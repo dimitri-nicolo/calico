@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
@@ -22,8 +23,14 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
+func setup(t *testing.T) func() {
+	return logutils.RedirectLogrusToTestingT(t)
+}
+
 // TestCreateFlowLog tests running a real elasticsearch query to create a flow log.
 func TestCreateFlowLog(t *testing.T) {
+	defer setup(t)()
+
 	// Create an elasticsearch client to use for the test. For this test, we use a real
 	// elasticsearch instance created via "make run-elastic".
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
@@ -65,6 +72,7 @@ func TestCreateFlowLog(t *testing.T) {
 
 	response, err := b.Create(ctx, clusterInfo, []v1.FlowLog{f})
 	require.NoError(t, err)
+	require.Equal(t, []v1.BulkError(nil), response.Errors)
 	require.Equal(t, 0, response.Failed)
 
 	// Clean up after ourselves by deleting the index.

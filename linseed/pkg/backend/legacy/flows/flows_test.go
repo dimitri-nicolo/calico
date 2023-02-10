@@ -4,7 +4,12 @@ package flows_test
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,6 +37,39 @@ var (
 	ctx    context.Context
 )
 
+func cleanupIndices(ctx context.Context, client *elastic.Client) error {
+	indices, err := client.CatIndices().Do(ctx)
+	if err != nil {
+		return err
+	}
+	for _, idx := range indices {
+		if !strings.HasPrefix(idx.Index, "tigera_secure_ee_flows") {
+			// Skip indicies that aren't for flows.
+			continue
+		}
+		_, err = client.DeleteIndex(idx.Index).Do(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	aliases, err := client.CatAliases().Do(ctx)
+	if err != nil {
+		return err
+	}
+	for _, a := range aliases {
+		if !strings.HasPrefix(a.Alias, "tigera_secure_ee_flows") {
+			// Skip aliases that aren't for flows.
+			continue
+		}
+		_, err = client.DeleteIndex(a.Alias).Do(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
 func setupTest(t *testing.T) func() {
@@ -41,14 +79,6 @@ func setupTest(t *testing.T) func() {
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
 	cache = templates.NewTemplateCache(client, 1, 0)
-
-	// Cleanup any data that might left over from a previous failed run.
-	exists, err := client.Backend().IndexExists("tigera_secure_ee_flows.*").Do(context.Background())
-	require.NoError(t, err)
-	if exists {
-		_, err = client.Backend().DeleteIndex("tigera_secure_ee_flows.*").Do(context.Background())
-		require.NoError(t, err)
-	}
 
 	// Create a FlowBackend to use.
 	b = flows.NewFlowBackend(client)
@@ -63,9 +93,15 @@ func setupTest(t *testing.T) func() {
 
 	// Function contains teardown logic.
 	return func() {
-		// Cancel the context and logging config.
-		logCancel()
+		// Cancel the context.
 		cancel()
+
+		// Cleanup any data that might left over from a previous failed run.
+		err = cleanupIndices(context.Background(), esClient)
+		require.NoError(t, err)
+
+		// Cancel logging
+		logCancel()
 	}
 }
 
@@ -89,8 +125,22 @@ func TestListFlows(t *testing.T) {
 		WithSourceIP("192.168.1.1").
 		WithRandomFlowStats().WithRandomPacketStats().
 		WithReporter("src").WithAction("allowed").
-		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
+		WithPolicies("0|allow-tigera|tigera-system/allow-tigera.cnx-apiserver-access|allow|1")
 	expected := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
+
+	// Add in the expected policy.
+	one := 1
+	expected.Policies = []v1.Policy{
+		{
+			Tier:      "allow-tigera",
+			Name:      "cnx-apiserver-access",
+			Namespace: "tigera-system",
+			Action:    "allow",
+			Count:     expected.LogStats.FlowLogCount,
+			RuleID:    &one,
+		},
+	}
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
@@ -130,7 +180,7 @@ func TestMultipleFlows(t *testing.T) {
 		WithSourceIP("34.15.66.3").
 		WithRandomFlowStats().WithRandomPacketStats().
 		WithReporter("src").WithAction("allowed").
-		WithSourceLabels("bread=rye", "cheese=brie", "wine=none") // TODO
+		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
 	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
 
 	// Template for flow #2.
@@ -179,6 +229,13 @@ func TestFlowFiltering(t *testing.T) {
 		// Configuration for which flows are expected to match.
 		ExpectFlow1 bool
 		ExpectFlow2 bool
+
+		// Number of logs to create
+		NumLogs int
+
+		// Whether to perform an equality comparison on the returned
+		// flows. Can be useful for tests where stats differ.
+		SkipComparison bool
 	}
 
 	numExpected := func(tc testCase) int {
@@ -252,6 +309,113 @@ func TestFlowFiltering(t *testing.T) {
 			ExpectFlow1: true,
 			ExpectFlow2: false, // Flow 2 has dest port 53
 		},
+		{
+			Name: "should query a flow based on source label equal selector",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{TimeRange: tr},
+				SourceSelectors: []v1.LabelSelector{
+					{
+						Key:      "bread",
+						Operator: "=",
+						Values:   []string{"rye"},
+					},
+				},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: false, // Flow 2 doesn't have the label
+		},
+		{
+			Name: "should query a flow based on dest label equal selector",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{TimeRange: tr},
+				DestinationSelectors: []v1.LabelSelector{
+					{
+						Key:      "dest_iteration",
+						Operator: "=",
+						Values:   []string{"0"},
+					},
+				},
+			},
+			// Both flows have this label set on destination.
+			ExpectFlow1: true,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query a flow based on dest label selector matching none",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{TimeRange: tr},
+				DestinationSelectors: []v1.LabelSelector{
+					{
+						Key:      "cranberry",
+						Operator: "=",
+						Values:   []string{"sauce"},
+					},
+				},
+			},
+			// neither flow has this label set on destination.
+			ExpectFlow1: false,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should query a flow based on multiple source labels",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{TimeRange: tr},
+				SourceSelectors: []v1.LabelSelector{
+					{
+						Key:      "bread",
+						Operator: "=",
+						Values:   []string{"rye"},
+					},
+					{
+						Key:      "cheese",
+						Operator: "=",
+						Values:   []string{"cheddar"},
+					},
+				},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: false, // Missing both labels
+		},
+		{
+			Name: "should query a flow based on multiple destination values for a single label",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{TimeRange: tr},
+				DestinationSelectors: []v1.LabelSelector{
+					{
+						Key:      "dest_iteration",
+						Operator: "=",
+						Values:   []string{"0", "1"},
+					},
+				},
+			},
+
+			// Both have this label.
+			ExpectFlow1: true,
+			ExpectFlow2: true,
+			NumLogs:     2,
+		},
+		{
+			Name: "should query a flow based on multiple destination values for a single label, not comprehensive",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{TimeRange: tr},
+				DestinationSelectors: []v1.LabelSelector{
+					{
+						Key:      "dest_iteration",
+						Operator: "=",
+						Values:   []string{"0", "1"},
+					},
+				},
+			},
+
+			// Both have this label.
+			ExpectFlow1: true,
+			ExpectFlow2: true,
+			NumLogs:     4,
+
+			// Skip comparison on this one, since the returned flows don't match the expected ones
+			// due to the filtering and the simplicity of our test modeling of flow logs.
+			SkipComparison: true,
+		},
 	}
 
 	for _, testcase := range testcases {
@@ -260,6 +424,11 @@ func TestFlowFiltering(t *testing.T) {
 		// to query one or more flows.
 		t.Run(testcase.Name, func(t *testing.T) {
 			defer setupTest(t)()
+
+			numLogs := testcase.NumLogs
+			if numLogs == 0 {
+				numLogs = 1
+			}
 
 			// Template for flow #1.
 			bld := NewFlowLogBuilder()
@@ -276,8 +445,8 @@ func TestFlowFiltering(t *testing.T) {
 				WithSourceIP("34.15.66.3").
 				WithRandomFlowStats().WithRandomPacketStats().
 				WithReporter("src").WithAction("allowed").
-				WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
-			exp1 := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
+				WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none")
+			exp1 := populateFlowDataN(t, ctx, bld, client, clusterInfo.Cluster, numLogs)
 
 			// Template for flow #2.
 			bld2 := NewFlowLogBuilder()
@@ -294,8 +463,8 @@ func TestFlowFiltering(t *testing.T) {
 				WithSourceIP("192.168.1.1").
 				WithRandomFlowStats().WithRandomPacketStats().
 				WithReporter("src").WithAction("allowed").
-				WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
-			exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo.Cluster)
+				WithSourceLabels("cheese=brie")
+			exp2 := populateFlowDataN(t, ctx, bld2, client, clusterInfo.Cluster, numLogs)
 
 			// Query for flows.
 			r, err := b.List(ctx, clusterInfo, testcase.Params)
@@ -303,6 +472,10 @@ func TestFlowFiltering(t *testing.T) {
 			require.Len(t, r.Items, numExpected(testcase))
 			require.Nil(t, r.AfterKey)
 			require.Empty(t, err)
+
+			if testcase.SkipComparison {
+				return
+			}
 
 			// Assert that the correct flows are returned.
 			if testcase.ExpectFlow1 {
@@ -340,7 +513,7 @@ func TestPagination(t *testing.T) {
 		WithSourceIP("34.15.66.3").
 		WithRandomFlowStats().WithRandomPacketStats().
 		WithReporter("src").WithAction("allowed").
-		WithSourceLabels("bread=rye", "cheese=brie", "wine=none") // TODO
+		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
 	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
 
 	// Template for flow #2.
@@ -388,25 +561,130 @@ func TestPagination(t *testing.T) {
 	require.Equal(t, exp1, r.Items[0])
 }
 
+// Definitions for search results to be used in the tests below.
+
+//go:embed testdata/elastic_valid_flow.json
+var validSingleFlow []byte
+
+// Test the handling of various responses from elastic. This suite of tests uses a mock http server
+// to return custom responses from elastic without the need for running a real elastic server.
+// This can be useful for simulating strange or malformed responses from Elasticsearch.
+func TestElasticResponses(t *testing.T) {
+	// Set elasticResponse in each test to mock out a given response from Elastic.
+	var server *httptest.Server
+	var ctx context.Context
+	var opts v1.L3FlowParams
+	var clusterInfo bapi.ClusterInfo
+
+	// setupAndTeardown initializes and tears down each test.
+	setupAndTeardown := func(t *testing.T, elasticResponse []byte) func() {
+		// Create a mock server to return elastic responses.
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(200)
+			_, err := w.Write(elasticResponse)
+			require.NoError(t, err)
+		}))
+
+		// Configure the elastic client to use the URL of our test server.
+		esClient, err := elastic.NewSimpleClient(elastic.SetURL(server.URL))
+		require.NoError(t, err)
+		client = lmaelastic.NewWithClient(esClient)
+
+		// Create a FlowBackend using the client.
+		b = flows.NewFlowBackend(client)
+
+		// Basic parameters for each test.
+		clusterInfo.Cluster = "cluster"
+		opts.TimeRange = &lmav1.TimeRange{}
+		opts.TimeRange.From = time.Now().Add(-5 * time.Second)
+		opts.TimeRange.To = time.Now().Add(5 * time.Second)
+
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+
+		// Teardown goes within this returned func.
+		return func() {
+			cancel()
+		}
+	}
+
+	type testCase struct {
+		// Name of the test
+		name string
+
+		// Response from elastic to be returned by the mock server.
+		response interface{}
+
+		// Expected error
+		err bool
+	}
+
+	// Define the list of testcases to run
+	testCases := []testCase{
+		{
+			name:     "empty json",
+			response: []byte("{}"),
+			err:      false,
+		},
+		{
+			name:     "malformed json",
+			response: []byte("{"),
+			err:      true,
+		},
+		{
+			name:     "timeout",
+			response: elastic.SearchResult{TimedOut: true},
+			err:      true,
+		},
+		{
+			name:     "valid single flow",
+			response: validSingleFlow,
+			err:      false,
+		},
+	}
+
+	for _, testcase := range testCases {
+		t.Run(testcase.name, func(t *testing.T) {
+			// We allow either raw byte arrays, or structures to be passed
+			// as input. If it's a struct, serialize it first.
+			var err error
+			bs, ok := testcase.response.([]byte)
+			if !ok {
+				bs, err = json.Marshal(testcase.response)
+				require.NoError(t, err)
+			}
+			defer setupAndTeardown(t, bs)()
+
+			// Query for flows.
+			_, err = b.List(ctx, clusterInfo, opts)
+			if testcase.err {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 // populateFlowData writes a series of flow logs to elasticsearch, and returns the FlowLog that we
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
 func populateFlowData(t *testing.T, ctx context.Context, b *flowLogBuilder, client lmaelastic.Client, cluster string) v1.L3Flow {
+	return populateFlowDataN(t, ctx, b, client, cluster, 10)
+}
+
+func populateFlowDataN(t *testing.T, ctx context.Context, b *flowLogBuilder, client lmaelastic.Client, cluster string, n int) v1.L3Flow {
 	batch := []v1.FlowLog{}
 
 	// Initialize the expected output based on the given builder template.
 	expected := b.ExpectedFlow()
 
-	// Labels are an aggregation across all flow logs created in the loop below.
-	// TODO: This should be calculated by the builder.
-	expected.SourceLabels = []v1.FlowLabels{
-		{Key: "bread", Values: []string{"rye"}},
-		{Key: "cheese", Values: []string{"brie"}},
-		{Key: "wine", Values: []string{"none"}},
+	expected.DestinationLabels = []v1.FlowLabels{
+		// A different dest_iteration is applied to each log in the flow.
+		{Key: "dest_iteration", Values: []string{}},
 	}
-	expected.DestinationLabels = []v1.FlowLabels{{Key: "dest_iteration", Values: []string{}}}
-	expected.LogStats.FlowLogCount = int64(10)
+	expected.LogStats.FlowLogCount = int64(n)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < n; i++ {
 		// We want a variety of label keys and values,
 		// so base this one off of the loop variable.
 		// Note: We use a nested terms aggregation to get labels, which has an

@@ -21,10 +21,18 @@ type L3FlowParams struct {
 	// returned
 	Source *Endpoint `json:"source" validate:"omitempty"`
 
+	// SourceSelectors are a list of label selectors to use
+	// to filter the source in flow queries.
+	SourceSelectors []LabelSelector `json:"source_selectors"`
+
 	// Destination will filter L3 flows that target the desired endpoint
 	// If no Source and Destination are present, all L3 Flows will be
 	// returned
 	Destination *Endpoint `json:"destination" validate:"omitempty"`
+
+	// DestinationSelectors are a list of label selectors to use
+	// to filter the destination in flow queries.
+	DestinationSelectors []LabelSelector `json:"destination_selectors"`
 
 	// Statistics will include different metrics for the L3 flows that are queried
 	// The following metrics can be extracted: connection, tcp, flow and process
@@ -53,8 +61,8 @@ type L3Flow struct {
 	Process *Process `json:"process,omitempty"`
 	Service *Service `json:"dest_service,omitempty"`
 
-	// Policies applied to this flow.
-	Policies []string `json:"policies,omitempty"`
+	// Policies applied to this flow, in order.
+	Policies []Policy `json:"policies,omitempty"`
 
 	// DestinationLabels are the labels applied to the destination during the lifetime
 	// of this flow. Note that a single label may have had multiple values throughout this flow's life.
@@ -75,6 +83,18 @@ type L3Flow struct {
 
 	// ProcessStats are process aggregated metrics generated from the traffic described by the L3 flows.
 	ProcessStats *ProcessStats `json:"process_stats,omitempty"`
+}
+
+type Policy struct {
+	Tier         string `json:"tier"`
+	Namespace    string `json:"namespace"`
+	Name         string `json:"name"`
+	Action       string `json:"action"`
+	IsStaged     bool   `json:"is_staged"`
+	IsKubernetes bool   `json:"is_kubernetes"`
+	IsProfile    bool   `json:"is_profile"`
+	Count        int64  `json:"count"`
+	RuleID       *int   `json:"rule_id"`
 }
 
 // FlowLabels represents a single label and all of its seen values over the course of

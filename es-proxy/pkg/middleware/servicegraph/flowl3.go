@@ -54,9 +54,7 @@ const (
 	FlowActionIdx
 )
 
-var (
-	zeroGraphTCPStats = v1.GraphTCPStats{}
-)
+var zeroGraphTCPStats = v1.GraphTCPStats{}
 
 type FlowEndpoint struct {
 	Type      v1.GraphNodeType
@@ -114,7 +112,7 @@ type L3FlowData struct {
 //     when an endpoint is subjected to a port scan.
 //   - Stats for TCP and Processes are aggregated for each flow.
 func GetL3FlowData(
-	ctx context.Context, linseed lsclient.Client, tr lmav1.TimeRange,
+	ctx context.Context, linseed lsclient.Client, cluster string, tr lmav1.TimeRange,
 	fc *FlowConfig, cfg *Config,
 ) (fs []L3Flow, err error) {
 	// Trace progress.
@@ -124,14 +122,14 @@ func GetL3FlowData(
 	}()
 
 	l3flowparams := lsv1.L3FlowParams{
-		QueryParams: &lsv1.QueryParams{
+		QueryParams: lsv1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: tr.From,
 				To:   tr.To,
 			},
 		},
 	}
-	l3flows, err := linseed.L3Flows().List(ctx, l3flowparams)
+	l3flows, err := linseed.L3Flows(cluster).List(ctx, l3flowparams)
 	if err != nil {
 		return nil, fmt.Errorf("error getting l3 flows %s", err)
 	}
@@ -284,7 +282,6 @@ func GetL3FlowData(
 		fs[i].Stats.Connections.TotalPerSampleInterval = int64(float64(fs[i].Stats.Connections.TotalPerSampleInterval) / l3Flushes)
 	}
 	return fs, nil
-
 }
 
 func singleDashToBlank(val string) string {

@@ -5,21 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
-	celastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
 )
@@ -50,10 +50,6 @@ type flowRequestParams struct {
 	// The format is either RFC3339 or a relative time like now-15m, now-1h.
 	startDateTime *time.Time
 	endDateTime   *time.Time
-}
-
-func (req flowRequestParams) clusterIndex() string {
-	return lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(req.clusterName))
 }
 
 // parseAndValidateFlowRequest parses the fields in the request query, validating that required parameters are set and or the
@@ -157,6 +153,80 @@ type FlowResponse struct {
 	DstPolicyReport *PolicyReport `json:"dstPolicyReport"`
 }
 
+// MergeDestLabels merges in the given destination labels.
+func (r *FlowResponse) MergeDestLabels(labels []v1.FlowLabels, count int64) {
+	if len(labels) != 0 && r.DstLabels == nil {
+		r.DstLabels = map[string][]FlowResponseLabelValue{}
+	}
+
+	for _, label := range labels {
+		k := label.Key
+		vals := label.Values
+
+		if _, ok := r.DstLabels[k]; !ok {
+			// No key currently known for this label. Add it.
+			r.DstLabels[k] = []FlowResponseLabelValue{}
+		}
+
+		// Iterate the values for the key, and increment the FlowResponse
+		// keys accordingly.
+		for _, v := range vals {
+			found := false
+			for _, lv := range r.DstLabels[k] {
+				if lv.Value == v {
+					// Found a match, increment it.
+					lv.Count += count
+					found = true
+				}
+			}
+
+			if !found {
+				// Didn't already exist - add it.
+				r.DstLabels[k] = append(r.DstLabels[k], FlowResponseLabelValue{
+					Value: v,
+					Count: count,
+				})
+			}
+		}
+	}
+}
+
+// MergeSourceLabels merges in the given source labels.
+func (r *FlowResponse) MergeSourceLabels(labels []v1.FlowLabels, count int64) {
+	if len(labels) != 0 && r.SrcLabels == nil {
+		r.SrcLabels = map[string][]FlowResponseLabelValue{}
+	}
+	for _, label := range labels {
+		k := label.Key
+		vals := label.Values
+		if _, ok := r.SrcLabels[k]; !ok {
+			// No key currently known for this label. Add it.
+			r.SrcLabels[k] = []FlowResponseLabelValue{}
+		}
+
+		// Iterate the values for the key, and increment the FlowResponse
+		// keys accordingly.
+		for _, v := range vals {
+			found := false
+			for _, lv := range r.SrcLabels[k] {
+				if lv.Value == v {
+					// Found a match, increment it.
+					lv.Count += count
+					found = true
+				}
+			}
+
+			if !found {
+				// Didn't already exist - add it.
+				r.SrcLabels[k] = append(r.SrcLabels[k], FlowResponseLabelValue{
+					Value: v,
+					Count: count,
+				})
+			}
+		}
+	}
+}
+
 type FlowResponseLabels map[string][]FlowResponseLabelValue
 
 type FlowResponseLabelValue struct {
@@ -178,13 +248,13 @@ type FlowResponsePolicy struct {
 
 type flowHandler struct {
 	k8sCliFactory datastore.ClusterCtxK8sClientFactory
-	esClient      celastic.Client
+	client        client.Client
 }
 
-func NewFlowHandler(esClient celastic.Client, k8sClientFactory datastore.ClusterCtxK8sClientFactory) http.Handler {
+func NewFlowHandler(client client.Client, k8sClientFactory datastore.ClusterCtxK8sClientFactory) http.Handler {
 	return &flowHandler{
-		esClient:      esClient,
 		k8sCliFactory: k8sClientFactory,
+		client:        client,
 	}
 }
 
@@ -254,101 +324,129 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 	}
 	log.Debug("User is authorised to view flow.")
 
-	filters := []elastic.Query{
-		elastic.NewTermQuery("source_type", req.srcType),
-		elastic.NewTermQuery("source_name_aggr", req.srcName),
-		elastic.NewTermQuery("source_namespace", req.srcNamespace),
-		elastic.NewTermQuery("dest_type", req.dstType),
-		elastic.NewTermQuery("dest_name_aggr", req.dstName),
-		elastic.NewTermQuery("dest_namespace", req.dstNamespace),
+	// Build the query to send.
+	params := v1.L3FlowParams{
+		Source: &v1.Endpoint{
+			Type:           v1.EndpointType(req.srcType),
+			AggregatedName: req.srcName,
+			Namespace:      req.srcNamespace,
+		},
+		Destination: &v1.Endpoint{
+			Type:           v1.EndpointType(req.dstType),
+			AggregatedName: req.dstName,
+			Namespace:      req.dstNamespace,
+		},
 	}
 
-	if len(req.srcLabels) > 0 {
-		filters = append(filters, buildLabelSelectorFilter(req.srcLabels, "source_labels", "source_labels.labels"))
+	for _, sel := range req.srcLabels {
+		params.SourceSelectors = append(params.SourceSelectors, v1.LabelSelector{
+			Key:      sel.Key,
+			Operator: sel.Operator,
+			Values:   sel.Values,
+		})
 	}
 
-	if len(req.dstLabels) > 0 {
-		filters = append(filters, buildLabelSelectorFilter(req.dstLabels, "dest_labels", "dest_labels.labels"))
+	for _, sel := range req.dstLabels {
+		params.DestinationSelectors = append(params.DestinationSelectors, v1.LabelSelector{
+			Key:      sel.Key,
+			Operator: sel.Operator,
+			Values:   sel.Values,
+		})
 	}
 
 	if req.startDateTime != nil || req.endDateTime != nil {
-		filter := elastic.NewRangeQuery("end_time")
+		if params.QueryParams.TimeRange == nil {
+			params.QueryParams.TimeRange = &lmav1.TimeRange{}
+		}
+
 		if req.startDateTime != nil {
-			filter = filter.Gte(req.startDateTime.Unix())
+			params.QueryParams.TimeRange.From = *req.startDateTime
 		}
-
 		if req.endDateTime != nil {
-			filter = filter.Lt(req.endDateTime.Unix())
+			params.QueryParams.TimeRange.To = *req.endDateTime
 		}
-
-		filters = append(filters, filter)
 	}
 
-	query := elastic.NewBoolQuery().Filter(filters...)
-
-	log.Debug("Querying elasticsearch for flow.")
-	esResponse, err := handler.esClient.Backend().Search().
-		Index(req.clusterIndex()).
-		Size(0).
-		Query(query).
-		Aggregation("src_policy_report", newReporterPolicyFilterAggregation("src")).
-		Aggregation("dest_policy_report", newReporterPolicyFilterAggregation("dst")).
-		Aggregation("dest_labels",
-			elastic.NewNestedAggregation().Path("dest_labels").
-				SubAggregation("by_kvpair", elastic.NewTermsAggregation().Field("dest_labels.labels"))).
-		Aggregation("source_labels",
-			elastic.NewNestedAggregation().Path("source_labels").
-				SubAggregation("by_kvpair", elastic.NewTermsAggregation().Field("source_labels.labels"))).
-		Do(context.Background())
-
+	log.Debug("Querying Linseed for flow(s).")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	flows, err := handler.client.L3Flows(req.clusterName).List(ctx, params)
 	if err != nil {
-		log.WithError(err).Error("failed to get flow logs from elasticsearch")
+		log.WithError(err).Error("failed to get flows")
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	log.Debugf("Total matching flow logs for flow: %d", esResponse.TotalHits())
-	if esResponse.TotalHits() == 0 {
+	log.Debugf("Total matching flow logs for flow: %d", len(flows.Items))
+	if len(flows.Items) == 0 {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return
 	}
 
-	response := FlowResponse{
-		Count: esResponse.TotalHits(),
+	// Use a Set object to track the toal number of unique frontend flows we're returning.
+	// Historically, this API did not include reporter or action in its definition of a flow,
+	// whereas Linseed does, meaning to keep the same behavior we need to treat any number of v1.L3Flow objects
+	// that have the same source+destination as a single flow, regardless of their reporter or action.
+	type localFlow struct {
+		source      v1.Endpoint
+		destination v1.Endpoint
 	}
+	tracker := set.New[localFlow]()
 
-	if labelsBucket, found := esResponse.Aggregations.Nested("source_labels"); found {
-		response.SrcLabels = getLabelsFromLabelAggregation(labelsBucket)
-		log.WithField("labels", response.SrcLabels).Debug("Source labels parsed.")
-	}
+	// Build a response. Above, we received a list of flows as reported by the source and destination,
+	// and with different actions. Here, we build a policy report by aggregating information
+	// from these flows.
+	response := FlowResponse{}
+	for i, item := range flows.Items {
+		log.Infof("Handling flow %d", i)
 
-	if labelsBucket, found := esResponse.Aggregations.Nested("dest_labels"); found {
-		response.DstLabels = getLabelsFromLabelAggregation(labelsBucket)
-		log.WithField("labels", response.DstLabels).Debug("Destination labels parsed.")
-	}
+		// Add the flow's source and destination to the tracker.
+		lf := localFlow{item.Key.Source, item.Key.Destination}
+		tracker.Add(lf)
 
-	if srcPolicyReportBucket, found := esResponse.Aggregations.Filter("src_policy_report"); found {
-		if policyReport, err := newPolicyReportFromBucket(srcPolicyReportBucket, flowHelper); err != nil {
-			log.WithError(err).Error("failed to read the source policy report from the elasticsearch response")
+		if item.LogStats != nil {
+			// Build labels into the response.
+			response.MergeSourceLabels(item.SourceLabels, item.LogStats.FlowLogCount)
+			response.MergeDestLabels(item.DestinationLabels, item.LogStats.FlowLogCount)
+		}
+
+		// Build up a policy report.
+		policyReport, err := newPolicyReportFromFlow(item, flowHelper)
+		if err != nil {
+			log.WithError(err).Error("failed to read policy report for flow")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
-		} else {
-			log.WithField("policies", policyReport).Debug("Policies parsed.")
-			response.SrcPolicyReport = policyReport
+		}
+		log.WithField("policies", policyReport).Debug("Policies parsed.")
+
+		if policyReport != nil {
+			if item.Key.Reporter == "src" {
+				log.Infof("Setting source policy report")
+				if response.SrcPolicyReport == nil {
+					response.SrcPolicyReport = &PolicyReport{}
+				}
+				if item.Key.Action == "allow" {
+					response.SrcPolicyReport.AllowedFlowPolicies = policyReport.AllowedFlowPolicies
+				} else if item.Key.Action == "deny" {
+					response.SrcPolicyReport.DeniedFlowPolicies = policyReport.DeniedFlowPolicies
+				}
+			} else {
+				log.Infof("Setting destination policy report")
+				if response.DstPolicyReport == nil {
+					response.DstPolicyReport = &PolicyReport{}
+				}
+				if item.Key.Action == "allow" {
+					response.DstPolicyReport.AllowedFlowPolicies = policyReport.AllowedFlowPolicies
+				} else if item.Key.Action == "deny" {
+					response.DstPolicyReport.DeniedFlowPolicies = policyReport.DeniedFlowPolicies
+				}
+			}
 		}
 	}
 
-	if dstPolicyReportBucket, found := esResponse.Aggregations.Filter("dest_policy_report"); found {
-		if policyReport, err := newPolicyReportFromBucket(dstPolicyReportBucket, flowHelper); err != nil {
-			log.WithError(err).Error("failed to read the destination policy report from the elasticsearch response")
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		} else {
-			log.WithField("policies", policyReport).Debug("Policies parsed.")
-			response.DstPolicyReport = policyReport
-		}
-	}
+	response.Count = int64(len(tracker.Slice()))
 
+	// Send the response back to the client.
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.WithError(err).Error("failed to json encode response")
@@ -357,37 +455,18 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 	}
 }
 
-func newReporterPolicyFilterAggregation(reporter string) elastic.Aggregation {
-	return elastic.NewFilterAggregation().Filter(elastic.NewTermQuery("reporter", reporter)).
-		SubAggregation("allowed_flow_policies", newActionPolicyFilterAggregation("allow")).
-		SubAggregation("denied_flow_policies", newActionPolicyFilterAggregation("deny"))
-}
-
-func newActionPolicyFilterAggregation(action string) elastic.Aggregation {
-	return elastic.NewFilterAggregation().Filter(elastic.NewTermQuery("action", action)).
-		SubAggregation("policies", elastic.NewNestedAggregation().Path("policies").
-			SubAggregation("by_tiered_policy", elastic.NewTermsAggregation().Field("policies.all_policies")))
-}
-
-func newPolicyReportFromBucket(policyReportAgg *elastic.AggregationSingleBucket, flowHelper rbac.FlowHelper) (*PolicyReport, error) {
+func newPolicyReportFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) (*PolicyReport, error) {
 	policyReport := &PolicyReport{}
-	if allowedPolicy, found := policyReportAgg.Filter("allowed_flow_policies"); found {
-		if policiesBucket, found := allowedPolicy.Nested("policies"); found {
-			if policies, err := getPoliciesFromPolicyBucket(policiesBucket, flowHelper); err != nil {
-				return nil, err
-			} else {
-				policyReport.AllowedFlowPolicies = policies
-			}
-		}
+
+	allPolicies, err := getPoliciesFromFlow(flow, flowHelper)
+	if err != nil {
+		return nil, err
 	}
-	if deniedPolicy, found := policyReportAgg.Filter("denied_flow_policies"); found {
-		if policiesBucket, found := deniedPolicy.Nested("policies"); found {
-			if policies, err := getPoliciesFromPolicyBucket(policiesBucket, flowHelper); err != nil {
-				return nil, err
-			} else {
-				policyReport.DeniedFlowPolicies = policies
-			}
-		}
+
+	if flow.Key.Action == "allow" {
+		policyReport.AllowedFlowPolicies = allPolicies
+	} else if flow.Key.Action == "deny" {
+		policyReport.DeniedFlowPolicies = allPolicies
 	}
 
 	// Don't return a policy report if there are neither allowed nor denied policies, since this means a policy report
@@ -402,117 +481,72 @@ func newPolicyReportFromBucket(policyReportAgg *elastic.AggregationSingleBucket,
 // getPoliciesFromPolicyBucket parses the policy logs out from the given AggregationSingleBucket into a FlowResponsePolicy
 // that can be sent back in the response. The given flowHelper helps to obfuscate the policy response if the user is not
 // authorized to view certain, or all, policies.
-func getPoliciesFromPolicyBucket(policiesAggregation *elastic.AggregationSingleBucket, flowHelper rbac.FlowHelper) ([]*FlowResponsePolicy, error) {
+func getPoliciesFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) ([]*FlowResponsePolicy, error) {
 	var policies []*FlowResponsePolicy
-	if terms, found := policiesAggregation.Terms("by_tiered_policy"); found {
-		var obfuscatedPolicy *FlowResponsePolicy
-		var policyIdx int
+	var obfuscatedPolicy *FlowResponsePolicy
+	var policyIdx int
 
-		// Policies aren't necessarily ordered in the flow log, so we parse out the policies from the flow log and sort
-		// them first.
-		var policyHits api.SortablePolicyHits
-		for _, bucket := range terms.Buckets {
-			key, ok := bucket.Key.(string)
-			if !ok {
-				// This means the flow log is invalid so just skip it, otherwise a minor issue with a single flow
-				// could completely disable this endpoint.
-				log.WithField("key", key).Warning("skipping bucket with non string key type")
-				continue
-			}
-
-			policyHit, err := api.PolicyHitFromFlowLogPolicyString(key, bucket.DocCount)
-			if err != nil {
-				// This means the flow log is invalid so just skip it, otherwise a minor issue with a single flow
-				// could completely disable this endpoint.
-				log.WithError(err).WithField("key", key).Warning("skipping policy that failed to parse")
-				continue
-			}
-
-			policyHits = append(policyHits, policyHit)
+	// Loop through the flow's policies. Check RBAC on each and obfuscate those which the user doesn't have
+	// permissions to see. Convert the others to the proper response format expected by the UI.
+	// TODO: It would be nice to change the response format expected by the UI to match Linseed's API, so we don't need
+	// to maintain multiple structures representing a policy hit.
+	for _, policy := range flow.Policies {
+		// Create a PolicyHit object to help with RBAC decisions.
+		policyHit, err := api.NewPolicyHit(api.Action(policy.Action), policy.Count, policyIdx, policy.IsStaged, policy.Name, policy.Namespace, policy.Tier, policy.RuleID)
+		if err != nil {
+			logrus.WithField("policy", policy).Warn("Failed to parse policy, skipping")
+			continue
 		}
 
-		sort.Sort(policyHits)
+		if canListPolicy, err := flowHelper.CanListPolicy(policyHit); err != nil {
+			// An error here may mean that the request needs to be retried, i.e. a temporary error, so we should fail
+			// the request so the user knows to try again.
+			return nil, err
+		} else if canListPolicy {
+			if obfuscatedPolicy != nil {
+				obfuscatedPolicy.Index = policyIdx
+				policies = append(policies, obfuscatedPolicy)
 
-		for _, policyHit := range policyHits {
-			if canListPolicy, err := flowHelper.CanListPolicy(policyHit); err != nil {
-				// An error here may mean that the request needs to be retried, i.e. a temporary error, so we should fail
-				// the request so the user knows to try again.
-				return nil, err
-			} else if canListPolicy {
-				if obfuscatedPolicy != nil {
-					obfuscatedPolicy.Index = policyIdx
-					policies = append(policies, obfuscatedPolicy)
-
-					obfuscatedPolicy = nil
-					policyIdx++
-				}
-
-				policies = append(policies, &FlowResponsePolicy{
-					Index:        policyIdx,
-					Action:       string(policyHit.Action()),
-					Tier:         policyHit.Tier(),
-					Namespace:    policyHit.Namespace(),
-					Name:         policyHit.Name(),
-					IsStaged:     policyHit.IsStaged(),
-					IsKubernetes: policyHit.IsKubernetes(),
-					IsProfile:    policyHit.IsProfile(),
-					Count:        policyHit.Count(),
-				})
-
+				obfuscatedPolicy = nil
 				policyIdx++
-			} else if policyHit.IsStaged() {
-				// Ignore staged policies the use is not authorized to view
-				continue
+			}
+
+			policies = append(policies, &FlowResponsePolicy{
+				Index:        policyIdx,
+				Action:       policy.Action,
+				Tier:         policy.Tier,
+				Namespace:    policy.Namespace,
+				Name:         policy.Name,
+				IsStaged:     policy.IsStaged,
+				IsKubernetes: policy.IsKubernetes,
+				IsProfile:    policy.IsProfile,
+				Count:        policy.Count,
+			})
+
+			policyIdx++
+		} else if policyHit.IsStaged() {
+			// Ignore staged policies the use is not authorized to view
+			continue
+		} else {
+			if obfuscatedPolicy != nil {
+				obfuscatedPolicy.Action = string(policyHit.Action())
+				obfuscatedPolicy.Count += policyHit.Count()
 			} else {
-				if obfuscatedPolicy != nil {
-					obfuscatedPolicy.Action = string(policyHit.Action())
-					obfuscatedPolicy.Count += policyHit.Count()
-				} else {
-					obfuscatedPolicy = &FlowResponsePolicy{
-						Namespace: "*",
-						Tier:      "*",
-						Name:      "*",
-						Action:    string(policyHit.Action()),
-						Count:     policyHit.Count(),
-					}
+				obfuscatedPolicy = &FlowResponsePolicy{
+					Namespace: "*",
+					Tier:      "*",
+					Name:      "*",
+					Action:    string(policyHit.Action()),
+					Count:     policyHit.Count(),
 				}
 			}
 		}
+	}
 
-		if obfuscatedPolicy != nil {
-			obfuscatedPolicy.Index = policyIdx
-			policies = append(policies, obfuscatedPolicy)
-		}
+	if obfuscatedPolicy != nil {
+		obfuscatedPolicy.Index = policyIdx
+		policies = append(policies, obfuscatedPolicy)
 	}
 
 	return policies, nil
-}
-
-// getLabelsFromLabelAggregation parses the labels out from the given aggregation and puts them into a map map[string][]FlowResponseLabels
-// that can be sent back in the response.
-func getLabelsFromLabelAggregation(labelAggregation *elastic.AggregationSingleBucket) FlowResponseLabels {
-	labelMap := make(FlowResponseLabels)
-	if terms, found := labelAggregation.Terms("by_kvpair"); found {
-		for _, bucket := range terms.Buckets {
-			key, ok := bucket.Key.(string)
-			if !ok {
-				log.WithField("key", key).Warning("skipping bucket with non string key type")
-				continue
-			}
-
-			labelParts := strings.Split(key, "=")
-			if len(labelParts) != 2 {
-				log.WithField("key", key).Warning("skipping bucket with key with invalid format (format should be 'key=value')")
-				continue
-			}
-
-			labelName, labelValue := labelParts[0], labelParts[1]
-			labelMap[labelName] = append(labelMap[labelName], FlowResponseLabelValue{
-				Count: bucket.DocCount,
-				Value: labelValue,
-			})
-		}
-	}
-
-	return labelMap
 }

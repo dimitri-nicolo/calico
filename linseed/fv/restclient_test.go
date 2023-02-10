@@ -25,7 +25,7 @@ func TestFV_RESTClient(t *testing.T) {
 		CACertPath: "cert/RootCA.crt",
 		URL:        "https://localhost:8444/",
 	}
-	rc, err := rest.NewClient(cluster, tenant, cfg)
+	rc, err := rest.NewClient(tenant, cfg)
 	require.NoError(t, err)
 
 	t.Run("should handle an OK response", func(t *testing.T) {
@@ -42,6 +42,7 @@ func TestFV_RESTClient(t *testing.T) {
 
 		err = rc.Post().
 			Path("/api/v1/flows/network").
+			Cluster(cluster).
 			Params(&params).
 			Do(context.TODO()).
 			Into(&flows)
@@ -55,6 +56,7 @@ func TestFV_RESTClient(t *testing.T) {
 		flows := v1.List[v1.L3Flow]{}
 		err = rc.Post().
 			Path("/api/v1/flows/network").
+			Cluster(cluster).
 			Params(&params).
 			Do(context.TODO()).
 			Into(&flows)
@@ -75,6 +77,7 @@ func TestFV_RESTClient(t *testing.T) {
 
 		err = rc.Post().
 			Path("/bad/url").
+			Cluster(cluster).
 			Params(&params).
 			Do(context.TODO()).
 			Into(&flows)

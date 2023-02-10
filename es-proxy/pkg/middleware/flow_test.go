@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/sirupsen/logrus"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -25,40 +26,79 @@ import (
 	calicojson "github.com/projectcalico/calico/es-proxy/test/json"
 	"github.com/projectcalico/calico/es-proxy/test/thirdpartymock"
 
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/projectcalico/calico/lma/pkg/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	celastic "github.com/projectcalico/calico/lma/pkg/elastic"
-
-	"github.com/olivere/elastic/v7"
 )
 
-var _ = Describe("FlowLog", func() {
+var _ = Describe("FlowLog middleware", func() {
 	var (
 		mockDoer             *thirdpartymock.MockDoer
 		mockRBACAuthoriser   *lmaauth.MockRBACAuthorizer
 		mockK8sClientFactory *datastore.MockClusterCtxK8sClientFactory
 		flowLogHandler       http.Handler
+		server               *httptest.Server
+		linseedResponse      v1.List[v1.L3Flow]
 
 		defaultUser user.Info
+
+		expectedQuery []byte
 	)
+
+	setResponse := func(r v1.List[v1.L3Flow]) {
+		linseedResponse = r
+	}
 
 	BeforeEach(func() {
 		defaultUser = &user.DefaultInfo{Name: "defaultUser"}
-
 		mockDoer = new(thirdpartymock.MockDoer)
+
+		// Create a mock server to mimic linseed.
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer GinkgoRecover()
+
+			w.WriteHeader(200)
+			body := linseedSearchResultToResponseBody(linseedResponse)
+
+			if len(expectedQuery) > 0 {
+				// Test wants to assert on the query.
+				reqBody, err := ioutil.ReadAll(r.Body)
+				Expect(err).ShouldNot(HaveOccurred())
+				r.Body = ioutil.NopCloser(bytes.NewBuffer(reqBody))
+
+				var params, expParams v1.L3FlowParams
+				err = json.Unmarshal(reqBody, &params)
+				Expect(err).ShouldNot(HaveOccurred())
+				err = json.Unmarshal(expectedQuery, &expParams)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(params).To(Equal(expParams))
+			}
+
+			logrus.Warnf("Mock server called! Returning BODY=%s", body)
+			_, err := w.Write(body)
+			Expect(err).ShouldNot(HaveOccurred())
+		}))
+
 		mockRBACAuthoriser = new(lmaauth.MockRBACAuthorizer)
 		mockK8sClientFactory = new(datastore.MockClusterCtxK8sClientFactory)
 
-		client, err := elastic.NewClient(elastic.SetHttpClient(mockDoer), elastic.SetSniff(false), elastic.SetHealthcheck(false))
+		client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 		Expect(err).ShouldNot(HaveOccurred())
 
-		flowLogHandler = NewFlowHandler(celastic.NewWithClient(client), mockK8sClientFactory)
+		flowLogHandler = NewFlowHandler(client, mockK8sClientFactory)
 	})
 
 	AfterEach(func() {
+		server.Close()
 		mockRBACAuthoriser.AssertExpectations(GinkgoT())
 		mockK8sClientFactory.AssertExpectations(GinkgoT())
 		mockDoer.AssertExpectations(GinkgoT())
+
+		// Reset the query so it doesn't impact the next test.
+		expectedQuery = nil
 	})
 
 	Context("ServeHTTP", func() {
@@ -115,12 +155,12 @@ var _ = Describe("FlowLog", func() {
 					mockRBACAuthoriser.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 					mockK8sClientFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthoriser, nil)
 
-					mockDoer.On("Do", mock.Anything).Return(&http.Response{
-						StatusCode: http.StatusOK,
-						Body: esSearchResultToResponseBody(elastic.SearchResult{
-							Hits: &elastic.SearchHits{TotalHits: &elastic.TotalHits{Value: 1}},
-						}),
-					}, nil)
+					// An empty response is all we need for these tests, since they are verifying params.
+					setResponse(v1.List[v1.L3Flow]{
+						Items: []v1.L3Flow{
+							{},
+						},
+					})
 
 					flowLogHandler.ServeHTTP(respRecorder, req)
 
@@ -148,10 +188,8 @@ var _ = Describe("FlowLog", func() {
 			mockRBACAuthoriser.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 			mockK8sClientFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthoriser, nil)
 
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body:       esSearchResultToResponseBody(elastic.SearchResult{}),
-			}, nil)
+			// Set an empty response from Linseed.
+			setResponse(v1.List[v1.L3Flow]{})
 
 			respRecorder := httptest.NewRecorder()
 			flowLogHandler.ServeHTTP(respRecorder, req)
@@ -160,99 +198,29 @@ var _ = Describe("FlowLog", func() {
 		})
 	})
 
-	DescribeTable("Elasticsearch query verification", func(req *http.Request, expectedEsQuery calicojson.Map) {
+	DescribeTable("Elasticsearch query verification", func(req *http.Request, expectedParams v1.L3FlowParams) {
 		req = req.WithContext(request.WithUser(req.Context(), defaultUser))
 
 		mockRBACAuthoriser.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 		mockK8sClientFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthoriser, nil)
 
-		expectedJsonObj := calicojson.Map{
-			"aggregations": calicojson.Map{
-				"dest_labels": calicojson.Map{
-					"aggregations": calicojson.Map{"by_kvpair": calicojson.Map{"terms": calicojson.Map{"field": "dest_labels.labels"}}},
-					"nested":       calicojson.Map{"path": "dest_labels"},
-				},
-				"src_policy_report": calicojson.Map{
-					"filter": calicojson.Map{"term": calicojson.Map{"reporter": "src"}},
-					"aggregations": calicojson.Map{
-						"allowed_flow_policies": calicojson.Map{
-							"filter": calicojson.Map{"term": calicojson.Map{"action": "allow"}},
-							"aggregations": calicojson.Map{
-								"policies": calicojson.Map{
-									"aggregations": calicojson.Map{"by_tiered_policy": calicojson.Map{"terms": calicojson.Map{"field": "policies.all_policies"}}},
-									"nested":       calicojson.Map{"path": "policies"},
-								},
-							},
-						},
-						"denied_flow_policies": calicojson.Map{
-							"filter": calicojson.Map{"term": calicojson.Map{"action": "deny"}},
-							"aggregations": calicojson.Map{
-								"policies": calicojson.Map{
-									"aggregations": calicojson.Map{"by_tiered_policy": calicojson.Map{"terms": calicojson.Map{"field": "policies.all_policies"}}},
-									"nested":       calicojson.Map{"path": "policies"},
-								},
-							},
-						},
-					},
-				},
-				"dest_policy_report": calicojson.Map{
-					"filter": calicojson.Map{"term": calicojson.Map{"reporter": "dst"}},
-					"aggregations": calicojson.Map{
-						"allowed_flow_policies": calicojson.Map{
-							"filter": calicojson.Map{"term": calicojson.Map{"action": "allow"}},
-							"aggregations": calicojson.Map{
-								"policies": calicojson.Map{
-									"aggregations": calicojson.Map{"by_tiered_policy": calicojson.Map{"terms": calicojson.Map{"field": "policies.all_policies"}}},
-									"nested":       calicojson.Map{"path": "policies"},
-								},
-							},
-						},
-						"denied_flow_policies": calicojson.Map{
-							"filter": calicojson.Map{"term": calicojson.Map{"action": "deny"}},
-							"aggregations": calicojson.Map{
-								"policies": calicojson.Map{
-									"aggregations": calicojson.Map{"by_tiered_policy": calicojson.Map{"terms": calicojson.Map{"field": "policies.all_policies"}}},
-									"nested":       calicojson.Map{"path": "policies"},
-								},
-							},
-						},
-					},
-				},
-				"source_labels": calicojson.Map{
-					"aggregations": calicojson.Map{"by_kvpair": calicojson.Map{"terms": calicojson.Map{"field": "source_labels.labels"}}},
-					"nested":       calicojson.Map{"path": "source_labels"},
-				},
+		var err error
+		expectedQuery, err = json.Marshal(expectedParams)
+		Expect(err).NotTo(HaveOccurred())
+
+		// An empty response is all we need for these tests, since they are verifying request params.
+		setResponse(v1.List[v1.L3Flow]{
+			Items: []v1.L3Flow{
+				{},
 			},
-			"query": expectedEsQuery,
-			"size":  0,
-		}
-
-		mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-			defer GinkgoRecover()
-			req := args.Get(0).(*http.Request)
-
-			body, err := io.ReadAll(req.Body)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(req.Body.Close()).ShouldNot(HaveOccurred())
-
-			req.Body = io.NopCloser(bytes.NewBuffer(body))
-
-			requestJson := map[string]interface{}{}
-			Expect(json.Unmarshal(body, &requestJson)).ShouldNot(HaveOccurred())
-			Expect(calicojson.MustUnmarshalToStandObject(body)).Should(Equal(calicojson.MustUnmarshalToStandObject(expectedJsonObj)),
-				cmp.Diff(calicojson.MustUnmarshalToStandObject(body), calicojson.MustUnmarshalToStandObject(expectedJsonObj)))
-		}).Return(&http.Response{
-			StatusCode: http.StatusOK,
-			Body: esSearchResultToResponseBody(elastic.SearchResult{
-				Hits: &elastic.SearchHits{TotalHits: &elastic.TotalHits{Value: 1}},
-			}),
-		}, nil)
+		})
 
 		respRecorder := httptest.NewRecorder()
 		flowLogHandler.ServeHTTP(respRecorder, req)
 
 		Expect(respRecorder.Code).Should(Equal(200))
 	},
+
 		Entry("when startDateTime and endDateTime are not specified",
 			createFlowLogRequest(map[string][]string{
 				"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeHEP}, "srcName": {"source"},
@@ -260,15 +228,17 @@ var _ = Describe("FlowLog", func() {
 				"dstName": {"destination"},
 			}),
 
-			calicojson.Map{"bool": calicojson.Map{
-				"filter": []calicojson.Map{
-					{"term": calicojson.Map{"source_type": "hep"}},
-					{"term": calicojson.Map{"source_name_aggr": "source"}},
-					{"term": calicojson.Map{"source_namespace": api.GlobalEndpointType}},
-					{"term": calicojson.Map{"dest_type": "wep"}},
-					{"term": calicojson.Map{"dest_name_aggr": "destination"}},
-					{"term": calicojson.Map{"dest_namespace": "default"}},
-				}},
+			v1.L3FlowParams{
+				Source: &v1.Endpoint{
+					Type:           "hep",
+					AggregatedName: "source",
+					Namespace:      api.GlobalEndpointType,
+				},
+				Destination: &v1.Endpoint{
+					Type:           "wep",
+					AggregatedName: "destination",
+					Namespace:      "default",
+				},
 			},
 		),
 		Entry("when startDateTime and endDateTime are specified",
@@ -278,69 +248,69 @@ var _ = Describe("FlowLog", func() {
 				"startDateTime": {"2006-01-02T13:04:05Z"}, "endDateTime": {"2006-01-02T15:04:05Z"},
 			}),
 
-			calicojson.Map{"bool": calicojson.Map{
-				"filter": []calicojson.Map{
-					{"term": calicojson.Map{"source_type": "wep"}},
-					{"term": calicojson.Map{"source_name_aggr": "source"}},
-					{"term": calicojson.Map{"source_namespace": "default"}},
-					{"term": calicojson.Map{"dest_type": "wep"}},
-					{"term": calicojson.Map{"dest_name_aggr": "destination"}},
-					{"term": calicojson.Map{"dest_namespace": "default"}},
-					{"range": calicojson.Map{
-						"end_time": calicojson.Map{
-							"from":          mustParseTime("2006-01-02T13:04:05Z", time.RFC3339).Unix(),
-							"include_lower": true,
-							"include_upper": false,
-							"to":            mustParseTime("2006-01-02T15:04:05Z", time.RFC3339).Unix(),
-						},
-					}},
-				}},
+			v1.L3FlowParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: mustParseTime("2006-01-02T13:04:05Z", time.RFC3339),
+						To:   mustParseTime("2006-01-02T15:04:05Z", time.RFC3339),
+					},
+				},
+				Source: &v1.Endpoint{
+					Type:           "wep",
+					AggregatedName: "source",
+					Namespace:      "default",
+				},
+				Destination: &v1.Endpoint{
+					Type:           "wep",
+					AggregatedName: "destination",
+					Namespace:      "default",
+				},
 			},
 		),
+
 		Entry("when source and destination labels are specified",
 			createFlowLogRequest(map[string][]string{
 				"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
 				"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
 				"srcLabels": {createLabelJson("srcname", "=", []string{"srcfoo"}), createLabelJson("srcotherlabel", "!=", []string{"srcbar"})},
-				"dstLabels": {createLabelJson("dstname", "=", []string{"srcfoo"}), createLabelJson("dstotherlabel", "!=", []string{"dstbar"})},
+				"dstLabels": {createLabelJson("dstname", "=", []string{"dstfoo"}), createLabelJson("dstotherlabel", "!=", []string{"dstbar"})},
 			}),
-			calicojson.Map{"bool": calicojson.Map{
-				"filter": []calicojson.Map{
-					{"term": calicojson.Map{"source_type": "wep"}},
-					{"term": calicojson.Map{"source_name_aggr": "source"}},
-					{"term": calicojson.Map{"source_namespace": "default"}},
-					{"term": calicojson.Map{"dest_type": "wep"}},
-					{"term": calicojson.Map{"dest_name_aggr": "destination"}},
-					{"term": calicojson.Map{"dest_namespace": "default"}},
-					{"nested": calicojson.Map{
-						"path": "source_labels",
-						"query": calicojson.Map{
-							"bool": calicojson.Map{
-								"filter": []calicojson.Map{
-									{"term": calicojson.Map{"source_labels.labels": "srcname=srcfoo"}},
-									// IMPORTANT: this is NOT a correct Elasticsearch label query, no label log will EVER
-									// have != in it. When conversion of a label selector to an elasticsearch query is fixed
-									// this will be updated, but for now this is possible and expected output.
-									{"term": calicojson.Map{"source_labels.labels": "srcotherlabel!=srcbar"}},
-								},
-							},
-						},
-					}},
-					{"nested": calicojson.Map{
-						"path": "dest_labels",
-						"query": calicojson.Map{
-							"bool": calicojson.Map{
-								"filter": []calicojson.Map{
-									{"term": calicojson.Map{"dest_labels.labels": "dstname=srcfoo"}},
-									// IMPORTANT: this is NOT a correct Elasticsearch label query, no label log will EVER
-									// have != in it. When conversion of a label selector to an elasticsearch query is fixed
-									// this will be updated, but for now this is possible and expected output.
-									{"term": calicojson.Map{"dest_labels.labels": "dstotherlabel!=dstbar"}},
-								},
-							},
-						},
-					}},
-				}},
+
+			v1.L3FlowParams{
+				Source: &v1.Endpoint{
+					Type:           "wep",
+					AggregatedName: "source",
+					Namespace:      "default",
+				},
+				Destination: &v1.Endpoint{
+					Type:           "wep",
+					AggregatedName: "destination",
+					Namespace:      "default",
+				},
+				SourceSelectors: []v1.LabelSelector{
+					{
+						Key:      "srcname",
+						Operator: "=",
+						Values:   []string{"srcfoo"},
+					},
+					{
+						Key:      "srcotherlabel",
+						Operator: "!=",
+						Values:   []string{"srcbar"},
+					},
+				},
+				DestinationSelectors: []v1.LabelSelector{
+					{
+						Key:      "dstname",
+						Operator: "=",
+						Values:   []string{"dstfoo"},
+					},
+					{
+						Key:      "dstotherlabel",
+						Operator: "!=",
+						Values:   []string{"dstbar"},
+					},
+				},
 			},
 		),
 	)
@@ -368,6 +338,13 @@ var _ = Describe("FlowLog", func() {
 				}
 
 				mockK8sClientFactory.On("RBACAuthorizerForCluster", "cluster").Return(mockRBACAuthoriser, nil)
+
+				// An empty response is all we need for these tests, since they are verifying authorization.
+				setResponse(v1.List[v1.L3Flow]{
+					Items: []v1.L3Flow{
+						{},
+					},
+				})
 
 				respRecorder := httptest.NewRecorder()
 				req := createFlowLogRequest(map[string][]string{
@@ -446,12 +423,12 @@ var _ = Describe("FlowLog", func() {
 
 				mockK8sClientFactory.On("RBACAuthorizerForCluster", "cluster").Return(mockRBACAuthoriser, nil)
 
-				mockDoer.On("Do", mock.Anything).Return(&http.Response{
-					StatusCode: http.StatusOK,
-					Body: esSearchResultToResponseBody(elastic.SearchResult{
-						Hits: &elastic.SearchHits{TotalHits: &elastic.TotalHits{Value: 1}},
-					}),
-				}, nil)
+				// An empty response is all we need for these tests, since they are verifying authorization.
+				setResponse(v1.List[v1.L3Flow]{
+					Items: []v1.L3Flow{
+						{},
+					},
+				})
 
 				respRecorder := httptest.NewRecorder()
 				req := createFlowLogRequest(map[string][]string{
@@ -539,7 +516,7 @@ var _ = Describe("FlowLog", func() {
 			})
 
 			// These table entry tests are run against setting both source and destination labels
-			var labelTestCases = []TableEntry{
+			labelTestCases := []TableEntry{
 				Entry("parses and returns a single label",
 					[]map[string]interface{}{
 						{"doc_count": 1, "key": "labelname=labelvalue"},
@@ -550,7 +527,8 @@ var _ = Describe("FlowLog", func() {
 				),
 				Entry("parses and returns a multiple different labels",
 					[]map[string]interface{}{
-						{"doc_count": 1, "key": "labelname1=labelvalue1"}, {"doc_count": 1, "key": "labelname2=labelvalue2"},
+						{"doc_count": 1, "key": "labelname1=labelvalue1"},
+						{"doc_count": 1, "key": "labelname2=labelvalue2"},
 						{"doc_count": 1, "key": "labelname3=labelvalue3"},
 					},
 					FlowResponseLabels{
@@ -561,47 +539,18 @@ var _ = Describe("FlowLog", func() {
 				),
 				Entry("parses and returns labels with multiple values",
 					[]map[string]interface{}{
-						{"doc_count": 1, "key": "labelname=labelvalue1"}, {"doc_count": 1, "key": "labelname=labelvalue2"},
+						{"doc_count": 1, "key": "labelname=labelvalue1"},
+						{"doc_count": 1, "key": "labelname=labelvalue2"},
 						{"doc_count": 1, "key": "labelname=labelvalue3"},
 					},
 					FlowResponseLabels{
 						"labelname": {{Count: 1, Value: "labelvalue1"}, {Count: 1, Value: "labelvalue2"}, {Count: 1, Value: "labelvalue3"}},
 					},
 				),
-				Entry("skips bucket entries with non string keys and parses the other valid labels",
-					[]map[string]interface{}{
-						{"doc_count": 1, "key": "labelname=labelvalue1"}, {"doc_count": 1, "key": 2},
-						{"doc_count": 1, "key": "labelname=labelvalue3"},
-					},
-					FlowResponseLabels{
-						"labelname": {{Count: 1, Value: "labelvalue1"}, {Count: 1, Value: "labelvalue3"}},
-					},
-				),
-				Entry("skips bucket entries with invalid keys and parses the other valid lables",
-					[]map[string]interface{}{
-						{"doc_count": 1, "key": "labelname=labelvalue1"}, {"doc_count": 1, "key": "badkey"},
-						{"doc_count": 1, "key": "labelname=labelvalue3"},
-					},
-					FlowResponseLabels{
-						"labelname": {{Count: 1, Value: "labelvalue1"}, {Count: 1, Value: "labelvalue3"}},
-					},
-				),
 			}
 
 			DescribeTable("parses the source labels", func(buckets []map[string]interface{}, expectedSrcLabels FlowResponseLabels) {
-				mockDoer.On("Do", mock.Anything).Return(&http.Response{
-					StatusCode: http.StatusOK,
-					Body: esSearchResultToResponseBody(elastic.SearchResult{
-						Hits: &elastic.SearchHits{TotalHits: &elastic.TotalHits{Value: 1}},
-						Aggregations: elastic.Aggregations{
-							"source_labels": calicojson.MustMarshal(map[string]interface{}{
-								"by_kvpair": map[string]interface{}{
-									"buckets": buckets,
-								},
-							}),
-						},
-					}),
-				}, nil)
+				setResponse(linseedLabelResponse(buckets, "src"))
 
 				flowLogHandler.ServeHTTP(respRecorder, req)
 				Expect(respRecorder.Code).Should(Equal(200))
@@ -619,19 +568,7 @@ var _ = Describe("FlowLog", func() {
 			}, labelTestCases...)
 
 			DescribeTable("parses the destination labels", func(buckets []map[string]interface{}, expectedDstLabels FlowResponseLabels) {
-				mockDoer.On("Do", mock.Anything).Return(&http.Response{
-					StatusCode: http.StatusOK,
-					Body: esSearchResultToResponseBody(elastic.SearchResult{
-						Hits: &elastic.SearchHits{TotalHits: &elastic.TotalHits{Value: 1}},
-						Aggregations: elastic.Aggregations{
-							"dest_labels": calicojson.MustMarshal(map[string]interface{}{
-								"by_kvpair": map[string]interface{}{
-									"buckets": buckets,
-								},
-							}),
-						},
-					}),
-				}, nil)
+				setResponse(linseedLabelResponse(buckets, "dst"))
 
 				flowLogHandler.ServeHTTP(respRecorder, req)
 				Expect(respRecorder.Code).Should(Equal(200))
@@ -653,63 +590,12 @@ var _ = Describe("FlowLog", func() {
 			DescribeTable("parsing policy hits when completely authorized",
 				func(
 					srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits []map[string]interface{},
-					expectedSrcPolicyReport, expectedDstPolicyReport *PolicyReport) {
+					expectedSrcPolicyReport, expectedDstPolicyReport *PolicyReport,
+				) {
 					mockRBACAuthoriser.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
-					agg := elastic.Aggregations{}
-					if srcAllowHits != nil || srcDenyHits != nil {
-						srcPolicyHits := calicojson.Map{}
-						if srcAllowHits != nil {
-							srcPolicyHits["allowed_flow_policies"] = calicojson.Map{
-								"policies": calicojson.Map{
-									"by_tiered_policy": calicojson.Map{
-										"buckets": srcAllowHits,
-									},
-								},
-							}
-						}
-						if srcDenyHits != nil {
-							srcPolicyHits["denied_flow_policies"] = calicojson.Map{
-								"policies": calicojson.Map{
-									"by_tiered_policy": calicojson.Map{
-										"buckets": srcDenyHits,
-									},
-								},
-							}
-						}
-						agg["src_policy_report"] = calicojson.MustMarshal(srcPolicyHits)
-					}
-
-					if dstAllowHits != nil || dstDenyHits != nil {
-						dstPolicyHits := calicojson.Map{}
-						if dstAllowHits != nil {
-							dstPolicyHits["allowed_flow_policies"] = calicojson.Map{
-								"policies": calicojson.Map{
-									"by_tiered_policy": calicojson.Map{
-										"buckets": dstAllowHits,
-									},
-								},
-							}
-						}
-						if dstDenyHits != nil {
-							dstPolicyHits["denied_flow_policies"] = calicojson.Map{
-								"policies": calicojson.Map{
-									"by_tiered_policy": calicojson.Map{
-										"buckets": dstDenyHits,
-									},
-								},
-							}
-						}
-						agg["dest_policy_report"] = calicojson.MustMarshal(dstPolicyHits)
-					}
-
-					mockDoer.On("Do", mock.Anything).Return(&http.Response{
-						StatusCode: http.StatusOK,
-						Body: esSearchResultToResponseBody(elastic.SearchResult{
-							Hits:         &elastic.SearchHits{TotalHits: &elastic.TotalHits{Value: 1}},
-							Aggregations: agg,
-						}),
-					}, nil)
+					// Configure the response from linseed based on the entry.
+					setResponse(linseedPolicyResponse(srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits))
 
 					flowLogHandler.ServeHTTP(respRecorder, req)
 					Expect(respRecorder.Code).Should(Equal(200))
@@ -744,6 +630,7 @@ var _ = Describe("FlowLog", func() {
 						},
 					},
 				),
+
 				Entry("single policy hit allowed at src and denied at dst",
 					[]map[string]interface{}{
 						{"key": "0|tier1|namespace1/policy1|allow|0", "doc_count": 1},
@@ -763,6 +650,7 @@ var _ = Describe("FlowLog", func() {
 						},
 					},
 				),
+
 				Entry("single policy hit denied at src and denied on dst",
 					nil,
 					[]map[string]interface{}{
@@ -776,6 +664,7 @@ var _ = Describe("FlowLog", func() {
 					},
 					nil,
 				),
+
 				Entry("single policy hit allowed and denied at src and dst",
 					[]map[string]interface{}{
 						{"key": "0|tier1|namespace1/policy1|allow|0", "doc_count": 1},
@@ -806,6 +695,7 @@ var _ = Describe("FlowLog", func() {
 						},
 					},
 				),
+
 				// Note that this test isn't exactly valid since a deny at the source means no reported flow at the
 				// destination, but this is just to test that the allow / deny logic handles multiple policies for
 				// src and dst.
@@ -871,6 +761,7 @@ var _ = Describe("FlowLog", func() {
 						},
 					},
 				),
+
 				Entry("Parses Kubernetes policy",
 					nil,
 					[]map[string]interface{}{
@@ -884,6 +775,7 @@ var _ = Describe("FlowLog", func() {
 					},
 					nil,
 				),
+
 				Entry("Parses Profile policy",
 					nil,
 					[]map[string]interface{}{
@@ -902,67 +794,16 @@ var _ = Describe("FlowLog", func() {
 			DescribeTable("obfuscating policies",
 				func(srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits []map[string]interface{},
 					expectedSrcPolicyReport, expectedDstPolicyReport *PolicyReport,
-					authResources []*authzv1.ResourceAttributes) {
+					authResources []*authzv1.ResourceAttributes,
+				) {
 					for _, resource := range authResources {
 						mockRBACAuthoriser.On("Authorize", mock.Anything, resource, mock.Anything).Return(true, nil)
 					}
 
 					mockRBACAuthoriser.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(false, nil).Maybe()
 
-					agg := elastic.Aggregations{}
-					if srcAllowHits != nil || srcDenyHits != nil {
-						srcPolicyHits := calicojson.Map{}
-						if srcAllowHits != nil {
-							srcPolicyHits["allowed_flow_policies"] = calicojson.Map{
-								"policies": calicojson.Map{
-									"by_tiered_policy": calicojson.Map{
-										"buckets": srcAllowHits,
-									},
-								},
-							}
-						}
-						if srcDenyHits != nil {
-							srcPolicyHits["denied_flow_policies"] = calicojson.Map{
-								"policies": calicojson.Map{
-									"by_tiered_policy": calicojson.Map{
-										"buckets": srcDenyHits,
-									},
-								},
-							}
-						}
-						agg["src_policy_report"] = calicojson.MustMarshal(srcPolicyHits)
-					}
-
-					if dstAllowHits != nil || dstDenyHits != nil {
-						dstPolicyHits := calicojson.Map{}
-						if dstAllowHits != nil {
-							dstPolicyHits["allowed_flow_policies"] = calicojson.Map{
-								"policies": calicojson.Map{
-									"by_tiered_policy": calicojson.Map{
-										"buckets": dstAllowHits,
-									},
-								},
-							}
-						}
-						if dstDenyHits != nil {
-							dstPolicyHits["denied_flow_policies"] = calicojson.Map{
-								"policies": calicojson.Map{
-									"by_tiered_policy": calicojson.Map{
-										"buckets": dstDenyHits,
-									},
-								},
-							}
-						}
-						agg["dest_policy_report"] = calicojson.MustMarshal(dstPolicyHits)
-					}
-
-					mockDoer.On("Do", mock.Anything).Return(&http.Response{
-						StatusCode: http.StatusOK,
-						Body: esSearchResultToResponseBody(elastic.SearchResult{
-							Hits:         &elastic.SearchHits{TotalHits: &elastic.TotalHits{Value: 1}},
-							Aggregations: agg,
-						}),
-					}, nil)
+					// Configure the response from linseed based on the entry.
+					setResponse(linseedPolicyResponse(srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits))
 
 					flowLogHandler.ServeHTTP(respRecorder, req)
 					Expect(respRecorder.Code).Should(Equal(200))
@@ -979,6 +820,7 @@ var _ = Describe("FlowLog", func() {
 						DstPolicyReport: expectedDstPolicyReport,
 					}))
 				},
+
 				Entry("single obfuscated policy hit allowed at src and dst",
 					[]map[string]interface{}{
 						{"key": "0|tier1|namespace/policy|allow|0", "doc_count": 1},
@@ -1004,6 +846,7 @@ var _ = Describe("FlowLog", func() {
 				// Note that this test isn't exactly valid since a deny at the source means no reported flow at the
 				// destination, but this is just to test that the allow / deny logic handles multiple policies for
 				// src and dst.
+
 				Entry("multiple obfuscated passes before non obfuscated deny at src and dst",
 					nil,
 					[]map[string]interface{}{
@@ -1037,6 +880,7 @@ var _ = Describe("FlowLog", func() {
 						{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier23"},
 					},
 				),
+
 				Entry("multiple obfuscated passes before obfuscated deny",
 					nil,
 					[]map[string]interface{}{
@@ -1065,6 +909,7 @@ var _ = Describe("FlowLog", func() {
 						{Namespace: "destination-ns", Verb: "list", Resource: "pods"},
 					},
 				),
+
 				Entry("multiple obfuscated passes before non obfuscated staged deny before obfuscated deny",
 					nil,
 					[]map[string]interface{}{
@@ -1105,6 +950,7 @@ var _ = Describe("FlowLog", func() {
 						{Namespace: "namespace2", Verb: "list", Group: "projectcalico.org", Resource: "tier.stagednetworkpolicies"},
 					},
 				),
+
 				Entry("omit obfuscated staged deny combine obfuscated pass and deny",
 					nil,
 					[]map[string]interface{}{
@@ -1153,13 +999,12 @@ func createFlowLogRequest(parameters map[string][]string) *http.Request {
 	return req
 }
 
-func esSearchResultToResponseBody(searchResult elastic.SearchResult) io.ReadCloser {
+func linseedSearchResultToResponseBody(searchResult v1.List[v1.L3Flow]) []byte {
 	byts, err := json.Marshal(searchResult)
 	if err != nil {
 		panic(err)
 	}
-
-	return io.NopCloser(bytes.NewBuffer(byts))
+	return byts
 }
 
 func mustParseTime(timeStr, format string) time.Time {
@@ -1175,4 +1020,120 @@ func createLabelJson(key, operator string, values []string) string {
 	return string(calicojson.MustMarshal(map[string]interface{}{
 		"key": key, "operator": operator, "values": values,
 	}))
+}
+
+// policiesToV1 is a helper to turn a policy string in ES format into
+// a v1.Policy that Linseed would return.
+func policiesToV1(policies []map[string]interface{}) []v1.Policy {
+	res := []v1.Policy{}
+	for _, policy := range policies {
+		key := policy["key"].(string)
+		count := policy["doc_count"].(int)
+		policyHit, err := api.PolicyHitFromFlowLogPolicyString(key, int64(count))
+		if err != nil {
+			panic(err)
+		}
+		pol := v1.Policy{
+			Action:       string(policyHit.Action()),
+			Tier:         policyHit.Tier(),
+			Namespace:    policyHit.Namespace(),
+			Name:         policyHit.Name(),
+			IsStaged:     policyHit.IsStaged(),
+			IsKubernetes: policyHit.IsKubernetes(),
+			IsProfile:    policyHit.IsProfile(),
+			Count:        policyHit.Count(),
+			RuleID:       policyHit.RuleIdIndex(),
+		}
+		res = append(res, pol)
+	}
+	return res
+}
+
+func linseedPolicyResponse(srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits []map[string]interface{}) v1.List[v1.L3Flow] {
+	return v1.List[v1.L3Flow]{
+		AfterKey: nil,
+		Items: []v1.L3Flow{
+			// A flow for the source allow hits.
+			{
+				Key: v1.L3FlowKey{
+					Reporter: "src",
+					Action:   "allow",
+				},
+				LogStats: &v1.LogStats{
+					FlowLogCount: 1,
+					LogCount:     1,
+				},
+				Policies: policiesToV1(srcAllowHits),
+			},
+
+			// Flow for the source deny hits.
+			{
+				Key: v1.L3FlowKey{
+					Reporter: "src",
+					Action:   "deny",
+				},
+				LogStats: &v1.LogStats{
+					FlowLogCount: 1,
+					LogCount:     1,
+				},
+				Policies: policiesToV1(srcDenyHits),
+			},
+			// A flow for the dest allow hits.
+			{
+				Key: v1.L3FlowKey{
+					Reporter: "dst",
+					Action:   "allow",
+				},
+				LogStats: &v1.LogStats{
+					FlowLogCount: 1,
+					LogCount:     1,
+				},
+				Policies: policiesToV1(dstAllowHits),
+			},
+
+			// Flow for the dest deny hits.
+			{
+				Key: v1.L3FlowKey{
+					Reporter: "dst",
+					Action:   "deny",
+				},
+				LogStats: &v1.LogStats{
+					FlowLogCount: 1,
+					LogCount:     1,
+				},
+				Policies: policiesToV1(dstDenyHits),
+			},
+		},
+	}
+}
+
+func linseedLabelResponse(labels []map[string]interface{}, srcDst string) v1.List[v1.L3Flow] {
+	newLabels := []v1.FlowLabels{}
+
+	for _, l := range labels {
+		key := l["key"].(string)
+		// count := l["doc_count"].(int)
+		splits := strings.Split(key, "=")
+
+		if len(splits) == 2 {
+			newLabels = append(newLabels, v1.FlowLabels{
+				Key:    splits[0],
+				Values: []string{splits[1]},
+			})
+		}
+	}
+
+	l3flow := v1.L3Flow{
+		LogStats: &v1.LogStats{FlowLogCount: 1, LogCount: 1},
+	}
+	if srcDst == "src" {
+		l3flow.SourceLabels = newLabels
+	} else {
+		l3flow.DestinationLabels = newLabels
+	}
+
+	return v1.List[v1.L3Flow]{
+		Items:    []v1.L3Flow{l3flow},
+		AfterKey: nil,
+	}
 }

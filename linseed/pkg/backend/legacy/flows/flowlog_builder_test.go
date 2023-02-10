@@ -2,6 +2,7 @@ package flows_test
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
@@ -62,7 +63,7 @@ func (b *flowLogBuilder) Build() (*v1.FlowLog, error) {
 // Note that some fields on a Flow are aggregated, and so will need to be calculated based
 // on the sum total of flow logs used to build the flow.
 func (b *flowLogBuilder) ExpectedFlow() *v1.L3Flow {
-	return &v1.L3Flow{
+	f := &v1.L3Flow{
 		Key: v1.L3FlowKey{
 			Action:   b.log.Action,
 			Reporter: b.log.Reporter,
@@ -88,6 +89,17 @@ func (b *flowLogBuilder) ExpectedFlow() *v1.L3Flow {
 			PortName:  b.log.DestServicePortName,
 		},
 	}
+
+	// Fill in the expected labels.
+	for _, l := range b.log.SourceLabels.Labels {
+		labelParts := strings.Split(l, "=")
+		f.SourceLabels = append(f.SourceLabels, v1.FlowLabels{
+			Key:    labelParts[0],
+			Values: []string{labelParts[1]},
+		})
+	}
+
+	return f
 }
 
 func (b *flowLogBuilder) WithSourceIP(ip string) *flowLogBuilder {
@@ -159,6 +171,11 @@ func (b *flowLogBuilder) WithReporter(r string) *flowLogBuilder {
 
 func (b *flowLogBuilder) WithAction(a string) *flowLogBuilder {
 	b.log.Action = a
+	return b
+}
+
+func (b *flowLogBuilder) WithPolicies(p string) *flowLogBuilder {
+	b.log.Policies = &v1.FlowLogPolicy{AllPolicies: []string{p}}
 	return b
 }
 

@@ -113,7 +113,7 @@ func Start(cfg *Config) error {
 		ClientCertPath:  "",
 		FIPSModeEnabled: true,
 	}
-	linseed, err := lsclient.NewClient("", "", config)
+	linseed, err := lsclient.NewClient("", config)
 	if err != nil {
 		log.WithError(err).Error("failed to create linseed client")
 		return err
@@ -147,6 +147,7 @@ func Start(cfg *Config) error {
 					servicegraph.NewServiceGraphHandler(
 						context.Background(),
 						authz,
+						esClient,
 						linseed,
 						k8sClientSetFactory,
 						&servicegraph.Config{
@@ -274,7 +275,7 @@ func Start(cfg *Config) error {
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.NewFlowHandler(esClient, k8sClientFactory)))))
+					middleware.NewFlowHandler(linseed, k8sClientFactory)))))
 	sm.Handle("/user",
 		middleware.AuthenticateRequest(authn,
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))

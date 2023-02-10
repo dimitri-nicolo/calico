@@ -25,11 +25,12 @@ func NewRequest(c *RESTClient) *Request {
 
 // Request is a helper struct for building an HTTP request.
 type Request struct {
-	client  *RESTClient
-	headers http.Header
-	verb    string
-	params  any
-	path    string
+	client    *RESTClient
+	headers   http.Header
+	verb      string
+	params    any
+	path      string
+	clusterID string
 }
 
 // Verb sets the verb this request will use.
@@ -46,6 +47,12 @@ func (r *Request) Params(p any) *Request {
 
 func (r *Request) Path(p string) *Request {
 	r.path = p
+	return r
+}
+
+// Cluster sets the x-cluster-id header for this request.
+func (r *Request) Cluster(c string) *Request {
+	r.clusterID = c
 	return r
 }
 
@@ -89,7 +96,7 @@ func (r *Request) Do(ctx context.Context) *Result {
 			err: fmt.Errorf("error creating new request: %s", err),
 		}
 	}
-	req.Header.Set("x-cluster-id", r.client.clusterID)
+	req.Header.Set("x-cluster-id", r.clusterID)
 	req.Header.Set("x-tenant-id", r.client.tenantID)
 	req.Header.Set("Content-Type", "application/json")
 

@@ -17,8 +17,7 @@ type RESTClient struct {
 	config Config
 	client *http.Client
 
-	clusterID string
-	tenantID  string
+	tenantID string
 }
 
 type Config struct {
@@ -33,17 +32,16 @@ type Config struct {
 }
 
 // NewClient returns a new RESTClient.
-func NewClient(clusterID, tenantID string, cfg Config) (*RESTClient, error) {
+func NewClient(tenantID string, cfg Config) (*RESTClient, error) {
 	httpClient, err := newHTTPClient(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	return &RESTClient{
-		config:    cfg,
-		clusterID: clusterID,
-		tenantID:  tenantID,
-		client:    httpClient,
+		config:   cfg,
+		tenantID: tenantID,
+		client:   httpClient,
 	}, nil
 }
 

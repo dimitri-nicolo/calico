@@ -17,11 +17,12 @@ type DNSFlowsInterface interface {
 // DNSFlows implements DNSFlowsInterface.
 type dnsFlows struct {
 	restClient *rest.RESTClient
+	clusterID  string
 }
 
 // newFlows returns a new FlowsInterface bound to the supplied client.
-func newDNSFlows(c *client) DNSFlowsInterface {
-	return &dnsFlows{restClient: c.restClient}
+func newDNSFlows(c *client, cluster string) DNSFlowsInterface {
+	return &dnsFlows{restClient: c.restClient, clusterID: cluster}
 }
 
 // List gets the flow list for the given flow input params.
@@ -30,6 +31,7 @@ func (f *dnsFlows) List(ctx context.Context, params v1.DNSFlowParams) (v1.List[v
 	err := f.restClient.Post().
 		Path("/api/v1/flows/dns").
 		Params(&params).
+		Cluster(f.clusterID).
 		Do(ctx).
 		Into(&flows)
 	if err != nil {

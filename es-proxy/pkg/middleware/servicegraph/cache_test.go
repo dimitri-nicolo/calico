@@ -52,15 +52,15 @@ func CreateMockBackendWithData(rbac RBACFilter, names NameHelper) *MockServiceGr
 	Expect(err).NotTo(HaveOccurred())
 
 	// Labels will be preloaded with value k8s-app = AnyApp and label = any
-	var labels = []string{"k8s-app == \"AnyApp\"", "label == \"any\""}
+	labels := []string{"k8s-app == \"AnyApp\"", "label == \"any\""}
 
 	// Will add labels only for services emailservice and shipping service from storefront namespace
-	var serviceLabels = make(map[v1.NamespacedName]LabelSelectors)
+	serviceLabels := make(map[v1.NamespacedName]LabelSelectors)
 	serviceLabels[v1.NamespacedName{Name: "emailservice", Namespace: "storefront"}] = labels
 	serviceLabels[v1.NamespacedName{Name: "shippingservice", Namespace: "storefront"}] = labels
 
 	// Will add label expressions only for replicaset loadgenerator-795cbf498c from storefront namespace
-	var replicaSetLabels = make(map[v1.NamespacedName]LabelSelectors)
+	replicaSetLabels := make(map[v1.NamespacedName]LabelSelectors)
 	replicaSetLabels[v1.NamespacedName{Name: "loadgenerator-795cbf498c", Namespace: "storefront"}] = []string{
 		"k8s-app in {\"AnyAp\"}", "environment not in {\"prod\"}", "!has(critical)", "has(test)",
 	}

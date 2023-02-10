@@ -15,7 +15,7 @@ import (
 //
 // Example usage:
 //
-// listFunc := client.L3Flows().List
+// listFunc := client.L3Flows("cluster").List
 // pager := NewListPager[v1.L3Flow](&v1.L3FlowParams{})
 // getPage := pager.PageFunc(listFunc)
 // results, more, err := getPage()
