@@ -175,14 +175,13 @@ NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 # CALICO_VERSION is used by pkg/lifecycle/startup
 # All these are required for correct version reporting by the various binaries
 # as well as embedding this information within the ClusterInformation resource.
-LDFLAGS=-ldflags "\
-	-X $(PACKAGE_NAME)/pkg/lifecycle/startup.CNXVERSION=$(NODE_GIT_VERSION) \
+LDFLAGS= -X $(PACKAGE_NAME)/pkg/lifecycle/startup.CNXVERSION=$(NODE_GIT_VERSION) \
 	-X $(PACKAGE_NAME)/pkg/lifecycle/startup.CNXRELEASEVERSION=$(NODE_RELEASE_VERSION) \
 	-X $(PACKAGE_NAME)/pkg/lifecycle/startup.CALICOVERSION=$(CALICO_VERSION) \
 	-X main.VERSION=$(NODE_GIT_VERSION) \
 	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
-	-X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT)"
+	-X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT)
 
 # Source golang files on which compiling the calico-node binary depends.
 SRC_FILES=$(shell find ./pkg -name '*.go') \
@@ -261,27 +260,28 @@ DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$
 DOCKER_GO_BUILD_CGO_WINDOWS=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD)
 
 $(NODE_CONTAINER_BINARY): filesystem/usr/lib/calico/bpf $(LIBBPF_A) $(SRC_FILES) ../go.mod
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go build -v -o $@ $(BUILD_FLAGS) $(LDFLAGS) ./cmd/calico-node/main.go'
+	$(call build_cgo_boring_binary, ./cmd/calico-node/main.go, $@)
+
 
 $(WINDOWS_BINARY):
 	$(DOCKER_GO_BUILD_CGO_WINDOWS) sh -c '$(GIT_CONFIG_SSH) \
 		GOOS=windows CC=x86_64-w64-mingw32-gcc \
-		go build --buildmode=exe -v -o $@ $(LDFLAGS) ./cmd/calico-node/main.go'
+		go build --buildmode=exe -v -o $@ -ldflags "$(LDFLAGS)" ./cmd/calico-node/main.go'
 
 $(WINDOWS_ARCHIVE_ROOT)/cni/calico.exe:
 	$(DOCKER_RUN) \
 		-e GOOS=windows \
 		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build -v -o $@ $(LDFLAGS) ./cmd/calico'
+		go build -v -o $@ -ldflags "$(LDFLAGS)" ./cmd/calico'
 
 $(WINDOWS_ARCHIVE_ROOT)/cni/calico-ipam.exe:
 	$(DOCKER_RUN) \
 		-e GOOS=windows \
 		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build -v -o $@ $(LDFLAGS) ./cmd/calico-ipam'
+		go build -v -o $@ -ldflags "$(LDFLAGS)" ./cmd/calico-ipam'
 
 $(TOOLS_MOUNTNS_BINARY):
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go build -v -o $@ $(BUILD_FLAGS) $(LDFLAGS) ./cmd/mountns'
+	$(call build_cgo_boring_binary, ./cmd/mountns, $@)
 
 ###############################################################################
 # Building the image
@@ -473,7 +473,7 @@ dual-tor-cleanup:
 tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 	mkdir -p dist
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/tests/k8st/reliable-nc"'
+	    sh -c 'go build -v -i -o $@ -v $(BUILD_FLAGS) -ldflags $(LDFLAGS) "$(PACKAGE_NAME)/tests/k8st/reliable-nc"'
 
 ## k8st: STs in a real Kubernetes cluster provisioned by KIND
 ##

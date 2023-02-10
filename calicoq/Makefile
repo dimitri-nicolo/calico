@@ -11,7 +11,7 @@ BUILD_IMAGES          ?=$(CALICOQ_IMAGE)
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-VERSION_FLAGS=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(GIT_VERSION) \
+LDFLAGS=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(GIT_VERSION) \
 	-X $(PACKAGE_NAME)/calicoq/commands.BUILD_DATE=$(DATE) \
 	-X $(PACKAGE_NAME)/calicoq/commands.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/calicoq/commands.GIT_REVISION=$(GIT_VERSION)
@@ -58,7 +58,7 @@ $(BINARY): $(SRC_FILES)
 
 	# Create the binary
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	   sh -c '$(GIT_CONFIG_SSH) go build -v -ldflags "$(VERSION_FLAGS)" -o "$(BINARY)" "./calicoq/calicoq.go"'
+	   sh -c '$(GIT_CONFIG_SSH) go build -v -ldflags "$(LDFLAGS)" -o "$(BINARY)" "./calicoq/calicoq.go"'
 
 ###############################################################################
 # CI/CD

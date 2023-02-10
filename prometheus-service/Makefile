@@ -10,10 +10,10 @@ BUILD_IMAGES          		?=$(PROMETHEUS_SERVICE_IMAGE)
 
 PROMETHEUS_SERVICE_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 
-VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-                  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-                  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-                  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
+LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
+			  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
+			  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
+			  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
 
 # Create an extended go-build image with docker binary installed for use with st target
 TOOLING_IMAGE?=calico/go-build-with-docker
@@ -57,7 +57,7 @@ build: bin/prometheus-service-$(ARCH)
 bin/prometheus-service-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" "$(PACKAGE_NAME)/cmd/server"'
+			go build -o $@ -v -ldflags "$(LDFLAGS)" "$(PACKAGE_NAME)/cmd/server"'
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGES) $(addsuffix -$(ARCH),$(BUILD_IMAGES))

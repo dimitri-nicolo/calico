@@ -17,12 +17,11 @@ SNORT_VERSION             ?=2.9.20
 #
 # We use -B to insert a build ID note into the executable, without which, the
 # RPM build tools complain.
-LDFLAGS:=-ldflags "\
-		-X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
-		-X $(PACKAGE_NAME)/pkg/version.BUILD_DATE=$(DATE) \
-		-X $(PACKAGE_NAME)/pkg/version.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
-		-X $(PACKAGE_NAME)/pkg/version.GIT_REVISION=$(GIT_COMMIT) \
-		-B 0x$(BUILD_ID)"
+LDFLAGS := -X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
+			-X $(PACKAGE_NAME)/pkg/version.BUILD_DATE=$(DATE) \
+			-X $(PACKAGE_NAME)/pkg/version.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
+			-X $(PACKAGE_NAME)/pkg/version.GIT_REVISION=$(GIT_COMMIT) \
+			-B 0x$(BUILD_ID)
 
 ##############################################################################
 # Include ../lib.Makefile before anything else
@@ -54,7 +53,7 @@ build: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v $(BUILD_FLAGS) -ldflags "$(VERSION_FLAGS)" cmd/controller/controller.go'
+			go build -o $@ -v $(BUILD_FLAGS) -ldflags "$(LDFLAGS)" cmd/controller/controller.go'
 
 ###############################################################################
 # Building the images

@@ -30,10 +30,10 @@ SRC_FILES = $(shell find pkg cmd -name '*.go') \
 
 # We use -X to insert the version information into the placeholder variables
 # in the version package.
-VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-                  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-                  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-                  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
+LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
+			  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
+			  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
+			  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
 
 ###############################################################################
 # BUILD BINARY
@@ -52,7 +52,7 @@ endif
 bin/firewall-integration-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v $(BUILD_TAGS) -ldflags "$(VERSION_FLAGS)" cmd/server/*.go'
+			go build -o $@ -v $(BUILD_TAGS) -ldflags "$(LDFLAGS)" cmd/server/*.go'
 
 ###############################################################################
 # BUILD IMAGE

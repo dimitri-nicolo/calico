@@ -40,7 +40,7 @@ ifdef UNIT_TESTS
 UNIT_TEST_FLAGS= -run $(UNIT_TESTS) -v
 endif
 
-VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
+LDFLAGS=-X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
 	-X $(PACKAGE_NAME)/pkg/version.BUILD_DATE=$(DATE) \
 	-X $(PACKAGE_NAME)/pkg/version.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/pkg/version.GIT_REVISION=$(GIT_COMMIT)
@@ -65,7 +65,7 @@ build: $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH) $(BINDIR)/intrusio
 $(BINDIR)/controller-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) \
 	    sh -c '$(GIT_CONFIG_SSH) \
-	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) cmd/controller/controller.go'
+	           go build -o $@ -v -ldflags "$(LDFLAGS)" $(BUILD_TAGS) cmd/controller/controller.go'
 
 .PHONY: $(BINDIR)/healthz-$(ARCH)
 $(BINDIR)/healthz-$(ARCH): $(SRC_FILES)
@@ -77,7 +77,7 @@ $(BINDIR)/healthz-$(ARCH): $(SRC_FILES)
 $(BINDIR)/intrusion-detection-job-installer-$(ARCH):
 	$(DOCKER_GO_BUILD_CGO) \
 	    sh -c '$(GIT_CONFIG_SSH) \
-	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) cmd/install/install.go'
+	           go build -o $@ -v -ldflags "$(LDFLAGS)" $(BUILD_TAGS) cmd/install/install.go'
 
 # by default, build the image for the target architecture
 .PHONY: image-all

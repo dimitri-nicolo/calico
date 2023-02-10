@@ -39,11 +39,11 @@ ifdef UNIT_TESTS
 UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
 
-VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler.VERSION=$(GIT_VERSION) \
-	-X $(PACKAGE_NAME)/pkg/handler.BUILD_DATE=$(DATE) \
-	-X $(PACKAGE_NAME)/pkg/handler.GIT_TAG=$(GIT_DESCRIPTION) \
-	-X $(PACKAGE_NAME)/pkg/handler.GIT_COMMIT=$(GIT_COMMIT) \
-	-X main.VERSION=$(ES_PROXY_VERSION)
+LDFLAGS = -X $(PACKAGE_NAME)/pkg/handler.VERSION=$(GIT_VERSION) \
+			-X $(PACKAGE_NAME)/pkg/handler.BUILD_DATE=$(DATE) \
+			-X $(PACKAGE_NAME)/pkg/handler.GIT_TAG=$(GIT_DESCRIPTION) \
+			-X $(PACKAGE_NAME)/pkg/handler.GIT_COMMIT=$(GIT_COMMIT) \
+			-X main.VERSION=$(ES_PROXY_VERSION)
 
 ###############################################################################
 # This section builds the output binaries.
@@ -61,7 +61,7 @@ endif
 $(BINDIR)/es-proxy-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO)  \
 		sh -c '$(GIT_CONFIG_SSH) \
-			   go build -o $@ -v $(BUILD_TAGS) -ldflags "$(VERSION_FLAGS)" cmd/server/*.go'
+			   go build -o $@ -v $(BUILD_TAGS) -ldflags "$(LDFLAGS)" cmd/server/*.go'
 
 ES_PROXY_CONTAINER_CREATED=.es-proxy.created-$(ARCH)
 

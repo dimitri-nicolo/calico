@@ -22,10 +22,10 @@ SRC_FILES      = $(shell sh -c "find pkg cmd -name \\*.go") \
 			$(shell find ../libcalico-go/lib -name '*.go') \
 			$(shell find ../licensing/client -name '*.go')
 
-VERSION_FLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-                -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-                -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-                -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
+LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
+			-X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
+			-X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
+			-X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
 
 ###############################################################################
 # This section builds the output binaries.
@@ -36,7 +36,7 @@ build: $(BINDIR)/license-agent-$(ARCH)
 $(BINDIR)/license-agent-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" "$(PACKAGE_NAME)/cmd/server"'
+			go build -o $@ -v -ldflags "$(LDFLAGS)" "$(PACKAGE_NAME)/cmd/server"'
 
 # Build the docker image.
 .PHONY: $(LICENSE_AGENT_IMAGE)
