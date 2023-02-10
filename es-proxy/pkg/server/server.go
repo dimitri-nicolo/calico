@@ -147,7 +147,6 @@ func Start(cfg *Config) error {
 					servicegraph.NewServiceGraphHandler(
 						context.Background(),
 						authz,
-						esClient,
 						linseed,
 						k8sClientSetFactory,
 						&servicegraph.Config{

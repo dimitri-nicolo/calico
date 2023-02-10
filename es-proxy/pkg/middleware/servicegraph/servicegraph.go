@@ -16,7 +16,6 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 
@@ -30,14 +29,12 @@ import (
 func NewServiceGraphHandler(
 	ctx context.Context,
 	authz auth.RBACAuthorizer,
-	elasticClient lmaelastic.Client,
 	linseed lsclient.Client,
 	clientSetFactory k8s.ClientSetFactory,
 	cfg *Config,
 ) http.Handler {
 	return NewServiceGraphHandlerWithBackend(ctx, &realServiceGraphBackend{
 		authz:            authz,
-		elastic:          elasticClient,
 		linseed:          linseed,
 		clientSetFactory: clientSetFactory,
 		config:           cfg,

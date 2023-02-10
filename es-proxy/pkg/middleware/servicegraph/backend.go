@@ -12,7 +12,6 @@ import (
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/auth"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
@@ -42,7 +41,6 @@ type ServiceGraphBackend interface {
 
 type realServiceGraphBackend struct {
 	authz            auth.RBACAuthorizer
-	elastic          lmaelastic.Client
 	clientSetFactory k8s.ClientSetFactory
 	config           *Config
 	linseed          lsclient.Client
@@ -178,7 +176,7 @@ func (r *realServiceGraphBackend) GetEvents(
 	if err != nil {
 		return nil, err
 	}
-	return GetEvents(ctx, r.elastic, cs, cluster, tr, r.config)
+	return GetEvents(ctx, r.linseed, cs, cluster, tr, r.config)
 }
 
 func (r *realServiceGraphBackend) NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error) {

@@ -78,10 +78,11 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.Eve
 		return nil, fmt.Errorf("no cluster ID on request")
 	}
 
-	// Build the query.
+	// Build the query, sorting by time.
 	query := b.client.Search().
 		Index(b.index(i)).
 		Size(opts.QueryParams.GetMaxResults()).
+		Sort("time", true).
 		Query(b.buildQuery(i, opts))
 
 	results, err := query.Do(ctx)
