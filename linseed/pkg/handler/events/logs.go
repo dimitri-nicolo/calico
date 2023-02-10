@@ -1,46 +1,44 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-package dns
+package events
 
 import (
 	"context"
 	"errors"
 	"net/http"
 
-	"github.com/projectcalico/calico/linseed/pkg/handler"
-	"github.com/sirupsen/logrus"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/handler"
 	"github.com/projectcalico/calico/linseed/pkg/middleware"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
+	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type flows struct {
-	backend bapi.DNSFlowBackend
-}
-
-func NewFlows(backend bapi.DNSFlowBackend) *flows {
-	return &flows{
+func NewEvents(backend bapi.EventsBackend) *events {
+	return &events{
 		backend: backend,
 	}
 }
 
-func (n flows) SupportedAPIs() map[string]http.Handler {
+type events struct {
+	backend bapi.EventsBackend
+}
+
+func (n events) SupportedAPIs() map[string]http.Handler {
 	return map[string]http.Handler{
 		"POST": n.Serve(),
 	}
 }
 
-func (n flows) URL() string {
+func (n events) URL() string {
 	return baseURL
 }
 
-func (n flows) Serve() http.HandlerFunc {
+func (n events) Serve() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		reqParams, err := handler.DecodeAndValidateReqParams[v1.DNSFlowParams](w, req)
+		reqParams, err := handler.DecodeAndValidateReqParams[v1.EventParams](w, req)
 		if err != nil {
 			logrus.WithError(err).Error("Failed to decode/validate request parameters")
 			var httpErr *httputils.HttpStatusError
@@ -69,7 +67,7 @@ func (n flows) Serve() http.HandlerFunc {
 		defer cancel()
 		response, err := n.backend.List(ctx, clusterInfo, *reqParams)
 		if err != nil {
-			logrus.WithError(err).Error("Failed to list flows")
+			logrus.WithError(err).Error("Failed to list events")
 			httputils.JSONError(w, &httputils.HttpStatusError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),

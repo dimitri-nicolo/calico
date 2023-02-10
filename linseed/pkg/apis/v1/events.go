@@ -3,7 +3,7 @@ package v1
 
 // EventParams define querying parameters to retrieve events
 type EventParams struct {
-	QueryParams *QueryParams `json:"query_params" validate:"required"`
+	QueryParams `json:",inline" validate:"required"`
 }
 
 type Event struct {

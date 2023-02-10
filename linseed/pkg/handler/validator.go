@@ -36,7 +36,7 @@ const contentType = "Content-Type"
 // RequestParams is the collection of request parameters types
 // that will be decoded and validated from an HTTP request
 type RequestParams interface {
-	v1.L3FlowParams | v1.L7FlowParams | v1.DNSFlowParams
+	v1.L3FlowParams | v1.L7FlowParams | v1.DNSFlowParams | v1.EventParams
 }
 
 // BulkRequestParams is the collection of request parameters types
