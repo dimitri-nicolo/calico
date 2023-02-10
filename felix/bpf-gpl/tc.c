@@ -664,7 +664,6 @@ int calico_tc_skb_accepted_entrypoint(struct __sk_buff *skb)
 
 	event_flow_log(skb, ctx.state);
 	CALI_DEBUG("Flow log event generated for ALLOW\n");
-
 	update_rule_counters(ctx.state);
 	struct calico_nat_dest *nat_dest = NULL;
 	struct calico_nat_dest nat_dest_2 = {
