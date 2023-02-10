@@ -31251,6 +31251,17 @@ rules:
       - update
       - delete
       - watch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - csidrivers
+    verbs:
+      - list
+      - watch
+      - update
+      - get
+      - create
+      - delete
   # Add the appropriate pod security policy permissions
   - apiGroups:
       - policy

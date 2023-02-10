@@ -41,7 +41,7 @@ Resource Types:
 <h3 id="operator.tigera.io/v1.APIServer">APIServer
 </h3>
 <p>APIServer installs the Tigera API server and related resources. At most one instance
-of this resource is supported. It must be named &ldquo;default&rdquo; or &ldquo;tigera-secure&rdquo;.</p>
+of this resource is supported. It must be named &ldquo;tigera-secure&rdquo;.</p>
 <table>
 <thead>
 <tr>
@@ -627,7 +627,7 @@ ComplianceStatus
 <h3 id="operator.tigera.io/v1.ImageSet">ImageSet
 </h3>
 <p>ImageSet is used to specify image digests for the images that the operator deploys.
-The name of the ImageSet is expected to be in the format <code>&lt;variant&gt;-&lt;release&gt;</code>.
+The name of the ImageSet is expected to be in the format <code>&lt;variang&gt;-&lt;release&gt;</code>.
 The <code>variant</code> used is <code>enterprise</code> if the InstallationSpec Variant is
 <code>TigeraSecureEnterprise</code> otherwise it is <code>calico</code>.
 The <code>release</code> must match the version of the variant that the operator is built to deploy,
@@ -1223,22 +1223,6 @@ IntrusionDetectionSpec
 Only DeepPacketInspection is supported for this spec.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>anomalyDetection</code><br>
-<em>
-<a href="#operator.tigera.io/v1.AnomalyDetectionSpec">
-AnomalyDetectionSpec
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>AnomalyDetection provides configuration for running AnomalyDetection Component within
-IntrusionDetection. Anomaly Detection configuration will only be applied to standalone and
-management clusters.</p>
-</td>
-</tr>
 </table>
 </td>
 </tr>
@@ -1714,18 +1698,6 @@ ManagementClusterTLS
 </table>
 </td>
 </tr>
-<tr>
-<td>
-<code>status</code><br>
-<em>
-<a href="#operator.tigera.io/v1.ManagementClusterConnectionStatus">
-ManagementClusterConnectionStatus
-</a>
-</em>
-</td>
-<td>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.Manager">Manager
@@ -2184,22 +2156,6 @@ WARNING: Please note that this field will modify the default API server Deployme
 </tr>
 <tr>
 <td>
-<code>topologySpreadConstraints</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#topologyspreadconstraint-v1-core">
-[]Kubernetes core/v1.TopologySpreadConstraint
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>TopologySpreadConstraints describes how a group of pods ought to spread across topology
-domains. Scheduler will schedule pods in a way which abides by the constraints.
-All topologySpreadConstraints are ANDed.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>tolerations</code><br>
 <em>
 <a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#toleration-v1-core">
@@ -2369,21 +2325,6 @@ string
 </td>
 <td>
 <p>State provides user-readable status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest observed set of conditions for the component. A component may be one or more of
-Ready, Progressing, Degraded or other customer types.</p>
 </td>
 </tr>
 </tbody>
@@ -2617,55 +2558,6 @@ string
 <p>State provides user-readable status.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>conditions</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest observed set of conditions for the component. A component may be one or more of
-Ready, Progressing, Degraded or other customer types.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.AnomalyDetectionSpec">AnomalyDetectionSpec
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.IntrusionDetectionSpec">IntrusionDetectionSpec</a>)
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>storageClassName</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>StorageClassName will be used to query for an existing StorageClass with the same as the field value. It will also
-populate the PersistentVolumeClaim.StorageClassName that is used to provision disks for the Anomaly Detection API
-pod for model storage. If the field is left blank, Anomaly Detection API will be using EmptyDir VolumeSource.
-The StorageClassName should only be modified when no StorageClass is currently active. We recommend choosing a
-storage class dedicated to AnomalyDetection only. Otherwise, model retention cannot be guaranteed during upgrades.
-See <a href="https://docs.tigera.io/maintenance/upgrading">https://docs.tigera.io/maintenance/upgrading</a> for up-to-date instructions.
-This field is not used for managed clusters in a Multi-cluster management setup.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.ApplicationLayerSpec">ApplicationLayerSpec
@@ -2736,21 +2628,6 @@ string
 </td>
 <td>
 <p>State provides user-readable status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest observed set of conditions for the component. A component may be one or more of
-Ready, Progressing, Degraded or other customer types.</p>
 </td>
 </tr>
 </tbody>
@@ -3176,21 +3053,6 @@ string
 </td>
 <td>
 <p>State provides user-readable status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest observed set of conditions for the component. A component may be one or more of
-Ready, Progressing, Degraded or other customer types.</p>
 </td>
 </tr>
 </tbody>
@@ -4414,21 +4276,6 @@ string
 <p>State provides user-readable status.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>conditions</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest observed set of conditions for the component. A component may be one or more of
-Ready, Progressing, Degraded or other customer types.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.ComponentName">ComponentName
@@ -4576,14 +4423,6 @@ Default: 60</p>
 </p>
 <p>EncapsulationType is the type of encapsulation to use on an IP pool.</p>
 <p>One of: IPIP, VXLAN, IPIPCrossSubnet, VXLANCrossSubnet, None</p>
-<h3 id="operator.tigera.io/v1.EncryptionOption">EncryptionOption
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.SyslogStoreSpec">SyslogStoreSpec</a>)
-</p>
-<p>EncryptionOption specifies the traffic encryption mode when connecting to a Syslog server.</p>
-<p>One of: None, TLS</p>
 <h3 id="operator.tigera.io/v1.FIPSMode">FIPSMode
 (<code>string</code> alias)</h3>
 <p>
@@ -5462,22 +5301,6 @@ Kubernetes core/v1.ResourceRequirements
 Only DeepPacketInspection is supported for this spec.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>anomalyDetection</code><br>
-<em>
-<a href="#operator.tigera.io/v1.AnomalyDetectionSpec">
-AnomalyDetectionSpec
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>AnomalyDetection provides configuration for running AnomalyDetection Component within
-IntrusionDetection. Anomaly Detection configuration will only be applied to standalone and
-management clusters.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.IntrusionDetectionStatus">IntrusionDetectionStatus
@@ -5504,21 +5327,6 @@ string
 </td>
 <td>
 <p>State provides user-readable status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest observed set of conditions for the component. A component may be one or more of
-Ready, Progressing, Degraded or other customer types.</p>
 </td>
 </tr>
 </tbody>
@@ -5689,21 +5497,6 @@ string
 </td>
 <td>
 <p>State provides user-readable status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest observed set of conditions for the component. A component may be one or more of
-Ready, Progressing, Degraded or other customer types.</p>
 </td>
 </tr>
 </tbody>
@@ -5911,21 +5704,6 @@ string
 is an opaque string which can be monitored for changes to perform actions when Kibana is modified.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>conditions</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest observed set of conditions for the component. A component may be one or more of
-Ready, Progressing, Degraded or other customer types.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.ManagementClusterConnectionSpec">ManagementClusterConnectionSpec
@@ -5968,38 +5746,6 @@ ManagementClusterTLS
 <td>
 <em>(Optional)</em>
 <p>TLS provides options for configuring how Managed Clusters can establish an mTLS connection with the Management Cluster.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.ManagementClusterConnectionStatus">ManagementClusterConnectionStatus
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.ManagementClusterConnection">ManagementClusterConnection</a>)
-</p>
-<p>ManagementClusterConnectionStatus defines the observed state of ManagementClusterConnection</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>conditions</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest observed set of conditions for the component. A component may be one or more of
-Ready, Progressing, Degraded or other customer types.</p>
 </td>
 </tr>
 </tbody>
@@ -6153,21 +5899,6 @@ string
 <p>State provides user-readable status.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>conditions</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest observed set of conditions for the component. A component may be one or more of
-Ready, Progressing, Degraded or other customer types.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.Metadata">Metadata
@@ -6262,21 +5993,6 @@ string
 </td>
 <td>
 <p>State provides user-readable status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#condition-v1-meta">
-[]Kubernetes meta/v1.Condition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest observed set of conditions for the component. A component may be one or more of
-Ready, Progressing, Degraded or other customer types.</p>
 </td>
 </tr>
 </tbody>
@@ -6885,23 +6601,8 @@ Default: 1024</p>
 </em>
 </td>
 <td>
-<p>If no values are provided, the list will be updated to include log types Audit, DNS and Flows.
-Default: Audit, DNS, Flows</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>encryption</code><br>
-<em>
-<a href="#operator.tigera.io/v1.EncryptionOption">
-EncryptionOption
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Encryption configures traffic encryption to the Syslog server.
-Default: None</p>
+<p>LogTypes contains a list of types of logs to export to syslog. By default, if this field is
+omitted, it will be set to include all possible values.</p>
 </td>
 </tr>
 </tbody>
@@ -7253,7 +6954,7 @@ If used in conjunction with the deprecated ComponentResources, then this value t
 (<em>Appears on:</em>
 <a href="#operator.tigera.io/v1.TyphaDeploymentPodTemplateSpec">TyphaDeploymentPodTemplateSpec</a>)
 </p>
-<p>TyphaDeploymentPodSpec is the typha Deployment&rsquo;s PodSpec.</p>
+<p>TyphaDeploymentDeploymentPodSpec is the typha Deployment&rsquo;s PodSpec.</p>
 <table>
 <thead>
 <tr>
@@ -7325,41 +7026,6 @@ If specified, each of the key/value pairs are added to the calico-typha Deployme
 the key does not already exist in the object&rsquo;s nodeSelector.
 If omitted, the calico-typha Deployment will use its default value for nodeSelector.
 WARNING: Please note that this field will modify the default calico-typha Deployment nodeSelector.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>terminationGracePeriodSeconds</code><br>
-<em>
-int64
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request.
-Value must be non-negative integer. The value zero indicates stop immediately via
-the kill signal (no opportunity to shut down).
-If this value is nil, the default grace period will be used instead.
-The grace period is the duration in seconds after the processes running in the pod are sent
-a termination signal and the time when the processes are forcibly halted with a kill signal.
-Set this value longer than the expected cleanup time for your process.
-Defaults to 30 seconds.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>topologySpreadConstraints</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#topologyspreadconstraint-v1-core">
-[]Kubernetes core/v1.TopologySpreadConstraint
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>TopologySpreadConstraints describes how a group of pods ought to spread across topology
-domains. Scheduler will schedule pods in a way which abides by the constraints.
-All topologySpreadConstraints are ANDed.</p>
 </td>
 </tr>
 <tr>
@@ -7473,54 +7139,6 @@ TyphaDeploymentPodTemplateSpec
 <td>
 <em>(Optional)</em>
 <p>Template describes the typha Deployment pod that will be created.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>strategy</code><br>
-<em>
-<a href="#operator.tigera.io/v1.TyphaDeploymentStrategy">
-TyphaDeploymentStrategy
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>The deployment strategy to use to replace existing pods with new ones.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.TyphaDeploymentStrategy">TyphaDeploymentStrategy
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.TyphaDeploymentSpec">TyphaDeploymentSpec</a>)
-</p>
-<p>TyphaDeploymentStrategy describes how to replace existing pods with new ones.  Only RollingUpdate is supported
-at this time so the Type field is not exposed.</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>rollingUpdate</code><br>
-<em>
-<a href="https://v1-21.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#rollingupdatedeployment-v1-apps">
-Kubernetes apps/v1.RollingUpdateDeployment
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Rolling update config params. Present only if DeploymentStrategyType =
-RollingUpdate.
-to be.</p>
 </td>
 </tr>
 </tbody>
