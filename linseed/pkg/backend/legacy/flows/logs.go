@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -93,7 +94,8 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.Fl
 	query := b.client.Search().
 		Index(b.index(i)).
 		Size(opts.QueryParams.GetMaxResults()).
-		Sort("time", true).
+		From(b.startFrom(opts)).
+		Sort("end_time", true).
 		Query(b.buildQuery(i, opts))
 
 	results, err := query.Do(ctx)
@@ -112,10 +114,49 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.Fl
 		logs = append(logs, l)
 	}
 
+	// Determine the AfterKey to return.
+	var ak map[string]interface{}
+	if numHits := len(results.Hits.Hits); numHits < opts.QueryParams.GetMaxResults() {
+		// We fully satisfied the request, no afterkey.
+		ak = nil
+	} else {
+		// There are more hits, return an afterKey the client can use for pagination.
+		ak = map[string]interface{}{
+			"startFrom": len(results.Hits.Hits),
+		}
+	}
+
 	return &v1.List[v1.FlowLog]{
-		Items:    logs,
-		AfterKey: nil, // TODO: Support pagination.
+		Items:     logs,
+		TotalHits: results.TotalHits(),
+		AfterKey:  ak,
 	}, nil
+}
+
+// startFrom parses the given parameters to determine which log to start from in the ES query.
+func (b *flowLogBackend) startFrom(opts v1.FlowLogParams) int {
+	if opts.AfterKey != nil {
+		if val, ok := opts.AfterKey["startFrom"]; ok {
+			switch v := val.(type) {
+			case string:
+				if sf, err := strconv.Atoi(v); err != nil {
+					return sf
+				} else {
+					logrus.WithField("val", v).Warn("Could not parse startFrom as an integer")
+				}
+			case float64:
+				logrus.WithField("val", val).Info("Handling float64 startFrom")
+				return int(v)
+			case int:
+				logrus.WithField("val", val).Info("Handling int startFrom")
+				return v
+			default:
+				logrus.WithField("val", val).Info("Unexpected type (%T) for startFrom, will not perform paging", val)
+			}
+		}
+	}
+	logrus.Debug("Starting query from 0")
+	return 0
 }
 
 // buildQuery builds an elastic query using the given parameters.

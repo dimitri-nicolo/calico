@@ -12,4 +12,9 @@ type List[T any] struct {
 	// was fully satisfied. If non-nil, it can be included on a subsequent
 	// request to retrieve the next page of items.
 	AfterKey map[string]interface{} `json:"after_key,omitempty"`
+
+	// TotalHits is an optional paramater on log responses to indicate the total number of matching hits.
+	// This is useful if the number of hits is greater than the number of results
+	// requested by the client.
+	TotalHits int64 `json:"total_hits,omitempty"`
 }

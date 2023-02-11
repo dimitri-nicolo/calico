@@ -3,7 +3,9 @@ package search
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -218,32 +220,57 @@ func searchFlowLogs(
 	}
 
 	// Configure pagination, timeout, etc.
-	// TODO: Support more than just the first page.
 	params.Timeout = request.Timeout
 	params.MaxResults = request.PageSize
-	// params.Page = request.PageNum * request.PageSize
-
-	numPages := 1
-	// TODO: Linseed could use this to return the total number of pages.
-	// cappedTotalHits := math.MinInt(int(result.TotalHits), middleware.MaxNumResults)
-	// numPages := 0
-	// if request.PageSize > 0 {
-	// 	numPages = ((cappedTotalHits - 1) / request.PageSize) + 1
-	// }
+	if request.PageNum != 0 {
+		// TODO: Ideally, clients don't know the format of the AfterKey. In order to satisfy
+		// the exising UI API, we need to for now.
+		params.AfterKey = map[string]interface{}{
+			"startFrom": request.PageNum * request.PageSize,
+		}
+	}
 
 	// Perform the query.
 	start := time.Now()
-	_, err := client.FlowLogs(request.ClusterName).List(ctx, &params)
+	items, err := client.FlowLogs(request.ClusterName).List(ctx, &params)
 	if err != nil {
 		return nil, err
 	}
 
+	type Hit struct {
+		ID     string       `json:"id"`
+		Index  string       `json:"index"`
+		Source lapi.FlowLog `json:"source"`
+	}
+
+	// Build the hits response.
+	hits := []json.RawMessage{}
+	for i, item := range items.Items {
+		hit := Hit{
+			ID:     fmt.Sprintf("%d", i),     // TODO - what does the UI use this for?
+			Index:  "tigera_secure_ee_flows", // TODO: What does the UI use this for?
+			Source: item,
+		}
+		hitJSON, err := json.Marshal(hit)
+		if err != nil {
+			return nil, err
+		}
+		hits = append(hits, hitJSON)
+	}
+
+	// Calculate the number of pages, given the request's page size.
+	cappedTotalHits := math.MinInt(int(items.TotalHits), middleware.MaxNumResults)
+	numPages := 0
+	if request.PageSize > 0 {
+		numPages = ((cappedTotalHits - 1) / request.PageSize) + 1
+	}
+
 	return &v1.SearchResponse{
-		TimedOut: false, // TODO: Is this used?
-		Took:     metav1.Duration{Duration: time.Since(start)},
-		NumPages: numPages,
-		// TotalHits: int(result.TotalHits),
-		// Hits:      result.RawHits,
+		TimedOut:  false, // TODO: Is this used?
+		Took:      metav1.Duration{Duration: time.Since(start)},
+		NumPages:  numPages,
+		TotalHits: int(items.TotalHits),
+		Hits:      hits,
 	}, nil
 }
 
