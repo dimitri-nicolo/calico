@@ -1,4 +1,5 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021,2023 Tigera, Inc. All rights reserved.
+
 package servicegraph
 
 import (
@@ -231,8 +232,8 @@ type MockServiceGraphBackend struct {
 	numCallsGetStatefulSetLabels int
 	numCallsGetDaemonSetLabels   int
 	numCallsGetPodsLabels        int
-	wgElastic                    sync.WaitGroup
-	numBlockedElastic            int
+	wgLinseed                    sync.WaitGroup
+	numBlockedLinseed            int
 }
 
 func (m *MockServiceGraphBackend) GetServiceLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
@@ -270,13 +271,13 @@ func (m *MockServiceGraphBackend) GetDaemonSetLabels(ctx context.Context, cluste
 	return m.DaemonSetLabels, m.DaemonSetLabelsErr
 }
 
-func (m *MockServiceGraphBackend) waitElastic() {
+func (m *MockServiceGraphBackend) waitLinseed() {
 	m.lock.Lock()
-	m.numBlockedElastic++
+	m.numBlockedLinseed++
 	m.lock.Unlock()
-	m.wgElastic.Wait()
+	m.wgLinseed.Wait()
 	m.lock.Lock()
-	m.numBlockedElastic--
+	m.numBlockedLinseed--
 	m.lock.Unlock()
 }
 
@@ -293,7 +294,7 @@ func (m *MockServiceGraphBackend) GetFlowConfig(ctx context.Context, cluster str
 func (m *MockServiceGraphBackend) GetL3FlowData(
 	ctx context.Context, cluster string, tr lmav1.TimeRange, fc *FlowConfig,
 ) ([]L3Flow, error) {
-	m.waitElastic()
+	m.waitLinseed()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsL3++
@@ -303,7 +304,7 @@ func (m *MockServiceGraphBackend) GetL3FlowData(
 func (m *MockServiceGraphBackend) GetL7FlowData(
 	ctx context.Context, cluster string, tr lmav1.TimeRange,
 ) ([]L7Flow, error) {
-	m.waitElastic()
+	m.waitLinseed()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsL7++
@@ -313,7 +314,7 @@ func (m *MockServiceGraphBackend) GetL7FlowData(
 func (m *MockServiceGraphBackend) GetDNSData(
 	ctx context.Context, cluster string, tr lmav1.TimeRange,
 ) ([]DNSLog, error) {
-	m.waitElastic()
+	m.waitLinseed()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsDNS++
@@ -323,7 +324,7 @@ func (m *MockServiceGraphBackend) GetDNSData(
 func (m *MockServiceGraphBackend) GetEvents(
 	ctx context.Context, cluster string, tr lmav1.TimeRange,
 ) ([]Event, error) {
-	m.waitElastic()
+	m.waitLinseed()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsEvents++
@@ -350,12 +351,12 @@ func (m *MockServiceGraphBackend) NewNameHelper(ctx context.Context, rd *Request
 	return m.NameHelper, nil
 }
 
-func (m *MockServiceGraphBackend) SetBlockElastic() {
-	m.wgElastic.Add(1)
+func (m *MockServiceGraphBackend) SetBlockLinseed() {
+	m.wgLinseed.Add(1)
 }
 
-func (m *MockServiceGraphBackend) SetUnblockElastic() {
-	m.wgElastic.Done()
+func (m *MockServiceGraphBackend) SetUnblockLinseed() {
+	m.wgLinseed.Done()
 }
 
 func (m *MockServiceGraphBackend) GetNumCallsFlowConfig() int {
@@ -403,5 +404,5 @@ func (m *MockServiceGraphBackend) GetNumCallsNameHelper() int {
 func (m *MockServiceGraphBackend) GetNumBlocked() int {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	return m.numBlockedElastic
+	return m.numBlockedLinseed
 }

@@ -450,7 +450,7 @@ func (s *serviceGraphCache) tidyCache() {
 	// Aged out cutoff time based on last access.
 	cutoff = time.Now().UTC().Add(-s.cfg.ServiceGraphCachePolledEntryAgeOut)
 
-	// Remove all aged-out relative time entries - this avoids unnecessary polling of elastic.
+	// Remove all aged-out relative time entries - this avoids unnecessary polling.
 	entry = s.queue.first
 	for entry != nil {
 		next := entry.next
@@ -551,7 +551,7 @@ func (s *serviceGraphCache) calculateKey(rd *RequestData) (cacheKey, error) {
 
 // populateData performs the various queries to get raw log data and updates the cacheEntry.
 func (s *serviceGraphCache) populateData(e *cacheEntry, d *cacheData) {
-	log.Debugf("Populating data from elastic and k8s queries: %s", e.cacheKey)
+	log.Debugf("Populating data from linseed and k8s queries: %s", e.cacheKey)
 
 	// When this finishes, close the pending channel so threads waiting for this to populate can complete.
 	defer close(d.pending)

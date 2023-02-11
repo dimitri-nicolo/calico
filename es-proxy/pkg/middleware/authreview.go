@@ -50,6 +50,6 @@ func (a userAuthorizationReview) PerformReviewForElasticLogs(
 		}
 	}
 
-	verbs, err := lmaauth.PerformUserAuthorizationReviewForElasticLogs(ctx, a.csf, user, cluster)
+	verbs, err := lmaauth.PerformUserAuthorizationReviewForLogs(ctx, a.csf, user, cluster)
 	return verbs, err
 }

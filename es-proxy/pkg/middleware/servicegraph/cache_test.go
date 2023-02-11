@@ -119,7 +119,7 @@ var _ = Describe("Service graph cache tests", func() {
 	It("handles request timeout", func() {
 		By("Blocking the elastic calls")
 		// Block the backend.
-		backend.SetBlockElastic()
+		backend.SetBlockLinseed()
 		now1 := time.Now().UTC()
 		tr1 := &lmav1.TimeRange{
 			From: now1.Add(-15 * time.Minute),
@@ -276,7 +276,7 @@ var _ = Describe("Service graph cache tests", func() {
 	It("handles concurrent requests, cache updates and expiration", func() {
 		By("Blocking the elastic calls")
 		// Block the backend.
-		backend.SetBlockElastic()
+		backend.SetBlockLinseed()
 
 		// Create two equivalent relative times (different actual times), and another different time.
 		now1 := time.Now().UTC()
@@ -339,7 +339,7 @@ var _ = Describe("Service graph cache tests", func() {
 
 		// Unblock the backend, wait for blocked calls to drop to zero and all async calls to return.
 		By("Unblocking elastic and waiting for all three requests to complete.")
-		backend.SetUnblockElastic()
+		backend.SetUnblockLinseed()
 		Eventually(backend.GetNumBlocked).Should(Equal(0))
 		Eventually(func() int32 { return atomic.LoadInt32(&safeCount) }).Should(BeZero())
 		Expect(q1).NotTo(BeNil())
@@ -476,7 +476,7 @@ var _ = Describe("Service graph cache tests", func() {
 
 		// By checking ForceUpdate actually forces an additional query.
 		By("Checking force refresh doesn't force a refresh if the request is pending by kicking off two simultaneously")
-		backend.SetBlockElastic()
+		backend.SetBlockLinseed()
 		atomic.AddInt32(&safeCount, 2)
 		go func() {
 			_, _ = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
@@ -503,14 +503,14 @@ var _ = Describe("Service graph cache tests", func() {
 
 		// Now unblock elastic. One of the requests will use the results of the other event though both request have
 		// ForceRefresh set to true.
-		backend.SetUnblockElastic()
+		backend.SetUnblockLinseed()
 		Eventually(func() int32 { return atomic.LoadInt32(&safeCount) }).Should(BeZero())
 		Expect(backend.GetNumCallsL3()).To(Equal(current + 3))
 
 		// By checking context can be cancelled by user.
 		By("Checking request can be cancelled")
 		thisctx, thiscancel := context.WithCancel(context.Background())
-		backend.SetBlockElastic()
+		backend.SetBlockLinseed()
 		atomic.AddInt32(&safeCount, 1)
 		go func() {
 			_, _ = cache.GetFilteredServiceGraphData(thisctx, &RequestData{
@@ -526,6 +526,6 @@ var _ = Describe("Service graph cache tests", func() {
 		// Cancel the request and it should return without unblocking the request.
 		thiscancel()
 		Eventually(func() int32 { return atomic.LoadInt32(&safeCount) }).Should(BeZero())
-		backend.SetUnblockElastic()
+		backend.SetUnblockLinseed()
 	})
 })
