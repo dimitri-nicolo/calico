@@ -90,11 +90,14 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.Fl
 		return nil, fmt.Errorf("no cluster ID on request")
 	}
 
+	// Get the startFrom param, if any.
+	startFrom := b.startFrom(opts)
+
 	// Build the query, sorting by time.
 	query := b.client.Search().
 		Index(b.index(i)).
 		Size(opts.QueryParams.GetMaxResults()).
-		From(b.startFrom(opts)).
+		From(startFrom).
 		Sort("end_time", true).
 		Query(b.buildQuery(i, opts))
 
@@ -121,8 +124,9 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.Fl
 		ak = nil
 	} else {
 		// There are more hits, return an afterKey the client can use for pagination.
+		// We add the number of hits to the start from provided on the request, if any.
 		ak = map[string]interface{}{
-			"startFrom": len(results.Hits.Hits),
+			"startFrom": startFrom + len(results.Hits.Hits),
 		}
 	}
 
