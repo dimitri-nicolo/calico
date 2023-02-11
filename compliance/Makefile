@@ -72,43 +72,35 @@ sub-build-%:
 
 .PHONY: bin/server-$(ARCH)
 bin/server-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(LDFLAGS)" cmd/server/server.go'
+	$(call build_static_cgo_boring_binary, cmd/server/server.go, $@)
 
 .PHONY: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(LDFLAGS)" cmd/controller/controller.go'
+	$(call build_static_cgo_boring_binary, cmd/controller/controller.go, $@)
 
 .PHONY: bin/snapshotter-$(ARCH)
 bin/snapshotter-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(LDFLAGS)" cmd/snapshotter/snapshotter.go'
+	$(call build_static_cgo_boring_binary, cmd/snapshotter/snapshotter.go, $@)
 
 .PHONY: bin/reporter-$(ARCH)
 bin/reporter-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(LDFLAGS)" cmd/reporter/reporter.go'
+	$(call build_static_cgo_boring_binary, cmd/reporter/reporter.go, $@)
 
 .PHONY: bin/report-type-gen-$(ARCH)
 bin/report-type-gen-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(LDFLAGS)" cmd/report-type-gen/*.go'
+	$(call build_static_cgo_boring_binary, cmd/report-type-gen/*.go, $@)
 
 .PHONY: bin/scaleloader-$(ARCH)
 bin/scaleloader-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(LDFLAGS)" cmd/mockdata-scaleloader/scaleloader.go'
+	$(call build_static_cgo_boring_binary, cmd/mockdata-scaleloader/scaleloader.go, $@)
 
 .PHONY: bin/kube-bench-$(ARCH)
 bin/kube-bench-$(ARCH): check-kube-bench-update cmd/kube-bench/main.go
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(LDFLAGS)" cmd/kube-bench/main.go'
+	$(call build_static_cgo_boring_binary, cmd/kube-bench/main.go, $@)
 
 .PHONY: bin/benchmarker-$(ARCH)
 bin/benchmarker-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(LDFLAGS)" cmd/benchmarker/benchmarker.go'
+	$(call build_static_cgo_boring_binary, cmd/benchmarker/benchmarker.go, $@)
 
 K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
 check-kube-bench-update:

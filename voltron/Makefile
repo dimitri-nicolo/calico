@@ -65,15 +65,11 @@ build: $(BINDIR)/voltron-$(ARCH) $(BINDIR)/guardian-$(ARCH)
 
 .PHONY: $(BINDIR)/voltron-$(ARCH)
 $(BINDIR)/voltron-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) \
-	    sh -c '$(GIT_CONFIG_SSH) \
-	           go build -o $@ -v -ldflags "$(LDFLAGS)" $(BUILD_TAGS) cmd/voltron/main.go'
+	$(call build_static_cgo_boring_binary, ./cmd/voltron/main.go, $@)
 
 .PHONY: $(BINDIR)/guardian-$(ARCH)
 $(BINDIR)/guardian-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) \
-	    sh -c '$(GIT_CONFIG_SSH) \
-	           go build -o $@ -v -ldflags "$(LDFLAGS)" $(BUILD_TAGS) cmd/guardian/main.go'
+	$(call build_static_cgo_boring_binary, ./cmd/guardian/main.go, $@)
 
 #############################################
 # Docker Image

@@ -1,4 +1,4 @@
-# Copyright 2022 Tigera Inc. All rights reserved.
+# Copyright 2022-2023 Tigera Inc. All rights reserved.
 include ../metadata.mk
 
 PACKAGE_NAME    ?= github.com/projectcalico/calico/continuous-policy-recommendation
@@ -36,18 +36,9 @@ LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
 # This section builds the output binaries.
 build: bin/continuous-policy-recommendation-$(ARCH)
 
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
-
 .PHONY: bin/continuous-policy-recommendation-$(ARCH)
 bin/continuous-policy-recommendation-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(LDFLAGS)" cmd/$*/*.go'
+	$(call build_static_cgo_boring_binary, ./cmd/main.go, $@)
 
 ###############################################################################
 # BUILD IMAGE

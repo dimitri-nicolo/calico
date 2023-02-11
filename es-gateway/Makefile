@@ -41,9 +41,7 @@ build: bin/es-gateway-$(ARCH)
 
 .PHONY: bin/es-gateway-$(ARCH)
 bin/es-gateway-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(LDFLAGS)" cmd/$*/*.go'
+	$(call build_static_cgo_boring_binary, ./cmd, $@)
 
 ###############################################################################
 # Building the image

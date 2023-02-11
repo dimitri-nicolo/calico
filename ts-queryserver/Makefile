@@ -37,13 +37,6 @@ LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
 			  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
 			  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
 
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
-
 ###############################################################################
 # BUILD BINARY
 ###############################################################################
@@ -52,9 +45,7 @@ build: bin/cnx-queryserver-$(ARCH)
 
 .PHONY: bin/cnx-queryserver-$(ARCH)
 bin/cnx-queryserver-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(LDFLAGS)" queryserver/$*/*.go'
+	$(call build_static_cgo_boring_binary, queryserver/$*/*.go, $@)
 
 ###############################################################################
 # BUILD IMAGE

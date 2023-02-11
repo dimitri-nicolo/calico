@@ -34,9 +34,7 @@ build: $(BINDIR)/license-agent-$(ARCH)
 
 .PHONY: $(BINDIR)/license-agent-$(ARCH)
 $(BINDIR)/license-agent-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(LDFLAGS)" "$(PACKAGE_NAME)/cmd/server"'
+	$(call build_static_cgo_boring_binary, ./cmd/server, $@)
 
 # Build the docker image.
 .PHONY: $(LICENSE_AGENT_IMAGE)

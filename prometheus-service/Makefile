@@ -55,9 +55,7 @@ SRC_FILES:= $(shell find cmd pkg -type f -name '*.go') \
 build: bin/prometheus-service-$(ARCH)
 
 bin/prometheus-service-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(LDFLAGS)" "$(PACKAGE_NAME)/cmd/server"'
+	$(call build_static_cgo_boring_binary, ./cmd/server, $@)
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGES) $(addsuffix -$(ARCH),$(BUILD_IMAGES))

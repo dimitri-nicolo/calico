@@ -46,9 +46,7 @@ build: bin/packetcapture-$(ARCH)
 
 .PHONY: bin/packetcapture-$(ARCH)
 bin/packetcapture-$(ARCH): $(SRC_FILES)
-		$(DOCKER_GO_BUILD_CGO) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "-linkmode external -extldflags -static $(LDFLAGS)" cmd/$*/*.go'
+	$(call build_static_cgo_boring_binary, ./cmd, $@)
 
 ###############################################################################
 # BUILD IMAGE

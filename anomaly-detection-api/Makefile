@@ -27,9 +27,7 @@ build: $(BINDIR)/anomaly-detection-api-$(ARCH)
 
 .PHONY: bin/anomaly-detection-api-$(ARCH)
 $(BINDIR)/anomaly-detection-api-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v $(LDFLAGS) cmd/main.go'
+	$(call build_static_cgo_boring_binary, cmd/main.go, $@)
 
 ###############################################################################
 # Build the image

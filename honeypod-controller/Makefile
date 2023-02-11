@@ -40,20 +40,11 @@ SRC_FILES  = $(shell find pkg cmd -name '*.go') \
 # Building the binary
 ###############################################################################
 
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
-
 build: bin/controller-$(ARCH)
 
 .PHONY: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v $(BUILD_FLAGS) -ldflags "$(LDFLAGS)" cmd/controller/controller.go'
+	$(call build_static_cgo_boring_binary, cmd/controller/controller.go, $@)
 
 ###############################################################################
 # Building the images

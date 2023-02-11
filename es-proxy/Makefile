@@ -59,9 +59,7 @@ CGO_ENABLED=0
 endif
 
 $(BINDIR)/es-proxy-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO)  \
-		sh -c '$(GIT_CONFIG_SSH) \
-			   go build -o $@ -v $(BUILD_TAGS) -ldflags "$(LDFLAGS)" cmd/server/*.go'
+	$(call build_static_cgo_boring_binary, cmd/server/*.go, $@)
 
 ES_PROXY_CONTAINER_CREATED=.es-proxy.created-$(ARCH)
 

@@ -54,11 +54,7 @@ clean-image:
 
 build: $(BINARY)
 $(BINARY): $(SRC_FILES)
-	mkdir -p .go-pkg-cache bin $(GOMOD_CACHE)
-
-	# Create the binary
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	   sh -c '$(GIT_CONFIG_SSH) go build -v -ldflags "$(LDFLAGS)" -o "$(BINARY)" "./calicoq/calicoq.go"'
+	$(call build_static_cgo_boring_binary, ./calicoq/calicoq.go, $(BINARY))
 
 ###############################################################################
 # CI/CD
