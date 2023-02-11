@@ -47,13 +47,6 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path $(dir) -prune -o) 
 		$(shell find ../libcalico-go/lib -name '*.go') \
 		$(shell find ../lma/pkg -name '*.go')
 
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
-
 ###############################################################################
 # Building the binary
 ###############################################################################

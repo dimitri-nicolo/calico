@@ -51,13 +51,6 @@ LDFLAGS = -X $(PACKAGE_NAME)/pkg/handler.VERSION=$(GIT_VERSION) \
 # "es-proxy" instead of "$(BINDIR)/es-proxy".
 build: $(BINDIR)/es-proxy-$(ARCH)
 
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
-
 $(BINDIR)/es-proxy-$(ARCH): $(SRC_FILES)
 	$(call build_static_cgo_boring_binary, cmd/server/*.go, $@)
 
