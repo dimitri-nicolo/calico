@@ -6,6 +6,12 @@ import (
 	"net"
 )
 
+// FlowLogParams define querying parameters to retrieve flow logs
+type FlowLogParams struct {
+	QueryParams `json:",inline" validate:"required"`
+	LogParams   `json:",inline"`
+}
+
 // FlowLog is the input format to ingest flow logs
 // Some empty values should be json marshalled as null and NOT with golang null values such as "" for
 // an empty string

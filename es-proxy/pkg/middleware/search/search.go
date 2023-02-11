@@ -20,6 +20,8 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	esSearch "github.com/projectcalico/calico/es-proxy/pkg/search"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
@@ -33,12 +35,7 @@ const (
 //
 // Uses a request body (JSON.blob) to extract parameters to build an elasticsearch query,
 // executes it and returns the results.
-func SearchHandler(
-	idxHelper lmaindex.Helper,
-	authReview middleware.AuthorizationReview,
-	k8sClient datastore.ClientSet,
-	client *elastic.Client,
-) http.Handler {
+func SearchHandler(idxHelper lmaindex.Helper, authReview middleware.AuthorizationReview, k8sClient datastore.ClientSet, esClient *elastic.Client, client client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse request body onto search parameters. If an error occurs while decoding define an http
 		// error and return.
@@ -47,14 +44,30 @@ func SearchHandler(
 			httputils.EncodeError(w, err)
 			return
 		}
+
+		// CASEY: Switch on new implementations if possible.
 		// Search.
-		response, err := search(idxHelper, params, authReview, k8sClient, client, r)
-		if err != nil {
-			httputils.EncodeError(w, err)
-			return
+		index := idxHelper.GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
+		if client != nil {
+			log.Info("Using linseed /search handler for index %s", index)
+			response, err := searchFlowLogs(client, params, authReview, k8sClient, r)
+			if err != nil {
+				httputils.EncodeError(w, err)
+				return
+			}
+
+			// Encode reponse to writer. Handles an error.
+			httputils.Encode(w, response)
+		} else {
+			log.Info("Using legacy /search handler for index %s", index)
+			response, err := search(idxHelper, params, authReview, k8sClient, esClient, r)
+			if err != nil {
+				httputils.EncodeError(w, err)
+				return
+			}
+			// Encode reponse to writer. Handles an error.
+			httputils.Encode(w, response)
 		}
-		// Encode reponse to writer. Handles an error.
-		httputils.Encode(w, response)
 	})
 }
 
@@ -120,7 +133,7 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	}
 
 	// At the moment, we only support a single sort by field.
-	//TODO(rlb): Need to check the fields are valid for the index type. Maybe something else for the
+	// TODO(rlb): Need to check the fields are valid for the index type. Maybe something else for the
 	// index helper.
 	if len(params.SortBy) > 1 {
 		return nil, &httputils.HttpStatusError{
@@ -133,7 +146,105 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	return &params, nil
 }
 
-// search returns the results of ES search.
+func searchFlowLogs(
+	client client.Client,
+	request *v1.SearchRequest,
+	authReview middleware.AuthorizationReview,
+	k8sClient datastore.ClientSet,
+	r *http.Request,
+) (*v1.SearchResponse, error) {
+	// Create a context with timeout to ensure we don't block for too long with this query.
+	// This releases timer resources if the operation completes before the timeout.
+	ctx, cancel := context.WithTimeout(r.Context(), request.Timeout.Duration)
+	defer cancel()
+
+	// Build the params for the query.
+	params := lapi.FlowLogParams{}
+
+	// TODO: What does this look like? How can we handle this in Linseed?
+	//
+	// Selector query.
+	// var selector elastic.Query
+	// var err error
+	// if len(params.Selector) > 0 {
+	// 	selector, err = idxHelper.NewSelectorQuery(params.Selector)
+	// 	if err != nil {
+	// 		// NewSelectorQuery returns an HttpStatusError.
+	// 		return nil, err
+	// 	}
+	// 	esquery = esquery.Must(selector)
+	// }
+
+	// TODO: What does this look like? How can we handle this in Linseed?
+	// if len(params.Filter) > 0 {
+	// 	for _, filter := range params.Filter {
+	// 		q := elastic.NewRawStringQuery(string(filter))
+	// 		esquery = esquery.Filter(q)
+	// 	}
+	// }
+
+	// Time range query.
+	if request.TimeRange != nil {
+		params.TimeRange = request.TimeRange
+	}
+
+	// TODO: This is performed on every request, and will need handling.
+	// either we do it here after getting all the results, or we enhance Linseed to be able to do it.
+	//
+	// RBAC query.
+	// verbs, err := authReview.PerformReviewForElasticLogs(ctx, params.ClusterName)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if rbac, err := idxHelper.NewRBACQuery(verbs); err != nil {
+	// 	// NewRBACQuery returns an HttpStatusError.
+	// 	return nil, err
+	// } else if rbac != nil {
+	// 	esquery = esquery.Filter(rbac)
+	// }
+
+	// Configure sorting, if set.
+	for _, s := range request.SortBy {
+		if s.Field == "" {
+			continue
+		}
+		params.Sort = append(params.Sort, lapi.SearchRequestSortBy{
+			Field:      s.Field,
+			Descending: s.Descending,
+		})
+	}
+
+	// Configure pagination, timeout, etc.
+	// TODO: Support more than just the first page.
+	params.Timeout = request.Timeout
+	params.MaxResults = request.PageSize
+	// params.Page = request.PageNum * request.PageSize
+
+	numPages := 1
+	// TODO: Linseed could use this to return the total number of pages.
+	// cappedTotalHits := math.MinInt(int(result.TotalHits), middleware.MaxNumResults)
+	// numPages := 0
+	// if request.PageSize > 0 {
+	// 	numPages = ((cappedTotalHits - 1) / request.PageSize) + 1
+	// }
+
+	// Perform the query.
+	start := time.Now()
+	_, err := client.FlowLogs(request.ClusterName).List(ctx, &params)
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1.SearchResponse{
+		TimedOut: false, // TODO: Is this used?
+		Took:     metav1.Duration{Duration: time.Since(start)},
+		NumPages: numPages,
+		// TotalHits: int(result.TotalHits),
+		// Hits:      result.RawHits,
+	}, nil
+}
+
+// Legacy search implementation. Keeping around while we convert.
 func search(
 	idxHelper lmaindex.Helper,
 	params *v1.SearchRequest,
@@ -143,13 +254,14 @@ func search(
 	r *http.Request,
 ) (*v1.SearchResponse, error) {
 	// Create a context with timeout to ensure we don't block for too long with this query.
+	// This releases timer resources if the operation completes before the timeout.
 	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), params.Timeout.Duration)
-	// Releases timer resources if the operation completes before the timeout.
 	defer cancelWithTimeout()
 
 	index := idxHelper.GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
 
 	esquery := elastic.NewBoolQuery()
+
 	// Selector query.
 	var selector elastic.Query
 	var err error
@@ -227,12 +339,14 @@ func search(
 		if s.Field == "" {
 			continue
 		}
-		//TODO(rlb): Maybe include other fields automatically based on selected field.
+		// TODO(rlb): Maybe include other fields automatically based on selected field.
 		sortby = append(sortby, esSearch.SortBy{
 			Field:     s.Field,
 			Ascending: !s.Descending,
 		})
 	}
+
+	// Configure paging.
 
 	query := &esSearch.Query{
 		EsQuery:  esquery,

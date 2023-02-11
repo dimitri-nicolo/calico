@@ -178,7 +178,8 @@ func Start(cfg *Config) error {
 						lmaindex.FlowLogs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
-						esClient.Backend(),
+						nil,
+						linseed,
 					)))))
 	sm.Handle("/dnsLogs/aggregation",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
@@ -194,6 +195,7 @@ func Start(cfg *Config) error {
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
 						esClient.Backend(),
+						nil,
 					)))))
 	sm.Handle("/l7Logs/aggregation",
 		middleware.ClusterRequestToResource(l7ResourceName,
@@ -209,6 +211,7 @@ func Start(cfg *Config) error {
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
 						esClient.Backend(),
+						nil,
 					)))))
 	sm.Handle("/events/bulk",
 		middleware.ClusterRequestToResource(eventsResourceName,
@@ -224,6 +227,7 @@ func Start(cfg *Config) error {
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
 						esClient.Backend(),
+						nil,
 					)))))
 	sm.Handle("/processes",
 		middleware.ClusterRequestToResource(flowLogsResourceName,

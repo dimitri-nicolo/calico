@@ -46,3 +46,17 @@ func (p *QueryParams) GetMaxResults() int {
 func (p *QueryParams) SetAfterKey(k map[string]interface{}) {
 	p.AfterKey = k
 }
+
+// LogParams are common for all log APIs.
+type LogParams struct {
+	Sort []SearchRequestSortBy `json:"sort"`
+}
+
+// SearchRequestSortBy allows configuration of sorting of results.
+type SearchRequestSortBy struct {
+	// The field to sort by.
+	Field string `json:"field"`
+
+	// True if the returned results should be in descending order. Default is ascending order.
+	Descending bool `json:"descending,omitempty"`
+}
