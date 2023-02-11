@@ -65,8 +65,7 @@ func main() {
 		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(
 			// L3 flow and log APIs.
 			l3.NewFlows(flowBackend),
-			l3.NewBulkIngestion(flowLogsBackend),
-			&l3.NetworkLogs{},
+			l3.NewFlowLogs(flowLogsBackend),
 
 			// L7 flow and log APIs.
 			l7.NewFlows(l7FlowBackend),

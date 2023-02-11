@@ -146,6 +146,9 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	return &params, nil
 }
 
+// TODO: Right now, this is basically just translating between UI format and Linseed format.
+// we might want to add more logic here, or we might want to bypass es-proxy altogether and send
+// these requests straight to linseed. That would require some thinking about authz.
 func searchFlowLogs(
 	client client.Client,
 	request *v1.SearchRequest,

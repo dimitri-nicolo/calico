@@ -88,7 +88,7 @@ func TestBulkIngestion_Serve(t *testing.T) {
 			req.Header.Set("Content-Type", "application/x-ndjson")
 			require.NoError(t, err)
 
-			b.Serve().ServeHTTP(rec, req)
+			b.Bulk().ServeHTTP(rec, req)
 
 			bodyBytes, err := io.ReadAll(rec.Body)
 			require.NoError(t, err)
@@ -105,9 +105,9 @@ func TestBulkIngestion_Serve(t *testing.T) {
 	}
 }
 
-func bulkFlowLogs(response *v1.BulkResponse, err error) *l3.BulkIngestion {
+func bulkFlowLogs(response *v1.BulkResponse, err error) *l3.FlowLogs {
 	mockBackend := &api.MockFlowLogBackend{}
-	b := l3.NewBulkIngestion(mockBackend)
+	b := l3.NewFlowLogs(mockBackend)
 
 	// mock backend to return the required backendFlowLogs
 	mockBackend.On("Create", mock.Anything,

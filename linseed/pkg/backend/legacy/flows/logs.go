@@ -4,7 +4,9 @@ package flows
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -12,8 +14,10 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 )
 
 type flowLogBackend struct {
@@ -75,6 +79,69 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 		Failed:    len(resp.Failed()),
 		Errors:    v1.GetBulkErrors(resp),
 	}, nil
+}
+
+// List lists logs that match the given parameters.
+func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.FlowLogParams) (*v1.List[v1.FlowLog], error) {
+	log := bapi.ContextLogger(i)
+
+	if i.Cluster == "" {
+		return nil, fmt.Errorf("no cluster ID on request")
+	}
+
+	// Build the query, sorting by time.
+	query := b.client.Search().
+		Index(b.index(i)).
+		Size(opts.QueryParams.GetMaxResults()).
+		Sort("time", true).
+		Query(b.buildQuery(i, opts))
+
+	results, err := query.Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	logs := []v1.FlowLog{}
+	for _, h := range results.Hits.Hits {
+		l := v1.FlowLog{}
+		err = json.Unmarshal(h.Source, &l)
+		if err != nil {
+			log.WithError(err).Error("Error unmarshalling log")
+			continue
+		}
+		logs = append(logs, l)
+	}
+
+	return &v1.List[v1.FlowLog]{
+		Items:    logs,
+		AfterKey: nil, // TODO: Support pagination.
+	}, nil
+}
+
+// buildQuery builds an elastic query using the given parameters.
+func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.FlowLogParams) elastic.Query {
+	// Parse times from the request. We default to a time-range query
+	// if no other search parameters are given.
+	var start, end time.Time
+	if opts.QueryParams.TimeRange != nil {
+		start = opts.QueryParams.TimeRange.From
+		end = opts.QueryParams.TimeRange.To
+	} else {
+		// Default to the latest 5 minute window.
+		start = time.Now().Add(-5 * time.Minute)
+		end = time.Now()
+	}
+	return lmaindex.FlowLogs().NewTimeRangeQuery(start, end)
+}
+
+func (b *flowLogBackend) index(i bapi.ClusterInfo) string {
+	if i.Tenant != "" {
+		// If a tenant is provided, then we must include it in the index.
+		return fmt.Sprintf("tigera_secure_ee_flows.%s.%s.*", i.Tenant, i.Cluster)
+	}
+
+	// Otherwise, this is a single-tenant cluster and we only need the cluster.
+	return fmt.Sprintf("tigera_secure_ee_flows.%s.*", i.Cluster)
 }
 
 func (b *flowLogBackend) writeAlias(i bapi.ClusterInfo) string {
