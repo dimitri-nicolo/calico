@@ -17,7 +17,10 @@ const DefaultTimeOut = 60 * time.Second
 
 type Params interface {
 	GetMaxResults() int
+	SetMaxResults(int)
 	SetAfterKey(map[string]interface{})
+	SetTimeout(*v1.Duration)
+	SetTimeRange(*lmav1.TimeRange)
 }
 
 // QueryParams are request parameters that are shared across all APIs
@@ -37,6 +40,10 @@ type QueryParams struct {
 	AfterKey map[string]interface{} `json:"after_key"`
 }
 
+func (p *QueryParams) SetMaxResults(i int) {
+	p.MaxResults = i
+}
+
 func (p *QueryParams) GetMaxResults() int {
 	if p == nil || p.MaxResults == 0 {
 		return 1000
@@ -46,6 +53,14 @@ func (p *QueryParams) GetMaxResults() int {
 
 func (p *QueryParams) SetAfterKey(k map[string]interface{}) {
 	p.AfterKey = k
+}
+
+func (p *QueryParams) SetTimeout(t *v1.Duration) {
+	p.Timeout = t
+}
+
+func (p *QueryParams) SetTimeRange(t *lmav1.TimeRange) {
+	p.TimeRange = t
 }
 
 // LogParams are common for all log APIs.
