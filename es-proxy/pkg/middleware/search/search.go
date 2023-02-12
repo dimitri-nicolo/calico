@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,22 +38,23 @@ const (
 //
 // Uses a request body (JSON.blob) to extract parameters to build an elasticsearch query,
 // executes it and returns the results.
-func SearchHandler(idxHelper lmaindex.Helper, authReview middleware.AuthorizationReview, k8sClient datastore.ClientSet, esClient *elastic.Client, client client.Client) http.Handler {
+func SearchHandler(idxHelper lmaindex.Helper, authReview middleware.AuthorizationReview, k8sClient datastore.ClientSet, esClient *elastic.Client, lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse request body onto search parameters. If an error occurs while decoding define an http
 		// error and return.
-		params, err := parseRequestBodyForParams(w, r)
+		request, err := parseRequestBodyForParams(w, r)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
 		}
 
-		// CASEY: Switch on new implementations if possible.
-		// Search.
-		index := idxHelper.GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
-		if client != nil {
-			log.Info("Using linseed /search handler for index %s", index)
-			response, err := searchFlowLogs(client, params, authReview, k8sClient, r)
+		if lsclient == nil {
+			//////////////////////////////////////////////////////////////////////////////////
+			// TODO: Remove the need for this branch entirely. This is the legacy code.
+			//       Just need to replace events implementation.
+			//////////////////////////////////////////////////////////////////////////////////
+			log.Warn("Using legacy search handler")
+			response, err := search(idxHelper, request, authReview, k8sClient, esClient, r)
 			if err != nil {
 				httputils.EncodeError(w, err)
 				return
@@ -60,16 +62,28 @@ func SearchHandler(idxHelper lmaindex.Helper, authReview middleware.Authorizatio
 
 			// Encode reponse to writer. Handles an error.
 			httputils.Encode(w, response)
-		} else {
-			log.Info("Using legacy /search handler for index %s", index)
-			response, err := search(idxHelper, params, authReview, k8sClient, esClient, r)
-			if err != nil {
-				httputils.EncodeError(w, err)
-				return
-			}
-			// Encode reponse to writer. Handles an error.
-			httputils.Encode(w, response)
+			return
 		}
+
+		// Create a context with timeout to ensure we don't block for too long with this query.
+		// This releases timer resources if the operation completes before the timeout.
+		ctx, cancel := context.WithTimeout(r.Context(), request.Timeout.Duration)
+		defer cancel()
+
+		var response *v1.SearchResponse
+
+		// Perform the search based on the type.
+		id := idxHelper.GetIndex("")
+		if strings.HasPrefix(id, "tigera_secure_ee_flows") {
+			response, err = searchFlowLogs(ctx, lsclient, request, authReview, k8sClient)
+		} else if strings.HasPrefix(id, "tigera_seucre_ee_dns") {
+			response, err = searchDNSLogs(ctx, lsclient, request, authReview, k8sClient)
+		} else {
+			logrus.Fatal("BUG: Hit unreachable branch")
+		}
+
+		// Encode reponse to writer. Handles an error.
+		httputils.Encode(w, response)
 	})
 }
 
@@ -148,39 +162,36 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	return &params, nil
 }
 
-// convertToParams converts a request into Linseed API parameters.
-func convertToParams(ctx context.Context, request *v1.SearchRequest, authReview middleware.AuthorizationReview) (lapi.Params, error) {
-	// Build the params for the query.
-	params := lapi.FlowLogParams{}
-
+// intoLogParams converts a request into the given Linseed API parameters.
+func intoLogParams(ctx context.Context, request *v1.SearchRequest, params lapi.LogParams, authReview middleware.AuthorizationReview) error {
 	// Add in the selector.
 	if len(request.Selector) > 0 {
 		// Validate the selector. Linseed performs the same check, but
 		// better to short-circuit the request if we can avoid it.
-		_, err := lmaindex.FlowLogs().NewSelectorQuery(params.Selector)
+		_, err := lmaindex.FlowLogs().NewSelectorQuery(request.Selector)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		params.Selector = request.Selector
+		params.SetSelector(request.Selector)
 	}
 
 	// Time range query.
 	if request.TimeRange != nil {
-		params.TimeRange = request.TimeRange
+		params.SetTimeRange(request.TimeRange)
 	}
 
 	// Get the user's permissions. We'll pass these to Linseed to filter out logs that
 	// the user doens't have permission to view.
 	verbs, err := authReview.PerformReviewForElasticLogs(ctx, request.ClusterName)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	params.Permissions = verbs
+	params.SetPermissions(verbs)
 
 	// Validate the RBAC of the user, and return an Unauthorized error if the verbs don't allow any resources.
 	// Linseed performs this same check, but better to short-circuit the request if we can avoid it.
 	if _, err := lmaindex.FlowLogs().NewRBACQuery(verbs); err != nil {
-		return nil, err
+		return err
 	}
 
 	// Configure sorting, if set.
@@ -188,68 +199,109 @@ func convertToParams(ctx context.Context, request *v1.SearchRequest, authReview 
 		if s.Field == "" {
 			continue
 		}
-		params.Sort = append(params.Sort, lapi.SearchRequestSortBy{
-			Field:      s.Field,
-			Descending: s.Descending,
+		params.SetSort([]lapi.SearchRequestSortBy{
+			{
+				Field:      s.Field,
+				Descending: s.Descending,
+			},
 		})
 	}
 
 	// Configure pagination, timeout, etc.
-	params.Timeout = request.Timeout
-	params.MaxResults = request.PageSize
+	params.SetTimeout(request.Timeout)
+	params.SetMaxResults(request.PageSize)
 	if request.PageNum != 0 {
 		// TODO: Ideally, clients don't know the format of the AfterKey. In order to satisfy
 		// the exising UI API, we need to for now.
-		params.AfterKey = map[string]interface{}{
+		params.SetAfterKey(map[string]interface{}{
 			"startFrom": request.PageNum * request.PageSize,
-		}
+		})
 	}
 
-	return &params, nil
+	return nil
 }
 
-// TODO: Right now, this handler is basically just translating between UI format and Linseed format.
-// we might want to add more logic here, or we might want to bypass es-proxy altogether and send
-// these requests straight to linseed. That would require some thinking about authz, and changes to the UI.
+// searchFlowLogs calls searchLogs, configured for flow logs.
 func searchFlowLogs(
-	client client.Client,
+	ctx context.Context,
+	lsclient client.Client,
 	request *v1.SearchRequest,
 	authReview middleware.AuthorizationReview,
 	k8sClient datastore.ClientSet,
-	r *http.Request,
 ) (*v1.SearchResponse, error) {
-	// Create a context with timeout to ensure we don't block for too long with this query.
-	// This releases timer resources if the operation completes before the timeout.
-	ctx, cancel := context.WithTimeout(r.Context(), request.Timeout.Duration)
-	defer cancel()
-
-	// Extract important info and convert to Linseed API params.
-	clusterName := request.ClusterName
-	pageSize := request.PageSize
-	params, err := convertToParams(ctx, request, authReview)
+	params := &lapi.FlowLogParams{}
+	err := intoLogParams(ctx, request, params, authReview)
 	if err != nil {
 		return nil, err
 	}
+	listFn := lsclient.FlowLogs(request.ClusterName).List
+	return searchLogs(ctx, listFn, params, authReview, k8sClient)
+}
+
+// searchFlowLogs calls searchLogs, configured for DNS logs.
+func searchDNSLogs(
+	ctx context.Context,
+	lsclient client.Client,
+	request *v1.SearchRequest,
+	authReview middleware.AuthorizationReview,
+	k8sClient datastore.ClientSet,
+) (*v1.SearchResponse, error) {
+	params := &lapi.DNSLogParams{}
+	err := intoLogParams(ctx, request, params, authReview)
+	if err != nil {
+		return nil, err
+	}
+	listFn := lsclient.DNSLogs(request.ClusterName).List
+	return searchLogs(ctx, listFn, params, authReview, k8sClient)
+}
+
+// searchL7Logs calls searchLogs, configured for DNS logs.
+func searchL7Logs(
+	ctx context.Context,
+	lsclient client.Client,
+	request *v1.SearchRequest,
+	authReview middleware.AuthorizationReview,
+	k8sClient datastore.ClientSet,
+) (*v1.SearchResponse, error) {
+	params := &lapi.L7LogParams{}
+	err := intoLogParams(ctx, request, params, authReview)
+	if err != nil {
+		return nil, err
+	}
+	listFn := lsclient.L7Logs(request.ClusterName).List
+	return searchLogs(ctx, listFn, params, authReview, k8sClient)
+}
+
+// searchLogs performs a search against the Linseed API for logs that match the given
+// parameters, using the provided client.ListFunc.
+func searchLogs[T any](
+	ctx context.Context,
+	listFunc client.ListFunc[T],
+	params lapi.LogParams,
+	authReview middleware.AuthorizationReview,
+	k8sClient datastore.ClientSet,
+) (*v1.SearchResponse, error) {
+	pageSize := params.GetMaxResults()
 
 	// Perform the query.
 	start := time.Now()
-	items, err := client.FlowLogs(clusterName).List(ctx, params)
+	items, err := listFunc(ctx, params)
 	if err != nil {
 		return nil, err
 	}
 
 	type Hit struct {
-		ID     string       `json:"id"`
-		Index  string       `json:"index"`
-		Source lapi.FlowLog `json:"source"`
+		ID     string `json:"id"`
+		Index  string `json:"index"`
+		Source T      `json:"source"`
 	}
 
 	// Build the hits response.
 	hits := []json.RawMessage{}
 	for i, item := range items.Items {
 		hit := Hit{
-			ID:     fmt.Sprintf("%d", i),     // TODO - what does the UI use this for?
-			Index:  "tigera_secure_ee_flows", // TODO: What does the UI use this for?
+			ID:     fmt.Sprintf("%d", i), // TODO - what does the UI use this for?
+			Index:  "tigera_secure_ee",   // TODO: What does the UI use this for?
 			Source: item,
 		}
 		hitJSON, err := json.Marshal(hit)
