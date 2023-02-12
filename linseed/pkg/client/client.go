@@ -8,10 +8,12 @@ import (
 
 type Client interface {
 	L3Flows(string) L3FlowsInterface
-	L7Flows(string) L7FlowsInterface
-	DNSFlows(string) DNSFlowsInterface
-	Events(string) EventsInterface
 	FlowLogs(string) FlowLogsInterface
+	L7Flows(string) L7FlowsInterface
+	L7Logs(string) L7LogsInterface
+	DNSFlows(string) DNSFlowsInterface
+	DNSLogs(string) DNSLogsInterface
+	Events(string) EventsInterface
 }
 
 type client struct {
@@ -41,6 +43,16 @@ func (c *client) Events(cluster string) EventsInterface {
 // FlowLogs returns an interface for managing v1.FlowLog resources.
 func (c *client) FlowLogs(cluster string) FlowLogsInterface {
 	return newFlowLogs(c, cluster)
+}
+
+// DNSLogs returns an interface for managing v1.DNSLog resources.
+func (c *client) DNSLogs(cluster string) DNSLogsInterface {
+	return newDNSLogs(c, cluster)
+}
+
+// L7Logs returns an interface for managing v1.L7Log resources.
+func (c *client) L7Logs(cluster string) L7LogsInterface {
+	return newL7Logs(c, cluster)
 }
 
 func NewClient(tenantID string, cfg rest.Config) (Client, error) {

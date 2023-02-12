@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 
@@ -42,7 +43,7 @@ func TestCreateL7Log(t *testing.T) {
 	}
 
 	// Create a dummy flow.
-	f := bapi.L7Log{
+	f := v1.L7Log{
 		StartTime:            fmt.Sprintf("%d", time.Now().Unix()),
 		EndTime:              fmt.Sprintf("%d", time.Now().Unix()),
 		DestType:             "wep",
@@ -55,7 +56,7 @@ func TestCreateL7Log(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	response, err := b.Create(ctx, clusterInfo, []bapi.L7Log{f})
+	response, err := b.Create(ctx, clusterInfo, []v1.L7Log{f})
 	require.NoError(t, err)
 	require.Equal(t, response.Failed, 0)
 	require.Equal(t, response.Succeeded, 1)

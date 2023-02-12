@@ -26,6 +26,13 @@ type Params interface {
 	SetTimeRange(*lmav1.TimeRange)
 }
 
+type LogParams interface {
+	Params
+	SetSelector(string)
+	SetPermissions([]v3.AuthorizedResourceVerbs)
+	SetSort([]SearchRequestSortBy)
+}
+
 // QueryParams are request parameters that are shared across all APIs
 type QueryParams struct {
 	// TimeRange will filter data generated within the specified time range
@@ -66,8 +73,8 @@ func (p *QueryParams) SetTimeRange(t *lmav1.TimeRange) {
 	p.TimeRange = t
 }
 
-// LogParams are common for all log APIs.
-type LogParams struct {
+// LogSelectionParams are common for all log APIs.
+type LogSelectionParams struct {
 	// Permissions define a set of resource kinds and namespaces that
 	// should be used to filter-in results. If present, any results that
 	// do not match the given permissions will be omitted.
@@ -78,6 +85,18 @@ type LogParams struct {
 
 	// Sort configures the sorting of results.
 	Sort []SearchRequestSortBy `json:"sort"`
+}
+
+func (l *LogSelectionParams) SetSelector(s string) {
+	l.Selector = s
+}
+
+func (l *LogSelectionParams) SetPermissions(p []v3.AuthorizedResourceVerbs) {
+	l.Permissions = p
+}
+
+func (l *LogSelectionParams) SetSort(s []SearchRequestSortBy) {
+	l.Sort = s
 }
 
 // SearchRequestSortBy allows configuration of sorting of results.

@@ -8,8 +8,8 @@ import (
 
 // FlowLogParams define querying parameters to retrieve flow logs
 type FlowLogParams struct {
-	QueryParams `json:",inline" validate:"required"`
-	LogParams   `json:",inline"`
+	QueryParams        `json:",inline" validate:"required"`
+	LogSelectionParams `json:",inline"`
 }
 
 // FlowLog is the input format to ingest flow logs

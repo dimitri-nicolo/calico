@@ -1,4 +1,10 @@
-package api
+package v1
+
+// L7LogParams define querying parameters to retrieve L7 logs
+type L7LogParams struct {
+	QueryParams        `json:",inline" validate:"required"`
+	LogSelectionParams `json:",inline"`
+}
 
 // L7Log is the structure which defines a single instance of an L7 flow log.
 type L7Log struct {
@@ -40,9 +46,4 @@ type L7Log struct {
 	Method       string `json:"method"`
 	UserAgent    string `json:"user_agent"`
 	Type         string `json:"type"`
-
-	// Cluster should not be set directly by calling code.
-	// Rather, this is set by the backend when creating the log.
-	// Backend implementations should error if provided with an L7Log where this field is set.
-	Cluster string `json:"cluster,omitempty"`
 }

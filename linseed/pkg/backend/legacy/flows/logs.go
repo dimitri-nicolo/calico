@@ -160,7 +160,7 @@ func (b *flowLogBackend) startFrom(opts v1.FlowLogParams) int {
 				logrus.WithField("val", val).Info("Handling int startFrom")
 				return v
 			default:
-				logrus.WithField("val", val).Info("Unexpected type (%T) for startFrom, will not perform paging", val)
+				logrus.WithField("val", val).Infof("Unexpected type (%T) for startFrom, will not perform paging", val)
 			}
 		}
 	}

@@ -18,6 +18,12 @@ import (
 	"golang.org/x/net/idna"
 )
 
+// DNSLogParams define querying parameters to retrieve DNS logs
+type DNSLogParams struct {
+	QueryParams        `json:",inline" validate:"required"`
+	LogSelectionParams `json:",inline"`
+}
+
 type DNSLog struct {
 	StartTime       time.Time         `json:"start_time"`
 	EndTime         time.Time         `json:"end_time"`

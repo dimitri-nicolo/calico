@@ -128,9 +128,9 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 
 	numFlows := 10
 
-	batch := []bapi.L7Log{}
+	batch := []v1.L7Log{}
 	for i := 0; i < numFlows; i++ {
-		f := bapi.L7Log{
+		f := v1.L7Log{
 			StartTime: fmt.Sprintf("%d", time.Now().Unix()),
 			EndTime:   fmt.Sprintf("%d", time.Now().Unix()),
 

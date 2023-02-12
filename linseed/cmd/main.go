@@ -56,7 +56,9 @@ func main() {
 	eventBackend := eventbackend.NewBackend(esClient, cache)
 	flowBackend := flows.NewFlowBackend(esClient)
 	dnsFlowBackend := dnsbackend.NewDNSFlowBackend(esClient)
+	dnsLogBackend := dnsbackend.NewDNSLogBackend(esClient, cache)
 	l7FlowBackend := l7backend.NewL7FlowBackend(esClient)
+	l7LogBackend := l7backend.NewL7LogBackend(esClient, cache)
 
 	// Start server
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
@@ -69,10 +71,11 @@ func main() {
 
 			// L7 flow and log APIs.
 			l7.NewFlows(l7FlowBackend),
-			&l7.Logs{},
+			l7.NewL7Logs(l7LogBackend),
 
 			// DNS flow and log APIs.
 			dns.NewFlows(dnsFlowBackend),
+			dns.NewDNSLogs(dnsLogBackend),
 
 			// Events
 			events.NewEvents(eventBackend),
