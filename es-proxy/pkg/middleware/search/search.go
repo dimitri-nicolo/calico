@@ -193,20 +193,19 @@ func searchFlowLogs(
 		params.TimeRange = request.TimeRange
 	}
 
-	// TODO: This is performed on every request, and will need handling.
-	// either we do it here after getting all the results, or we enhance Linseed to be able to do it.
-	//
-	// RBAC query.
-	// verbs, err := authReview.PerformReviewForElasticLogs(ctx, params.ClusterName)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if rbac, err := idxHelper.NewRBACQuery(verbs); err != nil {
-	// 	// NewRBACQuery returns an HttpStatusError.
-	// 	return nil, err
-	// } else if rbac != nil {
-	// 	esquery = esquery.Filter(rbac)
-	// }
+	// Get the user's permissions. We'll pass these to Linseed to filter out logs that
+	// the user doens't have permission to view.
+	verbs, err := authReview.PerformReviewForElasticLogs(ctx, request.ClusterName)
+	if err != nil {
+		return nil, err
+	}
+	params.Permissions = verbs
+
+	// TODO: This just returns an Unauthorized error if the verbs don't allow any resources.
+	// We should get Linseed to return this instead.
+	if _, err := lmaindex.FlowLogs().NewRBACQuery(verbs); err != nil {
+		return nil, err
+	}
 
 	// Configure sorting, if set.
 	for _, s := range request.SortBy {

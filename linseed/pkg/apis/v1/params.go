@@ -8,6 +8,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // DefaultTimeOut is the default timeout that an API will run its query
@@ -49,6 +50,12 @@ func (p *QueryParams) SetAfterKey(k map[string]interface{}) {
 
 // LogParams are common for all log APIs.
 type LogParams struct {
+	// Permissions define a set of resource kinds and namespaces that
+	// should be used to filter-in results. If present, any results that
+	// do not match the given permissions will be omitted.
+	Permissions []v3.AuthorizedResourceVerbs `json:"permissions"`
+
+	// Sort configures the sorting of results.
 	Sort []SearchRequestSortBy `json:"sort"`
 }
 

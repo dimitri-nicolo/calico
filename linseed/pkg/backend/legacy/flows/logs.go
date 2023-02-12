@@ -93,13 +93,18 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.Fl
 	// Get the startFrom param, if any.
 	startFrom := b.startFrom(opts)
 
+	q, err := b.buildQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
+
 	// Build the query, sorting by time.
 	query := b.client.Search().
 		Index(b.index(i)).
 		Size(opts.QueryParams.GetMaxResults()).
 		From(startFrom).
 		Sort("end_time", true).
-		Query(b.buildQuery(i, opts))
+		Query(q)
 
 	results, err := query.Do(ctx)
 	if err != nil {
@@ -164,7 +169,7 @@ func (b *flowLogBackend) startFrom(opts v1.FlowLogParams) int {
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.FlowLogParams) elastic.Query {
+func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.FlowLogParams) (elastic.Query, error) {
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
 	var start, end time.Time
@@ -176,7 +181,28 @@ func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.FlowLogParams) e
 		start = time.Now().Add(-5 * time.Minute)
 		end = time.Now()
 	}
-	return lmaindex.FlowLogs().NewTimeRangeQuery(start, end)
+	constraints := []elastic.Query{
+		lmaindex.FlowLogs().NewTimeRangeQuery(start, end),
+	}
+
+	// If RBAC constraints were given, add them in.
+	// TODO: We should split the query building and the authz check. Run the authz in the frontend.
+	if len(opts.Permissions) > 0 {
+		rbacQuery, err := lmaindex.FlowLogs().NewRBACQuery(opts.Permissions)
+		if err != nil {
+			return nil, err
+		}
+		constraints = append(constraints, rbacQuery)
+	}
+
+	if len(constraints) == 1 {
+		// This is just a time-range query. We don't need to join multiple
+		// constraints together.
+		return constraints[0], nil
+	}
+
+	// We need to perform a boolean query with multiple constraints.
+	return elastic.NewBoolQuery().Filter(constraints...), nil
 }
 
 func (b *flowLogBackend) index(i bapi.ClusterInfo) string {
