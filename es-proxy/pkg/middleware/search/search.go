@@ -148,45 +148,21 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	return &params, nil
 }
 
-// TODO: Right now, this is basically just translating between UI format and Linseed format.
-// we might want to add more logic here, or we might want to bypass es-proxy altogether and send
-// these requests straight to linseed. That would require some thinking about authz.
-func searchFlowLogs(
-	client client.Client,
-	request *v1.SearchRequest,
-	authReview middleware.AuthorizationReview,
-	k8sClient datastore.ClientSet,
-	r *http.Request,
-) (*v1.SearchResponse, error) {
-	// Create a context with timeout to ensure we don't block for too long with this query.
-	// This releases timer resources if the operation completes before the timeout.
-	ctx, cancel := context.WithTimeout(r.Context(), request.Timeout.Duration)
-	defer cancel()
-
+// convertToParams converts a request into Linseed API parameters.
+func convertToParams(ctx context.Context, request *v1.SearchRequest, authReview middleware.AuthorizationReview) (lapi.Params, error) {
 	// Build the params for the query.
 	params := lapi.FlowLogParams{}
 
-	// TODO: What does this look like? How can we handle this in Linseed?
-	//
-	// Selector query.
-	// var selector elastic.Query
-	// var err error
-	// if len(params.Selector) > 0 {
-	// 	selector, err = idxHelper.NewSelectorQuery(params.Selector)
-	// 	if err != nil {
-	// 		// NewSelectorQuery returns an HttpStatusError.
-	// 		return nil, err
-	// 	}
-	// 	esquery = esquery.Must(selector)
-	// }
-
-	// TODO: What does this look like? How can we handle this in Linseed?
-	// if len(params.Filter) > 0 {
-	// 	for _, filter := range params.Filter {
-	// 		q := elastic.NewRawStringQuery(string(filter))
-	// 		esquery = esquery.Filter(q)
-	// 	}
-	// }
+	// Add in the selector.
+	if len(request.Selector) > 0 {
+		// Validate the selector. Linseed performs the same check, but
+		// better to short-circuit the request if we can avoid it.
+		_, err := lmaindex.FlowLogs().NewSelectorQuery(params.Selector)
+		if err != nil {
+			return nil, err
+		}
+		params.Selector = request.Selector
+	}
 
 	// Time range query.
 	if request.TimeRange != nil {
@@ -201,8 +177,8 @@ func searchFlowLogs(
 	}
 	params.Permissions = verbs
 
-	// TODO: This just returns an Unauthorized error if the verbs don't allow any resources.
-	// We should get Linseed to return this instead.
+	// Validate the RBAC of the user, and return an Unauthorized error if the verbs don't allow any resources.
+	// Linseed performs this same check, but better to short-circuit the request if we can avoid it.
 	if _, err := lmaindex.FlowLogs().NewRBACQuery(verbs); err != nil {
 		return nil, err
 	}
@@ -229,9 +205,35 @@ func searchFlowLogs(
 		}
 	}
 
+	return &params, nil
+}
+
+// TODO: Right now, this handler is basically just translating between UI format and Linseed format.
+// we might want to add more logic here, or we might want to bypass es-proxy altogether and send
+// these requests straight to linseed. That would require some thinking about authz, and changes to the UI.
+func searchFlowLogs(
+	client client.Client,
+	request *v1.SearchRequest,
+	authReview middleware.AuthorizationReview,
+	k8sClient datastore.ClientSet,
+	r *http.Request,
+) (*v1.SearchResponse, error) {
+	// Create a context with timeout to ensure we don't block for too long with this query.
+	// This releases timer resources if the operation completes before the timeout.
+	ctx, cancel := context.WithTimeout(r.Context(), request.Timeout.Duration)
+	defer cancel()
+
+	// Extract important info and convert to Linseed API params.
+	clusterName := request.ClusterName
+	pageSize := request.PageSize
+	params, err := convertToParams(ctx, request, authReview)
+	if err != nil {
+		return nil, err
+	}
+
 	// Perform the query.
 	start := time.Now()
-	items, err := client.FlowLogs(request.ClusterName).List(ctx, &params)
+	items, err := client.FlowLogs(clusterName).List(ctx, params)
 	if err != nil {
 		return nil, err
 	}
@@ -260,8 +262,8 @@ func searchFlowLogs(
 	// Calculate the number of pages, given the request's page size.
 	cappedTotalHits := math.MinInt(int(items.TotalHits), middleware.MaxNumResults)
 	numPages := 0
-	if request.PageSize > 0 {
-		numPages = ((cappedTotalHits - 1) / request.PageSize) + 1
+	if pageSize > 0 {
+		numPages = ((cappedTotalHits - 1) / pageSize) + 1
 	}
 
 	return &v1.SearchResponse{

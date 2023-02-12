@@ -195,6 +195,15 @@ func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.FlowLogParams) (
 		constraints = append(constraints, rbacQuery)
 	}
 
+	// If a selector was provided, parse it and add it in.
+	if len(opts.Selector) > 0 {
+		selQuery, err := lmaindex.FlowLogs().NewSelectorQuery(opts.Selector)
+		if err != nil {
+			return nil, err
+		}
+		constraints = append(constraints, selQuery)
+	}
+
 	if len(constraints) == 1 {
 		// This is just a time-range query. We don't need to join multiple
 		// constraints together.

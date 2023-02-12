@@ -11,6 +11,9 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
+// Make sure QueryParams implements the interface.
+var _ Params = &QueryParams{}
+
 // DefaultTimeOut is the default timeout that an API will run its query
 // until it cancels the execution
 const DefaultTimeOut = 60 * time.Second
@@ -69,6 +72,9 @@ type LogParams struct {
 	// should be used to filter-in results. If present, any results that
 	// do not match the given permissions will be omitted.
 	Permissions []v3.AuthorizedResourceVerbs `json:"permissions"`
+
+	// If present, returns only the logs that match the query.
+	Selector string `json:"selector"`
 
 	// Sort configures the sorting of results.
 	Sort []SearchRequestSortBy `json:"sort"`
