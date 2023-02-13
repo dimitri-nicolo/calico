@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"time"
 
 	elastic "github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
@@ -14,6 +12,7 @@ import (
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 )
@@ -21,7 +20,7 @@ import (
 type l7LogBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
-
+	helper    lmaindex.Helper
 	templates bapi.Cache
 }
 
@@ -30,6 +29,7 @@ func NewL7LogBackend(c lmaelastic.Client, cache bapi.Cache) bapi.L7LogBackend {
 		client:    c.Backend(),
 		lmaclient: c,
 		templates: cache,
+		helper:    lmaindex.L7Logs(),
 	}
 	return b
 }
@@ -89,9 +89,9 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.L7Lo
 	}
 
 	// Get the startFrom param, if any.
-	startFrom := b.startFrom(opts)
+	startFrom := logtools.StartFrom(&opts)
 
-	q, err := b.buildQuery(i, opts)
+	q, err := logtools.BuildQuery(b.helper, i, &opts)
 	if err != nil {
 		return nil, err
 	}
@@ -138,78 +138,6 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.L7Lo
 		TotalHits: results.TotalHits(),
 		AfterKey:  ak,
 	}, nil
-}
-
-// startFrom parses the given parameters to determine which log to start from in the ES query.
-func (b *l7LogBackend) startFrom(opts v1.L7LogParams) int {
-	if opts.AfterKey != nil {
-		if val, ok := opts.AfterKey["startFrom"]; ok {
-			switch v := val.(type) {
-			case string:
-				if sf, err := strconv.Atoi(v); err != nil {
-					return sf
-				} else {
-					logrus.WithField("val", v).Warn("Could not parse startFrom as an integer")
-				}
-			case float64:
-				logrus.WithField("val", val).Info("Handling float64 startFrom")
-				return int(v)
-			case int:
-				logrus.WithField("val", val).Info("Handling int startFrom")
-				return v
-			default:
-				logrus.WithField("val", val).Infof("Unexpected type (%T) for startFrom, will not perform paging", val)
-			}
-		}
-	}
-	logrus.Debug("Starting query from 0")
-	return 0
-}
-
-// buildQuery builds an elastic query using the given parameters.
-func (b *l7LogBackend) buildQuery(i bapi.ClusterInfo, opts v1.L7LogParams) (elastic.Query, error) {
-	// Parse times from the request. We default to a time-range query
-	// if no other search parameters are given.
-	var start, end time.Time
-	if opts.QueryParams.TimeRange != nil {
-		start = opts.QueryParams.TimeRange.From
-		end = opts.QueryParams.TimeRange.To
-	} else {
-		// Default to the latest 5 minute window.
-		start = time.Now().Add(-5 * time.Minute)
-		end = time.Now()
-	}
-	constraints := []elastic.Query{
-		lmaindex.L7Logs().NewTimeRangeQuery(start, end),
-	}
-
-	// If RBAC constraints were given, add them in.
-	// TODO: We should split the query building and the authz check. Run the authz in the frontend.
-	if len(opts.Permissions) > 0 {
-		rbacQuery, err := lmaindex.L7Logs().NewRBACQuery(opts.Permissions)
-		if err != nil {
-			return nil, err
-		}
-		constraints = append(constraints, rbacQuery)
-	}
-
-	// If a selector was provided, parse it and add it in.
-	if len(opts.Selector) > 0 {
-		selQuery, err := lmaindex.L7Logs().NewSelectorQuery(opts.Selector)
-		if err != nil {
-			return nil, err
-		}
-		constraints = append(constraints, selQuery)
-	}
-
-	if len(constraints) == 1 {
-		// This is just a time-range query. We don't need to join multiple
-		// constraints together.
-		return constraints[0], nil
-	}
-
-	// We need to perform a boolean query with multiple constraints.
-	return elastic.NewBoolQuery().Filter(constraints...), nil
 }
 
 func (b *l7LogBackend) index(i bapi.ClusterInfo) string {

@@ -22,14 +22,18 @@ type Params interface {
 	GetMaxResults() int
 	SetMaxResults(int)
 	SetAfterKey(map[string]interface{})
+	GetAfterKey() map[string]interface{}
 	SetTimeout(*v1.Duration)
 	SetTimeRange(*lmav1.TimeRange)
+	GetTimeRange() *lmav1.TimeRange
 }
 
 type LogParams interface {
 	Params
 	SetSelector(string)
+	GetSelector() string
 	SetPermissions([]v3.AuthorizedResourceVerbs)
+	GetPermissions() []v3.AuthorizedResourceVerbs
 	SetSort([]SearchRequestSortBy)
 }
 
@@ -65,12 +69,20 @@ func (p *QueryParams) SetAfterKey(k map[string]interface{}) {
 	p.AfterKey = k
 }
 
+func (p *QueryParams) GetAfterKey() map[string]interface{} {
+	return p.AfterKey
+}
+
 func (p *QueryParams) SetTimeout(t *v1.Duration) {
 	p.Timeout = t
 }
 
 func (p *QueryParams) SetTimeRange(t *lmav1.TimeRange) {
 	p.TimeRange = t
+}
+
+func (p *QueryParams) GetTimeRange() *lmav1.TimeRange {
+	return p.TimeRange
 }
 
 // LogSelectionParams are common for all log APIs.
@@ -91,8 +103,16 @@ func (l *LogSelectionParams) SetSelector(s string) {
 	l.Selector = s
 }
 
+func (l *LogSelectionParams) GetSelector() string {
+	return l.Selector
+}
+
 func (l *LogSelectionParams) SetPermissions(p []v3.AuthorizedResourceVerbs) {
 	l.Permissions = p
+}
+
+func (l *LogSelectionParams) GetPermissions() []v3.AuthorizedResourceVerbs {
+	return l.Permissions
 }
 
 func (l *LogSelectionParams) SetSort(s []SearchRequestSortBy) {
