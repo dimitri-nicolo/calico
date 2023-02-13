@@ -109,6 +109,10 @@ func TestFV_Events(t *testing.T) {
 		}
 		resp, err := cli.Events("cluster").List(ctx, &params)
 		require.NoError(t, err)
+
+		// The ID should be set, but random, so we can't assert on its value.
+		require.NotEqual(t, "", resp.Items[0].ID)
+		resp.Items[0].ID = ""
 		require.Equal(t, events, resp.Items)
 	})
 }
