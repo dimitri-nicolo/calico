@@ -1,6 +1,4 @@
 {
-  "index_patterns": ["tigera_secure_ee_events*"],
-  "mappings": {
     "dynamic": "false",
     "properties": {
       "time": {
@@ -63,5 +61,4 @@
         "type": "object"
       }
     }
-  }
 }

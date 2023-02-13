@@ -8,21 +8,21 @@ import (
 	"net/http"
 )
 
-type L7Logs struct {
+type Logs struct {
 	// TODO: Add storage
 }
 
-func (n L7Logs) SupportedAPIs() map[string]http.Handler {
+func (n Logs) SupportedAPIs() map[string]http.Handler {
 	return map[string]http.Handler{
 		"POST": n.Serve(),
 	}
 }
 
-func (n L7Logs) URL() string {
+func (n Logs) URL() string {
 	return fmt.Sprintf("%s/logs", baseURL)
 }
 
-func (n L7Logs) Serve() http.HandlerFunc {
+func (n Logs) Serve() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		_, err := w.Write([]byte("net-logs"))
 		if err != nil {

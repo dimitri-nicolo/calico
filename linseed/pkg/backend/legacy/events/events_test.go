@@ -61,15 +61,6 @@ func setupTest(t *testing.T) func() {
 	}
 }
 
-func ptr(i int) *int64 {
-	i64 := int64(i)
-	return &i64
-}
-
-func stringPtr(s string) *string {
-	return &s
-}
-
 // TestCreateEvent tests running a real elasticsearch query to create an event.
 func TestCreateEvent(t *testing.T) {
 	defer setupTest(t)()
@@ -83,17 +74,17 @@ func TestCreateEvent(t *testing.T) {
 		Origin:          "South Detroit",
 		Severity:        1,
 		Type:            "TODO",
-		DestIP:          stringPtr("192.168.1.1"),
+		DestIP:          testutils.StringPtr("192.168.1.1"),
 		DestName:        "anywhere-1234",
 		DestNameAggr:    "anywhere",
-		DestPort:        ptr(53),
+		DestPort:        testutils.Int64Ptr(53),
 		Dismissed:       false,
 		Host:            "midnight-train",
-		SourceIP:        stringPtr("192.168.2.2"),
+		SourceIP:        testutils.StringPtr("192.168.2.2"),
 		SourceName:      "south-detroit-1234",
 		SourceNameAggr:  "south-detroit",
 		SourceNamespace: "michigan",
-		SourcePort:      ptr(48127),
+		SourcePort:      testutils.Int64Ptr(48127),
 	}
 
 	// Create the event in ES.
@@ -119,5 +110,10 @@ func TestCreateEvent(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(results.Items))
+
+	// We expect the ID to be present, but it's a random value so we
+	// can't assert on the exact value.
+	require.NotEqual(t, "", results.Items[0].ID)
+	results.Items[0].ID = ""
 	require.Equal(t, event, results.Items[0])
 }

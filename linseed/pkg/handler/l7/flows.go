@@ -44,12 +44,11 @@ func (n flows) Serve() http.HandlerFunc {
 		reqParams, err := handler.DecodeAndValidateReqParams[v1.L7FlowParams](w, req)
 		if err != nil {
 			log.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *httputils.HttpStatusError
+			var httpErr *v1.HTTPError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
 			} else {
-				httputils.JSONError(w, &httputils.HttpStatusError{
-					Err:    err,
+				httputils.JSONError(w, &v1.HTTPError{
 					Msg:    err.Error(),
 					Status: http.StatusBadRequest,
 				}, http.StatusBadRequest)
@@ -71,10 +70,9 @@ func (n flows) Serve() http.HandlerFunc {
 		response, err := n.backend.List(ctx, clusterInfo, *reqParams)
 		if err != nil {
 			log.WithError(err).Error("Failed to list flows")
-			httputils.JSONError(w, &httputils.HttpStatusError{
+			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
-				Err:    err,
 			}, http.StatusInternalServerError)
 			return
 		}

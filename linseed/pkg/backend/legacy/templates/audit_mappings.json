@@ -1,6 +1,7 @@
 {
     "properties": {
       "timestamp": { "type": "date" },
+      "host": { "type": "keyword" },
       "apiVersion": { "type": "keyword" },
       "AuditID": { "type": "keyword" },
       "kind": { "type": "keyword" },

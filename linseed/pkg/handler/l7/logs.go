@@ -10,11 +10,11 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/handler"
 )
 
-type L7Logs struct {
+type Logs struct {
 	// TODO: Add storage
 }
 
-func (n L7Logs) APIS() []handler.API {
+func (n Logs) APIS() []handler.API {
 	return []handler.API{
 		{
 			Method:  "POST",
@@ -24,11 +24,11 @@ func (n L7Logs) APIS() []handler.API {
 	}
 }
 
-func (n L7Logs) URL() string {
+func (n Logs) URL() string {
 	return fmt.Sprintf("%s/logs", baseURL)
 }
 
-func (n L7Logs) Serve() http.HandlerFunc {
+func (n Logs) Serve() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		_, err := w.Write([]byte("net-logs"))
 		if err != nil {

@@ -45,7 +45,7 @@ func TestBulkIngestion_Serve(t *testing.T) {
 			reqBody:         "{#}",
 			want: testResult{
 				true, 400,
-				"{\"Status\":400,\"Msg\":\"Request body contains badly-formed JSON\",\"Err\":{}}",
+				"{\"Status\":400,\"Msg\":\"Request body contains badly-formed JSON\"}",
 			},
 		},
 
@@ -66,7 +66,7 @@ func TestBulkIngestion_Serve(t *testing.T) {
 			backendError:    errors.New("any error"),
 			backendResponse: nil,
 			reqBody:         marshal(flowLogs),
-			want:            testResult{true, 500, "{\"Status\":500,\"Msg\":\"any error\",\"Err\":{}}"},
+			want:            testResult{true, 500, "{\"Status\":500,\"Msg\":\"any error\"}"},
 		},
 
 		// Ingest some flow logs

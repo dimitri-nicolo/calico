@@ -16,7 +16,7 @@ import (
 )
 
 func TestClusterInfo(t *testing.T) {
-	httpErrorMsg := "{\"Status\":401,\"Msg\":\"Missing tenant identifier\",\"Err\":{}}"
+	httpErrorMsg := `{"Status":401,"Msg":"Missing tenant identifier"}`
 
 	tests := []struct {
 		name          string

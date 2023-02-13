@@ -33,7 +33,7 @@ func (n events) APIS() []handler.API {
 			// Base URL queries for events.
 			Method:  "POST",
 			URL:     baseURL,
-			Handler: n.Serve(),
+			Handler: n.List(),
 		},
 		{
 			// Bulk creation for events.
@@ -44,17 +44,16 @@ func (n events) APIS() []handler.API {
 	}
 }
 
-func (n events) Serve() http.HandlerFunc {
+func (n events) List() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		reqParams, err := handler.DecodeAndValidateReqParams[v1.EventParams](w, req)
 		if err != nil {
 			logrus.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *httputils.HttpStatusError
+			var httpErr *v1.HTTPError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
 			} else {
-				httputils.JSONError(w, &httputils.HttpStatusError{
-					Err:    err,
+				httputils.JSONError(w, &v1.HTTPError{
 					Msg:    err.Error(),
 					Status: http.StatusBadRequest,
 				}, http.StatusBadRequest)
@@ -76,10 +75,9 @@ func (n events) Serve() http.HandlerFunc {
 		response, err := n.backend.List(ctx, clusterInfo, *reqParams)
 		if err != nil {
 			logrus.WithError(err).Error("Failed to list events")
-			httputils.JSONError(w, &httputils.HttpStatusError{
+			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
-				Err:    err,
 			}, http.StatusInternalServerError)
 			return
 		}
@@ -94,12 +92,11 @@ func (n events) Bulk() http.HandlerFunc {
 		logs, err := handler.DecodeAndValidateBulkParams[v1.Event](w, req)
 		if err != nil {
 			logrus.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *httputils.HttpStatusError
+			var httpErr *v1.HTTPError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
 			} else {
-				httputils.JSONError(w, &httputils.HttpStatusError{
-					Err:    err,
+				httputils.JSONError(w, &v1.HTTPError{
 					Msg:    err.Error(),
 					Status: http.StatusBadRequest,
 				}, http.StatusBadRequest)
@@ -117,10 +114,9 @@ func (n events) Bulk() http.HandlerFunc {
 		response, err := n.backend.Create(ctx, clusterInfo, logs)
 		if err != nil {
 			logrus.WithError(err).Error("Failed to ingest events")
-			httputils.JSONError(w, &httputils.HttpStatusError{
+			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
-				Err:    err,
 			}, http.StatusInternalServerError)
 			return
 		}

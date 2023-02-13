@@ -15,6 +15,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	ContentTypeJSON          = "application/json"
+	ContentTypeMultilineJSON = "application/x-ndjson"
+)
+
 func NewRequest(c *RESTClient) *Request {
 	return &Request{
 		client: c,
@@ -117,7 +122,7 @@ func (r *Request) Do(ctx context.Context) *Result {
 	req.Header.Set("x-tenant-id", r.client.tenantID)
 
 	if r.contentType == "" {
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", ContentTypeJSON)
 	} else {
 		req.Header.Set("Content-Type", r.contentType)
 	}

@@ -30,16 +30,7 @@ func setupTest(t *testing.T) func() {
 const errNoInput = `
 {
   "Status": 400,
-  "Msg": "error with field TimeRange = '\u003cnil\u003e' (Reason: failed to validate Field: TimeRange because of Tag: required )",
-  "Err": {
-    "ErroredFields": [
-      {
-        "Name": "TimeRange",
-        "Value": null,
-        "Reason": "Reason: failed to validate Field: TimeRange because of Tag: required "
-      }
-    ]
-  }
+  "Msg": "error with field TimeRange = '\u003cnil\u003e' (Reason: failed to validate Field: TimeRange because of Tag: required )"
 }
 `
 

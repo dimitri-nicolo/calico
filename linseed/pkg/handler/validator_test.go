@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	"github.com/projectcalico/calico/lma/pkg/httputils"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/handler"
@@ -46,29 +45,53 @@ func TestDecodeAndValidateReqParams(t *testing.T) {
 
 	tests := []testCase[v1.L3FlowParams]{
 		{
-			"no body", reqNoBody(jsonContentType), &v1.L3FlowParams{},
-			true, "empty request body", http.StatusBadRequest,
+			"no body",
+			reqNoBody(jsonContentType),
+			&v1.L3FlowParams{},
+			true,
+			"empty request body",
+			http.StatusBadRequest,
 		},
 		{
-			"empty body", req("", jsonContentType), &v1.L3FlowParams{},
-			true, "Request body must not be empty", http.StatusBadRequest,
+			"empty body",
+			req("", jsonContentType),
+			&v1.L3FlowParams{},
+			true,
+			"Request body must not be empty",
+			http.StatusBadRequest,
 		},
 		{
-			"empty json", req("{}", jsonContentType), &v1.L3FlowParams{},
-			true, "error with field TimeRange = '<nil>' (Reason: failed to validate Field: TimeRange because of Tag: required )", http.StatusBadRequest,
+			"empty json",
+			req("{}", jsonContentType),
+			&v1.L3FlowParams{},
+			true,
+			"error with field TimeRange = '<nil>' (Reason: failed to validate Field: TimeRange because of Tag: required )",
+			http.StatusBadRequest,
 		},
 		{
-			"malformed json", req("{#4FEF}", jsonContentType), &v1.L3FlowParams{},
-			true, "Request body contains badly-formed JSON (at position 2)", http.StatusBadRequest,
+			"malformed json",
+			req("{#4FEF}", jsonContentType),
+			&v1.L3FlowParams{},
+			true,
+			"Request body contains badly-formed JSON (at position 2)",
+			http.StatusBadRequest,
 		},
 		{
-			"other content-type", req(marshall(params), "application/xml"), &params,
-			true, "Received a request with content-type (application/xml) that is not supported", http.StatusUnsupportedMediaType,
+			"other content-type",
+			req(marshall(params), "application/xml"),
+			&params,
+			true,
+			"Received a request with content-type (application/xml) that is not supported",
+			http.StatusUnsupportedMediaType,
 		},
 
 		{
-			"with time range", req(marshall(params), jsonContentType), &params,
-			false, "", 200,
+			"with time range",
+			req(marshall(params), jsonContentType),
+			&params,
+			false,
+			"",
+			200,
 		},
 	}
 
@@ -79,7 +102,7 @@ func TestDecodeAndValidateReqParams(t *testing.T) {
 			if tt.wantErr {
 				require.Error(t, err)
 
-				var httpErr *httputils.HttpStatusError
+				var httpErr *v1.HTTPError
 				assert.Equal(t, err.Error(), tt.errorMsg)
 				if errors.As(err, &httpErr) {
 					assert.Equal(t, httpErr.Status, tt.statusCode)
@@ -217,7 +240,7 @@ func TestValidateBulkParams(t *testing.T) {
 			if tt.wantErr {
 				require.Error(t, err)
 
-				var httpErr *httputils.HttpStatusError
+				var httpErr *v1.HTTPError
 				assert.Equal(t, err.Error(), tt.errorMsg)
 				if errors.As(err, &httpErr) {
 					assert.Equal(t, httpErr.Status, tt.statusCode)

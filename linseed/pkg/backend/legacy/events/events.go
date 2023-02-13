@@ -98,6 +98,7 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.Eve
 			log.WithError(err).Error("Error unmarshalling event")
 			continue
 		}
+		event.ID = h.Id
 		events = append(events, event)
 	}
 

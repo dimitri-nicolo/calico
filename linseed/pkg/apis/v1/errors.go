@@ -39,3 +39,15 @@ func GetBulkErrors(resp *elastic.BulkResponse) []BulkError {
 	}
 	return allErrors
 }
+
+type HTTPError struct {
+	// Status http status code of the request error.
+	Status int `json:"Status"`
+
+	// Message describing the error.
+	Msg string `json:"Msg"`
+}
+
+func (e HTTPError) Error() string {
+	return e.Msg
+}

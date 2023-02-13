@@ -4,7 +4,6 @@ package handler
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -55,19 +54,17 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 	// Check content-type
 	content := strings.ToLower(strings.TrimSpace(req.Header.Get(contentType)))
 	if content != newlineJsonContent {
-		return bulkParams, &httputils.HttpStatusError{
+		return bulkParams, &v1.HTTPError{
 			Status: http.StatusUnsupportedMediaType,
 			Msg:    fmt.Sprintf("Received a request with content-type (%s) that is not supported", content),
-			Err:    errors.New("content-type not supported"),
 		}
 	}
 
 	// Check body
 	if req.Body == nil {
-		return bulkParams, &httputils.HttpStatusError{
+		return bulkParams, &v1.HTTPError{
 			Status: http.StatusBadRequest,
 			Msg:    "Received a request with an empty body",
-			Err:    errors.New("empty request body"),
 		}
 	}
 
@@ -75,10 +72,9 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 	req.Body = http.MaxBytesReader(w, req.Body, maxBytes)
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		return bulkParams, &httputils.HttpStatusError{
+		return bulkParams, &v1.HTTPError{
 			Status: http.StatusBadRequest,
 			Msg:    err.Error(),
-			Err:    err,
 		}
 	}
 
@@ -91,10 +87,9 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 		if err != nil {
 			if err != io.EOF {
 				log.WithError(err).Errorf("Failed to decode message for %s", trimBody)
-				return bulkParams, &httputils.HttpStatusError{
+				return bulkParams, &v1.HTTPError{
 					Status: http.StatusBadRequest,
 					Msg:    "Request body contains badly-formed JSON",
-					Err:    err,
 				}
 			}
 			break
@@ -103,10 +98,9 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 	}
 
 	if len(bulkParams) == 0 {
-		return bulkParams, &httputils.HttpStatusError{
+		return bulkParams, &v1.HTTPError{
 			Status: http.StatusBadRequest,
 			Msg:    "Request body contains badly-formed JSON",
-			Err:    errors.New("json is malformed or empty"),
 		}
 	}
 
@@ -121,10 +115,9 @@ func DecodeAndValidateReqParams[T RequestParams](w http.ResponseWriter, req *htt
 
 	content := strings.ToLower(strings.TrimSpace(req.Header.Get(contentType)))
 	if content != jsonContent {
-		return reqParams, &httputils.HttpStatusError{
+		return reqParams, &v1.HTTPError{
 			Status: http.StatusUnsupportedMediaType,
 			Msg:    fmt.Sprintf("Received a request with content-type (%s) that is not supported", content),
-			Err:    errors.New("content-type not supported"),
 		}
 	}
 
@@ -135,10 +128,9 @@ func DecodeAndValidateReqParams[T RequestParams](w http.ResponseWriter, req *htt
 
 	// Validate parameters.
 	if err := validator.Validate(reqParams); err != nil {
-		return reqParams, &httputils.HttpStatusError{
+		return reqParams, &v1.HTTPError{
 			Status: http.StatusBadRequest,
 			Msg:    err.Error(),
-			Err:    err,
 		}
 	}
 

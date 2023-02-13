@@ -3,9 +3,9 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
@@ -37,10 +37,9 @@ func (m ClusterInfo) Extract() func(next http.Handler) http.Handler {
 			// extract tenant id
 			tenant := req.Header.Get(lmak8s.XTenantIDHeader)
 			if m.expectedTenantID != "" && tenant != m.expectedTenantID {
-				httputils.JSONError(w, &httputils.HttpStatusError{
+				httputils.JSONError(w, &v1.HTTPError{
 					Status: http.StatusUnauthorized,
 					Msg:    "Missing tenant identifier",
-					Err:    fmt.Errorf("missing credentials"),
 				}, http.StatusUnauthorized)
 				return
 			}

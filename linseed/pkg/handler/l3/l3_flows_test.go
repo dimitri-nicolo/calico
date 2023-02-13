@@ -46,7 +46,7 @@ func TestNetworkFlows_Post(t *testing.T) {
 			reqBody: "{#}",
 			want: testResult{
 				true, 400,
-				`{"Msg":"Request body contains badly-formed JSON (at position 2)", "Status":400, "Err":{"Offset":2}}`,
+				`{"Msg":"Request body contains badly-formed JSON (at position 2)", "Status":400}`,
 			},
 			backendL3Flows: noFlows,
 		},

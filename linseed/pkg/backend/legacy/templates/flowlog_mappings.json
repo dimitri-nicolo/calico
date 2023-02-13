@@ -255,6 +255,9 @@
       },
       "tcp_unrecovered_to": {
         "type": "long"
+      },
+      "host": {
+        "type": "keyword"
       }
     }
 }

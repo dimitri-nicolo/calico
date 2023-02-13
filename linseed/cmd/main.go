@@ -70,7 +70,7 @@ func main() {
 
 			// L7 flow and log APIs.
 			l7.NewFlows(l7FlowBackend),
-			&l7.L7Logs{},
+			&l7.Logs{},
 
 			// DNS flow and log APIs.
 			dns.NewFlows(dnsFlowBackend),

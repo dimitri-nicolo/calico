@@ -7,6 +7,7 @@ type EventParams struct {
 }
 
 type Event struct {
+	ID              string       `json:"id"`
 	Time            int64        `json:"time" validate:"required"`
 	Description     string       `json:"description" validate:"required"`
 	Origin          string       `json:"origin" validate:"required"`

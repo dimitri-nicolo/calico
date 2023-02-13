@@ -216,7 +216,7 @@ func parseKubernetesEvent(rawEvent corev1.Event, tr lmav1.TimeRange) *Event {
 func parseTigeraEvent(item lapi.Event) *Event {
 	log.Debugf("Processing event with ID: %+v", item)
 
-	id := "0" // TODO:
+	id := item.ID
 	destPort := 0
 	if item.DestPort != nil {
 		destPort = int(*item.DestPort)

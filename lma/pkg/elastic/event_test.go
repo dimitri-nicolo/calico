@@ -48,7 +48,7 @@ var _ = Describe("Elasticsearch events index", func() {
 		cfg = MustLoadConfig()
 	})
 
-	// TODO: Port these tests to Linseed
+	// TODO CASEY: Port these tests to Linseed
 	Context("create and update events index", func() {
 		var (
 			esClient *elastic.Client
