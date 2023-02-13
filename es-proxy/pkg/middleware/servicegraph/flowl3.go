@@ -252,13 +252,6 @@ func GetL3FlowData(
 	return fs, <-errors
 }
 
-func singleDashToBlank(val string) string {
-	if val == "-" {
-		return ""
-	}
-	return val
-}
-
 func blankToSingleDash(val string) string {
 	if val == "" {
 		return "-"
