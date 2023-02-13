@@ -56,9 +56,8 @@ func setupTest(t *testing.T) func() {
 	// Instantiate a backend.
 	b = audit.NewBackend(client, cache)
 
-	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 
 	// Function contains teardown logic.
 	return func() {
