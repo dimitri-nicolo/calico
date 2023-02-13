@@ -5,15 +5,17 @@ package rest
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"path"
 	"strings"
 
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
+
 	"github.com/sirupsen/logrus"
+
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 const (

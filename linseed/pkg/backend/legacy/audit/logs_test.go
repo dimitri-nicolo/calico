@@ -4,10 +4,11 @@ package audit_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/sirupsen/logrus"
 

@@ -4,11 +4,12 @@ package l7
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

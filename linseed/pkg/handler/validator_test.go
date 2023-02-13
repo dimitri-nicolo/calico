@@ -4,12 +4,13 @@ package handler_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 

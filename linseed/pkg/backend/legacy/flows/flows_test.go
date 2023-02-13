@@ -5,13 +5,14 @@ package flows_test
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/sirupsen/logrus"
 

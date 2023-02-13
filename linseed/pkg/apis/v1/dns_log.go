@@ -5,13 +5,14 @@ package v1
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/google/gopacket/layers"
 	"golang.org/x/net/idna"

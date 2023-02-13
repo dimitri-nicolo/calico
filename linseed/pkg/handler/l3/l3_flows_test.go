@@ -5,23 +5,19 @@ package l3_test
 import (
 	"bytes"
 	_ "embed"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
-
-	"github.com/projectcalico/calico/linseed/pkg/backend/api"
-
-	"github.com/stretchr/testify/mock"
-
-	"github.com/stretchr/testify/assert"
-
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
 )
 
 //go:embed testdata/input/all_l3flows_within_timerange.json

@@ -3,7 +3,7 @@
 package config
 
 import (
-	"encoding/json"
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
 const (

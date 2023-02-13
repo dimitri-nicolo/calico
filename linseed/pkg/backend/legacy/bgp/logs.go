@@ -4,9 +4,10 @@ package bgp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
