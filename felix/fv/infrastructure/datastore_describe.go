@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 )
@@ -34,6 +35,12 @@ func DatastoreDescribe(description string, datastores []apiconfig.DatastoreType,
 	for _, ds := range datastores {
 		switch ds {
 		case apiconfig.EtcdV3:
+			if len(datastores) > 1 {
+				// Enterprise only supports KDD so skip running etcd tests if this test also runs
+				// on KDD.
+				log.Infof("Skipping etcd mode tests for %q", description)
+				continue
+			}
 			Describe(fmt.Sprintf("%s (etcdv3 backend)", description),
 				func() {
 					body(createEtcdDatastoreInfra)
