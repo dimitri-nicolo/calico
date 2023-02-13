@@ -12,6 +12,7 @@ import (
 	"path"
 	"strings"
 
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -167,17 +168,7 @@ func (r *Result) Into(obj any) error {
 		return fmt.Errorf("server returned not found for path %s: %s", r.path, string(r.body))
 	} else if r.statusCode != http.StatusOK {
 		// A structured error returned by the server - parse it.
-
-		// TODO: JSON can't unmarshal the error type, so we need to skip that field.
-		// this is a temporary workaround.
-		type httpStatusError struct {
-			// Status http status code of the request error.
-			Status int `json:"Status"`
-
-			// Http status error message.
-			Msg string `json:"Msg"`
-		}
-		httpError := httpStatusError{}
+		httpError := v1.HTTPError{}
 		err := json.Unmarshal(r.body, &httpError)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal error response: %s", err)
