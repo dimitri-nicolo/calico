@@ -10,6 +10,9 @@ import (
 	"time"
 
 	elastic "github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
@@ -18,8 +21,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/require"
 )
 
 var (

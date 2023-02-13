@@ -7,8 +7,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/projectcalico/calico/linseed/pkg/handler"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/linseed/pkg/handler"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
