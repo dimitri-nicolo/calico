@@ -190,6 +190,7 @@ type Config struct {
 	BPFDisableUnprivileged             bool             `config:"bool;true"`
 	BPFLogLevel                        string           `config:"oneof(off,info,debug);off;non-zero"`
 	BPFDataIfacePattern                *regexp.Regexp   `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*|tunl0$|vxlan.calico$|egress.calico$|wireguard.cali$|wg-v6.cali$)"`
+	BPFL3IfacePattern                  *regexp.Regexp   `config:"regexp;"`
 	BPFConnectTimeLoadBalancingEnabled bool             `config:"bool;true"`
 	BPFExternalServiceMode             string           `config:"oneof(tunnel,dsr);tunnel;non-zero"`
 	BPFKubeProxyIptablesCleanupEnabled bool             `config:"bool;true"`
@@ -266,6 +267,7 @@ type Config struct {
 	IptablesLockTimeoutSecs            time.Duration     `config:"seconds;0"`
 	IptablesLockProbeIntervalMillis    time.Duration     `config:"millis;50"`
 	FeatureDetectOverride              map[string]string `config:"keyvaluelist;;"`
+	FeatureGates                       map[string]string `config:"keyvaluelist;;"`
 	IpsetsRefreshInterval              time.Duration     `config:"seconds;10"`
 	MaxIpsetSize                       int               `config:"int;1048576;non-zero"`
 	XDPRefreshInterval                 time.Duration     `config:"seconds;90"`
@@ -538,7 +540,7 @@ type Config struct {
 	Variant string `config:"string;CalicoEnterprise"`
 
 	// Configures MTU auto-detection.
-	MTUIfacePattern *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*)"`
+	MTUIfacePattern *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[copsx].*|(eth|wlan|wwan).*)"`
 
 	// Configures Transparent proxying modes
 	TPROXYMode             string `config:"oneof(Disabled,Enabled,EnabledAllServices);Disabled"`

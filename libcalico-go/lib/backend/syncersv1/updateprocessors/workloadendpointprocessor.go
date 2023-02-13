@@ -216,6 +216,7 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 		Ports:                      ports,
 		GenerateName:               v3res.GenerateName,
 		AllowSpoofedSourcePrefixes: allowedSources,
+		Annotations:                v3res.GetObjectMeta().GetAnnotations(),
 
 		// EE properties below
 		AWSElasticIPs:              v3res.Spec.AWSElasticIPs,

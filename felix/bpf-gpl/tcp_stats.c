@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 #include "events.h"
@@ -14,8 +14,8 @@ int calico_tcp_stats(struct __sk_buff *skb)
 	struct cali_tc_ctx ctx = {
 		.skb = skb,
 	};
-	if (!skb_refresh_validate_ptrs(&ctx, UDP_SIZE)) {
-		if ((ctx.ip_header->ihl == 5) && (ctx.ip_header->protocol == IPPROTO_TCP)) {
+	if (!skb_refresh_validate_ptrs(&ctx, TCP_SIZE)) {
+		if ((ip_hdr(&ctx)->ihl == 5) && (ip_hdr(&ctx)->protocol == IPPROTO_TCP)) {
 			socket_lookup(&ctx);
 		}
 	}

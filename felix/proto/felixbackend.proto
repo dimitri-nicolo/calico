@@ -458,6 +458,7 @@ message WorkloadEndpoint {
   repeated string aws_elastic_ips = 102;
   int32 egress_max_next_hops = 103;
   repeated string allow_spoofed_source_prefixes = 10;
+  map<string, string> annotations = 11;
   repeated string external_network_names = 105;
 }
 

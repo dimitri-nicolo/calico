@@ -169,6 +169,7 @@ type bpfEndpointManager struct {
 	hostIP                  net.IP
 	fibLookupEnabled        bool
 	dataIfaceRegex          *regexp.Regexp
+	l3IfaceRegex            *regexp.Regexp
 	workloadIfaceRegex      *regexp.Regexp
 	ipSetIDAlloc            *idalloc.IDAllocator
 	epToHostAction          string
@@ -292,6 +293,7 @@ func newBPFEndpointManager(
 		hostname:                config.Hostname,
 		fibLookupEnabled:        fibLookupEnabled,
 		dataIfaceRegex:          config.BPFDataIfacePattern,
+		l3IfaceRegex:            config.BPFL3IfacePattern,
 		workloadIfaceRegex:      workloadIfaceRegex,
 		ipSetIDAlloc:            ipSetIDAlloc,
 		epToHostAction:          config.RulesConfig.EndpointToHostAction,
@@ -352,8 +354,8 @@ func newBPFEndpointManager(
 		m.dp = m
 	}
 
-	if config.FeatureDetectOverrides != nil {
-		m.ctlbWorkaroundEnabled = config.FeatureDetectOverrides["BPFConnectTimeLoadBalancingWorkaround"] == "enabled"
+	if config.FeatureGates != nil {
+		m.ctlbWorkaroundEnabled = config.FeatureGates["BPFConnectTimeLoadBalancingWorkaround"] == "enabled"
 	}
 
 	if m.ctlbWorkaroundEnabled {
@@ -553,8 +555,8 @@ func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceUpdate) {
 		}
 	}
 
-	if !m.isDataIface(update.Name) && !m.isWorkloadIface(update.Name) {
-		log.WithField("update", update).Debug("Ignoring interface that's neither data nor workload.")
+	if !m.isDataIface(update.Name) && !m.isWorkloadIface(update.Name) && !m.isL3Iface(update.Name) {
+		log.WithField("update", update).Debug("Ignoring interface that's neither data nor workload nor L3.")
 		return
 	}
 
@@ -782,9 +784,9 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 	errs := map[string]error{}
 	var wg sync.WaitGroup
 	m.dirtyIfaceNames.Iter(func(iface string) error {
-		if !m.isDataIface(iface) {
+		if !m.isDataIface(iface) && !m.isL3Iface(iface) {
 			log.WithField("iface", iface).Debug(
-				"Ignoring interface that doesn't match the host data interface regex")
+				"Ignoring interface that doesn't match the host data/l3 interface regex")
 			return nil
 		}
 		if !m.ifaceIsUp(iface) {
@@ -851,9 +853,9 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 	defer m.ifacesLock.Unlock()
 
 	m.dirtyIfaceNames.Iter(func(iface string) error {
-		if !m.isDataIface(iface) {
+		if !m.isDataIface(iface) && !m.isL3Iface(iface) {
 			log.WithField("iface", iface).Debug(
-				"Ignoring interface that doesn't match the host data interface regex")
+				"Ignoring interface that doesn't match the host data/l3 interface regex")
 			return nil
 		}
 		err := errs[iface]
@@ -1286,7 +1288,7 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(policyDirection PolDirection
 		} else {
 			endpointType = tc.EpTypeTunnel
 		}
-	} else if ifaceName == "wireguard.cali" {
+	} else if ifaceName == "wireguard.cali" || m.isL3Iface(ifaceName) {
 		endpointType = tc.EpTypeL3Device
 	} else if ifaceName == bpfInDev || ifaceName == bpfOutDev {
 		endpointType = tc.EpTypeNAT
@@ -1520,6 +1522,13 @@ func (m *bpfEndpointManager) isDataIface(iface string) bool {
 	return m.dataIfaceRegex.MatchString(iface) || iface == bpfOutDev
 }
 
+func (m *bpfEndpointManager) isL3Iface(iface string) bool {
+	if m.l3IfaceRegex == nil {
+		return false
+	}
+	return m.l3IfaceRegex.MatchString(iface)
+}
+
 func (m *bpfEndpointManager) addWEPToIndexes(wlID proto.WorkloadEndpointID, wl *proto.WorkloadEndpoint) {
 	for _, t := range wl.Tiers {
 		m.addPolicyToEPMappings(t.Name, t.IngressPolicies, wlID)
@@ -1611,7 +1620,7 @@ func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]proto.HostE
 	if wildcardExists {
 		log.Info("Host-* endpoint is configured")
 		for ifaceName := range m.nameToIface {
-			if _, specificExists := hostIfaceToEpMap[ifaceName]; m.isDataIface(ifaceName) && !specificExists {
+			if _, specificExists := hostIfaceToEpMap[ifaceName]; (m.isDataIface(ifaceName) || m.isL3Iface(ifaceName)) && !specificExists {
 				log.Infof("Use host-* endpoint policy for %v", ifaceName)
 				hostIfaceToEpMap[ifaceName] = wildcardHostEndpoint
 			}
@@ -1662,8 +1671,8 @@ func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]proto.HostE
 
 	// Now anything remaining in hostIfaceToEpMap must be a new host endpoint.
 	for ifaceName, newEp := range hostIfaceToEpMap {
-		if !m.isDataIface(ifaceName) {
-			log.Warningf("Host endpoint configured for ifaceName=%v, but that doesn't match BPFDataIfacePattern; ignoring", ifaceName)
+		if !m.isDataIface(ifaceName) && !m.isL3Iface(ifaceName) {
+			log.Warningf("Host endpoint configured for ifaceName=%v, but that doesn't match BPFDataIfacePattern/BPFL3IfacePattern; ignoring", ifaceName)
 			continue
 		}
 		log.Infof("Host endpoint added for ifaceName=%v", ifaceName)
@@ -2247,5 +2256,3 @@ func (m *bpfEndpointManager) addRuleInfo(rule *proto.Rule, idx int,
 
 	return matchID
 }
-
-//ruleMatchID(dir rules.RuleDir, action string, owner rules.RuleOwnerType, idx int, name string) polprog.RuleMatchID

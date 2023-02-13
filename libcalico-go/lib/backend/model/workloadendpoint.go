@@ -163,6 +163,7 @@ type WorkloadEndpoint struct {
 	Ports                      []EndpointPort    `json:"ports,omitempty" validate:"dive"`
 	GenerateName               string            `json:"generate_name,omitempty"`
 	AllowSpoofedSourcePrefixes []net.IPNet       `json:"allow_spoofed_source_ips,omitempty"`
+	Annotations                map[string]string `json:"annotations,omitempty"`
 
 	// EE properties below
 	EgressSelector             string    `json:"egress_selector,omitempty"`

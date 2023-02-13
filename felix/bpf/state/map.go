@@ -29,6 +29,7 @@ const (
 	PolicyAllow
 	PolicyDeny
 	PolicyTailCallFailed = 10
+	MaxRuleIDs           = 32
 )
 
 // struct cali_tc_state {
@@ -52,8 +53,6 @@ const (
 //    struct calico_nat_dest nat_dest;
 //    __u64 prog_start_time;
 // };
-
-const MaxRuleIDs = 32
 
 type State struct {
 	perfEventHeader     uint64

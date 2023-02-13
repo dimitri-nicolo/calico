@@ -687,6 +687,16 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 								apiv3.LabelNetworkNamespace: "testNamespace",
 								apiv3.LabelNetworkInterface: "ens4",
 							},
+							Annotations: map[string]string{
+								nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+									{
+										Name:      "calico-default-network",
+										Interface: "ens4",
+										IPs:       []string{"192.168.91.113"},
+										Mac:       "9e:e7:7e:9d:8f:e0",
+									},
+								}),
+							},
 						},
 						Spec: libapiv3.WorkloadEndpointSpec{
 							Orchestrator:  "k8s",
@@ -765,6 +775,28 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									apiv3.LabelNetworkInterface: "ens4",
 									"pod":                       "simplePod",
 								},
+								Annotations: map[string]string{
+									nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+										{
+											Name:      "calico-default-network",
+											Interface: "ens4",
+											IPs:       []string{"192.168.91.113"},
+											Mac:       "9e:e7:7e:9d:8f:e0",
+										},
+										{
+											Name:      "calico1",
+											Interface: "net1",
+											IPs:       []string{"192.168.91.114"},
+											Mac:       "62:45:f5:10:97:c1",
+										},
+										{
+											Name:      "calico2",
+											Interface: "net2",
+											IPs:       []string{"192.168.91.115"},
+											Mac:       "62:76:f5:90:27:c1",
+										},
+									}),
+								},
 							},
 							Spec: libapiv3.WorkloadEndpointSpec{
 								Orchestrator:  "k8s",
@@ -792,6 +824,28 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									apiv3.LabelNetworkInterface: "net1",
 									"pod":                       "simplePod",
 								},
+								Annotations: map[string]string{
+									nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+										{
+											Name:      "calico-default-network",
+											Interface: "ens4",
+											IPs:       []string{"192.168.91.113"},
+											Mac:       "9e:e7:7e:9d:8f:e0",
+										},
+										{
+											Name:      "calico1",
+											Interface: "net1",
+											IPs:       []string{"192.168.91.114"},
+											Mac:       "62:45:f5:10:97:c1",
+										},
+										{
+											Name:      "calico2",
+											Interface: "net2",
+											IPs:       []string{"192.168.91.115"},
+											Mac:       "62:76:f5:90:27:c1",
+										},
+									}),
+								},
 							},
 							Spec: libapiv3.WorkloadEndpointSpec{
 								Orchestrator:  "k8s",
@@ -818,6 +872,28 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									apiv3.LabelNetworkNamespace: "testNamespace",
 									apiv3.LabelNetworkInterface: "net2",
 									"pod":                       "simplePod",
+								},
+								Annotations: map[string]string{
+									nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+										{
+											Name:      "calico-default-network",
+											Interface: "ens4",
+											IPs:       []string{"192.168.91.113"},
+											Mac:       "9e:e7:7e:9d:8f:e0",
+										},
+										{
+											Name:      "calico1",
+											Interface: "net1",
+											IPs:       []string{"192.168.91.114"},
+											Mac:       "62:45:f5:10:97:c1",
+										},
+										{
+											Name:      "calico2",
+											Interface: "net2",
+											IPs:       []string{"192.168.91.115"},
+											Mac:       "62:76:f5:90:27:c1",
+										},
+									}),
 								},
 							},
 							Spec: libapiv3.WorkloadEndpointSpec{
