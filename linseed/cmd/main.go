@@ -60,25 +60,15 @@ func main() {
 	l7FlowBackend := l7backend.NewL7FlowBackend(esClient)
 	l7LogBackend := l7backend.NewL7LogBackend(esClient, cache)
 
-	// Start server
+	// Start server, adding in handlers for the various API endpoints.
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 	server := server.NewServer(addr, cfg.FIPSModeEnabled,
 		server.WithMiddlewares(server.Middlewares(cfg)),
 		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(
-			// L3 flow and log APIs.
-			l3.NewFlows(flowBackend),
-			l3.NewFlowLogs(flowLogsBackend),
-
-			// L7 flow and log APIs.
-			l7.NewFlows(l7FlowBackend),
-			l7.NewL7Logs(l7LogBackend),
-
-			// DNS flow and log APIs.
-			dns.NewFlows(dnsFlowBackend),
-			dns.NewDNSLogs(dnsLogBackend),
-
-			// Events
-			events.NewEvents(eventBackend),
+			l3.New(flowBackend, flowLogsBackend),
+			l7.New(l7FlowBackend, l7LogBackend),
+			dns.New(dnsFlowBackend, dnsLogBackend),
+			events.New(eventBackend),
 		)...),
 		server.WithRoutes(server.UtilityRoutes()...),
 	)

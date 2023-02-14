@@ -3,14 +3,16 @@
 package logtools
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
-	"github.com/sirupsen/logrus"
 )
 
 // BuildQuery builds an elastic log query using the given parameters.
@@ -36,7 +38,9 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (elast
 		if err != nil {
 			return nil, err
 		}
-		constraints = append(constraints, rbacQuery)
+		if rbacQuery != nil {
+			constraints = append(constraints, rbacQuery)
+		}
 	}
 
 	// If a selector was provided, parse it and add it in.
@@ -45,7 +49,9 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (elast
 		if err != nil {
 			return nil, err
 		}
-		constraints = append(constraints, selQuery)
+		if selQuery != nil {
+			constraints = append(constraints, selQuery)
+		}
 	}
 
 	if len(constraints) == 1 {
@@ -59,27 +65,27 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (elast
 }
 
 // StartFrom parses the given parameters to determine which log to start from in the ES query.
-func StartFrom(opts v1.LogParams) int {
+func StartFrom(opts v1.LogParams) (int, error) {
 	if ak := opts.GetAfterKey(); ak != nil {
 		if val, ok := ak["startFrom"]; ok {
 			switch v := val.(type) {
 			case string:
 				if sf, err := strconv.Atoi(v); err != nil {
-					return sf
+					return sf, nil
 				} else {
-					logrus.WithField("val", v).Warn("Could not parse startFrom as an integer")
+					return 0, fmt.Errorf("Could not parse startFrom (%s) as an integer", v)
 				}
 			case float64:
-				logrus.WithField("val", val).Debug("Handling float64 startFrom")
-				return int(v)
+				logrus.WithField("val", val).Trace("Handling float64 startFrom")
+				return int(v), nil
 			case int:
-				logrus.WithField("val", val).Debug("Handling int startFrom")
-				return v
+				logrus.WithField("val", val).Trace("Handling int startFrom")
+				return v, nil
 			default:
 				logrus.WithField("val", val).Warnf("Unexpected type (%T) for startFrom, will not perform paging", val)
 			}
 		}
 	}
-	logrus.Debug("Starting query from 0")
-	return 0
+	logrus.Trace("Starting query from 0")
+	return 0, nil
 }

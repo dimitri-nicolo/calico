@@ -23,12 +23,6 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-var (
-	cli       client.Client
-	ctx       context.Context
-	lmaClient lmaelastic.Client
-)
-
 func setupAndTeardown(t *testing.T) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")

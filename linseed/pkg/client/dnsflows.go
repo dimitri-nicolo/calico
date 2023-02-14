@@ -29,7 +29,7 @@ func newDNSFlows(c *client, cluster string) DNSFlowsInterface {
 func (f *dnsFlows) List(ctx context.Context, params v1.Params) (*v1.List[v1.DNSFlow], error) {
 	flows := v1.List[v1.DNSFlow]{}
 	err := f.restClient.Post().
-		Path("/api/v1/flows/dns").
+		Path("/dns").
 		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).

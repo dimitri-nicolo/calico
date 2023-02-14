@@ -31,7 +31,7 @@ func newL7Logs(c *client, cluster string) L7LogsInterface {
 func (f *l7Logs) List(ctx context.Context, params v1.Params) (*v1.List[v1.L7Log], error) {
 	l7Logs := v1.List[v1.L7Log]{}
 	err := f.restClient.Post().
-		Path("/api/v1/flows/l7/logs").
+		Path("/l7/logs").
 		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).
@@ -46,21 +46,25 @@ func (f *l7Logs) Create(ctx context.Context, l7Logs []v1.L7Log) (*v1.BulkRespons
 	var err error
 	body := []byte{}
 	for _, e := range l7Logs {
-		// Add each item, separated by a newline.
+		if len(body) != 0 {
+			// Include a separator between logs.
+			body = append(body, []byte("\n")...)
+		}
+
+		// Add each item.
 		out, err := json.Marshal(e)
 		if err != nil {
 			return nil, err
 		}
 		body = append(body, out...)
-		body = append(body, []byte("\n")...)
 	}
 
 	resp := v1.BulkResponse{}
 	err = f.restClient.Post().
-		Path("/api/v1/bulk/flows/l7/logs").
+		Path("/l7/logs/bulk").
 		Cluster(f.clusterID).
 		BodyJSON(body).
-		ContentType("application/x-ndjson").
+		ContentType(rest.ContentTypeMultilineJSON).
 		Do(ctx).
 		Into(&resp)
 	return &resp, err

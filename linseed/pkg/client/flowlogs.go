@@ -31,7 +31,7 @@ func newFlowLogs(c *client, cluster string) FlowLogsInterface {
 func (f *flowLogs) List(ctx context.Context, params v1.Params) (*v1.List[v1.FlowLog], error) {
 	flowLogs := v1.List[v1.FlowLog]{}
 	err := f.restClient.Post().
-		Path("/api/v1/flows/network/logs").
+		Path("/flows/logs").
 		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).
@@ -46,21 +46,25 @@ func (f *flowLogs) Create(ctx context.Context, flowLogs []v1.FlowLog) (*v1.BulkR
 	var err error
 	body := []byte{}
 	for _, e := range flowLogs {
-		// Add each item, separated by a newline.
+		if len(body) != 0 {
+			// Include a separator between logs.
+			body = append(body, []byte("\n")...)
+		}
+
+		// Add each item.
 		out, err := json.Marshal(e)
 		if err != nil {
 			return nil, err
 		}
 		body = append(body, out...)
-		body = append(body, []byte("\n")...)
 	}
 
 	resp := v1.BulkResponse{}
 	err = f.restClient.Post().
-		Path("/api/v1/bulk/flows/network/logs").
+		Path("/flows/logs/bulk").
 		Cluster(f.clusterID).
 		BodyJSON(body).
-		ContentType("application/x-ndjson").
+		ContentType(rest.ContentTypeMultilineJSON).
 		Do(ctx).
 		Into(&resp)
 	return &resp, err

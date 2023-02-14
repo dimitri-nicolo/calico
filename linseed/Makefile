@@ -89,7 +89,10 @@ MOCKERY_FILE_PATHS= \
 	pkg/backend/api/FlowBackend \
 	pkg/backend/api/FlowLogBackend \
 	pkg/backend/api/L7FlowBackend \
-	pkg/backend/api/DNSFlowBackend
+	pkg/backend/api/L7LogBackend \
+	pkg/backend/api/DNSFlowBackend \
+	pkg/backend/api/DNSLogBackend \
+	pkg/backend/api/EventsBackend
 
 #############################################
 # Run unit level tests

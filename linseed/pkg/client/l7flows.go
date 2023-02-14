@@ -29,7 +29,7 @@ func newL7Flows(c *client, cluster string) L7FlowsInterface {
 func (f *l7Flows) List(ctx context.Context, params v1.Params) (*v1.List[v1.L7Flow], error) {
 	flows := v1.List[v1.L7Flow]{}
 	err := f.restClient.Post().
-		Path("/api/v1/flows/l7").
+		Path("/l7").
 		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).

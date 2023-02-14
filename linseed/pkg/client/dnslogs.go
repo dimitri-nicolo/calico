@@ -31,7 +31,7 @@ func newDNSLogs(c *client, cluster string) DNSLogsInterface {
 func (f *dnsLogs) List(ctx context.Context, params v1.Params) (*v1.List[v1.DNSLog], error) {
 	dnsLogs := v1.List[v1.DNSLog]{}
 	err := f.restClient.Post().
-		Path("/api/v1/flows/dns/logs").
+		Path("/dns/logs").
 		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).
@@ -46,21 +46,25 @@ func (f *dnsLogs) Create(ctx context.Context, dnsLogs []v1.DNSLog) (*v1.BulkResp
 	var err error
 	body := []byte{}
 	for _, e := range dnsLogs {
-		// Add each item, separated by a newline.
+		if len(body) != 0 {
+			// Include a separator between logs.
+			body = append(body, []byte("\n")...)
+		}
+
+		// Add each item.
 		out, err := json.Marshal(e)
 		if err != nil {
 			return nil, err
 		}
 		body = append(body, out...)
-		body = append(body, []byte("\n")...)
 	}
 
 	resp := v1.BulkResponse{}
 	err = f.restClient.Post().
-		Path("/api/v1/bulk/flows/dns/logs").
+		Path("/dns/logs/bulk").
 		Cluster(f.clusterID).
 		BodyJSON(body).
-		ContentType("application/x-ndjson").
+		ContentType(rest.ContentTypeMultilineJSON).
 		Do(ctx).
 		Into(&resp)
 	return &resp, err

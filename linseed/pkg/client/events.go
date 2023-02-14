@@ -32,7 +32,7 @@ func newEvents(c *client, cluster string) EventsInterface {
 func (f *events) List(ctx context.Context, params v1.Params) (*v1.List[v1.Event], error) {
 	events := v1.List[v1.Event]{}
 	err := f.restClient.Post().
-		Path("/api/v1/events").
+		Path("/events").
 		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).
@@ -63,7 +63,7 @@ func (f *events) Create(ctx context.Context, events []v1.Event) (*v1.BulkRespons
 
 	resp := v1.BulkResponse{}
 	err = f.restClient.Post().
-		Path("/api/v1/events/bulk").
+		Path("/events/bulk").
 		Cluster(f.clusterID).
 		BodyJSON(body).
 		ContentType(rest.ContentTypeMultilineJSON).

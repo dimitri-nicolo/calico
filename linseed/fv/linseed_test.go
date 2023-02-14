@@ -52,13 +52,13 @@ func TestFV_Linseed(t *testing.T) {
 			path: "/version", method: "DELETE", wantStatusCode: 405, wantBody: "",
 		},
 		{
-			name: "should return 415 unsupported content type for /api/v1/flows/network",
-			path: "/api/v1/flows/network", method: "POST",
+			name: "should return 415 unsupported content type for /api/v1/flows",
+			path: "/api/v1/flows/", method: "POST",
 			headers: contentType("text/plain"), body: "{}", wantStatusCode: 415, wantBody: "",
 		},
 		{
-			name: "should return 415 unsupported content type for /api/v1/bulk/flows/network/logs",
-			path: "/api/v1/bulk/flows/network/logs", method: "POST",
+			name: "should return 415 unsupported content type for /api/v1/flows/logs/bulk",
+			path: "/api/v1/flows/logs/bulk", method: "POST",
 			headers: contentType("text/plain"), body: "{}", wantStatusCode: 415, wantBody: "",
 		},
 	}
@@ -96,7 +96,7 @@ func TestFV_Linseed(t *testing.T) {
 
 		// setup HTTP client and HTTP request
 		client := secureHTTPClient(t)
-		spec := xndJSONPostHTTPReqSpec(fmt.Sprintf("https://%s%s", addr, "/api/v1/bulk/flows/network/logs"),
+		spec := xndJSONPostHTTPReqSpec(fmt.Sprintf("https://%s%s", addr, "/api/v1/flows/logs/bulk"),
 			tenant, cluster, []byte(flowLogsLinux))
 		// make the request to ingest flows
 		res, resBody := doRequest(t, client, spec)

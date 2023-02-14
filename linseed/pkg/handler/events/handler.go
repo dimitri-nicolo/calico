@@ -1,63 +1,64 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
-//
 
-package dns
+package events
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
+
+	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/handler"
 	"github.com/projectcalico/calico/linseed/pkg/middleware"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func NewDNSLogs(backend bapi.DNSLogBackend) handler.Handler {
-	return &dnsLogs{
+const (
+	EventsPath     = "/events"
+	EventsPathBulk = "/events/bulk"
+)
+
+func New(backend bapi.EventsBackend) *events {
+	return &events{
 		backend: backend,
 	}
 }
 
-type dnsLogs struct {
-	backend bapi.DNSLogBackend
+type events struct {
+	backend bapi.EventsBackend
 }
 
-func (n dnsLogs) APIS() []handler.API {
+func (h events) APIS() []handler.API {
 	return []handler.API{
 		{
+			// Base URL queries for events.
 			Method:  "POST",
-			URL:     "/flows/dns/logs/bulk",
-			Handler: n.Bulk(),
+			URL:     EventsPath,
+			Handler: h.List(),
 		},
 		{
+			// Bulk creation for events.
 			Method:  "POST",
-			URL:     "/flows/dns/logs",
-			Handler: n.GetLogs(),
+			URL:     EventsPathBulk,
+			Handler: h.Bulk(),
 		},
 	}
 }
 
-func (n dnsLogs) URL() string {
-	return fmt.Sprintf("%s/logs", baseURL)
-}
-
-func (b dnsLogs) GetLogs() http.HandlerFunc {
+func (h events) List() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		reqParams, err := handler.DecodeAndValidateReqParams[v1.DNSLogParams](w, req)
+		reqParams, err := handler.DecodeAndValidateReqParams[v1.EventParams](w, req)
 		if err != nil {
-			log.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *httputils.HttpStatusError
+			logrus.WithError(err).Error("Failed to decode/validate request parameters")
+			var httpErr *v1.HTTPError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
 			} else {
-				httputils.JSONError(w, &httputils.HttpStatusError{
-					Err:    err,
+				httputils.JSONError(w, &v1.HTTPError{
 					Msg:    err.Error(),
 					Status: http.StatusBadRequest,
 				}, http.StatusBadRequest)
@@ -76,34 +77,31 @@ func (b dnsLogs) GetLogs() http.HandlerFunc {
 
 		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
 		defer cancel()
-		response, err := b.backend.List(ctx, clusterInfo, *reqParams)
+		response, err := h.backend.List(ctx, clusterInfo, *reqParams)
 		if err != nil {
-			log.WithError(err).Error("Failed to list DNS logs")
-			httputils.JSONError(w, &httputils.HttpStatusError{
+			logrus.WithError(err).Error("Failed to list events")
+			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
-				Err:    err,
 			}, http.StatusInternalServerError)
 			return
 		}
 
-		log.Debugf("DNSLog response is: %+v", response)
+		logrus.Debugf("%s response is: %+v", EventsPath, response)
 		httputils.Encode(w, response)
 	}
 }
 
-// Bulk handles bulk ingestion requests to add logs, typically from fluentd.
-func (b dnsLogs) Bulk() http.HandlerFunc {
+func (h events) Bulk() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		logs, err := handler.DecodeAndValidateBulkParams[v1.DNSLog](w, req)
+		logs, err := handler.DecodeAndValidateBulkParams[v1.Event](w, req)
 		if err != nil {
-			log.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *httputils.HttpStatusError
+			logrus.WithError(err).Error("Failed to decode/validate request parameters")
+			var httpErr *v1.HTTPError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
 			} else {
-				httputils.JSONError(w, &httputils.HttpStatusError{
-					Err:    err,
+				httputils.JSONError(w, &v1.HTTPError{
 					Msg:    err.Error(),
 					Status: http.StatusBadRequest,
 				}, http.StatusBadRequest)
@@ -118,17 +116,16 @@ func (b dnsLogs) Bulk() http.HandlerFunc {
 			Tenant:  middleware.TenantIDFromContext(req.Context()),
 		}
 
-		response, err := b.backend.Create(ctx, clusterInfo, logs)
+		response, err := h.backend.Create(ctx, clusterInfo, logs)
 		if err != nil {
-			log.WithError(err).Error("Failed to ingest DNS logs")
-			httputils.JSONError(w, &httputils.HttpStatusError{
+			logrus.WithError(err).Error("Failed to ingest events")
+			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
-				Err:    err,
 			}, http.StatusInternalServerError)
 			return
 		}
-		log.Debugf("Bulk response is: %+v", response)
+		logrus.Debugf("%s response is: %+v", EventsPathBulk, response)
 		httputils.Encode(w, response)
 	}
 }

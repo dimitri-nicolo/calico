@@ -5,7 +5,6 @@ package events
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 
@@ -14,13 +13,16 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 )
 
 type eventsBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
 	templates bapi.Cache
+	helper    lmaindex.Helper
 }
 
 func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.EventsBackend {
@@ -28,6 +30,7 @@ func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.EventsBackend {
 		client:    c.Backend(),
 		lmaclient: c,
 		templates: cache,
+		helper:    lmaindex.Alerts(),
 	}
 }
 
@@ -79,12 +82,32 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.Eve
 		return nil, fmt.Errorf("no cluster ID on request")
 	}
 
-	// Build the query, sorting by time.
+	// Get the startFrom param, if any.
+	startFrom, err := logtools.StartFrom(&opts)
+	if err != nil {
+		return nil, err
+	}
+
+	q, err := logtools.BuildQuery(b.helper, i, &opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build the query.
 	query := b.client.Search().
 		Index(b.index(i)).
 		Size(opts.QueryParams.GetMaxResults()).
-		Sort("time", true).
-		Query(b.buildQuery(i, opts))
+		From(startFrom).
+		Query(q)
+
+	// Configure sorting.
+	if len(opts.Sort) != 0 {
+		for _, s := range opts.Sort {
+			query.Sort(s.Field, !s.Descending)
+		}
+	} else {
+		query.Sort(b.helper.GetTimeField(), true)
+	}
 
 	results, err := query.Do(ctx)
 	if err != nil {
@@ -107,22 +130,6 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.Eve
 		Items:    events,
 		AfterKey: nil, // TODO: Support pagination.
 	}, nil
-}
-
-// buildQuery builds an elastic query using the given parameters.
-func (b *eventsBackend) buildQuery(i bapi.ClusterInfo, opts v1.EventParams) elastic.Query {
-	// Parse times from the request. We default to a time-range query
-	// if no other search parameters are given.
-	var start, end time.Time
-	if opts.QueryParams.TimeRange != nil {
-		start = opts.QueryParams.TimeRange.From
-		end = opts.QueryParams.TimeRange.To
-	} else {
-		// Default to the latest 5 minute window.
-		start = time.Now().Add(-5 * time.Minute)
-		end = time.Now()
-	}
-	return elastic.NewRangeQuery("time").Gt(start.Unix()).Lte(end.Unix())
 }
 
 func (b *eventsBackend) index(i bapi.ClusterInfo) string {

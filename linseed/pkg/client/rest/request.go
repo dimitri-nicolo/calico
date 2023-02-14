@@ -23,6 +23,10 @@ const (
 	ContentTypeMultilineJSON = "application/x-ndjson"
 )
 
+const (
+	VersionPath = "/api/v1"
+)
+
 func NewRequest(c *RESTClient) *Request {
 	return &Request{
 		client: c,
@@ -107,7 +111,7 @@ func (r *Request) Do(ctx context.Context) *Result {
 		p := path.Join(paths...)
 		return fmt.Sprintf("%s/%s", strings.TrimRight(base, "/"), strings.TrimLeft(p, "/"))
 	}
-	url := JoinPath(r.client.config.URL, r.path)
+	url := JoinPath(r.client.config.URL, VersionPath, r.path)
 
 	// Build the request.
 	req, err := http.NewRequestWithContext(

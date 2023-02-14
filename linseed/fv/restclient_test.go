@@ -41,7 +41,7 @@ func TestFV_RESTClient(t *testing.T) {
 		flows := v1.List[v1.L3Flow]{}
 
 		err = rc.Post().
-			Path("/api/v1/flows/network").
+			Path("/flows").
 			Cluster(cluster).
 			Params(&params).
 			Do(context.TODO()).
@@ -55,7 +55,7 @@ func TestFV_RESTClient(t *testing.T) {
 		params := v1.L3FlowParams{}
 		flows := v1.List[v1.L3Flow]{}
 		err = rc.Post().
-			Path("/api/v1/flows/network").
+			Path("/flows").
 			Cluster(cluster).
 			Params(&params).
 			Do(context.TODO()).

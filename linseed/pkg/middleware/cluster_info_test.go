@@ -43,7 +43,7 @@ func TestClusterInfo(t *testing.T) {
 			})
 
 			clusterInfo := middleware.NewClusterInfo(tt.tenantIDCheck).Extract()
-			req, err := http.NewRequest("POST", "/flows/network", nil)
+			req, err := http.NewRequest("POST", "/flows", nil)
 
 			// Set cluster and tenant ID header
 			req.Header.Set(lmak8s.XClusterIDHeader, tt.xClusterID)

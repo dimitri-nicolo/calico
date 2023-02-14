@@ -89,7 +89,10 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.L7Lo
 	}
 
 	// Get the startFrom param, if any.
-	startFrom := logtools.StartFrom(&opts)
+	startFrom, err := logtools.StartFrom(&opts)
+	if err != nil {
+		return nil, err
+	}
 
 	q, err := logtools.BuildQuery(b.helper, i, &opts)
 	if err != nil {
@@ -101,8 +104,16 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.L7Lo
 		Index(b.index(i)).
 		Size(opts.QueryParams.GetMaxResults()).
 		From(startFrom).
-		Sort("end_time", true).
 		Query(q)
+
+	// Configure sorting.
+	if len(opts.Sort) != 0 {
+		for _, s := range opts.Sort {
+			query.Sort(s.Field, !s.Descending)
+		}
+	} else {
+		query.Sort(b.helper.GetTimeField(), true)
+	}
 
 	results, err := query.Do(ctx)
 	if err != nil {

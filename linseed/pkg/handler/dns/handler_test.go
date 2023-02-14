@@ -1,6 +1,6 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-package l7
+package dns
 
 import (
 	"bytes"
@@ -46,7 +46,7 @@ const withinTimeRange = `
 }
 `
 
-func TestL7FlowsHandler(t *testing.T) {
+func TestDNSFlowsHandler(t *testing.T) {
 	type testResult struct {
 		httpStatus int
 		errorMsg   string
@@ -56,14 +56,14 @@ func TestL7FlowsHandler(t *testing.T) {
 		name         string
 		reqBody      string
 		want         testResult
-		backendFlows []v1.L7Flow
+		backendFlows []v1.DNSFlow
 	}{
 		// Failure to parse request and validate
 		{
 			name:         "empty json",
 			reqBody:      "{}",
 			want:         testResult{400, errNoInput},
-			backendFlows: []v1.L7Flow{},
+			backendFlows: []v1.DNSFlow{},
 		},
 
 		// Retrieve all  flow logs within a time range
@@ -71,7 +71,7 @@ func TestL7FlowsHandler(t *testing.T) {
 			name:         "retrieve all flows within time range",
 			reqBody:      withinTimeRange,
 			want:         testResult{200, ""},
-			backendFlows: []v1.L7Flow{},
+			backendFlows: []v1.DNSFlow{},
 		},
 	}
 
@@ -80,14 +80,15 @@ func TestL7FlowsHandler(t *testing.T) {
 			defer setupTest(t)()
 
 			n := flowHandler(tt.backendFlows)
+			url := n.APIS()[0].URL
 
 			rec := httptest.NewRecorder()
-			req, err := http.NewRequest("POST", n.APIS()[0].URL, bytes.NewBufferString(tt.reqBody))
+			req, err := http.NewRequest("POST", url, bytes.NewBufferString(tt.reqBody))
 			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 
 			// Serve the request and read the response.
-			n.Serve().ServeHTTP(rec, req)
+			n.Flows().ServeHTTP(rec, req)
 			bodyBytes, err := io.ReadAll(rec.Body)
 			require.NoError(t, err)
 
@@ -103,24 +104,25 @@ func TestL7FlowsHandler(t *testing.T) {
 	}
 }
 
-func flowHandler(flows []v1.L7Flow) *flows {
-	mockBackend := &api.MockL7FlowBackend{}
-	n := NewFlows(mockBackend)
+func flowHandler(flows []v1.DNSFlow) *dns {
+	mockFlowBackend := &api.MockDNSFlowBackend{}
+	mockLogBackend := &api.MockDNSLogBackend{}
+	n := New(mockFlowBackend, mockLogBackend)
 
-	res := v1.List[v1.L7Flow]{
+	res := v1.List[v1.DNSFlow]{
 		Items:    flows,
 		AfterKey: nil,
 	}
 
 	// mock backend to return the required flows
-	mockBackend.On("List", mock.Anything,
-		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.L7FlowParams")).Return(&res, nil)
+	mockFlowBackend.On("List", mock.Anything,
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.DNSFlowParams")).Return(&res, nil)
 
 	return n
 }
 
-func marshalResponse(t *testing.T, flows []v1.L7Flow) string {
-	response := v1.List[v1.L7Flow]{}
+func marshalResponse(t *testing.T, flows []v1.DNSFlow) string {
+	response := v1.List[v1.DNSFlow]{}
 	response.Items = flows
 	newData, err := json.Marshal(response)
 	require.NoError(t, err)
