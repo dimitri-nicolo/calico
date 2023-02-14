@@ -175,10 +175,9 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					search.SearchHandler(
-						lmaindex.FlowLogs(),
+						search.SearchTypeFlows,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
-						nil,
 						linseed,
 					)))))
 	sm.Handle("/dnsLogs/aggregation",
@@ -191,10 +190,9 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					search.SearchHandler(
-						lmaindex.DnsLogs(),
+						search.SearchTypeDNS,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
-						nil,
 						linseed,
 					)))))
 	sm.Handle("/l7Logs/aggregation",
@@ -207,10 +205,9 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					search.SearchHandler(
-						lmaindex.L7Logs(),
+						search.SearchTypeL7,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
-						nil,
 						linseed,
 					)))))
 	sm.Handle("/events/bulk",
@@ -223,11 +220,10 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					search.SearchHandler(
-						lmaindex.Alerts(),
+						search.SearchTypeEvents,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
-						esClient.Backend(),
-						nil,
+						linseed,
 					)))))
 	sm.Handle("/processes",
 		middleware.ClusterRequestToResource(flowLogsResourceName,

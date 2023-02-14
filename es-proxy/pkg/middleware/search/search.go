@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,7 +41,7 @@ const (
 //
 // Uses a request body (JSON.blob) to extract parameters to build an elasticsearch query,
 // executes it and returns the results.
-func SearchHandler(t SearchType, authReview middleware.AuthorizationReview, k8sClient datastore.ClientSet, esClient *elastic.Client, lsclient client.Client) http.Handler {
+func SearchHandler(t SearchType, authReview middleware.AuthorizationReview, k8sClient datastore.ClientSet, lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse request body onto search parameters. If an error occurs while decoding define an http
 		// error and return.
@@ -58,25 +56,38 @@ func SearchHandler(t SearchType, authReview middleware.AuthorizationReview, k8sC
 		ctx, cancel := context.WithTimeout(r.Context(), request.Timeout.Duration)
 		defer cancel()
 
-		var response *v1.SearchResponse
-
-		// Perform the search based on the type.
-		switch t {
-		case SearchTypeFlows:
-			response, err = searchFlowLogs(ctx, lsclient, request, authReview, k8sClient)
-		case SearchTypeDNS:
-			response, err = searchDNSLogs(ctx, lsclient, request, authReview, k8sClient)
-		case SearchTypeL7:
-			response, err = searchL7Logs(ctx, lsclient, request, authReview, k8sClient)
-		case SearchTypeEvents:
-			response, err = searchEvents(ctx, lsclient, request, authReview, k8sClient)
-		default:
-			logrus.Fatal("BUG: Hit unreachable branch")
+		// Perform the search.
+		response, err := search(ctx, t, request, authReview, k8sClient, lsclient)
+		if err != nil {
+			httputils.EncodeError(w, err)
+			return
 		}
-
-		// Encode reponse to writer. Handles an error.
 		httputils.Encode(w, response)
 	})
+}
+
+// search is a helepr for performing a search. We split this out into a separate function to make it easier to
+// unit test without requiring a full HTTP handler.
+func search(
+	ctx context.Context,
+	t SearchType,
+	request *v1.SearchRequest,
+	authReview middleware.AuthorizationReview,
+	k8sClient datastore.ClientSet,
+	lsclient client.Client,
+) (*v1.SearchResponse, error) {
+	// Perform the search based on the type.
+	switch t {
+	case SearchTypeFlows:
+		return searchFlowLogs(ctx, lsclient, request, authReview, k8sClient)
+	case SearchTypeDNS:
+		return searchDNSLogs(ctx, lsclient, request, authReview, k8sClient)
+	case SearchTypeL7:
+		return searchL7Logs(ctx, lsclient, request, authReview, k8sClient)
+	case SearchTypeEvents:
+		return searchEvents(ctx, lsclient, request, authReview, k8sClient)
+	}
+	return nil, fmt.Errorf("Unhandled search type")
 }
 
 // parseRequestBodyForParams extracts query parameters from the request body (JSON.blob) and
@@ -338,7 +349,11 @@ func searchLogs[T any](
 	start := time.Now()
 	items, err := listFunc(ctx, params)
 	if err != nil {
-		return nil, err
+		return nil, &httputils.HttpStatusError{
+			Status: http.StatusInternalServerError,
+			Msg:    "error performing search",
+			Err:    err,
+		}
 	}
 
 	type Hit struct {
@@ -348,7 +363,7 @@ func searchLogs[T any](
 	}
 
 	// Build the hits response.
-	hits := []json.RawMessage{}
+	var hits []json.RawMessage
 	for i, item := range items.Items {
 		hit := Hit{
 			ID:     fmt.Sprintf("%d", i), // TODO - what does the UI use this for?
@@ -357,7 +372,11 @@ func searchLogs[T any](
 		}
 		hitJSON, err := json.Marshal(hit)
 		if err != nil {
-			return nil, err
+			return nil, &httputils.HttpStatusError{
+				Status: http.StatusInternalServerError,
+				Msg:    "error marshalling results",
+				Err:    err,
+			}
 		}
 		hits = append(hits, hitJSON)
 	}
