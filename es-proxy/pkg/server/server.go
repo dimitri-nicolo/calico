@@ -194,8 +194,8 @@ func Start(cfg *Config) error {
 						lmaindex.DnsLogs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
-						esClient.Backend(),
 						nil,
+						linseed,
 					)))))
 	sm.Handle("/l7Logs/aggregation",
 		middleware.ClusterRequestToResource(l7ResourceName,
@@ -210,8 +210,8 @@ func Start(cfg *Config) error {
 						lmaindex.L7Logs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
-						esClient.Backend(),
 						nil,
+						linseed,
 					)))))
 	sm.Handle("/events/bulk",
 		middleware.ClusterRequestToResource(eventsResourceName,

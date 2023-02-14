@@ -458,7 +458,6 @@ func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 // This method will take a look at the request parameters made to the /flowLogs endpoint with pip settings,
 // verify RBAC based on the previewed settings and return the results from elastic.
 func getPIPFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, pip pippkg.PIP, rbacHelper PolicyImpactRbacHelper) (interface{}, int, error) {
-
 	// Check a NP is supplied in every request.
 	if len(params.PolicyPreviews) == 0 {
 		// Expect the policy preview to contain a network policy.
