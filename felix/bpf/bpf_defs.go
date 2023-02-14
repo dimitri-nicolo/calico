@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-// Copyright (c) 2020  All rights reserved.
 
 package bpf
 
@@ -80,3 +78,16 @@ var ErrIterationFinished = errors.New("iteration finished")
 // ErrVisitedTooManyKeys is returned by the MapIterator's Next() method if it sees many more keys than there should
 // be in the map.
 var ErrVisitedTooManyKeys = errors.New("visited 10x the max size of the map keys")
+
+const (
+	ProgIndexPolicy = iota
+	ProgIndexAllowed
+	ProgIndexICMP
+	ProgIndexDrop
+	ProgIndexHostCTConflict
+	ProgIndexV6Prologue
+	ProgIndexV6Policy
+	ProgIndexV6Allowed
+	ProgIndexV6ICMP
+	ProgIndexV6Drop
+)
