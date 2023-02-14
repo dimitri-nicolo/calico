@@ -13,16 +13,14 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 
 	log "github.com/sirupsen/logrus"
-	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
 
-// scanner cli token expiration time default 100 years
-var scannerCLITokenExpirationSeconds int64 = 100 * 365 * 86400
+// token expiration time for all token requests, defaults to 100 years
+var defaultTokenExpirationSeconds int64 = 100 * 365 * 86400
 
 type reconciler struct {
 	clusterName string
@@ -69,12 +67,12 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 		}
 	}
 
-	if err := c.reconcileServiceAccounts(); err != nil {
+	if err := c.reconcileManagementServiceAccountSecrets(); err != nil {
 		reqLogger.Errorf("error reconciling service accounts for image assurance %+v", err)
 		return err
 	}
 
-	if err := c.reconcileClusterRoleBinding(); err != nil {
+	if err := c.reconcileClusterRoleBindings(); err != nil {
 		reqLogger.Errorf("error reconciling cluster role bindings for image assurance %+v", err)
 		return err
 	}
@@ -84,20 +82,19 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 		return err
 	}
 
-	// These items are for the admission controller (which are is not in the management cluster as of right now or
-	// the management cluster already has the item.
+	// These items are only for managed cluster components, as of right now or management cluster already has the item.
 	if !c.management {
 		if err := c.reconcileCASecrets(); err != nil {
 			reqLogger.Errorf("error reconciling CA secrets for image assurance %+v", err)
 			return err
 		}
 
-		if err := c.reconcileAdmissionControllerSecret(); err != nil {
+		if err := c.reconcileAdmissionControllerToken(); err != nil {
 			reqLogger.Errorf("error reconciling admission controller secrets %+v", err)
 			return err
 		}
 
-		if err := c.reconcileCRAdaptorSecret(); err != nil {
+		if err := c.reconcileCRAdaptorToken(); err != nil {
 			reqLogger.Errorf("error reconciling cr adaptor secrets %+v", err)
 			return err
 		}
@@ -151,90 +148,24 @@ func (c *reconciler) reconcileCASecrets() error {
 	return nil
 }
 
-// reconcileAdmissionControllerSecret reconciles secrets for admission controller from management cluster to managed cluster
-func (c *reconciler) reconcileAdmissionControllerSecret() error {
-	sa, err := c.managementK8sCLI.CoreV1().ServiceAccounts(c.managementOperatorNamespace).Get(context.Background(),
-		fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat, c.clusterName), metav1.GetOptions{})
-
-	if err != nil {
-		return err
-	}
-
-	saSecret, err := c.managementK8sCLI.CoreV1().Secrets(c.managementOperatorNamespace).Get(context.Background(),
-		sa.Secrets[0].Name, metav1.GetOptions{})
-
-	if err != nil {
-		return err
-	}
-
-	managedSecret := c.managedAdmissionControllerSecret(saSecret)
-	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(managedSecret)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// reconcileCRAdaptorSecret reconciles secrets for the CR Adaptor from management cluster to managed cluster.
-func (c *reconciler) reconcileCRAdaptorSecret() error {
-	sa, err := c.managementK8sCLI.CoreV1().ServiceAccounts(c.managementOperatorNamespace).Get(context.Background(),
-		fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat, c.clusterName), metav1.GetOptions{})
-
-	if err != nil {
-		return err
-	}
-
-	saSecret, err := c.managementK8sCLI.CoreV1().Secrets(c.managementOperatorNamespace).Get(context.Background(),
-		sa.Secrets[0].Name, metav1.GetOptions{})
-
-	if err != nil {
-		return err
-	}
-
-	managedSecret := c.managedCRAdaptorControllerSecret(saSecret)
-	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(managedSecret)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// reconcileServiceAccount ensures that service account exists in management cluster. We don't
-// need to check for the existence of service account, we always write, if nothing has changed it's a no-op, else it's updated.
-func (c *reconciler) reconcileServiceAccounts() error {
-	// Admission controller only runs in the managed cluster.
-	if !c.management {
-		sa := c.admissionControllerServiceAccount()
-		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
-			return err
-		}
-
-		sa = c.crAdaptorServiceAccount()
-		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
-			return err
-		}
-	}
-
+// reconcileManagementServiceAccountSecrets ensures that service account and a token against it exists in management cluster.
+func (c *reconciler) reconcileManagementServiceAccountSecrets() error {
 	// Intrusion detection controller, scanner, pod watcher only runs in the management cluster
 	if c.management {
-		isa := c.intrusionDetectionControllerServiceAccount()
-		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, isa); err != nil {
+		err := c.reconcileManagementServiceAccountSecret(resource.ImageAssuranceIDSControllerServiceAccountName, c.managementOperatorNamespace)
+		if err != nil {
 			return err
 		}
-		ssa := c.scannerServiceAccount()
-		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, ssa); err != nil {
+		err = c.reconcileManagementServiceAccountSecret(resource.ImageAssuranceScannerServiceAccountName, c.managementOperatorNamespace)
+		if err != nil {
 			return err
 		}
-		psa := c.podWatcherServiceAccount()
-		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, psa); err != nil {
+		err = c.reconcileManagementServiceAccountSecret(resource.ImageAssuranceOperatorServiceAccountName, c.managementOperatorNamespace)
+		if err != nil {
 			return err
 		}
-		operatorSA := c.operatorServiceAccount()
-		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, operatorSA); err != nil {
-			return err
-		}
-		rsa := c.runtimeCleanerServiceAccount()
-		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, rsa); err != nil {
+		err = c.reconcileManagementServiceAccountSecret(resource.ImageAssuranceRuntimeCleanerServiceAccountName, c.managementOperatorNamespace)
+		if err != nil {
 			return err
 		}
 	}
@@ -242,17 +173,19 @@ func (c *reconciler) reconcileServiceAccounts() error {
 	return nil
 }
 
-// reconcileClusterRoleBinding ensures that cluster role bindings exists in management cluster. We don't
+// reconcileClusterRoleBindings ensures that cluster role bindings exists in management cluster. We don't
 // need to check for the cluster role binding here, we always write, if nothing has changed it's a no-op, else it's updated.
-func (c *reconciler) reconcileClusterRoleBinding() error {
+func (c *reconciler) reconcileClusterRoleBindings() error {
 	// Admission controller only runs in the managed cluster.
 	if !c.management {
-		crb := c.admissionControllerClusterRoleBinding()
+		mgmtResourceName := fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat, c.clusterName)
+		crb := getClusterRoleBindingDefinition(mgmtResourceName, c.admissionControllerClusterRoleName, mgmtResourceName, c.managementOperatorNamespace)
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, crb); err != nil {
 			return err
 		}
 
-		crb = c.crAdaptorClusterRoleBinding()
+		mgmtResourceName = fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat, c.clusterName)
+		crb = getClusterRoleBindingDefinition(mgmtResourceName, c.crAdaptorClusterRoleName, mgmtResourceName, c.managementOperatorNamespace)
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, crb); err != nil {
 			return err
 		}
@@ -260,27 +193,33 @@ func (c *reconciler) reconcileClusterRoleBinding() error {
 
 	// Intrusion detection controller, scanner, pod watcher only runs in the management cluster
 	if c.management {
-		icrb := c.idsControllerClusterRoleBinding()
+		icrb := getClusterRoleBindingDefinition(resource.ImageAssuranceIDSControllerClusterRoleBindingName, c.intrusionDetectionClusterRoleName,
+			resource.ImageAssuranceIDSControllerServiceAccountName, c.managementOperatorNamespace)
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, icrb); err != nil {
 			return err
 		}
-		scrb := c.scannerClusterRoleBinding()
+		scrb := getClusterRoleBindingDefinition(resource.ImageAssuranceScannerClusterRoleBindingName, c.scannerClusterRoleName,
+			resource.ImageAssuranceScannerServiceAccountName, c.managementOperatorNamespace)
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, scrb); err != nil {
 			return err
 		}
-		ccrb := c.scannerCLIClusterRoleBinding()
+		ccrb := getClusterRoleBindingDefinition(resource.ImageAssuranceScannerCLIClusterRoleBindingName, c.scannerCLIClusterRoleName,
+			resource.ImageAssuranceScannerCLIServiceAccountName, resource.ManagerNameSpaceName)
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, ccrb); err != nil {
 			return err
 		}
-		pcrb := c.podWatcherClusterRoleBinding()
+		pcrb := getClusterRoleBindingDefinition(resource.ImageAssurancePodWatcherClusterRoleBindingName, c.podWatcherClusterRoleName,
+			resource.ImageAssurancePodWatcherServiceAccountName, c.managementOperatorNamespace)
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, pcrb); err != nil {
 			return err
 		}
-		operatorCRB := c.operatorClusterRoleBinding()
+		operatorCRB := getClusterRoleBindingDefinition(resource.ImageAssuranceOperatorClusterRoleBindingName, c.operatorClusterRoleName,
+			resource.ImageAssuranceOperatorServiceAccountName, c.managementOperatorNamespace)
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, operatorCRB); err != nil {
 			return err
 		}
-		rcrb := c.runtimeCleanerClusterRoleBinding()
+		rcrb := getClusterRoleBindingDefinition(resource.ImageAssuranceRuntimeCleanerClusterRoleBindingName, c.runtimeCleanerClusterRoleName,
+			resource.ImageAssuranceRuntimeCleanerServiceAccountName, c.managementOperatorNamespace)
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, rcrb); err != nil {
 			return err
 		}
@@ -305,308 +244,98 @@ func (c *reconciler) verifyOperatorNamespaces(reqLogger *log.Entry) error {
 	return nil
 }
 
-func (c *reconciler) managedAdmissionControllerSecret(mgmtSecret *corev1.Secret) *corev1.Secret {
-	return &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      resource.ManagedIAAdmissionControllerResourceName,
-			Namespace: c.imageAssuranceNamespace,
-		},
-		Data: mgmtSecret.Data,
+//reconcileAdmissionControllerToken creates a service account and secret for the admission controller in the management cluster
+// using token request API, and then copies the secret to the managed cluster with a well-known name
+// (tigera-image-assurance-admission-controller-api-access) to be used by the admission controller.
+func (c *reconciler) reconcileAdmissionControllerToken() error {
+	mgmtClusterResourceName := fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat, c.clusterName)
+	sa := getServiceAccountDefinition(mgmtClusterResourceName, c.managementOperatorNamespace)
+	if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
+		return err
 	}
+
+	secret := getTokenSecretDefinition(mgmtClusterResourceName, c.managementOperatorNamespace)
+	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
+		return err
+	}
+
+	tokenRequest := getTokenRequestDefinitionWithSecret(mgmtClusterResourceName, c.managementOperatorNamespace, secret)
+	tokenResp, err := resource.WriteServiceAccountTokenRequestToK8s(c.managementK8sCLI, tokenRequest, sa.Name)
+	if err != nil {
+		return err
+	}
+
+	// Update the empty secret in management cluster with token data.
+	secret.Data["token"] = []byte(tokenResp.Status.Token)
+	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
+		return err
+	}
+
+	// Copy the same secret to managed cluster with well known name and token data.
+	mngdSecret := c.getSecretDefinition(resource.ManagedIAAdmissionControllerResourceName, c.imageAssuranceNamespace, secret.Data)
+	if err := resource.WriteSecretToK8s(c.managedK8sCLI, mngdSecret); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (c *reconciler) managedCRAdaptorControllerSecret(mgmtSecret *corev1.Secret) *corev1.Secret {
-	return &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      resource.ManagedIACRAdaptorResourceName,
-			Namespace: c.imageAssuranceNamespace,
-		},
-		Data: mgmtSecret.Data,
+// reconcileCRAdaptorToken creates a service account and secret for the CR adaptor in the management cluster
+// using token request API, and then copies the secret to the managed cluster with a well-known name
+// (tigera-image-assurance-cr-adaptor-api-access) to be used by the CR adaptor.
+func (c *reconciler) reconcileCRAdaptorToken() error {
+	mgmtClusterResourceName := fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat, c.clusterName)
+	sa := getServiceAccountDefinition(mgmtClusterResourceName, c.managementOperatorNamespace)
+	if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
+		return err
 	}
-}
 
-// admissionControllerServiceAccount returns a definition for service account
-func (c *reconciler) admissionControllerServiceAccount() *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat, c.clusterName),
-			Namespace: c.managementOperatorNamespace,
-		},
+	secret := getTokenSecretDefinition(mgmtClusterResourceName, c.managementOperatorNamespace)
+	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
+		return err
 	}
-}
 
-// crAdaptorServiceAccount returns a definition for service account
-func (c *reconciler) crAdaptorServiceAccount() *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat, c.clusterName),
-			Namespace: c.managementOperatorNamespace,
-		},
+	tokenRequest := getTokenRequestDefinitionWithSecret(mgmtClusterResourceName, c.managementOperatorNamespace, secret)
+	tokenResp, err := resource.WriteServiceAccountTokenRequestToK8s(c.managementK8sCLI, tokenRequest, sa.Name)
+	if err != nil {
+		return err
 	}
-}
 
-// intrusionDetectionControllerServiceAccount returns a definition for service account
-func (c *reconciler) intrusionDetectionControllerServiceAccount() *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      resource.ImageAssuranceIDSControllerServiceAccountName,
-			Namespace: c.managementOperatorNamespace,
-		},
+	// Update the empty secret in management cluster with token data.
+	secret.Data["token"] = []byte(tokenResp.Status.Token)
+	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
+		return err
 	}
-}
 
-// scannerServiceAccount returns a definition for service account
-func (c *reconciler) scannerServiceAccount() *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      resource.ImageAssuranceScannerServiceAccountName,
-			Namespace: c.managementOperatorNamespace,
-		},
+	// Copy the same secret to managed cluster with well known name and token data.
+	mngdSecret := c.getSecretDefinition(resource.ManagedIACRAdaptorResourceName, c.imageAssuranceNamespace, secret.Data)
+	if err := resource.WriteSecretToK8s(c.managedK8sCLI, mngdSecret); err != nil {
+		return err
 	}
-}
 
-// podWatcherServiceAccount returns a definition for service account
-func (c *reconciler) podWatcherServiceAccount() *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      resource.ImageAssurancePodWatcherServiceAccountName,
-			Namespace: c.managementOperatorNamespace,
-		},
-	}
-}
-
-// runtimeCleanerServiceAccount returns a definition for service account
-func (c *reconciler) runtimeCleanerServiceAccount() *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      resource.ImageAssuranceRuntimeCleanerServiceAccountName,
-			Namespace: c.managementOperatorNamespace,
-		},
-	}
-}
-
-// operatorServiceAccount returns a definition for service account.
-func (c *reconciler) operatorServiceAccount() *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      resource.ImageAssuranceOperatorServiceAccountName,
-			Namespace: c.managementOperatorNamespace,
-		},
-	}
-}
-
-// admissionControllerClusterRoleBinding returns a definition for cluster role binding
-func (c *reconciler) admissionControllerClusterRoleBinding() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat, c.clusterName),
-			Labels: map[string]string{},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     c.admissionControllerClusterRoleName,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat, c.clusterName),
-				Namespace: c.managementOperatorNamespace,
-			},
-		},
-	}
-}
-
-// crAdaptorClusterRoleBinding returns a definition for cluster role binding
-func (c *reconciler) crAdaptorClusterRoleBinding() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat, c.clusterName),
-			Labels: map[string]string{},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     c.crAdaptorClusterRoleName,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat, c.clusterName),
-				Namespace: c.managementOperatorNamespace,
-			},
-		},
-	}
-}
-
-// idsControllerClusterRoleBinding returns a definition for cluster role binding
-func (c *reconciler) idsControllerClusterRoleBinding() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   resource.ImageAssuranceIDSControllerClusterRoleBindingName,
-			Labels: map[string]string{},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     c.intrusionDetectionClusterRoleName,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      resource.ImageAssuranceIDSControllerServiceAccountName,
-				Namespace: c.managementOperatorNamespace,
-			},
-		},
-	}
-}
-
-// scannerClusterRoleBinding returns a definition for cluster role binding
-func (c *reconciler) scannerClusterRoleBinding() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   resource.ImageAssuranceScannerClusterRoleBindingName,
-			Labels: map[string]string{},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     c.scannerClusterRoleName,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      resource.ImageAssuranceScannerServiceAccountName,
-				Namespace: c.managementOperatorNamespace,
-			},
-		},
-	}
-}
-
-// podWatcherClusterRoleBinding returns a definition for cluster role binding
-func (c *reconciler) podWatcherClusterRoleBinding() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   resource.ImageAssurancePodWatcherClusterRoleBindingName,
-			Labels: map[string]string{},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     c.podWatcherClusterRoleName,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      resource.ImageAssurancePodWatcherServiceAccountName,
-				Namespace: c.managementOperatorNamespace,
-			},
-		},
-	}
-}
-
-// runtimeCleanerClusterRoleBinding returns a definition for cluster role binding
-func (c *reconciler) runtimeCleanerClusterRoleBinding() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   resource.ImageAssuranceRuntimeCleanerClusterRoleBindingName,
-			Labels: map[string]string{},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     c.runtimeCleanerClusterRoleName,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      resource.ImageAssuranceRuntimeCleanerServiceAccountName,
-				Namespace: c.managementOperatorNamespace,
-			},
-		},
-	}
-}
-
-// operatorClusterRoleBinding returns a definition for cluster role binding
-func (c *reconciler) operatorClusterRoleBinding() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   resource.ImageAssuranceOperatorClusterRoleBindingName,
-			Labels: map[string]string{},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     c.operatorClusterRoleName,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      resource.ImageAssuranceOperatorServiceAccountName,
-				Namespace: c.managementOperatorNamespace,
-			},
-		},
-	}
-}
-
-// scannerCLIClusterRoleBinding returns a definition for cluster role binding
-func (c *reconciler) scannerCLIClusterRoleBinding() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   resource.ImageAssuranceScannerCLIClusterRoleBindingName,
-			Labels: map[string]string{},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     c.scannerCLIClusterRoleName,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      resource.ImageAssuranceScannerCLIServiceAccountName,
-				Namespace: resource.ManagerNameSpaceName,
-			},
-		},
-	}
+	return nil
 }
 
 // reconcileCLIServiceAccountToken creates a token for tigera-image-assurance-scanner-cli-api-access service account that
 // can be used with scanner CLI.
 func (c *reconciler) reconcileCLIServiceAccountToken() error {
-	scsa := c.scannerCLITokenServiceAccount()
+	scsa := getServiceAccountDefinition(resource.ImageAssuranceScannerCLIServiceAccountName, resource.ManagerNameSpaceName)
 	if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, scsa); err != nil {
 		return err
 	}
 
-	secret := c.scannerCLITokenSecret()
+	secret := getTokenSecretDefinition(c.scannerCLITokenSecretName, resource.ManagerNameSpaceName)
 	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
 		return err
 	}
 
-	tokenRequest := c.scannerCLITokenTokenRequest(secret)
+	tokenRequest := getTokenRequestDefinitionWithSecret(c.scannerCLITokenSecretName, resource.ManagerNameSpaceName, secret)
 	tokenResp, err := resource.WriteServiceAccountTokenRequestToK8s(c.managementK8sCLI, tokenRequest, scsa.Name)
 	if err != nil {
 		return err
 	}
 
+	// Update the empty secret with token data.
 	secret.Data["token"] = []byte(tokenResp.Status.Token)
 	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
 		return err
@@ -615,44 +344,30 @@ func (c *reconciler) reconcileCLIServiceAccountToken() error {
 	return nil
 }
 
-// scannerCLITokenSecret returns definition for scanner CLI API token secret with a well known name in manager namespace.
-func (c *reconciler) scannerCLITokenSecret() *corev1.Secret {
-	return &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      c.scannerCLITokenSecretName,
-			Namespace: resource.ManagerNameSpaceName,
-		},
-		Data: map[string][]byte{},
+// reconcileManagementServiceAccountSecret creates a service account with a provided name and namespace in management cluster.
+// It also creates secret with the same name, namespace as the provided service account and populates with an API token using TokenRequest API.
+func (c *reconciler) reconcileManagementServiceAccountSecret(resourceName, namespace string) error {
+	sa := getServiceAccountDefinition(resourceName, namespace)
+	if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
+		return err
 	}
-}
 
-func (c *reconciler) scannerCLITokenTokenRequest(secret *corev1.Secret) *authv1.TokenRequest {
-	return &authv1.TokenRequest{
-		TypeMeta: metav1.TypeMeta{Kind: "TokenRequest", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      c.scannerCLITokenSecretName,
-			Namespace: resource.ManagerNameSpaceName,
-		},
-		Spec: authv1.TokenRequestSpec{
-			ExpirationSeconds: &scannerCLITokenExpirationSeconds,
-			BoundObjectRef: &authv1.BoundObjectReference{
-				Kind:       "Secret",
-				APIVersion: secret.APIVersion,
-				Name:       secret.Name,
-				UID:        secret.UID,
-			},
-		},
+	secret := getTokenSecretDefinition(resourceName, namespace)
+	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
+		return err
 	}
-}
 
-// scannerCLITokenServiceAccount returns a definition for service account to be created in manager namespace for cli api access.
-func (c *reconciler) scannerCLITokenServiceAccount() *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      resource.ImageAssuranceScannerCLIServiceAccountName,
-			Namespace: resource.ManagerNameSpaceName,
-		},
+	tokenRequest := getTokenRequestDefinitionWithSecret(resourceName, namespace, secret)
+	tokenResp, err := resource.WriteServiceAccountTokenRequestToK8s(c.managementK8sCLI, tokenRequest, sa.Name)
+	if err != nil {
+		return err
 	}
+
+	// Update the empty secret with token data.
+	secret.Data["token"] = []byte(tokenResp.Status.Token)
+	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
+		return err
+	}
+
+	return nil
 }

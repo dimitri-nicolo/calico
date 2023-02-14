@@ -80,7 +80,7 @@ func New(
 	// namespace in the management cluster or it is for the admission controller which is not currently used in
 	// the admission controller.
 	if !r.management {
-		// The managed cluster might not be set up for image assurance so we watch the namespace so we're notified
+		// The managed cluster might not be set up for image assurance, so we watch the namespace, to get notified
 		// when it becomes available.
 		w.AddWatch(
 			cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "namespaces", "",
@@ -96,18 +96,22 @@ func New(
 			&corev1.Secret{}, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 
-		// In managed cluster we need to watch tigera-image-assurance-admission-controller-api-access key, which contains
-		// service account token for accessing image assurance api for updates and deletes.
+		// In managed clusters we only watch for secret deletions of tigera-image-assurance-admission-controller-api-access
+		// and re-create them if they are deleted. Watching for their updates caused a reconcile loop.
+		// TODO: We need to refactor this later to include secret update events.
 		w.AddWatch(
 			cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", r.imageAssuranceNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ManagedIAAdmissionControllerResourceName))),
-			&corev1.Secret{}, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+			&corev1.Secret{}, worker.ResourceWatchDelete,
 		)
 
+		// In managed clusters we only watch for secret deletions of tigera-image-assurance-cr-adaptor-api-access
+		// and re-create them if they are deleted. Watching for their updates caused a reconcile loop.
+		// TODO: We need to refactor this later to include secret update events.
 		w.AddWatch(
 			cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", r.imageAssuranceNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ManagedIACRAdaptorResourceName))),
-			&corev1.Secret{}, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+			&corev1.Secret{}, worker.ResourceWatchDelete,
 		)
 
 		w.AddWatch(
