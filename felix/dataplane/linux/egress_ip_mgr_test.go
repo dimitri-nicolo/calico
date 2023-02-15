@@ -74,6 +74,8 @@ var _ = Describe("EgressIPManager", func() {
 		healthReportC := make(chan<- EGWHealthReport)
 		ipsets := newMockSets()
 		bpfIPsets := newMockSets()
+		la := netlink.NewLinkAttrs()
+		la.Name = "egress.calico"
 		manager = newEgressIPManagerWithShims(
 			mainTable,
 			rrFactory,
@@ -83,7 +85,7 @@ var _ = Describe("EgressIPManager", func() {
 			"egress.calico",
 			dpConfig,
 			&mockVXLANDataplane{
-				links: []netlink.Link{&mockLink{attrs: netlink.LinkAttrs{Name: "egress.calico"}}},
+				links: []netlink.Link{&mockLink{attrs: la}},
 			},
 			logutils.NewSummarizer("test loop"),
 			func(ifName string) error { return nil },
