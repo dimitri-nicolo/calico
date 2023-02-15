@@ -1382,11 +1382,11 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 		return err
 	}
 
+	la := netlink.NewLinkAttrs()
+	la.Name = m.vxlanDevice
+	la.HardwareAddr = mac
 	vxlan := &netlink.Vxlan{
-		LinkAttrs: netlink.LinkAttrs{
-			Name:         m.vxlanDevice,
-			HardwareAddr: mac,
-		},
+		LinkAttrs:    la,
 		VxlanId:      m.vxlanID,
 		Port:         m.vxlanPort,
 		VtepDevIndex: parent.Attrs().Index,
