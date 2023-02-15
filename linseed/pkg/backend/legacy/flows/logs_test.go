@@ -21,7 +21,7 @@ func TestCreateFlowLog(t *testing.T) {
 	defer setupTest(t)()
 
 	clusterInfo := bapi.ClusterInfo{
-		Cluster: "testcluster",
+		Cluster: cluster,
 	}
 
 	// Create a dummy flow.
@@ -53,9 +53,6 @@ func TestCreateFlowLog(t *testing.T) {
 }
 
 func TestFlowLogFiltering(t *testing.T) {
-	// Use the same cluster information.
-	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
-
 	type testCase struct {
 		Name   string
 		Params v1.FlowLogParams
@@ -144,6 +141,8 @@ func TestFlowLogFiltering(t *testing.T) {
 		// to query one or more flow logs.
 		t.Run(testcase.Name, func(t *testing.T) {
 			defer setupTest(t)()
+
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 			// Set the time range for the test. We set this per-test
 			// so that the time range captures the windows that the logs

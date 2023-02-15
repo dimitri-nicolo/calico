@@ -17,13 +17,35 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+
 	"github.com/stretchr/testify/assert"
 )
 
+var esClient *elastic.Client
+
+func setupLinseedFV(t *testing.T) func() {
+	// Random cluster name to prevent overlap with other tests.
+	cluster = testutils.RandomClusterName()
+
+	// Create an elastic client for the tests.
+	var err error
+	elasticEndpoint := "http://localhost:9200"
+	esClient, err = elastic.NewClient(
+		elastic.SetURL(elasticEndpoint),
+		elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)),
+		elastic.SetInfoLog(log.New(os.Stdout, "", log.LstdFlags)))
+	require.NoError(t, err)
+
+	return func() {
+		// Cleanup any data that might left over from a previous failed run.
+		err := testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_flows.%s", cluster))
+		require.NoError(t, err)
+	}
+}
+
 func TestFV_Linseed(t *testing.T) {
 	addr := "localhost:8444"
-	elasticEndpoint := "http://localhost:9200"
-	cluster := "cluster"
 	tenant := ""
 
 	tests := []struct {
@@ -65,6 +87,8 @@ func TestFV_Linseed(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer setupLinseedFV(t)()
+
 			client := secureHTTPClient(t)
 			httpReqSpec := noBodyHTTPReqSpec(tt.method, fmt.Sprintf("https://%s%s", addr, tt.path), tenant, cluster)
 			httpReqSpec.AddHeaders(tt.headers)
@@ -79,6 +103,8 @@ func TestFV_Linseed(t *testing.T) {
 	}
 
 	t.Run("should deny any HTTP connection", func(t *testing.T) {
+		defer setupLinseedFV(t)()
+
 		client := &http.Client{}
 		res, resBody := doRequest(t, client, noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/", addr), tenant, cluster))
 
@@ -87,12 +113,7 @@ func TestFV_Linseed(t *testing.T) {
 	})
 
 	t.Run("should ingest flow logs to Elastic", func(t *testing.T) {
-		// setup Elastic client
-		esClient, err := elastic.NewClient(
-			elastic.SetURL(elasticEndpoint),
-			elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)),
-			elastic.SetInfoLog(log.New(os.Stdout, "", log.LstdFlags)))
-		require.NoError(t, err)
+		defer setupLinseedFV(t)()
 
 		// setup HTTP client and HTTP request
 		client := secureHTTPClient(t)
@@ -103,13 +124,13 @@ func TestFV_Linseed(t *testing.T) {
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 		assert.JSONEq(t, "{\"failed\":0, \"succeeded\":25, \"total\":25}", strings.Trim(string(resBody), "\n"))
 
-		index := fmt.Sprintf("tigera_secure_ee_flows.cluster.*")
+		index := fmt.Sprintf("tigera_secure_ee_flows.%s.*", cluster)
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		_, err = esClient.Refresh(index).Do(ctx)
+		_, err := esClient.Refresh(index).Do(ctx)
 		require.NoError(t, err)
 		query := elastic.NewTermQuery("end_time", "1675469001")
-		result, err := esClient.Search().Index("tigera_secure_ee_flows.cluster.*").Query(query).Do(ctx)
+		result, err := esClient.Search().Index(fmt.Sprintf("tigera_secure_ee_flows.%s.*", cluster)).Query(query).Do(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, result.Hits.TotalHits.Value, int64(25))
 	})

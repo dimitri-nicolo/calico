@@ -4,6 +4,7 @@ package bgp_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -26,9 +27,10 @@ import (
 )
 
 var (
-	client lmaelastic.Client
-	b      bapi.BGPBackend
-	ctx    context.Context
+	client  lmaelastic.Client
+	b       bapi.BGPBackend
+	ctx     context.Context
+	cluster string
 )
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
@@ -48,13 +50,17 @@ func setupTest(t *testing.T) func() {
 	// Instantiate a backend.
 	b = bgp.NewBackend(client, cache)
 
+	// Create a random cluster name for each test to make sure we don't
+	// interfere between tests.
+	cluster = testutils.RandomClusterName()
+
 	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 
 	// Function contains teardown logic.
 	return func() {
-		err = testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_bgp")
+		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_bgp.%s", cluster))
 		require.NoError(t, err)
 
 		// Cancel the context
@@ -67,7 +73,7 @@ func setupTest(t *testing.T) func() {
 func TestCreateBGPLog(t *testing.T) {
 	defer setupTest(t)()
 
-	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	f := v1.BGPLog{
 		// yyyy-MM-dd'T'HH:mm:ss

@@ -3,7 +3,9 @@ package testutils
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -12,10 +14,29 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 func RefreshIndex(ctx context.Context, c lmaelastic.Client, index string) error {
 	logrus.WithField("index", index).Info("[TEST] Refreshing index")
 	_, err := c.Backend().Refresh(index).Do(ctx)
 	return err
+}
+
+func RandomClusterName() string {
+	name := fmt.Sprintf("cluster-%s", RandStringRunes(8))
+	logrus.WithField("name", name).Info("Using random cluster name for test")
+	return name
+}
+
+func RandStringRunes(n int) string {
+	letterRunes := []rune("abcdefghijklmnopqrstuvwxyz")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }
 
 func LogIndicies(ctx context.Context, client *elastic.Client) error {

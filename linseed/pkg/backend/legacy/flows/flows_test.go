@@ -32,11 +32,12 @@ import (
 )
 
 var (
-	client lmaelastic.Client
-	cache  bapi.Cache
-	fb     bapi.FlowBackend
-	flb    bapi.FlowLogBackend
-	ctx    context.Context
+	client  lmaelastic.Client
+	cache   bapi.Cache
+	fb      bapi.FlowBackend
+	flb     bapi.FlowLogBackend
+	ctx     context.Context
+	cluster string
 )
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
@@ -57,6 +58,10 @@ func setupTest(t *testing.T) func() {
 	fb = flows.NewFlowBackend(client)
 	flb = flows.NewFlowLogBackend(client, cache)
 
+	// Create a random cluster name for each test to make sure we don't
+	// interfere between tests.
+	cluster = testutils.RandomClusterName()
+
 	// Set a timeout for each test.
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
@@ -67,7 +72,7 @@ func setupTest(t *testing.T) func() {
 		cancel()
 
 		// Cleanup any data that might left over from a previous failed run.
-		err = testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_flows")
+		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_flows.%s", cluster))
 		require.NoError(t, err)
 
 		// Cancel logging
@@ -79,7 +84,7 @@ func setupTest(t *testing.T) func() {
 func TestListFlows(t *testing.T) {
 	defer setupTest(t)()
 
-	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// Put some data into ES so we can query it.
 	bld := NewFlowLogBuilder()
@@ -134,7 +139,7 @@ func TestMultipleFlows(t *testing.T) {
 	defer setupTest(t)()
 
 	// Both flows use the same cluster information.
-	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// Template for flow #1.
 	bld := NewFlowLogBuilder()
@@ -189,9 +194,6 @@ func TestMultipleFlows(t *testing.T) {
 }
 
 func TestFlowFiltering(t *testing.T) {
-	// Use the same cluster information.
-	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
-
 	type testCase struct {
 		Name   string
 		Params v1.L3FlowParams
@@ -390,6 +392,8 @@ func TestFlowFiltering(t *testing.T) {
 		t.Run(testcase.Name, func(t *testing.T) {
 			defer setupTest(t)()
 
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
 			// Set the time range for the test. We set this per-test
 			// so that the time range captures the windows that the logs
 			// are created in.
@@ -466,7 +470,7 @@ func TestPagination(t *testing.T) {
 	defer setupTest(t)()
 
 	// Both flows use the same cluster information.
-	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// Template for flow #1.
 	bld := NewFlowLogBuilder()
@@ -567,7 +571,7 @@ func TestElasticResponses(t *testing.T) {
 		fb = flows.NewFlowBackend(client)
 
 		// Basic parameters for each test.
-		clusterInfo.Cluster = "cluster"
+		clusterInfo.Cluster = cluster
 		opts.TimeRange = &lmav1.TimeRange{}
 		opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
 		opts.TimeRange.To = time.Now().Add(5 * time.Minute)

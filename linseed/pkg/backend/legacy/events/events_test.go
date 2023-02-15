@@ -4,6 +4,7 @@ package events_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -24,10 +25,11 @@ import (
 )
 
 var (
-	client lmaelastic.Client
-	b      bapi.EventsBackend
-	ctx    context.Context
-	cache  bapi.Cache
+	client  lmaelastic.Client
+	b       bapi.EventsBackend
+	ctx     context.Context
+	cache   bapi.Cache
+	cluster string
 )
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
@@ -47,13 +49,17 @@ func setupTest(t *testing.T) func() {
 	// Instantiate a backend.
 	b = events.NewBackend(client, cache)
 
+	// Create a random cluster name for each test to make sure we don't
+	// interfere between tests.
+	cluster = testutils.RandomClusterName()
+
 	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 
 	// Function contains teardown logic.
 	return func() {
-		err = testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_events")
+		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_events.%s", cluster))
 		require.NoError(t, err)
 
 		cancel()
@@ -65,7 +71,7 @@ func setupTest(t *testing.T) func() {
 func TestCreateEvent(t *testing.T) {
 	defer setupTest(t)()
 
-	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// The event to create
 	event := v1.Event{

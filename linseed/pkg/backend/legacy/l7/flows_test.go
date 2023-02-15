@@ -26,11 +26,12 @@ import (
 )
 
 var (
-	client lmaelastic.Client
-	cache  bapi.Cache
-	b      bapi.L7FlowBackend
-	lb     bapi.L7LogBackend
-	ctx    context.Context
+	client  lmaelastic.Client
+	cache   bapi.Cache
+	b       bapi.L7FlowBackend
+	lb      bapi.L7LogBackend
+	ctx     context.Context
+	cluster string
 )
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
@@ -51,6 +52,10 @@ func setupTest(t *testing.T) func() {
 	b = l7.NewL7FlowBackend(client)
 	lb = l7.NewL7LogBackend(client, cache)
 
+	// Create a random cluster name for each test to make sure we don't
+	// interfere between tests.
+	cluster = testutils.RandomClusterName()
+
 	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
@@ -61,7 +66,7 @@ func setupTest(t *testing.T) func() {
 		cancel()
 
 		// Cleanup any data that might left over from a previous failed run.
-		err = testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_l7")
+		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_l7.%s", cluster))
 		require.NoError(t, err)
 
 		// Cancel logging
@@ -73,7 +78,7 @@ func setupTest(t *testing.T) func() {
 func TestListL7Flows(t *testing.T) {
 	defer setupTest(t)()
 
-	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// Put some data into ES so we can query it.
 	expected := populateL7FlowData(t, ctx, client, cache, clusterInfo.Cluster)

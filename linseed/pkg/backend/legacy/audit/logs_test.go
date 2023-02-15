@@ -35,9 +35,10 @@ import (
 )
 
 var (
-	client lmaelastic.Client
-	b      bapi.AuditBackend
-	ctx    context.Context
+	client  lmaelastic.Client
+	b       bapi.AuditBackend
+	ctx     context.Context
+	cluster string
 )
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
@@ -57,12 +58,18 @@ func setupTest(t *testing.T) func() {
 	// Instantiate a backend.
 	b = audit.NewBackend(client, cache)
 
+	// Create a random cluster name for each test to make sure we don't
+	// interfere between tests.
+	cluster = testutils.RandomClusterName()
+
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 
 	// Function contains teardown logic.
 	return func() {
-		err = testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_audit")
+		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_audit_kube.%s", cluster))
+		require.NoError(t, err)
+		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_audit_ee.%s", cluster))
 		require.NoError(t, err)
 
 		// Cancel the context
@@ -75,7 +82,7 @@ func setupTest(t *testing.T) func() {
 func TestCreateKubeAuditLog(t *testing.T) {
 	defer setupTest(t)()
 
-	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// The DaemonSet that this audit log is for.
 	ds := apps.DaemonSet{
@@ -143,7 +150,7 @@ func TestCreateKubeAuditLog(t *testing.T) {
 func TestCreateEEAuditLog(t *testing.T) {
 	defer setupTest(t)()
 
-	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// The NetworkSet that this audit log is for.
 	obj := v3.GlobalNetworkSet{

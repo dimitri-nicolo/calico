@@ -39,7 +39,7 @@ func TestCreateL7Log(t *testing.T) {
 	b := l7.NewL7LogBackend(client, cache)
 
 	clusterInfo := bapi.ClusterInfo{
-		Cluster: "testcluster",
+		Cluster: cluster,
 	}
 
 	// Create a dummy flow.

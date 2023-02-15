@@ -28,11 +28,12 @@ import (
 )
 
 var (
-	client lmaelastic.Client
-	cache  bapi.Cache
-	b      bapi.DNSFlowBackend
-	lb     bapi.DNSLogBackend
-	ctx    context.Context
+	client  lmaelastic.Client
+	cache   bapi.Cache
+	b       bapi.DNSFlowBackend
+	lb      bapi.DNSLogBackend
+	ctx     context.Context
+	cluster string
 )
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
@@ -56,6 +57,10 @@ func setupTest(t *testing.T) func() {
 	b = dns.NewDNSFlowBackend(client)
 	lb = dns.NewDNSLogBackend(client, cache)
 
+	// Create a random cluster name for each test to make sure we don't
+	// interfere between tests.
+	cluster = testutils.RandomClusterName()
+
 	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
@@ -66,7 +71,7 @@ func setupTest(t *testing.T) func() {
 		cancel()
 
 		// Cleanup any data that might left over from a previous failed run.
-		err = testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_dns")
+		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_dns.%s", cluster))
 		require.NoError(t, err)
 
 		// Cancel logging
@@ -78,7 +83,7 @@ func setupTest(t *testing.T) func() {
 func TestListDNSFlows(t *testing.T) {
 	defer setupTest(t)()
 
-	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// Timeout the test after 5 seconds.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

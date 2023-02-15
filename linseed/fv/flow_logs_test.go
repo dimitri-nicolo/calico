@@ -29,6 +29,7 @@ var (
 	cli       client.Client
 	ctx       context.Context
 	lmaClient lmaelastic.Client
+	cluster   string
 )
 
 func flowlogSetupAndTeardown(t *testing.T) func() {
@@ -49,13 +50,17 @@ func flowlogSetupAndTeardown(t *testing.T) func() {
 	cli, err = client.NewClient("", cfg)
 	require.NoError(t, err)
 
+	// Create a random cluster name for each test to make sure we don't
+	// interfere between tests.
+	cluster = testutils.RandomClusterName()
+
 	// Set up context with a timeout.
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 
 	return func() {
 		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_flows")
+		testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_flows.%s", cluster))
 		logCancel()
 		cancel()
 	}
@@ -75,7 +80,7 @@ func TestFV_FlowLogs(t *testing.T) {
 		}
 
 		// Perform a query.
-		logs, err := cli.FlowLogs("cluster").List(ctx, &params)
+		logs, err := cli.FlowLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.FlowLog{}, logs.Items)
 	})
@@ -89,7 +94,7 @@ func TestFV_FlowLogs(t *testing.T) {
 				EndTime: time.Now().Unix(), // TODO- more fields.
 			},
 		}
-		bulk, err := cli.FlowLogs("cluster").Create(ctx, logs)
+		bulk, err := cli.FlowLogs(cluster).Create(ctx, logs)
 		require.NoError(t, err)
 		require.Equal(t, bulk.Succeeded, 1, "create flow log did not succeed")
 
@@ -105,7 +110,7 @@ func TestFV_FlowLogs(t *testing.T) {
 				},
 			},
 		}
-		resp, err := cli.FlowLogs("cluster").List(ctx, &params)
+		resp, err := cli.FlowLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, logs, resp.Items)
 	})
@@ -123,7 +128,7 @@ func TestFV_FlowLogs(t *testing.T) {
 					Host:      fmt.Sprintf("%d", i),
 				},
 			}
-			bulk, err := cli.FlowLogs("cluster").Create(ctx, logs)
+			bulk, err := cli.FlowLogs(cluster).Create(ctx, logs)
 			require.NoError(t, err)
 			require.Equal(t, bulk.Succeeded, 1, "create flow log did not succeed")
 		}
@@ -144,7 +149,7 @@ func TestFV_FlowLogs(t *testing.T) {
 					AfterKey:   afterKey,
 				},
 			}
-			resp, err := cli.FlowLogs("cluster").List(ctx, &params)
+			resp, err := cli.FlowLogs(cluster).List(ctx, &params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
 			require.Equal(t, []v1.FlowLog{
@@ -172,7 +177,7 @@ func TestFV_FlowLogs(t *testing.T) {
 				AfterKey:   afterKey,
 			},
 		}
-		resp, err := cli.FlowLogs("cluster").List(ctx, &params)
+		resp, err := cli.FlowLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 0, len(resp.Items))
 		require.Nil(t, resp.AfterKey)
@@ -353,7 +358,7 @@ func TestFV_FlowLogsRBAC(t *testing.T) {
 					EndTime:         time.Now().Unix(),
 				},
 			}
-			bulk, err := cli.FlowLogs("cluster").Create(ctx, logs)
+			bulk, err := cli.FlowLogs(cluster).Create(ctx, logs)
 			require.NoError(t, err)
 			require.Equal(t, bulk.Succeeded, 1, "create flow log did not succeed")
 
@@ -371,7 +376,7 @@ func TestFV_FlowLogsRBAC(t *testing.T) {
 				},
 				LogSelectionParams: v1.LogSelectionParams{Permissions: testcase.permissions},
 			}
-			resp, err := cli.FlowLogs("cluster").List(ctx, &params)
+			resp, err := cli.FlowLogs(cluster).List(ctx, &params)
 
 			if testcase.expectError {
 				require.Error(t, err)

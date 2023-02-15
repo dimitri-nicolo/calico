@@ -6,6 +6,7 @@ package fv_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -41,13 +42,17 @@ func eventsSetupAndTeardown(t *testing.T) func() {
 	cli, err = client.NewClient("", cfg)
 	require.NoError(t, err)
 
+	// Create a random cluster name for each test to make sure we don't
+	// interfere between tests.
+	cluster = testutils.RandomClusterName()
+
 	// Set up context with a timeout.
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 
 	return func() {
 		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_events")
+		testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_events.%s", cluster))
 		logCancel()
 		cancel()
 	}
@@ -67,7 +72,7 @@ func TestFV_Events(t *testing.T) {
 		}
 
 		// Perform a query.
-		events, err := cli.Events("cluster").List(ctx, &params)
+		events, err := cli.Events(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.Event{}, events.Items)
 	})
@@ -85,7 +90,7 @@ func TestFV_Events(t *testing.T) {
 				Type:        "TODO",
 			},
 		}
-		bulk, err := cli.Events("cluster").Create(ctx, events)
+		bulk, err := cli.Events(cluster).Create(ctx, events)
 		require.NoError(t, err)
 		require.Equal(t, bulk.Succeeded, 1, "create event did not succeed")
 
@@ -101,7 +106,7 @@ func TestFV_Events(t *testing.T) {
 				},
 			},
 		}
-		resp, err := cli.Events("cluster").List(ctx, &params)
+		resp, err := cli.Events(cluster).List(ctx, &params)
 		require.NoError(t, err)
 
 		// The ID should be set, but random, so we can't assert on its value.

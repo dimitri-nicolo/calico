@@ -19,7 +19,7 @@ import (
 func TestCreateDNSLog(t *testing.T) {
 	defer setupTest(t)()
 
-	clusterInfo := bapi.ClusterInfo{Cluster: "testcluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	ip := net.ParseIP("10.0.1.1")
 
