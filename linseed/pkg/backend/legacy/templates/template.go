@@ -101,6 +101,8 @@ func (c *TemplateConfig) mappings() string {
 		return BGPMappings
 	case bapi.Events:
 		return EventsMappings
+	case bapi.WAFLogs:
+		return WAFMappings
 	default:
 		panic("log type not implemented")
 	}
