@@ -47,12 +47,12 @@ func (h Flows) APIS() []handler.API {
 		{
 			Method:  "POST",
 			URL:     LogPath,
-			Handler: h.Bulk(),
+			Handler: h.GetLogs(),
 		},
 		{
 			Method:  "POST",
 			URL:     LogPathBulk,
-			Handler: h.GetLogs(),
+			Handler: h.Bulk(),
 		},
 	}
 }

@@ -325,8 +325,8 @@ var _ = Describe("SearchElasticHits", func() {
 				PageSize:    100,
 				PageNum:     0,
 				TimeRange: &lmav1.TimeRange{
-					From: fromTime,
-					To:   toTime,
+					From: mustParseTime("2021-04-19T21:25:30Z"),
+					To:   mustParseTime("2021-04-19T22:25:30Z"),
 				},
 				SortBy: []v1.SearchRequestSortBy{{
 					Field:      "test",

@@ -31,7 +31,7 @@ var (
 	lmaClient lmaelastic.Client
 )
 
-func setupAndTeardown(t *testing.T) func() {
+func flowlogSetupAndTeardown(t *testing.T) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -63,7 +63,7 @@ func setupAndTeardown(t *testing.T) func() {
 
 func TestFV_FlowLogs(t *testing.T) {
 	t.Run("should return an empty list if there are no flow logs", func(t *testing.T) {
-		defer setupAndTeardown(t)()
+		defer flowlogSetupAndTeardown(t)()
 
 		params := v1.FlowLogParams{
 			QueryParams: v1.QueryParams{
@@ -81,7 +81,7 @@ func TestFV_FlowLogs(t *testing.T) {
 	})
 
 	t.Run("should create and list flow logs", func(t *testing.T) {
-		defer setupAndTeardown(t)()
+		defer flowlogSetupAndTeardown(t)()
 
 		// Create a basic flow log.
 		logs := []v1.FlowLog{
@@ -111,7 +111,7 @@ func TestFV_FlowLogs(t *testing.T) {
 	})
 
 	t.Run("should support pagination", func(t *testing.T) {
-		defer setupAndTeardown(t)()
+		defer flowlogSetupAndTeardown(t)()
 
 		// Create 5 flow logs.
 		logTime := time.Now().Unix()
@@ -341,7 +341,7 @@ func TestFV_FlowLogsRBAC(t *testing.T) {
 
 	for _, testcase := range testcases {
 		t.Run(testcase.name, func(t *testing.T) {
-			defer setupAndTeardown(t)()
+			defer flowlogSetupAndTeardown(t)()
 
 			// Create a flow log with the given parameters.
 			logs := []v1.FlowLog{
@@ -369,7 +369,7 @@ func TestFV_FlowLogsRBAC(t *testing.T) {
 					},
 					MaxResults: 1,
 				},
-				LogParams: v1.LogParams{Permissions: testcase.permissions},
+				LogSelectionParams: v1.LogSelectionParams{Permissions: testcase.permissions},
 			}
 			resp, err := cli.FlowLogs("cluster").List(ctx, &params)
 

@@ -23,7 +23,7 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func setupAndTeardown(t *testing.T) func() {
+func eventsSetupAndTeardown(t *testing.T) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -55,7 +55,7 @@ func setupAndTeardown(t *testing.T) func() {
 
 func TestFV_Events(t *testing.T) {
 	t.Run("should return an empty list if there are no events", func(t *testing.T) {
-		defer setupAndTeardown(t)()
+		defer eventsSetupAndTeardown(t)()
 
 		params := v1.EventParams{
 			QueryParams: v1.QueryParams{
@@ -73,7 +73,7 @@ func TestFV_Events(t *testing.T) {
 	})
 
 	t.Run("should create and list events", func(t *testing.T) {
-		defer setupAndTeardown(t)()
+		defer eventsSetupAndTeardown(t)()
 
 		// Create a basic event.
 		events := []v1.Event{
