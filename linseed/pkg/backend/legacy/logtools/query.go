@@ -17,6 +17,8 @@ import (
 
 // BuildQuery builds an elastic log query using the given parameters.
 func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (elastic.Query, error) {
+	query := elastic.NewBoolQuery()
+
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
 	var start, end time.Time
@@ -28,9 +30,7 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (elast
 		start = time.Now().Add(-5 * time.Minute)
 		end = time.Now()
 	}
-	constraints := []elastic.Query{
-		h.NewTimeRangeQuery(start, end),
-	}
+	query.Filter(h.NewTimeRangeQuery(start, end))
 
 	// If RBAC constraints were given, add them in.
 	if perms := opts.GetPermissions(); len(perms) > 0 {
@@ -39,7 +39,7 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (elast
 			return nil, err
 		}
 		if rbacQuery != nil {
-			constraints = append(constraints, rbacQuery)
+			query.Filter(rbacQuery)
 		}
 	}
 
@@ -50,18 +50,10 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (elast
 			return nil, err
 		}
 		if selQuery != nil {
-			constraints = append(constraints, selQuery)
+			query.Must(selQuery)
 		}
 	}
-
-	if len(constraints) == 1 {
-		// This is just a time-range query. We don't need to join multiple
-		// constraints together.
-		return constraints[0], nil
-	}
-
-	// We need to perform a boolean query with multiple constraints.
-	return elastic.NewBoolQuery().Filter(constraints...), nil
+	return query, nil
 }
 
 // StartFrom parses the given parameters to determine which log to start from in the ES query.

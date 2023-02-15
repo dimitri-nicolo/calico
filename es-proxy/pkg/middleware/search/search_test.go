@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +16,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/mock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -96,20 +94,32 @@ var _ = Describe("SearchElasticHits", func() {
 	)
 
 	setLinseedResponse := func(searchResult any) {
-		byts, err := json.Marshal(searchResult)
-		if err != nil {
-			panic(err)
+		// Support passing a struct, or an already serialized
+		// json blob.
+		if byts, ok := searchResult.([]byte); !ok {
+			byts, err := json.Marshal(searchResult)
+			if err != nil {
+				panic(err)
+			}
+			linseedResponse = byts
+		} else {
+			linseedResponse = byts
 		}
-		linseedResponse = byts
 	}
 
 	setLinseedResponseError := func(e error) {
 		linseedError = e
 	}
 
-	setExpectedQuery := func(p lapi.LogParams) {
-		bs, _ := json.Marshal(p)
-		expectedQueryParams = bs
+	setExpectedQuery := func(p any) {
+		// Support passing a struct, or an already serialized
+		// json blob.
+		if byts, ok := p.([]byte); !ok {
+			byts, _ := json.Marshal(p)
+			expectedQueryParams = byts
+		} else {
+			expectedQueryParams = byts
+		}
 	}
 
 	setLinseedDelay := func(d time.Duration) {
@@ -208,6 +218,7 @@ var _ = Describe("SearchElasticHits", func() {
 		expectedQueryParams = nil
 		linseedResponse = nil
 		linseedDelay = 0
+		linseedError = nil
 	})
 
 	Context("/search request and response validation", func() {
@@ -619,33 +630,55 @@ var _ = Describe("SearchElasticHits", func() {
 	})
 
 	Context("/events/search request and response validation", func() {
-		It("should inject alert exceptions in search request", func() {
-			Skip("alert exceptions are not yet supported")
+		BeforeEach(func() {
+			// Create a mock server to mimic linseed. We use a different one here from the root Describe
+			// in order to handle event specific changes in logic.
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				defer GinkgoRecover()
 
+				if expectedQueryParams != nil {
+					// Test wants to assert on the query.
+					reqBody, err := ioutil.ReadAll(r.Body)
+					Expect(err).ShouldNot(HaveOccurred())
+					r.Body = ioutil.NopCloser(bytes.NewBuffer(reqBody))
+
+					var params, expectedParams lapi.EventParams
+					err = json.Unmarshal(reqBody, &params)
+					Expect(err).ShouldNot(HaveOccurred())
+					err = json.Unmarshal(expectedQueryParams, &expectedParams)
+
+					logrus.Infof("REQ: %s", string(reqBody))
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(params).To(Equal(expectedParams))
+				}
+
+				// Sleep a few milliseconds to make sure we populate the response time field.
+				time.Sleep(5 * time.Millisecond)
+
+				// Allows tests to simulate a delayed response.
+				if linseedDelay != 0 {
+					time.Sleep(linseedDelay)
+				}
+
+				if linseedError != nil {
+					w.WriteHeader(500)
+					httputils.JSONError(w, linseedError, 500)
+				} else {
+					w.WriteHeader(200)
+					logrus.Warnf("Mock server called! Returning BODY=%s", linseedResponse)
+					_, err := w.Write(linseedResponse)
+					Expect(err).ShouldNot(HaveOccurred())
+				}
+			}))
+		})
+
+		It("should inject alert exceptions in search request", func() {
 			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
 
-			// mock http client
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
-
-				// Elastic _search request
-				Expect(req.Method).To(Equal(http.MethodPost))
-				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster./_search"))
-
-				body, err := io.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-
-				// Elastic search request json
-				Expect(body).To(Equal([]byte(eventSearchRequest)))
-
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
-			}, nil)
+			// set the search response.
+			setLinseedResponse([]byte(eventSearchResponse))
+			setExpectedQuery([]byte(eventSearchRequest))
 
 			// create some alert exceptions
 			now := time.Now()
@@ -713,197 +746,159 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(resp.TimedOut).To(BeFalse())
 			Expect(resp.TotalHits).To(Equal(2))
 		})
-	})
-	It("should handle alert exceptions selector AND/OR conditions", func() {
-		Skip("alert exceptions are not yet supported")
 
-		// mock http client
-		mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-			defer GinkgoRecover()
-			req := args.Get(0).(*http.Request)
+		It("should handle alert exceptions selector AND/OR conditions", func() {
+			// set the search response.
+			setLinseedResponse([]byte(eventSearchResponse))
+			setExpectedQuery([]byte(eventSearchRequestSelector))
 
-			// Elastic _search request
-			Expect(req.Method).To(Equal(http.MethodPost))
-			Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster./_search"))
+			// create some alert exceptions
+			alertExceptions := []*v3.AlertException{
+				// AND
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-and",
+						CreationTimestamp: metav1.Now(),
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException all AND",
+						Selector:    "origin = origin1 AND type = global_alert",
+					},
+				},
+				// OR
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-or",
+						CreationTimestamp: metav1.Now(),
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException OR",
+						Selector:    "origin = origin2 OR type = honeypod",
+					},
+				},
+				// mixed AND / OR
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-and-or",
+						CreationTimestamp: metav1.Now(),
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException AND OR",
+						Selector:    "origin = origin3 AND type = alert OR source_namespace = ns3",
+					},
+				},
+			}
+			for _, alertException := range alertExceptions {
+				_, err := fakeClientSet.AlertExceptions().Create(context.Background(), alertException, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			}
 
-			body, err := ioutil.ReadAll(req.Body)
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
-			// Elastic search request json
-			Expect(body).To(Equal([]byte(eventSearchRequestSelector)))
 
-			Expect(req.Body.Close()).NotTo(HaveOccurred())
-			req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-		}).Return(&http.Response{
-			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
-		}, nil)
-
-		// create some alert exceptions
-		alertExceptions := []*v3.AlertException{
-			// AND
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:              "alert-exception-and",
-					CreationTimestamp: metav1.Now(),
-				},
-				Spec: v3.AlertExceptionSpec{
-					Description: "AlertException all AND",
-					Selector:    "origin = origin1 AND type = global_alert",
-				},
-			},
-			// OR
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:              "alert-exception-or",
-					CreationTimestamp: metav1.Now(),
-				},
-				Spec: v3.AlertExceptionSpec{
-					Description: "AlertException OR",
-					Selector:    "origin = origin2 OR type = honeypod",
-				},
-			},
-			// mixed AND / OR
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:              "alert-exception-and-or",
-					CreationTimestamp: metav1.Now(),
-				},
-				Spec: v3.AlertExceptionSpec{
-					Description: "AlertException AND OR",
-					Selector:    "origin = origin3 AND type = alert OR source_namespace = ns3",
-				},
-			},
-		}
-		for _, alertException := range alertExceptions {
-			_, err := fakeClientSet.AlertExceptions().Create(context.Background(), alertException, metav1.CreateOptions{})
+			// validate responses
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
 			Expect(err).NotTo(HaveOccurred())
-		}
 
-		client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
-		Expect(err).NotTo(HaveOccurred())
+			rr := httptest.NewRecorder()
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
+			handler.ServeHTTP(rr, req)
 
-		// validate responses
-		req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
-		Expect(err).NotTo(HaveOccurred())
+			Expect(rr.Code).To(Equal(http.StatusOK))
 
-		rr := httptest.NewRecorder()
-		handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
-		handler.ServeHTTP(rr, req)
-
-		Expect(rr.Code).To(Equal(http.StatusOK))
-
-		var resp v1.SearchResponse
-		err = json.Unmarshal(rr.Body.Bytes(), &resp)
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(resp.Hits).To(HaveLen(2))
-		Expect(resp.NumPages).To(Equal(1))
-		Expect(resp.TimedOut).To(BeFalse())
-		Expect(resp.TotalHits).To(Equal(2))
-	})
-
-	It("should skip invalid alert exceptions selector", func() {
-		Skip("alert exceptions are not yet supported")
-
-		// mock http client
-		mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-			defer GinkgoRecover()
-			req := args.Get(0).(*http.Request)
-
-			// Elastic _search request
-			Expect(req.Method).To(Equal(http.MethodPost))
-			Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster./_search"))
-
-			body, err := ioutil.ReadAll(req.Body)
+			var resp v1.SearchResponse
+			err = json.Unmarshal(rr.Body.Bytes(), &resp)
 			Expect(err).NotTo(HaveOccurred())
-			// Elastic search request json
-			Expect(body).To(Equal([]byte(eventSearchRequestSelectorInvalid)))
 
-			Expect(req.Body.Close()).NotTo(HaveOccurred())
-			req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-		}).Return(&http.Response{
-			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
-		}, nil)
+			Expect(resp.Hits).To(HaveLen(2))
+			Expect(resp.NumPages).To(Equal(1))
+			Expect(resp.TimedOut).To(BeFalse())
+			Expect(resp.TotalHits).To(Equal(2))
+		})
 
-		// create some alert exceptions
-		alertExceptions := []*v3.AlertException{
-			// valid selector
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:              "alert-exception-valid-selector",
-					CreationTimestamp: metav1.Now(),
+		It("should skip invalid alert exceptions selector", func() {
+			setLinseedResponse([]byte(eventSearchResponse))
+			setExpectedQuery([]byte(eventSearchRequestSelectorInvalid))
+
+			// create some alert exceptions
+			alertExceptions := []*v3.AlertException{
+				// valid selector
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-valid-selector",
+						CreationTimestamp: metav1.Now(),
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException valid selector",
+						Selector:    "origin = origin1",
+					},
 				},
-				Spec: v3.AlertExceptionSpec{
-					Description: "AlertException valid selector",
-					Selector:    "origin = origin1",
+				// invalid selector
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-invalid-selector",
+						CreationTimestamp: metav1.Now(),
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException invalid selector",
+						Selector:    "invalid selector",
+					},
 				},
-			},
-			// invalid selector
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:              "alert-exception-invalid-selector",
-					CreationTimestamp: metav1.Now(),
-				},
-				Spec: v3.AlertExceptionSpec{
-					Description: "AlertException invalid selector",
-					Selector:    "invalid selector",
-				},
-			},
-		}
-		for _, alertException := range alertExceptions {
-			_, err := fakeClientSet.AlertExceptions().Create(context.Background(), alertException, metav1.CreateOptions{})
+			}
+			for _, alertException := range alertExceptions {
+				_, err := fakeClientSet.AlertExceptions().Create(context.Background(), alertException, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
-		}
 
-		client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
-		Expect(err).NotTo(HaveOccurred())
+			// validate responses
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
+			Expect(err).NotTo(HaveOccurred())
 
-		// validate responses
-		req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
-		Expect(err).NotTo(HaveOccurred())
+			rr := httptest.NewRecorder()
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
+			handler.ServeHTTP(rr, req)
 
-		rr := httptest.NewRecorder()
-		handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
-		handler.ServeHTTP(rr, req)
+			Expect(rr.Code).To(Equal(http.StatusOK))
 
-		Expect(rr.Code).To(Equal(http.StatusOK))
+			var resp v1.SearchResponse
+			err = json.Unmarshal(rr.Body.Bytes(), &resp)
+			Expect(err).NotTo(HaveOccurred())
 
-		var resp v1.SearchResponse
-		err = json.Unmarshal(rr.Body.Bytes(), &resp)
-		Expect(err).NotTo(HaveOccurred())
+			Expect(resp.Hits).To(HaveLen(2))
+			Expect(resp.NumPages).To(Equal(1))
+			Expect(resp.TimedOut).To(BeFalse())
+			Expect(resp.TotalHits).To(Equal(2))
+		})
 
-		Expect(resp.Hits).To(HaveLen(2))
-		Expect(resp.NumPages).To(Equal(1))
-		Expect(resp.TimedOut).To(BeFalse())
-		Expect(resp.TotalHits).To(Equal(2))
-	})
+		It("should return error when request is not GET or POST", func() {
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
+			Expect(err).NotTo(HaveOccurred())
 
-	It("should return error when request is not GET or POST", func() {
-		client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
-		Expect(err).NotTo(HaveOccurred())
+			req, err := http.NewRequest(http.MethodPatch, "", bytes.NewReader([]byte("any")))
+			Expect(err).NotTo(HaveOccurred())
 
-		req, err := http.NewRequest(http.MethodPatch, "", bytes.NewReader([]byte("any")))
-		Expect(err).NotTo(HaveOccurred())
+			rr := httptest.NewRecorder()
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
+			handler.ServeHTTP(rr, req)
 
-		rr := httptest.NewRecorder()
-		handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
-		handler.ServeHTTP(rr, req)
+			Expect(rr.Code).To(Equal(http.StatusMethodNotAllowed))
+		})
 
-		Expect(rr.Code).To(Equal(http.StatusMethodNotAllowed))
-	})
+		It("should return error when request body is not valid", func() {
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
+			Expect(err).NotTo(HaveOccurred())
 
-	It("should return error when request body is not valid", func() {
-		client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
-		Expect(err).NotTo(HaveOccurred())
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte("invalid-json-body")))
+			Expect(err).NotTo(HaveOccurred())
 
-		req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte("invalid-json-body")))
-		Expect(err).NotTo(HaveOccurred())
+			rr := httptest.NewRecorder()
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
+			handler.ServeHTTP(rr, req)
 
-		rr := httptest.NewRecorder()
-		handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
-		handler.ServeHTTP(rr, req)
-
-		Expect(rr.Code).To(Equal(http.StatusBadRequest))
+			Expect(rr.Code).To(Equal(http.StatusBadRequest))
+		})
 	})
 })

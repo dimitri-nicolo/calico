@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -217,41 +218,6 @@ func intoLogParams(ctx context.Context, h lmaindex.Helper, request *v1.SearchReq
 	// 	}
 	// }
 
-	// // For security event search requests, we need to modify the Elastic query
-	// // to exclude events which match exceptions created by users.
-	// if strings.Contains(index, lmaelastic.EventsIndex) {
-	// 	eventExceptionList, err := k8sClient.AlertExceptions().List(ctx, metav1.ListOptions{})
-	// 	if err != nil {
-	// 		log.WithError(err).Error("failed to list alert exceptions")
-	// 		return nil, &httputils.HttpStatusError{
-	// 			Status: http.StatusInternalServerError,
-	// 			Msg:    err.Error(),
-	// 			Err:    err,
-	// 		}
-	// 	}
-
-	// 	now := &metav1.Time{Time: time.Now()}
-	// 	for _, alertException := range eventExceptionList.Items {
-	// 		if alertException.Spec.StartTime.Before(now) {
-	// 			if alertException.Spec.EndTime != nil && alertException.Spec.EndTime.Before(now) {
-	// 				// skip expired alert exceptions
-	// 				log.Debugf(`skipping expired alert exception="%s"`, alertException.GetName())
-	// 				continue
-	// 			}
-
-	// 			q, err := idxHelper.NewSelectorQuery(alertException.Spec.Selector)
-	// 			if err != nil {
-	// 				// skip invalid alert exception selector
-	// 				log.WithError(err).Warnf(`ignoring alert exception="%s", failed to parse selector="%s"`,
-	// 					alertException.GetName(), alertException.Spec.Selector)
-	// 				continue
-	// 			}
-
-	// 			esquery = esquery.MustNot(q)
-	// 		}
-	// 	}
-	// }
-
 	// Configure pagination, timeout, etc.
 	params.SetTimeout(request.Timeout)
 	params.SetMaxResults(request.PageSize)
@@ -330,6 +296,52 @@ func searchEvents(
 	if err != nil {
 		return nil, err
 	}
+
+	// For security event search requests, we need to modify the Elastic query
+	// to exclude events which match exceptions created by users.
+	eventExceptionList, err := k8sClient.AlertExceptions().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.WithError(err).Error("failed to list alert exceptions")
+		return nil, &httputils.HttpStatusError{
+			Status: http.StatusInternalServerError,
+			Msg:    err.Error(),
+			Err:    err,
+		}
+	}
+
+	var selectors []string
+	now := &metav1.Time{Time: time.Now()}
+	for _, alertException := range eventExceptionList.Items {
+		if alertException.Spec.StartTime.Before(now) {
+			if alertException.Spec.EndTime != nil && alertException.Spec.EndTime.Before(now) {
+				// skip expired alert exceptions
+				log.Debugf(`skipping expired alert exception="%s"`, alertException.GetName())
+				continue
+			}
+
+			// Validate the selector first.
+			_, err := lmaindex.Alerts().NewSelectorQuery(alertException.Spec.Selector)
+			if err != nil {
+				log.WithError(err).Warnf(`ignoring alert exception="%s", failed to parse selector="%s"`,
+					alertException.GetName(), alertException.Spec.Selector)
+				continue
+			}
+			selectors = append(selectors, alertException.Spec.Selector)
+		}
+	}
+
+	if len(selectors) > 0 {
+		if len(selectors) == 1 {
+			// Just one selector - invert it.
+			params.Selector = fmt.Sprintf("NOT ( %s )", selectors[0])
+		} else {
+			// Combine the selectors using OR, and then negate since we don't want
+			// any alerts that match any of the selectors.
+			// i.e., NOT ( (SEL1) OR (SEL2) OR (SEL3) )
+			params.Selector = fmt.Sprintf("NOT (( %s ))", strings.Join(selectors, " ) OR ( "))
+		}
+	}
+
 	listFn := lsclient.Events(request.ClusterName).List
 	return searchLogs(ctx, listFn, params, authReview, k8sClient)
 }
