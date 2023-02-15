@@ -346,6 +346,10 @@ func searchEvents(
 	return searchLogs(ctx, listFn, params, authReview, k8sClient)
 }
 
+type Hit[T any] struct {
+	Source T `json:"source"`
+}
+
 // searchLogs performs a search against the Linseed API for logs that match the given
 // parameters, using the provided client.ListFunc.
 func searchLogs[T any](
@@ -368,18 +372,10 @@ func searchLogs[T any](
 		}
 	}
 
-	type Hit struct {
-		ID     string `json:"id"`
-		Index  string `json:"index"`
-		Source T      `json:"source"`
-	}
-
 	// Build the hits response.
 	var hits []json.RawMessage
-	for i, item := range items.Items {
-		hit := Hit{
-			ID:     fmt.Sprintf("%d", i), // TODO - what does the UI use this for?
-			Index:  "tigera_secure_ee",   // TODO: What does the UI use this for?
+	for _, item := range items.Items {
+		hit := Hit[T]{
 			Source: item,
 		}
 		hitJSON, err := json.Marshal(hit)
