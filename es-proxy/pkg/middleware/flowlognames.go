@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -238,6 +239,25 @@ func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error)
 	return params, nil
 }
 
+func buildLabelSelectorFilter(labelSelectors []LabelSelector, path string, termsKey string) *elastic.NestedQuery {
+	var labelValues []interface{}
+	var selectorQueries []elastic.Query
+	for _, selector := range labelSelectors {
+		keyAndOperator := fmt.Sprintf("%s%s", selector.Key, selector.Operator)
+		if len(selector.Values) == 1 {
+			selectorQuery := elastic.NewTermQuery(termsKey, fmt.Sprintf("%s%s", keyAndOperator, selector.Values[0]))
+			selectorQueries = append(selectorQueries, selectorQuery)
+		} else {
+			for _, value := range selector.Values {
+				labelValues = append(labelValues, fmt.Sprintf("%s%s", keyAndOperator, value))
+			}
+			selectorQuery := elastic.NewTermsQuery(termsKey, labelValues...)
+			selectorQueries = append(selectorQueries, selectorQuery)
+		}
+	}
+	return elastic.NewNestedQuery(path, elastic.NewBoolQuery().Filter(selectorQueries...))
+}
+
 func buildNamesQuery(params *FlowLogNamesParams) *elastic.BoolQuery {
 	var termFilterValues []interface{}
 	query := elastic.NewBoolQuery()
@@ -278,13 +298,13 @@ func buildNamesQuery(params *FlowLogNamesParams) *elastic.BoolQuery {
 		sourceConditions = append(sourceConditions, buildTermsFilter(params.SourceType, "source_type"))
 	}
 	if len(params.SourceLabels) > 0 {
-		// sourceConditions = append(sourceConditions, buildLabelSelectorFilter(params.SourceLabels, "source_labels", "source_labels.labels"))
+		sourceConditions = append(sourceConditions, buildLabelSelectorFilter(params.SourceLabels, "source_labels", "source_labels.labels"))
 	}
 	if len(params.DestType) > 0 {
 		destConditions = append(destConditions, buildTermsFilter(params.DestType, "dest_type"))
 	}
 	if len(params.DestLabels) > 0 {
-		// destConditions = append(destConditions, buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels"))
+		destConditions = append(destConditions, buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels"))
 	}
 
 	// Use the filtering queries to craft the appropriate source and destination filtering queries
