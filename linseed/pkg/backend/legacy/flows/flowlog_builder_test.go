@@ -65,8 +65,8 @@ func (b *flowLogBuilder) Build() (*v1.FlowLog, error) {
 func (b *flowLogBuilder) ExpectedFlow() *v1.L3Flow {
 	f := &v1.L3Flow{
 		Key: v1.L3FlowKey{
-			Action:   b.log.Action,
-			Reporter: b.log.Reporter,
+			Action:   v1.FlowAction(b.log.Action),
+			Reporter: v1.FlowReporter(b.log.Reporter),
 			Protocol: b.log.Protocol,
 			Source: v1.Endpoint{
 				Namespace:      b.log.SourceNamespace,

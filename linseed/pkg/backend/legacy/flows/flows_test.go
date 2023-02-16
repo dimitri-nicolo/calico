@@ -383,6 +383,16 @@ func TestFlowFiltering(t *testing.T) {
 			// due to the filtering and the simplicity of our test modeling of flow logs.
 			SkipComparison: true,
 		},
+		{
+			Name: "should query a flow based on action",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				Action:      testutils.ActionPtr(v1.FlowActionAllow),
+			},
+
+			ExpectFlow1: true, // Only the first flow allows.
+			ExpectFlow2: false,
+		},
 	}
 
 	for _, testcase := range testcases {
@@ -421,7 +431,7 @@ func TestFlowFiltering(t *testing.T) {
 				WithSourceName("tigera-operator").
 				WithSourceIP("34.15.66.3").
 				WithRandomFlowStats().WithRandomPacketStats().
-				WithReporter("src").WithAction("allowed").
+				WithReporter("src").WithAction("allow").
 				WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none")
 			exp1 := populateFlowDataN(t, ctx, bld, client, clusterInfo.Cluster, numLogs)
 
@@ -439,7 +449,7 @@ func TestFlowFiltering(t *testing.T) {
 				WithSourceName("my-deployment").
 				WithSourceIP("192.168.1.1").
 				WithRandomFlowStats().WithRandomPacketStats().
-				WithReporter("src").WithAction("allowed").
+				WithReporter("src").WithAction("deny").
 				WithSourceLabels("cheese=brie")
 			exp2 := populateFlowDataN(t, ctx, bld2, client, clusterInfo.Cluster, numLogs)
 

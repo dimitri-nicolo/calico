@@ -331,6 +331,10 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elast
 		constraints = append(constraints, buildLabelSelectorFilter(opts.DestinationSelectors, "dest_labels"))
 	}
 
+	if opts.Action != nil {
+		constraints = append(constraints, elastic.NewTermQuery("action", opts.Action))
+	}
+
 	if len(constraints) == 1 {
 		// This is just a time-range query. We don't need to join multiple
 		// constraints together.
