@@ -110,8 +110,8 @@ func GetL3FlowData(
 	for page := range results {
 		for _, flow := range page.Items {
 			progress.IncRaw()
-			reporter := flow.Key.Reporter
-			action := flow.Key.Action
+			reporter := string(flow.Key.Reporter)
+			action := string(flow.Key.Action)
 			proto := flow.Key.Protocol
 			processName := ""
 			if flow.Process != nil {

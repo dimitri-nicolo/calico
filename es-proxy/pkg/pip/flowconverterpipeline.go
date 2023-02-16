@@ -135,7 +135,7 @@ func (p *pip) SearchAndProcessFlowLogs(
 
 		// Obtain separately source allow/deny and dest allow/deny.  The destination allow/deny need to be married
 		// up to the source allow flow.
-		var srcAllowFlow, srcDenyFlow, dstAllowFlow, dstDenyFlow *lapi.L3Flow
+		var srcAllowFlow, srcDenyFlow, dstAllowFlow, dstDenyFlow *api.Flow
 		var srcAllowRawBucket, srcDenyRawBucket, dstAllowRawBucket, dstDenyRawBucket *elastic.CompositeAggregationBucket
 
 		// Handler function to calculate the result for a given connection.
@@ -164,17 +164,17 @@ func (p *pip) SearchAndProcessFlowLogs(
 				// Denied source flows are interesting. If the remote dest is a Calico managed endpoint *and* the action
 				// has been modified from denied then we need to add some flow data for the remote. Since we won't have
 				// the actual data, all we can do is add a fake flow with minimal available data.
-				if api.IsCalicoManagedEndpoint(srcDenyFlow.Key.Destination) &&
+				if srcDenyFlow.Destination.IsCalicoManagedEndpoint() &&
 					(afterSrc.Action&api.ActionFlagAllow != 0 || beforeSrc.Action&api.ActionFlagAllow != 0) {
 					log.Debug("Including fake destination flow due to source flow changing from denied")
-					destFlow := lapi.L3Flow{
-						Key: lapi.L3FlowKey{
-							Reporter:    lapi.FlowReporterDest,
-							Source:      srcDenyFlow.Key.Source,
-							Destination: srcDenyFlow.Key.Destination,
-							// ActionFlag:  0,
-							Protocol: srcDenyFlow.Key.Protocol,
-						},
+					destFlow := api.Flow{
+						Reporter:    api.ReporterTypeDestination,
+						Source:      srcDenyFlow.Source,
+						Destination: srcDenyFlow.Destination,
+						ActionFlag:  0,
+						Proto:       srcDenyFlow.Proto,
+						IPVersion:   srcDenyFlow.IPVersion,
+						Policies:    nil,
 					}
 					_, beforeDest, afterDest := calc.CalculateDest(&destFlow, beforeSrc.Action, afterSrc.Action)
 
@@ -370,8 +370,15 @@ func (p *pip) SearchAndProcessFlowLogs(
 		// aggregated bucket when the new raw bucket belongs in a different aggregation group.
 		for page := range pages {
 			for _, f := range page.Items {
-				// Make a copy to use in the loop.
-				flow := f
+				// Convert the received flow into the format understood by PIP.
+				flow := api.FromLinseedFlow(f)
+				if flow == nil {
+					continue
+				}
+
+				// Convert to a raw bucket. Ideally we don't need to do this, but the PIP code and API response is written in terms of
+				// elastic buckets and so for legacy reasons we convert a nice api.L3Flow struct into a messay ES bucket struct.
+				rawBucket := bucketFromFlow(&f)
 
 				// Check the last raw connection key to see if we have clocked the connection, if so calculate the new
 				// source/dest flow for the connection.
@@ -410,23 +417,23 @@ func (p *pip) SearchAndProcessFlowLogs(
 
 				// Recorded flows can only have a reported action of allow or deny. No other bits in the action flags should
 				// be set.
-				switch flow.Key.Reporter {
-				case lapi.FlowReporterSource:
-					switch flow.Key.Action {
-					case lapi.FlowActionAllow:
-						srcAllowFlow = &flow
+				switch flow.Reporter {
+				case api.ReporterTypeSource:
+					switch flow.ActionFlag {
+					case api.ActionFlagAllow:
+						srcAllowFlow = flow
 						srcAllowRawBucket = rawBucket
-					case lapi.FlowActionDeny:
-						srcDenyFlow = &flow
+					case api.ActionFlagDeny:
+						srcDenyFlow = flow
 						srcDenyRawBucket = rawBucket
 					}
-				case lapi.FlowReporterDest:
-					switch flow.Key.Action {
-					case lapi.FlowActionAllow:
-						dstAllowFlow = &flow
+				case api.ReporterTypeDestination:
+					switch flow.ActionFlag {
+					case api.ActionFlagAllow:
+						dstAllowFlow = flow
 						dstAllowRawBucket = rawBucket
-					case lapi.FlowActionDeny:
-						dstDenyFlow = &flow
+					case api.ActionFlagDeny:
+						dstDenyFlow = flow
 						dstDenyRawBucket = rawBucket
 					}
 				}
@@ -450,6 +457,85 @@ func (p *pip) SearchAndProcessFlowLogs(
 	}()
 
 	return results, errs
+}
+
+func bucketFromFlow(flow *lapi.L3Flow) *elastic.CompositeAggregationBucket {
+	bucket := &elastic.CompositeAggregationBucket{}
+	bucket.DocCount = flow.LogStats.FlowLogCount
+	bucket.CompositeAggregationKey = []elastic.CompositeAggregationSourceValue{
+		{Name: "reporter", Value: flow.Key.Reporter},
+		{Name: "action", Value: flow.Key.Action},
+		{Name: "proto", Value: flow.Key.Protocol},
+		{Name: "source_type", Value: flow.Key.Source.Type},
+		{Name: "source_name_aggr", Value: flow.Key.Source.AggregatedName},
+		{Name: "source_namespace", Value: flow.Key.Source.Namespace},
+		{Name: "dest_type", Value: flow.Key.Destination.Type},
+		{Name: "dest_name_aggr", Value: flow.Key.Destination.AggregatedName},
+		{Name: "dest_namespace", Value: flow.Key.Destination.Namespace},
+	}
+	bucket.AggregatedSums = map[string]float64{}
+	if stats := flow.LogStats; stats != nil {
+		bucket.AggregatedSums["num_flows_started"] = float64(stats.Started)
+		bucket.AggregatedSums["num_flows_completed"] = float64(stats.Completed)
+	}
+	if stats := flow.TrafficStats; stats != nil {
+		bucket.AggregatedSums["packets_in"] = float64(stats.PacketsIn)
+		bucket.AggregatedSums["packets_out"] = float64(stats.PacketsOut)
+		bucket.AggregatedSums["bytes_in"] = float64(stats.BytesIn)
+		bucket.AggregatedSums["bytes_out"] = float64(stats.BytesOut)
+	}
+
+	bucket.AggregatedTerms = map[string]*elastic.AggregatedTerm{
+		"dest_labels": {
+			DocCount: 0,
+			Buckets:  map[interface{}]int64{},
+		},
+		"source_labels": {
+			DocCount: 0,
+			Buckets:  map[interface{}]int64{},
+		},
+		"policies": {
+			DocCount: 0,
+			Buckets:  map[interface{}]int64{},
+		},
+	}
+
+	// flow.Service = &v1.Service{
+	// 	Name:      b.ft.ValueString(key, "dest_service_name"),
+	// 	Namespace: b.ft.ValueString(key, "dest_service_namespace"),
+	// 	Port:      b.ft.ValueInt64(key, "dest_service_port_num"),
+	// 	PortName:  b.ft.ValueString(key, "dest_service_port"),
+	// }
+
+	// if flow.Key.Protocol == "tcp" {
+	// 	flow.TCPStats = &v1.TCPStats{
+	// 		TotalRetransmissions:     int64(bucket.AggregatedSums[FlowAggSumTCPRetranmissions]),
+	// 		LostPackets:              int64(bucket.AggregatedSums[FlowAggSumTCPLostPackets]),
+	// 		UnrecoveredTo:            int64(bucket.AggregatedSums[FlowAggSumTCPUnrecoveredTO]),
+	// 		MinSendCongestionWindow:  bucket.AggregatedMin[FlowAggMinTCPSendCongestionWindow],
+	// 		MinMSS:                   bucket.AggregatedMin[FlowAggMinTCPMSS],
+	// 		MaxSmoothRTT:             bucket.AggregatedMax[FlowAggMaxTCPSmoothRTT],
+	// 		MaxMinRTT:                bucket.AggregatedMax[FlowAggMaxTCPMinRTT],
+	// 		MeanSendCongestionWindow: bucket.AggregatedMean[FlowAggMeanTCPSendCongestionWindow],
+	// 		MeanSmoothRTT:            bucket.AggregatedMean[FlowAggMeanTCPSmoothRTT],
+	// 		MeanMinRTT:               bucket.AggregatedMean[FlowAggMeanTCPMinRTT],
+	// 		MeanMSS:                  bucket.AggregatedMean[FlowAggMeanTCPMSS],
+	// 	}
+	// }
+
+	// // Determine the process info if available in the logs.
+	// // var processes v1.GraphEndpointProcesses
+	// processName := b.ft.ValueString(key, "process_name")
+	// if processName != "" {
+	// 	flow.Process = &v1.Process{Name: processName}
+	// 	flow.ProcessStats = &v1.ProcessStats{
+	// 		MinNumNamesPerFlow: int(bucket.AggregatedMin[FlowAggMinProcessNames]),
+	// 		MaxNumNamesPerFlow: int(bucket.AggregatedMax[FlowAggMaxProcessNames]),
+	// 		MinNumIDsPerFlow:   int(bucket.AggregatedMin[FlowAggMinProcessIds]),
+	// 		MaxNumIDsPerFlow:   int(bucket.AggregatedMax[FlowAggMaxProcessIds]),
+	// 	}
+	// }
+	return bucket
 }
 
 // aggregateRawFlowBucket aggregates the raw aggregation bucket into the further aggregated sets of related buckets in

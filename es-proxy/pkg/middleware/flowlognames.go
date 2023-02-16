@@ -278,13 +278,13 @@ func buildNamesQuery(params *FlowLogNamesParams) *elastic.BoolQuery {
 		sourceConditions = append(sourceConditions, buildTermsFilter(params.SourceType, "source_type"))
 	}
 	if len(params.SourceLabels) > 0 {
-		sourceConditions = append(sourceConditions, buildLabelSelectorFilter(params.SourceLabels, "source_labels", "source_labels.labels"))
+		// sourceConditions = append(sourceConditions, buildLabelSelectorFilter(params.SourceLabels, "source_labels", "source_labels.labels"))
 	}
 	if len(params.DestType) > 0 {
 		destConditions = append(destConditions, buildTermsFilter(params.DestType, "dest_type"))
 	}
 	if len(params.DestLabels) > 0 {
-		destConditions = append(destConditions, buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels"))
+		// destConditions = append(destConditions, buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels"))
 	}
 
 	// Use the filtering queries to craft the appropriate source and destination filtering queries
@@ -367,7 +367,7 @@ func getNamesFromElastic(params *FlowLogNamesParams, esClient lmaelastic.Client,
 
 		// Add names to the set
 		if params.Strict {
-			//If we strictly enforce RBAC, then we will only return endpoints we have RBAC
+			// If we strictly enforce RBAC, then we will only return endpoints we have RBAC
 			// permissions for and match the query parameters.
 			if allowedName(params, source, rbacHelper) && checkEndpointRBAC(rbacHelper, source) {
 				nameSet.Add(source.Name)

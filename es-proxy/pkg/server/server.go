@@ -127,7 +127,7 @@ func Start(cfg *Config) error {
 	k8sClientSetFactory := k8s.NewClientSetFactory(cfg.VoltronCAPath, cfg.VoltronURL)
 
 	// Create a PIP backend.
-	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, esClient)
+	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, linseed)
 
 	kibanaTLSConfig := calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
 	kibanaTLSConfig.InsecureSkipVerify = true

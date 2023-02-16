@@ -115,7 +115,7 @@ func (s *pip) syncFromArchive(cxt context.Context, params *PolicyImpactParams, c
 	}
 
 	// Populate the cache from the replayer.
-	r := replay.New(*params.FromTime, *params.ToTime, s.esClient, s.esClient, cb)
+	r := replay.New(*params.FromTime, *params.ToTime, &LinseedLister{}, &LinseedEventer{}, cb)
 	r.Start(cxt)
 }
 

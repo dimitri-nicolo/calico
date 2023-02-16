@@ -11,7 +11,6 @@ import (
 
 	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/api"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -92,8 +91,8 @@ func (m ImpactedResources) IsDeleted(id v3.ResourceID) bool {
 
 // PolicyCalculator is used to determine the calculated behavior from a configuration change for a given flow.
 type PolicyCalculator interface {
-	CalculateSource(source *lapi.L3Flow) (processed bool, before, after EndpointResponse)
-	CalculateDest(dest *lapi.L3Flow, srcActionBefore, srcActionAfter api.ActionFlag) (processed bool, before, after EndpointResponse)
+	CalculateSource(source *api.Flow) (processed bool, before, after EndpointResponse)
+	CalculateDest(dest *api.Flow, srcActionBefore, srcActionAfter api.ActionFlag) (processed bool, before, after EndpointResponse)
 }
 
 type EndpointResponse struct {

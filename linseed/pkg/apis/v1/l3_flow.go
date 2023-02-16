@@ -64,7 +64,7 @@ type L3FlowKey struct {
 	// Common fields
 	Action   FlowAction   `json:"action"`
 	Reporter FlowReporter `json:"reporter"`
-	Protocol string       `json:"protocol"`
+	Protocol string       `json:"protocol"` // TODO: Do we support int values?
 
 	// Source and destination information.
 	Source      Endpoint `json:"source"`
