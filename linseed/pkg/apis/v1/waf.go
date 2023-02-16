@@ -6,7 +6,7 @@ import "time"
 
 // WAFLogParams define querying parameters to retrieve BGP logs
 type WAFLogParams struct {
-	QueryParams *QueryParams `json:"query_params" validate:"required"`
+	QueryParams `json:",inline" validate:"required"`
 }
 
 type WAFLog struct {
