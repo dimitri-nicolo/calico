@@ -226,55 +226,107 @@ func TestFlowFiltering(t *testing.T) {
 			Name: "should query a flow based on source type",
 			Params: v1.L3FlowParams{
 				QueryParams: v1.QueryParams{},
-				Source:      &v1.Endpoint{Type: "wep"},
+				SourceTypes: []v1.EndpointType{v1.WEP},
 			},
 			ExpectFlow1: true,
 			ExpectFlow2: false, // Flow 2 is type hep, so won't match.
 		},
 		{
-			Name: "should query a flow based on destination type",
+			Name: "should query a flow based on multiple destination types",
 			Params: v1.L3FlowParams{
 				QueryParams: v1.QueryParams{},
-				Destination: &v1.Endpoint{Type: "wep"},
+				SourceTypes: []v1.EndpointType{v1.WEP, v1.HEP},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query a flow based on destination type",
+			Params: v1.L3FlowParams{
+				QueryParams:      v1.QueryParams{},
+				DestinationTypes: []v1.EndpointType{v1.WEP},
 			},
 			ExpectFlow1: true,
 			ExpectFlow2: false, // Flow 2 is type hep, so won't match.
+		},
+		{
+			Name: "should query a flow based on multiple destination types",
+			Params: v1.L3FlowParams{
+				QueryParams:      v1.QueryParams{},
+				DestinationTypes: []v1.EndpointType{v1.WEP, v1.HEP},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: true,
 		},
 		{
 			Name: "should query a flow based on source namespace",
 			Params: v1.L3FlowParams{
 				QueryParams: v1.QueryParams{},
-				Source:      &v1.Endpoint{Namespace: "default"},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeSource,
+						Namespaces: []string{"default"},
+					},
+				},
 			},
 			ExpectFlow1: false, // Flow 1 has source namespace tigera-operator
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query a flow based on multiple source namespaces",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeSource,
+						Namespaces: []string{"default", "tigera-operator"},
+					},
+				},
+			},
+			ExpectFlow1: true,
 			ExpectFlow2: true,
 		},
 		{
 			Name: "should query a flow based on destination namespace",
 			Params: v1.L3FlowParams{
 				QueryParams: v1.QueryParams{},
-				Destination: &v1.Endpoint{Namespace: "kube-system"},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeDest,
+						Namespaces: []string{"kube-system"},
+					},
+				},
 			},
 			ExpectFlow1: false, // Flow 1 has dest namespace openshift-system
 			ExpectFlow2: true,
 		},
 		{
-			Name: "should query a flow based on source port",
+			Name: "should query a flow based on multiple destination namespace",
 			Params: v1.L3FlowParams{
 				QueryParams: v1.QueryParams{},
-				Source:      &v1.Endpoint{Port: 1010},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeDest,
+						Namespaces: []string{"kube-system", "openshift-dns"},
+					},
+				},
 			},
 			ExpectFlow1: true,
-			ExpectFlow2: false, // Flow 2 has source port 5656
+			ExpectFlow2: true,
 		},
 		{
-			Name: "should query a flow based on destination port",
+			Name: "should query a flow based on namespace MatchTypeAny",
 			Params: v1.L3FlowParams{
 				QueryParams: v1.QueryParams{},
-				Destination: &v1.Endpoint{Port: 1053},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeAny,
+						Namespaces: []string{"kube-system"},
+					},
+				},
 			},
-			ExpectFlow1: true,
-			ExpectFlow2: false, // Flow 2 has dest port 53
+			ExpectFlow1: false,
+			ExpectFlow2: true,
 		},
 		{
 			Name: "should query a flow based on source label equal selector",
@@ -387,10 +439,98 @@ func TestFlowFiltering(t *testing.T) {
 			Name: "should query a flow based on action",
 			Params: v1.L3FlowParams{
 				QueryParams: v1.QueryParams{},
-				Action:      testutils.ActionPtr(v1.FlowActionAllow),
+				Actions:     []v1.FlowAction{v1.FlowActionAllow},
 			},
 
 			ExpectFlow1: true, // Only the first flow allows.
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should query a flow based on multiple actions",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				Actions:     []v1.FlowAction{v1.FlowActionAllow, v1.FlowActionDeny},
+			},
+
+			ExpectFlow1: true,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query a flow based on source name aggr",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				NameAggrMatches: []v1.NameMatch{
+					{
+						Type:  v1.MatchTypeSource,
+						Names: []string{"tigera-operator-*"},
+					},
+				},
+			},
+
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should query a flow based on dest name aggr",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				NameAggrMatches: []v1.NameMatch{
+					{
+						Type:  v1.MatchTypeSource,
+						Names: []string{"my-deployment-*"},
+					},
+				},
+			},
+
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			// This test should match both flows, but does so by fully-specifying all
+			// query parameters.
+			Name: "should query both flows with a complex multi-part query",
+			Params: v1.L3FlowParams{
+				QueryParams:      v1.QueryParams{},
+				Actions:          []v1.FlowAction{v1.FlowActionAllow, v1.FlowActionDeny},
+				SourceTypes:      []v1.EndpointType{v1.WEP, v1.HEP},
+				DestinationTypes: []v1.EndpointType{v1.WEP, v1.HEP},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeDest,
+						Namespaces: []string{"kube-system", "openshift-dns"},
+					},
+					{
+						Type:       v1.MatchTypeSource,
+						Namespaces: []string{"default", "tigera-operator"},
+					},
+				},
+			},
+
+			ExpectFlow1: true,
+			ExpectFlow2: true,
+		},
+		{
+			// This test uses a complex query that ultimately only matches on of the flows
+			// beacause it doesn't include flow1's destination namespace.
+			Name: "should query both flows with a complex multi-part query",
+			Params: v1.L3FlowParams{
+				QueryParams:      v1.QueryParams{},
+				Actions:          []v1.FlowAction{v1.FlowActionAllow, v1.FlowActionDeny},
+				SourceTypes:      []v1.EndpointType{v1.WEP, v1.HEP},
+				DestinationTypes: []v1.EndpointType{v1.WEP, v1.HEP},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeDest,
+						Namespaces: []string{"openshift-dns"},
+					},
+					{
+						Type:       v1.MatchTypeSource,
+						Namespaces: []string{"default", "tigera-operator"},
+					},
+				},
+			},
+
+			ExpectFlow1: true,
 			ExpectFlow2: false,
 		},
 	}
@@ -428,7 +568,7 @@ func TestFlowFiltering(t *testing.T) {
 				WithDestPort(1053).
 				WithSourcePort(1010).
 				WithProtocol("udp").
-				WithSourceName("tigera-operator").
+				WithSourceName("tigera-operator-*").
 				WithSourceIP("34.15.66.3").
 				WithRandomFlowStats().WithRandomPacketStats().
 				WithReporter("src").WithAction("allow").
@@ -446,7 +586,7 @@ func TestFlowFiltering(t *testing.T) {
 				WithDestPort(53).
 				WithSourcePort(5656).
 				WithProtocol("udp").
-				WithSourceName("my-deployment").
+				WithSourceName("my-deployment-*").
 				WithSourceIP("192.168.1.1").
 				WithRandomFlowStats().WithRandomPacketStats().
 				WithReporter("src").WithAction("deny").

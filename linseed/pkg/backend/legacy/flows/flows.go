@@ -296,62 +296,106 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elast
 		end = time.Now()
 	}
 
-	// Keep tabs of all the constraints we want to apply to the request.
 	// Every request has at least a time-range limitation.
-	constraints := []elastic.Query{
-		lmaindex.FlowLogs().NewTimeRangeQuery(start, end),
+	query := elastic.NewBoolQuery()
+	query.Filter(lmaindex.FlowLogs().NewTimeRangeQuery(start, end))
+
+	if len(opts.Actions) > 0 {
+		// Filter-in any flows with one of the given actions.
+		values := []interface{}{}
+		for _, a := range opts.Actions {
+			values = append(values, a)
+		}
+		query.Filter(elastic.NewTermsQuery("action", values...))
 	}
 
-	// Add in constraints based on the source, if specified.
-	if src := opts.Source; src != nil {
-		if src.AggregatedName != "" {
-			constraints = append(constraints, elastic.NewTermQuery("source_name_aggr", src.AggregatedName))
+	if len(opts.SourceTypes) > 0 {
+		// Filter-in any flows with one of the given actions.
+		values := []interface{}{}
+		for _, t := range opts.SourceTypes {
+			values = append(values, t)
 		}
-		if src.Type != "" {
-			constraints = append(constraints, elastic.NewTermQuery("source_type", src.Type))
+		query.Filter(elastic.NewTermsQuery("source_type", values...))
+	}
+
+	if len(opts.DestinationTypes) > 0 {
+		// Filter-in any flows with one of the given actions.
+		values := []interface{}{}
+		for _, t := range opts.DestinationTypes {
+			values = append(values, t)
 		}
-		if src.Namespace != "" {
-			constraints = append(constraints, elastic.NewTermQuery("source_namespace", src.Namespace))
-		}
-		if src.Port != 0 {
-			constraints = append(constraints, elastic.NewTermQuery("source_port", src.Port))
+		query.Filter(elastic.NewTermsQuery("dest_type", values...))
+	}
+
+	if len(opts.NamespaceMatches) > 0 {
+		for _, match := range opts.NamespaceMatches {
+			// Get the list of values as an interface{}, as needed for a terms query.
+			values := []interface{}{}
+			for _, t := range match.Namespaces {
+				values = append(values, t)
+			}
+
+			switch match.Type {
+			case v1.MatchTypeSource:
+				if len(match.Namespaces) == 1 {
+					query.Filter(elastic.NewTermQuery("source_namespace", match.Namespaces[0]))
+				} else {
+					query.Filter(elastic.NewTermsQuery("source_namespace", values...))
+				}
+			case v1.MatchTypeDest:
+				if len(match.Namespaces) == 1 {
+					query.Filter(elastic.NewTermQuery("dest_namespace", match.Namespaces[0]))
+				} else {
+					query.Filter(elastic.NewTermsQuery("dest_namespace", values...))
+				}
+			case v1.MatchTypeAny:
+				fallthrough
+			default:
+				// By default, treat as an "any" match. Return any flows that have a source
+				// or destination namespace that matches.
+				query.Filter(elastic.NewBoolQuery().Should(
+					elastic.NewTermsQuery("source_namespace", values...),
+					elastic.NewTermsQuery("dest_namespace", values...),
+				).MinimumNumberShouldMatch(1))
+			}
 		}
 	}
+
+	if len(opts.NameAggrMatches) > 0 {
+		for _, match := range opts.NameAggrMatches {
+			// Get the list of values as an interface{}, as needed for a terms query.
+			values := []interface{}{}
+			for _, t := range match.Names {
+				values = append(values, t)
+			}
+
+			switch match.Type {
+			case v1.MatchTypeSource:
+				query.Filter(elastic.NewTermsQuery("source_name_aggr", values...))
+			case v1.MatchTypeDest:
+				query.Filter(elastic.NewTermsQuery("dest_name_aggr", values...))
+			case v1.MatchTypeAny:
+				fallthrough
+			default:
+				// By default, treat as an "any" match. Return any flows that have a source
+				// or destination name that matches.
+				query.Filter(elastic.NewBoolQuery().Should(
+					elastic.NewTermsQuery("source_name_aggr", values...),
+					elastic.NewTermsQuery("dest_name_aggr", values...),
+				).MinimumNumberShouldMatch(1))
+			}
+		}
+	}
+
+	// Add in label selectors, if specified.
 	if len(opts.SourceSelectors) != 0 {
-		constraints = append(constraints, buildLabelSelectorFilter(opts.SourceSelectors, "source_labels"))
-	}
-
-	// Add in constraints based on the destination, if specified.
-	if dst := opts.Destination; dst != nil {
-		if dst.AggregatedName != "" {
-			constraints = append(constraints, elastic.NewTermQuery("dest_name_aggr", dst.AggregatedName))
-		}
-		if dst.Type != "" {
-			constraints = append(constraints, elastic.NewTermQuery("dest_type", dst.Type))
-		}
-		if dst.Namespace != "" {
-			constraints = append(constraints, elastic.NewTermQuery("dest_namespace", dst.Namespace))
-		}
-		if dst.Port != 0 {
-			constraints = append(constraints, elastic.NewTermQuery("dest_port", dst.Port))
-		}
+		query.Filter(buildLabelSelectorFilter(opts.SourceSelectors, "source_labels"))
 	}
 	if len(opts.DestinationSelectors) != 0 {
-		constraints = append(constraints, buildLabelSelectorFilter(opts.DestinationSelectors, "dest_labels"))
+		query.Filter(buildLabelSelectorFilter(opts.DestinationSelectors, "dest_labels"))
 	}
 
-	if opts.Action != nil {
-		constraints = append(constraints, elastic.NewTermQuery("action", opts.Action))
-	}
-
-	if len(constraints) == 1 {
-		// This is just a time-range query. We don't need to join multiple
-		// constraints together.
-		return constraints[0]
-	}
-
-	// We need to perform a boolean query with multiple constraints.
-	return elastic.NewBoolQuery().Filter(constraints...)
+	return query
 }
 
 // IMPORTANT: This function does not create the correct Elasticsearch query from the label selector and needs to be redone.

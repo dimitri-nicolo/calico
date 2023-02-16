@@ -19,6 +19,7 @@ import (
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	pippkg "github.com/projectcalico/calico/es-proxy/pkg/pip"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
@@ -312,29 +313,30 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 }
 
 func buildFlowParams(params *FlowLogsParams) *lapi.L3FlowParams {
-	flowParams := lapi.L3FlowParams{
-		Source:      &lapi.Endpoint{},
-		Destination: &lapi.Endpoint{},
-	}
-	flowParams.MaxResults = int(params.Limit)
+	fp := lapi.L3FlowParams{}
+	fp.MaxResults = int(params.Limit)
 	if len(params.Actions) > 0 {
-		// TODO: Is it a reasonable query to have more than one?
-		// It's combined using a Filter clause, meaning the log must match
-		// all of the filters to be returned. Can a log ever match two actions?
-		// Same for many of the below queries.
-		action := lapi.FlowAction(params.Actions[0])
-		flowParams.Action = &action
+		fp.Actions = []lapi.FlowAction{}
+		for _, a := range params.Actions {
+			fp.Actions = append(fp.Actions, lapi.FlowAction(a))
+		}
 	}
 	if len(params.SourceType) > 0 {
-		flowParams.Source.Type = lapi.EndpointType(params.SourceType[0])
+		fp.SourceTypes = []lapi.EndpointType{}
+		for _, t := range params.SourceType {
+			fp.SourceTypes = append(fp.SourceTypes, lapi.EndpointType(t))
+		}
 	}
 	if len(params.DestType) > 0 {
-		flowParams.Destination.Type = lapi.EndpointType(params.DestType[0])
+		fp.DestinationTypes = []lapi.EndpointType{}
+		for _, t := range params.DestType {
+			fp.DestinationTypes = append(fp.DestinationTypes, lapi.EndpointType(t))
+		}
 	}
 	if len(params.SourceLabels) > 0 {
-		flowParams.SourceSelectors = []lapi.LabelSelector{}
+		fp.SourceSelectors = []lapi.LabelSelector{}
 		for _, sel := range params.SourceLabels {
-			flowParams.SourceSelectors = append(flowParams.SourceSelectors, lapi.LabelSelector{
+			fp.SourceSelectors = append(fp.SourceSelectors, lapi.LabelSelector{
 				Key:      sel.Key,
 				Operator: sel.Operator,
 				Values:   sel.Values,
@@ -342,9 +344,9 @@ func buildFlowParams(params *FlowLogsParams) *lapi.L3FlowParams {
 		}
 	}
 	if len(params.DestLabels) > 0 {
-		flowParams.DestinationSelectors = []lapi.LabelSelector{}
+		fp.DestinationSelectors = []lapi.LabelSelector{}
 		for _, sel := range params.DestLabels {
-			flowParams.DestinationSelectors = append(flowParams.DestinationSelectors, lapi.LabelSelector{
+			fp.DestinationSelectors = append(fp.DestinationSelectors, lapi.LabelSelector{
 				Key:      sel.Key,
 				Operator: sel.Operator,
 				Values:   sel.Values,
@@ -359,7 +361,7 @@ func buildFlowParams(params *FlowLogsParams) *lapi.L3FlowParams {
 		if params.endDateTime != nil {
 			tr.To = *params.endDateTime
 		}
-		flowParams.TimeRange = &tr
+		fp.TimeRange = &tr
 	}
 
 	if params.Unprotected {
@@ -367,15 +369,23 @@ func buildFlowParams(params *FlowLogsParams) *lapi.L3FlowParams {
 	}
 
 	if params.Namespace != "" {
-		flowParams.Source.Namespace = params.Namespace
-		flowParams.Destination.Namespace = params.Namespace
+		fp.NamespaceMatches = []lapi.NamespaceMatch{
+			{
+				Type:       lapi.MatchTypeAny,
+				Namespaces: []string{params.Namespace},
+			},
+		}
 	}
 
 	if params.SourceDestNamePrefix != "" {
-		flowParams.Source.AggregatedName = params.SourceDestNamePrefix
-		flowParams.Destination.AggregatedName = params.SourceDestNamePrefix
+		fp.NameAggrMatches = []lapi.NameMatch{
+			{
+				Type:  lapi.MatchTypeAny,
+				Names: []string{params.SourceDestNamePrefix},
+			},
+		}
 	}
-	return &flowParams
+	return &fp
 }
 
 func buildTermsFilter(terms []string, termsKey string) *elastic.TermsQuery {
@@ -389,11 +399,11 @@ func buildTermsFilter(terms []string, termsKey string) *elastic.TermsQuery {
 // This method will take a look at the request parameters made to the /flowLogs endpoint and return the results.
 func getFlowLogsFromElastic(ctx context.Context, flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, lsclient client.Client) (interface{}, int, error) {
 	flowParams := buildFlowParams(params)
-	result, err := lsclient.FlowLogs(params.ClusterName).List(ctx, flowParams)
+	result, err := lsclient.L3Flows(params.ClusterName).List(ctx, flowParams)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
-	return result, http.StatusOK, nil
+	return result.Items, http.StatusOK, nil
 }
 
 func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {

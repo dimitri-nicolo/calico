@@ -326,16 +326,36 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 
 	// Build the query to send.
 	params := v1.L3FlowParams{
-		Source: &v1.Endpoint{
-			Type:           v1.EndpointType(req.srcType),
-			AggregatedName: req.srcName,
-			Namespace:      req.srcNamespace,
-		},
-		Destination: &v1.Endpoint{
-			Type:           v1.EndpointType(req.dstType),
-			AggregatedName: req.dstName,
-			Namespace:      req.dstNamespace,
-		},
+		SourceTypes:      []v1.EndpointType{v1.EndpointType(req.srcType)},
+		DestinationTypes: []v1.EndpointType{v1.EndpointType(req.dstType)},
+		NameAggrMatches:  []v1.NameMatch{},      // Filled in below.
+		NamespaceMatches: []v1.NamespaceMatch{}, // Filled in below.
+	}
+
+	if len(req.srcName) > 0 {
+		params.NameAggrMatches = append(params.NameAggrMatches, v1.NameMatch{
+			Type:  v1.MatchTypeSource,
+			Names: []string{req.srcName},
+		})
+	}
+	if len(req.dstName) > 0 {
+		params.NameAggrMatches = append(params.NameAggrMatches, v1.NameMatch{
+			Type:  v1.MatchTypeDest,
+			Names: []string{req.dstName},
+		})
+	}
+
+	if len(req.srcNamespace) > 0 {
+		params.NamespaceMatches = append(params.NamespaceMatches, v1.NamespaceMatch{
+			Type:       v1.MatchTypeSource,
+			Namespaces: []string{req.srcNamespace},
+		})
+	}
+	if len(req.dstNamespace) > 0 {
+		params.NamespaceMatches = append(params.NamespaceMatches, v1.NamespaceMatch{
+			Type:       v1.MatchTypeDest,
+			Namespaces: []string{req.dstNamespace},
+		})
 	}
 
 	for _, sel := range req.srcLabels {

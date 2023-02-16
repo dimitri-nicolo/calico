@@ -229,15 +229,15 @@ var _ = Describe("FlowLog middleware", func() {
 			}),
 
 			v1.L3FlowParams{
-				Source: &v1.Endpoint{
-					Type:           "hep",
-					AggregatedName: "source",
-					Namespace:      api.GlobalEndpointType,
+				SourceTypes:      []v1.EndpointType{v1.HEP},
+				DestinationTypes: []v1.EndpointType{v1.WEP},
+				NameAggrMatches: []v1.NameMatch{
+					{Type: v1.MatchTypeSource, Names: []string{"source"}},
+					{Type: v1.MatchTypeDest, Names: []string{"destination"}},
 				},
-				Destination: &v1.Endpoint{
-					Type:           "wep",
-					AggregatedName: "destination",
-					Namespace:      "default",
+				NamespaceMatches: []v1.NamespaceMatch{
+					{Type: v1.MatchTypeSource, Namespaces: []string{api.GlobalEndpointType}},
+					{Type: v1.MatchTypeDest, Namespaces: []string{"default"}},
 				},
 			},
 		),
@@ -255,15 +255,15 @@ var _ = Describe("FlowLog middleware", func() {
 						To:   mustParseTime("2006-01-02T15:04:05Z", time.RFC3339),
 					},
 				},
-				Source: &v1.Endpoint{
-					Type:           "wep",
-					AggregatedName: "source",
-					Namespace:      "default",
+				SourceTypes:      []v1.EndpointType{v1.WEP},
+				DestinationTypes: []v1.EndpointType{v1.WEP},
+				NameAggrMatches: []v1.NameMatch{
+					{Type: v1.MatchTypeSource, Names: []string{"source"}},
+					{Type: v1.MatchTypeDest, Names: []string{"destination"}},
 				},
-				Destination: &v1.Endpoint{
-					Type:           "wep",
-					AggregatedName: "destination",
-					Namespace:      "default",
+				NamespaceMatches: []v1.NamespaceMatch{
+					{Type: v1.MatchTypeSource, Namespaces: []string{"default"}},
+					{Type: v1.MatchTypeDest, Namespaces: []string{"default"}},
 				},
 			},
 		),
@@ -277,15 +277,15 @@ var _ = Describe("FlowLog middleware", func() {
 			}),
 
 			v1.L3FlowParams{
-				Source: &v1.Endpoint{
-					Type:           "wep",
-					AggregatedName: "source",
-					Namespace:      "default",
+				SourceTypes:      []v1.EndpointType{v1.WEP},
+				DestinationTypes: []v1.EndpointType{v1.WEP},
+				NameAggrMatches: []v1.NameMatch{
+					{Type: v1.MatchTypeSource, Names: []string{"source"}},
+					{Type: v1.MatchTypeDest, Names: []string{"destination"}},
 				},
-				Destination: &v1.Endpoint{
-					Type:           "wep",
-					AggregatedName: "destination",
-					Namespace:      "default",
+				NamespaceMatches: []v1.NamespaceMatch{
+					{Type: v1.MatchTypeSource, Namespaces: []string{"default"}},
+					{Type: v1.MatchTypeDest, Namespaces: []string{"default"}},
 				},
 				SourceSelectors: []v1.LabelSelector{
 					{

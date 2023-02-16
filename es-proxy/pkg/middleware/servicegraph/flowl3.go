@@ -99,9 +99,7 @@ func GetL3FlowData(
 	}
 
 	// Create the list pager.
-	params := lsv1.L3FlowParams{
-		QueryParams: lsv1.QueryParams{TimeRange: &tr},
-	}
+	params := lsv1.L3FlowParams{QueryParams: lsv1.QueryParams{TimeRange: &tr}}
 	pager := client.NewListPager[lapi.L3Flow](&params)
 	results, errors := pager.Stream(ctx, linseed.L3Flows(cluster).List)
 
