@@ -85,7 +85,6 @@ type Config struct {
 	ImageAssuranceScannerCLITokenSecretName                   string `split_words:"true"`
 	ImageAssuranceAdmissionControllerClusterRoleName          string `split_words:"true"`
 	ImageAssuranceCRAdaptorClusterRoleName                    string `split_words:"true"`
-	ImageAssurancePodWatcherClusterRoleName                   string `split_words:"true"`
 	ImageAssuranceOperatorClusterRoleName                     string `split_words:"true"`
 	ImageAssuranceRuntimeCleanerClusterRoleName               string `split_words:"true"`
 

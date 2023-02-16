@@ -53,7 +53,6 @@ func New(
 		scannerClusterRoleName:             cfg.ScannerClusterRoleName,
 		scannerCLIClusterRoleName:          cfg.ScannerCLIClusterRoleName,
 		scannerCLITokenSecretName:          cfg.ScannerCLITokenSecretName,
-		podWatcherClusterRoleName:          cfg.PodWatcherClusterRoleName,
 		operatorClusterRoleName:            cfg.OperatorCloudClusterRoleName,
 		runtimeCleanerClusterRoleName:      cfg.RuntimeCleanerClusterRoleName,
 	}
@@ -171,12 +170,6 @@ func New(
 		)
 
 		// Watch for changes to the service accounts created by the reconciler.
-		w.AddWatch(
-			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
-				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssurancePodWatcherServiceAccountName))),
-			&corev1.ServiceAccount{},
-			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
-		)
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceOperatorServiceAccountName))),

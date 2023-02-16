@@ -40,7 +40,6 @@ type reconciler struct {
 	scannerClusterRoleName             string
 	scannerCLIClusterRoleName          string
 	scannerCLITokenSecretName          string
-	podWatcherClusterRoleName          string
 	operatorClusterRoleName            string
 	runtimeCleanerClusterRoleName      string
 }
@@ -206,11 +205,6 @@ func (c *reconciler) reconcileClusterRoleBindings() error {
 		ccrb := getClusterRoleBindingDefinition(resource.ImageAssuranceScannerCLIClusterRoleBindingName, c.scannerCLIClusterRoleName,
 			resource.ImageAssuranceScannerCLIServiceAccountName, resource.ManagerNameSpaceName)
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, ccrb); err != nil {
-			return err
-		}
-		pcrb := getClusterRoleBindingDefinition(resource.ImageAssurancePodWatcherClusterRoleBindingName, c.podWatcherClusterRoleName,
-			resource.ImageAssurancePodWatcherServiceAccountName, c.managementOperatorNamespace)
-		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, pcrb); err != nil {
 			return err
 		}
 		operatorCRB := getClusterRoleBindingDefinition(resource.ImageAssuranceOperatorClusterRoleBindingName, c.operatorClusterRoleName,
