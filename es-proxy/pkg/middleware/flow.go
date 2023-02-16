@@ -396,7 +396,11 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 	// Build a response. Above, we received a list of flows as reported by the source and destination,
 	// and with different actions. Here, we build a policy report by aggregating information
 	// from these flows.
-	response := FlowResponse{}
+	response := FlowResponse{
+		// The UI expects these to be non-nil, so always default them to empty values.
+		SrcLabels: make(FlowResponseLabels),
+		DstLabels: make(FlowResponseLabels),
+	}
 	for i, item := range flows.Items {
 		log.Infof("Handling flow %d", i)
 
