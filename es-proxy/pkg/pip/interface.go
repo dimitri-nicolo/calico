@@ -2,7 +2,6 @@ package pip
 
 import (
 	"context"
-	"time"
 
 	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 
@@ -32,8 +31,6 @@ type PIP interface {
 type PolicyImpactParams struct {
 	FlowParams      *lapi.L3FlowParams `json:"-"`
 	ResourceActions []ResourceChange   `json:"resourceActions"`
-	FromTime        *time.Time         `json:"-"`
-	ToTime          *time.Time         `json:"-"`
 	ClusterName     string             `json:"-"`
 	Limit           int32              `json:"-"`
 	ImpactedOnly    bool               `json:"-"`

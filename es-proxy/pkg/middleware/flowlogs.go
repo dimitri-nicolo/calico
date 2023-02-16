@@ -351,15 +351,13 @@ func buildFlowParams(params *FlowLogsParams) *lapi.L3FlowParams {
 			})
 		}
 	}
-	if params.startDateTimeESParm != nil || params.endDateTimeESParm != nil {
+	if params.startDateTime != nil || params.endDateTime != nil {
 		tr := v1.TimeRange{}
-		if params.startDateTimeESParm != nil {
-			// TODO
-			// tr.From = params.startDateTimeESParm
+		if params.startDateTime != nil {
+			tr.From = *params.startDateTime
 		}
-		if params.endDateTimeESParm != nil {
-			// TODO
-			// tr.To = params.startDateTimeESParm
+		if params.endDateTime != nil {
+			tr.To = *params.endDateTime
 		}
 		flowParams.TimeRange = &tr
 	}
@@ -412,22 +410,12 @@ func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 		}
 	}
 
-	flowParams.TimeRange = &v1.TimeRange{}
-	if params.startDateTime != nil {
-		flowParams.TimeRange.From = *params.startDateTime
-	}
-	if params.endDateTime != nil {
-		flowParams.TimeRange.To = *params.endDateTime
-	}
-
 	return &pippkg.PolicyImpactParams{
 		FlowParams:      flowParams,
 		ClusterName:     params.ClusterName,
 		ResourceActions: resourceChanges,
 		Limit:           params.Limit,
 		ImpactedOnly:    params.ImpactedOnly,
-		FromTime:        params.startDateTime,
-		ToTime:          params.endDateTime,
 	}
 }
 

@@ -109,13 +109,19 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, params *PolicyImpactParam
 // syncFromArchive will load archived configuration and invoke the syncer callbacks.
 func (s *pip) syncFromArchive(cxt context.Context, params *PolicyImpactParams, cb syncer.SyncerCallbacks) {
 	// If we could not determine the time interval, then we can't populate the cache from archived data.
-	if params.FromTime == nil || params.ToTime == nil {
+	if params.FlowParams == nil || params.FlowParams.TimeRange == nil {
 		log.Debug("No From/To time available, so cannot load archived data")
 		return
 	}
 
 	// Populate the cache from the replayer.
-	r := replay.New(*params.FromTime, *params.ToTime, &LinseedLister{}, &LinseedEventer{}, cb)
+	r := replay.New(
+		params.FlowParams.TimeRange.From,
+		params.FlowParams.TimeRange.To,
+		&LinseedLister{},
+		&LinseedEventer{},
+		cb,
+	)
 	r.Start(cxt)
 }
 
