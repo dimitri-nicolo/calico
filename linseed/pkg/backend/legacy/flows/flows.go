@@ -35,6 +35,8 @@ const (
 	FlowAggSumTCPRetranmissions        = "sum_tcp_total_retransmissions"
 	FlowAggSumTCPLostPackets           = "sum_tcp_lost_packets"
 	FlowAggSumTCPUnrecoveredTO         = "sum_tcp_unrecovered_to"
+	FlowAggSumHTTPDeniedIn             = "sum_http_requests_denied_in"
+	FlowAggSumHTTPAllowedIn            = "sum_http_requests_allowed_in"
 	FlowAggMinProcessNames             = "process_names_min_num"
 	FlowAggMinProcessIds               = "process_ids_min_num"
 	FlowAggMinTCPSendCongestionWindow  = "tcp_min_send_congestion_window"
@@ -98,6 +100,8 @@ func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
 		{Name: FlowAggSumTCPRetranmissions, Field: "tcp_total_retransmissions"},
 		{Name: FlowAggSumTCPLostPackets, Field: "tcp_lost_packets"},
 		{Name: FlowAggSumTCPUnrecoveredTO, Field: "tcp_unrecovered_to"},
+		{Name: FlowAggSumHTTPAllowedIn, Field: "http_requests_allowed_in"},
+		{Name: FlowAggSumHTTPDeniedIn, Field: "http_requests_denied_in"},
 	}
 	mins := []lmaelastic.AggMaxMinInfo{
 		{Name: FlowAggMinProcessNames, Field: "num_process_names"},
@@ -249,6 +253,11 @@ func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 			MeanMinRTT:               bucket.AggregatedMean[FlowAggMeanTCPMinRTT],
 			MeanMSS:                  bucket.AggregatedMean[FlowAggMeanTCPMSS],
 		}
+	}
+
+	flow.HTTPStats = &v1.HTTPStats{
+		AllowedIn: int64(bucket.AggregatedSums[FlowAggSumHTTPAllowedIn]),
+		DeniedIn:  int64(bucket.AggregatedSums[FlowAggSumHTTPDeniedIn]),
 	}
 
 	// Determine the process info if available in the logs.

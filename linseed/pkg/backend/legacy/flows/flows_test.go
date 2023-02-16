@@ -671,6 +671,10 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *flowLogBuilder, cli
 		{Key: "dest_iteration", Values: []string{}},
 	}
 	expected.LogStats.FlowLogCount = int64(n)
+	expected.HTTPStats = &v1.HTTPStats{
+		AllowedIn: 0,
+		DeniedIn:  0,
+	}
 
 	for i := 0; i < n; i++ {
 		// We want a variety of label keys and values,

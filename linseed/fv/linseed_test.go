@@ -17,7 +17,9 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -25,6 +27,10 @@ import (
 var esClient *elastic.Client
 
 func setupLinseedFV(t *testing.T) func() {
+	// Hook logrus into testing.T
+	config.ConfigureLogging("DEBUG")
+	logCancel := logutils.RedirectLogrusToTestingT(t)
+
 	// Random cluster name to prevent overlap with other tests.
 	cluster = testutils.RandomClusterName()
 
@@ -41,6 +47,7 @@ func setupLinseedFV(t *testing.T) func() {
 		// Cleanup any data that might left over from a previous failed run.
 		err := testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_flows.%s", cluster))
 		require.NoError(t, err)
+		logCancel()
 	}
 }
 

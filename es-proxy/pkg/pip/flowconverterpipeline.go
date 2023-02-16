@@ -520,10 +520,10 @@ func bucketFromFlow(flow *lapi.L3Flow) *elastic.CompositeAggregationBucket {
 		bucket.AggregatedSums["sum_bytes_in"] = float64(stats.BytesIn)
 		bucket.AggregatedSums["sum_bytes_out"] = float64(stats.BytesOut)
 	}
-
-	// TODO - get real data for these.
-	bucket.AggregatedSums["sum_http_requests_allowed_in"] = 0
-	bucket.AggregatedSums["sum_http_requests_denied_in"] = 0
+	if stats := flow.HTTPStats; stats != nil {
+		bucket.AggregatedSums["sum_http_requests_allowed_in"] = float64(stats.AllowedIn)
+		bucket.AggregatedSums["sum_http_requests_denied_in"] = float64(stats.DeniedIn)
+	}
 
 	// Add in labels.
 	for _, l := range flow.SourceLabels {
