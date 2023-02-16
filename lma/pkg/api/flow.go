@@ -117,7 +117,7 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 
 // GetFlowEndpointLabels extracts the flow endpoint labels from the composite aggregation key.
 func GetLinseedFlowLabels(labels []lapi.FlowLabels) map[string]string {
-	if labels == nil {
+	if len(labels) == 0 {
 		return nil
 	}
 

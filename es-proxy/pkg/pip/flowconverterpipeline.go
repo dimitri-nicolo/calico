@@ -2,6 +2,7 @@ package pip
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
@@ -122,6 +123,8 @@ func (p *pip) SearchAndProcessFlowLogs(
 	go func() {
 		defer func() {
 			cancel()
+			close(results)
+			close(errs)
 		}()
 
 		// Initialize the last known raw flow key to simplify our processing, and the last raw connection key.
@@ -370,12 +373,6 @@ func (p *pip) SearchAndProcessFlowLogs(
 		// aggregated bucket when the new raw bucket belongs in a different aggregation group.
 		for page := range pages {
 			for _, f := range page.Items {
-				// Convert the received flow into the format understood by PIP.
-				flow := api.FromLinseedFlow(f)
-				if flow == nil {
-					continue
-				}
-
 				// Convert to a raw bucket. Ideally we don't need to do this, but the PIP code and API response is written in terms of
 				// elastic buckets and so for legacy reasons we convert a nice api.L3Flow struct into a messay ES bucket struct.
 				rawBucket := bucketFromFlow(&f)
@@ -414,6 +411,11 @@ func (p *pip) SearchAndProcessFlowLogs(
 				// We combine the results to give just a single source and dest flow as follows:
 				// - Convert deny+allow for the same endpoint to an unknown
 				// - Only include overlapping intersecting labels and policies
+				// Convert the received flow into the format understood by PIP.
+				flow := api.FromLinseedFlow(f)
+				if flow == nil {
+					continue
+				}
 
 				// Recorded flows can only have a reported action of allow or deny. No other bits in the action flags should
 				// be set.
@@ -463,78 +465,83 @@ func bucketFromFlow(flow *lapi.L3Flow) *elastic.CompositeAggregationBucket {
 	bucket := &elastic.CompositeAggregationBucket{}
 	bucket.DocCount = flow.LogStats.FlowLogCount
 	bucket.CompositeAggregationKey = []elastic.CompositeAggregationSourceValue{
-		{Name: "reporter", Value: flow.Key.Reporter},
-		{Name: "action", Value: flow.Key.Action},
-		{Name: "proto", Value: flow.Key.Protocol},
-		{Name: "source_type", Value: flow.Key.Source.Type},
-		{Name: "source_name_aggr", Value: flow.Key.Source.AggregatedName},
+		// Order matters!
+		{Name: "source_type", Value: string(flow.Key.Source.Type)},
 		{Name: "source_namespace", Value: flow.Key.Source.Namespace},
-		{Name: "dest_type", Value: flow.Key.Destination.Type},
-		{Name: "dest_name_aggr", Value: flow.Key.Destination.AggregatedName},
+		{Name: "source_name_aggr", Value: flow.Key.Source.AggregatedName},
+		{Name: "dest_type", Value: string(flow.Key.Destination.Type)},
 		{Name: "dest_namespace", Value: flow.Key.Destination.Namespace},
-	}
-	bucket.AggregatedSums = map[string]float64{}
-	if stats := flow.LogStats; stats != nil {
-		bucket.AggregatedSums["num_flows_started"] = float64(stats.Started)
-		bucket.AggregatedSums["num_flows_completed"] = float64(stats.Completed)
-	}
-	if stats := flow.TrafficStats; stats != nil {
-		bucket.AggregatedSums["packets_in"] = float64(stats.PacketsIn)
-		bucket.AggregatedSums["packets_out"] = float64(stats.PacketsOut)
-		bucket.AggregatedSums["bytes_in"] = float64(stats.BytesIn)
-		bucket.AggregatedSums["bytes_out"] = float64(stats.BytesOut)
+		{Name: "dest_name_aggr", Value: flow.Key.Destination.AggregatedName},
+		{Name: "proto", Value: string(flow.Key.Protocol)},
+		{Name: "source_ip", Value: ""},
+		{Name: "source_name", Value: ""},
+		{Name: "source_port", Value: flow.Key.Source.Port},
+		{Name: "dest_ip", Value: ""},
+		{Name: "dest_name", Value: ""},
+		{Name: "dest_port", Value: flow.Key.Destination.Port},
+		{Name: "action", Value: string(flow.Key.Action)},
+		{Name: "reporter", Value: string(flow.Key.Reporter)},
 	}
 
+	// Zero out fields before filling them in with data, so we ensure they are always
+	// present in the response.
+	bucket.AggregatedSums = map[string]float64{}
+	bucket.AggregatedSums["sum_num_flows_started"] = float64(0)
+	bucket.AggregatedSums["sum_num_flows_completed"] = float64(0)
+	bucket.AggregatedSums["sum_packets_in"] = float64(0)
+	bucket.AggregatedSums["sum_packets_out"] = float64(0)
+	bucket.AggregatedSums["sum_bytes_in"] = float64(0)
+	bucket.AggregatedSums["sum_bytes_out"] = float64(0)
+	bucket.AggregatedSums["sum_http_requests_allowed_in"] = 0
+	bucket.AggregatedSums["sum_http_requests_denied_in"] = 0
 	bucket.AggregatedTerms = map[string]*elastic.AggregatedTerm{
 		"dest_labels": {
-			DocCount: 0,
+			DocCount: 1,
 			Buckets:  map[interface{}]int64{},
 		},
 		"source_labels": {
-			DocCount: 0,
+			DocCount: 1,
 			Buckets:  map[interface{}]int64{},
 		},
 		"policies": {
-			DocCount: 0,
+			DocCount: 1,
 			Buckets:  map[interface{}]int64{},
 		},
 	}
 
-	// flow.Service = &v1.Service{
-	// 	Name:      b.ft.ValueString(key, "dest_service_name"),
-	// 	Namespace: b.ft.ValueString(key, "dest_service_namespace"),
-	// 	Port:      b.ft.ValueInt64(key, "dest_service_port_num"),
-	// 	PortName:  b.ft.ValueString(key, "dest_service_port"),
-	// }
+	// Now fill in with real data.
+	if stats := flow.LogStats; stats != nil {
+		bucket.AggregatedSums["sum_num_flows_started"] = float64(stats.Started)
+		bucket.AggregatedSums["sum_num_flows_completed"] = float64(stats.Completed)
+	}
+	if stats := flow.TrafficStats; stats != nil {
+		bucket.AggregatedSums["sum_packets_in"] = float64(stats.PacketsIn)
+		bucket.AggregatedSums["sum_packets_out"] = float64(stats.PacketsOut)
+		bucket.AggregatedSums["sum_bytes_in"] = float64(stats.BytesIn)
+		bucket.AggregatedSums["sum_bytes_out"] = float64(stats.BytesOut)
+	}
 
-	// if flow.Key.Protocol == "tcp" {
-	// 	flow.TCPStats = &v1.TCPStats{
-	// 		TotalRetransmissions:     int64(bucket.AggregatedSums[FlowAggSumTCPRetranmissions]),
-	// 		LostPackets:              int64(bucket.AggregatedSums[FlowAggSumTCPLostPackets]),
-	// 		UnrecoveredTo:            int64(bucket.AggregatedSums[FlowAggSumTCPUnrecoveredTO]),
-	// 		MinSendCongestionWindow:  bucket.AggregatedMin[FlowAggMinTCPSendCongestionWindow],
-	// 		MinMSS:                   bucket.AggregatedMin[FlowAggMinTCPMSS],
-	// 		MaxSmoothRTT:             bucket.AggregatedMax[FlowAggMaxTCPSmoothRTT],
-	// 		MaxMinRTT:                bucket.AggregatedMax[FlowAggMaxTCPMinRTT],
-	// 		MeanSendCongestionWindow: bucket.AggregatedMean[FlowAggMeanTCPSendCongestionWindow],
-	// 		MeanSmoothRTT:            bucket.AggregatedMean[FlowAggMeanTCPSmoothRTT],
-	// 		MeanMinRTT:               bucket.AggregatedMean[FlowAggMeanTCPMinRTT],
-	// 		MeanMSS:                  bucket.AggregatedMean[FlowAggMeanTCPMSS],
-	// 	}
-	// }
+	// TODO - get real data for these.
+	bucket.AggregatedSums["sum_http_requests_allowed_in"] = 0
+	bucket.AggregatedSums["sum_http_requests_denied_in"] = 0
 
-	// // Determine the process info if available in the logs.
-	// // var processes v1.GraphEndpointProcesses
-	// processName := b.ft.ValueString(key, "process_name")
-	// if processName != "" {
-	// 	flow.Process = &v1.Process{Name: processName}
-	// 	flow.ProcessStats = &v1.ProcessStats{
-	// 		MinNumNamesPerFlow: int(bucket.AggregatedMin[FlowAggMinProcessNames]),
-	// 		MaxNumNamesPerFlow: int(bucket.AggregatedMax[FlowAggMaxProcessNames]),
-	// 		MinNumIDsPerFlow:   int(bucket.AggregatedMin[FlowAggMinProcessIds]),
-	// 		MaxNumIDsPerFlow:   int(bucket.AggregatedMax[FlowAggMaxProcessIds]),
-	// 	}
-	// }
+	// Add in labels.
+	for _, l := range flow.SourceLabels {
+		for _, v := range l.Values {
+			// TODO: We hardcode to a single doc count since Linseed doesn't
+			// tell us the doc count.
+			key := fmt.Sprintf("%s=%s", l.Key, v)
+			bucket.AggregatedTerms["source_labels"].Buckets[key] = 1
+		}
+	}
+	for _, l := range flow.DestinationLabels {
+		for _, v := range l.Values {
+			// TODO: We hardcode to a single doc count since Linseed doesn't
+			// tell us the doc count.
+			key := fmt.Sprintf("%s=%s", l.Key, v)
+			bucket.AggregatedTerms["dest_labels"].Buckets[key] = 1
+		}
+	}
 	return bucket
 }
 

@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/list"
 
 	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
@@ -93,12 +94,19 @@ func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams, rbacHe
 		}
 	}
 
+	// TODO: This query isn't actually used, it's just needed for the conversion functions below.
+	// We need to rework how we make those conversion functions!
+	q := &pelastic.CompositeAggregationQuery{
+		Name:               api.FlowlogBuckets,
+		AggNestedTermInfos: pelastic.FlowAggregatedTerms,
+	}
+
 	return &FlowLogResults{
 		CompositeAggregationResults: pelastic.CompositeAggregationResults{
-			TimedOut: timedOut,
-			Took:     took,
-			// Aggregations: pelastic.CompositeAggregationBucketsToMap(before, q),
+			TimedOut:     timedOut,
+			Took:         took,
+			Aggregations: pelastic.CompositeAggregationBucketsToMap(before, q),
 		},
-		// AggregationsPreview: pelastic.CompositeAggregationBucketsToMap(after, q),
+		AggregationsPreview: pelastic.CompositeAggregationBucketsToMap(after, q),
 	}, nil
 }

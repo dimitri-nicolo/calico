@@ -412,6 +412,14 @@ func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 		}
 	}
 
+	flowParams.TimeRange = &v1.TimeRange{}
+	if params.startDateTime != nil {
+		flowParams.TimeRange.From = *params.startDateTime
+	}
+	if params.endDateTime != nil {
+		flowParams.TimeRange.To = *params.endDateTime
+	}
+
 	return &pippkg.PolicyImpactParams{
 		FlowParams:      flowParams,
 		ClusterName:     params.ClusterName,
@@ -455,7 +463,7 @@ func getPIPFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLog
 		}
 	}
 
-	// Fetch results from Elasticsearch
+	// Fetch results from Linseed.
 	response, err := pip.GetFlows(context.TODO(), pipParams, flowFilter)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err

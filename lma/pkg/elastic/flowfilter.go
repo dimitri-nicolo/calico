@@ -31,6 +31,7 @@ type flowFilterIncludeAll struct{}
 func (f *flowFilterIncludeAll) IncludeFlow(flow *CompositeAggregationBucket) (include bool, err error) {
 	return true, nil
 }
+
 func (f *flowFilterIncludeAll) ModifyFlow(flow *CompositeAggregationBucket) error {
 	return nil
 }
@@ -123,6 +124,5 @@ func (f *flowFilterUserRBAC) obfuscatePolicies(flow *CompositeAggregationBucket)
 func (f *flowFilterUserRBAC) canListEndpoint(k CompositeAggregationKey, epTypeIdx, nsIdx int) (bool, error) {
 	epType := GetFlowEndpointTypeFromCompAggKey(k, epTypeIdx)
 	namespace := k[nsIdx].String()
-
 	return f.r.CanListEndpoint(epType, namespace)
 }
