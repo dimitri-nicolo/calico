@@ -563,6 +563,7 @@ var _ = Describe("FlowLog middleware", func() {
 
 				Expect(flResponse).Should(Equal(FlowResponse{
 					Count:     1,
+					DstLabels: FlowResponseLabels{},
 					SrcLabels: expectedSrcLabels,
 				}))
 			}, labelTestCases...)
@@ -581,6 +582,7 @@ var _ = Describe("FlowLog middleware", func() {
 
 				Expect(flResponse).Should(Equal(FlowResponse{
 					Count:     1,
+					SrcLabels: FlowResponseLabels{},
 					DstLabels: expectedDstLabels,
 				}))
 			}, labelTestCases...)
@@ -608,6 +610,8 @@ var _ = Describe("FlowLog middleware", func() {
 
 					Expect(flResponse).Should(Equal(FlowResponse{
 						Count:           1,
+						SrcLabels:       FlowResponseLabels{},
+						DstLabels:       FlowResponseLabels{},
 						SrcPolicyReport: expectedSrcPolicyReport,
 						DstPolicyReport: expectedDstPolicyReport,
 					}))
@@ -816,6 +820,8 @@ var _ = Describe("FlowLog middleware", func() {
 
 					Expect(flResponse).Should(Equal(FlowResponse{
 						Count:           1,
+						SrcLabels:       FlowResponseLabels{},
+						DstLabels:       FlowResponseLabels{},
 						SrcPolicyReport: expectedSrcPolicyReport,
 						DstPolicyReport: expectedDstPolicyReport,
 					}))
