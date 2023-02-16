@@ -401,9 +401,7 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 		SrcLabels: make(FlowResponseLabels),
 		DstLabels: make(FlowResponseLabels),
 	}
-	for i, item := range flows.Items {
-		log.Infof("Handling flow %d", i)
-
+	for _, item := range flows.Items {
 		// Add the flow's source and destination to the tracker.
 		lf := localFlow{item.Key.Source, item.Key.Destination}
 		tracker.Add(lf)
@@ -425,7 +423,7 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 
 		if policyReport != nil {
 			if item.Key.Reporter == "src" {
-				log.Infof("Setting source policy report")
+				log.Debugf("Setting source policy report")
 				if response.SrcPolicyReport == nil {
 					response.SrcPolicyReport = &PolicyReport{}
 				}
@@ -435,7 +433,7 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 					response.SrcPolicyReport.DeniedFlowPolicies = policyReport.DeniedFlowPolicies
 				}
 			} else {
-				log.Infof("Setting destination policy report")
+				log.Debugf("Setting destination policy report")
 				if response.DstPolicyReport == nil {
 					response.DstPolicyReport = &PolicyReport{}
 				}
