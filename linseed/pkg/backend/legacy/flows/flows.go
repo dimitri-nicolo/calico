@@ -198,8 +198,8 @@ func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 
 	// Build the flow, starting with the key.
 	flow := v1.L3Flow{Key: v1.L3FlowKey{}}
-	flow.Key.Reporter = b.ft.ValueString(key, "reporter")
-	flow.Key.Action = b.ft.ValueString(key, "action")
+	flow.Key.Reporter = v1.FlowReporter(b.ft.ValueString(key, "reporter"))
+	flow.Key.Action = v1.FlowAction(b.ft.ValueString(key, "action"))
 	flow.Key.Protocol = b.ft.ValueString(key, "proto")
 	flow.Key.Source = v1.Endpoint{
 		Type:           v1.EndpointType(b.ft.ValueString(key, "source_type")),
