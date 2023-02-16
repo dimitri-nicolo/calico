@@ -51,7 +51,7 @@ build: bin/readiness-probe-$(ARCH)
 .PHONY: bin/readiness-probe-$(ARCH)
 bin/readiness-probe-$(ARCH): readiness-probe/main.go
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-		go build -v -o $@ readiness-probe/main.go'
+		go build -v -ldflags="-s -w" -o $@ readiness-probe/main.go'
 
 
 image: $(ELASTICSEARCH_IMAGE)
