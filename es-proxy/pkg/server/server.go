@@ -164,7 +164,7 @@ func Start(cfg *Config) error {
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.FlowLogsHandler(k8sClientFactory, esClient, p)))))
+					middleware.FlowLogsHandler(k8sClientFactory, linseed, p)))))
 	sm.Handle("/flowLogs/aggregation",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,

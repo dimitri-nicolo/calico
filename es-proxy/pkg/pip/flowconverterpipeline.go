@@ -6,6 +6,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 
@@ -100,8 +102,8 @@ type ProcessedFlows struct {
 // This will exit cleanly if the context is cancelled.
 func (p *pip) SearchAndProcessFlowLogs(
 	ctx context.Context,
-	query *elastic.CompositeAggregationQuery,
-	startAfterKey elastic.CompositeAggregationKey,
+	pager client.ListPager[lapi.L3Flow],
+	cluster string,
 	calc policycalc.PolicyCalculator,
 	limit int32,
 	impactedOnly bool,
@@ -110,29 +112,16 @@ func (p *pip) SearchAndProcessFlowLogs(
 	results := make(chan ProcessedFlows, UINumAggregatedFlows)
 	errs := make(chan error, 1)
 
-	// Modify the original query to include all of the required data.
-	modifiedQuery := &elastic.CompositeAggregationQuery{
-		DocumentIndex:           query.DocumentIndex,
-		Query:                   query.Query,
-		Name:                    query.Name,
-		AggCompositeSourceInfos: PIPCompositeSources,
-		AggNestedTermInfos:      elastic.FlowAggregatedTerms,
-		AggSumInfos:             elastic.FlowAggregationSums,
-		MaxBucketsPerQuery:      query.MaxBucketsPerQuery,
-	}
-
 	// Create a cancellable context so we can exit cleanly when we hit our target number of aggregated results.
 	ctx, cancel := context.WithCancel(ctx)
 
-	// Search for the raw data in ES.
-	rcvdBuckets, rcvdErrs := p.esClient.SearchCompositeAggregations(ctx, modifiedQuery, nil)
-	var sent int
+	// Start a paged search.
+	pages, errors := pager.Stream(ctx, p.lsclient.L3Flows(cluster).List)
 
+	var sent int
 	go func() {
 		defer func() {
 			cancel()
-			close(results)
-			close(errs)
 		}()
 
 		// Initialize the last known raw flow key to simplify our processing, and the last raw connection key.
@@ -146,7 +135,7 @@ func (p *pip) SearchAndProcessFlowLogs(
 
 		// Obtain separately source allow/deny and dest allow/deny.  The destination allow/deny need to be married
 		// up to the source allow flow.
-		var srcAllowFlow, srcDenyFlow, dstAllowFlow, dstDenyFlow *api.Flow
+		var srcAllowFlow, srcDenyFlow, dstAllowFlow, dstDenyFlow *lapi.L3Flow
 		var srcAllowRawBucket, srcDenyRawBucket, dstAllowRawBucket, dstDenyRawBucket *elastic.CompositeAggregationBucket
 
 		// Handler function to calculate the result for a given connection.
@@ -175,17 +164,17 @@ func (p *pip) SearchAndProcessFlowLogs(
 				// Denied source flows are interesting. If the remote dest is a Calico managed endpoint *and* the action
 				// has been modified from denied then we need to add some flow data for the remote. Since we won't have
 				// the actual data, all we can do is add a fake flow with minimal available data.
-				if srcDenyFlow.Destination.IsCalicoManagedEndpoint() &&
+				if api.IsCalicoManagedEndpoint(srcDenyFlow.Key.Destination) &&
 					(afterSrc.Action&api.ActionFlagAllow != 0 || beforeSrc.Action&api.ActionFlagAllow != 0) {
 					log.Debug("Including fake destination flow due to source flow changing from denied")
-					destFlow := api.Flow{
-						Reporter:    api.ReporterTypeDestination,
-						Source:      srcDenyFlow.Source,
-						Destination: srcDenyFlow.Destination,
-						ActionFlag:  0,
-						Proto:       srcDenyFlow.Proto,
-						IPVersion:   srcDenyFlow.IPVersion,
-						Policies:    nil,
+					destFlow := lapi.L3Flow{
+						Key: lapi.L3FlowKey{
+							Reporter:    lapi.FlowReporterDest,
+							Source:      srcDenyFlow.Key.Source,
+							Destination: srcDenyFlow.Key.Destination,
+							// ActionFlag:  0,
+							Protocol: srcDenyFlow.Key.Protocol,
+						},
 					}
 					_, beforeDest, afterDest := calc.CalculateDest(&destFlow, beforeSrc.Action, afterSrc.Action)
 
@@ -379,66 +368,67 @@ func (p *pip) SearchAndProcessFlowLogs(
 		// Iterate through all the raw buckets from ES until the channel is closed. Buckets are ordered in the natural
 		// order of the composite sources, thus we can enumerate, process and aggregate related buckets, forwarding the
 		// aggregated bucket when the new raw bucket belongs in a different aggregation group.
-		for rawBucket := range rcvdBuckets {
-			// Check the last raw connection key to see if we have clocked the connection, if so calculate the new
-			// source/dest flow for the connection.
-			if !lastRawConnectionKey.SameBucket(rawBucket.CompositeAggregationKey) {
-				log.Debug("Clocked to next connection")
+		for page := range pages {
+			for _, f := range page.Items {
+				// Make a copy to use in the loop.
+				flow := f
 
-				// Process the connection group.
-				processConnectionGroup()
+				// Check the last raw connection key to see if we have clocked the connection, if so calculate the new
+				// source/dest flow for the connection.
+				if !lastRawConnectionKey.SameBucket(rawBucket.CompositeAggregationKey) {
+					log.Debug("Clocked to next connection")
 
-				// Update the last connection key. We only track the indices that are common to the new connection.
-				lastRawConnectionKey = rawBucket.CompositeAggregationKey[:PIPCompositeSourcesNumSameConnGroup]
-			}
+					// Process the connection group.
+					processConnectionGroup()
 
-			// Check the last raw flow key to see if we have clocked flows, if so send any aggregated results and reset
-			// the aggregations. Composite key values are returned in strict order.
-			if !lastRawFlowKey.SameBucket(rawBucket.CompositeAggregationKey) {
-				log.Debug("Clocked to next flow")
-
-				// Handle the aggregated results by sending over the results channel. If this indicates we should
-				// exit (either due to error or we've hit our results limit) then exit.
-				if exit := sendResult(); exit {
-					return
+					// Update the last connection key. We only track the indices that are common to the new connection.
+					lastRawConnectionKey = rawBucket.CompositeAggregationKey[:PIPCompositeSourcesNumSameConnGroup]
 				}
 
-				// Update the last flow key. We only track the indices that are common to the new set of flow
-				// aggregations.
-				lastRawFlowKey = rawBucket.CompositeAggregationKey[:PIPCompositeSourcesNumSameFlow]
-			}
+				// Check the last raw flow key to see if we have clocked flows, if so send any aggregated results and reset
+				// the aggregations. Composite key values are returned in strict order.
+				if !lastRawFlowKey.SameBucket(rawBucket.CompositeAggregationKey) {
+					log.Debug("Clocked to next flow")
 
-			log.Debug("Process flow bucket")
+					// Handle the aggregated results by sending over the results channel. If this indicates we should
+					// exit (either due to error or we've hit our results limit) then exit.
+					if exit := sendResult(); exit {
+						return
+					}
 
-			// There is a possibility that through config changes we get allow and deny results for both source and dest.
-			// We combine the results to give just a single source and dest flow as follows:
-			// - Convert deny+allow for the same endpoint to an unknown
-			// - Only include overlapping intersecting labels and policies
-			flow := compositeAggregationBucketToFlow(rawBucket)
-			if flow == nil {
-				continue
-			}
-
-			// Recorded flows can only have a reported action of allow or deny. No other bits in the action flags should
-			// be set.
-			switch flow.Reporter {
-			case api.ReporterTypeSource:
-				switch flow.ActionFlag {
-				case api.ActionFlagAllow:
-					srcAllowFlow = flow
-					srcAllowRawBucket = rawBucket
-				case api.ActionFlagDeny:
-					srcDenyFlow = flow
-					srcDenyRawBucket = rawBucket
+					// Update the last flow key. We only track the indices that are common to the new set of flow
+					// aggregations.
+					lastRawFlowKey = rawBucket.CompositeAggregationKey[:PIPCompositeSourcesNumSameFlow]
 				}
-			case api.ReporterTypeDestination:
-				switch flow.ActionFlag {
-				case api.ActionFlagAllow:
-					dstAllowFlow = flow
-					dstAllowRawBucket = rawBucket
-				case api.ActionFlagDeny:
-					dstDenyFlow = flow
-					dstDenyRawBucket = rawBucket
+
+				log.Debug("Process flow")
+
+				// There is a possibility that through config changes we get allow and deny results for both source and dest.
+				// We combine the results to give just a single source and dest flow as follows:
+				// - Convert deny+allow for the same endpoint to an unknown
+				// - Only include overlapping intersecting labels and policies
+
+				// Recorded flows can only have a reported action of allow or deny. No other bits in the action flags should
+				// be set.
+				switch flow.Key.Reporter {
+				case lapi.FlowReporterSource:
+					switch flow.Key.Action {
+					case lapi.FlowActionAllow:
+						srcAllowFlow = &flow
+						srcAllowRawBucket = rawBucket
+					case lapi.FlowActionDeny:
+						srcDenyFlow = &flow
+						srcDenyRawBucket = rawBucket
+					}
+				case lapi.FlowReporterDest:
+					switch flow.Key.Action {
+					case lapi.FlowActionAllow:
+						dstAllowFlow = &flow
+						dstAllowRawBucket = rawBucket
+					case lapi.FlowActionDeny:
+						dstDenyFlow = &flow
+						dstDenyRawBucket = rawBucket
+					}
 				}
 			}
 		}
@@ -453,8 +443,8 @@ func (p *pip) SearchAndProcessFlowLogs(
 		// If there was an error, send that. All data that we gathered has been sent now.
 		// We can use the blocking version of the channel operator since the error channel will have been closed (it
 		// is closed alongside the results channel).
-		if err, ok := <-rcvdErrs; ok {
-			log.WithError(err).Warning("Hit error processing flow logs")
+		if err, ok := <-errors; ok {
+			log.WithError(err).Warning("Hit error querying flows")
 			errs <- err
 		}
 	}()

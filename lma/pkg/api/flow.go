@@ -5,6 +5,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 const (
@@ -110,11 +111,11 @@ type FlowEndpointData struct {
 }
 
 // IsCalicoManagedEndpoint returns if the endpoint is managed by Calico.
-func (e *FlowEndpointData) IsCalicoManagedEndpoint() bool {
+func IsCalicoManagedEndpoint(e lapi.Endpoint) bool {
 	switch e.Type {
 	// Only HEPs and WEPs are calico-managed endpoints.  NetworkSets are handled by Calico, but are not endpoints in
 	// the sense that policy is not applied directly to them.
-	case EndpointTypeHep, EndpointTypeWep:
+	case lapi.HEP, lapi.WEP:
 		return true
 	default:
 		return false

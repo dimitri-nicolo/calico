@@ -23,19 +23,17 @@ const (
 	FlowIPNone         = "0.0.0.0"
 )
 
-var (
-	// This is the set of composite sources requested by the UI.
-	FlowCompositeSources = []AggCompositeSourceInfo{
-		{Name: "source_type", Field: "source_type"},
-		{Name: "source_namespace", Field: "source_namespace"},
-		{Name: "source_name", Field: "source_name_aggr"},
-		{Name: "dest_type", Field: "dest_type"},
-		{Name: "dest_namespace", Field: "dest_namespace"},
-		{Name: "dest_name", Field: "dest_name_aggr"},
-		{Name: "action", Field: "action"},
-		{Name: "reporter", Field: "reporter"},
-	}
-)
+// This is the set of composite sources requested by the UI.
+var FlowCompositeSources = []AggCompositeSourceInfo{
+	{Name: "source_type", Field: "source_type"},
+	{Name: "source_namespace", Field: "source_namespace"},
+	{Name: "source_name", Field: "source_name_aggr"},
+	{Name: "dest_type", Field: "dest_type"},
+	{Name: "dest_namespace", Field: "dest_namespace"},
+	{Name: "dest_name", Field: "dest_name_aggr"},
+	{Name: "action", Field: "action"},
+	{Name: "reporter", Field: "reporter"},
+}
 
 const (
 	// Indexes into the API flow data.

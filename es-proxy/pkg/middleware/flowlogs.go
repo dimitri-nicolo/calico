@@ -18,12 +18,13 @@ import (
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 	pippkg "github.com/projectcalico/calico/es-proxy/pkg/pip"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	v1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
 
@@ -124,7 +125,7 @@ func (c *PolicyPreview) UnmarshalJSON(b []byte) error {
 
 // A handler for the /flowLogs endpoint, uses url parameters to build an elasticsearch query,
 // executes it and returns the results.
-func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esClient lmaelastic.Client, pip pippkg.PIP) http.Handler {
+func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, lsclient client.Client, pip pippkg.PIP) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Validate Request
 		params, err := validateFlowLogsRequest(req)
@@ -147,6 +148,10 @@ func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esCl
 			return
 		}
 
+		// Create a context to use.
+		ctx, cancel := context.WithTimeout(req.Context(), 60*time.Second)
+		defer cancel()
+
 		k8sCli, err := k8sClientFactory.ClientSetForCluster(params.ClusterName)
 		if err != nil {
 			log.WithError(err).Error("failed to get k8s cli")
@@ -167,7 +172,7 @@ func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esCl
 		var response interface{}
 		var stat int
 		if len(params.PolicyPreviews) == 0 {
-			response, stat, err = getFlowLogsFromElastic(flowFilter, params, esClient)
+			response, stat, err = getFlowLogsFromElastic(ctx, flowFilter, params, lsclient)
 		} else {
 			rbacHelper := NewPolicyImpactRbacHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
 			response, stat, err = getPIPFlowLogsFromElastic(flowFilter, params, pip, rbacHelper)
@@ -306,67 +311,73 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	return params, nil
 }
 
-// applies appropriate filters to an elastic.BoolQuery
-func buildFlowLogsQuery(params *FlowLogsParams) *elastic.BoolQuery {
-	query := elastic.NewBoolQuery()
-	var filters []elastic.Query
+func buildFlowParams(params *FlowLogsParams) *lapi.L3FlowParams {
+	flowParams := lapi.L3FlowParams{
+		Source:      &lapi.Endpoint{},
+		Destination: &lapi.Endpoint{},
+	}
+	flowParams.MaxResults = int(params.Limit)
 	if len(params.Actions) > 0 {
-		actionsFilter := buildTermsFilter(params.Actions, "action")
-		filters = append(filters, actionsFilter)
+		// TODO: Is it a reasonable query to have more than one?
+		// It's combined using a Filter clause, meaning the log must match
+		// all of the filters to be returned. Can a log ever match two actions?
+		// Same for many of the below queries.
+		action := lapi.FlowAction(params.Actions[0])
+		flowParams.Action = &action
 	}
 	if len(params.SourceType) > 0 {
-		sourceTypeFilter := buildTermsFilter(params.SourceType, "source_type")
-		filters = append(filters, sourceTypeFilter)
+		flowParams.Source.Type = lapi.EndpointType(params.SourceType[0])
 	}
 	if len(params.DestType) > 0 {
-		destTypeFilter := buildTermsFilter(params.DestType, "dest_type")
-		filters = append(filters, destTypeFilter)
+		flowParams.Destination.Type = lapi.EndpointType(params.DestType[0])
 	}
 	if len(params.SourceLabels) > 0 {
-		sourceLabelsFilter := buildLabelSelectorFilter(params.SourceLabels, "source_labels",
-			"source_labels.labels")
-		filters = append(filters, sourceLabelsFilter)
+		flowParams.SourceSelectors = []lapi.LabelSelector{}
+		for _, sel := range params.SourceLabels {
+			flowParams.SourceSelectors = append(flowParams.SourceSelectors, lapi.LabelSelector{
+				Key:      sel.Key,
+				Operator: sel.Operator,
+				Values:   sel.Values,
+			})
+		}
 	}
 	if len(params.DestLabels) > 0 {
-		destLabelsFilter := buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels")
-		filters = append(filters, destLabelsFilter)
+		flowParams.DestinationSelectors = []lapi.LabelSelector{}
+		for _, sel := range params.DestLabels {
+			flowParams.DestinationSelectors = append(flowParams.DestinationSelectors, lapi.LabelSelector{
+				Key:      sel.Key,
+				Operator: sel.Operator,
+				Values:   sel.Values,
+			})
+		}
 	}
 	if params.startDateTimeESParm != nil || params.endDateTimeESParm != nil {
-		filter := elastic.NewRangeQuery("end_time")
+		tr := v1.TimeRange{}
 		if params.startDateTimeESParm != nil {
-			filter = filter.Gte(params.startDateTimeESParm)
+			// TODO
+			// tr.From = params.startDateTimeESParm
 		}
 		if params.endDateTimeESParm != nil {
-			filter = filter.Lt(params.endDateTimeESParm)
+			// TODO
+			// tr.To = params.startDateTimeESParm
 		}
-		filters = append(filters, filter)
+		flowParams.TimeRange = &tr
 	}
 
 	if params.Unprotected {
-		filters = append(filters, UnprotectedQuery())
+		// TODO: filters = append(filters, UnprotectedQuery())
 	}
 
 	if params.Namespace != "" {
-		namespaceFilter := elastic.NewBoolQuery().
-			Should(
-				elastic.NewTermQuery("source_namespace", params.Namespace),
-				elastic.NewTermQuery("dest_namespace", params.Namespace),
-			).
-			MinimumNumberShouldMatch(1)
-		filters = append(filters, namespaceFilter)
+		flowParams.Source.Namespace = params.Namespace
+		flowParams.Destination.Namespace = params.Namespace
 	}
-	if params.SourceDestNamePrefix != "" {
-		namePrefixFilter := elastic.NewBoolQuery().
-			Should(
-				elastic.NewPrefixQuery("source_name_aggr", params.SourceDestNamePrefix),
-				elastic.NewPrefixQuery("dest_name_aggr", params.SourceDestNamePrefix),
-			).
-			MinimumNumberShouldMatch(1)
-		filters = append(filters, namePrefixFilter)
-	}
-	query = query.Filter(filters...)
 
-	return query
+	if params.SourceDestNamePrefix != "" {
+		flowParams.Source.AggregatedName = params.SourceDestNamePrefix
+		flowParams.Destination.AggregatedName = params.SourceDestNamePrefix
+	}
+	return &flowParams
 }
 
 func buildTermsFilter(terms []string, termsKey string) *elastic.TermsQuery {
@@ -377,51 +388,10 @@ func buildTermsFilter(terms []string, termsKey string) *elastic.TermsQuery {
 	return elastic.NewTermsQuery(termsKey, termValues...)
 }
 
-// IMPORTANT: This function does not create the correct Elasticsearch query from the label selector and needs to be redone.
-// It tries to find docs that have labels name "<key>.<operator>.<value>" which could be "name!=foobar" or "namecontainsfoobar".
-// The only successful queries generated by this function are those with an operator of "=".
-//
-// Builds a nested filter for LabelSelectors
-// The LabelSelector allows a user describe matching the labels in elasticsearch. If multiple values are specified,
-// a "terms" query will be created with as follows:
-// "terms": {
-// "<labelType>.labels": [
-//
-//	 "<key><operator><value1>",
-//	 "<key><operator><value2>",
-//	 ]
-//	}
-//
-// If only one value is specified a "term" query is created as follows:
-//
-//	"term": {
-//	 "<labelType>.labels": <key><operator><value>"
-//	}
-func buildLabelSelectorFilter(labelSelectors []LabelSelector, path string, termsKey string) *elastic.NestedQuery {
-	var labelValues []interface{}
-	var selectorQueries []elastic.Query
-	for _, selector := range labelSelectors {
-		keyAndOperator := fmt.Sprintf("%s%s", selector.Key, selector.Operator)
-		if len(selector.Values) == 1 {
-			selectorQuery := elastic.NewTermQuery(termsKey, fmt.Sprintf("%s%s", keyAndOperator, selector.Values[0]))
-			selectorQueries = append(selectorQueries, selectorQuery)
-		} else {
-			for _, value := range selector.Values {
-				labelValues = append(labelValues, fmt.Sprintf("%s%s", keyAndOperator, value))
-			}
-			selectorQuery := elastic.NewTermsQuery(termsKey, labelValues...)
-			selectorQueries = append(selectorQueries, selectorQuery)
-		}
-	}
-	return elastic.NewNestedQuery(path, elastic.NewBoolQuery().Filter(selectorQueries...))
-}
-
-// This method will take a look at the request parameters made to the /flowLogs endpoint and return the results from elastic.
-func getFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, esClient lmaelastic.Client) (interface{}, int, error) {
-	query := buildFlowLogsQuery(params)
-	index := lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
-	result, err := lmaelastic.GetCompositeAggrFlows(
-		context.TODO(), 60*time.Second, esClient, query, index, flowFilter, params.Limit)
+// This method will take a look at the request parameters made to the /flowLogs endpoint and return the results.
+func getFlowLogsFromElastic(ctx context.Context, flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, lsclient client.Client) (interface{}, int, error) {
+	flowParams := buildFlowParams(params)
+	result, err := lsclient.FlowLogs(params.ClusterName).List(ctx, flowParams)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
@@ -429,8 +399,7 @@ func getFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsPa
 }
 
 func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
-	query := buildFlowLogsQuery(params)
-	index := lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
+	flowParams := buildFlowParams(params)
 
 	// Convert the input format to the PIP format.
 	// TODO(rlb): We don't need both formats, and the PIP format has the more generically named "Resource" field rather
@@ -444,8 +413,7 @@ func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 	}
 
 	return &pippkg.PolicyImpactParams{
-		Query:           query,
-		DocumentIndex:   index,
+		FlowParams:      flowParams,
 		ClusterName:     params.ClusterName,
 		ResourceActions: resourceChanges,
 		Limit:           params.Limit,
