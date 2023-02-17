@@ -117,10 +117,6 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 
 // GetFlowEndpointLabels extracts the flow endpoint labels from the composite aggregation key.
 func GetLinseedFlowLabels(labels []lapi.FlowLabels) map[string]string {
-	if len(labels) == 0 {
-		return nil
-	}
-
 	// Find the most frequently seen label value.
 	l := make(map[string]string)
 	for _, labelKey := range labels {
