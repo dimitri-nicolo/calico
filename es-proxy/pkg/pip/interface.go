@@ -15,7 +15,7 @@ type PIP interface {
 	GetFlows(ctx context.Context, params *PolicyImpactParams, flowFilter pelastic.FlowFilter) (*FlowLogResults, error)
 
 	// The following public interface methods are here more for convenience than anything else. The PIPHandler
-	// should just use GetCompositeAggrFlows().
+	// should just use GetFlows().
 	GetPolicyCalculator(ctx context.Context, r *PolicyImpactParams) (policycalc.PolicyCalculator, error)
 	SearchAndProcessFlowLogs(
 		ctx context.Context,

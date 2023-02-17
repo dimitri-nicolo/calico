@@ -44,7 +44,7 @@ type FlowLogResults struct {
 	AggregationsPreview                  map[string]interface{} `json:"aggregations_preview"`
 }
 
-// GetCompositeAggrFlows returns the set of PIP-processed flows based on the request parameters in `params`. The map is
+// GetFlows returns the set of PIP-processed flows based on the request parameters in `params`. The map is
 // JSON serializable
 func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams, rbacHelper pelastic.FlowFilter) (*FlowLogResults, error) {
 	// Create a context with timeout to ensure we don't block for too long with this calculation.

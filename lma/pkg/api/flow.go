@@ -201,20 +201,6 @@ type FlowEndpointData struct {
 }
 
 // IsCalicoManagedEndpoint returns if the endpoint is managed by Calico.
-func IsCalicoManagedEndpoint(e lapi.Endpoint) bool {
-	switch e.Type {
-	// Only HEPs and WEPs are calico-managed endpoints.  NetworkSets are handled by Calico, but are not endpoints in
-	// the sense that policy is not applied directly to them.
-	case lapi.HEP, lapi.WEP:
-		return true
-	default:
-		return false
-	}
-}
-
-// TODO: CASEY
-// This is the legacy version attached to FlowEndpointData - we want to replace all usages of this
-// and remove the FlowEndpointData struct if possible.
 func (e *FlowEndpointData) IsCalicoManagedEndpoint() bool {
 	switch e.Type {
 	// Only HEPs and WEPs are calico-managed endpoints.  NetworkSets are handled by Calico, but are not endpoints in

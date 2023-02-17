@@ -20,7 +20,7 @@ var (
 	// The order of this is important since ES orders its responses based on this source order - and PIP utilizes this
 	// to simplify the aggregation processing allowing us to pipeline the conversion.
 	PIPCompositeSources = []elastic.AggCompositeSourceInfo{
-		// This first set of fields matches the set requested by the API (see elastic.FlowCompositeSources) and will never
+		// This first set of fields matches the set requested by the API and will never
 		// be modified by the policy calculation. These are non-aggregated and non-cached in the pipeline converter and
 		// a single set of these values represents a single flow.
 		{Name: "source_type", Field: "source_type"},
@@ -97,7 +97,7 @@ type ProcessedFlows struct {
 	After  []*elastic.CompositeAggregationBucket
 }
 
-// SearchAndFilterCompositeAggrFlows provides a pipeline to search elastic flow logs, translate the results based on PIP and
+// SearchAndProcessCompositeAggrFlows provides a pipeline to search elastic flow logs, translate the results based on PIP and
 // stream aggregated results through the returned channel.
 //
 // This will exit cleanly if the context is cancelled.
@@ -668,46 +668,4 @@ func (s sortedCache) SortAndCopy() []*elastic.CompositeAggregationBucket {
 	d := make([]*elastic.CompositeAggregationBucket, len(s))
 	copy(d, s)
 	return d
-}
-
-// compositeAggregationBucketToFlow converts the raw aggregation bucket into the required policy calculator flow.
-func compositeAggregationBucketToFlow(b *elastic.CompositeAggregationBucket) *api.Flow {
-	if b == nil {
-		return nil
-	}
-
-	k := b.CompositeAggregationKey
-	flow := &api.Flow{
-		Reporter: api.ReporterType(k[PIPCompositeSourcesRawIdxReporter].String()),
-		Source: api.FlowEndpointData{
-			Type:      elastic.GetFlowEndpointTypeFromCompAggKey(k, PIPCompositeSourcesRawIdxSourceType),
-			Name:      elastic.GetFlowEndpointNameFromCompAggKey(k, PIPCompositeSourcesRawIdxSourceName, PIPCompositeSourcesRawIdxSourceNameAggr),
-			Namespace: elastic.GetFlowEndpointNamespaceFromCompAggKey(k, PIPCompositeSourcesRawIdxSourceNamespace),
-			Labels:    elastic.GetFlowEndpointLabelsFromCompAggKey(b.AggregatedTerms[elastic.FlowAggregatedTermsNameSourceLabels]),
-			IP:        elastic.GetFlowEndpointIPFromCompAggKey(k, PIPCompositeSourcesRawIdxSourceIP),
-			Port:      elastic.GetFlowEndpointPortFromCompAggKey(k, PIPCompositeSourcesRawIdxSourcePort),
-		},
-		Destination: api.FlowEndpointData{
-			Type:      elastic.GetFlowEndpointTypeFromCompAggKey(k, PIPCompositeSourcesRawIdxDestType),
-			Name:      elastic.GetFlowEndpointNameFromCompAggKey(k, PIPCompositeSourcesRawIdxDestName, PIPCompositeSourcesRawIdxDestNameAggr),
-			Namespace: elastic.GetFlowEndpointNamespaceFromCompAggKey(k, PIPCompositeSourcesRawIdxDestNamespace),
-			Labels:    elastic.GetFlowEndpointLabelsFromCompAggKey(b.AggregatedTerms[elastic.FlowAggregatedTermsNameDestLabels]),
-			IP:        elastic.GetFlowEndpointIPFromCompAggKey(k, PIPCompositeSourcesRawIdxDestIP),
-			Port:      elastic.GetFlowEndpointPortFromCompAggKey(k, PIPCompositeSourcesRawIdxDestPort),
-		},
-		ActionFlag: elastic.GetFlowActionFromCompAggKey(k, PIPCompositeSourcesRawIdxAction),
-		Proto:      elastic.GetFlowProtoFromCompAggKey(k, PIPCompositeSourcesRawIdxProto),
-		Policies:   elastic.GetFlowPoliciesFromAggTerm(b.AggregatedTerms[elastic.FlowAggregatedTermsNamePolicies]),
-	}
-
-	// Assume IP version is 4 unless otherwise determined from actual IPs in the flow.
-	ipVersion := 4
-	if flow.Source.IP != nil {
-		ipVersion = flow.Source.IP.Version()
-	} else if flow.Destination.IP != nil {
-		ipVersion = flow.Source.IP.Version()
-	}
-	flow.IPVersion = &ipVersion
-
-	return flow
 }

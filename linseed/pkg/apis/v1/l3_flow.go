@@ -15,10 +15,12 @@ const (
 type FlowAction string
 
 const (
-	FlowActionAllow FlowAction = "allow"
-	FlowActionDeny  FlowAction = "deny"
-	FlowActionPass  FlowAction = "pass"
-	FlowActionLog   FlowAction = "log"
+	FlowActionUnknown       FlowAction = "unknown"
+	FlowActionAllow         FlowAction = "allow"
+	FlowActionDeny          FlowAction = "deny"
+	FlowActionPass          FlowAction = "pass"
+	FlowActionLog           FlowAction = "log"
+	FlowActionEndOfTierDeny FlowAction = "eot-deny"
 )
 
 type FlowReporter string

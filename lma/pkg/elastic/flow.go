@@ -2,11 +2,8 @@
 package elastic
 
 import (
-	"context"
 	"strings"
-	"time"
 
-	elastic "github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
@@ -22,18 +19,6 @@ const (
 	FlowNamespaceNone  = "-"
 	FlowIPNone         = "0.0.0.0"
 )
-
-// This is the set of composite sources requested by the UI.
-var FlowCompositeSources = []AggCompositeSourceInfo{
-	{Name: "source_type", Field: "source_type"},
-	{Name: "source_namespace", Field: "source_namespace"},
-	{Name: "source_name", Field: "source_name_aggr"},
-	{Name: "dest_type", Field: "dest_type"},
-	{Name: "dest_namespace", Field: "dest_namespace"},
-	{Name: "dest_name", Field: "dest_name_aggr"},
-	{Name: "action", Field: "action"},
-	{Name: "reporter", Field: "reporter"},
-}
 
 const (
 	// Indexes into the API flow data.
@@ -74,140 +59,6 @@ var (
 		{"sum_http_requests_denied_in", "http_requests_denied_in"},
 	}
 )
-
-// GetCompositeAggrFlows returns the set of filtered flows based on the request parameters. The response is JSON serializable.
-func GetCompositeAggrFlows(
-	ctxIn context.Context, timeout time.Duration, client Client,
-	query elastic.Query, docIndex string, filter FlowFilter, limit int32,
-) (*CompositeAggregationResults, error) {
-	// Create a context with timeout to ensure we don't block for too long with this query.
-	ctxWithTimeout, cancel := context.WithTimeout(ctxIn, timeout)
-	defer cancel() // Releases timer resources if the operation completes before the timeout.
-
-	// Construct the query.
-	compositeQuery := &CompositeAggregationQuery{
-		Name:                    FlowlogBuckets,
-		DocumentIndex:           docIndex,
-		Query:                   query,
-		AggCompositeSourceInfos: FlowCompositeSources,
-		AggSumInfos:             FlowAggregationSums,
-	}
-
-	// Enumerate the aggregation buckets until we have all we need. The channel will be automatically closed.
-	var results []*CompositeAggregationBucket
-	startTime := time.Now()
-	buckets, errs := SearchAndFilterCompositeAggrFlows(ctxWithTimeout, client, compositeQuery, filter, limit)
-	for bucket := range buckets {
-		results = append(results, bucket)
-	}
-	took := int64(time.Since(startTime) / time.Millisecond)
-
-	// Check for errors.
-	// We can use the blocking version of the channel operator since the error channel will have been closed (it
-	// is closed alongside the results channel).
-	err := <-errs
-
-	// If there was an error, check for a timeout. If it timed out just flag this in the response, but return whatever
-	// data we already have. Otherwise return the error.
-	// For timeouts we have a couple of mechanisms for hitting this:
-	// -  The elastic search query returns a timeout.
-	// -  We exceed the context deadline.
-	var timedOut bool
-	if err != nil {
-		if _, ok := err.(TimedOutError); ok {
-			// Response from ES indicates a handled timeout.
-			log.Info("Response from ES indicates time out - flag results as timedout")
-			timedOut = true
-		} else if ctxIn.Err() == nil && ctxWithTimeout.Err() == context.DeadlineExceeded {
-			// The context passed to us has no error, but our context with timeout is indicating it has timed out.
-			// We need to check the context error rather than checking the returned error since elastic wraps the
-			// original context error.
-			log.Info("Context deadline exceeded - flag results as timedout")
-			timedOut = true
-		} else {
-			// Just pass the received error up the stack.
-			log.WithError(err).Warning("Error response from elasticsearch query")
-			return nil, err
-		}
-	}
-
-	return &CompositeAggregationResults{
-		TimedOut:     timedOut,
-		Took:         took,
-		Aggregations: CompositeAggregationBucketsToMap(results, compositeQuery),
-	}, nil
-}
-
-// SearchAndFilterCompositeAggrFlows provides a pipeline to search elastic flow logs and filter the results.
-//
-// This will exit cleanly if the context is cancelled.
-func SearchAndFilterCompositeAggrFlows(
-	ctx context.Context,
-	client Client,
-	query *CompositeAggregationQuery,
-	filter FlowFilter,
-	limit int32,
-) (<-chan *CompositeAggregationBucket, <-chan error) {
-	results := make(chan *CompositeAggregationBucket, 1000)
-	errs := make(chan error, 1)
-
-	// Create a cancellable context so we can exit cleanly when we hit our target number of aggregated results.
-	ctx, cancel := context.WithCancel(ctx)
-
-	// Search for the raw data in ES.
-	rcvdBuckets, rcvdErrs := client.SearchCompositeAggregations(ctx, query, nil)
-	var sent int
-
-	go func() {
-		defer func() {
-			cancel()
-			close(results)
-			close(errs)
-		}()
-
-		// Iterate through all the raw buckets from ES until the channel is closed. Buckets are ordered in the natural
-		// order of the composite sources, thus we can enumerate, process and aggregate related buckets, forwarding the
-		// aggregated bucket when the new raw bucket belongs in a different aggregation group.
-		for bucket := range rcvdBuckets {
-			if include, err := filter.IncludeFlow(bucket); err != nil {
-				// Unable to check RBAC permissions.
-				log.WithError(err).Info("Error determining if flow should be included")
-				errs <- err
-				return
-			} else if !include {
-				// The filter indicates that the flow should not be included.
-				log.Debug("Flow should not be included")
-				continue
-			}
-
-			// Send the flow, or exit if done.
-			select {
-			case <-ctx.Done():
-				errs <- ctx.Err()
-				return
-			case results <- bucket:
-				// Increment the number sent.
-				sent += 1
-			}
-
-			// Exit if we reach the limit of flows.
-			if sent >= int(limit) {
-				log.Debug("Reached or exceeded our limit of flows to return")
-				return
-			}
-		}
-
-		// If there was an error, send that. All data that we gathered has been sent now.
-		// We can use the blocking version of the channel operator since the error channel will have been closed (it
-		// is closed alongside the results channel).
-		if err, ok := <-rcvdErrs; ok {
-			log.WithError(err).Warning("Hit error processing flow logs")
-			errs <- err
-		}
-	}()
-
-	return results, errs
-}
 
 // ---- Helper methods to convert the raw flow data into the flows.Flow data. ----
 
