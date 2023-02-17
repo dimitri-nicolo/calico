@@ -90,7 +90,7 @@ bin/check-status-linux-$(ARCH): $(SRC_FILES)
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build $(BUILD_TAGS)  -v -o $@ -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/check-status/'
 
 bin/kubectl-$(ARCH):
-	wget https://storage.googleapis.com/kubernetes-release/release/$(KUBECTL_VERSION)/bin/linux/$(subst armv7,arm,$(ARCH))/kubectl -O $@
+	wget https://storage.googleapis.com/kubernetes-release/release/$(KUBECTL_VERSION)/bin/linux/$(ARCH)/kubectl -O $@
 	chmod +x $@
 
 ###############################################################################

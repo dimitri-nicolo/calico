@@ -56,7 +56,6 @@ build: bin/node-driver-registrar-$(ARCH) bin/flexvol-$(ARCH) bin/csi-driver-$(AR
 # so we can disable it across the board.
 bin/flexvol-amd64: ARCH=amd64
 bin/flexvol-arm64: ARCH=arm64
-bin/flexvol-armv7: ARCH=armv7
 bin/flexvol-ppc64le: ARCH=ppc64le
 bin/flexvol-s390x: ARCH=s390x
 bin/flexvol-%: $(SRC_FILES)
@@ -64,7 +63,6 @@ bin/flexvol-%: $(SRC_FILES)
 
 bin/csi-driver-amd64: ARCH=amd64
 bin/csi-driver-arm64: ARCH=arm64
-bin/csi-driver-armv7: ARCH=armv7
 bin/csi-driver-ppc64le: ARCH=ppc64le
 bin/csi-driver-s390x: ARCH=s390x
 bin/csi-driver-%: $(SRC_FILES)
@@ -85,10 +83,6 @@ CGO_ENABLED=1
 REGISTRAR_BUILD_CMD=$(REGISTRAR_TIGERA_BUILD_CMD)
 else ifeq ($(ARCH), $(filter $(ARCH),arm64))
 CGO_ENABLED=0
-REGISTRAR_BUILD_CMD=$(REGISTRAR_TIGERA_BUILD_CMD)
-else ifeq ($(ARCH), $(filter $(ARCH),armv7))
-CGO_ENABLED=0
-GOARCH=arm -e GOARM=7
 REGISTRAR_BUILD_CMD=$(REGISTRAR_TIGERA_BUILD_CMD)
 else ifeq ($(ARCH), $(filter $(ARCH),ppc64le))
 BUILD_PLATFORMS="linux ppc64le -ppc64le"
