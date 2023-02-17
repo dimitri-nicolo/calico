@@ -396,14 +396,104 @@ func buildTermsFilter(terms []string, termsKey string) *elastic.TermsQuery {
 	return elastic.NewTermsQuery(termsKey, termValues...)
 }
 
+// TODO CASEY
+// This is a temporary structure to mimic the response we used to receive from
+// elasticsearch. Ultimately, we should update the UI to expect the new format, but for now
+// we will just convert the Linseed results into a format the UI understands.
+// Alternatively, maybe we should adjust the Linseed resposne format so that it matches
+// what a flow used to look like from ES.
+type FlowLogResponse struct {
+	Took         int64        `json:"took"`
+	TimedOut     bool         `json:"timed_out"`
+	Aggregations Aggregations `json:"aggregations"`
+}
+
+type Aggregations struct {
+	FlogBuckets FlowBuckets `json:"flog_buckets"`
+}
+
+type FlowBuckets struct {
+	Buckets []Bucket `json:"buckets"`
+}
+
+type Bucket struct {
+	DocCount                 int64            `json:"doc_count"`
+	Key                      Key              `json:"key"`
+	SumBytesIn               map[string]int64 `json:"sum_bytes_in"`
+	SumBytesOut              map[string]int64 `json:"sum_bytes_out"`
+	SumHttpRequestsAllowedIn map[string]int64 `json:"sum_http_requests_allowed_in"`
+	SumHttpRequestsDeniedIn  map[string]int64 `json:"sum_http_requests_denied_in"`
+	SumNumFlowsCompleted     map[string]int64 `json:"sum_num_flows_completed"`
+	SumNumFlowsStarted       map[string]int64 `json:"sum_num_flows_started"`
+	SumPacketsIn             map[string]int64 `json:"sum_packets_in"`
+	SumPacketsOut            map[string]int64 `json:"sum_packets_out"`
+}
+
+type Key struct {
+	Action          string `json:"action"`
+	DestName        string `json:"dest_name"`
+	DestNamespace   string `json:"dest_namespace"`
+	DestType        string `json:"dest_type"`
+	Reporter        string `json:"reporter"`
+	SourceName      string `json:"source_name"`
+	SourceNamespace string `json:"source_namespace"`
+	SourceType      string `json:"source_type"`
+}
+
+func convertToBuckets(items *lapi.List[lapi.L3Flow]) []Bucket {
+	buckets := []Bucket{}
+	for _, f := range items.Items {
+		buckets = append(buckets, Bucket{
+			DocCount: f.LogStats.FlowLogCount,
+			Key: Key{
+				Action:          string(f.Key.Action),
+				DestName:        f.Key.Destination.AggregatedName,
+				DestNamespace:   emptyToDash(f.Key.Destination.Namespace),
+				DestType:        string(f.Key.Destination.Type),
+				Reporter:        string(f.Key.Reporter),
+				SourceName:      f.Key.Source.AggregatedName,
+				SourceNamespace: emptyToDash(f.Key.Source.Namespace),
+				SourceType:      string(f.Key.Source.Type),
+			},
+			SumBytesIn:               map[string]int64{"value": f.TrafficStats.BytesIn},
+			SumBytesOut:              map[string]int64{"value": f.TrafficStats.BytesOut},
+			SumHttpRequestsAllowedIn: map[string]int64{"value": f.HTTPStats.AllowedIn},
+			SumHttpRequestsDeniedIn:  map[string]int64{"value": f.HTTPStats.DeniedIn},
+			SumNumFlowsStarted:       map[string]int64{"value": f.LogStats.Started},
+			SumNumFlowsCompleted:     map[string]int64{"value": f.LogStats.Completed},
+			SumPacketsIn:             map[string]int64{"value": f.TrafficStats.PacketsIn},
+			SumPacketsOut:            map[string]int64{"value": f.TrafficStats.PacketsOut},
+		})
+	}
+	return buckets
+}
+
+func emptyToDash(s string) string {
+	if s == "" {
+		return "-"
+	}
+	return s
+}
+
 // This method will take a look at the request parameters made to the /flowLogs endpoint and return the results.
 func getFlowLogsFromElastic(ctx context.Context, flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, lsclient client.Client) (interface{}, int, error) {
+	start := time.Now()
 	flowParams := buildFlowParams(params)
 	result, err := lsclient.L3Flows(params.ClusterName).List(ctx, flowParams)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
-	return result.Items, http.StatusOK, nil
+
+	response := FlowLogResponse{
+		Took:     time.Since(start).Milliseconds(),
+		TimedOut: false,
+		Aggregations: Aggregations{
+			FlogBuckets: FlowBuckets{
+				Buckets: convertToBuckets(result),
+			},
+		},
+	}
+	return response, http.StatusOK, nil
 }
 
 func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
