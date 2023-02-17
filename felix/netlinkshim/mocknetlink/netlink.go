@@ -19,6 +19,8 @@ import (
 	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
+	"github.com/projectcalico/calico/felix/environment"
+
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/netlinkshim"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -224,6 +226,16 @@ type MockNetlinkDataplane struct {
 	mutex                   sync.Mutex
 	deletedConntrackEntries set.Set[ip.Addr]
 	ConntrackSleep          time.Duration
+}
+
+func (d *MockNetlinkDataplane) GetFeatures() *environment.Features {
+	return &environment.Features{
+		KernelSideRouteFiltering: true,
+	}
+}
+
+func (d *MockNetlinkDataplane) SetStrictCheck(b bool) error {
+	return nil
 }
 
 func (d *MockNetlinkDataplane) ResetDeltas() {

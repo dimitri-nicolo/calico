@@ -27,6 +27,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
+	"github.com/projectcalico/calico/felix/environment"
+
 	"github.com/projectcalico/calico/felix/dataplane/common"
 	"github.com/projectcalico/calico/felix/ethtool"
 	"github.com/projectcalico/calico/felix/ip"
@@ -103,6 +105,7 @@ func newVXLANManager(
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
 	ipVersion uint8,
+	featureDetector environment.FeatureDetector,
 ) *vxlanManager {
 	nlHandle, _ := netlink.NewHandle()
 
@@ -124,6 +127,7 @@ func newVXLANManager(
 			false,
 			0,
 			opRecorder,
+			featureDetector,
 		)
 		if ipVersion == 6 {
 			brt = routetable.New(
@@ -136,6 +140,7 @@ func newVXLANManager(
 				false,
 				0,
 				opRecorder,
+				featureDetector,
 			)
 		} else if ipVersion != 4 {
 			logrus.WithField("ipVersion", ipVersion).Panic("Unknown IP version")
@@ -157,7 +162,7 @@ func newVXLANManager(
 			deviceRouteSourceAddress net.IP, deviceRouteProtocol netlink.RouteProtocol, removeExternalRoutes bool) routetable.RouteTableInterface {
 			return routetable.New(interfaceRegexes, ipVersion, vxlan, netlinkTimeout,
 				deviceRouteSourceAddress, deviceRouteProtocol, removeExternalRoutes, 0,
-				opRecorder,
+				opRecorder, featureDetector,
 			)
 		},
 	)
