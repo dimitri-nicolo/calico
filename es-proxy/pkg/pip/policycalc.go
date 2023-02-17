@@ -118,8 +118,8 @@ func (s *pip) syncFromArchive(cxt context.Context, params *PolicyImpactParams, c
 	r := replay.New(
 		params.FlowParams.TimeRange.From,
 		params.FlowParams.TimeRange.To,
-		&LinseedLister{},
-		&LinseedEventer{},
+		NewLister(s.lsclient, params.ClusterName),
+		NewEventer(s.lsclient, params.ClusterName),
 		cb,
 	)
 	r.Start(cxt)
