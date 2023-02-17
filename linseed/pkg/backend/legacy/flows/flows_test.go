@@ -808,7 +808,7 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *flowLogBuilder, cli
 
 	expected.DestinationLabels = []v1.FlowLabels{
 		// A different dest_iteration is applied to each log in the flow.
-		{Key: "dest_iteration", Values: []string{}},
+		{Key: "dest_iteration", Values: []v1.FlowLabelValue{}},
 	}
 	expected.LogStats.FlowLogCount = int64(n)
 	expected.HTTPStats = &v1.HTTPStats{
@@ -841,7 +841,15 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *flowLogBuilder, cli
 		expected.TrafficStats.BytesOut += int64(f.BytesOut)
 		expected.TrafficStats.PacketsIn += int64(f.PacketsIn)
 		expected.TrafficStats.PacketsOut += int64(f.PacketsOut)
-		expected.DestinationLabels[0].Values = append(expected.DestinationLabels[0].Values, fmt.Sprintf("%d", i))
+		expected.DestinationLabels[0].Values = append(expected.DestinationLabels[0].Values,
+			v1.FlowLabelValue{
+				Value: fmt.Sprintf("%d", i),
+				Count: f.NumFlows,
+			},
+		)
+		for i := 0; i < len(expected.SourceLabels); i++ {
+			expected.SourceLabels[i].Values[0].Count += f.NumFlows
+		}
 	}
 
 	// Create the batch.

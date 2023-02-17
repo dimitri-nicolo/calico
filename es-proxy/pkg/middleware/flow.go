@@ -14,7 +14,6 @@ import (
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 
@@ -154,7 +153,7 @@ type FlowResponse struct {
 }
 
 // MergeDestLabels merges in the given destination labels.
-func (r *FlowResponse) MergeDestLabels(labels []v1.FlowLabels, count int64) {
+func (r *FlowResponse) MergeDestLabels(labels []v1.FlowLabels) {
 	if len(labels) != 0 && r.DstLabels == nil {
 		r.DstLabels = map[string][]FlowResponseLabelValue{}
 	}
@@ -173,9 +172,9 @@ func (r *FlowResponse) MergeDestLabels(labels []v1.FlowLabels, count int64) {
 		for _, v := range vals {
 			found := false
 			for _, lv := range r.DstLabels[k] {
-				if lv.Value == v {
+				if lv.Value == v.Value {
 					// Found a match, increment it.
-					lv.Count += count
+					lv.Count += v.Count
 					found = true
 				}
 			}
@@ -183,8 +182,8 @@ func (r *FlowResponse) MergeDestLabels(labels []v1.FlowLabels, count int64) {
 			if !found {
 				// Didn't already exist - add it.
 				r.DstLabels[k] = append(r.DstLabels[k], FlowResponseLabelValue{
-					Value: v,
-					Count: count,
+					Value: v.Value,
+					Count: v.Count,
 				})
 			}
 		}
@@ -192,7 +191,7 @@ func (r *FlowResponse) MergeDestLabels(labels []v1.FlowLabels, count int64) {
 }
 
 // MergeSourceLabels merges in the given source labels.
-func (r *FlowResponse) MergeSourceLabels(labels []v1.FlowLabels, count int64) {
+func (r *FlowResponse) MergeSourceLabels(labels []v1.FlowLabels) {
 	if len(labels) != 0 && r.SrcLabels == nil {
 		r.SrcLabels = map[string][]FlowResponseLabelValue{}
 	}
@@ -209,9 +208,9 @@ func (r *FlowResponse) MergeSourceLabels(labels []v1.FlowLabels, count int64) {
 		for _, v := range vals {
 			found := false
 			for _, lv := range r.SrcLabels[k] {
-				if lv.Value == v {
+				if lv.Value == v.Value {
 					// Found a match, increment it.
-					lv.Count += count
+					lv.Count += v.Count
 					found = true
 				}
 			}
@@ -219,8 +218,8 @@ func (r *FlowResponse) MergeSourceLabels(labels []v1.FlowLabels, count int64) {
 			if !found {
 				// Didn't already exist - add it.
 				r.SrcLabels[k] = append(r.SrcLabels[k], FlowResponseLabelValue{
-					Value: v,
-					Count: count,
+					Value: v.Value,
+					Count: v.Count,
 				})
 			}
 		}
@@ -403,16 +402,6 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 		return
 	}
 
-	// Use a Set object to track the toal number of unique frontend flows we're returning.
-	// Historically, this API did not include reporter or action in its definition of a flow,
-	// whereas Linseed does, meaning to keep the same behavior we need to treat any number of v1.L3Flow objects
-	// that have the same source+destination as a single flow, regardless of their reporter or action.
-	type localFlow struct {
-		source      v1.Endpoint
-		destination v1.Endpoint
-	}
-	tracker := set.New[localFlow]()
-
 	// Build a response. Above, we received a list of flows as reported by the source and destination,
 	// and with different actions. Here, we build a policy report by aggregating information
 	// from these flows.
@@ -421,15 +410,14 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 		SrcLabels: make(FlowResponseLabels),
 		DstLabels: make(FlowResponseLabels),
 	}
+	totalHits := int64(0)
 	for _, item := range flows.Items {
-		// Add the flow's source and destination to the tracker.
-		lf := localFlow{item.Key.Source, item.Key.Destination}
-		tracker.Add(lf)
+		totalHits += item.LogStats.FlowLogCount
 
 		if item.LogStats != nil {
 			// Build labels into the response.
-			response.MergeSourceLabels(item.SourceLabels, item.LogStats.FlowLogCount)
-			response.MergeDestLabels(item.DestinationLabels, item.LogStats.FlowLogCount)
+			response.MergeSourceLabels(item.SourceLabels)
+			response.MergeDestLabels(item.DestinationLabels)
 		}
 
 		// Build up a policy report.
@@ -466,7 +454,7 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 		}
 	}
 
-	response.Count = int64(len(tracker.Slice()))
+	response.Count = totalHits
 
 	// Send the response back to the client.
 	w.Header().Set("Content-Type", "application/json")

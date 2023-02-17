@@ -94,8 +94,13 @@ func (b *flowLogBuilder) ExpectedFlow() *v1.L3Flow {
 	for _, l := range b.log.SourceLabels.Labels {
 		labelParts := strings.Split(l, "=")
 		f.SourceLabels = append(f.SourceLabels, v1.FlowLabels{
-			Key:    labelParts[0],
-			Values: []string{labelParts[1]},
+			Key: labelParts[0],
+			Values: []v1.FlowLabelValue{
+				{
+					Value: labelParts[1],
+					Count: 0, // This gets filled in by the caller.
+				},
+			},
 		})
 	}
 

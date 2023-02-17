@@ -440,9 +440,9 @@ type Key struct {
 	SourceType      string `json:"source_type"`
 }
 
-func convertToBuckets(items *lapi.List[lapi.L3Flow]) []Bucket {
+func convertToBuckets(items []lapi.L3Flow) []Bucket {
 	buckets := []Bucket{}
-	for _, f := range items.Items {
+	for _, f := range items {
 		buckets = append(buckets, Bucket{
 			DocCount: f.LogStats.FlowLogCount,
 			Key: Key{
@@ -479,8 +479,18 @@ func emptyToDash(s string) string {
 func getFlowLogsFromElastic(ctx context.Context, flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, lsclient client.Client) (interface{}, int, error) {
 	start := time.Now()
 	flowParams := buildFlowParams(params)
-	result, err := lsclient.L3Flows(params.ClusterName).List(ctx, flowParams)
-	if err != nil {
+
+	// Build a list pager so we can aggregate multiple pages of flows.
+	pager := client.NewListPager[lapi.L3Flow](flowParams)
+	pages, errors := pager.Stream(ctx, lsclient.L3Flows(params.ClusterName).List)
+
+	result := []lapi.L3Flow{}
+	for page := range pages {
+		result = append(result, page.Items...)
+	}
+
+	// Check for errors.
+	if err := <-errors; err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
 

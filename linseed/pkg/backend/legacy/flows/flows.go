@@ -12,7 +12,6 @@ import (
 
 	elastic "github.com/olivere/elastic/v7"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -453,7 +452,7 @@ func (b *flowBackend) index(i bapi.ClusterInfo) string {
 // that can be sent back in the response.
 func getLabelsFromLabelAggregation(log *logrus.Entry, terms map[string]*lmaelastic.AggregatedTerm, k string) []v1.FlowLabels {
 	tracker := newLabelTracker()
-	for i := range terms[k].Buckets {
+	for i, count := range terms[k].Buckets {
 		label, ok := i.(string)
 		if !ok {
 			log.WithField("value", i).Warning("skipping bucket with non-string label")
@@ -466,9 +465,7 @@ func getLabelsFromLabelAggregation(log *logrus.Entry, terms map[string]*lmaelast
 		}
 
 		labelName, labelValue := labelParts[0], labelParts[1]
-
-		// TODO: Do we need to include bucket.DocCount per-label?
-		tracker.Add(labelName, labelValue)
+		tracker.Add(labelName, labelValue, count)
 	}
 
 	return tracker.Labels()
@@ -476,23 +473,32 @@ func getLabelsFromLabelAggregation(log *logrus.Entry, terms map[string]*lmaelast
 
 func newLabelTracker() *labelTracker {
 	return &labelTracker{
-		s: make(map[string]set.Set[string]),
+		s:         make(map[string]map[string]int64),
+		allValues: make(map[string][]string),
 	}
 }
 
 type labelTracker struct {
-	// Map of key to set of values seen for that key.
-	s       map[string]set.Set[string]
-	allKeys []string
+	// Map of key, to map of value to count.
+	s         map[string]map[string]int64
+	allKeys   []string
+	allValues map[string][]string
 }
 
-func (t *labelTracker) Add(k, v string) {
+func (t *labelTracker) Add(k, v string, count int64) {
 	if _, ok := t.s[k]; !ok {
 		// New label key
-		t.s[k] = set.New[string]()
+		t.s[k] = map[string]int64{}
 		t.allKeys = append(t.allKeys, k)
 	}
-	t.s[k].Add(v)
+	if _, ok := t.s[k][v]; !ok {
+		// New value for this key.
+		t.s[k][v] = 0
+		t.allValues[k] = append(t.allValues[k], v)
+	}
+
+	// Increment the count.
+	t.s[k][v] += count
 }
 
 func (t *labelTracker) Labels() []v1.FlowLabels {
@@ -502,15 +508,21 @@ func (t *labelTracker) Labels() []v1.FlowLabels {
 	sort.Strings(t.allKeys)
 
 	for _, key := range t.allKeys {
-		v := t.s[key]
+		allValuesForKey := t.allValues[key]
 
 		// Again, sort the values slice so that we get consistent output.
-		values := v.Slice()
-		sort.Strings(values)
-		labels = append(labels, v1.FlowLabels{
-			Key:    key,
-			Values: values,
-		})
+		sort.Strings(allValuesForKey)
+
+		// Build up the flow labels for this key, adding each value and count.
+		flowLabels := v1.FlowLabels{Key: key}
+		for _, value := range allValuesForKey {
+			count := t.s[key][value]
+			flowLabels.Values = append(flowLabels.Values, v1.FlowLabelValue{
+				Value: value,
+				Count: count,
+			})
+		}
+		labels = append(labels, flowLabels)
 	}
 	return labels
 }

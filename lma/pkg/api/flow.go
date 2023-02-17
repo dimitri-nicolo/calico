@@ -121,12 +121,17 @@ func GetLinseedFlowLabels(labels []lapi.FlowLabels) map[string]string {
 		return nil
 	}
 
-	// Right now, we just take the first label value.
-	// Historically, we've taken the label that had the most hits, so this is
-	// a departure. But we don't currently have that information on the Linseed API.
+	// Find the most frequently seen label value.
 	l := make(map[string]string)
-	for _, label := range labels {
-		l[label.Key] = label.Values[0]
+	for _, labelKey := range labels {
+		weight := int64(0)
+		val := ""
+		for _, v := range labelKey.Values {
+			if v.Count > weight {
+				val = v.Value
+			}
+		}
+		l[labelKey.Key] = val
 	}
 	return l
 }

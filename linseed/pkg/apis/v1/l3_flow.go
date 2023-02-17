@@ -154,8 +154,16 @@ type Policy struct {
 // FlowLabels represents a single label and all of its seen values over the course of
 // a flow's life.
 type FlowLabels struct {
-	Key    string   `json:"key"`
-	Values []string `json:"values"`
+	Key    string           `json:"key"`
+	Values []FlowLabelValue `json:"values"`
+}
+
+type FlowLabelValue struct {
+	// The value for this label.
+	Value string `json:"value"`
+
+	// The number of individual flow logs that had this label value.
+	Count int64 `json:"count"`
 }
 
 // LogStats represent the number of flows aggregated into this entry

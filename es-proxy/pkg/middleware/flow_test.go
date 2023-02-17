@@ -1123,8 +1123,13 @@ func linseedLabelResponse(labels []map[string]interface{}, srcDst string) v1.Lis
 
 		if len(splits) == 2 {
 			newLabels = append(newLabels, v1.FlowLabels{
-				Key:    splits[0],
-				Values: []string{splits[1]},
+				Key: splits[0],
+				Values: []v1.FlowLabelValue{
+					{
+						Value: splits[1],
+						Count: 1,
+					},
+				},
 			})
 		}
 	}
