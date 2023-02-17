@@ -528,18 +528,14 @@ func bucketFromFlow(flow *lapi.L3Flow) *elastic.CompositeAggregationBucket {
 	// Add in labels.
 	for _, l := range flow.SourceLabels {
 		for _, v := range l.Values {
-			// TODO: We hardcode to a single doc count since Linseed doesn't
-			// tell us the doc count.
-			key := fmt.Sprintf("%s=%s", l.Key, v)
-			bucket.AggregatedTerms["source_labels"].Buckets[key] = 1
+			key := fmt.Sprintf("%s=%s", l.Key, v.Value)
+			bucket.AggregatedTerms["source_labels"].Buckets[key] = v.Count
 		}
 	}
 	for _, l := range flow.DestinationLabels {
 		for _, v := range l.Values {
-			// TODO: We hardcode to a single doc count since Linseed doesn't
-			// tell us the doc count.
-			key := fmt.Sprintf("%s=%s", l.Key, v)
-			bucket.AggregatedTerms["dest_labels"].Buckets[key] = 1
+			key := fmt.Sprintf("%s=%s", l.Key, v.Value)
+			bucket.AggregatedTerms["dest_labels"].Buckets[key] = v.Count
 		}
 	}
 	return bucket
