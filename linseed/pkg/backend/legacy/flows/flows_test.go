@@ -193,6 +193,72 @@ func TestMultipleFlows(t *testing.T) {
 	require.Equal(t, exp2, r.Items[0])
 }
 
+// TestFlowMultiplePolicies tests a flow that traverses multiple policies and ultimately
+// hits the default profile allow rule.
+func TestFlowMultiplePolicies(t *testing.T) {
+	defer setupTest(t)()
+
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+	// Put some data into ES so we can query it.
+	bld := NewFlowLogBuilder()
+	bld.WithType("wep").
+		WithSourceNamespace("default").
+		WithDestNamespace("kube-system").
+		WithDestName("kube-dns-*").
+		WithDestIP("10.0.0.10").
+		WithDestService("kube-dns", 53).
+		WithDestPort(53).
+		WithProtocol("udp").
+		WithSourceName("my-deployment").
+		WithSourceIP("192.168.1.1").
+		WithRandomFlowStats().WithRandomPacketStats().
+		WithReporter("src").WithAction("allowed").
+		WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
+		// Add in a couple of policies, as well as the default profile hit.
+		WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
+		WithPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0")
+
+	expected := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
+
+	// Add in the expected policies.
+	expected.Policies = []v1.Policy{
+		{
+			Tier:      "allow-tigera",
+			Name:      "cluster-dns",
+			Namespace: "kube-system",
+			Action:    "pass",
+			Count:     expected.LogStats.FlowLogCount,
+			RuleID:    testutils.IntPtr(1),
+		},
+		{
+			Tier:      "__PROFILE__",
+			Name:      "kube-system",
+			Namespace: "",
+			Action:    "allow",
+			Count:     expected.LogStats.FlowLogCount,
+			RuleID:    testutils.IntPtr(0),
+			IsProfile: true,
+		},
+	}
+
+	// Set time range so that we capture all of the populated flow logs.
+	opts := v1.L3FlowParams{}
+	opts.TimeRange = &lmav1.TimeRange{}
+	opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
+
+	// Query for flows. There should be a single flow from the populated data.
+	r, err := fb.List(ctx, clusterInfo, opts)
+	require.NoError(t, err)
+	require.Len(t, r.Items, 1)
+	require.Nil(t, r.AfterKey)
+	require.Empty(t, err)
+
+	// Assert that the flow data is populated correctly.
+	require.Equal(t, expected, r.Items[0])
+}
+
 func TestFlowFiltering(t *testing.T) {
 	type testCase struct {
 		Name   string

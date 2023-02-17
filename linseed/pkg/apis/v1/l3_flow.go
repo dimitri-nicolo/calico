@@ -35,28 +35,35 @@ type L3FlowParams struct {
 	QueryParams `json:",inline" validate:"required"`
 
 	// Actions limits returned flows to only those with the given actions.
+	// If multiple actions are provided, they are combined with a logical OR.
 	Actions []FlowAction `json:"actions" validate:"omitempty"`
 
 	// SourceTypes limits the returned flows to only those originating
 	// from one of the specified types.
+	// If multiple types are provided, they are combined with a logical OR.
 	SourceTypes []EndpointType `json:"source_types"`
 
 	// DestinationTypes limits the returned flows to only those destined
 	// to one of the specified types.
+	// If multiple types are provided, they are combined with a logical OR.
 	DestinationTypes []EndpointType `json:"destination_types"`
 
 	// SourceSelectors are a list of label selectors to use
 	// to select the source in flow queries.
+	// If multiple selectors are provided, they are combined with a logical AND.
 	SourceSelectors []LabelSelector `json:"source_selectors"`
 
 	// DestinationSelectors are a list of label selectors to use
 	// to select the destination in flow queries.
+	// If multiple selectors are provided, they are combined with a logical AND.
 	DestinationSelectors []LabelSelector `json:"destination_selectors"`
 
 	// Select flows that match these namespace criteria.
+	// If multiple matches are provided, they are combined with a logical AND.
 	NamespaceMatches []NamespaceMatch `json:"namespace_matches"`
 
 	// Select flows based on aggregated name.
+	// If multiple matches are provided, they are combined with a logical AND.
 	NameAggrMatches []NameMatch `json:"name_aggr_matches"`
 
 	// Statistics will include different metrics for the L3 flows that are queried

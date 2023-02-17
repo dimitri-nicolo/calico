@@ -364,10 +364,6 @@ func buildFlowParams(params *FlowLogsParams) *lapi.L3FlowParams {
 		fp.TimeRange = &tr
 	}
 
-	if params.Unprotected {
-		// TODO: filters = append(filters, UnprotectedQuery())
-	}
-
 	if params.Namespace != "" {
 		fp.NamespaceMatches = []lapi.NamespaceMatch{
 			{
@@ -440,9 +436,23 @@ type Key struct {
 	SourceType      string `json:"source_type"`
 }
 
-func convertToBuckets(items []lapi.L3Flow) []Bucket {
+func convertToBuckets(items []lapi.L3Flow, unprotectedOnly bool) []Bucket {
 	buckets := []Bucket{}
 	for _, f := range items {
+		// If this is an unprotected query, filter out any flows that have a policy.
+		// We might want to add this as a query parameter to Linseed, but for now we can
+		// filter them here since we need to iterate for conversion anyway.
+		hasPolicy := false
+		for _, p := range f.Policies {
+			if !p.IsProfile {
+				hasPolicy = true
+				break
+			}
+		}
+		if hasPolicy {
+			continue
+		}
+
 		buckets = append(buckets, Bucket{
 			DocCount: f.LogStats.FlowLogCount,
 			Key: Key{
@@ -499,7 +509,7 @@ func getFlowLogsFromElastic(ctx context.Context, flowFilter lmaelastic.FlowFilte
 		TimedOut: false,
 		Aggregations: Aggregations{
 			FlogBuckets: FlowBuckets{
-				Buckets: convertToBuckets(result),
+				Buckets: convertToBuckets(result, params.Unprotected),
 			},
 		},
 	}

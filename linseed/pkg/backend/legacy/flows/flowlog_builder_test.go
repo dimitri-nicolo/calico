@@ -179,8 +179,18 @@ func (b *flowLogBuilder) WithAction(a string) *flowLogBuilder {
 	return b
 }
 
-func (b *flowLogBuilder) WithPolicies(p string) *flowLogBuilder {
-	b.log.Policies = &v1.FlowLogPolicy{AllPolicies: []string{p}}
+func (b *flowLogBuilder) WithPolicies(p ...string) *flowLogBuilder {
+	b.log.Policies = &v1.FlowLogPolicy{AllPolicies: p}
+	return b
+}
+
+func (b *flowLogBuilder) WithPolicy(p string) *flowLogBuilder {
+	if b.log.Policies == nil {
+		b.log.Policies = &v1.FlowLogPolicy{
+			AllPolicies: []string{},
+		}
+	}
+	b.log.Policies.AllPolicies = append(b.log.Policies.AllPolicies, p)
 	return b
 }
 
