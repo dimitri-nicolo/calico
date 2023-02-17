@@ -463,15 +463,14 @@ func (p *pip) SearchAndProcessFlowLogs(
 
 func bucketFromFlow(flow *lapi.L3Flow) *elastic.CompositeAggregationBucket {
 	bucket := &elastic.CompositeAggregationBucket{}
-	bucket.DocCount = flow.LogStats.FlowLogCount
 	bucket.CompositeAggregationKey = []elastic.CompositeAggregationSourceValue{
 		// Order matters!
 		{Name: "source_type", Value: string(flow.Key.Source.Type)},
 		{Name: "source_namespace", Value: flow.Key.Source.Namespace},
-		{Name: "source_name_aggr", Value: flow.Key.Source.AggregatedName},
+		{Name: "source_name", Value: flow.Key.Source.AggregatedName},
 		{Name: "dest_type", Value: string(flow.Key.Destination.Type)},
 		{Name: "dest_namespace", Value: flow.Key.Destination.Namespace},
-		{Name: "dest_name_aggr", Value: flow.Key.Destination.AggregatedName},
+		{Name: "dest_name", Value: flow.Key.Destination.AggregatedName},
 		{Name: "proto", Value: string(flow.Key.Protocol)},
 		{Name: "source_ip", Value: ""},
 		{Name: "source_name", Value: ""},
@@ -485,6 +484,7 @@ func bucketFromFlow(flow *lapi.L3Flow) *elastic.CompositeAggregationBucket {
 
 	// Zero out fields before filling them in with data, so we ensure they are always
 	// present in the response.
+	bucket.DocCount = 0
 	bucket.AggregatedSums = map[string]float64{}
 	bucket.AggregatedSums["sum_num_flows_started"] = float64(0)
 	bucket.AggregatedSums["sum_num_flows_completed"] = float64(0)
@@ -511,6 +511,7 @@ func bucketFromFlow(flow *lapi.L3Flow) *elastic.CompositeAggregationBucket {
 
 	// Now fill in with real data.
 	if stats := flow.LogStats; stats != nil {
+		bucket.DocCount = flow.LogStats.FlowLogCount
 		bucket.AggregatedSums["sum_num_flows_started"] = float64(stats.Started)
 		bucket.AggregatedSums["sum_num_flows_completed"] = float64(stats.Completed)
 	}

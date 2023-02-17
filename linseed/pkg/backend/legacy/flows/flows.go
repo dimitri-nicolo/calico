@@ -561,11 +561,18 @@ func getPoliciesFromAggregation(log *logrus.Entry, terms map[string]*lmaelastic.
 		// perform filtering of the returned policies to remove any that the user does not have permission to view.
 		// TODO: Should we (and can we) perform that RBAC here?
 		for _, policyHit := range policyHits {
+			// Names are calculated differently based on the type of policy.
+			// For profiles, we want the full name including the kns / knp prefix.
+			// For policies, the tier is listed as a separate field, so we just want the name.
+			name := policyHit.Name()
+			if policyHit.IsProfile() {
+				name = policyHit.FullName()
+			}
 			policies = append(policies, v1.Policy{
 				Action:       string(policyHit.Action()),
 				Tier:         policyHit.Tier(),
 				Namespace:    policyHit.Namespace(),
-				Name:         policyHit.Name(),
+				Name:         name,
 				IsStaged:     policyHit.IsStaged(),
 				IsKubernetes: policyHit.IsKubernetes(),
 				IsProfile:    policyHit.IsProfile(),
