@@ -41,11 +41,11 @@ var (
 )
 
 // RemoteClusterInterface provides appropriate hooks for the syncer to:
-// - get the Calico API config from the RemoteClusterConfig, returning nil if the RemoteClusterConfig
-//   is not valid for this syncer
-// - create the appropriate resource types for the remote syncer
-// - modify the remote syncer updates (e.g. modifying names to include the cluster name to avoid
-//   naming conflicts across the clusters).
+//   - get the Calico API config from the RemoteClusterConfig, returning nil if the RemoteClusterConfig
+//     is not valid for this syncer
+//   - create the appropriate resource types for the remote syncer
+//   - modify the remote syncer updates (e.g. modifying names to include the cluster name to avoid
+//     naming conflicts across the clusters).
 type RemoteClusterInterface interface {
 	GetCalicoAPIConfig(*apiv3.RemoteClusterConfiguration) *apiconfig.CalicoAPIConfig
 	CreateResourceTypes() []watchersyncer.ResourceType

@@ -461,7 +461,8 @@ func removeEndpointDataFromSlice(s []*EndpointData, i int) []*EndpointData {
 // goroutine that will be called after endpointDataTTLAfterMarkedAsRemoved
 // has passed.  ipToEndpointDeletionTimers is used to track the all the timers
 // created for tentatively deleted endpoints as they are accessed by add/update
-//  operations.
+//
+//	operations.
 func (ec *EndpointLookupsCache) removeEndpointWithDelay(key model.Key) {
 	ec.epMutex.Lock()
 	defer ec.epMutex.Unlock()
@@ -523,8 +524,9 @@ func (ec *EndpointLookupsCache) removeEndpoint(key model.Key) {
 }
 
 // removeEndpointDataIpMapping checks if  there is an existing
-//  - IP to WEP/HEP relation that is being tracked and removes it if there is one.
-//  - Endpoint to IP relation that is being tracked and removes it if there is one.
+//   - IP to WEP/HEP relation that is being tracked and removes it if there is one.
+//   - Endpoint to IP relation that is being tracked and removes it if there is one.
+//
 // This method isn't safe to be used concurrently and the caller should acquire the
 // EndpointLookupsCache.epMutex before calling this method.
 func (ec *EndpointLookupsCache) removeEndpointDataIpMapping(key model.Key, ip [16]byte) {
@@ -598,7 +600,7 @@ func (ec *EndpointLookupsCache) GetAllEndpointData() []*EndpointData {
 	return allEds
 }
 
-//reportEndpointCacheMetrics reports endpoint cache performance metrics to prometheus
+// reportEndpointCacheMetrics reports endpoint cache performance metrics to prometheus
 func (ec *EndpointLookupsCache) reportEndpointCacheMetrics() {
 	gaugeEndpointCacheLength.Set(float64(len(ec.endpointData)))
 }
