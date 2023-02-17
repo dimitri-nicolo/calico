@@ -21,8 +21,8 @@ type dnsFlows struct {
 }
 
 // newFlows returns a new FlowsInterface bound to the supplied client.
-func newDNSFlows(c *client, cluster string) DNSFlowsInterface {
-	return &dnsFlows{restClient: c.restClient, clusterID: cluster}
+func newDNSFlows(c Client, cluster string) DNSFlowsInterface {
+	return &dnsFlows{restClient: c.RESTClient(), clusterID: cluster}
 }
 
 // List gets the flow list for the given flow input params.

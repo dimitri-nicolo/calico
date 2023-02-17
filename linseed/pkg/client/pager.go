@@ -83,7 +83,7 @@ func (p *listPager[T]) Stream(ctx context.Context, f ListFunc[T]) (<-chan v1.Lis
 		var more bool
 		var page *v1.List[T]
 		defer func() {
-			logrus.Debugf("stream goroutine completed, closing channels")
+			logrus.Debugf("ListPager stream goroutine completed, closing channels")
 			close(results)
 			close(errors)
 		}()

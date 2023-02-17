@@ -23,8 +23,8 @@ type flowLogs struct {
 }
 
 // newFlowLogs returns a new FlowLogsInterface bound to the supplied client.
-func newFlowLogs(c *client, cluster string) FlowLogsInterface {
-	return &flowLogs{restClient: c.restClient, clusterID: cluster}
+func newFlowLogs(c Client, cluster string) FlowLogsInterface {
+	return &flowLogs{restClient: c.RESTClient(), clusterID: cluster}
 }
 
 // List gets the flowLogs for the given input params.

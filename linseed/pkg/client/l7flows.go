@@ -21,8 +21,8 @@ type l7Flows struct {
 }
 
 // newFlows returns a new FlowsInterface bound to the supplied client.
-func newL7Flows(c *client, cluster string) L7FlowsInterface {
-	return &l7Flows{restClient: c.restClient, clusterID: cluster}
+func newL7Flows(c Client, cluster string) L7FlowsInterface {
+	return &l7Flows{restClient: c.RESTClient(), clusterID: cluster}
 }
 
 // List gets the l3 flow list for the given flow input params.

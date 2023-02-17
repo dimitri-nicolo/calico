@@ -23,8 +23,8 @@ type dnsLogs struct {
 }
 
 // newDNSLogs returns a new DNSLogsInterface bound to the supplied client.
-func newDNSLogs(c *client, cluster string) DNSLogsInterface {
-	return &dnsLogs{restClient: c.restClient, clusterID: cluster}
+func newDNSLogs(c Client, cluster string) DNSLogsInterface {
+	return &dnsLogs{restClient: c.RESTClient(), clusterID: cluster}
 }
 
 // List gets the dnsLogs for the given input params.

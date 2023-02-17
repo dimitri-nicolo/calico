@@ -7,6 +7,7 @@ import (
 )
 
 type Client interface {
+	RESTClient() *rest.RESTClient
 	L3Flows(string) L3FlowsInterface
 	FlowLogs(string) FlowLogsInterface
 	L7Flows(string) L7FlowsInterface
@@ -19,6 +20,11 @@ type Client interface {
 
 type client struct {
 	restClient *rest.RESTClient
+}
+
+// L3Flows returns an interface for managing v1.L3Flow resources.
+func (c *client) RESTClient() *rest.RESTClient {
+	return c.restClient
 }
 
 // L3Flows returns an interface for managing v1.L3Flow resources.

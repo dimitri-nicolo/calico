@@ -21,8 +21,8 @@ type l3Flows struct {
 }
 
 // newFlows returns a new FlowsInterface bound to the supplied client.
-func newL3Flows(c *client, cluster string) L3FlowsInterface {
-	return &l3Flows{restClient: c.restClient, clusterID: cluster}
+func newL3Flows(c Client, cluster string) L3FlowsInterface {
+	return &l3Flows{restClient: c.RESTClient(), clusterID: cluster}
 }
 
 // List gets the l3 flow list for the given flow input params.

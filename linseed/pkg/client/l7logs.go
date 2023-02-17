@@ -23,8 +23,8 @@ type l7Logs struct {
 }
 
 // newL7Logs returns a new L7LogsInterface bound to the supplied client.
-func newL7Logs(c *client, cluster string) L7LogsInterface {
-	return &l7Logs{restClient: c.restClient, clusterID: cluster}
+func newL7Logs(c Client, cluster string) L7LogsInterface {
+	return &l7Logs{restClient: c.RESTClient(), clusterID: cluster}
 }
 
 // List gets the l7Logs for the given input params.
