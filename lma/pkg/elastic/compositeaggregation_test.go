@@ -2,16 +2,12 @@
 package elastic_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/olivere/elastic/v7"
 
 	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -739,12 +735,3 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 		Expect(marshaledbucket).To(MatchJSON(sampleBucketJsonTestMarshal))
 	})
 })
-
-func esSearchResultToResponseBody(searchResult elastic.SearchResult) io.ReadCloser {
-	byts, err := json.Marshal(searchResult)
-	if err != nil {
-		panic(err)
-	}
-
-	return io.NopCloser(bytes.NewBuffer(byts))
-}

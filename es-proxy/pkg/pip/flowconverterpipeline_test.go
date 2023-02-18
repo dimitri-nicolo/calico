@@ -2,6 +2,7 @@ package pip
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -82,7 +83,7 @@ func flow(reporter, action, protocol string, source, dest epData, policies ...st
 
 		name := hit.Name()
 		if hit.IsProfile() {
-			name = hit.FullName()
+			name = fmt.Sprintf("kns.%s", name)
 		}
 		flow.Policies = append(flow.Policies, lapi.Policy{
 			Tier:         hit.Tier(),

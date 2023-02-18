@@ -233,7 +233,7 @@ func TestFlowMultiplePolicies(t *testing.T) {
 		},
 		{
 			Tier:      "__PROFILE__",
-			Name:      "kube-system",
+			Name:      "kns.kube-system",
 			Namespace: "",
 			Action:    "allow",
 			Count:     expected.LogStats.FlowLogCount,
