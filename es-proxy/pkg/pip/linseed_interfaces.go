@@ -77,12 +77,11 @@ func (l *linseedEventer) GetAuditEvents(ctx context.Context, from *time.Time, to
 			}
 		}
 
-		// Check for errors.
+		// Check for errors before returning.
 		err := <-errors
 		if err != nil {
 			ch <- &api.AuditEventResult{Err: err}
 		}
-		return
 	}()
 
 	return ch
