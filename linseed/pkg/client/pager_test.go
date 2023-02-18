@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -145,7 +146,7 @@ func TestPager(t *testing.T) {
 		var page v1.List[v1.L3Flow]
 		var err error
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		// Create the streamer.
@@ -201,30 +202,25 @@ func TestPager(t *testing.T) {
 		pager := client.NewListPager[v1.L3Flow](&v1.L3FlowParams{})
 		listFunc := getListFunc(testData)
 
-		var page v1.List[v1.L3Flow]
-		var err error
-
-		ctx, cancel := context.WithCancel(context.Background())
+		// Use a timeout in case we get stuck.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		// Create the streamer.
+		// Create the streamer and read from it.
 		results, errors := pager.Stream(ctx, listFunc)
-
 		allPages := []v1.List[v1.L3Flow]{}
-
-		// Iterate through test data up until the one that generates the error.
-		// Index 2 is the page that generates the error.
-		for range testData[0:3] {
-			select {
-			case err = <-errors:
-			case page = <-results:
-				require.NotNil(t, page)
-				allPages = append(allPages, page)
-			}
+		for page := range results {
+			require.NotNil(t, page)
+			allPages = append(allPages, page)
 		}
 
-		// Check the outputs.
+		// We should have received an error.
+		err := <-errors
 		require.Error(t, err)
+
+		// Check the pages we received. We should have received two pages before
+		// hitting the error, so allPages should have length 2.
+		require.Len(t, allPages, 2)
 		for i, p := range allPages {
 			require.Equal(t, *testData[i].List, p)
 		}
@@ -232,5 +228,75 @@ func TestPager(t *testing.T) {
 		// Assert that the channels have been closed, since we've read all the data.
 		require.Empty(t, errors)
 		require.Empty(t, results)
+	})
+
+	t.Run("should respect the max results option", func(t *testing.T) {
+		defer setupTest(t)()
+
+		// Data to be returned by listFunc for the test.
+		testData := []result{
+			{
+				List: &v1.List[v1.L3Flow]{
+					Items:    []v1.L3Flow{{}, {}}, // Two items
+					AfterKey: map[string]interface{}{"foo": "bar"},
+				},
+				Error: nil,
+			},
+			{
+				List: &v1.List[v1.L3Flow]{
+					Items:    []v1.L3Flow{{}, {}}, // Two items
+					AfterKey: map[string]interface{}{"whizz": "pop"},
+				},
+				Error: nil,
+			},
+			{
+				List: &v1.List[v1.L3Flow]{
+					Items:    []v1.L3Flow{{}, {}}, // Two items
+					AfterKey: map[string]interface{}{"ham": "salad"},
+				},
+				Error: nil,
+			},
+			{
+				List: &v1.List[v1.L3Flow]{
+					Items:    []v1.L3Flow{{}, {}}, // Two items
+					AfterKey: nil,                 // Indicates this is the last page.
+				},
+				Error: nil,
+			},
+		}
+
+		// Params configure the parameeters for each individual
+		// page request. For this, set a max page size of 2.
+		params := &v1.L3FlowParams{}
+		params.MaxResults = 2
+
+		// Perform a paged list, specifying a max results of 5.
+		opt := client.WithMaxResults[v1.L3Flow](5)
+		pager := client.NewListPager(params, opt)
+		listFunc := getListFunc(testData)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		// Create the streamer.
+		allPages := []v1.List[v1.L3Flow]{}
+		results, errors := pager.Stream(ctx, listFunc)
+		for page := range results {
+			require.NotNil(t, page)
+			allPages = append(allPages, page)
+		}
+
+		// We should not have received an error.
+		err := <-errors
+		require.NoError(t, err)
+
+		// Since each page has two results, and we want no more than 5
+		// results total, we should only get back two pages. A third would
+		// put us over our requested max.
+		require.Len(t, allPages, 2)
+
+		// Assert that the channels have been closed, since we've read all the data.
+		require.Empty(t, results)
+		require.Empty(t, errors)
 	})
 }

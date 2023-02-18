@@ -187,7 +187,6 @@ var _ = Describe("Test handling of flow splitting", func() {
 		}
 
 		p := lapi.L3FlowParams{}
-		p.MaxResults = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
@@ -423,7 +422,6 @@ var _ = Describe("Test handling of flow splitting", func() {
 		}
 
 		p := lapi.L3FlowParams{}
-		p.MaxResults = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
@@ -565,7 +563,6 @@ var _ = Describe("Test handling of flow splitting", func() {
 		}
 
 		p := lapi.L3FlowParams{}
-		p.MaxResults = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
@@ -721,7 +718,6 @@ var _ = Describe("Test handling of flow splitting", func() {
 		}
 
 		p := lapi.L3FlowParams{}
-		p.MaxResults = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
@@ -907,7 +903,6 @@ var _ = Describe("Test handling of flow splitting", func() {
 		}
 
 		p := lapi.L3FlowParams{}
-		p.MaxResults = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")

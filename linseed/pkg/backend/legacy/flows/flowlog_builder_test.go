@@ -62,7 +62,7 @@ func (b *flowLogBuilder) Build() (*v1.FlowLog, error) {
 	}
 
 	// Keep track of the logs that have been built so that we can
-	// built an expected flow from them if requested. We take a copy
+	// produce an expected flow from them if requested. We take a copy
 	// so that the caller can modify the next iteration of this log if desired.
 	cp := *b.activeLog
 	b.logs = append(b.logs, cp)
