@@ -465,7 +465,7 @@ func (b *flowBackend) index(i bapi.ClusterInfo) string {
 // getLabelsFromLabelAggregation parses the labels out from the given aggregation and puts them into a map map[string][]FlowResponseLabels
 // that can be sent back in the response.
 func getLabelsFromLabelAggregation(log *logrus.Entry, terms map[string]*lmaelastic.AggregatedTerm, k string) []v1.FlowLabels {
-	tracker := newLabelTracker()
+	tracker := NewLabelTracker()
 	for i, count := range terms[k].Buckets {
 		label, ok := i.(string)
 		if !ok {
@@ -485,21 +485,21 @@ func getLabelsFromLabelAggregation(log *logrus.Entry, terms map[string]*lmaelast
 	return tracker.Labels()
 }
 
-func newLabelTracker() *labelTracker {
-	return &labelTracker{
+func NewLabelTracker() *LabelTracker {
+	return &LabelTracker{
 		s:         make(map[string]map[string]int64),
 		allValues: make(map[string][]string),
 	}
 }
 
-type labelTracker struct {
+type LabelTracker struct {
 	// Map of key, to map of value to count.
 	s         map[string]map[string]int64
 	allKeys   []string
 	allValues map[string][]string
 }
 
-func (t *labelTracker) Add(k, v string, count int64) {
+func (t *LabelTracker) Add(k, v string, count int64) {
 	if _, ok := t.s[k]; !ok {
 		// New label key
 		t.s[k] = map[string]int64{}
@@ -515,7 +515,7 @@ func (t *labelTracker) Add(k, v string, count int64) {
 	t.s[k][v] += count
 }
 
-func (t *labelTracker) Labels() []v1.FlowLabels {
+func (t *LabelTracker) Labels() []v1.FlowLabels {
 	labels := []v1.FlowLabels{}
 
 	// Sort keys so we get a consistenly ordered output.

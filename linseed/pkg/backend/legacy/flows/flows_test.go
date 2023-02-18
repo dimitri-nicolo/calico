@@ -869,19 +869,6 @@ func populateFlowData(t *testing.T, ctx context.Context, b *flowLogBuilder, clie
 func populateFlowDataN(t *testing.T, ctx context.Context, b *flowLogBuilder, client lmaelastic.Client, cluster string, n int) v1.L3Flow {
 	batch := []v1.FlowLog{}
 
-	// Initialize the expected output based on the given builder template.
-	expected := b.ExpectedFlow()
-
-	expected.DestinationLabels = []v1.FlowLabels{
-		// A different dest_iteration is applied to each log in the flow.
-		{Key: "dest_iteration", Values: []v1.FlowLabelValue{}},
-	}
-	expected.LogStats.FlowLogCount = int64(n)
-	expected.HTTPStats = &v1.HTTPStats{
-		AllowedIn: 0,
-		DeniedIn:  0,
-	}
-
 	for i := 0; i < n; i++ {
 		// We want a variety of label keys and values,
 		// so base this one off of the loop variable.
@@ -889,33 +876,12 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *flowLogBuilder, cli
 		// inherent maximum number of buckets of 10. As a result, if a flow has more than
 		// 10 labels, not all of them will be shown. We might be able to use a composite aggregation instead,
 		// but these are more expensive.
-		b2 := b.Copy()
-		b2.WithDestLabels(fmt.Sprintf("dest_iteration=%d", i))
-
-		f, err := b2.Build()
+		b.WithDestLabels(fmt.Sprintf("dest_iteration=%d", i))
+		f, err := b.Build()
 		require.NoError(t, err)
 
 		// Add it to the batch
 		batch = append(batch, *f)
-
-		// Increment fields on the expected flow based on the flow log that was
-		// just added.
-		expected.LogStats.LogCount += int64(f.NumFlows)
-		expected.LogStats.Started += int64(f.NumFlowsStarted)
-		expected.LogStats.Completed += int64(f.NumFlowsCompleted)
-		expected.TrafficStats.BytesIn += int64(f.BytesIn)
-		expected.TrafficStats.BytesOut += int64(f.BytesOut)
-		expected.TrafficStats.PacketsIn += int64(f.PacketsIn)
-		expected.TrafficStats.PacketsOut += int64(f.PacketsOut)
-		expected.DestinationLabels[0].Values = append(expected.DestinationLabels[0].Values,
-			v1.FlowLabelValue{
-				Value: fmt.Sprintf("%d", i),
-				Count: f.NumFlows,
-			},
-		)
-		for i := 0; i < len(expected.SourceLabels); i++ {
-			expected.SourceLabels[i].Values[0].Count += f.NumFlows
-		}
 	}
 
 	// Create the batch.
@@ -942,5 +908,7 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *flowLogBuilder, cli
 	err = testutils.RefreshIndex(ctx, client, index)
 	require.NoError(t, err)
 
+	// Return the expected flow based on the batch of flows we created above.
+	expected := b.ExpectedFlow()
 	return *expected
 }
