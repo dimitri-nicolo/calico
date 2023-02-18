@@ -106,28 +106,7 @@ RUN yum install -y --setopt=tsflags=nodocs \
  && rm -rf ruby-$RUBY_FULL_VERSION.tar.gz \
  && rm -rf ruby-$RUBY_FULL_VERSION \
  && rm -rf /fluentd/cloned \
- && gem sources --clear-all \
-# remove pre-installed packages in ruby that may have high CVE issues
- && rm -rf /var/lib/ruby/gems/*/cache/*.gem \
-       /var/lib/ruby/gems/2.*/gems/fluentd-*/test \
-       /var/lib/ruby/lib/ruby/gems/2.7.0/gems/bundler-2.1.4 \
-       /var/lib/ruby/lib/ruby/gems/2.7.0/specifications/default/bundler-2.1.4.gemspec \
-       /var/lib/ruby/lib/ruby/2.7.0/bundler \
-       /usr/local/lib/ruby/gems/2.7.0/gems/bundler-2.1.4 \
-       /usr/local/lib/ruby/2.7.0/bundler \
-       /usr/local/lib/ruby/gems/2.7.0/specifications/default/bundler-2.1.4.gemspec \
-       /usr/local/lib/ruby/gems/2.7.0/gems/rdoc-6.2.1.1 \
-       /usr/local/lib/ruby/2.7.0/rdoc \
-       /usr/local/lib/ruby/gems/2.7.0/specifications/default/rdoc-6.2.1.1.gemspec \
-       /usr/local/lib/ruby/2.7.0/cgi \
-       /usr/local/lib/ruby/2.7.0/x86_64-linux-musl/cgi \
-       /var/lib/ruby/3.0.0/x86_64-linux-musl/cgi \
-       /var/lib/ruby/3.0.0/cgi \
-       /usr/local/lib/ruby/gems/2.7.0/specifications/default/cgi-0.1.0.1.gemspec \
-       /ruby-2.7.5.tar.gz \
-       /ruby-2.7.5 \
- && yum remove -y make wget gcc gcc-c++ git patch vim-minimal zlib-devel libcom_err-devel python3-libxml python3-libxml2 \
- && yum clean all
+ && gem sources --clear-all
 
 # Configure scripts and create directories fluentD needs
 
@@ -186,7 +165,7 @@ ENV FLUENTD_CONF="fluent.conf"
 COPY --from=builder /fluentd/ /fluentd/
 COPY --from=builder /var/lib/ruby/ /var/lib/ruby/
 
-# Add binaries needed by fluentd scripts
+# Copy binaries needed by fluentd scripts
 COPY --from=builder /bin/bash /bin/bash
 COPY --from=builder /bin/sh /bin/sh
 COPY --from=builder /usr/bin/bash /usr/bin/bash
@@ -206,9 +185,8 @@ COPY --from=builder /usr/bin/tar /usr/bin/tar
 COPY --from=builder /usr/bin/jq /usr/bin/jq
 COPY --from=builder /usr/bin/fluentd /usr/bin/fluentd
 COPY --from=builder /usr/bin/fluent-gem /usr/bin/fluent-gem
-COPY --from=builder /usr/bin/ldd /usr/bin/ldd
 
-# Add scripts needed by fluentd
+# Copy scripts needed by fluentd
 COPY --from=builder /bin/readiness.sh /bin/readiness.sh
 COPY --from=builder /bin/liveness.sh /bin/liveness.sh
 COPY --from=builder /bin/syslog-environment.sh /bin/syslog-environment.sh
@@ -224,7 +202,7 @@ COPY --from=builder /bin/eks-log-forwarder-startup /bin/
 # It can run in multiple flavours (splunk, syslog) etc and those configurations will be done at runtime
 COPY --from=builder /lib64/ /lib64/
 
-# add /tmp
+# Create /tmp directory
 COPY --from=builder /tmp /tmp/
 
 # libc/nss
@@ -235,14 +213,14 @@ COPY --from=builder /etc/nsswitch.conf /etc/nsswitch.conf
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/shadow /etc/shadow
 
-# Add scripts and configuration files for fluentd
-ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
-ADD elastic_mapping_dns.template /fluentd/etc/elastic_mapping_dns.template
-ADD elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
-ADD elastic_mapping_bgp.template /fluentd/etc/elastic_mapping_bgp.template
-ADD elastic_mapping_waf.template /fluentd/etc/elastic_mapping_waf.template
-ADD elastic_mapping_l7.template /fluentd/etc/elastic_mapping_l7.template
-ADD elastic_mapping_runtime.template /fluentd/etc/elastic_mapping_runtime.template
+# Copy scripts and configuration files for fluentd
+COPY elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
+COPY elastic_mapping_dns.template /fluentd/etc/elastic_mapping_dns.template
+COPY elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
+COPY elastic_mapping_bgp.template /fluentd/etc/elastic_mapping_bgp.template
+COPY elastic_mapping_waf.template /fluentd/etc/elastic_mapping_waf.template
+COPY elastic_mapping_l7.template /fluentd/etc/elastic_mapping_l7.template
+COPY elastic_mapping_runtime.template /fluentd/etc/elastic_mapping_runtime.template
 COPY fluent_sources.conf /fluentd/etc/fluent_sources.conf
 COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
 COPY output_match /fluentd/etc/output_match
@@ -263,7 +241,7 @@ ENV L7_LOG_FILE=/var/log/calico/l7logs/l7.log
 ENV EE_AUDIT_LOG_FILE=/var/log/calico/audit/tsee-audit.log
 ENV RUNTIME_LOG_FILE=/var/log/calico/runtime-security/report.log
 
-#TLS Settings
+# TLS Settings
 ENV TLS_KEY_PATH=/tls/tls.key
 ENV TLS_CRT_PATH=/tls/tls.crt
 ENV CA_CRT_PATH=/etc/pki/tigera/tigera-ca-bundle.crt
@@ -303,4 +281,3 @@ EXPOSE 24284
 
 ENTRYPOINT []
 CMD /bin/ee_entrypoint.sh fluentd -c /fluentd/etc/${FLUENTD_CONF} -p /fluentd/plugins $FLUENTD_OPT
-
