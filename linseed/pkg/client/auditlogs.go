@@ -7,9 +7,10 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
+	auditv1 "k8s.io/apiserver/pkg/apis/audit"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
-	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 )
 
 // AuditLogsInterface has methods related to audit logs.

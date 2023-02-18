@@ -9,9 +9,10 @@ import (
 	"os"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
-	"github.com/sirupsen/logrus"
 )
 
 // This small tool is helpful for converting Elasticsearch aggregated search results into
