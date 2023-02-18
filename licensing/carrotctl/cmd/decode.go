@@ -3,8 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 
 	"gopkg.in/yaml.v2"
 
@@ -27,7 +27,7 @@ var DecodeLicenseCmd = &cobra.Command{
 	Use:   "decode",
 	Short: "Decode licenses",
 	Run: func(cmd *cobra.Command, args []string) {
-		f, err := ioutil.ReadFile(lFile)
+		f, err := os.ReadFile(lFile)
 		if err != nil {
 			log.Fatalf("error reading license file: %v", err)
 		}

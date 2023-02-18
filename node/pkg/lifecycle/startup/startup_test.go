@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -1305,7 +1304,7 @@ var _ = Describe("BGP layout tests", func() {
 
 		BeforeEach(func() {
 			var err error
-			encDir, err = ioutil.TempDir("", "enc.XXXX")
+			encDir, err = os.MkdirTemp("", "enc.XXXX")
 			Expect(err).NotTo(HaveOccurred())
 			encFileName = filepath.Join(encDir, "enc.yml")
 			os.Setenv("CALICO_EARLY_NETWORKING", encFileName)

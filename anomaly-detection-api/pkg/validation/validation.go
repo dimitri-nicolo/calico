@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"mime"
 	"net/http"
 	"strconv"
@@ -53,9 +53,9 @@ func ValidateClustersEndpointModelStorageHandlerRequest(req *http.Request) *api_
 // ValidateClustersLogTypeMetadataRequest validates the request for the /clusters/.../{log_type} endpoint handled
 // by handler.ClustersEndpointHandler
 // sub validation includes:
-//	- valid content type is application/JSON if PUT method
-//	- valid request LogTypeMetadata body
-//  	- last_updated is a float representing unix timestamp
+//   - valid content type is application/JSON if PUT method
+//   - valid request LogTypeMetadata body
+//   - last_updated is a float representing unix timestamp
 func ValidateClustersLogTypeMetadataRequest(req *http.Request) *api_error.APIError {
 	if !stateChangingMethods[req.Method] {
 		return nil
@@ -78,11 +78,11 @@ func ValidateClustersLogTypeMetadataRequest(req *http.Request) *api_error.APIErr
 
 // ValidateClustersLogTypeMetadataRequestBody validates the fields in the  request's body as a LogTypeMetadata struct.
 // sub validations includes:
-//	- last_updated is a float representing unix timestamp
+//   - last_updated is a float representing unix timestamp
 func ValidateClustersLogTypeMetadataRequestBody(req *http.Request) *api_error.APIError {
 	var logTypeMetadataReqBody data.LogTypeMetadata
 
-	b, err := ioutil.ReadAll(req.Body)
+	b, err := io.ReadAll(req.Body)
 
 	if err != nil {
 		return &api_error.APIError{
@@ -114,7 +114,7 @@ func ValidateClustersLogTypeMetadataRequestBody(req *http.Request) *api_error.AP
 	// a calculation between the decimal and integer portion of a valid float
 
 	// restore body as it will be read again in further handlers
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+	req.Body = io.NopCloser(bytes.NewBuffer(b))
 	return nil
 }
 
@@ -162,11 +162,11 @@ func ValidateModelSizeRequestBody(req *http.Request) *api_error.APIError {
 
 		var bodyBytes []byte
 		if req.Body != nil {
-			bodyBytes, _ = ioutil.ReadAll(req.Body)
+			bodyBytes, _ = io.ReadAll(req.Body)
 		}
 
 		// Restore the io.ReadCloser to its original state
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+		req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 		if int64(len(bodyBytes)) > req.ContentLength {
 			return &api_error.APIError{

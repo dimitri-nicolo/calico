@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -44,7 +44,7 @@ func (f *FortiManagerRestClient) Post(payload []uint8) ([]uint8, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithError(err).WithField("payload", string(payload)).Error("Received error from Fortimanager")
 		return nil, err
@@ -85,7 +85,7 @@ func (f *FortiGateRestClient) FortiGateRestGet(url string) ([]uint8, error) {
 
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithError(err).Error("Error from FortiGate for GET request")
 		return nil, err
@@ -114,7 +114,7 @@ func (f *FortiGateRestClient) FortiGateRestPut(url string, payload []uint8) ([]u
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithError(err).Error("Error from FortiGate for PUT request")
 		return nil, err
@@ -140,7 +140,7 @@ func (f *FortiGateRestClient) FortiGateRestPost(url string, payload []uint8) ([]
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithError(err).Error("Error from FortiGate for POST request")
 		return nil, err
@@ -172,7 +172,7 @@ func (f *FortiGateRestClient) FortiGateRestDelete(url string) ([]uint8, error) {
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithError(err).Error("Error from FortiGate for DELETE request")
 		return nil, err

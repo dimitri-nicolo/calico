@@ -3,7 +3,7 @@ package ut
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -274,7 +274,7 @@ func mustGetString(name string) string {
 	if err != nil {
 		panic(err)
 	}
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	if err != nil {
 		panic(err)
 	}

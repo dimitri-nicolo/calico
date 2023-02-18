@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -119,7 +119,7 @@ func (handler *kibanaLoginHandler) ServeHTTP(w http.ResponseWriter, req *http.Re
 		}
 
 		if kibanaResponse.StatusCode != http.StatusOK {
-			body, err := ioutil.ReadAll(kibanaResponse.Body)
+			body, err := io.ReadAll(kibanaResponse.Body)
 			if err != nil {
 				log.WithError(err).Error("failed to parse Kibana response body")
 				redirectToDashboardWithError(w, req, http.StatusInternalServerError, "Internal Server Error")

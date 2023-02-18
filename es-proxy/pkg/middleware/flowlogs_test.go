@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
@@ -154,7 +153,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		})
 
 		It("should return errInvalidPolicyPreview when passed a request with a policyPreview that has an invalid verb", func() {
-			validPreviewBadVerb, err := ioutil.ReadFile("testdata/flow_logs_invalid_preview_bad_verb.json")
+			validPreviewBadVerb, err := os.ReadFile("testdata/flow_logs_invalid_preview_bad_verb.json")
 			Expect(err).To(Not(HaveOccurred()))
 			req, err := newTestRequestWithParam(http.MethodGet, "policyPreview", string(validPreviewBadVerb))
 			Expect(err).NotTo(HaveOccurred())
@@ -164,7 +163,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		})
 
 		It("should return errInvalidPolicyPreview when passed a request with a policyPreview that has an extra unknown field", func() {
-			validPreviewBadVerb, err := ioutil.ReadFile("testdata/flow_logs_invalid_preview_extra_field.json")
+			validPreviewBadVerb, err := os.ReadFile("testdata/flow_logs_invalid_preview_extra_field.json")
 			Expect(err).To(Not(HaveOccurred()))
 			req, err := newTestRequestWithParam(http.MethodGet, "policyPreview", string(validPreviewBadVerb))
 			Expect(err).NotTo(HaveOccurred())
@@ -177,7 +176,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			req, err := http.NewRequest(http.MethodGet, "", nil)
 			Expect(err).NotTo(HaveOccurred())
 			startTimeObject, endTimeObject := getTestStartAndEndTime()
-			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
 			q := req.URL.Query()
 			q.Add("cluster", "cluster2")
@@ -268,7 +267,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 					},
 				}
 
-				querySelectors, err := ioutil.ReadFile("testdata/flow_logs_query_dest_selectors.json")
+				querySelectors, err := os.ReadFile("testdata/flow_logs_query_dest_selectors.json")
 				Expect(err).To(Not(HaveOccurred()))
 				query := buildFlowLogsQuery(params)
 				queryInf, err := query.Source()
@@ -288,7 +287,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 					},
 				}
 
-				querySelectors, err := ioutil.ReadFile("testdata/flow_logs_query_source_selectors.json")
+				querySelectors, err := os.ReadFile("testdata/flow_logs_query_source_selectors.json")
 				Expect(err).To(Not(HaveOccurred()))
 				query := buildFlowLogsQuery(params)
 				queryInf, _ := query.Source()
@@ -320,7 +319,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				endDateTimeESParm:   endTime,
 			}
 
-			queryAllFilters, err := ioutil.ReadFile("testdata/flow_logs_query_all_filters.json")
+			queryAllFilters, err := os.ReadFile("testdata/flow_logs_query_all_filters.json")
 			Expect(err).To(Not(HaveOccurred()))
 			query := buildFlowLogsQuery(params)
 			queryInf, _ := query.Source()
@@ -333,7 +332,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 	Context("Test that the getFlowLogsFromElastic function behaves as expected", func() {
 		It("should retrieve a search results object", func() {
 			By("Creating a mock ES client with a mocked out search results")
-			flowLogsResponseJSON, err := ioutil.ReadFile("testdata/flow_logs_aggr_response.json")
+			flowLogsResponseJSON, err := os.ReadFile("testdata/flow_logs_aggr_response.json")
 			Expect(err).To(Not(HaveOccurred()))
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(flowLogsResponseJSON)})
 			params := &FlowLogsParams{
@@ -368,11 +367,11 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		It("should retrieve a FlowLogResults object with only 1 bucket in each section due to a limit", func() {
 			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
 			Expect(err).To(Not(HaveOccurred()))
-			esResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			esResponse, err := os.ReadFile("testdata/flow_logs_aggr_response_2.json")
 			Expect(err).To(Not(HaveOccurred()))
-			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
-			aggResponse, err := ioutil.ReadFile("testdata/flow_logs_pip_1_aggregation.json")
+			aggResponse, err := os.ReadFile("testdata/flow_logs_pip_1_aggregation.json")
 			Expect(err).To(Not(HaveOccurred()))
 			previews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))
@@ -401,9 +400,9 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		It("should retrieve a FlowLogResults object with 2 buckets in each section due to a limit", func() {
 			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
 			Expect(err).To(Not(HaveOccurred()))
-			esResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			esResponse, err := os.ReadFile("testdata/flow_logs_aggr_response_2.json")
 			Expect(err).To(Not(HaveOccurred()))
-			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
 			previews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))
@@ -430,9 +429,9 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		It("should retrieve a FlowLogResults object with no flows because none were impacted", func() {
 			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
 			Expect(err).To(Not(HaveOccurred()))
-			esResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			esResponse, err := os.ReadFile("testdata/flow_logs_aggr_response_2.json")
 			Expect(err).To(Not(HaveOccurred()))
-			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
 			previews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))
@@ -473,9 +472,9 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		It("should retrieve a FlowLogResults object with only 1 bucket in each section due to a limit, with results RBAC filtered (non-PIP)", func() {
 			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
 			Expect(err).To(Not(HaveOccurred()))
-			esResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			esResponse, err := os.ReadFile("testdata/flow_logs_aggr_response_2.json")
 			Expect(err).To(Not(HaveOccurred()))
-			aggResponse, err := ioutil.ReadFile("testdata/flow_logs_1_aggregation_rbac.json")
+			aggResponse, err := os.ReadFile("testdata/flow_logs_1_aggregation_rbac.json")
 			Expect(err).To(Not(HaveOccurred()))
 
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
@@ -509,11 +508,11 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		It("should retrieve a FlowLogResults object with only 1 bucket in each section due to a limit, with results RBAC filtered (PIP)", func() {
 			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
 			Expect(err).To(Not(HaveOccurred()))
-			esResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			esResponse, err := os.ReadFile("testdata/flow_logs_aggr_response_2.json")
 			Expect(err).To(Not(HaveOccurred()))
-			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
-			aggResponse, err := ioutil.ReadFile("testdata/flow_logs_pip_1_aggregation_rbac.json")
+			aggResponse, err := os.ReadFile("testdata/flow_logs_pip_1_aggregation_rbac.json")
 			Expect(err).To(Not(HaveOccurred()))
 			previews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))
@@ -595,7 +594,8 @@ type mockLister struct {
 }
 
 // Initialize is used by the test to fill the lister with a list for each resource type
-//   Useful for replayer.
+//
+//	Useful for replayer.
 func newMockLister() *mockLister {
 	m := &mockLister{}
 	for _, rh := range resources.GetAllResourceHelpers() {

@@ -1,7 +1,7 @@
 package model_storage_test
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -87,7 +87,7 @@ var _ = Describe("Model Storage Endpoint test", func() {
 		modelStorageHandler.HandleModelStorage(getWriter, getReq)
 
 		Expect(getWriter.Result().StatusCode).To(Equal(200))
-		bodyBytes, err := ioutil.ReadAll(getWriter.Body)
+		bodyBytes, err := io.ReadAll(getWriter.Body)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(bodyBytes)).To(Equal(testBase64FileString))
 	})
@@ -111,7 +111,7 @@ var _ = Describe("Model Storage Endpoint test", func() {
 		Expect(getWriter.Result().StatusCode).To(Equal(200))
 		Expect(getWriter.Result().ContentLength).To(Equal(int64(12)))
 
-		bodyBytes, err := ioutil.ReadAll(getWriter.Body)
+		bodyBytes, err := io.ReadAll(getWriter.Body)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(bodyBytes)).To(Equal(0))
 	})

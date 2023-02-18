@@ -6,7 +6,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"math/rand"
@@ -111,7 +110,7 @@ func SaveCertAsPEM(derBytes []byte, filePath string) error {
 }
 
 func ReadCertPemFromFile(path string) string {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalf("error reading file: %s", err)
 	}

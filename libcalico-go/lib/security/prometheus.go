@@ -6,8 +6,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -27,7 +27,7 @@ func ServePrometheusMetrics(gatherer prometheus.Gatherer, host string, port int,
 	mux.Handle("/metrics", handler)
 	if certFile != "" && keyFile != "" && caFile != "" {
 		var caCert []byte
-		caCert, err = ioutil.ReadFile(caFile)
+		caCert, err = os.ReadFile(caFile)
 		if err != nil {
 			return
 		}

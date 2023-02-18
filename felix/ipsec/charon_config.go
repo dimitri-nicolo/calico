@@ -4,7 +4,6 @@ package ipsec
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
@@ -224,7 +223,7 @@ func (c *CharonConfig) SetLogLevel(felixLevel string) {
 }
 
 func writeStringToFile(path, text string) error {
-	if err := ioutil.WriteFile(path, []byte(text), 0600); err != nil {
+	if err := os.WriteFile(path, []byte(text), 0600); err != nil {
 		return fmt.Errorf("Failed to write file %s", path)
 	}
 	return nil

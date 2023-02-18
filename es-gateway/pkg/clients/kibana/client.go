@@ -5,8 +5,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"time"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
@@ -34,7 +35,7 @@ type Client interface {
 // NewClient returns a newly configured ES client.
 func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPath string, mTLS, fipsModeEnabled bool) (Client, error) {
 	// Load CA cert
-	caCert, err := ioutil.ReadFile(caCertPath)
+	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,7 +92,7 @@ func (c *client) GetKibanaStatus() error {
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		// Dump response
 		defer res.Body.Close()
-		data, err := ioutil.ReadAll(res.Body)
+		data, err := io.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}

@@ -4,7 +4,6 @@ package common
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -108,7 +107,7 @@ func ExecCmdWriteToFile(c Cmd) {
 		return
 	}
 
-	if err := ioutil.WriteFile(c.FilePath, content, 0644); err != nil {
+	if err := os.WriteFile(c.FilePath, content, 0644); err != nil {
 		log.Errorf("Error writing diags to file: %s\n", err)
 	}
 	log.Debugf("Command executed successfully and outputted to %s", c.FilePath)

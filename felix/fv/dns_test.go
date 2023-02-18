@@ -7,7 +7,6 @@ package fv_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
@@ -61,7 +60,7 @@ func getDNSLogs(logFile string) ([]string, error) {
 	if !fileExists {
 		return nil, fmt.Errorf("Expected DNS log file %v does not exist", logFile)
 	}
-	logBytes, err := ioutil.ReadFile(logFile)
+	logBytes, err := os.ReadFile(logFile)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +152,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	JustBeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
 		var err error
-		dnsDir, err = ioutil.TempDir("", "dnsinfo")
+		dnsDir, err = os.CreateTemp("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
 
 		nameservers := GetLocalNameservers()

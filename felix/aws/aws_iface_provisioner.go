@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -773,7 +773,7 @@ func (m *SecondaryIfaceProvisioner) maybeUpdateAWSSubnetFile(subnets map[string]
 	// of the CNI plugin seeing a partially-written file.  If the file is missing/partial then the CNI plugin
 	// will fail to read/parse the file and bail out.  The CNI plugin only tries to read this file if the pod
 	// has the aws-secondary-ip resource request so only AWS-backed pods are in danger of failing.
-	oldData, err := ioutil.ReadFile(m.awsSubnetsFilename)
+	oldData, err := os.ReadFile(m.awsSubnetsFilename)
 	if err == nil {
 		if bytes.Equal(oldData, encoded) {
 			logrus.Debug("AWS subnets file already correct.")
@@ -783,7 +783,7 @@ func (m *SecondaryIfaceProvisioner) maybeUpdateAWSSubnetFile(subnets map[string]
 		logrus.WithError(err).Debug("Failed to read old aws-subnets file.  Rewriting it...")
 	}
 
-	err = ioutil.WriteFile(m.awsSubnetsFilename, encoded, 0644)
+	err = os.WriteFile(m.awsSubnetsFilename, encoded, 0644)
 	if err != nil {
 		return err
 	}

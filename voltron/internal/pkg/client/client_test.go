@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -65,7 +64,7 @@ func getServerFromConn(conn net.Conn, handlerFunc http.HandlerFunc) *http.Server
 }
 
 func readAll(r io.ReadCloser) string {
-	requestBody, err := ioutil.ReadAll(r)
+	requestBody, err := io.ReadAll(r)
 	Expect(err).ShouldNot(HaveOccurred())
 	return string(requestBody)
 }
@@ -75,7 +74,7 @@ func writeResponse(w http.ResponseWriter, response string) {
 	Expect(err).ShouldNot(HaveOccurred())
 }
 
-//TODO write more intricate tests once tunnel.Tunnel has been turned into an interface
+// TODO write more intricate tests once tunnel.Tunnel has been turned into an interface
 var _ = Describe("Client", func() {
 	Context("ServeTunnelHTTP", func() {
 		It("proxies accepted connections", func() {

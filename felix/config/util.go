@@ -3,7 +3,7 @@
 package config
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"runtime"
 	"strconv"
@@ -23,7 +23,7 @@ func isNflogSizeAvailable() bool {
 		log.WithError(err).Errorf("Unable to determine kernel version: %v", err)
 		return false
 	}
-	procKernel, err := ioutil.ReadAll(f)
+	procKernel, err := io.ReadAll(f)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to read /proc/kernel: %v", err)
 		return false

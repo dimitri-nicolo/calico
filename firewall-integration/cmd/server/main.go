@@ -6,7 +6,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
@@ -305,7 +304,7 @@ func getCalicoClient(kubeconfig string) (clientv3.ProjectcalicoV3Interface, erro
 
 func getFortiDevicesConfig(fortiCfgPath string, k8sClient *kubernetes.Clientset, isFortiMgr bool) ([]fortilib.FwFortiDevConfig, error) {
 	// Read ConfigMap from the File
-	data, err := ioutil.ReadFile(fortiCfgPath)
+	data, err := os.ReadFile(fortiCfgPath)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to read config file %v", fortiCfgPath)
 		return nil, err

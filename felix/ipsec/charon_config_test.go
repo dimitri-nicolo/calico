@@ -4,7 +4,6 @@ package ipsec_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -55,7 +54,7 @@ var _ = DescribeTable("charon config file tests",
 
 		//initialise main config
 		mainConfig := path.Join(".", "charon.conf")
-		err := ioutil.WriteFile(mainConfig, []byte("charon {\n}\n"), 0644)
+		err := os.WriteFile(mainConfig, []byte("charon {\n}\n"), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		c := NewCharonConfig(".", "charon.conf")
@@ -81,7 +80,7 @@ var _ = DescribeTable("charon config file tests",
 			yesOrNo[makeBeforeBreak],
 		)
 
-		content, err := ioutil.ReadFile(mainConfig)
+		content, err := os.ReadFile(mainConfig)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(content)).To(Equal(expected))
 

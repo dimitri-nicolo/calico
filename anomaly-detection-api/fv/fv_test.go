@@ -6,7 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -46,7 +46,7 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	caCert, err := ioutil.ReadFile(caCert)
+	caCert, err := os.ReadFile(caCert)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -112,7 +112,7 @@ var _ = Describe("FV", func() {
 			Expect(resp.StatusCode).To(Equal(200))
 			Expect(err).NotTo(HaveOccurred())
 
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			bodyBytes, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal(testBase64FileString))
 		})
@@ -150,7 +150,7 @@ var _ = Describe("FV", func() {
 			Expect(resp.StatusCode).To(Equal(200))
 			Expect(err).NotTo(HaveOccurred())
 
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			bodyBytes, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal(updatedTestFileContent))
 		})
@@ -184,7 +184,7 @@ var _ = Describe("FV", func() {
 			Expect(resp.StatusCode).To(Equal(200))
 			Expect(err).NotTo(HaveOccurred())
 
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			bodyBytes, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(bodyBytes)).To(Equal(0))
 		})
@@ -212,7 +212,7 @@ var _ = Describe("FV", func() {
 			_, err = rand.Read(token)
 			Expect(err).To(BeNil())
 
-			req.Body = ioutil.NopCloser(bytes.NewBuffer(token))
+			req.Body = io.NopCloser(bytes.NewBuffer(token))
 
 			Expect(err).NotTo(HaveOccurred())
 			resp, err := Client.Do(req)
@@ -232,7 +232,7 @@ var _ = Describe("FV", func() {
 			_, err = rand.Read(token)
 			Expect(err).To(BeNil())
 
-			req.Body = ioutil.NopCloser(bytes.NewBuffer(token))
+			req.Body = io.NopCloser(bytes.NewBuffer(token))
 
 			Expect(err).NotTo(HaveOccurred())
 			resp, err := Client.Do(req)

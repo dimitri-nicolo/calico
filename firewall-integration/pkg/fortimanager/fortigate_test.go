@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -133,7 +132,7 @@ func (f *mockRestClient) FortiGateRestGet(url string) ([]uint8, error) {
 		if resp.StatusCode != fn.FortiGateReturnSuccess {
 			return nil, fmt.Errorf("Error from FortiGate, GET Status:%s StatusCode:%d", resp.Status, resp.StatusCode)
 		}
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		return body, err
 	}
 	return nil, err
@@ -150,7 +149,7 @@ func (f *mockRestClient) FortiGateRestPut(url string, payload []uint8) ([]uint8,
 		if resp.StatusCode != fn.FortiGateReturnSuccess {
 			return nil, fmt.Errorf("Error from FortiGate, PUT Status:%s StatusCode:%d", resp.Status, resp.StatusCode)
 		}
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		return body, err
 	}
 	return nil, err
@@ -221,7 +220,7 @@ var _ = Describe("Test Fortigate Address object", func() {
 			httpmock.RegisterResponder("POST", "https://fortigate.dev/api/v2/cmdb/firewall/address/testAddr-1?access_token=test",
 				func(req *http.Request) (*http.Response, error) {
 					r := req.Body
-					body, err := ioutil.ReadAll(r)
+					body, err := io.ReadAll(r)
 					if err != nil {
 						return httpmock.NewStringResponse(500, err.Error()), nil
 					}
@@ -340,7 +339,7 @@ var _ = Describe("Test Fortigate Address Group Object", func() {
 			httpmock.RegisterResponder("POST", "https://fortigate.dev/api/v2/cmdb/firewall/addrgrp/testAddrGrp-1?access_token=test",
 				func(req *http.Request) (*http.Response, error) {
 					r := req.Body
-					body, err := ioutil.ReadAll(r)
+					body, err := io.ReadAll(r)
 					if err != nil {
 						return httpmock.NewStringResponse(500, err.Error()), nil
 					}

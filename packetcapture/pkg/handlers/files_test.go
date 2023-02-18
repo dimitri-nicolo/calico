@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -45,7 +44,7 @@ var _ = Describe("FilesDownload", func() {
 
 	It("should archive a pcap file with only its header", func() {
 		// Create a temp directory to store all the files needed for the test
-		var tempDir, err = ioutil.TempDir("/tmp", "test")
+		var tempDir, err = os.MkdirTemp("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
@@ -78,7 +77,7 @@ var _ = Describe("FilesDownload", func() {
 		Expect(recorder.Header().Get("Content-Disposition")).To(Equal("attachment; filename=files.zip"))
 		Expect(recorder.Header().Get("Content-Length")).NotTo(Equal(""))
 
-		archive, err := ioutil.TempFile(tempDir, "result.*.zip")
+		archive, err := os.CreateTemp(tempDir, "result.*.zip")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Write the body to file
@@ -89,7 +88,7 @@ var _ = Describe("FilesDownload", func() {
 
 	It("should download files from a single node", func() {
 		// Create a temp directory to store all the files needed for the test
-		var tempDir, err = ioutil.TempDir("/tmp", "test")
+		var tempDir, err = os.MkdirTemp("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
@@ -122,7 +121,7 @@ var _ = Describe("FilesDownload", func() {
 		Expect(recorder.Header().Get("Content-Disposition")).To(Equal("attachment; filename=files.zip"))
 		Expect(recorder.Header().Get("Content-Length")).NotTo(Equal(""))
 
-		archive, err := ioutil.TempFile(tempDir, "result.*.zip")
+		archive, err := os.CreateTemp(tempDir, "result.*.zip")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Write the body to file
@@ -133,7 +132,7 @@ var _ = Describe("FilesDownload", func() {
 
 	It("should download files from 0 files", func() {
 		// Create a temp directory to store all the files needed for the test
-		var tempDir, err = ioutil.TempDir("/tmp", "test")
+		var tempDir, err = os.MkdirTemp("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
@@ -170,7 +169,7 @@ var _ = Describe("FilesDownload", func() {
 
 	It("should download files from multiple nodes", func() {
 		// Create a temp directory to store all the files needed for the test
-		var tempDir, err = ioutil.TempDir("/tmp", "test")
+		var tempDir, err = os.MkdirTemp("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
@@ -221,7 +220,7 @@ var _ = Describe("FilesDownload", func() {
 		Expect(recorder.Header().Get("Content-Disposition")).To(Equal("attachment; filename=files.zip"))
 		Expect(recorder.Header().Get("Content-Length")).NotTo(Equal(""))
 
-		archive, err := ioutil.TempFile(tempDir, "result.*.zip")
+		archive, err := os.CreateTemp(tempDir, "result.*.zip")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Write the body to file
@@ -239,7 +238,7 @@ var _ = Describe("FilesDownload", func() {
 
 	It("should downloads files from multiple nodes and ignore errors in between", func() {
 		// Create a temp directory to store all the files needed for the test
-		var tempDir, err = ioutil.TempDir("/tmp", "test")
+		var tempDir, err = os.MkdirTemp("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
@@ -287,7 +286,7 @@ var _ = Describe("FilesDownload", func() {
 		Expect(recorder.Header().Get("Content-Disposition")).To(Equal("attachment; filename=files.zip"))
 		Expect(recorder.Header().Get("Content-Length")).NotTo(Equal(""))
 
-		archive, err := ioutil.TempFile(tempDir, "result.*.zip")
+		archive, err := os.CreateTemp(tempDir, "result.*.zip")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Write the body to file
@@ -372,7 +371,7 @@ var _ = Describe("FilesDownload", func() {
 
 	It("should ignore tar output removing leading /' from member names", func() {
 		// Create a temp directory to store all the files needed for the test
-		var tempDir, err = ioutil.TempDir("/tmp", "test")
+		var tempDir, err = os.MkdirTemp("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
@@ -409,7 +408,7 @@ var _ = Describe("FilesDownload", func() {
 		Expect(recorder.Header().Get("Content-Disposition")).To(Equal("attachment; filename=files.zip"))
 		Expect(recorder.Header().Get("Content-Length")).NotTo(Equal(""))
 
-		archive, err := ioutil.TempFile(tempDir, "result.*.zip")
+		archive, err := os.CreateTemp(tempDir, "result.*.zip")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Write the body to file
@@ -420,7 +419,7 @@ var _ = Describe("FilesDownload", func() {
 
 	It("should ignore tar output No such file or directory", func() {
 		// Create a temp directory to store all the files needed for the test
-		var tempDir, err = ioutil.TempDir("/tmp", "test")
+		var tempDir, err = os.MkdirTemp("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
@@ -768,7 +767,7 @@ func createTarArchive(dir string, files []string, data []byte) *os.File {
 	defer GinkgoRecover()
 
 	// Create the file for the tar archive
-	var tarFile, err = ioutil.TempFile(dir, "archive.*.tar")
+	var tarFile, err = os.CreateTemp(dir, "archive.*.tar")
 	Expect(err).NotTo(HaveOccurred())
 
 	// Archive the file to the tar archive
@@ -776,7 +775,7 @@ func createTarArchive(dir string, files []string, data []byte) *os.File {
 
 	for _, file := range files {
 		// Create a temporary file with some random data in it
-		file, err := ioutil.TempFile(dir, fmt.Sprintf("%s.*.txt", file))
+		file, err := os.CreateTemp(dir, fmt.Sprintf("%s.*.txt", file))
 		Expect(err).NotTo(HaveOccurred())
 		_, err = file.Write(data)
 		Expect(err).NotTo(HaveOccurred())

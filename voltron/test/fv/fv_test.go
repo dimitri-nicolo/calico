@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -80,12 +79,12 @@ func (c *testClient) doRequest(clusterID string) (string, error) {
 	Expect(err).NotTo(HaveOccurred())
 
 	if resp.StatusCode != 200 {
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		Expect(err).NotTo(HaveOccurred())
 		return "", errors.Errorf("error status: %d, body: %s", resp.StatusCode, body)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	Expect(err).NotTo(HaveOccurred())
 
 	return string(body), nil
@@ -101,7 +100,7 @@ func (c *testClient) doHTTPRequest(clusterID string) (string, error) {
 		return "", errors.Errorf("error status: %d", resp.StatusCode)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	Expect(err).NotTo(HaveOccurred())
 
 	return string(body), nil

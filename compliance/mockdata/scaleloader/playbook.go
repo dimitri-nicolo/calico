@@ -2,7 +2,6 @@ package scaleloader
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path"
@@ -70,7 +69,7 @@ func generatePlaybookInstance(playbookPath string, pc PlaybookCfg) (*Playbook, e
 
 	scaledPath := path.Join(playbookPath, "scaled")
 	if _, err := os.Stat(scaledPath); err == nil {
-		items, err := ioutil.ReadDir(scaledPath)
+		items, err := os.ReadDir(scaledPath)
 		if err != nil {
 			return nil, fmt.Errorf("Failed reading scaled path %s", scaledPath)
 		}
@@ -95,7 +94,7 @@ func generatePlaybookInstance(playbookPath string, pc PlaybookCfg) (*Playbook, e
 	}
 	nonscaledPath := path.Join(playbookPath, "nonscaled")
 	if _, err := os.Stat(nonscaledPath); err == nil {
-		items, err := ioutil.ReadDir(nonscaledPath)
+		items, err := os.ReadDir(nonscaledPath)
 		if err != nil {
 			return nil, fmt.Errorf("Failed reading nonscaled path %s", nonscaledPath)
 		}
@@ -119,7 +118,7 @@ func generatePlaybookInstance(playbookPath string, pc PlaybookCfg) (*Playbook, e
 }
 
 func readPlays(log *logrus.Entry, scaleName string, playPath string) (init []Step, steps []Step, err error) {
-	files, err := ioutil.ReadDir(playPath)
+	files, err := os.ReadDir(playPath)
 	if err != nil {
 		log.Fatal(err)
 	}

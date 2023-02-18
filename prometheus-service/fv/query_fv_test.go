@@ -7,10 +7,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"io/ioutil"
-
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -36,7 +35,7 @@ var _ = Describe("Prometheus Proxy Test", func() {
 	var mockPrometheusService *http.Server
 	var client *http.Client
 	BeforeEach(func() {
-		caCert, err := ioutil.ReadFile(caCert)
+		caCert, err := os.ReadFile(caCert)
 		if err != nil {
 			log.Fatal(err)
 		}

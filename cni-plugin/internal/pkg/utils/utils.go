@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -82,7 +81,7 @@ func nodenameFromFile(filename string) string {
 	if filename == "" {
 		filename = "/var/lib/calico/nodename"
 	}
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// File doesn't exist, return empty string.
@@ -107,7 +106,7 @@ func DetermineAWSSubnets(filename string) ([]string, error) {
 	if filename == "" {
 		filename = "/var/lib/calico/aws-subnets"
 	}
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		logrus.Errorf("Failed to read AWS subnets file %q: %s; Felix should create the file. "+
 			"Is Felix running and configured to enable AWS subnet support?", filename, err.Error())
@@ -127,7 +126,7 @@ func MTUFromFile(filename string) (int, error) {
 	if filename == "" {
 		filename = "/var/lib/calico/mtu"
 	}
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// File doesn't exist, return zero.
@@ -310,22 +309,22 @@ func DeleteIPAM(conf types.NetConf, args *skel.CmdArgs, logger *logrus.Entry) er
 // unmarshaling it into a struct.  The structure of the JSON is as follows; we support replacing usePodCidr in
 // either the "ipam" dict or its nested ranges section:
 //
-//    {
-//      "cniVersion": "%s",
-//      ...
-//      "ipam": {
-//        "type": "host-local",
-//        "subnet": "usePodCidr",
-//        "ranges": [
-//          [
-//             {
-//               "subnet": "usePodCidr"
-//             }
-//          ]
-//        ]
-//      }
-//      ...
-//    }
+//	{
+//	  "cniVersion": "%s",
+//	  ...
+//	  "ipam": {
+//	    "type": "host-local",
+//	    "subnet": "usePodCidr",
+//	    "ranges": [
+//	      [
+//	         {
+//	           "subnet": "usePodCidr"
+//	         }
+//	      ]
+//	    ]
+//	  }
+//	  ...
+//	}
 func ReplaceHostLocalIPAMPodCIDRs(logger *logrus.Entry, stdinData map[string]interface{}, getPodCIDRs func() (string, string, error)) error {
 	ipamData, ok := stdinData["ipam"].(map[string]interface{})
 	if !ok {

@@ -15,7 +15,7 @@ package testutils
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 
@@ -80,7 +80,7 @@ func E2eDatastoreDescribe(description string, datastores DatastoreType, body fun
 
 // GetK8sInlineConfig returns a CalicoAPIConfig with the kubeconfig inline.
 func GetK8sInlineConfig() apiconfig.CalicoAPIConfig {
-	kc, err := ioutil.ReadFile(kubeconfig)
+	kc, err := os.ReadFile(kubeconfig)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return apiconfig.CalicoAPIConfig{
 		Spec: apiconfig.CalicoAPIConfigSpec{

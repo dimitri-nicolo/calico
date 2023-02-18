@@ -11,7 +11,6 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -83,18 +82,28 @@ func CheckRulesSetDirectoryExists() error {
 func ExtractRulesSetFilenames() error {
 
 	// Read all core rule set file names from rules directory.
-	items, err := ioutil.ReadDir(rulesetDirectory)
+	items, err := os.ReadDir(rulesetDirectory)
 	if err != nil {
 		return err
 	}
 
+	var itemInfos []os.FileInfo
+	for _, i := range items {
+		info, err2 := i.Info()
+		if err2 == nil {
+			// Most likely the file no longer exists.
+			log.Debugf("could not get file info for rule: %v", err2)
+		} else {
+			itemInfos = append(itemInfos, info)
+		}
+	}
 	// Sort files descending to ensure lower cased files like crs-setup.conf are loaded first.
 	// This is a requirement for Core Rules Set and REQUEST-901-INITIALIZATION.conf bootstrap.
-	sortFileNameDescend(items)
+	sortFileNameDescend(itemInfos)
 
 	count := 1
 	filenames = nil
-	for _, item := range items {
+	for _, item := range itemInfos {
 
 		// Ignore files that link to the parent directory.
 		filename := item.Name()

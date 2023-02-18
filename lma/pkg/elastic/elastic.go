@@ -8,9 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"strconv"
 	"time"
@@ -110,7 +110,7 @@ func NewFromConfig(cfg *Config) (Client, error) {
 	h := &http.Client{}
 	if cfg.ParsedElasticURL.Scheme == "https" {
 		if cfg.ElasticCA != "" {
-			cert, err := ioutil.ReadFile(cfg.ElasticCA)
+			cert, err := os.ReadFile(cfg.ElasticCA)
 			if err != nil {
 				return nil, err
 			}

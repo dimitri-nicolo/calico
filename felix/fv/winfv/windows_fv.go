@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,7 +37,7 @@ type WinFV struct {
 
 func NewWinFV(rootDir, flowLogDir, dnsCacheFile string) (*WinFV, error) {
 	configFile := filepath.Join(rootDir, "config.ps1")
-	b, err := ioutil.ReadFile(configFile) // just pass the file name
+	b, err := os.ReadFile(configFile) // just pass the file name
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +80,7 @@ func (f *WinFV) RestartFelix() {
 }
 
 func (f *WinFV) RestoreConfig() error {
-	err := ioutil.WriteFile(f.configFile, []byte(f.originalConfig), 0644)
+	err := os.WriteFile(f.configFile, []byte(f.originalConfig), 0644)
 	if err != nil {
 		return err
 	}
@@ -107,7 +106,7 @@ func (f *WinFV) AddConfigItems(configs map[string]interface{}) error {
 		items = fmt.Sprintf("%s\n%s\n", items, entry)
 	}
 
-	err := ioutil.WriteFile(f.configFile, []byte(items), 0644)
+	err := os.WriteFile(f.configFile, []byte(items), 0644)
 	if err != nil {
 		return err
 	}
@@ -145,7 +144,7 @@ func (f *WinFV) ReadDnsCacheFile() ([]JsonMappingV1, error) {
 		}
 		err = json.Unmarshal(s.Bytes(), &m)
 		if err != nil {
-			all, _ := ioutil.ReadFile(f.dnsCacheFile)
+			all, _ := os.ReadFile(f.dnsCacheFile)
 			return result, fmt.Errorf("Error unmarshaling dns log: %v\nLog:\n%s\nFile:\n%s", err, string(s.Bytes()), string(all))
 		}
 		result = append(result, m)

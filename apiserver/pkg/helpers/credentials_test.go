@@ -3,7 +3,6 @@ package helpers
 
 import (
 	"crypto/x509"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -173,7 +172,7 @@ func TestReadCredentials(t *testing.T) {
 }
 
 func createTemp(pattern string, data string) (*os.File, error) {
-	file, err := ioutil.TempFile("/tmp", pattern)
+	file, err := os.CreateTemp("/tmp", pattern)
 	if err != nil {
 		return file, err
 	}

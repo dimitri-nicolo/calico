@@ -5,7 +5,7 @@ package server
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"time"
 
@@ -37,11 +37,11 @@ func WithExternalCredFiles(certFile, keyFile string) Option {
 	return func(s *Server) error {
 		var err error
 
-		certPEMBlock, err := ioutil.ReadFile(certFile)
+		certPEMBlock, err := os.ReadFile(certFile)
 		if err != nil {
 			return err
 		}
-		keyPEMBlock, err := ioutil.ReadFile(keyFile)
+		keyPEMBlock, err := os.ReadFile(keyFile)
 		if err != nil {
 			return err
 		}
@@ -64,11 +64,11 @@ func WithExternalCreds(certBytes []byte, keyBytes []byte) Option {
 // connections within the management cluster.
 func WithInternalCredFiles(certFile, keyFile string) Option {
 	return func(s *Server) error {
-		certPEMBlock, err := ioutil.ReadFile(certFile)
+		certPEMBlock, err := os.ReadFile(certFile)
 		if err != nil {
 			return err
 		}
-		keyPEMBlock, err := ioutil.ReadFile(keyFile)
+		keyPEMBlock, err := os.ReadFile(keyFile)
 		if err != nil {
 			return err
 		}

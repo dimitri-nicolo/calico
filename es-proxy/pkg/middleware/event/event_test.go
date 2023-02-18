@@ -6,7 +6,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 
@@ -78,16 +78,16 @@ var _ = Describe("Event middleware tests", func() {
 				Expect(req.URL.Path).To(Equal("/_bulk"))
 				Expect(req.URL.Query().Get("refresh")).To(Equal("wait_for"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				// Elastic bulk request NDJSON
 				Expect(body).To(Equal([]byte(eventBulkDeleteRequest)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(eventBulkDeleteResponse))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(eventBulkDeleteResponse))),
 			}, nil)
 
 			// mock lma es client
@@ -148,16 +148,16 @@ var _ = Describe("Event middleware tests", func() {
 				Expect(req.URL.Path).To(Equal("/_bulk"))
 				Expect(req.URL.Query().Get("refresh")).To(Equal("wait_for"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				// Elastic bulk request NDJSON
 				Expect(body).To(Equal([]byte(eventBulkDismissRequest)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(eventBulkDismissResponse))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(eventBulkDismissResponse))),
 			}, nil)
 
 			// mock lma es client
@@ -218,16 +218,16 @@ var _ = Describe("Event middleware tests", func() {
 				Expect(req.URL.Path).To(Equal("/_bulk"))
 				Expect(req.URL.Query().Get("refresh")).To(Equal("wait_for"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				// Elastic bulk request NDJSON
 				Expect(body).To(Equal([]byte(eventBulkMixedRequest)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(eventBulkMixedResponse))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(eventBulkMixedResponse))),
 			}, nil)
 
 			// mock lma es client

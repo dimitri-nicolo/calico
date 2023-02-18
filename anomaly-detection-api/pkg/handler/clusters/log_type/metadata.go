@@ -3,7 +3,7 @@ package log_type
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -60,7 +60,7 @@ func (l *LogTypeEndpointHandler) HandleLogTypeMetaData(w http.ResponseWriter, re
 	case http.MethodPut:
 		clustersLogTypePath := strings.TrimSuffix(req.URL.Path, MetadataEndpointPath)
 
-		b, err := ioutil.ReadAll(req.Body)
+		b, err := io.ReadAll(req.Body)
 		defer req.Body.Close()
 
 		if err != nil {

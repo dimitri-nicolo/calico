@@ -5,7 +5,6 @@ package puller
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -150,7 +149,7 @@ func TestQuery(t *testing.T) {
 	client := &http.Client{}
 	resp := &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(strings.NewReader(strings.Join([]string(append(input, "# comment", "", " ", "junk", "junk/")), "\n"))),
+		Body:       io.NopCloser(strings.NewReader(strings.Join([]string(append(input, "# comment", "", " ", "junk", "junk/")), "\n"))),
 	}
 	client.Transport = &util.MockRoundTripper{
 		Response: resp,
