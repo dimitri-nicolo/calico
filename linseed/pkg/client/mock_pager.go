@@ -8,11 +8,11 @@ import (
 
 // MockListPager is useful for tests in order to return predetermined responses.
 // Pass in a custom ListFunc to return objects of type T each time it is called.
-func NewMockListPager[T any](p v1.Params, f ListFunc[T]) ListPager[T] {
+func NewMockListPager[T any](p v1.Params, f ListFunc[T], opts ...ListPagerOption[T]) ListPager[T] {
 	return &mockListPager[T]{
 		params:    p,
 		listFn:    f,
-		realPager: NewListPager[T](p),
+		realPager: NewListPager(p, opts...),
 	}
 }
 

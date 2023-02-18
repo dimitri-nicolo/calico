@@ -2,6 +2,7 @@ package pip
 
 import (
 	"context"
+	"time"
 
 	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 
@@ -12,7 +13,7 @@ import (
 
 type PIP interface {
 	// This is the main entrypoint into PIP.
-	GetFlows(ctx context.Context, params *PolicyImpactParams, flowFilter pelastic.FlowFilter) (*FlowLogResults, error)
+	GetFlows(ctx context.Context, pager client.ListPager[lapi.L3Flow], params *PolicyImpactParams, flowFilter pelastic.FlowFilter) (*FlowLogResults, error)
 
 	// The following public interface methods are here more for convenience than anything else. The PIPHandler
 	// should just use GetFlows().
@@ -29,9 +30,10 @@ type PIP interface {
 }
 
 type PolicyImpactParams struct {
-	FlowParams      *lapi.L3FlowParams `json:"-"`
-	ResourceActions []ResourceChange   `json:"resourceActions"`
-	ClusterName     string             `json:"-"`
-	Limit           int32              `json:"-"`
-	ImpactedOnly    bool               `json:"-"`
+	FromTime        *time.Time       `json:"-"`
+	ToTime          *time.Time       `json:"-"`
+	ResourceActions []ResourceChange `json:"resourceActions"`
+	ClusterName     string           `json:"-"`
+	Limit           int32            `json:"-"`
+	ImpactedOnly    bool             `json:"-"`
 }

@@ -68,6 +68,16 @@ type flowBackend struct {
 	aggNested        []lmaelastic.AggNestedTermInfo
 }
 
+type BucketConverter interface {
+	BaseQuery() *lmaelastic.CompositeAggregationQuery
+	ConvertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) *v1.L3Flow
+}
+
+func NewBucketConverter() BucketConverter {
+	fb := NewFlowBackend(nil)
+	return fb.(*flowBackend)
+}
+
 func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
 	// These are the keys which define a flow in ES, and will be used to create buckets in the ES result.
 	compositeSources := []lmaelastic.AggCompositeSourceInfo{
@@ -164,6 +174,18 @@ func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
 	}
 }
 
+func (b *flowBackend) BaseQuery() *lmaelastic.CompositeAggregationQuery {
+	return &lmaelastic.CompositeAggregationQuery{
+		Name:                    "buckets",
+		AggCompositeSourceInfos: b.compositeSources,
+		AggSumInfos:             b.aggSums,
+		AggMaxInfos:             b.aggMaxs,
+		AggMinInfos:             b.aggMins,
+		AggMeanInfos:            b.aggMeans,
+		AggNestedTermInfos:      b.aggNested,
+	}
+}
+
 // List returns all flows which match the given options.
 func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) (*v1.List[v1.L3Flow], error) {
 	log := bapi.ContextLogger(i)
@@ -173,30 +195,22 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 	}
 
 	// Build the aggregation request.
-	query := &lmaelastic.CompositeAggregationQuery{
-		DocumentIndex:           b.index(i),
-		Query:                   b.buildQuery(i, opts),
-		Name:                    "buckets",
-		AggCompositeSourceInfos: b.compositeSources,
-		AggSumInfos:             b.aggSums,
-		AggMaxInfos:             b.aggMaxs,
-		AggMinInfos:             b.aggMins,
-		AggMeanInfos:            b.aggMeans,
-		AggNestedTermInfos:      b.aggNested,
-		MaxBucketsPerQuery:      opts.GetMaxResults(),
-	}
+	query := b.BaseQuery()
+	query.Query = b.buildQuery(i, opts)
+	query.DocumentIndex = b.index(i)
+	query.MaxBucketsPerQuery = opts.GetMaxResults()
 	log.Debugf("Listing flows from index %s", query.DocumentIndex)
 
 	// Perform the request.
-	page, key, err := lmaelastic.PagedSearch(ctx, b.lmaclient, query, log, b.convertBucket, opts.AfterKey)
+	page, key, err := lmaelastic.PagedSearch(ctx, b.lmaclient, query, log, b.ConvertBucket, opts.AfterKey)
 	return &v1.List[v1.L3Flow]{
 		Items:    page,
 		AfterKey: key,
 	}, err
 }
 
-// convertBucket turns a composite aggregation bucket into an L3Flow.
-func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) *v1.L3Flow {
+// ConvertBucket turns a composite aggregation bucket into an L3Flow.
+func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) *v1.L3Flow {
 	key := bucket.CompositeAggregationKey
 
 	// Build the flow, starting with the key.

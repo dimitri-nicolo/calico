@@ -466,10 +466,10 @@ func bucketFromFlow(flow *lapi.L3Flow) *elastic.CompositeAggregationBucket {
 	bucket.CompositeAggregationKey = []elastic.CompositeAggregationSourceValue{
 		// Order matters!
 		{Name: "source_type", Value: string(flow.Key.Source.Type)},
-		{Name: "source_namespace", Value: flow.Key.Source.Namespace},
+		{Name: "source_namespace", Value: elastic.EmptyToDash(flow.Key.Source.Namespace)},
 		{Name: "source_name", Value: flow.Key.Source.AggregatedName},
 		{Name: "dest_type", Value: string(flow.Key.Destination.Type)},
-		{Name: "dest_namespace", Value: flow.Key.Destination.Namespace},
+		{Name: "dest_namespace", Value: elastic.EmptyToDash(flow.Key.Destination.Namespace)},
 		{Name: "dest_name", Value: flow.Key.Destination.AggregatedName},
 		{Name: "proto", Value: string(flow.Key.Protocol)},
 		{Name: "source_ip", Value: ""},
@@ -496,16 +496,13 @@ func bucketFromFlow(flow *lapi.L3Flow) *elastic.CompositeAggregationBucket {
 	bucket.AggregatedSums["sum_http_requests_denied_in"] = 0
 	bucket.AggregatedTerms = map[string]*elastic.AggregatedTerm{
 		"dest_labels": {
-			DocCount: 1,
-			Buckets:  map[interface{}]int64{},
+			Buckets: map[interface{}]int64{},
 		},
 		"source_labels": {
-			DocCount: 1,
-			Buckets:  map[interface{}]int64{},
+			Buckets: map[interface{}]int64{},
 		},
 		"policies": {
-			DocCount: 1,
-			Buckets:  map[interface{}]int64{},
+			Buckets: map[interface{}]int64{},
 		},
 	}
 
@@ -514,6 +511,9 @@ func bucketFromFlow(flow *lapi.L3Flow) *elastic.CompositeAggregationBucket {
 		bucket.DocCount = flow.LogStats.FlowLogCount
 		bucket.AggregatedSums["sum_num_flows_started"] = float64(stats.Started)
 		bucket.AggregatedSums["sum_num_flows_completed"] = float64(stats.Completed)
+		for _, term := range bucket.AggregatedTerms {
+			term.DocCount = bucket.DocCount
+		}
 	}
 	if stats := flow.TrafficStats; stats != nil {
 		bucket.AggregatedSums["sum_packets_in"] = float64(stats.PacketsIn)

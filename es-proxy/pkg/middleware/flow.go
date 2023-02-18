@@ -412,9 +412,10 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 	}
 	totalHits := int64(0)
 	for _, item := range flows.Items {
-		totalHits += item.LogStats.FlowLogCount
-
 		if item.LogStats != nil {
+			// Increment stats.
+			totalHits += item.LogStats.FlowLogCount
+
 			// Build labels into the response.
 			response.MergeSourceLabels(item.SourceLabels)
 			response.MergeDestLabels(item.DestinationLabels)

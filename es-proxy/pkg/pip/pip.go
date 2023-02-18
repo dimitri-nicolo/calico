@@ -46,7 +46,7 @@ type FlowLogResults struct {
 
 // GetFlows returns the set of PIP-processed flows based on the request parameters in `params`. The map is
 // JSON serializable
-func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams, rbacHelper pelastic.FlowFilter) (*FlowLogResults, error) {
+func (p *pip) GetFlows(ctxIn context.Context, pager client.ListPager[lapi.L3Flow], params *PolicyImpactParams, rbacHelper pelastic.FlowFilter) (*FlowLogResults, error) {
 	// Create a context with timeout to ensure we don't block for too long with this calculation.
 	ctx, cancel := context.WithTimeout(ctxIn, p.cfg.MaxCalculationTime)
 	defer cancel() // Releases timer resources if the operation completes before the timeout.
@@ -56,9 +56,6 @@ func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams, rbacHe
 	if err != nil {
 		return nil, err
 	}
-
-	// Create the list pager.
-	pager := client.NewListPager[lapi.L3Flow](params.FlowParams)
 
 	// Enumerate the aggregation buckets until we have all we need. The channel will be automatically closed.
 	var before []*pelastic.CompositeAggregationBucket

@@ -261,6 +261,10 @@ func (q *CompositeAggregationQuery) getMaxBuckets() int {
 //	 }
 //	}
 func (q *CompositeAggregationQuery) ConvertBucket(item *elastic.AggregationBucketCompositeItem) (*CompositeAggregationBucket, error) {
+	return q.ConvertBucketHelper(item, false)
+}
+
+func (q *CompositeAggregationQuery) ConvertBucketHelper(item *elastic.AggregationBucketCompositeItem, allowMissing bool) (*CompositeAggregationBucket, error) {
 	// Extract the data from the response.
 	cab := NewCompositeAggregationBucket(item.DocCount)
 
@@ -271,6 +275,10 @@ func (q *CompositeAggregationQuery) ConvertBucket(item *elastic.AggregationBucke
 		name := q.AggCompositeSourceInfos[i].Name
 		val, ok := item.Key[name]
 		if !ok {
+			if allowMissing {
+				cab.CompositeAggregationKey = append(cab.CompositeAggregationKey, CompositeAggregationSourceValue{Name: name, Value: ""})
+				continue
+			}
 			log.Errorf("Error fetching composite results: %s", name)
 			return nil, fmt.Errorf("error fetching composite results: %s missing from response", name)
 		}

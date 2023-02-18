@@ -609,7 +609,7 @@ var _ = Describe("FlowLog middleware", func() {
 					Expect(json.Unmarshal(respBody, &flResponse))
 
 					Expect(flResponse).Should(Equal(FlowResponse{
-						Count:           1,
+						Count:           4,
 						SrcLabels:       FlowResponseLabels{},
 						DstLabels:       FlowResponseLabels{},
 						SrcPolicyReport: expectedSrcPolicyReport,
@@ -819,7 +819,7 @@ var _ = Describe("FlowLog middleware", func() {
 					Expect(json.Unmarshal(respBody, &flResponse))
 
 					Expect(flResponse).Should(Equal(FlowResponse{
-						Count:           1,
+						Count:           4,
 						SrcLabels:       FlowResponseLabels{},
 						DstLabels:       FlowResponseLabels{},
 						SrcPolicyReport: expectedSrcPolicyReport,

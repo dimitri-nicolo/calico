@@ -19,9 +19,22 @@ import (
 // pager := NewListPager[v1.L3Flow](&v1.L3FlowParams{})
 // getPage := pager.PageFunc(listFunc)
 // results, more, err := getPage()
-func NewListPager[T any](p v1.Params) ListPager[T] {
-	return &listPager[T]{
+func NewListPager[T any](p v1.Params, opts ...ListPagerOption[T]) ListPager[T] {
+	pager := &listPager[T]{
 		params: p,
+	}
+	for _, opt := range opts {
+		opt(pager)
+	}
+	return pager
+}
+
+type ListPagerOption[T any] func(*listPager[T])
+
+// WithMaxResults limits the total number of results returned by the pager.
+func WithMaxResults[T any](r int) ListPagerOption[T] {
+	return func(p *listPager[T]) {
+		p.maxResults = r
 	}
 }
 
@@ -40,7 +53,8 @@ type ListFunc[T any] func(context.Context, v1.Params) (*v1.List[T], error)
 type PageFunc[T any] func() (*v1.List[T], bool, error)
 
 type listPager[T any] struct {
-	params v1.Params
+	params     v1.Params
+	maxResults int
 }
 
 func (p *listPager[T]) PageFunc(f ListFunc[T]) PageFunc[T] {
@@ -72,8 +86,10 @@ func (p *listPager[T]) Stream(ctx context.Context, f ListFunc[T]) (<-chan v1.Lis
 	// more pages.
 	results := make(chan v1.List[T], 2)
 
-	// We exit the gorouting on the first sign of error, so no need for buffering.
-	errors := make(chan error)
+	// We exit the gorouting on the first sign of error.
+	errors := make(chan error, 1)
+
+	sent := 0
 
 	// Start a go routine which performs the paging and populates the
 	// above channels with results.
@@ -103,10 +119,19 @@ func (p *listPager[T]) Stream(ctx context.Context, f ListFunc[T]) (<-chan v1.Lis
 					return
 				} else if page != nil {
 					results <- *page
+					sent += len(page.Items)
 				}
 
 				if !more {
 					return
+				}
+				if p.maxResults > 0 {
+					// Result limiting enabled.
+					if sent+p.params.GetMaxResults() > p.maxResults {
+						// Another full page would put us over the limit, so return now.
+						logrus.Debugf("stream sent max results, terminating")
+						return
+					}
 				}
 			}
 		}

@@ -172,11 +172,14 @@ func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, lscl
 
 		var response interface{}
 		var stat int
+		flowParams := buildFlowParams(params)
+		opts := []client.ListPagerOption[lapi.L3Flow]{client.WithMaxResults[lapi.L3Flow](int(params.Limit))}
+		pager := client.NewListPager(flowParams, opts...)
 		if len(params.PolicyPreviews) == 0 {
-			response, stat, err = getFlowLogsFromElastic(ctx, flowFilter, params, lsclient)
+			response, stat, err = getFlowLogsFromElastic(ctx, flowFilter, params.Unprotected, pager, lsclient, params.ClusterName)
 		} else {
 			rbacHelper := NewPolicyImpactRbacHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
-			response, stat, err = getPIPFlowLogsFromElastic(flowFilter, params, pip, rbacHelper)
+			response, stat, err = getPIPFlowLogsFromElastic(ctx, pager, flowFilter, params, pip, rbacHelper)
 		}
 
 		if err != nil {
@@ -314,7 +317,13 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 
 func buildFlowParams(params *FlowLogsParams) *lapi.L3FlowParams {
 	fp := lapi.L3FlowParams{}
+
+	// We will limit the entire response later, but
+	// don't increase the page size above 1000.
 	fp.MaxResults = int(params.Limit)
+	if params.Limit > 1000 {
+		fp.MaxResults = 1000
+	}
 	if len(params.Actions) > 0 {
 		fp.Actions = []lapi.FlowAction{}
 		for _, a := range params.Actions {
@@ -392,29 +401,9 @@ func buildTermsFilter(terms []string, termsKey string) *elastic.TermsQuery {
 	return elastic.NewTermsQuery(termsKey, termValues...)
 }
 
-// TODO CASEY
-// This is a temporary structure to mimic the response we used to receive from
-// elasticsearch. Ultimately, we should update the UI to expect the new format, but for now
-// we will just convert the Linseed results into a format the UI understands.
-// Alternatively, maybe we should adjust the Linseed resposne format so that it matches
-// what a flow used to look like from ES.
-type FlowLogResponse struct {
-	Took         int64        `json:"took"`
-	TimedOut     bool         `json:"timed_out"`
-	Aggregations Aggregations `json:"aggregations"`
-}
-
-type Aggregations struct {
-	FlogBuckets FlowBuckets `json:"flog_buckets"`
-}
-
-type FlowBuckets struct {
-	Buckets []Bucket `json:"buckets"`
-}
-
-type Bucket struct {
+type bucket struct {
 	DocCount                 int64            `json:"doc_count"`
-	Key                      Key              `json:"key"`
+	Key                      key              `json:"key"`
 	SumBytesIn               map[string]int64 `json:"sum_bytes_in"`
 	SumBytesOut              map[string]int64 `json:"sum_bytes_out"`
 	SumHttpRequestsAllowedIn map[string]int64 `json:"sum_http_requests_allowed_in"`
@@ -425,7 +414,7 @@ type Bucket struct {
 	SumPacketsOut            map[string]int64 `json:"sum_packets_out"`
 }
 
-type Key struct {
+type key struct {
 	Action          string `json:"action"`
 	DestName        string `json:"dest_name"`
 	DestNamespace   string `json:"dest_namespace"`
@@ -436,64 +425,85 @@ type Key struct {
 	SourceType      string `json:"source_type"`
 }
 
-func convertToBuckets(items []lapi.L3Flow, unprotectedOnly bool) []Bucket {
-	buckets := []Bucket{}
+// This is temporary logic to mimic the response we used to receive from
+// elasticsearch. Ultimately, we should update the UI to expect the new format, but for now
+// we will just convert the Linseed results into a format the UI understands.
+// Alternatively, maybe we should adjust the Linseed resposne format so that it matches
+// what a flow used to look like from ES.
+func convertToBuckets(items []lapi.L3Flow, unprotectedOnly bool, filter lmaelastic.FlowFilter) []bucket {
+	buckets := []bucket{}
 	for _, f := range items {
-		// If this is an unprotected query, filter out any flows that have a policy.
-		// We might want to add this as a query parameter to Linseed, but for now we can
-		// filter them here since we need to iterate for conversion anyway.
-		hasPolicy := false
-		for _, p := range f.Policies {
-			if !p.IsProfile {
-				hasPolicy = true
-				break
+		if unprotectedOnly {
+			// If this is an unprotected query, filter out any flows that have a policy.
+			// We might want to add this as a query parameter to Linseed, but for now we can
+			// filter them here since we need to iterate for conversion anyway.
+			hasPolicy := false
+			for _, p := range f.Policies {
+				if !p.IsProfile {
+					hasPolicy = true
+					break
+				}
+			}
+			if hasPolicy {
+				continue
 			}
 		}
-		if hasPolicy {
+
+		// Check that this flow is allowed by the filter.
+		if include, err := filter.IncludeLinseedFlow(&f); err != nil {
+			log.WithError(err).Warn("Failed to check flow, skipping")
+			continue
+		} else if !include {
+			log.Debugf("Skipping flow: %#v", f)
 			continue
 		}
 
-		buckets = append(buckets, Bucket{
-			DocCount: f.LogStats.FlowLogCount,
-			Key: Key{
+		bucket := bucket{
+			Key: key{
 				Action:          string(f.Key.Action),
 				DestName:        f.Key.Destination.AggregatedName,
-				DestNamespace:   emptyToDash(f.Key.Destination.Namespace),
+				DestNamespace:   lmaelastic.EmptyToDash(f.Key.Destination.Namespace),
 				DestType:        string(f.Key.Destination.Type),
 				Reporter:        string(f.Key.Reporter),
 				SourceName:      f.Key.Source.AggregatedName,
-				SourceNamespace: emptyToDash(f.Key.Source.Namespace),
+				SourceNamespace: lmaelastic.EmptyToDash(f.Key.Source.Namespace),
 				SourceType:      string(f.Key.Source.Type),
 			},
-			SumBytesIn:               map[string]int64{"value": f.TrafficStats.BytesIn},
-			SumBytesOut:              map[string]int64{"value": f.TrafficStats.BytesOut},
-			SumHttpRequestsAllowedIn: map[string]int64{"value": f.HTTPStats.AllowedIn},
-			SumHttpRequestsDeniedIn:  map[string]int64{"value": f.HTTPStats.DeniedIn},
-			SumNumFlowsStarted:       map[string]int64{"value": f.LogStats.Started},
-			SumNumFlowsCompleted:     map[string]int64{"value": f.LogStats.Completed},
-			SumPacketsIn:             map[string]int64{"value": f.TrafficStats.PacketsIn},
-			SumPacketsOut:            map[string]int64{"value": f.TrafficStats.PacketsOut},
-		})
+		}
+		if f.TrafficStats != nil {
+			bucket.SumBytesIn = map[string]int64{"value": f.TrafficStats.BytesIn}
+			bucket.SumBytesOut = map[string]int64{"value": f.TrafficStats.BytesOut}
+			bucket.SumPacketsIn = map[string]int64{"value": f.TrafficStats.PacketsIn}
+			bucket.SumPacketsOut = map[string]int64{"value": f.TrafficStats.PacketsOut}
+		}
+		if f.HTTPStats != nil {
+			bucket.SumHttpRequestsAllowedIn = map[string]int64{"value": f.HTTPStats.AllowedIn}
+			bucket.SumHttpRequestsDeniedIn = map[string]int64{"value": f.HTTPStats.DeniedIn}
+
+		}
+		if f.LogStats != nil {
+			bucket.DocCount = f.LogStats.FlowLogCount
+			bucket.SumNumFlowsStarted = map[string]int64{"value": f.LogStats.Started}
+			bucket.SumNumFlowsCompleted = map[string]int64{"value": f.LogStats.Completed}
+		}
+		buckets = append(buckets, bucket)
 	}
 	return buckets
 }
 
-func emptyToDash(s string) string {
-	if s == "" {
-		return "-"
-	}
-	return s
-}
-
 // This method will take a look at the request parameters made to the /flowLogs endpoint and return the results.
-func getFlowLogsFromElastic(ctx context.Context, flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, lsclient client.Client) (interface{}, int, error) {
+func getFlowLogsFromElastic(
+	ctx context.Context,
+	filter lmaelastic.FlowFilter,
+	unprotected bool,
+	pager client.ListPager[lapi.L3Flow],
+	lsc client.Client,
+	cluster string,
+) (*lmaelastic.CompositeAggregationResults, int, error) {
 	start := time.Now()
-	flowParams := buildFlowParams(params)
 
-	// Build a list pager so we can aggregate multiple pages of flows.
-	pager := client.NewListPager[lapi.L3Flow](flowParams)
-	pages, errors := pager.Stream(ctx, lsclient.L3Flows(params.ClusterName).List)
-
+	// Perform the paginated list.
+	pages, errors := pager.Stream(ctx, lsc.L3Flows(cluster).List)
 	result := []lapi.L3Flow{}
 	for page := range pages {
 		result = append(result, page.Items...)
@@ -504,21 +514,19 @@ func getFlowLogsFromElastic(ctx context.Context, flowFilter lmaelastic.FlowFilte
 		return nil, http.StatusInternalServerError, err
 	}
 
-	response := FlowLogResponse{
+	response := lmaelastic.CompositeAggregationResults{
 		Took:     time.Since(start).Milliseconds(),
 		TimedOut: false,
-		Aggregations: Aggregations{
-			FlogBuckets: FlowBuckets{
-				Buckets: convertToBuckets(result, params.Unprotected),
+		Aggregations: map[string]interface{}{
+			"flog_buckets": map[string]interface{}{
+				"buckets": convertToBuckets(result, unprotected, filter),
 			},
 		},
 	}
-	return response, http.StatusOK, nil
+	return &response, http.StatusOK, nil
 }
 
 func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
-	flowParams := buildFlowParams(params)
-
 	// Convert the input format to the PIP format.
 	// TODO(rlb): We don't need both formats, and the PIP format has the more generically named "Resource" field rather
 	//            than limiting to network policies.
@@ -531,17 +539,25 @@ func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 	}
 
 	return &pippkg.PolicyImpactParams{
-		FlowParams:      flowParams,
 		ClusterName:     params.ClusterName,
 		ResourceActions: resourceChanges,
 		Limit:           params.Limit,
 		ImpactedOnly:    params.ImpactedOnly,
+		FromTime:        params.startDateTime,
+		ToTime:          params.endDateTime,
 	}
 }
 
 // This method will take a look at the request parameters made to the /flowLogs endpoint with pip settings,
 // verify RBAC based on the previewed settings and return the results from elastic.
-func getPIPFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, pip pippkg.PIP, rbacHelper PolicyImpactRbacHelper) (interface{}, int, error) {
+func getPIPFlowLogsFromElastic(
+	ctx context.Context,
+	pager client.ListPager[lapi.L3Flow],
+	flowFilter lmaelastic.FlowFilter,
+	params *FlowLogsParams,
+	pip pippkg.PIP,
+	rbacHelper PolicyImpactRbacHelper,
+) (interface{}, int, error) {
 	// Check a NP is supplied in every request.
 	if len(params.PolicyPreviews) == 0 {
 		// Expect the policy preview to contain a network policy.
@@ -572,7 +588,7 @@ func getPIPFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLog
 	}
 
 	// Fetch results from Linseed.
-	response, err := pip.GetFlows(context.TODO(), pipParams, flowFilter)
+	response, err := pip.GetFlows(ctx, pager, pipParams, flowFilter)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err
 	}

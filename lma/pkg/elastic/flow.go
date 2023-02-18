@@ -211,3 +211,13 @@ func ConvertFlow(b *CompositeAggregationBucket, compositeIdxs map[string]int, te
 
 	return flow
 }
+
+// EmptyToDash converts an empty string to a "-".
+// Linseed returns fields such as namespaces as an empty string for global resources,
+// whereas the UI expects a "-".
+func EmptyToDash(s string) string {
+	if s == "" {
+		return "-"
+	}
+	return s
+}
