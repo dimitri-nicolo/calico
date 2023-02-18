@@ -777,6 +777,10 @@ blocks:
     when: "${FORCE_RUN} or change_in(['/*', '/compliance/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu2004
     secrets:
     - name: test-customer-license
     prologue:
