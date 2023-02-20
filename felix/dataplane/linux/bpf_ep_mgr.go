@@ -369,7 +369,7 @@ func newBPFEndpointManager(
 			nil, // deviceRouteSourceAddress
 			config.DeviceRouteProtocol,
 			true, // removeExternalRoutes
-			254,
+			unix.RT_TABLE_MAIN,
 			opReporter,
 			featureDetector,
 		)
