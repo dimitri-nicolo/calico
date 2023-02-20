@@ -26,6 +26,7 @@ import (
 	"github.com/projectcalico/calico/felix/config"
 	. "github.com/projectcalico/calico/felix/iptables"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/tproxydefs"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
@@ -1423,8 +1424,15 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			Rules: []Rule{
 				{
 					Comment: []string{"Proxy selected services"},
-					Match:   Match().DestIPPortSet(nameForIPSet("tproxy-svc-ips")),
+					Match:   Match().DestIPPortSet(nameForIPSet(tproxydefs.ServiceIPsIPSet)),
 					Action:  JumpAction{Target: ChainManglePreroutingTProxySvc},
+				},
+				{
+					Comment: []string{"Proxy selected pods"},
+					Match: Match().
+						Protocol("tcp").
+						DestIPSet(nameForIPSet(tproxydefs.ApplicationLayerPolicyIPSet)),
+					Action: JumpAction{Target: ChainManglePreroutingTProxySvc},
 				},
 				{
 					Comment: []string{"Proxy selected nodeports"},
@@ -1432,7 +1440,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 						Protocol("tcp").
 						DestAddrType(AddrTypeLocal).
 						// We use a single port ipset for both V4 and V6
-						DestIPPortSet(r.IPSetConfigV4.NameForMainIPSet("tproxy-nodeports-tcp")),
+						DestIPPortSet(r.IPSetConfigV4.NameForMainIPSet(tproxydefs.NodePortsIPSet)),
 					Action: JumpAction{Target: ChainManglePreroutingTProxyNP},
 				},
 			},
@@ -1484,7 +1492,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			{
 				// Proxied connections that are pod-to-self need to be masqueraded
 				Comment: []string{"MASQ proxied pod-service-self"},
-				Match:   Match().SourceDestSet(nameForIPSet("tproxy-pod-self")),
+				Match:   Match().SourceDestSet(nameForIPSet(tproxydefs.PodSelf)),
 				Action:  SetMaskedMarkAction{Mark: r.KubeMasqueradeMark, Mask: r.KubeMasqueradeMark},
 			},
 		}

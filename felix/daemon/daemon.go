@@ -145,7 +145,8 @@ func Run(configFile string, gitVersion string, buildDate string, gitRevision str
 	// Initialise early so we can trace out config parsing.
 	logutils.ConfigureEarlyLogging()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	if os.Getenv("GOGC") == "" {
 		// Tune the GC to trade off a little extra CPU usage for significantly lower
@@ -709,7 +710,7 @@ configRetry:
 	if policySyncProcessor != nil {
 		log.WithField("policySyncPathPrefix", configParams.PolicySyncPathPrefix).Info(
 			"Policy sync API enabled.  Starting the policy sync server.")
-		policySyncProcessor.Start()
+		policySyncProcessor.StartWithCtx(ctx)
 		sc := make(chan *sync.WaitGroup)
 		stopSignalChans = append(stopSignalChans, sc)
 		go policySyncAPIBinder.SearchAndBind(sc)

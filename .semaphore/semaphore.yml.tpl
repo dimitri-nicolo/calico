@@ -638,6 +638,10 @@ blocks:
     prologue:
       commands:
       - cd app-policy
+    epilogue:
+      always:
+        commands:
+          - test-results publish report
     jobs:
     - name: "app-policy tests"
       commands:

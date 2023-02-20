@@ -31,8 +31,6 @@ include ../lib.Makefile
 # We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), $(filter $(ARCH),amd64))
 CGO_ENABLED=1
-CGO_CFLAGS="-I/usr/local/modsecurity/include"
-CGO_LDFLAGS="-L/usr/local/modsecurity/lib/ -Wl,-rpath -Wl,/usr/local/modsecurity/lib/ -lmodsecurity"
 else
 CGO_ENABLED=0
 CGO_CFLAGS=""
@@ -154,9 +152,11 @@ $(CONTAINER_CREATED): Dockerfile.$(ARCH) bin/dikastes-$(ARCH) bin/healthz-$(ARCH
 ###############################################################################
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev
-ut: protobuf
-	mkdir -p report
-	$(DOCKER_GO_BUILD_CGO) /bin/bash -c "go test -v $(GINKGO_ARGS) ./... | go-junit-report > ./report/tests.xml"
+ut: protobuf ut-exec
+
+ut-exec:
+	$(DOCKER_GO_BUILD_CGO) /bin/bash -c "go install gotest.tools/gotestsum@latest && gotestsum --junitfile report/tests.xml ./..."
+
 
 ###############################################################################
 # CI

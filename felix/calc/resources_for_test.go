@@ -61,8 +61,6 @@ var (
 	namedPortInheritIPSetID     = namedPortID(inheritSelector, "tcp", "tcpport")
 	httpMatchMethod             = HTTPMatch{Methods: []string{"GET"}}
 	serviceAccountSelector      = "name == 'sa1'"
-	tproxyIpSetSelector         = "tproxy-svc-ips"
-	tproxyIpSetNodeports        = "tproxy-nodeports-tcp"
 )
 
 // Canned workload endpoints.
@@ -92,6 +90,22 @@ var localWlEp1 = WorkloadEndpoint{
 		"a":  "a",
 		"b":  "b",
 	},
+	Ports: []EndpointPort{
+		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
+		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 1234},
+		{Name: "udpport", Protocol: numorstring.ProtocolFromStringV1("udp"), Port: 9091},
+	},
+}
+
+var localWlEp1NoLabels = WorkloadEndpoint{
+	State:      "active",
+	Name:       "cali1",
+	Mac:        mustParseMac("01:02:03:04:05:06"),
+	ProfileIDs: []string{"prof-1", "prof-2", "prof-missing"},
+	IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32"),
+		mustParseNet("10.0.0.2/32")},
+	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
+		mustParseNet("fc00:fe11::2/128")},
 	Ports: []EndpointPort{
 		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
 		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 1234},

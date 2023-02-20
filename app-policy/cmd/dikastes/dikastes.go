@@ -16,18 +16,11 @@ import (
 	"time"
 
 	"github.com/docopt/docopt-go"
-	authz_v2 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2"
-	authz_v2alpha "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2alpha"
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	"github.com/projectcalico/calico/app-policy/checker"
-	"github.com/projectcalico/calico/app-policy/health"
-	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/app-policy/proto"
-	"github.com/projectcalico/calico/app-policy/statscache"
-	"github.com/projectcalico/calico/app-policy/syncher"
+	"github.com/projectcalico/calico/app-policy/server"
 	"github.com/projectcalico/calico/app-policy/uds"
 	"github.com/projectcalico/calico/app-policy/waf"
 	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
@@ -40,22 +33,19 @@ Usage:
   dikastes client <namespace> <account> [--method <method>] [options]
 
 Options:
-  <namespace>            Service account namespace.
-  <account>              Service account name.
-  -h --help              Show this screen.
-  -l --listen <port>     Unix domain socket path [default: /var/run/dikastes/dikastes.sock]
-  -d --dial <target>     Target to dial. [default: localhost:50051]
-  -r --rules <target>    Directory where WAF rules are stored.
-  --debug                Log at Debug level.`
+  <namespace>               Service account namespace.
+  <account>                 Service account name.
+  -h --help                 Show this screen.
+  -l --listen <port>        Unix domain socket path [default: /var/run/dikastes/dikastes.sock]
+  -d --dial <target>        Target to dial. [default: localhost:50051]
+  -r --rules <target>       Directory where WAF rules are stored.
+  --log-level               Log at specified level e.g. [default: info].
+`
 
-var VERSION string
-
-const (
-	maxPendingDataplaneStats = 100
-)
+var VERSION string = "dev"
 
 func main() {
-	log.Info("Dikastes launching with ALP, WAF etc. logger.")
+	log.Infof("Dikastes (%s) launching", VERSION)
 	// Make sure the RNG is seeded.
 	seedrng.EnsureSeeded()
 
@@ -64,9 +54,16 @@ func main() {
 		println(usage)
 		return
 	}
-	if arguments["--debug"].(bool) {
-		log.SetLevel(log.DebugLevel)
+
+	if lvl, ok := arguments["--log-level"].(string); ok {
+		setLevel, err := log.ParseLevel(lvl)
+		if err != nil {
+			log.WithError(err).Warn("invalid log-level value. falling back to default value 'info'")
+			setLevel = log.InfoLevel
+		}
+		log.SetLevel(setLevel)
 	}
+
 	if arguments["server"].(bool) {
 		runServer(arguments)
 	} else if arguments["client"].(bool) {
@@ -75,87 +72,49 @@ func main() {
 }
 
 func runServer(arguments map[string]interface{}) {
-	filePath := arguments["--listen"].(string)
-	dial := arguments["--dial"].(string)
-	rulesetArgument := arguments["--rules"]
-
-	_, err := os.Stat(filePath)
-	if !os.IsNotExist(err) {
-		// file exists, try to delete it.
-		err := os.Remove(filePath)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"listen": filePath,
-				"err":    err,
-			}).Fatal("File exists and unable to remove.")
-		}
-	}
-	lis, err := net.Listen("unix", filePath)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"listen": filePath,
-			"err":    err,
-		}).Fatal("Unable to listen.")
-	}
-	defer lis.Close()
-	err = os.Chmod(filePath, 0777) // Anyone on system can connect.
-	if err != nil {
-		log.Fatal("Unable to set write permission on socket.")
-	}
-
-	// Check if WAF should be enabled first before proceeding...
-	if rulesetArgument != nil {
-		rulesetDirectory := rulesetArgument.(string)
-		err = waf.CheckRulesSetExists(rulesetDirectory)
-		if err != nil {
-			log.Fatalf("Failed WAF Core Rules Set check: '%s'", err.Error())
-		}
-	}
-
-	if waf.IsEnabled() {
-		// Initialize WAF and load OWASP Core Rule Sets.
-		log.Info("WAF is enabled...")
-		waf.InitializeModSecurity()
-
-		filenames := waf.GetRulesSetFilenames()
-		err = waf.LoadModSecurityCoreRuleSet(filenames)
-		if err != nil {
-			log.Fatalf("Failed to load WAF ruleset: %s", err.Error())
-		}
-	} else {
-		// Otherwise simply log to the fact.
-		log.Info("WAF is NOT enabled!")
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Check server
-	gs := grpc.NewServer()
-	stores := make(chan *policystore.PolicyStore)
-	dpStats := make(chan statscache.DPStats, maxPendingDataplaneStats)
-	checkServer := checker.NewServer(ctx, stores, dpStats)
-	authz.RegisterAuthorizationServer(gs, checkServer)
-	checkServerV2 := checkServer.V2Compat()
-	authz_v2alpha.RegisterAuthorizationServer(gs, checkServerV2)
-	authz_v2.RegisterAuthorizationServer(gs, checkServerV2)
+	// Lifecycle: use a buffered channel so we don't miss any signals
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	// Synchronize the policy store and start reporting stats.
-	opts := uds.GetDialOptions()
-	syncClient := syncher.NewClient(dial, opts, syncher.ClientOptions{})
+	var (
+		listenNetwork    string = "unix"
+		listenAddr       string = arguments["--listen"].(string)
+		policySyncAdress string = arguments["--dial"].(string)
+		rulesetArgument         = arguments["--rules"]
+	)
 
-	// Register the health check service, which reports the syncClient's inSync status.
-	proto.RegisterHealthzServer(gs, health.NewHealthCheckService(syncClient))
+	subscriptionType := getEnv("DIKASTES_SUBSCRIPTION_TYPE", "per-pod-policies")
 
-	go syncClient.Start(ctx, stores, dpStats)
+	// Config: overwrite listen socket path with hostport, env only
+	listenTCP := getEnv("DIKASTES_FORCE_LISTEN_TCP_HOSTPORT", "")
+	if listenTCP != "" {
+		listenNetwork = "tcp"
+		listenAddr = listenTCP
+	}
 
-	// Run gRPC server on separate goroutine so we catch any signals and clean up.
-	go func() {
-		if err := gs.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %v", err)
-		}
-	}()
+	log.WithFields(log.Fields{
+		"listenNetwork":    listenNetwork,
+		"listenAddress":    listenAddr,
+		"wafRuleset":       rulesetArgument,
+		"subscriptionType": subscriptionType,
+	}).Info("runtime arguments")
 
+	// WAF: initialize if enabled, also cleanup after
+	waf.Initialize(rulesetArgument)
+	defer waf.CleanupModSecurity()
+
+	// Dikastes main: Setup and serve
+	dikastesServer := server.NewDikastesServer(
+		server.WithListenArguments(listenNetwork, listenAddr),
+		server.WithDialAddress(policySyncAdress),
+		server.WithSubscriptionType(subscriptionType),
+	)
+	go dikastesServer.Serve(ctx)
+
+	// Istio: termination handler (i.e., quitquitquit handler)
 	th := httpTerminationHandler{make(chan bool, 1)}
 	if httpServerPort := os.Getenv("DIKASTES_HTTP_BIND_PORT"); httpServerPort != "" {
 		httpServerAddr := os.Getenv("DIKASTES_HTTP_BIND_ADDR")
@@ -173,22 +132,13 @@ func runServer(arguments map[string]interface{}) {
 		}
 	}
 
-	// Use a buffered channel so we don't miss any signals
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-	// Block until a signal is received.
+	// Lifecycle: block until a signal is received.
 	select {
 	case sig := <-sigChan:
 		log.Infof("Got signal: %v", sig)
 	case <-th.termChan:
 		log.Info("Received HTTP termination request")
 	}
-
-	// Cleanup WAF resources
-	waf.CleanupModSecurity()
-
-	gs.GracefulStop()
 }
 
 func runClient(arguments map[string]interface{}) {
@@ -269,4 +219,11 @@ func (h *httpTerminationHandler) RunHTTPServer(addr string, port string) (*http.
 		}
 	}()
 	return httpServer, httpServerWg, nil
+}
+
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
 }

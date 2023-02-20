@@ -428,7 +428,7 @@ type SyncRequest struct {
 	// dataplane statistics to Felix.
 	SupportsDataplaneStats bool `protobuf:"varint,2,opt,name=supportsDataplaneStats,proto3" json:"supportsDataplaneStats,omitempty"`
 	// Determines which types of payloads will be sent to the client.
-	// Valid values are "per-pod-policies" or "l3-routes".
+	// Valid values are "per-pod-policies", "per-host-policies", or "l3-routes".
 	SubscriptionType string `protobuf:"bytes,3,opt,name=subscriptionType,proto3" json:"subscriptionType,omitempty"`
 	// Controls whether IPv6 routes will be sent or not.
 	SupportsIPv6RouteUpdates bool `protobuf:"varint,100,opt,name=supportsIPv6RouteUpdates,proto3" json:"supportsIPv6RouteUpdates,omitempty"`

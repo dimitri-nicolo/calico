@@ -136,7 +136,7 @@ func (s *statsCache) add(d DPStats) {
 
 // flush sends the current aggregated cache, and creates a new empty cache.
 func (s *statsCache) flush() {
-	log.Debug("Reporting cached statistics and flushing cache")
+	log.Trace("Reporting cached statistics and flushing cache")
 	if len(s.stats) == 0 {
 		// No stats, so nothing to report.
 		return

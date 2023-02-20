@@ -41,7 +41,7 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 	}
 	nrs := &noopRuleScanner{}
 	arc := calc.NewActiveRulesCalculator()
-	arc.PolicyMatchListener = cbs
+	arc.PolicyMatchListeners = append(arc.PolicyMatchListeners, cbs)
 	arc.RuleScanner = nrs
 	cbs.activeRulesCalculator = arc
 

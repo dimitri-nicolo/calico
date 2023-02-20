@@ -21,6 +21,8 @@ import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	"github.com/projectcalico/calico/felix/tproxydefs"
+
 	. "github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
@@ -39,10 +41,13 @@ var _ = describeTProxyTest(false, "EnabledAllServices")
 
 func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 	const (
-		l7LoggingAnnotation     = "projectcalico.org/l7-logging"
-		TPROXYServiceIPsIPSetV4 = "cali40tproxy-svc-ips"
-		TPROXYNodeportsSet      = "cali40tproxy-nodeports-tcp"
-		TPROXYPodToSelf         = "cali40tproxy-pod-self"
+		l7LoggingAnnotation = "projectcalico.org/l7-logging"
+		TPROXYPodToSelf     = "cali40tproxy-pod-self"
+	)
+
+	var (
+		TPROXYServiceIPsIPSetV4 = fmt.Sprintf("cali40%s", tproxydefs.ServiceIPsIPSet)
+		TPROXYNodeportsSet      = fmt.Sprintf("cali40%s", tproxydefs.NodePortsIPSet)
 	)
 
 	var expectedFelix0IP, expectedFelix1IP ExpectationOption

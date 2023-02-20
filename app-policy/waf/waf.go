@@ -1,5 +1,7 @@
-// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
+//go:build cgo
+// +build cgo
 
+// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
 package waf
 
 // #cgo CFLAGS: -I/usr/local/modsecurity/include
@@ -250,6 +252,27 @@ func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHo
 	return nil
 }
 
+func Initialize(rulesetArgument interface{}) {
+	// Check if WAF should be enabled first before proceeding...
+	if rulesetArgument != nil {
+		rulesetDirectory := rulesetArgument.(string)
+		if err := CheckRulesSetExists(rulesetDirectory); err != nil {
+			log.Fatalf("Failed WAF Core Rules Set check: '%s'", err.Error())
+		}
+	}
+
+	if IsEnabled() {
+		log.Info("WAF is enabled!")
+		InitializeLogging()
+		InitializeModSecurity()
+
+		filenames := GetRulesSetFilenames()
+		if err := LoadModSecurityCoreRuleSet(filenames); err != nil {
+			log.Fatalf("Failed to load WAF ruleset: %s", err.Error())
+		}
+	}
+}
+
 // IsEnabled helper function used by client calling code.
 func IsEnabled() bool {
 	return wafIsEnabled
@@ -314,6 +337,9 @@ func GetAndClearOwaspLogs(uniqueId string) []string {
 }
 
 func CleanupModSecurity() {
+	if !IsEnabled() {
+		return
+	}
 	C.CleanupModSecurity()
 	log.Printf("WAF Cleanup Mod Security.")
 }

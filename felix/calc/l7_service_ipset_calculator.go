@@ -17,57 +17,60 @@ import (
 
 	"github.com/projectcalico/calico/felix/dispatcher"
 	"github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 const (
-	l7LoggingAnnotation     = "projectcalico.org/l7-logging"
-	TPROXYServiceIPsIPSet   = "tproxy-svc-ips"
-	TPROXYNodePortsTCPIPSet = "tproxy-nodeports-tcp"
+	l7LoggingAnnotation = "projectcalico.org/l7-logging"
 )
 
-// L7ServiceIPSetsCalculator maintains most up-to-date list of all L7 logging
-// enabled frontends.
+// L7ServiceIPSetsCalculator maintains IP sets for the service-related IPs that should be sent to
+// Envoy for "L7" treatment (either ALP, L7 logging, or WAF).
 //
-// To do this, the L7ServiceIPSetsCalculator hooks into the calculation graph.
-// by handling callbacks for updated service information.
-//
-// Currently it handles "service" resource that have a predefined annotation for enabling logging.
-// It emits ipSetUpdateCallbacks when a state change happens, keeping data plane in-sync with datastore.
+// This includes:
+//   - The Service ClusterIPs and NodePorts of services with the l7LoggingAnnotation.
+//   - The backing pod IPs of the same (across the whole cluster).  This is calculated
+//     from the EndpointSlices of the above services.
 type L7ServiceIPSetsCalculator struct {
-	createdIpSet    bool
-	conf            *config.Config
-	suh             *ServiceUpdateHandler
-	esai            *EndpointSliceAddrIndexer
-	callbacks       ipSetUpdateCallbacks
-	activeEndpoints set.Set[ipPortProtoKey]
-	activeNodePorts set.Set[portProtoKey]
+	createdIpSet bool
+	conf         *config.Config
+	sai          *ServiceAddrIndexer
+	esai         *EndpointSliceAddrIndexer
+
+	activeWorkloadIPSetMembers map[labelindex.IPSetMember]struct{}
+	activeEndpoints            set.Set[ipPortProtoKey]
+	activeNodePorts            set.Set[portProtoKey]
+
+	callbacks ipSetUpdateCallbacks
 }
 
 func NewL7ServiceIPSetsCalculator(callbacks ipSetUpdateCallbacks, conf *config.Config) *L7ServiceIPSetsCalculator {
 	tpr := &L7ServiceIPSetsCalculator{
-		conf:            conf,
-		createdIpSet:    false,
-		callbacks:       callbacks,
-		suh:             NewServiceUpdateHandler(),
-		esai:            NewEndpointSliceAddrIndexer(),
-		activeEndpoints: set.New[ipPortProtoKey](),
-		activeNodePorts: set.New[portProtoKey](),
-	}
-	tpr.callbacks.OnIPSetAdded(TPROXYServiceIPsIPSet, proto.IPSetUpdate_IP_AND_PORT)
-	tpr.callbacks.OnIPSetAdded(TPROXYNodePortsTCPIPSet, proto.IPSetUpdate_PORTS)
+		conf:         conf,
+		createdIpSet: false,
+		callbacks:    callbacks,
+		sai:          NewServiceAddrIndexer(),
 
+		activeWorkloadIPSetMembers: make(map[labelindex.IPSetMember]struct{}),
+		esai:                       NewEndpointSliceAddrIndexer(),
+		activeEndpoints:            set.New[ipPortProtoKey](),
+		activeNodePorts:            set.New[portProtoKey](),
+	}
+
+	tpr.callbacks.OnIPSetAdded(tproxydefs.ServiceIPsIPSet, proto.IPSetUpdate_IP_AND_PORT)
+	tpr.callbacks.OnIPSetAdded(tproxydefs.NodePortsIPSet, proto.IPSetUpdate_PORTS)
 	return tpr
 }
 
-func (tpr *L7ServiceIPSetsCalculator) RegisterWith(allUpdateDisp *dispatcher.Dispatcher) {
+func (c *L7ServiceIPSetsCalculator) RegisterWithAllUpdates(allUpdateDisp *dispatcher.Dispatcher) {
 	log.Debugf("registering with all update dispatcher for tproxy service updates")
-	allUpdateDisp.Register(model.ResourceKey{}, tpr.OnResourceUpdate)
+	allUpdateDisp.Register(model.ResourceKey{}, c.OnResourceUpdate)
 }
 
-func (tpr *L7ServiceIPSetsCalculator) isEndpointSliceFromAnnotatedService(
+func (c *L7ServiceIPSetsCalculator) isEndpointSliceFromAnnotatedService(
 	k model.ResourceKey, v *discovery.EndpointSlice,
 ) bool {
 	serviceKey := model.ResourceKey{
@@ -75,44 +78,44 @@ func (tpr *L7ServiceIPSetsCalculator) isEndpointSliceFromAnnotatedService(
 		Kind:      model.KindKubernetesService,
 	}
 	if v == nil {
-		edp, ok := tpr.esai.endpointSlices[k]
+		edp, ok := c.esai.endpointSlices[k]
 		if !ok {
 			return false
 		}
 		v = edp
 	}
 	serviceKey.Name = v.ObjectMeta.Labels["kubernetes.io/service-name"]
-	_, ok := tpr.suh.services[serviceKey]
+	_, ok := c.sai.services[serviceKey]
 	return ok
 }
 
 // OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
 // kubernetes services updates (for now). We can add other resources to L7 in future here.
-func (tpr *L7ServiceIPSetsCalculator) OnResourceUpdate(update api.Update) (_ bool) {
+func (c *L7ServiceIPSetsCalculator) OnResourceUpdate(update api.Update) (_ bool) {
 	switch k := update.Key.(type) {
 	case model.ResourceKey:
 		switch k.Kind {
 		case model.KindKubernetesService:
 			log.Debugf("processing update for service %s", k)
 			if update.Value == nil {
-				if _, ok := tpr.suh.services[k]; ok {
-					tpr.suh.RemoveService(k)
-					tpr.flush()
+				if _, ok := c.sai.services[k]; ok {
+					c.sai.RemoveService(k)
+					c.flush()
 				}
 			} else {
 				service := update.Value.(*kapiv1.Service)
 				annotations := service.ObjectMeta.Annotations
 				// process services annotated with l7 or all service when in EnabledAllServices mode
-				if hasAnnotation(annotations, l7LoggingAnnotation) || tpr.conf.TPROXYModeEnabledAllServices() {
-					log.Infof("processing update for tproxy annotated service %s", k)
-					tpr.suh.AddOrUpdateService(k, service)
-					tpr.flush()
+				if hasAnnotation(annotations, l7LoggingAnnotation) || c.conf.TPROXYModeEnabledAllServices() {
+					log.Debugf("processing update for tproxy annotated service %s", k)
+					c.sai.AddOrUpdateService(k, service)
+					c.flush()
 				} else {
 					// case when service is present in services and no longer has annotation
-					if _, ok := tpr.suh.services[k]; ok {
-						log.Infof("removing unannotated service from ipset %s", k)
-						tpr.suh.RemoveService(k)
-						tpr.flush()
+					if _, ok := c.sai.services[k]; ok {
+						log.Debugf("removing unannotated service from ipset %s", k)
+						c.sai.RemoveService(k)
+						c.flush()
 					}
 				}
 			}
@@ -120,20 +123,20 @@ func (tpr *L7ServiceIPSetsCalculator) OnResourceUpdate(update api.Update) (_ boo
 			log.Debugf("processing update for endpointslice %s", k)
 			needFlush := false
 			if update.Value == nil {
-				if tpr.isEndpointSliceFromAnnotatedService(k, nil) {
+				if c.isEndpointSliceFromAnnotatedService(k, nil) {
 					needFlush = true
 				}
-				tpr.esai.RemoveEndpointSlice(k)
+				c.esai.RemoveEndpointSlice(k)
 			} else {
 				endpointSlice := update.Value.(*discovery.EndpointSlice)
-				tpr.esai.AddOrUpdateEndpointSlice(k, endpointSlice)
-				if tpr.isEndpointSliceFromAnnotatedService(k, endpointSlice) {
+				c.esai.AddOrUpdateEndpointSlice(k, endpointSlice)
+				if c.isEndpointSliceFromAnnotatedService(k, endpointSlice) {
 					needFlush = true
 				}
 			}
 
 			if needFlush {
-				tpr.flush()
+				c.flush()
 			}
 		default:
 			log.Debugf("Ignoring update for resource: %s", k)
@@ -149,18 +152,17 @@ func (tpr *L7ServiceIPSetsCalculator) OnResourceUpdate(update api.Update) (_ boo
 // for tproxy traffic selection changes. It detects the change in state by comparing most up to date
 // members list maintained by UpdateHandlers to the list maintained by
 // L7ServiceIPSetsCalculator.
-func (tpr *L7ServiceIPSetsCalculator) flush() {
-
-	addedSvs, removedSvs := tpr.resolveRegularEndpoints()
+func (c *L7ServiceIPSetsCalculator) flush() {
+	addedSvs, removedSvs := c.resolveRegularEndpoints()
 
 	if len(addedSvs) > 0 || len(removedSvs) > 0 {
-		tpr.flushRegularEndpoints(addedSvs, removedSvs)
+		c.flushRegularEndpoints(addedSvs, removedSvs)
 	}
 
-	addedNPs, removedNPs := tpr.resolveNodePorts()
+	addedNPs, removedNPs := c.resolveNodePorts()
 
 	if len(addedNPs) > 0 || len(removedNPs) > 0 {
-		tpr.flushNodePorts(addedNPs, removedNPs)
+		c.flushNodePorts(addedNPs, removedNPs)
 	}
 }
 
@@ -175,23 +177,20 @@ func isTCP(ipPortProto ipPortProtoKey) bool {
 	return true
 }
 
-func (tpr *L7ServiceIPSetsCalculator) resolveRegularEndpoints() ([]ipPortProtoKey,
-	[]ipPortProtoKey) {
+func (c *L7ServiceIPSetsCalculator) resolveRegularEndpoints() (added []ipPortProtoKey, removed []ipPortProtoKey) {
 	// todo: felix maintains a diff of changes. We should use that instead if iterating over entire map
 	log.Infof("flush regular services for tproxy")
 
-	var added, removed []ipPortProtoKey
-
 	// Get all ipPortProtos from endpointSlice update handler
-	allSvcKeys := make([]model.ResourceKey, len(tpr.suh.services))
-	for k := range tpr.suh.services {
+	allSvcKeys := make([]model.ResourceKey, len(c.sai.services))
+	for k := range c.sai.services {
 		allSvcKeys = append(allSvcKeys, k)
 	}
-	esaiIPPortProtos := tpr.esai.IPPortProtosByService(allSvcKeys...)
+	esaiIPPortProtos := c.esai.IPPortProtosByService(allSvcKeys...)
 
-	tpr.activeEndpoints.Iter(func(ipPortProto ipPortProtoKey) error {
+	c.activeEndpoints.Iter(func(ipPortProto ipPortProtoKey) error {
 		// if member key exists in up-to-date list, else add to removed
-		_, ok := tpr.suh.ipPortProtoToServices[ipPortProto]
+		_, ok := c.sai.ipPortProtoToServices[ipPortProto]
 		if ok {
 			return nil
 		}
@@ -204,9 +203,9 @@ func (tpr *L7ServiceIPSetsCalculator) resolveRegularEndpoints() ([]ipPortProtoKe
 	})
 
 	// add new items to tproxy from updated list of annotated endpoints
-	for ipPortProto, _ := range tpr.suh.ipPortProtoToServices {
+	for ipPortProto, _ := range c.sai.ipPortProtoToServices {
 		// if it already exists in active endpoints skip it
-		if tpr.activeEndpoints.Contains(ipPortProto) {
+		if c.activeEndpoints.Contains(ipPortProto) {
 			continue
 		}
 		// if protocol is not TCP skip it for now
@@ -218,7 +217,7 @@ func (tpr *L7ServiceIPSetsCalculator) resolveRegularEndpoints() ([]ipPortProtoKe
 
 	esaiIPPortProtos.Iter(func(ipPortProto ipPortProtoKey) error {
 		// if it already exists in active endpoints skip it
-		if tpr.activeEndpoints.Contains(ipPortProto) {
+		if c.activeEndpoints.Contains(ipPortProto) {
 			return nil
 		}
 		// if protocol is not TCP skip it for now
@@ -232,42 +231,41 @@ func (tpr *L7ServiceIPSetsCalculator) resolveRegularEndpoints() ([]ipPortProtoKe
 	return added, removed
 }
 
-func (tpr *L7ServiceIPSetsCalculator) flushRegularEndpoints(added []ipPortProtoKey,
+func (c *L7ServiceIPSetsCalculator) flushRegularEndpoints(added []ipPortProtoKey,
 	removed []ipPortProtoKey) {
 
 	for _, ipPortProto := range removed {
 		member := getIpSetMemberFromIpPortProto(ipPortProto)
-		tpr.callbacks.OnIPSetMemberRemoved(TPROXYServiceIPsIPSet, member)
-		tpr.activeEndpoints.Discard(ipPortProto)
+		c.callbacks.OnIPSetMemberRemoved(tproxydefs.ServiceIPsIPSet, member)
+		c.activeEndpoints.Discard(ipPortProto)
 	}
 
 	for _, ipPortProto := range added {
 		member := getIpSetMemberFromIpPortProto(ipPortProto)
-		tpr.callbacks.OnIPSetMemberAdded(TPROXYServiceIPsIPSet, member)
-		tpr.activeEndpoints.Add(ipPortProto)
+		c.callbacks.OnIPSetMemberAdded(tproxydefs.ServiceIPsIPSet, member)
+		c.activeEndpoints.Add(ipPortProto)
 	}
 
 }
 
-func (tpr *L7ServiceIPSetsCalculator) resolveNodePorts() ([]portProtoKey,
-	[]portProtoKey) {
+func (c *L7ServiceIPSetsCalculator) resolveNodePorts() ([]portProtoKey, []portProtoKey) {
 	// todo: felix maintains a diff of changes. We should use that instead if iterating over entire map
 	log.Infof("flush node ports for tproxy")
 
 	var added, removed []portProtoKey
 
-	tpr.activeNodePorts.Iter(func(portProto portProtoKey) error {
+	c.activeNodePorts.Iter(func(portProto portProtoKey) error {
 		// if member key exists in up-to-date list, update the value to latest in active node ports and continue to next
-		if _, ok := tpr.suh.nodePortServices[portProto]; ok {
+		if _, ok := c.sai.nodePortServices[portProto]; ok {
 			return nil
 		}
 		removed = append(removed, portProto)
 		return nil
 	})
 
-	for portProto := range tpr.suh.nodePortServices {
+	for portProto := range c.sai.nodePortServices {
 		// if it already exists in active node ports skip it
-		if tpr.activeNodePorts.Contains(portProto) {
+		if c.activeNodePorts.Contains(portProto) {
 			continue
 		}
 		protocol := labelindex.IPSetPortProtocol(portProto.proto)
@@ -286,17 +284,17 @@ func (tpr *L7ServiceIPSetsCalculator) resolveNodePorts() ([]portProtoKey,
 	return added, removed
 }
 
-func (tpr *L7ServiceIPSetsCalculator) flushNodePorts(added []portProtoKey,
+func (c *L7ServiceIPSetsCalculator) flushNodePorts(added []portProtoKey,
 	removed []portProtoKey) {
 
 	for _, portProto := range removed {
 		if labelindex.IPSetPortProtocol(portProto.proto) == labelindex.ProtocolTCP {
 			member := getIpSetPortMemberFromPortProto(portProto)
 			member.Family = 4
-			tpr.callbacks.OnIPSetMemberRemoved(TPROXYNodePortsTCPIPSet, member)
+			c.callbacks.OnIPSetMemberRemoved(tproxydefs.NodePortsIPSet, member)
 			member.Family = 6
-			tpr.callbacks.OnIPSetMemberRemoved(TPROXYNodePortsTCPIPSet, member)
-			tpr.activeNodePorts.Discard(portProto)
+			c.callbacks.OnIPSetMemberRemoved(tproxydefs.NodePortsIPSet, member)
+			c.activeNodePorts.Discard(portProto)
 		}
 	}
 
@@ -304,10 +302,10 @@ func (tpr *L7ServiceIPSetsCalculator) flushNodePorts(added []portProtoKey,
 		if labelindex.IPSetPortProtocol(portProto.proto) == labelindex.ProtocolTCP {
 			member := getIpSetPortMemberFromPortProto(portProto)
 			member.Family = 4
-			tpr.callbacks.OnIPSetMemberAdded(TPROXYNodePortsTCPIPSet, member)
+			c.callbacks.OnIPSetMemberAdded(tproxydefs.NodePortsIPSet, member)
 			member.Family = 6
-			tpr.callbacks.OnIPSetMemberAdded(TPROXYNodePortsTCPIPSet, member)
-			tpr.activeNodePorts.Add(portProto)
+			c.callbacks.OnIPSetMemberAdded(tproxydefs.NodePortsIPSet, member)
+			c.activeNodePorts.Add(portProto)
 		}
 	}
 

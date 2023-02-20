@@ -158,7 +158,7 @@ func TestCheckNoIngressPolicyRulesInTier(t *testing.T) {
 		},
 	}}
 
-	status := checkTiers(store, req)
+	status := checkTiers(store, store.Endpoint, req)
 	expectedStatus := rpc.Status{Code: OK}
 	Expect(status.Code).To(Equal(expectedStatus.Code))
 	Expect(status.Message).To(Equal(expectedStatus.Message))
@@ -181,7 +181,7 @@ func TestCheckStoreNoEndpoint(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "HEAD"},
 		},
 	}}
-	status := checkStore(store, req)
+	status := checkStore(store, nil, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 }
 
@@ -204,7 +204,7 @@ func TestCheckStoreNoTiers(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "HEAD"},
 		},
 	}}
-	status := checkStore(store, req)
+	status := checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 }
 
@@ -250,13 +250,13 @@ func TestCheckStorePolicyMatch(t *testing.T) {
 		},
 	}}
 
-	status := checkStore(store, req)
+	status := checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 
 	http := req.GetAttributes().GetRequest().GetHttp()
 	http.Method = "HEAD"
 
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 }
 
@@ -298,13 +298,13 @@ func TestCheckStoreProfileOnly(t *testing.T) {
 		},
 	}}
 
-	status := checkStore(store, req)
+	status := checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 
 	http := req.GetAttributes().GetRequest().GetHttp()
 	http.Method = "HEAD"
 
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 }
 
@@ -351,7 +351,7 @@ func TestCheckStorePolicyDefaultDeny(t *testing.T) {
 		},
 	}}
 
-	status := checkStore(store, req)
+	status := checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 }
 
@@ -408,7 +408,7 @@ func TestCheckStorePass(t *testing.T) {
 		},
 	}}
 
-	status := checkStore(store, req)
+	status := checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 }
 
@@ -437,19 +437,19 @@ func TestCheckStoreInitFails(t *testing.T) {
 	// for DropActionOverride, and OK for ACCEPT and LOG_AND_ACCEPT. Default
 	// value is DROP.
 	Expect(store.DropActionOverride).To(Equal(policystore.DROP))
-	status := checkStore(store, req)
+	status := checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 
 	store.DropActionOverride = policystore.LOG_AND_DROP
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 
 	store.DropActionOverride = policystore.ACCEPT
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 
 	store.DropActionOverride = policystore.LOG_AND_ACCEPT
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 }
 
@@ -491,19 +491,19 @@ func TestCheckStoreWithInvalidData(t *testing.T) {
 	// Check that we get INVALID_ARGUMENT for DROP and LOG_AND_DROP values
 	// for DropActionOverride, and OK for ACCEPT and LOG_AND_ACCEPT.
 	Expect(store.DropActionOverride).To(Equal(policystore.DROP))
-	status := checkStore(store, req)
+	status := checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(INVALID_ARGUMENT))
 
 	store.DropActionOverride = policystore.LOG_AND_DROP
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(INVALID_ARGUMENT))
 
 	store.DropActionOverride = policystore.ACCEPT
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 
 	store.DropActionOverride = policystore.LOG_AND_ACCEPT
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 }
 
@@ -567,19 +567,19 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 
 	// Check request is OK for all values of DropActionOverride.
 	Expect(store.DropActionOverride).To(Equal(policystore.DROP))
-	status := checkStore(store, req)
+	status := checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 
 	store.DropActionOverride = policystore.LOG_AND_DROP
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 
 	store.DropActionOverride = policystore.ACCEPT
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 
 	store.DropActionOverride = policystore.LOG_AND_ACCEPT
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 
 	// Change to a bad path, and check that we get PERMISSION_DENIED for
@@ -589,19 +589,19 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 	http.Path = "/bad"
 
 	store.DropActionOverride = policystore.DROP
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 
 	store.DropActionOverride = policystore.LOG_AND_DROP
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 
 	store.DropActionOverride = policystore.ACCEPT
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 
 	store.DropActionOverride = policystore.LOG_AND_ACCEPT
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 }
 
@@ -662,12 +662,12 @@ func TestCheckStorePolicyMultiTierDiffTierMatch(t *testing.T) {
 		},
 	}}
 
-	status := checkStore(store, req)
+	status := checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 
 	http := req.GetAttributes().GetRequest().GetHttp()
 	http.Method = "GET"
 
-	status = checkStore(store, req)
+	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 }

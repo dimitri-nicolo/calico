@@ -15,10 +15,14 @@
 package checker
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/proto"
+	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	log "github.com/sirupsen/logrus"
@@ -31,6 +35,7 @@ var PERMISSION_DENIED = int32(code.Code_PERMISSION_DENIED)
 var UNAVAILABLE = int32(code.Code_UNAVAILABLE)
 var INVALID_ARGUMENT = int32(code.Code_INVALID_ARGUMENT)
 var INTERNAL = int32(code.Code_INTERNAL)
+var UNKNOWN = int32(code.Code_UNKNOWN)
 
 // Action is an enumeration of actions a policy rule can take if it is matched.
 type Action int
@@ -43,11 +48,117 @@ const (
 	NO_MATCH // Indicates policy did not match request. Cannot be assigned to rule.
 )
 
+var (
+	rlog = logutils.NewRateLimitedLogger()
+)
+
+func lookupEndpointsFromRequest(store *policystore.PolicyStore, req *authz.CheckRequest) (source, destination []*proto.WorkloadEndpoint, err error) {
+	log.Debugf("extracting endpoints from request %s", req.String())
+
+	// Extract source and destination IP addresses if possible:
+	requestAttributes := req.GetAttributes()
+	if requestAttributes == nil {
+		err = errors.New("cannot process specified request data")
+		return
+	}
+
+	// map destination first
+	if addr, port, ok := addrPortFromPeer(requestAttributes.Destination); ok {
+		log.Debugf("found destination address we would like to match: [%v:%v]", addr, port)
+		destinationIp, err := ip.ParseCIDROrIP(addr)
+		if err != nil {
+			rlog.Warnf("cannot process addr %v: %v", addr, err)
+		} else {
+			log.Debug("trying to match destination: ", destinationIp)
+			destination = ipToEndpoints(store, destinationIp)
+		}
+	}
+
+	// map source next
+	if addr, port, ok := addrPortFromPeer(requestAttributes.Source); ok {
+		log.Debugf("found source address we would like to match: [%v:%v]", addr, port)
+		sourceIp, err := ip.ParseCIDROrIP(addr)
+		if err != nil {
+			rlog.Warnf("cannot process addr %v: %v", addr, err)
+		} else {
+			log.Debug("trying to match source: ", sourceIp)
+			source = ipToEndpoints(store, sourceIp)
+		}
+	}
+
+	return
+}
+
+func addrPortFromPeer(peer *authz.AttributeContext_Peer) (addr string, port uint32, ok bool) {
+	if peer == nil {
+		return
+	}
+
+	addr = peer.GetAddress().GetSocketAddress().GetAddress()
+	port = peer.GetAddress().GetSocketAddress().GetPortValue()
+
+	return addr, port, true
+}
+
+func ipToEndpoints(store *policystore.PolicyStore, addr ip.CIDR) []*proto.WorkloadEndpoint {
+	return store.IPToIndexes.Get(addr)
+}
+
+func checkRequest(store *policystore.PolicyStore, req *authz.CheckRequest) status.Status {
+	src, dst, err := lookupEndpointsFromRequest(store, req)
+	if err != nil {
+		return status.Status{Code: INTERNAL, Message: fmt.Sprintf("endpoint lookup error: %v", err)}
+	}
+	log.Debugf("Found endpoints from request [src: %v, dst: %v]", src, dst)
+
+	if len(dst) > 0 {
+		// Destination is local workload, apply its ingress policy.
+		// possible there's multiple weps for an ip.
+		// let's run through all of them and apply its ingress policy
+		for _, ds := range dst {
+			if s := checkStore(store, ds, req); s.Code != OK {
+				// stop looping on first non-OK status
+				return status.Status{
+					Code:    s.Code,
+					Message: s.Message,
+					Details: s.Details,
+				}
+			}
+		}
+		// all local destinations aren't getting denied by policy
+		// let traffic through
+		return status.Status{Code: OK}
+	}
+
+	if len(src) > 0 {
+		// Source is local but destination is not.  We assume that the traffic reached Envoy as
+		// a false positive; for example, a workload connecting out to an L7-annotated service.
+		// Let it through; it should be handled by the remote Envoy/Dikastes.
+
+		// NB: in the future we can process egress rules here e.g.
+		/*
+			if src != nil { // originating node: so process src traffic
+				return checkStore(store, src, req) // TODO need flag to reverse policy logic
+			}
+		*/
+
+		// possible future iteration: apply src egress policy
+		// return checkStore(store, src, req, withEgressProcessing{})
+		log.Debugf("allowing traffic to continue to its destination hop/next processing leg. (req: %s)", req.String())
+		return status.Status{Code: OK, Message: fmt.Sprintf("request %s passing through", req.String())}
+	}
+
+	// Don't know source or dest.  Why was this packet sent to us?
+	// Assume that we're out of sync and reject it.
+	log.Debug("encountered invalid ext_authz request case")
+	return status.Status{Code: PERMISSION_DENIED}
+}
+
 // checkStore applies the tiered policy plus any config based corrections and returns OK if the check passes or
 // PERMISSION_DENIED if the check fails.
-func checkStore(store *policystore.PolicyStore, req *authz.CheckRequest) (s status.Status) {
+func checkStore(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, req *authz.CheckRequest) (s status.Status) {
 	// Check using the configured policy
-	s = checkTiers(store, req)
+	s = checkTiers(store, ep, req)
 
 	// If the result from the policy check will result in a drop, check if we are overriding the drop
 	// action, and if so modify the result.
@@ -57,7 +168,7 @@ func checkStore(store *policystore.PolicyStore, req *authz.CheckRequest) (s stat
 			// Leave action unchanged, packet will be dropped.
 		case policystore.ACCEPT, policystore.LOG_AND_ACCEPT:
 			// Convert action that would result in a drop into an accept.
-			log.Info("Invoking DropActionOverride: Converting drop action to allow")
+			rlog.Info("Invoking DropActionOverride: Converting drop action to allow")
 			s.Code = OK
 		}
 	}
@@ -66,22 +177,22 @@ func checkStore(store *policystore.PolicyStore, req *authz.CheckRequest) (s stat
 
 // checkTiers applies the tiered policy in the given store and returns OK if the check passes, or PERMISSION_DENIED if
 // the check fails. Note, if no policy matches, the default is PERMISSION_DENIED.
-func checkTiers(store *policystore.PolicyStore, req *authz.CheckRequest) (s status.Status) {
+func checkTiers(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, req *authz.CheckRequest) (s status.Status) {
 	s = status.Status{Code: PERMISSION_DENIED}
-	ep := store.Endpoint
+	// nothing to check. return early
 	if ep == nil {
-		log.Warning("CheckRequest before we synced Endpoint information.")
 		return
 	}
 	reqCache, err := NewRequestCache(store, req)
 	if err != nil {
-		log.WithField("error", err).Error("Failed to init requestCache")
+		rlog.Errorf("Failed to init requestCache: %v", err)
 		return
 	}
 	defer func() {
 		if r := recover(); r != nil {
 			// Recover from the panic if we know what it is and we know what to do with it.
-			if _, ok := r.(*InvalidDataFromDataPlane); ok {
+			if v, ok := r.(*InvalidDataFromDataPlane); ok {
+				log.Debug("encountered InvalidFromDataPlane: ", v.string)
 				s = status.Status{Code: INVALID_ARGUMENT}
 			} else {
 				panic(r)
@@ -89,11 +200,13 @@ func checkTiers(store *policystore.PolicyStore, req *authz.CheckRequest) (s stat
 		}
 	}()
 	for _, tier := range ep.Tiers {
-		log.WithField("tier", tier.GetName()).Debug("Checking policy tier")
+		log.Debug("Checking policy tier", tier.GetName())
 		policies := tier.IngressPolicies
 		if len(policies) == 0 {
 			// No ingress policy in this tier, move on to next one.
 			continue
+		} else {
+			log.Debug("policies: ", policies)
 		}
 
 		action := NO_MATCH
@@ -102,14 +215,10 @@ func checkTiers(store *policystore.PolicyStore, req *authz.CheckRequest) (s stat
 			pID := proto.PolicyID{Tier: tier.GetName(), Name: name}
 			policy := store.PolicyByID[pID]
 			action = checkPolicy(policy, reqCache)
-			log.WithFields(log.Fields{
-				"ordinal":  i,
-				"PolicyID": pID,
-				"result":   action,
-			}).Debug("Policy checked")
+			log.Debugf("Policy checked (ordinal=%d, profileId=%v, action=%v)", i, pID, action)
 			switch action {
 			case NO_MATCH:
-				continue
+				continue Policy
 			// If the Policy matches, end evaluation (skipping profiles, if any)
 			case ALLOW:
 				s.Code = OK
@@ -121,7 +230,9 @@ func checkTiers(store *policystore.PolicyStore, req *authz.CheckRequest) (s stat
 				// Pass means end evaluation of policies and proceed to next tier (or profiles), if any.
 				break Policy
 			case LOG:
-				panic("policy should never return LOG action")
+				log.Debug("policy should never return LOG action")
+				s.Code = INVALID_ARGUMENT
+				return
 			}
 		}
 		// Done evaluating policies in the tier. If no policy rules have matched, there is an implicit default deny
@@ -138,11 +249,7 @@ func checkTiers(store *policystore.PolicyStore, req *authz.CheckRequest) (s stat
 			pID := proto.ProfileID{Name: name}
 			profile := store.ProfileByID[pID]
 			action := checkProfile(profile, reqCache)
-			log.WithFields(log.Fields{
-				"ordinal":   i,
-				"ProfileID": pID,
-				"result":    action,
-			}).Debug("Profile checked")
+			log.Debugf("Profile checked (ordinal=%d, profileId=%v, action=%v)", i, pID, action)
 			switch action {
 			case NO_MATCH:
 				continue
@@ -153,7 +260,9 @@ func checkTiers(store *policystore.PolicyStore, req *authz.CheckRequest) (s stat
 				s.Code = PERMISSION_DENIED
 				return
 			case LOG:
-				log.Panic("profile should never return LOG action")
+				log.Debug("profile should never return LOG action")
+				s.Code = INVALID_ARGUMENT
+				return
 			}
 		}
 	} else {
@@ -165,18 +274,27 @@ func checkTiers(store *policystore.PolicyStore, req *authz.CheckRequest) (s stat
 
 // checkPolicy checks if the policy matches the request data, and returns the action.
 func checkPolicy(policy *proto.Policy, req *requestCache) (action Action) {
+	if policy == nil {
+		return Action(INTERNAL)
+	}
+
 	// Note that we support only inbound policy.
 	return checkRules(policy.InboundRules, req, policy.Namespace)
 }
 
-func checkProfile(p *proto.Profile, req *requestCache) (action Action) {
-	return checkRules(p.InboundRules, req, "")
+func checkProfile(profile *proto.Profile, req *requestCache) (action Action) {
+	// profiles or profile updates might not be available yet. use internal here
+	if profile == nil {
+		return Action(INTERNAL)
+	}
+
+	return checkRules(profile.InboundRules, req, "")
 }
 
 func checkRules(rules []*proto.Rule, req *requestCache, policyNamespace string) (action Action) {
 	for _, r := range rules {
 		if match(r, req, policyNamespace) {
-			log.Debugf("Rule matched.")
+			log.Debugf("checkRules: Rule matched %v", *r)
 			a := actionFromString(r.Action)
 			if a != LOG {
 				// We don't support actually logging requests, but if we hit a LOG action, we should
@@ -202,7 +320,7 @@ func actionFromString(s string) Action {
 	a, found := m[strings.ToLower(s)]
 	if !found {
 		log.Errorf("Got bad action %v", s)
-		log.Panic("got bad action")
+		panic(&InvalidDataFromDataPlane{"got bad action"})
 	}
 	return a
 }

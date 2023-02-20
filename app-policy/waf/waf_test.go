@@ -1,3 +1,6 @@
+//go:build cgo
+// +build cgo
+
 // Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
 
 package waf

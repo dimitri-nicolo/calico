@@ -25,6 +25,7 @@ import (
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/dataplane/mock"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/tproxydefs"
 	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -43,8 +44,9 @@ import (
 // empty is the base state, with nothing in the datastore or dataplane.
 // Note: Incase of Tproxy mode, the ipset exists even when no updates are present, this is a one off case
 var empty = NewState().withName("<empty>").
-	withIPSet(tproxyIpSetSelector, []string{}).
-	withIPSet(tproxyIpSetNodeports, []string{})
+	withIPSet(tproxydefs.ServiceIPsIPSet, []string{}).
+	withIPSet(tproxydefs.ApplicationLayerPolicyIPSet, []string{}).
+	withIPSet(tproxydefs.NodePortsIPSet, []string{})
 
 // initialisedStore builds on empty, adding in the ready flag and global config.
 var initialisedStore = empty.withKVUpdates(
@@ -2548,52 +2550,173 @@ var withOutL7Annotation = l7EnabledState.withKVUpdates(
 var clusterIPWithL7Annotation = withOutL7Annotation.withKVUpdates(
 	svcWithL7Annotation,
 	epslcForSvcWithL7Annotation,
-).withIPSet(tproxyIpSetSelector, []string{
+).withIPSet(tproxydefs.ServiceIPsIPSet, []string{
 	"10.0.0.0,tcp:123",
 	"10.0.0.1,tcp:123",
-}).withIPSet(tproxyIpSetNodeports, []string{
+}).withIPSet(tproxydefs.NodePortsIPSet, []string{
 	"v4,234", "v6,234",
 }).withName("clusterIPWithL7Annotation")
 
 var epslcAppendWithL7Annotation = clusterIPWithL7Annotation.withKVUpdates(
 	epslcForSvcWithL7Annotation2,
-).withIPSet(tproxyIpSetSelector, []string{
+).withIPSet(tproxydefs.ServiceIPsIPSet, []string{
 	"10.0.0.0,tcp:123",
 	"10.0.0.1,tcp:123",
 	"10.0.0.2,tcp:123",
 	"10.0.0.3,tcp:123",
-}).withIPSet(tproxyIpSetNodeports, []string{
+}).withIPSet(tproxydefs.NodePortsIPSet, []string{
 	"v4,234", "v6,234",
 }).withName("epslcAppendWithL7Annotation")
 
 var externalIPWithL7Annotation = epslcAppendWithL7Annotation.withKVUpdates(
 	externalSvcWithL7Annotation,
 	deleteEpslcForSvcWithL7Annotation,
-).withIPSet(tproxyIpSetSelector, []string{
+).withIPSet(tproxydefs.ServiceIPsIPSet, []string{
 	"10.0.0.0,tcp:123",
 	"10.0.0.2,tcp:123",
 	"10.0.0.3,tcp:123",
 	"2001:569:7007:1a00:45ac:2caa:a3be:5e10,tcp:123",
 	"10.0.0.20,tcp:123",
-}).withIPSet(tproxyIpSetNodeports, []string{
+}).withIPSet(tproxydefs.NodePortsIPSet, []string{
 	"v4,234", "v6,234",
 }).withName("externalIPWithL7Annotation")
 
 var deleteClusterIPL7Annotation = externalIPWithL7Annotation.withKVUpdates(
 	deleteSvcWithL7Annotation,
 	deleteEpslcForSvcWithL7Annotation2,
-).withIPSet(tproxyIpSetSelector, []string{
+).withIPSet(tproxydefs.ServiceIPsIPSet, []string{
 	"2001:569:7007:1a00:45ac:2caa:a3be:5e10,tcp:123",
 	"10.0.0.20,tcp:123",
-}).withIPSet(tproxyIpSetNodeports, []string{
+}).withIPSet(tproxydefs.NodePortsIPSet, []string{
 	"v4,234", "v6,234",
 }).withName("deleteClusterIPL7Annotation")
 
 var deleteExternalIPL7Annotation = deleteClusterIPL7Annotation.withKVUpdates(
 	deleteExternalSvcWithL7Annotation,
-).withIPSet(tproxyIpSetSelector, []string{}).
-	withIPSet(tproxyIpSetNodeports, []string{}).
+).withIPSet(tproxydefs.ServiceIPsIPSet, []string{}).
+	withIPSet(tproxydefs.NodePortsIPSet, []string{}).
 	withName("deleteExternalIPL7Annotation")
+
+var tproxyALPLocalWEP = withHttpMethodPolicy.withKVUpdates(
+	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
+).withRoutes(
+	// Routes for the local WEP.
+	routelocalWlTenDotOne,
+	routelocalWlTenDotTwo,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
+).withActivePolicies(
+	proto.PolicyID{Tier: "default", Name: "pol-1"},
+).withEndpoint(
+	localWlEp1Id,
+	[]mock.TierInfo{
+		{Name: "default", IngressPolicyNames: []string{"pol-1"}, EgressPolicyNames: []string{"pol-1"}},
+	},
+).withActiveProfiles(
+	proto.ProfileID{Name: "prof-1"},
+	proto.ProfileID{Name: "prof-2"},
+	proto.ProfileID{Name: "prof-missing"},
+).withIPSet(
+	tproxydefs.ApplicationLayerPolicyIPSet, []string{
+		"10.0.0.1/32",
+		"10.0.0.2/32",
+	},
+).withName("tproxyALPLocalWEP")
+
+var tproxyTwoLocalWEPs = tproxyALPLocalWEP.withKVUpdates(
+	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
+).withRoutes(
+	// Routes for the local WEP.
+	routelocalWlTenDotOne,
+	routelocalWlTenDotTwo,
+	routelocalWlTenDotThree,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
+	routelocalWlV6ColonThree,
+).withEndpoint(
+	localWlEp2Id,
+	[]mock.TierInfo{
+		{Name: "default", IngressPolicyNames: []string{"pol-1"}, EgressPolicyNames: []string{"pol-1"}},
+	},
+).withIPSet(
+	tproxydefs.ApplicationLayerPolicyIPSet, []string{
+		"10.0.0.1/32",
+		"10.0.0.2/32",
+		"10.0.0.3/32",
+	},
+).withActiveProfiles(
+	proto.ProfileID{Name: "prof-1"},
+	proto.ProfileID{Name: "prof-2"},
+	proto.ProfileID{Name: "prof-3"},
+	proto.ProfileID{Name: "prof-missing"},
+).withName("tproxyTwoLocalWEPs")
+
+var tproxyTwoLocalWEPsOneNewIPs = tproxyTwoLocalWEPs.withKVUpdates(
+	KVPair{Key: localWlEpKey1, Value: &localWlEp1DifferentIPs},
+).withIPSet(
+	tproxydefs.ApplicationLayerPolicyIPSet, []string{
+		"11.0.0.1/32",
+		"11.0.0.2/32",
+		"10.0.0.2/32",
+		"10.0.0.3/32",
+	},
+).withRoutes(
+	// Routes for the local WEPs.
+	proto.RouteUpdate{
+		Type:          proto.RouteType_LOCAL_WORKLOAD,
+		Dst:           "11.0.0.1/32",
+		DstNodeName:   localHostname,
+		LocalWorkload: true,
+	},
+	proto.RouteUpdate{
+		Type:          proto.RouteType_LOCAL_WORKLOAD,
+		Dst:           "11.0.0.2/32",
+		DstNodeName:   localHostname,
+		LocalWorkload: true,
+	},
+	routelocalWlTenDotTwo,
+	routelocalWlTenDotThree,
+	proto.RouteUpdate{
+		Type:          proto.RouteType_LOCAL_WORKLOAD,
+		Dst:           "fc00:fe12::1/128",
+		DstNodeName:   localHostname,
+		LocalWorkload: true,
+	},
+	proto.RouteUpdate{
+		Type:          proto.RouteType_LOCAL_WORKLOAD,
+		Dst:           "fc00:fe12::2/128",
+		DstNodeName:   localHostname,
+		LocalWorkload: true,
+	},
+	routelocalWlV6ColonTwo,
+	routelocalWlV6ColonThree,
+).withName("tproxyTwoLocalWEPsOneNewIPs")
+
+var tproxyTwoLocalWEPsOneNoLabels = tproxyTwoLocalWEPs.withKVUpdates(
+	KVPair{Key: localWlEpKey1, Value: &localWlEp1NoLabels},
+).withEndpoint(
+	localWlEp1Id,
+	[]mock.TierInfo{},
+).withIPSet(
+	tproxydefs.ApplicationLayerPolicyIPSet, []string{
+		"10.0.0.2/32",
+		"10.0.0.3/32",
+	},
+).withName("tproxyTwoLocalWEPsOneNoLabels")
+
+var tproxyALPLocalAndRemoteWEP = tproxyALPLocalWEP.withKVUpdates(
+	KVPair{Key: remoteWlEpKey1, Value: &commRemoteWlEp1},
+).withRemoteEndpoint(
+	&calc.EndpointData{
+		Key:      remoteWlEpKey1,
+		Endpoint: &commRemoteWlEp1,
+	},
+).withIPSet(
+	tproxydefs.ApplicationLayerPolicyIPSet, []string{
+		"10.0.0.1/32",
+		"10.0.0.2/32",
+	},
+).withName("tproxyALPLocalAndRemoteWEP")
 
 // Local workload endpoint and an endpoint slice for service named "svc".
 var endpointSliceAndLocalWorkload = empty.withKVUpdates(
