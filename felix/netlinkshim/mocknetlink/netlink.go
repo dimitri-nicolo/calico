@@ -20,7 +20,6 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
 	"github.com/projectcalico/calico/felix/environment"
-
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/netlinkshim"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -707,7 +706,7 @@ func (d *MockNetlinkDataplane) AddMockRoute(route *netlink.Route) {
 	r := *route
 	d.ExistingTables.Add(r.Table)
 	if r.Table == 0 {
-		// Store the main table with index 0 for simplicity with comparisons.
+		// Table 0 is "unspecified", which gets defaulted to the main table.
 		r.Table = unix.RT_TABLE_MAIN
 	}
 	d.RouteKeyToRoute[key] = r
@@ -736,7 +735,7 @@ func (d *MockNetlinkDataplane) RouteAdd(route *netlink.Route) error {
 	} else {
 		r := *route
 		if r.Table == 0 {
-			// Store main table routes with 0 index for simplicity of comparison.
+			// Table 0 is "unspecified", which gets defaulted to the main table.
 			r.Table = unix.RT_TABLE_MAIN
 		}
 		d.RouteKeyToRoute[key] = r

@@ -261,7 +261,7 @@ func newBPFEndpointManager(
 	iptablesFilterTable iptablesTable,
 	livenessCallback func(),
 	opReporter logutils.OpRecorder,
-	featureDetector environment.FeatureDetector,
+	featureDetector environment.FeatureDetectorIface,
 
 	// CaliEnt args below
 
