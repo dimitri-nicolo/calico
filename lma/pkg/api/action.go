@@ -12,7 +12,7 @@ const (
 	ActionUnknown       Action = "unknown"
 	ActionAllow         Action = "allow"
 	ActionDeny          Action = "deny"
-	ActionEndOfTierDeny Action = "eot-deny" // TODO: Where does this come from?
+	ActionEndOfTierDeny Action = "eot-deny"
 	ActionNextTier      Action = "pass"
 	// TODO figure out if log should be here, it doesn't seem like log actions appear in the flow logs.
 	// Used to flag an action as invalid when calling ActionFromString

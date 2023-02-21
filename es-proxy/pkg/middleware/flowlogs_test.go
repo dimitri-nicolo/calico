@@ -23,9 +23,11 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/list"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
+	"github.com/projectcalico/calico/lma/pkg/timeutils"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -295,6 +297,12 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 		It("should return params with all filters applied", func() {
 			startTime, endTime := getTestStartAndEndTime()
+			now := time.Now()
+			start, _, err := timeutils.ParseTime(now, &startTime)
+			Expect(err).NotTo(HaveOccurred())
+			end, _, err := timeutils.ParseTime(now, &endTime)
+			Expect(err).NotTo(HaveOccurred())
+
 			params := &FlowLogsParams{
 				Actions:              []string{"allow", "deny", "unknown"},
 				SourceType:           []string{"net", "ns", "wep", "hep"},
@@ -311,12 +319,19 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				},
 				startDateTimeESParm: startTime,
 				endDateTimeESParm:   endTime,
+				startDateTime:       start,
+				endDateTime:         end,
 			}
 
 			flp := buildFlowParams(params)
 			Expect(flp).NotTo(BeNil())
 			Expect(*flp).To(Equal(lapi.L3FlowParams{
-				QueryParams:      lapi.QueryParams{},
+				QueryParams: lapi.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: *start,
+						To:   *end,
+					},
+				},
 				Actions:          []lapi.FlowAction{lapi.FlowActionAllow, lapi.FlowActionDeny, lapi.FlowActionUnknown},
 				SourceTypes:      []lapi.EndpointType{lapi.Network, lapi.NetworkSet, lapi.WEP, lapi.HEP},
 				DestinationTypes: []lapi.EndpointType{lapi.Network, lapi.NetworkSet, lapi.WEP, lapi.HEP},
@@ -486,9 +501,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
 				resp := v1.List[lapi.L3Flow]{}
 				err = json.Unmarshal(linseedResponse, &resp)
-				if err != nil {
-					return nil, err
-				}
+				Expect(err).NotTo(HaveOccurred())
 				return &resp, nil
 			}
 			p := lapi.L3FlowParams{}
@@ -533,9 +546,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
 				resp := v1.List[lapi.L3Flow]{}
 				err = json.Unmarshal(linseedResponse, &resp)
-				if err != nil {
-					return nil, err
-				}
+				Expect(err).NotTo(HaveOccurred())
 				return &resp, nil
 			}
 			p := lapi.L3FlowParams{}
@@ -580,9 +591,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
 				resp := v1.List[lapi.L3Flow]{}
 				err = json.Unmarshal(linseedResponse, &resp)
-				if err != nil {
-					return nil, err
-				}
+				Expect(err).NotTo(HaveOccurred())
 				return &resp, nil
 			}
 			p := lapi.L3FlowParams{}
@@ -631,51 +640,62 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(searchResults).To(BeNil())
 		})
 
-		// It("should retrieve a FlowLogResults object with only 1 bucket in each section due to a limit, with results RBAC filtered (PIP)", func() {
-		// 	err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
-		// 	Expect(err).To(Not(HaveOccurred()))
-		// 	esResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
-		// 	Expect(err).To(Not(HaveOccurred()))
-		// 	validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
-		// 	Expect(err).To(Not(HaveOccurred()))
-		// 	aggResponse, err := ioutil.ReadFile("testdata/flow_logs_pip_1_aggregation_rbac.json")
-		// 	Expect(err).To(Not(HaveOccurred()))
-		// 	previews, err := getPolicyPreviews([]string{string(validPreview)})
-		// 	Expect(err).To(Not(HaveOccurred()))
+		It("should retrieve a FlowLogResults object with only 1 bucket in each section due to a limit, with results RBAC filtered (PIP)", func() {
+			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
+			Expect(err).To(Not(HaveOccurred()))
+			linseedResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			Expect(err).To(Not(HaveOccurred()))
+			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			Expect(err).To(Not(HaveOccurred()))
+			aggResponse, err := ioutil.ReadFile("testdata/flow_logs_pip_1_aggregation_rbac.json")
+			Expect(err).To(Not(HaveOccurred()))
+			previews, err := getPolicyPreviews([]string{string(validPreview)})
+			Expect(err).To(Not(HaveOccurred()))
 
-		// 	listSrc := newMockLister()
-		// 	esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
-		// 	pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
-		// 	params := &FlowLogsParams{
-		// 		PolicyPreviews: previews,
-		// 		Limit:          1,
-		// 	}
+			// Create a mock list pager to get results from Linseed.
+			// listFn mocks out results from Linseed.
+			listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+				resp := v1.List[lapi.L3Flow]{}
+				err = json.Unmarshal(linseedResponse, &resp)
+				Expect(err).NotTo(HaveOccurred())
+				return &resp, nil
+			}
+			p := lapi.L3FlowParams{}
+			pager := client.NewMockListPager(&p, listFn)
 
-		// 	mockFlowHelper := new(rbac.MockFlowHelper)
+			// PIP parameters.
+			params := &FlowLogsParams{
+				PolicyPreviews: previews,
+				Limit:          1,
+			}
+			listSrc := newMockLister()
+			lsclient := client.NewMockClient("")
+			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, lsclient)
+			mockFlowHelper := new(rbac.MockFlowHelper)
 
-		// 	// Allow all except HEP and GNPs.  The first result will be excluded.  The second result will have the GNP obfuscated.
-		// 	mockFlowHelper.On("CanListPolicy", mock.Anything).Return(false, nil)
-		// 	mockFlowHelper.On("CanListEndpoint", api.EndpointTypeHep, api.GlobalEndpointType).Return(false, nil)
-		// 	mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, api.GlobalEndpointType).Return(false, nil)
-		// 	mockFlowHelper.On("CanListEndpoint", api.EndpointTypeWep, mock.Anything).Return(true, nil)
+			// Allow all except HEP and GNPs.  The first result will be excluded.  The second result will have the GNP obfuscated.
+			mockFlowHelper.On("CanListPolicy", mock.Anything).Return(false, nil)
+			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeHep, api.GlobalEndpointType).Return(false, nil)
+			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, api.GlobalEndpointType).Return(false, nil)
+			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeWep, mock.Anything).Return(true, nil)
 
-		// 	flowFilter := lmaelastic.NewFlowFilterUserRBAC(mockFlowHelper)
-		// 	searchResults, stat, err := getPIPFlowLogsFromElastic(flowFilter, params, pipClient, rbacHelper)
+			flowFilter := lmaelastic.NewFlowFilterUserRBAC(mockFlowHelper)
+			searchResults, stat, err := getPIPFlowLogsFromElastic(context.TODO(), pager, flowFilter, params, pipClient, rbacHelper)
 
-		// 	mockFlowHelper.AssertExpectations(GinkgoT())
+			mockFlowHelper.AssertExpectations(GinkgoT())
 
-		// 	Expect(stat).To(Equal(http.StatusOK))
-		// 	Expect(err).To(Not(HaveOccurred()))
+			Expect(stat).To(Equal(http.StatusOK))
+			Expect(err).To(Not(HaveOccurred()))
 
-		// 	// Check the results.
-		// 	Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
-		// 	convertedResults := searchResults.(*pip.FlowLogResults)
-		// 	// the took field won't always match the expected response since it is timer based so overwrite it here
-		// 	convertedResults.Took = 3
-		// 	searchData, err := json.Marshal(convertedResults)
-		// 	Expect(err).To(Not(HaveOccurred()))
-		// 	Expect(searchData).To(MatchJSON(aggResponse))
-		// })
+			// Check the results.
+			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
+			convertedResults := searchResults.(*pip.FlowLogResults)
+			// the took field won't always match the expected response since it is timer based so overwrite it here
+			convertedResults.Took = 3
+			searchData, err := json.Marshal(convertedResults)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(searchData).To(MatchJSON(aggResponse))
+		})
 	})
 })
 

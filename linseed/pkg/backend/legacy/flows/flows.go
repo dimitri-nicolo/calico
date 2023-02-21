@@ -68,6 +68,8 @@ type flowBackend struct {
 	aggNested        []lmaelastic.AggNestedTermInfo
 }
 
+// BucketConverter is a helper interface used as part of the cmd/converter tooling to convert
+// elasticsearch results into v1.L3Flow objects.
 type BucketConverter interface {
 	BaseQuery() *lmaelastic.CompositeAggregationQuery
 	ConvertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) *v1.L3Flow
@@ -493,9 +495,20 @@ func NewLabelTracker() *LabelTracker {
 }
 
 type LabelTracker struct {
-	// Map of key, to map of value to count.
-	s         map[string]map[string]int64
-	allKeys   []string
+	// Map of key, to map of value to count. e.g.,
+	//
+	// { "k1": {"v1": 1, v2: 2}, "k2": {"v3": 1}}
+	//
+	// We need to aggregate all of the labels across multiple flow logs, where we can have
+	// one flow log with key1 = A and another flow log with key1 = B
+	s map[string]map[string]int64
+
+	// Keeps track of all the keys we have seen. Used in the final calculation for
+	// sorting to produce deterministic results.
+	allKeys []string
+
+	// Keeps track of all the values we have seen for each key. Used in the final calculation
+	// for sorting to produce deterministic results.
 	allValues map[string][]string
 }
 

@@ -83,21 +83,21 @@ const (
 type NamespaceMatch struct {
 	// Whether to match against the source namespace, destination namespace,
 	// or either namespace.
-	Type MatchType
+	Type MatchType `json:"type"`
 
 	// List of namespaces to match against. Any flow which has a matching namespace
 	// will be included. If multiple are provided, they are combined using a logical OR.
-	Namespaces []string
+	Namespaces []string `json:"namespaces"`
 }
 
 type NameMatch struct {
 	// Whether to match against the source name, destination name,
 	// or either source or destination name.
-	Type MatchType
+	Type MatchType `json:"type"`
 
 	// Any flow with a matching name will be included. If multiple are provided,
 	// they are combined using a logical OR.
-	Names []string
+	Names []string `json:"names"`
 }
 
 // L3FlowKey represents the identifiers for an L3 Flow.

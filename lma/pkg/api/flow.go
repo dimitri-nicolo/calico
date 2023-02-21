@@ -73,6 +73,7 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 	var proto *uint8
 	pn, err := strconv.Atoi(lsf.Key.Protocol)
 	if err != nil {
+		logrus.WithField("proto", lsf.Key.Protocol).Debug("Handling string protocol")
 		p := numorstring.ProtocolFromString(lsf.Key.Protocol)
 		proto = GetProtocolNumber(&p)
 	} else {
