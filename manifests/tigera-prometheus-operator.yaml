@@ -29053,16 +29053,13 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/component: controller
-      app.kubernetes.io/name: calico-prometheus-operator
+      operator: prometheus
   template:
     metadata:
       annotations:
         kubectl.kubernetes.io/default-container: calico-prometheus-operator
       labels:
-        app.kubernetes.io/component: controller
-        app.kubernetes.io/name: calico-prometheus-operator
-        app.kubernetes.io/version: 0.62.0
+        operator: prometheus
     spec:
       automountServiceAccountToken: true
       nodeSelector:
