@@ -55,26 +55,27 @@ type GraphEventDetails struct {
 
 // GraphEvents is used to store event details. Stored as a map to handle deduplication, this is JSON marshaled as a
 // slice.
-//   [
-//     {
-//       "id": {
-//         "type": "kubernetes"
-//         "name": "n2",
-//         "namespace": "n",
-//       },
-//       "description": "A k8s thing occurred",
-//       "time": "1973-03-14T00:00:00Z"
-//     },
-//     {
-//       "id": {
-//         "type": "alert"
-//         "id": "aifn93hrbv_Ds",
-//         "name": "policy.pod",
-//       },
-//       "description": "A pod was modified occurred",
-//       "time": "1973-03-14T00:00:00Z"
-//     }
-//   ]
+//
+//	[
+//	  {
+//	    "id": {
+//	      "type": "kubernetes"
+//	      "name": "n2",
+//	      "namespace": "n",
+//	    },
+//	    "description": "A k8s thing occurred",
+//	    "time": "1973-03-14T00:00:00Z"
+//	  },
+//	  {
+//	    "id": {
+//	      "type": "alert"
+//	      "id": "aifn93hrbv_Ds",
+//	      "name": "policy.pod",
+//	    },
+//	    "description": "A pod was modified occurred",
+//	    "time": "1973-03-14T00:00:00Z"
+//	  }
+//	]
 type GraphEvents map[GraphEventID]GraphEventDetails
 
 type graphEventWithID struct {

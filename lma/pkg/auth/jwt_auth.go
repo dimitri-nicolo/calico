@@ -41,10 +41,10 @@ const (
 )
 
 // JWTAuth replaces the now deprecated AggregateAuthenticator for the following reasons:
-//  - It is faster. It extracts the issuer from the token and only authenticates based on that issuer.
-//  - It takes impersonation headers into account.
-//  - It uses token reviews in favour of authentication reviews. This is the k8s native way of authn and does not need
-//    special RBAC permissions.
+//   - It is faster. It extracts the issuer from the token and only authenticates based on that issuer.
+//   - It takes impersonation headers into account.
+//   - It uses token reviews in favour of authentication reviews. This is the k8s native way of authn and does not need
+//     special RBAC permissions.
 //
 // JWTAuth should be constructed with a k8s client and interface for service account token auth and for the authorization
 // checks that are related to impersonation. It then accepts extra authenticators for any other bearer JWT token issuers,
@@ -160,7 +160,7 @@ type jwtAuth struct {
 
 // Authenticate checks if a request is authenticated. It accepts only JWT bearer tokens.
 // If it has impersonation headers, it will also check if the authenticated user is authorized
-//to impersonate. The resulting user info will be that of the impersonated user.
+// to impersonate. The resulting user info will be that of the impersonated user.
 func (a *jwtAuth) Authenticate(req *http.Request) (user.Info, int, error) {
 	// This will return an error when:
 	// - No authorization header is present

@@ -238,7 +238,7 @@ func (c *reconciler) verifyOperatorNamespaces(reqLogger *log.Entry) error {
 	return nil
 }
 
-//reconcileAdmissionControllerToken creates a service account and secret for the admission controller in the management cluster
+// reconcileAdmissionControllerToken creates a service account and secret for the admission controller in the management cluster
 // using token request API, and then copies the secret to the managed cluster with a well-known name
 // (tigera-image-assurance-admission-controller-api-access) to be used by the admission controller.
 func (c *reconciler) reconcileAdmissionControllerToken() error {

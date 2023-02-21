@@ -5,6 +5,7 @@ package puller
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"sync"

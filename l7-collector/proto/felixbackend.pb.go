@@ -2,71 +2,73 @@
 // source: felixbackend.proto
 
 /*
-	Package proto is a generated protocol buffer package.
+Package proto is a generated protocol buffer package.
 
-	It is generated from these files:
-		felixbackend.proto
+It is generated from these files:
 
-	It has these top-level messages:
-		SyncRequest
-		ToDataplane
-		FromDataplane
-		ConfigUpdate
-		InSync
-		IPSetUpdate
-		IPSetDeltaUpdate
-		IPSetRemove
-		ActiveProfileUpdate
-		ActiveProfileRemove
-		ProfileID
-		Profile
-		ActivePolicyUpdate
-		ActivePolicyRemove
-		PolicyID
-		Policy
-		Rule
-		ServiceAccountMatch
-		HTTPMatch
-		IcmpTypeAndCode
-		Protocol
-		PortRange
-		WorkloadEndpointID
-		WorkloadEndpointUpdate
-		WorkloadEndpoint
-		WorkloadEndpointRemove
-		HostEndpointID
-		HostEndpointUpdate
-		HostEndpoint
-		HostEndpointRemove
-		TierInfo
-		NatInfo
-		ProcessStatusUpdate
-		HostEndpointStatusUpdate
-		EndpointStatus
-		HostEndpointStatusRemove
-		WorkloadEndpointStatusUpdate
-		WorkloadEndpointStatusRemove
-		HostMetadataUpdate
-		HostMetadataRemove
-		IPSecTunnelAdd
-		IPSecTunnelRemove
-		IPSecBindingUpdate
-		IPSecBlacklistAdd
-		IPSecBlacklistRemove
-		IPAMPoolUpdate
-		IPAMPoolRemove
-		IPAMPool
-		ServiceAccountUpdate
-		ServiceAccountRemove
-		ServiceAccountID
-		NamespaceUpdate
-		NamespaceRemove
-		NamespaceID
-		ReportResult
-		DataplaneStats
-		Statistic
-		RuleTrace
-		HttpData
+	felixbackend.proto
+
+It has these top-level messages:
+
+	SyncRequest
+	ToDataplane
+	FromDataplane
+	ConfigUpdate
+	InSync
+	IPSetUpdate
+	IPSetDeltaUpdate
+	IPSetRemove
+	ActiveProfileUpdate
+	ActiveProfileRemove
+	ProfileID
+	Profile
+	ActivePolicyUpdate
+	ActivePolicyRemove
+	PolicyID
+	Policy
+	Rule
+	ServiceAccountMatch
+	HTTPMatch
+	IcmpTypeAndCode
+	Protocol
+	PortRange
+	WorkloadEndpointID
+	WorkloadEndpointUpdate
+	WorkloadEndpoint
+	WorkloadEndpointRemove
+	HostEndpointID
+	HostEndpointUpdate
+	HostEndpoint
+	HostEndpointRemove
+	TierInfo
+	NatInfo
+	ProcessStatusUpdate
+	HostEndpointStatusUpdate
+	EndpointStatus
+	HostEndpointStatusRemove
+	WorkloadEndpointStatusUpdate
+	WorkloadEndpointStatusRemove
+	HostMetadataUpdate
+	HostMetadataRemove
+	IPSecTunnelAdd
+	IPSecTunnelRemove
+	IPSecBindingUpdate
+	IPSecBlacklistAdd
+	IPSecBlacklistRemove
+	IPAMPoolUpdate
+	IPAMPoolRemove
+	IPAMPool
+	ServiceAccountUpdate
+	ServiceAccountRemove
+	ServiceAccountID
+	NamespaceUpdate
+	NamespaceRemove
+	NamespaceID
+	ReportResult
+	DataplaneStats
+	Statistic
+	RuleTrace
+	HttpData
 */
 package proto
 

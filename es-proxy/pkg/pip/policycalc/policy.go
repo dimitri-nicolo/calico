@@ -63,9 +63,9 @@ func (p *CompiledPolicy) Applies(flow *api.Flow, cache *flowCache) MatchType {
 
 // Action determines the action of this policy on the flow. It is assumed Applies() has already been invoked to
 // determine if this policy actually applies to the flow.
-// -  It returns a set of possible actions for this policy - a combination of allow, deny, pass or no-match.
-// -  It also uses the flow log to validate or provide certainty with the calculation, so the response may contain
-//    additional bits that pertain to the flow log value.
+//   - It returns a set of possible actions for this policy - a combination of allow, deny, pass or no-match.
+//   - It also uses the flow log to validate or provide certainty with the calculation, so the response may contain
+//     additional bits that pertain to the flow log value.
 func (c *CompiledPolicy) Action(flow *api.Flow, cache *flowCache) api.ActionFlag {
 	var exact bool
 	var flagsThisPolicy api.ActionFlag

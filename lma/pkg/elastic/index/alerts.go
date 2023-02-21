@@ -68,8 +68,8 @@ func (h alertsIndexHelper) GetTimeField() string {
 // In Calico Enterprise < 3.12, we use `tigera_secure_ee_events.<cluster>` as the events index pattern.
 // In Calico Enterprise >= 3.12, we use `tigera_secure_ee_events.<cluster>.lma` as the events index pattern.
 // Also, we create an alisa `tigera_secure_ee_events.<cluster>.` (notice the last dot) in Calico Enterprise >= 3.12 as:
-//   1. read/write alias for `tigera_secure_ee_events.<cluster>.lma`.
-//   2. read only alias for `tigera_secure_ee_events.<cluster>`.
+//  1. read/write alias for `tigera_secure_ee_events.<cluster>.lma`.
+//  2. read only alias for `tigera_secure_ee_events.<cluster>`.
 func (h alertsIndexHelper) GetIndex(cluster string) string {
 	return fmt.Sprintf("%s.%s.", lmaelastic.EventsIndex, cluster)
 }

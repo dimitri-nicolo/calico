@@ -96,9 +96,10 @@ func (c *client) StoreArchivedReport(r *api.ArchivedReportData) error {
 }
 
 // RetrieveArchivedReport implements the api.ReportRetriever interface
-//TODO(rlb): This is another example of an elastic query that is similar to the PIP composite query and could
-//           therefore be put somewhere common. For now though leave as is because we intend to port this to
-//           v2.5.x and it's better to minimize churn in this case.
+// TODO(rlb): This is another example of an elastic query that is similar to the PIP composite query and could
+//
+//	therefore be put somewhere common. For now though leave as is because we intend to port this to
+//	v2.5.x and it's better to minimize churn in this case.
 func (c *client) RetrieveArchivedReportTypeAndNames(cxt context.Context, q api.ReportQueryParams) ([]api.ReportTypeAndName, error) {
 	var reps []api.ReportTypeAndName
 

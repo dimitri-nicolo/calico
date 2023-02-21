@@ -17,10 +17,10 @@ limitations under the License.
 
 // Package controller contains the controller for Tigera compliance. It is based (almost entirely) off the
 // v1.14.1 Kubernetes CronJob controller, but modified with the following tweaks:
-// -  Reads Calico GlobalReport resources instead of K8s CronJob resources.
-// -  Automatically deletes successful jobs
-// -  Passes the correct job start and finish time to the report job
-// -  Updates the GlobalReport status instead of the CronJob status
-// -  Triggers the jobs at reportRetriever configured interval after the start of the next job (since data is historical and we need
-//    to allow the data to be fully sent to the archive.
+//   - Reads Calico GlobalReport resources instead of K8s CronJob resources.
+//   - Automatically deletes successful jobs
+//   - Passes the correct job start and finish time to the report job
+//   - Updates the GlobalReport status instead of the CronJob status
+//   - Triggers the jobs at reportRetriever configured interval after the start of the next job (since data is historical and we need
+//     to allow the data to be fully sent to the archive.
 package controller

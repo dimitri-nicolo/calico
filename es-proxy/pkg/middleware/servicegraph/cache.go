@@ -114,8 +114,9 @@ func (s *serviceGraphCache) GetCacheSize() int {
 // -  service groups calculated from flows
 // -  event IDs correlated to endpoints
 // TODO(rlb): The events are not RBAC filtered, instead events are overlaid onto the filtered graph view - so the
-//            presence of a graph node or not is used to determine whether or not an event is included. This will likely
-//            need to be revisited when we refine RBAC control of events.
+//
+//	presence of a graph node or not is used to determine whether or not an event is included. This will likely
+//	need to be revisited when we refine RBAC control of events.
 func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd *RequestData) (*ServiceGraphData, error) {
 	// Run the following queries in parallel.
 	// - Get the RBAC filter

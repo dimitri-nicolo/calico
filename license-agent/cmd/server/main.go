@@ -65,8 +65,8 @@ func main() {
 	lr.Start()
 }
 
-//checkFileExist checks valid file exist, if so returns
-//File Path else return empty string
+// checkFileExist checks valid file exist, if so returns
+// File Path else return empty string
 func checkFileExists(name string) string {
 	if _, err := os.Stat(name); os.IsNotExist(err) {
 		return ""

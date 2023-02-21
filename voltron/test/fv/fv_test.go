@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"

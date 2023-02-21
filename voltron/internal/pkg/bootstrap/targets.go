@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"encoding/json"
 	"net/url"
+	"os"
 	"regexp"
 
 	"github.com/pkg/errors"

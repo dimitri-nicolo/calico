@@ -17,6 +17,7 @@ package node_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"

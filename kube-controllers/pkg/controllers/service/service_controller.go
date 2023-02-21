@@ -168,9 +168,9 @@ func (c *serviceController) getEndpointsForService(serviceKey string) *v1.Endpoi
 	return epIface.(*v1.Endpoints)
 }
 
-//shouldCreateNetworkSet return false if networkset corresponding to service/endpoint pair should not be created. True otherwise.
-//If service should be created, it also returns the NetworkSet from service to networkset conversion and the NetworkSet from
-//endpoints to networkset conversion
+// shouldCreateNetworkSet return false if networkset corresponding to service/endpoint pair should not be created. True otherwise.
+// If service should be created, it also returns the NetworkSet from service to networkset conversion and the NetworkSet from
+// endpoints to networkset conversion
 func (c *serviceController) shouldCreateNetworkSet(svc *v1.Service, ep *v1.Endpoints) (bool, *api.NetworkSet, *api.NetworkSet) {
 	//Both must be not present for a networkset to be eventually created.
 	if (svc != nil && ep == nil) || (ep != nil && svc == nil) {
@@ -195,7 +195,7 @@ func (c *serviceController) shouldCreateNetworkSet(svc *v1.Service, ep *v1.Endpo
 	return true, &nsFromService, &nsFromEndpoints
 }
 
-//convertToNetworkSet create the NetworkSet merging content from service and endpoints
+// convertToNetworkSet create the NetworkSet merging content from service and endpoints
 func (c *serviceController) convertToNetworkSet(nsFromSvc, nsFromEp *api.NetworkSet) *api.NetworkSet {
 	networkSet := api.NewNetworkSet()
 
