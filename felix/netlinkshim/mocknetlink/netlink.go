@@ -239,6 +239,9 @@ type MockNetlinkDataplane struct {
 	ConntrackSleep          time.Duration
 }
 
+func (d *MockNetlinkDataplane) RefreshFeatures() {
+}
+
 func (d *MockNetlinkDataplane) GetFeatures() *environment.Features {
 	return &environment.Features{
 		KernelSideRouteFiltering: true,
