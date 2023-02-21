@@ -3,6 +3,7 @@ package utils
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 
 	log "github.com/sirupsen/logrus"

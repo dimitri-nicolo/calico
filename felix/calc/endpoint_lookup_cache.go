@@ -461,8 +461,7 @@ func removeEndpointDataFromSlice(s []*EndpointData, i int) []*EndpointData {
 // goroutine that will be called after endpointDataTTLAfterMarkedAsRemoved
 // has passed.  ipToEndpointDeletionTimers is used to track the all the timers
 // created for tentatively deleted endpoints as they are accessed by add/update
-//
-//	operations.
+// operations.
 func (ec *EndpointLookupsCache) removeEndpointWithDelay(key model.Key) {
 	ec.epMutex.Lock()
 	defer ec.epMutex.Unlock()

@@ -247,9 +247,9 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	})
 
 	var certPemID1, keyPemID1, certPemID2, keyPemID2 []byte
-	var fingerprintID1, fingerprintID2 string
 
 	It("should register 2 clusters", func() {
+		var fingerprintID1, fingerprintID2 string
 		k8sAPI.WaitForManagedClustersWatched()
 		var err error
 		certPemID1, keyPemID1, fingerprintID1, err = test.GenerateTestCredentials(clusterID, tunnelCert, tunnelPrivKey)

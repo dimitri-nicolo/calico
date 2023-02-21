@@ -67,7 +67,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 		// Create a temporary directory to map into the container as /var/run/calico/policysync, which
 		// is where we tell Felix to put the policy sync mounts and credentials.
 		var err error
-		tempDir, err = os.CreateTemp("", "felixfv")
+		tempDir, err = os.MkdirTemp("", "felixfv")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Configure felix to enable the policy sync API.
@@ -701,7 +701,7 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 		// Create a temporary directory per Felix node to map into the container as /var/run/calico/policysync, which
 		// is where we tell Felix to put the route sync mounts and credentials.
 		for ii := range tempDirs {
-			t, err := os.TempDir("", fmt.Sprintf("felixfv-%d", ii))
+			t, err := os.MkdirTemp("", fmt.Sprintf("felixfv-%d", ii))
 			Expect(err).NotTo(HaveOccurred())
 			tempDirs[ii] = t
 			options.PerNodeOptions = append(options.PerNodeOptions, infrastructure.PerNodeOptions{

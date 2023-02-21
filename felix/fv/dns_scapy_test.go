@@ -194,7 +194,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			BeforeEach(func() {
 				opts := infrastructure.DefaultTopologyOptions()
 				var err error
-				dnsDir, err = os.CreateTemp("", "dnsinfo")
+				dnsDir, err = os.MkdirTemp("", "dnsinfo")
 				Expect(err).NotTo(HaveOccurred())
 
 				// Start scapy first, so we can get its IP and configure Felix to trust it.
@@ -698,7 +698,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 	BeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
 		var err error
-		dnsDir, err = os.CreateTemp("", "dnsinfo")
+		dnsDir, err = os.MkdirTemp("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Start etcd and Felix, with no trusted DNS server IPs yet.
@@ -828,7 +828,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 	BeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
 		var err error
-		dnsDir, err = os.CreateTemp("", "dnsinfo")
+		dnsDir, err = os.MkdirTemp("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Start etcd and Felix, with no trusted DNS server IPs yet.

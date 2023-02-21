@@ -94,7 +94,7 @@ func (a *authenticator) Authenticate(authHeader string) (user.Info, int, error) 
 			AuthorizationHeader: []string{authHeader},
 			"Content-Type":      []string{"application/json"},
 		},
-		Body: os.NopCloser(reader),
+		Body: io.NopCloser(reader),
 	}
 	response, err := a.client.Do(req)
 	if err != nil {

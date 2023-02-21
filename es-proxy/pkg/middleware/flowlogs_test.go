@@ -593,9 +593,7 @@ type mockLister struct {
 	RetrieveCalls int
 }
 
-// Initialize is used by the test to fill the lister with a list for each resource type
-//
-//	Useful for replayer.
+// Initialize is used by the test to fill the lister with a list for each resource type useful for replayer.
 func newMockLister() *mockLister {
 	m := &mockLister{}
 	for _, rh := range resources.GetAllResourceHelpers() {

@@ -87,26 +87,22 @@ func ExtractRulesSetFilenames() error {
 		return err
 	}
 
-	var itemInfos []os.FileInfo
+	var itemNames []string
 	for _, i := range items {
-		info, err2 := i.Info()
-		if err2 == nil {
-			// Most likely the file no longer exists.
-			log.Debugf("could not get file info for rule: %v", err2)
-		} else {
-			itemInfos = append(itemInfos, info)
-		}
+		itemNames = append(itemNames, i.Name())
 	}
 	// Sort files descending to ensure lower cased files like crs-setup.conf are loaded first.
 	// This is a requirement for Core Rules Set and REQUEST-901-INITIALIZATION.conf bootstrap.
-	sortFileNameDescend(itemInfos)
+	sort.Slice(itemNames, func(i, j int) bool {
+		return itemNames[i] > itemNames[j]
+	})
 
 	count := 1
 	filenames = nil
-	for _, item := range itemInfos {
+	for _, item := range itemNames {
 
 		// Ignore files that link to the parent directory.
-		filename := item.Name()
+		filename := item
 		if strings.HasPrefix(filename, "..") {
 			continue
 		}
@@ -299,12 +295,6 @@ func GetRulesSetFilenames() []string {
 
 func GetProcessHttpRequestPrefix(id string) string {
 	return fmt.Sprintf("WAF Process Http Request [%s]", id)
-}
-
-func sortFileNameDescend(files []os.FileInfo) {
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Name() > files[j].Name()
-	})
 }
 
 //export GoModSecurityLoggingCallback

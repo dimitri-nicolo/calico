@@ -40,7 +40,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		felix = nil
 		w = nil
 		var err error
-		dnsDir, err = os.CreateTemp("", "dnsinfo")
+		dnsDir, err = os.MkdirTemp("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
 	})
 

@@ -35,7 +35,7 @@ build: bin/cub-generator-$(ARCH)
 bin/cub-generator-$(ARCH): $(SRC_FILES)
 		$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(LDFLAGS)" cmd/$*/*.go'
+			go build -buildvcs=false -o $@ -v -ldflags "$(LDFLAGS)" cmd/$*/*.go'
 
 
 ###############################################################################

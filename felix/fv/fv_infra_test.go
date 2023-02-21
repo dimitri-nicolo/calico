@@ -185,7 +185,7 @@ var _ = infrastructure.DatastoreDescribe("Container self tests",
 
 			It("should panic and drop a core file", func() {
 				felixes[0].WaitNotRunning(5 * time.Second)
-				dir, err := io.ReadDir("/tmp")
+				dir, err := os.ReadDir("/tmp")
 				Expect(err).NotTo(HaveOccurred())
 				name := ""
 				for _, f := range dir {
