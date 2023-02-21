@@ -19,6 +19,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/projectcalico/calico/felix/environment"
+
 	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/rules"
@@ -92,7 +94,9 @@ type routeTableGenerator interface {
 		deviceRouteSourceAddress net.IP,
 		deviceRouteProtocol int,
 		removeExternalRoutes bool,
-		opRecorder logutils.OpRecorder) routetable.RouteTableInterface
+		opRecorder logutils.OpRecorder,
+		featureDetector environment.FeatureDetector,
+	) routetable.RouteTableInterface
 }
 
 type routeTableFactory struct {
@@ -107,7 +111,9 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 	deviceRouteSourceAddress net.IP,
 	deviceRouteProtocol int,
 	removeExternalRoutes bool,
-	opRecorder logutils.OpRecorder) routetable.RouteTableInterface {
+	opRecorder logutils.OpRecorder,
+	featureDetector environment.FeatureDetector,
+) routetable.RouteTableInterface {
 
 	f.count += 1
 	return routetable.New(interfacePrefixes,
@@ -118,7 +124,8 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 		netlink.RouteProtocol(deviceRouteProtocol),
 		removeExternalRoutes,
 		tableIndex,
-		opRecorder)
+		opRecorder,
+		featureDetector)
 }
 
 type routeRulesGenerator interface {
@@ -300,7 +307,8 @@ type egressIPManager struct {
 	// gets passed to routerule package when creating rules
 	tableIndexSet set.Set[int]
 
-	opRecorder logutils.OpRecorder
+	opRecorder      logutils.OpRecorder
+	featureDetector environment.FeatureDetector
 
 	disableChecksumOffload func(ifName string) error
 
@@ -324,6 +332,7 @@ func newEgressIPManager(
 	healthReportC chan<- EGWHealthReport,
 	ipsets egressIPSets,
 	bpfIPSets egressIPSets,
+	featureDetector environment.FeatureDetector,
 ) *egressIPManager {
 	nlHandle, err := netlink.NewHandle()
 	if err != nil {
@@ -345,7 +354,7 @@ func newEgressIPManager(
 	l2Table := routetable.New([]string{"^" + deviceName + "$"},
 		4, true, dpConfig.NetlinkTimeout, nil,
 		dpConfig.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
-		opRecorder)
+		opRecorder, featureDetector)
 
 	hopRandSource := rand.NewSource(time.Now().UTC().UnixNano())
 
@@ -366,6 +375,7 @@ func newEgressIPManager(
 		healthReportC,
 		ipsets,
 		bpfIPSets,
+		featureDetector,
 	)
 	return mgr
 }
@@ -387,6 +397,7 @@ func newEgressIPManagerWithShims(
 	healthReportC chan<- EGWHealthReport,
 	ipsets egressIPSets,
 	bpfIPSets egressIPSets,
+	featureDetector environment.FeatureDetector,
 ) *egressIPManager {
 
 	mgr := egressIPManager{
@@ -420,6 +431,7 @@ func newEgressIPManagerWithShims(
 		hopRand:                rand.New(hopRandSource),
 		ipsets:                 ipsets,
 		bpfIPSets:              bpfIPSets,
+		featureDetector:        featureDetector,
 	}
 
 	if healthAgg != nil {
@@ -1172,7 +1184,9 @@ func (m *egressIPManager) newRouteTable(tableNum int) routetable.RouteTableInter
 		nil,
 		int(m.dpConfig.DeviceRouteProtocol),
 		true,
-		m.opRecorder)
+		m.opRecorder,
+		m.featureDetector,
+	)
 }
 
 func (m *egressIPManager) getNextTableIndex() (int, error) {

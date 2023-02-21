@@ -936,6 +936,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	tproxyMgr := newTProxyManager(config,
 		tproxyRTIndex4, tproxyRTIndex6,
 		dp.loopSummarizer,
+		featureDetector,
 		tproxyWithIptablesEqualIPsChecker(newIptablesEqualIPsChecker(config, ipSetsV4, ipSetsV6)),
 	)
 	dp.RegisterManager(tproxyMgr)
@@ -1117,6 +1118,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.egwHealthReportC,
 			ipSetsV4,
 			bpfIPSets,
+			featureDetector,
 		)
 		dp.RegisterManager(dp.egressIPManager)
 	} else {
@@ -1237,6 +1239,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.config,
 			dp.loopSummarizer,
 			secondaryIfaceProv,
+			featureDetector,
 		)
 		dp.RegisterManager(awsSubnetManager)
 		dp.awsStateUpdC = secondaryIfaceProv.ResponseC()

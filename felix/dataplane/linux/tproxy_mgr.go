@@ -11,6 +11,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/felix/environment"
+
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/ip"
@@ -49,6 +51,7 @@ func newTProxyManager(
 	dpConfig Config,
 	idx4, idx6 int,
 	opRecorder logutils.OpRecorder,
+	featureDetector environment.FeatureDetector,
 	opts ...TProxyOption,
 ) *tproxyManager {
 
@@ -82,6 +85,7 @@ func newTProxyManager(
 		true, // removeExternalRoutes
 		idx4,
 		opRecorder,
+		featureDetector,
 	)
 
 	rr, err := routerule.New(
@@ -131,6 +135,7 @@ func newTProxyManager(
 			true, // removeExternalRoutes
 			idx6,
 			opRecorder,
+			featureDetector,
 		)
 
 		rr, err := routerule.New(
