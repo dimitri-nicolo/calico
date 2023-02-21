@@ -50,14 +50,16 @@ func (i *InvalidDataFromDataPlane) Error() string {
 
 // match checks if the Rule matches the request.  It returns true if the Rule matches, false otherwise.
 func match(rule *proto.Rule, req *requestCache, policyNamespace string) bool {
-	log.WithFields(log.Fields{
-		"rule":            rule,
-		"Req.Method":      req.Request.GetAttributes().GetRequest().GetHttp().GetMethod(),
-		"Req.Path":        req.Request.GetAttributes().GetRequest().GetHttp().GetPath(),
-		"Req.Protocol":    req.Request.GetAttributes().GetRequest().GetHttp().GetProtocol(),
-		"Req.Source":      req.Request.GetAttributes().GetSource(),
-		"Req.Destination": req.Request.GetAttributes().GetDestination(),
-	}).Debug("Checking rule on request")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"rule":            rule,
+			"Req.Method":      req.Request.GetAttributes().GetRequest().GetHttp().GetMethod(),
+			"Req.Path":        req.Request.GetAttributes().GetRequest().GetHttp().GetPath(),
+			"Req.Protocol":    req.Request.GetAttributes().GetRequest().GetHttp().GetProtocol(),
+			"Req.Source":      req.Request.GetAttributes().GetSource(),
+			"Req.Destination": req.Request.GetAttributes().GetDestination(),
+		}).Debug("Checking rule on request")
+	}
 	attr := req.Request.GetAttributes()
 	return matchSource(rule, req, policyNamespace) &&
 		matchDestination(rule, req, policyNamespace) &&
@@ -124,12 +126,14 @@ func matchRequest(rule *proto.Rule, req *authz.AttributeContext_Request) bool {
 }
 
 func matchServiceAccounts(saMatch *proto.ServiceAccountMatch, p peer) bool {
-	log.WithFields(log.Fields{
-		"name":      p.Name,
-		"namespace": p.Namespace,
-		"labels":    p.Labels,
-		"rule":      saMatch},
-	).Debug("Matching service account.")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"name":      p.Name,
+			"namespace": p.Namespace,
+			"labels":    p.Labels,
+			"rule":      saMatch},
+		).Debug("Matching service account.")
+	}
 	if saMatch == nil {
 		log.Debug("nil ServiceAccountMatch.  Return true.")
 		return true
@@ -144,10 +148,12 @@ func matchServiceAccounts(saMatch *proto.ServiceAccountMatch, p peer) bool {
 }
 
 func matchName(names []string, name string) bool {
-	log.WithFields(log.Fields{
-		"names": names,
-		"name":  name,
-	}).Debug("Matching name")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"names": names,
+			"name":  name,
+		}).Debug("Matching name")
+	}
 	if len(names) == 0 {
 		log.Debug("No names on rule.")
 		return true
@@ -161,10 +167,12 @@ func matchName(names []string, name string) bool {
 }
 
 func matchLabels(selectorStr string, labels map[string]string) bool {
-	log.WithFields(log.Fields{
-		"selector": selectorStr,
-		"labels":   labels,
-	}).Debug("Matching labels")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"selector": selectorStr,
+			"labels":   labels,
+		}).Debug("Matching labels")
+	}
 	sel, err := selector.Parse(selectorStr)
 	if err != nil {
 		log.Warnf("Could not parse label selector %v, %v", selectorStr, err)
@@ -175,11 +183,13 @@ func matchLabels(selectorStr string, labels map[string]string) bool {
 }
 
 func matchNamespace(nsMatch *namespaceMatch, ns namespace) bool {
-	log.WithFields(log.Fields{
-		"namespace": ns.Name,
-		"labels":    ns.Labels,
-		"rule":      nsMatch},
-	).Debug("Matching namespace.")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"namespace": ns.Name,
+			"labels":    ns.Labels,
+			"rule":      nsMatch},
+		).Debug("Matching namespace.")
+	}
 	// In case of plain text, Dikastes falls back on IP addresses. In such a case
 	// namespace is empty as there is no such information in the authorization header.
 	// In case of plain text so Dikastes only matches if the IP addresses are part of
@@ -190,9 +200,11 @@ func matchNamespace(nsMatch *namespaceMatch, ns namespace) bool {
 }
 
 func matchHTTP(rule *proto.HTTPMatch, req *authz.AttributeContext_HttpRequest) bool {
-	log.WithFields(log.Fields{
-		"rule": rule,
-	}).Debug("Matching HTTP.")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"rule": rule,
+		}).Debug("Matching HTTP.")
+	}
 	if rule == nil {
 		log.Debug("nil HTTPRule.  Return true")
 		return true
@@ -201,10 +213,12 @@ func matchHTTP(rule *proto.HTTPMatch, req *authz.AttributeContext_HttpRequest) b
 }
 
 func matchHTTPMethods(methods []string, reqMethod string) bool {
-	log.WithFields(log.Fields{
-		"methods":   methods,
-		"reqMethod": reqMethod,
-	}).Debug("Matching HTTP Methods")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"methods":   methods,
+			"reqMethod": reqMethod,
+		}).Debug("Matching HTTP Methods")
+	}
 	if len(methods) == 0 {
 		log.Debug("Rule has 0 HTTP Methods, matched.")
 		return true
@@ -224,10 +238,12 @@ func matchHTTPMethods(methods []string, reqMethod string) bool {
 }
 
 func matchHTTPPaths(paths []*proto.HTTPMatch_PathMatch, reqPath string) bool {
-	log.WithFields(log.Fields{
-		"paths":   paths,
-		"reqPath": reqPath,
-	}).Debug("Matching HTTP Paths")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"paths":   paths,
+			"reqPath": reqPath,
+		}).Debug("Matching HTTP Paths")
+	}
 	if len(paths) == 0 {
 		log.Debug("Rule has 0 HTTP Paths, matched.")
 		return true
@@ -262,20 +278,24 @@ func matchHTTPPaths(paths []*proto.HTTPMatch_PathMatch, reqPath string) bool {
 }
 
 func matchSrcIPSets(r *proto.Rule, req *requestCache) bool {
-	log.WithFields(log.Fields{
-		"SrcIpSetIds":    r.SrcIpSetIds,
-		"NotSrcIpSetIds": r.NotSrcIpSetIds,
-	}).Debug("matching source IP sets")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"SrcIpSetIds":    r.SrcIpSetIds,
+			"NotSrcIpSetIds": r.NotSrcIpSetIds,
+		}).Debug("matching source IP sets")
+	}
 	addr := req.Request.GetAttributes().GetSource().GetAddress()
 	return matchIPSetsAll(r.SrcIpSetIds, req, addr) &&
 		matchIPSetsNotAny(r.NotSrcIpSetIds, req, addr)
 }
 
 func matchDstIPSets(r *proto.Rule, req *requestCache) bool {
-	log.WithFields(log.Fields{
-		"DstIpSetIds":    r.DstIpSetIds,
-		"NotDstIpSetIds": r.NotDstIpSetIds,
-	}).Debug("matching destination IP sets")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"DstIpSetIds":    r.DstIpSetIds,
+			"NotDstIpSetIds": r.NotDstIpSetIds,
+		}).Debug("matching destination IP sets")
+	}
 	addr := req.Request.GetAttributes().GetDestination().GetAddress()
 	return matchIPSetsAll(r.DstIpSetIds, req, addr) &&
 		matchIPSetsNotAny(r.NotDstIpSetIds, req, addr)
@@ -304,12 +324,14 @@ func matchIPSetsNotAny(ids []string, req *requestCache, addr *core.Address) bool
 }
 
 func matchPort(dir string, ranges []*proto.PortRange, namedPortSets []string, req *requestCache, addr *core.Address) bool {
-	log.WithFields(log.Fields{
-		"ranges":        ranges,
-		"namedPortSets": namedPortSets,
-		"addr":          addr,
-		"dir":           dir,
-	}).Debug("matching port")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"ranges":        ranges,
+			"namedPortSets": namedPortSets,
+			"addr":          addr,
+			"dir":           dir,
+		}).Debug("matching port")
+	}
 	if len(ranges) == 0 && len(namedPortSets) == 0 {
 		return true
 	}
@@ -329,11 +351,13 @@ func matchPort(dir string, ranges []*proto.PortRange, namedPortSets []string, re
 }
 
 func matchNet(dir string, nets []string, addr *core.Address) bool {
-	log.WithFields(log.Fields{
-		"nets": nets,
-		"addr": addr,
-		"dir":  dir,
-	}).Debug("matching net")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"nets": nets,
+			"addr": addr,
+			"dir":  dir,
+		}).Debug("matching net")
+	}
 	if len(nets) == 0 {
 		return true
 	}
@@ -368,11 +392,13 @@ func matchL4Protocol(rule *proto.Rule, dest *authz.AttributeContext_Peer) bool {
 
 	// Default protocol is TCP. Convert to lowercase.
 	reqProtocol := strings.ToLower(dest.GetAddress().GetSocketAddress().GetProtocol().String())
-	log.WithFields(log.Fields{
-		"isProtocol":      rule.GetProtocol(),
-		"isNotProtocol":   rule.NotProtocol,
-		"requestProtocol": reqProtocol,
-	}).Debug("Matching L4 protocol")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"isProtocol":      rule.GetProtocol(),
+			"isNotProtocol":   rule.NotProtocol,
+			"requestProtocol": reqProtocol,
+		}).Debug("Matching L4 protocol")
+	}
 
 	checkStringInRuleProtocol := func(p *proto.Protocol, s string, defaultResult bool) bool {
 		if p == nil {

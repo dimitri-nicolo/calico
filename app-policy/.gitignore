@@ -6,3 +6,4 @@ bin
 report/
 release-notes-*
 Makefile.common*
+*.log

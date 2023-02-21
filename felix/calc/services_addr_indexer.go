@@ -51,7 +51,7 @@ type portProtoKey struct {
 	proto int
 }
 
-// ServiceUpdateHandler handles all the service related updates coming from
+// ServiceAddrIndexer handles all the service related updates coming from
 // update dispatcher.
 //
 // This component should included in other components which can register
@@ -59,23 +59,23 @@ type portProtoKey struct {
 //
 // It processes the updates passed to it and creates three maps. One contains all services
 // passed to it, other two contains node port services, regular services.
-type ServiceUpdateHandler struct {
+type ServiceAddrIndexer struct {
 	// Service relationships and cached resource info.
 	ipPortProtoToServices map[ipPortProtoKey][]proxy.ServicePortName
 	nodePortServices      map[portProtoKey][]proxy.ServicePortName
 	services              map[model.ResourceKey]kapiv1.ServiceSpec
 }
 
-func NewServiceUpdateHandler() *ServiceUpdateHandler {
-	suh := &ServiceUpdateHandler{
+func NewServiceAddrIndexer() *ServiceAddrIndexer {
+	sai := &ServiceAddrIndexer{
 		ipPortProtoToServices: make(map[ipPortProtoKey][]proxy.ServicePortName),
 		nodePortServices:      make(map[portProtoKey][]proxy.ServicePortName),
 		services:              make(map[model.ResourceKey]kapiv1.ServiceSpec),
 	}
-	return suh
+	return sai
 }
 
-func (suh *ServiceUpdateHandler) handleService(
+func (s *ServiceAddrIndexer) handleService(
 	key model.ResourceKey, svc kapiv1.ServiceSpec,
 	epOperator func(key ipPortProtoKey, svc proxy.ServicePortName),
 	nodePortOperator func(key portProtoKey, svc proxy.ServicePortName),
@@ -141,12 +141,12 @@ func (suh *ServiceUpdateHandler) handleService(
 	}
 }
 
-func (suh *ServiceUpdateHandler) addServiceMap(key ipPortProtoKey, svc proxy.ServicePortName) {
-	suh.ipPortProtoToServices[key] = append(suh.ipPortProtoToServices[key], svc)
+func (s *ServiceAddrIndexer) addServiceMap(key ipPortProtoKey, svc proxy.ServicePortName) {
+	s.ipPortProtoToServices[key] = append(s.ipPortProtoToServices[key], svc)
 }
 
-func (suh *ServiceUpdateHandler) removeServiceMap(key ipPortProtoKey, svc proxy.ServicePortName) {
-	svcs := suh.ipPortProtoToServices[key]
+func (s *ServiceAddrIndexer) removeServiceMap(key ipPortProtoKey, svc proxy.ServicePortName) {
+	svcs := s.ipPortProtoToServices[key]
 	// Remove entry from the services slice and update the mapping. We can just iterate through the slice and
 	// shift across once we find the entry.
 	found := false
@@ -159,50 +159,50 @@ func (suh *ServiceUpdateHandler) removeServiceMap(key ipPortProtoKey, svc proxy.
 	}
 	if found {
 		svcs = svcs[:len(svcs)-1]
-		suh.ipPortProtoToServices[key] = svcs
+		s.ipPortProtoToServices[key] = svcs
 	}
 	if len(svcs) == 0 {
 		// No more services for the cluster IP, so just remove the cluster IP to service mapping
-		delete(suh.ipPortProtoToServices, key)
+		delete(s.ipPortProtoToServices, key)
 		return
 	}
 }
 
 // AddOrUpdateService tracks service cluster IP to service mappings.
-func (suh *ServiceUpdateHandler) AddOrUpdateService(key model.ResourceKey, service *kapiv1.Service) {
+func (s *ServiceAddrIndexer) AddOrUpdateService(key model.ResourceKey, service *kapiv1.Service) {
 
-	if existing, ok := suh.services[key]; ok {
+	if existing, ok := s.services[key]; ok {
 		if reflect.DeepEqual(existing, service.Spec) {
 			// Service data has not changed. Do nothing.
 			return
 		}
 
 		// Service data has changed, keep the logic simple by removing the old service and re-adding the new one.
-		suh.handleService(key, existing, suh.removeServiceMap, suh.removeNodePortMap)
+		s.handleService(key, existing, s.removeServiceMap, s.removeNodePortMap)
 	}
 
-	suh.handleService(key, service.Spec, suh.addServiceMap, suh.addNodePortMap)
-	suh.services[key] = service.Spec
+	s.handleService(key, service.Spec, s.addServiceMap, s.addNodePortMap)
+	s.services[key] = service.Spec
 }
 
-func (suh *ServiceUpdateHandler) RemoveService(key model.ResourceKey) {
+func (s *ServiceAddrIndexer) RemoveService(key model.ResourceKey) {
 
 	// Look up service by key and remove the entry.
-	if existing, ok := suh.services[key]; ok {
+	if existing, ok := s.services[key]; ok {
 		// Remove the service maps.
-		suh.handleService(key, existing, suh.removeServiceMap, suh.removeNodePortMap)
-		delete(suh.services, key)
+		s.handleService(key, existing, s.removeServiceMap, s.removeNodePortMap)
+		delete(s.services, key)
 	}
 }
 
-func (suh *ServiceUpdateHandler) addNodePortMap(key portProtoKey, svc proxy.ServicePortName) {
-	suh.nodePortServices[key] = append(suh.nodePortServices[key], svc)
+func (s *ServiceAddrIndexer) addNodePortMap(key portProtoKey, svc proxy.ServicePortName) {
+	s.nodePortServices[key] = append(s.nodePortServices[key], svc)
 }
 
-func (suh *ServiceUpdateHandler) removeNodePortMap(key portProtoKey, svc proxy.ServicePortName) {
+func (s *ServiceAddrIndexer) removeNodePortMap(key portProtoKey, svc proxy.ServicePortName) {
 	// Remove entry from the services slice and update the mapping. We can just iterate through the slice and
 	// shift across once we find the entry.
-	svcs := suh.nodePortServices[key]
+	svcs := s.nodePortServices[key]
 	found := false
 	for i := range svcs {
 		if found {
@@ -213,12 +213,12 @@ func (suh *ServiceUpdateHandler) removeNodePortMap(key portProtoKey, svc proxy.S
 	}
 	if found {
 		svcs = svcs[:len(svcs)-1]
-		suh.nodePortServices[key] = svcs
+		s.nodePortServices[key] = svcs
 	}
 
 	if len(svcs) == 0 {
 		// This is the only service for the node port, so just remove the node port to service mapping
-		delete(suh.nodePortServices, key)
+		delete(s.nodePortServices, key)
 		return
 	}
 }
@@ -257,14 +257,14 @@ func uniqueService(svcs []proxy.ServicePortName) proxy.ServicePortName {
 // with the remote endpoint dispatcher and updates the endpoint
 // cache appropriately.
 type ServiceLookupsCache struct {
-	suh *ServiceUpdateHandler
+	suh *ServiceAddrIndexer
 
 	mutex sync.RWMutex
 }
 
 func NewServiceLookupsCache() *ServiceLookupsCache {
 	slc := &ServiceLookupsCache{
-		suh:   NewServiceUpdateHandler(),
+		suh:   NewServiceAddrIndexer(),
 		mutex: sync.RWMutex{},
 	}
 	return slc

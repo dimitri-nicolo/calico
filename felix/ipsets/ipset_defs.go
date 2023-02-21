@@ -142,7 +142,7 @@ func (t IPSetType) CanonicaliseMember(member string) IPSetMember {
 	switch t {
 	case IPSetTypeHashIP:
 		// Convert the string into our ip.Addr type, which is backed by an array.
-		ipAddr := ip.FromString(member)
+		ipAddr := ip.FromIPOrCIDRString(member)
 		if ipAddr == nil {
 			// This should be prevented by validation in libcalico-go.
 			log.WithField("ip", member).Panic("Failed to parse IP")

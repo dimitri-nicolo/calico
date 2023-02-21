@@ -466,6 +466,16 @@ var baseTests = []StateList{
 	},
 
 	{
+		// ALP with TPROXY IP set.
+		tproxyALPLocalWEP,
+		tproxyALPLocalAndRemoteWEP,    // remote WEP should have no effect on TPROXY.
+		tproxyTwoLocalWEPs,            // Two local WEPs with overlapping IPs in the TPROXY IP set.
+		tproxyTwoLocalWEPsOneNewIPs,   // Switch the IP of one of the WEPs.
+		tproxyTwoLocalWEPsOneNoLabels, // Remove the labels of one WEP, no longer matches ALP policy.
+		localEpsWithPolicy,            // Remove the ALP policy
+	},
+
+	{
 		encapWithIPIPPool,
 		encapWithVXLANPool,
 		encapWithIPIPAndVXLANPool,
@@ -899,7 +909,6 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 	var state State
 	var sentInSync bool
 	var lastStats StatsUpdate
-	var l7Resolver *L7ServiceIPSetsCalculator
 
 	tierSupportEnabled := licenseMonitor.GetFeatureStatus(features.Tiers)
 	BeforeEach(func() {
@@ -909,6 +918,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		conf.SetUseNodeResourceUpdates(expandedTest.UsesNodeResources())
 		conf.RouteSource = expandedTest.RouteSource()
 		conf.EgressIPSupport = "EnabledPerNamespaceOrPerPod"
+		conf.TPROXYMode = "Enabled"
 		mockDataplane = mock.NewMockDataplane()
 		lookupsCache = NewLookupsCache()
 		eventBuf = NewEventSequencer(mockDataplane)
@@ -916,13 +926,11 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		conf.Encapsulation = config.Encapsulation{VXLANEnabled: true, VXLANEnabledV6: true}
 		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, conf, tierSupportEnabled, func() {})
 		calcGraph.EnableIPSec(eventBuf)
-		l7Resolver = NewL7ServiceIPSetsCalculator(eventBuf, conf)
 		statsCollector := NewStatsCollector(func(stats StatsUpdate) error {
 			lastStats = stats
 			return nil
 		})
 		statsCollector.RegisterWith(calcGraph)
-		l7Resolver.RegisterWith(calcGraph.AllUpdDispatcher)
 		validationFilter = NewValidationFilter(calcGraph.AllUpdDispatcher, conf)
 		sentInSync = false
 		lastState = empty

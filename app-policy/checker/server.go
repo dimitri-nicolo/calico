@@ -3,171 +3,140 @@
 package checker
 
 import (
-	"strings"
+	"fmt"
+	"os"
 
-	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/app-policy/statscache"
-	"github.com/projectcalico/calico/app-policy/waf"
+	log "github.com/sirupsen/logrus"
+
+	"golang.org/x/net/context"
+	"google.golang.org/genproto/googleapis/rpc/code"
+	"google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/grpc"
 
 	core_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	authz_v2 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2"
+	authz_v2alpha "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2alpha"
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	type_v2 "github.com/envoyproxy/go-control-plane/envoy/type"
 	_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
-	"google.golang.org/genproto/googleapis/rpc/status"
+
+	"github.com/projectcalico/calico/app-policy/policystore"
+	"github.com/projectcalico/calico/app-policy/statscache"
 )
 
 type authServer struct {
-	stores  <-chan *policystore.PolicyStore
-	dpStats chan<- statscache.DPStats
-	Store   *policystore.PolicyStore
+	dpStats          chan<- statscache.DPStats
+	Store            policystore.PolicyStoreManager
+	checkProviders   []CheckProvider
+	subscriptionType string
 }
 
+type AuthServerOption func(*authServer)
+
 // NewServer creates a new authServer and returns a pointer to it.
-func NewServer(ctx context.Context, stores <-chan *policystore.PolicyStore, dpStats chan<- statscache.DPStats) *authServer {
-	s := &authServer{stores: stores, dpStats: dpStats}
-	go s.updateStores(ctx)
+func NewServer(ctx context.Context, storeManager policystore.PolicyStoreManager, dpStats chan<- statscache.DPStats, opts ...AuthServerOption) *authServer {
+	s := &authServer{Store: storeManager, dpStats: dpStats}
+	for _, o := range opts {
+		o(s)
+	}
 	return s
+}
+
+func WithSubscriptionType(s string) AuthServerOption {
+	return func(as *authServer) {
+		as.subscriptionType = s
+	}
+}
+
+func WithRegisteredCheckProvider(c CheckProvider) AuthServerOption {
+	log.Info("registering check provider: ", c.Name())
+	return func(as *authServer) {
+		// don't re-register providers that are already registered
+		for _, p := range as.checkProviders {
+			if c.Name() == p.Name() {
+				log.Warn("encountered attempt to register already-registered check provider")
+				return
+			}
+		}
+		as.checkProviders = append(as.checkProviders, c)
+	}
+}
+
+func (as *authServer) RegisterGRPCServices(gs *grpc.Server) {
+	authz.RegisterAuthorizationServer(gs, as)
+
+	authz_v2.RegisterAuthorizationServer(gs, as.V2Compat())
+	authz_v2alpha.RegisterAuthorizationServer(gs, as.V2Compat())
 }
 
 // Check applies the currently loaded policy to a network request and renders a policy decision.
 func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*authz.CheckResponse, error) {
+	hostname, _ := os.Hostname()
+	logCtx := log.WithContext(ctx).WithField("hostname", hostname)
+	logCtx.Debug("Check start: ", req.String())
 
-	// Helper variables used to reduce potential code smells.
-	reqMethod := req.GetAttributes().GetRequest().GetHttp().GetMethod()
-	reqPath := req.GetAttributes().GetRequest().GetHttp().GetPath()
-	reqHost := req.GetAttributes().GetRequest().GetHttp().GetHost()
-	reqProtocol := req.GetAttributes().GetRequest().GetHttp().GetProtocol()
-	reqSourceHost := req.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetAddress()
-	reqSourcePort := req.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetPortValue()
-	reqDestinationHost := req.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetAddress()
-	reqDestinationPort := req.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetPortValue()
-	reqHeaders := req.GetAttributes().GetRequest().GetHttp().GetHeaders()
-	reqBody := req.GetAttributes().GetRequest().GetHttp().GetBody()
-
-	log.WithFields(log.Fields{
-		"context":         ctx,
-		"Req.Method":      reqMethod,
-		"Req.Path":        reqPath,
-		"Req.Protocol":    reqProtocol,
-		"Req.Source":      req.GetAttributes().GetSource(),
-		"Req.Destination": req.GetAttributes().GetDestination(),
-	}).Debug("Check start")
-	resp := authz.CheckResponse{Status: &status.Status{Code: INTERNAL}}
-	var st status.Status
-	var statsEnabledForAllowed, statsEnabledForDenied bool
-
+	resp := &authz.CheckResponse{Status: &status.Status{Code: INTERNAL}}
+	var err error
 	// Ensure that we only access as.Store once per Check call. The authServer can be updated to point to a different
 	// store asynchronously with this call, so we use a local variable to reference the PolicyStore for the duration of
 	// this call for consistency.
 	store := as.Store
-	if store == nil {
-		log.Warn("Check request before synchronized to Policy, failing.")
-		resp.Status.Code = UNAVAILABLE
-		return &resp, nil
-	}
 	store.Read(func(ps *policystore.PolicyStore) {
-		st = checkStore(ps, req)
-		statsEnabledForAllowed = ps.DataplaneStatsEnabledForAllowed
-		statsEnabledForDenied = ps.DataplaneStatsEnabledForDenied
+		if ps == nil {
+			panic("bug: policyStore is nil and shouldn't happen.. ever")
+		}
+
+		var unknownChecks int
+	T:
+		for _, checkProvider := range as.checkProviders {
+			checkName := checkProvider.Name()
+			log.Debugf("checking request with provider %s", checkName)
+
+			resp, err = checkProvider.Check(ps, req)
+			if err != nil {
+				msg := fmt.Sprintf("check provider %s failed with error %v", checkName, err)
+				log.Error(msg)
+				resp = &authz.CheckResponse{Status: &status.Status{
+					Code:    INTERNAL,
+					Message: msg,
+				}}
+				break T
+			}
+
+			switch v := resp.Status.Code; v {
+			case OK:
+				// current check passes but we may need to go through all the other checks
+				log.Debugf("request passes %s check", checkName)
+				continue T
+			case UNKNOWN:
+				// check provider tried to process result, but there's no clear decision; or
+				// check provider is requesting to continue to next check
+				log.Debugf("request returned unknown for %s check", checkName)
+				unknownChecks++
+				continue T
+			default:
+				log.Errorf("request denied by %s with status %s", checkName, code.Code(v).String())
+				break T
+			}
+		}
+
+		// all checks returned unknown
+		if unknownChecks == len(as.checkProviders) {
+			resp.Status.Code = UNKNOWN
+		}
+
+		// If we are reporting stats for allowed and response is OK, or we are reporting stats for denied and
+		// the response is not OK then report the stats.
+		if (ps.DataplaneStatsEnabledForAllowed && resp.Status.Code == OK) ||
+			ps.DataplaneStatsEnabledForDenied && resp.Status.Code != OK {
+			as.reportStats(ctx, resp.Status, req)
+		}
 	})
 
-	// If we are reporting stats for allowed and response is OK, or we are reporting stats for denied and
-	// the response is not OK then report the stats.
-	if (statsEnabledForAllowed && st.Code == OK) || (statsEnabledForDenied && st.Code != OK) {
-		as.reportStats(ctx, &st, req)
-	}
+	logCtx.Debug("Check complete: ", req.String())
 
-	if waf.IsEnabled() {
-		// WAF ModSecurity Process Http Request.
-		err := wafProcessHttpRequest(reqPath, reqMethod, reqProtocol, reqSourceHost, reqSourcePort, reqDestinationHost, reqDestinationPort, reqHost, reqHeaders, reqBody)
-		if err != nil {
-			log.Errorf("WAF Process Http Request URL '%s' WAF rules rejected HTTP request!", reqPath)
-			resp.Status.Code = PERMISSION_DENIED
-		} else {
-			resp.Status.Code = OK
-		}
-		return &resp, err
-	}
-
-	resp.Status = &st
-	log.WithFields(log.Fields{
-		"Req.Method":               reqMethod,
-		"Req.Path":                 reqPath,
-		"Req.Protocol":             reqProtocol,
-		"Req.Source":               req.GetAttributes().GetSource(),
-		"Req.Destination":          req.GetAttributes().GetDestination(),
-		"Response.Status":          resp.GetStatus(),
-		"Response.HttpResponse":    resp.GetHttpResponse(),
-		"Response.DynamicMetadata": resp.GetDynamicMetadata,
-	}).Debug("Check complete")
-	return &resp, nil
-}
-
-func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, clientPort uint32, serverHost string, serverPort uint32, destinationHost string, reqHeaders map[string]string, reqBody string) error {
-
-	// Use this as the correlationID.
-	id := waf.GenerateModSecurityID()
-
-	httpProtocol, httpVersion := splitInput(inputProtocol, "/", "HTTP", "1.1")
-	err := waf.ProcessHttpRequest(id, uri, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort, reqHeaders, reqBody)
-
-	// Collect OWASP log information:
-	owaspLogInfo := waf.GetAndClearOwaspLogs(id)
-
-	// Log to Elasticsearch => Kibana.
-	if err != nil {
-
-		// Flatten out potential multiple OWASP log entries into comma-separated string.
-		ruleInfo := strings.Join(owaspLogInfo, ", ")
-		waf.Logger.WithFields(log.Fields{
-			"path":     uri,
-			"method":   httpMethod,
-			"protocol": inputProtocol,
-			"source": log.Fields{
-				"ip":       clientHost,
-				"port_num": clientPort,
-				"hostname": "-",
-			},
-			"destination": log.Fields{
-				"ip":       serverHost,
-				"port_num": serverPort,
-				"hostname": destinationHost,
-			},
-			"rule_info": ruleInfo,
-		}).Error("WAF check FAILED!")
-	} else {
-		prefix := waf.GetProcessHttpRequestPrefix(id)
-		for _, owaspLog := range owaspLogInfo {
-			log.Warnf("%s URL '%s' OWASP Warning'%s'", prefix, uri, owaspLog)
-		}
-	}
-
-	return err
-}
-
-// splitInput: split input based on delimiter specified into 2x components [left and right].
-// if input cannot be split into 2x components based on delimiter then use default values specified.
-// input example: "HTTP/1.1"
-// output return: "HTTP" and "1.1"
-func splitInput(input, delim, defaultLeft, defaultRight string) (actualLeft, actualRight string) {
-	splitN := strings.SplitN(input, delim, 2)
-	length := len(splitN)
-
-	actualLeft = defaultLeft
-	actualRight = defaultRight
-
-	if length == 1 && len(splitN[0]) > 0 {
-		actualLeft = splitN[0]
-	}
-	if length == 2 && len(splitN[1]) > 0 {
-		actualRight = splitN[1]
-	}
-
-	return actualLeft, actualRight
+	return resp, nil
 }
 
 // reportStats creates a statistics for this request and reports it to the client.
@@ -333,20 +302,5 @@ func headersV2Compat(hdrs []*core.HeaderValueOption) []*core_v2.HeaderValueOptio
 func httpStatusV2Compat(s *_type.HttpStatus) *type_v2.HttpStatus {
 	return &type_v2.HttpStatus{
 		Code: type_v2.StatusCode(s.Code),
-	}
-}
-
-// updateStores pulls PolicyStores off the channel and assigns them.
-func (as *authServer) updateStores(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case as.Store = <-as.stores:
-			// Variable assignment is atomic, so this is threadsafe as long as each check call accesses authServer.Store
-			// only once.
-			log.Info("Switching to new in-sync policy store.")
-			continue
-		}
 	}
 }

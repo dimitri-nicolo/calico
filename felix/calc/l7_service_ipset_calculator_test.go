@@ -15,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/labelindex"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -58,12 +59,12 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 		func(updates []api.Update, addedMembers []output, removedMembers []output, conf *config.Config) {
 			var mockCallbacks = &ipSetMockCallbacks{}
 
-			mockCallbacks.On("OnIPSetAdded", calc.TPROXYServiceIPsIPSet, proto.IPSetUpdate_IP_AND_PORT)
-			mockCallbacks.On("OnIPSetAdded", calc.TPROXYNodePortsTCPIPSet, proto.IPSetUpdate_PORTS)
+			mockCallbacks.On("OnIPSetAdded", tproxydefs.ServiceIPsIPSet, proto.IPSetUpdate_IP_AND_PORT)
+			mockCallbacks.On("OnIPSetAdded", tproxydefs.NodePortsIPSet, proto.IPSetUpdate_PORTS)
 
 			for _, addedMember := range addedMembers {
 				switch addedMember.setId {
-				case calc.TPROXYServiceIPsIPSet:
+				case tproxydefs.ServiceIPsIPSet:
 					member := labelindex.IPSetMember{
 						PortNumber: uint16(addedMember.port),
 						Protocol:   addedMember.protocol,
@@ -72,7 +73,7 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 						member.CIDR = ip.FromString(addedMember.ipAddr).AsCIDR()
 					}
 					mockCallbacks.On("OnIPSetMemberAdded", addedMember.setId, member)
-				case calc.TPROXYNodePortsTCPIPSet:
+				case tproxydefs.NodePortsIPSet:
 					member := labelindex.IPSetMember{
 						PortNumber: uint16(addedMember.port),
 					}
@@ -87,7 +88,7 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 
 			for _, removedMember := range removedMembers {
 				switch removedMember.setId {
-				case calc.TPROXYServiceIPsIPSet:
+				case tproxydefs.ServiceIPsIPSet:
 					member := labelindex.IPSetMember{
 						PortNumber: uint16(removedMember.port),
 						Protocol:   removedMember.protocol,
@@ -96,7 +97,7 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 						member.CIDR = ip.FromString(removedMember.ipAddr).AsCIDR()
 					}
 					mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
-				case calc.TPROXYNodePortsTCPIPSet:
+				case tproxydefs.NodePortsIPSet:
 					member := labelindex.IPSetMember{
 						PortNumber: uint16(removedMember.port),
 					}
@@ -177,26 +178,26 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
 				// There are always 2 port updates, one for v4 and one for v6
-				setId: calc.TPROXYNodePortsTCPIPSet,
+				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
 			}, {
-				setId:    calc.TPROXYNodePortsTCPIPSet,
+				setId:    tproxydefs.NodePortsIPSet,
 				port:     456,
 				ipv6Port: true,
 			}},
@@ -232,25 +233,25 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
+				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
 			}, {
-				setId:    calc.TPROXYNodePortsTCPIPSet,
+				setId:    tproxydefs.NodePortsIPSet,
 				port:     456,
 				ipv6Port: true,
 			}},
@@ -343,33 +344,33 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				UpdateType: api.UpdateTypeKVUpdated,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
+				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
 			}, {
-				setId:    calc.TPROXYNodePortsTCPIPSet,
+				setId:    tproxydefs.NodePortsIPSet,
 				port:     456,
 				ipv6Port: true,
 			}},
 			[]output{{
-				setId: calc.TPROXYNodePortsTCPIPSet,
+				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
 			}, {
-				setId:    calc.TPROXYNodePortsTCPIPSet,
+				setId:    tproxydefs.NodePortsIPSet,
 				port:     456,
 				ipv6Port: true,
 			}},
@@ -409,48 +410,48 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				UpdateType: api.UpdateTypeKVDeleted,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
+				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
 			}, {
-				setId:    calc.TPROXYNodePortsTCPIPSet,
+				setId:    tproxydefs.NodePortsIPSet,
 				port:     456,
 				ipv6Port: true,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
+				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
 			}, {
-				setId:    calc.TPROXYNodePortsTCPIPSet,
+				setId:    tproxydefs.NodePortsIPSet,
 				port:     456,
 				ipv6Port: true,
 			}},
@@ -493,48 +494,48 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
+				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
 			}, {
-				setId:    calc.TPROXYNodePortsTCPIPSet,
+				setId:    tproxydefs.NodePortsIPSet,
 				port:     456,
 				ipv6Port: true,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
+				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
 			}, {
-				setId:    calc.TPROXYNodePortsTCPIPSet,
+				setId:    tproxydefs.NodePortsIPSet,
 				port:     456,
 				ipv6Port: true,
 			}},
@@ -565,15 +566,15 @@ var _ = Describe("L7ServiceIPSetsCalculator", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServiceIPsIPSet,
+				setId:    tproxydefs.ServiceIPsIPSet,
 				ipAddr:   "2001:569:7007:1a00:45ac:2caa:a3be:5e10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
+				setId: tproxydefs.NodePortsIPSet,
 				port:  456,
 			}, {
-				setId:    calc.TPROXYNodePortsTCPIPSet,
+				setId:    tproxydefs.NodePortsIPSet,
 				port:     456,
 				ipv6Port: true,
 			}},

@@ -11,6 +11,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/tproxydefs"
 )
 
 var _ = Describe("TPROXYManager", func() {
@@ -47,8 +48,8 @@ var _ = Describe("TPROXYManager", func() {
 			v6tup = append(v6tup, m+","+m)
 		}
 
-		ipv4sets.Verify(tproxyPodToSelfIPSet, v4tup)
-		ipv6sets.Verify(tproxyPodToSelfIPSet, v6tup)
+		ipv4sets.Verify(tproxydefs.PodSelf, v4tup)
+		ipv6sets.Verify(tproxydefs.PodSelf, v6tup)
 	}
 
 	It("Should should not fail if it sees delete first", func() {

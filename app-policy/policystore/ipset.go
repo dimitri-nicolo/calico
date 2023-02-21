@@ -50,6 +50,7 @@ type IPSet interface {
 // We'll use golang's map type under the covers here because it is simple to implement.
 type ipMapSet map[string]bool
 type ipPortMapSet map[string]bool
+type portMapSet map[string]struct{}
 
 // NewIPSet creates an IPSet of the appropriate type given by t.
 func NewIPSet(t syncapi.IPSetUpdate_IPSetType) IPSet {
@@ -60,8 +61,11 @@ func NewIPSet(t syncapi.IPSetUpdate_IPSetType) IPSet {
 		return ipPortMapSet{}
 	case syncapi.IPSetUpdate_NET:
 		return ipNetSet{v4: &trieNode{}, v6: &trieNode{}}
+	case syncapi.IPSetUpdate_PORTS:
+		return portMapSet{}
 	}
-	panic("Unrecognized IPSet type")
+	log.Warn(fmt.Sprintf("Unrecognized IPSet type %T", t))
+	return nil
 }
 
 func (m ipMapSet) AddString(ip string) {
@@ -99,6 +103,21 @@ func (m ipPortMapSet) ContainsAddress(addr *envoyapi.Address) bool {
 		"key":   key,
 	}).Debug("Finding address in ipPortMapSet", addr)
 	return m[key]
+}
+
+func (m portMapSet) AddString(port string) {
+	m[port] = struct{}{}
+}
+
+func (m portMapSet) RemoveString(port string) {
+	delete(m, port)
+}
+
+func (m portMapSet) ContainsAddress(addr *envoyapi.Address) bool {
+	sck := addr.GetSocketAddress()
+	key := fmt.Sprintf("%d", sck.GetPortValue())
+	_, ok := m[key]
+	return ok
 }
 
 // ipNetSet implements an IPSet of type NET, where the members are CIDRs.  These sets are a combination of endpoint IPs
