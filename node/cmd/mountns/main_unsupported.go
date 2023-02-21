@@ -22,7 +22,7 @@ import (
 	"runtime"
 )
 
-// BPF dataplane is not supported in some architectures like Armv7, and at the same time
+// BPF dataplane is not supported in some architectures like ARMv7, and at the same time
 // the main logic, in main.go, cannot be compiled for these architectures as it depends
 // on libbpf and cgo. This file is compiled for these architectures.
 func main() {
