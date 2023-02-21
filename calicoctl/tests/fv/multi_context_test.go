@@ -15,7 +15,6 @@
 package fv_test
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -37,10 +36,12 @@ func init() {
 func TestMultiCluster(t *testing.T) {
 	RegisterTestingT(t)
 
-	os.Setenv("KUBECONFIG", strings.Join([]string{
+	unpatchEnv, err := PatchEnv("KUBECONFIG", strings.Join([]string{
 		"/go/src/github.com/projectcalico/calico/calicoctl/test-data/multi-context/kubectl-config.yaml",
 		"/go/src/github.com/projectcalico/calico/calicoctl/test-data/multi-context/kubectl-config-second.yaml",
 	}, ":"))
+	Expect(err).NotTo(HaveOccurred())
+	defer unpatchEnv()
 
 	// Setup the license
 	out := Calicoctl(true, "create", "-f", licutils.ValidEnterpriseTestLicensePath(), "--context", "main")

@@ -63,6 +63,10 @@ func TestDatastoreMigrationIPAM(t *testing.T) {
 	pool.Spec.CIDR = "10.65.0.0/16"
 	_, err = client.IPPools().Create(ctx, pool, options.SetOptions{})
 	Expect(err).NotTo(HaveOccurred())
+	defer func() {
+		_, err = client.IPPools().Delete(ctx, "ipam-test-v4", options.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	}()
 
 	// Create an IPv6 pool.
 	pool = v3.NewIPPool()
@@ -70,6 +74,10 @@ func TestDatastoreMigrationIPAM(t *testing.T) {
 	pool.Spec.CIDR = "fd5f:abcd:64::0/48"
 	_, err = client.IPPools().Create(ctx, pool, options.SetOptions{})
 	Expect(err).NotTo(HaveOccurred())
+	defer func() {
+		_, err = client.IPPools().Delete(ctx, "ipam-test-v6", options.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	}()
 
 	// Create a Node resource for this host.
 	node := libapiv3.NewNode()
@@ -82,6 +90,10 @@ func TestDatastoreMigrationIPAM(t *testing.T) {
 	}
 	_, err = client.Nodes().Create(ctx, node, options.SetOptions{})
 	Expect(err).NotTo(HaveOccurred())
+	defer func() {
+		_, err = client.Nodes().Delete(ctx, "node4", options.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	}()
 
 	// Assign some IPs.
 	var v4, v6 []cnet.IPNet
@@ -108,6 +120,10 @@ func TestDatastoreMigrationIPAM(t *testing.T) {
 	pool.Spec.BlockSize = 29
 	_, err = client.IPPools().Create(ctx, pool, options.SetOptions{})
 	Expect(err).NotTo(HaveOccurred())
+	defer func() {
+		_, err = client.IPPools().Delete(ctx, "ipam-test-v4-b29", options.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	}()
 
 	// Allocate more than one block's worth (8) of IPs from that
 	// pool.
@@ -219,14 +235,5 @@ func TestDatastoreMigrationIPAM(t *testing.T) {
 	}
 	// Release the IPs
 	_, err = client.IPAM().ReleaseIPs(ctx, ips...)
-	Expect(err).NotTo(HaveOccurred())
-
-	_, err = client.IPPools().Delete(ctx, "ipam-test-v4", options.DeleteOptions{})
-	Expect(err).NotTo(HaveOccurred())
-	_, err = client.IPPools().Delete(ctx, "ipam-test-v6", options.DeleteOptions{})
-	Expect(err).NotTo(HaveOccurred())
-	_, err = client.Nodes().Delete(ctx, "node4", options.DeleteOptions{})
-	Expect(err).NotTo(HaveOccurred())
-	_, err = client.IPPools().Delete(ctx, "ipam-test-v4-b29", options.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred())
 }
