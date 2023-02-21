@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -651,15 +651,15 @@ func RemoveQdisc(ifaceName string) error {
 
 // Return a key that uniquely identifies this attach point, amongst all of the possible attach
 // points associated with a single given interface.
-func (ap *AttachPoint) JumpMapFDMapKey() string {
-	return "tc-" + string(ap.Hook)
+func (ap AttachPoint) JumpMapFDMapKey() string {
+	return string(ap.Hook)
 }
 
 func (ap AttachPoint) IfaceName() string {
 	return ap.Iface
 }
 
-func (ap *AttachPoint) MustReattach() bool {
+func (ap AttachPoint) MustReattach() bool {
 	return ap.ForceReattach
 }
 
@@ -668,8 +668,8 @@ func ConfigureVethNS(m *libbpf.Map, VethNS uint16) error {
 	return libbpf.TcSetGlobals(m, bpfGlobalData)
 }
 
-func (ap AttachPoint) HookName() string {
-	return string(ap.Hook)
+func (ap AttachPoint) HookName() bpf.Hook {
+	return ap.Hook
 }
 
 func (ap AttachPoint) Config() string {
