@@ -515,7 +515,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		toDataplane:      make(chan interface{}, msgPeekLimit),
 		fromDataplane:    make(chan interface{}, 100),
 		ruleRenderer:     ruleRenderer,
-		ifaceMonitor:     ifacemonitor.New(config.IfaceMonitorConfig, config.FatalErrorRestartCallback),
+		ifaceMonitor:     ifacemonitor.New(config.IfaceMonitorConfig, featureDetector, config.FatalErrorRestartCallback),
 		ifaceUpdates:     make(chan *ifaceUpdate, 100),
 		ifaceAddrUpdates: make(chan *ifaceAddrsUpdate, 100),
 		config:           config,
