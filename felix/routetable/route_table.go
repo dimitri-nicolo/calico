@@ -526,7 +526,7 @@ func (r *RouteTable) RouteRemove(ifaceName string, cidr ip.CIDR) {
 }
 
 func (r *RouteTable) SetL2Routes(ifaceName string, targets []L2Target) {
-	if r.tableIndex != unix.RT_TABLE_UNSPEC {
+	if r.tableIndex != unix.RT_TABLE_MAIN {
 		log.WithField("tableindex", r.tableIndex).Panic(
 			"Non main routing table should not set L2 routes.")
 	}

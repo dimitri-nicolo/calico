@@ -1296,7 +1296,7 @@ func (f *awsIPMgrFakes) NewRouteTable(
 	removeExternalRoutes bool,
 	index int,
 	reporter logutils.OpRecorder,
-	featureDetector environment.FeatureDetector) routetable.RouteTableInterface {
+	featureDetector environment.FeatureDetectorIface) routetable.RouteTableInterface {
 
 	Expect(version).To(BeNumerically("==", 4))
 	Expect(vxlan).To(BeFalse())

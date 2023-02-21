@@ -51,7 +51,7 @@ func newTProxyManager(
 	dpConfig Config,
 	idx4, idx6 int,
 	opRecorder logutils.OpRecorder,
-	featureDetector environment.FeatureDetector,
+	featureDetector environment.FeatureDetectorIface,
 	opts ...TProxyOption,
 ) *tproxyManager {
 

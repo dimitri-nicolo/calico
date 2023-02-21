@@ -79,7 +79,7 @@ type awsIPManager struct {
 	nl              awsNetlinkIface
 	newRouteTable   routeTableNewFn
 	newRouteRules   routeRulesNewFn
-	featureDetector environment.FeatureDetector
+	featureDetector environment.FeatureDetectorIface
 }
 
 type awsEndpointInfo struct {
@@ -122,7 +122,7 @@ func NewAWSIPManager(
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
 	ifaceProvisioner awsIfaceProvisioner,
-	featureDetector environment.FeatureDetector,
+	featureDetector environment.FeatureDetectorIface,
 	opts ...AWSSubnetManagerOpt,
 ) *awsIPManager {
 	logrus.WithField("routeTables", routeTableIndexes).Info("Creating AWS subnet manager.")
@@ -970,7 +970,7 @@ type routeTableNewFn func(
 	removeExternalRoutes bool,
 	tableIndex int,
 	opReporter logutils.OpRecorder,
-	featureDetector environment.FeatureDetector,
+	featureDetector environment.FeatureDetectorIface,
 ) routetable.RouteTableInterface
 
 type awsNetlinkIface interface {
@@ -1010,7 +1010,7 @@ func realRouteTableNew(
 	removeExternalRoutes bool,
 	tableIndex int,
 	opReporter logutils.OpRecorder,
-	featureDetector environment.FeatureDetector,
+	featureDetector environment.FeatureDetectorIface,
 ) routetable.RouteTableInterface {
 	return routetable.New(interfaceRegexes, ipVersion, vxlan, netlinkTimeout, deviceRouteSourceAddress,
 		deviceRouteProtocol, removeExternalRoutes, tableIndex, opReporter, featureDetector)

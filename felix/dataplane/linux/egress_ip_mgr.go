@@ -95,7 +95,7 @@ type routeTableGenerator interface {
 		deviceRouteProtocol int,
 		removeExternalRoutes bool,
 		opRecorder logutils.OpRecorder,
-		featureDetector environment.FeatureDetector,
+		featureDetector environment.FeatureDetectorIface,
 	) routetable.RouteTableInterface
 }
 
@@ -112,7 +112,7 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 	deviceRouteProtocol int,
 	removeExternalRoutes bool,
 	opRecorder logutils.OpRecorder,
-	featureDetector environment.FeatureDetector,
+	featureDetector environment.FeatureDetectorIface,
 ) routetable.RouteTableInterface {
 
 	f.count += 1
@@ -308,7 +308,7 @@ type egressIPManager struct {
 	tableIndexSet set.Set[int]
 
 	opRecorder      logutils.OpRecorder
-	featureDetector environment.FeatureDetector
+	featureDetector environment.FeatureDetectorIface
 
 	disableChecksumOffload func(ifName string) error
 
@@ -332,7 +332,7 @@ func newEgressIPManager(
 	healthReportC chan<- EGWHealthReport,
 	ipsets egressIPSets,
 	bpfIPSets egressIPSets,
-	featureDetector environment.FeatureDetector,
+	featureDetector environment.FeatureDetectorIface,
 ) *egressIPManager {
 	nlHandle, err := netlink.NewHandle()
 	if err != nil {
@@ -397,7 +397,7 @@ func newEgressIPManagerWithShims(
 	healthReportC chan<- EGWHealthReport,
 	ipsets egressIPSets,
 	bpfIPSets egressIPSets,
-	featureDetector environment.FeatureDetector,
+	featureDetector environment.FeatureDetectorIface,
 ) *egressIPManager {
 
 	mgr := egressIPManager{
