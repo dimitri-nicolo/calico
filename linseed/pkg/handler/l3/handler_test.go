@@ -9,21 +9,28 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
+
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
 )
 
-//go:embed testdata/input/all_l3flows_within_timerange.json
-var withinTimeRange string
+var withinTimeRange = `{
+  "time_range": {
+    "from": "2021-04-19T14:25:30.169821857-07:00",
+    "to": "2021-04-19T14:25:30.169827009-07:00"
+  },
+  "timeout": "60s"
+}`
 
 func TestFlows_Post(t *testing.T) {
 	type testResult struct {
@@ -63,7 +70,7 @@ func TestFlows_Post(t *testing.T) {
 			n := mockFlows(tt.backendL3Flows)
 
 			rec := httptest.NewRecorder()
-			req, err := http.NewRequest("POST", n.APIS()[0].URL, bytes.NewBufferString(tt.reqBody))
+			req, err := http.NewRequest("POST", dummyURL, bytes.NewBufferString(tt.reqBody))
 			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 
@@ -108,7 +115,7 @@ func TestFlowLogs_Bulk(t *testing.T) {
 			reqBody:         "{#}",
 			want: testResult{
 				true, 400,
-				"{\"Status\":400,\"Msg\":\"Request body contains badly-formed JSON\"}",
+				`{"Msg":"Request body contains badly-formed JSON", "Status":400}`,
 			},
 		},
 
@@ -118,7 +125,7 @@ func TestFlowLogs_Bulk(t *testing.T) {
 			backendFlowLogs: flowLogs,
 			backendError:    nil,
 			backendResponse: bulkResponseSuccess,
-			reqBody:         marshalFlowLogs(flowLogs),
+			reqBody:         testutils.MarshalBulkParams[v1.FlowLog](flowLogs),
 			want:            testResult{false, 200, ""},
 		},
 
@@ -128,8 +135,8 @@ func TestFlowLogs_Bulk(t *testing.T) {
 			backendFlowLogs: flowLogs,
 			backendError:    errors.New("any error"),
 			backendResponse: nil,
-			reqBody:         marshalFlowLogs(flowLogs),
-			want:            testResult{true, 500, "{\"Status\":500,\"Msg\":\"any error\"}"},
+			reqBody:         testutils.MarshalBulkParams[v1.FlowLog](flowLogs),
+			want:            testResult{true, 500, `{"Msg":"any error", "Status":500}`},
 		},
 
 		// Ingest some flow logs
@@ -138,7 +145,7 @@ func TestFlowLogs_Bulk(t *testing.T) {
 			backendFlowLogs: flowLogs,
 			backendError:    nil,
 			backendResponse: bulkResponsePartialSuccess,
-			reqBody:         marshalFlowLogs(flowLogs),
+			reqBody:         testutils.MarshalBulkParams[v1.FlowLog](flowLogs),
 			want:            testResult{false, 200, ""},
 		},
 	}
@@ -147,7 +154,7 @@ func TestFlowLogs_Bulk(t *testing.T) {
 			b := mockBulk(tt.backendResponse, tt.backendError)
 
 			rec := httptest.NewRecorder()
-			req, err := http.NewRequest("POST", b.APIS()[0].URL, bytes.NewBufferString(tt.reqBody))
+			req, err := http.NewRequest("POST", dummyURL, bytes.NewBufferString(tt.reqBody))
 			req.Header.Set("Content-Type", "application/x-ndjson")
 			require.NoError(t, err)
 
@@ -160,7 +167,7 @@ func TestFlowLogs_Bulk(t *testing.T) {
 			if tt.want.wantErr {
 				wantBody = tt.want.errorMsg
 			} else {
-				wantBody = marshalBulkResponse(t, tt.backendResponse)
+				wantBody = testutils.MarshalBulkResponse(t, tt.backendResponse)
 			}
 			assert.Equal(t, tt.want.httpStatus, rec.Result().StatusCode)
 			assert.JSONEq(t, wantBody, string(bodyBytes))
@@ -203,19 +210,4 @@ func marshalResponse(t *testing.T, flows []v1.L3Flow) string {
 	newData, err := json.Marshal(response)
 	require.NoError(t, err)
 	return string(newData)
-}
-
-func marshalBulkResponse(t *testing.T, response *v1.BulkResponse) string {
-	newData, err := json.Marshal(response)
-	require.NoError(t, err)
-	return string(newData)
-}
-
-func marshalFlowLogs(flowLogs []v1.FlowLog) string {
-	var logs []string
-	for _, p := range flowLogs {
-		newData, _ := json.Marshal(p)
-		logs = append(logs, string(newData))
-	}
-	return strings.Join(logs, "\n")
 }

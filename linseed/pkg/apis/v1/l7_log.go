@@ -1,3 +1,5 @@
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
 package v1
 
 // L7LogParams define querying parameters to retrieve L7 logs
@@ -8,8 +10,8 @@ type L7LogParams struct {
 
 // L7Log is the structure which defines a single instance of an L7 flow log.
 type L7Log struct {
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
+	StartTime int64 `json:"start_time"`
+	EndTime   int64 `json:"end_time"`
 
 	DurationMean int64 `json:"duration_mean"`
 	DurationMax  int64 `json:"duration_max"`
@@ -42,8 +44,10 @@ type L7Log struct {
 	DestPortNum         int64  `json:"dest_port_num"`
 
 	URL          string `json:"url"`
-	ResponseCode int32  `json:"response_code"`
+	ResponseCode string `json:"response_code"`
 	Method       string `json:"method"`
 	UserAgent    string `json:"user_agent"`
 	Type         string `json:"type"`
+
+	Host string `json:"host"`
 }

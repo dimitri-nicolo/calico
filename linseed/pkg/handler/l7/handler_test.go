@@ -4,10 +4,13 @@ package l7
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
@@ -82,7 +85,7 @@ func TestL7FlowsHandler(t *testing.T) {
 			n := flowHandler(tt.backendFlows)
 
 			rec := httptest.NewRecorder()
-			req, err := http.NewRequest("POST", n.APIS()[0].URL, bytes.NewBufferString(tt.reqBody))
+			req, err := http.NewRequest("POST", dummyURL, bytes.NewBufferString(tt.reqBody))
 			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 
@@ -126,4 +129,100 @@ func marshalResponse(t *testing.T, flows []v1.L7Flow) string {
 	newData, err := json.Marshal(response)
 	require.NoError(t, err)
 	return string(newData)
+}
+
+func TestL7BulkIngestion(t *testing.T) {
+	type testResult struct {
+		wantErr    bool
+		httpStatus int
+		errorMsg   string
+	}
+
+	tests := []struct {
+		name            string
+		backendL7Logs   []v1.L7Log
+		backendResponse *v1.BulkResponse
+		backendError    error
+		reqBody         string
+		want            testResult
+	}{
+		// Failure to parse request and validate
+		{
+			name:            "malformed json",
+			backendL7Logs:   noL7Logs,
+			backendError:    nil,
+			backendResponse: nil,
+			reqBody:         "{#}",
+			want: testResult{
+				true, 400,
+				`{"Msg":"Request body contains badly-formed JSON", "Status":400}`,
+			},
+		},
+
+		// Ingest all l7 logs
+		{
+			name:            "ingest l7 logs",
+			backendL7Logs:   l7Logs,
+			backendError:    nil,
+			backendResponse: bulkResponseSuccess,
+			reqBody:         testutils.MarshalBulkParams[v1.L7Log](l7Logs),
+			want:            testResult{false, 200, ""},
+		},
+
+		// Fails to ingest all l7 logs
+		{
+			name:            "fail to ingest all l7s logs",
+			backendL7Logs:   l7Logs,
+			backendError:    errors.New("any error"),
+			backendResponse: nil,
+			reqBody:         testutils.MarshalBulkParams[v1.L7Log](l7Logs),
+			want:            testResult{true, 500, `{"Msg":"any error", "Status":500}`},
+		},
+
+		// Ingest some l7 logs
+		{
+			name:            "ingest some L7 logs",
+			backendL7Logs:   l7Logs,
+			backendError:    nil,
+			backendResponse: bulkResponsePartialSuccess,
+			reqBody:         testutils.MarshalBulkParams[v1.L7Log](l7Logs),
+			want:            testResult{false, 200, ""},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := bulkL7Logs(tt.backendResponse, tt.backendError)
+
+			rec := httptest.NewRecorder()
+			req, err := http.NewRequest("POST", dummyURL, bytes.NewBufferString(tt.reqBody))
+			req.Header.Set("Content-Type", "application/x-ndjson")
+			require.NoError(t, err)
+
+			b.Bulk().ServeHTTP(rec, req)
+
+			bodyBytes, err := io.ReadAll(rec.Body)
+			require.NoError(t, err)
+
+			var wantBody string
+			if tt.want.wantErr {
+				wantBody = tt.want.errorMsg
+			} else {
+				wantBody = testutils.MarshalBulkResponse(t, tt.backendResponse)
+			}
+			assert.Equal(t, tt.want.httpStatus, rec.Result().StatusCode)
+			assert.JSONEq(t, wantBody, string(bodyBytes))
+		})
+	}
+}
+
+func bulkL7Logs(response *v1.BulkResponse, err error) *l7 {
+	mockFlowBackend := &api.MockL7FlowBackend{}
+	mockLogBackend := &api.MockL7LogBackend{}
+	n := New(mockFlowBackend, mockLogBackend)
+
+	// mock backend to return the required backendL7Logs
+	mockLogBackend.On("Create", mock.Anything,
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("[]v1.L7Log")).Return(response, err)
+
+	return n.(*l7)
 }

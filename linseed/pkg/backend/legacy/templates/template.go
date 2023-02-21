@@ -79,7 +79,12 @@ func (c *TemplateConfig) TemplateName() string {
 }
 
 func (c *TemplateConfig) indexPatterns() string {
-	return fmt.Sprintf("tigera_secure_ee_%s*", c.logsType)
+	pattern, ok := IndexPatternsLookup[c.logsType]
+	if !ok {
+		panic("index pattern for log type not implemented")
+	}
+
+	return pattern
 }
 
 func (c *TemplateConfig) mappings() string {

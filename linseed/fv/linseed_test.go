@@ -12,7 +12,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
@@ -117,29 +116,6 @@ func TestFV_Linseed(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 		assert.Equal(t, "Client sent an HTTP request to an HTTPS server.", strings.Trim(string(resBody), "\n"))
-	})
-
-	t.Run("should ingest flow logs to Elastic", func(t *testing.T) {
-		defer setupLinseedFV(t)()
-
-		// setup HTTP client and HTTP request
-		client := secureHTTPClient(t)
-		spec := xndJSONPostHTTPReqSpec(fmt.Sprintf("https://%s%s", addr, "/api/v1/flows/logs/bulk"),
-			tenant, cluster, []byte(flowLogsLinux))
-		// make the request to ingest flows
-		res, resBody := doRequest(t, client, spec)
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		assert.JSONEq(t, "{\"failed\":0, \"succeeded\":25, \"total\":25}", strings.Trim(string(resBody), "\n"))
-
-		index := fmt.Sprintf("tigera_secure_ee_flows.%s.*", cluster)
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		_, err := esClient.Refresh(index).Do(ctx)
-		require.NoError(t, err)
-		query := elastic.NewTermQuery("end_time", "1675469001")
-		result, err := esClient.Search().Index(fmt.Sprintf("tigera_secure_ee_flows.%s.*", cluster)).Query(query).Do(ctx)
-		require.NoError(t, err)
-		assert.Equal(t, result.Hits.TotalHits.Value, int64(25))
 	})
 }
 

@@ -8,9 +8,12 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
@@ -44,6 +47,7 @@ type DNSLog struct {
 	LatencyCount    int               `json:"latency_count"`
 	LatencyMean     time.Duration     `json:"latency_mean"`
 	LatencyMax      time.Duration     `json:"latency_max"`
+	Host            string            `json:"host"`
 }
 
 type DNSLatency struct {
@@ -92,7 +96,7 @@ func (d DNSName) encodeDNSName() dnsNameEncoded {
 }
 
 func (d DNSName) String() string {
-	return fmt.Sprintf("%s %s %s", d.Name, d.Class, d.Type)
+	return fmt.Sprintf("%s %s %s", d.Name, d.Class.String(), d.Type.String())
 }
 
 func (a DNSName) Less(b DNSName) bool {
@@ -127,21 +131,91 @@ func (a DNSName) Less(b DNSName) bool {
 
 type DNSResponseCode layers.DNSResponseCode
 
-func (d DNSResponseCode) String() string {
-	if res, ok := dnsResponseCodeTable[d]; ok {
+func (d *DNSResponseCode) String() string {
+	if d == nil {
+		return ""
+	}
+	if res, ok := dnsResponseCodeTable[*d]; ok {
 		return res
 	}
 
-	return fmt.Sprintf("#%d", d)
+	return fmt.Sprintf("#%d", *d)
 }
 
-func (d DNSResponseCode) MarshalJSON() ([]byte, error) {
-	if res, ok := dnsResponseCodeTable[d]; ok {
+func (d *DNSResponseCode) MarshalJSON() ([]byte, error) {
+	if d == nil {
+		return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
+	}
+	if res, ok := dnsResponseCodeTable[*d]; ok {
 		return json.Marshal(&res)
 	}
 
-	i := uint(d)
-	return json.Marshal(&i)
+	return json.Marshal(fmt.Sprintf("#%d", *d))
+}
+
+func (d *DNSResponseCode) UnmarshalJSON(data []byte) error {
+	var item string
+	if err := json.Unmarshal(data, &item); err != nil {
+		return err
+	}
+
+	if strings.HasPrefix(item, "#") {
+		code, err := strconv.Atoi(strings.TrimPrefix(item, "#"))
+		if err != nil {
+			return fmt.Errorf("failed to recognize DNS response code %s", item)
+		}
+
+		*d = DNSResponseCode(code)
+
+		return nil
+	}
+
+	switch strings.ToLower(item) {
+	case "noerror":
+		*d = DNSResponseCode(layers.DNSResponseCodeNoErr)
+	case "formerr":
+		*d = DNSResponseCode(layers.DNSResponseCodeFormErr)
+	case "servfail":
+		*d = DNSResponseCode(layers.DNSResponseCodeServFail)
+	case "nxdomain":
+		*d = DNSResponseCode(layers.DNSResponseCodeNXDomain)
+	case "notimp":
+		*d = DNSResponseCode(layers.DNSResponseCodeNotImp)
+	case "refused":
+		*d = DNSResponseCode(layers.DNSResponseCodeRefused)
+	case "yxdomain":
+		*d = DNSResponseCode(layers.DNSResponseCodeYXDomain)
+	case "yxrrset":
+		*d = DNSResponseCode(layers.DNSResponseCodeYXRRSet)
+	case "nxrrset":
+		*d = DNSResponseCode(layers.DNSResponseCodeNXRRSet)
+	case "notauth":
+		*d = DNSResponseCode(layers.DNSResponseCodeNotAuth)
+	case "notzone":
+		*d = DNSResponseCode(layers.DNSResponseCodeNotZone)
+	case "dsotypeni":
+		*d = DNSResponseCode(11)
+	case "badsig":
+		*d = DNSResponseCode(layers.DNSResponseCodeBadVers)
+	case "badkey":
+		*d = DNSResponseCode(layers.DNSResponseCodeBadKey)
+	case "badtime":
+		*d = DNSResponseCode(layers.DNSResponseCodeBadTime)
+	case "badmode":
+		*d = DNSResponseCode(layers.DNSResponseCodeBadMode)
+	case "badname":
+		*d = DNSResponseCode(layers.DNSResponseCodeBadName)
+	case "badalg":
+		*d = DNSResponseCode(layers.DNSResponseCodeBadAlg)
+	case "badtrunc":
+		*d = DNSResponseCode(layers.DNSResponseCodeBadTruc)
+	case "badcookie":
+		*d = DNSResponseCode(layers.DNSResponseCodeBadCookie)
+	default:
+		return fmt.Errorf("failed to recognize DNS response code %s", item)
+	}
+
+	return nil
 }
 
 // Formatting from IANA DNS Parameters
@@ -170,32 +244,153 @@ var dnsResponseCodeTable = map[DNSResponseCode]string{
 
 type DNSClass layers.DNSClass
 
-func (d DNSClass) String() string {
-	c := layers.DNSClass(d).String()
+func (d *DNSClass) String() string {
+	if d == nil {
+		return ""
+	}
+	c := layers.DNSClass(*d).String()
 	if c != "Unknown" {
 		return c
 	}
-	return fmt.Sprintf("#%d", d)
+	return fmt.Sprintf("#%d", *d)
 }
 
-func (d DNSClass) MarshalJSON() ([]byte, error) {
-	s := d.String()
-	return json.Marshal(&s)
+func (d *DNSClass) MarshalJSON() ([]byte, error) {
+	if d != nil {
+		s := d.String()
+		return json.Marshal(&s)
+	}
+
+	return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
+}
+
+func (d *DNSClass) UnmarshalJSON(data []byte) error {
+	var val string
+	if err := json.Unmarshal(data, &val); err != nil {
+		return err
+	}
+	*d = toDNSClass(val)
+
+	return nil
+}
+
+func toDNSClass(val string) DNSClass {
+	if strings.HasPrefix(val, "#") {
+		code, err := strconv.Atoi(strings.TrimPrefix(val, "#"))
+		if err != nil {
+			log.Warnf("Failed to recognize DNS Class %s. Will default to 0", val)
+			return DNSClass(0)
+		}
+
+		return DNSClass(code)
+	}
+
+	switch strings.ToLower(val) {
+	case "in":
+		return DNSClass(layers.DNSClassIN)
+	case "cs":
+		return DNSClass(layers.DNSClassCS)
+	case "ch":
+		return DNSClass(layers.DNSClassCH)
+	case "hs":
+		return DNSClass(layers.DNSClassHS)
+	case "any":
+		return DNSClass(layers.DNSClassAny)
+	default:
+		log.Warnf("Failed to recognize DNS Class %s. Will default to 0", val)
+		return DNSClass(0)
+	}
 }
 
 type DNSType layers.DNSType
 
-func (d DNSType) String() string {
-	t := layers.DNSType(d).String()
+func (d *DNSType) String() string {
+	if d == nil {
+		return ""
+	}
+	t := layers.DNSType(*d).String()
 	if t != "Unknown" {
 		return t
 	}
-	return fmt.Sprintf("#%d", d)
+	return fmt.Sprintf("#%d", *d)
 }
 
-func (d DNSType) MarshalJSON() ([]byte, error) {
-	s := d.String()
-	return json.Marshal(&s)
+func (d *DNSType) MarshalJSON() ([]byte, error) {
+	if d != nil {
+		s := d.String()
+		return json.Marshal(&s)
+	}
+
+	return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
+}
+
+func (d *DNSType) UnmarshalJSON(data []byte) error {
+	var val string
+	if err := json.Unmarshal(data, &val); err != nil {
+		return err
+	}
+
+	*d = toDNSType(val)
+
+	return nil
+}
+
+func toDNSType(val string) DNSType {
+	if strings.HasPrefix(val, "#") {
+		code, err := strconv.Atoi(strings.TrimPrefix(val, "#"))
+		if err != nil {
+			log.Warnf("Failed to recognize DNS Type %s. Will default to 0", val)
+			return DNSType(0)
+		}
+
+		return DNSType(code)
+	}
+
+	switch val {
+	case "A":
+		return DNSType(layers.DNSTypeA)
+	case "NS":
+		return DNSType(layers.DNSTypeNS)
+	case "MD":
+		return DNSType(layers.DNSTypeMD)
+	case "MF":
+		return DNSType(layers.DNSTypeMF)
+	case "CNAME":
+		return DNSType(layers.DNSTypeCNAME)
+	case "SOA":
+		return DNSType(layers.DNSTypeSOA)
+	case "MB":
+		return DNSType(layers.DNSTypeMB)
+	case "MG":
+		return DNSType(layers.DNSTypeMG)
+	case "MR":
+		return DNSType(layers.DNSTypeMR)
+	case "NULL":
+		return DNSType(layers.DNSTypeNULL)
+	case "WKS":
+		return DNSType(layers.DNSTypeWKS)
+	case "PTR":
+		return DNSType(layers.DNSTypePTR)
+	case "HINFO":
+		return DNSType(layers.DNSTypeHINFO)
+	case "MINFO":
+		return DNSType(layers.DNSTypeMINFO)
+	case "MX":
+		return DNSType(layers.DNSTypeMX)
+	case "TXT":
+		return DNSType(layers.DNSTypeTXT)
+	case "AAAA":
+		return DNSType(layers.DNSTypeAAAA)
+	case "SRV":
+		return DNSType(layers.DNSTypeSRV)
+	case "OPT":
+		return DNSType(layers.DNSTypeOPT)
+	case "URI":
+		return DNSType(layers.DNSTypeURI)
+	default:
+		log.Warnf("Failed to recognize DNS Type %s. Will default to 0", val)
+		return DNSType(0)
+	}
 }
 
 type DNSNames []DNSName
@@ -214,29 +409,35 @@ func (d DNSNames) Swap(i, j int) {
 
 type DNSRRSets map[DNSName]DNSRDatas
 
-func (d DNSRRSets) String() string {
+func (d *DNSRRSets) String() string {
+	if d == nil {
+		return ""
+	}
+
 	var s []string
 	var names DNSNames
 
-	for n := range d {
+	data := *d
+	for n := range data {
 		names = append(names, n)
 	}
 	sort.Sort(names)
 
 	for _, n := range names {
-		for _, r := range d[n] {
-			s = append(s, fmt.Sprintf("%s %s", n, r))
+		for _, r := range data[n] {
+			s = append(s, fmt.Sprintf("%s %s", n.String(), r))
 		}
 	}
 	return strings.Join(s, "\n")
 }
 
 // Add inserts a DNSRData into the appropriate DNSRDatas in sorted order
-func (d DNSRRSets) Add(name DNSName, rdata DNSRData) {
-	index := sort.Search(len(d[name]), func(i int) bool { return !d[name][i].Less(rdata) })
-	d[name] = append(d[name], DNSRData{})
-	copy(d[name][index+1:], d[name][index:])
-	d[name][index] = rdata
+func (d *DNSRRSets) Add(name DNSName, rdata DNSRData) {
+	data := *d
+	index := sort.Search(len(data[name]), func(i int) bool { return !data[name][i].Less(rdata) })
+	data[name] = append(data[name], DNSRData{})
+	copy(data[name][index+1:], data[name][index:])
+	data[name][index] = rdata
 }
 
 type dnsRRSetsEncoded struct {
@@ -244,13 +445,44 @@ type dnsRRSetsEncoded struct {
 	RData DNSRDatas `json:"rdata"`
 }
 
-func (d DNSRRSets) MarshalJSON() ([]byte, error) {
+func (d *DNSRRSets) MarshalJSON() ([]byte, error) {
+	if d == nil {
+		return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
+	}
 	var r []dnsRRSetsEncoded
-	for name, rdatas := range d {
+	for name, rdatas := range *d {
 		r = append(r, dnsRRSetsEncoded{name.encodeDNSName(), rdatas})
 	}
 
 	return json.Marshal(r)
+}
+
+func (d *DNSRRSets) UnmarshalJSON(data []byte) error {
+	dnsRRSetsEncoded := []dnsRRSetsEncoded{}
+	err := json.Unmarshal(data, &dnsRRSetsEncoded)
+	if err != nil {
+		return err
+	}
+
+	rrSets := DNSRRSets(make(map[DNSName]DNSRDatas))
+	for _, dnsRRSet := range dnsRRSetsEncoded {
+		dnsClass, ok := dnsRRSet.dnsNameEncoded.Class.(string)
+		if !ok {
+			return fmt.Errorf("failed to convert %v to string", dnsRRSet.Class)
+		}
+		dnsType, ok := dnsRRSet.dnsNameEncoded.Type.(string)
+		if !ok {
+			return fmt.Errorf("failed to convert %v to DNSType", dnsRRSet.Type)
+		}
+
+		dnsName := DNSName{Name: dnsRRSet.dnsNameEncoded.Name, Class: toDNSClass(dnsClass), Type: toDNSType(dnsType)}
+		for _, rdata := range dnsRRSet.RData {
+			rrSets.Add(dnsName, rdata)
+		}
+	}
+
+	*d = rrSets
+	return nil
 }
 
 type DNSRDatas []DNSRData
@@ -272,11 +504,15 @@ type DNSRData struct {
 	Decoded interface{}
 }
 
-func (a DNSRData) Less(b DNSRData) bool {
+func (a *DNSRData) Less(b DNSRData) bool {
 	return bytes.Compare(a.Raw, b.Raw) < 0
 }
 
-func (d DNSRData) String() string {
+func (d *DNSRData) String() string {
+	if d == nil {
+		return ""
+	}
+
 	switch v := d.Decoded.(type) {
 	case net.IP:
 		return v.String()
@@ -300,7 +536,7 @@ func (d DNSRData) String() string {
 }
 
 // IDNAString is like String() but decodes international domain names to unicode
-func (d DNSRData) IDNAString() string {
+func (d *DNSRData) IDNAString() string {
 	switch v := d.Decoded.(type) {
 	case net.IP:
 		return v.String()
@@ -324,8 +560,135 @@ func (d DNSRData) IDNAString() string {
 	}
 }
 
-func (d DNSRData) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.IDNAString())
+func (d *DNSRData) MarshalJSON() ([]byte, error) {
+	if d != nil {
+		if d.Decoded == nil {
+			return []byte{}, nil
+		}
+
+		return json.Marshal(d.IDNAString())
+	}
+
+	return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
+}
+
+func (d *DNSRData) UnmarshalJSON(data []byte) error {
+	var val string
+	if err := json.Unmarshal(data, &val); err != nil {
+		return err
+	}
+
+	tokens := strings.Split(val, " ")
+	switch len(tokens) {
+	default:
+		// During the marshaling, we loose type information as most values
+		// come in as string format
+		d.Decoded = val
+	case 2:
+		// Detect an MX record
+		mx, err := toMXRecord(tokens)
+		if err != nil {
+			return err
+		}
+		d.Decoded = *mx
+
+	case 4:
+		// Detect an SRV record
+		srv, err := toSRVRecord(tokens)
+		if err != nil {
+			return err
+		}
+		d.Decoded = *srv
+
+	case 7:
+		// Detected a SOA record
+		soa, err := toSOARecord(tokens)
+		if err != nil {
+			return err
+		}
+		d.Decoded = *soa
+	}
+
+	d.Raw = []byte(val)
+
+	return nil
+}
+
+func toMXRecord(tokens []string) (*layers.DNSMX, error) {
+	if len(tokens) != 2 {
+		return nil, fmt.Errorf("invalid format for DNSMX record")
+	}
+
+	preference, err := strconv.Atoi(tokens[0])
+	if err != nil {
+		return nil, err
+	}
+	return &layers.DNSMX{
+		Preference: uint16(preference),
+		Name:       []byte(tokens[1]),
+	}, nil
+}
+
+func toSRVRecord(tokens []string) (*layers.DNSSRV, error) {
+	if len(tokens) != 4 {
+		return nil, fmt.Errorf("invalid format for DNSSRV record")
+	}
+
+	priority, err := strconv.Atoi(tokens[0])
+	if err != nil {
+		return nil, err
+	}
+	weight, err := strconv.Atoi(tokens[1])
+	if err != nil {
+		return nil, err
+	}
+	port, err := strconv.Atoi(tokens[2])
+	if err != nil {
+		return nil, err
+	}
+
+	return &layers.DNSSRV{
+		Priority: uint16(priority),
+		Weight:   uint16(weight),
+		Port:     uint16(port),
+		Name:     []byte(tokens[3]),
+	}, nil
+}
+
+func toSOARecord(tokens []string) (*layers.DNSSOA, error) {
+	if len(tokens) != 7 {
+		return nil, fmt.Errorf("invalid format for DNSSOA record")
+	}
+
+	serial, err := strconv.Atoi(tokens[2])
+	if err != nil {
+		return nil, err
+	}
+	refresh, err := strconv.Atoi(tokens[3])
+	if err != nil {
+		return nil, err
+	}
+	retry, err := strconv.Atoi(tokens[4])
+	if err != nil {
+		return nil, err
+	}
+	expire, err := strconv.Atoi(tokens[5])
+	if err != nil {
+		return nil, err
+	}
+	minimum, err := strconv.Atoi(tokens[6])
+	if err != nil {
+		return nil, err
+	}
+	return &layers.DNSSOA{
+		MName:   []byte(tokens[0]),
+		RName:   []byte(tokens[1]),
+		Serial:  uint32(serial),
+		Refresh: uint32(refresh),
+		Retry:   uint32(retry),
+		Expire:  uint32(expire),
+		Minimum: uint32(minimum),
+	}, nil
 }
 
 type DNSServer struct {
@@ -341,13 +704,36 @@ type dnsServerEncoded struct {
 	IP        string `json:"ip"`
 }
 
-func (d DNSServer) MarshalJSON() ([]byte, error) {
+func (d *DNSServer) MarshalJSON() ([]byte, error) {
+	if d == nil {
+		return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
+	}
+
+	ip := d.IP.String()
+	if ip == "<nil>" {
+		ip = ""
+	}
+
 	return json.Marshal(&dnsServerEncoded{
 		Name:      d.Name,
 		NameAggr:  d.AggregatedName,
 		Namespace: d.Namespace,
-		IP:        d.IP.String(),
+		IP:        ip,
 	})
+}
+
+func (d *DNSServer) UnmarshalJSON(data []byte) error {
+	dnsServerEncoded := dnsServerEncoded{}
+	err := json.Unmarshal(data, &dnsServerEncoded)
+	if err != nil {
+		return err
+	}
+	d.Name = dnsServerEncoded.Name
+	d.AggregatedName = dnsServerEncoded.NameAggr
+	d.Namespace = dnsServerEncoded.Namespace
+	d.IP = net.ParseIP(dnsServerEncoded.IP)
+
+	return nil
 }
 
 type DNSStats struct {

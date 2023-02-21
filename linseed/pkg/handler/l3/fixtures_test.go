@@ -7,6 +7,8 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 )
 
+const dummyURL = "anyURL"
+
 var (
 	noFlows []v1.L3Flow
 	flows   = []v1.L3Flow{

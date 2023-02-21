@@ -1,51 +1,50 @@
 {
-    "properties": {
-      "timestamp": { "type": "date" },
-      "host": { "type": "keyword" },
-      "apiVersion": { "type": "keyword" },
-      "AuditID": { "type": "keyword" },
-      "kind": { "type": "keyword" },
-      "Level": { "type": "keyword" },
-      "metadata": { "type": "object", "enabled": false },
-      "name": { "type": "keyword" },
-      "ObjectRef": {
-        "properties": {
-          "apiGroup": { "type": "keyword" },
-          "apiVersion": { "type": "keyword" },
-          "name": { "type": "keyword" },
-          "resource": { "type": "keyword" },
-          "namespace": { "type": "keyword" }
-        }
-      },
-      "RequestObject": { "type": "object", "enabled": false },
-      "RequestReceivedTimestamp": { "type": "date" },
-      "RequestURI": { "type": "keyword" },
-      "ResponseObject": {
-        "properties": {
-          "apiVersion": { "type": "keyword" },
-          "kind": { "type": "keyword" },
-          "metadata": { "type": "object", "enabled": false },
-          "spec": { "type": "object", "enabled": false },
-          "status": { "type": "object", "enabled": false },
-          "data": { "type": "object", "enabled": false }
-        }
-      },
-      "ResponseStatus": {
-        "properties": {
-          "code": { "type": "long" },
-          "metadata": { "type": "object", "enabled": false }
-        }
-      },
-      "SourceIPs": { "type": "text" },
-      "Stage": { "type": "text" },
-      "StageTimestamp": { "type": "date" },
-      "User": {
-        "properties": {
-          "groups": { "type": "keyword" },
-          "username": { "type": "keyword" },
-          "uid": { "type": "keyword" }
-        }
-      },
-      "Verb": { "type": "keyword" }
-    }
+  "properties": {
+    "apiVersion": { "type": "keyword" },
+    "auditID": { "type": "keyword" },
+    "kind": { "type": "keyword" },
+    "level": { "type": "keyword" },
+    "metadata": { "type": "object", "enabled": false },
+    "name": { "type": "keyword" },
+    "objectRef": {
+      "properties": {
+        "apiGroup": { "type": "keyword" },
+        "apiVersion": { "type": "keyword" },
+        "name": { "type": "keyword" },
+        "resource": { "type": "keyword" },
+        "namespace": { "type": "keyword" }
+      }
+    },
+    "requestObject": { "type": "object", "enabled": false },
+    "requestReceivedTimestamp": { "type": "date" },
+    "requestURI": { "type": "keyword" },
+    "responseObject": {
+      "properties": {
+        "apiVersion": { "type": "keyword" },
+        "kind": { "type": "keyword" },
+        "metadata": { "type": "object", "enabled": false },
+        "spec": { "type": "object", "enabled": false },
+        "status": { "type": "object", "enabled": false },
+        "data": { "type": "object", "enabled": false }
+      }
+    },
+    "responseStatus": {
+      "properties": {
+        "code": { "type": "long" },
+        "metadata": { "type": "object", "enabled": false }
+      }
+    },
+    "sourceIPs": { "type": "text" },
+    "stage": { "type": "text" },
+    "stageTimestamp": { "type": "date" },
+    "timestamp": { "type": "date" },
+    "user": {
+      "properties": {
+        "groups": { "type": "keyword" },
+        "username": { "type": "keyword" },
+        "uid": { "type": "keyword" }
+      }
+    },
+    "verb": { "type": "keyword" }
+  }
 }

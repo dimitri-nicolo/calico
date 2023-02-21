@@ -4,10 +4,13 @@ package dns
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
@@ -127,4 +130,100 @@ func marshalResponse(t *testing.T, flows []v1.DNSFlow) string {
 	newData, err := json.Marshal(response)
 	require.NoError(t, err)
 	return string(newData)
+}
+
+func TestBulkIngestion(t *testing.T) {
+	type testResult struct {
+		wantErr    bool
+		httpStatus int
+		errorMsg   string
+	}
+
+	tests := []struct {
+		name            string
+		backendDNSLogs  []v1.DNSLog
+		backendResponse *v1.BulkResponse
+		backendError    error
+		reqBody         string
+		want            testResult
+	}{
+		// Failure to parse request and validate
+		{
+			name:            "malformed json",
+			backendDNSLogs:  noDNSLogs,
+			backendError:    nil,
+			backendResponse: nil,
+			reqBody:         "{#}",
+			want: testResult{
+				true, 400,
+				`{"Msg":"Request body contains badly-formed JSON", "Status":400}`,
+			},
+		},
+
+		// Ingest all dns logs
+		{
+			name:            "ingest dns logs",
+			backendDNSLogs:  dnsLogs,
+			backendError:    nil,
+			backendResponse: bulkResponseSuccess,
+			reqBody:         testutils.MarshalBulkParams[v1.DNSLog](dnsLogs),
+			want:            testResult{false, 200, ""},
+		},
+
+		// Fails to ingest all dns logs
+		{
+			name:            "fail to ingest all DNSs logs",
+			backendDNSLogs:  dnsLogs,
+			backendError:    errors.New("any error"),
+			backendResponse: nil,
+			reqBody:         testutils.MarshalBulkParams[v1.DNSLog](dnsLogs),
+			want:            testResult{true, 500, `{"Msg":"any error", "Status":500}`},
+		},
+
+		// Ingest some dns logs
+		{
+			name:            "ingest some DNSs logs",
+			backendDNSLogs:  dnsLogs,
+			backendError:    nil,
+			backendResponse: bulkResponsePartialSuccess,
+			reqBody:         testutils.MarshalBulkParams[v1.DNSLog](dnsLogs),
+			want:            testResult{false, 200, ""},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := bulkDNSLogs(tt.backendResponse, tt.backendError)
+
+			rec := httptest.NewRecorder()
+			req, err := http.NewRequest("POST", dummyURL, bytes.NewBufferString(tt.reqBody))
+			req.Header.Set("Content-Type", "application/x-ndjson")
+			require.NoError(t, err)
+
+			b.Bulk().ServeHTTP(rec, req)
+
+			bodyBytes, err := io.ReadAll(rec.Body)
+			require.NoError(t, err)
+
+			var wantBody string
+			if tt.want.wantErr {
+				wantBody = tt.want.errorMsg
+			} else {
+				wantBody = testutils.MarshalBulkResponse(t, tt.backendResponse)
+			}
+			assert.Equal(t, tt.want.httpStatus, rec.Result().StatusCode)
+			assert.JSONEq(t, wantBody, string(bodyBytes))
+		})
+	}
+}
+
+func bulkDNSLogs(response *v1.BulkResponse, err error) *dns {
+	mockFlowBackend := &api.MockDNSFlowBackend{}
+	mockLogBackend := &api.MockDNSLogBackend{}
+	n := New(mockFlowBackend, mockLogBackend)
+
+	// mock backend to return the required backendDNSLogs
+	mockLogBackend.On("Create", mock.Anything,
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("[]v1.DNSLog")).Return(response, err)
+
+	return n
 }

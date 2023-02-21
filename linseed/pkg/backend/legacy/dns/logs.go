@@ -4,8 +4,9 @@ package dns
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/olivere/elastic/v7"
 
@@ -54,7 +55,12 @@ func (b *dnsLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 
 	for _, f := range logs {
 		// Add this log to the bulk request.
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(f)
+		dnsLog, err := json.Marshal(f)
+		if err != nil {
+			log.WithError(err).Warningf("Failed to marshal dns log and add it to the request %+v", f)
+			continue
+		}
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(string(dnsLog))
 		bulk.Add(req)
 	}
 

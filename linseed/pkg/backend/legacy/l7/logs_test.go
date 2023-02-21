@@ -44,8 +44,8 @@ func TestCreateL7Log(t *testing.T) {
 
 	// Create a dummy flow.
 	f := v1.L7Log{
-		StartTime:            fmt.Sprintf("%d", time.Now().Unix()),
-		EndTime:              fmt.Sprintf("%d", time.Now().Unix()),
+		StartTime:            time.Now().Unix(),
+		EndTime:              time.Now().Unix(),
 		DestType:             "wep",
 		DestNamespace:        "kube-system",
 		DestNameAggr:         "kube-dns-*",

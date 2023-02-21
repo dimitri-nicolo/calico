@@ -21,8 +21,8 @@ import (
 	l7backend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
 	"github.com/projectcalico/calico/linseed/pkg/handler/dns"
 	"github.com/projectcalico/calico/linseed/pkg/handler/events"
-	l3 "github.com/projectcalico/calico/linseed/pkg/handler/l3"
-	l7 "github.com/projectcalico/calico/linseed/pkg/handler/l7"
+	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
+	"github.com/projectcalico/calico/linseed/pkg/handler/l7"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
@@ -51,8 +51,8 @@ func main() {
 	esClient := backend.MustGetElasticClient(toElasticConfig(cfg))
 	cache := templates.NewTemplateCache(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
 
-	// Create all of the necessary backends.
-	flowLogsBackend := flows.NewFlowLogBackend(esClient, cache)
+	// Create all the necessary backends.
+	flowLogBackend := flows.NewFlowLogBackend(esClient, cache)
 	eventBackend := eventbackend.NewBackend(esClient, cache)
 	flowBackend := flows.NewFlowBackend(esClient)
 	dnsFlowBackend := dnsbackend.NewDNSFlowBackend(esClient)
@@ -65,7 +65,7 @@ func main() {
 	server := server.NewServer(addr, cfg.FIPSModeEnabled,
 		server.WithMiddlewares(server.Middlewares(cfg)),
 		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(
-			l3.New(flowBackend, flowLogsBackend),
+			l3.New(flowBackend, flowLogBackend),
 			l7.New(l7FlowBackend, l7LogBackend),
 			dns.New(dnsFlowBackend, dnsLogBackend),
 			events.New(eventBackend),

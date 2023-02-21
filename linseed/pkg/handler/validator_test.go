@@ -147,11 +147,11 @@ func encode[T any](params []T, delim string) string {
 	return buffer.String()
 }
 
-func TestValidateBulkParams(t *testing.T) {
-	type testCase[T handler.BulkRequestParams] struct {
+func TestValidateFlowLogBulkParams(t *testing.T) {
+	type testCase struct {
 		name       string
 		req        *http.Request
-		want       []T
+		want       []v1.FlowLog
 		wantErr    bool
 		errorMsg   string
 		statusCode int
@@ -186,7 +186,7 @@ func TestValidateBulkParams(t *testing.T) {
 		},
 	}
 
-	tests := []testCase[v1.FlowLog]{
+	tests := []testCase{
 		{
 			"no body", reqNoBody(jsonNewlineContentType),
 			[]v1.FlowLog{},

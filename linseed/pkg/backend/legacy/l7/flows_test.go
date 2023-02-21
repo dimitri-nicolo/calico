@@ -136,10 +136,10 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 	batch := []v1.L7Log{}
 	for i := 0; i < numFlows; i++ {
 		f := v1.L7Log{
-			StartTime: fmt.Sprintf("%d", time.Now().Unix()),
-			EndTime:   fmt.Sprintf("%d", time.Now().Unix()),
+			StartTime: time.Now().Unix(),
+			EndTime:   time.Now().Unix(),
 
-			ResponseCode: 200,
+			ResponseCode: "200",
 			URL:          "http://example.com",
 			UserAgent:    "test-user",
 			Method:       "GET",
