@@ -46,9 +46,9 @@ type IDInfo struct {
 
 // GetNormalizedIDs can be called on an ID passed in on the API to return the set of IDs normalized for the current
 // invocation.  In particular this takes care of the following:
-// -  Different sets of services making up the service group (which impacts the naming)
-// -  Splitting out a non-directional ID into separate directional IDs if split_ingress_egress is true, or
-//    contraction into non-directional if split_ingress_egress is false.
+//   - Different sets of services making up the service group (which impacts the naming)
+//   - Splitting out a non-directional ID into separate directional IDs if split_ingress_egress is true, or
+//     contraction into non-directional if split_ingress_egress is false.
 func GetNormalizedIDs(id v1.GraphNodeID, sgs ServiceGroups, splitIngressEgress bool) ([]v1.GraphNodeID, error) {
 	idi, err := ParseGraphNodeID(id, sgs)
 	if err != nil {

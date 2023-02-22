@@ -71,46 +71,47 @@ type AggMeanInfo struct {
 // This simpler API assumes queries of the following format:
 //
 // GET tigera_secure_ee_flows*/_search
-//{
-//  "size": 0,
-//  "query": "<.Query>",                                          <- Populated from Query
-//  "aggs": {
-//    "flog_buckets": {                                           <- Populated from Name
-//      "composite": {
-//        "size": 1000,
-//        "sources": [                                            <- Populated from AggCompositeSourceInfos
-//          {
-//            "<.AggCompositeSourceInfo.Name>": {
-//              "terms": {
-//                "field": "<.AggCompositeSourceInfo.Field>"
-//              }
-//            }
-//          },
-//          ...
-//        ]
-//      },
-//      "aggs": {
-//        "<.AggNestedTermInfo.Name>": {                          <- Populated from AggNestedTermInfos
-//          "nested": { "path": "<.AggNestedTermInfo.Path>" },
-//          "aggregations": {
-//            "<.AggNestedTermInfo.Term>": {                      <- Note: Only a single term is supported which means
-//              "terms": {                                                 the results can discard some additional
-//                "field": "<.AggNestedTermInfo.Field>"                    hierarchy.
-//              }
-//            }
-//          }
-//        },
-//        ...
-//        "<.AggSumInfo.Name>": {                                 <- Populated from AggSumInfo
-//          "sum": {
-//            "field": "<.AggSumInfo.Field>"
-//          }
-//        },
-//        ...
-//      }
-//    }
-//  }
-//}
+//
+//	{
+//	 "size": 0,
+//	 "query": "<.Query>",                                          <- Populated from Query
+//	 "aggs": {
+//	   "flog_buckets": {                                           <- Populated from Name
+//	     "composite": {
+//	       "size": 1000,
+//	       "sources": [                                            <- Populated from AggCompositeSourceInfos
+//	         {
+//	           "<.AggCompositeSourceInfo.Name>": {
+//	             "terms": {
+//	               "field": "<.AggCompositeSourceInfo.Field>"
+//	             }
+//	           }
+//	         },
+//	         ...
+//	       ]
+//	     },
+//	     "aggs": {
+//	       "<.AggNestedTermInfo.Name>": {                          <- Populated from AggNestedTermInfos
+//	         "nested": { "path": "<.AggNestedTermInfo.Path>" },
+//	         "aggregations": {
+//	           "<.AggNestedTermInfo.Term>": {                      <- Note: Only a single term is supported which means
+//	             "terms": {                                                 the results can discard some additional
+//	               "field": "<.AggNestedTermInfo.Field>"                    hierarchy.
+//	             }
+//	           }
+//	         }
+//	       },
+//	       ...
+//	       "<.AggSumInfo.Name>": {                                 <- Populated from AggSumInfo
+//	         "sum": {
+//	           "field": "<.AggSumInfo.Field>"
+//	         }
+//	       },
+//	       ...
+//	     }
+//	   }
+//	 }
+//	}
 type CompositeAggregationQuery struct {
 	// The document index to search. For flow logs this could be "tigera_secure_ee_flows.cluster.*".
 	DocumentIndex string
@@ -211,52 +212,53 @@ func (q *CompositeAggregationQuery) getMaxBuckets() int {
 // ConvertBucket converts the aggregation bucket result to a CompositeAggregationBucket using the query parameters.
 //
 // Wire format of response:
-//{
-//  "aggregations": {
-//    "flog_buckets": {                                        <- Name
-//      "buckets": [
-//        {
-//          "doc_count": 3,
-//          "key": {
-//            "flow_impacted": true,
-//            "action": "allow",
-//            "dest_name": "cnx-apiserver-65954bfd46-*",
-//            "dest_namespace": "kube-system",
-//            "dest_type": "wep",
-//            "reporter": "src",
-//            "source_name": "cnx-apiclient-65954bfd46-*",
-//            "source_namespace": "compliance",
-//            "source_type": "wep"
-//          },
-//          "dest_labels": {
-//            "by_kvpair": {
-//              "buckets": [
-//                {
-//                  "doc_count": 3,
-//                  "key": "apiserver=true"
-//                },
-//                {
-//                  "doc_count": 3,
-//                  "key": "k8s-app=cnx-apiserver"
-//                },
-//                {
-//                  "doc_count": 3,
-//                  "key": "pod-template-hash=65954bfd46"
-//                }
-//              ],
-//              "doc_count_error_upper_bound": 0,
-//              "sum_other_doc_count": 0
-//            },
-//            "doc_count": 3
-//          },
-//          "sum_bytes_in": {
-//            "value": 10000
-//          }
-//        },
-//      ]
-//    }
-//  }
-//}
+//
+//	{
+//	 "aggregations": {
+//	   "flog_buckets": {                                        <- Name
+//	     "buckets": [
+//	       {
+//	         "doc_count": 3,
+//	         "key": {
+//	           "flow_impacted": true,
+//	           "action": "allow",
+//	           "dest_name": "cnx-apiserver-65954bfd46-*",
+//	           "dest_namespace": "kube-system",
+//	           "dest_type": "wep",
+//	           "reporter": "src",
+//	           "source_name": "cnx-apiclient-65954bfd46-*",
+//	           "source_namespace": "compliance",
+//	           "source_type": "wep"
+//	         },
+//	         "dest_labels": {
+//	           "by_kvpair": {
+//	             "buckets": [
+//	               {
+//	                 "doc_count": 3,
+//	                 "key": "apiserver=true"
+//	               },
+//	               {
+//	                 "doc_count": 3,
+//	                 "key": "k8s-app=cnx-apiserver"
+//	               },
+//	               {
+//	                 "doc_count": 3,
+//	                 "key": "pod-template-hash=65954bfd46"
+//	               }
+//	             ],
+//	             "doc_count_error_upper_bound": 0,
+//	             "sum_other_doc_count": 0
+//	           },
+//	           "doc_count": 3
+//	         },
+//	         "sum_bytes_in": {
+//	           "value": 10000
+//	         }
+//	       },
+//	     ]
+//	   }
+//	 }
+//	}
 func (q *CompositeAggregationQuery) ConvertBucket(item *elastic.AggregationBucketCompositeItem) (*CompositeAggregationBucket, error) {
 	// Extract the data from the response.
 	cab := NewCompositeAggregationBucket(item.DocCount)
@@ -434,9 +436,9 @@ func (cout *CompositeAggregationBucket) Aggregate(cin *CompositeAggregationBucke
 
 // SetAggregatedTermsFromStringSlice replaces the specified terms (or creates if it doesn't exist) with the ones
 // specified in the string slice.
-// - If the entry exists, the DocCount from the term aggregation is used to populate each of the buckets.
-// - If the entry does not exist, the DocCount from the CompositeAggregationBucket is used to populate the
-//   term aggregation and each bucket.
+//   - If the entry exists, the DocCount from the term aggregation is used to populate each of the buckets.
+//   - If the entry does not exist, the DocCount from the CompositeAggregationBucket is used to populate the
+//     term aggregation and each bucket.
 func (cout *CompositeAggregationBucket) SetAggregatedTermsFromStringSlice(name string, vals []string) {
 	terms, ok := cout.AggregatedTerms[name]
 	if !ok {
@@ -465,8 +467,9 @@ func (c CompositeAggregationKey) SameBucket(other CompositeAggregationKey) bool 
 }
 
 // CompositeAggregationSourceValue contains the name and value of a source in a composite aggregation key.
-//TODO(rlb): I'm not sure we need the name in this structure since it can be inferred from the Query and we aren't
-//           using it for self-consistency checks when comparing sets of keys.
+// TODO(rlb): I'm not sure we need the name in this structure since it can be inferred from the Query and we aren't
+//
+//	using it for self-consistency checks when comparing sets of keys.
 type CompositeAggregationSourceValue struct {
 	Name  string
 	Value interface{}

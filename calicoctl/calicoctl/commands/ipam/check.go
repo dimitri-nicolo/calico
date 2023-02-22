@@ -18,8 +18,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"sort"
 	"strings"
 
@@ -489,7 +489,7 @@ func (c *IPAMChecker) printReport() {
 		LeakedHandles:       c.leakedHandles,
 	}
 	bytes, _ := json.MarshalIndent(r, "", "  ")
-	_ = ioutil.WriteFile(c.outFile, bytes, 0o777)
+	_ = os.WriteFile(c.outFile, bytes, 0o777)
 }
 
 // recordAllocation takes a block and ordinal within that block and updates

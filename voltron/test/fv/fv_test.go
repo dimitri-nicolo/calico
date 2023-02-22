@@ -7,7 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -80,12 +80,12 @@ func (c *testClient) doRequest(clusterID string) (string, error) {
 	Expect(err).NotTo(HaveOccurred())
 
 	if resp.StatusCode != 200 {
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		Expect(err).NotTo(HaveOccurred())
 		return "", errors.Errorf("error status: %d, body: %s", resp.StatusCode, body)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	Expect(err).NotTo(HaveOccurred())
 
 	return string(body), nil
@@ -101,7 +101,7 @@ func (c *testClient) doHTTPRequest(clusterID string) (string, error) {
 		return "", errors.Errorf("error status: %d", resp.StatusCode)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	Expect(err).NotTo(HaveOccurred())
 
 	return string(body), nil
@@ -247,9 +247,9 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	})
 
 	var certPemID1, keyPemID1, certPemID2, keyPemID2 []byte
-	var fingerprintID1, fingerprintID2 string
 
 	It("should register 2 clusters", func() {
+		var fingerprintID1, fingerprintID2 string
 		k8sAPI.WaitForManagedClustersWatched()
 		var err error
 		certPemID1, keyPemID1, fingerprintID1, err = test.GenerateTestCredentials(clusterID, tunnelCert, tunnelPrivKey)

@@ -19,11 +19,11 @@
 // Query strings are parsed by alecthomas/participle language parser into a Left node (single Term) and
 // a Right node (an array of OpTerm).
 //
-//	* A Term will be recursively parsed into a Left node (single UnaryOpTerm) and a Right node (an array of OpValue).
-//	* An OpTerm will be recursively parsed into a Left node (single UnaryOpTerm) and a Right node (an array of OpValue).
-//	* An OpValue contains one or more UnaryOpTerm.
-//	* A UnaryOpTerm contains a Negator operator and a Value, which can be one of Atom, Set, or Subquery.
-//	* A SubQuery will be recursively parsed again like an upper level Query or SubQuery.
+//   - A Term will be recursively parsed into a Left node (single UnaryOpTerm) and a Right node (an array of OpValue).
+//   - An OpTerm will be recursively parsed into a Left node (single UnaryOpTerm) and a Right node (an array of OpValue).
+//   - An OpValue contains one or more UnaryOpTerm.
+//   - A UnaryOpTerm contains a Negator operator and a Value, which can be one of Atom, Set, or Subquery.
+//   - A SubQuery will be recursively parsed again like an upper level Query or SubQuery.
 //
 // Here is an example of an annotated query string.
 //
@@ -56,5 +56,4 @@
 //	       Left: UnaryOpTerm  Right: []OpValue  |
 //	       |                                    |
 //	Query: Left: Term                           Right: []OpTerm
-//
 package query

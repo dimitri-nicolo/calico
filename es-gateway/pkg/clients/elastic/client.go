@@ -5,8 +5,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 
 	es7 "github.com/elastic/go-elasticsearch/v7"
 
@@ -27,7 +27,7 @@ type Client interface {
 // NewClient returns a newly configured ES client.
 func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPath string, mTLS, fipsModeEnabled bool) (Client, error) {
 	// Attempt to load CA cert.
-	caCert, err := ioutil.ReadFile(caCertPath)
+	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
 		return nil, err
 	}

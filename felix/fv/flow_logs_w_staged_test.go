@@ -560,14 +560,16 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 })
 
 // Felix1             Felix2
-//  EP1-1 <-+-------> EP2-1
 //
-//       ^           ^-- Apply test policies here (for ingress and egress)
-//       `-------------- Allow all policy
+//	EP1-1 <-+-------> EP2-1
+//
+//	     ^           ^-- Apply test policies here (for ingress and egress)
+//	     `-------------- Allow all policy
 //
 // Ingress/Egress Policies (dest ep1-1)
-//   Tier1 | Tier2  | Default | Profile
-//   np1-1 | snp2-1 |         | (default A)
+//
+//	Tier1 | Tier2  | Default | Profile
+//	np1-1 | snp2-1 |         | (default A)
 //
 // np1-1 will pass ingress and egress
 // snp2-1 will be modified so that:

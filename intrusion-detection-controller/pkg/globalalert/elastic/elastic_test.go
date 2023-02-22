@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -55,7 +54,7 @@ var _ = Describe("GlobalAlert Elastic Test", func() {
 		// for vulnerability dataset
 		f := mustOpen("test_files/10_vulnerability_events_from_image_assurance_api.json")
 		defer f.Close()
-		events, err := ioutil.ReadAll(f)
+		events, err := io.ReadAll(f)
 		Expect(err).NotTo(HaveOccurred())
 		httpServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, string(events))
@@ -595,12 +594,12 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			return &http.Response{
 				StatusCode: http.StatusOK,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader("")),
+				Body:       io.NopCloser(strings.NewReader("")),
 			}, nil
 		}
 
 	case "POST":
-		originalReqBody, err := ioutil.ReadAll(req.Body)
+		originalReqBody, err := io.ReadAll(req.Body)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		reqBody := alterRequestBodyForComparison(originalReqBody)
@@ -704,7 +703,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Request:    req,
-					Body: ioutil.NopCloser(strings.NewReader(`{
+					Body: io.NopCloser(strings.NewReader(`{
 					"hits": {
 						"total": {
 							"value": 1,
@@ -851,10 +850,10 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	if os.Getenv("ELASTIC_TEST_DEBUG") == "yes" {
 		_, _ = fmt.Fprintf(os.Stderr, "%s %s\n", req.Method, req.URL)
 		if req.Body != nil {
-			b, _ := ioutil.ReadAll(req.Body)
+			b, _ := io.ReadAll(req.Body)
 			_ = req.Body.Close()
 			body := string(b)
-			req.Body = ioutil.NopCloser(bytes.NewReader(b))
+			req.Body = io.NopCloser(bytes.NewReader(b))
 			_, _ = fmt.Fprintln(os.Stderr, body)
 		}
 	}
@@ -862,7 +861,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	return &http.Response{
 		Request:    req,
 		StatusCode: 500,
-		Body:       ioutil.NopCloser(strings.NewReader("")),
+		Body:       io.NopCloser(strings.NewReader("")),
 	}, nil
 }
 
@@ -923,7 +922,7 @@ func mustGetQueryWithStartTimeAsString(name, startTime string) string {
 	if err != nil {
 		Expect(err).ShouldNot(HaveOccurred())
 	}
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	if err != nil {
 		Expect(err).ShouldNot(HaveOccurred())
 	}
@@ -950,7 +949,7 @@ func mustGetQueryWithStartTimeAsString(name, startTime string) string {
 func mustGetEventIndexDocAsString(name string) string {
 	f, err := os.Open(name)
 	Expect(err).ShouldNot(HaveOccurred())
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	Expect(err).ShouldNot(HaveOccurred())
 	err = f.Close()
 	Expect(err).ShouldNot(HaveOccurred())

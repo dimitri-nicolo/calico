@@ -2,7 +2,7 @@
 package handler_test
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 
@@ -23,7 +23,7 @@ var _ = Describe("Health Check test", func() {
 
 		healthCheck.ServeHTTP(rr, req)
 
-		bodyBytes, err := ioutil.ReadAll(rr.Body)
+		bodyBytes, err := io.ReadAll(rr.Body)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rr.Result().StatusCode).To(Equal(200))

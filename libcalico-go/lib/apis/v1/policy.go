@@ -26,20 +26,21 @@ import (
 //
 // Each policy must do one of the following:
 //
-//  	- Match the packet and apply a “next-tier” action; this skips the rest of the tier, deferring
-//        to the next tier (or the explicit profiles if this is the last tier.
-//  	- Match the packet and apply an “allow” action; this immediately accepts the packet, skipping
-//        all further tiers and profiles. This is not recommended in general, because it prevents
-//        further policy from being executed.
-// 	- Match the packet and apply a "deny" action; this drops the packet immediately, skipping all
-//        further tiers and profiles.
-// 	- Fail to match the packet; in which case the packet proceeds to the next policy in the tier.
-//        If there are no more policies in the tier then the packet is dropped.
+//   - Match the packet and apply a “next-tier” action; this skips the rest of the tier, deferring
+//     to the next tier (or the explicit profiles if this is the last tier.
+//   - Match the packet and apply an “allow” action; this immediately accepts the packet, skipping
+//     all further tiers and profiles. This is not recommended in general, because it prevents
+//     further policy from being executed.
+//   - Match the packet and apply a "deny" action; this drops the packet immediately, skipping all
+//     further tiers and profiles.
+//   - Fail to match the packet; in which case the packet proceeds to the next policy in the tier.
+//     If there are no more policies in the tier then the packet is dropped.
 //
 // Note:
-// 	If no policies in a tier match an endpoint then the packet skips the tier completely. The
-// 	“default deny” behavior described above only applies if some of the policies in a tier match
-// 	the endpoint.
+//
+//	If no policies in a tier match an endpoint then the packet skips the tier completely. The
+//	“default deny” behavior described above only applies if some of the policies in a tier match
+//	the endpoint.
 //
 // Calico implements the security policy for each endpoint individually and only the policies that
 // have matching selectors are implemented. This ensures that the number of rules that actually need

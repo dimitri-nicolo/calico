@@ -5,7 +5,6 @@ package file
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
 	"time"
@@ -62,7 +61,7 @@ func (f fileMaintainer) run(ctx context.Context) {
 			f.filePaths.Iter(func(path string) error {
 				// loop through all files in this path and delete files if there are more than 5
 				// Delete all older files if there are more than maxAllowedAlertFiles files
-				files, err := ioutil.ReadDir(path)
+				files, err := os.ReadDir(path)
 				if err != nil {
 					log.WithError(err).Errorf("Failed to read alert files from %s", path)
 					return nil

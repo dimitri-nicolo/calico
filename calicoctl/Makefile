@@ -39,9 +39,10 @@ TEST_CONTAINER_NAME ?= calico/test
 
 CALICOCTL_GIT_REVISION?=$(shell git rev-parse --short HEAD)
 
-LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/calicoctl/commands.VERSION=$(GIT_VERSION) \
+LDFLAGS=-X $(PACKAGE_NAME)/calicoctl/commands.VERSION=$(GIT_VERSION) \
 	-X $(PACKAGE_NAME)/calicoctl/commands.GIT_REVISION=$(CALICOCTL_GIT_REVISION) \
-	-X $(PACKAGE_NAME)/calicoctl/commands/common.VERSION=$(GIT_VERSION)"
+	-X $(PACKAGE_NAME)/calicoctl/commands/common.VERSION=$(GIT_VERSION) \
+	-X main.VERSION=$(GIT_VERSION)
 
 .PHONY: clean
 ## Clean enough that a new release build will be clean
@@ -68,7 +69,6 @@ build-all: $(addprefix bin/calicoctl-linux-,$(VALIDARCHES)) bin/calicoctl-window
 build: bin/calicoctl-$(BUILDOS)-$(ARCH)
 # The supported different binary names. For each, ensure that an OS and ARCH is set
 bin/calicoctl-%-amd64: ARCH=amd64
-bin/calicoctl-%-armv7: ARCH=armv7
 bin/calicoctl-%-arm64: ARCH=arm64
 bin/calicoctl-%-ppc64le: ARCH=ppc64le
 bin/calicoctl-%-s390x: ARCH=s390x
@@ -82,9 +82,11 @@ bin/calicoctl-linux-%: BUILDOS=linux
 bin/calicoctl-%: $(SRC_FILES)
 	$(MAKE) build-calicoctl BUILDOS=$(BUILDOS) ARCH=$(ARCH)
 build-calicoctl:
-	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	  go build -v -o bin/calicoctl-$(BUILDOS)-$(ARCH) $(LDFLAGS) "./calicoctl/calicoctl.go"
+ifeq ($(BUILDOS)/$(ARCH), linux/amd64)
+	$(call build_static_cgo_boring_binary, ./calicoctl/calicoctl.go, bin/calicoctl-$(BUILDOS)-$(ARCH))
+else
+	$(call build_binary, ./calicoctl/calicoctl.go, bin/calicoctl-$(BUILDOS)-$(ARCH))
+endif
 
 # Overrides for the binaries that need different output names
 bin/calicoctl: bin/calicoctl-linux-amd64
@@ -121,8 +123,7 @@ CALICO_VERSION_HELPER_SRC=$(CALICO_VERSION_HELPER_DIR)/calico_version_helper.go
 .PHONY: version-helper
 version-helper: $(CALICO_VERSION_HELPER_BIN)
 $(CALICO_VERSION_HELPER_BIN): $(CALICO_VERSION_HELPER_SRC)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && \
-		go build -v -o $(CALICO_VERSION_HELPER_BIN) -ldflags "-X main.VERSION=$(GIT_VERSION)" $(CALICO_VERSION_HELPER_SRC)'
+	$(call build_static_cgo_boring_binary, $(CALICO_VERSION_HELPER_SRC), $(CALICO_VERSION_HELPER_BIN))
 
 ###############################################################################
 # UTs

@@ -84,8 +84,8 @@ type FortiFWClientApi interface {
 	ListAllFirewallRulesInPkg(string) ([]FortiFWPolicy, error)
 }
 
-//Create a Firewall Address object in FortiGate device
-//http POST request to FortiGate device
+// Create a Firewall Address object in FortiGate device
+// http POST request to FortiGate device
 func (f *FortiGateClient) CreateFirewallAddress(fortiFWAddr FortiFWAddress) error {
 
 	//Copy data from Common FW object to FortiGate Specific
@@ -133,7 +133,7 @@ func (f *FortiGateClient) CreateFirewallAddress(fortiFWAddr FortiFWAddress) erro
 	return nil
 }
 
-//Update the Firewall Address
+// Update the Firewall Address
 func (f *FortiGateClient) UpdateFirewallAddress(fortiFWAddr FortiFWAddress) error {
 
 	//Copy data from generic FW object to FortiGate Specific
@@ -182,7 +182,7 @@ func (f *FortiGateClient) UpdateFirewallAddress(fortiFWAddr FortiFWAddress) erro
 	return nil
 }
 
-//Delete the Firewall Address in FortiGate device
+// Delete the Firewall Address in FortiGate device
 func (f *FortiGateClient) DeleteFirewallAddress(fortiFWAddr FortiFWAddress) error {
 	//create a URL string for delete request
 	url := f.URL(fmt.Sprintf("/api/v2/cmdb/firewall/address/%s", fortiFWAddr.Name))
@@ -216,7 +216,7 @@ func (f *FortiGateClient) DeleteFirewallAddress(fortiFWAddr FortiFWAddress) erro
 	return nil
 }
 
-//Get all Firewall Addresses in FortiGate
+// Get all Firewall Addresses in FortiGate
 func (f *FortiGateClient) ListAllFirewallAddresses() ([]FortiFWAddress, error) {
 	//create a URL string for Getting all FW addresses
 	url := f.URL("/api/v2/cmdb/firewall/address")
@@ -273,7 +273,7 @@ func (f *FortiGateClient) ListAllFirewallAddresses() ([]FortiFWAddress, error) {
 	return fwAddressObjs, nil
 }
 
-//Get the Firewall Address object from FortiGate
+// Get the Firewall Address object from FortiGate
 func (f *FortiGateClient) GetFirewallAddress(fwAddr string) (FortiFWAddress, error) {
 	//create a URL string for getting the FW address object
 	url := f.URL(fmt.Sprintf("/api/v2/cmdb/firewall/address/%s", fwAddr))
@@ -327,7 +327,7 @@ func (f *FortiGateClient) GetFirewallAddress(fwAddr string) (FortiFWAddress, err
 	return fwAddressObj, nil
 }
 
-//Get all Firewall address Groups present in the FortiGate
+// Get all Firewall address Groups present in the FortiGate
 func (f *FortiGateClient) ListAllFirewallAddressGroups() ([]FortiFWAddressGroup, error) {
 	//URL string for getting the FW address Group
 	url := f.URL("/api/v2/cmdb/firewall/addrgrp")
@@ -364,7 +364,7 @@ func (f *FortiGateClient) ListAllFirewallAddressGroups() ([]FortiFWAddressGroup,
 	return fwAddressGroups, nil
 }
 
-//Get the Firewall address Group present in the FortiGate
+// Get the Firewall address Group present in the FortiGate
 func (f *FortiGateClient) GetFirewallAddressGroup(fwAddr string) (FortiFWAddressGroup, error) {
 
 	//URL string for getting the FW address Group
@@ -404,7 +404,7 @@ func (f *FortiGateClient) GetFirewallAddressGroup(fwAddr string) (FortiFWAddress
 	return fwAddresses, nil
 }
 
-//Update the Firewall Address Group
+// Update the Firewall Address Group
 func (f *FortiGateClient) UpdateFirewallAddressGroup(fwAddrGrpObj FortiFWAddressGroup) error {
 
 	//create a URL string for HTTP PUT request
@@ -457,8 +457,8 @@ func (f *FortiGateClient) UpdateFirewallAddressGroup(fwAddrGrpObj FortiFWAddress
 	return nil
 }
 
-//Create a Firewall Address Group  in FortiGate device
-//http POST request to FortiGate device
+// Create a Firewall Address Group  in FortiGate device
+// http POST request to FortiGate device
 func (f *FortiGateClient) CreateFirewallAddressGroup(fwAddrGrp FortiFWAddressGroup) error {
 
 	//create a URL string for HTTP POST
@@ -512,7 +512,7 @@ func (f *FortiGateClient) CreateFirewallAddressGroup(fwAddrGrp FortiFWAddressGro
 	return nil
 }
 
-//Delete the Firewall Address Group in FortiGate device
+// Delete the Firewall Address Group in FortiGate device
 func (f *FortiGateClient) DeleteFirewallAddressGroup(addrGrpName string) error {
 	//create a URL string for delete request
 	url := f.URL(fmt.Sprintf("/api/v2/cmdb/firewall/addrgrp/%s", addrGrpName))
@@ -755,8 +755,8 @@ func (f *FortiManagerClient) GetFirewallAddress(fwAddress string) (FortiFWAddres
 
 }
 
-//Create a Firewall Address object in FortiManager
-//http POST request to FortiManager device
+// Create a Firewall Address object in FortiManager
+// http POST request to FortiManager device
 func (f *FortiManagerClient) CreateFirewallAddress(fortiFWAddr FortiFWAddress) error {
 
 	url := fmt.Sprintf("/pm/config/adom/%s/obj/firewall/address/%s", f.Adom, fortiFWAddr.Name)
@@ -785,7 +785,7 @@ func (f *FortiManagerClient) CreateFirewallAddress(fortiFWAddr FortiFWAddress) e
 	return err
 }
 
-//Modify and/or Update the Firewall Address object
+// Modify and/or Update the Firewall Address object
 func (f *FortiManagerClient) UpdateFirewallAddress(fortiFWAddr FortiFWAddress) error {
 
 	url := fmt.Sprintf("/pm/config/adom/%s/obj/firewall/address/%s", f.Adom, fortiFWAddr.Name)
@@ -817,7 +817,7 @@ func (f *FortiManagerClient) UpdateFirewallAddress(fortiFWAddr FortiFWAddress) e
 	return err
 }
 
-//Delete the Firewall Addresss Group in FortiManager, Arguments: Adom name, FW address name
+// Delete the Firewall Addresss Group in FortiManager, Arguments: Adom name, FW address name
 func (f *FortiManagerClient) DeleteFirewallAddress(fortiFWAddr FortiFWAddress) error {
 
 	url := fmt.Sprintf("/pm/config/adom/%s/obj/firewall/address/%s", f.Adom, fortiFWAddr.Name)
@@ -839,7 +839,7 @@ func (f *FortiManagerClient) DeleteFirewallAddress(fortiFWAddr FortiFWAddress) e
 	return err
 }
 
-//Get All Firewall Addresss Group in FortiManager, Arguments: Adom
+// Get All Firewall Addresss Group in FortiManager, Arguments: Adom
 func (f *FortiManagerClient) ListAllFirewallAddressGroups() ([]FortiFWAddressGroup, error) {
 
 	//URL string for getting the FW address Group
@@ -871,7 +871,7 @@ func (f *FortiManagerClient) ListAllFirewallAddressGroups() ([]FortiFWAddressGro
 	return fwAddresses, err
 }
 
-//Get the Firewall Addresss Group in FortiManager, Arguments: Adom and firewall Address group name
+// Get the Firewall Addresss Group in FortiManager, Arguments: Adom and firewall Address group name
 func (f *FortiManagerClient) GetFirewallAddressGroup(fwAddressGroup string) (FortiFWAddressGroup, error) {
 
 	var fwAddressGrpObj FortiFWAddressGroup
@@ -901,7 +901,7 @@ func (f *FortiManagerClient) GetFirewallAddressGroup(fwAddressGroup string) (For
 	return fwAddressGrpObj, err
 }
 
-//Create a FW address Group, Arguments Firewall Address Group object and ADOM name
+// Create a FW address Group, Arguments Firewall Address Group object and ADOM name
 func (f *FortiManagerClient) UpdateFirewallAddressGroup(fwAddressGrp FortiFWAddressGroup) error {
 
 	//create a URL string for FW address Group with ADOM name and Address Group Name
@@ -930,7 +930,7 @@ func (f *FortiManagerClient) UpdateFirewallAddressGroup(fwAddressGrp FortiFWAddr
 	return err
 }
 
-//Create a FW address Group, Arguments Firewall Address Group object and ADOM name
+// Create a FW address Group, Arguments Firewall Address Group object and ADOM name
 func (f *FortiManagerClient) CreateFirewallAddressGroup(fwAddrGrp FortiFWAddressGroup) error {
 
 	//create a URL string for FW address Group with ADOM name and Address Group Name
@@ -959,7 +959,7 @@ func (f *FortiManagerClient) CreateFirewallAddressGroup(fwAddrGrp FortiFWAddress
 	return err
 }
 
-//Delete a FW address Group, Arguments Firewall Address Group Name and ADOM name
+// Delete a FW address Group, Arguments Firewall Address Group Name and ADOM name
 func (f *FortiManagerClient) DeleteFirewallAddressGroup(fwAddressGrpName string) error {
 
 	//create a URL string for FW address Group with ADOM name and Address Group Name

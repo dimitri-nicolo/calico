@@ -7,7 +7,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sort"
@@ -102,15 +102,15 @@ var _ = Describe("Application middleware tests", func() {
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_l7.test-cluster-name.*/_search"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(body).To(Equal([]byte(l7SearchRequest)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(l7SearchResponse))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(l7SearchResponse))),
 			}, nil)
 
 			// mock es client
@@ -168,15 +168,15 @@ var _ = Describe("Application middleware tests", func() {
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_l7.test-cluster-name.*/_search"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(body).To(Equal([]byte(l7SearchRequestWithNamespace)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(l7SearchResponseWithNamespace))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(l7SearchResponseWithNamespace))),
 			}, nil)
 
 			// mock es client
@@ -274,15 +274,15 @@ var _ = Describe("Application middleware tests", func() {
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_l7.test-cluster-name.*/_search"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(body).To(Equal([]byte(l7SearchRequestWithNamespace)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte("invalid-elastic-response"))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte("invalid-elastic-response"))),
 			}, nil)
 
 			// mock es client
@@ -400,15 +400,15 @@ var _ = Describe("Application middleware tests", func() {
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_l7.test-cluster-name.*/_search"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(body).To(Equal([]byte(l7SearchRequest)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(l7SearchResponse))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(l7SearchResponse))),
 			}, nil)
 
 			// mock es client
@@ -468,15 +468,15 @@ var _ = Describe("Application middleware tests", func() {
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_l7.test-cluster-name.*/_search"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(body).To(Equal([]byte(l7SearchRequestWithNamespace)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(l7SearchResponseWithNamespace))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(l7SearchResponseWithNamespace))),
 			}, nil)
 
 			// mock es client
@@ -572,15 +572,15 @@ var _ = Describe("Application middleware tests", func() {
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_l7.test-cluster-name.*/_search"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(body).To(Equal([]byte(l7SearchRequestWithNamespace)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte("invalid-elastic-response"))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte("invalid-elastic-response"))),
 			}, nil)
 
 			// mock es client

@@ -45,18 +45,10 @@ endif
 #
 # We use -X to insert the version information into the placeholder variables
 # in the version package.
-VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-                  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-                  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-                  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT) \
-
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
-
+LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
+			  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
+			  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
+			  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT) \
 
 ##########################################################################################
 # BUILD
@@ -65,15 +57,11 @@ build: $(BINDIR)/voltron-$(ARCH) $(BINDIR)/guardian-$(ARCH)
 
 .PHONY: $(BINDIR)/voltron-$(ARCH)
 $(BINDIR)/voltron-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) \
-	    sh -c '$(GIT_CONFIG_SSH) \
-	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) cmd/voltron/main.go'
+	$(call build_static_cgo_boring_binary, ./cmd/voltron/main.go, $@)
 
 .PHONY: $(BINDIR)/guardian-$(ARCH)
 $(BINDIR)/guardian-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) \
-	    sh -c '$(GIT_CONFIG_SSH) \
-	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) cmd/guardian/main.go'
+	$(call build_static_cgo_boring_binary, ./cmd/guardian/main.go, $@)
 
 #############################################
 # Docker Image

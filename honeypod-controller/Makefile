@@ -17,12 +17,11 @@ SNORT_VERSION             ?=2.9.20
 #
 # We use -B to insert a build ID note into the executable, without which, the
 # RPM build tools complain.
-LDFLAGS:=-ldflags "\
-		-X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
-		-X $(PACKAGE_NAME)/pkg/version.BUILD_DATE=$(DATE) \
-		-X $(PACKAGE_NAME)/pkg/version.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
-		-X $(PACKAGE_NAME)/pkg/version.GIT_REVISION=$(GIT_COMMIT) \
-		-B 0x$(BUILD_ID)"
+LDFLAGS := -X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
+			-X $(PACKAGE_NAME)/pkg/version.BUILD_DATE=$(DATE) \
+			-X $(PACKAGE_NAME)/pkg/version.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
+			-X $(PACKAGE_NAME)/pkg/version.GIT_REVISION=$(GIT_COMMIT) \
+			-B 0x$(BUILD_ID)
 
 ##############################################################################
 # Include ../lib.Makefile before anything else
@@ -41,20 +40,11 @@ SRC_FILES  = $(shell find pkg cmd -name '*.go') \
 # Building the binary
 ###############################################################################
 
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
-
 build: bin/controller-$(ARCH)
 
 .PHONY: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v $(BUILD_FLAGS) -ldflags "$(VERSION_FLAGS)" cmd/controller/controller.go'
+	$(call build_static_cgo_boring_binary, cmd/controller/controller.go, $@)
 
 ###############################################################################
 # Building the images

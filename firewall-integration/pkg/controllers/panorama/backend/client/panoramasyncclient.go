@@ -141,7 +141,8 @@ type PanoramaRuleClient struct {
 // then default type. An error is returned if the call to Panorama client returns an error. The list
 // of Panorama rule entries are converted to the generic interface type. A a valid device group,
 // other than "shared" must be provided to retrieve a valid response, as the Panorama API call to
-//  GetAll rules for the "shared" device group returns an error.
+//
+//	GetAll rules for the "shared" device group returns an error.
 func (c *PanoramaRuleClient) List() (*model.KVPairList, error) {
 	log.Debugf("List Panorama Rules for device group: %s", c.DeviceGroup)
 

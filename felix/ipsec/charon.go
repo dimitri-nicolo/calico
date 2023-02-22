@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -435,7 +434,7 @@ func CleanUpOldCharon() error {
 	const pidfilePath = "/var/run/charon.pid"
 	if f, err := os.Open(pidfilePath); err == nil {
 		defer f.Close()
-		bs, err := ioutil.ReadAll(f)
+		bs, err := io.ReadAll(f)
 		if err != nil {
 			return err
 		}

@@ -17,7 +17,6 @@ package flannelmigration_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"regexp"
@@ -99,7 +98,7 @@ var _ = Describe("flannel-migration-controller FV test", func() {
 		apiserver = testutils.RunK8sApiserver(etcd.IP)
 
 		// Write out a kubeconfig file
-		kconfigfile, err = ioutil.TempFile("", "ginkgo-migrationcontroller")
+		kconfigfile, err = os.CreateTemp("", "ginkgo-migrationcontroller")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Change ownership of the kubeconfig file  so it is accessible by all users in the container

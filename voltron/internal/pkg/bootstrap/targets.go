@@ -2,8 +2,8 @@ package bootstrap
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"regexp"
 
 	"github.com/pkg/errors"
@@ -81,7 +81,7 @@ func ProxyTargets(tgts Targets, fipsModeEnabled bool) ([]proxy.Target, error) {
 		}
 
 		if t.TokenPath != "" {
-			token, err := ioutil.ReadFile(t.TokenPath)
+			token, err := os.ReadFile(t.TokenPath)
 			if err != nil {
 				return nil, errors.Errorf("Failed reading token from %s: %s", t.TokenPath, err)
 			}

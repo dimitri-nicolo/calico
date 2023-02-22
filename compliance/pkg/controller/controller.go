@@ -255,11 +255,11 @@ func (cc *ComplianceController) syncOne(rep *v3.GlobalReport, js []batchv1.Job, 
 // updateStatus reconciles a Report with a list of any Jobs that it created and updates the Report Status.
 // This processing is semi-resilient to the Status being deleted in the middle of processing jobs (see inline for
 // more info):
-// -  The set of active, successful and failed jobs is always determined from querying the jobs. Therefore, jobs
-//    deleted by another process will result in the status field losing those jobs on the next poll cycle.
-// -  The end time of the last scheduled report job is used to determine what jobs need to be created. If it is
-//    deleted, it is repopulated from the archived report storage and the still-configured Jobs (taking the latest
-//    of those times).
+//   - The set of active, successful and failed jobs is always determined from querying the jobs. Therefore, jobs
+//     deleted by another process will result in the status field losing those jobs on the next poll cycle.
+//   - The end time of the last scheduled report job is used to determine what jobs need to be created. If it is
+//     deleted, it is repopulated from the archived report storage and the still-configured Jobs (taking the latest
+//     of those times).
 //
 // All known jobs created by "report" should be included in "js".
 func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.Job, now time.Time) bool {

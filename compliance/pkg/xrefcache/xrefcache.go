@@ -224,12 +224,12 @@ func (x *xrefCache) processUpdatesOfType(updateType syncer.UpdateType, updates [
 // for each entry.
 //
 // Notes:
-// -  Cross referencing between different resources (e.g. profile -> endpoint) is updated synchronously as part of
-//    the syncer dispatcher update above. Thus we can send multiple updates to the caches and perform the calculated
-//    state updates afterwards.
-// -  There is no circular dependency of *calculated* state, so it is safe and more efficient to use a priority
-//    queue for processing the updated resources. Once a resource of higher priority has been calculated it is
-//    safe to send updates for that resource without triggering further updates for that resource.
+//   - Cross referencing between different resources (e.g. profile -> endpoint) is updated synchronously as part of
+//     the syncer dispatcher update above. Thus we can send multiple updates to the caches and perform the calculated
+//     state updates afterwards.
+//   - There is no circular dependency of *calculated* state, so it is safe and more efficient to use a priority
+//     queue for processing the updated resources. Once a resource of higher priority has been calculated it is
+//     safe to send updates for that resource without triggering further updates for that resource.
 func (x *xrefCache) processQueue() {
 	// Process queued updates for recalculation and consumer notification.
 	for x.modified.Len() > 0 {

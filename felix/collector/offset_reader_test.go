@@ -4,7 +4,6 @@ package collector
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -18,7 +17,7 @@ import (
 var _ = Describe("LogOffsetReader", func() {
 	DescribeTable("Reads Offsets from",
 		func(positions string, expected Offsets) {
-			var positionFile, err = ioutil.TempFile("", "pos")
+			var positionFile, err = os.CreateTemp("", "pos")
 			Expect(err).NotTo(HaveOccurred())
 			_, err = positionFile.WriteString(positions)
 			Expect(err).NotTo(HaveOccurred())

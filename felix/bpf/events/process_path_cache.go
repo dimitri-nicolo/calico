@@ -4,7 +4,6 @@ package events
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strconv"
@@ -208,7 +207,7 @@ func (r *BPFProcessPathCache) readProcCmdline(procId int) (string, string, error
 	var rpath, rargs, args string
 	var rerror error
 	IsPidPresent := false
-	proc, err := ioutil.ReadDir("/proc")
+	proc, err := os.ReadDir("/proc")
 	if err != nil {
 		return "", "", err
 	}
@@ -222,7 +221,7 @@ func (r *BPFProcessPathCache) readProcCmdline(procId int) (string, string, error
 			continue
 		}
 		procPath := fmt.Sprintf("/proc/%d/cmdline", pid)
-		content, err := ioutil.ReadFile(procPath)
+		content, err := os.ReadFile(procPath)
 		if err != nil {
 			log.WithError(err).Debugf("error reading %v", procPath)
 			if pid == procId {

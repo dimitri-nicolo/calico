@@ -3,7 +3,7 @@ package utils
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -19,7 +19,7 @@ func LoadData(fileName string, data interface{}) {
 		return
 	}
 	// Read opened jsonFile as a byte array.
-	byteValue, _ := ioutil.ReadAll(jsonFile)
+	byteValue, _ := io.ReadAll(jsonFile)
 	// Unmarshal the byteArray which contains the jsonFile's content into 'data'.
 	err = json.Unmarshal(byteValue, data)
 	if err != nil {

@@ -61,8 +61,9 @@ func (c *GnpCache) entriesFromDatastore() (map[string]gnpCacheEntry, error) {
 }
 
 // Copied from anx-controller:
-//   syncDatastoreBackoff syncs with the datastore and populates the cache with
-//   entries, retrying with an exponential backoff.
+//
+//	syncDatastoreBackoff syncs with the datastore and populates the cache with
+//	entries, retrying with an exponential backoff.
 func (c *GnpCache) SyncDatastoreBackoff() {
 	b := &backoff.Backoff{
 		Min:    1 * time.Second,

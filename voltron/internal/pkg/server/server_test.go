@@ -10,7 +10,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -452,7 +451,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						Name:     clusterA,
 					}, (*authorizationv1.NonResourceAttributes)(nil)).Return(false, nil)
 					resp := clientHelloReq(httpsAddr, clusterA, http.StatusForbidden)
-					bits, err := ioutil.ReadAll(resp.Body)
+					bits, err := io.ReadAll(resp.Body)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(string(bits)).To(Equal("not authorized for managed cluster\n"))
 				})

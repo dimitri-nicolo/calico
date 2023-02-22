@@ -9,8 +9,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/pkg/errors"
@@ -22,12 +22,12 @@ func ReadCredentials(certPath, keyPath string) (cert []byte, key []byte, err err
 		return nil, nil, errors.New("path provided for credentials is empty")
 	}
 
-	cert, err = ioutil.ReadFile(certPath)
+	cert, err = os.ReadFile(certPath)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	key, err = ioutil.ReadFile(keyPath)
+	key, err = os.ReadFile(keyPath)
 	if err != nil {
 		return nil, nil, err
 	}

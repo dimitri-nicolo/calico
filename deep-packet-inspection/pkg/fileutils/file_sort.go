@@ -15,10 +15,10 @@ const (
 )
 
 // SortFile is an implementation of sort.Interface
-// It sorts the files based on the unix timpestamp in the file name's postfix.
+// It sorts the files based on the unix timestamp in the file name's postfix.
 // File with name "alert_fast.txt" is considered smallest, and all other files "alert_fast.txt.<unix_time>"
 // are sorted based on the <unix_time>.
-type SortFile []os.FileInfo
+type SortFile []os.DirEntry
 
 func (f SortFile) Len() int {
 	return len(f)

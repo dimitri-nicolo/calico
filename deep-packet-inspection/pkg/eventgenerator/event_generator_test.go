@@ -5,7 +5,6 @@ package eventgenerator_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -419,9 +418,9 @@ var _ = Describe("File Parser", func() {
 })
 
 func copyAlertFile(path, src, dst string) {
-	input, err := ioutil.ReadFile(fmt.Sprintf("test/data/%s", src))
+	input, err := os.ReadFile(fmt.Sprintf("test/data/%s", src))
 	Expect(err).ShouldNot(HaveOccurred())
-	err = ioutil.WriteFile(fmt.Sprintf("%s/%s", path, dst), input, 0644)
+	err = os.WriteFile(fmt.Sprintf("%s/%s", path, dst), input, 0644)
 	Expect(err).ShouldNot(HaveOccurred())
 }
 

@@ -16,7 +16,6 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -44,7 +43,7 @@ func SetEnv() error {
 		filePath = ocIfaceModePath
 	}
 
-	modeBytes, err := ioutil.ReadFile(filePath)
+	modeBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}

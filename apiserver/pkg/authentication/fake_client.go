@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -41,14 +41,14 @@ func (f roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	if req.Method != "POST" {
 		return &http.Response{
 			StatusCode: http.StatusMethodNotAllowed,
-			Body:       ioutil.NopCloser(bytes.NewBufferString("Unsupported Method")),
+			Body:       io.NopCloser(bytes.NewBufferString("Unsupported Method")),
 		}, nil
 	}
 	header := req.Header.Get(AuthorizationHeader)
 	if header == "" {
 		return &http.Response{
 			StatusCode: http.StatusUnauthorized,
-			Body:       ioutil.NopCloser(bytes.NewBufferString("user not authenticated")),
+			Body:       io.NopCloser(bytes.NewBufferString("user not authenticated")),
 		}, nil
 	}
 	result, ok := f.users[header]
@@ -58,7 +58,7 @@ func (f roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	return &http.Response{
 		StatusCode: result.statusCode,
-		Body:       ioutil.NopCloser(bytes.NewReader(result.apiResponseJson)),
+		Body:       io.NopCloser(bytes.NewReader(result.apiResponseJson)),
 	}, nil
 }
 

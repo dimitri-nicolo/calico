@@ -40,10 +40,10 @@ import (
 //
 // With those variations in place,
 //
-// - Generate denied flows, as well as allowed.
-// - Generate flows from multiple client pods, sharing a prefix, each
-//   of which makes multiple connections to an IP that matches a wep, hep
-//   or ns.
+//   - Generate denied flows, as well as allowed.
+//   - Generate flows from multiple client pods, sharing a prefix, each
+//     of which makes multiple connections to an IP that matches a wep, hep
+//     or ns.
 //
 // Verifications:
 //
@@ -59,14 +59,13 @@ import (
 // - Timing variations
 // - start_time and end_time fields
 //
-//             Host 1                              Host 2
+//	        Host 1                              Host 2
 //
-//     wl-client-1                              wl-server-1 (allowed)
-//     wl-client-2                              wl-server-2 (denied)
-//     wl-client-3                              hep-IP
-//     wl-client-4
-//           ns-IP
-//
+//	wl-client-1                              wl-server-1 (allowed)
+//	wl-client-2                              wl-server-2 (denied)
+//	wl-client-3                              hep-IP
+//	wl-client-4
+//	      ns-IP
 type aggregation int
 
 const (

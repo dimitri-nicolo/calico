@@ -7,7 +7,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sort"
@@ -96,15 +96,15 @@ var _ = Describe("Service middleware tests", func() {
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_flows.test-cluster-name.*/_search"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(body).To(Equal([]byte(flowSearchRequest)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(flowSearchResponse))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(flowSearchResponse))),
 			}, nil)
 
 			// mock es client
@@ -216,15 +216,15 @@ var _ = Describe("Service middleware tests", func() {
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_flows.test-cluster-name.*/_search"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(body).To(Equal([]byte(flowSearchRequest)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte("invalid-elastic-response"))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte("invalid-elastic-response"))),
 			}, nil)
 
 			// mock es client

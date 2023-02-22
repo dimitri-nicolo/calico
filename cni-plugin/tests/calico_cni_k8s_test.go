@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -555,7 +554,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 				err = os.MkdirAll("/var/lib/calico", os.ModePerm)
 				Expect(err).NotTo(HaveOccurred())
-				err = ioutil.WriteFile("/var/lib/calico/mtu", []byte("3000"), 0644)
+				err = os.WriteFile("/var/lib/calico/mtu", []byte("3000"), 0644)
 				Expect(err).NotTo(HaveOccurred())
 				defer os.Remove("/var/lib/calico/mtu")
 
@@ -1621,7 +1620,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 
 			// Write out the AWS subnets file to tell the CNI plugin which subnets are local.
-			err = ioutil.WriteFile(
+			err = os.WriteFile(
 				"/tmp/aws-subnets",
 				[]byte(`{"aws_subnet_ids": ["subnet-00000000000000001", "subnet-00000000000000002"]}`),
 				0644,
@@ -3524,7 +3523,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 		BeforeEach(func() {
 			Expect(os.MkdirAll("/etc/cni/net.d/", os.ModePerm))
-			Expect(ioutil.WriteFile("/etc/cni/net.d/calico_multi_interface_mode", []byte("multus"), 0777)).ShouldNot(HaveOccurred())
+			Expect(os.WriteFile("/etc/cni/net.d/calico_multi_interface_mode", []byte("multus"), 0777)).ShouldNot(HaveOccurred())
 
 			testutils.MustCreateNewIPPool(calicoClient, pool, false, false, true)
 

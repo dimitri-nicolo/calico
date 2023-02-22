@@ -4,7 +4,6 @@ package ipsec
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
@@ -109,20 +108,21 @@ func (t *ConfigTree) AddOneKV(key, value string) error {
 // StartSection: the section name to start with.
 // linePrefix: the prefix for each line to indent. Normally it is couple of spaces.
 // Result of a configTree with "charon.filelog.stdout.default": "2",
-//                             "charon.filelog.stderr.default": "2",
-//                             "charon.filelog.stderr.time_format": "%e %b %F"
 //
-//  charon {
-//    filelog {
-//      stdout {
-//        default = 2
-//      }
-//      stderr {
-//        default = 2
-//        time_format = %e %b %F
-//      }
-//    }
-//  }
+//	                           "charon.filelog.stderr.default": "2",
+//	                           "charon.filelog.stderr.time_format": "%e %b %F"
+//
+//	charon {
+//	  filelog {
+//	    stdout {
+//	      default = 2
+//	    }
+//	    stderr {
+//	      default = 2
+//	      time_format = %e %b %F
+//	    }
+//	  }
+//	}
 //
 // This function will render each section and config items in an ordered pattern.
 // It is not mandatory but it makes UT and debug easier.
@@ -223,7 +223,7 @@ func (c *CharonConfig) SetLogLevel(felixLevel string) {
 }
 
 func writeStringToFile(path, text string) error {
-	if err := ioutil.WriteFile(path, []byte(text), 0600); err != nil {
+	if err := os.WriteFile(path, []byte(text), 0600); err != nil {
 		return fmt.Errorf("Failed to write file %s", path)
 	}
 	return nil

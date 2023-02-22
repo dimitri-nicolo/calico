@@ -16,7 +16,7 @@ package commands
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/docopt/docopt-go"
@@ -68,7 +68,7 @@ Description:
 
 	filename := argutils.ArgStringOrBlank(parsedArgs, "--filename")
 
-	f, err := ioutil.ReadFile(filename)
+	f, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("error reading license file '%v'", err)
 	}

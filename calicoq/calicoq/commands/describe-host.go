@@ -139,8 +139,6 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 	return
 }
 
-// MATT: Might want to integrate this into the describeCmd and use these callbacks to
-//       save-off rules that reference stuff?
 type noopRuleScanner struct {
 }
 

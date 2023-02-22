@@ -32,16 +32,18 @@ func (p *GraphProcesses) Combine(p2 *GraphProcesses) *GraphProcesses {
 //
 // This is actually JSON marshalled as a slice, so the JSON will appear in the format:
 // [
-//   {
-//     "name": "p1",
-//     "min_num_names_per_flow": 1,
-//     "max_num_names_per_flow": 2,
-//     "min_num_ids_per_flow": 10,
-//     "max_num_ids_per_flow": 12
-//   }, {
-//     "name": "p2"
-//     ...
-//   }
+//
+//	{
+//	  "name": "p1",
+//	  "min_num_names_per_flow": 1,
+//	  "max_num_names_per_flow": 2,
+//	  "min_num_ids_per_flow": 10,
+//	  "max_num_ids_per_flow": 12
+//	}, {
+//	  "name": "p2"
+//	  ...
+//	}
+//
 // ]
 type GraphEndpointProcesses map[string]GraphEndpointProcess
 

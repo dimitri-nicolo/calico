@@ -9,9 +9,9 @@ import "github.com/projectcalico/calico/compliance/pkg/syncer"
 // the event type EventProtectedIngress is identical to the cache entry flag FlagProtectedIngress. This flag indicates
 // whether the resource has ingress protection or not. Using the same set of values makes it easy to use bit-wise
 // operations to track changes and to notify of the equivalent events:
-// -  If a policy has cache entry flags X which are then updated to Y
-// -  The event flags correspond one-to-one with the cache flags, so therefore the event flags associated with
-//    configuration change X->Y can be determined using syncer.UpdateType(X ^ Y).
+//   - If a policy has cache entry flags X which are then updated to Y
+//   - The event flags correspond one-to-one with the cache flags, so therefore the event flags associated with
+//     configuration change X->Y can be determined using syncer.UpdateType(X ^ Y).
 //
 // Events that do not correspond to boolean configuration values do not have equivalents defined for the CacheEntry
 // values.

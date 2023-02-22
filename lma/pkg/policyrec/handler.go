@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -19,7 +19,7 @@ const (
 
 func ExtractPolicyRecommendationParamsFromRequest(req *http.Request) (*PolicyRecommendationParams, error) {
 	// Read the body data
-	b, err := ioutil.ReadAll(req.Body)
+	b, err := io.ReadAll(req.Body)
 	if err != nil {
 		log.WithError(err).Info("Error reading request body")
 		return nil, err

@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -68,20 +68,20 @@ var _ ipamInterface = ipam.Interface(nil)
 // - On AWS or IPAM failure, it does exponential backoff.
 //
 // Resyncs consist of:
-// - Reading the capacity limits of our node type.
-// - Reading the current state of our instance and ENIs over the AWS API. If the node has additional
-//   non-calico ENIs they are taken into account when calculating the capacity available to Calico
-// - Call the "capacityCallback" to tell other components how many IPs we can support.
-// - Analysing the datastore state to choose a single "best" AWS subnet.  We only support a single AWS
-//   subnet per node to avoid having to balance IPs between multiple ENIs on different subnets.
-//   (It's a misconfiguration to have multiple valid subnets but we need to tolerate it to do IP pool
-//   migrations.)
-// - Comparing the set of local workload routes against the IPs that we've already assigned to ENIs.
-// - Remove any AWS IPs that are no longer needed.
-// - If there are more IPs than the existing ENIs can handle, try to allocate additional host IPs in
-//   calico IPAM and then create and attach new AWS ENIs with those IPs.
-// - Allocate the new IPs to ENIs and assign them in AWS.
-// - Respond to the main thread.
+//   - Reading the capacity limits of our node type.
+//   - Reading the current state of our instance and ENIs over the AWS API. If the node has additional
+//     non-calico ENIs they are taken into account when calculating the capacity available to Calico
+//   - Call the "capacityCallback" to tell other components how many IPs we can support.
+//   - Analysing the datastore state to choose a single "best" AWS subnet.  We only support a single AWS
+//     subnet per node to avoid having to balance IPs between multiple ENIs on different subnets.
+//     (It's a misconfiguration to have multiple valid subnets but we need to tolerate it to do IP pool
+//     migrations.)
+//   - Comparing the set of local workload routes against the IPs that we've already assigned to ENIs.
+//   - Remove any AWS IPs that are no longer needed.
+//   - If there are more IPs than the existing ENIs can handle, try to allocate additional host IPs in
+//     calico IPAM and then create and attach new AWS ENIs with those IPs.
+//   - Allocate the new IPs to ENIs and assign them in AWS.
+//   - Respond to the main thread.
 //
 // Since failures can occur at any stage, we check for
 // - Leaked IPs
@@ -773,7 +773,7 @@ func (m *SecondaryIfaceProvisioner) maybeUpdateAWSSubnetFile(subnets map[string]
 	// of the CNI plugin seeing a partially-written file.  If the file is missing/partial then the CNI plugin
 	// will fail to read/parse the file and bail out.  The CNI plugin only tries to read this file if the pod
 	// has the aws-secondary-ip resource request so only AWS-backed pods are in danger of failing.
-	oldData, err := ioutil.ReadFile(m.awsSubnetsFilename)
+	oldData, err := os.ReadFile(m.awsSubnetsFilename)
 	if err == nil {
 		if bytes.Equal(oldData, encoded) {
 			logrus.Debug("AWS subnets file already correct.")
@@ -783,7 +783,7 @@ func (m *SecondaryIfaceProvisioner) maybeUpdateAWSSubnetFile(subnets map[string]
 		logrus.WithError(err).Debug("Failed to read old aws-subnets file.  Rewriting it...")
 	}
 
-	err = ioutil.WriteFile(m.awsSubnetsFilename, encoded, 0644)
+	err = os.WriteFile(m.awsSubnetsFilename, encoded, 0644)
 	if err != nil {
 		return err
 	}

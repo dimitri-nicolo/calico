@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -56,7 +56,7 @@ func main() {
 		log.Fatal("No scenario specified")
 	}
 
-	scenarioFile, err := ioutil.ReadFile(scenario)
+	scenarioFile, err := os.ReadFile(scenario)
 	if err != nil {
 		log.Fatalf("Unable to read scenario file: %v", err)
 	}

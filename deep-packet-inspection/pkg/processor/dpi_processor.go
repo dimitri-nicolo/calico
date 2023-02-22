@@ -91,20 +91,21 @@ func NewProcessor(ctx context.Context,
 // a cacheResponse object with success set to true if the request is fulfilled.
 //
 // Request types:
-//  	- getRequest: returns the SnortExec for the requested WEP key
 //
-// 		- getCacheSizeRequest: returns the number of items in the cache
+//   - getRequest: returns the SnortExec for the requested WEP key
 //
-//		- addRequest: adds the given WEP key into cache if it doesn't already exist and set snortExec to nil.
-//		  This request is sent before starting the loop that starts/restarts snort.
+//   - getCacheSizeRequest: returns the number of items in the cache
 //
-// 		- updateRequest: maps the WEP key to given snortExec and returns success response only if WEP key already exists.
-//		  This request returns success as false if the WEP key doesn't already exist, the only scenario during which
-//		  WEP key is deleted from the cache if either WEP or DPI resource is deleted or context is cancelled,
-//		  updateRequest is no longer valid at this point.
-//	      As this request is sent from within the goroutine loop that starts/restarts snort, goroutine returns if success is false.
+//   - addRequest: adds the given WEP key into cache if it doesn't already exist and set snortExec to nil.
+//     This request is sent before starting the loop that starts/restarts snort.
 //
-//		- deleteRequest, deleteAllRequest: stops the running snort process, deletes it from the cache and update the status if needed.
+//   - updateRequest: maps the WEP key to given snortExec and returns success response only if WEP key already exists.
+//     This request returns success as false if the WEP key doesn't already exist, the only scenario during which
+//     WEP key is deleted from the cache if either WEP or DPI resource is deleted or context is cancelled,
+//     updateRequest is no longer valid at this point.
+//     As this request is sent from within the goroutine loop that starts/restarts snort, goroutine returns if success is false.
+//
+//   - deleteRequest, deleteAllRequest: stops the running snort process, deletes it from the cache and update the status if needed.
 func (p *dpiProcessor) run(ctx context.Context) {
 	wepKeyToSnortExec := make(map[string]exec.Exec)
 	for {

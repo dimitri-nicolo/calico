@@ -388,10 +388,10 @@ func (c *collector) reportEpStatsCacheMetrics() {
 // applyConntrackStatUpdate applies a stats update from a conn track poll.
 // If entryExpired is set then, this means that the update is for a recently
 // expired entry. One of the following will be done:
-// - If we already track the tuple, then the stats will be updated and will
-//   then be expired from epStats.
-// - If we don't track the tuple, this call will be a no-op as this update
-//   is just waiting for the conntrack entry to timeout.
+//   - If we already track the tuple, then the stats will be updated and will
+//     then be expired from epStats.
+//   - If we don't track the tuple, this call will be a no-op as this update
+//     is just waiting for the conntrack entry to timeout.
 func (c *collector) applyConntrackStatUpdate(
 	data *Data, packets int, bytes int, reversePackets int, reverseBytes int, entryExpired bool,
 ) {

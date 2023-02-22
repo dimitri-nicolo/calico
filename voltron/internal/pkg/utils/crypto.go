@@ -10,7 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
@@ -20,7 +20,7 @@ import (
 
 // LoadX509Key reads private keys from file and returns the key as a crypto.Signer
 func LoadX509Key(keyFile string) (crypto.Signer, error) {
-	keyPEMBlock, err := ioutil.ReadFile(keyFile)
+	keyPEMBlock, err := os.ReadFile(keyFile)
 	if err != nil {
 		return nil, errors.WithMessage(err, fmt.Sprintf("Could not read key %s", keyFile))
 	}
@@ -35,7 +35,7 @@ func LoadX509Key(keyFile string) (crypto.Signer, error) {
 
 // LoadX509Cert reads a certificate from file and returns the cert (as a crypto.Signer)
 func LoadX509Cert(certFile string) (*x509.Certificate, error) {
-	certPEMBlock, err := ioutil.ReadFile(certFile)
+	certPEMBlock, err := os.ReadFile(certFile)
 	if err != nil {
 		return nil, errors.WithMessage(err, fmt.Sprintf("Could not read cert %s", certFile))
 	}
