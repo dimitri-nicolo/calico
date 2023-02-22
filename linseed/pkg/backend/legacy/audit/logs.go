@@ -97,7 +97,7 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 }
 
 // List lists logs that match the given parameters.
-func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.AuditLogParams) (*v1.List[v1.AuditLog], error) {
+func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.AuditLogParams) (*v1.List[v1.AuditLog], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -143,7 +143,7 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.A
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.AuditLogParams) elastic.Query {
+func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams) elastic.Query {
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
 	var start, end time.Time

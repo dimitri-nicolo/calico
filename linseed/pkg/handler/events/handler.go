@@ -77,7 +77,7 @@ func (h events) List() http.HandlerFunc {
 
 		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
 		defer cancel()
-		response, err := h.backend.List(ctx, clusterInfo, *reqParams)
+		response, err := h.backend.List(ctx, clusterInfo, reqParams)
 		if err != nil {
 			logrus.WithError(err).Error("Failed to list events")
 			httputils.JSONError(w, &v1.HTTPError{

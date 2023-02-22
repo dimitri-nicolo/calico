@@ -83,7 +83,7 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 }
 
 // List lists logs that match the given parameters.
-func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.FlowLogParams) (*v1.List[v1.FlowLog], error) {
+func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.FlowLogParams) (*v1.List[v1.FlowLog], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -91,12 +91,12 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.Fl
 	}
 
 	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(&opts)
+	startFrom, err := logtools.StartFrom(opts)
 	if err != nil {
 		return nil, err
 	}
 
-	q, err := logtools.BuildQuery(b.helper, i, &opts)
+	q, err := logtools.BuildQuery(b.helper, i, opts)
 	if err != nil {
 		return nil, err
 	}

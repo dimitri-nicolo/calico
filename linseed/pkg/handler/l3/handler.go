@@ -86,7 +86,7 @@ func (h Flows) Flows() http.HandlerFunc {
 		// List flows from backend
 		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
 		defer cancel()
-		response, err := h.flows.List(ctx, clusterInfo, *reqParams)
+		response, err := h.flows.List(ctx, clusterInfo, reqParams)
 		if err != nil {
 			logrus.WithError(err).Error("Failed to list flows")
 			httputils.JSONError(w, &v1.HTTPError{
@@ -129,7 +129,7 @@ func (h Flows) GetLogs() http.HandlerFunc {
 
 		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
 		defer cancel()
-		response, err := h.logs.List(ctx, clusterInfo, *reqParams)
+		response, err := h.logs.List(ctx, clusterInfo, reqParams)
 		if err != nil {
 			logrus.WithError(err).Error("Failed to list flow logs")
 			httputils.JSONError(w, &v1.HTTPError{

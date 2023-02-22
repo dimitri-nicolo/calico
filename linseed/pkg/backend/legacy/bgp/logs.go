@@ -81,7 +81,7 @@ func (b *bgpLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 }
 
 // List lists logs that match the given parameters.
-func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.BGPLogParams) (*v1.List[v1.BGPLog], error) {
+func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BGPLogParams) (*v1.List[v1.BGPLog], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -118,7 +118,7 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.BGP
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *bgpLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.BGPLogParams) elastic.Query {
+func (b *bgpLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.BGPLogParams) elastic.Query {
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
 	var start, end time.Time

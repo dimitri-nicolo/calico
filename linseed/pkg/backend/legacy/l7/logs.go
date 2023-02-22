@@ -81,7 +81,7 @@ func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1
 }
 
 // List lists logs that match the given parameters.
-func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.L7LogParams) (*v1.List[v1.L7Log], error) {
+func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.L7LogParams) (*v1.List[v1.L7Log], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -89,12 +89,12 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.L7Lo
 	}
 
 	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(&opts)
+	startFrom, err := logtools.StartFrom(opts)
 	if err != nil {
 		return nil, err
 	}
 
-	q, err := logtools.BuildQuery(b.helper, i, &opts)
+	q, err := logtools.BuildQuery(b.helper, i, opts)
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package flows_test
+package testutils
 
 import (
 	"fmt"
@@ -6,14 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	_ "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-	"github.com/projectcalico/calico/linseed/pkg/testutils"
-	lmaapi "github.com/projectcalico/calico/lma/pkg/api"
-
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
+	lmaapi "github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/stretchr/testify/require"
 )
 
 func NewFlowLogBuilder() *flowLogBuilder {
@@ -73,7 +70,7 @@ func (b *flowLogBuilder) Build() (*v1.FlowLog, error) {
 	b.logs = append(b.logs, cp)
 
 	// Perform any validation here to ensure the log that we're building is legit.
-	return b.activeLog, nil
+	return &cp, nil
 }
 
 // ExpectedFlow returns a baseline flow to expect, given the flow log's configuration.
