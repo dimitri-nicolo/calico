@@ -69,11 +69,10 @@ type flowBackend struct {
 }
 
 // BucketConverter is a helper interface used as part of the cmd/converter tooling to convert
-// elasticsearch results into v1.L3Flow objects, as well as for unit testing.
+// elasticsearch results into v1.L3Flow objects.
 type BucketConverter interface {
 	BaseQuery() *lmaelastic.CompositeAggregationQuery
 	ConvertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) *v1.L3Flow
-	BuildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elastic.Query
 }
 
 func NewBucketConverter() BucketConverter {
@@ -199,7 +198,7 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 
 	// Build the aggregation request.
 	query := b.BaseQuery()
-	query.Query = b.BuildQuery(i, opts)
+	query.Query = b.buildQuery(i, opts)
 	query.DocumentIndex = b.index(i)
 	query.MaxBucketsPerQuery = opts.GetMaxResults()
 	log.Debugf("Listing flows from index %s", query.DocumentIndex)
@@ -299,8 +298,8 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 	return &flow
 }
 
-// BuildQuery builds an elastic query using the given parameters.
-func (b *flowBackend) BuildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elastic.Query {
+// buildQuery builds an elastic query using the given parameters.
+func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elastic.Query {
 	// Start with a time-based constraint.
 	var start, end time.Time
 	if opts.TimeRange != nil {
