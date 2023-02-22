@@ -278,20 +278,19 @@ func Start(cfg *Config) error {
 	sm.Handle("/user",
 		middleware.AuthenticateRequest(authn,
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
-	sm.Handle("/kibana/login",
-		middleware.AuthenticateRequest(authn,
-			middleware.NewKibanaLoginHandler(k8sClientSet, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
-				middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType))))
-	sm.Handle("/.kibana/_search",
-		middleware.KibanaIndexPattern(
+
+	if !cfg.ElasticKibanaDisabled {
+		// Kibana endpoints are only served if configured to have Kibana enabled.
+		sm.Handle("/kibana/login",
 			middleware.AuthenticateRequest(authn,
-				middleware.AuthorizeRequest(authz,
-					rawquery.RawQueryHandler(esClient.Backend())))))
-	sm.Handle("/",
-		middleware.RequestToResource(
-			middleware.AuthenticateRequest(authn,
-				middleware.AuthorizeRequest(authz,
-					rawquery.RawQueryHandler(esClient.Backend())))))
+				middleware.NewKibanaLoginHandler(k8sClientSet, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
+					middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType))))
+		sm.Handle("/.kibana/_search",
+			middleware.KibanaIndexPattern(
+				middleware.AuthenticateRequest(authn,
+					middleware.AuthorizeRequest(authz,
+						rawquery.RawQueryHandler(esClient.Backend())))))
+	}
 
 	server = &http.Server{
 		Addr:    cfg.ListenAddr,
