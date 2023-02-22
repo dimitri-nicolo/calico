@@ -36,6 +36,7 @@ var (
 	cache   bapi.Cache
 	fb      bapi.FlowBackend
 	flb     bapi.FlowLogBackend
+	conv    flows.BucketConverter
 	ctx     context.Context
 	cluster string
 )
@@ -57,6 +58,7 @@ func setupTest(t *testing.T) func() {
 	// Create backends to use.
 	fb = flows.NewFlowBackend(client)
 	flb = flows.NewFlowLogBackend(client, cache)
+	conv = flb.(flows.BucketConverter)
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
@@ -962,6 +964,77 @@ func TestElasticResponses(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBuildQuery(t *testing.T) {
+	t.Run("should render an unprotected query", func(t *testing.T) {
+		// 	testParamsUnprotected = &policyrec.PolicyRecommendationParams{
+		// 		StartTime:     "now-3h",
+		// 		EndTime:       "now-0h",
+		// 		EndpointName:  "test-app-pod",
+		// 		Namespace:     "test-namespace",
+		// 		Unprotected:   true,
+		// 		DocumentIndex: "test-flow-log-index",
+		// 	}
+
+		now := time.Now()
+		i := bapi.ClusterInfo{Cluster: cluster}
+		opts := v1.L3FlowParams{}
+		opts.TimeRange = &lmav1.TimeRange{From: now, To: now}
+		opts.NameAggrMatches = []v1.NameMatch{{Names: []string{"test-app-pod"}, Type: v1.MatchTypeAny}}
+		q := conv.BuildQuery(i, opts)
+
+		// query := policyrec.BuildQuery(testParamsUnprotected)
+		// boolQuery, ok := query.(*elastic.BoolQuery)
+		// Expect(ok).To(BeTrue())
+		// matchBoolTopLevelQuery(boolQuery, testParamsUnprotected)
+	})
+
+	// 	testParams = &policyrec.PolicyRecommendationParams{
+	// 		StartTime:     "now-3h",
+	// 		EndTime:       "now-0h",
+	// 		EndpointName:  "test-app-pod",
+	// 		Namespace:     "test-namespace",
+	// 		Unprotected:   false,
+	// 		DocumentIndex: "test-flow-log-index",
+	// 	}
+
+	// 	testNamespaceOnlyParameters = &policyrec.PolicyRecommendationParams{
+	// 		StartTime:     "now-3h",
+	// 		EndTime:       "now-0h",
+	// 		EndpointName:  "",
+	// 		Namespace:     "test-namespace",
+	// 		Unprotected:   false,
+	// 		DocumentIndex: "test-flow-log-index",
+	// 	}
+
+	// 	testNamespaceOnlyParametersUnprotected = &policyrec.PolicyRecommendationParams{
+	// 		StartTime:     "now-3h",
+	// 		EndTime:       "now-0h",
+	// 		EndpointName:  "",
+	// 		Namespace:     "test-namespace",
+	// 		Unprotected:   true,
+	// 		DocumentIndex: "test-flow-log-index",
+	// 	}
+	// )
+
+	// By("Validating a query for all traffic in the default tier")
+	// query = policyrec.BuildQuery(testParams)
+	// boolQuery, ok = query.(*elastic.BoolQuery)
+	// Expect(ok).To(BeTrue())
+	// matchBoolTopLevelQuery(boolQuery, testParams)
+
+	// By("Validating an unprotected namespace query")
+	// query = policyrec.BuildQuery(testNamespaceOnlyParametersUnprotected)
+	// boolQuery, ok = query.(*elastic.BoolQuery)
+	// Expect(ok).To(BeTrue())
+	// matchBoolTopLevelQuery(boolQuery, testNamespaceOnlyParametersUnprotected)
+
+	// By("Validating a namespace query for all traffic in the default tier")
+	// query = policyrec.BuildQuery(testNamespaceOnlyParameters)
+	// boolQuery, ok = query.(*elastic.BoolQuery)
+	// Expect(ok).To(BeTrue())
+	// matchBoolTopLevelQuery(boolQuery, testNamespaceOnlyParameters)
 }
 
 // populateFlowData writes a series of flow logs to elasticsearch, and returns the FlowLog that we

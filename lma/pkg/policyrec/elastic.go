@@ -16,8 +16,6 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
 )
 
-const defaultTier = "default"
-
 const (
 	FlowlogBuckets = "flog_buckets"
 )

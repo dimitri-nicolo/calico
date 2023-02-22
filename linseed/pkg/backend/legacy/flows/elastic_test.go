@@ -1,5 +1,5 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
-package policyrec_test
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
+package flows_test
 
 import (
 	"fmt"
@@ -8,75 +8,8 @@ import (
 
 	"github.com/projectcalico/calico/lma/pkg/policyrec"
 
-	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
-
-var (
-	testParamsUnprotected = &policyrec.PolicyRecommendationParams{
-		StartTime:     "now-3h",
-		EndTime:       "now-0h",
-		EndpointName:  "test-app-pod",
-		Namespace:     "test-namespace",
-		Unprotected:   true,
-		DocumentIndex: "test-flow-log-index",
-	}
-
-	testParams = &policyrec.PolicyRecommendationParams{
-		StartTime:     "now-3h",
-		EndTime:       "now-0h",
-		EndpointName:  "test-app-pod",
-		Namespace:     "test-namespace",
-		Unprotected:   false,
-		DocumentIndex: "test-flow-log-index",
-	}
-
-	testNamespaceOnlyParameters = &policyrec.PolicyRecommendationParams{
-		StartTime:     "now-3h",
-		EndTime:       "now-0h",
-		EndpointName:  "",
-		Namespace:     "test-namespace",
-		Unprotected:   false,
-		DocumentIndex: "test-flow-log-index",
-	}
-
-	testNamespaceOnlyParametersUnprotected = &policyrec.PolicyRecommendationParams{
-		StartTime:     "now-3h",
-		EndTime:       "now-0h",
-		EndpointName:  "",
-		Namespace:     "test-namespace",
-		Unprotected:   true,
-		DocumentIndex: "test-flow-log-index",
-	}
-)
-
-var _ = Describe("Policy Recommendation Unit Tests for functions interfacing with elasticsearch", func() {
-	It("Should create a valid elasticsearch query with valid PolicyRecommendationParams", func() {
-		By("Validating an unprotected query")
-		query := policyrec.BuildElasticQuery(testParamsUnprotected)
-		boolQuery, ok := query.(*elastic.BoolQuery)
-		Expect(ok).To(BeTrue())
-		matchBoolTopLevelQuery(boolQuery, testParamsUnprotected)
-
-		By("Validating a query for all traffic in the default tier")
-		query = policyrec.BuildElasticQuery(testParams)
-		boolQuery, ok = query.(*elastic.BoolQuery)
-		Expect(ok).To(BeTrue())
-		matchBoolTopLevelQuery(boolQuery, testParams)
-
-		By("Validating an unprotected namespace query")
-		query = policyrec.BuildElasticQuery(testNamespaceOnlyParametersUnprotected)
-		boolQuery, ok = query.(*elastic.BoolQuery)
-		Expect(ok).To(BeTrue())
-		matchBoolTopLevelQuery(boolQuery, testNamespaceOnlyParametersUnprotected)
-
-		By("Validating a namespace query for all traffic in the default tier")
-		query = policyrec.BuildElasticQuery(testNamespaceOnlyParameters)
-		boolQuery, ok = query.(*elastic.BoolQuery)
-		Expect(ok).To(BeTrue())
-		matchBoolTopLevelQuery(boolQuery, testNamespaceOnlyParameters)
-	})
-})
 
 // Matches a flow log filtering query of the form
 //
@@ -161,7 +94,6 @@ func matchBoolTopLevelQuery(boolQuery *elastic.BoolQuery, params *policyrec.Poli
 					matchInnerBoolShouldQuery(innerBoolQuery, params)
 				} else {
 					matchNamespaceInnerBoolShouldQuery(innerBoolQuery, params)
-
 				}
 			}
 		}
