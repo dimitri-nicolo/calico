@@ -42,6 +42,11 @@ func NewBackend(c lmaelastic.Client) bapi.ProcessBackend {
 	}
 }
 
+// Used for testing.
+type BucketConverter interface {
+	ConvertElasticResult(log *logrus.Entry, results *elastic.SearchResult) ([]v1.ProcessInfo, error)
+}
+
 // List returns all flows which match the given options.
 func (b *processBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.ProcessParams) (*v1.List[v1.ProcessInfo], error) {
 	log := bapi.ContextLogger(i)
@@ -62,19 +67,51 @@ func (b *processBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 		return nil, err
 	}
 
-	// Perform the search.
-	search := b.lmaclient.Backend().Search(b.index(i)).
-		Query(query).
-		Aggregation(sourceNameAggrKey, aggregation).
-		Size(0)
-
-	res, err := search.Do(ctx)
+	// Get the startFrom param, if any.
+	startFrom, err := logtools.StartFrom(opts)
 	if err != nil {
 		return nil, err
 	}
 
+	// Perform the search.
+	search := b.lmaclient.Backend().Search(b.index(i)).
+		Query(query).
+		From(startFrom).
+		Aggregation(sourceNameAggrKey, aggregation).
+		Size(0)
+
+	results, err := search.Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	processes, err := b.ConvertElasticResult(log, results)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine the AfterKey to return.
+	var ak map[string]interface{}
+	if numHits := len(results.Hits.Hits); numHits < opts.QueryParams.GetMaxResults() {
+		// We fully satisfied the request, no afterkey.
+		ak = nil
+	} else {
+		// There are more hits, return an afterKey the client can use for pagination.
+		// We add the number of hits to the start from provided on the request, if any.
+		ak = map[string]interface{}{
+			"startFrom": startFrom + len(results.Hits.Hits),
+		}
+	}
+
+	return &v1.List[v1.ProcessInfo]{
+		AfterKey: ak,
+		Items:    processes,
+	}, nil
+}
+
+func (b *processBackend) ConvertElasticResult(log *logrus.Entry, results *elastic.SearchResult) ([]v1.ProcessInfo, error) {
 	// Handle the results.
-	aggItems, found := res.Aggregations.Terms(sourceNameAggrKey)
+	aggItems, found := results.Aggregations.Terms(sourceNameAggrKey)
 	if !found {
 		err := fmt.Errorf("failed to get key %s in aggregation from search results", sourceNameAggrKey)
 		return nil, err
@@ -84,17 +121,14 @@ func (b *processBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 	for _, bucket := range aggItems.Buckets {
 		process := b.convertBucket(log, bucket)
 		if process != nil {
-			processes = append(processes, *process)
+			processes = append(processes, process...)
 		}
 	}
-	return &v1.List[v1.ProcessInfo]{
-		AfterKey: nil, // TODO
-		Items:    processes,
-	}, nil
+	return processes, nil
 }
 
-// convertBucket turns a composite aggregation bucket into an L3Flow.
-func (b *processBackend) convertBucket(log *logrus.Entry, bucket *elastic.AggregationBucketKeyItem) *v1.ProcessInfo {
+// convertBucket turns a composite aggregation bucket into one or more ProcessInfos.
+func (b *processBackend) convertBucket(log *logrus.Entry, bucket *elastic.AggregationBucketKeyItem) []v1.ProcessInfo {
 	endpoint, ok := bucket.Key.(string)
 	if !ok {
 		log.Warnf("failed to convert bucket key %v to string", bucket.Key)
@@ -105,6 +139,8 @@ func (b *processBackend) convertBucket(log *logrus.Entry, bucket *elastic.Aggreg
 		log.Warnf("failed to get bucket key %s in sub-aggregation", processNameKey)
 		return nil
 	} else {
+		// Each endpoint may have one or more processes present, each with one or more process IDs.
+		procs := []v1.ProcessInfo{}
 		for _, bb := range processNameItems.Buckets {
 			if processName, ok := bb.Key.(string); !ok {
 				log.Warnf("failed to convert bucket key %v to string", bb.Key)
@@ -119,12 +155,12 @@ func (b *processBackend) convertBucket(log *logrus.Entry, bucket *elastic.Aggreg
 						Endpoint: endpoint,
 						Count:    len(processIDItems.Buckets),
 					}
-					return &process
+					procs = append(procs, process)
 				}
 			}
 		}
+		return procs
 	}
-	return nil
 }
 
 // buildQuery builds an elastic query using the given parameters.

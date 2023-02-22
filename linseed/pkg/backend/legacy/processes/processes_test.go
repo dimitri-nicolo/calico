@@ -5,7 +5,9 @@ package processes_test
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 
@@ -127,4 +129,52 @@ func TestListProcesses(t *testing.T) {
 		Count:    1,
 	}
 	require.Equal(t, expected, r.Items[0])
+}
+
+//go:embed testdata/flow_search_response.json
+var flowSearchResponse []byte
+
+func TestParseESResponse(t *testing.T) {
+	resp := elastic.SearchResult{}
+	err := json.Unmarshal(flowSearchResponse, &resp)
+	require.NoError(t, err)
+
+	// Use the process backend to convert the ES results.
+	converter := pb.(processes.BucketConverter)
+	procs, err := converter.ConvertElasticResult(logrus.NewEntry(logrus.StandardLogger()), &resp)
+	require.NoError(t, err)
+	require.Len(t, procs, 9)
+
+	// Sort the result slice so that test assertions aren't tied to conversion algorithm.
+	sort.Slice(procs, func(i, j int) bool {
+		return procs[i].Name < procs[j].Name
+	})
+
+	require.Equal(t, procs[0].Name, "/app/cartservice")
+	require.Equal(t, procs[0].Endpoint, "cartservice-74f56fd4b-*")
+	require.Equal(t, procs[0].Count, 3)
+	require.Equal(t, procs[1].Name, "/src/checkoutservice")
+	require.Equal(t, procs[1].Endpoint, "checkoutservice-69c8ff664b-*")
+	require.Equal(t, procs[1].Count, 4)
+	require.Equal(t, procs[2].Name, "/src/server")
+	require.Equal(t, procs[2].Endpoint, "frontend-99684f7f8-*")
+	require.Equal(t, procs[2].Count, 3)
+	require.Equal(t, procs[3].Name, "/usr/local/bin/locust")
+	require.Equal(t, procs[3].Endpoint, "loadgenerator-555fbdc87d-*")
+	require.Equal(t, procs[3].Count, 1)
+	require.Equal(t, procs[4].Name, "/usr/local/bin/python")
+	require.Equal(t, procs[4].Endpoint, "loadgenerator-555fbdc87d-*")
+	require.Equal(t, procs[4].Count, 2)
+	require.Equal(t, procs[5].Name, "/usr/local/bin/python")
+	require.Equal(t, procs[5].Endpoint, "recommendationservice-5f8c456796-*")
+	require.Equal(t, procs[5].Count, 2)
+	require.Equal(t, procs[6].Name, "/usr/local/openjdk-8/bin/java")
+	require.Equal(t, procs[6].Endpoint, "adservice-77d5cd745d-*")
+	require.Equal(t, procs[6].Count, 3)
+	require.Equal(t, procs[7].Name, "python")
+	require.Equal(t, procs[7].Endpoint, "recommendationservice-5f8c456796-*")
+	require.Equal(t, procs[7].Count, 2)
+	require.Equal(t, procs[8].Name, "wget")
+	require.Equal(t, procs[8].Endpoint, "loadgenerator-555fbdc87d-*")
+	require.Equal(t, procs[8].Count, 1)
 }

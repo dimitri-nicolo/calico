@@ -17,6 +17,7 @@ type Client interface {
 	Events(string) EventsInterface
 	AuditLogs(string) AuditLogsInterface
 	BGPLogs(string) BGPLogsInterface
+	Processes(string) ProcessesInterface
 }
 
 type client struct {
@@ -71,6 +72,11 @@ func (c *client) AuditLogs(cluster string) AuditLogsInterface {
 // BGPLogs returns an interface for managing v1.BGPLog resources.
 func (c *client) BGPLogs(cluster string) BGPLogsInterface {
 	return newBGPLogs(c, cluster)
+}
+
+// Processes returns an interface for managing v1.ProcessInfo resources.
+func (c *client) Processes(cluster string) ProcessesInterface {
+	return newProcesses(c, cluster)
 }
 
 func NewClient(tenantID string, cfg rest.Config) (Client, error) {

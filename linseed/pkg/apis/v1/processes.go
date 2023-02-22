@@ -14,5 +14,7 @@ type ProcessInfo struct {
 	Endpoint string `json:"endpoint" validate:"required"`
 
 	// Count the number of instances of this process.
-	Count int `json:"count" validate:"required"`
+	// NOTE: The json tag is not consistent with others because it is
+	// using the format expected by the UI.
+	Count int `json:"instanceCount" validate:"required"`
 }
