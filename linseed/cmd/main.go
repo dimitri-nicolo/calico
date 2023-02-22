@@ -11,30 +11,31 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/handler/audit"
 	"github.com/projectcalico/calico/linseed/pkg/handler/bgp"
 	"github.com/projectcalico/calico/linseed/pkg/handler/dns"
 	"github.com/projectcalico/calico/linseed/pkg/handler/events"
 	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
 	"github.com/projectcalico/calico/linseed/pkg/handler/l7"
+	"github.com/projectcalico/calico/linseed/pkg/handler/processes"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 
+	auditbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/audit"
 	bgpbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/bgp"
 	dnsbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/dns"
 	eventbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/events"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
+	flowbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
 	l7backend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
+	procbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/processes"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 
-	auditbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/audit"
-
-	"github.com/projectcalico/calico/linseed/pkg/server"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/linseed/pkg/config"
+	"github.com/projectcalico/calico/linseed/pkg/server"
 )
 
 func main() {
@@ -46,7 +47,7 @@ func main() {
 
 	// Configure logging
 	config.ConfigureLogging(cfg.LogLevel)
-	log.Debugf("Starting with %#v", cfg)
+	logrus.Debugf("Starting with %#v", cfg)
 
 	// Register for termination signals
 	signalChan := make(chan os.Signal, 1)
@@ -57,15 +58,16 @@ func main() {
 	cache := templates.NewTemplateCache(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
 
 	// Create all the necessary backends.
-	flowLogBackend := flows.NewFlowLogBackend(esClient, cache)
+	flowLogBackend := flowbackend.NewFlowLogBackend(esClient, cache)
 	eventBackend := eventbackend.NewBackend(esClient, cache)
-	flowBackend := flows.NewFlowBackend(esClient)
+	flowBackend := flowbackend.NewFlowBackend(esClient)
 	dnsFlowBackend := dnsbackend.NewDNSFlowBackend(esClient)
 	dnsLogBackend := dnsbackend.NewDNSLogBackend(esClient, cache)
 	l7FlowBackend := l7backend.NewL7FlowBackend(esClient)
 	l7LogBackend := l7backend.NewL7LogBackend(esClient, cache)
 	auditBackend := auditbackend.NewBackend(esClient, cache)
 	bgpBackend := bgpbackend.NewBackend(esClient, cache)
+	procBackend := procbackend.NewBackend(esClient)
 
 	// Start server, adding in handlers for the various API endpoints.
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
@@ -78,14 +80,15 @@ func main() {
 			events.New(eventBackend),
 			audit.New(auditBackend),
 			bgp.New(bgpBackend),
+			processes.New(procBackend),
 		)...),
 		server.WithRoutes(server.UtilityRoutes()...),
 	)
 
 	go func() {
-		log.Infof("Listening for HTTPS requests at %s", addr)
+		logrus.Infof("Listening for HTTPS requests at %s", addr)
 		if err := server.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey); err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
+			logrus.Fatal(err)
 		}
 	}()
 
@@ -96,14 +99,14 @@ func main() {
 	shutDownCtx, shutDownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutDownCancel()
 	if err := server.Shutdown(shutDownCtx); err != nil {
-		log.Fatalf("server shutdown failed: %+v", err)
+		logrus.Fatalf("server shutdown failed: %+v", err)
 	}
-	log.Info("Server is shutting down")
+	logrus.Info("Server is shutting down")
 }
 
 func toElasticConfig(cfg config.Config) backend.ElasticConfig {
 	if cfg.ElasticUsername == "" || cfg.ElasticPassword == "" {
-		log.Warn("No credentials were passed in for Elastic. Will connect to ES without credentials")
+		logrus.Warn("No credentials were passed in for Elastic. Will connect to ES without credentials")
 
 		return backend.ElasticConfig{
 			URL:             cfg.ElasticEndpoint,

@@ -7,21 +7,18 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"sort"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/olivere/elastic/v7"
-	"github.com/stretchr/testify/mock"
-
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/es-proxy/test/thirdpartymock"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 
 	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -34,10 +31,6 @@ var (
 	// requests from es-proxy to elastic
 	//go:embed testdata/flow_search_request.json
 	flowSearchRequest string
-
-	// responses from elastic to es-proxy
-	//go:embed testdata/flow_search_response.json
-	flowSearchResponse string
 )
 
 // The user authentication review mock struct implementing the authentication review interface.
@@ -87,41 +80,35 @@ var _ = Describe("Service middleware tests", func() {
 
 	Context("Elasticsearch /services request and response validation", func() {
 		It("should return a valid services response", func() {
-			// mock http client
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
+			// Build mock response from Linseed.
+			procs := []lapi.ProcessInfo{
+				{Name: "/src/checkoutservice", Endpoint: "checkoutservice-69c8ff664b-*", Count: 4},
+				{Name: "/src/server", Endpoint: "frontend-99684f7f8-*", Count: 3},
+				{Name: "/usr/local/openjdk-8/bin/java", Endpoint: "adservice-77d5cd745d-*", Count: 3},
+				{Name: "/usr/local/bin/python", Endpoint: "loadgenerator-555fbdc87d-*", Count: 2},
+				{Name: "/usr/local/bin/locust", Endpoint: "loadgenerator-555fbdc87d-*", Count: 1},
+				{Name: "wget", Endpoint: "loadgenerator-555fbdc87d-*", Count: 1},
+				{Name: "python", Endpoint: "recommendationservice-5f8c456796-*", Count: 2},
+				{Name: "/usr/local/bin/python", Endpoint: "recommendationservice-5f8c456796-*", Count: 2},
+				{Name: "/app/cartservice", Endpoint: "cartservice-74f56fd4b-*", Count: 3},
+			}
 
-				// Elastic _search request
-				Expect(req.Method).To(Equal(http.MethodPost))
-				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_flows.test-cluster-name.*/_search"))
+			results := []rest.MockResult{}
+			results = append(results, rest.MockResult{
+				Body: lapi.List[lapi.ProcessInfo]{
+					Items: procs,
+				},
+			})
 
-				body, err := io.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(body).To(Equal([]byte(flowSearchRequest)))
-
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(bytes.NewBuffer([]byte(flowSearchResponse))),
-			}, nil)
-
-			// mock es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
-			Expect(err).NotTo(HaveOccurred())
+			// mock linseed client
+			lsc := client.NewMockClient("", results...)
 
 			// validate responses
 			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(processRequest)))
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			idxHelper := lmaindex.FlowLogs()
-			handler := ProcessHandler(idxHelper, userAuthReview, client)
+			handler := ProcessHandler(userAuthReview, lsc)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
@@ -139,48 +126,39 @@ var _ = Describe("Service middleware tests", func() {
 
 			Expect(resp.Processes[0].Name).To(Equal("/app/cartservice"))
 			Expect(resp.Processes[0].Endpoint).To(Equal("cartservice-74f56fd4b-*"))
-			Expect(resp.Processes[0].InstanceCount).To(Equal(3))
+			Expect(resp.Processes[0].Count).To(Equal(3))
 			Expect(resp.Processes[1].Name).To(Equal("/src/checkoutservice"))
 			Expect(resp.Processes[1].Endpoint).To(Equal("checkoutservice-69c8ff664b-*"))
-			Expect(resp.Processes[1].InstanceCount).To(Equal(4))
+			Expect(resp.Processes[1].Count).To(Equal(4))
 			Expect(resp.Processes[2].Name).To(Equal("/src/server"))
 			Expect(resp.Processes[2].Endpoint).To(Equal("frontend-99684f7f8-*"))
-			Expect(resp.Processes[2].InstanceCount).To(Equal(3))
+			Expect(resp.Processes[2].Count).To(Equal(3))
 			Expect(resp.Processes[3].Name).To(Equal("/usr/local/bin/locust"))
 			Expect(resp.Processes[3].Endpoint).To(Equal("loadgenerator-555fbdc87d-*"))
-			Expect(resp.Processes[3].InstanceCount).To(Equal(1))
+			Expect(resp.Processes[3].Count).To(Equal(1))
 			Expect(resp.Processes[4].Name).To(Equal("/usr/local/bin/python"))
 			Expect(resp.Processes[4].Endpoint).To(Equal("loadgenerator-555fbdc87d-*"))
-			Expect(resp.Processes[4].InstanceCount).To(Equal(2))
+			Expect(resp.Processes[4].Count).To(Equal(2))
 			Expect(resp.Processes[5].Name).To(Equal("/usr/local/bin/python"))
 			Expect(resp.Processes[5].Endpoint).To(Equal("recommendationservice-5f8c456796-*"))
-			Expect(resp.Processes[5].InstanceCount).To(Equal(2))
+			Expect(resp.Processes[5].Count).To(Equal(2))
 			Expect(resp.Processes[6].Name).To(Equal("/usr/local/openjdk-8/bin/java"))
 			Expect(resp.Processes[6].Endpoint).To(Equal("adservice-77d5cd745d-*"))
-			Expect(resp.Processes[6].InstanceCount).To(Equal(3))
+			Expect(resp.Processes[6].Count).To(Equal(3))
 			Expect(resp.Processes[7].Name).To(Equal("python"))
 			Expect(resp.Processes[7].Endpoint).To(Equal("recommendationservice-5f8c456796-*"))
-			Expect(resp.Processes[7].InstanceCount).To(Equal(2))
+			Expect(resp.Processes[7].Count).To(Equal(2))
 			Expect(resp.Processes[8].Name).To(Equal("wget"))
 			Expect(resp.Processes[8].Endpoint).To(Equal("loadgenerator-555fbdc87d-*"))
-			Expect(resp.Processes[8].InstanceCount).To(Equal(1))
+			Expect(resp.Processes[8].Count).To(Equal(1))
 		})
 
 		It("should return error when request is not POST", func() {
 			req, err := http.NewRequest(http.MethodGet, "", bytes.NewReader([]byte("any")))
 			Expect(err).NotTo(HaveOccurred())
 
-			// mock es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
-			Expect(err).NotTo(HaveOccurred())
-
 			rr := httptest.NewRecorder()
-			idxHelper := lmaindex.FlowLogs()
-			handler := ProcessHandler(idxHelper, userAuthReview, client)
+			handler := ProcessHandler(userAuthReview, nil)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusMethodNotAllowed))
@@ -190,133 +168,30 @@ var _ = Describe("Service middleware tests", func() {
 			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte("invalid-json-body")))
 			Expect(err).NotTo(HaveOccurred())
 
-			// mock es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
-			Expect(err).NotTo(HaveOccurred())
-
 			rr := httptest.NewRecorder()
-			idxHelper := lmaindex.FlowLogs()
-			handler := ProcessHandler(idxHelper, userAuthReview, client)
+			handler := ProcessHandler(userAuthReview, nil)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusBadRequest))
 		})
 
-		It("should return error when response from elastic is not valid", func() {
-			// mock http client
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
-
-				// Elastic _search request
-				Expect(req.Method).To(Equal(http.MethodPost))
-				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_flows.test-cluster-name.*/_search"))
-
-				body, err := io.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(body).To(Equal([]byte(flowSearchRequest)))
-
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(bytes.NewBuffer([]byte("invalid-elastic-response"))),
-			}, nil)
-
-			// mock es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
-			Expect(err).NotTo(HaveOccurred())
+		It("should return error when response from linseed is an error", func() {
+			// mock linseed client
+			lsc := client.NewMockClient("", []rest.MockResult{{Err: fmt.Errorf("mock error")}}...)
 
 			// validate responses
 			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(processRequest)))
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			idxHelper := lmaindex.FlowLogs()
-			handler := ProcessHandler(idxHelper, userAuthReview, client)
-			handler.ServeHTTP(rr, req)
-
-			Expect(rr.Code).To(Equal(http.StatusInternalServerError))
-		})
-
-		It("should return error when index helper failed to create a new selector query", func() {
-			// mock index helper
-			mockIdxHelper := lmaindex.MockHelper{}
-			mockIdxHelper.On("GetIndex", mock.Anything).Return("any-index")
-			mockIdxHelper.On("NewSelectorQuery", mock.Anything).Return(nil, fmt.Errorf("NewSelectorQuery failed"))
-
-			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(processRequest)))
-			Expect(err).NotTo(HaveOccurred())
-
-			// mock es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
-			Expect(err).NotTo(HaveOccurred())
-
-			rr := httptest.NewRecorder()
-			handler := ProcessHandler(&mockIdxHelper, userAuthReview, client)
-			handler.ServeHTTP(rr, req)
-
-			Expect(rr.Code).To(Equal(http.StatusInternalServerError))
-		})
-
-		It("should return error when index helper failed to create a new RBAC query", func() {
-			// mock index helper
-			mockIdxHelper := lmaindex.MockHelper{}
-			now := time.Now()
-			mockIdxHelper.On("GetIndex", mock.Anything).Return("any-index")
-			mockIdxHelper.On("NewSelectorQuery", mock.Anything).Return(elastic.NewBoolQuery(), nil)
-			mockIdxHelper.On("NewTimeRangeQuery", mock.Anything, mock.Anything).
-				Return(elastic.NewRangeQuery("any-time-field").Gt(now.Unix()).Lte(now.Unix()), nil)
-			mockIdxHelper.On("NewRBACQuery", mock.Anything).Return(nil, fmt.Errorf("NewRBACQuery failed"))
-
-			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(processRequest)))
-			Expect(err).NotTo(HaveOccurred())
-
-			// mock es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
-			Expect(err).NotTo(HaveOccurred())
-
-			rr := httptest.NewRecorder()
-			handler := ProcessHandler(&mockIdxHelper, userAuthReview, client)
+			handler := ProcessHandler(userAuthReview, lsc)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusInternalServerError))
 		})
 
 		It("should return error when failed to perform AuthorizationReview", func() {
-			// mock index helper
-			mockIdxHelper := lmaindex.MockHelper{}
-			now := time.Now()
-			mockIdxHelper.On("GetIndex", mock.Anything).Return("any-index")
-			mockIdxHelper.On("NewSelectorQuery", mock.Anything).Return(elastic.NewBoolQuery(), nil)
-			mockIdxHelper.On("NewTimeRangeQuery", mock.Anything, mock.Anything).
-				Return(elastic.NewRangeQuery("any-time-field").Gt(now.Unix()).Lte(now.Unix()), nil)
-
 			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(processRequest)))
-			Expect(err).NotTo(HaveOccurred())
-
-			// mock es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
 			Expect(err).NotTo(HaveOccurred())
 
 			// mock auth review returns error
@@ -326,7 +201,7 @@ var _ = Describe("Service middleware tests", func() {
 			}
 
 			rr := httptest.NewRecorder()
-			handler := ProcessHandler(&mockIdxHelper, mockUserAuthReviewFailed, client)
+			handler := ProcessHandler(mockUserAuthReviewFailed, nil)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusInternalServerError))
