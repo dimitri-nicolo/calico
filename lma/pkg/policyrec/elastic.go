@@ -3,14 +3,17 @@ package policyrec
 
 import (
 	"context"
-	"fmt"
+	"time"
 
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
-	elastic "github.com/olivere/elastic/v7"
-
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/timeutils"
 )
 
 const defaultTier = "default"
@@ -85,132 +88,65 @@ var (
 	}
 )
 
-/*
-	{
-	  "bool": {
-	    "must": [
-	      {"range": {"start_time": { "gte": "{{.StartTime}}"}}},
-	      {"range": {"end_time": { "lte": "{{.EndTime}}"}}},
-	      {"terms":{"source_type":["net","ns","wep","hep"]}},
-	      {"terms":{"dest_type":["net","ns","wep","hep"]}},
-	      {"nested": {
-	        "path": "policies",
-	        "query": {
-	          "wildcard": {
-	            "policies.all_policies": {
-	              "value": "*|__PROFILE__|__PROFILE__.kns.{{.Namespace}}|allow"
-	            }
-	          }
-	        }
-	      }},
-	      {"bool": {
-	        "should": [
-	          {"bool": {
-							"must": [
-	              {"term": {"source_namespace": "{{.Namespace}}"}}
-	            ]
-							OR
-	            "must": [
-	              {"term": {"source_name_aggr": "{{.EndpointName}}"}},
-	              {"term": {"source_namespace": "{{.Namespace}}"}}
-	            ]
-	          }},
-	          {"bool": {
-							"must": [
-	              {"term": {"dest_namespace": "{{.Namespace}}"}}
-	            ]
-							OR
-	            "must": [
-	              {"term": {"dest_name_aggr": "{{.EndpointName}}"}},
-	              {"term": {"dest_namespace": "{{.Namespace}}"}}
-	            ]
-	          }}
-	        ]
-	      }}
-	    ]
-	  }
+func BuildQuery(params *PolicyRecommendationParams) *lapi.L3FlowParams {
+	// Parse the start and end times.
+	now := time.Now()
+	start, _, err := timeutils.ParseTime(now, &params.StartTime)
+	if err != nil {
+		logrus.WithError(err).Warning("Failed to parse start time")
 	}
-*/
-func BuildElasticQuery(params *PolicyRecommendationParams) elastic.Query {
-	query := elastic.NewBoolQuery()
 
-	startQuery := elastic.NewRangeQuery("start_time").Gte(params.StartTime)
-	endQuery := elastic.NewRangeQuery("end_time").Lte(params.EndTime)
-	sourceTermsQuery := elastic.NewTermsQuery("source_type", "net", "ns", "wep", "hep")
-	destTermsQuery := elastic.NewTermsQuery("dest_type", "net", "ns", "wep", "hep")
+	end, _, err := timeutils.ParseTime(now, &params.EndTime)
+	if err != nil {
+		logrus.WithError(err).Warning("Failed to parse end time")
+	}
 
-	nameAndNamespaceQuery := buildNameOrNamespaceQuery(params.Namespace, params.EndpointName)
+	fp := lapi.L3FlowParams{}
+	fp.TimeRange = &lmav1.TimeRange{}
+	if start != nil {
+		fp.TimeRange.From = *start
+	}
+	if end != nil {
+		fp.TimeRange.To = *end
+	}
 
-	unprotectedWildcardQuery := buildUnprotectedQuery(params.Namespace)
+	fp.SourceTypes = []lapi.EndpointType{lapi.Network, lapi.NetworkSet, lapi.WEP, lapi.HEP}
+	fp.DestinationTypes = []lapi.EndpointType{lapi.Network, lapi.NetworkSet, lapi.WEP, lapi.HEP}
+	if params.Namespace != "" {
+		fp.NamespaceMatches = []lapi.NamespaceMatch{
+			{Type: lapi.MatchTypeAny, Namespaces: []string{params.Namespace}},
+		}
+	}
+	if params.EndpointName != "" {
+		fp.NameAggrMatches = []lapi.NameMatch{
+			{Type: lapi.MatchTypeAny, Names: []string{params.EndpointName}},
+		}
+	}
 
 	// If the request is only for unprotected flows then return a query that will
 	// specifically only pick flows that are allowed by a profile.
+	allow := lapi.FlowActionAllow
 	if params.Unprotected {
-		unprotectedQuery := elastic.NewNestedQuery("policies", unprotectedWildcardQuery)
-		return query.Must(
-			startQuery,
-			endQuery,
-			sourceTermsQuery,
-			destTermsQuery,
-			unprotectedQuery,
-			nameAndNamespaceQuery,
-		)
-	}
-
-	// Otherwise fetch all flows seen (allow, deny, and pass) by the default tier
-	// and allowed by profiles.
-	defaultTierWildcardQuery := buildTierQuery(defaultTier)
-
-	matchingTiers := elastic.NewBoolQuery()
-	matchingTiers.Should(defaultTierWildcardQuery, unprotectedWildcardQuery)
-	nestedTiersQuery := elastic.NewNestedQuery("policies", matchingTiers)
-
-	return query.Must(
-		startQuery,
-		endQuery,
-		nestedTiersQuery,
-		nameAndNamespaceQuery,
-	)
-}
-
-// buildTierQuery builds a wildcarded nested query that will match a policy hit in the
-// default tier.
-func buildTierQuery(tierName string) elastic.Query {
-	tier := fmt.Sprintf("*|%s|*|*", tierName)
-	return elastic.NewWildcardQuery("policies.all_policies", tier)
-}
-
-func buildUnprotectedQuery(namespace string) elastic.Query {
-	namespaceProfile := fmt.Sprintf("*|__PROFILE__|__PROFILE__.kns.%s|allow*", namespace)
-	return elastic.NewWildcardQuery("policies.all_policies", namespaceProfile)
-}
-
-func buildNameOrNamespaceQuery(namespace, name string) elastic.Query {
-	nameOrNamespaceQuery := elastic.NewBoolQuery()
-	sourceQuery := elastic.NewBoolQuery()
-	destQuery := elastic.NewBoolQuery()
-
-	// An empty name results in a namespace only query.
-	if name == "" {
-		sourceQuery = sourceQuery.Must(
-			elastic.NewTermQuery("source_namespace", namespace),
-		)
-		destQuery = destQuery.Must(
-			elastic.NewTermQuery("dest_namespace", namespace),
-		)
+		fp.PolicyMatches = []lapi.PolicyMatch{
+			{
+				Tier:   "__PROFILE__",
+				Action: &allow,
+			},
+		}
 	} else {
-		sourceQuery = sourceQuery.Must(
-			elastic.NewTermQuery("source_namespace", namespace),
-			elastic.NewTermQuery("source_name_aggr", name),
-		)
-		destQuery = destQuery.Must(
-			elastic.NewTermQuery("dest_namespace", namespace),
-			elastic.NewTermQuery("dest_name_aggr", name),
-		)
+		// Otherwise, return any flows that are seen by the default tier
+		// or allowed by a profile.
+		fp.PolicyMatches = []lapi.PolicyMatch{
+			{
+				Tier: "default",
+			},
+			{
+				Tier:   "__PROFILE__",
+				Action: &allow,
+			},
+		}
 	}
-
-	return nameOrNamespaceQuery.Should(sourceQuery, destQuery)
-
+	return &fp
 }
 
 // CompositeAggregator is an interface to provide composite aggregation via Elasticsearch.
@@ -220,28 +156,21 @@ type CompositeAggregator interface {
 	) (<-chan *pelastic.CompositeAggregationBucket, <-chan error)
 }
 
-// TODO: Add special error handling for elastic queries that are rejected because elastic permissions are bad.
-func SearchFlows(ctx context.Context, c CompositeAggregator, query elastic.Query, params *PolicyRecommendationParams) ([]*api.Flow, error) {
-	aggQuery := &pelastic.CompositeAggregationQuery{
-		DocumentIndex:           params.DocumentIndex,
-		Query:                   query,
-		Name:                    FlowlogBuckets,
-		AggCompositeSourceInfos: CompositeSources,
-		AggNestedTermInfos:      AggregatedTerms,
-	}
-
+func SearchFlows(ctx context.Context, listFn client.ListFunc[lapi.L3Flow], pager client.ListPager[lapi.L3Flow]) ([]*api.Flow, error) {
 	// Search for the raw data in ES.
-	rcvdBuckets, rcvdErrs := c.SearchCompositeAggregations(ctx, aggQuery, nil)
+	pages, errors := pager.Stream(ctx, listFn)
 
 	flows := []*api.Flow{}
-	// Iterate through all the raw buckets from ES until the channel is closed.
-	for rawBucket := range rcvdBuckets {
-		// Convert the bucket to an api.Flow
-		flow := pelastic.ConvertFlow(rawBucket, PRCompositeSourcesIdxs, PRAggregatedTermNames)
-		flows = append(flows, flow)
+	for page := range pages {
+		for _, f := range page.Items {
+			flow := api.FromLinseedFlow(f)
+			if flow != nil {
+				flows = append(flows, flow)
+			}
+		}
 	}
 
-	if err, ok := <-rcvdErrs; ok {
+	if err, ok := <-errors; ok {
 		log.WithError(err).Warning("Hit error processing flow logs")
 		return flows, err
 	}

@@ -18,7 +18,7 @@ type FlowLogsInterface interface {
 
 // FlowLogs implements FlowLogsInterface.
 type flowLogs struct {
-	restClient *rest.RESTClient
+	restClient rest.RESTClient
 	clusterID  string
 }
 

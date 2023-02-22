@@ -13,7 +13,15 @@ import (
 )
 
 // RESTClient is a helper for building HTTP requests for the Linseed API.
-type RESTClient struct {
+type RESTClient interface {
+	BaseURL() string
+	Tenant() string
+	HTTPClient() *http.Client
+	Verb(string) Request
+	Post() Request
+}
+
+type restClient struct {
 	config Config
 	client *http.Client
 
@@ -31,14 +39,14 @@ type Config struct {
 	FIPSModeEnabled bool
 }
 
-// NewClient returns a new RESTClient.
-func NewClient(tenantID string, cfg Config) (*RESTClient, error) {
+// NewClient returns a new restClient.
+func NewClient(tenantID string, cfg Config) (RESTClient, error) {
 	httpClient, err := newHTTPClient(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	return &RESTClient{
+	return &restClient{
 		config:   cfg,
 		tenantID: tenantID,
 		client:   httpClient,
@@ -73,10 +81,22 @@ func newHTTPClient(cfg Config) (*http.Client, error) {
 	}, nil
 }
 
-func (c *RESTClient) Verb(verb string) *Request {
+func (c *restClient) Verb(verb string) Request {
 	return NewRequest(c).Verb(verb)
 }
 
-func (c *RESTClient) Post() *Request {
+func (c *restClient) Post() Request {
 	return c.Verb("POST")
+}
+
+func (c *restClient) BaseURL() string {
+	return c.config.URL
+}
+
+func (c *restClient) Tenant() string {
+	return c.tenantID
+}
+
+func (c *restClient) HTTPClient() *http.Client {
+	return c.client
 }

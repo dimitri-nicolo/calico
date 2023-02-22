@@ -16,7 +16,7 @@ type L7FlowsInterface interface {
 
 // L7Flows implements L7FlowsInterface.
 type l7Flows struct {
-	restClient *rest.RESTClient
+	restClient rest.RESTClient
 	clusterID  string
 }
 

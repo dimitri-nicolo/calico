@@ -56,6 +56,7 @@ func createAndReturnError(err error, errorStr string, code int, featureID lmaerr
 	}
 }
 
+// TODO - delete?
 // NewMockSearchClient creates a mock client used for testing search results that will return
 // an empty result before returning an error. This tests the case where we try to get every result
 // from elasticsearch without needing to explicitly handle how many results we are expecting.

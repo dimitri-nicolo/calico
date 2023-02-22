@@ -402,6 +402,16 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elast
 		}
 	}
 
+	if len(opts.PolicyMatches) > 0 {
+		// Filter-in any flow logs that match any of the given policy matches.
+		b := elastic.NewBoolQuery()
+		for _, m := range opts.PolicyMatches {
+			b.Should(policyQuery(m))
+		}
+		b.MinimumNumberShouldMatch(1)
+		query.Filter(b)
+	}
+
 	// Add in label selectors, if specified.
 	if len(opts.SourceSelectors) != 0 {
 		query.Filter(buildLabelSelectorFilter(opts.SourceSelectors, "source_labels"))
@@ -410,7 +420,42 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elast
 		query.Filter(buildLabelSelectorFilter(opts.DestinationSelectors, "dest_labels"))
 	}
 
+	// if logrus.IsLevelEnabled(logrus.DebugLevel) {
+	// 	// If debug logging is enabled, print out pretty query.
+	// 	logrus.Debugf("Flow ES query: %s", spew.Sdump(query))
+	// }
+
 	return query
+}
+
+func policyQuery(m v1.PolicyMatch) elastic.Query {
+	index := "*"
+	tier := "*"
+	name := "*"
+	action := "*"
+	if m.Tier != "" {
+		tier = m.Tier
+	}
+
+	// Names can look differently depending on the type of hit.
+	// - Namespaced policy: <namespace>/<tier>.<name>
+	// - Global / Profile: <tier>.<name>
+	if m.Name != nil {
+		name = fmt.Sprintf("%s.%s", tier, *m.Name)
+	}
+	if m.Namespace != nil {
+		name = fmt.Sprintf("%s/%s", *m.Namespace, name)
+	}
+	if m.Action != nil {
+		action = string(*m.Action)
+	}
+
+	// Policy strings are formatted like so:
+	// <index> | <tier> | <name> | <action> | <ruleID>
+	matchString := fmt.Sprintf("%s|%s|%s|%s*", index, tier, name, action)
+	logrus.WithField("match", matchString).Debugf("Matching on policy string")
+	wildcard := elastic.NewWildcardQuery("policies.all_policies", matchString)
+	return elastic.NewNestedQuery("policies", wildcard)
 }
 
 // IMPORTANT: This function does not create the correct Elasticsearch query from the label selector and needs to be redone.

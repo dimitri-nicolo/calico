@@ -85,7 +85,7 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 		Reporter: ReporterType(lsf.Key.Reporter),
 		Source: FlowEndpointData{
 			Type:      EndpointType(lsf.Key.Source.Type),
-			Name:      lsf.Key.Source.Name,
+			Name:      lsf.Key.Source.AggregatedName,
 			Namespace: lsf.Key.Source.Namespace,
 			IP:        nil, // TODO: We don't return this from Linseed!
 			Port:      &srcPort,
@@ -93,7 +93,7 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 		},
 		Destination: FlowEndpointData{
 			Type:      EndpointType(lsf.Key.Destination.Type),
-			Name:      lsf.Key.Destination.Name,
+			Name:      lsf.Key.Destination.AggregatedName,
 			Namespace: lsf.Key.Destination.Namespace,
 			IP:        nil, // TODO: We don't return this from Linseed!
 			Port:      &dstPort,

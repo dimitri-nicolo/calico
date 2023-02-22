@@ -19,7 +19,7 @@ type DNSLogsInterface interface {
 
 // DNSLogs implements DNSLogsInterface.
 type dnsLogs struct {
-	restClient *rest.RESTClient
+	restClient rest.RESTClient
 	clusterID  string
 }
 

@@ -7,9 +7,8 @@ import (
 	"errors"
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/calico/linseed/pkg/handler"
+	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -61,7 +60,7 @@ func (h Flows) Flows() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		reqParams, err := handler.DecodeAndValidateReqParams[v1.L3FlowParams](w, req)
 		if err != nil {
-			log.WithError(err).Error("Failed to decode/validate request parameters")
+			logrus.WithError(err).Error("Failed to decode/validate request parameters")
 			var httpErr *v1.HTTPError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
@@ -88,7 +87,7 @@ func (h Flows) Flows() http.HandlerFunc {
 		defer cancel()
 		response, err := h.flows.List(ctx, clusterInfo, *reqParams)
 		if err != nil {
-			log.WithError(err).Error("Failed to list flows")
+			logrus.WithError(err).Error("Failed to list flows")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
@@ -96,7 +95,7 @@ func (h Flows) Flows() http.HandlerFunc {
 			return
 		}
 
-		log.Debugf("Flow response is: %+v", response)
+		logrus.Debugf("Flow response is: %+v", response)
 		httputils.Encode(w, response)
 	}
 }
@@ -105,7 +104,7 @@ func (h Flows) GetLogs() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		reqParams, err := handler.DecodeAndValidateReqParams[v1.FlowLogParams](w, req)
 		if err != nil {
-			log.WithError(err).Error("Failed to decode/validate request parameters")
+			logrus.WithError(err).Error("Failed to decode/validate request parameters")
 			var httpErr *v1.HTTPError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
@@ -131,7 +130,7 @@ func (h Flows) GetLogs() http.HandlerFunc {
 		defer cancel()
 		response, err := h.logs.List(ctx, clusterInfo, *reqParams)
 		if err != nil {
-			log.WithError(err).Error("Failed to list flow logs")
+			logrus.WithError(err).Error("Failed to list flow logs")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
@@ -139,7 +138,7 @@ func (h Flows) GetLogs() http.HandlerFunc {
 			return
 		}
 
-		log.Debugf("FlowLog response is: %+v", response)
+		logrus.Debugf("FlowLog response is: %+v", response)
 		httputils.Encode(w, response)
 	}
 }
@@ -149,7 +148,7 @@ func (h Flows) Bulk() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		logs, err := handler.DecodeAndValidateBulkParams[v1.FlowLog](w, req)
 		if err != nil {
-			log.WithError(err).Error("Failed to decode/validate request parameters")
+			logrus.WithError(err).Error("Failed to decode/validate request parameters")
 			var httpErr *v1.HTTPError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
@@ -171,14 +170,14 @@ func (h Flows) Bulk() http.HandlerFunc {
 
 		response, err := h.logs.Create(ctx, clusterInfo, logs)
 		if err != nil {
-			log.WithError(err).Error("Failed to ingest flow logs")
+			logrus.WithError(err).Error("Failed to ingest flow logs")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
 			}, http.StatusInternalServerError)
 			return
 		}
-		log.Debugf("Bulk response is: %+v", response)
+		logrus.Debugf("Bulk response is: %+v", response)
 		httputils.Encode(w, response)
 	}
 }

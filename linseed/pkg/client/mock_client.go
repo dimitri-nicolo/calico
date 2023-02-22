@@ -4,13 +4,18 @@ package client
 
 import "github.com/projectcalico/calico/linseed/pkg/client/rest"
 
+type MockClient interface {
+	Client
+	SetResults(results ...rest.MockResult)
+}
+
 type mockClient struct {
-	restClient *rest.RESTClient
+	restClient rest.RESTClient
 	tenant     string
 }
 
-func (c *mockClient) RESTClient() *rest.RESTClient {
-	return nil
+func (c *mockClient) RESTClient() rest.RESTClient {
+	return c.restClient
 }
 
 // L3Flows returns an interface for managing v1.L3Flow resources.
@@ -53,9 +58,13 @@ func (c *mockClient) AuditLogs(cluster string) AuditLogsInterface {
 	return newAuditLogs(c, cluster)
 }
 
-func NewMockClient(tenantID string) Client {
+func NewMockClient(tenantID string, results ...rest.MockResult) MockClient {
 	return &mockClient{
-		restClient: nil, // TODO: Right now, this isn't a functional client.
+		restClient: rest.NewMockClient(results...),
 		tenant:     tenantID,
 	}
+}
+
+func (m *mockClient) SetResults(results ...rest.MockResult) {
+	m.restClient = rest.NewMockClient(results...)
 }

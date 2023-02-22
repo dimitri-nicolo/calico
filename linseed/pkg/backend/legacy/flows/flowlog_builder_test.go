@@ -7,6 +7,7 @@ import (
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	lmaapi "github.com/projectcalico/calico/lma/pkg/api"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
@@ -143,6 +144,36 @@ func (b *flowLogBuilder) ExpectedFlow() *v1.L3Flow {
 	// Set labels.
 	f.SourceLabels = slt.Labels()
 	f.DestinationLabels = dlt.Labels()
+
+	// Add in expected policies. Right now, we don't support aggregation
+	// of policies across multiple logs in this builder, and we assume
+	// every log in the flow has the same policies.
+	for _, p := range b.activeLog.Policies.AllPolicies {
+		if f.Policies == nil {
+			f.Policies = make([]v1.Policy, 0)
+		}
+		h, err := lmaapi.PolicyHitFromFlowLogPolicyString(p, 1)
+		if err != nil {
+			panic(err)
+		}
+
+		name := h.Name()
+		if h.IsProfile() {
+			name = fmt.Sprintf("kns.%s", name)
+		}
+
+		pol := v1.Policy{
+			Tier:      h.Tier(),
+			Name:      name,
+			Namespace: h.Namespace(),
+			Action:    string(h.Action()),
+			Count:     f.LogStats.FlowLogCount,
+			RuleID:    h.RuleIdIndex(),
+			IsProfile: h.IsProfile(),
+			IsStaged:  h.IsStaged(),
+		}
+		f.Policies = append(f.Policies, pol)
+	}
 
 	return f
 }

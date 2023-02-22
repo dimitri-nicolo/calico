@@ -104,19 +104,6 @@ func TestListFlows(t *testing.T) {
 		WithPolicies("0|allow-tigera|tigera-system/allow-tigera.cnx-apiserver-access|allow|1")
 	expected := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
 
-	// Add in the expected policy.
-	one := 1
-	expected.Policies = []v1.Policy{
-		{
-			Tier:      "allow-tigera",
-			Name:      "cnx-apiserver-access",
-			Namespace: "tigera-system",
-			Action:    "allow",
-			Count:     expected.LogStats.FlowLogCount,
-			RuleID:    &one,
-		},
-	}
-
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
 	opts.TimeRange = &lmav1.TimeRange{}
@@ -552,6 +539,108 @@ func TestFlowFiltering(t *testing.T) {
 			ExpectFlow2: true,
 		},
 		{
+			Name: "should query based on unprotected flows",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						// Match the first flow's profile hit. This match returns all "unprotected"
+						// flows in all namespaces.
+						Tier:   "__PROFILE__",
+						Action: testutils.ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should query based on unprotected flows within a namespace",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeAny,
+						Namespaces: []string{"openshift-dns"},
+					},
+				},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						// Match the first flow's profile hit. This match returns all "unprotected"
+						// flows from the openshift-dns namespace.
+						Tier:   "__PROFILE__",
+						Name:   testutils.StringPtr("kns.openshift-dns"),
+						Action: testutils.ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should query based on a specific policy hit tier",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Tier: "allow-tigera",
+					},
+				},
+			},
+
+			// Both flows have a policy hit in this tier.
+			ExpectFlow1: true,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query based on a specific policy hit tier and action",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Tier:   "allow-tigera",
+						Action: testutils.ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+
+			// Both flows have a policy hit in this tier, but only the second
+			// is allowed by the tier.
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query based on a specific policy hit name and namespace",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Name:      testutils.StringPtr("cluster-dns"),
+						Namespace: testutils.StringPtr("kube-system"),
+					},
+				},
+			},
+
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query based on a specific policy hit name",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Name: testutils.StringPtr("cluster-dns"),
+					},
+				},
+			},
+
+			ExpectFlow1: true,
+			ExpectFlow2: true,
+		},
+		{
 			// This test should match both flows, but does so by fully-specifying all
 			// query parameters.
 			Name: "should query both flows with a complex multi-part query",
@@ -578,7 +667,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			// This test uses a complex query that ultimately only matches on of the flows
 			// beacause it doesn't include flow1's destination namespace.
-			Name: "should query both flows with a complex multi-part query",
+			Name: "should query a flow with a complex multi-part query",
 			Params: v1.L3FlowParams{
 				QueryParams:      v1.QueryParams{},
 				Actions:          []v1.FlowAction{v1.FlowActionAllow, v1.FlowActionDeny},
@@ -592,6 +681,14 @@ func TestFlowFiltering(t *testing.T) {
 					{
 						Type:       v1.MatchTypeSource,
 						Namespaces: []string{"default", "tigera-operator"},
+					},
+				},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						// Match the first flow's profile hit.
+						Tier:   "__PROFILE__",
+						Name:   testutils.StringPtr("kns.openshift-dns"),
+						Action: testutils.ActionPtr(v1.FlowActionAllow),
 					},
 				},
 			},
@@ -638,7 +735,11 @@ func TestFlowFiltering(t *testing.T) {
 				WithSourceIP("34.15.66.3").
 				WithRandomFlowStats().WithRandomPacketStats().
 				WithReporter("src").WithAction("allow").
-				WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none")
+				WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none").
+				// Pass followed by a profile allow.
+				// *|__PROFILE__|__PROFILE__.kns.kube-system|allow*
+				WithPolicy("0|allow-tigera|openshift-dns/allow-tigera.cluster-dns|pass|1").
+				WithPolicy("1|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0")
 			exp1 := populateFlowDataN(t, ctx, bld, client, clusterInfo.Cluster, numLogs)
 
 			// Template for flow #2.
@@ -656,7 +757,10 @@ func TestFlowFiltering(t *testing.T) {
 				WithSourceIP("192.168.1.1").
 				WithRandomFlowStats().WithRandomPacketStats().
 				WithReporter("src").WithAction("deny").
-				WithSourceLabels("cheese=brie")
+				WithSourceLabels("cheese=brie").
+				// Explicit allow.
+				WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|allow|1")
+
 			exp2 := populateFlowDataN(t, ctx, bld2, client, clusterInfo.Cluster, numLogs)
 
 			// Query for flows.

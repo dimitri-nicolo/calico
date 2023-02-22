@@ -19,7 +19,7 @@ type EventsInterface interface {
 
 // Events implements EventsInterface.
 type events struct {
-	restClient *rest.RESTClient
+	restClient rest.RESTClient
 	clusterID  string
 }
 

@@ -16,7 +16,7 @@ type L3FlowsInterface interface {
 
 // L3Flows implements L3FlowsInterface.
 type l3Flows struct {
-	restClient *rest.RESTClient
+	restClient rest.RESTClient
 	clusterID  string
 }
 

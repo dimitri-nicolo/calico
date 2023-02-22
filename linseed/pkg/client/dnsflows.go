@@ -16,7 +16,7 @@ type DNSFlowsInterface interface {
 
 // DNSFlows implements DNSFlowsInterface.
 type dnsFlows struct {
-	restClient *rest.RESTClient
+	restClient rest.RESTClient
 	clusterID  string
 }
 

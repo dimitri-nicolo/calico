@@ -9,10 +9,11 @@ import (
 	"net/http"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
+	"github.com/davecgh/go-spew/spew"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
@@ -89,7 +90,7 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 		err := d.Decode(&input)
 		if err != nil {
 			if err != io.EOF {
-				log.WithError(err).Errorf("Failed to decode message for %s", trimBody)
+				logrus.WithError(err).Errorf("Failed to decode message for %s", trimBody)
 				return bulkParams, &v1.HTTPError{
 					Status: http.StatusBadRequest,
 					Msg:    "Request body contains badly-formed JSON",
@@ -135,6 +136,12 @@ func DecodeAndValidateReqParams[T RequestParams](w http.ResponseWriter, req *htt
 			Status: http.StatusBadRequest,
 			Msg:    err.Error(),
 		}
+	}
+
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		// If debug logging is enabled, print out pretty params.
+		paramsStr := spew.Sdump(reqParams)
+		logrus.Debugf("Decoded %T: %s", reqParams, paramsStr)
 	}
 
 	return reqParams, nil

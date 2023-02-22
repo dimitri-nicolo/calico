@@ -18,7 +18,7 @@ type L7LogsInterface interface {
 
 // L7Logs implements L7LogsInterface.
 type l7Logs struct {
-	restClient *rest.RESTClient
+	restClient rest.RESTClient
 	clusterID  string
 }
 

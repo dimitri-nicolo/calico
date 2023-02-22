@@ -21,7 +21,7 @@ type AuditLogsInterface interface {
 
 // AuditLogs implements AuditLogsInterface.
 type audit struct {
-	restClient *rest.RESTClient
+	restClient rest.RESTClient
 	clusterID  string
 }
 

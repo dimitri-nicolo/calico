@@ -3,55 +3,35 @@ package middleware
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
 )
 
 const (
-	namesBucketName        = "source_dest_name_aggrs"
 	flowLogEndpointTypeNs  = "ns"
 	flowLogEndpointTypeWep = "wep"
 	flowLogEndpointTypeHep = "hep"
-	srcEpNamespaceIdx      = 0
-	srcEpNameIdx           = 1
-	srcEpTypeIdx           = 2
-	destEpNamespaceIdx     = 3
-	destEpNameIdx          = 4
-	destEpTypeIdx          = 5
 )
 
-var (
-	namesTimeout = 10 * time.Second
-
-	NamesCompositeSources = []lmaelastic.AggCompositeSourceInfo{
-		{Name: "source_namespace", Field: "source_namespace"},
-		{Name: "source_name_aggr", Field: "source_name_aggr"},
-		{Name: "source_type", Field: "source_type"},
-		{Name: "dest_namespace", Field: "dest_namespace"},
-		{Name: "dest_name_aggr", Field: "dest_name_aggr"},
-		{Name: "dest_type", Field: "dest_type"},
-	}
-)
+var namesTimeout = 10 * time.Second
 
 type FlowLogNamesParams struct {
 	Limit         int32           `json:"limit"`
@@ -69,8 +49,8 @@ type FlowLogNamesParams struct {
 	DestLabels    []LabelSelector `json:"dstLabels"`
 
 	// Parsed timestamps
-	startDateTimeESParm interface{}
-	endDateTimeESParm   interface{}
+	startDateTimeESParm *time.Time
+	endDateTimeESParm   *time.Time
 }
 
 type EndpointInfo struct {
@@ -79,7 +59,7 @@ type EndpointInfo struct {
 	Type      string
 }
 
-func FlowLogNamesHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esClient lmaelastic.Client) http.Handler {
+func FlowLogNamesHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// validate request
 		params, err := validateFlowLogNamesRequest(req)
@@ -112,7 +92,7 @@ func FlowLogNamesHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, 
 
 		flowHelper := rbac.NewCachedFlowHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
 
-		response, err := getNamesFromElastic(params, esClient, flowHelper)
+		response, err := getNamesFromLinseed(params, lsclient, flowHelper)
 		if err != nil {
 			log.WithError(err).Info("Error getting names from elastic")
 			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)
@@ -156,12 +136,12 @@ func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error)
 
 	// Parse the start/end time to validate the format. We don't need the resulting time struct.
 	now := time.Now()
-	_, startDateTimeESParm, err := timeutils.ParseTime(now, &startDateTimeString)
+	startDateTimeESParm, _, err := timeutils.ParseTime(now, &startDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting start date time")
 		return nil, ErrParseRequest
 	}
-	_, endDateTimeESParm, err := timeutils.ParseTime(now, &endDateTimeString)
+	endDateTimeESParm, _, err := timeutils.ParseTime(now, &endDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting end date time")
 		return nil, ErrParseRequest
@@ -239,172 +219,133 @@ func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error)
 	return params, nil
 }
 
-func buildLabelSelectorFilter(labelSelectors []LabelSelector, path string, termsKey string) *elastic.NestedQuery {
-	var labelValues []interface{}
-	var selectorQueries []elastic.Query
-	for _, selector := range labelSelectors {
-		keyAndOperator := fmt.Sprintf("%s%s", selector.Key, selector.Operator)
-		if len(selector.Values) == 1 {
-			selectorQuery := elastic.NewTermQuery(termsKey, fmt.Sprintf("%s%s", keyAndOperator, selector.Values[0]))
-			selectorQueries = append(selectorQueries, selectorQuery)
-		} else {
-			for _, value := range selector.Values {
-				labelValues = append(labelValues, fmt.Sprintf("%s%s", keyAndOperator, value))
-			}
-			selectorQuery := elastic.NewTermsQuery(termsKey, labelValues...)
-			selectorQueries = append(selectorQueries, selectorQuery)
-		}
-	}
-	return elastic.NewNestedQuery(path, elastic.NewBoolQuery().Filter(selectorQueries...))
-}
-
-func buildNamesQuery(params *FlowLogNamesParams) *elastic.BoolQuery {
-	var termFilterValues []interface{}
-	query := elastic.NewBoolQuery()
-	nestedQuery := elastic.NewBoolQuery()
+func buildNamesQuery(params *FlowLogNamesParams) *lapi.L3FlowParams {
+	fp := lapi.L3FlowParams{}
 	if len(params.Actions) > 0 {
 		for _, action := range params.Actions {
-			termFilterValues = append(termFilterValues, action)
+			fp.Actions = append(fp.Actions, lapi.FlowAction(action))
 		}
-		nestedQuery = nestedQuery.Filter(elastic.NewTermsQuery("action", termFilterValues...))
 	}
+
 	if params.Unprotected {
-		query = query.Filter(UnprotectedQuery())
+		// Only include flows that are allowed by a profile.
+		allow := lapi.FlowActionAllow
+		fp.PolicyMatches = []lapi.PolicyMatch{
+			{
+				Tier:   "__PROFILE__",
+				Action: &allow,
+			},
+		}
 	}
 
 	if params.startDateTimeESParm != nil || params.endDateTimeESParm != nil {
-		filter := elastic.NewRangeQuery("end_time")
+		tr := lmav1.TimeRange{}
 		if params.startDateTimeESParm != nil {
-			filter = filter.Gte(params.startDateTimeESParm)
+			tr.From = *params.startDateTimeESParm
 		}
 		if params.endDateTimeESParm != nil {
-			filter = filter.Lt(params.endDateTimeESParm)
+			tr.To = *params.endDateTimeESParm
 		}
-		query = query.Filter(filter)
+		fp.TimeRange = &tr
 	}
 
 	// Collect all the different filtering queries based on the specified parameters.
-	sourceConditions := []elastic.Query{}
-	destConditions := []elastic.Query{}
 	if params.Prefix != "" {
-		sourceConditions = append(sourceConditions, elastic.NewPrefixQuery("source_name_aggr", params.Prefix))
-		destConditions = append(destConditions, elastic.NewPrefixQuery("dest_name_aggr", params.Prefix))
+		fp.NameAggrMatches = []lapi.NameMatch{
+			{Type: lapi.MatchTypeAny, Names: []string{params.Prefix}},
+		}
 	}
 	if params.Namespace != "" {
-		sourceConditions = append(sourceConditions, elastic.NewTermQuery("source_namespace", params.Namespace))
-		destConditions = append(destConditions, elastic.NewTermQuery("dest_namespace", params.Namespace))
+		fp.NamespaceMatches = []lapi.NamespaceMatch{
+			{Type: lapi.MatchTypeAny, Namespaces: []string{params.Namespace}},
+		}
 	}
 	if len(params.SourceType) > 0 {
-		sourceConditions = append(sourceConditions, buildTermsFilter(params.SourceType, "source_type"))
+		for _, t := range params.SourceType {
+			fp.SourceTypes = append(fp.SourceTypes, lapi.EndpointType(t))
+		}
 	}
 	if len(params.SourceLabels) > 0 {
-		sourceConditions = append(sourceConditions, buildLabelSelectorFilter(params.SourceLabels, "source_labels", "source_labels.labels"))
+		for _, lab := range params.SourceLabels {
+			fp.SourceSelectors = append(fp.SourceSelectors, lapi.LabelSelector{
+				Key:      lab.Key,
+				Values:   lab.Values,
+				Operator: lab.Operator,
+			})
+		}
 	}
 	if len(params.DestType) > 0 {
-		destConditions = append(destConditions, buildTermsFilter(params.DestType, "dest_type"))
+		for _, t := range params.DestType {
+			fp.DestinationTypes = append(fp.DestinationTypes, lapi.EndpointType(t))
+		}
 	}
 	if len(params.DestLabels) > 0 {
-		destConditions = append(destConditions, buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels"))
-	}
-
-	// Use the filtering queries to craft the appropriate source and destination filtering queries
-	var sourceQuery, destQuery *elastic.BoolQuery
-	if len(sourceConditions) > 0 {
-		sourceQuery = elastic.NewBoolQuery()
-		for _, query := range sourceConditions {
-			sourceQuery = sourceQuery.Must(query)
-		}
-	}
-	if len(destConditions) > 0 {
-		destQuery = elastic.NewBoolQuery()
-		for _, query := range destConditions {
-			destQuery = destQuery.Must(query)
+		for _, lab := range params.DestLabels {
+			fp.DestinationSelectors = append(fp.DestinationSelectors, lapi.LabelSelector{
+				Key:      lab.Key,
+				Values:   lab.Values,
+				Operator: lab.Operator,
+			})
 		}
 	}
 
-	// Add the source and destination filtering queries to the ES query.
-	if sourceQuery != nil && destQuery != nil {
-		query = query.Should(sourceQuery, destQuery).MinimumNumberShouldMatch(1)
-	} else if sourceQuery != nil {
-		query = query.Should(sourceQuery)
-	} else if destQuery != nil {
-		query = query.Should(destQuery)
-	}
-
-	query = query.Filter(nestedQuery)
-
-	return query
+	return &fp
 }
 
-func getNamesFromElastic(params *FlowLogNamesParams, esClient lmaelastic.Client, rbacHelper rbac.FlowHelper) ([]string, error) {
-	// form query
-	query := buildNamesQuery(params)
-	index := lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
-
-	aggQuery := &lmaelastic.CompositeAggregationQuery{
-		DocumentIndex:           index,
-		Query:                   query,
-		Name:                    namesBucketName,
-		AggCompositeSourceInfos: NamesCompositeSources,
-	}
-
+func getNamesFromLinseed(params *FlowLogNamesParams, lsclient client.Client, rbacHelper rbac.FlowHelper) ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), namesTimeout)
 	defer cancel()
 
-	// Perform the query with composite aggregation
-	// TODO: Since composite aggregation is expensive and we only care about
-	// correlating fields together in order to do RBAC checks, we should instead
-	// precalculate RBAC permissions and use those as filters on the query itself.
-	// In this case, there will be four possibilities for return values, source filtered
-	// on source, destination filtered on source, source filtered on destination, and
-	// destination filtered on destination. We will need to run four separate queries
-	// with the precalculated filters to grab these four possible return values and
-	// then aggregate the set together in order to get our return values. This should
-	// be cheaper since the four queries themselves should be much cheaper to run than
-	// the single composite aggregation query.
-	rcvdBuckets, rcvdErrors := esClient.SearchCompositeAggregations(ctx, aggQuery, nil)
 	nameSet := set.New[string]()
 	names := make([]string, 0)
-	for bucket := range rcvdBuckets {
-		// Pull endpoint names out of the buckets
-		// The index refers to the order in which the fields are listed in the composite sources
-		key := bucket.CompositeAggregationKey
-		source := EndpointInfo{
-			Namespace: key[srcEpNamespaceIdx].String(),
-			Name:      key[srcEpNameIdx].String(),
-			Type:      key[srcEpTypeIdx].String(),
-		}
-		dest := EndpointInfo{
-			Namespace: key[destEpNamespaceIdx].String(),
-			Name:      key[destEpNameIdx].String(),
-			Type:      key[destEpTypeIdx].String(),
-		}
 
-		// Check if the set length hits the requested limit
-		if nameSet.Len() >= int(params.Limit) {
-			break
-		}
+	flowParams := buildNamesQuery(params)
 
-		// Add names to the set
-		if params.Strict {
-			// If we strictly enforce RBAC, then we will only return endpoints we have RBAC
-			// permissions for and match the query parameters.
-			if allowedName(params, source, rbacHelper) && checkEndpointRBAC(rbacHelper, source) {
-				nameSet.Add(source.Name)
+	// TODO: Right now we use Flows to determine names. We could alternatively use
+	// flow logs, or the k8s Namespace API, or even implement a new /namespaces API in Linseed. Unclear which of these
+	// will perform best.
+	opts := []client.ListPagerOption[lapi.L3Flow]{}
+	pager := client.NewListPager(flowParams, opts...)
+	pages, errors := pager.Stream(ctx, lsclient.L3Flows(params.ClusterName).List)
+	for page := range pages {
+		for _, flow := range page.Items {
+			source := EndpointInfo{
+				Namespace: flow.Key.Source.Namespace,
+				Name:      flow.Key.Source.AggregatedName,
+				Type:      string(flow.Key.Source.Type),
 			}
-			if allowedName(params, dest, rbacHelper) && checkEndpointRBAC(rbacHelper, dest) {
-				nameSet.Add(dest.Name)
+			dest := EndpointInfo{
+				Namespace: flow.Key.Destination.Namespace,
+				Name:      flow.Key.Destination.AggregatedName,
+				Type:      string(flow.Key.Destination.Type),
 			}
-		} else {
-			// If we are not strictly enforcing RBAC, we will return both endpoints as long as we
-			// have the RBAC permissions to view one endpoint in a flow and they match the query
-			// parameters.
-			if checkEndpointRBAC(rbacHelper, source) || checkEndpointRBAC(rbacHelper, dest) {
-				if allowedName(params, source, rbacHelper) {
+
+			// Check if the set length hits the requested limit
+			if nameSet.Len() >= int(params.Limit) {
+				break
+			}
+
+			// Add names to the set
+			if params.Strict {
+				// If we strictly enforce RBAC, then we will only return endpoints we have RBAC
+				// permissions for and match the query parameters.
+				if allowedName(params, source, rbacHelper) && checkEndpointRBAC(rbacHelper, source) {
 					nameSet.Add(source.Name)
 				}
-				if allowedName(params, dest, rbacHelper) {
+				if allowedName(params, dest, rbacHelper) && checkEndpointRBAC(rbacHelper, dest) {
 					nameSet.Add(dest.Name)
+				}
+			} else {
+				// If we are not strictly enforcing RBAC, we will return both endpoints as long as we
+				// have the RBAC permissions to view one endpoint in a flow and they match the query
+				// parameters.
+				if checkEndpointRBAC(rbacHelper, source) || checkEndpointRBAC(rbacHelper, dest) {
+					if allowedName(params, source, rbacHelper) {
+						nameSet.Add(source.Name)
+					}
+					if allowedName(params, dest, rbacHelper) {
+						nameSet.Add(dest.Name)
+					}
 				}
 			}
 		}
@@ -426,7 +367,7 @@ func getNamesFromElastic(params *FlowLogNamesParams, esClient lmaelastic.Client,
 
 	// Check for an error after all the namespaces have been processed. This should be fine
 	// since an error should stop more buckets from being received.
-	if err, ok := <-rcvdErrors; ok {
+	if err, ok := <-errors; ok {
 		log.WithError(err).Warning("Error processing the flow logs for finding valid names")
 		return names, err
 	}
@@ -451,7 +392,7 @@ func checkEndpointRBAC(rbacHelper rbac.FlowHelper, ep EndpointInfo) bool {
 	switch ep.Type {
 	case flowLogEndpointTypeNs:
 		// Check if this is a global networkset
-		if ep.Namespace == "-" {
+		if ep.Namespace == "" {
 			//nolint:staticcheck // Ignore SA1019 deprecated
 			allowGlobalNs, err := rbacHelper.CanListGlobalNetworkSets()
 			if err != nil {

@@ -27,15 +27,26 @@ const (
 	VersionPath = "/api/v1"
 )
 
-func NewRequest(c *RESTClient) *Request {
-	return &Request{
+// Request is a helper for building a request for the Linseed API.
+type Request interface {
+	Verb(v string) Request
+	Params(p any) Request
+	BodyJSON(b any) Request
+	Path(p string) Request
+	Cluster(c string) Request
+	ContentType(t string) Request
+	Do(ctx context.Context) *Result
+}
+
+func NewRequest(c RESTClient) Request {
+	return &request{
 		client: c,
 	}
 }
 
-// Request is a helper struct for building an HTTP request.
-type Request struct {
-	client      *RESTClient
+// request is a helper struct for building an HTTP request.
+type request struct {
+	client      RESTClient
 	contentType string
 	verb        string
 	params      any
@@ -45,40 +56,40 @@ type Request struct {
 }
 
 // Verb sets the verb this request will use.
-func (r *Request) Verb(verb string) *Request {
+func (r *request) Verb(verb string) Request {
 	r.verb = verb
 	return r
 }
 
 // Params sets parameters to pass in the request body.
-func (r *Request) Params(p any) *Request {
+func (r *request) Params(p any) Request {
 	r.params = p
 	return r
 }
 
 // BodyJSON sets the body
-func (r *Request) BodyJSON(p any) *Request {
+func (r *request) BodyJSON(p any) Request {
 	r.body = p
 	return r
 }
 
-func (r *Request) Path(p string) *Request {
+func (r *request) Path(p string) Request {
 	r.path = p
 	return r
 }
 
 // Cluster sets the x-cluster-id header for this request.
-func (r *Request) Cluster(c string) *Request {
+func (r *request) Cluster(c string) Request {
 	r.clusterID = c
 	return r
 }
 
-func (r *Request) ContentType(c string) *Request {
+func (r *request) ContentType(c string) Request {
 	r.contentType = c
 	return r
 }
 
-func (r *Request) Do(ctx context.Context) *Result {
+func (r *request) Do(ctx context.Context) *Result {
 	if r.body != nil && r.params != nil {
 		return &Result{
 			err: fmt.Errorf("cannot specify body and params on same requst"),
@@ -111,7 +122,7 @@ func (r *Request) Do(ctx context.Context) *Result {
 		p := path.Join(paths...)
 		return fmt.Sprintf("%s/%s", strings.TrimRight(base, "/"), strings.TrimLeft(p, "/"))
 	}
-	url := JoinPath(r.client.config.URL, VersionPath, r.path)
+	url := JoinPath(r.client.BaseURL(), VersionPath, r.path)
 
 	// Build the request.
 	req, err := http.NewRequestWithContext(
@@ -126,7 +137,7 @@ func (r *Request) Do(ctx context.Context) *Result {
 		}
 	}
 	req.Header.Set("x-cluster-id", r.clusterID)
-	req.Header.Set("x-tenant-id", r.client.tenantID)
+	req.Header.Set("x-tenant-id", r.client.Tenant())
 
 	if r.contentType == "" {
 		req.Header.Set("Content-Type", ContentTypeJSON)
@@ -135,7 +146,7 @@ func (r *Request) Do(ctx context.Context) *Result {
 	}
 
 	// Perform the request.
-	response, err := r.client.client.Do(req)
+	response, err := r.client.HTTPClient().Do(req)
 	if err != nil {
 		return &Result{
 			err: fmt.Errorf("error connecting linseed API: %s", err),

@@ -9,10 +9,10 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/policyrec"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
@@ -35,7 +35,7 @@ type PolicyRecommendationResponse struct {
 func PolicyRecommendationHandler(
 	clientSetk8sClientFactory lmak8s.ClientSetFactory,
 	k8sClientFactory datastore.ClusterCtxK8sClientFactory,
-	c policyrec.CompositeAggregator,
+	c client.Client,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Check that the request has the appropriate method. Should it be GET or POST?
@@ -53,7 +53,7 @@ func PolicyRecommendationHandler(
 			log.Debug("Cluster ID not present, setting default")
 			clusterID = datastore.DefaultCluster
 		}
-		log.WithField("cluster", clusterID).Debug("Cluster ID for index")
+		log.WithField("cluster", clusterID).Debug("Cluster ID from request")
 
 		// Get the k8s client set for this cluster.
 		clientSet, err := clientSetk8sClientFactory.NewClientSetForApplication(clusterID)
@@ -62,9 +62,6 @@ func PolicyRecommendationHandler(
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-
-		// Ensure index is properly scoped by to the correct cluster.
-		params.DocumentIndex = lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(clusterID))
 
 		authorizer, err := k8sClientFactory.RBACAuthorizerForCluster(clusterID)
 		if err != nil {
@@ -80,20 +77,20 @@ func PolicyRecommendationHandler(
 			return
 		}
 
-		flowHelper := rbac.NewCachedFlowHelper(user, authorizer)
-
 		// Check that user has sufficient permissions to list flows for the requested endpoint. This
 		// happens in the selected cluster from the UI drop-down menu.
+		flowHelper := rbac.NewCachedFlowHelper(user, authorizer)
 		if stat, err := ValidateRecommendationPermissions(flowHelper, params); err != nil {
 			createAndReturnError(err, "Not permitting user actions", stat, api.PolicyRec, w)
 			return
 		}
 
-		// Query elasticsearch with the parameters provided
-		flows, err := policyrec.QueryElasticsearchFlows(req.Context(), c, params)
+		// Query with the parameters provided
+		query := policyrec.BuildQuery(params)
+		pager := client.NewListPager[lapi.L3Flow](query)
+		flows, err := policyrec.SearchFlows(req.Context(), c.L3Flows(clusterID).List, pager)
 		if err != nil {
-			createAndReturnError(err, "Error querying elasticsearch", http.StatusInternalServerError,
-				api.PolicyRec, w)
+			createAndReturnError(err, "Error querying flows", http.StatusInternalServerError, api.PolicyRec, w)
 			return
 		}
 
