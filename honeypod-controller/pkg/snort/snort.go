@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -106,7 +105,7 @@ func ProcessSnort(e *api.EventsData, p *hp.HoneyPodLogProcessor, outPath string,
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			continue
 		}
-		content, err := ioutil.ReadFile(path)
+		content, err := os.ReadFile(path)
 		if err != nil {
 			log.WithError(err).Error("Error reading file: ", path)
 			continue

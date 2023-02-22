@@ -25,8 +25,8 @@ type LogOffset interface {
 type Offsets map[string]int64
 
 // OffsetReader reads the offset between the current position of the external processing pipeline
-//and current position of the log file. It returns a map with (key,value) set as the log file name
-//the offset
+// and current position of the log file. It returns a map with (key,value) set as the log file name
+// the offset
 type OffsetReader interface {
 	Read() Offsets
 }
@@ -52,8 +52,8 @@ type rangeLogOffset struct {
 }
 
 // NewRangeLogOffset creates a new rangeLogOffset. rangeLogOffset reads Offsets and it compares the values to be within
-//the range of interval [0, threshold). Any negative offset or any offset above the threshold will mark the fact that logs
-//are being stalled in the external processing pipeline
+// the range of interval [0, threshold). Any negative offset or any offset above the threshold will mark the fact that logs
+// are being stalled in the external processing pipeline
 func NewRangeLogOffset(offsetReader OffsetReader, threshold int64) *rangeLogOffset {
 	if threshold <= 0 {
 		panic(fmt.Sprintf("Invalid parameter for threshold %d. Any value above zero is accepted", threshold))
@@ -75,9 +75,9 @@ const unwatchedPosition = "ffffffffffffffff"
 var posFilePattern = regexp.MustCompile(pattern)
 
 // NewFluentDLogOffsetReader creates a new fluentDLogOffsetReader. fluentDLogOffsetReader reads Offsets stored by
-//FluentD in the position file and compares than with the actual size of the logfile. The position file written by
-//FluentD will have one entry for each of the log files that is reading from. Each line from the position file will
-//have the following format: {file_path}\t{position_in_file_as_hex}\t{inode_of_the_file_as_hex}
+// FluentD in the position file and compares than with the actual size of the logfile. The position file written by
+// FluentD will have one entry for each of the log files that is reading from. Each line from the position file will
+// have the following format: {file_path}\t{position_in_file_as_hex}\t{inode_of_the_file_as_hex}
 func NewFluentDLogOffsetReader(positionFile string) *fluentDLogOffsetReader {
 	return &fluentDLogOffsetReader{posFilePattern, positionFile}
 }

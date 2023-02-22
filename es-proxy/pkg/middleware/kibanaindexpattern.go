@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 
@@ -37,14 +37,14 @@ func KibanaIndexPattern(h http.Handler) http.Handler {
 func getResourceNameFromKibanaIndexPattern(req *http.Request) (string, error) {
 
 	// Read the body data
-	b, err := ioutil.ReadAll(req.Body)
+	b, err := io.ReadAll(req.Body)
 	if err != nil {
 		log.WithError(err).Debug("Error reading request body")
 		return "", err
 	}
 
 	//  reset the request body
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+	req.Body = io.NopCloser(bytes.NewBuffer(b))
 
 	// unmarshal the json
 	var k kibanaReq

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
@@ -12,7 +12,7 @@ func traverseDir(dir string, skipSubDir bool, substr string, forEach func(string
 	clog := log.WithField("dir", dir)
 	clog.Debug("Traversing")
 
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		clog.WithError(err).Error("failed to read dir")
 		return err

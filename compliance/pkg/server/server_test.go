@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
@@ -88,7 +87,7 @@ func (t *tester) list(expStatus int, exp []server.Report) {
 	r, err := t.client.Get(listUrl)
 	Expect(err).NotTo(HaveOccurred())
 	defer r.Body.Close()
-	bodyBytes, err := ioutil.ReadAll(r.Body)
+	bodyBytes, err := io.ReadAll(r.Body)
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(r.StatusCode).To(Equal(expStatus))
@@ -120,7 +119,7 @@ func (t *tester) downloadSingle(id string, expStatus int, forecast forecastFile)
 
 	// inspect the content
 	defer r.Body.Close()
-	bodyBytes, err := ioutil.ReadAll(r.Body)
+	bodyBytes, err := io.ReadAll(r.Body)
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(strings.TrimSpace(string(bodyBytes))).To(Equal(forecast.FileContent))
@@ -152,7 +151,7 @@ func (t *tester) downloadMulti(id string, expStatus int, forecasts []forecastFil
 
 	//inspect the content
 	defer r.Body.Close()
-	bodyBytes, err := ioutil.ReadAll(r.Body)
+	bodyBytes, err := io.ReadAll(r.Body)
 	Expect(err).NotTo(HaveOccurred())
 
 	//unzip the the file

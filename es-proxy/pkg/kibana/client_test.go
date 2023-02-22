@@ -3,7 +3,7 @@ package kibana
 
 import (
 	"crypto/tls"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -31,7 +31,7 @@ var _ = Describe("client", func() {
 				defer wg.Done()
 				defer r.Body.Close()
 
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(calicojson.MustUnmarshalToStandObject(body)).Should(Equal(map[string]interface{}{

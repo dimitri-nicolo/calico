@@ -9,8 +9,9 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 
 	es7 "github.com/elastic/go-elasticsearch/v7"
 
@@ -119,7 +120,7 @@ type clientBuilder struct {
 }
 
 func (builder *clientBuilder) Build() (Client, error) {
-	cert, err := ioutil.ReadFile(builder.certPath)
+	cert, err := os.ReadFile(builder.certPath)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +191,7 @@ func (cli *client) createRole(role Role) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}
@@ -218,7 +219,7 @@ func (cli *client) DeleteRole(role Role) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 && response.StatusCode != 404 {
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}
@@ -265,7 +266,7 @@ func (cli *client) CreateUser(user User) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}
@@ -289,7 +290,7 @@ func (cli *client) DeleteUser(user User) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 && response.StatusCode != 404 {
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}
@@ -341,7 +342,7 @@ func (cli *client) UpdateUser(user User) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}
@@ -385,7 +386,7 @@ func (cli *client) GetUsers() ([]User, error) {
 	}
 	defer response.Body.Close()
 
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -435,7 +436,7 @@ func (cli *client) SetUserPassword(user User) error {
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}
@@ -466,7 +467,7 @@ func (cli *client) CreateRoleMapping(roleMapping RoleMapping) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}
@@ -491,14 +492,14 @@ func (cli *client) GetRoleMappings() ([]RoleMapping, error) {
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			return nil, err
 		}
 		return nil, fmt.Errorf(string(body))
 	}
 
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -534,7 +535,7 @@ func (cli *client) DeleteRoleMapping(name string) (bool, error) {
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 && response.StatusCode != 404 {
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			return false, err
 		}

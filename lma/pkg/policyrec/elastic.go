@@ -85,50 +85,52 @@ var (
 	}
 )
 
-/*{
-  "bool": {
-    "must": [
-      {"range": {"start_time": { "gte": "{{.StartTime}}"}}},
-      {"range": {"end_time": { "lte": "{{.EndTime}}"}}},
-      {"terms":{"source_type":["net","ns","wep","hep"]}},
-      {"terms":{"dest_type":["net","ns","wep","hep"]}},
-      {"nested": {
-        "path": "policies",
-        "query": {
-          "wildcard": {
-            "policies.all_policies": {
-              "value": "*|__PROFILE__|__PROFILE__.kns.{{.Namespace}}|allow"
-            }
-          }
-        }
-      }},
-      {"bool": {
-        "should": [
-          {"bool": {
-						"must": [
-              {"term": {"source_namespace": "{{.Namespace}}"}}
-            ]
-						OR
-            "must": [
-              {"term": {"source_name_aggr": "{{.EndpointName}}"}},
-              {"term": {"source_namespace": "{{.Namespace}}"}}
-            ]
-          }},
-          {"bool": {
-						"must": [
-              {"term": {"dest_namespace": "{{.Namespace}}"}}
-            ]
-						OR
-            "must": [
-              {"term": {"dest_name_aggr": "{{.EndpointName}}"}},
-              {"term": {"dest_namespace": "{{.Namespace}}"}}
-            ]
-          }}
-        ]
-      }}
-    ]
-  }
-}*/
+/*
+	{
+	  "bool": {
+	    "must": [
+	      {"range": {"start_time": { "gte": "{{.StartTime}}"}}},
+	      {"range": {"end_time": { "lte": "{{.EndTime}}"}}},
+	      {"terms":{"source_type":["net","ns","wep","hep"]}},
+	      {"terms":{"dest_type":["net","ns","wep","hep"]}},
+	      {"nested": {
+	        "path": "policies",
+	        "query": {
+	          "wildcard": {
+	            "policies.all_policies": {
+	              "value": "*|__PROFILE__|__PROFILE__.kns.{{.Namespace}}|allow"
+	            }
+	          }
+	        }
+	      }},
+	      {"bool": {
+	        "should": [
+	          {"bool": {
+							"must": [
+	              {"term": {"source_namespace": "{{.Namespace}}"}}
+	            ]
+							OR
+	            "must": [
+	              {"term": {"source_name_aggr": "{{.EndpointName}}"}},
+	              {"term": {"source_namespace": "{{.Namespace}}"}}
+	            ]
+	          }},
+	          {"bool": {
+							"must": [
+	              {"term": {"dest_namespace": "{{.Namespace}}"}}
+	            ]
+							OR
+	            "must": [
+	              {"term": {"dest_name_aggr": "{{.EndpointName}}"}},
+	              {"term": {"dest_namespace": "{{.Namespace}}"}}
+	            ]
+	          }}
+	        ]
+	      }}
+	    ]
+	  }
+	}
+*/
 func BuildElasticQuery(params *PolicyRecommendationParams) elastic.Query {
 	query := elastic.NewBoolQuery()
 

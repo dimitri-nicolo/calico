@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -41,12 +40,11 @@ import (
 // ConnectivityChecker records a set of connectivity expectations and supports calculating the
 // actual state of the connectivity between the given workloads.  It is expected to be used like so:
 //
-//     var cc = &connectivity.Checker{}
-//     cc.Expect(None, w[2], w[0], 1234)
-//     cc.Expect(Some, w[1], w[0], 5678)
-//     cc.Expect(Some, w[1], w[0], 4321, ExpectWithABC, ExpectWithXYZ)
-//     cc.CheckConnectivity()
-//
+//	var cc = &connectivity.Checker{}
+//	cc.Expect(None, w[2], w[0], 1234)
+//	cc.Expect(Some, w[1], w[0], 5678)
+//	cc.Expect(Some, w[1], w[0], 4321, ExpectWithABC, ExpectWithXYZ)
+//	cc.CheckConnectivity()
 type Checker struct {
 	ReverseDirection bool
 	Protocol         string // "tcp" or "udp"
@@ -756,12 +754,12 @@ func (cmd *CheckCmd) run(cName string, logMsg string) *Result {
 
 	go func() {
 		defer wg.Done()
-		wOut, outErr = ioutil.ReadAll(outPipe)
+		wOut, outErr = io.ReadAll(outPipe)
 	}()
 
 	go func() {
 		defer wg.Done()
-		wErr, errErr = ioutil.ReadAll(errPipe)
+		wErr, errErr = io.ReadAll(errPipe)
 	}()
 
 	wg.Wait()

@@ -86,10 +86,10 @@ type ListInterface interface {
 //
 // The Value is dependent on the Key, but in general will be on of the following
 // types:
-// -  A pointer to a struct
-// -  A slice or map
-// -  A bare string, boolean value or IP address (i.e. without quotes, so not
-//    JSON format).
+//   - A pointer to a struct
+//   - A slice or map
+//   - A bare string, boolean value or IP address (i.e. without quotes, so not
+//     JSON format).
 type KVPair struct {
 	Key      Key
 	Value    interface{}
@@ -134,15 +134,15 @@ func KeyToDefaultPath(key Key) (string, error) {
 //
 // For example, KeyToDefaultDeletePath(TierKey{Tier: "a"}) returns
 //
-//     "/calico/v1/policy/tier/a"
+//	"/calico/v1/policy/tier/a"
 //
 // which is a prefix of both KeyToDefaultPath(TierKey{Tier: "a"}):
 //
-//     "/calico/v1/policy/tier/a/metadata"
+//	"/calico/v1/policy/tier/a/metadata"
 //
 // and KeyToDefaultPath(PolicyKey{Tier: "a", Name: "b"}):
 //
-//     "/calico/v1/policy/tier/a/policy/b"
+//	"/calico/v1/policy/tier/a/policy/b"
 func KeyToDefaultDeletePath(key Key) (string, error) {
 	return key.defaultDeletePath()
 }
@@ -160,16 +160,19 @@ func KeyToValueType(key Key) (reflect.Type, error) {
 // in the order supplied in the slice and only if the directory is empty.
 //
 // For example,
-// 	KeyToDefaultDeletePaths(WorkloadEndpointKey{
-// 		Nodename: "h",
-// 		OrchestratorID: "o",
-// 		WorkloadID: "w",
-// 		EndpointID: "e",
-// 	})
+//
+//	KeyToDefaultDeletePaths(WorkloadEndpointKey{
+//		Nodename: "h",
+//		OrchestratorID: "o",
+//		WorkloadID: "w",
+//		EndpointID: "e",
+//	})
+//
 // returns
 //
 // ["/calico/v1/host/h/workload/o/w/endpoint",
-//  "/calico/v1/host/h/workload/o/w"]
+//
+//	"/calico/v1/host/h/workload/o/w"]
 //
 // indicating that these paths should also be deleted when they are empty.
 // In this example it is equivalent to deleting the workload when there are
@@ -182,14 +185,14 @@ func KeyToDefaultDeleteParentPaths(key Key) ([]string, error) {
 // common-prefix path suitable for querying a datastore that uses the paths
 // returned by KeyToDefaultPath.  For example,
 //
-//     ListOptionsToDefaultPathRoot(TierListOptions{})
+//	ListOptionsToDefaultPathRoot(TierListOptions{})
 //
 // doesn't specify any particular tier so it returns
 // "/calico/v1/policy/tier" which is a prefix for all tiers.  The datastore
 // must then do a recursive query to find all children of that path.
 // However,
 //
-//    ListOptionsToDefaultPathRoot(TierListOptions{Tier:"a"})
+//	ListOptionsToDefaultPathRoot(TierListOptions{Tier:"a"})
 //
 // returns a more-specific path, which filters down to the specific tier of
 // interest: "/calico/v1/policy/tier/a"

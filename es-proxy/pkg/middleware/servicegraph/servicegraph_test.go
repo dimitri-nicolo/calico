@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -190,7 +190,7 @@ var _ = Describe("Service graph data tests", func() {
 		if CurrentGinkgoTestDescription().Failed && actualData != nil && actualDataFilename != "" {
 			formatted, err := json.MarshalIndent(actualData, "", "  ")
 			Expect(err).NotTo(HaveOccurred())
-			err = ioutil.WriteFile(actualDataFilename, formatted, os.ModePerm)
+			err = os.WriteFile(actualDataFilename, formatted, os.ModePerm)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = GinkgoWriter.Write([]byte(fmt.Sprintf(`
@@ -242,7 +242,7 @@ var _ = Describe("Service graph data tests", func() {
 			// Marshal the request and create an HTTP request
 			sgrb, err := json.Marshal(sgr)
 			Expect(err).NotTo(HaveOccurred())
-			body := ioutil.NopCloser(bytes.NewReader(sgrb))
+			body := io.NopCloser(bytes.NewReader(sgrb))
 			req, err := http.NewRequest("POST", "/serviceGraph", body)
 			Expect(err).NotTo(HaveOccurred())
 			req = req.WithContext(ctx)
@@ -270,7 +270,7 @@ var _ = Describe("Service graph data tests", func() {
 			actualDataFilename = "testdata/responses/test-" + resp + ".actual.json"
 
 			// Parse the expected response.
-			content, err := ioutil.ReadFile(expectDataFilename)
+			content, err := os.ReadFile(expectDataFilename)
 			Expect(err).NotTo(HaveOccurred())
 			err = json.Unmarshal(content, &expected)
 			Expect(err).NotTo(HaveOccurred())
@@ -616,7 +616,7 @@ var _ = Describe("Service graph data tests", func() {
 			})
 
 			// Marshal the request and create an HTTP request
-			body := ioutil.NopCloser(strings.NewReader(sgr))
+			body := io.NopCloser(strings.NewReader(sgr))
 			req, err := http.NewRequest("POST", "/serviceGraph", body)
 			Expect(err).NotTo(HaveOccurred())
 			req = req.WithContext(ctx)

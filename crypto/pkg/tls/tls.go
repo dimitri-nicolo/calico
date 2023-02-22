@@ -14,7 +14,7 @@ import (
 func NewTLSConfig(fipsMode bool) *tls.Config {
 	log.WithField("BuiltWithBoringCrypto", BuiltWithBoringCrypto).
 		WithField("fipsMode", fipsMode).
-		Info("creating a TLS config")
+		Debug("creating a TLS config")
 
 	cfg := &tls.Config{
 		MinVersion: tls.VersionTLS12,

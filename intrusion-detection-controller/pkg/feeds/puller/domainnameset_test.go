@@ -4,7 +4,7 @@ package puller
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -51,7 +51,7 @@ func TestQueryDomainNameSet(t *testing.T) {
 	client := &http.Client{}
 	resp := &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(strings.NewReader(strings.Join(append(input, "# comment", "", " "), "\n"))),
+		Body:       io.NopCloser(strings.NewReader(strings.Join(append(input, "# comment", "", " "), "\n"))),
 	}
 	client.Transport = &util.MockRoundTripper{
 		Response: resp,
@@ -98,7 +98,7 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 	client := &http.Client{}
 	resp := &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(strings.NewReader(strings.Join(input, "\n"))),
+		Body:       io.NopCloser(strings.NewReader(strings.Join(input, "\n"))),
 	}
 	client.Transport = &util.MockRoundTripper{
 		Response: resp,

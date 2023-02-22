@@ -3,7 +3,7 @@ package server
 
 import (
 	"crypto/tls"
-	"io/ioutil"
+	"os"
 
 	"github.com/projectcalico/calico/es-gateway/pkg/metrics"
 
@@ -56,11 +56,11 @@ func WithInternalTLSFiles(certFile, keyFile string) Option {
 	return func(s *Server) error {
 		var err error
 
-		certPEMBlock, err := ioutil.ReadFile(certFile)
+		certPEMBlock, err := os.ReadFile(certFile)
 		if err != nil {
 			return err
 		}
-		keyPEMBlock, err := ioutil.ReadFile(keyFile)
+		keyPEMBlock, err := os.ReadFile(keyFile)
 		if err != nil {
 			return err
 		}

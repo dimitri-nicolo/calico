@@ -16,7 +16,7 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
@@ -47,7 +47,7 @@ func runGenCmd(args []string) {
 		clog := log.WithField("file", f)
 		clog.Info("Processing file")
 
-		contents, err := ioutil.ReadFile(f)
+		contents, err := os.ReadFile(f)
 		if err != nil {
 			return err
 		}
@@ -85,7 +85,7 @@ func runGenCmd(args []string) {
 			return nil
 		}
 		manifestFullPath := path.Join(outDir, "manifests", path.Base(f))
-		if err := ioutil.WriteFile(manifestFullPath, manifestContent, 0644); err != nil {
+		if err := os.WriteFile(manifestFullPath, manifestContent, 0644); err != nil {
 			log.WithError(err).Error("Failed to write report type to file: skipping...")
 		}
 
@@ -98,7 +98,7 @@ func runGenCmd(args []string) {
 			return nil
 		}
 		jsonFullPath := path.Join(outDir, "json", path.Base(f)+".json")
-		if err := ioutil.WriteFile(jsonFullPath, jsonContent, 0644); err != nil {
+		if err := os.WriteFile(jsonFullPath, jsonContent, 0644); err != nil {
 			log.WithError(err).Error("Failed to write report type to file: skipping...")
 		}
 
@@ -112,7 +112,7 @@ func runGenCmd(args []string) {
 // getTemplate returns the contents of the specified template file
 func getTemplate(dirName string, templName string) (template []byte, err error) {
 	templFullPath := path.Join(dirName, templName)
-	template, err = ioutil.ReadFile(templFullPath)
+	template, err = os.ReadFile(templFullPath)
 	if err != nil {
 		return template, err
 	}

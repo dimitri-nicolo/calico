@@ -75,7 +75,7 @@ func NewServiceConverter() Converter {
 	return &serviceConverter{}
 }
 
-//IsServiceToBeExcluded returns true if service should be excluded from networkset management.
+// IsServiceToBeExcluded returns true if service should be excluded from networkset management.
 func (s *serviceConverter) isServiceToBeExcluded(service *corev1.Service) bool {
 	key := s.GetKey(service)
 	clog := log.WithField("key", key)

@@ -112,11 +112,12 @@ func (r *adDetectionReconciler) Run(stop <-chan struct{}) {
 
 // reconcile is the main reconciliation loop called by the worker of the Detection Job Controller. It receives State
 // updates to the CronJob from the resource cache and conducts the verfication of the received resource as follows:
-// 	- verfies if the received resource name is within the list of Detection Jobs, ignores if not
-//  - verfies that the resource is present, if not found restores it with the initial CronJob
-// 		configuration it had when it was first added
-//  - verrifes that the fields of the received Detection CronJob has not been altered,  restores it
-// 		with the initial CronJob configuration if found otherwise
+//   - verfies if the received resource name is within the list of Detection Jobs, ignores if not
+//   - verfies that the resource is present, if not found restores it with the initial CronJob
+//     configuration it had when it was first added
+//   - verrifes that the fields of the received Detection CronJob has not been altered,  restores it
+//     with the initial CronJob configuration if found otherwise
+//
 // Error Statuses are reported to the assosciated GlobalAlert for each Detection CronJob during each verfication step
 func (r *adDetectionReconciler) reconcile() bool {
 	workqueue := r.detectionCycleResourceCache.GetQueue()

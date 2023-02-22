@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -69,7 +69,7 @@ var _ = Describe("Validation test", func() {
 			_, err := rand.Read(token)
 			Expect(err).To(BeNil())
 
-			req.Body = ioutil.NopCloser(bytes.NewBuffer(token))
+			req.Body = io.NopCloser(bytes.NewBuffer(token))
 
 			apiErr := validation.ValidateClustersEndpointModelStorageHandlerRequest(req)
 			Expect(apiErr).ToNot(BeNil())
@@ -87,7 +87,7 @@ var _ = Describe("Validation test", func() {
 			_, err := rand.Read(token)
 			Expect(err).To(BeNil())
 
-			req.Body = ioutil.NopCloser(bytes.NewBuffer(token))
+			req.Body = io.NopCloser(bytes.NewBuffer(token))
 
 			apiErr := validation.ValidateClustersEndpointModelStorageHandlerRequest(req)
 			Expect(apiErr).ToNot(BeNil())

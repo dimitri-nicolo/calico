@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -105,11 +104,11 @@ func main() {
 	key := fmt.Sprintf("%s/managed-cluster.key", cfg.CertPath)
 	log.Infof("Voltron Address: %s", cfg.VoltronURL)
 
-	pemCert, err := ioutil.ReadFile(cert)
+	pemCert, err := os.ReadFile(cert)
 	if err != nil {
 		log.Fatalf("Failed to load cert: %s", err)
 	}
-	pemKey, err := ioutil.ReadFile(key)
+	pemKey, err := os.ReadFile(key)
 	if err != nil {
 		log.Fatalf("Failed to load key: %s", err)
 	}
@@ -120,7 +119,7 @@ func main() {
 		log.Info("using system certs")
 	} else {
 		serverCrt := fmt.Sprintf("%s/management-cluster.crt", cfg.CertPath)
-		pemServerCrt, err := ioutil.ReadFile(serverCrt)
+		pemServerCrt, err := os.ReadFile(serverCrt)
 		if err != nil {
 			log.WithError(err).Fatal("failed to read server cert")
 		}

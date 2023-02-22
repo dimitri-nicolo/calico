@@ -526,7 +526,7 @@ func getEventEndpointsFromObject(objResource, objNamespace, objName string) []Fl
 // include the data in. If the node doesn't exist then we just include in the namespace, so this approximation is
 // a reasonable approach.
 //
-//TODO(rlb): This doesn't work if the name of the replica set is long - in that case the pod name will not resemble
+// TODO(rlb): This doesn't work if the name of the replica set is long - in that case the pod name will not resemble
 // the generate name. This also will not work if we decide to aggregate based on the conrolling resource (e.g.
 // daemonset, deployment, cronjob). So we should fix this - but might involve us maintaining a DB of this information
 // to cross reference.

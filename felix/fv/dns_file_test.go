@@ -7,7 +7,6 @@ package fv_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -41,7 +40,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		felix = nil
 		w = nil
 		var err error
-		dnsDir, err = ioutil.TempDir("", "dnsinfo")
+		dnsDir, err = os.MkdirTemp("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -60,7 +59,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	startWithPersistentFileContent := func(fileContent string) {
 		// Populate the DNS info file that Felix will read.
-		err := ioutil.WriteFile(path.Join(dnsDir, "dnsinfo.txt"), []byte(fileContent), 0644)
+		err := os.WriteFile(path.Join(dnsDir, "dnsinfo.txt"), []byte(fileContent), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Now start etcd and Felix.

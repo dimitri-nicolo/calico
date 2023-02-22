@@ -4,7 +4,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -131,7 +130,7 @@ func collectDiags(opts *diagOpts) error {
 
 	// Create a temp folder to house all diagnostic files. Use empty string for dir parameter.
 	// TempDir will use the default directory for temporary files (see os.TempDir).
-	rootDir, err := ioutil.TempDir("", "")
+	rootDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return err
 	}

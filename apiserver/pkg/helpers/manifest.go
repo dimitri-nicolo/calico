@@ -16,13 +16,13 @@ import (
 // cluster. Applying the manifest will result in the creation of the ManagementClusterConnection CR and the Secret
 // tigera-managed-cluster-connection. The secret must be created in the active
 // operator's namespace.
-//The template contains the following customizable entries:
+// The template contains the following customizable entries:
 // - {{.CACert}}
 // - {{.Cert}}
 // - {{.PrivateKey}}
 // - {{.OperatorNamespace}}
-//By design managementClusterAddr is intended to be left unfilled (until the user downloads this manifest and fills it).
-//In the future, we will autofill this field using user-facing config
+// By design managementClusterAddr is intended to be left unfilled (until the user downloads this manifest and fills it).
+// In the future, we will autofill this field using user-facing config
 const installationManifestTemplate = `
 # Once applied to your managed cluster, a deployment is created to establish a secure tcp connection
 # with the management cluster.

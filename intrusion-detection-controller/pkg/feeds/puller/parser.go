@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"sync"
 
@@ -41,7 +40,7 @@ func jsonParser(path string) parser {
 			return filterErr
 		}
 
-		input, err := ioutil.ReadAll(r)
+		input, err := io.ReadAll(r)
 		if err != nil {
 			return fmt.Errorf("could not read data: %s", err)
 		}

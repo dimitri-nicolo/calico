@@ -34,11 +34,11 @@ include ../lib.Makefile
 #
 # We use -B to insert a build ID note into the executable, without which, the
 # RPM build tools complain.
-VERSION_FLAGS = -X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
-		-X $(PACKAGE_NAME)/pkg/version.BUILD_DATE=$(DATE) \
-		-X $(PACKAGE_NAME)/pkg/version.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
-		-X $(PACKAGE_NAME)/pkg/version.GIT_REVISION=$(GIT_COMMIT) \
-		-B 0x$(BUILD_ID)
+LDFLAGS = 	-X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
+				-X $(PACKAGE_NAME)/pkg/version.BUILD_DATE=$(DATE) \
+				-X $(PACKAGE_NAME)/pkg/version.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
+				-X $(PACKAGE_NAME)/pkg/version.GIT_REVISION=$(GIT_COMMIT) \
+				-B 0x$(BUILD_ID)
 
 NON_SRC_DIRS = test
 # All Compliance Server go files.
@@ -46,13 +46,6 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path $(dir) -prune -o) 
 		$(shell find ../api/pkg -name '*.go') \
 		$(shell find ../libcalico-go/lib -name '*.go') \
 		$(shell find ../lma/pkg -name '*.go')
-
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
 
 ###############################################################################
 # Building the binary
@@ -72,43 +65,35 @@ sub-build-%:
 
 .PHONY: bin/server-$(ARCH)
 bin/server-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/server/server.go'
+	$(call build_static_cgo_boring_binary, cmd/server/server.go, $@)
 
 .PHONY: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/controller/controller.go'
+	$(call build_static_cgo_boring_binary, cmd/controller/controller.go, $@)
 
 .PHONY: bin/snapshotter-$(ARCH)
 bin/snapshotter-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/snapshotter/snapshotter.go'
+	$(call build_static_cgo_boring_binary, cmd/snapshotter/snapshotter.go, $@)
 
 .PHONY: bin/reporter-$(ARCH)
 bin/reporter-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/reporter/reporter.go'
+	$(call build_static_cgo_boring_binary, cmd/reporter/reporter.go, $@)
 
 .PHONY: bin/report-type-gen-$(ARCH)
 bin/report-type-gen-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/report-type-gen/*.go'
+	$(call build_static_cgo_boring_binary, cmd/report-type-gen/*.go, $@)
 
 .PHONY: bin/scaleloader-$(ARCH)
 bin/scaleloader-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/mockdata-scaleloader/scaleloader.go'
+	$(call build_static_cgo_boring_binary, cmd/mockdata-scaleloader/scaleloader.go, $@)
 
 .PHONY: bin/kube-bench-$(ARCH)
 bin/kube-bench-$(ARCH): check-kube-bench-update cmd/kube-bench/main.go
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/kube-bench/main.go'
+	$(call build_static_cgo_boring_binary, cmd/kube-bench/main.go, $@)
 
 .PHONY: bin/benchmarker-$(ARCH)
 bin/benchmarker-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/benchmarker/benchmarker.go'
+	$(call build_static_cgo_boring_binary, cmd/benchmarker/benchmarker.go, $@)
 
 K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
 check-kube-bench-update:

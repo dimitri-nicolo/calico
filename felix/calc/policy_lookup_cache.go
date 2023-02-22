@@ -617,7 +617,7 @@ func (pc *PolicyLookupsCache) Dump() string {
 	return strings.Join(lines, "\n")
 }
 
-//reportPolicyCacheMetrics reports policy cache performance metrics to prometheus
+// reportPolicyCacheMetrics reports policy cache performance metrics to prometheus
 func (pc *PolicyLookupsCache) reportPolicyCacheMetrics(policyCacheWritesDelta uint32) {
 	gaugePolicyCacheLength.Set(float64(len(pc.nflogPrefixesPolicy)))
 }

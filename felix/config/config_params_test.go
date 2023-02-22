@@ -16,7 +16,6 @@ package config_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"reflect"
@@ -1061,7 +1060,7 @@ var _ = Describe("IPSec PSK parameters test", func() {
 	Describe("with IPSec PSK File", func() {
 		BeforeEach(func() {
 			c = config.New()
-			err := ioutil.WriteFile(pskFile, []byte(psk), 0600)
+			err := os.WriteFile(pskFile, []byte(psk), 0600)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		AfterEach(func() {
@@ -1081,7 +1080,7 @@ var _ = Describe("IPSec PSK parameters test", func() {
 		It("should panic on empty PSK file", func() {
 			c.IPSecMode = "PSK"
 			c.IPSecPSKFile = pskFile
-			err := ioutil.WriteFile(pskFile, []byte{}, 0600)
+			err := os.WriteFile(pskFile, []byte{}, 0600)
 			Expect(err).NotTo(HaveOccurred())
 
 			panicWrapper := func() { c.GetPSKFromFile() }

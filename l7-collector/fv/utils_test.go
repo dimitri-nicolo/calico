@@ -5,7 +5,6 @@ package fv_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -118,7 +117,7 @@ func createTestConfig() *config.Config {
 }
 
 func makeTmpListenerDir() string {
-	dirPath, err := ioutil.TempDir("/tmp", "felixut")
+	dirPath, err := os.MkdirTemp("/tmp", "felixut")
 	if err != nil {
 		return ""
 	}

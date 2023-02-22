@@ -862,10 +862,10 @@ func (s *DomainInfoStore) processDNSRequestPacketForLogging(ipv4 *layers.IPv4, d
 // determine latency.
 //
 // Under certain conditions requests and responses may arrive out of order. This method handles both:
-// - If a request has not been received then the response is stored for a maximum of 1s while we wait for a request.
-//   Since request and response are processed by different queues then it is theoretically possible for them to arrive
-//   out of order (and infact NFQueued responses seem to regularly arrive before NFLog'd requests.
-// - If a request has been received then the latency is calculated and the response packet is logged with latency.
+//   - If a request has not been received then the response is stored for a maximum of 1s while we wait for a request.
+//     Since request and response are processed by different queues then it is theoretically possible for them to arrive
+//     out of order (and infact NFQueued responses seem to regularly arrive before NFLog'd requests.
+//   - If a request has been received then the latency is calculated and the response packet is logged with latency.
 //
 // Request packets are processed in processDNSRequestPacketForLogging.
 // Responses that have been held for >1s are removed in releaseUnpairedDataForLogging.

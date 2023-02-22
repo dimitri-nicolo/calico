@@ -4,7 +4,6 @@ package capture_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"sort"
@@ -70,7 +69,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 
 		var err error
 
-		baseDir, err = ioutil.TempDir("/tmp", "pcap-tests")
+		baseDir, err = os.MkdirTemp("/tmp", "pcap-tests")
 		Expect(err).NotTo(HaveOccurred())
 		captureDir = fmt.Sprintf("%s/%s/%s", baseDir, namespace, name)
 	})
@@ -737,7 +736,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		err = os.MkdirAll(captureDir, 0755)
 		defer os.Remove(captureDir)
 		Expect(err).NotTo(HaveOccurred())
-		file, err := ioutil.TempFile(captureDir, fmt.Sprintf("%s_%s-*.pcap", podName, deviceName))
+		file, err := os.CreateTemp(captureDir, fmt.Sprintf("%s_%s-*.pcap", podName, deviceName))
 		Expect(err).NotTo(HaveOccurred())
 		defer os.Remove(file.Name())
 
@@ -906,7 +905,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var err = os.MkdirAll(captureDir, 0755)
 		defer os.Remove(captureDir)
 		Expect(err).NotTo(HaveOccurred())
-		file, err := ioutil.TempFile(captureDir, fmt.Sprintf("%s_%s-*.pcap", podName, deviceName))
+		file, err := os.CreateTemp(captureDir, fmt.Sprintf("%s_%s-*.pcap", podName, deviceName))
 		Expect(err).NotTo(HaveOccurred())
 		defer os.Remove(file.Name())
 		var dummyFile = outputFile{
@@ -940,7 +939,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var err = os.MkdirAll(captureDir, 0755)
 		defer os.Remove(captureDir)
 		Expect(err).NotTo(HaveOccurred())
-		file, err := ioutil.TempFile(captureDir, fmt.Sprintf("%s_%s-*.pcap", podName, deviceName))
+		file, err := os.CreateTemp(captureDir, fmt.Sprintf("%s_%s-*.pcap", podName, deviceName))
 		Expect(err).NotTo(HaveOccurred())
 		defer os.Remove(file.Name())
 		var dummyFile = outputFile{
@@ -1003,17 +1002,20 @@ func assertStatusUpdates(update *proto.PacketCaptureStatusUpdate, expected []out
 }
 
 func read(baseDir string) []os.FileInfo {
-	var pCaps []os.FileInfo
-	var err error
-	pCaps, err = ioutil.ReadDir(baseDir)
+	pCaps, err := os.ReadDir(baseDir)
 	if err != nil {
-		return pCaps
+		return nil
 	}
 
-	sort.Slice(pCaps, func(i, j int) bool {
+	var pcapInfo []os.FileInfo
+	for _, pc := range pCaps {
+		info, _ := pc.Info()
+		pcapInfo = append(pcapInfo, info)
+	}
+	sort.Slice(pcapInfo, func(i, j int) bool {
 		return pCaps[i].Name() < pCaps[j].Name()
 	})
-	return pCaps
+	return pcapInfo
 }
 
 func dummyPacketDataSize() int {

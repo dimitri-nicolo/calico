@@ -15,15 +15,13 @@
 package policysync_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
-
 	"net"
 	"os"
 	"path"
 	"reflect"
-
-	"context"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

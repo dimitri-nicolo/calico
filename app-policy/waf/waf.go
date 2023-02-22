@@ -11,7 +11,6 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -83,21 +82,27 @@ func CheckRulesSetDirectoryExists() error {
 func ExtractRulesSetFilenames() error {
 
 	// Read all core rule set file names from rules directory.
-	items, err := ioutil.ReadDir(rulesetDirectory)
+	items, err := os.ReadDir(rulesetDirectory)
 	if err != nil {
 		return err
 	}
 
+	var itemNames []string
+	for _, i := range items {
+		itemNames = append(itemNames, i.Name())
+	}
 	// Sort files descending to ensure lower cased files like crs-setup.conf are loaded first.
 	// This is a requirement for Core Rules Set and REQUEST-901-INITIALIZATION.conf bootstrap.
-	sortFileNameDescend(items)
+	sort.Slice(itemNames, func(i, j int) bool {
+		return itemNames[i] > itemNames[j]
+	})
 
 	count := 1
 	filenames = nil
-	for _, item := range items {
+	for _, item := range itemNames {
 
 		// Ignore files that link to the parent directory.
-		filename := item.Name()
+		filename := item
 		if strings.HasPrefix(filename, "..") {
 			continue
 		}
@@ -290,12 +295,6 @@ func GetRulesSetFilenames() []string {
 
 func GetProcessHttpRequestPrefix(id string) string {
 	return fmt.Sprintf("WAF Process Http Request [%s]", id)
-}
-
-func sortFileNameDescend(files []os.FileInfo) {
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Name() > files[j].Name()
-	})
 }
 
 //export GoModSecurityLoggingCallback

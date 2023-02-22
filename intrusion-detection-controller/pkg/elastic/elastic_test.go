@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	url2 "net/url"
 	"os"
@@ -363,7 +362,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader("")),
+				Body:       io.NopCloser(strings.NewReader("")),
 			}, nil
 		}
 	case "GET":
@@ -449,10 +448,10 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 
 		}
 	case "POST":
-		b, _ := ioutil.ReadAll(req.Body)
+		b, _ := io.ReadAll(req.Body)
 		_ = req.Body.Close()
 		body := string(b)
-		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+		req.Body = io.NopCloser(bytes.NewReader(b))
 
 		switch req.URL.String() {
 		// QueryIPSet
@@ -557,7 +556,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader("")),
+				Body:       io.NopCloser(strings.NewReader("")),
 			}, nil
 		default:
 			return &http.Response{
@@ -570,10 +569,10 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	if os.Getenv("ELASTIC_TEST_DEBUG") == "yes" {
 		_, _ = fmt.Fprintf(os.Stderr, "%s %s\n", req.Method, req.URL)
 		if req.Body != nil {
-			b, _ := ioutil.ReadAll(req.Body)
+			b, _ := io.ReadAll(req.Body)
 			_ = req.Body.Close()
 			body := string(b)
-			req.Body = ioutil.NopCloser(bytes.NewReader(b))
+			req.Body = io.NopCloser(bytes.NewReader(b))
 			_, _ = fmt.Fprintln(os.Stderr, body)
 		}
 	}
@@ -581,7 +580,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	return &http.Response{
 		Request:    req,
 		StatusCode: 500,
-		Body:       ioutil.NopCloser(strings.NewReader("")),
+		Body:       io.NopCloser(strings.NewReader("")),
 	}, nil
 }
 
@@ -598,7 +597,7 @@ func mustGetString(name string) string {
 	if err != nil {
 		panic(err)
 	}
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	if err != nil {
 		panic(err)
 	}

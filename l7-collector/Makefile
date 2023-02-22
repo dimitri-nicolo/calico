@@ -19,17 +19,10 @@ include ../lib.Makefile
 SRC_FILES=$(shell find cmd pkg uds -name '*.go') \
 		$(shell find ../libcalico-go/lib -name '*.go')
 
-VERSION_FLAGS=-X main.VERSION=$(GIT_VERSION) \
-	-X main.BUILD_DATE=$(DATE) \
-	-X main.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
-	-X main.GIT_REVISION=$(GIT_COMMIT)
-
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
+LDFLAGS = -X main.VERSION=$(GIT_VERSION) \
+			-X main.BUILD_DATE=$(DATE) \
+			-X main.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
+			-X main.GIT_REVISION=$(GIT_COMMIT)
 
 ###############################################################################
 # Building the binary
@@ -38,9 +31,7 @@ build: bin/l7-collector-$(ARCH)
 
 .PHONY: bin/l7-collector-$(ARCH)
 bin/l7-collector-$(ARCH): $(SRC_FILES) protobuf
-	$(DOCKER_GO_BUILD_CGO) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/l7-collector/*.go'
+	$(call build_static_cgo_boring_binary, cmd/l7-collector/*.go, $@)
 
 # Generate the protobuf bindings for go. The proto/felixbackend.pb.go file is included in SRC_FILES
 # In order to make use of complex structures like protobuf.google.timestamp, we need to link the
