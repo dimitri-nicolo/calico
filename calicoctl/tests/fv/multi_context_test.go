@@ -48,7 +48,7 @@ func TestMultiCluster(t *testing.T) {
 	Expect(out).To(ContainSubstring("Successfully"))
 
 	// Set Calico version in ClusterInformation for both contexts
-	out, err := SetCalicoVersion(true, "--context", "main")
+	out, err = SetCalicoVersion(true, "--context", "main")
 	Expect(err).ToNot(HaveOccurred())
 	Expect(out).To(ContainSubstring("Calico version set to"))
 
