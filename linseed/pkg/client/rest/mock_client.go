@@ -23,7 +23,7 @@ func (m *mockRestClient) Verb(v string) Request {
 	}
 	result := m.results[m.called]
 	m.called++
-	return NewMockRequest(m, result).Verb(v)
+	return NewMockRequest(m, &result).Verb(v)
 }
 
 func (m *mockRestClient) Post() Request {

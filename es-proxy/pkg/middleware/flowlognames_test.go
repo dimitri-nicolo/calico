@@ -138,7 +138,7 @@ var duplicateFlowResponse = []rest.MockResult{
 							Type:           lapi.WEP,
 						},
 						Destination: lapi.Endpoint{
-							Namespace:      "tigera-manager",
+							Namespace:      "tigera-compliance",
 							AggregatedName: "compliance-controller-c7f4b94dd-*",
 							Type:           lapi.WEP,
 						},

@@ -84,11 +84,11 @@ type PolicyMatch struct {
 	Tier string `json:"tier"`
 
 	// The action taken by the policy.
-	Action *FlowAction
+	Action *FlowAction `json:"action"`
 
 	// Namespace and name of the policy.
-	Namespace *string
-	Name      *string
+	Namespace *string `json:"namespace"`
+	Name      *string `json:"name"`
 }
 
 type MatchType string

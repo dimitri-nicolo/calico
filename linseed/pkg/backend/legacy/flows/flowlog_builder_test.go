@@ -3,7 +3,10 @@ package flows_test
 import (
 	"fmt"
 	"strings"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
@@ -76,7 +79,7 @@ func (b *flowLogBuilder) Build() (*v1.FlowLog, error) {
 // Note that some fields on a Flow are aggregated, and so will need to be calculated based
 // on the sum total of flow logs used to build the flow.
 // Our aggregation logic within the builder is fairly limited.
-func (b *flowLogBuilder) ExpectedFlow() *v1.L3Flow {
+func (b *flowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 	// Initialize the flow with identifying information. For now, we
 	// don't support multiple flows from a single builder, so we assume
 	// all of the logs have the same Key fields.
@@ -148,31 +151,31 @@ func (b *flowLogBuilder) ExpectedFlow() *v1.L3Flow {
 	// Add in expected policies. Right now, we don't support aggregation
 	// of policies across multiple logs in this builder, and we assume
 	// every log in the flow has the same policies.
-	for _, p := range b.activeLog.Policies.AllPolicies {
-		if f.Policies == nil {
-			f.Policies = make([]v1.Policy, 0)
-		}
-		h, err := lmaapi.PolicyHitFromFlowLogPolicyString(p, 1)
-		if err != nil {
-			panic(err)
-		}
+	if b.activeLog != nil && b.activeLog.Policies != nil {
+		for _, p := range b.activeLog.Policies.AllPolicies {
+			if f.Policies == nil {
+				f.Policies = make([]v1.Policy, 0)
+			}
+			h, err := lmaapi.PolicyHitFromFlowLogPolicyString(p, 1)
+			require.NoError(t, err)
 
-		name := h.Name()
-		if h.IsProfile() {
-			name = fmt.Sprintf("kns.%s", name)
-		}
+			name := h.Name()
+			if h.IsProfile() {
+				name = fmt.Sprintf("kns.%s", name)
+			}
 
-		pol := v1.Policy{
-			Tier:      h.Tier(),
-			Name:      name,
-			Namespace: h.Namespace(),
-			Action:    string(h.Action()),
-			Count:     f.LogStats.FlowLogCount,
-			RuleID:    h.RuleIdIndex(),
-			IsProfile: h.IsProfile(),
-			IsStaged:  h.IsStaged(),
+			pol := v1.Policy{
+				Tier:      h.Tier(),
+				Name:      name,
+				Namespace: h.Namespace(),
+				Action:    string(h.Action()),
+				Count:     f.LogStats.FlowLogCount,
+				RuleID:    h.RuleIdIndex(),
+				IsProfile: h.IsProfile(),
+				IsStaged:  h.IsStaged(),
+			}
+			f.Policies = append(f.Policies, pol)
 		}
-		f.Policies = append(f.Policies, pol)
 	}
 
 	return f

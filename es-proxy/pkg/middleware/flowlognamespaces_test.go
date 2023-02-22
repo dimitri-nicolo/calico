@@ -42,16 +42,6 @@ var duplicateNamespaceResponse = []rest.MockResult{
 				{
 					Key: lapi.L3FlowKey{
 						Source: lapi.Endpoint{
-							Namespace: "tigera-eck-operator",
-						},
-						Destination: lapi.Endpoint{
-							Namespace: "tigera-elasticsearch",
-						},
-					},
-				},
-				{
-					Key: lapi.L3FlowKey{
-						Source: lapi.Endpoint{
 							Namespace: "tigera-prometheus",
 						},
 						Destination: lapi.Endpoint{

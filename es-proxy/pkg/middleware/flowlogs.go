@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -391,14 +390,6 @@ func buildFlowParams(params *FlowLogsParams) *lapi.L3FlowParams {
 		}
 	}
 	return &fp
-}
-
-func buildTermsFilter(terms []string, termsKey string) *elastic.TermsQuery {
-	var termValues []interface{}
-	for _, term := range terms {
-		termValues = append(termValues, term)
-	}
-	return elastic.NewTermsQuery(termsKey, termValues...)
 }
 
 type bucket struct {

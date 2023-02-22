@@ -8,7 +8,7 @@ import (
 )
 
 // Produce a new mock request, used to mock request results from Linseed.
-func NewMockRequest(c RESTClient, result MockResult) Request {
+func NewMockRequest(c RESTClient, result *MockResult) Request {
 	return &mockRequest{
 		realRequest: NewRequest(c).(*request),
 		result:      result,
@@ -20,7 +20,7 @@ type mockRequest struct {
 	realRequest *request
 
 	// Mock result to return on call to Do()
-	result MockResult
+	result *MockResult
 }
 
 func (m *mockRequest) Verb(v string) Request {
@@ -57,6 +57,10 @@ func (m *mockRequest) ContentType(t string) Request {
 // real response from Linseed. The mock client stack provides a
 // hook for callers to return custom results here.
 func (m *mockRequest) Do(ctx context.Context) *Result {
+	// Populate metadata about the request.
+	m.result.Called = true
+	m.result.Path = m.realRequest.path
+	m.result.Verb = m.realRequest.verb
 	return &Result{
 		err:        m.result.Err,
 		body:       m.result.body(),
@@ -69,6 +73,12 @@ type MockResult struct {
 	Err        error
 	Body       interface{}
 	StatusCode int
+
+	// Metadata about the call that was made. Will be populated
+	// by the client as calls are made.
+	Called bool
+	Verb   string
+	Path   string
 }
 
 func (m *MockResult) body() []byte {

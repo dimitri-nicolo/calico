@@ -36,7 +36,6 @@ var (
 	cache   bapi.Cache
 	fb      bapi.FlowBackend
 	flb     bapi.FlowLogBackend
-	conv    flows.BucketConverter
 	ctx     context.Context
 	cluster string
 )
@@ -738,7 +737,6 @@ func TestFlowFiltering(t *testing.T) {
 				WithReporter("src").WithAction("allow").
 				WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none").
 				// Pass followed by a profile allow.
-				// *|__PROFILE__|__PROFILE__.kns.kube-system|allow*
 				WithPolicy("0|allow-tigera|openshift-dns/allow-tigera.cluster-dns|pass|1").
 				WithPolicy("1|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0")
 			exp1 := populateFlowDataN(t, ctx, bld, client, clusterInfo.Cluster, numLogs)
@@ -1014,6 +1012,6 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *flowLogBuilder, cli
 	require.NoError(t, err)
 
 	// Return the expected flow based on the batch of flows we created above.
-	expected := b.ExpectedFlow()
+	expected := b.ExpectedFlow(t)
 	return *expected
 }

@@ -420,11 +420,6 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elast
 		query.Filter(buildLabelSelectorFilter(opts.DestinationSelectors, "dest_labels"))
 	}
 
-	// if logrus.IsLevelEnabled(logrus.DebugLevel) {
-	// 	// If debug logging is enabled, print out pretty query.
-	// 	logrus.Debugf("Flow ES query: %s", spew.Sdump(query))
-	// }
-
 	return query
 }
 

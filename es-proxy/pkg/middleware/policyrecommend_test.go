@@ -504,7 +504,52 @@ var (
 	}
 
 	// Just the flow reported by the source on egress.
-	app1ToNginxEgressFlows = []rest.MockResult{app1ToNginxFlows[0]}
+	app1ToNginxEgressFlows = []rest.MockResult{
+		{
+			Body: lapi.List[lapi.L3Flow]{
+				Items: []lapi.L3Flow{
+					// First flow - this is just the flow as reported by the source.
+					{
+						Key: lapi.L3FlowKey{
+							Source: lapi.Endpoint{
+								Type:           lapi.WEP,
+								Namespace:      "namespace1",
+								AggregatedName: "app1-abcdef-*",
+							},
+							Destination: lapi.Endpoint{
+								Type:           lapi.WEP,
+								Namespace:      "namespace1",
+								AggregatedName: "nginx-12345-*",
+								Port:           80,
+							},
+							Protocol: "6",
+							Reporter: lapi.FlowReporterSource,
+							Action:   lapi.FlowActionAllow,
+						},
+						SourceLabels: []lapi.FlowLabels{
+							{
+								Key: "app",
+								Values: []lapi.FlowLabelValue{
+									{Value: "app1", Count: 1},
+								},
+							},
+						},
+						DestinationLabels: []lapi.FlowLabels{
+							{
+								Key: "app",
+								Values: []lapi.FlowLabelValue{
+									{Value: "nginx", Count: 1},
+								},
+							},
+						},
+						Policies: []lapi.Policy{
+							{Tier: "__PROFILE__", Name: "kns.namespace1", Action: "allow", IsProfile: true},
+						},
+					},
+				},
+			},
+		},
+	}
 
 	flowsForNamespaceTest = []rest.MockResult{
 		{
@@ -649,7 +694,7 @@ var (
 							{
 								Key: "app",
 								Values: []lapi.FlowLabelValue{
-									{Value: "nginx2", Count: 1},
+									{Value: "nginx3", Count: 1},
 								},
 							},
 						},
@@ -934,13 +979,12 @@ var _ = Describe("Policy Recommendation", func() {
 			http.StatusOK,
 		),
 
-		// TODO: This one is failing?
-		// Entry("for destination endpoint with egress only flows - no rules will be computed",
-		// 	app1ToNginxEgressFlows,
-		// 	nginxQuery,
-		// 	nil,
-		// 	http.StatusInternalServerError,
-		// ),
+		Entry("for destination endpoint with egress only flows - no rules will be computed",
+			app1ToNginxEgressFlows,
+			nginxQuery,
+			nil,
+			http.StatusInternalServerError,
+		),
 
 		Entry("for unknown endpoint - no results from linseed",
 			[]rest.MockResult{{Body: lapi.List[lapi.L3Flow]{}}},
