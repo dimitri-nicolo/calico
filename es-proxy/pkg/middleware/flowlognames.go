@@ -94,7 +94,7 @@ func FlowLogNamesHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, 
 
 		response, err := getNamesFromLinseed(params, lsclient, flowHelper)
 		if err != nil {
-			log.WithError(err).Info("Error getting names from elastic")
+			log.WithError(err).Info("Error getting names from linseed")
 			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)
 		}
 

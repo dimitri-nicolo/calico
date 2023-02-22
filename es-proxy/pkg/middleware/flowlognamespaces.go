@@ -39,8 +39,8 @@ type FlowLogNamespaceParams struct {
 	Strict        bool     `json:"strict"`
 
 	// Parsed timestamps
-	startDateTimeESParm *time.Time
-	endDateTimeESParm   *time.Time
+	startDateTimeParm *time.Time
+	endDateTimeParm   *time.Time
 }
 
 type Namespace struct {
@@ -80,9 +80,9 @@ func FlowLogNamespaceHandler(k8sClientFactory datastore.ClusterCtxK8sClientFacto
 
 		flowHelper := rbac.NewCachedFlowHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
 
-		response, err := getNamespacesFromElastic(params, lsclient, flowHelper)
+		response, err := getNamespacesFromLinseed(params, lsclient, flowHelper)
 		if err != nil {
-			log.WithError(err).Info("Error getting namespaces from elastic")
+			log.WithError(err).Info("Error getting namespaces from linseed")
 			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)
 		}
 
@@ -124,12 +124,12 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 
 	// Parse the start/end time to validate the format. We don't need the resulting time struct.
 	now := time.Now()
-	startDateTimeESParm, _, err := timeutils.ParseTime(now, &startDateTimeString)
+	startDateTimeParm, _, err := timeutils.ParseTime(now, &startDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting start date time")
 		return nil, ErrParseRequest
 	}
-	endDateTimeESParm, _, err := timeutils.ParseTime(now, &endDateTimeString)
+	endDateTimeParm, _, err := timeutils.ParseTime(now, &endDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting end date time")
 		return nil, ErrParseRequest
@@ -142,16 +142,16 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 	}
 
 	params := &FlowLogNamespaceParams{
-		Actions:             actions,
-		Limit:               limit,
-		ClusterName:         cluster,
-		Prefix:              prefix,
-		Unprotected:         unprotected,
-		StartDateTime:       startDateTimeString,
-		EndDateTime:         endDateTimeString,
-		startDateTimeESParm: startDateTimeESParm,
-		endDateTimeESParm:   endDateTimeESParm,
-		Strict:              strict,
+		Actions:           actions,
+		Limit:             limit,
+		ClusterName:       cluster,
+		Prefix:            prefix,
+		Unprotected:       unprotected,
+		StartDateTime:     startDateTimeString,
+		EndDateTime:       endDateTimeString,
+		startDateTimeParm: startDateTimeParm,
+		endDateTimeParm:   endDateTimeParm,
+		Strict:            strict,
 	}
 
 	// Check whether the params are provided in the request and set default values if not
@@ -188,13 +188,13 @@ func buildFlowNamespaceParams(params *FlowLogNamespaceParams) *lapi.L3FlowParams
 		}
 	}
 
-	if params.startDateTimeESParm != nil || params.endDateTimeESParm != nil {
+	if params.startDateTimeParm != nil || params.endDateTimeParm != nil {
 		tr := lmav1.TimeRange{}
-		if params.startDateTimeESParm != nil {
-			tr.From = *params.startDateTimeESParm
+		if params.startDateTimeParm != nil {
+			tr.From = *params.startDateTimeParm
 		}
-		if params.endDateTimeESParm != nil {
-			tr.To = *params.endDateTimeESParm
+		if params.endDateTimeParm != nil {
+			tr.To = *params.endDateTimeParm
 		}
 		fp.TimeRange = &tr
 	}
@@ -202,7 +202,7 @@ func buildFlowNamespaceParams(params *FlowLogNamespaceParams) *lapi.L3FlowParams
 	return fp
 }
 
-func getNamespacesFromElastic(params *FlowLogNamespaceParams, lsclient client.Client, rbacHelper rbac.FlowHelper) ([]Namespace, error) {
+func getNamespacesFromLinseed(params *FlowLogNamespaceParams, lsclient client.Client, rbacHelper rbac.FlowHelper) ([]Namespace, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), namespaceTimeout)
 	defer cancel()
 

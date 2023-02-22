@@ -353,7 +353,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				ClusterName: "cluster",
 			}
 
-			namespaces, err := getNamespacesFromElastic(params, lsc, rbac.NewAlwaysAllowFlowHelper())
+			namespaces, err := getNamespacesFromLinseed(params, lsc, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 2))
 			Expect(namespaces[0].Name).To(Equal("tigera-eck-operator"))
@@ -369,7 +369,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				ClusterName: "cluster",
 			}
 
-			namespaces, err := getNamespacesFromElastic(params, lsc, rbac.NewAlwaysAllowFlowHelper())
+			namespaces, err := getNamespacesFromLinseed(params, lsc, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 0))
 		})
@@ -383,7 +383,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				ClusterName: "cluster",
 			}
 
-			namespaces, err := getNamespacesFromElastic(params, lsc, rbac.NewAlwaysAllowFlowHelper())
+			namespaces, err := getNamespacesFromLinseed(params, lsc, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 10))
 			Expect(namespaces[0].Name).To(Equal("kube-system"))
@@ -407,7 +407,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				ClusterName: "cluster",
 			}
 			possibilities := []string{"kube-system", "tigera-compliance", "tigera-elasticsearch", "tigera-prometheus", "tigera-eck-operator"}
-			namespaces, err := getNamespacesFromElastic(params, lsc, rbac.NewAlwaysAllowFlowHelper())
+			namespaces, err := getNamespacesFromLinseed(params, lsc, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 3))
 			Expect(possibilities).To(ContainElement(namespaces[0].Name))
@@ -423,7 +423,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				Prefix:      "",
 				ClusterName: "",
 			}
-			namespaces, err := getNamespacesFromElastic(params, lsc, rbac.NewAlwaysAllowFlowHelper())
+			namespaces, err := getNamespacesFromLinseed(params, lsc, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(HaveOccurred())
 			Expect(namespaces).To(HaveLen(0))
 		})
@@ -454,7 +454,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 					Strict:      true,
 				}
 
-				namespaces, err := getNamespacesFromElastic(params, lsc, mockFlowHelper)
+				namespaces, err := getNamespacesFromLinseed(params, lsc, mockFlowHelper)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(namespaces).To(HaveLen(1))
 				Expect(namespaces[0].Name).To(Equal("tigera-elasticsearch"))
@@ -480,7 +480,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 					ClusterName: "cluster",
 				}
 
-				namespaces, err := getNamespacesFromElastic(params, lsc, mockFlowHelper)
+				namespaces, err := getNamespacesFromLinseed(params, lsc, mockFlowHelper)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(namespaces).To(HaveLen(3))
 				Expect(namespaces[0].Name).To(Equal("kube-system"))
@@ -504,7 +504,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 					Strict:      true,
 				}
 
-				namespaces, err := getNamespacesFromElastic(params, lsc, mockFlowHelper)
+				namespaces, err := getNamespacesFromLinseed(params, lsc, mockFlowHelper)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(namespaces).To(HaveLen(2))
 				Expect(namespaces[0].Name).To(Equal("-"))
@@ -527,7 +527,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 					Strict:      true,
 				}
 
-				namespaces, err := getNamespacesFromElastic(params, lsc, mockFlowHelper)
+				namespaces, err := getNamespacesFromLinseed(params, lsc, mockFlowHelper)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(namespaces).To(HaveLen(1))
 				Expect(namespaces[0].Name).To(Equal("tigera-elasticsearch"))
