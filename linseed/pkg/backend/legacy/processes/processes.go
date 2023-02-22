@@ -1,0 +1,204 @@
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
+package processes
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/sirupsen/logrus"
+
+	elastic "github.com/olivere/elastic/v7"
+
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/backend"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+)
+
+const (
+	defaultAggregationSize = 1000
+
+	sourceNameAggrKey = "agg-source_name_aggr"
+	processNameKey    = "agg-process_name"
+	processIDKey      = "agg-process_id"
+)
+
+// processBackend implements the Backend interface for flows stored
+// in elasticsearch in the legacy storage model.
+type processBackend struct {
+	// Elasticsearch client.
+	lmaclient lmaelastic.Client
+
+	// Track mapping of field name to its index in the ES response.
+	ft *backend.FieldTracker
+}
+
+func NewBackend(c lmaelastic.Client) bapi.ProcessBackend {
+	return &processBackend{
+		lmaclient: c,
+	}
+}
+
+// List returns all flows which match the given options.
+func (b *processBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.ProcessParams) (*v1.List[v1.ProcessInfo], error) {
+	log := bapi.ContextLogger(i)
+
+	if i.Cluster == "" {
+		return nil, fmt.Errorf("no cluster ID provided on request")
+	}
+
+	// Build the query.
+	query, err := b.buildQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get aggregation parameters.
+	aggregation, err := getAggregation(b.lmaclient.Backend())
+	if err != nil {
+		return nil, err
+	}
+
+	// Perform the search.
+	search := b.lmaclient.Backend().Search(b.index(i)).
+		Query(query).
+		Aggregation(sourceNameAggrKey, aggregation).
+		Size(0)
+
+	res, err := search.Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Handle the results.
+	aggItems, found := res.Aggregations.Terms(sourceNameAggrKey)
+	if !found {
+		err := fmt.Errorf("failed to get key %s in aggregation from search results", sourceNameAggrKey)
+		return nil, err
+	}
+
+	processes := []v1.ProcessInfo{}
+	for _, bucket := range aggItems.Buckets {
+		process := b.convertBucket(log, bucket)
+		if process != nil {
+			processes = append(processes, *process)
+		}
+	}
+	return &v1.List[v1.ProcessInfo]{
+		AfterKey: nil, // TODO
+		Items:    processes,
+	}, nil
+}
+
+// convertBucket turns a composite aggregation bucket into an L3Flow.
+func (b *processBackend) convertBucket(log *logrus.Entry, bucket *elastic.AggregationBucketKeyItem) *v1.ProcessInfo {
+	endpoint, ok := bucket.Key.(string)
+	if !ok {
+		log.Warnf("failed to convert bucket key %v to string", bucket.Key)
+		return nil
+	}
+
+	if processNameItems, found := bucket.Aggregations.Terms(processNameKey); !found {
+		log.Warnf("failed to get bucket key %s in sub-aggregation", processNameKey)
+		return nil
+	} else {
+		for _, bb := range processNameItems.Buckets {
+			if processName, ok := bb.Key.(string); !ok {
+				log.Warnf("failed to convert bucket key %v to string", bb.Key)
+				continue
+			} else {
+				if processIDItems, found := bb.Aggregations.Terms(processIDKey); !found {
+					log.Warnf("failed to get bucket key %s in sub-aggregation", processIDKey)
+					continue
+				} else {
+					process := v1.ProcessInfo{
+						Name:     processName,
+						Endpoint: endpoint,
+						Count:    len(processIDItems.Buckets),
+					}
+					return &process
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// buildQuery builds an elastic query using the given parameters.
+func (b *processBackend) buildQuery(i bapi.ClusterInfo, opts *v1.ProcessParams) (elastic.Query, error) {
+	// Start with the base flow log query using common fields.
+	query, err := logtools.BuildQuery(lmaindex.FlowLogs(), i, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Exclude process_name in ["-", "*"] and process_id in "*"
+	excludes := []elastic.Query{
+		elastic.NewTermsQuery("process_name", "-", "*"),
+		elastic.NewTermQuery("process_id", "*"),
+	}
+	query = query.MustNot(excludes...)
+
+	// For process queries, we must always match on resporter = src, since they
+	// are the only logs with process information present.
+	query.Must(elastic.NewTermQuery("reporter", "src"))
+
+	return query, nil
+}
+
+// getAggregation returns the aggregations for flow log elastic search.
+func getAggregation(esClient *elastic.Client) (*elastic.TermsAggregation, error) {
+	// aggregation
+	// "aggs": {
+	//     "agg-source_name_aggr": {
+	//       "terms": {
+	//         "field": "source_name_aggr",
+	//         "size": 1000
+	//       },
+	//       "aggs": {
+	//         "agg-process_name": {
+	//           "terms": {
+	//             "field": "process_name",
+	//             "size": 1000
+	//           },
+	//           "aggs": {
+	//             "agg-process_id": {
+	//               "terms": {
+	//                 "field": "process_id",
+	//                 "size": 1000
+	//               }
+	//             }
+	//           }
+	//         }
+	//       }
+	//     }
+	//   }
+	aggSourceNameAggr := elastic.NewTermsAggregation()
+	aggSourceNameAggr.Field("source_name_aggr")
+	aggSourceNameAggr.Size(defaultAggregationSize)
+
+	aggProcessName := elastic.NewTermsAggregation()
+	aggProcessName.Field("process_name")
+	aggProcessName.Size(defaultAggregationSize)
+	aggSourceNameAggr.SubAggregation(processNameKey, aggProcessName)
+
+	aggProcessID := elastic.NewTermsAggregation()
+	aggProcessID.Field("process_id")
+	aggProcessID.Size(defaultAggregationSize)
+	aggProcessName.SubAggregation(processIDKey, aggProcessID)
+
+	return aggSourceNameAggr, nil
+}
+
+func (b *processBackend) index(i bapi.ClusterInfo) string {
+	if i.Tenant != "" {
+		// If a tenant is provided, then we must include it in the index.
+		return fmt.Sprintf("tigera_secure_ee_flows.%s.%s.*", i.Tenant, i.Cluster)
+	}
+
+	// Otherwise, this is a single-tenant cluster and we only need the cluster.
+	return fmt.Sprintf("tigera_secure_ee_flows.%s.*", i.Cluster)
+}
