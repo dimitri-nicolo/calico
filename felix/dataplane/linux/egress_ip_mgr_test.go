@@ -11,6 +11,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/projectcalico/calico/felix/environment"
+
 	"github.com/golang-collections/collections/stack"
 	log "github.com/sirupsen/logrus"
 
@@ -93,6 +95,7 @@ var _ = Describe("EgressIPManager", func() {
 			healthReportC,
 			ipsets,
 			bpfIPsets,
+			&environment.FakeFeatureDetector{},
 		)
 
 		Expect(healthAgg.Summary().Ready).To(BeFalse())
@@ -1343,7 +1346,8 @@ func (f *mockRouteTableFactory) NewRouteTable(interfacePrefixes []string,
 	deviceRouteSourceAddress net.IP,
 	deviceRouteProtocol int,
 	removeExternalRoutes bool,
-	opRecorder logutils.OpRecorder) routetable.RouteTableInterface {
+	opRecorder logutils.OpRecorder,
+	featureDetector environment.FeatureDetectorIface) routetable.RouteTableInterface {
 
 	table := &mockRouteTable{
 		index:           tableIndex,

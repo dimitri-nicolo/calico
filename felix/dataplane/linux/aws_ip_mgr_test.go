@@ -14,6 +14,8 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
 
+	"github.com/projectcalico/calico/felix/environment"
+
 	"github.com/projectcalico/calico/felix/testutils"
 
 	"github.com/projectcalico/calico/felix/aws"
@@ -101,6 +103,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 			},
 			opRecorder,
 			fakes,
+			fakes.FeatureDetector,
 			OptNetlinkOverride(fakes),
 			OptRouteTableOverride(fakes.NewRouteTable),
 			OptRouteRulesOverride(fakes.NewRouteRules),
@@ -1145,9 +1148,10 @@ func describeAWSIPMgrCommonTests(mode string) {
 func newAWSMgrFakes() *awsIPMgrFakes {
 	errorProd := testutils.NewErrorProducer()
 	return &awsIPMgrFakes{
-		RouteTables: map[int]*fakeRouteTable{},
-		Errors:      errorProd,
-		Neighs:      map[NeighKey]*netlink.Neigh{},
+		RouteTables:     map[int]*fakeRouteTable{},
+		Errors:          errorProd,
+		Neighs:          map[NeighKey]*netlink.Neigh{},
+		FeatureDetector: &environment.FakeFeatureDetector{},
 	}
 }
 
@@ -1162,6 +1166,7 @@ type awsIPMgrFakes struct {
 	Errors               testutils.ErrorProducer
 	DatastoreUpdateCount int
 	DeletedNeighs        []string
+	FeatureDetector      *environment.FakeFeatureDetector
 }
 
 type NeighKey struct {
@@ -1290,7 +1295,8 @@ func (f *awsIPMgrFakes) NewRouteTable(
 	deviceRouteProtocol netlink.RouteProtocol,
 	removeExternalRoutes bool,
 	index int,
-	reporter logutils.OpRecorder) routetable.RouteTableInterface {
+	reporter logutils.OpRecorder,
+	featureDetector environment.FeatureDetectorIface) routetable.RouteTableInterface {
 
 	Expect(version).To(BeNumerically("==", 4))
 	Expect(vxlan).To(BeFalse())

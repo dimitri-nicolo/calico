@@ -163,13 +163,14 @@ func TestFeatureDetection(t *testing.T) {
 			"iptables v1.8.4",
 			"Linux version 5.7.0",
 			Features{
-				RestoreSupportsLock:   true,
-				SNATFullyRandom:       true,
-				MASQFullyRandom:       true,
-				ChecksumOffloadBroken: true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
-				BPFKprobes:            true,
+				RestoreSupportsLock:      true,
+				SNATFullyRandom:          true,
+				MASQFullyRandom:          true,
+				ChecksumOffloadBroken:    true,
+				KernelSideRouteFiltering: true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				BPFKprobes:               true,
 			},
 		},
 	} {
@@ -472,44 +473,48 @@ func TestBPFFeatureDetection(t *testing.T) {
 		{
 			"Linux version 5.10.0 - ubuntu",
 			Features{
-				IPIPDeviceIsL3:        false,
-				BPFKprobes:            true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
-				ChecksumOffloadBroken: true,
+				IPIPDeviceIsL3:           false,
+				BPFKprobes:               true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				ChecksumOffloadBroken:    true,
+				KernelSideRouteFiltering: true,
 			},
 			map[string]string{},
 		},
 		{
 			"Linux version 5.14.0 - something else",
 			Features{
-				IPIPDeviceIsL3:        true,
-				BPFKprobes:            true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
-				ChecksumOffloadBroken: true,
+				IPIPDeviceIsL3:           true,
+				BPFKprobes:               true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				ChecksumOffloadBroken:    true,
+				KernelSideRouteFiltering: true,
 			},
 			map[string]string{},
 		},
 		{
 			"Linux version 5.15.0",
 			Features{
-				IPIPDeviceIsL3:        true,
-				BPFKprobes:            true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
-				ChecksumOffloadBroken: true,
+				IPIPDeviceIsL3:           true,
+				BPFKprobes:               true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				ChecksumOffloadBroken:    true,
+				KernelSideRouteFiltering: true,
 			},
 			map[string]string{},
 		},
 		{
 			"Linux version 5.10.0 - Default",
 			Features{
-				IPIPDeviceIsL3:        true,
-				BPFKprobes:            true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
-				ChecksumOffloadBroken: true,
+				IPIPDeviceIsL3:           true,
+				BPFKprobes:               true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				ChecksumOffloadBroken:    true,
+				KernelSideRouteFiltering: true,
 			},
 			map[string]string{
 				"IPIPDeviceIsL3": "true",
@@ -518,11 +523,12 @@ func TestBPFFeatureDetection(t *testing.T) {
 		{
 			"Linux version 5.14.0",
 			Features{
-				IPIPDeviceIsL3:        false,
-				BPFKprobes:            true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
-				ChecksumOffloadBroken: true,
+				IPIPDeviceIsL3:           false,
+				BPFKprobes:               true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				ChecksumOffloadBroken:    true,
+				KernelSideRouteFiltering: true,
 			},
 			map[string]string{
 				"IPIPDeviceIsL3": "false",
@@ -531,11 +537,12 @@ func TestBPFFeatureDetection(t *testing.T) {
 		{
 			"Linux version 5.16.0 - Ubuntu",
 			Features{
-				IPIPDeviceIsL3:        false,
-				BPFKprobes:            true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
-				ChecksumOffloadBroken: true,
+				IPIPDeviceIsL3:           false,
+				BPFKprobes:               true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				ChecksumOffloadBroken:    true,
+				KernelSideRouteFiltering: true,
 			},
 			map[string]string{
 				"IPIPDeviceIsL3": "false",
@@ -544,44 +551,48 @@ func TestBPFFeatureDetection(t *testing.T) {
 		{
 			"Linux version 4.18.0 - Red Hat",
 			Features{
-				ChecksumOffloadBroken: true,
-				IPIPDeviceIsL3:        false,
-				BPFKprobes:            true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
+				ChecksumOffloadBroken:    true,
+				IPIPDeviceIsL3:           false,
+				BPFKprobes:               true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				KernelSideRouteFiltering: true,
 			},
 			map[string]string{},
 		},
 		{
 			"Linux version 4.18.0-330 - Red Hat",
 			Features{
-				ChecksumOffloadBroken: true,
-				IPIPDeviceIsL3:        true,
-				BPFKprobes:            true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
+				ChecksumOffloadBroken:    true,
+				IPIPDeviceIsL3:           true,
+				BPFKprobes:               true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				KernelSideRouteFiltering: true,
 			},
 			map[string]string{},
 		},
 		{
 			"Linux version 4.18.0-420 - Red hat",
 			Features{
-				ChecksumOffloadBroken: true,
-				IPIPDeviceIsL3:        true,
-				BPFKprobes:            true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
+				ChecksumOffloadBroken:    true,
+				IPIPDeviceIsL3:           true,
+				BPFKprobes:               true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				KernelSideRouteFiltering: true,
 			},
 			map[string]string{},
 		},
 		{
 			"Linux version 4.17.0 - el8_3",
 			Features{
-				ChecksumOffloadBroken: true,
-				IPIPDeviceIsL3:        true,
-				BPFKprobes:            true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
+				ChecksumOffloadBroken:    true,
+				IPIPDeviceIsL3:           true,
+				BPFKprobes:               true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				KernelSideRouteFiltering: true,
 			},
 			map[string]string{
 				"IPIPDeviceIsL3": "true",
@@ -590,11 +601,12 @@ func TestBPFFeatureDetection(t *testing.T) {
 		{
 			"Linux version 4.18.0-330 - el8_5",
 			Features{
-				ChecksumOffloadBroken: true,
-				IPIPDeviceIsL3:        false,
-				BPFKprobes:            true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
+				ChecksumOffloadBroken:    true,
+				IPIPDeviceIsL3:           false,
+				BPFKprobes:               true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				KernelSideRouteFiltering: true,
 			},
 			map[string]string{
 				"IPIPDeviceIsL3": "false",
@@ -603,11 +615,12 @@ func TestBPFFeatureDetection(t *testing.T) {
 		{
 			"Linux version 4.18.0-390 - el9_7",
 			Features{
-				ChecksumOffloadBroken: true,
-				IPIPDeviceIsL3:        false,
-				BPFKprobes:            true,
-				NFLogSize:             true,
-				NFQueueBypass:         true,
+				ChecksumOffloadBroken:    true,
+				IPIPDeviceIsL3:           false,
+				BPFKprobes:               true,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				KernelSideRouteFiltering: true,
 			},
 			map[string]string{
 				"IPIPDeviceIsL3": "false",
@@ -616,6 +629,8 @@ func TestBPFFeatureDetection(t *testing.T) {
 	} {
 		t.Run("kernel "+tst.kernelVersion, func(t *testing.T) {
 			RegisterTestingT(t)
+			dataplane := testutils.NewMockDataplane("filter", map[string][]string{}, "legacy")
+			dataplane.Version = "iptables v1.4.4"
 			featureDetector := NewFeatureDetector(nil)
 			if tst.override != nil {
 				featureDetector = NewFeatureDetector(tst.override)
@@ -623,6 +638,7 @@ func TestBPFFeatureDetection(t *testing.T) {
 			kernel := mockKernelVersion{
 				kernelVersion: tst.kernelVersion,
 			}
+			featureDetector.NewCmd = dataplane.NewCmd
 			featureDetector.GetKernelVersionReader = kernel.GetKernelVersionReader
 			Expect(featureDetector.GetFeatures()).To(Equal(&tst.features))
 		})

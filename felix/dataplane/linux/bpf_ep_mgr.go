@@ -261,6 +261,7 @@ func newBPFEndpointManager(
 	iptablesFilterTable iptablesTable,
 	livenessCallback func(),
 	opReporter logutils.OpRecorder,
+	featureDetector environment.FeatureDetectorIface,
 
 	// CaliEnt args below
 
@@ -368,8 +369,9 @@ func newBPFEndpointManager(
 			nil, // deviceRouteSourceAddress
 			config.DeviceRouteProtocol,
 			true, // removeExternalRoutes
-			254,
+			unix.RT_TABLE_MAIN,
 			opReporter,
+			featureDetector,
 		)
 		m.services = make(map[serviceKey][]ip.V4CIDR)
 		m.dirtyServices = set.New[serviceKey]()
