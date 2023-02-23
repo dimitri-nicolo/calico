@@ -5,6 +5,7 @@
 package fv_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -338,5 +339,64 @@ func TestFV_EEAuditIngestion(t *testing.T) {
 		}
 
 		assert.Equal(t, eeAuditLogs, strings.Join(esLogs, "\n"))
+	})
+}
+
+func TestFV_BGPIngestion(t *testing.T) {
+	addr := "https://localhost:8444/api/v1/bgp/logs/bulk"
+	tenant := ""
+	expectedResponse := `{"failed":0, "succeeded":4, "total":4}`
+	indexPrefix := "tigera_secure_ee_bgp."
+
+	t.Run("ingest bgp logs via bulk API with production data", func(t *testing.T) {
+		// Create a random cluster name for each test to make sure we don't
+		// interfere between tests.
+		cluster = testutils.RandomClusterName()
+		defer ingestionSetupAndTeardown(t, indexPrefix, cluster)()
+
+		// setup HTTP httpClient and HTTP request
+		httpClient := secureHTTPClient(t)
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(bgpLogs))
+
+		// make the request to ingest flows
+		res, resBody := doRequest(t, httpClient, spec)
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
+
+		// Force a refresh in order to read the newly ingested data
+		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
+		_, err := esClient.Refresh(index).Do(ctx)
+		require.NoError(t, err)
+
+		startTime, err := time.Parse(v1.BGPLogTimeFormat, "2023-02-23T00:10:46")
+		require.NoError(t, err)
+		endTime, err := time.Parse(v1.BGPLogTimeFormat, "2023-02-23T00:15:46")
+		require.NoError(t, err)
+		params := v1.BGPLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: startTime,
+					To:   endTime,
+				},
+			},
+		}
+
+		resultList, err := cli.BGPLogs(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.NotNil(t, resultList)
+
+		require.Equal(t, int64(4), resultList.TotalHits)
+
+		var esLogs []string
+		for _, log := range resultList.Items {
+			buffer := &bytes.Buffer{}
+			encoder := json.NewEncoder(buffer)
+			encoder.SetEscapeHTML(false)
+			err := encoder.Encode(log)
+			require.NoError(t, err)
+			esLogs = append(esLogs, strings.Trim(string(buffer.Bytes()), "\n"))
+		}
+
+		assert.Equal(t, bgpLogs, strings.Join(esLogs, "\n"))
 	})
 }

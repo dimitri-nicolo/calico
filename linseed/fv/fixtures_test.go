@@ -30,3 +30,8 @@ var eeAuditLogs string
 //
 //go:embed testdata/backend/kube_audit_logs_legacy.txt
 var kubeAuditLogs string
+
+// bgpLogs is a sample bgp logs to be ingested for testing purposes
+//
+//go:embed testdata/backend/bgp_logs_legacy.txt
+var bgpLogs string

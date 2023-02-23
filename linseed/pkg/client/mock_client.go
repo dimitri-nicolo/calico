@@ -58,6 +58,11 @@ func (c *mockClient) AuditLogs(cluster string) AuditLogsInterface {
 	return newAuditLogs(c, cluster)
 }
 
+// BGPLogs returns an interface for managing v1.BGPLog resources.
+func (c *mockClient) BGPLogs(cluster string) BGPLogsInterface {
+	return newBGPLogs(c, cluster)
+}
+
 func NewMockClient(tenantID string, results ...rest.MockResult) MockClient {
 	return &mockClient{
 		restClient: rest.NewMockClient(results...),

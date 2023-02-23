@@ -10,16 +10,16 @@ const (
 
 // BGPLogTimeFormat is the expected format to use for LogTime on BGP logs.
 // For golang, e.g., LogTime: time.Format(v1.BGPLogTimeFormat)
-const BGPLogTimeFormat = "2006-01-02T03:04:05"
+const BGPLogTimeFormat = "2006-01-02T15:04:05"
 
 type BGPLog struct {
 	LogTime   string          `json:"logtime"`
 	Message   string          `json:"message"`
-	IPVersion BGPLogIPVersion `json:"ip_version"`
 	Host      string          `json:"host"`
+	IPVersion BGPLogIPVersion `json:"ip_version"`
 }
 
 // BGPLogParams define querying parameters to retrieve BGP logs
 type BGPLogParams struct {
-	QueryParams *QueryParams `json:"query_params" validate:"required"`
+	QueryParams `json:",inline" validate:"required"`
 }

@@ -34,3 +34,8 @@ func Unmarshal(data []byte, v any) error {
 func NewDecoder(reader io.Reader) *jsoniter.Decoder {
 	return jsoniter.NewDecoder(reader)
 }
+
+// NewEncoder will return a jsoniter encoder
+func NewEncoder(writer io.Writer) *jsoniter.Encoder {
+	return jsoniter.NewEncoder(writer)
+}

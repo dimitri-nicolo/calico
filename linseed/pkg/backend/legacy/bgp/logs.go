@@ -55,6 +55,7 @@ func (b *bgpLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 
 	for _, f := range logs {
 		// Add this log to the bulk request.
+		// f.IngestApp = "linseed"
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(f)
 		bulk.Add(req)
 	}
@@ -110,8 +111,9 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.BGP
 	}
 
 	return &v1.List[v1.BGPLog]{
-		Items:    logs,
-		AfterKey: nil, // TODO: Support pagination.
+		TotalHits: int64(len(logs)),
+		Items:     logs,
+		AfterKey:  nil, // TODO: Support pagination.
 	}, nil
 }
 
@@ -120,7 +122,7 @@ func (b *bgpLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.BGPLogParams) ela
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
 	var start, end time.Time
-	if opts.QueryParams != nil && opts.QueryParams.TimeRange != nil {
+	if opts.QueryParams.TimeRange != nil {
 		start = opts.QueryParams.TimeRange.From
 		end = opts.QueryParams.TimeRange.To
 	} else {

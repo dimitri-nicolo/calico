@@ -13,12 +13,15 @@ import (
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/handler/audit"
+	"github.com/projectcalico/calico/linseed/pkg/handler/bgp"
 	"github.com/projectcalico/calico/linseed/pkg/handler/dns"
+	"github.com/projectcalico/calico/linseed/pkg/handler/events"
 	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
 	"github.com/projectcalico/calico/linseed/pkg/handler/l7"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 
+	bgpbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/bgp"
 	dnsbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/dns"
 	eventbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/events"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
@@ -26,8 +29,6 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/linseed/pkg/handler/events"
 
 	auditbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/audit"
 
@@ -64,6 +65,7 @@ func main() {
 	l7FlowBackend := l7backend.NewL7FlowBackend(esClient)
 	l7LogBackend := l7backend.NewL7LogBackend(esClient, cache)
 	auditBackend := auditbackend.NewBackend(esClient, cache)
+	bgpBackend := bgpbackend.NewBackend(esClient, cache)
 
 	// Start server, adding in handlers for the various API endpoints.
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
@@ -75,6 +77,7 @@ func main() {
 			dns.New(dnsFlowBackend, dnsLogBackend),
 			events.New(eventBackend),
 			audit.New(auditBackend),
+			bgp.New(bgpBackend),
 		)...),
 		server.WithRoutes(server.UtilityRoutes()...),
 	)

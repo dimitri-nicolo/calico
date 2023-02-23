@@ -16,6 +16,7 @@ type Client interface {
 	DNSLogs(string) DNSLogsInterface
 	Events(string) EventsInterface
 	AuditLogs(string) AuditLogsInterface
+	BGPLogs(string) BGPLogsInterface
 }
 
 type client struct {
@@ -65,6 +66,11 @@ func (c *client) L7Logs(cluster string) L7LogsInterface {
 // AuditLogs returns an interface for managing v1.AuditLog resources.
 func (c *client) AuditLogs(cluster string) AuditLogsInterface {
 	return newAuditLogs(c, cluster)
+}
+
+// BGPLogs returns an interface for managing v1.BGPLog resources.
+func (c *client) BGPLogs(cluster string) BGPLogsInterface {
+	return newBGPLogs(c, cluster)
 }
 
 func NewClient(tenantID string, cfg rest.Config) (Client, error) {
