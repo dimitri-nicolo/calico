@@ -17,29 +17,24 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/sys/unix"
-
-	"github.com/projectcalico/calico/felix/environment"
-
-	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
-	"github.com/projectcalico/calico/felix/ipsets"
-	"github.com/projectcalico/calico/felix/rules"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/libcalico-go/lib/names"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
+	"github.com/golang-collections/collections/stack"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 
-	"github.com/golang-collections/collections/stack"
-
+	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
+	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/ethtool"
 	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/routerule"
 	"github.com/projectcalico/calico/felix/routetable"
+	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // Egress IP manager watches EgressIPSet and WEP updates.

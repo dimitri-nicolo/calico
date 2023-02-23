@@ -653,7 +653,7 @@ func (r *RouteTable) Apply() error {
 			lastTry := retry == maxApplyRetries-1
 			fullResync := ia == updateTypeFullResync || lastTry
 			var err error
-			if r.tableIndex == unix.RT_TABLE_UNSPEC && r.vxlan && ifaceName != InterfaceNone {
+			if r.tableIndex == unix.RT_TABLE_MAIN && r.vxlan && ifaceName != InterfaceNone {
 				// Sync L2 routes first.
 				err = r.syncL2RoutesForLink(ifaceName)
 			}
