@@ -12,6 +12,10 @@ import (
 	"testing"
 	"time"
 
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/sirupsen/logrus"
@@ -26,7 +30,6 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -60,7 +63,7 @@ func setupTest(t *testing.T) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = testutils.RandomClusterName()
+	cluster = backendutils.RandomClusterName()
 
 	// Set a timeout for each test.
 	var cancel context.CancelFunc
@@ -72,7 +75,7 @@ func setupTest(t *testing.T) func() {
 		cancel()
 
 		// Cleanup any data that might left over from a previous failed run.
-		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_flows.%s", cluster))
+		err = backendutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_flows.%s", cluster))
 		require.NoError(t, err)
 
 		// Cancel logging
@@ -547,7 +550,7 @@ func TestFlowFiltering(t *testing.T) {
 						// Match the first flow's profile hit. This match returns all "unprotected"
 						// flows in all namespaces.
 						Tier:   "__PROFILE__",
-						Action: testutils.ActionPtr(v1.FlowActionAllow),
+						Action: ActionPtr(v1.FlowActionAllow),
 					},
 				},
 			},
@@ -571,7 +574,7 @@ func TestFlowFiltering(t *testing.T) {
 						// flows from the openshift-dns namespace.
 						Tier:   "__PROFILE__",
 						Name:   testutils.StringPtr("kns.openshift-dns"),
-						Action: testutils.ActionPtr(v1.FlowActionAllow),
+						Action: ActionPtr(v1.FlowActionAllow),
 					},
 				},
 			},
@@ -601,7 +604,7 @@ func TestFlowFiltering(t *testing.T) {
 				PolicyMatches: []v1.PolicyMatch{
 					{
 						Tier:   "allow-tigera",
-						Action: testutils.ActionPtr(v1.FlowActionAllow),
+						Action: ActionPtr(v1.FlowActionAllow),
 					},
 				},
 			},
@@ -688,7 +691,7 @@ func TestFlowFiltering(t *testing.T) {
 						// Match the first flow's profile hit.
 						Tier:   "__PROFILE__",
 						Name:   testutils.StringPtr("kns.openshift-dns"),
-						Action: testutils.ActionPtr(v1.FlowActionAllow),
+						Action: ActionPtr(v1.FlowActionAllow),
 					},
 				},
 			},
@@ -1008,10 +1011,14 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *flowLogBuilder, cli
 		}
 	}
 	require.NotEqual(t, "", index)
-	err = testutils.RefreshIndex(ctx, client, index)
+	err = backendutils.RefreshIndex(ctx, client, index)
 	require.NoError(t, err)
 
 	// Return the expected flow based on the batch of flows we created above.
 	expected := b.ExpectedFlow(t)
 	return *expected
+}
+
+func ActionPtr(val v1.FlowAction) *v1.FlowAction {
+	return &val
 }

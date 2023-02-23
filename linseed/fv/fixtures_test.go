@@ -6,17 +6,27 @@ package fv_test
 
 import _ "embed"
 
-// flowLogsLinux is a sample flow logs to be ingested for testing purposes
+// flowLogs is a sample flow logs to be ingested for testing purposes
 //
-//go:embed testdata/backend/flow_logs_legacy_linux.txt
-var flowLogsLinux string
+//go:embed testdata/backend/flow_logs_legacy.txt
+var flowLogs string
 
-// dnsLogsLinux is a sample flow logs to be ingested for testing purposes
+// dnsLogs is a sample flow logs to be ingested for testing purposes
 //
-//go:embed testdata/backend/dns_logs_legacy_linux.txt
-var dnsLogsLinux string
+//go:embed testdata/backend/dns_logs_legacy.txt
+var dnsLogs string
 
-// l7LogsLinux is a sample l7 logs to be ingested for testing purposes
+// l7Logs is a sample l7 logs to be ingested for testing purposes
 //
-//go:embed testdata/backend/l7_logs_legacy_linux.txt
-var l7LogsLinux string
+//go:embed testdata/backend/l7_logs_legacy.txt
+var l7Logs string
+
+// eeAuditLogs is a sample ee audit logs to be ingested for testing purposes
+//
+//go:embed testdata/backend/ee_audit_logs_legacy.txt
+var eeAuditLogs string
+
+// kubeAuditLogs is a sample kube audit logs to be ingested for testing purposes
+//
+//go:embed testdata/backend/kube_audit_logs_legacy.txt
+var kubeAuditLogs string

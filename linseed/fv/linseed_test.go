@@ -7,23 +7,20 @@ package fv_test
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/olivere/elastic/v7"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 
 	"github.com/stretchr/testify/assert"
 )
-
-var esClient *elastic.Client
 
 func setupLinseedFV(t *testing.T) func() {
 	// Hook logrus into testing.T
@@ -33,25 +30,22 @@ func setupLinseedFV(t *testing.T) func() {
 	// Random cluster name to prevent overlap with other tests.
 	cluster = testutils.RandomClusterName()
 
-	// Create an elastic client for the tests.
-	var err error
-	elasticEndpoint := "http://localhost:9200"
-	esClient, err = elastic.NewClient(
-		elastic.SetURL(elasticEndpoint),
-		elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)),
-		elastic.SetInfoLog(log.New(os.Stdout, "", log.LstdFlags)))
-	require.NoError(t, err)
+	// Set up context with a timeout.
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 
 	return func() {
 		// Cleanup any data that might left over from a previous failed run.
 		err := testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_flows.%s", cluster))
 		require.NoError(t, err)
 		logCancel()
+		cancel()
 	}
 }
 
 func TestFV_Linseed(t *testing.T) {
 	addr := "localhost:8444"
+	cluster := "cluster"
 	tenant := ""
 
 	tests := []struct {

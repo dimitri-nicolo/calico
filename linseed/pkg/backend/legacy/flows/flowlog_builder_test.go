@@ -8,11 +8,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	_ "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 	lmaapi "github.com/projectcalico/calico/lma/pkg/api"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
 )
 
 func NewFlowLogBuilder() *flowLogBuilder {

@@ -11,9 +11,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -167,7 +167,7 @@ func TestFlowLogs_Bulk(t *testing.T) {
 			if tt.want.wantErr {
 				wantBody = tt.want.errorMsg
 			} else {
-				wantBody = testutils.MarshalBulkResponse(t, tt.backendResponse)
+				wantBody = testutils.Marshal(t, tt.backendResponse)
 			}
 			assert.Equal(t, tt.want.httpStatus, rec.Result().StatusCode)
 			assert.JSONEq(t, wantBody, string(bodyBytes))

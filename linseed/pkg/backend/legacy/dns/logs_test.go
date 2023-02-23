@@ -50,7 +50,6 @@ func TestCreateDNSLog(t *testing.T) {
 				Labels: map[string]string{"app": "dns"},
 			},
 		},
-		RRSets: v1.DNSRRSets{},
 		Latency: v1.DNSLatency{
 			Count: 15,
 			Mean:  5 * time.Second,

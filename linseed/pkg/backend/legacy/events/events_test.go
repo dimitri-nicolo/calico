@@ -8,6 +8,10 @@ import (
 	"testing"
 	"time"
 
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
+
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -19,7 +23,6 @@ import (
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/events"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -51,7 +54,7 @@ func setupTest(t *testing.T) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = testutils.RandomClusterName()
+	cluster = backendutils.RandomClusterName()
 
 	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc
@@ -59,7 +62,7 @@ func setupTest(t *testing.T) func() {
 
 	// Function contains teardown logic.
 	return func() {
-		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_events.%s", cluster))
+		err = backendutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_events.%s", cluster))
 		require.NoError(t, err)
 
 		cancel()
@@ -102,7 +105,7 @@ func TestCreateEvent(t *testing.T) {
 	require.Equal(t, 1, resp.Succeeded)
 
 	// Refresh the index.
-	err = testutils.RefreshIndex(ctx, client, "tigera_secure_ee_events.*")
+	err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_events.*")
 	require.NoError(t, err)
 
 	// List the events and make sure the one we created is present.

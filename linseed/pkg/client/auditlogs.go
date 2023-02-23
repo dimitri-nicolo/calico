@@ -4,10 +4,9 @@ package client
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
-
-	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
@@ -15,8 +14,8 @@ import (
 
 // AuditLogsInterface has methods related to audit logs.
 type AuditLogsInterface interface {
-	List(context.Context, v1.Params) (*v1.List[auditv1.Event], error)
-	Create(context.Context, []auditv1.Event) (*v1.BulkResponse, error)
+	List(context.Context, v1.Params) (*v1.List[v1.AuditLog], error)
+	Create(context.Context, v1.AuditLogType, []v1.AuditLog) (*v1.BulkResponse, error)
 }
 
 // AuditLogs implements AuditLogsInterface.
@@ -31,10 +30,10 @@ func newAuditLogs(c Client, cluster string) AuditLogsInterface {
 }
 
 // List gets the audit for the given input params.
-func (f *audit) List(ctx context.Context, params v1.Params) (*v1.List[auditv1.Event], error) {
-	logs := v1.List[auditv1.Event]{}
+func (f *audit) List(ctx context.Context, params v1.Params) (*v1.List[v1.AuditLog], error) {
+	logs := v1.List[v1.AuditLog]{}
 	err := f.restClient.Post().
-		Path("/audit").
+		Path("/audit/logs").
 		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).
@@ -45,7 +44,7 @@ func (f *audit) List(ctx context.Context, params v1.Params) (*v1.List[auditv1.Ev
 	return &logs, nil
 }
 
-func (f *audit) Create(ctx context.Context, auditl []auditv1.Event) (*v1.BulkResponse, error) {
+func (f *audit) Create(ctx context.Context, logType v1.AuditLogType, auditl []v1.AuditLog) (*v1.BulkResponse, error) {
 	var err error
 	body := []byte{}
 	for _, e := range auditl {
@@ -65,7 +64,7 @@ func (f *audit) Create(ctx context.Context, auditl []auditv1.Event) (*v1.BulkRes
 
 	resp := v1.BulkResponse{}
 	err = f.restClient.Post().
-		Path("/auditl/bulk").
+		Path(fmt.Sprintf("/audit/logs/%s/bulk", logType)).
 		Cluster(f.clusterID).
 		BodyJSON(body).
 		ContentType(rest.ContentTypeMultilineJSON).

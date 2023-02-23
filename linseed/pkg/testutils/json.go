@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
@@ -20,7 +18,7 @@ func MustUnmarshalToMap(t *testing.T, source string) map[string]interface{} {
 	return val
 }
 
-func MarshalBulkResponse(t *testing.T, response *v1.BulkResponse) string {
+func Marshal(t *testing.T, response interface{}) string {
 	newData, err := json.Marshal(response)
 	require.NoError(t, err)
 

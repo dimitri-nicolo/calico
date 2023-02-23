@@ -5,8 +5,6 @@ package api
 import (
 	"context"
 
-	"k8s.io/apiserver/pkg/apis/audit"
-
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -55,10 +53,10 @@ type DNSLogBackend interface {
 // AuditBackend defines the interface for interacting with audit logs.
 type AuditBackend interface {
 	// Create creates the given logs.
-	Create(context.Context, v1.AuditLogType, ClusterInfo, []audit.Event) (*v1.BulkResponse, error)
+	Create(context.Context, v1.AuditLogType, ClusterInfo, []v1.AuditLog) (*v1.BulkResponse, error)
 
 	// List lists logs that match the given parameters.
-	List(context.Context, ClusterInfo, v1.AuditLogParams) (*v1.List[audit.Event], error)
+	List(context.Context, ClusterInfo, v1.AuditLogParams) (*v1.List[v1.AuditLog], error)
 }
 
 // BGPBackend defines the interface for interacting with bgp logs.

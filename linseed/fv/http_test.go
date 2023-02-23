@@ -50,19 +50,6 @@ func noBodyHTTPReqSpec(method, url, tenant, cluster string) httpReqSpec {
 	}
 }
 
-func jsonPostHTTPReqSpec(url, tenant, cluster string, body []byte) httpReqSpec {
-	return httpReqSpec{
-		method: "POST",
-		url:    url,
-		headers: map[string]string{
-			"x-cluster-id": cluster,
-			"x-tenant-id":  tenant,
-			"Content-Type": "application/json",
-		},
-		body: body,
-	}
-}
-
 func xndJSONPostHTTPReqSpec(url, tenant, cluster string, body []byte) httpReqSpec {
 	return httpReqSpec{
 		method: "POST",

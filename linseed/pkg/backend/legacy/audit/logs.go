@@ -11,11 +11,6 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apiserver/pkg/apis/audit"
-
-	kaudit "k8s.io/apiserver/pkg/audit"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -39,7 +34,7 @@ func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.AuditBackend {
 }
 
 // Create the given logs in elasticsearch.
-func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i bapi.ClusterInfo, logs []audit.Event) (*v1.BulkResponse, error) {
+func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i bapi.ClusterInfo, logs []v1.AuditLog) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -71,15 +66,7 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 	bulk := b.client.Bulk()
 
 	for _, f := range logs {
-		// Kubernetes audit.Event objects require special serialization that differs from the
-		// default json implementation. So use that here. This is taken from the k8s source:
-		// https://github.com/kubernetes/kubernetes/blob/v1.25.0/staging/src/k8s.io/apiserver/plugin/pkg/audit/log/backend.go#L76-L81
-		groupVersion := schema.GroupVersion{
-			Group:   "audit.k8s.io",
-			Version: "v1",
-		}
-		encoder := kaudit.Codecs.LegacyCodec(groupVersion)
-		bs, err := runtime.Encode(encoder, &f)
+		bs, err := f.MarshalJSON()
 		if err != nil {
 			return nil, err
 		}
@@ -110,7 +97,7 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 }
 
 // List lists logs that match the given parameters.
-func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.AuditLogParams) (*v1.List[audit.Event], error) {
+func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.AuditLogParams) (*v1.List[v1.AuditLog], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -137,9 +124,9 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.A
 		return nil, err
 	}
 
-	events := []audit.Event{}
+	events := []v1.AuditLog{}
 	for _, h := range results.Hits.Hits {
-		e := audit.Event{}
+		e := v1.AuditLog{}
 		err = json.Unmarshal(h.Source, &e)
 		if err != nil {
 			log.WithError(err).Error("Error unmarshalling audit log")
@@ -148,9 +135,10 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.A
 		events = append(events, e)
 	}
 
-	return &v1.List[audit.Event]{
-		Items:    events,
-		AfterKey: nil, // TODO: Support pagination.
+	return &v1.List[v1.AuditLog]{
+		TotalHits: int64(len(events)),
+		Items:     events,
+		AfterKey:  nil, // TODO: Support pagination.
 	}, nil
 }
 

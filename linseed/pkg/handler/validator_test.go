@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"

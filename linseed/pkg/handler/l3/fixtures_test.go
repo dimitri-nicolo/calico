@@ -4,7 +4,7 @@ package l3_test
 
 import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 )
 
 const dummyURL = "anyURL"

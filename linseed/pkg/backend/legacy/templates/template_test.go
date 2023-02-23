@@ -6,14 +6,17 @@ import (
 	"fmt"
 	"testing"
 
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
+
 	"github.com/stretchr/testify/require"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 )
 
 func TestBoostrapFlowsTemplate(t *testing.T) {
-	cluster := testutils.RandomClusterName()
+	cluster := backendutils.RandomClusterName()
 
 	settings := fmt.Sprintf(`{
 "lifecycle": {
@@ -38,7 +41,7 @@ func TestBoostrapFlowsTemplate(t *testing.T) {
 }
 
 func TestBoostrapDNSTemplate(t *testing.T) {
-	cluster := testutils.RandomClusterName()
+	cluster := backendutils.RandomClusterName()
 
 	expectedTemplate := &Template{
 		IndexPatterns: []string{"tigera_secure_ee_dns*"},
@@ -62,7 +65,7 @@ func TestBoostrapDNSTemplate(t *testing.T) {
 }
 
 func TestBoostrapEEAuditTemplate(t *testing.T) {
-	cluster := testutils.RandomClusterName()
+	cluster := backendutils.RandomClusterName()
 
 	settings := fmt.Sprintf(`{
 "lifecycle": {
@@ -87,7 +90,7 @@ func TestBoostrapEEAuditTemplate(t *testing.T) {
 }
 
 func TestBoostrapKUBEAuditTemplate(t *testing.T) {
-	cluster := testutils.RandomClusterName()
+	cluster := backendutils.RandomClusterName()
 
 	settings := fmt.Sprintf(`{
 "lifecycle": {

@@ -10,7 +10,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
@@ -192,6 +192,8 @@ func TestBulkIngestion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer setupTest(t)()
+
 			b := bulkDNSLogs(tt.backendResponse, tt.backendError)
 
 			rec := httptest.NewRecorder()
@@ -208,7 +210,7 @@ func TestBulkIngestion(t *testing.T) {
 			if tt.want.wantErr {
 				wantBody = tt.want.errorMsg
 			} else {
-				wantBody = testutils.MarshalBulkResponse(t, tt.backendResponse)
+				wantBody = testutils.Marshal(t, tt.backendResponse)
 			}
 			assert.Equal(t, tt.want.httpStatus, rec.Result().StatusCode)
 			assert.JSONEq(t, wantBody, string(bodyBytes))

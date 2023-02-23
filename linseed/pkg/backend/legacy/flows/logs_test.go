@@ -6,7 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
+
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -196,7 +199,7 @@ func TestFlowLogFiltering(t *testing.T) {
 			require.Equal(t, []v1.BulkError(nil), response.Errors)
 			require.Equal(t, 0, response.Failed)
 
-			err = testutils.RefreshIndex(ctx, client, "tigera_secure_ee_flows.*")
+			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_flows.*")
 			require.NoError(t, err)
 
 			// Query for flow logs.

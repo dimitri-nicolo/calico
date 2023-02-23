@@ -8,6 +8,10 @@ import (
 	"testing"
 	"time"
 
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/sirupsen/logrus"
@@ -30,7 +34,6 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/audit"
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -60,16 +63,16 @@ func setupTest(t *testing.T) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = testutils.RandomClusterName()
+	cluster = backendutils.RandomClusterName()
 
 	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Minute)
 
 	// Function contains teardown logic.
 	return func() {
-		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_audit_kube.%s", cluster))
+		err = backendutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_audit_kube.%s", cluster))
 		require.NoError(t, err)
-		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_audit_ee.%s", cluster))
+		err = backendutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_audit_ee.%s", cluster))
 		require.NoError(t, err)
 
 		// Cancel the context
@@ -91,46 +94,49 @@ func TestCreateKubeAuditLog(t *testing.T) {
 	dsRaw, err := json.Marshal(ds)
 	require.NoError(t, err)
 
-	f := kaudit.Event{
-		TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
-		AuditID:    types.UID("some-uuid-most-likely"),
-		Stage:      kaudit.StageRequestReceived,
-		RequestURI: "/apis/v1/namespaces",
-		Verb:       "GET",
-		User: authnv1.UserInfo{
-			Username: "user",
-			UID:      "uid",
-			Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+	f := v1.AuditLog{
+		Event: kaudit.Event{
+			TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+			AuditID:    types.UID("some-uuid-most-likely"),
+			Stage:      kaudit.StageRequestReceived,
+			RequestURI: "/apis/v1/namespaces",
+			Verb:       "GET",
+			User: authnv1.UserInfo{
+				Username: "user",
+				UID:      "uid",
+				Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+			},
+			ImpersonatedUser: &authnv1.UserInfo{
+				Username: "impuser",
+				UID:      "impuid",
+				Groups:   []string{"g1"},
+			},
+			SourceIPs:      []string{"1.2.3.4"},
+			UserAgent:      "user-agent",
+			ObjectRef:      &kaudit.ObjectReference{},
+			ResponseStatus: &metav1.Status{},
+			RequestObject: &runtime.Unknown{
+				Raw:         dsRaw,
+				ContentType: runtime.ContentTypeJSON,
+			},
+			ResponseObject: &runtime.Unknown{
+				Raw:         dsRaw,
+				ContentType: runtime.ContentTypeJSON,
+			},
+			RequestReceivedTimestamp: metav1.NewMicroTime(time.Now().Add(-5 * time.Second)),
+			StageTimestamp:           metav1.NewMicroTime(time.Now()),
+			Annotations:              map[string]string{"brick": "red"},
 		},
-		ImpersonatedUser: &authnv1.UserInfo{
-			Username: "impuser",
-			UID:      "impuid",
-			Groups:   []string{"g1"},
-		},
-		SourceIPs:      []string{"1.2.3.4"},
-		UserAgent:      "user-agent",
-		ObjectRef:      &kaudit.ObjectReference{},
-		ResponseStatus: &metav1.Status{},
-		RequestObject: &runtime.Unknown{
-			Raw:         dsRaw,
-			ContentType: runtime.ContentTypeJSON,
-		},
-		ResponseObject: &runtime.Unknown{
-			Raw:         dsRaw,
-			ContentType: runtime.ContentTypeJSON,
-		},
-		RequestReceivedTimestamp: metav1.NewMicroTime(time.Now().Add(-5 * time.Second)),
-		StageTimestamp:           metav1.NewMicroTime(time.Now()),
-		Annotations:              map[string]string{"brick": "red"},
+		Name: testutils.StringPtr("any"),
 	}
 
 	// Create the event in ES.
-	resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []kaudit.Event{f})
+	resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []v1.AuditLog{f})
 	require.NoError(t, err)
 	require.Equal(t, 0, len(resp.Errors))
 
 	// Refresh the index.
-	err = testutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_audit_kube.%s.*", clusterInfo.Cluster))
+	err = backendutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_audit_kube.%s.*", clusterInfo.Cluster))
 	require.NoError(t, err)
 
 	// List the event, assert that it matches the one we just wrote.
@@ -159,46 +165,49 @@ func TestCreateEEAuditLog(t *testing.T) {
 	objRaw, err := json.Marshal(obj)
 	require.NoError(t, err)
 
-	f := kaudit.Event{
-		TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
-		AuditID:    types.UID("some-uuid-most-likely"),
-		Stage:      kaudit.StageRequestReceived,
-		RequestURI: "/apis/v3/projectcalico.org",
-		Verb:       "PUT",
-		User: authnv1.UserInfo{
-			Username: "user",
-			UID:      "uid",
-			Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+	f := v1.AuditLog{
+		Event: kaudit.Event{
+			TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+			AuditID:    types.UID("some-uuid-most-likely"),
+			Stage:      kaudit.StageRequestReceived,
+			RequestURI: "/apis/v3/projectcalico.org",
+			Verb:       "PUT",
+			User: authnv1.UserInfo{
+				Username: "user",
+				UID:      "uid",
+				Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+			},
+			ImpersonatedUser: &authnv1.UserInfo{
+				Username: "impuser",
+				UID:      "impuid",
+				Groups:   []string{"g1"},
+			},
+			SourceIPs:      []string{"1.2.3.4"},
+			UserAgent:      "user-agent",
+			ObjectRef:      &kaudit.ObjectReference{},
+			ResponseStatus: &metav1.Status{},
+			RequestObject: &runtime.Unknown{
+				Raw:         objRaw,
+				ContentType: runtime.ContentTypeJSON,
+			},
+			ResponseObject: &runtime.Unknown{
+				Raw:         objRaw,
+				ContentType: runtime.ContentTypeJSON,
+			},
+			RequestReceivedTimestamp: metav1.NewMicroTime(time.Now().Add(-5 * time.Second)),
+			StageTimestamp:           metav1.NewMicroTime(time.Now()),
+			Annotations:              map[string]string{"brick": "red"},
 		},
-		ImpersonatedUser: &authnv1.UserInfo{
-			Username: "impuser",
-			UID:      "impuid",
-			Groups:   []string{"g1"},
-		},
-		SourceIPs:      []string{"1.2.3.4"},
-		UserAgent:      "user-agent",
-		ObjectRef:      &kaudit.ObjectReference{},
-		ResponseStatus: &metav1.Status{},
-		RequestObject: &runtime.Unknown{
-			Raw:         objRaw,
-			ContentType: runtime.ContentTypeJSON,
-		},
-		ResponseObject: &runtime.Unknown{
-			Raw:         objRaw,
-			ContentType: runtime.ContentTypeJSON,
-		},
-		RequestReceivedTimestamp: metav1.NewMicroTime(time.Now().Add(-5 * time.Second)),
-		StageTimestamp:           metav1.NewMicroTime(time.Now()),
-		Annotations:              map[string]string{"brick": "red"},
+		Name: testutils.StringPtr("ee-any"),
 	}
 
 	// Create the event in ES.
-	resp, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []kaudit.Event{f})
+	resp, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []v1.AuditLog{f})
 	require.NoError(t, err)
 	require.Equal(t, 0, len(resp.Errors))
 
 	// Refresh the index.
-	err = testutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_audit_ee.%s.*", clusterInfo.Cluster))
+	err = backendutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_audit_ee.%s.*", clusterInfo.Cluster))
 	require.NoError(t, err)
 
 	// List the event, assert that it matches the one we just wrote.

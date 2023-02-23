@@ -25,28 +25,28 @@ type L7Log struct {
 	SourceType      string `json:"src_type"`
 	SourcePortNum   int64  `json:"source_port_num"`
 
+	DestNameAggr         string `json:"dest_name_aggr"`
+	DestNamespace        string `json:"dest_namespace"`
+	DestType             string `json:"dest_type"`
+	DestPortNum          int64  `json:"dest_port_num"`
 	DestServiceName      string `json:"dest_service_name"`
 	DestServiceNamespace string `json:"dest_service_namespace"`
-
-	// DestServicePort is the numerical value of the port exposed by the service which the connection is trying to reach.
-	// Described in the Service resource specs as specs.[]ports.port. It will have the empty L7 Log numerical field value of 0 when:
-	// - in rare cases where the Service is unavailable (ie. deleted or down) while processing the Service information
-	DestServicePort int64 `json:"dest_service_port"`
 
 	// DestServicePortName Name is the name of the port exposed by the Service which the connection is trying to reach.
 	// Described in the Service resource specs as specs.[]ports.name. It will have the empty L7 Log character field value of '-' when:
 	// - the optional port name field in the Service resource is not provided
 	// - in rare cases where the Service is unavailable (ie. deleted or down) while processing the Service information
 	DestServicePortName string `json:"dest_service_port_name"`
-	DestNameAggr        string `json:"dest_name_aggr"`
-	DestNamespace       string `json:"dest_namespace"`
-	DestType            string `json:"dest_type"`
-	DestPortNum         int64  `json:"dest_port_num"`
 
-	URL          string `json:"url"`
-	ResponseCode string `json:"response_code"`
+	// DestServicePort is the numerical value of the port exposed by the service which the connection is trying to reach.
+	// Described in the Service resource specs as specs.[]ports.port. It will have the empty L7 Log numerical field value of 0 when:
+	// - in rare cases where the Service is unavailable (ie. deleted or down) while processing the Service information
+	DestServicePort int64 `json:"dest_service_port"`
+
 	Method       string `json:"method"`
 	UserAgent    string `json:"user_agent"`
+	URL          string `json:"url"`
+	ResponseCode string `json:"response_code"`
 	Type         string `json:"type"`
 
 	Host string `json:"host"`
