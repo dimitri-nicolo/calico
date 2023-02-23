@@ -329,3 +329,19 @@ func Test_EmitExternalNetworkTableName(t *testing.T) {
 			str, len(output), maxFuncNameLen)
 	}
 }
+
+func Test_ValidateHashToIpv4Method(t *testing.T) {
+	expectedRouterId := "207.94.5.27"
+	nodeName := "Testrobin123"
+	actualRouterId := hashToIPv4(nodeName)
+	if expectedRouterId != actualRouterId {
+		t.Errorf("Expected %s to equal %s", expectedRouterId, actualRouterId)
+	}
+
+	expectedRouterId = "109.174.215.226"
+	nodeName = "nodeTest"
+	actualRouterId := hashToIPv4(nodeName)
+	if expectedRouterId != actualRouterId {
+		t.Errorf("Expected %s to equal %s", expectedRouterId, actualRouterId)
+	}
+}
