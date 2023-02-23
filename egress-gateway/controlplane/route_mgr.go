@@ -155,7 +155,6 @@ func OptBackoffManager(bom wait.BackoffManager) RouteManagerOpt {
 
 // Start starts the main route manager process, running a reconciliation loop between datastore config and the kernel
 func (m *RouteManager) Start(ctx context.Context) {
-
 	// Prepare a timer and timer-notification channel for backoff-retries after kernel failures.
 	var backoffTimer clock.Timer
 	var retry <-chan time.Time
@@ -251,13 +250,12 @@ func (m *RouteManager) NotifyResync(s data.RouteStore) {
 }
 
 // calculateActiveTunnelsForNodes guesses which tunnel on each node is most-likely to be used when sending traffic to this workload
-//  data is returned as a map of nodeName:tunnel key-pairs
+// data is returned as a map of nodeName:tunnel key-pairs
 func calculateActiveTunnelsForNodes(
 	thisWorkload *proto.RouteUpdate,
 	workloadsByNodeName map[string][]proto.RouteUpdate,
 	tunnelsByNodeName map[string][]proto.RouteUpdate,
 ) map[string]*proto.RouteUpdate {
-
 	gatewayEncapType := thisWorkload.IpPoolType // will the gateway receive packets that have been sNAT'd by the node's tunnel?
 	gatewayNodeHasWireguard := false            // wireguard tunnels will take precedence if nodes are peered - we search for this device next
 
@@ -437,7 +435,7 @@ func (m *RouteManager) newRoute(ru *proto.RouteUpdate, isExitRoute bool) (route 
 
 // newNeigh creates a new netlink.Neigh from a RouteUpdate
 // isHostTunnel flags whether the route update passed represents a host-ns tunnel device
-//   in that case, the returned neigh's IP will be that of the tunnel, rather than the node IP
+// in that case, the returned neigh's IP will be that of the tunnel, rather than the node IP
 func (m *RouteManager) newNeigh(ru *proto.RouteUpdate, isHostTunnel bool, family int) (neigh netlink.Neigh, err error) {
 	neigh.LinkIndex = m.egressTunnelIface.Attrs().Index
 	neigh.State = netlink.NUD_PERMANENT
