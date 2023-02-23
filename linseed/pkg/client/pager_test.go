@@ -143,22 +143,25 @@ func TestPager(t *testing.T) {
 		pager := client.NewListPager[v1.L3Flow](&v1.L3FlowParams{})
 		listFunc := getListFunc(testData)
 
-		var page v1.List[v1.L3Flow]
-		var err error
-
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		// Create the streamer.
+		// Create the streamer and read from it.
 		results, errors := pager.Stream(ctx, listFunc)
-		for _, expected := range testData {
-			select {
-			case err = <-errors:
-				require.NoError(t, err)
-			case page = <-results:
-				require.NotNil(t, page)
-				require.Equal(t, *expected.List, page)
-			}
+		allPages := []v1.List[v1.L3Flow]{}
+		for page := range results {
+			require.NotNil(t, page)
+			allPages = append(allPages, page)
+		}
+
+		// We should not have received an error.
+		err := <-errors
+		require.NoError(t, err)
+
+		// Check the pages we received
+		require.Len(t, allPages, 4)
+		for i, p := range allPages {
+			require.Equal(t, *testData[i].List, p)
 		}
 
 		// Assert that the channels have been closed, since we've read all the data.
