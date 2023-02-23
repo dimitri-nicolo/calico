@@ -36,10 +36,12 @@ import (
 
 var esClient *elastic.Client
 
-func ingestionSetupAndTeardown(t *testing.T, index, cluster string) func() {
+func ingestionSetupAndTeardown(t *testing.T, index string) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
+
+	cluster = testutils.RandomClusterName()
 
 	// Create an ES client.
 	var err error
@@ -49,8 +51,10 @@ func ingestionSetupAndTeardown(t *testing.T, index, cluster string) func() {
 
 	// Instantiate a client.
 	cfg := rest.Config{
-		CACertPath: "cert/RootCA.crt",
-		URL:        "https://localhost:8444/",
+		CACertPath:     "cert/RootCA.crt",
+		URL:            "https://localhost:8444/",
+		ClientCertPath: "cert/localhost.crt",
+		ClientKeyPath:  "cert/localhost.key",
 	}
 	cli, err = client.NewClient("", cfg)
 	require.NoError(t, err)
@@ -74,10 +78,7 @@ func TestFV_FlowIngestion(t *testing.T) {
 	indexPrefix := "tigera_secure_ee_flows."
 
 	t.Run("ingest flow logs via bulk API with production data", func(t *testing.T) {
-		// Create a random cluster name for each test to make sure we don't
-		// interfere between tests.
-		cluster = testutils.RandomClusterName()
-		defer ingestionSetupAndTeardown(t, indexPrefix, cluster)()
+		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := secureHTTPClient(t)
@@ -126,10 +127,7 @@ func TestFV_DNSIngestion(t *testing.T) {
 	indexPrefix := "tigera_secure_ee_dns."
 
 	t.Run("ingest dns logs via bulk API with production data", func(t *testing.T) {
-		// Create a random cluster name for each test to make sure we don't
-		// interfere between tests.
-		cluster = testutils.RandomClusterName()
-		defer ingestionSetupAndTeardown(t, indexPrefix, cluster)()
+		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := secureHTTPClient(t)
@@ -183,10 +181,7 @@ func TestFV_L7Ingestion(t *testing.T) {
 	indexPrefix := "tigera_secure_ee_l7."
 
 	t.Run("ingest l7 logs via bulk API with production data", func(t *testing.T) {
-		// Create a random cluster name for each test to make sure we don't
-		// interfere between tests.
-		cluster = testutils.RandomClusterName()
-		defer ingestionSetupAndTeardown(t, indexPrefix, cluster)()
+		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := secureHTTPClient(t)
@@ -235,10 +230,7 @@ func TestFV_KubeAuditIngestion(t *testing.T) {
 	indexPrefix := "tigera_secure_ee_audit_kube."
 
 	t.Run("ingest kube audit logs via bulk API with production data", func(t *testing.T) {
-		// Create a random cluster name for each test to make sure we don't
-		// interfere between tests.
-		cluster = testutils.RandomClusterName()
-		defer ingestionSetupAndTeardown(t, indexPrefix, cluster)()
+		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := secureHTTPClient(t)
@@ -292,10 +284,7 @@ func TestFV_EEAuditIngestion(t *testing.T) {
 	indexPrefix := "tigera_secure_ee_audit_ee."
 
 	t.Run("ingest ee audit logs via bulk API with production data", func(t *testing.T) {
-		// Create a random cluster name for each test to make sure we don't
-		// interfere between tests.
-		cluster = testutils.RandomClusterName()
-		defer ingestionSetupAndTeardown(t, indexPrefix, cluster)()
+		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := secureHTTPClient(t)
@@ -349,10 +338,7 @@ func TestFV_BGPIngestion(t *testing.T) {
 	indexPrefix := "tigera_secure_ee_bgp."
 
 	t.Run("ingest bgp logs via bulk API with production data", func(t *testing.T) {
-		// Create a random cluster name for each test to make sure we don't
-		// interfere between tests.
-		cluster = testutils.RandomClusterName()
-		defer ingestionSetupAndTeardown(t, indexPrefix, cluster)()
+		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := secureHTTPClient(t)

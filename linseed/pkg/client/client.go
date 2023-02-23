@@ -3,6 +3,8 @@
 package client
 
 import (
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
@@ -80,6 +82,7 @@ func (c *client) Processes(cluster string) ProcessesInterface {
 }
 
 func NewClient(tenantID string, cfg rest.Config) (Client, error) {
+	logrus.Infof("Creating new linseed client with config: %#v", cfg)
 	rc, err := rest.NewClient(tenantID, cfg)
 	if err != nil {
 		return nil, err

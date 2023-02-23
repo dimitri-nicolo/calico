@@ -122,12 +122,13 @@ run-image: stop-image run-elastic
 		--name=tigera-$(LINSEED_IMAGE) \
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.crt:/certs/https/tls.crt \
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.key:/certs/https/tls.key \
+		-v $(REPO_ROOT)/linseed/fv/cert/RootCA.crt:/certs/https/client.crt \
 		-e LINSEED_ELASTIC_ENDPOINT="http://localhost:9200" \
 		-e LINSEED_ELASTIC_SCHEME="http" \
 		-e LINSEED_LOG_LEVEL="debug" \
 		tigera/$(LINSEED_IMAGE):latest
-	# Wait until Linseed is accepting requests.
-	while ! curl -k https://localhost:8444/health; do echo "Waiting for linseed to come up..."; sleep 2; done
+	# Wait until Linseed is accepting requests on its readiness port.
+	while ! curl -k http://localhost:8080/readiness; do echo "Waiting for linseed to come up..."; sleep 2; done
 
 stop-image:
 	-docker rm -f $(shell docker ps -aq --filter "name=tigera-$(LINSEED_IMAGE)")
@@ -136,7 +137,6 @@ stop-image:
 fv: clean image build-tests run-image
 	 $(DOCKER_RUN) \
 	 	-e KUBECONFIG=/home/user/certs/kubeconfig \
-		-v $(CERTS_PATH):/home/user/certs \
 	 	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd fv && ./fv.test'
 
 # We pre-build the test binary so that we can run it outside a container and allow it

@@ -45,6 +45,7 @@ func setupLinseedFV(t *testing.T) func() {
 
 func TestFV_Linseed(t *testing.T) {
 	addr := "localhost:8444"
+	healthAddr := "localhost:8080"
 	cluster := "cluster"
 	tenant := ""
 
@@ -97,8 +98,6 @@ func TestFV_Linseed(t *testing.T) {
 
 			assert.Equal(t, tt.wantStatusCode, res.StatusCode)
 			assert.Equal(t, tt.wantBody, strings.Trim(string(resBody), "\n"))
-
-			return
 		})
 	}
 
@@ -110,6 +109,24 @@ func TestFV_Linseed(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 		assert.Equal(t, "Client sent an HTTP request to an HTTPS server.", strings.Trim(string(resBody), "\n"))
+	})
+
+	t.Run("should be ready", func(t *testing.T) {
+		defer setupLinseedFV(t)()
+
+		client := secureHTTPClient(t)
+		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/readiness", healthAddr), tenant, cluster)
+		res, _ := doRequest(t, client, httpReqSpec)
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+	})
+
+	t.Run("should be live", func(t *testing.T) {
+		defer setupLinseedFV(t)()
+
+		client := secureHTTPClient(t)
+		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/liveness", healthAddr), tenant, cluster)
+		res, _ := doRequest(t, client, httpReqSpec)
+		assert.Equal(t, http.StatusOK, res.StatusCode)
 	})
 }
 

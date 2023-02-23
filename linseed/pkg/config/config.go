@@ -13,11 +13,16 @@ const (
 
 // Config defines the parameters of the application
 type Config struct {
-	Port      int `default:"8444" split_words:"true"`
-	Host      string
+	Port     int `default:"8444" split_words:"true"`
+	Host     string
+	LogLevel string `default:"INFO" split_words:"true"`
+
+	// Certificate presented to the client for TLS verification.
 	HTTPSCert string `default:"/certs/https/tls.crt" split_words:"true"`
 	HTTPSKey  string `default:"/certs/https/tls.key" split_words:"true"`
-	LogLevel  string `default:"INFO" split_words:"true"`
+
+	// Used to verify client certificates for mTLS.
+	CACert string `default:"/certs/https/client.crt" split_words:"true"`
 
 	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
 	FIPSModeEnabled bool `default:"false" split_words:"true"`

@@ -3,8 +3,11 @@
 package server
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/http"
+	"os"
 
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 
@@ -53,8 +56,6 @@ func Middlewares(cfg config.Config) []func(http.Handler) http.Handler {
 	return []func(http.Handler) http.Handler{
 		// LogRequestHeaders needs to be placed before any middlewares that mutate the request
 		httputils.LogRequestHeaders,
-		// HealthCheck is defined as middleware in order to bypass any route matching
-		middleware.HealthCheck,
 		// AllowContentType allows only specific content types for the requests
 		chimiddleware.AllowContentType("application/json", "application/x-ndjson"),
 		// ClusterInfoOld will extract cluster and tenant information from the request to identify the caller
@@ -105,6 +106,33 @@ func WithMiddlewares(middlewares []func(http.Handler) http.Handler) Option {
 		}
 
 		s.router.Use(middlewares...)
+
+		return nil
+	}
+}
+
+// WithClientCACerts configures the server to enable mTLS, using the certificates located at the
+// provided paths to authenticate clients.
+func WithClientCACerts(certPaths ...string) Option {
+	return func(s *Server) error {
+		if s.srv == nil || s.srv.TLSConfig == nil {
+			return fmt.Errorf("server is not initialized")
+		}
+
+		// Build a cert pool with the provided paths.
+		certPool := x509.NewCertPool()
+		for _, certPath := range certPaths {
+			caCert, err := os.ReadFile(certPath)
+			if err != nil {
+				return err
+			}
+			certPool.AppendCertsFromPEM(caCert)
+		}
+
+		// Require client certificate verification using the generated
+		// certificate pool.
+		s.srv.TLSConfig.ClientAuth = tls.RequireAndVerifyClientCert
+		s.srv.TLSConfig.ClientCAs = certPool
 
 		return nil
 	}

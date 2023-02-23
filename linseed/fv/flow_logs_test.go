@@ -45,8 +45,10 @@ func flowlogSetupAndTeardown(t *testing.T) func() {
 
 	// Instantiate a client.
 	cfg := rest.Config{
-		CACertPath: "cert/RootCA.crt",
-		URL:        "https://localhost:8444/",
+		CACertPath:     "cert/RootCA.crt",
+		URL:            "https://localhost:8444/",
+		ClientCertPath: "cert/localhost.crt",
+		ClientKeyPath:  "cert/localhost.key",
 	}
 	cli, err = client.NewClient("", cfg)
 	require.NoError(t, err)
