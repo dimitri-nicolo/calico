@@ -39,11 +39,11 @@ func (_m *MockAuditBackend) Create(_a0 context.Context, _a1 v1.AuditLogType, _a2
 }
 
 // List provides a mock function with given fields: _a0, _a1, _a2
-func (_m *MockAuditBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.AuditLogParams) (*v1.List[v1.AuditLog], error) {
+func (_m *MockAuditBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 *v1.AuditLogParams) (*v1.List[v1.AuditLog], error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 *v1.List[v1.AuditLog]
-	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, v1.AuditLogParams) *v1.List[v1.AuditLog]); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, *v1.AuditLogParams) *v1.List[v1.AuditLog]); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
@@ -52,7 +52,7 @@ func (_m *MockAuditBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.Au
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, v1.AuditLogParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, *v1.AuditLogParams) error); ok {
 		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)

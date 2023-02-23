@@ -39,11 +39,11 @@ func (_m *MockEventsBackend) Create(_a0 context.Context, _a1 ClusterInfo, _a2 []
 }
 
 // List provides a mock function with given fields: _a0, _a1, _a2
-func (_m *MockEventsBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.EventParams) (*v1.List[v1.Event], error) {
+func (_m *MockEventsBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 *v1.EventParams) (*v1.List[v1.Event], error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 *v1.List[v1.Event]
-	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, v1.EventParams) *v1.List[v1.Event]); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, *v1.EventParams) *v1.List[v1.Event]); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
@@ -52,7 +52,7 @@ func (_m *MockEventsBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.E
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, v1.EventParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, *v1.EventParams) error); ok {
 		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)

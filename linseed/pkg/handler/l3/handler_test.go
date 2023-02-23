@@ -187,7 +187,7 @@ func mockFlows(flows []v1.L3Flow) *l3.Flows {
 
 	// mock backend to return the required flows
 	mockFlowBackend.On("List", mock.Anything,
-		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.L3FlowParams")).Return(&res, nil)
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("*v1.L3FlowParams")).Return(&res, nil)
 
 	return n.(*l3.Flows)
 }

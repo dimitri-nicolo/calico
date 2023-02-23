@@ -91,7 +91,7 @@ func TestListL7Flows(t *testing.T) {
 	opts.TimeRange.To = time.Now().Add(5 * time.Second)
 
 	// Query for flows. There should be a single flow from the populated data.
-	r, err := b.List(ctx, clusterInfo, opts)
+	r, err := b.List(ctx, clusterInfo, &opts)
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)
 

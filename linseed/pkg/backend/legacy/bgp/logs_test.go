@@ -100,7 +100,7 @@ func TestCreateBGPLog(t *testing.T) {
 	start, err := time.Parse(v1.BGPLogTimeFormat, "1990-09-15T06:12:00")
 	require.NoError(t, err)
 
-	results, err := b.List(ctx, clusterInfo, v1.BGPLogParams{
+	results, err := b.List(ctx, clusterInfo, &v1.BGPLogParams{
 		QueryParams: v1.QueryParams{
 			// 1990-09-15'T'06:12:32
 			TimeRange: &lmav1.TimeRange{

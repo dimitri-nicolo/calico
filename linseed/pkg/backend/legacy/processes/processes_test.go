@@ -101,6 +101,7 @@ func TestListProcesses(t *testing.T) {
 	require.NoError(t, err)
 	bld.WithReporter("dst")
 	dstLog, err := bld.Build()
+	require.NoError(t, err)
 
 	response, err := flb.Create(ctx, clusterInfo, []v1.FlowLog{*srcLog, *dstLog})
 	require.NoError(t, err)
@@ -114,6 +115,7 @@ func TestListProcesses(t *testing.T) {
 	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
 	err = testutils.RefreshIndex(ctx, client, "tigera_secure_ee_flows.*")
+	require.NoError(t, err)
 
 	// Query for process info. There should be a single entry from the populated data.
 	r, err := pb.List(ctx, clusterInfo, &opts)

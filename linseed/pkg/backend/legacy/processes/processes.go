@@ -11,7 +11,6 @@ import (
 	elastic "github.com/olivere/elastic/v7"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -31,9 +30,6 @@ const (
 type processBackend struct {
 	// Elasticsearch client.
 	lmaclient lmaelastic.Client
-
-	// Track mapping of field name to its index in the ES response.
-	ft *backend.FieldTracker
 }
 
 func NewBackend(c lmaelastic.Client) bapi.ProcessBackend {

@@ -309,7 +309,7 @@ func auditLogs(response []v1.AuditLog, err error) *audit {
 
 	// mock backend to return the required backendAudit
 	mockLogBackend.On("List", mock.Anything,
-		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.AuditLogParams")).Return(&v1.List[v1.AuditLog]{Items: response}, err)
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("*v1.AuditLogParams")).Return(&v1.List[v1.AuditLog]{Items: response}, err)
 
 	return n
 }

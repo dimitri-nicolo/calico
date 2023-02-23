@@ -156,7 +156,7 @@ func TestFlowLogFiltering(t *testing.T) {
 			testcase.Params.QueryParams.TimeRange = tr
 
 			// Template for flow #1.
-			bld := NewFlowLogBuilder()
+			bld := backendutils.NewFlowLogBuilder()
 			bld.WithType("wep").
 				WithSourceNamespace("tigera-operator").
 				WithDestNamespace("openshift-dns").
@@ -176,7 +176,7 @@ func TestFlowLogFiltering(t *testing.T) {
 			require.NoError(t, err)
 
 			// Template for flow #2.
-			bld2 := NewFlowLogBuilder()
+			bld2 := backendutils.NewFlowLogBuilder()
 			bld2.WithType("hep").
 				WithSourceNamespace("default").
 				WithDestNamespace("kube-system").
@@ -203,7 +203,7 @@ func TestFlowLogFiltering(t *testing.T) {
 			require.NoError(t, err)
 
 			// Query for flow logs.
-			r, err := flb.List(ctx, clusterInfo, testcase.Params)
+			r, err := flb.List(ctx, clusterInfo, &testcase.Params)
 			require.NoError(t, err)
 			require.Len(t, r.Items, numExpected(testcase))
 			require.Nil(t, r.AfterKey)

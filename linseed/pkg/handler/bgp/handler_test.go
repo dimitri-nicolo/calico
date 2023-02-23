@@ -223,7 +223,7 @@ func bgpGetLogs(response []v1.BGPLog, err error) *bgp {
 
 	// mock backend to return the required backendBGP
 	mockLogBackend.On("List", mock.Anything,
-		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.BGPLogParams")).Return(&v1.List[v1.BGPLog]{Items: response}, err)
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("*v1.BGPLogParams")).Return(&v1.List[v1.BGPLog]{Items: response}, err)
 
 	return n
 }
