@@ -51,4 +51,5 @@ commit your changes. **The following manifests are not auto generated:**
 - tigera-policy-integration.yaml
 - tigera-prometheus-operator.yaml
 - tigera-psp.yaml
+- operator-crds.yaml
 - windows-kube-proxy.yaml
