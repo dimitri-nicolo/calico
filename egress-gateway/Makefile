@@ -60,12 +60,7 @@ clean:
 # Building the binary
 ###############################################################################
 
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
+LDFLAGS = -X main.VERSION=$(GIT_VERSION)
 
 .PHONY: build-all
 ## Build the binaries for all architectures and platforms
@@ -76,9 +71,7 @@ build-all: $(addprefix bin/egressd-,$(VALIDARCHES))
 build: bin/egressd-$(ARCH)
 bin/egressd-amd64: ARCH=amd64
 bin/egressd-%: $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) $(CALICO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) \
-		  go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) " -o bin/egressd-$(ARCH) ./cmd/egressd'
+	$(call build_static_cgo_boring_binary, ./cmd/egressd, $@)
 
 ###############################################################################
 # Building the image

@@ -22,9 +22,9 @@ type InScopeCallback (apiv3.ResourceID)
 // events.
 //
 // Important notes to consumers of the cache:
-// - The cache is not synchronized. Calls into any of the interface methods should be synchronized.
-// - The CacheEntry returned on an OnUpdate callback is a pointer to the data stored in the cache. Any information
-//   required from the update should be copied during the OnUpdate callback.
+//   - The cache is not synchronized. Calls into any of the interface methods should be synchronized.
+//   - The CacheEntry returned on an OnUpdate callback is a pointer to the data stored in the cache. Any information
+//     required from the update should be copied during the OnUpdate callback.
 type XrefCache interface {
 	// Callbacks for the datastore, used to populate this cache.
 	syncer.SyncerCallbacks

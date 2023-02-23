@@ -1023,9 +1023,10 @@ func (s *serviceGraphConstructionData) overlayDNS() {
 // getMostGranularNodeInView returns the most granular node that is in view for a given endpoint.
 //
 // Note: This duplicates a lot of the processing in trackNodes, so we might want to think about just using that
-//       to locate the nodes. This processing is, however, a little more lightweight since it only needs to
-//       consider nodes that already exist - and can just track the most granular node visible rather than involved
-//       in the node expansion processing.
+//
+//	to locate the nodes. This processing is, however, a little more lightweight since it only needs to
+//	consider nodes that already exist - and can just track the most granular node visible rather than involved
+//	in the node expansion processing.
 func (s *serviceGraphConstructionData) getMostGranularNodeInView(
 	nodesInView map[v1.GraphNodeID]*trackedNode, ep FlowEndpoint, sg *ServiceGroup,
 ) *trackedNode {

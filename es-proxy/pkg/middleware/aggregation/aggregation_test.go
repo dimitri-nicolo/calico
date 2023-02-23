@@ -6,7 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -206,7 +206,7 @@ var _ = Describe("Aggregation tests", func() {
 			// Marshal the request and create an HTTP request
 			sgrb, err := json.Marshal(sgr)
 			Expect(err).NotTo(HaveOccurred())
-			body := ioutil.NopCloser(bytes.NewReader(sgrb))
+			body := io.NopCloser(bytes.NewReader(sgrb))
 			req, err := http.NewRequest("POST", "/aggregation", body)
 			Expect(err).NotTo(HaveOccurred())
 			req = req.WithContext(ctx)
@@ -480,7 +480,7 @@ var _ = Describe("Aggregation tests", func() {
 			})
 
 			// Marshal the request and create an HTTP request
-			body := ioutil.NopCloser(strings.NewReader(reqest))
+			body := io.NopCloser(strings.NewReader(reqest))
 			req, err := http.NewRequest("POST", "/aggregation", body)
 			Expect(err).NotTo(HaveOccurred())
 			req = req.WithContext(ctx)

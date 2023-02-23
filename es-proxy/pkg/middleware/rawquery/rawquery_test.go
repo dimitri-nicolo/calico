@@ -3,7 +3,7 @@ package rawquery
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	. "github.com/onsi/ginkgo"
@@ -17,7 +17,7 @@ var _ = Describe("Raw query middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			body := []byte(`{"filter":[],"page_size":100,"page_num":0,"sort_by":[{"field":"time","descending":true}]}`)
-			req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+			req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 			var w http.ResponseWriter
 			index, query, err := parseQueryRequest(w, req)

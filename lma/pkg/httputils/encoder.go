@@ -29,7 +29,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -89,7 +88,7 @@ func decode(w http.ResponseWriter, r *http.Request, dst interface{}, ignoreUnkno
 	// Limit the allowable request body size.
 	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 	// Retain the body, to pass it forward.
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		if len(body) >= maxBytes {
 			msg := "Request body must not be larger than 1MB"
@@ -108,7 +107,7 @@ func decode(w http.ResponseWriter, r *http.Request, dst interface{}, ignoreUnkno
 		}
 	}
 
-	dec := json.NewDecoder(ioutil.NopCloser(bytes.NewBuffer(body)))
+	dec := json.NewDecoder(io.NopCloser(bytes.NewBuffer(body)))
 	if !ignoreUnknownFields {
 		dec.DisallowUnknownFields()
 	}
@@ -159,7 +158,7 @@ func decode(w http.ResponseWriter, r *http.Request, dst interface{}, ignoreUnkno
 	}
 
 	// Write data back to the request body.
-	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	r.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	return nil
 }

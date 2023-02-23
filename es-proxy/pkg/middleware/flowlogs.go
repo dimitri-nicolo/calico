@@ -386,14 +386,17 @@ func buildTermsFilter(terms []string, termsKey string) *elastic.TermsQuery {
 // a "terms" query will be created with as follows:
 // "terms": {
 // "<labelType>.labels": [
-//  "<key><operator><value1>",
-//  "<key><operator><value2>",
-//  ]
-// }
+//
+//	 "<key><operator><value1>",
+//	 "<key><operator><value2>",
+//	 ]
+//	}
+//
 // If only one value is specified a "term" query is created as follows:
-// "term": {
-//  "<labelType>.labels": <key><operator><value>"
-// }
+//
+//	"term": {
+//	 "<labelType>.labels": <key><operator><value>"
+//	}
 func buildLabelSelectorFilter(labelSelectors []LabelSelector, path string, termsKey string) *elastic.NestedQuery {
 	var labelValues []interface{}
 	var selectorQueries []elastic.Query

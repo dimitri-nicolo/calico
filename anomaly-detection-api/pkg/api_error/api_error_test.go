@@ -2,7 +2,7 @@ package api_error_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 
@@ -26,7 +26,7 @@ var _ = Describe("APIError adds Status to header", func() {
 		api_error.WriteAPIErrorToHeader(w, apiErr)
 		Expect(w.Result().StatusCode).To(Equal(testStatus))
 
-		bodyBytes, err := ioutil.ReadAll(w.Body)
+		bodyBytes, err := io.ReadAll(w.Body)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(bodyBytes)).To(Equal(http.StatusText(testStatus)))
 	})
@@ -38,7 +38,7 @@ var _ = Describe("APIError adds Status to header", func() {
 		api_error.WriteStatusErrorToHeader(w, testStatus)
 		Expect(w.Result().StatusCode).To(Equal(testStatus))
 
-		bodyBytes, err := ioutil.ReadAll(w.Body)
+		bodyBytes, err := io.ReadAll(w.Body)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(bodyBytes)).To(Equal(http.StatusText(testStatus)))
 	})

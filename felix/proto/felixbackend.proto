@@ -47,7 +47,7 @@ message SyncRequest {
   // dataplane statistics to Felix.
   bool supportsDataplaneStats = 2;
   // Determines which types of payloads will be sent to the client.
-  // Valid values are "per-pod-policies" or "l3-routes".
+  // Valid values are "per-pod-policies", "per-host-policies", or "l3-routes".
   string subscriptionType = 3;
 
   // Enterprise-only fields, start at 100.

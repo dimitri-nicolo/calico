@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"time"
@@ -276,11 +275,11 @@ var _ = Describe("SearchElasticHits", func() {
 				defer GinkgoRecover()
 				req := args.Get(0).(*http.Request)
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
 
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 				requestJson := map[string]interface{}{}
 				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
@@ -383,11 +382,11 @@ var _ = Describe("SearchElasticHits", func() {
 				defer GinkgoRecover()
 				req := args.Get(0).(*http.Request)
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
 
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 				requestJson := map[string]interface{}{}
 				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
@@ -495,11 +494,11 @@ var _ = Describe("SearchElasticHits", func() {
 				defer GinkgoRecover()
 				req := args.Get(0).(*http.Request)
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
 
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 				requestJson := map[string]interface{}{}
 				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
@@ -593,11 +592,11 @@ var _ = Describe("SearchElasticHits", func() {
 				defer GinkgoRecover()
 				req := args.Get(0).(*http.Request)
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
 
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 				requestJson := map[string]interface{}{}
 				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
@@ -691,11 +690,11 @@ var _ = Describe("SearchElasticHits", func() {
 				defer GinkgoRecover()
 				req := args.Get(0).(*http.Request)
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
 
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 				requestJson := map[string]interface{}{}
 				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
@@ -788,11 +787,11 @@ var _ = Describe("SearchElasticHits", func() {
 				defer GinkgoRecover()
 				req := args.Get(0).(*http.Request)
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
 
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 				requestJson := map[string]interface{}{}
 				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
@@ -933,16 +932,16 @@ var _ = Describe("SearchElasticHits", func() {
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster./_search"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				// Elastic search request json
 				Expect(body).To(Equal([]byte(eventSearchRequest)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
 			}, nil)
 
 			// create some alert exceptions
@@ -1031,16 +1030,16 @@ var _ = Describe("SearchElasticHits", func() {
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster./_search"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				// Elastic search request json
 				Expect(body).To(Equal([]byte(eventSearchRequestSelector)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
 			}, nil)
 
 			// create some alert exceptions
@@ -1123,16 +1122,16 @@ var _ = Describe("SearchElasticHits", func() {
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster./_search"))
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
 				// Elastic search request json
 				Expect(body).To(Equal([]byte(eventSearchRequestSelectorInvalid)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
 			}, nil)
 
 			// create some alert exceptions
@@ -1242,5 +1241,5 @@ func esSearchHitsResultToResponseBody(searchResult elastic.SearchResult) io.Read
 		panic(err)
 	}
 
-	return ioutil.NopCloser(bytes.NewBuffer(byts))
+	return io.NopCloser(bytes.NewBuffer(byts))
 }

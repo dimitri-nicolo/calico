@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strconv"
@@ -302,7 +301,7 @@ func TestIPAMCleanup(t *testing.T) {
 	// Run calicoctl ipam check and parse the resulting report.
 	out = Calicoctl(false, "ipam", "check", "--show-all-ips", "-o", "/tmp/ipam_report.json")
 	t.Log("IPAM check output:", out)
-	reportFile, err := ioutil.ReadFile("/tmp/ipam_report.json")
+	reportFile, err := os.ReadFile("/tmp/ipam_report.json")
 	Expect(err).NotTo(HaveOccurred())
 	t.Log("IPAM check report (raw JSON):", string(reportFile))
 	var report ipamcmd.Report

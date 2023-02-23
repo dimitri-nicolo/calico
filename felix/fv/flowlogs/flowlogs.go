@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -39,7 +38,7 @@ func ReadFlowLogsFile(flowLogDir string) ([]collector.FlowLog, error) {
 		var fljo collector.FlowLogJSONOutput
 		err = json.Unmarshal(s.Bytes(), &fljo)
 		if err != nil {
-			all, _ := ioutil.ReadFile(filePath)
+			all, _ := os.ReadFile(filePath)
 			return flowLogs, fmt.Errorf("Error unmarshaling flow log: %v\nLog:\n%s\nFile:\n%s", err, string(s.Bytes()), string(all))
 		}
 		fl, err := fljo.ToFlowLog()

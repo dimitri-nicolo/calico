@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -128,7 +127,7 @@ func (ap AttachPoint) AttachProgram() (int, error) {
 		ap.VethNS = uint16(l.Attrs().NetNsID)
 	}
 
-	tempDir, err := ioutil.TempDir("", "calico-tc")
+	tempDir, err := os.MkdirTemp("", "calico-tc")
 	if err != nil {
 		return -1, fmt.Errorf("failed to create temporary directory: %w", err)
 	}
@@ -651,15 +650,15 @@ func RemoveQdisc(ifaceName string) error {
 
 // Return a key that uniquely identifies this attach point, amongst all of the possible attach
 // points associated with a single given interface.
-func (ap *AttachPoint) JumpMapFDMapKey() string {
-	return "tc-" + string(ap.Hook)
+func (ap AttachPoint) JumpMapFDMapKey() string {
+	return string(ap.Hook)
 }
 
 func (ap AttachPoint) IfaceName() string {
 	return ap.Iface
 }
 
-func (ap *AttachPoint) MustReattach() bool {
+func (ap AttachPoint) MustReattach() bool {
 	return ap.ForceReattach
 }
 
@@ -668,8 +667,8 @@ func ConfigureVethNS(m *libbpf.Map, VethNS uint16) error {
 	return libbpf.TcSetGlobals(m, bpfGlobalData)
 }
 
-func (ap AttachPoint) HookName() string {
-	return string(ap.Hook)
+func (ap AttachPoint) HookName() bpf.Hook {
+	return ap.Hook
 }
 
 func (ap AttachPoint) Config() string {

@@ -20,6 +20,7 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/routerule"
 	"github.com/projectcalico/calico/felix/routetable"
+	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -32,10 +33,6 @@ type tproxyManager struct {
 
 	iptablesEqualIPsChecker *iptablesEqualIPsChecker
 }
-
-const (
-	tproxyPodToSelfIPSet = "tproxy-pod-self"
-)
 
 type tproxyIPSets interface {
 	AddOrReplaceIPSet(meta ipsets.IPSetMetadata, members []string)
@@ -293,7 +290,7 @@ func newIptablesEqualIPsChecker(dpConfig Config, ipSetsV4, ipSetsV6 tproxyIPSets
 	if enabled {
 		ipSetsV4.AddOrReplaceIPSet(
 			ipsets.IPSetMetadata{
-				SetID:   tproxyPodToSelfIPSet,
+				SetID:   tproxydefs.PodSelf,
 				Type:    ipsets.IPSetTypeHashNetNet,
 				MaxSize: dpConfig.MaxIPSetSize,
 			},
@@ -303,7 +300,7 @@ func newIptablesEqualIPsChecker(dpConfig Config, ipSetsV4, ipSetsV6 tproxyIPSets
 		if enabled6 {
 			ipSetsV6.AddOrReplaceIPSet(
 				ipsets.IPSetMetadata{
-					SetID:   tproxyPodToSelfIPSet,
+					SetID:   tproxydefs.PodSelf,
 					Type:    ipsets.IPSetTypeHashNetNet,
 					MaxSize: dpConfig.MaxIPSetSize,
 				},
@@ -426,28 +423,28 @@ func (c *iptablesEqualIPsChecker) CompleteDeferredWork() error {
 	for ipv4 := range c.ipv4ToAdd {
 		add = append(add, ipv4+","+ipv4)
 	}
-	c.ipSetsV4.AddMembers(tproxyPodToSelfIPSet, add)
+	c.ipSetsV4.AddMembers(tproxydefs.PodSelf, add)
 
 	if c.enabled6 {
 		var add6 []string
 		for ipv6 := range c.ipv6ToAdd {
 			add6 = append(add6, ipv6+","+ipv6)
 		}
-		c.ipSetsV6.AddMembers(tproxyPodToSelfIPSet, add6)
+		c.ipSetsV6.AddMembers(tproxydefs.PodSelf, add6)
 	}
 
 	var del []string
 	for ipv4 := range c.ipv4ToDel {
 		del = append(del, ipv4+","+ipv4)
 	}
-	c.ipSetsV4.RemoveMembers(tproxyPodToSelfIPSet, del)
+	c.ipSetsV4.RemoveMembers(tproxydefs.PodSelf, del)
 
 	if c.enabled6 {
 		var del6 []string
 		for ipv6 := range c.ipv6ToDel {
 			del6 = append(del6, ipv6+","+ipv6)
 		}
-		c.ipSetsV6.RemoveMembers(tproxyPodToSelfIPSet, del6)
+		c.ipSetsV6.RemoveMembers(tproxydefs.PodSelf, del6)
 	}
 
 	c.ipv4ToAdd = make(map[string]struct{})

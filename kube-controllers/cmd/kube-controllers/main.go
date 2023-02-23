@@ -20,7 +20,6 @@ import (
 	"crypto/x509"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -298,7 +297,7 @@ func main() {
 
 		if caFile, ok = os.LookupEnv(config.EnvCAFile); ok {
 			// Create a CA certificate pool.
-			caCert, err := ioutil.ReadFile(caFile)
+			caCert, err := os.ReadFile(caFile)
 			if err != nil {
 				log.Fatal(err)
 			}

@@ -5,7 +5,6 @@ package earlynetworking
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -184,7 +183,7 @@ nodeLoop:
 		}
 		birdConfig = birdConfig + fmt.Sprintf(BIRD_CONFIG_PER_PEER, index+1, peering.PeerIP, peerAS)
 	}
-	err = ioutil.WriteFile(BIRD_CONFIG_FILE, []byte(birdConfig), 0644)
+	err = os.WriteFile(BIRD_CONFIG_FILE, []byte(birdConfig), 0644)
 	if err != nil {
 		logrus.WithError(err).Fatalf("Failed to write BIRD config at %v", BIRD_CONFIG_FILE)
 	}

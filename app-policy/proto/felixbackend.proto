@@ -39,6 +39,9 @@ message SyncRequest {
   // if supported by Felix. If enabled, the sync consumer may call the Report RPC method to stream
   // dataplane statistics to Felix.
   bool supportsDataplaneStats = 2;
+  // Determines which types of payloads will be sent to the client.
+  // Valid values are "per-pod-policies", "per-host-policies", or "l3-routes".
+  string subscriptionType = 3;
 }
 
 // Rationale for having explicit Remove messages rather than sending and update
@@ -163,6 +166,10 @@ message IPSetUpdate {
     IP = 0;           // Each member is an IP address in dotted-decimal or IPv6 format.
     IP_AND_PORT = 1;  // Each member is "<IP>,(tcp|udp):port".
     NET = 2;          // Each member is a CIDR in dotted-decimal or IPv6 format.
+    DOMAIN = 3;       // Each member is a domain name.
+    EGRESS_IP = 4;    // Each member is an egress IP.
+    NET_NET = 5;      // Each member is two CIDRs.
+    PORTS = 6;        // Each member is a port (bitmap of ports)
   }
   IPSetType type = 3;
 }

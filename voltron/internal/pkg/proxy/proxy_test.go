@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -307,7 +306,7 @@ var _ = Describe("Proxy", func() {
 			res := w.Result()
 			Expect(res.StatusCode).To(Equal(200))
 
-			msg, err := ioutil.ReadAll(res.Body)
+			msg, err := io.ReadAll(res.Body)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(msg)).To(Equal(token))
@@ -322,7 +321,7 @@ var _ = Describe("Proxy", func() {
 			res := w.Result()
 			Expect(res.StatusCode).To(Equal(200))
 
-			msg, err := ioutil.ReadAll(res.Body)
+			msg, err := io.ReadAll(res.Body)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(msg)).To(Equal(noToken))
@@ -374,7 +373,7 @@ var _ = Describe("Proxy", func() {
 			srvURL, err := url.Parse(server.URL)
 			Expect(err).NotTo(HaveOccurred())
 
-			certFile, err := ioutil.TempFile("", "path-cert")
+			certFile, err := os.CreateTemp("", "path-cert")
 			Expect(err).ShouldNot(HaveOccurred())
 			_, err = certFile.Write(certPem)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -446,7 +445,7 @@ var _ = Describe("Proxy", func() {
 
 func createCa() (*os.File, []byte, error) {
 	ca, _ := test.CreateSelfSignedX509CertBinary("xyz", true)
-	file, err := ioutil.TempFile("", "test-certificate")
+	file, err := os.CreateTemp("", "test-certificate")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -467,5 +466,5 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 func body(msg string) io.ReadCloser {
-	return ioutil.NopCloser(strings.NewReader(msg))
+	return io.NopCloser(strings.NewReader(msg))
 }

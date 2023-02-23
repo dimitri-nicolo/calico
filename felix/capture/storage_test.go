@@ -3,7 +3,6 @@
 package capture_test
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -18,7 +17,7 @@ var _ = Describe("PacketCapture Storage Tests", func() {
 	BeforeEach(func() {
 		var err error
 
-		baseDir, err = ioutil.TempDir("/tmp", "pcap-tests")
+		baseDir, err = os.MkdirTemp("/tmp", "pcap-tests")
 		Expect(err).NotTo(HaveOccurred())
 
 	})

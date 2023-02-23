@@ -3,7 +3,7 @@ package tunnelmgr_test
 import (
 	"bytes"
 	"crypto/tls"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"sync"
@@ -365,7 +365,7 @@ func acceptAndRespondOnce(listener net.Listener, wg *sync.WaitGroup, status, bod
 }
 
 func createResponse(status, body string) *http.Response {
-	closer := ioutil.NopCloser(bytes.NewReader([]byte(body)))
+	closer := io.NopCloser(bytes.NewReader([]byte(body)))
 	return &http.Response{
 		Status:        status,
 		ContentLength: int64(len(body)),
@@ -374,7 +374,7 @@ func createResponse(status, body string) *http.Response {
 }
 
 func readResponseBody(r *http.Response) string {
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	Expect(err).ShouldNot(HaveOccurred())
 	return string(body)
 }

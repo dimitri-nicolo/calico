@@ -79,42 +79,43 @@ var _ = Describe("Policy Recommendation Unit Tests for functions interfacing wit
 })
 
 // Matches a flow log filtering query of the form
-// {
-//   "bool": {
-//     "must": [
-//       {"range": {"start_time": { "gte": "now-3h"}}},
-//       {"range": {"end_time": { "lte": "now-0h"}}},
-//       {"terms":{"source_type":["net","ns","wep","hep"]}},
-//       {"terms":{"dest_type":["net","ns","wep","hep"]}},
-//       {"nested": {
-//         "path": "policies",
-//         "query": {
-//           "wildcard": {
-//             "policies.all_policies": {
-//               "value": "*|default|*|*"
-//             }
-//           }
-//         }
-//       }},
-//       {"bool": {
-//         "should": [
-//           {"bool": {
-//             "must": [
-//               {"term": {"source_name_aggr": "test-app-pod"}},
-//               {"term": {"source_namespace": "test-namespace"}}
-//             ]
-//           }},
-//           {"bool": {
-//             "must": [
-//               {"term": {"dest_name_aggr": "test-app-pod"}},
-//               {"term": {"dest_namespace": "test-namespace"}}
-//             ]
-//           }}
-//         ]
-//       }}
-//     ]
-//   }
-// }
+//
+//	{
+//	  "bool": {
+//	    "must": [
+//	      {"range": {"start_time": { "gte": "now-3h"}}},
+//	      {"range": {"end_time": { "lte": "now-0h"}}},
+//	      {"terms":{"source_type":["net","ns","wep","hep"]}},
+//	      {"terms":{"dest_type":["net","ns","wep","hep"]}},
+//	      {"nested": {
+//	        "path": "policies",
+//	        "query": {
+//	          "wildcard": {
+//	            "policies.all_policies": {
+//	              "value": "*|default|*|*"
+//	            }
+//	          }
+//	        }
+//	      }},
+//	      {"bool": {
+//	        "should": [
+//	          {"bool": {
+//	            "must": [
+//	              {"term": {"source_name_aggr": "test-app-pod"}},
+//	              {"term": {"source_namespace": "test-namespace"}}
+//	            ]
+//	          }},
+//	          {"bool": {
+//	            "must": [
+//	              {"term": {"dest_name_aggr": "test-app-pod"}},
+//	              {"term": {"dest_namespace": "test-namespace"}}
+//	            ]
+//	          }}
+//	        ]
+//	      }}
+//	    ]
+//	  }
+//	}
 func matchBoolTopLevelQuery(boolQuery *elastic.BoolQuery, params *policyrec.PolicyRecommendationParams) {
 	source, err := boolQuery.Source()
 	Expect(err).To(BeNil())
@@ -197,42 +198,43 @@ func matchTermsType(termsQuery map[string]interface{}) {
 }
 
 // Matches the nested query for policies
-//      {"nested": {
-//        "path": "policies",
-//        "query": {
-//          "wildcard": {
-//            "policies.all_policies": {
-//              "value": "*|default|*|*"
-//            }
-//          }
-//        }
-//      }},
 //
+//	{"nested": {
+//	  "path": "policies",
+//	  "query": {
+//	    "wildcard": {
+//	      "policies.all_policies": {
+//	        "value": "*|default|*|*"
+//	      }
+//	    }
+//	  }
+//	}},
 //
 // Will also match a nested multiple policy query. Note that the ordering
 // of policies to be matched is important.
-//     {"nested": {
-//        "path": "policies",
-//        "query": {
-//          "bool": {
-//            "should": [
-//              {
-//                "wildcard": {
-//                  "policies.all_policies": {
-//                  "value": "*|allow-tigera|*|*"
-//                  }
-//                }
-//              },
-//              {
-//                "wildcard": {
-//                  "policies.all_policies": {
-//                  "value": "*|__PROFILE__|__PROFILE__.kns.tigera-intrusion-detection|allow"
-//                  }
-//                }
-//              }
-//            ]
-//          }
-//        }
+//
+//	{"nested": {
+//	   "path": "policies",
+//	   "query": {
+//	     "bool": {
+//	       "should": [
+//	         {
+//	           "wildcard": {
+//	             "policies.all_policies": {
+//	             "value": "*|allow-tigera|*|*"
+//	             }
+//	           }
+//	         },
+//	         {
+//	           "wildcard": {
+//	             "policies.all_policies": {
+//	             "value": "*|__PROFILE__|__PROFILE__.kns.tigera-intrusion-detection|allow"
+//	             }
+//	           }
+//	         }
+//	       ]
+//	     }
+//	   }
 func matchNestedQuery(nestedQuery map[string]interface{}, wildcardedPolicyQueries []string) {
 	for nestedQueryKey, nestedQueryParams := range nestedQuery {
 		switch nestedQueryKey {
@@ -275,20 +277,21 @@ func matchWildcardQuery(wildcardQuery map[string]interface{}, wildcardedPolicyQu
 }
 
 // Matches the inner "should" query
-//      {"bool": {
-//        "should": [
-//          {"bool": {
-//            "must": [
-//              {"term": {"source_namespace": "test-namespace"}}
-//            ]
-//          }},
-//          {"bool": {
-//            "must": [
-//              {"term": {"dest_namespace": "test-namespace"}}
-//            ]
-//          }}
-//        ]
-//      }}
+//
+//	{"bool": {
+//	  "should": [
+//	    {"bool": {
+//	      "must": [
+//	        {"term": {"source_namespace": "test-namespace"}}
+//	      ]
+//	    }},
+//	    {"bool": {
+//	      "must": [
+//	        {"term": {"dest_namespace": "test-namespace"}}
+//	      ]
+//	    }}
+//	  ]
+//	}}
 func matchNamespaceInnerBoolShouldQuery(boolQuery map[string]interface{}, params *policyrec.PolicyRecommendationParams) {
 	shouldQuery, ok := boolQuery["should"].([]interface{})
 	Expect(ok).To(BeTrue())
@@ -308,22 +311,23 @@ func matchNamespaceInnerBoolShouldQuery(boolQuery map[string]interface{}, params
 }
 
 // Matches the inner "should" query
-//      {"bool": {
-//        "should": [
-//          {"bool": {
-//            "must": [
-//              {"term": {"source_name_aggr": "test-app-pod"}},
-//              {"term": {"source_namespace": "test-namespace"}}
-//            ]
-//          }},
-//          {"bool": {
-//            "must": [
-//              {"term": {"dest_name_aggr": "test-app-pod"}},
-//              {"term": {"dest_namespace": "test-namespace"}}
-//            ]
-//          }}
-//        ]
-//      }}
+//
+//	{"bool": {
+//	  "should": [
+//	    {"bool": {
+//	      "must": [
+//	        {"term": {"source_name_aggr": "test-app-pod"}},
+//	        {"term": {"source_namespace": "test-namespace"}}
+//	      ]
+//	    }},
+//	    {"bool": {
+//	      "must": [
+//	        {"term": {"dest_name_aggr": "test-app-pod"}},
+//	        {"term": {"dest_namespace": "test-namespace"}}
+//	      ]
+//	    }}
+//	  ]
+//	}}
 func matchInnerBoolShouldQuery(boolQuery map[string]interface{}, params *policyrec.PolicyRecommendationParams) {
 	shouldQuery, ok := boolQuery["should"].([]interface{})
 	Expect(ok).To(BeTrue())
@@ -343,9 +347,10 @@ func matchInnerBoolShouldQuery(boolQuery map[string]interface{}, params *policyr
 }
 
 // Matches inner must queries such as (and corresponding source variant):
-//            "must": [
-//              {"term": {"dest_namespace": "test-namespace"}}
-//            ]
+//
+//	"must": [
+//	  {"term": {"dest_namespace": "test-namespace"}}
+//	]
 func matchNamespaceInnerMustQuery(mustQuery interface{}, params *policyrec.PolicyRecommendationParams) {
 	mustPart := mustQuery
 	part, ok := mustPart.(map[string]interface{})
@@ -367,10 +372,11 @@ func matchNamespaceInnerMustQuery(mustQuery interface{}, params *policyrec.Polic
 }
 
 // Matches inner must queries such as (and corresponding source variant):
-//            "must": [
-//              {"term": {"dest_name_aggr": "test-app-pod"}},
-//              {"term": {"dest_namespace": "test-namespace"}}
-//            ]
+//
+//	"must": [
+//	  {"term": {"dest_name_aggr": "test-app-pod"}},
+//	  {"term": {"dest_namespace": "test-namespace"}}
+//	]
 func matchInnerMustQuery(mustQuery []interface{}, params *policyrec.PolicyRecommendationParams) {
 	for _, mustPart := range mustQuery {
 		part, ok := mustPart.(map[string]interface{})

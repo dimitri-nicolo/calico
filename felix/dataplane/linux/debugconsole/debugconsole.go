@@ -44,7 +44,7 @@ func New(packetProcessorRestarter PacketProcessorDebugRestarter) DebugConsole {
 // Start opens a unix socket (at the location of SockAddr) and listens for commands over that socket.
 // Commands can be sent to the debug console using netcat as follows:
 //
-//   echo <command> <arguments> | nc -U /var/run/calico/felix/debug
+//	echo <command> <arguments> | nc -U /var/run/calico/felix/debug
 //
 // If the command was executed successfully "success" will be printed out, otherwise "fail: <error-message>" will be
 // printed.

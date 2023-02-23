@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -94,7 +94,7 @@ func (a *authenticator) Authenticate(authHeader string) (user.Info, int, error) 
 			AuthorizationHeader: []string{authHeader},
 			"Content-Type":      []string{"application/json"},
 		},
-		Body: ioutil.NopCloser(reader),
+		Body: io.NopCloser(reader),
 	}
 	response, err := a.client.Do(req)
 	if err != nil {
@@ -102,7 +102,7 @@ func (a *authenticator) Authenticate(authHeader string) (user.Info, int, error) 
 		return nil, 500, errors.New("unexpected error during authentication review")
 	}
 	defer response.Body.Close()
-	byteArray, err := ioutil.ReadAll(response.Body)
+	byteArray, err := io.ReadAll(response.Body)
 
 	stat := response.StatusCode
 	if stat == http.StatusForbidden {

@@ -10,10 +10,10 @@ BUILD_IMAGES          		?=$(PROMETHEUS_SERVICE_IMAGE)
 
 PROMETHEUS_SERVICE_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 
-VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-                  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-                  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-                  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
+LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
+			  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
+			  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
+			  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
 
 # Create an extended go-build image with docker binary installed for use with st target
 TOOLING_IMAGE?=calico/go-build-with-docker
@@ -27,13 +27,6 @@ TOOLING_IMAGE_CREATED=.go-build-with-docker.created
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ##############################################################################
 include ../lib.Makefile
-
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
 
 ###############################################################################
 # Build
@@ -55,9 +48,7 @@ SRC_FILES:= $(shell find cmd pkg -type f -name '*.go') \
 build: bin/prometheus-service-$(ARCH)
 
 bin/prometheus-service-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" "$(PACKAGE_NAME)/cmd/server"'
+	$(call build_static_cgo_boring_binary, ./cmd/server, $@)
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGES) $(addsuffix -$(ARCH),$(BUILD_IMAGES))

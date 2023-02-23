@@ -2,99 +2,101 @@
 // source: felixbackend.proto
 
 /*
-	Package proto is a generated protocol buffer package.
+Package proto is a generated protocol buffer package.
 
-	It is generated from these files:
-		felixbackend.proto
+It is generated from these files:
 
-	It has these top-level messages:
-		SyncRequest
-		ToDataplane
-		FromDataplane
-		ConfigUpdate
-		RawConfig
-		InSync
-		IPSetUpdate
-		IPSetDeltaUpdate
-		IPSetRemove
-		ActiveProfileUpdate
-		ActiveProfileRemove
-		ProfileID
-		Profile
-		ActivePolicyUpdate
-		ActivePolicyRemove
-		PolicyID
-		Policy
-		Rule
-		ServiceAccountMatch
-		HTTPMatch
-		RuleMetadata
-		IcmpTypeAndCode
-		Protocol
-		PortRange
-		WorkloadEndpointID
-		WorkloadEndpointUpdate
-		WorkloadEndpoint
-		WorkloadEndpointRemove
-		HostEndpointID
-		HostEndpointUpdate
-		HostEndpoint
-		HostEndpointRemove
-		TierInfo
-		NatInfo
-		ProcessStatusUpdate
-		HostEndpointStatusUpdate
-		EndpointStatus
-		HostEndpointStatusRemove
-		WorkloadEndpointStatusUpdate
-		WorkloadEndpointStatusRemove
-		WireguardStatusUpdate
-		HostMetadataUpdate
-		HostMetadataRemove
-		HostMetadataV6Update
-		HostMetadataV6Remove
-		IPSecTunnelAdd
-		IPSecTunnelRemove
-		IPSecBindingUpdate
-		IPSecBlacklistAdd
-		IPSecBlacklistRemove
-		IPAMPoolUpdate
-		IPAMPoolRemove
-		IPAMPool
-		Encapsulation
-		ServiceAccountUpdate
-		ServiceAccountRemove
-		ServiceAccountID
-		NamespaceUpdate
-		NamespaceRemove
-		NamespaceID
-		TunnelType
-		RouteUpdate
-		RouteRemove
-		VXLANTunnelEndpointUpdate
-		VXLANTunnelEndpointRemove
-		ReportResult
-		DataplaneStats
-		Statistic
-		RuleTrace
-		HTTPData
-		WireguardEndpointUpdate
-		WireguardEndpointRemove
-		WireguardEndpointV6Update
-		WireguardEndpointV6Remove
-		GlobalBGPConfigUpdate
-		PacketCaptureUpdate
-		PacketCaptureRemove
-		PacketCaptureID
-		PacketCaptureStatusUpdate
-		PacketCaptureSpecification
-		EgressPodStatusUpdate
-		ServiceUpdate
-		ServiceRemove
-		ExternalNetworkID
-		ExternalNetwork
-		ExternalNetworkUpdate
-		ExternalNetworkRemove
+	felixbackend.proto
+
+It has these top-level messages:
+
+	SyncRequest
+	ToDataplane
+	FromDataplane
+	ConfigUpdate
+	RawConfig
+	InSync
+	IPSetUpdate
+	IPSetDeltaUpdate
+	IPSetRemove
+	ActiveProfileUpdate
+	ActiveProfileRemove
+	ProfileID
+	Profile
+	ActivePolicyUpdate
+	ActivePolicyRemove
+	PolicyID
+	Policy
+	Rule
+	ServiceAccountMatch
+	HTTPMatch
+	RuleMetadata
+	IcmpTypeAndCode
+	Protocol
+	PortRange
+	WorkloadEndpointID
+	WorkloadEndpointUpdate
+	WorkloadEndpoint
+	WorkloadEndpointRemove
+	HostEndpointID
+	HostEndpointUpdate
+	HostEndpoint
+	HostEndpointRemove
+	TierInfo
+	NatInfo
+	ProcessStatusUpdate
+	HostEndpointStatusUpdate
+	EndpointStatus
+	HostEndpointStatusRemove
+	WorkloadEndpointStatusUpdate
+	WorkloadEndpointStatusRemove
+	WireguardStatusUpdate
+	HostMetadataUpdate
+	HostMetadataRemove
+	HostMetadataV6Update
+	HostMetadataV6Remove
+	IPSecTunnelAdd
+	IPSecTunnelRemove
+	IPSecBindingUpdate
+	IPSecBlacklistAdd
+	IPSecBlacklistRemove
+	IPAMPoolUpdate
+	IPAMPoolRemove
+	IPAMPool
+	Encapsulation
+	ServiceAccountUpdate
+	ServiceAccountRemove
+	ServiceAccountID
+	NamespaceUpdate
+	NamespaceRemove
+	NamespaceID
+	TunnelType
+	RouteUpdate
+	RouteRemove
+	VXLANTunnelEndpointUpdate
+	VXLANTunnelEndpointRemove
+	ReportResult
+	DataplaneStats
+	Statistic
+	RuleTrace
+	HTTPData
+	WireguardEndpointUpdate
+	WireguardEndpointRemove
+	WireguardEndpointV6Update
+	WireguardEndpointV6Remove
+	GlobalBGPConfigUpdate
+	PacketCaptureUpdate
+	PacketCaptureRemove
+	PacketCaptureID
+	PacketCaptureStatusUpdate
+	PacketCaptureSpecification
+	EgressPodStatusUpdate
+	ServiceUpdate
+	ServiceRemove
+	ExternalNetworkID
+	ExternalNetwork
+	ExternalNetworkUpdate
+	ExternalNetworkRemove
 */
 package proto
 
@@ -428,7 +430,7 @@ type SyncRequest struct {
 	// dataplane statistics to Felix.
 	SupportsDataplaneStats bool `protobuf:"varint,2,opt,name=supportsDataplaneStats,proto3" json:"supportsDataplaneStats,omitempty"`
 	// Determines which types of payloads will be sent to the client.
-	// Valid values are "per-pod-policies" or "l3-routes".
+	// Valid values are "per-pod-policies", "per-host-policies", or "l3-routes".
 	SubscriptionType string `protobuf:"bytes,3,opt,name=subscriptionType,proto3" json:"subscriptionType,omitempty"`
 	// Controls whether IPv6 routes will be sent or not.
 	SupportsIPv6RouteUpdates bool `protobuf:"varint,100,opt,name=supportsIPv6RouteUpdates,proto3" json:"supportsIPv6RouteUpdates,omitempty"`

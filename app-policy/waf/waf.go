@@ -1,5 +1,7 @@
-// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
+//go:build cgo
+// +build cgo
 
+// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
 package waf
 
 // #cgo CFLAGS: -I/usr/local/modsecurity/include
@@ -9,7 +11,6 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -81,21 +82,27 @@ func CheckRulesSetDirectoryExists() error {
 func ExtractRulesSetFilenames() error {
 
 	// Read all core rule set file names from rules directory.
-	items, err := ioutil.ReadDir(rulesetDirectory)
+	items, err := os.ReadDir(rulesetDirectory)
 	if err != nil {
 		return err
 	}
 
+	var itemNames []string
+	for _, i := range items {
+		itemNames = append(itemNames, i.Name())
+	}
 	// Sort files descending to ensure lower cased files like crs-setup.conf are loaded first.
 	// This is a requirement for Core Rules Set and REQUEST-901-INITIALIZATION.conf bootstrap.
-	sortFileNameDescend(items)
+	sort.Slice(itemNames, func(i, j int) bool {
+		return itemNames[i] > itemNames[j]
+	})
 
 	count := 1
 	filenames = nil
-	for _, item := range items {
+	for _, item := range itemNames {
 
 		// Ignore files that link to the parent directory.
-		filename := item.Name()
+		filename := item
 		if strings.HasPrefix(filename, "..") {
 			continue
 		}
@@ -250,6 +257,27 @@ func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHo
 	return nil
 }
 
+func Initialize(rulesetArgument interface{}) {
+	// Check if WAF should be enabled first before proceeding...
+	if rulesetArgument != nil {
+		rulesetDirectory := rulesetArgument.(string)
+		if err := CheckRulesSetExists(rulesetDirectory); err != nil {
+			log.Fatalf("Failed WAF Core Rules Set check: '%s'", err.Error())
+		}
+	}
+
+	if IsEnabled() {
+		log.Info("WAF is enabled!")
+		InitializeLogging()
+		InitializeModSecurity()
+
+		filenames := GetRulesSetFilenames()
+		if err := LoadModSecurityCoreRuleSet(filenames); err != nil {
+			log.Fatalf("Failed to load WAF ruleset: %s", err.Error())
+		}
+	}
+}
+
 // IsEnabled helper function used by client calling code.
 func IsEnabled() bool {
 	return wafIsEnabled
@@ -267,12 +295,6 @@ func GetRulesSetFilenames() []string {
 
 func GetProcessHttpRequestPrefix(id string) string {
 	return fmt.Sprintf("WAF Process Http Request [%s]", id)
-}
-
-func sortFileNameDescend(files []os.FileInfo) {
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Name() > files[j].Name()
-	})
 }
 
 //export GoModSecurityLoggingCallback
@@ -314,6 +336,9 @@ func GetAndClearOwaspLogs(uniqueId string) []string {
 }
 
 func CleanupModSecurity() {
+	if !IsEnabled() {
+		return
+	}
 	C.CleanupModSecurity()
 	log.Printf("WAF Cleanup Mod Security.")
 }

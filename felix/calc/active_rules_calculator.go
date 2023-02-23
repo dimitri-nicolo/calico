@@ -85,7 +85,7 @@ type ActiveRulesCalculator struct {
 
 	// Callback objects.
 	RuleScanner           ruleScanner
-	PolicyMatchListener   PolicyMatchListener
+	PolicyMatchListeners  []PolicyMatchListener
 	PolicyLookupCache     ruleScanner
 	OnPolicyCountsChanged func(numTiers, numPolicies, numProfiles, numALPPolicies, numALPEndpoints int)
 	OnAlive               func()
@@ -318,7 +318,9 @@ func (arc *ActiveRulesCalculator) updateEndpointProfileIDs(key model.Key, profil
 
 func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
 	if es, ok := selID.(egressSelector); ok {
-		arc.PolicyMatchListener.OnEgressSelectorMatch(string(es), labelId)
+		for _, l := range arc.PolicyMatchListeners {
+			l.OnEgressSelectorMatch(string(es), labelId)
+		}
 		return
 	}
 	polKey := selID.(model.PolicyKey)
@@ -331,12 +333,16 @@ func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
 		log.Debugf("Policy %v now matches a local endpoint", polKey)
 		arc.sendPolicyUpdate(polKey)
 	}
-	arc.PolicyMatchListener.OnPolicyMatch(polKey, labelId)
+	for _, l := range arc.PolicyMatchListeners {
+		l.OnPolicyMatch(polKey, labelId)
+	}
 }
 
 func (arc *ActiveRulesCalculator) onMatchStopped(selID, labelId interface{}) {
 	if es, ok := selID.(egressSelector); ok {
-		arc.PolicyMatchListener.OnEgressSelectorMatchStopped(string(es), labelId)
+		for _, l := range arc.PolicyMatchListeners {
+			l.OnEgressSelectorMatchStopped(string(es), labelId)
+		}
 		return
 	}
 	polKey := selID.(model.PolicyKey)
@@ -347,7 +353,9 @@ func (arc *ActiveRulesCalculator) onMatchStopped(selID, labelId interface{}) {
 		log.Debugf("Policy %v no longer matches a local endpoint", polKey)
 		arc.sendPolicyUpdate(polKey)
 	}
-	arc.PolicyMatchListener.OnPolicyMatchStopped(polKey, labelId)
+	for _, l := range arc.PolicyMatchListeners {
+		l.OnPolicyMatchStopped(polKey, labelId)
+	}
 }
 
 var DummyDropRules = model.ProfileRules{

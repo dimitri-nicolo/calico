@@ -15,6 +15,7 @@
 package policysync
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -35,17 +36,19 @@ import (
 const MaxMembersPerMessage = 82200
 
 type Processor struct {
-	Updates            <-chan interface{}
-	JoinUpdates        chan interface{}
-	endpointsByID      map[proto.WorkloadEndpointID]*EndpointInfo
-	policyByID         map[proto.PolicyID]*policyInfo
-	profileByID        map[proto.ProfileID]*profileInfo
-	serviceAccountByID map[proto.ServiceAccountID]*proto.ServiceAccountUpdate
-	namespaceByID      map[proto.NamespaceID]*proto.NamespaceUpdate
-	ipSetsByID         map[string]*ipSetInfo
-	routesByID         map[string]*proto.RouteUpdate
-	config             *config.Config
-	receivedInSync     bool
+	Updates             <-chan interface{}
+	JoinUpdates         chan interface{}
+	perHostPolicyAgents map[uint64]chan<- proto.ToDataplane
+	workloadsByID       map[proto.WorkloadEndpointID]*proto.WorkloadEndpointUpdate
+	endpointsByID       map[proto.WorkloadEndpointID]*EndpointInfo
+	policyByID          map[proto.PolicyID]*policyInfo
+	profileByID         map[proto.ProfileID]*profileInfo
+	serviceAccountByID  map[proto.ServiceAccountID]*proto.ServiceAccountUpdate
+	namespaceByID       map[proto.NamespaceID]*proto.NamespaceUpdate
+	ipSetsByID          map[string]*ipSetInfo
+	routesByID          map[string]*proto.RouteUpdate
+	config              *config.Config
+	receivedInSync      bool
 }
 
 // SubscriptionType represents the set of updates a client is interested in receiving.
@@ -56,6 +59,8 @@ const (
 	SubscriptionTypePerPodPolicies SubscriptionType = iota
 	// SubscriptionTypeL3Routes is used by egress gateway pods to get L3 route updates for the cluster.
 	SubscriptionTypeL3Routes
+	// SubscriptionTypePerHostPolicies is used by per-host dikastes to get policy and workload updates for a particular cluster
+	SubscriptionTypePerHostPolicies
 )
 
 func (s SubscriptionType) String() string {
@@ -64,17 +69,23 @@ func (s SubscriptionType) String() string {
 		return "per-pod-policies"
 	case SubscriptionTypeL3Routes:
 		return "l3-routes"
+	case SubscriptionTypePerHostPolicies:
+		return "per-host-policies"
 	default:
 		return fmt.Sprintf("<unknown-subscription-type(%v)>", uint8(s))
 	}
 }
 
-func newSubscriptionType(s string) (SubscriptionType, error) {
+func NewSubscriptionType(s string) (SubscriptionType, error) {
 	switch strings.ToLower(s) {
+	case "":
+		return SubscriptionTypePerPodPolicies, nil
 	case strings.ToLower(SubscriptionTypePerPodPolicies.String()):
 		return SubscriptionTypePerPodPolicies, nil
 	case strings.ToLower(SubscriptionTypeL3Routes.String()):
 		return SubscriptionTypeL3Routes, nil
+	case strings.ToLower(SubscriptionTypePerHostPolicies.String()):
+		return SubscriptionTypePerHostPolicies, nil
 	default:
 		return 0, fmt.Errorf("unknown subscription type %s", s)
 	}
@@ -104,6 +115,7 @@ type JoinMetadata struct {
 // goroutine.
 type JoinRequest struct {
 	JoinMetadata
+	SubscriptionType SubscriptionType
 	// The sync request that initiated the join. This contains details of the features supported by
 	// the consumer.
 	SyncRequest proto.SyncRequest
@@ -115,46 +127,76 @@ type JoinRequest struct {
 
 type LeaveRequest struct {
 	JoinMetadata
+	SubscriptionType SubscriptionType
 }
 
 func NewProcessor(config *config.Config, updates <-chan interface{}) *Processor {
-	return &Processor{
+	proc := &Processor{
 		// Updates from the calculation graph.
 		Updates: updates,
 		// JoinUpdates from the new servers that have started.
-		JoinUpdates:        make(chan interface{}, 10),
-		endpointsByID:      make(map[proto.WorkloadEndpointID]*EndpointInfo),
-		policyByID:         make(map[proto.PolicyID]*policyInfo),
-		profileByID:        make(map[proto.ProfileID]*profileInfo),
-		serviceAccountByID: make(map[proto.ServiceAccountID]*proto.ServiceAccountUpdate),
-		namespaceByID:      make(map[proto.NamespaceID]*proto.NamespaceUpdate),
-		ipSetsByID:         make(map[string]*ipSetInfo),
-		routesByID:         make(map[string]*proto.RouteUpdate),
-		config:             config,
+		JoinUpdates:         make(chan interface{}, 10),
+		perHostPolicyAgents: make(map[uint64]chan<- proto.ToDataplane, 1024),
+		workloadsByID:       make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpointUpdate),
+		endpointsByID:       make(map[proto.WorkloadEndpointID]*EndpointInfo),
+		policyByID:          make(map[proto.PolicyID]*policyInfo),
+		profileByID:         make(map[proto.ProfileID]*profileInfo),
+		serviceAccountByID:  make(map[proto.ServiceAccountID]*proto.ServiceAccountUpdate),
+		namespaceByID:       make(map[proto.NamespaceID]*proto.NamespaceUpdate),
+		ipSetsByID:          make(map[string]*ipSetInfo),
+		routesByID:          make(map[string]*proto.RouteUpdate),
+		config:              config,
 	}
+	return proc
 }
 
 func (p *Processor) Start() {
-	go p.loop()
+	p.StartWithCtx(context.TODO())
 }
 
-func (p *Processor) loop() {
+func (p *Processor) StartWithCtx(ctx context.Context) {
+	go p.loop(ctx)
+}
+
+func (p *Processor) loop(ctx context.Context) {
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case update := <-p.Updates:
 			p.handleDataplane(update)
 		case joinReq := <-p.JoinUpdates:
 			log.WithField("update", joinReq).Info("Request received on the join updates channel")
 			switch r := joinReq.(type) {
 			case JoinRequest:
-				p.handleJoin(r)
+				switch r.SubscriptionType {
+				case SubscriptionTypePerHostPolicies:
+					p.handlePerHostPolicyAgentJoin(r)
+				default:
+					p.handleJoin(r)
+				}
 			case LeaveRequest:
-				p.handleLeave(r)
+				switch r.SubscriptionType {
+				case SubscriptionTypePerHostPolicies:
+					p.handlePerHostPolicyAgentLeave(r)
+				default:
+					p.handleLeave(r)
+				}
 			default:
 				log.WithField("message", joinReq).Panic("Unexpected message")
 			}
 		}
 	}
+}
+
+func (p *Processor) handlePerHostPolicyAgentJoin(joinReq JoinRequest) {
+	log.Debug("<---- per host agent joining")
+	p.perHostPolicyAgents[joinReq.JoinUID] = joinReq.C
+	p.catchUpPerHostSyncTo(joinReq.C)
+}
+
+func (p *Processor) handlePerHostPolicyAgentLeave(leaveReq LeaveRequest) {
+	delete(p.perHostPolicyAgents, leaveReq.JoinUID)
 }
 
 func (p *Processor) handleJoin(joinReq JoinRequest) {
@@ -175,14 +217,7 @@ func (p *Processor) handleJoin(joinReq JoinRequest) {
 		logCxt.Info("Join request with no previously active connection.")
 	}
 
-	var subType SubscriptionType
-	subType, err := newSubscriptionType(joinReq.SyncRequest.SubscriptionType)
-	if err != nil {
-		log.WithField("subscriptionType", joinReq.SyncRequest.SubscriptionType).
-			Debug("Unknown SubscriptionType, defaulting to SubscriptionTypePerPodPolicies")
-		subType = SubscriptionTypePerPodPolicies
-	}
-	ei.subscription = subType
+	ei.subscription = joinReq.SubscriptionType
 	ei.supportsIPv6Routes = joinReq.SyncRequest.SupportsIPv6RouteUpdates
 	ei.currentJoinUID = joinReq.JoinUID
 	ei.output = joinReq.C
@@ -277,6 +312,9 @@ func (p *Processor) handleDataplane(update interface{}) {
 			"type": reflect.TypeOf(update),
 		}).Debug("Unhandled update")
 	}
+
+	// pass through updates to per-host-policy agents thus far
+	p.sendToAllPerHostAgents(update)
 }
 
 func (p *Processor) handleInSync(update *proto.InSync) {
@@ -290,6 +328,84 @@ func (p *Processor) handleInSync(update *proto.InSync) {
 		ei.sendMsg(&proto.ToDataplane_InSync{
 			InSync: &proto.InSync{},
 		})
+	}
+}
+
+func (p *Processor) sendToAllPerHostAgents(update interface{}) {
+	for _, c := range p.perHostPolicyAgents {
+		if upd, err := Wrap(update); err == nil {
+			c <- *upd
+		}
+	}
+}
+
+func (p *Processor) catchUpPerHostSyncTo(perHostAgent chan<- proto.ToDataplane) {
+	log.Debug("<---- catching up sync to a per host agent")
+	// profiles
+	for profileID, profile := range p.profileByID {
+		pid := profileID // dear golang, it's weird that i have to do this
+		upd := &proto.ActiveProfileUpdate{
+			Id:      &pid,
+			Profile: profile.p,
+		}
+
+		perHostAgent <- proto.ToDataplane{
+			Payload: &proto.ToDataplane_ActiveProfileUpdate{
+				ActiveProfileUpdate: upd,
+			},
+		}
+	}
+	// policies
+	for policyID, policy := range p.policyByID {
+		pid := policyID
+		upd := &proto.ActivePolicyUpdate{
+			Id:     &pid,
+			Policy: policy.p,
+		}
+		perHostAgent <- proto.ToDataplane{
+			Payload: &proto.ToDataplane_ActivePolicyUpdate{
+				ActivePolicyUpdate: upd,
+			},
+		}
+	}
+	// service accounts
+	for _, upd := range p.serviceAccountByID {
+		perHostAgent <- proto.ToDataplane{
+			Payload: &proto.ToDataplane_ServiceAccountUpdate{
+				ServiceAccountUpdate: upd,
+			},
+		}
+	}
+	// namespaces
+	for _, upd := range p.namespaceByID {
+		perHostAgent <- proto.ToDataplane{
+			Payload: &proto.ToDataplane_NamespaceUpdate{
+				NamespaceUpdate: upd,
+			},
+		}
+	}
+	// ipsets
+	for _, upd := range p.ipSetsByID {
+		perHostAgent <- proto.ToDataplane{
+			Payload: &proto.ToDataplane_IpsetUpdate{
+				IpsetUpdate: upd.getIPSetUpdate(),
+			},
+		}
+	}
+	// endpoints
+	for _, ei := range p.endpointsByID {
+		if upd, err := Wrap(ei.endpointUpd); err == nil {
+			perHostAgent <- *upd
+			log.Debug("sending")
+		}
+	}
+
+	if p.receivedInSync {
+		perHostAgent <- proto.ToDataplane{
+			Payload: &proto.ToDataplane_InSync{
+				InSync: &proto.InSync{},
+			},
+		}
 	}
 }
 

@@ -40,7 +40,6 @@ type reconciler struct {
 	scannerClusterRoleName             string
 	scannerCLIClusterRoleName          string
 	scannerCLITokenSecretName          string
-	podWatcherClusterRoleName          string
 	operatorClusterRoleName            string
 	runtimeCleanerClusterRoleName      string
 }
@@ -208,11 +207,6 @@ func (c *reconciler) reconcileClusterRoleBindings() error {
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, ccrb); err != nil {
 			return err
 		}
-		pcrb := getClusterRoleBindingDefinition(resource.ImageAssurancePodWatcherClusterRoleBindingName, c.podWatcherClusterRoleName,
-			resource.ImageAssurancePodWatcherServiceAccountName, c.managementOperatorNamespace)
-		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, pcrb); err != nil {
-			return err
-		}
 		operatorCRB := getClusterRoleBindingDefinition(resource.ImageAssuranceOperatorClusterRoleBindingName, c.operatorClusterRoleName,
 			resource.ImageAssuranceOperatorServiceAccountName, c.managementOperatorNamespace)
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, operatorCRB); err != nil {
@@ -244,7 +238,7 @@ func (c *reconciler) verifyOperatorNamespaces(reqLogger *log.Entry) error {
 	return nil
 }
 
-//reconcileAdmissionControllerToken creates a service account and secret for the admission controller in the management cluster
+// reconcileAdmissionControllerToken creates a service account and secret for the admission controller in the management cluster
 // using token request API, and then copies the secret to the managed cluster with a well-known name
 // (tigera-image-assurance-admission-controller-api-access) to be used by the admission controller.
 func (c *reconciler) reconcileAdmissionControllerToken() error {

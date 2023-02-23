@@ -3,7 +3,7 @@ package scaleloader
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"text/template"
 
@@ -98,7 +98,7 @@ type Meta struct {
 func readStep(log *logrus.Entry, scaleName string, stepCount int, path string) (Step, error) {
 	step := Step{}
 
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		log.WithError(err).WithField("path", path).Error("failed to read yaml")
 		return Step{}, fmt.Errorf("Failed to read %s: %v", path, err)

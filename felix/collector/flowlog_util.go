@@ -39,9 +39,9 @@ const (
 
 // extractPartsFromAggregatedTuple converts and returns each field of a tuple to a string.
 // If a field is missing a "-" is used in it's place. This can happen if:
-// - This field has been aggregated over.
-// - This is a ICMP flow in which case it is a "3-tuple" where only source ip,
-//   destination IP and protocol makes sense.
+//   - This field has been aggregated over.
+//   - This is a ICMP flow in which case it is a "3-tuple" where only source ip,
+//     destination IP and protocol makes sense.
 func extractPartsFromAggregatedTuple(t Tuple) (srcIP, dstIP, proto, l4Src, l4Dst string) {
 	// Try to extract source and destination IP address.
 	// This field is aggregated over when using FlowPrefixName aggregation.

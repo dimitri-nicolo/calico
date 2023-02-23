@@ -192,23 +192,23 @@ func (e ErrLostEvents) Num() int {
 func ParsePolicyVerdict(data []byte) PolicyVerdict {
 	fl := PolicyVerdict{
 		SrcAddr:        net.IP(data[0:4]),
-		DstAddr:        net.IP(data[8:12]),
-		PostNATDstAddr: net.IP(data[12:16]),
-		NATTunSrcAddr:  net.IP(data[16:20]),
-		PolicyRC:       state.PolicyResult(binary.LittleEndian.Uint32(data[20:24])),
-		SrcPort:        binary.LittleEndian.Uint16(data[24:26]),
-		DstPort:        binary.LittleEndian.Uint16(data[28:30]),
-		PostNATDstPort: binary.LittleEndian.Uint16(data[30:32]),
-		IPProto:        uint8(data[32]),
-		IPSize:         binary.BigEndian.Uint16(data[34:36]),
-		RulesHit:       binary.LittleEndian.Uint32(data[36:40]),
+		DstAddr:        net.IP(data[32:36]),
+		PostNATDstAddr: net.IP(data[48:52]),
+		NATTunSrcAddr:  net.IP(data[52:56]),
+		PolicyRC:       state.PolicyResult(binary.LittleEndian.Uint32(data[84:88])),
+		SrcPort:        binary.LittleEndian.Uint16(data[88:90]),
+		DstPort:        binary.LittleEndian.Uint16(data[92:94]),
+		PostNATDstPort: binary.LittleEndian.Uint16(data[94:96]),
+		IPProto:        uint8(data[96]),
+		IPSize:         binary.BigEndian.Uint16(data[98:100]),
+		RulesHit:       binary.LittleEndian.Uint32(data[100:104]),
 	}
 
 	if fl.RulesHit > state.MaxRuleIDs {
 		fl.RulesHit = state.MaxRuleIDs
 	}
 
-	off := 40
+	off := 104
 	for i := 0; i < int(fl.RulesHit); i++ {
 		fl.RuleIDs[i] = binary.LittleEndian.Uint64(data[off : off+8])
 		off += 8

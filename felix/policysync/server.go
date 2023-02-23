@@ -26,6 +26,8 @@ import (
 	"github.com/projectcalico/calico/pod2daemon/binder"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -61,7 +63,14 @@ func (s *Server) RegisterGrpc(g *grpc.Server) {
 }
 
 func (s *Server) Sync(syncRequest *proto.SyncRequest, stream proto.PolicySync_SyncServer) error {
-	log.Info("New sync connection")
+	log.Info("New sync connection with subscription type ", syncRequest.SubscriptionType)
+
+	// Validate for correct syncRequest first:
+	st, err := NewSubscriptionType(syncRequest.SubscriptionType)
+	if err != nil {
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	// Extract the workload ID from the request.
 	cxt := stream.Context()
 	creds, ok := binder.CallerFromContext(cxt)
@@ -92,16 +101,17 @@ func (s *Server) Sync(syncRequest *proto.SyncRequest, stream proto.PolicySync_Sy
 		JoinUID:    myJoinUID,
 	}
 	s.JoinUpdates <- JoinRequest{
-		JoinMetadata: joinMeta,
-		SyncRequest:  *syncRequest,
-		C:            updates,
+		SubscriptionType: st,
+		JoinMetadata:     joinMeta,
+		SyncRequest:      *syncRequest,
+		C:                updates,
 	}
 
 	// Defer the cleanup of the join and the updates channel.
 	defer func() {
 		logCxt.Info("Shutting down sync connection")
 		joinsCopy := s.JoinUpdates
-		leaveRequest := LeaveRequest{JoinMetadata: joinMeta}
+		leaveRequest := LeaveRequest{JoinMetadata: joinMeta, SubscriptionType: st}
 		// Since the processor closes the update channel, we need to keep draining the updates channel to avoid
 		// blocking the processor.
 		//

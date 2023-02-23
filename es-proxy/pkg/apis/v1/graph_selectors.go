@@ -4,15 +4,17 @@ package v1
 // GraphSelectors provides selectors used to asynchronously perform associated queries for an edge or a node.
 // These selectors are used in the other raw and service graph APIs to look update additional data for an edge or a
 // node. The format of these selectors is the same as used in GlobalAlerts.  For example,
-//   source_namespace = "namespace1" || (dest_type = "wep" && dest_namespace != "namespace2")
+//
+//	source_namespace = "namespace1" || (dest_type = "wep" && dest_namespace != "namespace2")
 //
 // The JSON formatted output of this is actually a simple set of selector strings for each search option:
-// {
-//   "l3_flows": "xx = 'y'",
-//   "l7_flows": "xx = 'y'",
-//   "dns_logs": "xx = 'y'"
-//   "alerts": "_id = 'abcdef'"
-// }
+//
+//	{
+//	  "l3_flows": "xx = 'y'",
+//	  "l7_flows": "xx = 'y'",
+//	  "dns_logs": "xx = 'y'"
+//	  "alerts": "_id = 'abcdef'"
+//	}
 //
 // A nil value means the selector is not valid. An empty value indicate select all.
 type GraphSelectors struct {

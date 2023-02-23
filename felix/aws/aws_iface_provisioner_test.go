@@ -5,7 +5,6 @@ package aws
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	nethttp "net/http"
 	"os"
@@ -600,7 +599,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 			Eventually(sip.ResponseC()).Should(Receive(Equal(responsePoolsNoENIs)))
 
 			// Should write out the aws-subnets file.
-			rawSubnets, err := ioutil.ReadFile(awsSubnetsFilename)
+			rawSubnets, err := os.ReadFile(awsSubnetsFilename)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rawSubnets).To(MatchJSON(fmt.Sprintf(`{"aws_subnet_ids": ["%s", "%s", "%s"]}`,
 				subnetIDWest1Calico, subnetIDWest1CalicoAlt, subnetIDWest1Default)))

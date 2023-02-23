@@ -17,8 +17,6 @@ package syncher
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -35,161 +33,151 @@ const (
 	// The stats reporting and flush interval. Currently set to half the hardcoded expiration time of cache entries in
 	// the Felix stats collector component.
 	DefaultStatsFlushInterval = 5 * time.Second
-
-	PolicySyncRetryTime = 500 * time.Millisecond
+	PolicySyncRetryTime       = 1000 * time.Millisecond
 )
 
-type syncClient struct {
-	target   string
-	dialOpts []grpc.DialOption
-	stats    statscache.StatsCache
-	inSync   bool
-}
+type SyncClient struct {
+	target           string
+	dialOpts         []grpc.DialOption
+	stats            statscache.StatsCache
+	subscriptionType string
+	inSync           bool
+	storeManager     policystore.PolicyStoreManager
+	syncRequest      *proto.SyncRequest
 
-type SyncClient interface {
-	// Start connects to the Policy Sync API server, processes policy updates from it and sends DataplaneStats to it.
-	// It collates and maintains policy updates in a PolicyStore which it sends over the channel when they are ready
-	// for enforcement.  Each time we disconnect and resync with the Policy Sync API a new PolicyStore is created
-	// and the previous one should be discarded.
-	Start(ctx context.Context, stores chan<- *policystore.PolicyStore, dpStats <-chan statscache.DPStats)
-
-	// SyncClient knows how to report its readiness.
-	health.ReadinessReporter
+	mu sync.Mutex
 }
 
 type ClientOptions struct {
 	StatsFlushInterval time.Duration
+	SubscriptionType   string
 }
 
 // NewClient creates a new syncClient.
-func NewClient(target string, dialOpts []grpc.DialOption, clientOpts ClientOptions) SyncClient {
+func NewClient(target string, policyStoreManager policystore.PolicyStoreManager, dialOpts []grpc.DialOption, clientOpts ClientOptions) *SyncClient {
 	statsFlushInterval := DefaultStatsFlushInterval
 	if clientOpts.StatsFlushInterval != 0 {
 		statsFlushInterval = clientOpts.StatsFlushInterval
 	}
-	return &syncClient{target: target, dialOpts: dialOpts, stats: statscache.New(statsFlushInterval)}
+
+	switch clientOpts.SubscriptionType {
+	case "":
+		clientOpts.SubscriptionType = "per-pod-policies"
+	case "per-pod-policies", "per-host-policies":
+		// pass
+	default:
+		log.Panicf("invalid subscription type: '%s'", clientOpts.SubscriptionType)
+	}
+
+	return &SyncClient{
+		target: target, dialOpts: dialOpts,
+		subscriptionType: clientOpts.SubscriptionType,
+		stats:            statscache.New(statsFlushInterval),
+		storeManager:     policyStoreManager,
+		syncRequest: &proto.SyncRequest{
+			SupportsDropActionOverride: true,
+			SupportsDataplaneStats:     true,
+			SubscriptionType:           clientOpts.SubscriptionType,
+		},
+	}
 }
 
-func (s *syncClient) Start(cxt context.Context, stores chan<- *policystore.PolicyStore, dpStats <-chan statscache.DPStats) {
-	s.stats.Start(cxt, dpStats)
+func (s *SyncClient) RegisterGRPCServices(gs *grpc.Server) {
+	proto.RegisterHealthzServer(gs, health.NewHealthCheckService(s))
+}
+
+func (s *SyncClient) Start(ctx context.Context, dpStats <-chan statscache.DPStats) {
+	s.stats.Start(ctx, dpStats)
 	for {
-		select {
-		case <-cxt.Done():
-			return
-		default:
-			store := policystore.NewPolicyStore()
-			inSync := make(chan struct{})
-			done := make(chan struct{})
-			go s.connect(cxt, store, inSync, done)
-
-			// Block until we receive InSync message, or cancelled.
-			select {
-			case <-inSync:
-				s.inSync = true
-				stores <- store
-			// Also catch the case where syncStore ends before it gets an InSync message.
-			case <-done:
-				// pass
-			case <-cxt.Done():
-				return
-			}
-
-			// Block until syncStore() ends (e.g. disconnected), or cancelled.
-			select {
-			case <-done:
-				// pass
-			case <-cxt.Done():
-				return
-			}
-
-			time.Sleep(PolicySyncRetryTime)
+		if err := s.connectAndSync(ctx); err != nil {
+			log.Error("connectAndSync error: ", err)
 		}
+		time.Sleep(PolicySyncRetryTime)
 	}
 }
 
-func (s *syncClient) connect(
-	cxt context.Context, store *policystore.PolicyStore, inSync chan<- struct{}, done chan<- struct{},
-) {
-	defer close(done)
-	conn, err := grpc.Dial(s.target, s.dialOpts...)
-	if err != nil {
-		log.Warnf("fail to dial Policy Sync server: %v", err)
-		return
+func (s *SyncClient) connectAndSync(ctx context.Context) error {
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	s.setInSync(false)
+	s.storeManager.OnReconnecting()
+
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("connection to PolicySync stopped: %w", err)
 	}
-	log.Info("Successfully connected to Policy Sync server")
-	defer conn.Close()
-	client := proto.NewPolicySyncClient(conn)
 
-	cxt, cancel := context.WithCancel(cxt)
-	wg := sync.WaitGroup{}
+	cc, err := grpc.Dial(s.target, s.dialOpts...)
+	if err != nil {
+		return fmt.Errorf("failed to connect to PolicySync server %s. %w", s.target, err)
+	}
+	defer cc.Close()
 
-	// Start the store sync go routine.
-	wg.Add(1)
-	go func() {
-		s.syncStore(cxt, client, store, inSync)
-		cancel()
-		wg.Done()
-	}()
+	client := proto.NewPolicySyncClient(cc)
+	stream, err := client.Sync(ctx, s.syncRequest)
+	if err != nil {
+		return fmt.Errorf("failed to stream from PolicySync server: %w", err)
+	}
+	go s.sendStats(cctx, client)
 
-	// Start the DataplaneStats reporting go routine.
-	wg.Add(1)
-	go func() {
-		s.sendStats(cxt, client)
-		cancel()
-		wg.Done()
-	}()
-
-	// Wait for both go routines to complete before exiting, since we don't want to close the connection
-	// whilst it may be being accessed.
-	wg.Wait()
+	return s.sync(stream, ctx)
 }
 
-func (s *syncClient) syncStore(cxt context.Context, client proto.PolicySyncClient, store *policystore.PolicyStore, inSync chan<- struct{}) {
-	// Send a sync request indicating which features we support.
-	stream, err := client.Sync(cxt, &proto.SyncRequest{
-		SupportsDropActionOverride: true,
-		SupportsDataplaneStats:     true,
-	})
-	if err != nil {
-		log.Warnf("failed to synchronize with Policy Sync server: %v", err)
-		s.inSync = false
-		return
-	}
-
-	log.Info("Starting synchronization with Policy Sync server")
+func (s *SyncClient) sync(stream proto.PolicySync_SyncClient, ctx context.Context) error {
 	for {
 		update, err := stream.Recv()
 		if err != nil {
-			log.Warnf("connection to Policy Sync server broken: %v", err)
-			return
+			return fmt.Errorf("exceeded max stream retries. retrying grpc connection %w", err)
 		}
-		log.WithFields(log.Fields{"proto": update}).Debug("Received sync API Update")
-		store.Write(func(ps *policystore.PolicyStore) { processUpdate(ps, inSync, update) })
+		switch update.Payload.(type) {
+		case *proto.ToDataplane_InSync:
+			s.setInSync(true)
+			s.storeManager.OnInSync()
+		default:
+			s.storeManager.Write(func(ps *policystore.PolicyStore) {
+				ps.ProcessUpdate(s.subscriptionType, update)
+			})
+		}
 	}
 }
 
-// sendStats is the main stats reporting loop.
-func (s *syncClient) sendStats(cxt context.Context, client proto.PolicySyncClient) {
-	log.Info("Starting sending DataplaneStats to Policy Sync server")
+// Readiness returns whether the SyncClient is InSync.
+func (s *SyncClient) Readiness() (ready bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
+	return s.inSync
+}
+
+func (s *SyncClient) setInSync(v bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.inSync = v
+}
+
+// sendStats is the main stats reporting loop.
+func (s *SyncClient) sendStats(ctx context.Context, client proto.PolicySyncClient) {
+	log.Info("Starting sending DataplaneStats to Policy Sync server")
 	for {
 		select {
 		case a := <-s.stats.Aggregated():
+			log.Debug("sending stats")
 			for t, v := range a {
-				if err := s.report(cxt, client, t, v); err != nil {
+				if err := s.report(ctx, client, t, v); err != nil {
 					// Error reporting stats, exit now to start reconnction processing.
 					log.WithError(err).Warning("Error reporting stats")
 					return
 				}
 			}
-		case <-cxt.Done():
+		case <-ctx.Done():
 			return
 		}
 	}
 }
 
 // report converts the statscache formatted stats and reports it as a proto.DataplaneStats to Felix.
-func (s *syncClient) report(cxt context.Context, client proto.PolicySyncClient, t statscache.Tuple, v statscache.Values) error {
+func (s *SyncClient) report(ctx context.Context, client proto.PolicySyncClient, t statscache.Tuple, v statscache.Values) error {
 	log.Debugf("Reporting statistic to Felix: %s=%s", t, v)
 
 	d := &proto.DataplaneStats{
@@ -218,7 +206,7 @@ func (s *syncClient) report(cxt context.Context, client proto.PolicySyncClient, 
 		})
 	}
 
-	if r, err := client.Report(cxt, d); err != nil {
+	if r, err := client.Report(ctx, d); err != nil {
 		// Error sending stats, must be a connection issue, so exit now to force a reconnect.
 		return err
 	} else if !r.Successful {
@@ -229,225 +217,4 @@ func (s *syncClient) report(cxt context.Context, client proto.PolicySyncClient, 
 		return nil
 	}
 	return nil
-}
-
-// Update the PolicyStore with the information passed over the Sync API.
-func processUpdate(store *policystore.PolicyStore, inSync chan<- struct{}, update *proto.ToDataplane) {
-	switch payload := update.Payload.(type) {
-	case *proto.ToDataplane_InSync:
-		close(inSync)
-		processInSync(store, payload.InSync)
-	case *proto.ToDataplane_IpsetUpdate:
-		processIPSetUpdate(store, payload.IpsetUpdate)
-	case *proto.ToDataplane_IpsetDeltaUpdate:
-		processIPSetDeltaUpdate(store, payload.IpsetDeltaUpdate)
-	case *proto.ToDataplane_IpsetRemove:
-		processIPSetRemove(store, payload.IpsetRemove)
-	case *proto.ToDataplane_ActiveProfileUpdate:
-		processActiveProfileUpdate(store, payload.ActiveProfileUpdate)
-	case *proto.ToDataplane_ActiveProfileRemove:
-		processActiveProfileRemove(store, payload.ActiveProfileRemove)
-	case *proto.ToDataplane_ActivePolicyUpdate:
-		processActivePolicyUpdate(store, payload.ActivePolicyUpdate)
-	case *proto.ToDataplane_ActivePolicyRemove:
-		processActivePolicyRemove(store, payload.ActivePolicyRemove)
-	case *proto.ToDataplane_WorkloadEndpointUpdate:
-		processWorkloadEndpointUpdate(store, payload.WorkloadEndpointUpdate)
-	case *proto.ToDataplane_WorkloadEndpointRemove:
-		processWorkloadEndpointRemove(store, payload.WorkloadEndpointRemove)
-	case *proto.ToDataplane_ServiceAccountUpdate:
-		processServiceAccountUpdate(store, payload.ServiceAccountUpdate)
-	case *proto.ToDataplane_ServiceAccountRemove:
-		processServiceAccountRemove(store, payload.ServiceAccountRemove)
-	case *proto.ToDataplane_NamespaceUpdate:
-		processNamespaceUpdate(store, payload.NamespaceUpdate)
-	case *proto.ToDataplane_NamespaceRemove:
-		processNamespaceRemove(store, payload.NamespaceRemove)
-	case *proto.ToDataplane_ConfigUpdate:
-		processConfigUpdate(store, payload.ConfigUpdate)
-	default:
-		panic(fmt.Sprintf("unknown payload %v", update.String()))
-	}
-}
-
-func processInSync(store *policystore.PolicyStore, inSync *proto.InSync) {
-	log.Debug("Processing InSync")
-}
-
-func processConfigUpdate(store *policystore.PolicyStore, update *proto.ConfigUpdate) {
-	log.WithFields(log.Fields{
-		"config": update.Config,
-	}).Info("Processing ConfigUpdate")
-
-	// Update the DropActionOverride setting if it is available.
-	if val, ok := update.Config["DropActionOverride"]; ok {
-		log.Debug("DropActionOverride is present in config")
-		var psVal policystore.DropActionOverride
-		switch strings.ToLower(val) {
-		case "drop":
-			psVal = policystore.DROP
-		case "accept":
-			psVal = policystore.ACCEPT
-		case "loganddrop":
-			psVal = policystore.LOG_AND_DROP
-		case "logandaccept":
-			psVal = policystore.LOG_AND_ACCEPT
-		default:
-			log.Errorf("Unknown DropActionOverride value: %s", val)
-			psVal = policystore.DROP
-		}
-		store.DropActionOverride = psVal
-	}
-
-	// Extract the flow logs settings, defaulting to false if not present.
-	store.DataplaneStatsEnabledForAllowed = getBoolFromConfig(update.Config, "DataplaneStatsEnabledForAllowed", false)
-	store.DataplaneStatsEnabledForDenied = getBoolFromConfig(update.Config, "DataplaneStatsEnabledForDenied", false)
-}
-
-func getBoolFromConfig(m map[string]string, name string, def bool) bool {
-	b := def
-	if v, ok := m[name]; ok {
-		log.Debugf("%s is present in config", name)
-		if p, err := strconv.ParseBool(v); err == nil {
-			log.Debugf("Parsed value from Felix config: %s=%v", name, p)
-			b = p
-		} else {
-			log.Errorf("Unknown %s boolean value: %s", name, v)
-		}
-	}
-	return b
-}
-
-func processIPSetUpdate(store *policystore.PolicyStore, update *proto.IPSetUpdate) {
-	log.WithFields(log.Fields{
-		"id": update.Id,
-	}).Debug("Processing IPSetUpdate")
-
-	// IPSetUpdate replaces the existing set.
-	s := policystore.NewIPSet(update.Type)
-	for _, addr := range update.Members {
-		s.AddString(addr)
-	}
-	store.IPSetByID[update.Id] = s
-}
-
-func processIPSetDeltaUpdate(store *policystore.PolicyStore, update *proto.IPSetDeltaUpdate) {
-	log.WithFields(log.Fields{
-		"id": update.Id,
-	}).Debug("Processing IPSetDeltaUpdate")
-	s := store.IPSetByID[update.Id]
-	if s == nil {
-		log.Errorf("Unknown IPSet id: %v", update.Id)
-		panic("unknown IPSet id")
-	}
-	for _, addr := range update.AddedMembers {
-		s.AddString(addr)
-	}
-	for _, addr := range update.RemovedMembers {
-		s.RemoveString(addr)
-	}
-}
-
-func processIPSetRemove(store *policystore.PolicyStore, update *proto.IPSetRemove) {
-	log.WithFields(log.Fields{
-		"id": update.Id,
-	}).Debug("Processing IPSetRemove")
-	delete(store.IPSetByID, update.Id)
-}
-
-func processActiveProfileUpdate(store *policystore.PolicyStore, update *proto.ActiveProfileUpdate) {
-	log.WithFields(log.Fields{
-		"id": update.Id,
-	}).Debug("Processing ActiveProfileUpdate")
-	if update.Id == nil {
-		panic("got ActiveProfileUpdate with nil ProfileID")
-	}
-	store.ProfileByID[*update.Id] = update.Profile
-}
-
-func processActiveProfileRemove(store *policystore.PolicyStore, update *proto.ActiveProfileRemove) {
-	log.WithFields(log.Fields{
-		"id": update.Id,
-	}).Debug("Processing ActiveProfileRemove")
-	if update.Id == nil {
-		panic("got ActiveProfileRemove with nil ProfileID")
-	}
-	delete(store.ProfileByID, *update.Id)
-}
-
-func processActivePolicyUpdate(store *policystore.PolicyStore, update *proto.ActivePolicyUpdate) {
-	log.WithFields(log.Fields{
-		"id": update.Id,
-	}).Debug("Processing ActivePolicyUpdate")
-	if update.Id == nil {
-		panic("got ActivePolicyUpdate with nil PolicyID")
-	}
-	store.PolicyByID[*update.Id] = update.Policy
-}
-
-func processActivePolicyRemove(store *policystore.PolicyStore, update *proto.ActivePolicyRemove) {
-	log.WithFields(log.Fields{
-		"id": update.Id,
-	}).Debug("Processing ActivePolicyRemove")
-	if update.Id == nil {
-		panic("got ActivePolicyRemove with nil PolicyID")
-	}
-	delete(store.PolicyByID, *update.Id)
-}
-
-func processWorkloadEndpointUpdate(store *policystore.PolicyStore, update *proto.WorkloadEndpointUpdate) {
-	// TODO: check the WorkloadEndpointID?
-	log.WithFields(log.Fields{
-		"orchestratorID": update.GetId().GetOrchestratorId(),
-		"workloadID":     update.GetId().GetWorkloadId(),
-		"endpointID":     update.GetId().GetEndpointId(),
-	}).Info("Processing WorkloadEndpointUpdate")
-	store.Endpoint = update.Endpoint
-}
-
-func processWorkloadEndpointRemove(store *policystore.PolicyStore, update *proto.WorkloadEndpointRemove) {
-	// TODO: maybe this isn't required, because removing the endpoint means shutting down the pod?
-	log.WithFields(log.Fields{
-		"orchestratorID": update.GetId().GetOrchestratorId(),
-		"workloadID":     update.GetId().GetWorkloadId(),
-		"endpointID":     update.GetId().GetEndpointId(),
-	}).Warning("Processing WorkloadEndpointRemove")
-	store.Endpoint = nil
-}
-
-func processServiceAccountUpdate(store *policystore.PolicyStore, update *proto.ServiceAccountUpdate) {
-	log.WithField("id", update.Id).Debug("Processing ServiceAccountUpdate")
-	if update.Id == nil {
-		panic("got ServiceAccountUpdate with nil ServiceAccountID")
-	}
-	store.ServiceAccountByID[*update.Id] = update
-}
-
-func processServiceAccountRemove(store *policystore.PolicyStore, update *proto.ServiceAccountRemove) {
-	log.WithField("id", update.Id).Debug("Processing ServiceAccountRemove")
-	if update.Id == nil {
-		panic("got ServiceAccountRemove with nil ServiceAccountID")
-	}
-	delete(store.ServiceAccountByID, *update.Id)
-}
-
-func processNamespaceUpdate(store *policystore.PolicyStore, update *proto.NamespaceUpdate) {
-	log.WithField("id", update.Id).Debug("Processing NamespaceUpdate")
-	if update.Id == nil {
-		panic("got NamespaceUpdate with nil NamespaceID")
-	}
-	store.NamespaceByID[*update.Id] = update
-}
-
-func processNamespaceRemove(store *policystore.PolicyStore, update *proto.NamespaceRemove) {
-	log.WithField("id", update.Id).Debug("Processing NamespaceRemove")
-	if update.Id == nil {
-		panic("got NamespaceRemove with nil NamespaceID")
-	}
-	delete(store.NamespaceByID, *update.Id)
-}
-
-// Readiness returns whether the SyncClient is InSync.
-func (s *syncClient) Readiness() bool {
-	return s.inSync
 }

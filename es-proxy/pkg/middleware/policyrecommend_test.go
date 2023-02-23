@@ -6,7 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 
@@ -897,7 +897,7 @@ var _ = Describe("Policy Recommendation", func() {
 
 			if statusCode != http.StatusOK {
 				Expect(w.Code).To(Equal(http.StatusNotFound))
-				recResponse, err := ioutil.ReadAll(w.Body)
+				recResponse, err := io.ReadAll(w.Body)
 				Expect(err).NotTo(HaveOccurred())
 				errorBody := &api.Error{}
 				err = json.Unmarshal(recResponse, errorBody)
@@ -907,7 +907,7 @@ var _ = Describe("Policy Recommendation", func() {
 				return
 			}
 
-			recResponse, err := ioutil.ReadAll(w.Body)
+			recResponse, err := io.ReadAll(w.Body)
 			Expect(err).NotTo(HaveOccurred())
 
 			actualRec := &PolicyRecommendationResponse{}
@@ -1007,7 +1007,7 @@ var _ = Describe("Policy Recommendation", func() {
 
 			if statusCode != http.StatusOK {
 				Expect(w.Code).To(Equal(http.StatusNotFound))
-				recResponse, err := ioutil.ReadAll(w.Body)
+				recResponse, err := io.ReadAll(w.Body)
 				Expect(err).NotTo(HaveOccurred())
 				errorBody := &api.Error{}
 				err = json.Unmarshal(recResponse, errorBody)
@@ -1017,7 +1017,7 @@ var _ = Describe("Policy Recommendation", func() {
 				return
 			}
 
-			recResponse, err := ioutil.ReadAll(w.Body)
+			recResponse, err := io.ReadAll(w.Body)
 			Expect(err).NotTo(HaveOccurred())
 
 			actualRec := &PolicyRecommendationResponse{}

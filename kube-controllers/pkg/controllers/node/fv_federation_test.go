@@ -5,7 +5,6 @@ package node
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"time"
@@ -256,7 +255,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		localApiserver = testutils.RunK8sApiserver(localEtcd.IP)
 
 		// Write out a kubeconfig file for the local API server, and create a k8s client.
-		lkubeconfig, err := ioutil.TempFile("", "ginkgo-localcluster")
+		lkubeconfig, err := os.CreateTemp("", "ginkgo-localcluster")
 		Expect(err).NotTo(HaveOccurred())
 		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
 		err = lkubeconfig.Chmod(os.ModePerm)
@@ -280,7 +279,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		remoteApiserver = testutils.RunK8sApiserver(remoteEtcd.IP)
 
 		// Write out a kubeconfig file for the remote API server.
-		rkubeconfig, err := ioutil.TempFile("", "ginkgo-remotecluster")
+		rkubeconfig, err := os.CreateTemp("", "ginkgo-remotecluster")
 		Expect(err).NotTo(HaveOccurred())
 		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
 		err = rkubeconfig.Chmod(os.ModePerm)

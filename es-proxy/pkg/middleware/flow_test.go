@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -232,11 +231,11 @@ var _ = Describe("FlowLog", func() {
 			defer GinkgoRecover()
 			req := args.Get(0).(*http.Request)
 
-			body, err := ioutil.ReadAll(req.Body)
+			body, err := io.ReadAll(req.Body)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(req.Body.Close()).ShouldNot(HaveOccurred())
 
-			req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+			req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 			requestJson := map[string]interface{}{}
 			Expect(json.Unmarshal(body, &requestJson)).ShouldNot(HaveOccurred())
@@ -607,7 +606,7 @@ var _ = Describe("FlowLog", func() {
 				flowLogHandler.ServeHTTP(respRecorder, req)
 				Expect(respRecorder.Code).Should(Equal(200))
 
-				respBody, err := ioutil.ReadAll(respRecorder.Body)
+				respBody, err := io.ReadAll(respRecorder.Body)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				var flResponse FlowResponse
@@ -637,7 +636,7 @@ var _ = Describe("FlowLog", func() {
 				flowLogHandler.ServeHTTP(respRecorder, req)
 				Expect(respRecorder.Code).Should(Equal(200))
 
-				respBody, err := ioutil.ReadAll(respRecorder.Body)
+				respBody, err := io.ReadAll(respRecorder.Body)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				var flResponse FlowResponse
@@ -715,7 +714,7 @@ var _ = Describe("FlowLog", func() {
 					flowLogHandler.ServeHTTP(respRecorder, req)
 					Expect(respRecorder.Code).Should(Equal(200))
 
-					respBody, err := ioutil.ReadAll(respRecorder.Body)
+					respBody, err := io.ReadAll(respRecorder.Body)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					var flResponse FlowResponse
@@ -968,7 +967,7 @@ var _ = Describe("FlowLog", func() {
 					flowLogHandler.ServeHTTP(respRecorder, req)
 					Expect(respRecorder.Code).Should(Equal(200))
 
-					respBody, err := ioutil.ReadAll(respRecorder.Body)
+					respBody, err := io.ReadAll(respRecorder.Body)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					var flResponse FlowResponse
@@ -1160,7 +1159,7 @@ func esSearchResultToResponseBody(searchResult elastic.SearchResult) io.ReadClos
 		panic(err)
 	}
 
-	return ioutil.NopCloser(bytes.NewBuffer(byts))
+	return io.NopCloser(bytes.NewBuffer(byts))
 }
 
 func mustParseTime(timeStr, format string) time.Time {

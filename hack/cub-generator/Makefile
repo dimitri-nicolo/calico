@@ -20,17 +20,10 @@ SRC_FILES = $(shell find pkg cmd -name '*.go')
 
 # We use -X to insert the version information into the placeholder variables
 # in the version package.
-VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-                  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-                  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-                  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
-
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
+LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
+			  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
+			  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
+			  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
 
 ###############################################################################
 # BUILD BINARY
@@ -42,7 +35,7 @@ build: bin/cub-generator-$(ARCH)
 bin/cub-generator-$(ARCH): $(SRC_FILES)
 		$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go'
+			go build -buildvcs=false -o $@ -v -ldflags "$(LDFLAGS)" cmd/$*/*.go'
 
 
 ###############################################################################

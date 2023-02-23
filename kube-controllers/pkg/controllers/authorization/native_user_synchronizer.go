@@ -278,6 +278,7 @@ func (n *nativeUserSynchronizer) synchronizeOIDCUsers(oidcUsersUpdated []string)
 // For an existing Elasticsearch user,
 //   - If password is not available in the data of k8s Secret, generate password and update both the Elasticsearch native user and data of k8s Secret
 //   - Else do noting [use existing password].
+//
 // For new Elasticsearch user, add/update the password in the data of k8s Secret.
 func (n *nativeUserSynchronizer) setOIDCUsersPassword(ctx context.Context, updateEsUsers map[string]elasticsearch.User, deleteEsUsers map[string]elasticsearch.User) error {
 	secret, err := n.k8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(ctx, resource.OIDCUsersEsSecreteName, metav1.GetOptions{})

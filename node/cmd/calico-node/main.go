@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"os"
 	"time"
-
-	"github.com/prometheus/common/log"
 
 	confdConfig "github.com/projectcalico/calico/confd/pkg/config"
 	confd "github.com/projectcalico/calico/confd/pkg/run"
@@ -134,7 +132,6 @@ func main() {
 
 	// Enables FIPS 140-2 verified crypto mode.
 	fipsModeEnabled := os.Getenv("FIPS_MODE_ENABLED") == "true"
-	log.Infof("FIPS mode enabled=%t", fipsModeEnabled)
 	// Check for liveness / readiness flags. Will only run checks specified by flags.
 	if *felixLive || *birdReady || *bird6Ready || *felixReady || *birdLive || *bird6Live || *bgpMetricsReady {
 		health.Run(*birdReady, *bird6Ready, *felixReady, *felixLive, *birdLive, *bird6Live, *bgpMetricsReady, fipsModeEnabled, *thresholdTime)

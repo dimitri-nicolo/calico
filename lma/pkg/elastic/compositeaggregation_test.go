@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -840,11 +839,11 @@ var _ = Describe("GetCompositeAggrFlows", func() {
 				defer GinkgoRecover()
 				req := args.Get(0).(*http.Request)
 
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(req.Body.Close()).ShouldNot(HaveOccurred())
 
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 				requestJson := map[string]interface{}{}
 				Expect(json.Unmarshal(body, &requestJson)).ShouldNot(HaveOccurred())
@@ -876,5 +875,5 @@ func esSearchResultToResponseBody(searchResult elastic.SearchResult) io.ReadClos
 		panic(err)
 	}
 
-	return ioutil.NopCloser(bytes.NewBuffer(byts))
+	return io.NopCloser(bytes.NewBuffer(byts))
 }

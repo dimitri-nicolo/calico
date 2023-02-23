@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -41,7 +40,7 @@ func runViewCmd(args []string) {
 		}
 		clog.Debug("Found file, opening")
 
-		contents, err := ioutil.ReadFile(f)
+		contents, err := os.ReadFile(f)
 		if err != nil {
 			return err
 		}

@@ -577,7 +577,7 @@ blocks:
 #      matrix:
 #      # TODO: s390x builds of calico/node are not working.
 #      - env_var: ARCH
-#        values: [ "arm64", "armv7", "ppc64le" ]
+#        values: [ "arm64", "ppc64le" ]
 #      commands:
 #      - ../.semaphore/run-and-monitor image-$ARCH.log make image ARCH=$ARCH
     - name: "Build Windows archive"
@@ -638,6 +638,10 @@ blocks:
     prologue:
       commands:
       - cd app-policy
+    epilogue:
+      always:
+        commands:
+          - test-results publish report
     jobs:
     - name: "app-policy tests"
       commands:

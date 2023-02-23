@@ -21,11 +21,12 @@ const (
 // CalculateNFLOGPrefixStr calculates NFLOG prefix string to use, limiting the length to 64 chars.
 // The default format is:
 // AODIII|Name ; with A:    the action: (A)llow, (D)eny, (N)ext-tier
-//                    O:    the owner type: (P)olicy or p(R)ofile
-//                    D:    the rule direction: (I)ngress or (E)gress
-//                    III:  the rule index (not a fixed number of digits)
-//                    Name: the policy or profile name (from the v1 model value - this may include both the
-//                          namespace and tier depending on the resource type)
+//
+//	O:    the owner type: (P)olicy or p(R)ofile
+//	D:    the rule direction: (I)ngress or (E)gress
+//	III:  the rule index (not a fixed number of digits)
+//	Name: the policy or profile name (from the v1 model value - this may include both the
+//	      namespace and tier depending on the resource type)
 //
 // If the total length of the prefix is greater than NFLOGPrefixMaxLength, then the first 10 chars
 // and the last 10 chars are left unchanged and the remainder is filled in with a hash of the original prefix
@@ -38,9 +39,10 @@ func CalculateNFLOGPrefixStr(action RuleAction, owner RuleOwnerType, dir RuleDir
 // drop action in a tier.
 // The format is:
 // AOD|Tier ; with A:    the action: Always (D)eny
-//                 O:    the owner type: Always (P)olicy
-//                 D:    the rule direction: (I)ngress or (E)gress
-//                 Tier: the tier name
+//
+//	O:    the owner type: Always (P)olicy
+//	D:    the rule direction: (I)ngress or (E)gress
+//	Tier: the tier name
 //
 // If the total length of the prefix is greater than NFLOGPrefixMaxLength, then the first 10 chars
 // and the last 10 chars are left unchanged and the remainder is filled in with a hash of the original prefix
@@ -54,9 +56,10 @@ func CalculateEndOfTierDropNFLOGPrefixStr(dir RuleDir, tier string) string {
 // tier are staged.
 // The format is:
 // AOD|Tier ; with A:    the action: Always (P)ass
-//                 O:    the owner type: Always (P)olicy
-//                 D:    the rule direction: (I)ngress or (E)gress
-//                 Tier: the tier name
+//
+//	O:    the owner type: Always (P)olicy
+//	D:    the rule direction: (I)ngress or (E)gress
+//	Tier: the tier name
 //
 // If the total length of the prefix is greater than NFLOGPrefixMaxLength, then the first 10 chars
 // and the last 10 chars are left unchanged and the remainder is filled in with a hash of the original prefix
@@ -69,8 +72,9 @@ func CalculateEndOfTierPassNFLOGPrefixStr(dir RuleDir, tier string) string {
 // drop action.
 // The format is:
 // AOD ; with A: the action: Always (D)eny
-//            O: the owner type: Always p(R)rofile
-//            D: the rule direction: (I)ngress or (E)gress
+//
+//	O: the owner type: Always p(R)rofile
+//	D: the rule direction: (I)ngress or (E)gress
 func CalculateNoMatchProfileNFLOGPrefixStr(dir RuleDir) string {
 	// This is a fix length, it never needs hashing.
 	return fmt.Sprintf("%c%c%c", RuleActionDeny, RuleOwnerTypeProfile, dir)
@@ -80,9 +84,11 @@ func CalculateNoMatchProfileNFLOGPrefixStr(dir RuleDir) string {
 // drop action.
 // The format is:
 // AOD|Policy ; with A:      the action: Always (D)eny
-//                   O:      the owner type: Always (P)olicy
-//                   D:      the rule direction: (I)ngress or (E)gress
-//                   Policy: the policy name
+//
+//	O:      the owner type: Always (P)olicy
+//	D:      the rule direction: (I)ngress or (E)gress
+//	Policy: the policy name
+//
 // This is the same format as CalculateEndOfTierDropNFLOGPrefixStr but since the policy name always includes the
 // tier as a prefix, it is not possible to have log prefix clashes between tiers and policies.
 func CalculateNoMatchPolicyNFLOGPrefixStr(dir RuleDir, name string) string {

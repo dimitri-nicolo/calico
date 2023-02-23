@@ -89,7 +89,7 @@ func NewService(calicoCLI calicoclient.Interface, k8sClient kubernetes.Interface
 
 // Start initializes the detection cycle as a CronJob for the GlobalAlert and all preliminary steps
 // required which follows:
-// 	1. retrieves the expected PodTemplate for the AnomalyDetection jobs
+//  1. retrieves the expected PodTemplate for the AnomalyDetection jobs
 //     - does not initialize the service if the PodTemplate does not exist
 //  2. verifies the existence that the model for the specified AD Job exists
 //     - runs an initial training job if no models found

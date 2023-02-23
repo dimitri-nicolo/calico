@@ -17,7 +17,6 @@ package config_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -108,7 +107,7 @@ current-context: test-context`
 	createAndSetKubeConfig := func() {
 		// Write out a kubeconfig file
 		var err error
-		kconfigFile, err = ioutil.TempFile("", "ginkgo-nodecontroller")
+		kconfigFile, err = os.CreateTemp("", "ginkgo-nodecontroller")
 		Expect(err).NotTo(HaveOccurred())
 		data := fmt.Sprintf(kubeconfigTemplate, "127.0.0.1")
 		_, err = kconfigFile.Write([]byte(data))

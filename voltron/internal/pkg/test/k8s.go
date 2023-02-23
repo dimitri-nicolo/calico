@@ -320,7 +320,7 @@ func (c *K8sFakeClient) AddCluster(id, name string, annotations map[string]strin
 		connectionStatus = calicov3.ManagedClusterStatusValueUnknown
 	}
 	if c.clusters.Get(id) != nil {
-		return errors.Errorf("cluster id %s already present", id)
+		return errors.Errorf("cluster id %s already present, fingerprint: ", id)
 	}
 
 	c.clusters.Add(id, name, annotations, connectionStatus)

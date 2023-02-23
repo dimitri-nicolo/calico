@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"io/ioutil"
 	"net/http"
+	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -244,7 +244,7 @@ var _ = Describe("Test flowlog request validation functions", func() {
 
 	Context("Test that the getPolicyPreviews function behaves as expected", func() {
 		It("should return a PolicyPreviews object when passed a valid preview string containing a Calico NetworkPolicy", func() {
-			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
 			policyPreviews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))
@@ -257,7 +257,7 @@ var _ = Describe("Test flowlog request validation functions", func() {
 		})
 
 		It("should return a PolicyPreviews object when passed a valid preview string containing a Calico GlobalNetworkPolicy", func() {
-			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview_2.json")
+			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview_2.json")
 			Expect(err).To(Not(HaveOccurred()))
 			policyPreviews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))
@@ -270,7 +270,7 @@ var _ = Describe("Test flowlog request validation functions", func() {
 		})
 
 		It("should return a PolicyPreviews object when passed a valid preview string containing a Kubernetes NetworkPolicy", func() {
-			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview_3.json")
+			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview_3.json")
 			Expect(err).To(Not(HaveOccurred()))
 			policyPreviews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))
@@ -283,7 +283,7 @@ var _ = Describe("Test flowlog request validation functions", func() {
 		})
 
 		It("should return a PolicyPreviews object when passed a valid preview string containing a Kubernetes v1beta1 NetworkPolicy ", func() {
-			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview_4.json")
+			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview_4.json")
 			Expect(err).To(Not(HaveOccurred()))
 			policyPreviews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))

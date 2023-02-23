@@ -17,7 +17,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"reflect"
@@ -740,7 +739,7 @@ func (c *Config) GetPSKFromFile() string {
 		log.Panicf("error file does not exist for PSK: %s", c.IPSecPSKFile)
 	}
 
-	data, err := ioutil.ReadFile(c.IPSecPSKFile)
+	data, err := os.ReadFile(c.IPSecPSKFile)
 	if err != nil {
 		log.Panicf("error reading PSK from file: %s, err %v", c.IPSecPSKFile, err)
 	}

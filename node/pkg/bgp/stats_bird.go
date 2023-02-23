@@ -345,7 +345,8 @@ func ignoreRow(line string) bool {
 // details.
 //
 // This row looks something like this ('filtered' may or may not be present):
-//   Routes:         1 imported, 1 filtered, 1 exported, 1 preferred
+//
+//	Routes:         1 imported, 1 filtered, 1 exported, 1 preferred
 func parseRoutes(line string, prc *PeerRouteCounts) bool {
 	groups := regex.protocol.routes.FindStringSubmatch(line)
 	if groups == nil {
@@ -378,8 +379,9 @@ func parseRoutes(line string, prc *PeerRouteCounts) bool {
 // within the peer details section called 'Route change stats'.
 //
 // This row looks like this:
-//   Route change stats:     received   rejected   filtered    ignored   accepted
-//     Import updates:              2          0          0          1          1
+//
+//	Route change stats:     received   rejected   filtered    ignored   accepted
+//	  Import updates:              2          0          0          1          1
 func parseImportUpdates(line string, iuc *PeerImportUpdateCounts) bool {
 	groups := regex.protocol.importUpdates.FindStringSubmatch(line)
 	if groups == nil {

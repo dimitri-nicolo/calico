@@ -22,12 +22,12 @@ const (
 
 // IsValidTierName return true if the name is a valid RFC1123 name and of length less than half the .
 // The name must:
-// - start with an alphabetic character
-// - end with an alphanumeric character
-// - contain only lowercase alphanumeric characters or '-'
-// - does not contain ".-" or "-." substrings.
-// - have a character length that is a maximum 28 characters long, i.e. half the
-//   lenOfMaxRfc1123WithoutHash=57.
+//   - start with an alphabetic character
+//   - end with an alphanumeric character
+//   - contain only lowercase alphanumeric characters or '-'
+//   - does not contain ".-" or "-." substrings.
+//   - have a character length that is a maximum 28 characters long, i.e. half the
+//     lenOfMaxRfc1123WithoutHash=57.
 func IsValidTierName(name string) bool {
 	// Validate the length of the tier name. The tier name is used as a prefix to a policy's name and
 	// thus the combined size must not exceed lenOfMaxRfc1123WithoutHash, where we define the max size

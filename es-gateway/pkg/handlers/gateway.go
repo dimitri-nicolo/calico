@@ -5,9 +5,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
+	"os"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -54,7 +54,7 @@ func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) er
 				ca = x509.NewCertPool()
 			}
 
-			file, err := ioutil.ReadFile(t.CAPem)
+			file, err := os.ReadFile(t.CAPem)
 			if err != nil {
 				return nil, errors.Wrap(err, fmt.Sprintf("could not read cert from file %s", t.CAPem))
 			}

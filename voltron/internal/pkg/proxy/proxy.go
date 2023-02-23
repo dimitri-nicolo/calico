@@ -5,10 +5,10 @@ package proxy
 import (
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"regexp"
 
 	"github.com/pkg/errors"
@@ -92,7 +92,7 @@ func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), err
 				ca = x509.NewCertPool()
 			}
 
-			file, err := ioutil.ReadFile(tgt.CAPem)
+			file, err := os.ReadFile(tgt.CAPem)
 			if err != nil {
 				return nil, errors.Wrap(err, fmt.Sprintf("could not read cert from file %s", tgt.CAPem))
 			}

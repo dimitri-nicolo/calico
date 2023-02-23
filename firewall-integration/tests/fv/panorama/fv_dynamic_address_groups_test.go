@@ -4,7 +4,6 @@ package fv
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"sync"
@@ -72,9 +71,9 @@ var _ = Describe("Tests address groups controller", func() {
 			By("Setting up controller configurations")
 			apiserver = &containers.Container{IP: "127.0.0.2"}
 			// Write out a kubeconfig file for the local API server, and create a k8s client.
-			lkubeconfig, err := ioutil.TempFile("", "ginkgo-localcluster")
+			lkubeconfig, err := os.CreateTemp("", "ginkgo-localcluster")
 			Expect(err).NotTo(HaveOccurred())
-			// Change ownership of the kubeconfig file  so it is accessible by all users in the container
+			// Change ownership of the kubeconfig file so it is accessible by all users in the container
 			err = lkubeconfig.Chmod(os.ModePerm)
 			Expect(err).NotTo(HaveOccurred())
 

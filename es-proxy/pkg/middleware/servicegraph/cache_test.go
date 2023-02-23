@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -31,22 +31,22 @@ func CreateMockBackendWithData(rbac RBACFilter, names NameHelper) *MockServiceGr
 	var dns []DNSLog
 	var events []Event
 
-	content, err := ioutil.ReadFile("testdata/l3.json")
+	content, err := os.ReadFile("testdata/l3.json")
 	Expect(err).NotTo(HaveOccurred())
 	err = json.Unmarshal(content, &l3)
 	Expect(err).NotTo(HaveOccurred())
 
-	content, err = ioutil.ReadFile("testdata/l7.json")
+	content, err = os.ReadFile("testdata/l7.json")
 	Expect(err).NotTo(HaveOccurred())
 	err = json.Unmarshal(content, &l7)
 	Expect(err).NotTo(HaveOccurred())
 
-	content, err = ioutil.ReadFile("testdata/dns.json")
+	content, err = os.ReadFile("testdata/dns.json")
 	Expect(err).NotTo(HaveOccurred())
 	err = json.Unmarshal(content, &dns)
 	Expect(err).NotTo(HaveOccurred())
 
-	content, err = ioutil.ReadFile("testdata/events.json")
+	content, err = os.ReadFile("testdata/events.json")
 	Expect(err).NotTo(HaveOccurred())
 	err = json.Unmarshal(content, &events)
 	Expect(err).NotTo(HaveOccurred())

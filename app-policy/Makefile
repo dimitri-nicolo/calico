@@ -21,6 +21,8 @@ DEV_TAG_SUFFIX        ?= calient-0.dev
 DIKASTES_IMAGE ?=dikastes
 BUILD_IMAGES ?= $(DIKASTES_IMAGE)
 
+LDFLAGS = -X main.VERSION=$(GIT_VERSION)
+
 ##############################################################################
 # Download and include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -31,8 +33,6 @@ include ../lib.Makefile
 # We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), $(filter $(ARCH),amd64))
 CGO_ENABLED=1
-CGO_CFLAGS="-I/usr/local/modsecurity/include"
-CGO_LDFLAGS="-L/usr/local/modsecurity/lib/ -Wl,-rpath -Wl,/usr/local/modsecurity/lib/ -lmodsecurity"
 else
 CGO_ENABLED=0
 CGO_CFLAGS=""
@@ -85,25 +85,14 @@ bin/dikastes-arm64: ARCH=arm64
 bin/dikastes-ppc64le: ARCH=ppc64le
 bin/dikastes-s390x: ARCH=s390x
 bin/dikastes-%: protobuf $(SRC_FILES)
-	mkdir -p bin
-	$(DOCKER_RUN_RO) \
-	  -e CGO_ENABLED=$(CGO_ENABLED) \
-	  -e CGO_CFLAGS=$(CGO_CFLAGS) \
-	  -e CGO_LDFLAGS=$(CGO_LDFLAGS) \
-	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION)" -v -o bin/dikastes-$(ARCH) ./cmd/dikastes
+	$(call build_cgo_boring_binary, ./cmd/dikastes, $@)
 
 bin/healthz-amd64: ARCH=amd64
 bin/healthz-arm64: ARCH=arm64
 bin/healthz-ppc64le: ARCH=ppc64le
 bin/healthz-s390x: ARCH=s390x
 bin/healthz-%: protobuf $(SRC_FILES)
-	mkdir -p bin || true
-	-mkdir -p .go-pkg-cache $(GOMOD_CACHE) || true
-	$(DOCKER_RUN_RO) \
-	  -e CGO_ENABLED=$(CGO_ENABLED) \
-	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION)" -v -o bin/healthz-$(ARCH) ./cmd/healthz
+	$(call build_static_cgo_boring_binary, ./cmd/healthz, $@)
 
 # We use gogofast for protobuf compilation.  Regular gogo is incompatible with
 # gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
@@ -154,9 +143,11 @@ $(CONTAINER_CREATED): Dockerfile.$(ARCH) bin/dikastes-$(ARCH) bin/healthz-$(ARCH
 ###############################################################################
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev
-ut: protobuf
-	mkdir -p report
-	$(DOCKER_GO_BUILD_CGO) /bin/bash -c "go test -v $(GINKGO_ARGS) ./... | go-junit-report > ./report/tests.xml"
+ut: protobuf ut-exec
+
+ut-exec:
+	$(DOCKER_GO_BUILD_CGO) /bin/bash -c "go install gotest.tools/gotestsum@latest && gotestsum --junitfile report/tests.xml ./..."
+
 
 ###############################################################################
 # CI

@@ -20,6 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/app-policy/proto"
+	"github.com/projectcalico/calico/app-policy/types"
 )
 
 // DropActionOverride is an enumeration of the available values for the DropActionOverride
@@ -35,10 +36,8 @@ const (
 
 // PolicyStore is a data store that holds Calico policy information.
 type PolicyStore struct {
-	// The RWMutex protects the entire contents of the PolicyStore. No one should read from or write to the PolicyStore
-	// without acquiring the corresponding lock.
-	// Helper methods Write() and Read() encapsulate the correct locking logic.
-	RWMutex sync.RWMutex
+	// route looker upper
+	IPToIndexes types.IPToEndpointsIndex
 
 	// Config settings
 	DropActionOverride              DropActionOverride
@@ -46,51 +45,134 @@ type PolicyStore struct {
 	DataplaneStatsEnabledForDenied  bool
 
 	// Cache data
+	Endpoint           *proto.WorkloadEndpoint
+	Endpoints          map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
 	PolicyByID         map[proto.PolicyID]*proto.Policy
 	ProfileByID        map[proto.ProfileID]*proto.Profile
 	IPSetByID          map[string]IPSet
-	Endpoint           *proto.WorkloadEndpoint
 	ServiceAccountByID map[proto.ServiceAccountID]*proto.ServiceAccountUpdate
 	NamespaceByID      map[proto.NamespaceID]*proto.NamespaceUpdate
+
+	// has this store seen inSync?
+	InSync bool
+
+	wepUpdates *workloadUpdateHandler
 }
 
 func NewPolicyStore() *PolicyStore {
-	return &PolicyStore{
-		RWMutex:            sync.RWMutex{},
+	ps := &PolicyStore{
+		IPToIndexes:        types.NewIPToEndpointsIndex(),
 		DropActionOverride: DROP,
+		Endpoints:          make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		IPSetByID:          make(map[string]IPSet),
 		ProfileByID:        make(map[proto.ProfileID]*proto.Profile),
 		PolicyByID:         make(map[proto.PolicyID]*proto.Policy),
 		ServiceAccountByID: make(map[proto.ServiceAccountID]*proto.ServiceAccountUpdate),
 		NamespaceByID:      make(map[proto.NamespaceID]*proto.NamespaceUpdate),
+
+		wepUpdates: newWorkloadEndpointUpdateHandler(),
+	}
+	return ps
+}
+
+type policyStoreManager struct {
+	current, pending *PolicyStore
+	rl, wl           sync.Locker
+	toActive         bool
+}
+
+type PolicyStoreManager interface {
+	// PolicyStoreManager reads from a current or pending policy store if
+	// syncher has an established and in-sync connection; or not, respectively.
+	Read(func(*PolicyStore))
+	// PolicyStoreManager writes to a current or pending policy store if
+	// syncher has an established and in-sync connection; or not, respectively.
+	Write(func(*PolicyStore))
+
+	// tells PSM of syncher state 'connection lost; reestablishing until inSync encountered'
+	OnReconnecting()
+	// tells PSM of syncher state 'connection (re-)established and in-sync'
+	OnInSync()
+}
+
+type PolicyStoreManagerOption func(*policyStoreManager)
+
+func WithLocker(mu sync.Locker) PolicyStoreManagerOption {
+	return func(psm *policyStoreManager) {
+		switch l := mu.(type) {
+		case *sync.Mutex:
+			psm.rl = l
+			psm.wl = l
+		case *sync.RWMutex:
+			psm.rl = l.RLocker()
+			psm.wl = l
+		default:
+			panic("unknown locker type")
+		}
 	}
 }
 
-// Write to/update the PolicyStore, handling locking logic.
-// writeFn is the logic that actually does the update.
-func (s *PolicyStore) Write(writeFn func(store *PolicyStore)) {
-	// TODO (spikecurtis) create a correlator that can be tracked for logging.
-	log.Debug("About to write lock PolicyStore")
-	s.RWMutex.Lock()
-	// We have a lock: Make sure we unlock under all exit conditions
-	defer func() {
-		s.RWMutex.Unlock()
-		log.Debug("PolicyStore write unlocked")
-	}()
-	log.Debug("PolicyStore write locked")
-	writeFn(s)
+func NewPolicyStoreManager() PolicyStoreManager {
+	return NewPolicyStoreManagerWithOpts(WithLocker(&sync.Mutex{}))
 }
 
-// Read the PolicyStore, handling locking logic.
-// readFn is the logic that actually does the reading.
-func (s *PolicyStore) Read(readFn func(store *PolicyStore)) {
-	log.Debug("About to read lock PolicyStore")
-	s.RWMutex.RLock()
-	// We have a lock: Make sure we unlock under all exit conditions
-	defer func() {
-		s.RWMutex.RUnlock()
-		log.Debug("PolicyStore read unlocked")
-	}()
-	log.Debug("PolicyStore read locked")
-	readFn(s)
+func NewPolicyStoreManagerWithOpts(opts ...PolicyStoreManagerOption) *policyStoreManager {
+	psm := &policyStoreManager{
+		current: NewPolicyStore(),
+		pending: NewPolicyStore(),
+	}
+	for _, o := range opts {
+		o(psm)
+	}
+	return psm
+}
+
+func (m *policyStoreManager) Read(cb func(*PolicyStore)) {
+	m.rl.Lock()
+	defer m.rl.Unlock()
+	log.Debugf("storeManager reading from current store at %p", m.current)
+
+	cb(m.current)
+}
+
+func (m *policyStoreManager) Write(cb func(*PolicyStore)) {
+	m.wl.Lock()
+	defer m.wl.Unlock()
+	if m.toActive {
+		log.Debugf("storeManager writing to current store at %p", m.current)
+		cb(m.current)
+		return
+	}
+
+	log.Debugf("storeManager writing to pending store at %p", m.current)
+	cb(m.pending)
+}
+
+// OnReconnecting - PSM creates a pending store and starts writing to it
+func (m *policyStoreManager) OnReconnecting() {
+	m.wl.Lock()
+	defer m.wl.Unlock()
+
+	// create store
+	m.pending = NewPolicyStore()
+
+	// route next writes to pending
+	m.toActive = false
+}
+
+func (m *policyStoreManager) OnInSync() {
+	m.wl.Lock()
+	defer m.wl.Unlock()
+
+	if m.toActive {
+		// we're already in-sync..
+		// exit this routine so we don't cause a swap in case
+		// insync is called more than once
+		return
+	}
+	// swap pending to active
+	m.current = m.pending
+	m.pending = nil
+	// route next writes to active
+	m.toActive = true
 }

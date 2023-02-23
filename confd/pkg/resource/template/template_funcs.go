@@ -120,27 +120,30 @@ func EmitBGPFilterFunctionName(filterName, direction, version string) (string, e
 // kind: ExternalNetwork
 // apiVersion: projectcalico.org/v3
 // metadata:
-//   name: test-enet
+//
+//	name: test-enet
+//
 // spec:
-//   routeTableIndex: 7
+//
+//	routeTableIndex: 7
 //
 // Would produce the following string array that can be easily output via BIRD config template:
 //
-// []string {
-//   "# ExternalNetwork test-enet",
-//   "table 'T_test-enet';",
-//   "protocol kernel 'K_test-enet' from kernel_template {",
-//   "  device routes yes;",
-//   "  table 'T_test-enet';",
-//   "  kernel table 7;",
-//   "  export filter {",
-//   "    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
-//   "    if proto = \"Global_10_192_0_3\" then accept;",
-//   "    if proto = \"Global_10_192_0_4\" then accept;",
-//   "    reject;",
-//   "  };",
-//   "}",
-//  }
+//	[]string {
+//	  "# ExternalNetwork test-enet",
+//	  "table 'T_test-enet';",
+//	  "protocol kernel 'K_test-enet' from kernel_template {",
+//	  "  device routes yes;",
+//	  "  table 'T_test-enet';",
+//	  "  kernel table 7;",
+//	  "  export filter {",
+//	  "    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+//	  "    if proto = \"Global_10_192_0_3\" then accept;",
+//	  "    if proto = \"Global_10_192_0_4\" then accept;",
+//	  "    reject;",
+//	  "  };",
+//	  "}",
+//	 }
 func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPairs, globalPeersKVP memkv.KVPairs,
 	nodeSpecificPeersKVP memkv.KVPairs) ([]string, error) {
 	lines := []string{}
@@ -277,36 +280,39 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 // kind: BGPFilter
 // apiVersion: projectcalico.org/v3
 // metadata:
-//   name: test-bgpfilter
+//
+//	name: test-bgpfilter
+//
 // spec:
-//   exportV4:
-//     - action: Accept
-//       matchOperator: In
-//       cidr: 77.0.0.0/16
-//     - action: Reject
-//       matchOperator: In
-//       cidr: 77.1.0.0/16
-//   importV4:
-//     - action: Accept
-//       matchOperator: In
-//       cidr: 44.0.0.0/16
-//     - action: Reject
-//       matchOperator: In
-//       cidr: 44.1.0.0/16
+//
+//	exportV4:
+//	  - action: Accept
+//	    matchOperator: In
+//	    cidr: 77.0.0.0/16
+//	  - action: Reject
+//	    matchOperator: In
+//	    cidr: 77.1.0.0/16
+//	importV4:
+//	  - action: Accept
+//	    matchOperator: In
+//	    cidr: 44.0.0.0/16
+//	  - action: Reject
+//	    matchOperator: In
+//	    cidr: 44.1.0.0/16
 //
 // Would produce the following string array that can be easily output via BIRD config template:
 //
-// []string{
-//   "# v4 BGPFilter test-bgpfilter",
-//   "function 'bgp_test-bgpfilter_importFilterV4'() {",
-//   "  if ( net ~ 44.0.0.0/16 ) then { accept; }",
-//   "  if ( net ~ 44.1.0.0/16 ) then { reject; }",
-//   "}",
-//   "function 'bgp_test-bgpfilter_exportFilterV4'() {",
-//   "  if ( net ~ 77.0.0.0/16 ) then { accept; }",
-//   "  if ( net ~ 77.1.0.0/16 ) then { reject; }",
-//   "}",
-//  }
+//	[]string{
+//	  "# v4 BGPFilter test-bgpfilter",
+//	  "function 'bgp_test-bgpfilter_importFilterV4'() {",
+//	  "  if ( net ~ 44.0.0.0/16 ) then { accept; }",
+//	  "  if ( net ~ 44.1.0.0/16 ) then { reject; }",
+//	  "}",
+//	  "function 'bgp_test-bgpfilter_exportFilterV4'() {",
+//	  "  if ( net ~ 77.0.0.0/16 ) then { accept; }",
+//	  "  if ( net ~ 77.1.0.0/16 ) then { reject; }",
+//	  "}",
+//	 }
 func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) {
 	lines := []string{}
 	var line string
