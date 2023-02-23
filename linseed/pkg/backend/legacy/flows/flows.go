@@ -189,7 +189,7 @@ func (b *flowBackend) BaseQuery() *lmaelastic.CompositeAggregationQuery {
 }
 
 // List returns all flows which match the given options.
-func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) (*v1.List[v1.L3Flow], error) {
+func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.L3FlowParams) (*v1.List[v1.L3Flow], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -299,7 +299,7 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elastic.Query {
+func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) elastic.Query {
 	// Start with a time-based constraint.
 	var start, end time.Time
 	if opts.TimeRange != nil {

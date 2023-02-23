@@ -16,11 +16,11 @@ type MockL7FlowBackend struct {
 }
 
 // List provides a mock function with given fields: _a0, _a1, _a2
-func (_m *MockL7FlowBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.L7FlowParams) (*v1.List[v1.L7Flow], error) {
+func (_m *MockL7FlowBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 *v1.L7FlowParams) (*v1.List[v1.L7Flow], error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 *v1.List[v1.L7Flow]
-	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, v1.L7FlowParams) *v1.List[v1.L7Flow]); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, *v1.L7FlowParams) *v1.List[v1.L7Flow]); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
@@ -29,7 +29,7 @@ func (_m *MockL7FlowBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.L
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, v1.L7FlowParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, *v1.L7FlowParams) error); ok {
 		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)

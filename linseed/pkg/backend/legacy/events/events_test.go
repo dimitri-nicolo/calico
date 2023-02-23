@@ -109,7 +109,7 @@ func TestCreateEvent(t *testing.T) {
 	require.NoError(t, err)
 
 	// List the events and make sure the one we created is present.
-	results, err := b.List(ctx, clusterInfo, v1.EventParams{
+	results, err := b.List(ctx, clusterInfo, &v1.EventParams{
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: time.Now().Add(-1 * time.Minute),

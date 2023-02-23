@@ -22,23 +22,23 @@ var (
 			Message: "any",
 		},
 	}
-)
 
-var bulkResponseSuccess = &v1.BulkResponse{
-	Total:     2,
-	Succeeded: 2,
-	Failed:    0,
-}
+	bulkResponseSuccess = &v1.BulkResponse{
+		Total:     2,
+		Succeeded: 2,
+		Failed:    0,
+	}
 
-var bulkResponsePartialSuccess = &v1.BulkResponse{
-	Total:     2,
-	Succeeded: 1,
-	Failed:    1,
-	Errors: []v1.BulkError{
-		{
-			Resource: "res",
-			Type:     "index error",
-			Reason:   "I couldn't do it",
+	bulkResponsePartialSuccess = &v1.BulkResponse{
+		Total:     2,
+		Succeeded: 1,
+		Failed:    1,
+		Errors: []v1.BulkError{
+			{
+				Resource: "res",
+				Type:     "index error",
+				Reason:   "I couldn't do it",
+			},
 		},
-	},
-}
+	}
+)

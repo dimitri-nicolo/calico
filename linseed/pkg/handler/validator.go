@@ -41,7 +41,8 @@ type RequestParams interface {
 	v1.L3FlowParams | v1.FlowLogParams |
 		v1.L7FlowParams | v1.L7LogParams |
 		v1.DNSFlowParams | v1.DNSLogParams |
-		v1.EventParams | v1.AuditLogParams | v1.BGPLogParams
+		v1.EventParams | v1.AuditLogParams |
+		v1.BGPLogParams | v1.ProcessParams
 }
 
 // BulkRequestParams is the collection of request parameters types

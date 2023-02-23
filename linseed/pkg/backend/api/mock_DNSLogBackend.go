@@ -39,11 +39,11 @@ func (_m *MockDNSLogBackend) Create(_a0 context.Context, _a1 ClusterInfo, _a2 []
 }
 
 // List provides a mock function with given fields: _a0, _a1, _a2
-func (_m *MockDNSLogBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.DNSLogParams) (*v1.List[v1.DNSLog], error) {
+func (_m *MockDNSLogBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 *v1.DNSLogParams) (*v1.List[v1.DNSLog], error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 *v1.List[v1.DNSLog]
-	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, v1.DNSLogParams) *v1.List[v1.DNSLog]); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, *v1.DNSLogParams) *v1.List[v1.DNSLog]); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
@@ -52,7 +52,7 @@ func (_m *MockDNSLogBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.D
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, v1.DNSLogParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, *v1.DNSLogParams) error); ok {
 		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)

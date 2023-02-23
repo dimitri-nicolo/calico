@@ -118,7 +118,7 @@ func flowHandler(flows []v1.L7Flow) *l7 {
 
 	// mock backend to return the required flows
 	mockFlowBackend.On("List", mock.Anything,
-		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.L7FlowParams")).Return(&res, nil)
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("*v1.L7FlowParams")).Return(&res, nil)
 
 	return n.(*l7)
 }

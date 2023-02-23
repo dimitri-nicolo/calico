@@ -86,7 +86,7 @@ func (h dns) Flows() http.HandlerFunc {
 
 		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
 		defer cancel()
-		response, err := h.flows.List(ctx, clusterInfo, *reqParams)
+		response, err := h.flows.List(ctx, clusterInfo, reqParams)
 		if err != nil {
 			logrus.WithError(err).Error("Failed to list flows")
 			httputils.JSONError(w, &v1.HTTPError{
@@ -129,7 +129,7 @@ func (h dns) GetLogs() http.HandlerFunc {
 
 		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
 		defer cancel()
-		response, err := h.logs.List(ctx, clusterInfo, *reqParams)
+		response, err := h.logs.List(ctx, clusterInfo, reqParams)
 		if err != nil {
 			log.WithError(err).Error("Failed to list DNS logs")
 			httputils.JSONError(w, &v1.HTTPError{

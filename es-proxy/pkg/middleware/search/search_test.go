@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"time"
@@ -141,9 +141,9 @@ var _ = Describe("SearchElasticHits", func() {
 
 			if expectedQueryParams != nil {
 				// Test wants to assert on the query.
-				reqBody, err := ioutil.ReadAll(r.Body)
+				reqBody, err := io.ReadAll(r.Body)
 				Expect(err).ShouldNot(HaveOccurred())
-				r.Body = ioutil.NopCloser(bytes.NewBuffer(reqBody))
+				r.Body = io.NopCloser(bytes.NewBuffer(reqBody))
 
 				var params, expectedParams lapi.FlowLogParams
 				err = json.Unmarshal(reqBody, &params)
@@ -638,9 +638,9 @@ var _ = Describe("SearchElasticHits", func() {
 
 				if expectedQueryParams != nil {
 					// Test wants to assert on the query.
-					reqBody, err := ioutil.ReadAll(r.Body)
+					reqBody, err := io.ReadAll(r.Body)
 					Expect(err).ShouldNot(HaveOccurred())
-					r.Body = ioutil.NopCloser(bytes.NewBuffer(reqBody))
+					r.Body = io.NopCloser(bytes.NewBuffer(reqBody))
 
 					var params, expectedParams lapi.EventParams
 					err = json.Unmarshal(reqBody, &params)

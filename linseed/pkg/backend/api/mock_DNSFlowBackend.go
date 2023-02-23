@@ -16,11 +16,11 @@ type MockDNSFlowBackend struct {
 }
 
 // List provides a mock function with given fields: _a0, _a1, _a2
-func (_m *MockDNSFlowBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.DNSFlowParams) (*v1.List[v1.DNSFlow], error) {
+func (_m *MockDNSFlowBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 *v1.DNSFlowParams) (*v1.List[v1.DNSFlow], error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 *v1.List[v1.DNSFlow]
-	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, v1.DNSFlowParams) *v1.List[v1.DNSFlow]); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, *v1.DNSFlowParams) *v1.List[v1.DNSFlow]); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
@@ -29,7 +29,7 @@ func (_m *MockDNSFlowBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, v1.DNSFlowParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, *v1.DNSFlowParams) error); ok {
 		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)

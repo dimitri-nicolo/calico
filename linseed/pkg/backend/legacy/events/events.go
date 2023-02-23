@@ -75,7 +75,7 @@ func (b *eventsBackend) Create(ctx context.Context, i bapi.ClusterInfo, events [
 }
 
 // List lists events that match the given parameters.
-func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.EventParams) (*v1.List[v1.Event], error) {
+func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.EventParams) (*v1.List[v1.Event], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -83,12 +83,12 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.Eve
 	}
 
 	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(&opts)
+	startFrom, err := logtools.StartFrom(opts)
 	if err != nil {
 		return nil, err
 	}
 
-	q, err := logtools.BuildQuery(b.helper, i, &opts)
+	q, err := logtools.BuildQuery(b.helper, i, opts)
 	if err != nil {
 		return nil, err
 	}

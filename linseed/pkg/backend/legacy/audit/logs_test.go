@@ -140,7 +140,7 @@ func TestCreateKubeAuditLog(t *testing.T) {
 	require.NoError(t, err)
 
 	// List the event, assert that it matches the one we just wrote.
-	results, err := b.List(ctx, clusterInfo, v1.AuditLogParams{Type: v1.AuditLogTypeKube})
+	results, err := b.List(ctx, clusterInfo, &v1.AuditLogParams{Type: v1.AuditLogTypeKube})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(results.Items))
 
@@ -211,7 +211,7 @@ func TestCreateEEAuditLog(t *testing.T) {
 	require.NoError(t, err)
 
 	// List the event, assert that it matches the one we just wrote.
-	results, err := b.List(ctx, clusterInfo, v1.AuditLogParams{Type: v1.AuditLogTypeEE})
+	results, err := b.List(ctx, clusterInfo, &v1.AuditLogParams{Type: v1.AuditLogTypeEE})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(results.Items))
 

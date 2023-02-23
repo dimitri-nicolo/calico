@@ -119,7 +119,7 @@ func flowHandler(flows []v1.DNSFlow) *dns {
 
 	// mock backend to return the required flows
 	mockFlowBackend.On("List", mock.Anything,
-		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.DNSFlowParams")).Return(&res, nil)
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("*v1.DNSFlowParams")).Return(&res, nil)
 
 	return n
 }

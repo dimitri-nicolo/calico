@@ -230,9 +230,8 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					process.ProcessHandler(
-						lmaindex.FlowLogs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						esClient.Backend(),
+						linseed,
 					)))))
 	sm.Handle("/services",
 		middleware.ClusterRequestToResource(l7ResourceName,

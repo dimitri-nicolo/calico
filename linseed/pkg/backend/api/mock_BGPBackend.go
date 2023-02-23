@@ -39,11 +39,11 @@ func (_m *MockBGPBackend) Create(_a0 context.Context, _a1 ClusterInfo, _a2 []v1.
 }
 
 // List provides a mock function with given fields: _a0, _a1, _a2
-func (_m *MockBGPBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.BGPLogParams) (*v1.List[v1.BGPLog], error) {
+func (_m *MockBGPBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 *v1.BGPLogParams) (*v1.List[v1.BGPLog], error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 *v1.List[v1.BGPLog]
-	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, v1.BGPLogParams) *v1.List[v1.BGPLog]); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, *v1.BGPLogParams) *v1.List[v1.BGPLog]); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
@@ -52,7 +52,7 @@ func (_m *MockBGPBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.BGPL
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, v1.BGPLogParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, *v1.BGPLogParams) error); ok {
 		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)

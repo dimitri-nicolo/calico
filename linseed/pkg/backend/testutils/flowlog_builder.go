@@ -1,4 +1,4 @@
-package flows_test
+package testutils
 
 import (
 	"fmt"
@@ -8,22 +8,20 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	_ "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-	"github.com/projectcalico/calico/linseed/pkg/testutils"
-	lmaapi "github.com/projectcalico/calico/lma/pkg/api"
-
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
+	lmaapi "github.com/projectcalico/calico/lma/pkg/api"
 )
 
-func NewFlowLogBuilder() *flowLogBuilder {
-	return &flowLogBuilder{
+func NewFlowLogBuilder() *FlowLogBuilder {
+	return &FlowLogBuilder{
 		// Initialize to an empty flow log.
 		activeLog: &v1.FlowLog{},
 	}
 }
 
-type flowLogBuilder struct {
+type FlowLogBuilder struct {
 	cluster string
 
 	activeLog *v1.FlowLog
@@ -36,16 +34,16 @@ type flowLogBuilder struct {
 	logs []v1.FlowLog
 }
 
-func (b *flowLogBuilder) Copy() *flowLogBuilder {
+func (b *FlowLogBuilder) Copy() *FlowLogBuilder {
 	n := *b
 	return &n
 }
 
-func (b *flowLogBuilder) Clear() {
+func (b *FlowLogBuilder) Clear() {
 	b.activeLog = &v1.FlowLog{}
 }
 
-func (b *flowLogBuilder) Build() (*v1.FlowLog, error) {
+func (b *FlowLogBuilder) Build() (*v1.FlowLog, error) {
 	// If no start and end times were set, default them.
 	if b.activeLog.StartTime == 0 {
 		b.WithStartTime(time.Now())
@@ -73,14 +71,14 @@ func (b *flowLogBuilder) Build() (*v1.FlowLog, error) {
 	b.logs = append(b.logs, cp)
 
 	// Perform any validation here to ensure the log that we're building is legit.
-	return b.activeLog, nil
+	return &cp, nil
 }
 
 // ExpectedFlow returns a baseline flow to expect, given the flow log's configuration.
 // Note that some fields on a Flow are aggregated, and so will need to be calculated based
 // on the sum total of flow logs used to build the flow.
 // Our aggregation logic within the builder is fairly limited.
-func (b *flowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
+func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 	// Initialize the flow with identifying information. For now, we
 	// don't support multiple flows from a single builder, so we assume
 	// all of the logs have the same Key fields.
@@ -182,84 +180,84 @@ func (b *flowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 	return f
 }
 
-func (b *flowLogBuilder) WithSourceIP(ip string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithSourceIP(ip string) *FlowLogBuilder {
 	b.activeLog.SourceIP = testutils.StringPtr(ip)
 	return b
 }
 
-func (b *flowLogBuilder) WithDestIP(ip string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithDestIP(ip string) *FlowLogBuilder {
 	b.activeLog.DestIP = testutils.StringPtr(ip)
 	return b
 }
 
-func (b *flowLogBuilder) WithProcessName(n string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithProcessName(n string) *FlowLogBuilder {
 	b.activeLog.ProcessName = n
 	return b
 }
 
-func (b *flowLogBuilder) WithSourceName(n string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithSourceName(n string) *FlowLogBuilder {
 	b.activeLog.SourceNameAggr = n
 	return b
 }
 
-func (b *flowLogBuilder) WithDestName(n string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithDestName(n string) *FlowLogBuilder {
 	b.activeLog.DestNameAggr = n
 	return b
 }
 
-func (b *flowLogBuilder) WithStartTime(t time.Time) *flowLogBuilder {
+func (b *FlowLogBuilder) WithStartTime(t time.Time) *FlowLogBuilder {
 	b.activeLog.StartTime = time.Now().Unix()
 	return b
 }
 
-func (b *flowLogBuilder) WithEndTime(t time.Time) *flowLogBuilder {
+func (b *FlowLogBuilder) WithEndTime(t time.Time) *FlowLogBuilder {
 	b.activeLog.EndTime = time.Now().Unix()
 	return b
 }
 
-func (b *flowLogBuilder) WithProtocol(p string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithProtocol(p string) *FlowLogBuilder {
 	b.activeLog.Protocol = p
 	return b
 }
 
-func (b *flowLogBuilder) WithDestPort(port int) *flowLogBuilder {
+func (b *FlowLogBuilder) WithDestPort(port int) *FlowLogBuilder {
 	b.activeLog.DestPort = testutils.Int64Ptr(int64(port))
 	return b
 }
 
-func (b *flowLogBuilder) WithSourcePort(port int) *flowLogBuilder {
+func (b *FlowLogBuilder) WithSourcePort(port int) *FlowLogBuilder {
 	b.activeLog.SourcePort = testutils.Int64Ptr(int64(port))
 	return b
 }
 
-func (b *flowLogBuilder) WithDestService(name string, port int) *flowLogBuilder {
+func (b *FlowLogBuilder) WithDestService(name string, port int) *FlowLogBuilder {
 	b.activeLog.DestServiceName = name
 	b.activeLog.DestServicePortName = fmt.Sprintf("%d", port)
 	b.activeLog.DestServicePortNum = testutils.Int64Ptr(int64(port))
 	return b
 }
 
-func (b *flowLogBuilder) WithCluster(c string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithCluster(c string) *FlowLogBuilder {
 	b.cluster = c
 	return b
 }
 
-func (b *flowLogBuilder) WithReporter(r string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithReporter(r string) *FlowLogBuilder {
 	b.activeLog.Reporter = r
 	return b
 }
 
-func (b *flowLogBuilder) WithAction(a string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithAction(a string) *FlowLogBuilder {
 	b.activeLog.Action = a
 	return b
 }
 
-func (b *flowLogBuilder) WithPolicies(p ...string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithPolicies(p ...string) *FlowLogBuilder {
 	b.activeLog.Policies = &v1.FlowLogPolicy{AllPolicies: p}
 	return b
 }
 
-func (b *flowLogBuilder) WithPolicy(p string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithPolicy(p string) *FlowLogBuilder {
 	if b.activeLog.Policies == nil {
 		b.activeLog.Policies = &v1.FlowLogPolicy{
 			AllPolicies: []string{},
@@ -270,61 +268,61 @@ func (b *flowLogBuilder) WithPolicy(p string) *flowLogBuilder {
 }
 
 // WithType sets both source and dest types at once.
-func (b *flowLogBuilder) WithType(t string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithType(t string) *FlowLogBuilder {
 	b.activeLog.DestType = t
 	b.activeLog.SourceType = t
 	return b
 }
 
-func (b *flowLogBuilder) WithDestType(c string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithDestType(c string) *FlowLogBuilder {
 	b.activeLog.DestType = c
 	return b
 }
 
-func (b *flowLogBuilder) WithSourceType(c string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithSourceType(c string) *FlowLogBuilder {
 	b.activeLog.SourceType = c
 	return b
 }
 
 // WithNamespace sets all namespace fields at once.
-func (b *flowLogBuilder) WithNamespace(n string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithNamespace(n string) *FlowLogBuilder {
 	b.activeLog.SourceNamespace = n
 	b.activeLog.DestNamespace = n
 	b.activeLog.DestServiceNamespace = n
 	return b
 }
 
-func (b *flowLogBuilder) WithSourceNamespace(n string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithSourceNamespace(n string) *FlowLogBuilder {
 	b.activeLog.SourceNamespace = n
 	return b
 }
 
-func (b *flowLogBuilder) WithDestNamespace(n string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithDestNamespace(n string) *FlowLogBuilder {
 	b.activeLog.DestNamespace = n
 	b.activeLog.DestServiceNamespace = n
 	return b
 }
 
-func (b *flowLogBuilder) WithSourceLabels(labels ...string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithSourceLabels(labels ...string) *FlowLogBuilder {
 	b.activeLog.SourceLabels = &v1.FlowLogLabels{
 		Labels: labels,
 	}
 	return b
 }
 
-func (b *flowLogBuilder) WithDestLabels(labels ...string) *flowLogBuilder {
+func (b *FlowLogBuilder) WithDestLabels(labels ...string) *FlowLogBuilder {
 	b.activeLog.DestLabels = &v1.FlowLogLabels{
 		Labels: labels,
 	}
 	return b
 }
 
-func (b *flowLogBuilder) WithRandomFlowStats() *flowLogBuilder {
+func (b *FlowLogBuilder) WithRandomFlowStats() *FlowLogBuilder {
 	b.randomFlowStats = true
 	return b
 }
 
-func (b *flowLogBuilder) WithRandomPacketStats() *flowLogBuilder {
+func (b *FlowLogBuilder) WithRandomPacketStats() *FlowLogBuilder {
 	b.randomPacketStats = true
 	return b
 }

@@ -94,7 +94,8 @@ MOCKERY_FILE_PATHS= \
 	pkg/backend/api/DNSLogBackend \
 	pkg/backend/api/EventsBackend \
 	pkg/backend/api/AuditBackend \
-	pkg/backend/api/BGPBackend
+	pkg/backend/api/BGPBackend \
+	pkg/backend/api/ProcessBackend
 
 #############################################
 # Run unit level tests
@@ -104,6 +105,7 @@ MOCKERY_FILE_PATHS= \
 ## Run only Unit Tests.
 ut: stop-elastic run-elastic ut-fast
 ut-fast:
+	# We run the tests 5 times to try and weed out test flakes.
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 5'
 
 st:

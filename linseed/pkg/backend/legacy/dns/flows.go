@@ -80,7 +80,7 @@ func NewDNSFlowBackend(c lmaelastic.Client) bapi.DNSFlowBackend {
 }
 
 // List returns all flows which match the given options.
-func (b *dnsFlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.DNSFlowParams) (*v1.List[v1.DNSFlow], error) {
+func (b *dnsFlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.DNSFlowParams) (*v1.List[v1.DNSFlow], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -136,7 +136,7 @@ func (b *dnsFlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Com
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *dnsFlowBackend) buildQuery(i bapi.ClusterInfo, opts v1.DNSFlowParams) elastic.Query {
+func (b *dnsFlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.DNSFlowParams) elastic.Query {
 	// Parse times from the request.
 	var start, end time.Time
 	if opts.TimeRange != nil {

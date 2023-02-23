@@ -90,7 +90,7 @@ func TestListFlows(t *testing.T) {
 	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// Put some data into ES so we can query it.
-	bld := NewFlowLogBuilder()
+	bld := backendutils.NewFlowLogBuilder()
 	bld.WithType("wep").
 		WithSourceNamespace("default").
 		WithDestNamespace("kube-system").
@@ -114,7 +114,7 @@ func TestListFlows(t *testing.T) {
 	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
 	// Query for flows. There should be a single flow from the populated data.
-	r, err := fb.List(ctx, clusterInfo, opts)
+	r, err := fb.List(ctx, clusterInfo, &opts)
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)
 	require.Nil(t, r.AfterKey)
@@ -132,7 +132,7 @@ func TestMultipleFlows(t *testing.T) {
 	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// Template for flow #1.
-	bld := NewFlowLogBuilder()
+	bld := backendutils.NewFlowLogBuilder()
 	bld.WithType("wep").
 		WithSourceNamespace("tigera-operator").
 		WithDestNamespace("kube-system").
@@ -149,7 +149,7 @@ func TestMultipleFlows(t *testing.T) {
 	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
 
 	// Template for flow #2.
-	bld2 := NewFlowLogBuilder()
+	bld2 := backendutils.NewFlowLogBuilder()
 	bld2.WithType("wep").
 		WithSourceNamespace("default").
 		WithDestNamespace("kube-system").
@@ -172,7 +172,7 @@ func TestMultipleFlows(t *testing.T) {
 	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
 	// Query for flows. There should be two flows from the populated data.
-	r, err := fb.List(ctx, clusterInfo, opts)
+	r, err := fb.List(ctx, clusterInfo, &opts)
 	require.NoError(t, err)
 	require.Len(t, r.Items, 2)
 	require.Nil(t, r.AfterKey)
@@ -191,7 +191,7 @@ func TestFlowMultiplePolicies(t *testing.T) {
 	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// Put some data into ES so we can query it.
-	bld := NewFlowLogBuilder()
+	bld := backendutils.NewFlowLogBuilder()
 	bld.WithType("wep").
 		WithSourceNamespace("default").
 		WithDestNamespace("kube-system").
@@ -239,7 +239,7 @@ func TestFlowMultiplePolicies(t *testing.T) {
 	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
 	// Query for flows. There should be a single flow from the populated data.
-	r, err := fb.List(ctx, clusterInfo, opts)
+	r, err := fb.List(ctx, clusterInfo, &opts)
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)
 	require.Nil(t, r.AfterKey)
@@ -724,7 +724,7 @@ func TestFlowFiltering(t *testing.T) {
 			}
 
 			// Template for flow #1.
-			bld := NewFlowLogBuilder()
+			bld := backendutils.NewFlowLogBuilder()
 			bld.WithType("wep").
 				WithSourceNamespace("tigera-operator").
 				WithDestNamespace("openshift-dns").
@@ -745,7 +745,7 @@ func TestFlowFiltering(t *testing.T) {
 			exp1 := populateFlowDataN(t, ctx, bld, client, clusterInfo.Cluster, numLogs)
 
 			// Template for flow #2.
-			bld2 := NewFlowLogBuilder()
+			bld2 := backendutils.NewFlowLogBuilder()
 			bld2.WithType("hep").
 				WithSourceNamespace("default").
 				WithDestNamespace("kube-system").
@@ -766,7 +766,7 @@ func TestFlowFiltering(t *testing.T) {
 			exp2 := populateFlowDataN(t, ctx, bld2, client, clusterInfo.Cluster, numLogs)
 
 			// Query for flows.
-			r, err := fb.List(ctx, clusterInfo, testcase.Params)
+			r, err := fb.List(ctx, clusterInfo, &testcase.Params)
 			require.NoError(t, err)
 			require.Len(t, r.Items, numExpected(testcase))
 			require.Nil(t, r.AfterKey)
@@ -795,7 +795,7 @@ func TestPagination(t *testing.T) {
 	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// Template for flow #1.
-	bld := NewFlowLogBuilder()
+	bld := backendutils.NewFlowLogBuilder()
 	bld.WithType("wep").
 		WithSourceNamespace("tigera-operator").
 		WithDestNamespace("kube-system").
@@ -812,7 +812,7 @@ func TestPagination(t *testing.T) {
 	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
 
 	// Template for flow #2.
-	bld2 := NewFlowLogBuilder()
+	bld2 := backendutils.NewFlowLogBuilder()
 	bld2.WithType("wep").
 		WithSourceNamespace("default").
 		WithDestNamespace("kube-system").
@@ -838,7 +838,7 @@ func TestPagination(t *testing.T) {
 	opts.MaxResults = 1
 
 	// Query for flows. There should be a single flow from the populated data.
-	r, err := fb.List(ctx, clusterInfo, opts)
+	r, err := fb.List(ctx, clusterInfo, &opts)
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)
 	require.NotNil(t, r.AfterKey)
@@ -848,7 +848,7 @@ func TestPagination(t *testing.T) {
 	// Now, send another request. This time, passing in the pagination key
 	// returned from the first. We should get the second flow.
 	opts.AfterKey = r.AfterKey
-	r, err = fb.List(ctx, clusterInfo, opts)
+	r, err = fb.List(ctx, clusterInfo, &opts)
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)
 	require.NotNil(t, r.AfterKey)
@@ -956,7 +956,7 @@ func TestElasticResponses(t *testing.T) {
 			defer setupAndTeardown(t, bs)()
 
 			// Query for flows.
-			_, err = fb.List(ctx, clusterInfo, opts)
+			_, err = fb.List(ctx, clusterInfo, &opts)
 			if testcase.err {
 				require.Error(t, err)
 			} else {
@@ -968,11 +968,11 @@ func TestElasticResponses(t *testing.T) {
 
 // populateFlowData writes a series of flow logs to elasticsearch, and returns the FlowLog that we
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
-func populateFlowData(t *testing.T, ctx context.Context, b *flowLogBuilder, client lmaelastic.Client, cluster string) v1.L3Flow {
+func populateFlowData(t *testing.T, ctx context.Context, b *backendutils.FlowLogBuilder, client lmaelastic.Client, cluster string) v1.L3Flow {
 	return populateFlowDataN(t, ctx, b, client, cluster, 10)
 }
 
-func populateFlowDataN(t *testing.T, ctx context.Context, b *flowLogBuilder, client lmaelastic.Client, cluster string, n int) v1.L3Flow {
+func populateFlowDataN(t *testing.T, ctx context.Context, b *backendutils.FlowLogBuilder, client lmaelastic.Client, cluster string, n int) v1.L3Flow {
 	batch := []v1.FlowLog{}
 
 	for i := 0; i < n; i++ {

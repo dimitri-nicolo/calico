@@ -93,7 +93,7 @@ func NewL7FlowBackend(c lmaelastic.Client) bapi.L7FlowBackend {
 }
 
 // List returns all flows which match the given options.
-func (b *l7FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L7FlowParams) (*v1.List[v1.L7Flow], error) {
+func (b *l7FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.L7FlowParams) (*v1.List[v1.L7Flow], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -172,7 +172,7 @@ func (b *l7FlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Comp
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *l7FlowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L7FlowParams) elastic.Query {
+func (b *l7FlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L7FlowParams) elastic.Query {
 	// Parse times from the request.
 	var start, end time.Time
 	if opts.TimeRange != nil {

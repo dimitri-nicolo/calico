@@ -161,7 +161,7 @@ func (h audit) GetLogs() http.HandlerFunc {
 
 		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
 		defer cancel()
-		response, err := h.logs.List(ctx, clusterInfo, *reqParams)
+		response, err := h.logs.List(ctx, clusterInfo, reqParams)
 		if err != nil {
 			log.WithError(err).Error("Failed to list Audit logs")
 			httputils.JSONError(w, &v1.HTTPError{

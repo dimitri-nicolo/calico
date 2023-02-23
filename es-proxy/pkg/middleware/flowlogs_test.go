@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
@@ -416,9 +415,9 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		It("should retrieve a FlowLogResults object with only 1 bucket in each section due to a limit, with results RBAC filtered (non-PIP)", func() {
 			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
 			Expect(err).To(Not(HaveOccurred()))
-			linseedResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			linseedResponse, err := os.ReadFile("testdata/flow_logs_aggr_response_2.json")
 			Expect(err).To(Not(HaveOccurred()))
-			aggResponse, err := ioutil.ReadFile("testdata/flow_logs_1_aggregation_rbac.json")
+			aggResponse, err := os.ReadFile("testdata/flow_logs_1_aggregation_rbac.json")
 			Expect(err).To(Not(HaveOccurred()))
 
 			// Build list of possible resposne items.
@@ -481,7 +480,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		It("should retrieve a FlowLogResults object with only 1 bucket in each section due to a limit", func() {
 			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
 			Expect(err).To(Not(HaveOccurred()))
-			linseedResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			linseedResponse, err := os.ReadFile("testdata/flow_logs_aggr_response_2.json")
 			Expect(err).To(Not(HaveOccurred()))
 			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
@@ -529,7 +528,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		It("should retrieve a FlowLogResults object with 2 buckets in each section due to a limit", func() {
 			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
 			Expect(err).To(Not(HaveOccurred()))
-			linseedResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			linseedResponse, err := os.ReadFile("testdata/flow_logs_aggr_response_2.json")
 			Expect(err).To(Not(HaveOccurred()))
 			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
@@ -574,7 +573,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		It("should retrieve a FlowLogResults object with no flows because none were impacted", func() {
 			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
 			Expect(err).To(Not(HaveOccurred()))
-			linseedResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			linseedResponse, err := os.ReadFile("testdata/flow_logs_aggr_response_2.json")
 			Expect(err).To(Not(HaveOccurred()))
 			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
@@ -643,11 +642,11 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		It("should retrieve a FlowLogResults object with only 1 bucket in each section due to a limit, with results RBAC filtered (PIP)", func() {
 			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
 			Expect(err).To(Not(HaveOccurred()))
-			linseedResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			linseedResponse, err := os.ReadFile("testdata/flow_logs_aggr_response_2.json")
 			Expect(err).To(Not(HaveOccurred()))
-			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			validPreview, err := os.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
-			aggResponse, err := ioutil.ReadFile("testdata/flow_logs_pip_1_aggregation_rbac.json")
+			aggResponse, err := os.ReadFile("testdata/flow_logs_pip_1_aggregation_rbac.json")
 			Expect(err).To(Not(HaveOccurred()))
 			previews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))
