@@ -6,7 +6,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apiserver/pkg/apis/audit"
 
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
@@ -68,12 +67,12 @@ func (l *linseedEventer) GetAuditEvents(ctx context.Context, from *time.Time, to
 			params.TimeRange.From = *to
 		}
 
-		pager := client.NewListPager[audit.Event](&params)
+		pager := client.NewListPager[lapi.AuditLog](&params)
 		pages, errors := pager.Stream(ctx, l.client.AuditLogs(l.cluster).List)
 		for page := range pages {
 			for _, audit := range page.Items {
 				cp := audit
-				ch <- &api.AuditEventResult{Event: &cp}
+				ch <- &api.AuditEventResult{Event: &cp.Event}
 			}
 		}
 

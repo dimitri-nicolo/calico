@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -65,9 +64,9 @@ var _ = Describe("FlowLog middleware", func() {
 
 			if len(expectedQuery) > 0 {
 				// Test wants to assert on the query.
-				reqBody, err := ioutil.ReadAll(r.Body)
+				reqBody, err := io.ReadAll(r.Body)
 				Expect(err).ShouldNot(HaveOccurred())
-				r.Body = ioutil.NopCloser(bytes.NewBuffer(reqBody))
+				r.Body = io.NopCloser(bytes.NewBuffer(reqBody))
 
 				var params, expParams v1.L3FlowParams
 				err = json.Unmarshal(reqBody, &params)

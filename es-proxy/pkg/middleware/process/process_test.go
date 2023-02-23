@@ -23,15 +23,10 @@ import (
 	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
-var (
-	// requests from manager to es-proxy
-	//go:embed testdata/process_request_from_manager.json
-	processRequest string
-
-	// requests from es-proxy to elastic
-	//go:embed testdata/flow_search_request.json
-	flowSearchRequest string
-)
+// requests from manager to es-proxy
+//
+//go:embed testdata/process_request_from_manager.json
+var processRequest string
 
 // The user authentication review mock struct implementing the authentication review interface.
 type userAuthorizationReviewMock struct {
