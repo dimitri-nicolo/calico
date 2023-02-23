@@ -274,6 +274,19 @@ func (d *DNSClass) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func convertToDNSClass(val interface{}) (DNSClass, error) {
+	switch v := val.(type) {
+	case string:
+		return toDNSClass(v), nil
+	case int:
+		return DNSClass(v), nil
+	case float64:
+		return DNSClass(v), nil
+	default:
+		return DNSClass(0), fmt.Errorf("failed to read dns class format")
+	}
+}
+
 func toDNSClass(val string) DNSClass {
 	if strings.HasPrefix(val, "#") {
 		code, err := strconv.Atoi(strings.TrimPrefix(val, "#"))
@@ -466,8 +479,8 @@ func (d *DNSRRSets) UnmarshalJSON(data []byte) error {
 
 	rrSets := DNSRRSets(make(map[DNSName]DNSRDatas))
 	for _, dnsRRSet := range dnsRRSetsEncoded {
-		dnsClass, ok := dnsRRSet.dnsNameEncoded.Class.(string)
-		if !ok {
+		dnsClass, error := convertToDNSClass(dnsRRSet.dnsNameEncoded.Class)
+		if error != nil {
 			return fmt.Errorf("failed to convert %v to string", dnsRRSet.Class)
 		}
 		dnsType, ok := dnsRRSet.dnsNameEncoded.Type.(string)
@@ -475,7 +488,7 @@ func (d *DNSRRSets) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("failed to convert %v to DNSType", dnsRRSet.Type)
 		}
 
-		dnsName := DNSName{Name: dnsRRSet.dnsNameEncoded.Name, Class: toDNSClass(dnsClass), Type: toDNSType(dnsType)}
+		dnsName := DNSName{Name: dnsRRSet.dnsNameEncoded.Name, Class: dnsClass, Type: toDNSType(dnsType)}
 		for _, rdata := range dnsRRSet.RData {
 			rrSets.Add(dnsName, rdata)
 		}

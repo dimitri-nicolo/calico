@@ -122,7 +122,7 @@ func TestFV_FlowIngestion(t *testing.T) {
 func TestFV_DNSIngestion(t *testing.T) {
 	addr := "https://localhost:8444/api/v1/dns/logs/bulk"
 	tenant := ""
-	expectedResponse := `{"failed":0, "succeeded":10, "total":10}`
+	expectedResponse := `{"failed":0, "succeeded":11, "total":11}`
 	indexPrefix := "tigera_secure_ee_dns."
 
 	t.Run("ingest dns logs via bulk API with production data", func(t *testing.T) {
@@ -145,7 +145,7 @@ func TestFV_DNSIngestion(t *testing.T) {
 		_, err := esClient.Refresh(index).Do(ctx)
 		require.NoError(t, err)
 
-		endTime, err := time.Parse(time.RFC3339Nano, "2023-02-10T01:17:11.310500008Z")
+		endTime, err := time.Parse(time.RFC3339Nano, "2023-02-22T23:54:02.736970074Z")
 		require.NoError(t, err)
 		startTime, err := time.Parse(time.RFC3339Nano, "2023-02-10T01:11:46.413467767Z")
 		require.NoError(t, err)
@@ -163,7 +163,7 @@ func TestFV_DNSIngestion(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resultList)
 
-		require.Equal(t, int64(10), resultList.TotalHits)
+		require.Equal(t, int64(11), resultList.TotalHits)
 
 		var esLogs []string
 		for _, log := range resultList.Items {

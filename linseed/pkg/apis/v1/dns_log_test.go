@@ -369,7 +369,7 @@ func TestDNSRRSets_MarshalJSON(t *testing.T) {
 			[]byte(`[{"name":"any","class":"Any","type":"A","rdata":["1.2.3.4","1.2.3.5"]}]`), false,
 		},
 		{
-			"marshall RRSets with SOA",
+			"marshal RRSets with SOA",
 			DNSRRSets{
 				DNSName{Name: "any", Class: DNSClass(layers.DNSClassAny), Type: DNSType(layers.DNSTypeA)}: DNSRDatas{
 					{nil, dnsSOA},
@@ -377,9 +377,8 @@ func TestDNSRRSets_MarshalJSON(t *testing.T) {
 			},
 			[]byte(`[{"name":"any","class":"Any","type":"A","rdata":["tigera.io. root.tigera.io. 1 3600 60 86400 1800"]}]`), false,
 		},
-
 		{
-			"marshall RRSets with SRV",
+			"marshal RRSets with SRV",
 			DNSRRSets{
 				DNSName{Name: "any", Class: DNSClass(layers.DNSClassAny), Type: DNSType(layers.DNSTypeA)}: DNSRDatas{
 					{nil, dnsSRV},
@@ -387,9 +386,8 @@ func TestDNSRRSets_MarshalJSON(t *testing.T) {
 			},
 			[]byte(`[{"name":"any","class":"Any","type":"A","rdata":["10 20 53 ns.tigera.io."]}]`), false,
 		},
-
 		{
-			"marshall RRSets with MX",
+			"marshal RRSets with MX",
 			DNSRRSets{
 				DNSName{Name: "any", Class: DNSClass(layers.DNSClassAny), Type: DNSType(layers.DNSTypeA)}: DNSRDatas{
 					{nil, dnsMX},
@@ -397,9 +395,8 @@ func TestDNSRRSets_MarshalJSON(t *testing.T) {
 			},
 			[]byte(`[{"name":"any","class":"Any","type":"A","rdata":["10 mail.tigera.io."]}]`), false,
 		},
-
 		{
-			"marshall RRSets with IP",
+			"marshal RRSets with IP",
 			DNSRRSets{
 				DNSName{Name: "any", Class: DNSClass(layers.DNSClassAny), Type: DNSType(layers.DNSTypeA)}: DNSRDatas{
 					{nil, net.ParseIP("1.2.3.4")},
@@ -407,9 +404,8 @@ func TestDNSRRSets_MarshalJSON(t *testing.T) {
 			},
 			[]byte(`[{"name":"any","class":"Any","type":"A","rdata":["1.2.3.4"]}]`), false,
 		},
-
 		{
-			"marshall RRSets with TXT",
+			"marshal RRSets with TXT",
 			DNSRRSets{
 				DNSName{Name: "any", Class: DNSClass(layers.DNSClassAny), Type: DNSType(layers.DNSTypeA)}: DNSRDatas{
 					{nil, [][]byte{[]byte("foo"), []byte("bar")}},
@@ -417,9 +413,8 @@ func TestDNSRRSets_MarshalJSON(t *testing.T) {
 			},
 			[]byte(`[{"name":"any","class":"Any","type":"A","rdata":["foobar"]}]`), false,
 		},
-
 		{
-			"marshall RRSets with hostname as string",
+			"marshal RRSets with hostname as string",
 			DNSRRSets{
 				DNSName{Name: "any", Class: DNSClass(layers.DNSClassAny), Type: DNSType(layers.DNSTypeA)}: DNSRDatas{
 					{nil, "ns1.tigera.io."},
@@ -427,9 +422,8 @@ func TestDNSRRSets_MarshalJSON(t *testing.T) {
 			},
 			[]byte(`[{"name":"any","class":"Any","type":"A","rdata":["ns1.tigera.io."]}]`), false,
 		},
-
 		{
-			"marshall RRSets with bytes",
+			"marshal RRSets with bytes",
 			DNSRRSets{
 				DNSName{Name: "any", Class: DNSClass(layers.DNSClassAny), Type: DNSType(layers.DNSTypeA)}: DNSRDatas{
 					{nil, []byte("foo")},
@@ -437,15 +431,23 @@ func TestDNSRRSets_MarshalJSON(t *testing.T) {
 			},
 			[]byte(`[{"name":"any","class":"Any","type":"A","rdata":["Zm9v"]}]`), false,
 		},
-
 		{
-			"marshall RRSets with any data",
+			"marshal RRSets with any data",
 			DNSRRSets{
 				DNSName{Name: "any", Class: DNSClass(layers.DNSClassAny), Type: DNSType(layers.DNSTypeA)}: DNSRDatas{
 					{nil, 1},
 				},
 			},
 			[]byte(`[{"name":"any","class":"Any","type":"A","rdata":["1"]}]`), false,
+		},
+		{
+			"marshal RRSets with OPT data",
+			DNSRRSets{
+				DNSName{Name: "", Class: DNSClass(1232), Type: DNSType(layers.DNSTypeOPT)}: DNSRDatas{
+					{nil, ""},
+				},
+			},
+			[]byte(`[{"name":"","class":1232,"type":"OPT","rdata":[""]}]`), false,
 		},
 	}
 	for _, tt := range tests {
@@ -479,7 +481,6 @@ func TestDNSRRSets_UnmarshalJSON(t *testing.T) {
 			DNSRRSets{},
 			true,
 		},
-
 		{
 			"Missing type", []byte(`[{"name":"any","class":"Any","rdata":["1.2.3.4"]}]`),
 			DNSRRSets{},
@@ -576,6 +577,17 @@ func TestDNSRRSets_UnmarshalJSON(t *testing.T) {
 					Class: DNSClass(layers.DNSClassAny),
 					Type:  DNSType(layers.DNSTypeA),
 				}: DNSRDatas{{Raw: []byte("Zm9v"), Decoded: "Zm9v"}},
+			},
+			false,
+		},
+		{
+			"OPT", []byte(`[{"name":"","class":1232,"type":"OPT","rdata":[""]}]`),
+			DNSRRSets{
+				DNSName{
+					Name:  "",
+					Class: DNSClass(1232),
+					Type:  DNSType(layers.DNSTypeOPT),
+				}: DNSRDatas{{[]byte{}, ""}},
 			},
 			false,
 		},
@@ -831,7 +843,7 @@ func TestDNSServer_UnmarshalJSON(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"unmarshall dns server",
+			"unmarshal dns server",
 			[]byte(`{"name":"e","name_aggr":"e-*","namespace":"ns","ip":"1.2.3.4"}`),
 			&DNSServer{
 				Endpoint: Endpoint{Name: "e", AggregatedName: "e-*", Namespace: "ns"},
