@@ -340,7 +340,7 @@ func Test_ValidateHashToIpv4Method(t *testing.T) {
 
 	expectedRouterId = "109.174.215.226"
 	nodeName = "nodeTest"
-	actualRouterId := hashToIPv4(nodeName)
+	actualRouterId = hashToIPv4(nodeName)
 	if expectedRouterId != actualRouterId {
 		t.Errorf("Expected %s to equal %s", expectedRouterId, actualRouterId)
 	}
