@@ -28927,115 +28927,10 @@ metadata:
   labels:
     name: tigera-prometheus
 ---
-# Source: tigera-prometheus-operator/templates/04-serviceaccount-prometheus-operator.yaml
+# Source: tigera-prometheus-operator/templates/02-serviceaccount-prometheus-operator.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  labels:
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/name: calico-prometheus-operator
-    app.kubernetes.io/version: 0.62.0
-  name: calico-prometheus-operator
-  namespace: tigera-prometheus
----
-# Source: tigera-prometheus-operator/templates/04-clusterrole-prometheus-operator.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/name: calico-prometheus-operator
-    app.kubernetes.io/version: 0.62.0
-  name: calico-prometheus-operator
-  namespace: tigera-prometheus
-rules:
-- apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - alertmanagers
-  - alertmanagers/finalizers
-  - alertmanagerconfigs
-  - prometheuses
-  - prometheuses/finalizers
-  - prometheuses/status
-  - thanosrulers
-  - thanosrulers/finalizers
-  - servicemonitors
-  - podmonitors
-  - probes
-  - prometheusrules
-  verbs:
-  - '*'
-- apiGroups:
-  - apps
-  resources:
-  - statefulsets
-  verbs:
-  - '*'
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - secrets
-  verbs:
-  - '*'
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - list
-  - delete
-- apiGroups:
-  - ""
-  resources:
-  - services
-  - services/finalizers
-  - endpoints
-  verbs:
-  - get
-  - create
-  - update
-  - delete
-- apiGroups:
-  - ""
-  resources:
-  - nodes
-  verbs:
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - networking.k8s.io
-  resources:
-  - ingresses
-  verbs:
-  - get
-  - list
-  - watch
----
-# Source: tigera-prometheus-operator/templates/04-clusterrolebinding-prometheus-operator.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  labels:
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/name: calico-prometheus-operator
-    app.kubernetes.io/version: 0.62.0
-  name: calico-prometheus-operator
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: calico-prometheus-operator
-subjects:
-- kind: ServiceAccount
   name: calico-prometheus-operator
   namespace: tigera-prometheus
 ---
@@ -29043,10 +28938,6 @@ subjects:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/name: calico-prometheus-operator
-    app.kubernetes.io/version: 0.62.0
   name: calico-prometheus-operator
   namespace: tigera-prometheus
 spec:

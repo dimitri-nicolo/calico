@@ -292,7 +292,7 @@ rules:
       - ipamblocks
     verbs:
       - list
-{{- else }}
+{{- end }}
   # Add the appropriate pod security policy permissions
   - apiGroups:
       - policy
@@ -313,7 +313,6 @@ rules:
       - create
       - update
       - delete
-{{- end }}
   # Permissions below this point are required for TSEE only.
   # For AWS security group setup. In enterprise, also needed for IDS installer and curator cronjob.
   - apiGroups:

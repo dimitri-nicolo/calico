@@ -2,10 +2,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/name: calico-prometheus-operator
-    app.kubernetes.io/version: 0.62.0
   name: calico-prometheus-operator
   namespace: tigera-prometheus
 spec:
