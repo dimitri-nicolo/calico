@@ -82,16 +82,22 @@ func doRequest(t *testing.T, client *http.Client, spec httpReqSpec) (*http.Respo
 }
 
 func secureHTTPClient(t *testing.T) *http.Client {
-	rootCAs, _ := x509.SystemCertPool()
-	if rootCAs == nil {
-		rootCAs = x509.NewCertPool()
+	// Get root CA for TLS verification of the server cert.
+	certPool, _ := x509.SystemCertPool()
+	if certPool == nil {
+		certPool = x509.NewCertPool()
 	}
-	rootCaCert, err := certs.ReadFile("cert/RootCA.crt")
+	caCert, err := certs.ReadFile("cert/RootCA.crt")
 	require.NoError(t, err)
-	rootCAs.AppendCertsFromPEM(rootCaCert)
+	certPool.AppendCertsFromPEM(caCert)
+
+	// Get client certificate for mTLS.
+	cert, err := tls.LoadX509KeyPair("cert/localhost.crt", "cert/localhost.key")
+	require.NoError(t, err)
 
 	tlsConfig := &tls.Config{
-		RootCAs: rootCAs,
+		RootCAs:      certPool,
+		Certificates: []tls.Certificate{cert},
 	}
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
 	client := &http.Client{Transport: transport}

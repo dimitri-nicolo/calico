@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/linseed/pkg/handler/audit"
 	"github.com/projectcalico/calico/linseed/pkg/handler/bgp"
 	"github.com/projectcalico/calico/linseed/pkg/handler/dns"
@@ -37,7 +39,30 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/server"
 )
 
+var (
+	ready bool
+	live  bool
+)
+
+func init() {
+	flag.BoolVar(&ready, "ready", false, "Set to get readiness information")
+	flag.BoolVar(&live, "live", false, "Set to get liveness information")
+}
+
 func main() {
+	flag.Parse()
+
+	if ready {
+		doHealthCheck("readiness")
+	} else if live {
+		doHealthCheck("liveness")
+	} else {
+		// Just run the server.
+		run()
+	}
+}
+
+func run() {
 	// Read and reconcile configuration
 	cfg := config.Config{}
 	if err := envconfig.Process(config.EnvConfigPrefix, &cfg); err != nil {
@@ -51,6 +76,12 @@ func main() {
 	// Register for termination signals
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Create a health aggregator and mark us as alive.
+	// For now, we don't do periodic updates to our health, so don't set a timeout.
+	const healthName = "startup"
+	healthAggregator := health.NewHealthAggregator()
+	healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true}, 0)
 
 	// TODO: check if we need to add es connection as part of the ready probe
 	esClient := backend.MustGetElasticClient(toElasticConfig(cfg))
@@ -68,9 +99,8 @@ func main() {
 	bgpBackend := bgpbackend.NewBackend(esClient, cache)
 	procBackend := procbackend.NewBackend(esClient)
 
-	// Start server, adding in handlers for the various API endpoints.
-	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
-	server := server.NewServer(addr, cfg.FIPSModeEnabled,
+	// Configure options used to launch the server.
+	opts := []server.Option{
 		server.WithMiddlewares(server.Middlewares(cfg)),
 		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(
 			l3.New(flowBackend, flowLogBackend),
@@ -82,7 +112,15 @@ func main() {
 			processes.New(procBackend),
 		)...),
 		server.WithRoutes(server.UtilityRoutes()...),
-	)
+	}
+
+	if cfg.CACert != "" {
+		opts = append(opts, server.WithClientCACerts(cfg.CACert))
+	}
+
+	// Start server, adding in handlers for the various API endpoints.
+	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
+	server := server.NewServer(addr, cfg.FIPSModeEnabled, opts...)
 
 	go func() {
 		logrus.Infof("Listening for HTTPS requests at %s", addr)
@@ -91,8 +129,18 @@ func main() {
 		}
 	}()
 
+	go func() {
+		// We only want the health aggregator to be accessible from within the container.
+		// Kubelet will use an exec probe to get status.
+		healthAggregator.ServeHTTP(true, "localhost", 8080)
+	}()
+
+	// Indicate that we're ready to serve requests.
+	healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
+
 	// Listen for termination signals
-	<-signalChan
+	sig := <-signalChan
+	logrus.WithField("signal", sig).Info("Received shutdown signal")
 
 	// Graceful shutdown of the server
 	shutDownCtx, shutDownCancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -128,5 +176,29 @@ func toElasticConfig(cfg config.Config) backend.ElasticConfig {
 		FIPSModeEnabled:   cfg.FIPSModeEnabled,
 		GZIPEnabled:       cfg.ElasticGZIPEnabled,
 		Scheme:            cfg.ElasticScheme,
+	}
+}
+
+// doHealthCheck checks the local readiness or liveness endpoint and prints its status.
+// It exits with a status code based on the status.
+func doHealthCheck(path string) {
+	url := fmt.Sprintf("http://localhost:8080/%s", path)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		fmt.Printf("failed to build request: %s\n", err)
+		os.Exit(1)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Printf("failed to check %s: %s\n", path, err)
+		os.Exit(1)
+	}
+	if resp.StatusCode == http.StatusOK {
+		os.Exit(0)
+	} else {
+		fmt.Printf("bad status code (%d) from %s endpoint\n", resp.StatusCode, path)
+		os.Exit(1)
 	}
 }

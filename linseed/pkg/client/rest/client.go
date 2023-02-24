@@ -6,8 +6,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/sirupsen/logrus"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 )
@@ -32,10 +36,19 @@ type Config struct {
 	// The base URL of the server
 	URL string
 
-	// TLS configuration.
-	CACertPath      string
-	ClientCertPath  string
-	ClientKeyPath   string
+	// CACertPath is the path to the CA cert for verifying
+	// the server certificate provided by Linseed.
+	CACertPath string
+
+	// ClientCertPath is the path to the client certificate this client
+	// should present to Linseed for mTLS authentication.
+	ClientCertPath string
+
+	// ClientKeyPath is the path to the client key used for mTLS.
+	ClientKeyPath string
+
+	// Whether or not TLS should be limited to FIPS compatible ciphers
+	// and TLS versions.
 	FIPSModeEnabled bool
 }
 
@@ -67,7 +80,18 @@ func newHTTPClient(cfg Config) (*http.Client, error) {
 		}
 		tlsConfig.RootCAs = caCertPool
 	}
-	httpTransport := &http.Transport{TLSClientConfig: tlsConfig}
+
+	// Create a custom dialer so that we can configure a dial timeout.
+	// If we can't connect to Linseed within 10 seconds, something is up.
+	// Note: this is not the same as the request timeout, which is handled via the
+	// provided context on a per-request basis.
+	dialWithTimeout := func(network, addr string) (net.Conn, error) {
+		return net.DialTimeout(network, addr, 10*time.Second)
+	}
+	httpTransport := &http.Transport{
+		Dial:            dialWithTimeout,
+		TLSClientConfig: tlsConfig,
+	}
 
 	if cfg.ClientKeyPath != "" && cfg.ClientCertPath != "" {
 		clientCert, err := tls.LoadX509KeyPair(cfg.ClientCertPath, cfg.ClientKeyPath)
@@ -75,6 +99,7 @@ func newHTTPClient(cfg Config) (*http.Client, error) {
 			return nil, fmt.Errorf("error load cert key pair for linseed client: %s", err)
 		}
 		httpTransport.TLSClientConfig.Certificates = []tls.Certificate{clientCert}
+		logrus.Info("Using provided client certificates for mTLS")
 	}
 	return &http.Client{
 		Transport: httpTransport,

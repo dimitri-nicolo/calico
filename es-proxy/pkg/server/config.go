@@ -35,6 +35,11 @@ type Config struct {
 	DefaultCertFile string `envconfig:"-"`
 	DefaultKeyFile  string `envconfig:"-"`
 
+	LinseedURL        string `envconfig:"LINSEED_URL" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
+	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
+
 	// The URL that we should proxy requests to.
 	ElasticScheme             string   `envconfig:"ELASTIC_SCHEME" default:"https"`
 	ElasticHost               string   `envconfig:"ELASTIC_HOST"`

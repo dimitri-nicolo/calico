@@ -107,11 +107,11 @@ func Start(cfg *Config) error {
 
 	// Create linseed Client.
 	config := lsrest.Config{
-		URL:             "https://tigera-linseed.tigera-elasticsearch.svc",
-		CACertPath:      "/etc/pki/tls/certs/tigera-ca-bundle.crt",
-		ClientKeyPath:   "",
-		ClientCertPath:  "",
-		FIPSModeEnabled: true,
+		URL:             cfg.LinseedURL,
+		CACertPath:      cfg.LinseedCA,
+		ClientKeyPath:   cfg.LinseedClientKey,
+		ClientCertPath:  cfg.LinseedClientCert,
+		FIPSModeEnabled: cfg.FIPSModeEnabled,
 	}
 	linseed, err := lsclient.NewClient("", config)
 	if err != nil {
@@ -128,12 +128,6 @@ func Start(cfg *Config) error {
 
 	// Create a PIP backend.
 	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, linseed)
-
-	kibanaTLSConfig := calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
-	kibanaTLSConfig.InsecureSkipVerify = true
-	kibanaCli := kibana.NewClient(&http.Client{
-		Transport: &http.Transport{TLSClientConfig: kibanaTLSConfig},
-	}, cfg.ElasticKibanaEndpoint)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
@@ -279,6 +273,12 @@ func Start(cfg *Config) error {
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
 
 	if !cfg.ElasticKibanaDisabled {
+		kibanaTLSConfig := calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
+		kibanaTLSConfig.InsecureSkipVerify = true
+		kibanaCli := kibana.NewClient(&http.Client{
+			Transport: &http.Transport{TLSClientConfig: kibanaTLSConfig},
+		}, cfg.ElasticKibanaEndpoint)
+
 		// Kibana endpoints are only served if configured to have Kibana enabled.
 		sm.Handle("/kibana/login",
 			middleware.AuthenticateRequest(authn,
