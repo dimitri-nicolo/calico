@@ -20,6 +20,7 @@ type Client interface {
 	AuditLogs(string) AuditLogsInterface
 	BGPLogs(string) BGPLogsInterface
 	Processes(string) ProcessesInterface
+	WAFLogs(string) WAFLogsInterface
 }
 
 type client struct {
@@ -74,6 +75,11 @@ func (c *client) AuditLogs(cluster string) AuditLogsInterface {
 // BGPLogs returns an interface for managing v1.BGPLog resources.
 func (c *client) BGPLogs(cluster string) BGPLogsInterface {
 	return newBGPLogs(c, cluster)
+}
+
+// WAFLogs returns an interface for managing v1.WAFLog resources.
+func (c *client) WAFLogs(cluster string) WAFLogsInterface {
+	return newWAFLogs(c, cluster)
 }
 
 // Processes returns an interface for managing v1.ProcessInfo resources.

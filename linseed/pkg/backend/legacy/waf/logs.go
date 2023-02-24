@@ -109,8 +109,9 @@ func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.WAF
 	}
 
 	return &v1.List[v1.WAFLog]{
-		Items:    logs,
-		AfterKey: nil, // TODO: Support pagination.
+		TotalHits: int64(len(logs)),
+		Items:     logs,
+		AfterKey:  nil, // TODO: Support pagination.
 	}, nil
 }
 
@@ -119,7 +120,7 @@ func (b *wafLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.WAFLogParams) ela
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
 	var start, end time.Time
-	if opts.QueryParams != nil && opts.QueryParams.TimeRange != nil {
+	if opts.QueryParams.TimeRange != nil {
 		start = opts.QueryParams.TimeRange.From
 		end = opts.QueryParams.TimeRange.To
 	} else {

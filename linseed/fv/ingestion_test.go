@@ -65,7 +65,7 @@ func ingestionSetupAndTeardown(t *testing.T, index string) func() {
 
 	return func() {
 		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("%s.%s", index, cluster))
+		testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("%s%s", index, cluster))
 		logCancel()
 		cancel()
 	}
@@ -384,5 +384,59 @@ func TestFV_BGPIngestion(t *testing.T) {
 		}
 
 		assert.Equal(t, bgpLogs, strings.Join(esLogs, "\n"))
+	})
+}
+
+func TestFV_WAFIngestion(t *testing.T) {
+	addr := "https://localhost:8444/api/v1/waf/logs/bulk"
+	tenant := ""
+	expectedResponse := `{"failed":0, "succeeded":1, "total":1}`
+	indexPrefix := "tigera_secure_ee_waf."
+
+	t.Run("ingest waf logs via bulk API with production data", func(t *testing.T) {
+		defer ingestionSetupAndTeardown(t, indexPrefix)()
+
+		// setup HTTP httpClient and HTTP request
+		httpClient := secureHTTPClient(t)
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(wafLogs))
+
+		// make the request to ingest flows
+		res, resBody := doRequest(t, httpClient, spec)
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
+
+		// Force a refresh in order to read the newly ingested data
+		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
+		_, err := esClient.Refresh(index).Do(ctx)
+		require.NoError(t, err)
+
+		endTime, err := time.Parse(time.RFC3339Nano, "2022-02-11T10:04:23.460223952Z")
+		require.NoError(t, err)
+		startTime, err := time.Parse(time.RFC3339Nano, "2022-02-11T10:03:23.460223952Z")
+		require.NoError(t, err)
+
+		params := v1.WAFLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: startTime,
+					To:   endTime,
+				},
+			},
+		}
+
+		resultList, err := cli.WAFLogs(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.NotNil(t, resultList)
+
+		require.Equal(t, int64(1), resultList.TotalHits)
+
+		var esLogs []string
+		for _, log := range resultList.Items {
+			logStr, err := json.Marshal(log)
+			require.NoError(t, err)
+			esLogs = append(esLogs, string(logStr))
+		}
+
+		assert.Equal(t, wafLogs, strings.Join(esLogs, "\n"))
 	})
 }

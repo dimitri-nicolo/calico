@@ -95,7 +95,8 @@ MOCKERY_FILE_PATHS= \
 	pkg/backend/api/EventsBackend \
 	pkg/backend/api/AuditBackend \
 	pkg/backend/api/BGPBackend \
-	pkg/backend/api/ProcessBackend
+	pkg/backend/api/ProcessBackend \
+	pkg/backend/api/WAFBackend
 
 #############################################
 # Run unit level tests

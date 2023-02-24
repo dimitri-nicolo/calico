@@ -92,7 +92,6 @@ func TestCreateWAFLog(t *testing.T) {
 		Protocol: "TCP",
 		Msg:      "This is a friendly reminder that nobody knows what is going on",
 		RuleInfo: "WAF rules, rule WAF",
-		Node:     "nodename",
 	}
 
 	// Create the log in ES.
@@ -108,7 +107,7 @@ func TestCreateWAFLog(t *testing.T) {
 	require.NoError(t, err)
 
 	results, err := b.List(ctx, clusterInfo, v1.WAFLogParams{
-		QueryParams: &v1.QueryParams{
+		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: time.Now().Add(-5 * time.Second),
 				To:   time.Now().Add(5 * time.Second),

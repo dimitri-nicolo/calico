@@ -11,18 +11,19 @@ type WAFLogParams struct {
 
 type WAFLog struct {
 	Timestamp   time.Time    `json:"@timestamp"`
-	Source      *WAFEndpoint `json:"source"`
 	Destination *WAFEndpoint `json:"destination"`
-	Path        string       `json:"path"`
+	Level       string       `json:"level"`
 	Method      string       `json:"method"`
-	Protocol    string       `json:"protocol"`
 	Msg         string       `json:"msg"`
+	Path        string       `json:"path"`
+	Protocol    string       `json:"protocol"`
 	RuleInfo    string       `json:"rule_info"`
-	Node        string       `json:"node"`
+	Source      *WAFEndpoint `json:"source"`
+	Host        string       `json:"host"`
 }
 
 type WAFEndpoint struct {
+	Hostname string `json:"hostname"`
 	IP       string `json:"ip"`
 	PortNum  int32  `json:"port_num"`
-	Hostname string `json:"hostname"`
 }

@@ -1,3 +1,6 @@
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+//
+
 package testutils
 
 import (
@@ -90,6 +93,18 @@ func CleanupIndices(ctx context.Context, client *elastic.Client, prefix string) 
 				continue
 			}
 			return fmt.Errorf("error removing alias: %s", err)
+		}
+	}
+
+	templateName := fmt.Sprintf("%s.", prefix)
+	exists, err := client.IndexTemplateExists(templateName).Do(ctx)
+	if err != nil {
+		return err
+	}
+	if exists {
+		_, err = client.IndexDeleteTemplate(templateName).Do(ctx)
+		if err != nil {
+			return err
 		}
 	}
 
