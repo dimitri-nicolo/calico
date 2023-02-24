@@ -3,12 +3,15 @@ package search
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
+
+	gojson "encoding/json"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	log "github.com/sirupsen/logrus"
 
@@ -372,21 +375,23 @@ func searchLogs[T any](
 		}
 	}
 
-	// Build the hits response.
-	var hits []json.RawMessage
+	// Build the hits response. We want to keep track of errors, but still return
+	// as many results as we can.
+	var hits []gojson.RawMessage
 	for _, item := range items.Items {
 		hit := Hit[T]{
 			Source: item,
 		}
 		hitJSON, err := json.Marshal(hit)
 		if err != nil {
+			log.WithError(err).WithField("hit", hit).Error("Error marshaling search result")
 			return nil, &httputils.HttpStatusError{
 				Status: http.StatusInternalServerError,
-				Msg:    "error marshalling results",
+				Msg:    "error marshaling search result from linseed",
 				Err:    err,
 			}
 		}
-		hits = append(hits, hitJSON)
+		hits = append(hits, gojson.RawMessage(hitJSON))
 	}
 
 	// Calculate the number of pages, given the request's page size.
