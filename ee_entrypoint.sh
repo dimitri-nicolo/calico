@@ -46,6 +46,9 @@ if [ "${MANAGED_K8S}" == "true" ]; then
   source ${ROOT_DIR}/bin/syslog-environment.sh
   source ${ROOT_DIR}/bin/syslog-config.sh
 
+  source ${ROOT_DIR}/bin/linseed-environment.sh
+  source ${ROOT_DIR}/bin/linseed-config.sh
+
   source ${ROOT_DIR}/bin/splunk-environment.sh
   source ${ROOT_DIR}/bin/splunk-config.sh
 
@@ -180,6 +183,9 @@ source ${ROOT_DIR}/bin/splunk-config.sh
 
 source ${ROOT_DIR}/bin/sumo-environment.sh
 source ${ROOT_DIR}/bin/sumo-config.sh
+
+source ${ROOT_DIR}/bin/linseed-environment.sh
+source ${ROOT_DIR}/bin/linseed-config.sh
 
 # Determine which output match directives to include.
 

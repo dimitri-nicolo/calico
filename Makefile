@@ -114,7 +114,7 @@ build-image-%:
 ifeq ($(OS),Windows_NT)
 	docker build --pull $(DOCKER_SQUASH) -t $(IMAGE):latest-$* --file $(DOCKERFILE) .
 else
-	docker buildx build --pull -f Dockerfile.fips -t $(IMAGE):latest-$* \
+	docker buildx build --pull --load -f Dockerfile.fips -t $(IMAGE):latest-$* \
 		--build-arg UBI_VERSION=$(UBI_VERSION) \
 		--build-arg UBI_IMAGE_VERSION=$(UBI_IMAGE_VERSION) \
 		--build-arg RUBY_MAJOR_VERSION=$(RUBY_MAJOR_VERSION) \
