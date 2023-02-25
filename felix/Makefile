@@ -108,7 +108,8 @@ LDFLAGS=-ldflags "\
 	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
 	-X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT) \
-	-B 0x$(BUILD_ID)"
+	-B 0x$(BUILD_ID) \
+	-s -w"
 
 .PHONY: clean
 clean:

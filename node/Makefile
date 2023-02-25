@@ -264,19 +264,19 @@ $(NODE_CONTAINER_BINARY): filesystem/usr/lib/calico/bpf $(LIBBPF_A) $(SRC_FILES)
 $(WINDOWS_BINARY):
 	$(DOCKER_GO_BUILD_CGO_WINDOWS) sh -c '$(GIT_CONFIG_SSH) \
 		GOOS=windows CC=x86_64-w64-mingw32-gcc \
-		go build -buildvcs=false --buildmode=exe -v -o $@ -ldflags "$(LDFLAGS)" ./cmd/calico-node/main.go'
+		go build -buildvcs=false --buildmode=exe -v -o $@ -ldflags "$(LDFLAGS) -s -w" ./cmd/calico-node/main.go'
 
 $(WINDOWS_ARCHIVE_ROOT)/cni/calico.exe:
 	$(DOCKER_RUN) \
 		-e GOOS=windows \
 		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS)" ./cmd/calico'
+		go build -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS) -s -w" ./cmd/calico'
 
 $(WINDOWS_ARCHIVE_ROOT)/cni/calico-ipam.exe:
 	$(DOCKER_RUN) \
 		-e GOOS=windows \
 		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS)" ./cmd/calico-ipam'
+		go build -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS) -s -w" ./cmd/calico-ipam'
 
 $(TOOLS_MOUNTNS_BINARY):
 	$(call build_cgo_binary, ./cmd/mountns, $@)
@@ -471,7 +471,7 @@ dual-tor-cleanup:
 tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 	mkdir -p dist
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -buildvcs=false -v -o $@ -v $(BUILD_FLAGS) -ldflags "$(LDFLAGS)" "$(PACKAGE_NAME)/tests/k8st/reliable-nc"'
+	    sh -c 'go build -buildvcs=false -v -o $@ -v $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/tests/k8st/reliable-nc'
 
 ## k8st: STs in a real Kubernetes cluster provisioned by KIND
 ##

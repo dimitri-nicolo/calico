@@ -21,9 +21,9 @@ SRC_FILES=$(shell find $(CARROTCTL_DIR) -name '*.go')
 CARROTCTL_VERSION?=$(shell git describe --tags --dirty --always)
 CARROTCTL_GIT_REVISION?=$(shell git rev-parse --short HEAD)
 CARROTCTL_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/carrotctl/cmd.VERSION=$(CARROTCTL_VERSION) \
+LDFLAGS=-X $(PACKAGE_NAME)/carrotctl/cmd.VERSION=$(CARROTCTL_VERSION) \
 	-X $(PACKAGE_NAME)/carrotctl/cmd.BUILD_DATE=$(CARROTCTL_BUILD_DATE) \
-	-X $(PACKAGE_NAME)/carrotctl/cmd.GIT_REVISION=$(CARROTCTL_GIT_REVISION)"
+	-X $(PACKAGE_NAME)/carrotctl/cmd.GIT_REVISION=$(CARROTCTL_GIT_REVISION)
 
 .PHONY: clean
 ## Clean enough that a new release build will be clean
@@ -62,7 +62,7 @@ bin/carrotctl-linux-%: BUILDOS=linux
 
 bin/carrotctl-%: $(SRC_FILES)
 	$(DOCKER_RUN) $(LOCAL_DOCKER_ARGS) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o bin/carrotctl-$(BUILDOS)-$(ARCH) $(LDFLAGS) "$(CARROTCTL_DIR)/carrotctl.go"'
+	    go build -v -o bin/carrotctl-$(BUILDOS)-$(ARCH) -ldflags "$(LDFLAGS) -s -w" "$(CARROTCTL_DIR)/carrotctl.go"'
 
 .PHONY: calico/carrotctl
 # Overrides for the binaries that need different output names
