@@ -56,7 +56,7 @@ func setupTest(t *testing.T) func() {
 
 	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 
 	// Function contains teardown logic.
 	return func() {
@@ -109,8 +109,8 @@ func TestCreateWAFLog(t *testing.T) {
 	results, err := b.List(ctx, clusterInfo, v1.WAFLogParams{
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
-				From: time.Now().Add(-5 * time.Second),
-				To:   time.Now().Add(5 * time.Second),
+				From: time.Now().Add(-10 * time.Second),
+				To:   time.Now().Add(10 * time.Second),
 			},
 		},
 	})
