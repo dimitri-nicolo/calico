@@ -131,6 +131,10 @@ promotions:
   pipeline_file: docs/deploy-site.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push linseed images
+  pipeline_file: push-images/linseed.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 
 global_job_config:
   secrets:
@@ -773,6 +777,10 @@ blocks:
     when: "${FORCE_RUN} or change_in(['/*', '/compliance/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu2004
     secrets:
     - name: test-customer-license
     prologue:
@@ -1023,6 +1031,25 @@ blocks:
       - cd voltron
     jobs:
     - name: "voltron tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: 'linseed'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/linseed/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu2004
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd linseed
+    jobs:
+    - name: "linseed tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 

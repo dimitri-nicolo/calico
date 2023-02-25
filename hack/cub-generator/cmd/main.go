@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/jessevdk/go-flags"
+
 	"github.com/projectcalico/calico/hack/cub-generator/pkg/generator"
 	"github.com/projectcalico/calico/hack/cub-generator/pkg/generator/app"
 	"github.com/projectcalico/calico/hack/cub-generator/pkg/generator/template"

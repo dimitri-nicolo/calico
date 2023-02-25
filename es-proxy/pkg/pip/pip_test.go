@@ -13,6 +13,9 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/pip/config"
 	"github.com/projectcalico/calico/es-proxy/pkg/pip/policycalc"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -58,12 +61,12 @@ var _ = Describe("Test handling of flow splitting", func() {
 		// Create a client which has all of the flows that:
 		// - allows all both ends using the *before* policy
 		// - breaks out into 1 of each of the required after conditions using the *after* policy
-		// - has a mixture of allow/deny flows recorded in ES - the policy calculator will recalculate the *before*
+		// - has a mixture of allow/deny flows recorded in Linseed - the policy calculator will recalculate the *before*
 		//   flow so will readjust the actual flow data.
-		By("Creating an ES client with a mocked out search results with all allow actions")
-		client := pelastic.NewMockSearchClient([]interface{}{
+		By("Creating a client with a mocked out search results with all allow actions")
+		flows := []lapi.L3Flow{
 			// before: deny/na       after: allow/allow
-			//flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 1)), <- denied at source
+			// flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 1)), <- denied at source
 			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 1)),
 
 			// before: allow/allow   after: allow/unknown
@@ -83,13 +86,13 @@ var _ = Describe("Test handling of flow splitting", func() {
 			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 2)),
 
 			// before: deny/na       after: deny/na
-			//flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 3), wepd("wepdst", "ns1", 1)), <- denied at source
+			// flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 3), wepd("wepdst", "ns1", 1)), <- denied at source
 			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 3), wepd("wepdst", "ns1", 1)),
 
 			// before: allow/allow   after: unknown/deny
 			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 3)),
 			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 3)),
-		})
+		}
 
 		By("Creating a policy calculator with the required policy updates")
 		np := &v3.NetworkPolicy{
@@ -176,18 +179,19 @@ var _ = Describe("Test handling of flow splitting", func() {
 			impacted,
 		)
 
-		By("Creating a composite agg query")
-		q := &pelastic.CompositeAggregationQuery{
-			Name:                    pelastic.FlowlogBuckets,
-			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      pelastic.FlowAggregatedTerms,
-			AggSumInfos:             pelastic.FlowAggregationSums,
-			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
+		// listFn mocks out results from Linseed.
+		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+			return &v1.List[lapi.L3Flow]{
+				Items: flows,
+			}, nil
 		}
 
+		p := lapi.L3FlowParams{}
+		pager := client.NewMockListPager(&p, listFn)
+
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
-		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, pc, 1000, false, pelastic.NewFlowFilterIncludeAll())
+		pip := pip{lsclient: client.NewMockClient(""), cfg: config.MustLoadConfig()}
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), pager, "cluster", pc, 1000, false, pelastic.NewFlowFilterIncludeAll())
 		var before []*pelastic.CompositeAggregationBucket
 		var after []*pelastic.CompositeAggregationBucket
 		for flow := range flowsChan {
@@ -367,12 +371,12 @@ var _ = Describe("Test handling of flow splitting", func() {
 		// After:  application tier, match all ingress, pass
 		//
 		// Create a client which has all of the flows that:
-		By("Creating an ES client with a mocked out search results with all allow actions")
-		client := pelastic.NewMockSearchClient([]interface{}{
+		By("Creating a client with a mocked out search results with all allow actions")
+		flows := []lapi.L3Flow{
 			// before: allow/deny    after: allow/deny
-			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "default|ns1/default.staged:ingress-defaultdeny|deny|-1", "__PROFILE__|__PROFILE__.kns.ns1|allow"),
-			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "__PROFILE__|__PROFILE__.kns.ns1|allow"),
-		})
+			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "1|default|ns1/default.staged:ingress-defaultdeny|deny|-1", "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
+			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
+		}
 
 		By("Creating a policy calculator with the required policy updates")
 		np_deny := &v3.NetworkPolicy{
@@ -410,18 +414,19 @@ var _ = Describe("Test handling of flow splitting", func() {
 			impacted,
 		)
 
-		By("Creating a composite agg query")
-		q := &pelastic.CompositeAggregationQuery{
-			Name:                    pelastic.FlowlogBuckets,
-			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      pelastic.FlowAggregatedTerms,
-			AggSumInfos:             pelastic.FlowAggregationSums,
-			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
+		// listFn mocks out results from Linseed.
+		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+			return &v1.List[lapi.L3Flow]{
+				Items: flows,
+			}, nil
 		}
 
+		p := lapi.L3FlowParams{}
+		pager := client.NewMockListPager(&p, listFn)
+
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
-		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, pc, 1000, false, pelastic.NewFlowFilterIncludeAll())
+		pip := pip{lsclient: client.NewMockClient(""), cfg: config.MustLoadConfig()}
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), pager, "cluster", pc, 1000, false, pelastic.NewFlowFilterIncludeAll())
 		var before []*pelastic.CompositeAggregationBucket
 		var after []*pelastic.CompositeAggregationBucket
 		for flow := range flowsChan {
@@ -507,12 +512,12 @@ var _ = Describe("Test handling of flow splitting", func() {
 		// After:  application tier, match all ingress, pass
 		//
 		// Create a client which has all of the flows that:
-		By("Creating an ES client with a mocked out search results with all allow actions")
-		client := pelastic.NewMockSearchClient([]interface{}{
+		By("Creating a client with a mocked out search results with all allow actions")
+		flows := []lapi.L3Flow{
 			// before: allow/deny    after: allow/deny
-			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "__PROFILE__|__PROFILE__.kns.ns1|allow"),
-			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "default|ns1/default.staged:egress-defaultdeny|deny|-1", "__PROFILE__|__PROFILE__.kns.ns1|allow"),
-		})
+			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
+			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3), "1|default|ns1/default.staged:egress-defaultdeny|deny|-1", "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
+		}
 
 		By("Creating a policy calculator with the required policy updates")
 		np_deny := &v3.NetworkPolicy{
@@ -550,18 +555,19 @@ var _ = Describe("Test handling of flow splitting", func() {
 			impacted,
 		)
 
-		By("Creating a composite agg query")
-		q := &pelastic.CompositeAggregationQuery{
-			Name:                    pelastic.FlowlogBuckets,
-			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      pelastic.FlowAggregatedTerms,
-			AggSumInfos:             pelastic.FlowAggregationSums,
-			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
+		// listFn mocks out results from Linseed.
+		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+			return &v1.List[lapi.L3Flow]{
+				Items: flows,
+			}, nil
 		}
 
+		p := lapi.L3FlowParams{}
+		pager := client.NewMockListPager(&p, listFn)
+
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
-		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, pc, 1000, false, pelastic.NewFlowFilterIncludeAll())
+		pip := pip{lsclient: client.NewMockClient(""), cfg: config.MustLoadConfig()}
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), pager, "cluster", pc, 1000, false, pelastic.NewFlowFilterIncludeAll())
 		var before []*pelastic.CompositeAggregationBucket
 		var after []*pelastic.CompositeAggregationBucket
 		for flow := range flowsChan {
@@ -634,13 +640,13 @@ var _ = Describe("Test handling of flow splitting", func() {
 		// After:  application tier, match all ingress, pass
 		//
 		// Create a client which has all of the flows that:
-		By("Creating an ES client with a mocked out search results with all allow actions")
-		client := pelastic.NewMockSearchClient([]interface{}{
+		By("Creating a client with a mocked out search results with all allow actions")
+		flows := []lapi.L3Flow{
 			// before: allow/deny    after: allow/deny
-			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "__PROFILE__|__PROFILE__.kns.ns2|allow"),
-			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "__PROFILE__|__PROFILE__.kns.ns1|allow"),
-			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "default|ns1/default.defaultdeny|deny|-1"),
-		})
+			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|__PROFILE__.kns.ns2|allow"),
+			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
+			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "1|default|ns1/default.defaultdeny|deny|-1"),
+		}
 
 		By("Creating a policy calculator with the required policy updates")
 		np_deny := &v3.NetworkPolicy{
@@ -704,18 +710,19 @@ var _ = Describe("Test handling of flow splitting", func() {
 			impacted,
 		)
 
-		By("Creating a composite agg query")
-		q := &pelastic.CompositeAggregationQuery{
-			Name:                    pelastic.FlowlogBuckets,
-			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      pelastic.FlowAggregatedTerms,
-			AggSumInfos:             pelastic.FlowAggregationSums,
-			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
+		// listFn mocks out results from Linseed.
+		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+			return &v1.List[lapi.L3Flow]{
+				Items: flows,
+			}, nil
 		}
 
+		p := lapi.L3FlowParams{}
+		pager := client.NewMockListPager(&p, listFn)
+
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
-		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, pc, 1000, false, pelastic.NewFlowFilterIncludeAll())
+		pip := pip{lsclient: client.NewMockClient(""), cfg: config.MustLoadConfig()}
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), pager, "cluster", pc, 1000, false, pelastic.NewFlowFilterIncludeAll())
 		var before []*pelastic.CompositeAggregationBucket
 		var after []*pelastic.CompositeAggregationBucket
 		for flow := range flowsChan {
@@ -818,13 +825,13 @@ var _ = Describe("Test handling of flow splitting", func() {
 		// After:  application tier, match all ingress, pass
 		//
 		// Create a client which has all of the flows that:
-		By("Creating an ES client with a mocked out search results with all allow actions")
-		client := pelastic.NewMockSearchClient([]interface{}{
+		By("Creating a client with a mocked out search results with all allow actions")
+		flows := []lapi.L3Flow{
 			// before: allow/deny    after: allow/deny
-			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "__PROFILE__|__PROFILE__.kns.ns2|allow"),
-			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "__PROFILE__|__PROFILE__.kns.ns1|allow"),
-			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "default|ns1/default.defaultdeny|deny|-1"),
-		})
+			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|__PROFILE__.kns.ns2|allow"),
+			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "0|__PROFILE__|__PROFILE__.kns.ns1|allow"),
+			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns2", 3), "1|default|ns1/default.defaultdeny|deny|-1"),
+		}
 
 		By("Creating a policy calculator with the required policy updates")
 		np_deny := &v3.NetworkPolicy{
@@ -888,18 +895,19 @@ var _ = Describe("Test handling of flow splitting", func() {
 			impacted,
 		)
 
-		By("Creating a composite agg query")
-		q := &pelastic.CompositeAggregationQuery{
-			Name:                    pelastic.FlowlogBuckets,
-			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      pelastic.FlowAggregatedTerms,
-			AggSumInfos:             pelastic.FlowAggregationSums,
-			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
+		// listFn mocks out results from Linseed.
+		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+			return &v1.List[lapi.L3Flow]{
+				Items: flows,
+			}, nil
 		}
 
+		p := lapi.L3FlowParams{}
+		pager := client.NewMockListPager(&p, listFn)
+
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
-		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, pc, 1000, false, pelastic.NewFlowFilterIncludeAll())
+		pip := pip{lsclient: client.NewMockClient(""), cfg: config.MustLoadConfig()}
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), pager, "cluster", pc, 1000, false, pelastic.NewFlowFilterIncludeAll())
 		var before []*pelastic.CompositeAggregationBucket
 		var after []*pelastic.CompositeAggregationBucket
 		for flow := range flowsChan {

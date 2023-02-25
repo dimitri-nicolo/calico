@@ -2,15 +2,12 @@
 package policyrec
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 const (
@@ -62,9 +59,4 @@ func ValidatePolicyRecommendationParams(params *PolicyRecommendationParams) erro
 	}
 
 	return nil
-}
-
-func QueryElasticsearchFlows(ctx context.Context, ca CompositeAggregator, params *PolicyRecommendationParams) ([]*api.Flow, error) {
-	query := BuildElasticQuery(params)
-	return SearchFlows(ctx, ca, query, params)
 }

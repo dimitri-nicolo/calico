@@ -26,10 +26,14 @@ var (
 	emptyIP      = [16]byte{}
 )
 
+// TODO: Import the types from Linseed instead.
 type FlowLogEndpointType string
-type FlowLogAction string
-type FlowLogReporter string
-type FlowLogSubnetType string
+
+type (
+	FlowLogAction     string
+	FlowLogReporter   string
+	FlowLogSubnetType string
+)
 
 type EndpointMetadata struct {
 	Type           FlowLogEndpointType `json:"type"`
@@ -249,14 +253,13 @@ func (f *FlowSpec) AggregateMetricUpdate(mu *MetricUpdate) {
 func (f *FlowSpec) MergeWith(mu MetricUpdate, other *FlowSpec) {
 	if stats, ok := f.statsByProcessName[mu.processName]; ok {
 		if otherStats, ok := other.statsByProcessName[mu.processName]; ok {
-			for tuple, _ := range otherStats.flowsRefsActive {
+			for tuple := range otherStats.flowsRefsActive {
 				stats.flowsRefsActive.AddWithValue(tuple, mu.natOutgoingPort)
 				stats.flowsRefs.AddWithValue(tuple, mu.natOutgoingPort)
 			}
 			stats.NumFlows = stats.flowsRefs.Len()
 			// TODO(doublek): Merge processIDs.
 		}
-
 	}
 }
 
@@ -746,7 +749,6 @@ func (f *FlowStats) reset() {
 // Flow logs should be constructed by calling toFlowProcessReportedStats and then flattening the resulting
 // slice with FlowMeta and other FlowLog information such as policies and labels.
 type FlowStatsByProcess struct {
-
 	// statsByProcessName stores aggregated flow statistics grouped by a process name.
 	statsByProcessName map[string]*FlowStats
 	// processNames stores the order in which process information is tracked and aggrgated.
@@ -763,8 +765,8 @@ type FlowStatsByProcess struct {
 }
 
 func NewFlowStatsByProcess(mu *MetricUpdate, includeProcess bool, processLimit, processArgsLimit int,
-	displayDebugTraceLogs bool, natOutgoingPortLimit int) FlowStatsByProcess {
-
+	displayDebugTraceLogs bool, natOutgoingPortLimit int,
+) FlowStatsByProcess {
 	f := FlowStatsByProcess{
 		displayDebugTraceLogs: displayDebugTraceLogs,
 		statsByProcessName:    make(map[string]*FlowStats),
@@ -1091,9 +1093,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 	// Sample entry with no aggregation and no labels.
 	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 nginx-7d98456675-* - wep kube-system kube-dns-7cc87d595-pxvxb kube-dns-7cc87d595-* - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow ["0|tier|namespace/tier.policy|allow|0"] [1.0.0.1] 1 kube-system kube-dns dig 23033 0
 
-	var (
-		srcType, dstType FlowLogEndpointType
-	)
+	var srcType, dstType FlowLogEndpointType
 
 	parts := strings.Split(fl, " ")
 	if len(parts) < 32 {

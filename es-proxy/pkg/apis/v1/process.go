@@ -2,6 +2,7 @@
 package v1
 
 import (
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
@@ -18,16 +19,5 @@ type ProcessRequest struct {
 
 type ProcessResponse struct {
 	// Processes contains a list of process info.
-	Processes []Process `json:"processes" validate:"required"`
-}
-
-type Process struct {
-	// Name of the process.
-	Name string `json:"name" validate:"required"`
-
-	// Endpoint executes the process.
-	Endpoint string `json:"endpoint" validate:"required"`
-
-	// InstanceCount counts the unique process id.
-	InstanceCount int `json:"instanceCount" validate:"required"`
+	Processes []lapi.ProcessInfo `json:"processes" validate:"required"`
 }

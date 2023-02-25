@@ -30,11 +30,11 @@ type Config struct {
 	ServiceGraphCachePollLoopInterval time.Duration
 
 	// The min time between starting successive background data queries. This is used to ensure we are sending too many
-	// requests in quick succession and overwhelming elastic or the kubernetes API. This does not gate user driven
+	// requests in quick succession and overwhelming linseed or the kubernetes API. This does not gate user driven
 	// queries.
 	ServiceGraphCachePollQueryInterval time.Duration
 
-	// The max time we expect it to take for data to be collected and stored in elastic. This is used to deterine
+	// The max time we expect it to take for data to be collected and stored. This is used to deterine
 	// whether a cache entry should be background polled for updates.
 	ServiceGraphCacheDataSettleTime time.Duration
 }

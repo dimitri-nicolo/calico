@@ -2,9 +2,14 @@
 package api
 
 import (
+	"strconv"
+
+	"github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 const (
@@ -57,6 +62,89 @@ const (
 	ReporterTypeSource      ReporterType = "src"
 	ReporterTypeDestination ReporterType = "dst"
 )
+
+func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
+	// Ports and protocol.
+	srcPort := uint16(lsf.Key.Source.Port)
+	dstPort := uint16(lsf.Key.Destination.Port)
+
+	// If the protocol already parses as an int, just
+	// use that.
+	var proto *uint8
+	pn, err := strconv.Atoi(lsf.Key.Protocol)
+	if err != nil {
+		logrus.WithField("proto", lsf.Key.Protocol).Debug("Handling string protocol")
+		p := numorstring.ProtocolFromString(lsf.Key.Protocol)
+		proto = GetProtocolNumber(&p)
+	} else {
+		uipn := uint8(pn)
+		proto = &uipn
+	}
+
+	flow := &Flow{
+		Reporter: ReporterType(lsf.Key.Reporter),
+		Source: FlowEndpointData{
+			Type:      EndpointType(lsf.Key.Source.Type),
+			Name:      lsf.Key.Source.AggregatedName,
+			Namespace: lsf.Key.Source.Namespace,
+			IP:        nil, // TODO: We don't return this from Linseed!
+			Port:      &srcPort,
+			Labels:    GetLinseedFlowLabels(lsf.SourceLabels),
+		},
+		Destination: FlowEndpointData{
+			Type:      EndpointType(lsf.Key.Destination.Type),
+			Name:      lsf.Key.Destination.AggregatedName,
+			Namespace: lsf.Key.Destination.Namespace,
+			IP:        nil, // TODO: We don't return this from Linseed!
+			Port:      &dstPort,
+			Labels:    GetLinseedFlowLabels(lsf.DestinationLabels),
+		},
+		ActionFlag: ActionFlagFromString(string(lsf.Key.Action)),
+		Proto:      proto,
+		Policies:   GetPolicyHits(lsf.Policies),
+	}
+
+	// Set IP version based on source IP, defaulting to v4.
+	ipVersion := 4
+	if flow.Source.IP != nil {
+		ipVersion = flow.Source.IP.Version()
+	} else if flow.Destination.IP != nil {
+		ipVersion = flow.Source.IP.Version()
+	}
+	flow.IPVersion = &ipVersion
+
+	return flow
+}
+
+// GetFlowEndpointLabels extracts the flow endpoint labels from the composite aggregation key.
+func GetLinseedFlowLabels(labels []lapi.FlowLabels) map[string]string {
+	// Find the most frequently seen label value.
+	l := make(map[string]string)
+	for _, labelKey := range labels {
+		weight := int64(0)
+		val := ""
+		for _, v := range labelKey.Values {
+			if v.Count > weight {
+				val = v.Value
+			}
+		}
+		l[labelKey.Key] = val
+	}
+	return l
+}
+
+func GetPolicyHits(pols []lapi.Policy) []PolicyHit {
+	hits := []PolicyHit{}
+	for i, p := range pols {
+		hit, err := NewPolicyHit(Action(p.Action), p.Count, i, p.IsStaged, p.Name, p.Namespace, p.Tier, p.RuleID)
+		if err != nil {
+			logrus.WithError(err).Warn("Skipping invalid policy")
+			continue
+		}
+		hits = append(hits, hit)
+	}
+	return hits
+}
 
 type Flow struct {
 	// Reporter

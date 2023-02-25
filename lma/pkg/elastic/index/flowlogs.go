@@ -69,9 +69,7 @@ func (h flowLogsIndexHelper) NewSelectorQuery(selector string) (elastic.Query, e
 	return JsonObjectElasticQuery(converter.Convert(q)), nil
 }
 
-func (h flowLogsIndexHelper) NewRBACQuery(
-	resources []apiv3.AuthorizedResourceVerbs,
-) (elastic.Query, error) {
+func (h flowLogsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceVerbs) (elastic.Query, error) {
 	// Convert the permissions into a query that each flow must satisfy - essentially a source or
 	// destination must be listable by the user to be included in the response.
 	var should []elastic.Query

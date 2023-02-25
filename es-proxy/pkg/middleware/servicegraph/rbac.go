@@ -24,7 +24,7 @@ import (
 // flow to be included.
 
 type RBACFilter interface {
-	// --- Whether we can access the various elastic logs. Flows are not included here because we have already validated
+	// --- Whether we can access the various types of log. Flows are not included here because we have already validated
 	//     access to flow logs (in server.go handler chaining).
 
 	// IncludeL7Logs returns true if the user is permitted to view L7 logs.
@@ -36,7 +36,7 @@ type RBACFilter interface {
 	// IncludeAlerts returns true if the user is permitted to view alerts.
 	IncludeAlerts() bool
 
-	// --- Whether we can access the specific details of the elastic logs.
+	// --- Whether we can access the specific details of the logs.
 
 	// IncludeFlow returns true if the user is permitted a specific flow
 	IncludeFlow(f FlowEdge) bool
@@ -61,7 +61,6 @@ type RBACFilter interface {
 func NewRBACFilter(
 	ctx context.Context, authz lmaauth.RBACAuthorizer, csFactory k8s.ClientSetFactory, cluster string,
 ) (RBACFilter, error) {
-
 	var verbs []v3.AuthorizedResourceVerbs
 	var l7Permitted, dnsPermitted, alertsPermitted bool
 	var verbsErr, l7Err, dnsErr, alertsErr error
@@ -81,7 +80,7 @@ func NewRBACFilter(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		verbs, verbsErr = lmaauth.PerformUserAuthorizationReviewForElasticLogs(ctx, csFactory, user, cluster)
+		verbs, verbsErr = lmaauth.PerformUserAuthorizationReviewForLogs(ctx, csFactory, user, cluster)
 	}()
 	wg.Add(1)
 	go func() {

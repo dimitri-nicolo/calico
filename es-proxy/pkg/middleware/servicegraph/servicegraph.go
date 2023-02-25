@@ -16,9 +16,10 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
+
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 )
 
 // This file implements the main HTTP handler factory for service graph. This is the main entry point for service
@@ -28,13 +29,13 @@ import (
 func NewServiceGraphHandler(
 	ctx context.Context,
 	authz auth.RBACAuthorizer,
-	elasticClient lmaelastic.Client,
+	linseed lsclient.Client,
 	clientSetFactory k8s.ClientSetFactory,
 	cfg *Config,
 ) http.Handler {
 	return NewServiceGraphHandlerWithBackend(ctx, &realServiceGraphBackend{
 		authz:            authz,
-		elastic:          elasticClient,
+		linseed:          linseed,
 		clientSetFactory: clientSetFactory,
 		config:           cfg,
 	}, cfg)

@@ -1,0 +1,14 @@
+{
+    "analysis": {
+      "normalizer": {
+        "lowercase": {
+          "type": "custom",
+          "filter": "lowercase"
+        },
+        "uppercase": {
+          "type": "custom",
+          "filter": "uppercase"
+        }
+      }
+    }
+}

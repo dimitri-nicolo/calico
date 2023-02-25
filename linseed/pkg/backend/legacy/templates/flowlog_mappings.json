@@ -1,0 +1,263 @@
+{
+    "properties": {
+      "@timestamp": {
+        "type": "date"
+      },
+      "start_time": {
+        "type": "date",
+        "format": "epoch_second"
+      },
+      "end_time": {
+        "type": "date",
+        "format": "epoch_second"
+      },
+      "action": {
+        "type": "keyword"
+      },
+      "bytes_in": {
+        "type": "long"
+      },
+      "bytes_out": {
+        "type": "long"
+      },
+      "dest_ip": {
+        "type": "ip",
+        "null_value": "0.0.0.0"
+      },
+      "dest_name": {
+        "type": "keyword"
+      },
+      "dest_name_aggr": {
+        "type": "keyword"
+      },
+      "dest_namespace": {
+        "type": "keyword"
+      },
+      "dest_port": {
+        "type": "long",
+        "null_value": "0"
+      },
+      "dest_port_num": {
+        "type": "alias",
+        "path": "dest_port"
+      },
+      "dest_type": {
+        "type": "keyword"
+      },
+      "dest_service_name": {
+        "type": "keyword"
+      },
+      "dest_service_namespace": {
+        "type": "keyword"
+      },
+      "dest_service_port": {
+        "type": "keyword"
+      },
+      "dest_service_port_name": {
+        "type": "alias",
+        "path": "dest_service_port"
+      },
+      "dest_service_port_num": {
+        "type": "long",
+        "null_value": "0"
+      },
+      "dest_labels": {
+        "type": "nested",
+        "properties": {
+          "labels": {
+            "type": "keyword"
+          }
+        }
+      },
+      "dest_domains": {
+        "type": "keyword"
+      },
+      "destination": {
+        "properties": {
+          "bytes": {
+            "type": "alias",
+            "path": "bytes_in"
+          },
+          "ip": {
+            "type": "alias",
+            "path": "dest_ip"
+          },
+          "port": {
+            "type": "alias",
+            "path": "dest_port"
+          },
+          "packets": {
+            "type": "alias",
+            "path": "packets_in"
+          }
+        }
+      },
+      "network": {
+        "properties": {
+          "protocol": {
+            "type": "alias",
+            "path": "proto"
+          }
+        }
+      },
+      "event": {
+        "properties": {
+          "action": {
+            "type": "alias",
+            "path": "action"
+          }
+        }
+      },
+      "reporter": {
+        "type": "keyword"
+      },
+      "nat_outgoing_ports": {
+        "type": "integer"
+      },
+      "num_flows": {
+        "type": "long"
+      },
+      "num_flows_completed": {
+        "type": "long"
+      },
+      "num_flows_started": {
+        "type": "long"
+      },
+      "http_requests_allowed_in": {
+        "type": "long"
+      },
+      "http_requests_denied_in": {
+        "type": "long"
+      },
+      "packets_in": {
+        "type": "long"
+      },
+      "packets_out": {
+        "type": "long"
+      },
+      "proto": {
+        "type": "keyword"
+      },
+      "policies": {
+        "type": "nested",
+        "properties": {
+          "all_policies": {
+            "type": "keyword"
+          }
+        }
+      },
+      "source_ip": {
+        "type": "ip",
+        "null_value": "0.0.0.0"
+      },
+      "source_name": {
+        "type": "keyword"
+      },
+      "source_name_aggr": {
+        "type": "keyword"
+      },
+      "source_namespace": {
+        "type": "keyword"
+      },
+      "source_port": {
+        "type": "long",
+        "null_value": "0"
+      },
+      "source_port_num": {
+        "type": "alias",
+        "path": "source_port"
+      },
+      "source_type": {
+        "type": "keyword"
+      },
+      "source_labels": {
+        "type": "nested",
+        "properties": {
+          "labels": {
+            "type": "keyword"
+          }
+        }
+      },
+      "source": {
+        "properties": {
+          "bytes": {
+            "type": "alias",
+            "path": "bytes_out"
+          },
+          "ip": {
+            "type": "alias",
+            "path": "source_ip"
+          },
+          "port": {
+            "type": "alias",
+            "path": "source_port"
+          },
+          "packets": {
+            "type": "alias",
+            "path": "packets_out"
+          }
+        }
+      },
+      "original_source_ips": {
+        "type": "ip",
+        "null_value": "0.0.0.0"
+      },
+      "num_original_source_ips": {
+        "type": "long"
+      },
+      "process_name": {
+        "type": "keyword"
+      },
+      "num_process_names": {
+        "type": "long"
+      },
+      "process_id": {
+        "type": "keyword"
+      },
+      "num_process_ids": {
+        "type": "long"
+      },
+      "process_args": {
+        "type": "keyword"
+      },
+      "num_process_args": {
+        "type": "long"
+      },
+      "tcp_lost_packets": {
+        "type": "long"
+      },
+      "tcp_max_min_rtt": {
+        "type": "long"
+      },
+      "tcp_max_smooth_rtt": {
+        "type": "long"
+      },
+      "tcp_mean_min_rtt": {
+        "type": "long"
+      },
+      "tcp_mean_mss": {
+        "type": "long"
+      },
+      "tcp_mean_send_congestion_window": {
+        "type": "long"
+      },
+      "tcp_mean_smooth_rtt": {
+        "type": "long"
+      },
+      "tcp_min_mss": {
+        "type": "long"
+      },
+      "tcp_min_send_congestion_window": {
+        "type": "long"
+      },
+      "tcp_total_retransmissions": {
+        "type": "long"
+      },
+      "tcp_unrecovered_to": {
+        "type": "long"
+      },
+      "host": {
+        "type": "keyword"
+      }
+    }
+}

@@ -1,4 +1,5 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021,2023 Tigera, Inc. All rights reserved.
+
 package servicegraph
 
 import (
@@ -12,15 +13,15 @@ import (
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/auth"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
+
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 )
 
 // Sanity check the realServiceGraphBackend satisfies the ServiceGraphBackend interface.
 var _ ServiceGraphBackend = &realServiceGraphBackend{}
 
 type ServiceGraphBackend interface {
-
 	// These methods access data for the cache and therefore use an application context rather than the user request
 	// context.
 	GetFlowConfig(ctx context.Context, cluster string) (*FlowConfig, error)
@@ -41,9 +42,9 @@ type ServiceGraphBackend interface {
 
 type realServiceGraphBackend struct {
 	authz            auth.RBACAuthorizer
-	elastic          lmaelastic.Client
 	clientSetFactory k8s.ClientSetFactory
 	config           *Config
+	linseed          lsclient.Client
 }
 
 func (r *realServiceGraphBackend) GetPodsLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
@@ -52,14 +53,14 @@ func (r *realServiceGraphBackend) GetPodsLabels(ctx context.Context, cluster str
 		return nil, err
 	}
 
-	var pods = make(map[v1.NamespacedName]LabelSelectors)
+	pods := make(map[v1.NamespacedName]LabelSelectors)
 	podsList, err := cs.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.WithError(err).Errorf("Failed to list pods")
 	}
 	for _, pod := range podsList.Items {
 		if len(pod.OwnerReferences) == 0 {
-			var key = v1.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}
+			key := v1.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}
 			pods[key] = AppendLabels(pods[key], pod.Labels)
 		}
 	}
@@ -73,13 +74,13 @@ func (r *realServiceGraphBackend) GetStatefulSetLabels(ctx context.Context, clus
 		return nil, err
 	}
 
-	var statefulSets = make(map[v1.NamespacedName]LabelSelectors)
+	statefulSets := make(map[v1.NamespacedName]LabelSelectors)
 	stsList, err := cs.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.WithError(err).Errorf("Failed to list statefulSets")
 	}
 	for _, sts := range stsList.Items {
-		var key = v1.NamespacedName{Name: sts.Name, Namespace: sts.Namespace}
+		key := v1.NamespacedName{Name: sts.Name, Namespace: sts.Namespace}
 		statefulSets[key] = AppendLabelSelectors(statefulSets[key], sts.Spec.Selector)
 	}
 
@@ -92,13 +93,13 @@ func (r *realServiceGraphBackend) GetDaemonSetLabels(ctx context.Context, cluste
 		return nil, err
 	}
 
-	var daemonSets = make(map[v1.NamespacedName]LabelSelectors)
+	daemonSets := make(map[v1.NamespacedName]LabelSelectors)
 	dsList, err := cs.AppsV1().DaemonSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.WithError(err).Errorf("Failed to list daemonSets")
 	}
 	for _, ds := range dsList.Items {
-		var key = v1.NamespacedName{Name: ds.Name, Namespace: ds.Namespace}
+		key := v1.NamespacedName{Name: ds.Name, Namespace: ds.Namespace}
 		daemonSets[key] = AppendLabelSelectors(daemonSets[key], ds.Spec.Selector)
 	}
 
@@ -111,13 +112,13 @@ func (r *realServiceGraphBackend) GetReplicaSetLabels(ctx context.Context, clust
 		return nil, err
 	}
 
-	var replicaSets = make(map[v1.NamespacedName]LabelSelectors)
+	replicaSets := make(map[v1.NamespacedName]LabelSelectors)
 	rsList, err := cs.AppsV1().ReplicaSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.WithError(err).Errorf("Failed to list replicaSets")
 	}
 	for _, rs := range rsList.Items {
-		var key = v1.NamespacedName{Name: rs.Name, Namespace: rs.Namespace}
+		key := v1.NamespacedName{Name: rs.Name, Namespace: rs.Namespace}
 		replicaSets[key] = AppendLabelSelectors(replicaSets[key], rs.Spec.Selector)
 	}
 
@@ -130,13 +131,13 @@ func (r *realServiceGraphBackend) GetServiceLabels(ctx context.Context, cluster 
 		return nil, err
 	}
 
-	var services = make(map[v1.NamespacedName]LabelSelectors)
+	services := make(map[v1.NamespacedName]LabelSelectors)
 	svList, err := cs.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.WithError(err).Errorf("Failed to list services")
 	}
 	for _, sv := range svList.Items {
-		var key = v1.NamespacedName{Name: sv.Name, Namespace: sv.Namespace}
+		key := v1.NamespacedName{Name: sv.Name, Namespace: sv.Namespace}
 		services[key] = AppendLabels(services[key], sv.Spec.Selector)
 	}
 
@@ -154,19 +155,19 @@ func (r *realServiceGraphBackend) GetFlowConfig(ctx context.Context, cluster str
 func (r *realServiceGraphBackend) GetL3FlowData(
 	ctx context.Context, cluster string, tr lmav1.TimeRange, fc *FlowConfig,
 ) ([]L3Flow, error) {
-	return GetL3FlowData(ctx, r.elastic, cluster, tr, fc, r.config)
+	return GetL3FlowData(ctx, r.linseed, cluster, tr, fc, r.config)
 }
 
 func (r *realServiceGraphBackend) GetDNSData(
 	ctx context.Context, cluster string, tr lmav1.TimeRange,
 ) ([]DNSLog, error) {
-	return GetDNSClientData(ctx, r.elastic, cluster, tr, r.config)
+	return GetDNSClientData(ctx, r.linseed, cluster, tr, r.config)
 }
 
 func (r *realServiceGraphBackend) GetL7FlowData(
 	ctx context.Context, cluster string, tr lmav1.TimeRange,
 ) ([]L7Flow, error) {
-	return GetL7FlowData(ctx, r.elastic, cluster, tr, r.config)
+	return GetL7FlowData(ctx, r.linseed, cluster, tr, r.config)
 }
 
 func (r *realServiceGraphBackend) GetEvents(
@@ -176,7 +177,7 @@ func (r *realServiceGraphBackend) GetEvents(
 	if err != nil {
 		return nil, err
 	}
-	return GetEvents(ctx, r.elastic, cs, cluster, tr, r.config)
+	return GetEvents(ctx, r.linseed, cs, cluster, tr, r.config)
 }
 
 func (r *realServiceGraphBackend) NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error) {
@@ -231,8 +232,8 @@ type MockServiceGraphBackend struct {
 	numCallsGetStatefulSetLabels int
 	numCallsGetDaemonSetLabels   int
 	numCallsGetPodsLabels        int
-	wgElastic                    sync.WaitGroup
-	numBlockedElastic            int
+	wgLinseed                    sync.WaitGroup
+	numBlockedLinseed            int
 }
 
 func (m *MockServiceGraphBackend) GetServiceLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
@@ -270,13 +271,13 @@ func (m *MockServiceGraphBackend) GetDaemonSetLabels(ctx context.Context, cluste
 	return m.DaemonSetLabels, m.DaemonSetLabelsErr
 }
 
-func (m *MockServiceGraphBackend) waitElastic() {
+func (m *MockServiceGraphBackend) waitLinseed() {
 	m.lock.Lock()
-	m.numBlockedElastic++
+	m.numBlockedLinseed++
 	m.lock.Unlock()
-	m.wgElastic.Wait()
+	m.wgLinseed.Wait()
 	m.lock.Lock()
-	m.numBlockedElastic--
+	m.numBlockedLinseed--
 	m.lock.Unlock()
 }
 
@@ -293,7 +294,7 @@ func (m *MockServiceGraphBackend) GetFlowConfig(ctx context.Context, cluster str
 func (m *MockServiceGraphBackend) GetL3FlowData(
 	ctx context.Context, cluster string, tr lmav1.TimeRange, fc *FlowConfig,
 ) ([]L3Flow, error) {
-	m.waitElastic()
+	m.waitLinseed()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsL3++
@@ -303,7 +304,7 @@ func (m *MockServiceGraphBackend) GetL3FlowData(
 func (m *MockServiceGraphBackend) GetL7FlowData(
 	ctx context.Context, cluster string, tr lmav1.TimeRange,
 ) ([]L7Flow, error) {
-	m.waitElastic()
+	m.waitLinseed()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsL7++
@@ -313,7 +314,7 @@ func (m *MockServiceGraphBackend) GetL7FlowData(
 func (m *MockServiceGraphBackend) GetDNSData(
 	ctx context.Context, cluster string, tr lmav1.TimeRange,
 ) ([]DNSLog, error) {
-	m.waitElastic()
+	m.waitLinseed()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsDNS++
@@ -323,7 +324,7 @@ func (m *MockServiceGraphBackend) GetDNSData(
 func (m *MockServiceGraphBackend) GetEvents(
 	ctx context.Context, cluster string, tr lmav1.TimeRange,
 ) ([]Event, error) {
-	m.waitElastic()
+	m.waitLinseed()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsEvents++
@@ -350,12 +351,12 @@ func (m *MockServiceGraphBackend) NewNameHelper(ctx context.Context, rd *Request
 	return m.NameHelper, nil
 }
 
-func (m *MockServiceGraphBackend) SetBlockElastic() {
-	m.wgElastic.Add(1)
+func (m *MockServiceGraphBackend) SetBlockLinseed() {
+	m.wgLinseed.Add(1)
 }
 
-func (m *MockServiceGraphBackend) SetUnblockElastic() {
-	m.wgElastic.Done()
+func (m *MockServiceGraphBackend) SetUnblockLinseed() {
+	m.wgLinseed.Done()
 }
 
 func (m *MockServiceGraphBackend) GetNumCallsFlowConfig() int {
@@ -403,5 +404,5 @@ func (m *MockServiceGraphBackend) GetNumCallsNameHelper() int {
 func (m *MockServiceGraphBackend) GetNumBlocked() int {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	return m.numBlockedElastic
+	return m.numBlockedLinseed
 }

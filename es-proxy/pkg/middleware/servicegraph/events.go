@@ -1,10 +1,9 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021,2023 Tigera, Inc. All rights reserved.
+
 package servicegraph
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -13,13 +12,13 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
-	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 )
 
 const (
@@ -27,9 +26,7 @@ const (
 	K8sEventTypeWarning = "Warning"
 )
 
-var (
-	replicaRegex = regexp.MustCompile("-[a-z0-9]{5}$")
-)
+var replicaRegex = regexp.MustCompile("-[a-z0-9]{5}$")
 
 // The extracted event information. This is simply an ID with a set of graph endpoints that it may correspond to. There
 // is a bit of guesswork here - so the graphconstructor will use this as best effort to track down the appropriate
@@ -45,42 +42,6 @@ type Event struct {
 	Endpoints []FlowEndpoint
 }
 
-// RawEvent used to unmarshaling the event.
-type RawEvent struct {
-	Time            int64           `json:"time"`
-	Type            string          `json:"type"`
-	Description     string          `json:"description"`
-	Alert           string          `json:"alert"`
-	Severity        int             `json:"severity"`
-	SourceNamespace string          `json:"source_namespace"`
-	SourceName      string          `json:"source_name"`
-	DestNamespace   string          `json:"dest_namespace"`
-	DestName        string          `json:"dest_name"`
-	DestPort        int             `json:"dest_port"`
-	Protocol        string          `json:"protocol"`
-	Record          *RawEventRecord `json:"record,omitempty"`
-}
-
-type RawEventRecord struct {
-	ResponseObjectKind string `json:"responseObject.kind"`
-	ObjectRefResource  string `json:"objectRef.resource"`
-	ObjectRefNamespace string `json:"objectRef.namespace"`
-	ObjectRefName      string `json:"objectRef.name"`
-	ClientNamespace    string `json:"client_namespace"`
-	ClientName         string `json:"client_name"`
-	ClientNameAggr     string `json:"client_name_aggr"`
-	SourceType         string `json:"source_type"`
-	SourceNamespace    string `json:"source_namespace"`
-	SourceNameAggr     string `json:"source_name_aggr"`
-	SourceName         string `json:"source_name"`
-	DestType           string `json:"dest_type"`
-	DestNamespace      string `json:"dest_namespace"`
-	DestNameAggr       string `json:"dest_name_aggr"`
-	DestName           string `json:"dest_name"`
-	DestPort           int    `json:"dest_port"`
-	Protocol           string `json:"proto"`
-}
-
 // GetEvents returns events and associated endpoints for each event for the specified time range. Note that Kubernetes
 // events are only stored temporarily and so we query all Kubernetes events and filter by time.
 //
@@ -90,7 +51,7 @@ type RawEventRecord struct {
 // we will not include it in the node. The unfiltered alerts table will still provide the user with the opportunity to
 // see all events.
 func GetEvents(
-	ctx context.Context, es lmaelastic.Client, csAppCluster k8s.ClientSet, cluster string, tr lmav1.TimeRange,
+	ctx context.Context, client client.Client, csAppCluster k8s.ClientSet, cluster string, tr lmav1.TimeRange,
 	cfg *Config,
 ) ([]Event, error) {
 	/* Reinstate when we have k8s events too
@@ -123,59 +84,33 @@ func GetEvents(
 	return append(tigeraEvents, kubernetesEvents...), nil
 	*/
 
-	return getTigeraEvents(ctx, es, cluster, tr, cfg)
+	return getTigeraEvents(ctx, client, cluster, tr, cfg)
 }
 
-func getTigeraEvents(
-	ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange,
-	cfg *Config,
-) (results []Event, err error) {
+func getTigeraEvents(ctx context.Context, lsClient client.Client, cluster string, tr lmav1.TimeRange, cfg *Config) (results []Event, err error) {
 	// Trace progress.
-	progress := newElasticProgress("events", tr)
+	progress := newProgress("events", tr)
 	defer func() {
 		progress.Complete(err)
 	}()
 
-	// Issue the query to Elasticsearch and send results out through the results channel. We terminate the search if:
-	// - there are no more "buckets" returned by Elasticsearch or the equivalent no-or-empty "after_key" in the
-	//   aggregated search results,
-	// - we hit an error, or
-	// - the context indicates "done"
-	querySize := alertsQuerySize
-	if cfg.ServiceGraphCacheMaxBucketsPerQuery > 0 {
-		querySize = cfg.ServiceGraphCacheMaxBucketsPerQuery
+	// Start a paged list of events.
+	// Always ensure we cancel the query if we bail early.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Set up for performing paged list queries for L7 flows.
+	params := lapi.EventParams{
+		QueryParams: lsv1.QueryParams{TimeRange: &tr},
 	}
-	query := lmaindex.Alerts().NewTimeRangeQuery(tr.From, tr.To)
-	index := lmaindex.Alerts().GetIndex(elasticvariant.AddIndexInfix(cluster))
-	var searchAfterKeys []interface{}
-	for {
-		log.Debugf("Issuing search query, start after %#v", searchAfterKeys)
+	pager := client.NewListPager[lapi.Event](&params)
+	pages, errors := pager.Stream(ctx, lsClient.Events(cluster).List)
 
-		// Query the document index.
-		search := es.Backend().Search(index).Query(query).Size(querySize).Sort("time", true)
-		if searchAfterKeys != nil {
-			search = search.SearchAfter(searchAfterKeys...)
-		}
-
-		searchResults, err := es.Do(ctx, search)
-		if err != nil {
-			// We hit an error, exit. This may be a context done error, but that's fine, pass the error on.
-			log.WithError(err).Debugf("Error searching %s", index)
-			return nil, err
-		}
-
-		// Exit if the search timed out. We return a very specific error type that can be recognized by the
-		// consumer - this is useful in propagating the timeout up the stack when we are doing server side
-		// aggregation.
-		if searchResults.TimedOut {
-			return nil, lmaelastic.TimedOutError(fmt.Sprintf("timed out querying %s", index))
-		}
-
-		// Loop through each of the items in the buckets and convert to a result bucket.
-		for _, item := range searchResults.Hits.Hits {
+	for page := range pages {
+		for _, item := range page.Items {
+			// Loop through each of the returned items and convert to service graph formatted event.
 			progress.IncRaw()
-			searchAfterKeys = item.Sort
-			if event := parseTigeraEvent(item.Id, item.Source); event != nil {
+			if event := parseTigeraEvent(item); event != nil {
 				results = append(results, *event)
 				progress.IncAggregated()
 
@@ -185,25 +120,16 @@ func getTigeraEvents(
 				}
 			}
 		}
-
-		if len(searchResults.Hits.Hits) < querySize {
-			log.Debugf("Completed processing %s, found %d events", index, len(results))
-			break
-		}
 	}
 
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.Debug("Tigera events:")
 		for i := range results {
-			log.Debugf(
-				"-  Event %s: %s",
-				results[i].ID,
-				results[i].Details.Description,
-			)
+			log.Debugf("-  Event %s: %s", results[i].ID, results[i].Details.Description)
 		}
 	}
 
-	return results, nil
+	return results, <-errors
 }
 
 /* TODO(rlb): Reinstate when we decide how to return k8s events to the user.
@@ -287,46 +213,33 @@ func parseKubernetesEvent(rawEvent corev1.Event, tr lmav1.TimeRange) *Event {
 
 // parseTigeraEvent parses the raw JSON event and converts it to an Event.  Returns nil if the format was not recognized or
 // if the event could not be attributed a graph node.
-func parseTigeraEvent(id string, item json.RawMessage) *Event {
-	rawEvent := &RawEvent{}
-	if err := json.Unmarshal(item, rawEvent); err != nil {
-		log.WithError(err).Warning("Unable to parse event")
-		return nil
+func parseTigeraEvent(item lapi.Event) *Event {
+	log.Debugf("Processing event with ID: %+v", item)
+
+	id := item.ID
+	destPort := 0
+	if item.DestPort != nil {
+		destPort = int(*item.DestPort)
 	}
 
-	log.Debugf("Processing event with ID %s: %#v", id, rawEvent)
-
-	// Make sure fields that might contain a "-" meaning "no value" have no value (basically fields from flow logs
-	// and DNS logs)
-	rawEvent.SourceNamespace = singleDashToBlank(rawEvent.SourceNamespace)
-	rawEvent.SourceName = singleDashToBlank(rawEvent.SourceName)
-	rawEvent.DestNamespace = singleDashToBlank(rawEvent.DestNamespace)
-	rawEvent.DestName = singleDashToBlank(rawEvent.DestName)
-	if rawEvent.Record != nil {
-		rawEvent.Record.SourceNamespace = singleDashToBlank(rawEvent.Record.SourceNamespace)
-		rawEvent.Record.SourceName = singleDashToBlank(rawEvent.Record.SourceName)
-		rawEvent.Record.DestNamespace = singleDashToBlank(rawEvent.Record.DestNamespace)
-		rawEvent.Record.DestName = singleDashToBlank(rawEvent.Record.DestName)
-	}
-
-	sev := rawEvent.Severity
+	sev := item.Severity
 	event := &Event{
 		ID: v1.GraphEventID{
-			Type:           v1.GraphEventType(rawEvent.Type),
+			Type:           v1.GraphEventType(item.Type),
 			ID:             id,
-			NamespacedName: v1.NamespacedName{Name: rawEvent.Alert},
+			NamespacedName: v1.NamespacedName{Name: item.Alert},
 		},
 		Details: v1.GraphEventDetails{
 			Severity:    &sev,
-			Description: rawEvent.Description,
-			Timestamp:   &metav1.Time{Time: time.Unix(0, rawEvent.Time)},
+			Description: item.Description,
+			Timestamp:   &metav1.Time{Time: time.Unix(0, item.Time)},
 		},
 	}
 
 	if eps := getEventEndpointsFromFlowEndpoint(
 		"",
-		rawEvent.SourceNamespace,
-		rawEvent.SourceName,
+		item.SourceNamespace,
+		item.SourceName,
 		"",
 		0, "",
 	); len(eps) > 0 {
@@ -334,52 +247,53 @@ func parseTigeraEvent(id string, item json.RawMessage) *Event {
 	}
 	if eps := getEventEndpointsFromFlowEndpoint(
 		"",
-		rawEvent.DestNamespace,
-		rawEvent.DestName,
+		item.DestNamespace,
+		item.DestName,
 		"",
-		rawEvent.DestPort,
-		rawEvent.Protocol,
+		destPort,
+		item.Protocol,
 	); len(eps) > 0 {
 		event.Endpoints = append(event.Endpoints, eps...)
 	}
-	if rawEvent.Record != nil {
-		log.Debugf("Parsing fields from Record: %#v", *rawEvent.Record)
+	if item.Record != nil {
+		log.Debugf("Parsing fields from Record: %#v", *item.Record)
 		if eps := getEventEndpointsFromFlowEndpoint(
-			rawEvent.Record.SourceType,
-			rawEvent.Record.SourceNamespace,
-			rawEvent.Record.SourceName,
-			rawEvent.Record.SourceNameAggr,
+			item.Record.SourceType,
+			item.Record.SourceNamespace,
+			item.Record.SourceName,
+			item.Record.SourceNameAggr,
 			0, "",
 		); len(eps) > 0 {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}
 		if eps := getEventEndpointsFromFlowEndpoint(
-			rawEvent.Record.DestType,
-			rawEvent.Record.DestNamespace,
-			rawEvent.Record.DestName,
-			rawEvent.Record.DestNameAggr,
-			rawEvent.Record.DestPort,
-			rawEvent.Record.Protocol,
+			item.Record.DestType,
+			item.Record.DestNamespace,
+			item.Record.DestName,
+			item.Record.DestNameAggr,
+			item.Record.DestPort,
+			item.Record.Protocol,
 		); len(eps) > 0 {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}
 		if eps := getEventEndpointsFromFlowEndpoint(
 			"wep",
-			rawEvent.Record.ClientNamespace,
-			rawEvent.Record.ClientName,
-			rawEvent.Record.ClientNameAggr,
+			item.Record.ClientNamespace,
+			item.Record.ClientName,
+			item.Record.ClientNameAggr,
 			0, "",
 		); len(eps) > 0 {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}
 		if eps := getEventEndpointsFromObject(
-			nonEmptyString(rawEvent.Record.ObjectRefResource, rawEvent.Record.ResponseObjectKind),
-			rawEvent.Record.ObjectRefNamespace,
-			rawEvent.Record.ObjectRefName,
+			nonEmptyString(item.Record.ObjectRefResource, item.Record.ResponseObjectKind),
+			item.Record.ObjectRefNamespace,
+			item.Record.ObjectRefName,
 		); len(eps) > 0 {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}
 	}
+
 	// Only return event IDs that we are able to correlate to a node.
 	if len(event.Endpoints) == 0 {
 		return nil

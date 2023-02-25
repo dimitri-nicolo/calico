@@ -2,10 +2,13 @@ package pip
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
 
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 
@@ -17,7 +20,7 @@ var (
 	// The order of this is important since ES orders its responses based on this source order - and PIP utilizes this
 	// to simplify the aggregation processing allowing us to pipeline the conversion.
 	PIPCompositeSources = []elastic.AggCompositeSourceInfo{
-		// This first set of fields matches the set requested by the API (see elastic.FlowCompositeSources) and will never
+		// This first set of fields matches the set requested by the API and will never
 		// be modified by the policy calculation. These are non-aggregated and non-cached in the pipeline converter and
 		// a single set of these values represents a single flow.
 		{Name: "source_type", Field: "source_type"},
@@ -94,14 +97,14 @@ type ProcessedFlows struct {
 	After  []*elastic.CompositeAggregationBucket
 }
 
-// SearchAndFilterCompositeAggrFlows provides a pipeline to search elastic flow logs, translate the results based on PIP and
+// SearchAndProcessCompositeAggrFlows provides a pipeline to search elastic flow logs, translate the results based on PIP and
 // stream aggregated results through the returned channel.
 //
 // This will exit cleanly if the context is cancelled.
 func (p *pip) SearchAndProcessFlowLogs(
 	ctx context.Context,
-	query *elastic.CompositeAggregationQuery,
-	startAfterKey elastic.CompositeAggregationKey,
+	pager client.ListPager[lapi.L3Flow],
+	cluster string,
 	calc policycalc.PolicyCalculator,
 	limit int32,
 	impactedOnly bool,
@@ -110,24 +113,13 @@ func (p *pip) SearchAndProcessFlowLogs(
 	results := make(chan ProcessedFlows, UINumAggregatedFlows)
 	errs := make(chan error, 1)
 
-	// Modify the original query to include all of the required data.
-	modifiedQuery := &elastic.CompositeAggregationQuery{
-		DocumentIndex:           query.DocumentIndex,
-		Query:                   query.Query,
-		Name:                    query.Name,
-		AggCompositeSourceInfos: PIPCompositeSources,
-		AggNestedTermInfos:      elastic.FlowAggregatedTerms,
-		AggSumInfos:             elastic.FlowAggregationSums,
-		MaxBucketsPerQuery:      query.MaxBucketsPerQuery,
-	}
-
 	// Create a cancellable context so we can exit cleanly when we hit our target number of aggregated results.
 	ctx, cancel := context.WithCancel(ctx)
 
-	// Search for the raw data in ES.
-	rcvdBuckets, rcvdErrs := p.esClient.SearchCompositeAggregations(ctx, modifiedQuery, nil)
-	var sent int
+	// Start a paged search.
+	pages, errors := pager.Stream(ctx, p.lsclient.L3Flows(cluster).List)
 
+	var sent int
 	go func() {
 		defer func() {
 			cancel()
@@ -379,66 +371,73 @@ func (p *pip) SearchAndProcessFlowLogs(
 		// Iterate through all the raw buckets from ES until the channel is closed. Buckets are ordered in the natural
 		// order of the composite sources, thus we can enumerate, process and aggregate related buckets, forwarding the
 		// aggregated bucket when the new raw bucket belongs in a different aggregation group.
-		for rawBucket := range rcvdBuckets {
-			// Check the last raw connection key to see if we have clocked the connection, if so calculate the new
-			// source/dest flow for the connection.
-			if !lastRawConnectionKey.SameBucket(rawBucket.CompositeAggregationKey) {
-				log.Debug("Clocked to next connection")
+		for page := range pages {
+			for _, f := range page.Items {
+				// Convert to a raw bucket. Ideally we don't need to do this, but the PIP code and API response is written in terms of
+				// elastic buckets and so for legacy reasons we convert a nice api.L3Flow struct into a messay ES bucket struct.
+				rawBucket := bucketFromFlow(&f)
 
-				// Process the connection group.
-				processConnectionGroup()
+				// Check the last raw connection key to see if we have clocked the connection, if so calculate the new
+				// source/dest flow for the connection.
+				if !lastRawConnectionKey.SameBucket(rawBucket.CompositeAggregationKey) {
+					log.Debug("Clocked to next connection")
 
-				// Update the last connection key. We only track the indices that are common to the new connection.
-				lastRawConnectionKey = rawBucket.CompositeAggregationKey[:PIPCompositeSourcesNumSameConnGroup]
-			}
+					// Process the connection group.
+					processConnectionGroup()
 
-			// Check the last raw flow key to see if we have clocked flows, if so send any aggregated results and reset
-			// the aggregations. Composite key values are returned in strict order.
-			if !lastRawFlowKey.SameBucket(rawBucket.CompositeAggregationKey) {
-				log.Debug("Clocked to next flow")
-
-				// Handle the aggregated results by sending over the results channel. If this indicates we should
-				// exit (either due to error or we've hit our results limit) then exit.
-				if exit := sendResult(); exit {
-					return
+					// Update the last connection key. We only track the indices that are common to the new connection.
+					lastRawConnectionKey = rawBucket.CompositeAggregationKey[:PIPCompositeSourcesNumSameConnGroup]
 				}
 
-				// Update the last flow key. We only track the indices that are common to the new set of flow
-				// aggregations.
-				lastRawFlowKey = rawBucket.CompositeAggregationKey[:PIPCompositeSourcesNumSameFlow]
-			}
+				// Check the last raw flow key to see if we have clocked flows, if so send any aggregated results and reset
+				// the aggregations. Composite key values are returned in strict order.
+				if !lastRawFlowKey.SameBucket(rawBucket.CompositeAggregationKey) {
+					log.Debug("Clocked to next flow")
 
-			log.Debug("Process flow bucket")
+					// Handle the aggregated results by sending over the results channel. If this indicates we should
+					// exit (either due to error or we've hit our results limit) then exit.
+					if exit := sendResult(); exit {
+						return
+					}
 
-			// There is a possibility that through config changes we get allow and deny results for both source and dest.
-			// We combine the results to give just a single source and dest flow as follows:
-			// - Convert deny+allow for the same endpoint to an unknown
-			// - Only include overlapping intersecting labels and policies
-			flow := compositeAggregationBucketToFlow(rawBucket)
-			if flow == nil {
-				continue
-			}
-
-			// Recorded flows can only have a reported action of allow or deny. No other bits in the action flags should
-			// be set.
-			switch flow.Reporter {
-			case api.ReporterTypeSource:
-				switch flow.ActionFlag {
-				case api.ActionFlagAllow:
-					srcAllowFlow = flow
-					srcAllowRawBucket = rawBucket
-				case api.ActionFlagDeny:
-					srcDenyFlow = flow
-					srcDenyRawBucket = rawBucket
+					// Update the last flow key. We only track the indices that are common to the new set of flow
+					// aggregations.
+					lastRawFlowKey = rawBucket.CompositeAggregationKey[:PIPCompositeSourcesNumSameFlow]
 				}
-			case api.ReporterTypeDestination:
-				switch flow.ActionFlag {
-				case api.ActionFlagAllow:
-					dstAllowFlow = flow
-					dstAllowRawBucket = rawBucket
-				case api.ActionFlagDeny:
-					dstDenyFlow = flow
-					dstDenyRawBucket = rawBucket
+
+				log.Debug("Process flow")
+
+				// There is a possibility that through config changes we get allow and deny results for both source and dest.
+				// We combine the results to give just a single source and dest flow as follows:
+				// - Convert deny+allow for the same endpoint to an unknown
+				// - Only include overlapping intersecting labels and policies
+				// Convert the received flow into the format understood by PIP.
+				flow := api.FromLinseedFlow(f)
+				if flow == nil {
+					continue
+				}
+
+				// Recorded flows can only have a reported action of allow or deny. No other bits in the action flags should
+				// be set.
+				switch flow.Reporter {
+				case api.ReporterTypeSource:
+					switch flow.ActionFlag {
+					case api.ActionFlagAllow:
+						srcAllowFlow = flow
+						srcAllowRawBucket = rawBucket
+					case api.ActionFlagDeny:
+						srcDenyFlow = flow
+						srcDenyRawBucket = rawBucket
+					}
+				case api.ReporterTypeDestination:
+					switch flow.ActionFlag {
+					case api.ActionFlagAllow:
+						dstAllowFlow = flow
+						dstAllowRawBucket = rawBucket
+					case api.ActionFlagDeny:
+						dstDenyFlow = flow
+						dstDenyRawBucket = rawBucket
+					}
 				}
 			}
 		}
@@ -453,13 +452,94 @@ func (p *pip) SearchAndProcessFlowLogs(
 		// If there was an error, send that. All data that we gathered has been sent now.
 		// We can use the blocking version of the channel operator since the error channel will have been closed (it
 		// is closed alongside the results channel).
-		if err, ok := <-rcvdErrs; ok {
-			log.WithError(err).Warning("Hit error processing flow logs")
+		if err, ok := <-errors; ok {
+			log.WithError(err).Warning("Hit error querying flows")
 			errs <- err
 		}
 	}()
 
 	return results, errs
+}
+
+func bucketFromFlow(flow *lapi.L3Flow) *elastic.CompositeAggregationBucket {
+	bucket := &elastic.CompositeAggregationBucket{}
+	bucket.CompositeAggregationKey = []elastic.CompositeAggregationSourceValue{
+		// Order matters!
+		{Name: "source_type", Value: string(flow.Key.Source.Type)},
+		{Name: "source_namespace", Value: elastic.EmptyToDash(flow.Key.Source.Namespace)},
+		{Name: "source_name", Value: flow.Key.Source.AggregatedName},
+		{Name: "dest_type", Value: string(flow.Key.Destination.Type)},
+		{Name: "dest_namespace", Value: elastic.EmptyToDash(flow.Key.Destination.Namespace)},
+		{Name: "dest_name", Value: flow.Key.Destination.AggregatedName},
+		{Name: "proto", Value: string(flow.Key.Protocol)},
+		{Name: "source_ip", Value: ""},
+		{Name: "source_name", Value: ""},
+		{Name: "source_port", Value: flow.Key.Source.Port},
+		{Name: "dest_ip", Value: ""},
+		{Name: "dest_name", Value: ""},
+		{Name: "dest_port", Value: flow.Key.Destination.Port},
+		{Name: "action", Value: string(flow.Key.Action)},
+		{Name: "reporter", Value: string(flow.Key.Reporter)},
+	}
+
+	// Zero out fields before filling them in with data, so we ensure they are always
+	// present in the response.
+	bucket.DocCount = 0
+	bucket.AggregatedSums = map[string]float64{}
+	bucket.AggregatedSums["sum_num_flows_started"] = float64(0)
+	bucket.AggregatedSums["sum_num_flows_completed"] = float64(0)
+	bucket.AggregatedSums["sum_packets_in"] = float64(0)
+	bucket.AggregatedSums["sum_packets_out"] = float64(0)
+	bucket.AggregatedSums["sum_bytes_in"] = float64(0)
+	bucket.AggregatedSums["sum_bytes_out"] = float64(0)
+	bucket.AggregatedSums["sum_http_requests_allowed_in"] = 0
+	bucket.AggregatedSums["sum_http_requests_denied_in"] = 0
+	bucket.AggregatedTerms = map[string]*elastic.AggregatedTerm{
+		"dest_labels": {
+			Buckets: map[interface{}]int64{},
+		},
+		"source_labels": {
+			Buckets: map[interface{}]int64{},
+		},
+		"policies": {
+			Buckets: map[interface{}]int64{},
+		},
+	}
+
+	// Now fill in with real data.
+	if stats := flow.LogStats; stats != nil {
+		bucket.DocCount = flow.LogStats.FlowLogCount
+		bucket.AggregatedSums["sum_num_flows_started"] = float64(stats.Started)
+		bucket.AggregatedSums["sum_num_flows_completed"] = float64(stats.Completed)
+		for _, term := range bucket.AggregatedTerms {
+			term.DocCount = bucket.DocCount
+		}
+	}
+	if stats := flow.TrafficStats; stats != nil {
+		bucket.AggregatedSums["sum_packets_in"] = float64(stats.PacketsIn)
+		bucket.AggregatedSums["sum_packets_out"] = float64(stats.PacketsOut)
+		bucket.AggregatedSums["sum_bytes_in"] = float64(stats.BytesIn)
+		bucket.AggregatedSums["sum_bytes_out"] = float64(stats.BytesOut)
+	}
+	if stats := flow.HTTPStats; stats != nil {
+		bucket.AggregatedSums["sum_http_requests_allowed_in"] = float64(stats.AllowedIn)
+		bucket.AggregatedSums["sum_http_requests_denied_in"] = float64(stats.DeniedIn)
+	}
+
+	// Add in labels.
+	for _, l := range flow.SourceLabels {
+		for _, v := range l.Values {
+			key := fmt.Sprintf("%s=%s", l.Key, v.Value)
+			bucket.AggregatedTerms["source_labels"].Buckets[key] = v.Count
+		}
+	}
+	for _, l := range flow.DestinationLabels {
+		for _, v := range l.Values {
+			key := fmt.Sprintf("%s=%s", l.Key, v.Value)
+			bucket.AggregatedTerms["dest_labels"].Buckets[key] = v.Count
+		}
+	}
+	return bucket
 }
 
 // aggregateRawFlowBucket aggregates the raw aggregation bucket into the further aggregated sets of related buckets in
@@ -589,46 +669,4 @@ func (s sortedCache) SortAndCopy() []*elastic.CompositeAggregationBucket {
 	d := make([]*elastic.CompositeAggregationBucket, len(s))
 	copy(d, s)
 	return d
-}
-
-// compositeAggregationBucketToFlow converts the raw aggregation bucket into the required policy calculator flow.
-func compositeAggregationBucketToFlow(b *elastic.CompositeAggregationBucket) *api.Flow {
-	if b == nil {
-		return nil
-	}
-
-	k := b.CompositeAggregationKey
-	flow := &api.Flow{
-		Reporter: api.ReporterType(k[PIPCompositeSourcesRawIdxReporter].String()),
-		Source: api.FlowEndpointData{
-			Type:      elastic.GetFlowEndpointTypeFromCompAggKey(k, PIPCompositeSourcesRawIdxSourceType),
-			Name:      elastic.GetFlowEndpointNameFromCompAggKey(k, PIPCompositeSourcesRawIdxSourceName, PIPCompositeSourcesRawIdxSourceNameAggr),
-			Namespace: elastic.GetFlowEndpointNamespaceFromCompAggKey(k, PIPCompositeSourcesRawIdxSourceNamespace),
-			Labels:    elastic.GetFlowEndpointLabelsFromCompAggKey(b.AggregatedTerms[elastic.FlowAggregatedTermsNameSourceLabels]),
-			IP:        elastic.GetFlowEndpointIPFromCompAggKey(k, PIPCompositeSourcesRawIdxSourceIP),
-			Port:      elastic.GetFlowEndpointPortFromCompAggKey(k, PIPCompositeSourcesRawIdxSourcePort),
-		},
-		Destination: api.FlowEndpointData{
-			Type:      elastic.GetFlowEndpointTypeFromCompAggKey(k, PIPCompositeSourcesRawIdxDestType),
-			Name:      elastic.GetFlowEndpointNameFromCompAggKey(k, PIPCompositeSourcesRawIdxDestName, PIPCompositeSourcesRawIdxDestNameAggr),
-			Namespace: elastic.GetFlowEndpointNamespaceFromCompAggKey(k, PIPCompositeSourcesRawIdxDestNamespace),
-			Labels:    elastic.GetFlowEndpointLabelsFromCompAggKey(b.AggregatedTerms[elastic.FlowAggregatedTermsNameDestLabels]),
-			IP:        elastic.GetFlowEndpointIPFromCompAggKey(k, PIPCompositeSourcesRawIdxDestIP),
-			Port:      elastic.GetFlowEndpointPortFromCompAggKey(k, PIPCompositeSourcesRawIdxDestPort),
-		},
-		ActionFlag: elastic.GetFlowActionFromCompAggKey(k, PIPCompositeSourcesRawIdxAction),
-		Proto:      elastic.GetFlowProtoFromCompAggKey(k, PIPCompositeSourcesRawIdxProto),
-		Policies:   elastic.GetFlowPoliciesFromAggTerm(b.AggregatedTerms[elastic.FlowAggregatedTermsNamePolicies]),
-	}
-
-	// Assume IP version is 4 unless otherwise determined from actual IPs in the flow.
-	ipVersion := 4
-	if flow.Source.IP != nil {
-		ipVersion = flow.Source.IP.Version()
-	} else if flow.Destination.IP != nil {
-		ipVersion = flow.Source.IP.Version()
-	}
-	flow.IPVersion = &ipVersion
-
-	return flow
 }
