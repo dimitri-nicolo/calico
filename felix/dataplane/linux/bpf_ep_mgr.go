@@ -2016,7 +2016,7 @@ func (m *bpfEndpointManager) updatePolicyProgram(jumpMapFD bpf.MapFD, rules polp
 	}
 
 	for _, ipFamily := range ipVersions {
-		insns, err := m.doUpdatePolicyProgram(jumpMapFD, rules, ipFamily)
+		insns, err := m.doUpdatePolicyProgram(ap.IfaceName(), jumpMapFD, rules, ipFamily)
 		perr := m.writePolicyDebugInfo(insns, ap.IfaceName(), ipFamily, polDir, ap.HookName(), err)
 		if perr != nil {
 			log.WithError(perr).Warn("error writing policy debug information")
@@ -2036,12 +2036,16 @@ func jumpPolicyKey(ipFamily proto.IPVersion) []byte {
 	}
 }
 
-func (m *bpfEndpointManager) doUpdatePolicyProgram(jumpMapFD bpf.MapFD, rules polprog.Rules, ipFamily proto.IPVersion) (asm.Insns, error) {
+func (m *bpfEndpointManager) doUpdatePolicyProgram(iface string, jumpMapFD bpf.MapFD, rules polprog.Rules,
+	ipFamily proto.IPVersion) (asm.Insns, error) {
+
 	opts := []polprog.Option{polprog.WithActionDropOverride(m.actionOnDrop)}
 	if m.bpfPolicyDebugEnabled {
 		opts = append(opts, polprog.WithPolicyDebugEnabled())
 	}
-	pg := polprog.NewBuilder(m.ipSetIDAlloc, m.bpfMapContext.IpsetsMap.MapFD(), m.bpfMapContext.StateMap.MapFD(), jumpMapFD, opts...)
+
+	pg := polprog.NewBuilder(m.ipSetIDAlloc, m.bpfMapContext.IpsetsMap.MapFD(),
+		m.bpfMapContext.StateMap.MapFD(), jumpMapFD, opts...)
 	if ipFamily == proto.IPVersion_IPV6 {
 		pg.EnableIPv6Mode()
 	}
@@ -2053,7 +2057,7 @@ func (m *bpfEndpointManager) doUpdatePolicyProgram(jumpMapFD bpf.MapFD, rules po
 	if rules.ForXDP {
 		progType = unix.BPF_PROG_TYPE_XDP
 	}
-	progFD, err := bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0", uint32(progType))
+	progFD, err := bpf.LoadBPFProgramFromInsns(insns, fmt.Sprintf("pol_%s", iface), "Apache-2.0", uint32(progType))
 	if err != nil {
 		return nil, fmt.Errorf("failed to load BPF policy program v%v: %w", ipFamily, err)
 	}

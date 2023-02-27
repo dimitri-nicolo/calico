@@ -150,7 +150,7 @@ func TestBpfLoaderFailureCases(t *testing.T) {
 func loadProgram(license string, insnMap map[string]*elf.ProgramInfo) {
 	Expect(license).To(Equal("GPL"))
 	for _, v := range insnMap {
-		_, err := bpf.LoadBPFProgramFromInsns(v.Insns, license, v.Type)
+		_, err := bpf.LoadBPFProgramFromInsns(v.Insns, "test", license, v.Type)
 		Expect(err).NotTo(HaveOccurred())
 	}
 }
