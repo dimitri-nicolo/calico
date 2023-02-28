@@ -35,3 +35,8 @@ var kubeAuditLogs string
 //
 //go:embed testdata/backend/bgp_logs_legacy.txt
 var bgpLogs string
+
+// wafLogs is a sample waf logs to be ingested for testing purposes
+//
+//go:embed testdata/backend/waf_logs_legacy.txt
+var wafLogs string

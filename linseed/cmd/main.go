@@ -20,6 +20,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
 	"github.com/projectcalico/calico/linseed/pkg/handler/l7"
 	"github.com/projectcalico/calico/linseed/pkg/handler/processes"
+	"github.com/projectcalico/calico/linseed/pkg/handler/waf"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 
@@ -31,6 +32,7 @@ import (
 	l7backend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
 	procbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/processes"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	wafbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/waf"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
@@ -98,6 +100,7 @@ func run() {
 	auditBackend := auditbackend.NewBackend(esClient, cache)
 	bgpBackend := bgpbackend.NewBackend(esClient, cache)
 	procBackend := procbackend.NewBackend(esClient)
+	wafBackend := wafbackend.NewBackend(esClient, cache)
 
 	// Configure options used to launch the server.
 	opts := []server.Option{
@@ -110,6 +113,7 @@ func run() {
 			audit.New(auditBackend),
 			bgp.New(bgpBackend),
 			processes.New(procBackend),
+			waf.New(wafBackend),
 		)...),
 		server.WithRoutes(server.UtilityRoutes()...),
 	}

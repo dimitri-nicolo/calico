@@ -54,6 +54,10 @@ func (c *mockClient) BGPLogs(cluster string) BGPLogsInterface {
 	return newBGPLogs(c, cluster)
 }
 
+func (c *mockClient) WAFLogs(cluster string) WAFLogsInterface {
+	return newWAFLogs(c, cluster)
+}
+
 func (c *mockClient) Processes(cluster string) ProcessesInterface {
 	return newProcesses(c, cluster)
 }

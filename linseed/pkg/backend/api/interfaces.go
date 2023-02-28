@@ -74,6 +74,15 @@ type BGPBackend interface {
 	List(context.Context, ClusterInfo, *v1.BGPLogParams) (*v1.List[v1.BGPLog], error)
 }
 
+// WAFBackend defines the interface for interacting with bgp logs.
+type WAFBackend interface {
+	// Create creates the given logs.
+	Create(context.Context, ClusterInfo, []v1.WAFLog) (*v1.BulkResponse, error)
+
+	// List lists logs that match the given parameters.
+	List(context.Context, ClusterInfo, *v1.WAFLogParams) (*v1.List[v1.WAFLog], error)
+}
+
 // EventsBackend defines the interface for interacting with events.
 type EventsBackend interface {
 	// Create creates the given logs.
@@ -95,6 +104,7 @@ const (
 	AuditKubeLogs LogsType = "audit_kube"
 	BGPLogs       LogsType = "bgp"
 	Events        LogsType = "events"
+	WAFLogs       LogsType = "waf"
 )
 
 // Cache is a cache for the templates in order
