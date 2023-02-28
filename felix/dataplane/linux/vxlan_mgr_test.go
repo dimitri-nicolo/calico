@@ -35,22 +35,22 @@ type mockVXLANDataplane struct {
 }
 
 func (m *mockVXLANDataplane) LinkByName(name string) (netlink.Link, error) {
+	la := netlink.NewLinkAttrs()
+	la.Index = 6
+	la.Name = "vxlan"
 	link := &netlink.Vxlan{
-		LinkAttrs: netlink.LinkAttrs{
-			Index: 6,
-			Name:  "vxlan",
-		},
+		LinkAttrs:    la,
 		VxlanId:      1,
 		Port:         20,
 		VtepDevIndex: 2,
 		SrcAddr:      ip.FromString("172.0.0.2").AsNetIP(),
 	}
 
+	la = netlink.NewLinkAttrs()
+	la.Name = "vxlan-v6"
 	if m.ipVersion == 6 {
 		link = &netlink.Vxlan{
-			LinkAttrs: netlink.LinkAttrs{
-				Name: "vxlan-v6",
-			},
+			LinkAttrs:    la,
 			VxlanId:      1,
 			Port:         20,
 			VtepDevIndex: 2,
@@ -127,6 +127,8 @@ var _ = Describe("VXLANManager", func() {
 		}
 		mockProcSys = &testProcSys{state: map[string]string{}}
 
+		la := netlink.NewLinkAttrs()
+		la.Name = "eth0"
 		manager = newVXLANManagerWithShims(
 			common.NewMockIPSets(),
 			rt, brt,
@@ -143,7 +145,7 @@ var _ = Describe("VXLANManager", func() {
 			},
 			mockProcSys.write,
 			&mockVXLANDataplane{
-				links:     []netlink.Link{&mockLink{attrs: netlink.LinkAttrs{Name: "eth0"}}},
+				links:     []netlink.Link{&mockLink{attrs: la}},
 				ipVersion: 4,
 			},
 			4,
@@ -168,7 +170,7 @@ var _ = Describe("VXLANManager", func() {
 			},
 			mockProcSys.write,
 			&mockVXLANDataplane{
-				links:     []netlink.Link{&mockLink{attrs: netlink.LinkAttrs{Name: "eth0"}}},
+				links:     []netlink.Link{&mockLink{attrs: la}},
 				ipVersion: 6,
 			},
 			6,
