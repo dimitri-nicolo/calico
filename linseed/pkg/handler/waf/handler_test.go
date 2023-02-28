@@ -223,7 +223,7 @@ func wafGetLogs(response []v1.WAFLog, err error) *waf {
 
 	// mock backend to return the required backendWAF
 	mockLogBackend.On("List", mock.Anything,
-		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.WAFLogParams")).Return(&v1.List[v1.WAFLog]{Items: response}, err)
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("*v1.WAFLogParams")).Return(&v1.List[v1.WAFLog]{Items: response}, err)
 
 	return n
 }

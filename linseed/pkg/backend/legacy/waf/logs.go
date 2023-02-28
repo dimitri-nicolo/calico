@@ -79,7 +79,7 @@ func (b *wafLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 }
 
 // List lists logs that match the given parameters.
-func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.WAFLogParams) (*v1.List[v1.WAFLog], error) {
+func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogParams) (*v1.List[v1.WAFLog], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -116,11 +116,11 @@ func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.WAF
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *wafLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.WAFLogParams) elastic.Query {
+func (b *wafLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.WAFLogParams) elastic.Query {
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
 	var start, end time.Time
-	if opts.QueryParams.TimeRange != nil {
+	if opts != nil && opts.QueryParams.TimeRange != nil {
 		start = opts.QueryParams.TimeRange.From
 		end = opts.QueryParams.TimeRange.To
 	} else {
@@ -142,5 +142,8 @@ func (b *wafLogBackend) index(i bapi.ClusterInfo) string {
 }
 
 func (b *wafLogBackend) writeAlias(i bapi.ClusterInfo) string {
+	if i.Tenant != "" {
+		return fmt.Sprintf("tigera_secure_ee_waf.%s.%s.", i.Tenant, i.Cluster)
+	}
 	return fmt.Sprintf("tigera_secure_ee_waf.%s.", i.Cluster)
 }

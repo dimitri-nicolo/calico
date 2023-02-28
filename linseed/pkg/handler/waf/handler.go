@@ -67,7 +67,7 @@ func (h waf) GetLogs() http.HandlerFunc {
 			return
 		}
 
-		if reqParams.Timeout == nil {
+		if reqParams != nil && reqParams.Timeout == nil {
 			reqParams.Timeout = &metav1.Duration{Duration: v1.DefaultTimeOut}
 		}
 
@@ -78,7 +78,7 @@ func (h waf) GetLogs() http.HandlerFunc {
 
 		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
 		defer cancel()
-		response, err := h.logs.List(ctx, clusterInfo, *reqParams)
+		response, err := h.logs.List(ctx, clusterInfo, reqParams)
 		if err != nil {
 			log.WithError(err).Error("Failed to list WAF logs")
 			httputils.JSONError(w, &v1.HTTPError{

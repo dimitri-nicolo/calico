@@ -75,8 +75,9 @@ func TestCreateWAFLog(t *testing.T) {
 
 	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
+	logTime := time.Now()
 	f := v1.WAFLog{
-		Timestamp: time.Now(),
+		Timestamp: logTime,
 		Source: &v1.WAFEndpoint{
 			IP:       "1.2.3.4",
 			PortNum:  789,
@@ -106,7 +107,7 @@ func TestCreateWAFLog(t *testing.T) {
 	err = testutils.RefreshIndex(ctx, client, "tigera_secure_ee_waf.*")
 	require.NoError(t, err)
 
-	results, err := b.List(ctx, clusterInfo, v1.WAFLogParams{
+	results, err := b.List(ctx, clusterInfo, &v1.WAFLogParams{
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: time.Now().Add(-10 * time.Second),
@@ -117,6 +118,7 @@ func TestCreateWAFLog(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, 1, len(results.Items))
+	require.Equal(t, results.Items[0].Timestamp.Format(time.RFC3339), logTime.Format(time.RFC3339))
 
 	// Timestamps don't equal on read.
 	results.Items[0].Timestamp = f.Timestamp

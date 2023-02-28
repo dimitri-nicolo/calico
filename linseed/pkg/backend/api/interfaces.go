@@ -80,7 +80,7 @@ type WAFBackend interface {
 	Create(context.Context, ClusterInfo, []v1.WAFLog) (*v1.BulkResponse, error)
 
 	// List lists logs that match the given parameters.
-	List(context.Context, ClusterInfo, v1.WAFLogParams) (*v1.List[v1.WAFLog], error)
+	List(context.Context, ClusterInfo, *v1.WAFLogParams) (*v1.List[v1.WAFLog], error)
 }
 
 // EventsBackend defines the interface for interacting with events.
