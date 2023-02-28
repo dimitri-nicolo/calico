@@ -188,7 +188,7 @@
     flexvol:
       image: tigera/pod2daemon-flexvol
       version: master
-    csi-driver:
+    csi:
       image: tigera/csi
       version: master
     csi-node-driver-registrar:
