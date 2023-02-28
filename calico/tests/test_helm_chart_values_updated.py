@@ -37,7 +37,7 @@ EXCLUDED_IMAGES = [
     'flexvol',
     'dikastes',
     'csi-node-driver-registrar',
-    'csi-driver',
+    'csi',
 
     # Enterprise images
     'calicoq',
