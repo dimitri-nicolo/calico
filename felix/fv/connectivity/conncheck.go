@@ -974,7 +974,7 @@ func (pc *PersistentConnection) Start() error {
 	}
 	stderr, err := runCmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("failed to start errput logging for %s", logName)
+		return fmt.Errorf("failed to start error logging for %s", logName)
 	}
 	log.WithField("name", logName).Info("Started")
 
@@ -1000,16 +1000,15 @@ func (pc *PersistentConnection) Start() error {
 	}()
 	stderrReader := bufio.NewReader(stderr)
 	go func() {
+		log.WithField("name", logName).Info("stderr reader started")
+		defer log.WithField("name", logName).Info("stderr reader exited")
 		for {
 			line, err := stderrReader.ReadString('\n')
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					log.Info("Persistent connection stderr closed.")
-					return
-				}
-				log.WithError(err).Info("Failed to read persistent connection stderr")
+				log.WithError(err).Info("End of permanent connection stderr")
 				return
 			}
+			line = strings.TrimSpace(string(line))
 			log.Infof("%s stderr: %s", logName, line)
 		}
 	}()

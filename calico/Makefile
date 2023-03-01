@@ -89,13 +89,9 @@ _site build: bin/ocp.tgz $(DOCS_SOURCE)
 	cp bin/ocp.tgz _site/manifests
 
 # Creates the tar file used for installing Calico on OpenShift.
-# Excludes manifests that should be applied after cluster creation.
-bin/ocp.tgz:
+bin/ocp.tgz: ../manifests/ocp/
 	mkdir -p bin
-	tar czvf $@ -C ../manifests/ \
-		--exclude=tigera-enterprise-resources.yaml \
-		--exclude=tigera-prometheus-operator.yaml \
-		 ocp \
+	tar czvf $@ -C ../manifests/ ocp
 
 ## Clean enough that a new release build will be clean
 clean:

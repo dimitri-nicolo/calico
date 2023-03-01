@@ -597,6 +597,8 @@ message IPAMPoolRemove {
 message IPAMPool {
   string cidr = 1;
   bool masquerade = 2;
+  string ipip_mode = 3;
+  string vxlan_mode = 4;
 
   // Enterprise additions; use IDs after 100.
   string aws_subnet_id = 101;

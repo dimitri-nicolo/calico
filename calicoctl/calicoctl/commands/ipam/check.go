@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	docopt "github.com/docopt/docopt-go"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -274,6 +275,7 @@ func (c *IPAMChecker) checkIPAM(ctx context.Context) error {
 			handleKey := kv.Key.(model.IPAMHandleKey)
 			handles[handleKey.HandleID] = HandleInfo{
 				ID:       handleKey.HandleID,
+				UID:      kv.UID,
 				Revision: kv.Revision,
 			}
 		}
@@ -661,6 +663,7 @@ func (a *Allocation) GetAttrString() string {
 
 type HandleInfo struct {
 	ID       string
+	UID      *types.UID
 	Revision string
 }
 
