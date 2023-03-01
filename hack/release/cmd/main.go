@@ -124,7 +124,7 @@ func loadVersionFile(filename string) []string {
 		version := comp["version"]
 		if image != nil && version != nil {
 			image := strings.TrimPrefix(image.(string), "tigera/")
-			imgs = append(imgs, fmt.Sprintf("%s=%s", image, version))
+			imgs = append(imgs, fmt.Sprintf("%s:%s", image, version))
 			logrus.Infof("Found image in versions file: %s:%s", image, version)
 		}
 	}
