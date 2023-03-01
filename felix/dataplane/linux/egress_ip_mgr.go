@@ -17,27 +17,24 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/golang-collections/collections/stack"
+	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 
 	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
-	"github.com/projectcalico/calico/felix/ipsets"
-	"github.com/projectcalico/calico/felix/rules"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/libcalico-go/lib/names"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	log "github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
-
-	"github.com/golang-collections/collections/stack"
-
+	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/ethtool"
 	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/routerule"
 	"github.com/projectcalico/calico/felix/routetable"
+	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // Egress IP manager watches EgressIPSet and WEP updates.
@@ -92,7 +89,9 @@ type routeTableGenerator interface {
 		deviceRouteSourceAddress net.IP,
 		deviceRouteProtocol int,
 		removeExternalRoutes bool,
-		opRecorder logutils.OpRecorder) routetable.RouteTableInterface
+		opRecorder logutils.OpRecorder,
+		featureDetector environment.FeatureDetectorIface,
+	) routetable.RouteTableInterface
 }
 
 type routeTableFactory struct {
@@ -107,7 +106,9 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 	deviceRouteSourceAddress net.IP,
 	deviceRouteProtocol int,
 	removeExternalRoutes bool,
-	opRecorder logutils.OpRecorder) routetable.RouteTableInterface {
+	opRecorder logutils.OpRecorder,
+	featureDetector environment.FeatureDetectorIface,
+) routetable.RouteTableInterface {
 
 	f.count += 1
 	return routetable.New(interfacePrefixes,
@@ -118,7 +119,8 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 		netlink.RouteProtocol(deviceRouteProtocol),
 		removeExternalRoutes,
 		tableIndex,
-		opRecorder)
+		opRecorder,
+		featureDetector)
 }
 
 type routeRulesGenerator interface {
@@ -300,7 +302,8 @@ type egressIPManager struct {
 	// gets passed to routerule package when creating rules
 	tableIndexSet set.Set[int]
 
-	opRecorder logutils.OpRecorder
+	opRecorder      logutils.OpRecorder
+	featureDetector environment.FeatureDetectorIface
 
 	disableChecksumOffload func(ifName string) error
 
@@ -324,6 +327,7 @@ func newEgressIPManager(
 	healthReportC chan<- EGWHealthReport,
 	ipsets egressIPSets,
 	bpfIPSets egressIPSets,
+	featureDetector environment.FeatureDetectorIface,
 ) *egressIPManager {
 	nlHandle, err := netlink.NewHandle()
 	if err != nil {
@@ -345,7 +349,7 @@ func newEgressIPManager(
 	l2Table := routetable.New([]string{"^" + deviceName + "$"},
 		4, true, dpConfig.NetlinkTimeout, nil,
 		dpConfig.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
-		opRecorder)
+		opRecorder, featureDetector)
 
 	hopRandSource := rand.NewSource(time.Now().UTC().UnixNano())
 
@@ -366,6 +370,7 @@ func newEgressIPManager(
 		healthReportC,
 		ipsets,
 		bpfIPSets,
+		featureDetector,
 	)
 	return mgr
 }
@@ -387,6 +392,7 @@ func newEgressIPManagerWithShims(
 	healthReportC chan<- EGWHealthReport,
 	ipsets egressIPSets,
 	bpfIPSets egressIPSets,
+	featureDetector environment.FeatureDetectorIface,
 ) *egressIPManager {
 
 	mgr := egressIPManager{
@@ -420,6 +426,7 @@ func newEgressIPManagerWithShims(
 		hopRand:                rand.New(hopRandSource),
 		ipsets:                 ipsets,
 		bpfIPSets:              bpfIPSets,
+		featureDetector:        featureDetector,
 	}
 
 	if healthAgg != nil {
@@ -1172,7 +1179,9 @@ func (m *egressIPManager) newRouteTable(tableNum int) routetable.RouteTableInter
 		nil,
 		int(m.dpConfig.DeviceRouteProtocol),
 		true,
-		m.opRecorder)
+		m.opRecorder,
+		m.featureDetector,
+	)
 }
 
 func (m *egressIPManager) getNextTableIndex() (int, error) {
@@ -1382,11 +1391,11 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 		return err
 	}
 
+	la := netlink.NewLinkAttrs()
+	la.Name = m.vxlanDevice
+	la.HardwareAddr = mac
 	vxlan := &netlink.Vxlan{
-		LinkAttrs: netlink.LinkAttrs{
-			Name:         m.vxlanDevice,
-			HardwareAddr: mac,
-		},
+		LinkAttrs:    la,
 		VxlanId:      m.vxlanID,
 		Port:         m.vxlanPort,
 		VtepDevIndex: parent.Attrs().Index,

@@ -2,6 +2,8 @@
 package rbac
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -27,10 +29,12 @@ var (
 	tierHelper = resources.GetResourceHelperByTypeMeta(resources.TypeCalicoTiers)
 )
 
-type ErrUnknownEndpointType struct{}
+type ErrUnknownEndpointType struct {
+	endpointType string
+}
 
 func (err *ErrUnknownEndpointType) Error() string {
-	return "endpoint endpoint type"
+	return fmt.Sprintf("unknown endpoint type: %s", err.endpointType)
 }
 
 // FlowHelper interface provides methods for consumers of Flows to perform RBAC checks on what the user should
@@ -167,7 +171,7 @@ func (r flowHelper) CanListEndpoint(typ api.EndpointType, namespace string) (boo
 		// Net endpoint types are not RBAC checked
 		authorized = false
 	default:
-		err = new(ErrUnknownEndpointType)
+		err = &ErrUnknownEndpointType{endpointType: string(typ)}
 	}
 
 	return authorized, err

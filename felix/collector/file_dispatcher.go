@@ -11,6 +11,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
+
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 const (
@@ -41,7 +43,7 @@ func (d *fileDispatcher) Initialize() error {
 	// Create the log directory before creating the logger.  If the logger creates it, it will do so
 	// with permission 0744, meaning that non-root users won't be able to "see" files in the
 	// directory, since "execute" permission on a directory needs to be granted.
-	err := os.MkdirAll(d.directory, 0755)
+	err := os.MkdirAll(d.directory, 0o755)
 	if err != nil {
 		return fmt.Errorf("can't make directories for new logfile: %s", err)
 	}
@@ -86,12 +88,12 @@ func (d *fileDispatcher) Dispatch(logSlice interface{}) error {
 				return err
 			}
 		}
-	case []*DNSLog:
+	case []*v1.DNSLog:
 		log.Debug("Dispatching DNS logs to file")
 		for _, l := range fl {
 			var b []byte
 			var err error
-			if l.Type == DNSLogTypeUnlogged {
+			if l.Type == v1.DNSLogTypeUnlogged {
 				b, err = json.Marshal(&DNSExcessLog{
 					StartTime: l.StartTime,
 					EndTime:   l.EndTime,

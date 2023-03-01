@@ -1,4 +1,5 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
+
 package servicegraph_test
 
 import (
@@ -157,7 +158,7 @@ var _ = Describe("ServicePort relationships test", func() {
 					Namespace: "namespace1", Name: "service3",
 				}},
 				ServicePorts: map[v1.ServicePort]map[FlowEndpoint]struct{}{
-					v1.ServicePort{
+					{
 						NamespacedName: v1.NamespacedName{
 							Name: "service1", Namespace: "namespace1",
 						},
@@ -170,7 +171,7 @@ var _ = Describe("ServicePort relationships test", func() {
 							Type: "rep", Namespace: "namespace1", NameAggr: "name2*", Name: "", PortNum: 9443, Protocol: "tcp",
 						}: struct{}{},
 					},
-					v1.ServicePort{
+					{
 						NamespacedName: v1.NamespacedName{
 							Name: "service2", Namespace: "namespace1",
 						},
@@ -183,7 +184,7 @@ var _ = Describe("ServicePort relationships test", func() {
 							Type: "rep", Namespace: "namespace1", NameAggr: "name4*", Name: "", PortNum: 9443, Protocol: "tcp",
 						}: struct{}{},
 					},
-					v1.ServicePort{
+					{
 						NamespacedName: v1.NamespacedName{
 							Name: "service3", Namespace: "namespace1",
 						},
@@ -244,7 +245,7 @@ var _ = Describe("ServicePort relationships test", func() {
 					Namespace: "namespace1", Name: "service1",
 				}},
 				ServicePorts: map[v1.ServicePort]map[FlowEndpoint]struct{}{
-					v1.ServicePort{
+					{
 						NamespacedName: v1.NamespacedName{
 							Name: "service1", Namespace: "namespace1",
 						},
@@ -254,7 +255,7 @@ var _ = Describe("ServicePort relationships test", func() {
 							Type: "rep", Namespace: "namespace1", NameAggr: "name1*", Name: "", PortNum: 9443, Protocol: "tcp",
 						}: struct{}{},
 					},
-					v1.ServicePort{
+					{
 						NamespacedName: v1.NamespacedName{
 							Name: "service1", Namespace: "namespace1",
 						},
@@ -314,7 +315,7 @@ var _ = Describe("ServicePort relationships test", func() {
 					Namespace: "namespace1", Name: "service1",
 				}},
 				ServicePorts: map[v1.ServicePort]map[FlowEndpoint]struct{}{
-					v1.ServicePort{
+					{
 						NamespacedName: v1.NamespacedName{
 							Name: "service1", Namespace: "namespace1",
 						},
@@ -333,7 +334,7 @@ var _ = Describe("ServicePort relationships test", func() {
 					Namespace: "namespace1", Name: "service2",
 				}},
 				ServicePorts: map[v1.ServicePort]map[FlowEndpoint]struct{}{
-					v1.ServicePort{
+					{
 						NamespacedName: v1.NamespacedName{
 							Name: "service2", Namespace: "namespace1",
 						},

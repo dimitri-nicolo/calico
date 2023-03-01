@@ -17,9 +17,7 @@ import (
 )
 
 type AuthorizationReview interface {
-	PerformReviewForElasticLogs(
-		ctx context.Context, cluster string,
-	) ([]libcalv3.AuthorizedResourceVerbs, error)
+	PerformReviewForElasticLogs(ctx context.Context, cluster string) ([]libcalv3.AuthorizedResourceVerbs, error)
 }
 
 // The user authentication review struct implementing the authentication review interface.
@@ -50,6 +48,6 @@ func (a userAuthorizationReview) PerformReviewForElasticLogs(
 		}
 	}
 
-	verbs, err := lmaauth.PerformUserAuthorizationReviewForElasticLogs(ctx, a.csf, user, cluster)
+	verbs, err := lmaauth.PerformUserAuthorizationReviewForLogs(ctx, a.csf, user, cluster)
 	return verbs, err
 }

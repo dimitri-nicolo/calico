@@ -46,7 +46,7 @@ func (r *realAggregationBackend) PerformUserAuthorizationReview(ctx context.Cont
 			Msg:    "No user information on request",
 		}
 	}
-	return auth.PerformUserAuthorizationReviewForElasticLogs(
+	return auth.PerformUserAuthorizationReviewForLogs(
 		ctx, r.clientSetFactory, user, rd.AggregationRequest.Cluster,
 	)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/google/gopacket/layers"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -185,7 +186,7 @@ var _ = Describe("DNS log aggregator", func() {
 
 			for _, b := range []bool{false, true} {
 				withLabels := b
-				var logs []*DNSLog
+				var logs []*v1.DNSLog
 
 				Describe(fmt.Sprintf("withLabels: %t", withLabels), func() {
 					It("sets startTime correctly", func() {
@@ -261,7 +262,7 @@ var _ = Describe("DNS log aggregator", func() {
 			found := false
 			for _, lg := range emitted {
 				if (lg.Count == 5) && (lg.Servers == nil) && (lg.RRSets == nil) {
-					Expect(lg.Type).To(Equal(DNSLogTypeUnlogged))
+					Expect(lg.Type).To(Equal(v1.DNSLogTypeUnlogged))
 					found = true
 					break
 				}

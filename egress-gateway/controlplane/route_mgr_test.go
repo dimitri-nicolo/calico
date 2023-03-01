@@ -297,12 +297,12 @@ func createDefaultLinkAndRoute(test *testing.T, nl netlinkshim.Handle) (netlink.
 func createDummyLink(test *testing.T, nl netlinkshim.Handle) *netlink.Vxlan {
 	log.Info("creating dummy link...")
 
+	la := netlink.NewLinkAttrs()
+	la.Name = dummyIfaceName
 	link := &netlink.Vxlan{
-		LinkAttrs: netlink.LinkAttrs{
-			Name: dummyIfaceName,
-		},
-		Port:    4790,
-		VxlanId: vni,
+		LinkAttrs: la,
+		Port:      4790,
+		VxlanId:   vni,
 	}
 	err := nl.LinkAdd(link)
 	if err != nil {

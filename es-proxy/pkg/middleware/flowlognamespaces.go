@@ -9,37 +9,24 @@ import (
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
 )
 
-const (
-	namespaceBucketName = "source_dest_namespaces"
-	srcNamespaceIdx     = 0
-	destNamespaceIdx    = 1
-)
-
-var (
-	namespaceTimeout = 10 * time.Second
-
-	NamespaceCompositeSources = []lmaelastic.AggCompositeSourceInfo{
-		{Name: "source_namespace", Field: "source_namespace"},
-		{Name: "dest_namespace", Field: "dest_namespace"},
-	}
-)
+var namespaceTimeout = 10 * time.Second
 
 type FlowLogNamespaceParams struct {
 	Limit         int32    `json:"limit"`
@@ -52,15 +39,15 @@ type FlowLogNamespaceParams struct {
 	Strict        bool     `json:"strict"`
 
 	// Parsed timestamps
-	startDateTimeESParm interface{}
-	endDateTimeESParm   interface{}
+	startDateTimeParm *time.Time
+	endDateTimeParm   *time.Time
 }
 
 type Namespace struct {
 	Name string `json:"name"`
 }
 
-func FlowLogNamespaceHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esClient lmaelastic.Client) http.Handler {
+func FlowLogNamespaceHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// validate request
 		params, err := validateFlowLogNamespacesRequest(req)
@@ -93,9 +80,9 @@ func FlowLogNamespaceHandler(k8sClientFactory datastore.ClusterCtxK8sClientFacto
 
 		flowHelper := rbac.NewCachedFlowHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
 
-		response, err := getNamespacesFromElastic(params, esClient, flowHelper)
+		response, err := getNamespacesFromLinseed(params, lsclient, flowHelper)
 		if err != nil {
-			log.WithError(err).Info("Error getting namespaces from elastic")
+			log.WithError(err).Info("Error getting namespaces from linseed")
 			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)
 		}
 
@@ -137,12 +124,12 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 
 	// Parse the start/end time to validate the format. We don't need the resulting time struct.
 	now := time.Now()
-	_, startDateTimeESParm, err := timeutils.ParseTime(now, &startDateTimeString)
+	startDateTimeParm, _, err := timeutils.ParseTime(now, &startDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting start date time")
 		return nil, ErrParseRequest
 	}
-	_, endDateTimeESParm, err := timeutils.ParseTime(now, &endDateTimeString)
+	endDateTimeParm, _, err := timeutils.ParseTime(now, &endDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting end date time")
 		return nil, ErrParseRequest
@@ -155,16 +142,16 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 	}
 
 	params := &FlowLogNamespaceParams{
-		Actions:             actions,
-		Limit:               limit,
-		ClusterName:         cluster,
-		Prefix:              prefix,
-		Unprotected:         unprotected,
-		StartDateTime:       startDateTimeString,
-		EndDateTime:         endDateTimeString,
-		startDateTimeESParm: startDateTimeESParm,
-		endDateTimeESParm:   endDateTimeESParm,
-		Strict:              strict,
+		Actions:           actions,
+		Limit:             limit,
+		ClusterName:       cluster,
+		Prefix:            prefix,
+		Unprotected:       unprotected,
+		StartDateTime:     startDateTimeString,
+		EndDateTime:       endDateTimeString,
+		startDateTimeParm: startDateTimeParm,
+		endDateTimeParm:   endDateTimeParm,
+		Strict:            strict,
 	}
 
 	// Check whether the params are provided in the request and set default values if not
@@ -183,103 +170,86 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 	return params, nil
 }
 
-func buildESQuery(params *FlowLogNamespaceParams) *elastic.BoolQuery {
-	query := elastic.NewBoolQuery()
-	var termFilterValues []interface{}
-	if len(params.Actions) == 0 {
-		return query
-	}
+func buildFlowNamespaceParams(params *FlowLogNamespaceParams) *lapi.L3FlowParams {
+	fp := &lapi.L3FlowParams{}
 
 	for _, action := range params.Actions {
-		termFilterValues = append(termFilterValues, action)
+		fp.Actions = append(fp.Actions, lapi.FlowAction(action))
 	}
-	query = query.Filter(elastic.NewTermsQuery("action", termFilterValues...))
 
 	if params.Unprotected {
-		query = query.Filter(UnprotectedQuery())
-	}
-
-	if params.startDateTimeESParm != nil || params.endDateTimeESParm != nil {
-		filter := elastic.NewRangeQuery("end_time")
-		if params.startDateTimeESParm != nil {
-			filter = filter.Gte(params.startDateTimeESParm)
+		// Only include flows that are allowed by a profile.
+		allow := lapi.FlowActionAllow
+		fp.PolicyMatches = []lapi.PolicyMatch{
+			{
+				Tier:   "__PROFILE__",
+				Action: &allow,
+			},
 		}
-		if params.endDateTimeESParm != nil {
-			filter = filter.Lt(params.endDateTimeESParm)
+	}
+
+	if params.startDateTimeParm != nil || params.endDateTimeParm != nil {
+		tr := lmav1.TimeRange{}
+		if params.startDateTimeParm != nil {
+			tr.From = *params.startDateTimeParm
 		}
-		query = query.Filter(filter)
+		if params.endDateTimeParm != nil {
+			tr.To = *params.endDateTimeParm
+		}
+		fp.TimeRange = &tr
 	}
 
-	if params.Prefix != "" {
-		query = query.Should(
-			elastic.NewPrefixQuery("source_namespace", params.Prefix),
-			elastic.NewPrefixQuery("dest_namespace", params.Prefix),
-		).MinimumNumberShouldMatch(1)
-	}
-
-	if params.StartDateTime != "" {
-		startFilter := elastic.NewRangeQuery("start_time").Gt(params.StartDateTime)
-		query = query.Filter(startFilter)
-	}
-	if params.EndDateTime != "" {
-		endFilter := elastic.NewRangeQuery("end_time").Lt(params.EndDateTime)
-		query = query.Filter(endFilter)
-	}
-
-	return query
+	return fp
 }
 
-func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelastic.Client, rbacHelper rbac.FlowHelper) ([]Namespace, error) {
-	// form query
-	query := buildESQuery(params)
-	index := lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
-
-	aggQuery := &lmaelastic.CompositeAggregationQuery{
-		DocumentIndex:           index,
-		Query:                   query,
-		Name:                    namespaceBucketName,
-		AggCompositeSourceInfos: NamespaceCompositeSources,
-	}
-
+func getNamespacesFromLinseed(params *FlowLogNamespaceParams, lsclient client.Client, rbacHelper rbac.FlowHelper) ([]Namespace, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), namespaceTimeout)
 	defer cancel()
 
-	// Perform the query with composite aggregation
-	rcvdBuckets, rcvdErrors := esClient.SearchCompositeAggregations(ctx, aggQuery, nil)
+	// Store the retrieved namespaces.
 	nsSet := set.New[string]()
 	namespaces := make([]Namespace, 0)
-	for bucket := range rcvdBuckets {
-		// Pull namespaces out of the buckets
-		// The index refers to the order in which the fields are listed in the composite sources
-		key := bucket.CompositeAggregationKey
-		source_namespace := key[srcNamespaceIdx].String()
-		dest_namespace := key[destNamespaceIdx].String()
 
-		// Check if the set length hits the requested limit
-		if nsSet.Len() >= int(params.Limit) {
-			break
-		}
+	// Perform the query with composite aggregation
+	flowParams := buildFlowNamespaceParams(params)
 
-		// Add namespaces to the set
-		if params.Strict {
-			// If we strictly enforce RBAC, then we will only return namespaces we have RBAC
-			// permissions for and match the query parameters.
-			if allowedNamespace(params, source_namespace, rbacHelper) && checkNamespaceRBAC(rbacHelper, source_namespace) {
-				nsSet.Add(source_namespace)
+	// TODO: Right now we use Flows to determine namespaces. We could alternatively use
+	// flow logs, or the k8s Namespace API, or even implement a new /namespaces API in Linseed. Unclear which of these
+	// will perform best.
+	opts := []client.ListPagerOption[lapi.L3Flow]{}
+	pager := client.NewListPager(flowParams, opts...)
+	pages, errors := pager.Stream(ctx, lsclient.L3Flows(params.ClusterName).List)
+	for page := range pages {
+		for _, flow := range page.Items {
+			sourceNS := elastic.EmptyToDash(flow.Key.Source.Namespace)
+			destNS := elastic.EmptyToDash(flow.Key.Destination.Namespace)
+
+			// Check if the set length hits the requested limit
+			if nsSet.Len() >= int(params.Limit) {
+				break
 			}
-			if allowedNamespace(params, dest_namespace, rbacHelper) && checkNamespaceRBAC(rbacHelper, dest_namespace) {
-				nsSet.Add(dest_namespace)
-			}
-		} else {
-			// If we are not strictly enforcing RBAC, we will return both namespaces as long we
-			// have the permissions to view one namespace in the flow and they match the query
-			// parameters.
-			if checkNamespaceRBAC(rbacHelper, source_namespace) || checkNamespaceRBAC(rbacHelper, dest_namespace) {
-				if allowedNamespace(params, source_namespace, rbacHelper) {
-					nsSet.Add(source_namespace)
+
+			// Add namespaces to the set
+			if params.Strict {
+				// If we strictly enforce RBAC, then we will only return namespaces we have RBAC
+				// permissions for and match the query parameters.
+				if allowedNamespace(params, sourceNS, rbacHelper) && checkNamespaceRBAC(rbacHelper, sourceNS) {
+					nsSet.Add(sourceNS)
 				}
-				if allowedNamespace(params, dest_namespace, rbacHelper) {
-					nsSet.Add(dest_namespace)
+				if allowedNamespace(params, destNS, rbacHelper) && checkNamespaceRBAC(rbacHelper, destNS) {
+					nsSet.Add(destNS)
+				}
+			} else {
+				// If we are not strictly enforcing RBAC, we will return both namespaces as long we
+				// have the permissions to view one namespace in the flow and they match the query
+				// parameters.
+				if checkNamespaceRBAC(rbacHelper, sourceNS) || checkNamespaceRBAC(rbacHelper, destNS) {
+					if allowedNamespace(params, sourceNS, rbacHelper) {
+						nsSet.Add(sourceNS)
+					}
+					if allowedNamespace(params, destNS, rbacHelper) {
+						nsSet.Add(destNS)
+					}
 				}
 			}
 		}
@@ -302,8 +272,8 @@ func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelasti
 	})
 
 	// Check for an error after all the namespaces have been processed. This should be fine
-	// since an error should stop more buckets from being received.
-	if err, ok := <-rcvdErrors; ok {
+	// since an error should stop pages from being received.
+	if err, ok := <-errors; ok {
 		log.WithError(err).Warning("Error processing the flow logs for finding valid namespaces")
 		return namespaces, err
 	}

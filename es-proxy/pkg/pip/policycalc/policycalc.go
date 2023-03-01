@@ -31,8 +31,10 @@ func (p Policy) String() string {
 	return fmt.Sprintf("%s -> %s; staged=%v", p.ResourceID, resources.GetResourceID(p.CalicoV3Policy), p.Staged)
 }
 
-type Tier []Policy
-type Tiers []Tier
+type (
+	Tier  []Policy
+	Tiers []Tier
+)
 
 // The consistent set of configuration used for calculating policy impact.
 type ResourceData struct {
@@ -60,7 +62,7 @@ func (m ImpactedResources) Add(rid v3.ResourceID, impact Impact) {
 	m[rid] = impact
 
 	// For K8s NP, also add the equivalent Calico NP resource ID.
-	//TODO(rlb): This is hacky. Need to rethink how we handle converted resources and the modified resources map.
+	// TODO(rlb): This is hacky. Need to rethink how we handle converted resources and the modified resources map.
 	if rid.TypeMeta == resources.TypeK8sNetworkPolicies {
 		rid = v3.ResourceID{
 			TypeMeta:  resources.TypeCalicoNetworkPolicies,
@@ -206,7 +208,7 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 	// If the flow is not impacted return the unmodified response. Note that if ActionFlag is zero then this must be
 	// an inserted flow due to a change of source action from deny to allow - we will have to recalculate in this
 	// case even if the policy changes do not impact the ingress for the flow.
-	//TODO: Should probably still run this through PIP to verify that the processor agrees.
+	// TODO: Should probably still run this through PIP to verify that the processor agrees.
 	if flow.ActionFlag != 0 && !changeset.FlowSelectedByImpactedPolicies(flow, cache) {
 		clog.Debug("Flow unaffected")
 		if isSrc || beforeSrcAction&api.ActionFlagAllow != 0 {

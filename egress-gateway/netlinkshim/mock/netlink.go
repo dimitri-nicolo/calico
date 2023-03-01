@@ -183,7 +183,7 @@ func (h *MockHandle) LinkSetUp(link netlink.Link) error {
 	return ErrorNotFound
 }
 
-//RouteList is a convenience-wrapper of RouteListFiltered - credit github.com/vishvananda/netlink
+// RouteList is a convenience-wrapper of RouteListFiltered - credit github.com/vishvananda/netlink
 func (h *MockHandle) RouteList(link netlink.Link, family int) ([]netlink.Route, error) {
 	var routeFilter *netlink.Route
 	if link != nil {

@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
 	"github.com/projectcalico/calico/felix/calc"
 )
@@ -165,16 +166,16 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 			},
 				nil)
 
-			expected := DNSRRSets{
-				{Name: "www1.tigera.io", Class: DNSClass(layers.DNSClassIN), Type: DNSType(layers.DNSTypeA)}: {
+			expected := v1.DNSRRSets{
+				{Name: "www1.tigera.io", Class: v1.DNSClass(layers.DNSClassIN), Type: v1.DNSType(layers.DNSTypeA)}: {
 					{Raw: []byte("1"), Decoded: net.ParseIP("127.0.0.2")},
 					{Raw: []byte("2"), Decoded: net.ParseIP("127.0.0.1")},
 					{Raw: []byte("3"), Decoded: net.ParseIP("127.0.0.3")},
 				},
-				{Name: "www.tigera.io", Class: DNSClass(layers.DNSClassIN), Type: DNSType(layers.DNSTypeCNAME)}: {
+				{Name: "www.tigera.io", Class: v1.DNSClass(layers.DNSClassIN), Type: v1.DNSType(layers.DNSTypeCNAME)}: {
 					{Raw: []byte("4"), Decoded: "www1.tigera.io."},
 				},
-				{Name: "tigera.io", Class: DNSClass(layers.DNSClassIN), Type: DNSType(layers.DNSTypeNS)}: {
+				{Name: "tigera.io", Class: v1.DNSClass(layers.DNSClassIN), Type: v1.DNSType(layers.DNSTypeNS)}: {
 					{Raw: []byte("5"), Decoded: "ns2.tigera.io."},
 					{Raw: []byte("6"), Decoded: "ns1.tigera.io."},
 				},
@@ -186,7 +187,6 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 			spec := newDNSSpecFromGoPacket(clientLabels, serverEM, serverLabels, &layers.DNS{}, nil)
 			Expect(spec.Servers).ShouldNot(BeNil())
 		})
-
 	})
 
 	Describe("newDNSMetaFromSpecAndGoPacket", func() {
@@ -199,10 +199,10 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 				},
 			}, DNSSpec{})
 
-			Expect(meta.Question).Should(Equal(DNSName{
+			Expect(meta.Question).Should(Equal(v1.DNSName{
 				Name:  "tigera.io",
-				Class: DNSClass(layers.DNSClassIN),
-				Type:  DNSType(layers.DNSTypeA),
+				Class: v1.DNSClass(layers.DNSClassIN),
+				Type:  v1.DNSType(layers.DNSTypeA),
 			}))
 		})
 
@@ -217,11 +217,11 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 
 		It("sets the rrset string", func() {
 			spec := DNSSpec{
-				RRSets: DNSRRSets{
+				RRSets: v1.DNSRRSets{
 					{
 						Name:  "tigera.io",
-						Class: DNSClass(layers.DNSClassIN),
-						Type:  DNSType(layers.DNSTypeA),
+						Class: v1.DNSClass(layers.DNSClassIN),
+						Type:  v1.DNSType(layers.DNSTypeA),
 					}: {
 						{Decoded: "127.0.0.1"},
 					},
@@ -244,7 +244,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 				Type:  layers.DNSTypeA,
 			})
 
-			Expect(name).Should(Equal(DNSName{"tigera.io", DNSClass(layers.DNSClassIN), DNSType(layers.DNSTypeA)}))
+			Expect(name).Should(Equal(v1.DNSName{"tigera.io", v1.DNSClass(layers.DNSClassIN), v1.DNSType(layers.DNSTypeA)}))
 		})
 
 		It("returns rdata as expected", func() {
@@ -257,7 +257,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 				IP:   decoded,
 			})
 
-			Expect(rdata).Should(Equal(DNSRData{
+			Expect(rdata).Should(Equal(v1.DNSRData{
 				Raw:     raw,
 				Decoded: decoded,
 			}))

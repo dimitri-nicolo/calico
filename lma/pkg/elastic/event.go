@@ -15,9 +15,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
-var (
-	eventDismissDoc map[string]bool = map[string]bool{"dismissed": true}
-)
+var eventDismissDoc map[string]bool = map[string]bool{"dismissed": true}
 
 func (c *client) EventsIndexExists(ctx context.Context) (bool, error) {
 	alias := c.ClusterAlias(EventsIndex)
@@ -27,6 +25,7 @@ func (c *client) EventsIndexExists(ctx context.Context) (bool, error) {
 // CreateEventsIndex creates events index with mapping if it doesn't exist.
 // It marks the new index as write index for events index alias and marks the old index (prior to CEv3.12)
 // as read index for the alias.
+// TODO CASEY: Delete this, and update anyyone using it to just wait for the index to exist. Linseed will make it.
 func (c *client) CreateEventsIndex(ctx context.Context) error {
 	alias := c.ClusterAlias(EventsIndex)
 	oldIndex := c.ClusterIndex(EventsIndex, "")

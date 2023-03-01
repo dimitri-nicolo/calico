@@ -286,6 +286,7 @@ func (p policyHit) ruleIdIndexString() string {
 // ToFlowLogPolicyString returns a flow log policy string. If PolicyHitFromFlowLogPolicyString was
 // used to create the PolicyHit the return value of ToFlowLogPolicyString will exactly match the
 // string given to PolicyHitFromFlowLogPolicyString.
+// <index> | <tier> | <name> | <action> | <ruleID>
 func (p policyHit) ToFlowLogPolicyString() string {
 	return fmt.Sprintf(
 		"%d|%s|%s|%s|%s", p.index, p.tier, p.FlowLogName(), p.action, p.ruleIdIndexString(),

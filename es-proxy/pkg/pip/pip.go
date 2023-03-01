@@ -4,24 +4,25 @@ import (
 	"context"
 	"time"
 
-	"github.com/projectcalico/calico/lma/pkg/api"
-
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/list"
 
 	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
 	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 // New returns a new PIP instance.
-func New(cfg *pipcfg.Config, listSrc ClusterAwareLister, es pelastic.Client) PIP {
+func New(cfg *pipcfg.Config, listSrc ClusterAwareLister, ls client.Client) PIP {
 	p := &pip{
 		listSrc:  listSrc,
-		esClient: es,
+		lsclient: ls,
 		cfg:      cfg,
 	}
 	return p
@@ -34,7 +35,7 @@ type ClusterAwareLister interface {
 // pip implements the PIP interface.
 type pip struct {
 	listSrc  ClusterAwareLister
-	esClient pelastic.Client
+	lsclient client.Client
 	cfg      *pipcfg.Config
 }
 
@@ -43,37 +44,27 @@ type FlowLogResults struct {
 	AggregationsPreview                  map[string]interface{} `json:"aggregations_preview"`
 }
 
-// GetCompositeAggrFlows returns the set of PIP-processed flows based on the request parameters in `params`. The map is
+// GetFlows returns the set of PIP-processed flows based on the request parameters in `params`. The map is
 // JSON serializable
-func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams, rbacHelper pelastic.FlowFilter) (*FlowLogResults, error) {
+func (p *pip) GetFlows(ctxIn context.Context, pager client.ListPager[lapi.L3Flow], params *PolicyImpactParams, rbacHelper pelastic.FlowFilter) (*FlowLogResults, error) {
 	// Create a context with timeout to ensure we don't block for too long with this calculation.
-	ctxWithTimeout, cancel := context.WithTimeout(ctxIn, p.cfg.MaxCalculationTime)
+	ctx, cancel := context.WithTimeout(ctxIn, p.cfg.MaxCalculationTime)
 	defer cancel() // Releases timer resources if the operation completes before the timeout.
 
 	// Get a primed policy calculator.
-	calc, err := p.GetPolicyCalculator(ctxWithTimeout, params)
+	calc, err := p.GetPolicyCalculator(ctx, params)
 	if err != nil {
 		return nil, err
-	}
-
-	// Construct the query.
-	q := &pelastic.CompositeAggregationQuery{
-		Name:                    api.FlowlogBuckets,
-		DocumentIndex:           params.DocumentIndex,
-		Query:                   params.Query,
-		AggCompositeSourceInfos: pelastic.FlowCompositeSources,
-		AggNestedTermInfos:      pelastic.FlowAggregatedTerms,
-		AggSumInfos:             pelastic.FlowAggregationSums,
 	}
 
 	// Enumerate the aggregation buckets until we have all we need. The channel will be automatically closed.
 	var before []*pelastic.CompositeAggregationBucket
 	var after []*pelastic.CompositeAggregationBucket
 	startTime := time.Now()
-	buckets, errs := p.SearchAndProcessFlowLogs(ctxWithTimeout, q, nil, calc, params.Limit, params.ImpactedOnly, rbacHelper)
-	for bucket := range buckets {
-		before = append(before, bucket.Before...)
-		after = append(after, bucket.After...)
+	processedFlows, errs := p.SearchAndProcessFlowLogs(ctx, pager, params.ClusterName, calc, params.Limit, params.ImpactedOnly, rbacHelper)
+	for processedFlow := range processedFlows {
+		before = append(before, processedFlow.Before...)
+		after = append(after, processedFlow.After...)
 	}
 	took := int64(time.Since(startTime) / time.Millisecond)
 
@@ -89,21 +80,22 @@ func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams, rbacHe
 	// -  The elastic search query returns a timeout.
 	var timedOut bool
 	if err != nil {
-		if ctxIn.Err() == nil && ctxWithTimeout.Err() == context.DeadlineExceeded {
+		if ctxIn.Err() == nil && ctx.Err() == context.DeadlineExceeded {
 			// The context passed to us has no error, but our context with timeout is indicating it has timed out.
-			// We need to check the context error rather than checking the returned error since elastic wraps the
-			// original context error.
 			log.Info("Context deadline exceeded - flag results as timedout")
-			timedOut = true
-		} else if _, ok := err.(pelastic.TimedOutError); ok {
-			// Response from ES indicates a handled timeout.
-			log.Info("Response from ES indicates time out - flag results as timedout")
 			timedOut = true
 		} else {
 			// Just pass the received error up the stack.
 			log.WithError(err).Warning("Error response from elasticsearch query")
 			return nil, err
 		}
+	}
+
+	// TODO: This query isn't actually used, it's just needed for the conversion functions below.
+	// We need to rework how we make those conversion functions!
+	q := &pelastic.CompositeAggregationQuery{
+		Name:               api.FlowlogBuckets,
+		AggNestedTermInfos: pelastic.FlowAggregatedTerms,
 	}
 
 	return &FlowLogResults{

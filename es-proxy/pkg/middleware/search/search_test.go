@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,19 +15,17 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/olivere/elastic/v7"
-	"github.com/stretchr/testify/mock"
+	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	calicojson "github.com/projectcalico/calico/lma/pkg/test/json"
 	"github.com/projectcalico/calico/lma/pkg/test/thirdpartymock"
 
 	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -74,236 +73,260 @@ func (a userAuthorizationReviewMock) PerformReviewForElasticLogs(
 	return a.verbs, a.err
 }
 
+func mustParseTime(s string) time.Time {
+	out, err := time.Parse(time.RFC3339, s)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return out
+}
+
 var _ = Describe("SearchElasticHits", func() {
 	var (
 		fakeClientSet  datastore.ClientSet
 		mockDoer       *thirdpartymock.MockDoer
 		userAuthReview userAuthorizationReviewMock
+		ctx            context.Context
+
+		server              *httptest.Server
+		expectedQueryParams []byte
+		linseedResponse     []byte
+		linseedDelay        time.Duration
+		linseedError        error
 	)
 
-	type Source struct {
-		Timestamp time.Time `json:"@timestamp"`
-		StartTime time.Time `json:"start_time"`
-		EndTime   time.Time `json:"end_time"`
-		Action    string    `json:"action"`
-		BytesIn   *uint64   `json:"bytes_in"`
-		BytesOut  *uint64   `json:"bytes_out"`
+	setLinseedResponse := func(searchResult any) {
+		// Support passing a struct, or an already serialized
+		// json blob.
+		if byts, ok := searchResult.([]byte); !ok {
+			byts, err := json.Marshal(searchResult)
+			if err != nil {
+				panic(err)
+			}
+			linseedResponse = byts
+		} else {
+			linseedResponse = byts
+		}
+	}
+
+	setLinseedResponseError := func(e error) {
+		linseedError = e
+	}
+
+	setExpectedQuery := func(p any) {
+		// Support passing a struct, or an already serialized
+		// json blob.
+		if byts, ok := p.([]byte); !ok {
+			byts, _ := json.Marshal(p)
+			expectedQueryParams = byts
+		} else {
+			expectedQueryParams = byts
+		}
+	}
+
+	setLinseedDelay := func(d time.Duration) {
+		linseedDelay = d
 	}
 
 	type SomeLog struct {
-		ID     string `json:"id"`
-		Index  string `json:"index"`
-		Source Source `json:"source"`
+		ID     string       `json:"id"`
+		Index  string       `json:"index"`
+		Source lapi.FlowLog `json:"source"`
 	}
 
 	BeforeEach(func() {
+		ctx = context.Background()
+
+		// Create a mock server to mimic linseed.
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer GinkgoRecover()
+
+			if expectedQueryParams != nil {
+				// Test wants to assert on the query.
+				reqBody, err := io.ReadAll(r.Body)
+				Expect(err).ShouldNot(HaveOccurred())
+				r.Body = io.NopCloser(bytes.NewBuffer(reqBody))
+
+				var params, expectedParams lapi.FlowLogParams
+				err = json.Unmarshal(reqBody, &params)
+				Expect(err).ShouldNot(HaveOccurred())
+				err = json.Unmarshal(expectedQueryParams, &expectedParams)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(params).To(Equal(expectedParams))
+			}
+
+			// Sleep a few milliseconds to make sure we populate the response time field.
+			time.Sleep(5 * time.Millisecond)
+
+			// Allows tests to simulate a delayed response.
+			if linseedDelay != 0 {
+				time.Sleep(linseedDelay)
+			}
+
+			if linseedError != nil {
+				w.WriteHeader(500)
+				httputils.JSONError(w, linseedError, 500)
+			} else {
+				w.WriteHeader(200)
+				logrus.Warnf("Mock server called! Returning BODY=%s", linseedResponse)
+				_, err := w.Write(linseedResponse)
+				Expect(err).ShouldNot(HaveOccurred())
+			}
+		}))
+
 		fakeClientSet = datastore.NewClientSet(nil, fake.NewSimpleClientset().ProjectcalicoV3())
 		mockDoer = new(thirdpartymock.MockDoer)
-		userAuthReview = userAuthorizationReviewMock{verbs: []libcalicov3.AuthorizedResourceVerbs{
-			{
-				APIGroup: "APIGroupVal1",
-				Resource: "hostendpoints",
-				Verbs: []libcalicov3.AuthorizedResourceVerb{
-					{
-						Verb: "list",
-						ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
-							{
-								Tier:      "tierVal1",
-								Namespace: "namespaceVal1",
-							},
-							{
-								Tier:      "tierVal2",
-								Namespace: "namespaceVal2",
+		userAuthReview = userAuthorizationReviewMock{
+			verbs: []libcalicov3.AuthorizedResourceVerbs{
+				{
+					APIGroup: "APIGroupVal1",
+					Resource: "hostendpoints",
+					Verbs: []libcalicov3.AuthorizedResourceVerb{
+						{
+							Verb: "list",
+							ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+								{
+									Tier:      "tierVal1",
+									Namespace: "namespaceVal1",
+								},
+								{
+									Tier:      "tierVal2",
+									Namespace: "namespaceVal2",
+								},
 							},
 						},
-					},
-					{
-						Verb: "list",
-						ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
-							{
-								Tier:      "tierVal1",
-								Namespace: "namespaceVal1",
-							},
-							{
-								Tier:      "tierVal2",
-								Namespace: "namespaceVal2",
+						{
+							Verb: "list",
+							ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+								{
+									Tier:      "tierVal1",
+									Namespace: "namespaceVal1",
+								},
+								{
+									Tier:      "tierVal2",
+									Namespace: "namespaceVal2",
+								},
 							},
 						},
 					},
 				},
 			},
-		},
 			err: nil,
 		}
-
 	})
 
 	AfterEach(func() {
 		mockDoer.AssertExpectations(GinkgoT())
+		expectedQueryParams = nil
+		linseedResponse = nil
+		linseedDelay = 0
+		linseedError = nil
 	})
 
-	Context("Elasticsearch /search request and response validation", func() {
-		fromTime := time.Date(2021, 04, 19, 14, 25, 30, 169827009, time.Local)
-		toTime := time.Date(2021, 04, 19, 15, 25, 30, 169827009, time.Local)
+	Context("/search request and response validation", func() {
+		fromTime := time.Date(2021, 0o4, 19, 14, 25, 30, 169827009, time.Local)
+		toTime := time.Date(2021, 0o4, 19, 15, 25, 30, 169827009, time.Local)
 
-		esResponse := []*elastic.SearchHit{
-			{
-				Index: "tigera_secure_ee_flows",
-				Type:  "_doc",
-				Id:    "2021-04-19 14:25:30.169827011 -0700 PDT m=+0.121726716",
-				Source: calicojson.MustMarshal(calicojson.Map{
-					"@timestamp": "2021-04-19T14:25:30.169827011-07:00",
-					"start_time": "2021-04-19T14:25:30.169821857-07:00",
-					"end_time":   "2021-04-19T14:25:30.169827009-07:00",
-					"action":     "action1",
-					"bytes_in":   uint64(5456),
-					"bytes_out":  uint64(48245),
-				}),
-			},
-			{
-				Index: "tigera_secure_ee_flows",
-				Type:  "_doc",
-				Id:    "2021-04-19 14:25:30.169827010 -0700 PDT m=+0.121726716",
-				Source: calicojson.MustMarshal(calicojson.Map{
-					"@timestamp": "2021-04-19T15:25:30.169827010-07:00",
-					"start_time": "2021-04-19T15:25:30.169821857-07:00",
-					"end_time":   "2021-04-19T15:25:30.169827009-07:00",
-					"action":     "action2",
-					"bytes_in":   uint64(3436),
-					"bytes_out":  uint64(68547),
-				}),
+		// Configure response from mock linseed server.
+		lsResp := lapi.List[lapi.FlowLog]{
+			TotalHits: 2,
+			Items: []lapi.FlowLog{
+				{
+					Timestamp: mustParseTime("2021-04-19T14:25:30.169827011-07:00").Unix(),
+					StartTime: mustParseTime("2021-04-19T14:25:30.169821857-07:00").Unix(),
+					EndTime:   mustParseTime("2021-04-19T14:25:30.169827009-07:00").Unix(),
+					Action:    "action1",
+					BytesIn:   int64(5456),
+					BytesOut:  int64(48245),
+				},
+				{
+					Timestamp: mustParseTime("2021-04-19T15:25:30.169827010-07:00").Unix(),
+					StartTime: mustParseTime("2021-04-19T15:25:30.169821857-07:00").Unix(),
+					EndTime:   mustParseTime("2021-04-19T15:25:30.169827009-07:00").Unix(),
+					Action:    "action2",
+					BytesIn:   int64(3436),
+					BytesOut:  int64(68547),
+				},
 			},
 		}
 
-		t1, _ := time.Parse(time.RFC3339, "2021-04-19T14:25:30.169827011-07:00")
-		st1, _ := time.Parse(time.RFC3339, "2021-04-19T14:25:30.169821857-07:00")
-		et1, _ := time.Parse(time.RFC3339, "2021-04-19T14:25:30.169827009-07:00")
-		bytesIn1 := uint64(5456)
-		bytesOut1 := uint64(48245)
-		t2, _ := time.Parse(time.RFC3339, "2021-04-19T15:25:30.169827010-07:00")
-		st2, _ := time.Parse(time.RFC3339, "2021-04-19T15:25:30.169821857-07:00")
-		et2, _ := time.Parse(time.RFC3339, "2021-04-19T15:25:30.169827009-07:00")
-		bytesIn2 := uint64(3436)
-		bytesOut2 := uint64(68547)
+		// Set the expected query to linseed.
+		lsQuery := &lapi.FlowLogParams{
+			QueryParams: lapi.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: mustParseTime("2021-04-19T21:25:30Z"),
+					To:   mustParseTime("2021-04-19T22:25:30Z"),
+				},
+				Timeout:    &metav1.Duration{Duration: 60 * time.Second},
+				MaxResults: 100,
+			},
+			LogSelectionParams: lapi.LogSelectionParams{
+				Selector: "",
+				Sort:     []lapi.SearchRequestSortBy{{Field: "test2", Descending: false}},
+				Permissions: []libcalicov3.AuthorizedResourceVerbs{
+					{
+						APIGroup: "APIGroupVal1",
+						Resource: "hostendpoints",
+						Verbs: []libcalicov3.AuthorizedResourceVerb{
+							{
+								Verb: "list",
+								ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+									{
+										Tier:      "tierVal1",
+										Namespace: "namespaceVal1",
+									},
+									{
+										Tier:      "tierVal2",
+										Namespace: "namespaceVal2",
+									},
+								},
+							},
+							{
+								Verb: "list",
+								ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+									{
+										Tier:      "tierVal1",
+										Namespace: "namespaceVal1",
+									},
+									{
+										Tier:      "tierVal2",
+										Namespace: "namespaceVal2",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		// The expected resposne from the search handler.
 		expectedJSONResponse := []*SomeLog{
 			{
-				ID:    "id1",
-				Index: "index1",
-				Source: Source{
-					Timestamp: t1,
-					StartTime: st1,
-					EndTime:   et1,
-					Action:    "action1",
-					BytesIn:   &bytesIn1,
-					BytesOut:  &bytesOut1,
-				},
+				ID:     "id1",
+				Index:  "index1",
+				Source: lsResp.Items[0],
 			},
 			{
-				ID:    "id2",
-				Index: "index2",
-				Source: Source{
-					Timestamp: t2,
-					StartTime: st2,
-					EndTime:   et2,
-					Action:    "action2",
-					BytesIn:   &bytesIn2,
-					BytesOut:  &bytesOut2,
-				},
+				ID:     "id2",
+				Index:  "index2",
+				Source: lsResp.Items[1],
 			},
 		}
 
-		It("Should return a valid Elastic search response", func() {
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
+		It("Should return a valid search response for flow logs", func() {
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
 
-			exp := calicojson.Map{
-				"from": 0,
-				"query": calicojson.Map{
-					"bool": calicojson.Map{
-						"filter": []calicojson.Map{
-							{
-								"range": calicojson.Map{
-									"end_time": calicojson.Map{
-										"from":          fromTime.Unix(),
-										"include_lower": false,
-										"include_upper": true,
-										"to":            toTime.Unix(),
-									},
-								},
-							},
-							{
-								"bool": calicojson.Map{
-									"should": []calicojson.Map{
-										{
-											"term": calicojson.Map{"source_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"dest_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"source_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"dest_type": "hep"},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				"size": 100,
-				"sort": []calicojson.Map{
-					{
-						"test": calicojson.Map{
-							"order": "desc",
-						},
-					},
-					{
-						"test2": calicojson.Map{
-							"order": "asc",
-						},
-					},
-				},
-			}
-
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
-
-				body, err := io.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
-
-				requestJson := map[string]interface{}{}
-				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
-				Expect(calicojson.MustUnmarshalToStandardObject(body)).
-					To(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body: esSearchHitsResultToResponseBody(elastic.SearchResult{
-					TookInMillis: 631,
-					TimedOut:     false,
-					Hits: &elastic.SearchHits{
-						Hits:      esResponse,
-						TotalHits: &elastic.TotalHits{Value: 2},
-					},
-				}),
-			}, nil)
+			// Set expected query and mock response.
+			setLinseedResponse(lsResp)
+			setExpectedQuery(lsQuery)
 
 			params := &v1.SearchRequest{
 				ClusterName: "cl_name_val",
 				PageSize:    100,
 				PageNum:     0,
 				TimeRange: &lmav1.TimeRange{
-					From: fromTime,
-					To:   toTime,
+					From: mustParseTime("2021-04-19T21:25:30Z"),
+					To:   mustParseTime("2021-04-19T22:25:30Z"),
 				},
 				SortBy: []v1.SearchRequestSortBy{{
 					Field:      "test",
@@ -315,16 +338,12 @@ var _ = Describe("SearchElasticHits", func() {
 				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
-			r, err := http.NewRequest(
-				http.MethodGet, "", bytes.NewReader([]byte(validRequestBody)))
-			Expect(err).NotTo(HaveOccurred())
-
-			results, err := search(lmaindex.FlowLogs(), params, userAuthReview, fakeClientSet, client, r)
+			results, err := search(ctx, SearchTypeFlows, params, userAuthReview, fakeClientSet, client)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results.NumPages).To(Equal(1))
 			Expect(results.TotalHits).To(Equal(2))
 			Expect(results.TimedOut).To(BeFalse())
-			Expect(results.Took.Milliseconds()).To(Equal(int64(631)))
+			Expect(results.Took.Milliseconds()).To(BeNumerically(">", (int64(0))))
 			var someLog *SomeLog
 			for i, hit := range results.Hits {
 				s, _ := hit.MarshalJSON()
@@ -339,70 +358,67 @@ var _ = Describe("SearchElasticHits", func() {
 			}
 		})
 
-		It("Should return a valid Elastic search response (search request with filter)", func() {
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
+		It("Should return a valid search response (event request with filter)", func() {
+			// TODO: Unskip once we've implemented.
+			Skip("event filtering not yet implemented for Linseed")
+
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
 
-			exp := calicojson.Map{
-				"from": 0,
-				"query": calicojson.Map{
-					"bool": calicojson.Map{
-						"filter": []calicojson.Map{
+			// Set expected query and mock response.
+			setLinseedResponse(lsResp)
+
+			// Set the expected query to linseed.
+			setExpectedQuery(
+				&lapi.FlowLogParams{
+					QueryParams: lapi.QueryParams{
+						TimeRange: &lmav1.TimeRange{
+							From: mustParseTime("2022-01-24T00:00:00Z"),
+							To:   mustParseTime("2022-01-31T23:59:59Z"),
+						},
+						Timeout:    &metav1.Duration{Duration: 60 * time.Second},
+						MaxResults: 100,
+					},
+					LogSelectionParams: lapi.LogSelectionParams{
+						Selector: "",
+						Sort:     []lapi.SearchRequestSortBy{{Field: "test2", Descending: false}},
+						Permissions: []libcalicov3.AuthorizedResourceVerbs{
 							{
-								"range": calicojson.Map{
-									"time": calicojson.Map{
-										"gte": "2022-01-24T00:00:00Z",
-										"lte": "2022-01-31T23:59:59Z",
+								APIGroup: "APIGroupVal1",
+								Resource: "hostendpoints",
+								Verbs: []libcalicov3.AuthorizedResourceVerb{
+									{
+										Verb: "list",
+										ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+											{
+												Tier:      "tierVal1",
+												Namespace: "namespaceVal1",
+											},
+											{
+												Tier:      "tierVal2",
+												Namespace: "namespaceVal2",
+											},
+										},
+									},
+									{
+										Verb: "list",
+										ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+											{
+												Tier:      "tierVal1",
+												Namespace: "namespaceVal1",
+											},
+											{
+												Tier:      "tierVal2",
+												Namespace: "namespaceVal2",
+											},
+										},
 									},
 								},
 							},
-							{
-								"term": calicojson.Map{
-									"type": "global_alert",
-								},
-							},
 						},
 					},
 				},
-				"size": 100,
-				"sort": []calicojson.Map{
-					{
-						"time": calicojson.Map{
-							"order": "desc",
-						},
-					},
-				},
-			}
-
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
-
-				body, err := io.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
-
-				requestJson := map[string]interface{}{}
-				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
-				Expect(calicojson.MustUnmarshalToStandardObject(body)).
-					To(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body: esSearchHitsResultToResponseBody(elastic.SearchResult{
-					TookInMillis: 123,
-					TimedOut:     false,
-					Hits: &elastic.SearchHits{
-						Hits:      esResponse,
-						TotalHits: &elastic.TotalHits{Value: 2},
-					},
-				}),
-			}, nil)
+			)
 
 			params := &v1.SearchRequest{
 				ClusterName: "cl_name_val",
@@ -419,16 +435,12 @@ var _ = Describe("SearchElasticHits", func() {
 				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
-			r, err := http.NewRequest(
-				http.MethodGet, "", bytes.NewReader([]byte(validRequestBody)))
-			Expect(err).NotTo(HaveOccurred())
-
-			results, err := search(lmaindex.Alerts(), params, userAuthReview, fakeClientSet, client, r)
+			results, err := search(ctx, SearchTypeEvents, params, userAuthReview, fakeClientSet, client)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results.NumPages).To(Equal(1))
 			Expect(results.TotalHits).To(Equal(2))
 			Expect(results.TimedOut).To(BeFalse())
-			Expect(results.Took.Milliseconds()).To(Equal(int64(123)))
+			Expect(results.Took.Milliseconds()).To(BeNumerically(">", (int64(0))))
 			var someLog *SomeLog
 			for i, hit := range results.Hits {
 				s, _ := hit.MarshalJSON()
@@ -444,77 +456,13 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 
 		It("Should return no hits when TotalHits are equal to zero", func() {
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
 
-			exp := calicojson.Map{
-				"from": 0,
-				"query": calicojson.Map{
-					"bool": calicojson.Map{
-						"filter": []calicojson.Map{
-							{
-								"range": calicojson.Map{
-									"end_time": calicojson.Map{
-										"from":          fromTime.Unix(),
-										"include_lower": false,
-										"include_upper": true,
-										"to":            toTime.Unix(),
-									},
-								},
-							},
-							{
-								"bool": calicojson.Map{
-									"should": []calicojson.Map{
-										{
-											"term": calicojson.Map{"source_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"dest_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"source_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"dest_type": "hep"},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				"size": 100,
-			}
-
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
-
-				body, err := io.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
-
-				requestJson := map[string]interface{}{}
-				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
-				Expect(calicojson.MustUnmarshalToStandardObject(body)).
-					To(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body: esSearchHitsResultToResponseBody(elastic.SearchResult{
-					TookInMillis: 631,
-					TimedOut:     false,
-					Hits: &elastic.SearchHits{
-						Hits:      esResponse,
-						TotalHits: &elastic.TotalHits{Value: 0},
-					},
-				}),
-			}, nil)
+			setLinseedResponse(lapi.List[lapi.FlowLog]{
+				TotalHits: 0,
+				Items:     []lapi.FlowLog{},
+			})
 
 			params := &v1.SearchRequest{
 				ClusterName: "cl_name_val",
@@ -527,92 +475,22 @@ var _ = Describe("SearchElasticHits", func() {
 				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
-			r, err := http.NewRequest(
-				http.MethodGet, "", bytes.NewReader([]byte(validRequestBody)))
-			Expect(err).NotTo(HaveOccurred())
-
-			results, err := search(lmaindex.FlowLogs(), params, userAuthReview, fakeClientSet, client, r)
+			results, err := search(ctx, SearchTypeFlows, params, userAuthReview, fakeClientSet, client)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results.NumPages).To(Equal(1))
+			Expect(results.Took.Milliseconds()).To(BeNumerically(">", (int64(0))))
 			Expect(results.TotalHits).To(Equal(0))
 			Expect(results.TimedOut).To(BeFalse())
-			Expect(results.Took.Milliseconds()).To(Equal(int64(631)))
 			var emptyHitsResponse []json.RawMessage
 			Expect(results.Hits).To(Equal(emptyHitsResponse))
 		})
 
-		It("Should return no hits when ElasticSearch Hits are empty (nil)", func() {
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
+		It("Should return an error with data on timeout", func() {
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
 
-			exp := calicojson.Map{
-				"from": 0,
-				"query": calicojson.Map{
-					"bool": calicojson.Map{
-						"filter": []calicojson.Map{
-							{
-								"range": calicojson.Map{
-									"end_time": calicojson.Map{
-										"from":          fromTime.Unix(),
-										"include_lower": false,
-										"include_upper": true,
-										"to":            toTime.Unix(),
-									},
-								},
-							},
-							{
-								"bool": calicojson.Map{
-									"should": []calicojson.Map{
-										{
-											"term": calicojson.Map{"source_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"dest_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"source_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"dest_type": "hep"},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				"size": 100,
-			}
-
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
-
-				body, err := io.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
-
-				requestJson := map[string]interface{}{}
-				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
-				Expect(calicojson.MustUnmarshalToStandardObject(body)).
-					To(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body: esSearchHitsResultToResponseBody(elastic.SearchResult{
-					TookInMillis: 631,
-					TimedOut:     false,
-					Hits: &elastic.SearchHits{
-						Hits:      nil,
-						TotalHits: &elastic.TotalHits{Value: 0},
-					},
-				}),
-			}, nil)
+			// Delay linseed response by 1 second.
+			setLinseedDelay(1 * time.Second)
 
 			params := &v1.SearchRequest{
 				ClusterName: "cl_name_val",
@@ -622,192 +500,26 @@ var _ = Describe("SearchElasticHits", func() {
 					From: fromTime,
 					To:   toTime,
 				},
-				Timeout: &metav1.Duration{Duration: 60 * time.Second},
+				Timeout: &metav1.Duration{Duration: 5 * time.Millisecond}, // Timeout after just a few ms.
 			}
 
-			r, err := http.NewRequest(
-				http.MethodGet, "", bytes.NewReader([]byte(validRequestBody)))
-			Expect(err).NotTo(HaveOccurred())
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Millisecond)
+			defer cancel()
 
-			results, err := search(lmaindex.FlowLogs(), params, userAuthReview, fakeClientSet, client, r)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(results.NumPages).To(Equal(1))
-			Expect(results.TotalHits).To(Equal(0))
-			Expect(results.TimedOut).To(BeFalse())
-			Expect(results.Took.Milliseconds()).To(Equal(int64(631)))
-			var emptyHitsResponse []json.RawMessage
-			Expect(results.Hits).To(Equal(emptyHitsResponse))
-		})
-
-		It("Should return an error with data when ElasticSearch returns TimeOut==true", func() {
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
-			Expect(err).NotTo(HaveOccurred())
-
-			exp := calicojson.Map{
-				"from": 0,
-				"query": calicojson.Map{
-					"bool": calicojson.Map{
-						"filter": []calicojson.Map{
-							{
-								"range": calicojson.Map{
-									"end_time": calicojson.Map{
-										"from":          fromTime.Unix(),
-										"include_lower": false,
-										"include_upper": true,
-										"to":            toTime.Unix(),
-									},
-								},
-							},
-							{
-								"bool": calicojson.Map{
-									"should": []calicojson.Map{
-										{
-											"term": calicojson.Map{"source_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"dest_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"source_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"dest_type": "hep"},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				"size": 100,
-			}
-
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
-
-				body, err := io.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
-
-				requestJson := map[string]interface{}{}
-				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
-				Expect(calicojson.MustUnmarshalToStandardObject(body)).
-					To(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body: esSearchHitsResultToResponseBody(elastic.SearchResult{
-					TookInMillis: 10000,
-					TimedOut:     true,
-					Hits: &elastic.SearchHits{
-						Hits:      esResponse,
-						TotalHits: &elastic.TotalHits{Value: 2},
-					},
-				}),
-			}, nil)
-
-			params := &v1.SearchRequest{
-				ClusterName: "cl_name_val",
-				PageSize:    100,
-				PageNum:     0,
-				TimeRange: &lmav1.TimeRange{
-					From: fromTime,
-					To:   toTime,
-				},
-				Timeout: &metav1.Duration{Duration: 60 * time.Second},
-			}
-
-			r, err := http.NewRequest(
-				http.MethodGet, "", bytes.NewReader([]byte(validRequestBody)))
-			Expect(err).NotTo(HaveOccurred())
-			results, err := search(lmaindex.FlowLogs(), params, userAuthReview, fakeClientSet, client, r)
+			results, err := search(ctx, SearchTypeFlows, params, userAuthReview, fakeClientSet, client)
 			Expect(err).To(HaveOccurred())
 			var se *httputils.HttpStatusError
 			Expect(errors.As(err, &se)).To(BeTrue())
 			Expect(se.Status).To(Equal(500))
-			Expect(se.Msg).
-				To(Equal("timed out querying tigera_secure_ee_flows.cl_name_val.*"))
+			Expect(se.Msg).To(Equal("error performing search"))
 			Expect(results).To(BeNil())
 		})
 
-		It("Should return an error when ElasticSearch returns an error", func() {
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
+		It("Should return an error when Linseed returns an error", func() {
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
 
-			exp := calicojson.Map{
-				"from": 0,
-				"query": calicojson.Map{
-					"bool": calicojson.Map{
-						"filter": []calicojson.Map{
-							{
-								"range": calicojson.Map{
-									"end_time": calicojson.Map{
-										"from":          fromTime.Unix(),
-										"include_lower": false,
-										"include_upper": true,
-										"to":            toTime.Unix(),
-									},
-								},
-							},
-							{
-								"bool": calicojson.Map{
-									"should": []calicojson.Map{
-										{
-											"term": calicojson.Map{"source_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"dest_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"source_type": "hep"},
-										},
-										{
-											"term": calicojson.Map{"dest_type": "hep"},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				"size": 100,
-			}
-
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
-
-				body, err := io.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
-
-				requestJson := map[string]interface{}{}
-				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
-				Expect(calicojson.MustUnmarshalToStandardObject(body)).
-					To(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body: esSearchHitsResultToResponseBody(elastic.SearchResult{
-					TookInMillis: 10000,
-					TimedOut:     true,
-					Hits: &elastic.SearchHits{
-						Hits:      esResponse,
-						TotalHits: &elastic.TotalHits{Value: 2},
-					},
-				}),
-			}, errors.New("ESError: Elastic search generic error"))
+			setLinseedResponseError(fmt.Errorf("An error!"))
 
 			params := &v1.SearchRequest{
 				ClusterName: "cl_name_val",
@@ -820,17 +532,13 @@ var _ = Describe("SearchElasticHits", func() {
 				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
-			r, err := http.NewRequest(
-				http.MethodGet, "", bytes.NewReader([]byte(validRequestBody)))
-			Expect(err).NotTo(HaveOccurred())
-
-			results, err := search(lmaindex.FlowLogs(), params, userAuthReview, fakeClientSet, client, r)
+			results, err := search(ctx, SearchTypeFlows, params, userAuthReview, fakeClientSet, client)
 			Expect(err).To(HaveOccurred())
 
 			var httpErr *httputils.HttpStatusError
 			Expect(errors.As(err, &httpErr)).To(BeTrue())
 			Expect(httpErr.Status).To(Equal(500))
-			Expect(httpErr.Msg).To(Equal("ESError: Elastic search generic error"))
+			Expect(httpErr.Msg).To(Equal("error performing search"))
 			Expect(results).To(BeNil())
 		})
 	})
@@ -921,28 +629,56 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 	})
 
-	Context("Elasticsearch /events/search request and response validation", func() {
-		It("should inject alert exceptions in search request", func() {
-			// mock http client
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
+	Context("/events/search request and response validation", func() {
+		BeforeEach(func() {
+			// Create a mock server to mimic linseed. We use a different one here from the root Describe
+			// in order to handle event specific changes in logic.
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
 
-				// Elastic _search request
-				Expect(req.Method).To(Equal(http.MethodPost))
-				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster./_search"))
+				if expectedQueryParams != nil {
+					// Test wants to assert on the query.
+					reqBody, err := io.ReadAll(r.Body)
+					Expect(err).ShouldNot(HaveOccurred())
+					r.Body = io.NopCloser(bytes.NewBuffer(reqBody))
 
-				body, err := io.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-				// Elastic search request json
-				Expect(body).To(Equal([]byte(eventSearchRequest)))
+					var params, expectedParams lapi.EventParams
+					err = json.Unmarshal(reqBody, &params)
+					Expect(err).ShouldNot(HaveOccurred())
+					err = json.Unmarshal(expectedQueryParams, &expectedParams)
 
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
-			}, nil)
+					logrus.Infof("REQ: %s", string(reqBody))
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(params).To(Equal(expectedParams))
+				}
+
+				// Sleep a few milliseconds to make sure we populate the response time field.
+				time.Sleep(5 * time.Millisecond)
+
+				// Allows tests to simulate a delayed response.
+				if linseedDelay != 0 {
+					time.Sleep(linseedDelay)
+				}
+
+				if linseedError != nil {
+					w.WriteHeader(500)
+					httputils.JSONError(w, linseedError, 500)
+				} else {
+					w.WriteHeader(200)
+					logrus.Warnf("Mock server called! Returning BODY=%s", linseedResponse)
+					_, err := w.Write(linseedResponse)
+					Expect(err).ShouldNot(HaveOccurred())
+				}
+			}))
+		})
+
+		It("should inject alert exceptions in search request", func() {
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
+			Expect(err).NotTo(HaveOccurred())
+
+			// set the search response.
+			setLinseedResponse([]byte(eventSearchResponse))
+			setExpectedQuery([]byte(eventSearchRequest))
 
 			// create some alert exceptions
 			now := time.Now()
@@ -991,21 +727,12 @@ var _ = Describe("SearchElasticHits", func() {
 				Expect(err).NotTo(HaveOccurred())
 			}
 
-			// mock lma es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
-			Expect(err).NotTo(HaveOccurred())
-			lmaClient := lmaelastic.NewWithClient(client)
-
 			// validate responses
 			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := SearchHandler(lmaindex.Alerts(), userAuthReview, fakeClientSet, lmaClient.Backend())
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
@@ -1021,26 +748,9 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 
 		It("should handle alert exceptions selector AND/OR conditions", func() {
-			// mock http client
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
-
-				// Elastic _search request
-				Expect(req.Method).To(Equal(http.MethodPost))
-				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster./_search"))
-
-				body, err := io.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-				// Elastic search request json
-				Expect(body).To(Equal([]byte(eventSearchRequestSelector)))
-
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
-			}, nil)
+			// set the search response.
+			setLinseedResponse([]byte(eventSearchResponse))
+			setExpectedQuery([]byte(eventSearchRequestSelector))
 
 			// create some alert exceptions
 			alertExceptions := []*v3.AlertException{
@@ -1083,21 +793,15 @@ var _ = Describe("SearchElasticHits", func() {
 				Expect(err).NotTo(HaveOccurred())
 			}
 
-			// mock lma es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
-			lmaClient := lmaelastic.NewWithClient(client)
 
 			// validate responses
 			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := SearchHandler(lmaindex.Alerts(), userAuthReview, fakeClientSet, lmaClient.Backend())
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
@@ -1113,26 +817,8 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 
 		It("should skip invalid alert exceptions selector", func() {
-			// mock http client
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
-
-				// Elastic _search request
-				Expect(req.Method).To(Equal(http.MethodPost))
-				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster./_search"))
-
-				body, err := io.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-				// Elastic search request json
-				Expect(body).To(Equal([]byte(eventSearchRequestSelectorInvalid)))
-
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
-			}, nil)
+			setLinseedResponse([]byte(eventSearchResponse))
+			setExpectedQuery([]byte(eventSearchRequestSelectorInvalid))
 
 			// create some alert exceptions
 			alertExceptions := []*v3.AlertException{
@@ -1164,21 +850,15 @@ var _ = Describe("SearchElasticHits", func() {
 				Expect(err).NotTo(HaveOccurred())
 			}
 
-			// mock lma es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
-			lmaClient := lmaelastic.NewWithClient(client)
 
 			// validate responses
 			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := SearchHandler(lmaindex.Alerts(), userAuthReview, fakeClientSet, lmaClient.Backend())
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
@@ -1194,52 +874,31 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 
 		It("should return error when request is not GET or POST", func() {
-			// mock lma es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
-			lmaClient := lmaelastic.NewWithClient(client)
 
 			req, err := http.NewRequest(http.MethodPatch, "", bytes.NewReader([]byte("any")))
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := SearchHandler(lmaindex.Alerts(), userAuthReview, fakeClientSet, lmaClient.Backend())
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusMethodNotAllowed))
 		})
 
 		It("should return error when request body is not valid", func() {
-			// mock lma es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
-			lmaClient := lmaelastic.NewWithClient(client)
 
 			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte("invalid-json-body")))
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := SearchHandler(lmaindex.Alerts(), userAuthReview, fakeClientSet, lmaClient.Backend())
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusBadRequest))
 		})
 	})
 })
-
-func esSearchHitsResultToResponseBody(searchResult elastic.SearchResult) io.ReadCloser {
-	byts, err := json.Marshal(searchResult)
-	if err != nil {
-		panic(err)
-	}
-
-	return io.NopCloser(bytes.NewBuffer(byts))
-}

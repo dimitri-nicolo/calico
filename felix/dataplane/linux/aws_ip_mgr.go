@@ -17,6 +17,8 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
 
+	"github.com/projectcalico/calico/felix/environment"
+
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 
 	"github.com/projectcalico/calico/felix/aws"
@@ -74,9 +76,10 @@ type awsIPManager struct {
 
 	// Shims for testing.
 
-	nl            awsNetlinkIface
-	newRouteTable routeTableNewFn
-	newRouteRules routeRulesNewFn
+	nl              awsNetlinkIface
+	newRouteTable   routeTableNewFn
+	newRouteRules   routeRulesNewFn
+	featureDetector environment.FeatureDetectorIface
 }
 
 type awsEndpointInfo struct {
@@ -119,6 +122,7 @@ func NewAWSIPManager(
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
 	ifaceProvisioner awsIfaceProvisioner,
+	featureDetector environment.FeatureDetectorIface,
 	opts ...AWSSubnetManagerOpt,
 ) *awsIPManager {
 	logrus.WithField("routeTables", routeTableIndexes).Info("Creating AWS subnet manager.")
@@ -143,9 +147,10 @@ func NewAWSIPManager(
 
 		ifaceProvisioner: ifaceProvisioner,
 
-		nl:            awsRealNetlink{},
-		newRouteRules: realRouteRuleNew,
-		newRouteTable: realRouteTableNew,
+		nl:              awsRealNetlink{},
+		newRouteRules:   realRouteRuleNew,
+		newRouteTable:   realRouteTableNew,
+		featureDetector: featureDetector,
 	}
 
 	for _, o := range opts {
@@ -904,6 +909,7 @@ func (a *awsIPManager) getOrAllocRoutingTable(ifaceName string) routetable.Route
 			true,
 			tableIndex,
 			a.opRecorder,
+			a.featureDetector,
 		)
 		a.routeTablesByIfaceName[ifaceName] = rt
 		a.routeTablesByTableIdx[tableIndex] = rt
@@ -964,6 +970,7 @@ type routeTableNewFn func(
 	removeExternalRoutes bool,
 	tableIndex int,
 	opReporter logutils.OpRecorder,
+	featureDetector environment.FeatureDetectorIface,
 ) routetable.RouteTableInterface
 
 type awsNetlinkIface interface {
@@ -1003,9 +1010,10 @@ func realRouteTableNew(
 	removeExternalRoutes bool,
 	tableIndex int,
 	opReporter logutils.OpRecorder,
+	featureDetector environment.FeatureDetectorIface,
 ) routetable.RouteTableInterface {
 	return routetable.New(interfaceRegexes, ipVersion, vxlan, netlinkTimeout, deviceRouteSourceAddress,
-		deviceRouteProtocol, removeExternalRoutes, tableIndex, opReporter)
+		deviceRouteProtocol, removeExternalRoutes, tableIndex, opReporter, featureDetector)
 }
 
 type awsRealNetlink struct{}

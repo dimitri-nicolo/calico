@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/projectcalico/calico/lma/pkg/httputils"
+
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +34,9 @@ import (
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/list"
+
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 var (
@@ -100,6 +105,20 @@ func Start(cfg *Config) error {
 		return err
 	}
 
+	// Create linseed Client.
+	config := lsrest.Config{
+		URL:             cfg.LinseedURL,
+		CACertPath:      cfg.LinseedCA,
+		ClientKeyPath:   cfg.LinseedClientKey,
+		ClientCertPath:  cfg.LinseedClientCert,
+		FIPSModeEnabled: cfg.FIPSModeEnabled,
+	}
+	linseed, err := lsclient.NewClient("", config)
+	if err != nil {
+		log.WithError(err).Error("failed to create linseed client")
+		return err
+	}
+
 	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.VoltronCAPath, cfg.VoltronURL)
 	authz := lmaauth.NewRBACAuthorizer(k8sCli)
 
@@ -108,13 +127,7 @@ func Start(cfg *Config) error {
 	k8sClientSetFactory := k8s.NewClientSetFactory(cfg.VoltronCAPath, cfg.VoltronURL)
 
 	// Create a PIP backend.
-	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, esClient)
-
-	kibanaTLSConfig := calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
-	kibanaTLSConfig.InsecureSkipVerify = true
-	kibanaCli := kibana.NewClient(&http.Client{
-		Transport: &http.Transport{TLSClientConfig: kibanaTLSConfig},
-	}, cfg.ElasticKibanaEndpoint)
+	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, linseed)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
@@ -128,7 +141,7 @@ func Start(cfg *Config) error {
 					servicegraph.NewServiceGraphHandler(
 						context.Background(),
 						authz,
-						esClient,
+						linseed,
 						k8sClientSetFactory,
 						&servicegraph.Config{
 							ServiceGraphCacheMaxEntries:           cfg.ServiceGraphCacheMaxEntries,
@@ -145,7 +158,7 @@ func Start(cfg *Config) error {
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.FlowLogsHandler(k8sClientFactory, esClient, p)))))
+					middleware.FlowLogsHandler(k8sClientFactory, linseed, p)))))
 	sm.Handle("/flowLogs/aggregation",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
@@ -156,10 +169,10 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					search.SearchHandler(
-						lmaindex.FlowLogs(),
+						search.SearchTypeFlows,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
-						esClient.Backend(),
+						linseed,
 					)))))
 	sm.Handle("/dnsLogs/aggregation",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
@@ -171,10 +184,10 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					search.SearchHandler(
-						lmaindex.DnsLogs(),
+						search.SearchTypeDNS,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
-						esClient.Backend(),
+						linseed,
 					)))))
 	sm.Handle("/l7Logs/aggregation",
 		middleware.ClusterRequestToResource(l7ResourceName,
@@ -186,10 +199,10 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					search.SearchHandler(
-						lmaindex.L7Logs(),
+						search.SearchTypeL7,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
-						esClient.Backend(),
+						linseed,
 					)))))
 	sm.Handle("/events/bulk",
 		middleware.ClusterRequestToResource(eventsResourceName,
@@ -201,19 +214,18 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					search.SearchHandler(
-						lmaindex.Alerts(),
+						search.SearchTypeEvents,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
-						esClient.Backend(),
+						linseed,
 					)))))
 	sm.Handle("/processes",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					process.ProcessHandler(
-						lmaindex.FlowLogs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						esClient.Backend(),
+						linseed,
 					)))))
 	sm.Handle("/services",
 		middleware.ClusterRequestToResource(l7ResourceName,
@@ -240,43 +252,48 @@ func Start(cfg *Config) error {
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.PolicyRecommendationHandler(k8sClientSetFactory, k8sClientFactory, esClient)))))
+					middleware.PolicyRecommendationHandler(k8sClientSetFactory, k8sClientFactory, linseed)))))
 	sm.Handle("/flowLogNamespaces",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.FlowLogNamespaceHandler(k8sClientFactory, esClient)))))
+					middleware.FlowLogNamespaceHandler(k8sClientFactory, linseed)))))
 	sm.Handle("/flowLogNames",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.FlowLogNamesHandler(k8sClientFactory, esClient)))))
+					middleware.FlowLogNamesHandler(k8sClientFactory, linseed)))))
 	sm.Handle("/flow",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.NewFlowHandler(esClient, k8sClientFactory)))))
+					middleware.NewFlowHandler(linseed, k8sClientFactory)))))
 	sm.Handle("/user",
 		middleware.AuthenticateRequest(authn,
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
-	sm.Handle("/kibana/login",
-		middleware.AuthenticateRequest(authn,
-			middleware.NewKibanaLoginHandler(k8sClientSet, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
-				middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType))))
-	sm.Handle("/.kibana/_search",
-		middleware.KibanaIndexPattern(
+
+	if !cfg.ElasticKibanaDisabled {
+		kibanaTLSConfig := calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
+		kibanaTLSConfig.InsecureSkipVerify = true
+		kibanaCli := kibana.NewClient(&http.Client{
+			Transport: &http.Transport{TLSClientConfig: kibanaTLSConfig},
+		}, cfg.ElasticKibanaEndpoint)
+
+		// Kibana endpoints are only served if configured to have Kibana enabled.
+		sm.Handle("/kibana/login",
 			middleware.AuthenticateRequest(authn,
-				middleware.AuthorizeRequest(authz,
-					rawquery.RawQueryHandler(esClient.Backend())))))
-	sm.Handle("/",
-		middleware.RequestToResource(
-			middleware.AuthenticateRequest(authn,
-				middleware.AuthorizeRequest(authz,
-					rawquery.RawQueryHandler(esClient.Backend())))))
+				middleware.NewKibanaLoginHandler(k8sClientSet, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
+					middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType))))
+		sm.Handle("/.kibana/_search",
+			middleware.KibanaIndexPattern(
+				middleware.AuthenticateRequest(authn,
+					middleware.AuthorizeRequest(authz,
+						rawquery.RawQueryHandler(esClient.Backend())))))
+	}
 
 	server = &http.Server{
 		Addr:    cfg.ListenAddr,
-		Handler: middleware.LogRequestHeaders(sm),
+		Handler: httputils.LogRequestHeaders(sm),
 	}
 	server.TLSConfig = calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
 	wg.Add(1)
