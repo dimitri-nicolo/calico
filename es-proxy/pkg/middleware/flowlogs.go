@@ -11,19 +11,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 	pippkg "github.com/projectcalico/calico/es-proxy/pkg/pip"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	v1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
 
@@ -124,7 +125,7 @@ func (c *PolicyPreview) UnmarshalJSON(b []byte) error {
 
 // A handler for the /flowLogs endpoint, uses url parameters to build an elasticsearch query,
 // executes it and returns the results.
-func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esClient lmaelastic.Client, pip pippkg.PIP) http.Handler {
+func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, lsclient client.Client, pip pippkg.PIP) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Validate Request
 		params, err := validateFlowLogsRequest(req)
@@ -147,6 +148,10 @@ func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esCl
 			return
 		}
 
+		// Create a context to use.
+		ctx, cancel := context.WithTimeout(req.Context(), 60*time.Second)
+		defer cancel()
+
 		k8sCli, err := k8sClientFactory.ClientSetForCluster(params.ClusterName)
 		if err != nil {
 			log.WithError(err).Error("failed to get k8s cli")
@@ -166,11 +171,14 @@ func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esCl
 
 		var response interface{}
 		var stat int
+		flowParams := buildFlowParams(params)
+		opts := []client.ListPagerOption[lapi.L3Flow]{client.WithMaxResults[lapi.L3Flow](int(params.Limit))}
+		pager := client.NewListPager(flowParams, opts...)
 		if len(params.PolicyPreviews) == 0 {
-			response, stat, err = getFlowLogsFromElastic(flowFilter, params, esClient)
+			response, stat, err = getFlowLogsFromElastic(ctx, flowFilter, params.Unprotected, pager, lsclient, params.ClusterName)
 		} else {
 			rbacHelper := NewPolicyImpactRbacHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
-			response, stat, err = getPIPFlowLogsFromElastic(flowFilter, params, pip, rbacHelper)
+			response, stat, err = getPIPFlowLogsFromElastic(ctx, pager, flowFilter, params, pip, rbacHelper)
 		}
 
 		if err != nil {
@@ -306,132 +314,210 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	return params, nil
 }
 
-// applies appropriate filters to an elastic.BoolQuery
-func buildFlowLogsQuery(params *FlowLogsParams) *elastic.BoolQuery {
-	query := elastic.NewBoolQuery()
-	var filters []elastic.Query
+func buildFlowParams(params *FlowLogsParams) *lapi.L3FlowParams {
+	fp := lapi.L3FlowParams{}
+
+	// We will limit the entire response later, but
+	// don't increase the page size above 1000.
+	fp.MaxResults = int(params.Limit)
+	if params.Limit > 1000 {
+		fp.MaxResults = 1000
+	}
 	if len(params.Actions) > 0 {
-		actionsFilter := buildTermsFilter(params.Actions, "action")
-		filters = append(filters, actionsFilter)
+		fp.Actions = []lapi.FlowAction{}
+		for _, a := range params.Actions {
+			fp.Actions = append(fp.Actions, lapi.FlowAction(a))
+		}
 	}
 	if len(params.SourceType) > 0 {
-		sourceTypeFilter := buildTermsFilter(params.SourceType, "source_type")
-		filters = append(filters, sourceTypeFilter)
+		fp.SourceTypes = []lapi.EndpointType{}
+		for _, t := range params.SourceType {
+			fp.SourceTypes = append(fp.SourceTypes, lapi.EndpointType(t))
+		}
 	}
 	if len(params.DestType) > 0 {
-		destTypeFilter := buildTermsFilter(params.DestType, "dest_type")
-		filters = append(filters, destTypeFilter)
+		fp.DestinationTypes = []lapi.EndpointType{}
+		for _, t := range params.DestType {
+			fp.DestinationTypes = append(fp.DestinationTypes, lapi.EndpointType(t))
+		}
 	}
 	if len(params.SourceLabels) > 0 {
-		sourceLabelsFilter := buildLabelSelectorFilter(params.SourceLabels, "source_labels",
-			"source_labels.labels")
-		filters = append(filters, sourceLabelsFilter)
+		fp.SourceSelectors = []lapi.LabelSelector{}
+		for _, sel := range params.SourceLabels {
+			fp.SourceSelectors = append(fp.SourceSelectors, lapi.LabelSelector{
+				Key:      sel.Key,
+				Operator: sel.Operator,
+				Values:   sel.Values,
+			})
+		}
 	}
 	if len(params.DestLabels) > 0 {
-		destLabelsFilter := buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels")
-		filters = append(filters, destLabelsFilter)
-	}
-	if params.startDateTimeESParm != nil || params.endDateTimeESParm != nil {
-		filter := elastic.NewRangeQuery("end_time")
-		if params.startDateTimeESParm != nil {
-			filter = filter.Gte(params.startDateTimeESParm)
+		fp.DestinationSelectors = []lapi.LabelSelector{}
+		for _, sel := range params.DestLabels {
+			fp.DestinationSelectors = append(fp.DestinationSelectors, lapi.LabelSelector{
+				Key:      sel.Key,
+				Operator: sel.Operator,
+				Values:   sel.Values,
+			})
 		}
-		if params.endDateTimeESParm != nil {
-			filter = filter.Lt(params.endDateTimeESParm)
-		}
-		filters = append(filters, filter)
 	}
-
-	if params.Unprotected {
-		filters = append(filters, UnprotectedQuery())
+	if params.startDateTime != nil || params.endDateTime != nil {
+		tr := v1.TimeRange{}
+		if params.startDateTime != nil {
+			tr.From = *params.startDateTime
+		}
+		if params.endDateTime != nil {
+			tr.To = *params.endDateTime
+		}
+		fp.TimeRange = &tr
 	}
 
 	if params.Namespace != "" {
-		namespaceFilter := elastic.NewBoolQuery().
-			Should(
-				elastic.NewTermQuery("source_namespace", params.Namespace),
-				elastic.NewTermQuery("dest_namespace", params.Namespace),
-			).
-			MinimumNumberShouldMatch(1)
-		filters = append(filters, namespaceFilter)
-	}
-	if params.SourceDestNamePrefix != "" {
-		namePrefixFilter := elastic.NewBoolQuery().
-			Should(
-				elastic.NewPrefixQuery("source_name_aggr", params.SourceDestNamePrefix),
-				elastic.NewPrefixQuery("dest_name_aggr", params.SourceDestNamePrefix),
-			).
-			MinimumNumberShouldMatch(1)
-		filters = append(filters, namePrefixFilter)
-	}
-	query = query.Filter(filters...)
-
-	return query
-}
-
-func buildTermsFilter(terms []string, termsKey string) *elastic.TermsQuery {
-	var termValues []interface{}
-	for _, term := range terms {
-		termValues = append(termValues, term)
-	}
-	return elastic.NewTermsQuery(termsKey, termValues...)
-}
-
-// IMPORTANT: This function does not create the correct Elasticsearch query from the label selector and needs to be redone.
-// It tries to find docs that have labels name "<key>.<operator>.<value>" which could be "name!=foobar" or "namecontainsfoobar".
-// The only successful queries generated by this function are those with an operator of "=".
-//
-// Builds a nested filter for LabelSelectors
-// The LabelSelector allows a user describe matching the labels in elasticsearch. If multiple values are specified,
-// a "terms" query will be created with as follows:
-// "terms": {
-// "<labelType>.labels": [
-//
-//	 "<key><operator><value1>",
-//	 "<key><operator><value2>",
-//	 ]
-//	}
-//
-// If only one value is specified a "term" query is created as follows:
-//
-//	"term": {
-//	 "<labelType>.labels": <key><operator><value>"
-//	}
-func buildLabelSelectorFilter(labelSelectors []LabelSelector, path string, termsKey string) *elastic.NestedQuery {
-	var labelValues []interface{}
-	var selectorQueries []elastic.Query
-	for _, selector := range labelSelectors {
-		keyAndOperator := fmt.Sprintf("%s%s", selector.Key, selector.Operator)
-		if len(selector.Values) == 1 {
-			selectorQuery := elastic.NewTermQuery(termsKey, fmt.Sprintf("%s%s", keyAndOperator, selector.Values[0]))
-			selectorQueries = append(selectorQueries, selectorQuery)
-		} else {
-			for _, value := range selector.Values {
-				labelValues = append(labelValues, fmt.Sprintf("%s%s", keyAndOperator, value))
-			}
-			selectorQuery := elastic.NewTermsQuery(termsKey, labelValues...)
-			selectorQueries = append(selectorQueries, selectorQuery)
+		fp.NamespaceMatches = []lapi.NamespaceMatch{
+			{
+				Type:       lapi.MatchTypeAny,
+				Namespaces: []string{params.Namespace},
+			},
 		}
 	}
-	return elastic.NewNestedQuery(path, elastic.NewBoolQuery().Filter(selectorQueries...))
+
+	if params.SourceDestNamePrefix != "" {
+		fp.NameAggrMatches = []lapi.NameMatch{
+			{
+				Type:  lapi.MatchTypeAny,
+				Names: []string{params.SourceDestNamePrefix},
+			},
+		}
+	}
+	return &fp
 }
 
-// This method will take a look at the request parameters made to the /flowLogs endpoint and return the results from elastic.
-func getFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, esClient lmaelastic.Client) (interface{}, int, error) {
-	query := buildFlowLogsQuery(params)
-	index := lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
-	result, err := lmaelastic.GetCompositeAggrFlows(
-		context.TODO(), 60*time.Second, esClient, query, index, flowFilter, params.Limit)
-	if err != nil {
+type bucket struct {
+	DocCount                 int64            `json:"doc_count"`
+	Key                      key              `json:"key"`
+	SumBytesIn               map[string]int64 `json:"sum_bytes_in"`
+	SumBytesOut              map[string]int64 `json:"sum_bytes_out"`
+	SumHttpRequestsAllowedIn map[string]int64 `json:"sum_http_requests_allowed_in"`
+	SumHttpRequestsDeniedIn  map[string]int64 `json:"sum_http_requests_denied_in"`
+	SumNumFlowsCompleted     map[string]int64 `json:"sum_num_flows_completed"`
+	SumNumFlowsStarted       map[string]int64 `json:"sum_num_flows_started"`
+	SumPacketsIn             map[string]int64 `json:"sum_packets_in"`
+	SumPacketsOut            map[string]int64 `json:"sum_packets_out"`
+}
+
+type key struct {
+	Action          string `json:"action"`
+	DestName        string `json:"dest_name"`
+	DestNamespace   string `json:"dest_namespace"`
+	DestType        string `json:"dest_type"`
+	Reporter        string `json:"reporter"`
+	SourceName      string `json:"source_name"`
+	SourceNamespace string `json:"source_namespace"`
+	SourceType      string `json:"source_type"`
+}
+
+// This is temporary logic to mimic the response we used to receive from
+// elasticsearch. Ultimately, we should update the UI to expect the new format, but for now
+// we will just convert the Linseed results into a format the UI understands.
+// Alternatively, maybe we should adjust the Linseed resposne format so that it matches
+// what a flow used to look like from ES.
+func convertToBuckets(items []lapi.L3Flow, unprotectedOnly bool, filter lmaelastic.FlowFilter) []bucket {
+	buckets := []bucket{}
+	for _, f := range items {
+		if unprotectedOnly {
+			// If this is an unprotected query, filter out any flows that have a policy.
+			// We might want to add this as a query parameter to Linseed, but for now we can
+			// filter them here since we need to iterate for conversion anyway.
+			hasPolicy := false
+			for _, p := range f.Policies {
+				if !p.IsProfile {
+					hasPolicy = true
+					break
+				}
+			}
+			if hasPolicy {
+				continue
+			}
+		}
+
+		// Check that this flow is allowed by the filter.
+		if include, err := filter.IncludeLinseedFlow(&f); err != nil {
+			log.WithError(err).Warn("Failed to check flow, skipping")
+			continue
+		} else if !include {
+			log.Debugf("Skipping flow: %#v", f)
+			continue
+		}
+
+		bucket := bucket{
+			Key: key{
+				Action:          string(f.Key.Action),
+				DestName:        f.Key.Destination.AggregatedName,
+				DestNamespace:   lmaelastic.EmptyToDash(f.Key.Destination.Namespace),
+				DestType:        string(f.Key.Destination.Type),
+				Reporter:        string(f.Key.Reporter),
+				SourceName:      f.Key.Source.AggregatedName,
+				SourceNamespace: lmaelastic.EmptyToDash(f.Key.Source.Namespace),
+				SourceType:      string(f.Key.Source.Type),
+			},
+		}
+		if f.TrafficStats != nil {
+			bucket.SumBytesIn = map[string]int64{"value": f.TrafficStats.BytesIn}
+			bucket.SumBytesOut = map[string]int64{"value": f.TrafficStats.BytesOut}
+			bucket.SumPacketsIn = map[string]int64{"value": f.TrafficStats.PacketsIn}
+			bucket.SumPacketsOut = map[string]int64{"value": f.TrafficStats.PacketsOut}
+		}
+		if f.HTTPStats != nil {
+			bucket.SumHttpRequestsAllowedIn = map[string]int64{"value": f.HTTPStats.AllowedIn}
+			bucket.SumHttpRequestsDeniedIn = map[string]int64{"value": f.HTTPStats.DeniedIn}
+
+		}
+		if f.LogStats != nil {
+			bucket.DocCount = f.LogStats.FlowLogCount
+			bucket.SumNumFlowsStarted = map[string]int64{"value": f.LogStats.Started}
+			bucket.SumNumFlowsCompleted = map[string]int64{"value": f.LogStats.Completed}
+		}
+		buckets = append(buckets, bucket)
+	}
+	return buckets
+}
+
+// This method will take a look at the request parameters made to the /flowLogs endpoint and return the results.
+func getFlowLogsFromElastic(
+	ctx context.Context,
+	filter lmaelastic.FlowFilter,
+	unprotected bool,
+	pager client.ListPager[lapi.L3Flow],
+	lsc client.Client,
+	cluster string,
+) (*lmaelastic.CompositeAggregationResults, int, error) {
+	start := time.Now()
+
+	// Perform the paginated list.
+	pages, errors := pager.Stream(ctx, lsc.L3Flows(cluster).List)
+	result := []lapi.L3Flow{}
+	for page := range pages {
+		result = append(result, page.Items...)
+	}
+
+	// Check for errors.
+	if err := <-errors; err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
-	return result, http.StatusOK, nil
+
+	response := lmaelastic.CompositeAggregationResults{
+		Took:     time.Since(start).Milliseconds(),
+		TimedOut: false,
+		Aggregations: map[string]interface{}{
+			"flog_buckets": map[string]interface{}{
+				"buckets": convertToBuckets(result, unprotected, filter),
+			},
+		},
+	}
+	return &response, http.StatusOK, nil
 }
 
 func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
-	query := buildFlowLogsQuery(params)
-	index := lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
-
 	// Convert the input format to the PIP format.
 	// TODO(rlb): We don't need both formats, and the PIP format has the more generically named "Resource" field rather
 	//            than limiting to network policies.
@@ -444,8 +530,6 @@ func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 	}
 
 	return &pippkg.PolicyImpactParams{
-		Query:           query,
-		DocumentIndex:   index,
 		ClusterName:     params.ClusterName,
 		ResourceActions: resourceChanges,
 		Limit:           params.Limit,
@@ -457,8 +541,14 @@ func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 
 // This method will take a look at the request parameters made to the /flowLogs endpoint with pip settings,
 // verify RBAC based on the previewed settings and return the results from elastic.
-func getPIPFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, pip pippkg.PIP, rbacHelper PolicyImpactRbacHelper) (interface{}, int, error) {
-
+func getPIPFlowLogsFromElastic(
+	ctx context.Context,
+	pager client.ListPager[lapi.L3Flow],
+	flowFilter lmaelastic.FlowFilter,
+	params *FlowLogsParams,
+	pip pippkg.PIP,
+	rbacHelper PolicyImpactRbacHelper,
+) (interface{}, int, error) {
 	// Check a NP is supplied in every request.
 	if len(params.PolicyPreviews) == 0 {
 		// Expect the policy preview to contain a network policy.
@@ -488,8 +578,8 @@ func getPIPFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLog
 		}
 	}
 
-	// Fetch results from Elasticsearch
-	response, err := pip.GetFlows(context.TODO(), pipParams, flowFilter)
+	// Fetch results from Linseed.
+	response, err := pip.GetFlows(ctx, pager, pipParams, flowFilter)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err
 	}

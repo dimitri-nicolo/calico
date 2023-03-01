@@ -1,0 +1,201 @@
+{
+  "took": 9,
+  "hits": {
+    "total": {
+      "value": 20,
+      "relation": "eq"
+    }
+  },
+  "aggregations": {
+    "buckets": {
+      "after_key": {
+        "dest_type": "wep",
+        "dest_namespace": "kube-system",
+        "dest_name_aggr": "kube-dns-*",
+        "dest_service_namespace": "kube-system",
+        "dest_service_name": "kube-dns",
+        "dest_service_port_name": "53",
+        "dest_service_port_num": 53,
+        "proto": "udp",
+        "dest_port_num": 53,
+        "source_type": "wep",
+        "source_namespace": "default",
+        "source_name_aggr": "my-deployment",
+        "process_name": "-",
+        "reporter": "src",
+        "action": "allowed"
+      },
+      "buckets": [
+        {
+          "key": {
+            "dest_type": "wep",
+            "dest_namespace": "kube-system",
+            "dest_name_aggr": "kube-dns-*",
+            "dest_service_namespace": "kube-system",
+            "dest_service_name": "kube-dns",
+            "dest_service_port_name": "53",
+            "dest_service_port_num": 53,
+            "proto": "udp",
+            "dest_port_num": 53,
+            "source_type": "wep",
+            "source_namespace": "default",
+            "source_name_aggr": "my-deployment",
+            "process_name": "-",
+            "reporter": "src",
+            "action": "allowed"
+          },
+          "doc_count": 10,
+          "tcp_mean_send_congestion_window": {
+            "value": 0
+          },
+          "sum_tcp_lost_packets": {
+            "value": 0
+          },
+          "sum_tcp_unrecovered_to": {
+            "value": 0
+          },
+          "process_ids_min_num": {
+            "value": 0
+          },
+          "sum_packets_out": {
+            "value": 20
+          },
+          "tcp_min_send_congestion_window": {
+            "value": 0
+          },
+          "policies": {
+            "doc_count": 0,
+            "by_tiered_policy": {
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0,
+              "buckets": []
+            }
+          },
+          "source_labels": {
+            "doc_count": 10,
+            "by_kvpair": {
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0,
+              "buckets": [
+                {
+                  "key": "bread=rye",
+                  "doc_count": 10
+                },
+                {
+                  "key": "cheese=brie",
+                  "doc_count": 10
+                },
+                {
+                  "key": "wine=none",
+                  "doc_count": 10
+                }
+              ]
+            }
+          },
+          "tcp_max_smooth_rtt": {
+            "value": 0
+          },
+          "sum_num_flows": {
+            "value": 10
+          },
+          "dest_labels": {
+            "doc_count": 10,
+            "by_kvpair": {
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0,
+              "buckets": [
+                {
+                  "key": "dest_iteration=0",
+                  "doc_count": 1
+                },
+                {
+                  "key": "dest_iteration=1",
+                  "doc_count": 1
+                },
+                {
+                  "key": "dest_iteration=2",
+                  "doc_count": 1
+                },
+                {
+                  "key": "dest_iteration=3",
+                  "doc_count": 1
+                },
+                {
+                  "key": "dest_iteration=4",
+                  "doc_count": 1
+                },
+                {
+                  "key": "dest_iteration=5",
+                  "doc_count": 1
+                },
+                {
+                  "key": "dest_iteration=6",
+                  "doc_count": 1
+                },
+                {
+                  "key": "dest_iteration=7",
+                  "doc_count": 1
+                },
+                {
+                  "key": "dest_iteration=8",
+                  "doc_count": 1
+                },
+                {
+                  "key": "dest_iteration=9",
+                  "doc_count": 1
+                }
+              ]
+            }
+          },
+          "process_names_max_num": {
+            "value": 0
+          },
+          "sum_num_flows_completed": {
+            "value": 20
+          },
+          "sum_tcp_total_retransmissions": {
+            "value": 0
+          },
+          "sum_num_flows_started": {
+            "value": 30
+          },
+          "tcp_min_mss": {
+            "value": 0
+          },
+          "sum_bytes_in": {
+            "value": 320
+          },
+          "process_names_min_num": {
+            "value": 0
+          },
+          "sum_packets_in": {
+            "value": 10
+          },
+          "process_ids_max_num": {
+            "value": 0
+          },
+          "sum_bytes_out": {
+            "value": 1280
+          },
+          "tcp_mean_smooth_rtt": {
+            "value": 0
+          },
+          "tcp_mean_min_rtt": {
+            "value": 0
+          },
+          "tcp_max_min_rtt": {
+            "value": 0
+          },
+          "tcp_mean_mss": {
+            "value": 0
+          }
+        }
+      ]
+    }
+  },
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "failed": 0
+  }
+}

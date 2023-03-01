@@ -1,0 +1,27 @@
+# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
+policy_module(calico-enterprise, 1.0.0)
+
+gen_require(`
+    type container_file_t;
+    type container_log_t;
+    type container_t;
+    type container_var_run_t;
+    type proc_t;
+')
+
+# read /var/lib/calico
+container_read_lib_files(container_t)
+
+# read and write /var/log/calico
+calico_manage_files(container_log_t)
+
+# read and write /var/run/calico
+calico_manage_files(container_var_run_t)
+
+# read and write /mnt/tigera
+calico_manage_files(container_file_t)
+allow container_t container_file_t:file map;
+
+# nginx
+allow container_t proc_t:filesystem associate;

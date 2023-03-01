@@ -134,3 +134,7 @@ promotions:
     pipeline_file: ../pod2daemon/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Linseed Release
+    pipeline_file: ../linseed/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"

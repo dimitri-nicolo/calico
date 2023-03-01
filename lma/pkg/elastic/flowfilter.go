@@ -4,6 +4,7 @@ package elastic
 import (
 	"sort"
 
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
 )
@@ -11,6 +12,7 @@ import (
 // FlowFilter interface is used by the composite aggregation flow enuemeration to perform additional filtering and
 // processing of the flow.
 type FlowFilter interface {
+	IncludeLinseedFlow(flow *lapi.L3Flow) (include bool, err error)
 	IncludeFlow(flow *CompositeAggregationBucket) (include bool, err error)
 	ModifyFlow(flow *CompositeAggregationBucket) error
 }
@@ -31,8 +33,13 @@ type flowFilterIncludeAll struct{}
 func (f *flowFilterIncludeAll) IncludeFlow(flow *CompositeAggregationBucket) (include bool, err error) {
 	return true, nil
 }
+
 func (f *flowFilterIncludeAll) ModifyFlow(flow *CompositeAggregationBucket) error {
 	return nil
+}
+
+func (f *flowFilterIncludeAll) IncludeLinseedFlow(flow *lapi.L3Flow) (include bool, err error) {
+	return true, nil
 }
 
 // flowFilterUserRBAC implements the flow filter interface. It limits the returned flows to those containing endpoints
@@ -41,7 +48,7 @@ type flowFilterUserRBAC struct {
 	r rbac.FlowHelper
 }
 
-// IncludeFlow implements the FlowFilter interface.
+// Deprecated: Use IncludeLinseedFlow where possible.
 func (f *flowFilterUserRBAC) IncludeFlow(flow *CompositeAggregationBucket) (include bool, err error) {
 	// Check if user is able to list either endpoint.  If they cannot list either endpoint then exclude the flow.
 	if canList, err := f.canListEndpoint(
@@ -53,6 +60,21 @@ func (f *flowFilterUserRBAC) IncludeFlow(flow *CompositeAggregationBucket) (incl
 	} else if canList, err = f.canListEndpoint(
 		flow.CompositeAggregationKey, FlowCompositeSourcesIdxDestType, FlowCompositeSourcesIdxDestNamespace,
 	); err != nil {
+		return false, err
+	} else if canList {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (f *flowFilterUserRBAC) IncludeLinseedFlow(flow *lapi.L3Flow) (include bool, err error) {
+	// Check if user is able to list either endpoint.  If they cannot list either endpoint then exclude the flow.
+	if canList, err := f.r.CanListEndpoint(api.EndpointType(flow.Key.Source.Type), EmptyToDash(flow.Key.Source.Namespace)); err != nil {
+		return false, err
+	} else if canList {
+		return true, nil
+	}
+	if canList, err := f.r.CanListEndpoint(api.EndpointType(flow.Key.Destination.Type), EmptyToDash(flow.Key.Destination.Namespace)); err != nil {
 		return false, err
 	} else if canList {
 		return true, nil
@@ -123,6 +145,5 @@ func (f *flowFilterUserRBAC) obfuscatePolicies(flow *CompositeAggregationBucket)
 func (f *flowFilterUserRBAC) canListEndpoint(k CompositeAggregationKey, epTypeIdx, nsIdx int) (bool, error) {
 	epType := GetFlowEndpointTypeFromCompAggKey(k, epTypeIdx)
 	namespace := k[nsIdx].String()
-
 	return f.r.CanListEndpoint(epType, namespace)
 }

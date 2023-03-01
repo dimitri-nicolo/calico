@@ -36,6 +36,7 @@ require (
 	github.com/florianl/go-nfqueue v1.2.0
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424
 	github.com/ghodss/yaml v1.0.0
+	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-ini/ini v1.63.2
 	github.com/go-openapi/runtime v0.23.3
 	github.com/go-sql-driver/mysql v1.5.0
@@ -100,7 +101,7 @@ require (
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tigera/api v0.0.0-20211119192830-60ae1a27d9ca
 	github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748
-	github.com/vishvananda/netlink v1.2.1-beta.2.0.20220630165224-c591ada0fb2b
+	github.com/vishvananda/netlink v1.2.1-beta.2.0.20230206183746-70ca0345eede
 	github.com/willf/bitset v1.1.11
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0

@@ -15,11 +15,12 @@ import (
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/testutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 type testDispatcher struct {
 	mutex sync.Mutex
-	logs  []*DNSLog
+	logs  []*v1.DNSLog
 }
 
 func (d *testDispatcher) Initialize() error {
@@ -31,12 +32,12 @@ func (d *testDispatcher) Dispatch(logSlice interface{}) error {
 	defer d.mutex.Unlock()
 
 	log.Info("In dispatch")
-	fl := logSlice.([]*DNSLog)
+	fl := logSlice.([]*v1.DNSLog)
 	d.logs = append(d.logs, fl...)
 	return nil
 }
 
-func (d *testDispatcher) getLogs() []*DNSLog {
+func (d *testDispatcher) getLogs() []*v1.DNSLog {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -52,7 +53,6 @@ type testSink struct {
 }
 
 var _ = Describe("DNS Log Reporter", func() {
-
 	var (
 		sinks        []*testSink
 		flushTrigger chan time.Time
@@ -135,7 +135,7 @@ var _ = Describe("DNS Log Reporter", func() {
 		Expect(err).NotTo(HaveOccurred())
 		flushTrigger <- time.Now()
 
-		commonChecks := func(l *DNSLog) {
+		commonChecks := func(l *v1.DNSLog) {
 			Expect(l.ClientNameAggr).To(Equal("test1*"))
 			Expect(l.ClientNamespace).To(Equal("alice"))
 		}

@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -260,6 +261,10 @@ func (q *CompositeAggregationQuery) getMaxBuckets() int {
 //	 }
 //	}
 func (q *CompositeAggregationQuery) ConvertBucket(item *elastic.AggregationBucketCompositeItem) (*CompositeAggregationBucket, error) {
+	return q.ConvertBucketHelper(item, false)
+}
+
+func (q *CompositeAggregationQuery) ConvertBucketHelper(item *elastic.AggregationBucketCompositeItem, allowMissing bool) (*CompositeAggregationBucket, error) {
 	// Extract the data from the response.
 	cab := NewCompositeAggregationBucket(item.DocCount)
 
@@ -270,6 +275,10 @@ func (q *CompositeAggregationQuery) ConvertBucket(item *elastic.AggregationBucke
 		name := q.AggCompositeSourceInfos[i].Name
 		val, ok := item.Key[name]
 		if !ok {
+			if allowMissing {
+				cab.CompositeAggregationKey = append(cab.CompositeAggregationKey, CompositeAggregationSourceValue{Name: name, Value: ""})
+				continue
+			}
 			log.Errorf("Error fetching composite results: %s", name)
 			return nil, fmt.Errorf("error fetching composite results: %s missing from response", name)
 		}
@@ -468,8 +477,7 @@ func (c CompositeAggregationKey) SameBucket(other CompositeAggregationKey) bool 
 
 // CompositeAggregationSourceValue contains the name and value of a source in a composite aggregation key.
 // TODO(rlb): I'm not sure we need the name in this structure since it can be inferred from the Query and we aren't
-//
-//	using it for self-consistency checks when comparing sets of keys.
+// using it for self-consistency checks when comparing sets of keys.
 type CompositeAggregationSourceValue struct {
 	Name  string
 	Value interface{}
@@ -543,13 +551,92 @@ func (c *mockComplianceClient) SearchCompositeAggregations(
 	return searchCompositeAggregationsHelper(ctx, query, startAfterKey, c)
 }
 
+// PagedSearch returns a page of items. If there are more items to retrieve, a key will also be returned
+// which can be used on subsequent calls to retrive the next page.
+func PagedSearch[T any](ctx context.Context,
+	c Client,
+	query *CompositeAggregationQuery,
+	log *logrus.Entry,
+	convert func(*logrus.Entry, *CompositeAggregationBucket) *T,
+	resultsAfter map[string]interface{},
+) ([]T, map[string]interface{}, error) {
+	// Query the document index. We aren't interested in the actual search results but rather only the aggregated
+	// results.
+	searchQuery := c.Backend().Search().
+		Index(query.DocumentIndex).
+		Size(0).
+		Query(query.Query)
+
+	// Construct the Aggregation for the query.
+	compiledCompositeAgg := query.getCompositeAggregation()
+
+	if resultsAfter != nil {
+		log.Debugf("Enumerating after key %+v", resultsAfter)
+		compiledCompositeAgg = compiledCompositeAgg.AggregateAfter(resultsAfter)
+	}
+
+	log.Debugf("Performing composite aggregation against index %s", query.DocumentIndex)
+	queryAgg := searchQuery.Aggregation(query.Name, compiledCompositeAgg)
+	searchResult, err := c.Do(ctx, queryAgg)
+	if err != nil {
+		// We hit an error, exit. This may be a context done error, but that's fine, pass the error on.
+		log.WithError(err).Debugf("Error searching %s", query.DocumentIndex)
+		return nil, nil, err
+	}
+
+	// Exit if the search timed out. We return a very specific error type that can be recognized by the
+	// consumer - this is useful in propagating the timeout up the stack when we are doing server side
+	// aggregation.
+	if searchResult.TimedOut {
+		log.Errorf("Elastic query timed out: %s", query.DocumentIndex)
+		return nil, nil, TimedOutError(fmt.Sprintf("timed out querying %s", query.DocumentIndex))
+	}
+
+	// Extract the buckets from the search results. If there are no results the buckets item will not be
+	// present.
+	// TODO(rlb): If this processing proves to be too slow we may need to use a streaming json unserializer and
+	//           hook directly into the HTTP client.
+	rawResults, ok := searchResult.Aggregations.Composite(query.Name)
+	if !ok {
+		log.Infof("No results for composite query of %s", query.DocumentIndex)
+		return nil, nil, nil
+	}
+
+	// Loop through each of the items in the buckets and convert to a page of objects.
+	page := []T{}
+	for _, item := range rawResults.Buckets {
+		log.Debugf("Processing bucket built from %d logs", item.DocCount)
+		cab, err := query.ConvertBucket(item)
+		if err != nil {
+			log.WithError(err).Error("error processing ES composite aggregation bucket")
+			return nil, nil, err
+
+		}
+
+		// Now convert to the desired output type.
+		if obj := convert(log, cab); obj != nil {
+			page = append(page, *obj)
+		}
+	}
+
+	// If we get fewer than the requested number of buckets, or if there is no AfterKey, it means that there are no more
+	// pages to be queried. So, just return the page without any continuation key.
+	if len(rawResults.Buckets) < query.getMaxBuckets() || rawResults.AfterKey == nil || len(rawResults.AfterKey) == 0 {
+		log.Debugf("Completed processing %s", query.DocumentIndex)
+		return page, nil, nil
+	}
+
+	// There's another page after this one - return the AfterKey so that callers can
+	// use it to query the next page.
+	return page, rawResults.AfterKey, nil
+}
+
 func searchCompositeAggregationsHelper(
 	ctx context.Context,
 	query *CompositeAggregationQuery,
 	startAfterKey CompositeAggregationKey,
 	c Client,
 ) (<-chan *CompositeAggregationBucket, <-chan error) {
-
 	// Create the results and errs channel.
 	results := make(chan *CompositeAggregationBucket, resultBucketSize)
 	errs := make(chan error, 1)
@@ -613,7 +700,7 @@ func searchCompositeAggregationsHelper(
 
 			// Extract the buckets from the search results. If there are no results the buckets item will not be
 			// present.
-			//TODO(rlb): If this processing proves to be too slow we may need to use a streaming json unserializer and
+			// TODO(rlb): If this processing proves to be too slow we may need to use a streaming json unserializer and
 			//           hook directly into the HTTP client.
 			rawResults, ok := searchResult.Aggregations.Composite(query.Name)
 			if !ok {

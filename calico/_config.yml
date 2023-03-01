@@ -84,7 +84,7 @@ imageNames:
   prometheusOperator: tigera/prometheus-operator
   windows: tigera/calico-windows
   windows-upgrade: tigera/calico-windows-upgrade
-  csi-driver: docker.io/calico/csi
+  csi: tigera/csi
 
 # List of files to exclude. These files won't get included in the deployed site.
 exclude:
@@ -184,5 +184,5 @@ defaults:
         prometheusOperator: tigera/prometheus-operator
         windows: tigera/calico-windows
         windows-upgrade: tigera/calico-windows-upgrade
-        csi-driver: calico/csi
+        csi: tigera/csi
         csi-node-driver-registrar: calico/node-driver-registrar

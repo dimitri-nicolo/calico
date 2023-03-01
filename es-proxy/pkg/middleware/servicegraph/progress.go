@@ -13,43 +13,43 @@ const (
 	logEvery = 5000
 )
 
-// Create a new zeroed elasticProgress.
-func newElasticProgress(name string, tr lmav1.TimeRange) *elasticProgress {
+// Create a new zeroed progressMeter.
+func newProgress(name string, tr lmav1.TimeRange) *progressMeter {
 	logCxt := log.WithField("name", name+"("+tr.String()+")")
 	logCxt.Info("Starting background enumeration")
-	p := &elasticProgress{
+	p := &progressMeter{
 		start:  time.Now(),
 		logCxt: logCxt,
 	}
 	return p
 }
 
-// elasticProgress is used to track and log elasticsearch query progress. The various elastic queries update the
+// progressMeter is used to track and log query progress. The various queries update the
 // progress incrementing for each enumerated raw flow and aggregated entry.  The helper logs every `logEvery` raw flows
 // and when the enumeration is complete.
-type elasticProgress struct {
+type progressMeter struct {
 	start      time.Time
 	logCxt     *log.Entry
 	raw        int
 	aggregated int
 }
 
-func (p *elasticProgress) IncRaw() {
+func (p *progressMeter) IncRaw() {
 	p.raw++
 	if p.raw%logEvery == 0 {
 		p.logCxt.Infof("Enumeration update: %d raw logs aggregated to %d cache entries", p.raw, p.aggregated)
 	}
 }
 
-func (p *elasticProgress) IncAggregated() {
+func (p *progressMeter) IncAggregated() {
 	p.aggregated++
 }
 
-func (p *elasticProgress) SetAggregated(num int) {
+func (p *progressMeter) SetAggregated(num int) {
 	p.aggregated = num
 }
 
-func (p *elasticProgress) Complete(err error) {
+func (p *progressMeter) Complete(err error) {
 	if err == nil {
 		p.logCxt.Infof("Enumeration complete: %d raw logs aggregated to %d cache entries", p.raw, p.aggregated)
 	} else {

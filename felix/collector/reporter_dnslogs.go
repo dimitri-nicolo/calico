@@ -11,10 +11,11 @@ import (
 
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 type DNSLogGetter interface {
-	Get() []*DNSLog
+	Get() []*v1.DNSLog
 }
 
 type DNSLogAggregator interface {

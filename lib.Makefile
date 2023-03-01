@@ -795,6 +795,8 @@ semaphore-run-auto-pin-update-workflows:
 # Generate testify mocks in the build container.
 gen-mocks:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(MAKE) mockery-run'
+	# The generated files need import reordering to pass static-checks
+	$(MAKE) fix
 
 # Run mockery for each path in MOCKERY_FILE_PATHS. The the generated mocks are
 # created in package and in test files. Look here for more information https://github.com/vektra/mockery
@@ -1403,9 +1405,11 @@ ELASTIC_IMAGE   ?= docker.elastic.co/elasticsearch/elasticsearch:$(ELASTIC_VERSI
 
 ## Run elasticsearch as a container (tigera-elastic)
 .PHONY: run-elastic
-run-elastic: stop-elastic
+run-elastic: $(REPO_ROOT)/.elasticsearch.created
+$(REPO_ROOT)/.elasticsearch.created:
 	# Run ES on Docker.
 	docker run --detach \
+	-m 2GB \
 	--net=host \
 	--name=tigera-elastic \
 	-e "discovery.type=single-node" \
@@ -1413,9 +1417,15 @@ run-elastic: stop-elastic
 
 	# Wait until ES is accepting requests.
 	@while ! docker exec tigera-elastic curl localhost:9200 2> /dev/null; do echo "Waiting for Elasticsearch to come up..."; sleep 2; done
+	touch $@
+
+	# Configure elastic to ignore high watermark errors, since this is just for tests.
+	curl -XPUT -H "Content-Type: application/json" http://localhost:9200/_cluster/settings -d '{"transient": {"cluster.routing.allocation.disk.threshold_enabled": false }}'
+	curl -XPUT -H "Content-Type: application/json" http://localhost:9200/_all/_settings -d '{"index.blocks.read_only_allow_delete": null}'
 
 ## Stop elasticsearch with name tigera-elastic
 .PHONY: stop-elastic
 stop-elastic:
 	-docker rm -f tigera-elastic
+	rm -rf $(REPO_ROOT)/.elasticsearch.created
 

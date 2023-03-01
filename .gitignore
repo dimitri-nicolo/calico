@@ -32,3 +32,4 @@ pod2daemon/node-driver-registrar/
 charts/tigera-operator/charts
 crypto/tmp
 
+metadata.yaml

@@ -1,13 +1,15 @@
 package pip
 
 import (
-	"bytes"
 	"context"
-	"text/template"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 
@@ -23,18 +25,6 @@ type epData struct {
 	Namespace string
 	NameAggr  string
 	Port      int
-}
-
-// flowData encapsulates flow data for these tests. It is not a full representation, merely enough to make the
-// aggregation interesting - we have tested the actual aggregation of composite objects specificially in other UTs so
-// don't need to worry about full tests here.
-type flowData struct {
-	Reporter    string
-	Protocol    string
-	Action      string
-	Source      epData
-	Destination epData
-	Policies    []string
 }
 
 // wepd creates an epData for a WEP.
@@ -57,152 +47,57 @@ func hepd(name string, port int) epData {
 	}
 }
 
-var (
-	// Template for an ES response. We only include a single flow in each response, but set the key to ensure we
-	// continue enumerating.
-	flowTemplate, _ = template.New("flow").Parse(`{
-  "took": 791,
-  "timed_out": false,
-  "_shards": {
-    "total": 15,
-    "successful": 15,
-    "skipped": 0,
-    "failed": 0
-  },
-  "hits": {
-    "total": {
-      "relation": "eq",
-      "value": 26095
-    },
-    "max_score": 0,
-    "hits": []
-  },
-  "aggregations": {
-    "flog_buckets": {
-      "after_key": {
-        "source_type": "{{ .Source.Type }}",
-        "source_namespace": "{{ .Source.Namespace }}",
-        "source_name": "{{ .Source.NameAggr }}",
-        "dest_type": "{{ .Destination.Type }}",
-        "dest_namespace":  "{{ .Destination.Namespace }}",
-        "dest_name":  "{{ .Destination.NameAggr }}",
-        "reporter": "{{ .Reporter }}",
-        "action": "{{ .Action }}",
-        "proto": "{{ .Protocol }}",
-        "source_ip": "0.0.0.0",
-        "source_name_full": "-",
-        "source_port": {{ .Source.Port }},
-        "dest_ip": "0.0.0.0",
-        "dest_name_full": "-",
-        "dest_port": {{ .Destination.Port }}
-      },
-      "buckets": [
-        {
-          "key": {
-            "source_type": "{{ .Source.Type }}",
-            "source_namespace": "{{ .Source.Namespace }}",
-            "source_name": "{{ .Source.NameAggr }}",
-            "dest_type": "{{ .Destination.Type }}",
-            "dest_namespace":  "{{ .Destination.Namespace }}",
-            "dest_name":  "{{ .Destination.NameAggr }}",
-            "reporter": "{{ .Reporter }}",
-            "action": "{{ .Action }}",
-            "proto": "{{ .Protocol }}",
-            "source_ip": "0.0.0.0",
-            "source_name_full": "-",
-            "source_port": {{ .Source.Port }},
-            "dest_ip": "0.0.0.0",
-            "dest_name_full": "-",
-            "dest_port": {{ .Destination.Port }}
-          },
-          "doc_count": 1,
-          "sum_http_requests_denied_in": {
-            "value": 1
-          },
-          "sum_num_flows_started": {
-            "value": 1
-          },
-          "sum_bytes_in": {
-            "value": 1
-          },
-          "sum_packets_out": {
-            "value": 1
-          },
-          "sum_packets_in": {
-            "value": 1
-          },
-          "policies": {
-            "doc_count": 1,
-            "by_tiered_policy": {
-              "doc_count_error_upper_bound": 0,
-              "sum_other_doc_count": 0,
-              "buckets": [
-{{$first := true}}{{range $key, $value := .Policies }}{{if $first}}{{$first = false}}{{else}}                },
-{{end}}                {
-                  "key": "{{$key}}|{{$value}}",
-                  "doc_count": 1
-{{end}}
-                }
-              ]
-            }
-          },
-          "source_labels": {
-            "doc_count": 1,
-            "by_kvpair": {
-              "buckets": [
-                {
-                  "key": "cluster=tigera-elasticsearch",
-                  "doc_count": 1
-                }
-              ]
-            }
-          },
-          "sum_bytes_out": {
-            "value": 1
-          },
-          "dest_labels": {
-            "doc_count": 1,
-            "by_kvpair": {
-              "buckets": [
-                {
-                  "key": "cluster=tigera-elasticsearch",
-                  "doc_count": 1
-                }
-              ]
-            }
-          },
-          "sum_http_requests_allowed_in": {
-            "value": 1
-          },
-          "sum_num_flows_completed": {
-            "value": 1
-          }
-        }
-      ]
-    }
-  }
-}`)
-
-	defaultPolicy = "allow-cnx|calico-monitoring/allow-cnx.elasticsearch-access|allow"
-)
-
-// flow generates an ES flow response used by the mock ES client.
-func flow(reporter, action, protocol string, source, dest epData, policies ...string) string {
+func flow(reporter, action, protocol string, source, dest epData, policies ...string) lapi.L3Flow {
 	if len(policies) == 0 {
+		defaultPolicy := "0|allow-cnx|calico-monitoring/allow-cnx.elasticsearch-access|allow"
 		policies = []string{defaultPolicy}
 	}
-	fd := flowData{
-		Reporter:    reporter,
-		Protocol:    protocol,
-		Action:      action,
-		Source:      source,
-		Destination: dest,
-		Policies:    policies,
+
+	flow := lapi.L3Flow{
+		Key: lapi.L3FlowKey{
+			Reporter: lapi.FlowReporter(reporter),
+			Action:   lapi.FlowAction(action),
+			Protocol: protocol,
+			Source: lapi.Endpoint{
+				Type:           v1.EndpointType(source.Type),
+				Namespace:      source.Namespace,
+				AggregatedName: source.NameAggr,
+				Port:           int64(source.Port),
+			},
+			Destination: lapi.Endpoint{
+				Type:           v1.EndpointType(dest.Type),
+				Namespace:      dest.Namespace,
+				AggregatedName: dest.NameAggr,
+				Port:           int64(dest.Port),
+			},
+		},
+		LogStats: &lapi.LogStats{
+			FlowLogCount: 1,
+		},
 	}
-	var tpl bytes.Buffer
-	err := flowTemplate.Execute(&tpl, fd)
-	Expect(err).NotTo(HaveOccurred())
-	return tpl.String()
+
+	// Parse policies in the same way Linseed would produce them.
+	for _, p := range policies {
+		hit, err := api.PolicyHitFromFlowLogPolicyString(p, 1)
+		Expect(err).NotTo(HaveOccurred())
+
+		name := hit.Name()
+		if hit.IsProfile() {
+			name = fmt.Sprintf("kns.%s", name)
+		}
+		flow.Policies = append(flow.Policies, lapi.Policy{
+			Tier:         hit.Tier(),
+			Namespace:    hit.Namespace(),
+			Name:         name,
+			Action:       string(hit.Action()),
+			IsStaged:     hit.IsStaged(),
+			IsKubernetes: hit.IsKubernetes(),
+			IsProfile:    hit.IsProfile(),
+			Count:        hit.Count(),
+			RuleID:       hit.RuleIdIndex(),
+		})
+	}
+	return flow
 }
 
 // alwaysAllowCalculator implements the policy calculator interface with an always allow source and dest response for
@@ -314,14 +209,12 @@ var _ = Describe("Test relationship between PIP and API queries", func() {
 		Expect(PIPCompositeSourcesRawIdxDestType).To(Equal(elastic.FlowCompositeSourcesIdxDestType))
 		Expect(PIPCompositeSourcesRawIdxDestNamespace).To(Equal(elastic.FlowCompositeSourcesIdxDestNamespace))
 		Expect(PIPCompositeSourcesRawIdxDestNameAggr).To(Equal(elastic.FlowCompositeSourcesIdxDestNameAggr))
-
 	})
 })
 
-var _ = Describe("Test handling of aggregated ES response", func() {
+var _ = Describe("Test handling of aggregated response", func() {
 	It("handles simple aggregation of results where action does not change", func() {
-		By("Creating an ES client with a mocked out search results with all allow actions")
-		client := elastic.NewMockSearchClient([]interface{}{
+		flows := []lapi.L3Flow{
 			// Dest api.
 			flow("dst", "allow", "tcp", hepd("hep1", 100), hepd("hep2", 200)), // + Aggregate before and after
 			flow("dst", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)), // |
@@ -332,20 +225,27 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			flow("src", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), // +
 			// WEP
 			flow("src", "allow", "tcp", wepd("hep1", "ns1", 100), hepd("hep2", 200)), // Missing dest flow
-		})
-
-		By("Creating a composite agg query")
-		q := &elastic.CompositeAggregationQuery{
-			Name:                    api.FlowlogBuckets,
-			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
-			AggSumInfos:             elastic.FlowAggregationSums,
-			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
 		}
 
+		// listFn mocks out results from Linseed.
+		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+			return &v1.List[lapi.L3Flow]{
+				Items: flows,
+			}, nil
+		}
+
+		p := lapi.L3FlowParams{}
+		p.MaxResults = 1 // Iterate after only a single response.
+		pager := client.NewMockListPager(&p, listFn)
+
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
-		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{}, 1000, false, elastic.NewFlowFilterIncludeAll())
+		pip := pip{lsclient: client.NewMockClient(""), cfg: config.MustLoadConfig()}
+		flowsChan, errors := pip.SearchAndProcessFlowLogs(context.Background(), pager, "cluster", alwaysAllowCalculator{}, 1000, false, elastic.NewFlowFilterIncludeAll())
+
+		// We shouldn't get an error.
+		err := <-errors
+		Expect(err).NotTo(HaveOccurred())
+
 		var before []*elastic.CompositeAggregationBucket
 		var after []*elastic.CompositeAggregationBucket
 		for flow := range flowsChan {
@@ -437,8 +337,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 	})
 
 	It("handles source flows changing from deny to allow", func() {
-		By("Creating an ES client with a mocked out ES results being a mixture of allow and deny")
-		client := elastic.NewMockSearchClient([]interface{}{
+		flows := []lapi.L3Flow{
 			// Dest api.
 			// flow("dst", "allow", "tcp", hepd("hep1", 100), hepd("hep2", 200)), <- this flow is now deny at source,
 			//                                                                       but will reappear in "after flows"
@@ -450,20 +349,22 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			flow("src", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), // + before       // +
 			// WEP
 			flow("src", "allow", "tcp", wepd("hep1", "ns1", 100), hepd("hep2", 200)), // Missing dest flow
-		})
-
-		By("Creating a composite agg query")
-		q := &elastic.CompositeAggregationQuery{
-			Name:                    api.FlowlogBuckets,
-			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
-			AggSumInfos:             elastic.FlowAggregationSums,
-			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
 		}
 
+		// listFn mocks out results from Linseed.
+		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+			return &v1.List[lapi.L3Flow]{
+				Items: flows,
+			}, nil
+		}
+
+		p := lapi.L3FlowParams{}
+		p.MaxResults = 1 // Iterate after only a single response.
+		pager := client.NewMockListPager(&p, listFn)
+
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
-		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{}, 1000, false, elastic.NewFlowFilterIncludeAll())
+		pip := pip{lsclient: client.NewMockClient(""), cfg: config.MustLoadConfig()}
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), pager, "cluster", alwaysAllowCalculator{}, 1000, false, elastic.NewFlowFilterIncludeAll())
 		var before []*elastic.CompositeAggregationBucket
 		var after []*elastic.CompositeAggregationBucket
 		for flow := range flowsChan {
@@ -581,8 +482,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 	})
 
 	It("handles source flows changing from allow to deny", func() {
-		By("Creating an ES client with a mocked out ES results being a mixture of allow and deny")
-		client := elastic.NewMockSearchClient([]interface{}{
+		flows := []lapi.L3Flow{
 			flow("dst", "deny", "udp", hepd("hep1", 100), hepd("hep2", 200)),
 			flow("src", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)),
 			flow("src", "deny", "tcp", hepd("hep1", 100), hepd("hep2", 200)),
@@ -591,20 +491,22 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			flow("src", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)),
 
 			flow("src", "allow", "tcp", wepd("hep1", "ns1", 100), hepd("hep2", 200)),
-		})
-
-		By("Creating a composite agg query")
-		q := &elastic.CompositeAggregationQuery{
-			Name:                    api.FlowlogBuckets,
-			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
-			AggSumInfos:             elastic.FlowAggregationSums,
-			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
 		}
 
+		// listFn mocks out results from Linseed.
+		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+			return &v1.List[lapi.L3Flow]{
+				Items: flows,
+			}, nil
+		}
+
+		p := lapi.L3FlowParams{}
+		p.MaxResults = 1 // Iterate after only a single response.
+		pager := client.NewMockListPager(&p, listFn)
+
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always deny after)")
-		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysDenyCalculator{}, 1000, false, elastic.NewFlowFilterIncludeAll())
+		pip := pip{lsclient: client.NewMockClient(""), cfg: config.MustLoadConfig()}
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), pager, "cluster", alwaysDenyCalculator{}, 1000, false, elastic.NewFlowFilterIncludeAll())
 		var before []*elastic.CompositeAggregationBucket
 		var after []*elastic.CompositeAggregationBucket
 		for flow := range flowsChan {
@@ -709,8 +611,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 	})
 
 	It("Should return only impacted flows when impactedOnly parameter is set to true", func() {
-		By("Creating an ES client with a mocked out ES results being a mixture of allow and deny")
-		client := elastic.NewMockSearchClient([]interface{}{
+		flows := []lapi.L3Flow{
 			// Dest api.
 			// flow("dst", "allow", "tcp", hepd("hep1", 100), hepd("hep2", 200)), <- this flow is now deny at source,
 			//                                                                       but will reappear in "after flows"
@@ -722,20 +623,21 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			flow("src", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), // + before       // +
 			// WEP
 			flow("src", "allow", "tcp", wepd("hep1", "ns1", 100), hepd("hep2", 200)), // Missing dest flow
-		})
-
-		By("Creating a composite agg query")
-		q := &elastic.CompositeAggregationQuery{
-			Name:                    api.FlowlogBuckets,
-			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
-			AggSumInfos:             elastic.FlowAggregationSums,
-			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
 		}
 
-		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
-		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{}, 1000, true, elastic.NewFlowFilterIncludeAll())
+		// listFn mocks out results from Linseed.
+		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+			return &v1.List[lapi.L3Flow]{
+				Items: flows,
+			}, nil
+		}
+
+		p := lapi.L3FlowParams{}
+		p.MaxResults = 1 // Iterate after only a single response.
+		pager := client.NewMockListPager(&p, listFn)
+
+		pip := pip{lsclient: client.NewMockClient(""), cfg: config.MustLoadConfig()}
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), pager, "cluster", alwaysAllowCalculator{}, 1000, true, elastic.NewFlowFilterIncludeAll())
 		var before []*elastic.CompositeAggregationBucket
 		for flow := range flowsChan {
 			before = append(before, flow.Before...)

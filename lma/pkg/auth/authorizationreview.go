@@ -39,33 +39,29 @@ func PerformAuthorizationReview(
 	return ar.Status.AuthorizedResourceVerbs, nil
 }
 
-var (
-	// The set of authorization resource attributes that are required for filtering the various elasticsearch logs.
-	authReviewAttrListEndpoints = []v3.AuthorizationReviewResourceAttributes{{
-		APIGroup: "projectcalico.org",
-		Resources: []string{
-			"hostendpoints", "networksets", "globalnetworksets", "networkpolicies", "globalnetworkpolicies",
-			"packetcaptures",
-		},
-		Verbs: []string{"list"},
-	}, {
-		APIGroup:  "",
-		Resources: []string{"pods", "nodes", "events"},
-		Verbs:     []string{"list"},
-	}, {
-		APIGroup:  "networking.k8s.io",
-		Resources: []string{"networkpolicies"},
-		Verbs:     []string{"list"},
-	}}
-)
+// The set of authorization resource attributes that are required for filtering the various elasticsearch logs.
+var authReviewAttrListEndpoints = []v3.AuthorizationReviewResourceAttributes{{
+	APIGroup: "projectcalico.org",
+	Resources: []string{
+		"hostendpoints", "networksets", "globalnetworksets", "networkpolicies", "globalnetworkpolicies",
+		"packetcaptures",
+	},
+	Verbs: []string{"list"},
+}, {
+	APIGroup:  "",
+	Resources: []string{"pods", "nodes", "events"},
+	Verbs:     []string{"list"},
+}, {
+	APIGroup:  "networking.k8s.io",
+	Resources: []string{"networkpolicies"},
+	Verbs:     []string{"list"},
+}}
 
-// PerformUserAuthorizationReviewForElasticLogs performs an authorization review impersonating the user.
+// PerformUserAuthorizationReviewForLogs performs an authorization review impersonating the user.
 //
 // This function requests a set of permissions for the various endpoint types and policy types, used for filtering
 // flow logs and other elastic logs.
-func PerformUserAuthorizationReviewForElasticLogs(
-	ctx context.Context, csFactory k8s.ClientSetFactory, user user.Info, cluster string,
-) ([]v3.AuthorizedResourceVerbs, error) {
+func PerformUserAuthorizationReviewForLogs(ctx context.Context, csFactory k8s.ClientSetFactory, user user.Info, cluster string) ([]v3.AuthorizedResourceVerbs, error) {
 	cs, err := csFactory.NewClientSetForUser(user, cluster)
 	if err != nil {
 		return nil, err

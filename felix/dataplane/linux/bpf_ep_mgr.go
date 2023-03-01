@@ -270,6 +270,7 @@ func newBPFEndpointManager(
 	iptablesFilterTable iptablesTable,
 	livenessCallback func(),
 	opReporter logutils.OpRecorder,
+	featureDetector environment.FeatureDetectorIface,
 
 	// CaliEnt args below
 
@@ -377,8 +378,9 @@ func newBPFEndpointManager(
 			nil, // deviceRouteSourceAddress
 			config.DeviceRouteProtocol,
 			true, // removeExternalRoutes
-			254,
+			unix.RT_TABLE_MAIN,
 			opReporter,
+			featureDetector,
 		)
 		m.services = make(map[serviceKey][]ip.V4CIDR)
 		m.dirtyServices = set.New[serviceKey]()
@@ -1755,11 +1757,11 @@ func (m *bpfEndpointManager) ensureBPFDevices() error {
 
 	bpfin, err := netlink.LinkByName(bpfInDev)
 	if err != nil {
+		la := netlink.NewLinkAttrs()
+		la.Name = bpfInDev
 		nat := &netlink.Veth{
-			LinkAttrs: netlink.LinkAttrs{
-				Name: bpfInDev,
-			},
-			PeerName: bpfOutDev,
+			LinkAttrs: la,
+			PeerName:  bpfOutDev,
 		}
 		if err := netlink.LinkAdd(nat); err != nil {
 			return fmt.Errorf("failed to add %s: %w", bpfInDev, err)

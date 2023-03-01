@@ -50,9 +50,7 @@ func (h alertsIndexHelper) NewSelectorQuery(selector string) (elastic.Query, err
 	return JsonObjectElasticQuery(converter.Convert(q)), nil
 }
 
-func (h alertsIndexHelper) NewRBACQuery(
-	resources []apiv3.AuthorizedResourceVerbs,
-) (elastic.Query, error) {
+func (h alertsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceVerbs) (elastic.Query, error) {
 	return nil, nil
 }
 
