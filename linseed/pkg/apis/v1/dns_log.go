@@ -438,7 +438,7 @@ func (d *DNSRRSets) String() string {
 
 	for _, n := range names {
 		for _, r := range data[n] {
-			s = append(s, fmt.Sprintf("%s %s", n.String(), r))
+			s = append(s, fmt.Sprintf("%s %s", n.String(), r.String()))
 		}
 	}
 	return strings.Join(s, "\n")
