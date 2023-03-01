@@ -2761,7 +2761,7 @@ func (p packet) StateIn() state.State {
 		preNATDstAddr = p.preNATDstAddr
 		preNATDstPort = p.preNATDstPort
 	}
-	flags := uint8(0)
+	flags := uint64(0)
 	if p.fromHostFlag {
 		flags |= polprog.FlagSrcIsHost
 	}

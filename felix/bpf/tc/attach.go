@@ -70,6 +70,8 @@ type AttachPoint struct {
 	IPv6Enabled             bool
 	MapSizes                map[string]uint32
 	RPFStrictEnabled        bool
+	NATin                   uint32
+	NATout                  uint32
 	EGWVxlanPort            uint16
 	EgressIPEnabled         bool
 	EgressGatewayHealthPort uint16
@@ -196,7 +198,7 @@ func (ap AttachPoint) AttachProgram() (int, error) {
 	}
 
 	isHost := false
-	if ap.Type == "host" || ap.Type == "nat" {
+	if ap.Type == "host" || ap.Type == "nat" || ap.Type == "lo" {
 		isHost = true
 	}
 
@@ -682,6 +684,8 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		PSNatLen:      ap.PSNATEnd,
 		VethNS:        ap.VethNS,
 		WgPort:        ap.WgPort,
+		NatIn:         ap.NATin,
+		NatOut:        ap.NATout,
 		EgwVxlanPort:  ap.EGWVxlanPort,
 		EgwHealthPort: ap.EgressGatewayHealthPort,
 	}

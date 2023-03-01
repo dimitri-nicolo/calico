@@ -138,7 +138,10 @@ void bpf_tc_set_globals(struct bpf_map *map,
 			uint host_tunnel_ip,
 			ushort if_ns,
 			uint flags,
-			ushort wg_port, ushort egw_vxlan_port,
+			ushort wg_port,
+			uint natin,
+			uint natout,
+			ushort egw_vxlan_port,
 			ushort egw_health_port)
 {
 	struct cali_tc_globals data = {
@@ -153,6 +156,8 @@ void bpf_tc_set_globals(struct bpf_map *map,
 		.if_ns = if_ns,
 		.flags = flags,
 		.wg_port = wg_port,
+		.natin_idx = natin,
+		.natout_idx = natout,
 		.egw_vxlan_port = egw_vxlan_port,
 		.egw_health_port = egw_health_port,
 	};
