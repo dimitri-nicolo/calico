@@ -51,14 +51,14 @@ build:
 	git submodule update
 
 clean:
-	rm -rf docker/Dockerfile \
-		   Makefile.*
-	bash -l -c '\
-		cd kibana && \
-		nvm install && nvm use && \
-		yarn kbn clean && yarn cache clean'
+	rm -f Makefile.*
+	git submodule foreach --recursive git reset --hard
+	git submodule foreach --recursive git clean -dfx
 
-kibana-bootstrap:
+kibana-patch:
+	patch -d kibana -p1 < patches/0001-Apply-Tigera-customizations-to-Kibana.patch
+
+kibana-bootstrap: kibana-patch
 	bash -l -c '\
 		cd kibana && \
 		nvm install && nvm use && \
@@ -74,8 +74,11 @@ KIBANA_VERSION=$(shell jq -r '.version' kibana/package.json)
 
 image: $(KIBANA_IMAGE)
 $(KIBANA_IMAGE):
-	cd docker && KIBANA_VERSION=$(KIBANA_VERSION) bash Dockerfile-template.sh
-	docker build $(DOCKER_BUILD) --build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) -t $(KIBANA_IMAGE):latest-$(ARCH) --file ./docker/Dockerfile docker/.
+	docker build $(DOCKER_BUILD) \
+		--build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) \
+		--build-arg KIBANA_VERSION=$(KIBANA_VERSION) \
+		-f docker/Dockerfile.amd64 \
+		-t $(KIBANA_IMAGE):latest-$(ARCH) docker/
 ifeq ($(ARCH),amd64)
 	docker tag $(KIBANA_IMAGE):latest-$(ARCH) $(KIBANA_IMAGE):latest
 endif
