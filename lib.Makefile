@@ -1321,7 +1321,7 @@ kind $(KIND):
 
 kubectl $(KUBECTL):
 	mkdir -p $(KIND_DIR)
-	curl -L https://storage.googleapis.com/kubernetes-release/release/$(K8S_VERSION)/bin/linux/$(ARCH)/kubectl -o $@
+	curl -L https://storage.googleapis.com/kubernetes-release/release/$(KUBECTL_VERSION)/bin/linux/$(ARCH)/kubectl -o $@
 	chmod +x $@
 
 bin/helm:
@@ -1400,7 +1400,6 @@ help:
 ###############################################################################
 # Common functions for launching a local Elastic instance.
 ###############################################################################
-ELASTIC_VERSION ?= 7.17.7
 ELASTIC_IMAGE   ?= docker.elastic.co/elasticsearch/elasticsearch:$(ELASTIC_VERSION)
 
 ## Run elasticsearch as a container (tigera-elastic)
