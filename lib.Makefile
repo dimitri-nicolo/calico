@@ -172,7 +172,7 @@ define build_static_cgo_boring_binary
         $(GO_BUILD_IMAGE):$(GO_BUILD_VER) \
         sh -c '$(GIT_CONFIG_SSH) \
             GOEXPERIMENT=boringcrypto go build -o $(2)  \
-            -tags fipsstrict,osusergo,netgo -v -buildvcs=false \
+            -tags fipsstrict,osusergo,netgo$(if $(BUILD_TAGS),$(comma)$(BUILD_TAGS)) -v -buildvcs=false \
             -ldflags "$(LDFLAGS) -linkmode external -extldflags -static" \
             $(1) \
             && go tool nm $(2) | grep '_Cfunc__goboringcrypto_' 1> /dev/null'
@@ -193,7 +193,7 @@ define build_cgo_boring_binary
         $(GO_BUILD_IMAGE):$(GO_BUILD_VER) \
         sh -c '$(GIT_CONFIG_SSH) \
             GOEXPERIMENT=boringcrypto go build -o $(2)  \
-            -tags fipsstrict -v -buildvcs=false \
+            -tags fipsstrict$(if $(BUILD_TAGS),$(comma)$(BUILD_TAGS)) -v -buildvcs=false \
             -ldflags "$(LDFLAGS)" \
             $(1) \
             && go tool nm $(2) | grep '_Cfunc__goboringcrypto_' 1> /dev/null'
