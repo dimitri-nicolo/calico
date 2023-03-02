@@ -85,13 +85,13 @@ var _ = Describe("role mapping listenAndSynchronize", func() {
 				Parameters: []interface{}{
 					[]rbacv1.PolicyRule{{
 						APIGroups:     []string{"lma.tigera.io"},
-						ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
+						ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "waf", "runtime", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
 						Resources:     []string{"*"},
 					}},
 					elasticsearch.RoleMapping{
 						Name: "tigera-k8s-test-resource",
 						Roles: []string{"flows_viewer", "audit_viewer", "audit_ee_viewer",
-							"audit_kube_viewer", "events_viewer", "dns_viewer", "l7_viewer", "kibana_viewer", "kibana_admin", "superuser",
+							"audit_kube_viewer", "events_viewer", "dns_viewer", "l7_viewer", "waf_viewer", "runtime_viewer", "kibana_viewer", "kibana_admin", "superuser",
 						},
 						Rules: map[string][]elasticsearch.Rule{
 							"any": {
@@ -116,16 +116,16 @@ var _ = Describe("role mapping listenAndSynchronize", func() {
 				Parameters: []interface{}{
 					[]rbacv1.PolicyRule{{
 						APIGroups:     []string{"lma.tigera.io"},
-						ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
+						ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "waf", "runtime", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
 						Resources:     []string{"cluster_1", "cluster_2"},
 					}},
 					elasticsearch.RoleMapping{
 						Name: "tigera-k8s-test-resource",
 						Roles: []string{
 							"flows_viewer_cluster_1", "audit_viewer_cluster_1", "audit_ee_viewer_cluster_1", "audit_kube_viewer_cluster_1",
-							"events_viewer_cluster_1", "dns_viewer_cluster_1", "l7_viewer_cluster_1", "flows_viewer_cluster_2", "audit_viewer_cluster_2",
+							"events_viewer_cluster_1", "dns_viewer_cluster_1", "l7_viewer_cluster_1", "waf_viewer_cluster_1", "runtime_viewer_cluster_1", "flows_viewer_cluster_2", "audit_viewer_cluster_2",
 							"audit_ee_viewer_cluster_2", "audit_kube_viewer_cluster_2", "events_viewer_cluster_2", "dns_viewer_cluster_2",
-							"l7_viewer_cluster_2", "kibana_viewer", "kibana_admin", "superuser",
+							"l7_viewer_cluster_2", "waf_viewer_cluster_2", "runtime_viewer_cluster_2", "kibana_viewer", "kibana_admin", "superuser",
 						},
 						Rules: map[string][]elasticsearch.Rule{
 							"any": {
@@ -154,7 +154,7 @@ var _ = Describe("role mapping listenAndSynchronize", func() {
 					}},
 					elasticsearch.RoleMapping{
 						Name:  "tigera-k8s-test-resource",
-						Roles: []string{"flows_viewer", "audit_viewer", "events_viewer", "dns_viewer", "l7_viewer"},
+						Roles: []string{"flows_viewer", "audit_viewer", "events_viewer", "dns_viewer", "l7_viewer", "waf_viewer", "runtime_viewer"},
 						Rules: map[string][]elasticsearch.Rule{
 							"any": {
 								{
@@ -203,7 +203,7 @@ var _ = Describe("role mapping listenAndSynchronize", func() {
 			// Return all the valid resource names so we can test the conversion or resource names to elasticsearch role names
 			mockClusterRoleCache.On("ClusterRoleRules", mock.Anything).Return([]rbacv1.PolicyRule{{
 				APIGroups:     []string{"lma.tigera.io"},
-				ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "kibana_login", "elasticsearch_superuser"},
+				ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "waf", "runtime", "kibana_login", "elasticsearch_superuser"},
 				Resources:     []string{"*"},
 			}})
 
@@ -338,7 +338,7 @@ var _ = Describe("role mapping listenAndSynchronize", func() {
 			// Verify that the correct role mapping is created given whats returned from the cache
 			mockESCLI.On("CreateRoleMapping", elasticsearch.RoleMapping{
 				Name:  "tigera-k8s-test-resource",
-				Roles: []string{"flows_viewer", "audit_viewer", "events_viewer", "dns_viewer", "l7_viewer"},
+				Roles: []string{"flows_viewer", "audit_viewer", "events_viewer", "dns_viewer", "l7_viewer", "waf_viewer", "runtime_viewer"},
 				Rules: map[string][]elasticsearch.Rule{
 					"any": {
 						{
@@ -517,7 +517,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 
 			rules := []rbacv1.PolicyRule{{
 				APIGroups:     []string{"lma.tigera.io"},
-				ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
+				ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "waf", "runtime", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
 				Resources:     []string{"*"},
 			}}
 			mockESCLI := elasticsearch.NewMockClient()
@@ -591,7 +591,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			}
 			rules := []rbacv1.PolicyRule{{
 				APIGroups:     []string{"lma.tigera.io"},
-				ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
+				ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "waf", "runtime", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
 				Resources:     []string{"cluster_1", "cluster_2"},
 			}}
 
