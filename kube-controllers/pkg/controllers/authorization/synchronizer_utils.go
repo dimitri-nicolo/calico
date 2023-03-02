@@ -44,6 +44,8 @@ func rulesToElasticsearchRoles(rules ...rbacv1.PolicyRule) []string {
 				esusers.ElasticsearchRoleNameEventsViewer,
 				esusers.ElasticsearchRoleNameDNSViewer,
 				esusers.ElasticsearchRoleNameL7Viewer,
+				esusers.ElasticsearchRoleNameWafViewer,
+				esusers.ElasticsearchRoleNameRuntimeViewer,
 			}
 		}
 
