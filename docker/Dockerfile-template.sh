@@ -3,7 +3,7 @@
 cat > Dockerfile <<EOF
 FROM docker.elastic.co/kibana/kibana:${KIBANA_VERSION}
 
-USER root
+USER 0
 
 RUN apt-get -y update && apt-get -y upgrade && apt-get clean
 
@@ -15,6 +15,6 @@ RUN /createKibanaConfig.sh /usr/share/kibana/config/kibana.yml
 COPY gtmSetup.sh /
 RUN /gtmSetup.sh
 
-USER kibana
+USER 1000
 EOF
 
