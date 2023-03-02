@@ -14,10 +14,48 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
+type Kind string
+
+const (
+	KindNetworkPolicy       Kind = "networkpolicies"
+	KindGlobalNetworkPolicy Kind = "globalnetworkpolicies"
+	KindNetworkSet          Kind = "networksets"
+	KindGlobalNetworkSet    Kind = "globalnetworksets"
+)
+
+type Verb string
+
+const (
+	Create Verb = "create"
+	Delete Verb = "delete"
+	Patch  Verb = "patch"
+	Update Verb = "update"
+)
+
 // AuditLogParams provide query options for listing audit logs.
 type AuditLogParams struct {
 	QueryParams `json:",inline" validate:"required"`
 	Type        AuditLogType `json:"type"`
+
+	// Configure filtering based on object kind. Response will include
+	// any objects that match any of the given kinds.
+	Kinds []Kind `json:"kinds"`
+
+	// Match specific object fields.
+	ObjectRef *ObjectReference `json:"object_ref"`
+
+	// Match the action taken on the resource
+	Verbs []Verb `json:"verbs"`
+
+	// Response code match.
+	ResponseCodes []int32 `json:"response_codes"`
+}
+
+// ObjectReference is the set of fields we support in query requests
+// to filter audit logs based on their object.
+type ObjectReference struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
 }
 
 type AuditLogType string

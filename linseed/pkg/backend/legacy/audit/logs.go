@@ -117,7 +117,8 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 	query := b.client.Search().
 		Index(b.index(opts.Type, i)).
 		Size(opts.GetMaxPageSize()).
-		Query(b.buildQuery(i, opts))
+		Query(b.buildQuery(i, opts)).
+		Sort("stageTimestamp", false)
 
 	results, err := query.Do(ctx)
 	if err != nil {
@@ -155,7 +156,62 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 		start = time.Now().Add(-5 * time.Minute)
 		end = time.Now()
 	}
-	return elastic.NewRangeQuery("requestReceivedTimestamp").Gt(start).Lte(end)
+	query := elastic.NewBoolQuery()
+	query.Filter(elastic.NewRangeQuery("requestReceivedTimestamp").Gt(start).Lte(end))
+
+	// Check if any resource kinds were specified.
+	if len(opts.Kinds) > 0 {
+		values := []interface{}{}
+		for _, a := range opts.Kinds {
+			values = append(values, a)
+		}
+		query.Filter(elastic.NewTermsQuery("objectRef.resource", values...))
+	}
+
+	// Match on verb.
+	if len(opts.Verbs) > 0 {
+		values := []interface{}{}
+		for _, a := range opts.Verbs {
+			values = append(values, a)
+		}
+		query.Must(elastic.NewTermsQuery("verb", values...))
+	}
+
+	// Match on object.
+	if opts.ObjectRef != nil {
+		if opts.ObjectRef.Name != "" {
+			query.Filter(elastic.NewTermQuery("objectRef.name", opts.ObjectRef.Name))
+		}
+		if opts.ObjectRef.Namespace != "" {
+			query.Filter(elastic.NewTermQuery("objectRef.namespace", opts.ObjectRef.Namespace))
+		}
+	}
+
+	// Match on response codes.
+	if len(opts.ResponseCodes) > 0 {
+		values := []interface{}{}
+		for _, a := range opts.ResponseCodes {
+			values = append(values, a)
+		}
+		query.Filter(elastic.NewTermsQuery("responseStatus.code", values...))
+	}
+
+	// Exclude any empty logs.
+	query.MustNot(
+		elastic.NewTermQuery("responseObject.metadata", "{}"),
+		elastic.NewTermQuery("objectRef", "{}"),
+		elastic.NewTermQuery("RequestObject", "{}"),
+	)
+
+	// Only match on RequestResponse level audit logs.
+	// TODO: Does this need to be configurable?
+	query.Must(elastic.NewMatchQuery("level", "RequestResponse"))
+
+	// Only match on logs who have a complete response.
+	// TODO: Does this need to be configurable?
+	query.Must(elastic.NewMatchQuery("stage", "ResponseComplete"))
+
+	return query
 }
 
 func (b *auditLogBackend) index(kind v1.AuditLogType, i bapi.ClusterInfo) string {
