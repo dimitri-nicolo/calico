@@ -127,7 +127,7 @@ func (p *listPager[T]) Stream(ctx context.Context, f ListFunc[T]) (<-chan v1.Lis
 				}
 				if p.maxResults > 0 {
 					// Result limiting enabled.
-					if sent+p.params.GetMaxResults() > p.maxResults {
+					if sent+p.params.GetMaxPageSize() > p.maxResults {
 						// Another full page would put us over the limit, so return now.
 						logrus.Debugf("stream sent max results, terminating")
 						return

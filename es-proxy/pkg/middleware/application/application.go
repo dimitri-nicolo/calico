@@ -3,22 +3,22 @@ package application
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/olivere/elastic/v7"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	log "github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
-	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
-	esSearch "github.com/projectcalico/calico/es-proxy/pkg/search"
 	"github.com/projectcalico/calico/lma/pkg/api"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
@@ -33,9 +33,8 @@ const (
 
 // ApplicationHandler handles application layer (l7) log requests from manager dashboard.
 func ApplicationHandler(
-	idxHelper lmaindex.Helper,
 	authReview middleware.AuthorizationReview,
-	client *elastic.Client,
+	lsclient client.Client,
 	applicationType ApplicationType,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -48,9 +47,9 @@ func ApplicationHandler(
 		var resp interface{}
 		switch applicationType {
 		case ApplicationTypeService:
-			resp, err = processServiceRequest(idxHelper, params, authReview, client, r)
+			resp, err = processServiceRequest(params, authReview, lsclient, r)
 		case ApplicationTypeURL:
-			resp, err = processURLRequest(idxHelper, params, authReview, client, r)
+			resp, err = processURLRequest(params, authReview, lsclient, r)
 		default:
 			log.Errorf("Invalid application type %v.", applicationType)
 
@@ -100,6 +99,16 @@ func parseApplicationRequest(w http.ResponseWriter, r *http.Request) (*v1.Applic
 		}
 	}
 
+	if params.TimeRange == nil {
+		err := errors.New("missing time range")
+		log.WithError(err).Info("Error validating service requests.")
+		return nil, &httputils.HttpStatusError{
+			Status: http.StatusBadRequest,
+			Msg:    http.StatusText(http.StatusBadRequest),
+			Err:    err,
+		}
+	}
+
 	// Set cluster name to default: "cluster", if empty.
 	if params.ClusterName == "" {
 		params.ClusterName = middleware.MaybeParseClusterNameFromRequest(r)
@@ -121,57 +130,73 @@ type service struct {
 
 // processServiceRequest translates service request parameters to Elastic queries and returns responses.
 func processServiceRequest(
-	idxHelper lmaindex.Helper,
-	params *v1.ApplicationRequest,
+	reqParams *v1.ApplicationRequest,
 	authReview middleware.AuthorizationReview,
-	client *elastic.Client,
+	lsclient client.Client,
 	r *http.Request,
 ) (*v1.ServiceResponse, error) {
-	res, err := search(idxHelper, params, authReview, client, r)
+	// create a context with timeout to ensure we don't block for too long.
+	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), middleware.DefaultRequestTimeout)
+	defer cancelWithTimeout()
+
+	// Build list params.
+	params := lapi.L7LogParams{}
+	params.TimeRange = reqParams.TimeRange
+	params.Selector = reqParams.Selector
+
+	verbs, err := authReview.PerformReview(ctx, reqParams.ClusterName)
 	if err != nil {
 		return nil, err
 	}
+	params.Permissions = verbs
+	params.MaxPageSize = middleware.MaxResultsPerPage
+	params.Timeout = &metav1.Duration{Duration: middleware.DefaultRequestTimeout}
+
+	// Perform paginated list.
+	pager := client.NewListPager(&params, client.WithMaxResults[lapi.L7Log](middleware.MaxNumResults))
+	pages, errors := pager.Stream(ctx, lsclient.L7Logs(reqParams.ClusterName).List)
 
 	serviceMap := make(map[string]*service)
-	for _, rawHit := range res.RawHits {
-		var doc l7Doc
-		if err := json.Unmarshal(rawHit, &doc); err != nil {
-			log.WithError(err).Warnf("failed to unmarshal L7 raw hit: %s", rawHit)
-			continue
-		}
+	for page := range pages {
+		for _, l7Log := range page.Items {
+			sourceNameAggr := l7Log.SourceNameAggr
+			if sourceNameAggr != "" &&
+				sourceNameAggr != api.FlowLogNetworkPrivate && sourceNameAggr != api.FlowLogNetworkPublic {
+				errCount := 0
+				if responseCode, err := strconv.Atoi(l7Log.ResponseCode); err == nil {
+					// Count HTTP error responses from 400 - 499 (client error) + 500 - 599 (server error)
+					if responseCode >= http.StatusBadRequest && responseCode <= httpStatusServerErrorUpperBound {
+						errCount = int(l7Log.Count)
+					}
+				}
 
-		sourceNameAggr := doc.Source.SourceNameAggr
-		if sourceNameAggr != "" &&
-			sourceNameAggr != api.FlowLogNetworkPrivate && sourceNameAggr != api.FlowLogNetworkPublic {
-			errCount := 0
-			if responseCode, err := strconv.Atoi(doc.Source.ResponseCode); err == nil {
-				// Count HTTP error responses from 400 - 499 (client error) + 500 - 599 (server error)
-				if responseCode >= http.StatusBadRequest && responseCode <= httpStatusServerErrorUpperBound {
-					errCount = doc.Source.Count
+				if s, found := serviceMap[sourceNameAggr]; found {
+					s.Count += int(l7Log.Count)
+					s.TotalBytesIn += int(l7Log.BytesIn)
+					s.TotalBytesOut += int(l7Log.BytesOut)
+					s.TotalDuration += time.Duration(int(l7Log.Count * l7Log.DurationMean))
+					s.TotalLatency += time.Duration(l7Log.Latency)
+					s.TotalErrorCount += errCount
+					s.TotalLogDuration += l7Log.EndTime - l7Log.StartTime
+				} else {
+					serviceMap[sourceNameAggr] = &service{
+						Count:            int(l7Log.Count),
+						SourceNameAggr:   sourceNameAggr,
+						TotalBytesIn:     int(l7Log.BytesIn),
+						TotalBytesOut:    int(l7Log.BytesOut),
+						TotalDuration:    time.Duration(l7Log.Count * l7Log.DurationMean),
+						TotalLatency:     time.Duration(l7Log.Latency),
+						TotalErrorCount:  errCount,
+						TotalLogDuration: l7Log.EndTime - l7Log.StartTime,
+					}
 				}
 			}
 
-			if s, found := serviceMap[sourceNameAggr]; found {
-				s.Count += doc.Source.Count
-				s.TotalBytesIn += doc.Source.BytesIn
-				s.TotalBytesOut += doc.Source.BytesOut
-				s.TotalDuration += doc.Source.DurationMean * time.Duration(doc.Source.Count)
-				s.TotalLatency += time.Duration(doc.Source.Latency)
-				s.TotalErrorCount += errCount
-				s.TotalLogDuration += doc.Source.EndTime - doc.Source.StartTime
-			} else {
-				serviceMap[sourceNameAggr] = &service{
-					Count:            doc.Source.Count,
-					SourceNameAggr:   sourceNameAggr,
-					TotalBytesIn:     doc.Source.BytesIn,
-					TotalBytesOut:    doc.Source.BytesOut,
-					TotalDuration:    doc.Source.DurationMean * time.Duration(doc.Source.Count),
-					TotalLatency:     time.Duration(doc.Source.Latency),
-					TotalErrorCount:  errCount,
-					TotalLogDuration: doc.Source.EndTime - doc.Source.StartTime,
-				}
-			}
 		}
+	}
+
+	if err, ok := <-errors; ok {
+		return nil, err
 	}
 
 	services := make([]v1.Service, 0)
@@ -203,39 +228,54 @@ type urlMapKey struct {
 
 // processURLRequest translates url request parameters to Elastic queries and returns responses.
 func processURLRequest(
-	idxHelper lmaindex.Helper,
-	params *v1.ApplicationRequest,
+	reqParams *v1.ApplicationRequest,
 	authReview middleware.AuthorizationReview,
-	client *elastic.Client,
+	lsclient client.Client,
 	r *http.Request,
 ) (*v1.URLResponse, error) {
-	res, err := search(idxHelper, params, authReview, client, r)
+	// create a context with timeout to ensure we don't block for too long.
+	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), middleware.DefaultRequestTimeout)
+	defer cancelWithTimeout()
+
+	// Build list params.
+	params := lapi.L7LogParams{}
+	params.TimeRange = reqParams.TimeRange
+	params.Selector = reqParams.Selector
+
+	verbs, err := authReview.PerformReview(ctx, reqParams.ClusterName)
 	if err != nil {
 		return nil, err
 	}
+	params.Permissions = verbs
+	params.MaxPageSize = middleware.MaxResultsPerPage
+	params.Timeout = &metav1.Duration{Duration: middleware.DefaultRequestTimeout}
+
+	// Perform paginated list.
+	pager := client.NewListPager(&params, client.WithMaxResults[lapi.L7Log](middleware.MaxNumResults))
+	pages, errors := pager.Stream(ctx, lsclient.L7Logs(reqParams.ClusterName).List)
 
 	urlMap := make(map[urlMapKey]*url)
-	for _, rawHit := range res.RawHits {
-		var doc l7Doc
-		if err := json.Unmarshal(rawHit, &doc); err != nil {
-			log.WithError(err).Warnf("failed to unmarshal L7 raw hit: %s", rawHit)
-			continue
-		}
-
-		key := urlMapKey{
-			URL:            doc.Source.URL,
-			SourceNameAggr: doc.Source.SourceNameAggr,
-		}
-		if key.URL != "" && key.SourceNameAggr != "" &&
-			key.SourceNameAggr != api.FlowLogNetworkPrivate && key.SourceNameAggr != api.FlowLogNetworkPublic {
-			if s, found := urlMap[key]; found {
-				s.RequestCount += doc.Source.Count
-			} else {
-				urlMap[key] = &url{
-					RequestCount: doc.Source.Count,
+	for page := range pages {
+		for _, l7Log := range page.Items {
+			key := urlMapKey{
+				URL:            l7Log.URL,
+				SourceNameAggr: l7Log.SourceNameAggr,
+			}
+			if key.URL != "" && key.SourceNameAggr != "" &&
+				key.SourceNameAggr != api.FlowLogNetworkPrivate && key.SourceNameAggr != api.FlowLogNetworkPublic {
+				if s, found := urlMap[key]; found {
+					s.RequestCount += int(l7Log.Count)
+				} else {
+					urlMap[key] = &url{
+						RequestCount: int(l7Log.Count),
+					}
 				}
 			}
 		}
+	}
+
+	if err, ok := <-errors; ok {
+		return nil, err
 	}
 
 	urls := make([]v1.URL, 0)
@@ -251,73 +291,4 @@ func processURLRequest(
 	return &v1.URLResponse{
 		URLs: urls,
 	}, nil
-}
-
-// search returns the results of ES search.
-func search(
-	idxHelper lmaindex.Helper,
-	params *v1.ApplicationRequest,
-	authReview middleware.AuthorizationReview,
-	esClient *elastic.Client,
-	r *http.Request,
-) (*esSearch.ESResults, error) {
-	// create a context with timeout to ensure we don't block for too long.
-	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), middleware.DefaultRequestTimeout)
-	defer cancelWithTimeout()
-
-	// Get service details from L7 ApplicationLayer logs.
-	index := idxHelper.GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
-
-	esquery := elastic.NewBoolQuery()
-	// Selector query.
-	if len(params.Selector) > 0 {
-		selector, err := idxHelper.NewSelectorQuery(params.Selector)
-		if err != nil {
-			// NewSelectorQuery returns an HttpStatusError.
-			return nil, err
-		}
-		esquery = esquery.Must(selector)
-	}
-
-	// Time range query.
-	if params.TimeRange == nil {
-		now := time.Now()
-		params.TimeRange = &lmav1.TimeRange{
-			From: now.Add(-middleware.DefaultRequestTimeRange),
-			To:   now,
-		}
-	}
-	timeRange := idxHelper.NewTimeRangeQuery(params.TimeRange.From, params.TimeRange.To)
-	esquery = esquery.Filter(timeRange)
-
-	// Rbac query.
-	verbs, err := authReview.PerformReviewForElasticLogs(ctx, params.ClusterName)
-	if err != nil {
-		return nil, err
-	}
-	if rbac, err := idxHelper.NewRBACQuery(verbs); err != nil {
-		// NewRBACQuery returns an HttpStatusError.
-		return nil, err
-	} else if rbac != nil {
-		esquery = esquery.Filter(rbac)
-	}
-
-	query := &esSearch.Query{
-		EsQuery:  esquery,
-		Index:    index,
-		PageSize: middleware.MaxNumResults,
-		Timeout:  middleware.DefaultRequestTimeout,
-	}
-
-	result, err := esSearch.Hits(ctx, query, esClient)
-	if err != nil {
-		log.WithError(err).Info("Error getting search results from elastic")
-		return nil, &httputils.HttpStatusError{
-			Status: http.StatusInternalServerError,
-			Msg:    err.Error(),
-			Err:    err,
-		}
-	}
-
-	return result, nil
 }

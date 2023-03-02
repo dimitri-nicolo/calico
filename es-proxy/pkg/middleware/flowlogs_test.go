@@ -364,7 +364,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				}, nil
 			}
 			p := lapi.L3FlowParams{}
-			p.MaxResults = 1 // Iterate after only a single response.
+			p.MaxPageSize = 1 // Iterate after only a single response.
 			pager := client.NewMockListPager(&p, listFn)
 
 			// Perform a search.
@@ -441,7 +441,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				return &r, nil
 			}
 			p := lapi.L3FlowParams{}
-			p.MaxResults = 1
+			p.MaxPageSize = 1
 			opts := []client.ListPagerOption[lapi.L3Flow]{client.WithMaxResults[lapi.L3Flow](2)}
 			pager := client.NewMockListPager(&p, listFn, opts...)
 			lsc := client.NewMockClient("")
@@ -504,7 +504,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				return &resp, nil
 			}
 			p := lapi.L3FlowParams{}
-			p.MaxResults = 1 // Iterate after only a single response.
+			p.MaxPageSize = 1 // Iterate after only a single response.
 			pager := client.NewMockListPager(&p, listFn)
 
 			// PIP parameters.
@@ -549,7 +549,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				return &resp, nil
 			}
 			p := lapi.L3FlowParams{}
-			p.MaxResults = 1 // Iterate after only a single response.
+			p.MaxPageSize = 1 // Iterate after only a single response.
 			pager := client.NewMockListPager(&p, listFn)
 
 			// PIP parameters.
@@ -594,7 +594,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				return &resp, nil
 			}
 			p := lapi.L3FlowParams{}
-			p.MaxResults = 1 // Iterate after only a single response.
+			p.MaxPageSize = 1 // Iterate after only a single response.
 			pager := client.NewMockListPager(&p, listFn)
 
 			// PIP parameters.

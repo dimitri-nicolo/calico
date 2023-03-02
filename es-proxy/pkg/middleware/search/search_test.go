@@ -67,7 +67,7 @@ type userAuthorizationReviewMock struct {
 
 // PerformReviewForElasticLogs wraps a mocked version of the authorization review method
 // PerformReviewForElasticLogs.
-func (a userAuthorizationReviewMock) PerformReviewForElasticLogs(
+func (a userAuthorizationReviewMock) PerformReview(
 	ctx context.Context, cluster string,
 ) ([]libcalicov3.AuthorizedResourceVerbs, error) {
 	return a.verbs, a.err
@@ -255,8 +255,8 @@ var _ = Describe("SearchElasticHits", func() {
 					From: mustParseTime("2021-04-19T21:25:30Z"),
 					To:   mustParseTime("2021-04-19T22:25:30Z"),
 				},
-				Timeout:    &metav1.Duration{Duration: 60 * time.Second},
-				MaxResults: 100,
+				Timeout:     &metav1.Duration{Duration: 60 * time.Second},
+				MaxPageSize: 100,
 			},
 			LogSelectionParams: lapi.LogSelectionParams{
 				Selector: "",
@@ -376,8 +376,8 @@ var _ = Describe("SearchElasticHits", func() {
 							From: mustParseTime("2022-01-24T00:00:00Z"),
 							To:   mustParseTime("2022-01-31T23:59:59Z"),
 						},
-						Timeout:    &metav1.Duration{Duration: 60 * time.Second},
-						MaxResults: 100,
+						Timeout:     &metav1.Duration{Duration: 60 * time.Second},
+						MaxPageSize: 100,
 					},
 					LogSelectionParams: lapi.LogSelectionParams{
 						Selector: "",

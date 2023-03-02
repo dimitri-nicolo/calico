@@ -148,8 +148,8 @@ func TestFV_FlowLogs(t *testing.T) {
 						From: time.Now().Add(-5 * time.Second),
 						To:   time.Now().Add(5 * time.Second),
 					},
-					MaxResults: 1,
-					AfterKey:   afterKey,
+					MaxPageSize: 1,
+					AfterKey:    afterKey,
 				},
 			}
 			resp, err := cli.FlowLogs(cluster).List(ctx, &params)
@@ -176,8 +176,8 @@ func TestFV_FlowLogs(t *testing.T) {
 					From: time.Now().Add(-5 * time.Second),
 					To:   time.Now().Add(5 * time.Second),
 				},
-				MaxResults: 1,
-				AfterKey:   afterKey,
+				MaxPageSize: 1,
+				AfterKey:    afterKey,
 			},
 		}
 		resp, err := cli.FlowLogs(cluster).List(ctx, &params)
@@ -375,7 +375,7 @@ func TestFV_FlowLogsRBAC(t *testing.T) {
 						From: time.Now().Add(-5 * time.Second),
 						To:   time.Now().Add(5 * time.Second),
 					},
-					MaxResults: 1,
+					MaxPageSize: 1,
 				},
 				LogSelectionParams: v1.LogSelectionParams{Permissions: testcase.permissions},
 			}

@@ -102,7 +102,7 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.L7L
 	// Build the query, sorting by time.
 	query := b.client.Search().
 		Index(b.index(i)).
-		Size(opts.QueryParams.GetMaxResults()).
+		Size(opts.QueryParams.GetMaxPageSize()).
 		From(startFrom).
 		Query(q)
 
@@ -133,7 +133,7 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.L7L
 
 	// Determine the AfterKey to return.
 	var ak map[string]interface{}
-	if numHits := len(results.Hits.Hits); numHits < opts.QueryParams.GetMaxResults() {
+	if numHits := len(results.Hits.Hits); numHits < opts.QueryParams.GetMaxPageSize() {
 		// We fully satisfied the request, no afterkey.
 		ak = nil
 	} else {

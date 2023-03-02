@@ -91,7 +91,7 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 	// Build the query.
 	query := b.client.Search().
 		Index(b.index(i)).
-		Size(opts.QueryParams.GetMaxResults()).
+		Size(opts.QueryParams.GetMaxPageSize()).
 		Query(b.buildQuery(i, opts))
 
 	results, err := query.Do(ctx)

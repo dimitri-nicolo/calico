@@ -98,7 +98,7 @@ func (b *dnsFlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 		AggMinInfos:             b.aggMins,
 		AggMeanInfos:            b.aggMeans,
 		AggNestedTermInfos:      b.aggNested,
-		MaxBucketsPerQuery:      opts.GetMaxResults(),
+		MaxBucketsPerQuery:      opts.GetMaxPageSize(),
 	}
 	log.Infof("Listing DNS flows from index %s", query.DocumentIndex)
 

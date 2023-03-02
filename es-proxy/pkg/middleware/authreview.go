@@ -17,7 +17,7 @@ import (
 )
 
 type AuthorizationReview interface {
-	PerformReviewForElasticLogs(ctx context.Context, cluster string) ([]libcalv3.AuthorizedResourceVerbs, error)
+	PerformReview(ctx context.Context, cluster string) ([]libcalv3.AuthorizedResourceVerbs, error)
 }
 
 // The user authentication review struct implementing the authentication review interface.
@@ -34,7 +34,7 @@ func NewAuthorizationReview(csFactory lmak8s.ClientSetFactory) AuthorizationRevi
 // the HTTP request.
 //
 // This function wraps lma's PerformUserAuthorizationReviewForElasticLogs.
-func (a userAuthorizationReview) PerformReviewForElasticLogs(
+func (a userAuthorizationReview) PerformReview(
 	ctx context.Context, cluster string,
 ) ([]libcalv3.AuthorizedResourceVerbs, error) {
 	user, ok := request.UserFrom(ctx)

@@ -235,7 +235,7 @@ var _ = Describe("Test handling of aggregated response", func() {
 		}
 
 		p := lapi.L3FlowParams{}
-		p.MaxResults = 1 // Iterate after only a single response.
+		p.MaxPageSize = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
@@ -359,7 +359,7 @@ var _ = Describe("Test handling of aggregated response", func() {
 		}
 
 		p := lapi.L3FlowParams{}
-		p.MaxResults = 1 // Iterate after only a single response.
+		p.MaxPageSize = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
@@ -501,7 +501,7 @@ var _ = Describe("Test handling of aggregated response", func() {
 		}
 
 		p := lapi.L3FlowParams{}
-		p.MaxResults = 1 // Iterate after only a single response.
+		p.MaxPageSize = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always deny after)")
@@ -633,7 +633,7 @@ var _ = Describe("Test handling of aggregated response", func() {
 		}
 
 		p := lapi.L3FlowParams{}
-		p.MaxResults = 1 // Iterate after only a single response.
+		p.MaxPageSize = 1 // Iterate after only a single response.
 		pager := client.NewMockListPager(&p, listFn)
 
 		pip := pip{lsclient: client.NewMockClient(""), cfg: config.MustLoadConfig()}

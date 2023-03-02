@@ -835,7 +835,7 @@ func TestPagination(t *testing.T) {
 	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
 	// Also set a max results of 1, so that we only get one flow at a time.
-	opts.MaxResults = 1
+	opts.MaxPageSize = 1
 
 	// Query for flows. There should be a single flow from the populated data.
 	r, err := fb.List(ctx, clusterInfo, &opts)

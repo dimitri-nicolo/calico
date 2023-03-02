@@ -13,10 +13,10 @@ import (
 )
 
 const (
-	DefaultRequestTimeRange = 1 * time.Hour
-	DefaultRequestTimeout   = 60 * time.Second
+	DefaultRequestTimeout = 60 * time.Second
 
-	MaxNumResults = 10000
+	MaxNumResults     = 10000
+	MaxResultsPerPage = 1000
 
 	clusterParam       = "cluster"
 	clusterIdHeader    = "x-cluster-id"

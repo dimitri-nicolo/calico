@@ -104,7 +104,7 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 	// Build the query, sorting by time.
 	query := b.client.Search().
 		Index(b.index(i)).
-		Size(opts.QueryParams.GetMaxResults()).
+		Size(opts.QueryParams.GetMaxPageSize()).
 		From(startFrom).
 		Query(q)
 
@@ -135,7 +135,7 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 
 	// Determine the AfterKey to return.
 	var ak map[string]interface{}
-	if numHits := len(results.Hits.Hits); numHits < opts.QueryParams.GetMaxResults() {
+	if numHits := len(results.Hits.Hits); numHits < opts.QueryParams.GetMaxPageSize() {
 		// We fully satisfied the request, no afterkey.
 		ak = nil
 	} else {

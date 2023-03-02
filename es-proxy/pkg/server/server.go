@@ -232,9 +232,8 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					application.ApplicationHandler(
-						lmaindex.L7Logs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						esClient.Backend(),
+						linseed,
 						application.ApplicationTypeService,
 					)))))
 	sm.Handle("/urls",
@@ -242,9 +241,8 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					application.ApplicationHandler(
-						lmaindex.L7Logs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						esClient.Backend(),
+						linseed,
 						application.ApplicationTypeURL,
 					)))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.

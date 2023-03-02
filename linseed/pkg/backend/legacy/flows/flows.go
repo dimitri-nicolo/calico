@@ -200,7 +200,7 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.L3F
 	query := b.BaseQuery()
 	query.Query = b.buildQuery(i, opts)
 	query.DocumentIndex = b.index(i)
-	query.MaxBucketsPerQuery = opts.GetMaxResults()
+	query.MaxBucketsPerQuery = opts.GetMaxPageSize()
 	log.Debugf("Listing flows from index %s", query.DocumentIndex)
 
 	// Perform the request.

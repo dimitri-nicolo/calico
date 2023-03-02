@@ -1,6 +1,6 @@
 {
   "timeout": "1m0s",
-  "max_results": 100,
+  "max_page_size": 100,
   "permissions": [
     {
       "apiGroup": "APIGroupVal1",

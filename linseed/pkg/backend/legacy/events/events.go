@@ -96,7 +96,7 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 	// Build the query.
 	query := b.client.Search().
 		Index(b.index(i)).
-		Size(opts.QueryParams.GetMaxResults()).
+		Size(opts.QueryParams.GetMaxPageSize()).
 		From(startFrom).
 		Query(q)
 
