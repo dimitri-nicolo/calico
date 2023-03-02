@@ -587,7 +587,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 		// This rule should log (and possibly do something else too).
 		logPrefix := pRule.LogPrefix
 		if logPrefix == "" {
-			logPrefix = "calico-drop"
+			logPrefix = "calico-packet"
 		}
 		rules = append(rules, iptables.Rule{
 			Action: iptables.LogAction{
