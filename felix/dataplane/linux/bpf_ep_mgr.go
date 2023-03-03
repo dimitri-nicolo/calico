@@ -157,6 +157,14 @@ type bpfInterfaceState struct {
 	programmedAsEgressClient  bool
 }
 
+type ctlbWorkaroundMode int
+
+const (
+	ctlbWorkaroundDisabled = iota
+	ctlbWorkaroundEnabled
+	ctlbWorkaroundUDPOnly
+)
+
 type bpfEndpointManager struct {
 	// Main store of information about interfaces; indexed on interface name.
 	ifacesLock  sync.Mutex
@@ -231,7 +239,7 @@ type bpfEndpointManager struct {
 	rpfStrictModeEnabled string
 
 	// Service routes
-	ctlbWorkaroundEnabled bool
+	ctlbWorkaroundMode ctlbWorkaroundMode
 
 	bpfPolicyDebugEnabled bool
 
@@ -372,11 +380,16 @@ func newBPFEndpointManager(
 	}
 
 	if config.FeatureGates != nil {
-		m.ctlbWorkaroundEnabled = config.FeatureGates["BPFConnectTimeLoadBalancingWorkaround"] == "enabled"
+		switch config.FeatureGates["BPFConnectTimeLoadBalancingWorkaround"] {
+		case "enabled":
+			m.ctlbWorkaroundMode = ctlbWorkaroundEnabled
+		case "udp":
+			m.ctlbWorkaroundMode = ctlbWorkaroundUDPOnly
+		}
 	}
 
-	if m.ctlbWorkaroundEnabled {
-		log.Info("BPFConnectTimeLoadBalancingWorkaround is enabled")
+	if m.ctlbWorkaroundMode != ctlbWorkaroundDisabled {
+		log.Infof("BPFConnectTimeLoadBalancingWorkaround is %d", m.ctlbWorkaroundMode)
 		m.routeTable = routetable.New(
 			[]string{bpfInDev},
 			4,
@@ -767,7 +780,7 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 	bpfEndpointsGauge.Set(float64(len(m.nameToIface)))
 	bpfDirtyEndpointsGauge.Set(float64(m.dirtyIfaceNames.Len()))
 
-	if m.ctlbWorkaroundEnabled {
+	if m.ctlbWorkaroundMode != ctlbWorkaroundDisabled {
 		// Update all existing IPs of dirty services
 		m.dirtyServices.Iter(func(svc serviceKey) error {
 			for _, ip := range m.services[svc] {
@@ -1535,7 +1548,7 @@ func (m *bpfEndpointManager) isWorkloadIface(iface string) bool {
 
 func (m *bpfEndpointManager) isDataIface(iface string) bool {
 	return m.dataIfaceRegex.MatchString(iface) ||
-		(m.ctlbWorkaroundEnabled && (iface == bpfOutDev || iface == "lo"))
+		(m.ctlbWorkaroundMode != ctlbWorkaroundDisabled && (iface == bpfOutDev || iface == "lo"))
 }
 
 func (m *bpfEndpointManager) isL3Iface(iface string) bool {
@@ -1768,7 +1781,7 @@ func (m *bpfEndpointManager) ensureStarted() {
 }
 
 func (m *bpfEndpointManager) ensureBPFDevices() error {
-	if !m.ctlbWorkaroundEnabled {
+	if m.ctlbWorkaroundMode == ctlbWorkaroundDisabled {
 		return nil
 	}
 
@@ -2215,8 +2228,23 @@ func (m *bpfEndpointManager) getInterfaceIP(ifaceName string) (*net.IP, error) {
 }
 
 func (m *bpfEndpointManager) onServiceUpdate(update *proto.ServiceUpdate) {
-	if !m.ctlbWorkaroundEnabled {
+	if m.ctlbWorkaroundMode == ctlbWorkaroundDisabled {
 		return
+	}
+
+	if m.ctlbWorkaroundMode == ctlbWorkaroundUDPOnly {
+		hasUDP := false
+
+		for _, port := range update.Ports {
+			if port.Protocol == "UDP" {
+				hasUDP = true
+				break
+			}
+		}
+
+		if !hasUDP {
+			return // skip services that do not have UDP ports
+		}
 	}
 
 	log.WithFields(log.Fields{
@@ -2265,7 +2293,7 @@ func (m *bpfEndpointManager) onServiceUpdate(update *proto.ServiceUpdate) {
 }
 
 func (m *bpfEndpointManager) onServiceRemove(update *proto.ServiceRemove) {
-	if !m.ctlbWorkaroundEnabled {
+	if m.ctlbWorkaroundMode == ctlbWorkaroundDisabled {
 		return
 	}
 
@@ -2304,7 +2332,7 @@ func (m *bpfEndpointManager) delRoute(cidr ip.V4CIDR) {
 }
 
 func (m *bpfEndpointManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
-	if !m.ctlbWorkaroundEnabled {
+	if m.ctlbWorkaroundMode == ctlbWorkaroundDisabled {
 		return nil
 	}
 

@@ -1052,9 +1052,16 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 
 		if config.BPFConnTimeLBEnabled {
+			excludeUDP := false
+			if config.FeatureDetectOverrides != nil {
+				switch config.FeatureDetectOverrides["BPFConnectTimeLoadBalancingWorkaround"] {
+				case "udp":
+					excludeUDP = true
+				}
+			}
 			// Activate the connect-time load balancer.
 			err = nat.InstallConnectTimeLoadBalancer(
-				config.BPFCgroupV2, config.BPFLogLevel, config.BPFConntrackTimeouts.UDPLastSeen, bpfMapContext)
+				config.BPFCgroupV2, config.BPFLogLevel, config.BPFConntrackTimeouts.UDPLastSeen, bpfMapContext, excludeUDP)
 			if err != nil {
 				log.WithError(err).Panic("BPFConnTimeLBEnabled but failed to attach connect-time load balancer, bailing out.")
 			}
