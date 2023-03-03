@@ -1,16 +1,6 @@
-PACKAGE_NAME            ?= github.com/tigera/honeypod-prototype
-GO_BUILD_VER            ?= v0.75
-GOMOD_VENDOR             = false
-GIT_USE_SSH              = true
+include ../metadata.mk
 
-ORGANIZATION=tigera
-SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_HONEYPOD_PROTOTYPE_PROJECT_ID)
-
-ifdef GOPATH
-EXTRA_DOCKER_ARGS += -v $(GOPATH)/pkg/mod:/go/pkg/mod:rw
-endif
-
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+PACKAGE_NAME            ?= github.com/tigera/calico-private/honeypod-prototype
 
 ##############################################################################
 # constants
@@ -21,9 +11,7 @@ HONEYPOD_EXP_SERVICE_IMAGE 		?=tigera/honeypod-exp-service
 HONEYPOD_EXP_SERVICE_HTML_LOCATION ?= ./compromised_k8s_pod/exposed_service_nginx/build/html
 HONEYPOD_EXP_SERVICE_LOCATION ?=./compromised_k8s_pod/exposed_service_nginx/build
 BUILD_IMAGES 									?=$(HONEYPOD_IMAGE) $(HONEYPOD_EXP_SERVICE_IMAGE)
-ARCHES                    		?=amd64
-DEV_REGISTRIES            		?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES        		?=quay.io
+
 RELEASE_BRANCH_PREFIX     		?=release-calient
 DEV_TAG_SUFFIX            		?=calient-0.dev
 
@@ -35,21 +23,11 @@ LDFLAGS:=-ldflags "\
 		-B 0x$(BUILD_ID)"
 
 ##############################################################################
-# Download and include Makefile.common before anything else
+# Include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ##############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-include Makefile.common
+include ../lib.Makefile
 
 ###############################################################################
 # BUILD IMAGE
