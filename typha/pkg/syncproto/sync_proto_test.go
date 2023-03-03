@@ -78,3 +78,11 @@ func TestEncodeCanned(t *testing.T) {
 
 	t.Logf("%q", b2.String())
 }
+
+func TestHealthName(t *testing.T) {
+	RegisterTestingT(t)
+	for _, st := range AllSyncerTypes {
+		Expect(st.HealthName()).To(MatchRegexp(`([A-Z]\w+)+`),
+			"health names should be UpperCamel for consistency")
+	}
+}

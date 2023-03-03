@@ -22,7 +22,7 @@ import (
 
 const (
 	// The health name for the snapshotter component.
-	healthReporterName = "compliance-snapshotter"
+	healthReporterName = "ComplianceSnapshotter"
 )
 
 var ver bool

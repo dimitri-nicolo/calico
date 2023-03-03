@@ -142,7 +142,7 @@ func NewFirewallPolicyIntegrationController(
 		cfg:                           cfg,
 		deviceGroup:                   cfg.FwDeviceGroup,
 		policyControllerNamespace:     cfg.FwPolicyControllerNamespace,
-		healthReporterName:            "tigera-policy-integration-controller",
+		healthReporterName:            "TigeraPolicyIntegrationController",
 		healthReportIntervalDuration:  panoramaHealthReportInterval,
 		healthReportIntervalMaxJitter: panoramaHealthReportInterval / jitterDenominator,
 		minDuration:                   cfg.FwPollInterval,
@@ -171,7 +171,7 @@ func NewFirewallPolicyIntegrationController(
 	if len(fpic.deviceGroup) == 0 {
 		fpic.deviceGroup = PanoramaSharedDeviceGroup
 	} else {
-		//Query the device group to verify its existence. Return an error if the API returns an error.
+		// Query the device group to verify its existence. Return an error if the API returns an error.
 		err := panutils.QueryDeviceGroup(fpic.pancli, fpic.deviceGroup)
 		// API has failed to successfully query the provided device group, no reason to run controller.
 		if err != nil {

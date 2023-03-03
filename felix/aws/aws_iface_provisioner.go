@@ -157,10 +157,10 @@ type AddrInfo struct {
 }
 
 const (
-	healthNameAWSProvisioner   = "aws-eni-provisioner"
-	healthNameENICapacity      = "aws-eni-capacity"
-	healthNameAWSInSync        = "aws-eni-addresses-in-sync"
-	healthNameElasticIPsInSync = "aws-elastic-ips-in-sync"
+	healthNameAWSProvisioner   = "AWSENIProvisioner"
+	healthNameENICapacity      = "AWSENICapacity"
+	healthNameAWSInSync        = "AWSENIAddressesInSync"
+	healthNameElasticIPsInSync = "AWSElasticIPsInSync"
 	defaultTimeout             = 30 * time.Second
 
 	livenessReportInterval = 30 * time.Second

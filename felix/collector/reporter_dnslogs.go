@@ -48,7 +48,7 @@ type DNSLogReporter struct {
 }
 
 const (
-	dnsHealthName     = "dns_reporter"
+	dnsHealthName     = "DNSReporter"
 	dnsHealthInterval = 10 * time.Second
 )
 
