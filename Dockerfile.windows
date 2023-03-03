@@ -26,8 +26,8 @@ ENV ROOT_DIR=c:
 RUN mklink /D c:\ruby c:\ruby31 \
 && setx /m path "c:\ruby\bin;%path%;" \
 && gem install \
-        bundler:2.3.19 \
-        cgi:0.3.5 \
+        bundler:2.4.7 \
+        cgi:0.3.6 \
         elasticsearch-api:7.17.7 \
         elasticsearch-transport:7.17.7 \
         elasticsearch-xpack:7.17.7 \
