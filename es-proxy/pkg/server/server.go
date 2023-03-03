@@ -21,6 +21,7 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/aggregation"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/application"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware/audit"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/event"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/process"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/rawquery"
@@ -268,6 +269,13 @@ func Start(cfg *Config) error {
 	sm.Handle("/user",
 		middleware.AuthenticateRequest(authn,
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
+
+	sm.Handle("/auditlogs", middleware.AuthenticateRequest(authn, audit.NewHandler(linseed)))
+
+	// Handle raw ES queries with the raw handler.
+	sm.Handle("/",
+		middleware.AuthenticateRequest(authn,
+			rawquery.RawQueryHandler(esClient.Backend())))
 
 	if !cfg.ElasticKibanaDisabled {
 		kibanaTLSConfig := calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
