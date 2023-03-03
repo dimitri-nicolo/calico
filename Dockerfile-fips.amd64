@@ -3,10 +3,10 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal:latest as builder
 ################################################################################
 # Build and patch elasticsearch from source
 ################################################################################
-ENV ELASTIC_VERSION=7.17.7
+ENV ELASTIC_VERSION=7.17.9
 ENV GRADLE_VERSION=7.5.1
 
-RUN microdnf update && microdnf upgrade
+RUN microdnf upgrade
 
 RUN microdnf install -y \
     java-17-openjdk-devel \
@@ -46,8 +46,8 @@ RUN JAVA_HOME=/usr/lib/jvm/java-17-openjdk \
 ################################################################################
 ENV TINI_VERSION=0.19.0
 
-ENV OPENJDK_VERSION=11.0.16.1
-ENV OPENJDK_PATCH=1
+ENV OPENJDK_VERSION=11.0.18
+ENV OPENJDK_PATCH=10
 
 ENV BC_FIPS_VERSION=1.0.2.3
 ENV BCTLS_FIPS_VERSION=1.0.11
