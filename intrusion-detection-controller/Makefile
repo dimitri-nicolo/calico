@@ -12,7 +12,7 @@ BUILD_IMAGES         ?=$(IDS_CONTROLLER_IMAGE) $(JOB_INSTALLER_IMAGE)
 TESLA ?= false
 ifeq ($(TESLA),true)
 	RELEASE_REGISTRIES    = gcr.io/tigera-tesla/tigera
-	BUILD_TAGS            ?= -tags tesla
+	BUILD_TAGS            ?= tesla
 	RELEASE_BRANCH_PREFIX = release-tesla
 	DEV_TAG_SUFFIX        = tesla-0.dev
 	IMAGETAG_PREFIX       ?= tesla
