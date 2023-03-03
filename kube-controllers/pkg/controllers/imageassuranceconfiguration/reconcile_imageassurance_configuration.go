@@ -14,6 +14,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -76,7 +77,8 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 		return err
 	}
 
-	if err := c.reconcileCLIServiceAccountToken(); err != nil {
+	_, _, err := c.createServiceAccountWithToken(resource.ImageAssuranceScannerCLIServiceAccountName, c.scannerCLITokenSecretName, resource.ManagerNameSpaceName)
+	if err != nil {
 		reqLogger.Errorf("error reconciling cli service account token for image assurance %+v", err)
 		return err
 	}
@@ -151,19 +153,22 @@ func (c *reconciler) reconcileCASecrets() error {
 func (c *reconciler) reconcileManagementServiceAccountSecrets() error {
 	// Intrusion detection controller, scanner, pod watcher only runs in the management cluster
 	if c.management {
-		err := c.reconcileManagementServiceAccountSecret(resource.ImageAssuranceIDSControllerServiceAccountName, c.managementOperatorNamespace)
+		_, _, err := c.createServiceAccountWithToken(resource.ImageAssuranceIDSControllerServiceAccountName, resource.ImageAssuranceIDSControllerServiceAccountName, c.managementOperatorNamespace)
 		if err != nil {
 			return err
 		}
-		err = c.reconcileManagementServiceAccountSecret(resource.ImageAssuranceScannerServiceAccountName, c.managementOperatorNamespace)
+
+		_, _, err = c.createServiceAccountWithToken(resource.ImageAssuranceScannerServiceAccountName, resource.ImageAssuranceScannerServiceAccountName, c.managementOperatorNamespace)
 		if err != nil {
 			return err
 		}
-		err = c.reconcileManagementServiceAccountSecret(resource.ImageAssuranceOperatorServiceAccountName, c.managementOperatorNamespace)
+
+		_, _, err = c.createServiceAccountWithToken(resource.ImageAssuranceOperatorServiceAccountName, resource.ImageAssuranceOperatorServiceAccountName, c.managementOperatorNamespace)
 		if err != nil {
 			return err
 		}
-		err = c.reconcileManagementServiceAccountSecret(resource.ImageAssuranceRuntimeCleanerServiceAccountName, c.managementOperatorNamespace)
+
+		_, _, err = c.createServiceAccountWithToken(resource.ImageAssuranceRuntimeCleanerServiceAccountName, resource.ImageAssuranceRuntimeCleanerServiceAccountName, c.managementOperatorNamespace)
 		if err != nil {
 			return err
 		}
@@ -243,25 +248,9 @@ func (c *reconciler) verifyOperatorNamespaces(reqLogger *log.Entry) error {
 // (tigera-image-assurance-admission-controller-api-access) to be used by the admission controller.
 func (c *reconciler) reconcileAdmissionControllerToken() error {
 	mgmtClusterResourceName := fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat, c.clusterName)
-	sa := getServiceAccountDefinition(mgmtClusterResourceName, c.managementOperatorNamespace)
-	if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
-		return err
-	}
 
-	secret := getTokenSecretDefinition(mgmtClusterResourceName, c.managementOperatorNamespace)
-	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
-		return err
-	}
-
-	tokenRequest := getTokenRequestDefinitionWithSecret(mgmtClusterResourceName, c.managementOperatorNamespace, secret)
-	tokenResp, err := resource.WriteServiceAccountTokenRequestToK8s(c.managementK8sCLI, tokenRequest, sa.Name)
+	_, secret, err := c.createServiceAccountWithToken(mgmtClusterResourceName, mgmtClusterResourceName, c.managementOperatorNamespace)
 	if err != nil {
-		return err
-	}
-
-	// Update the empty secret in management cluster with token data.
-	secret.Data["token"] = []byte(tokenResp.Status.Token)
-	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
 		return err
 	}
 
@@ -279,25 +268,9 @@ func (c *reconciler) reconcileAdmissionControllerToken() error {
 // (tigera-image-assurance-cr-adaptor-api-access) to be used by the CR adaptor.
 func (c *reconciler) reconcileCRAdaptorToken() error {
 	mgmtClusterResourceName := fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat, c.clusterName)
-	sa := getServiceAccountDefinition(mgmtClusterResourceName, c.managementOperatorNamespace)
-	if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
-		return err
-	}
 
-	secret := getTokenSecretDefinition(mgmtClusterResourceName, c.managementOperatorNamespace)
-	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
-		return err
-	}
-
-	tokenRequest := getTokenRequestDefinitionWithSecret(mgmtClusterResourceName, c.managementOperatorNamespace, secret)
-	tokenResp, err := resource.WriteServiceAccountTokenRequestToK8s(c.managementK8sCLI, tokenRequest, sa.Name)
+	_, secret, err := c.createServiceAccountWithToken(mgmtClusterResourceName, mgmtClusterResourceName, c.managementOperatorNamespace)
 	if err != nil {
-		return err
-	}
-
-	// Update the empty secret in management cluster with token data.
-	secret.Data["token"] = []byte(tokenResp.Status.Token)
-	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
 		return err
 	}
 
@@ -310,58 +283,38 @@ func (c *reconciler) reconcileCRAdaptorToken() error {
 	return nil
 }
 
-// reconcileCLIServiceAccountToken creates a token for tigera-image-assurance-scanner-cli-api-access service account that
-// can be used with scanner CLI.
-func (c *reconciler) reconcileCLIServiceAccountToken() error {
-	scsa := getServiceAccountDefinition(resource.ImageAssuranceScannerCLIServiceAccountName, resource.ManagerNameSpaceName)
-	if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, scsa); err != nil {
-		return err
-	}
-
-	secret := getTokenSecretDefinition(c.scannerCLITokenSecretName, resource.ManagerNameSpaceName)
-	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
-		return err
-	}
-
-	tokenRequest := getTokenRequestDefinitionWithSecret(c.scannerCLITokenSecretName, resource.ManagerNameSpaceName, secret)
-	tokenResp, err := resource.WriteServiceAccountTokenRequestToK8s(c.managementK8sCLI, tokenRequest, scsa.Name)
-	if err != nil {
-		return err
-	}
-
-	// Update the empty secret with token data.
-	secret.Data["token"] = []byte(tokenResp.Status.Token)
-	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// reconcileManagementServiceAccountSecret creates a service account with a provided name and namespace in management cluster.
-// It also creates secret with the same name, namespace as the provided service account and populates with an API token using TokenRequest API.
-func (c *reconciler) reconcileManagementServiceAccountSecret(resourceName, namespace string) error {
-	sa := getServiceAccountDefinition(resourceName, namespace)
+func (c *reconciler) createServiceAccountWithToken(saName, tokenSecretName, namespace string) (*corev1.ServiceAccount, *corev1.Secret, error) {
+	sa := getServiceAccountDefinition(saName, namespace)
 	if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	secret := getTokenSecretDefinition(resourceName, namespace)
-	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
-		return err
-	}
-
-	tokenRequest := getTokenRequestDefinitionWithSecret(resourceName, namespace, secret)
-	tokenResp, err := resource.WriteServiceAccountTokenRequestToK8s(c.managementK8sCLI, tokenRequest, sa.Name)
+	secret, err := c.managementK8sCLI.CoreV1().Secrets(namespace).
+		Get(context.Background(), tokenSecretName, metav1.GetOptions{})
 	if err != nil {
-		return err
+		if !errors.IsNotFound(err) {
+			return nil, nil, err
+		}
+
+		secret = getTokenSecretDefinition(tokenSecretName, namespace)
+		if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
+			return nil, nil, err
+		}
 	}
 
-	// Update the empty secret with token data.
-	secret.Data["token"] = []byte(tokenResp.Status.Token)
-	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
-		return err
+	if token := secret.Data["token"]; len(token) == 0 {
+		tokenRequest := getTokenRequestDefinitionWithSecret(tokenSecretName, namespace, secret)
+		tokenResp, err := resource.WriteServiceAccountTokenRequestToK8s(c.managementK8sCLI, tokenRequest, sa.Name)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// Update the empty secret in management cluster with token data.
+		secret.Data["token"] = []byte(tokenResp.Status.Token)
+		if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
+			return nil, nil, err
+		}
 	}
 
-	return nil
+	return sa, secret, nil
 }
