@@ -93,6 +93,10 @@ promotions:
   pipeline_file: push-images/honeypod-controller.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push honeypod-prototype images
+  pipeline_file: push-images/honeypod-prototype.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push intrusion-detection-controller images
   pipeline_file: push-images/intrusion-detection-controller.yml
   auto_promote:
@@ -908,6 +912,20 @@ blocks:
     - name: "honeypod-controller tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
+
+
+- name: 'honeypod-prototype'
+  run:
+    when: "false or change_in(['/*', '/honeypod-prototype/'])"
+  dependencies: ["Prerequisites"]
+  task:
+    prologue:
+      commands:
+        - cd honeypod-prototype
+    jobs:
+      - name: "honeypod-prototype tests"
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: 'intrusion-detection-controller'
   run:
