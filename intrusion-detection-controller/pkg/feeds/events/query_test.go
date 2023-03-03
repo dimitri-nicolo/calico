@@ -14,6 +14,7 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/api"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -58,7 +59,8 @@ func TestSuspiciousIP_Success(t *testing.T) {
 	i := &elastic.MockIterator{
 		ErrorIndex: -1,
 		Hits:       hits,
-		Keys:       []db.QueryKey{db.QueryKeyFlowLogSourceIP, db.QueryKeyFlowLogDestIP, db.QueryKeyUnknown}}
+		Keys:       []db.QueryKey{db.QueryKeyFlowLogSourceIP, db.QueryKeyFlowLogDestIP, db.QueryKeyUnknown},
+	}
 	q := &elastic.MockSetQuerier{Iterator: i}
 	uut := NewSuspiciousIP(q)
 
@@ -74,7 +76,7 @@ func TestSuspiciousIP_Success(t *testing.T) {
 				DestIP:        util.Sptr("2.3.4.5"),
 				DestName:      "dest",
 				DestNamespace: "default",
-				Record: SuspiciousIPEventRecord{
+				Record: v1.SuspiciousIPEventRecord{
 					Feeds: []string{"test"},
 				},
 			},
@@ -90,7 +92,7 @@ func TestSuspiciousIP_Success(t *testing.T) {
 				SourceNamespace: "default",
 				DestIP:          util.Sptr("2.3.4.5"),
 				DestName:        "dest",
-				Record: SuspiciousIPEventRecord{
+				Record: v1.SuspiciousIPEventRecord{
 					Feeds: []string{"test"},
 				},
 			},
@@ -135,7 +137,8 @@ func TestSuspiciousIP_IterationFails(t *testing.T) {
 		Error:      errors.New("test"),
 		ErrorIndex: 1,
 		Hits:       hits,
-		Keys:       []db.QueryKey{db.QueryKeyFlowLogSourceIP, db.QueryKeyFlowLogDestIP}}
+		Keys:       []db.QueryKey{db.QueryKeyFlowLogSourceIP, db.QueryKeyFlowLogDestIP},
+	}
 	q := &elastic.MockSetQuerier{Iterator: i}
 	uut := NewSuspiciousIP(q)
 
@@ -205,7 +208,8 @@ func TestSuspiciousDomain_Success(t *testing.T) {
 	i := &elastic.MockIterator{
 		ErrorIndex: -1,
 		Hits:       hits,
-		Keys:       []db.QueryKey{db.QueryKeyDNSLogQName, db.QueryKeyDNSLogQName, db.QueryKeyDNSLogQName, db.QueryKeyUnknown}}
+		Keys:       []db.QueryKey{db.QueryKeyDNSLogQName, db.QueryKeyDNSLogQName, db.QueryKeyDNSLogQName, db.QueryKeyUnknown},
+	}
 	domains := db.DomainNameSetSpec{
 		"xx.yy.zzz",
 		"qq.rr.sss",
@@ -222,9 +226,9 @@ func TestSuspiciousDomain_Success(t *testing.T) {
 	results, _, _, err := uut.QuerySet(ctx, testFeed)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(results).To(HaveLen(2))
-	rec1, ok := results[0].GetEventsData().Record.(SuspiciousDomainEventRecord)
+	rec1, ok := results[0].GetEventsData().Record.(v1.SuspiciousDomainEventRecord)
 	g.Expect(ok).Should(BeTrue())
-	rec2, ok := results[1].GetEventsData().Record.(SuspiciousDomainEventRecord)
+	rec2, ok := results[1].GetEventsData().Record.(v1.SuspiciousDomainEventRecord)
 	g.Expect(ok).Should(BeTrue())
 	g.Expect(rec1.SuspiciousDomains).To(Equal([]string{"xx.yy.zzz"}))
 	g.Expect(rec2.SuspiciousDomains).To(Equal([]string{"qq.rr.sss"}))
@@ -255,7 +259,8 @@ func TestSuspiciousDomain_IterationFails(t *testing.T) {
 		Error:      errors.New("iteration failed"),
 		ErrorIndex: 0,
 		Hits:       hits,
-		Keys:       []db.QueryKey{db.QueryKeyDNSLogQName}}
+		Keys:       []db.QueryKey{db.QueryKeyDNSLogQName},
+	}
 	domains := db.DomainNameSetSpec{
 		"xx.yy.zzz",
 		"qq.rr.sss",

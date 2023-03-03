@@ -33,7 +33,8 @@ SRC_FILES     = $(shell find pkg cmd -name '*.go') \
 		$(shell find ../api/pkg -name '*.go') \
 		$(shell find ../compliance/pkg -name '*.go') \
 		$(shell find ../libcalico-go/lib -name '*.go') \
-		$(shell find ../lma/pkg -name '*.go')
+		$(shell find ../lma/pkg -name '*.go') \
+		$(shell find ../linseed -name '*.go')
 TEST_DIRS    ?= $(shell find $(TOP_SRC_DIRS) -name '*_test.go' -exec dirname {} \; | sort | uniq)
 ifdef UNIT_TESTS
 UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v

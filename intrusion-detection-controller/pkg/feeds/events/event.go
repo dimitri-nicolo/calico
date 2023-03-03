@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 )
 
@@ -16,20 +17,12 @@ type SuspiciousIPSecurityEvent struct {
 	lmaAPI.EventsData
 }
 
-type SuspiciousIPEventRecord struct {
-	FlowAction       string   `json:"flow_action"`
-	FlowLogID        string   `json:"flow_log_id"`
-	Protocol         string   `json:"protocol"`
-	Feeds            []string `json:"feeds,omitempty"`
-	SuspiciousPrefix *string  `json:"suspicious_prefix"`
-}
-
 func (s SuspiciousIPSecurityEvent) GetEventsData() lmaAPI.EventsData {
 	return s.EventsData
 }
 
 func (s SuspiciousIPSecurityEvent) GetID() string {
-	record, ok := s.Record.(SuspiciousIPEventRecord)
+	record, ok := s.Record.(v1.SuspiciousIPEventRecord)
 	if !ok {
 		log.Error("Type caset failed to get ID")
 	}
@@ -55,18 +48,12 @@ type SuspiciousDomainSecurityEvent struct {
 	lmaAPI.EventsData
 }
 
-type SuspiciousDomainEventRecord struct {
-	DNSLogID          string   `json:"dns_log_id"`
-	Feeds             []string `json:"feeds,omitempty"`
-	SuspiciousDomains []string `json:"suspicious_domains"`
-}
-
 func (s SuspiciousDomainSecurityEvent) GetEventsData() lmaAPI.EventsData {
 	return s.EventsData
 }
 
 func (s SuspiciousDomainSecurityEvent) GetID() string {
-	record, ok := s.Record.(SuspiciousDomainEventRecord)
+	record, ok := s.Record.(v1.SuspiciousDomainEventRecord)
 	if !ok {
 		log.Error("Type caset failed to get ID")
 	}

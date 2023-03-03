@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/calico/honeypod-controller/pkg/events"
 	hp "github.com/projectcalico/calico/honeypod-controller/pkg/processor"
 	"github.com/projectcalico/calico/honeypod-controller/pkg/snort"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
@@ -69,10 +70,10 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 		tigeraInternal1Path := filepath.Join(tmpSnortPath, "tigera-internal-1-*")
 		tigeraInternal3Path := filepath.Join(tmpSnortPath, "tigera-internal-3-6b97f5d974-*")
-		Expect(os.Mkdir(tigeraInternal1Path, 0755)).NotTo(HaveOccurred())
-		Expect(os.Mkdir(tigeraInternal3Path, 0755)).NotTo(HaveOccurred())
-		Expect(os.WriteFile(filepath.Join(tigeraInternal1Path, "alert"), []byte(snortAlertTigeraInternal1), 0644)).NotTo(HaveOccurred())
-		Expect(os.WriteFile(filepath.Join(tigeraInternal3Path, "alert"), []byte(snortAlertTigeraInternal3), 0644)).NotTo(HaveOccurred())
+		Expect(os.Mkdir(tigeraInternal1Path, 0o755)).NotTo(HaveOccurred())
+		Expect(os.Mkdir(tigeraInternal3Path, 0o755)).NotTo(HaveOccurred())
+		Expect(os.WriteFile(filepath.Join(tigeraInternal1Path, "alert"), []byte(snortAlertTigeraInternal1), 0o644)).NotTo(HaveOccurred())
+		Expect(os.WriteFile(filepath.Join(tigeraInternal3Path, "alert"), []byte(snortAlertTigeraInternal3), 0o644)).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
@@ -96,7 +97,7 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 				DestNamespace:   "tigera-internal",
 				SourceNameAggr:  "attacker-app-774579d456-*",
 				SourceNamespace: "default",
-				Record: events.HoneypodAlertRecord{
+				Record: v1.HoneypodAlertRecord{
 					Count:       &count,
 					HostKeyword: &hostKeyword,
 				},
@@ -132,7 +133,7 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 
 		b, err := json.Marshal(eventsData.Record)
 		Expect(err).NotTo(HaveOccurred())
-		record := &events.HoneypodSnortEventRecord{}
+		record := &v1.HoneypodSnortEventRecord{}
 		err = json.Unmarshal(b, record)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(record.Snort.Description).To(Equal("snort.alert.signame"))
@@ -178,13 +179,13 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 			SourceNamespace: "default",
 			Time:            t.Unix(),
 			Type:            "honeypod",
-			Record: events.HoneypodAlertRecord{
+			Record: v1.HoneypodAlertRecord{
 				HostKeyword: &hostKeyword,
 			},
 		}
 		// We modify the path to snort alert due to being a test
 		// We pass our pre-create alerts to be processed
-		var store = snort.NewStore(t)
+		store := snort.NewStore(t)
 		err = snort.ProcessSnort(alert, p, tmpSnortPath, store)
 		Expect(err).NotTo(HaveOccurred())
 		end := time.Now()

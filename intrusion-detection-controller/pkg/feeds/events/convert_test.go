@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	idsElastic "github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
@@ -59,7 +60,7 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		HTTPRequestsAllowedIn: 8,
 		HTTPRequestsDeniedIn:  9,
 	}
-	record := SuspiciousIPEventRecord{
+	record := v1.SuspiciousIPEventRecord{
 		FlowAction:       "allow",
 		FlowLogID:        "111-222-333",
 		Protocol:         "tcp",
@@ -137,7 +138,7 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		HTTPRequestsAllowedIn: 8,
 		HTTPRequestsDeniedIn:  9,
 	}
-	record := SuspiciousIPEventRecord{
+	record := v1.SuspiciousIPEventRecord{
 		FlowAction:       "allow",
 		FlowLogID:        "111-222-333",
 		Protocol:         "tcp",
@@ -215,7 +216,7 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		HTTPRequestsAllowedIn: 8,
 		HTTPRequestsDeniedIn:  9,
 	}
-	record := SuspiciousIPEventRecord{
+	record := v1.SuspiciousIPEventRecord{
 		FlowAction:       "allow",
 		FlowLogID:        "111-222-333",
 		Protocol:         "tcp",
@@ -298,7 +299,7 @@ func TestConvertDNSLog_QName(t *testing.T) {
 			SourceName:      "client-8888-34",
 			SourceNameAggr:  "client-8888-*",
 			Host:            "",
-			Record: SuspiciousDomainEventRecord{
+			Record: v1.SuspiciousDomainEventRecord{
 				DNSLogID:          hit.Id,
 				Feeds:             []string{"test-feed"},
 				SuspiciousDomains: []string{"www.badguys.co.uk"},
@@ -353,7 +354,7 @@ func TestConvertDNSLog_RRSetName(t *testing.T) {
 			},
 		},
 	}
-	record := SuspiciousDomainEventRecord{
+	record := v1.SuspiciousDomainEventRecord{
 		DNSLogID:          hit.Id,
 		Feeds:             []string{"test-feed", "my-feed"},
 		SuspiciousDomains: []string{"www1.badguys-backend.co.uk"},
@@ -441,7 +442,7 @@ func TestConvertDNSLog_RRSetRData(t *testing.T) {
 			},
 		},
 	}
-	record := SuspiciousDomainEventRecord{
+	record := v1.SuspiciousDomainEventRecord{
 		DNSLogID:          hit.Id,
 		Feeds:             []string{"test-feed"},
 		SuspiciousDomains: []string{"uef0.malh0st.io"},

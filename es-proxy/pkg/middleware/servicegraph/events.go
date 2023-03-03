@@ -99,7 +99,7 @@ func getTigeraEvents(ctx context.Context, lsClient client.Client, cluster string
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// Set up for performing paged list queries for L7 flows.
+	// Set up for performing paged list queries for events.
 	params := lapi.EventParams{
 		QueryParams: lsv1.QueryParams{TimeRange: &tr},
 	}
@@ -255,40 +255,47 @@ func parseTigeraEvent(item lapi.Event) *Event {
 	); len(eps) > 0 {
 		event.Endpoints = append(event.Endpoints, eps...)
 	}
+
 	if item.Record != nil {
-		log.Debugf("Parsing fields from Record: %#v", *item.Record)
+		record := lapi.EventRecord{}
+		err := item.GetRecord(&record)
+		if err != nil {
+			return nil
+		}
+
+		log.Debugf("Parsing fields from Record: %#v", record)
 		if eps := getEventEndpointsFromFlowEndpoint(
-			item.Record.SourceType,
-			item.Record.SourceNamespace,
-			item.Record.SourceName,
-			item.Record.SourceNameAggr,
+			record.SourceType,
+			record.SourceNamespace,
+			record.SourceName,
+			record.SourceNameAggr,
 			0, "",
 		); len(eps) > 0 {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}
 		if eps := getEventEndpointsFromFlowEndpoint(
-			item.Record.DestType,
-			item.Record.DestNamespace,
-			item.Record.DestName,
-			item.Record.DestNameAggr,
-			item.Record.DestPort,
-			item.Record.Protocol,
+			record.DestType,
+			record.DestNamespace,
+			record.DestName,
+			record.DestNameAggr,
+			record.DestPort,
+			record.Protocol,
 		); len(eps) > 0 {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}
 		if eps := getEventEndpointsFromFlowEndpoint(
 			"wep",
-			item.Record.ClientNamespace,
-			item.Record.ClientName,
-			item.Record.ClientNameAggr,
+			record.ClientNamespace,
+			record.ClientName,
+			record.ClientNameAggr,
 			0, "",
 		); len(eps) > 0 {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}
 		if eps := getEventEndpointsFromObject(
-			nonEmptyString(item.Record.ObjectRefResource, item.Record.ResponseObjectKind),
-			item.Record.ObjectRefNamespace,
-			item.Record.ObjectRefName,
+			nonEmptyString(record.ObjectRefResource, record.ResponseObjectKind),
+			record.ObjectRefNamespace,
+			record.ObjectRefName,
 		); len(eps) > 0 {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/projectcalico/calico/honeypod-controller/pkg/events"
 	hp "github.com/projectcalico/calico/honeypod-controller/pkg/processor"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
 	api "github.com/projectcalico/calico/lma/pkg/api"
 )
@@ -31,7 +32,7 @@ type Alert struct {
 }
 
 func parse(input string) ([]Alert, error) {
-	//We will do generic splits of the Alert result for now
+	// We will do generic splits of the Alert result for now
 	alerts := strings.Split(input, "\n\n")
 	var result []Alert
 	for _, lines := range alerts {
@@ -50,7 +51,7 @@ func parse(input string) ([]Alert, error) {
 }
 
 func parseTime(timeStr dateSrcDst) (time.Time, error) {
-	//Convert Alert's timestamp to time.Time
+	// Convert Alert's timestamp to time.Time
 	res := strings.Split(string(timeStr), " ")
 	layout := "01/02/06-15:04:05.000000"
 	newTime, err := time.Parse(layout, res[0])
@@ -62,16 +63,16 @@ func parseTime(timeStr dateSrcDst) (time.Time, error) {
 }
 
 func RunScanSnort(e *api.EventsData, pcap string, outPath string) error {
-	//We setup the directory for the snort alert result to be stored in
+	// We setup the directory for the snort alert result to be stored in
 	output := fmt.Sprintf("%s/%s", outPath, e.DestNameAggr)
 
 	log.Info("Running Snort Scan on: ", pcap)
-	err := os.MkdirAll(output, 0755)
+	err := os.MkdirAll(output, 0o755)
 	if err != nil {
 		log.WithError(err).Error("Failed to create Snort folder")
 		return err
 	}
-	//Exec snort with pre-set flags, and redirect Stdout to a buffer
+	// Exec snort with pre-set flags, and redirect Stdout to a buffer
 	// -q                        : quiet
 	// -k none                   : checksum level
 	// -y                        : show year in timestamp
@@ -91,7 +92,7 @@ func RunScanSnort(e *api.EventsData, pcap string, outPath string) error {
 }
 
 func ProcessSnort(e *api.EventsData, p *hp.HoneyPodLogProcessor, outPath string, store *Store) error {
-	//We look at the directory in which the snort alerts is stored
+	// We look at the directory in which the snort alerts is stored
 	snortAlertDirs, err := filepath.Glob(fmt.Sprintf("%s/*", outPath))
 	if err != nil {
 		log.WithError(err).Error("Error matching Snort directory")
@@ -100,7 +101,7 @@ func ProcessSnort(e *api.EventsData, p *hp.HoneyPodLogProcessor, outPath string,
 
 	log.Info("Parsing Snort result: ", snortAlertDirs)
 	for _, match := range snortAlertDirs {
-		//If found, we iterate each entry, parse it and filter the ones that we already sent to elasticsearch
+		// If found, we iterate each entry, parse it and filter the ones that we already sent to elasticsearch
 		path := fmt.Sprintf("%s/alert", match)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			continue
@@ -125,12 +126,13 @@ func ProcessSnort(e *api.EventsData, p *hp.HoneyPodLogProcessor, outPath string,
 	}
 	return nil
 }
+
 func SendEvents(snortEvents []Alert, p *hp.HoneyPodLogProcessor, e *api.EventsData) error {
 	b, err := json.Marshal(e.Record)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event.record")
 	}
-	record := &events.HoneypodAlertRecord{}
+	record := &v1.HoneypodAlertRecord{}
 	err = json.Unmarshal(b, record)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal event.record to honeypod alert record")
@@ -156,8 +158,8 @@ func SendEvents(snortEvents []Alert, p *hp.HoneyPodLogProcessor, e *api.EventsDa
 				DestNamespace:   e.DestNamespace,
 				SourceNameAggr:  e.SourceNameAggr,
 				SourceNamespace: e.SourceNamespace,
-				Record: events.HoneypodSnortEventRecord{
-					Snort: &events.Snort{
+				Record: v1.HoneypodSnortEventRecord{
+					Snort: &v1.Snort{
 						Description: event.SigName,
 						Category:    event.Category,
 						Occurrence:  string(event.DateSrcDst),
