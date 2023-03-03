@@ -6,18 +6,18 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 // EventHandler handles event bulk requests for deleting and dimssing events.
-func EventHandler(esClientFactory lmaelastic.ClusterContextClientFactory) http.Handler {
+func EventHandler(lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// parse http request body into bulk request.
 		params, err := parseEventRequest(w, r)
@@ -28,7 +28,7 @@ func EventHandler(esClientFactory lmaelastic.ClusterContextClientFactory) http.H
 
 		// perform elastic bulk actions.
 		// only delete and dismiss actions are supported for events.
-		resp, err := processEventRequest(r, esClientFactory, params)
+		resp, err := processEventRequest(r, lsclient, params)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
@@ -96,82 +96,53 @@ func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkEventReq
 }
 
 // processEventRequest translates bulk parameters to Elastic bulk requests and return responses.
-func processEventRequest(
-	r *http.Request,
-	esClientFactory lmaelastic.ClusterContextClientFactory,
-	params *v1.BulkEventRequest,
-) (*v1.BulkEventResponse, error) {
+func processEventRequest(r *http.Request, lsclient client.Client, params *v1.BulkEventRequest) (*v1.BulkEventResponse, error) {
 	// create a context with timeout to ensure we don't block for too long.
 	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), middleware.DefaultRequestTimeout)
 	defer cancelWithTimeout()
 
-	esClient, err := esClientFactory.ClientForCluster(params.ClusterName)
-	if err != nil {
-		log.WithError(err).Error("failed to create Elastic client from factory")
-		return nil, &httputils.HttpStatusError{
-			Status: http.StatusInternalServerError,
-			Msg:    err.Error(),
-			Err:    err,
-		}
-	}
+	resp := v1.BulkEventResponse{}
+	var dismissResp, delResp *lapi.BulkResponse
+	var err error
 
-	resp, err := processBulkEventRequest(ctx, esClient, params)
-	if err != nil {
-		return nil, &httputils.HttpStatusError{
-			Status: http.StatusInternalServerError,
-			Msg:    err.Error(),
-			Err:    err,
-		}
-	}
-	return resp, nil
-}
-
-func processBulkEventRequest(ctx context.Context, esClient lmaelastic.Client, params *v1.BulkEventRequest) (*v1.BulkEventResponse, error) {
-	bulkService := elastic.NewBulkService(esClient.Backend()).Refresh("wait_for")
-	if bulkService == nil {
-		err := errors.New("failed to create bulk service for events")
-		log.WithError(err).Error("failed to process bulk events request")
-		return nil, err
-	}
-
+	// We don't actually perform the delete and dismiss together. The UI only sends
+	// one of these at a time anyway. We will handle a request that has both set, though.
 	if params.Delete != nil {
+		eventsToDelete := []lapi.Event{}
 		for _, item := range params.Delete.Items {
-			bulkService.Add(elastic.NewBulkDeleteRequest().Index(item.Index).Id(item.ID))
+			eventsToDelete = append(eventsToDelete, lapi.Event{ID: item.ID})
+		}
+		delResp, err = lsclient.Events(params.ClusterName).Delete(ctx, eventsToDelete)
+		if err != nil {
+			return nil, err
 		}
 	}
 	if params.Dismiss != nil {
-		for _, item := range params.Dismiss.Items {
-			bulkService.Add(elastic.NewBulkUpdateRequest().Index(item.Index).Id(item.ID).Doc(map[string]bool{"dismissed": true}))
+		eventsToDismiss := []lapi.Event{}
+		for _, item := range params.Delete.Items {
+			eventsToDismiss = append(eventsToDismiss, lapi.Event{ID: item.ID})
+		}
+		dismissResp, err = lsclient.Events(params.ClusterName).Dismiss(ctx, eventsToDismiss)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	response, err := bulkService.Do(ctx)
-	if err != nil {
-		log.WithError(err).Error("failed to process bulk events request")
-		return nil, err
-	}
+	// Populate bulk response errors.
+	resp.Errors = resp.Errors || len(dismissResp.Errors) > 0
+	resp.Errors = resp.Errors || len(delResp.Errors) > 0
 
-	resp := v1.BulkEventResponse{
-		Errors: response.Errors,
-		Took:   response.Took,
-	}
-
-	items := make([]*elastic.BulkResponseItem, 0)
-	items = append(items, response.Deleted()...)
-	items = append(items, response.Updated()...)
-	resp.Items = make([]v1.BulkEventResponseItem, len(items))
-	for i, item := range items {
-		resp.Items[i].Index = item.Index
-		resp.Items[i].ID = item.Id
-		resp.Items[i].Result = item.Result
-		resp.Items[i].Status = item.Status
-		if item.Error != nil {
-			resp.Items[i].Error = &v1.BulkEventErrorDetails{
-				Type:   item.Error.Type,
-				Reason: item.Error.Reason,
-			}
-		}
-	}
+	// Populate items array in response.
+	// items := make([]*elastic.BulkResponseItem, 0)
+	// items = append(items, response.Deleted()...)
+	// items = append(items, response.Updated()...)
+	// resp.Items = make([]v1.BulkEventResponseItem, len(items))
+	// for i, item := range items {
+	// 	resp.Items[i].Index = item.Index
+	// 	resp.Items[i].ID = item.Id
+	// 	resp.Items[i].Result = item.Result
+	// 	resp.Items[i].Status = item.Status
+	// }
 
 	return &resp, nil
 }

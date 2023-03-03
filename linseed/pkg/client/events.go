@@ -15,6 +15,8 @@ import (
 type EventsInterface interface {
 	List(context.Context, v1.Params) (*v1.List[v1.Event], error)
 	Create(context.Context, []v1.Event) (*v1.BulkResponse, error)
+	Dismiss(context.Context, []v1.Event) (*v1.BulkResponse, error)
+	Delete(context.Context, []v1.Event) (*v1.BulkResponse, error)
 }
 
 // Events implements EventsInterface.
@@ -63,6 +65,64 @@ func (f *events) Create(ctx context.Context, events []v1.Event) (*v1.BulkRespons
 
 	resp := v1.BulkResponse{}
 	err = f.restClient.Post().
+		Path("/events/bulk").
+		Cluster(f.clusterID).
+		BodyJSON(body).
+		ContentType(rest.ContentTypeMultilineJSON).
+		Do(ctx).
+		Into(&resp)
+	return &resp, err
+}
+
+func (f *events) Dismiss(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
+	var err error
+	body := []byte{}
+	for _, e := range events {
+		// Add a newline between each. Do it here so that
+		// we don't have a newline after the last event.
+		if len(body) != 0 {
+			body = append(body, []byte("\n")...)
+		}
+
+		// Add the item.
+		out, err := json.Marshal(e)
+		if err != nil {
+			return nil, err
+		}
+		body = append(body, out...)
+	}
+
+	resp := v1.BulkResponse{}
+	err = f.restClient.Put().
+		Path("/events/bulk").
+		Cluster(f.clusterID).
+		BodyJSON(body).
+		ContentType(rest.ContentTypeMultilineJSON).
+		Do(ctx).
+		Into(&resp)
+	return &resp, err
+}
+
+func (f *events) Delete(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
+	var err error
+	body := []byte{}
+	for _, e := range events {
+		// Add a newline between each. Do it here so that
+		// we don't have a newline after the last event.
+		if len(body) != 0 {
+			body = append(body, []byte("\n")...)
+		}
+
+		// Add the item.
+		out, err := json.Marshal(e)
+		if err != nil {
+			return nil, err
+		}
+		body = append(body, out...)
+	}
+
+	resp := v1.BulkResponse{}
+	err = f.restClient.Delete().
 		Path("/events/bulk").
 		Cluster(f.clusterID).
 		BodyJSON(body).

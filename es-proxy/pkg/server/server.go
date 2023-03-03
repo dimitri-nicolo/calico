@@ -208,7 +208,7 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					event.EventHandler(esClientFactory)))))
+					event.EventHandler(linseed)))))
 	sm.Handle("/events/search",
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,

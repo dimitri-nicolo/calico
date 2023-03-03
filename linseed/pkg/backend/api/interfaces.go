@@ -101,6 +101,12 @@ type EventsBackend interface {
 
 	// List lists logs that match the given parameters.
 	List(context.Context, ClusterInfo, *v1.EventParams) (*v1.List[v1.Event], error)
+
+	// Dismiss the given events.
+	Dismiss(context.Context, ClusterInfo, []v1.Event) (*v1.BulkResponse, error)
+
+	// Delete the given events.
+	Delete(context.Context, ClusterInfo, []v1.Event) (*v1.BulkResponse, error)
 }
 
 // LogsType determines the type of logs supported
