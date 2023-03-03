@@ -26,17 +26,14 @@ func NewHandler(lsclient client.Client) http.Handler {
 		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 		defer cancel()
 
-		// Create a pager to use.
-		pager := client.NewListPager[v1.AuditLog](params)
-
-		logs, err := doAuditSearch(ctx, cluster, lsclient, pager)
+		items, err := lsclient.AuditLogs(cluster).List(ctx, params)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
 		}
 
 		// Write the response.
-		httputils.Encode(w, logs)
+		httputils.Encode(w, items)
 	})
 }
 
@@ -44,6 +41,7 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, s
 	type auditRequest struct {
 		v1.AuditLogParams `json:",inline"`
 		Cluster           string `json:"cluster"`
+		Page              int    `json:"page"`
 	}
 
 	params := auditRequest{}
@@ -66,6 +64,12 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, s
 		params.Cluster = datastore.DefaultCluster
 	}
 
+	// Ideally, clients don't know the syntax of the after key, but
+	// for paged lists we currently need this.
+	params.SetAfterKey(map[string]interface{}{
+		"startFrom": params.Page * params.MaxPageSize,
+	})
+
 	// Verify required fields.
 	if params.Type == "" {
 		return nil, "", &httputils.HttpStatusError{
@@ -75,18 +79,4 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, s
 	}
 
 	return &params.AuditLogParams, params.Cluster, nil
-}
-
-func doAuditSearch(ctx context.Context, cluster string, lsc client.Client, pager client.ListPager[v1.AuditLog]) ([]v1.AuditLog, error) {
-	allLogs := []v1.AuditLog{}
-	pages, errors := pager.Stream(ctx, lsc.AuditLogs(cluster).List)
-
-	for page := range pages {
-		allLogs = append(allLogs, page.Items...)
-	}
-
-	if err, ok := <-errors; ok {
-		return nil, err
-	}
-	return allLogs, nil
 }
