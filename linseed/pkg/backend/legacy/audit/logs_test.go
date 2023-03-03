@@ -234,6 +234,7 @@ func TestAuditLogFiltering(t *testing.T) {
 		// Configuration for which logs are expected to match.
 		ExpectLog1 bool
 		ExpectLog2 bool
+		ExpectKube bool
 
 		// Whether to perform an equality comparison on the returned
 		// logs. Can be useful for tests where stats differ.
@@ -246,6 +247,9 @@ func TestAuditLogFiltering(t *testing.T) {
 			num++
 		}
 		if tc.ExpectLog2 {
+			num++
+		}
+		if tc.ExpectKube {
 			num++
 		}
 		return num
@@ -309,6 +313,15 @@ func TestAuditLogFiltering(t *testing.T) {
 			ExpectLog1: false,
 			ExpectLog2: true,
 		},
+		{
+			Name: "should support returning both kube and EE audit logs at once",
+			Params: v1.AuditLogParams{
+				Type: v1.AuditLogTypeAny,
+			},
+			ExpectLog1: true,
+			ExpectLog2: true,
+			ExpectKube: true,
+		},
 	}
 
 	for _, testcase := range testcases {
@@ -331,7 +344,7 @@ func TestAuditLogFiltering(t *testing.T) {
 			tr.To = logTime.Add(1 * time.Millisecond)
 			testcase.Params.QueryParams.TimeRange = tr
 
-			// The NetworkSet that this audit log is for.
+			// The NetworkSet that audit log is for.
 			obj := v3.NetworkPolicy{
 				TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
 			}
@@ -431,7 +444,59 @@ func TestAuditLogFiltering(t *testing.T) {
 			require.Equal(t, []v1.BulkError(nil), response.Errors)
 			require.Equal(t, 0, response.Failed)
 
-			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_audit_ee.*")
+			// Also create a Kube audit log.
+			ds := apps.DaemonSet{
+				TypeMeta: metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
+			}
+			dsRaw, err := json.Marshal(ds)
+			require.NoError(t, err)
+
+			a3 := v1.AuditLog{
+				Event: kaudit.Event{
+					TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+					AuditID:    types.UID("some-uuid-most-likely"),
+					Stage:      kaudit.StageResponseComplete,
+					Level:      kaudit.LevelRequestResponse,
+					RequestURI: "/apis/v1/namespaces",
+					Verb:       "GET",
+					User: authnv1.UserInfo{
+						Username: "user",
+						UID:      "uid",
+						Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+					},
+					ImpersonatedUser: &authnv1.UserInfo{
+						Username: "impuser",
+						UID:      "impuid",
+						Groups:   []string{"g1"},
+					},
+					SourceIPs: []string{"1.2.3.4"},
+					UserAgent: "user-agent",
+					ObjectRef: &kaudit.ObjectReference{
+						Resource:  "daemonsets",
+						Name:      "calico-node",
+						Namespace: "calico-system",
+					},
+					ResponseStatus: &metav1.Status{},
+					RequestObject: &runtime.Unknown{
+						Raw:         dsRaw,
+						ContentType: runtime.ContentTypeJSON,
+					},
+					ResponseObject: &runtime.Unknown{
+						Raw:         dsRaw,
+						ContentType: runtime.ContentTypeJSON,
+					},
+					RequestReceivedTimestamp: metav1.NewMicroTime(logTime),
+					StageTimestamp:           metav1.NewMicroTime(logTime),
+					Annotations:              map[string]string{"brick": "red"},
+				},
+				Name: testutils.StringPtr("any"),
+			}
+
+			resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []v1.AuditLog{a3})
+			require.NoError(t, err)
+			require.Equal(t, 0, len(resp.Errors))
+
+			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_audit_*")
 			require.NoError(t, err)
 
 			// Query for flow logs.
@@ -451,6 +516,9 @@ func TestAuditLogFiltering(t *testing.T) {
 			}
 			if testcase.ExpectLog2 {
 				require.Contains(t, r.Items, a2)
+			}
+			if testcase.ExpectKube {
+				require.Contains(t, r.Items, a3)
 			}
 		})
 	}

@@ -107,6 +107,7 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 	switch opts.Type {
 	case v1.AuditLogTypeEE:
 	case v1.AuditLogTypeKube:
+	case v1.AuditLogTypeAny:
 	case "":
 		return nil, fmt.Errorf("no audit log type provided on List request")
 	default:
@@ -215,13 +216,18 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 }
 
 func (b *auditLogBackend) index(kind v1.AuditLogType, i bapi.ClusterInfo) string {
+	base := fmt.Sprintf("tigera_secure_ee_audit_%s", kind)
+	if kind == v1.AuditLogTypeAny {
+		// Return both kube and EE logs.
+		base = fmt.Sprintf("tigera_secure_ee_audit_*")
+	}
 	if i.Tenant != "" {
 		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.%s.*", kind, i.Tenant, i.Cluster)
+		return fmt.Sprintf("%s.%s.%s.*", base, i.Tenant, i.Cluster)
 	}
 
 	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.*", kind, i.Cluster)
+	return fmt.Sprintf("%s.%s.*", base, i.Cluster)
 }
 
 func (b *auditLogBackend) writeAlias(kind v1.AuditLogType, i bapi.ClusterInfo) string {

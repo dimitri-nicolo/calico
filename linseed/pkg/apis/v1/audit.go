@@ -63,6 +63,7 @@ type AuditLogType string
 const (
 	AuditLogTypeKube AuditLogType = "kube"
 	AuditLogTypeEE   AuditLogType = "ee"
+	AuditLogTypeAny  AuditLogType = "any"
 )
 
 // AuditLog is the model used to ingest audit data
