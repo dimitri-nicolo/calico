@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e
+
+REPO=gcr.io/unique-caldron-775/smc/mock-node
+TAG=$(date -I)-$RANDOM
+IMAGE=$REPO:$TAG
+
+make image
+echo "Tagging image as $IMAGE"
+docker tag mock-node:latest-amd64 $IMAGE
+docker push $IMAGE
+kubectl set image -n calico-system deployment mock-calico-node mock-calico-node=$IMAGE
+echo "Set image $IMAGE"

@@ -22,7 +22,7 @@ defaultOperatorRegistry=$(cat ../charts/tigera-operator/values.yaml | grep regis
 OPERATOR_REGISTRY=${OPERATOR_REGISTRY:-$defaultOperatorRegistry}
 
 # Images used in manifests that are not rendered by Helm.
-NON_HELM_MANIFEST_IMAGES="calico/apiserver calico/windows calico/ctl calico/csi calico/node-driver-registrar"
+NON_HELM_MANIFEST_IMAGES="calico/apiserver calico/windows calico/ctl calico/csi calico/node-driver-registrar calico/mock-node"
 NON_HELM_MANIFEST_IMAGES_ENT="tigera/compliance-reporter tigera/firewall-integration tigera/ingress-collector \
 tigera/license-agent tigera/prometheus-operator tigera/prometheus-config-reloader tigera/anomaly_detection_jobs \
 tigera/honeypod tigera/honeypod-controller tigera/honeypod-exp-service tigera/calico-windows tigera/calicoctl"
