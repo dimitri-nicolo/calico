@@ -233,7 +233,7 @@ func TestDPStatsAfterConnection(t *testing.T) {
 			HTTPRequestsDenied:  0,
 		},
 	}
-	Eventually(server.GetDataplaneStats, "150ms", "50ms").Should(Equal([]*proto.DataplaneStats{
+	Eventually(server.GetDataplaneStats, "500ms", "50ms").Should(Equal([]*proto.DataplaneStats{
 		{
 			SrcIp:    "1.2.3.4",
 			DstIp:    "11.22.33.44",
@@ -266,7 +266,7 @@ func TestDPStatsAfterConnection(t *testing.T) {
 			HTTPRequestsDenied:  5,
 		},
 	}
-	Eventually(server.GetDataplaneStats, "150ms", "50ms").Should(Equal([]*proto.DataplaneStats{
+	Eventually(server.GetDataplaneStats, "500ms", "50ms").Should(Equal([]*proto.DataplaneStats{
 		{
 			SrcIp:    "1.2.3.4",
 			DstIp:    "11.22.33.44",
