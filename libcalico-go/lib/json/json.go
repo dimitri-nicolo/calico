@@ -20,6 +20,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
+type RawMessage jsoniter.RawMessage
+
 // Marshal is a drop in replacement for encoding/json.Marshall, which uses jsoniter for better performance.
 func Marshal(v any) ([]byte, error) {
 	return jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(v)

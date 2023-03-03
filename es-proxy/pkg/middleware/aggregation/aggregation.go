@@ -4,7 +4,6 @@ package aggregation
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -15,47 +14,73 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
-	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // This file implements an aggregated data query handler. The primary use of this is for the UX when querying aggregated
-// data for specific service graph nodes and edges. This is essentially a wrapper around the elasticsearch _search
-// interface, but provides the following useful additional function:
-// - Selector based queries (can select data using a selector format)
-// - RBAC limited data
-// - Handling of time series with auto selection of time buckets to avoid querying excessive amounts of data.
-// - Hard coded limits on the aggregation hits.
+// data for specific service graph nodes and edges.
 
 const (
 	minAggregationInterval = 10 * time.Minute
 	minTimeBuckets         = 4
 	maxTimeBuckets         = 24
-	timeBucket             = "tb"
 )
 
-func NewAggregationHandler(
-	elasticClient lmaelastic.Client,
-	clientSetFactory k8s.ClientSetFactory,
-	indexHelper lmaindex.Helper,
-) http.Handler {
-	return NewAggregationHandlerWithBackend(indexHelper, &realAggregationBackend{
-		elastic:          elasticClient,
-		clientSetFactory: clientSetFactory,
-	})
+type DataType int
+
+const (
+	TypeDNS DataType = iota
+	TypeL7
+	TypeFlows
+)
+
+func NewHandler(lsclient client.Client, clientSetFactory k8s.ClientSetFactory, typ DataType) http.Handler {
+	switch typ {
+	case TypeDNS:
+		return NewDNSHandler(lsclient, &realAuthorizer{
+			clientSetFactory: clientSetFactory,
+		})
+	case TypeL7:
+		return NewL7Handler(lsclient, &realAuthorizer{
+			clientSetFactory: clientSetFactory,
+		})
+	case TypeFlows:
+		return NewFlowHandler(lsclient, &realAuthorizer{
+			clientSetFactory: clientSetFactory,
+		})
+	}
+	panic("Unhandled aggregation type")
 }
 
-func NewAggregationHandlerWithBackend(indexHelper lmaindex.Helper, backend AggregationBackend) http.Handler {
-	return &aggregation{
-		backend:     backend,
-		indexHelper: indexHelper,
+func NewDNSHandler(c client.Client, auth Authorizer) http.Handler {
+	return &genericHandler{
+		&dnsHandler{
+			lsclient:   c,
+			authorizer: auth,
+		},
+	}
+}
+
+func NewL7Handler(c client.Client, auth Authorizer) http.Handler {
+	return &genericHandler{
+		&l7Handler{
+			lsclient:   c,
+			authorizer: auth,
+		},
+	}
+}
+
+func NewFlowHandler(c client.Client, auth Authorizer) http.Handler {
+	return &genericHandler{
+		&flowHandler{
+			lsclient:   c,
+			authorizer: auth,
+		},
 	}
 }
 
@@ -64,22 +89,137 @@ func NewAggregationHandlerWithBackend(indexHelper lmaindex.Helper, backend Aggre
 type RequestData struct {
 	HTTPRequest        *http.Request
 	AggregationRequest v1.AggregationRequest
-	Index              string
 	IsTimeSeries       bool
-	Aggregations       map[string]elastic.Aggregation
+	NumBuckets         int
 }
 
-// aggregation implements the Aggregation interface.
-type aggregation struct {
-	backend     AggregationBackend
-	indexHelper lmaindex.Helper
+// dnsHandler handles requests for DNS log stats.
+type dnsHandler struct {
+	lsclient   client.Client
+	authorizer Authorizer
 }
 
-func (s *aggregation) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (s *dnsHandler) RunQuery(ctx context.Context, rd *RequestData) (*v1.AggregationResponse, error) {
+	// Create the query.
+	params := lapi.DNSAggregationParams{}
+	params.Selector = rd.AggregationRequest.Selector
+	if verbs, err := s.authorizer.PerformUserAuthorizationReview(ctx, rd); err != nil {
+		return nil, err
+	} else if len(verbs) == 0 {
+		return nil, &httputils.HttpStatusError{
+			Msg:    "Forbidden",
+			Status: http.StatusForbidden,
+		}
+	} else {
+		params.Permissions = verbs
+	}
+	params.NumBuckets = rd.NumBuckets
+	params.TimeRange = rd.AggregationRequest.TimeRange
+
+	// Add in the aggregations.
+	params.Aggregations = make(map[string]json.RawMessage)
+	for n, a := range rd.AggregationRequest.Aggregations {
+		params.Aggregations[n] = json.RawMessage(a)
+	}
+
+	// Run the query.
+	aggs, err := s.lsclient.DNSLogs(rd.AggregationRequest.Cluster).Aggregations(ctx, &params)
+	if err != nil {
+		return nil, err
+	}
+	return extractAggregationResults(aggs, rd)
+}
+
+// l7Handler handles requests for L7 log stats.
+type l7Handler struct {
+	lsclient   client.Client
+	authorizer Authorizer
+}
+
+func (s *l7Handler) RunQuery(ctx context.Context, rd *RequestData) (*v1.AggregationResponse, error) {
+	// Create the query.
+	params := lapi.L7AggregationParams{}
+	params.Selector = rd.AggregationRequest.Selector
+	if verbs, err := s.authorizer.PerformUserAuthorizationReview(ctx, rd); err != nil {
+		return nil, err
+	} else if len(verbs) == 0 {
+		return nil, &httputils.HttpStatusError{
+			Msg:    "Forbidden",
+			Status: http.StatusForbidden,
+		}
+	} else {
+		params.Permissions = verbs
+	}
+	params.NumBuckets = rd.NumBuckets
+	params.TimeRange = rd.AggregationRequest.TimeRange
+
+	// Add in the aggregations.
+	params.Aggregations = make(map[string]json.RawMessage)
+	for n, a := range rd.AggregationRequest.Aggregations {
+		params.Aggregations[n] = json.RawMessage(a)
+	}
+
+	// Run the query.
+	aggs, err := s.lsclient.L7Logs(rd.AggregationRequest.Cluster).Aggregations(ctx, &params)
+	if err != nil {
+		return nil, err
+	}
+	return extractAggregationResults(aggs, rd)
+}
+
+// flowHandler handles requests for flow log stats.
+type flowHandler struct {
+	lsclient   client.Client
+	authorizer Authorizer
+}
+
+func (s *flowHandler) RunQuery(ctx context.Context, rd *RequestData) (*v1.AggregationResponse, error) {
+	// Create the query.
+	params := lapi.FlowLogAggregationParams{}
+	params.Selector = rd.AggregationRequest.Selector
+	if verbs, err := s.authorizer.PerformUserAuthorizationReview(ctx, rd); err != nil {
+		return nil, err
+	} else if len(verbs) == 0 {
+		return nil, &httputils.HttpStatusError{
+			Msg:    "Forbidden",
+			Status: http.StatusForbidden,
+		}
+	} else {
+		params.Permissions = verbs
+	}
+	params.NumBuckets = rd.NumBuckets
+	params.TimeRange = rd.AggregationRequest.TimeRange
+
+	// Add in the aggregations.
+	params.Aggregations = make(map[string]json.RawMessage)
+	for n, a := range rd.AggregationRequest.Aggregations {
+		params.Aggregations[n] = json.RawMessage(a)
+	}
+
+	// Run the query.
+	aggs, err := s.lsclient.FlowLogs(rd.AggregationRequest.Cluster).Aggregations(ctx, &params)
+	if err != nil {
+		return nil, err
+	}
+	return extractAggregationResults(aggs, rd)
+}
+
+// QueryMaker describes an interface that allows clients to make queries for stats data.
+type QueryMaker interface {
+	RunQuery(context.Context, *RequestData) (*v1.AggregationResponse, error)
+}
+
+// genericHandler is a generic HTTP server to handling stats requests. The type-specific
+// logic is implemented within the QueryMaker.
+type genericHandler struct {
+	backend QueryMaker
+}
+
+func (s *genericHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
 
 	// Extract the request specific data used to collate and filter the data.
-	rd, err := s.getAggregationRequest(w, req)
+	rd, err := getAggregationRequest(w, req)
 	if err != nil {
 		httputils.EncodeError(w, err)
 		return
@@ -89,21 +229,19 @@ func (s *aggregation) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithTimeout(req.Context(), rd.AggregationRequest.Timeout)
 	defer cancel()
 
-	// Create the elastic query.
+	res, err := s.backend.RunQuery(ctx, rd)
+	if err != nil {
+		httputils.EncodeError(w, err)
+		return
+	}
+
+	httputils.Encode(w, res)
+	log.Debugf("Aggregation request took %s", time.Since(start))
+}
+
+func extractAggregationResults(aggs elastic.Aggregations, rd *RequestData) (*v1.AggregationResponse, error) {
 	res := v1.AggregationResponse{}
-	if sel, err := s.indexHelper.NewSelectorQuery(rd.AggregationRequest.Selector); err != nil {
-		httputils.EncodeError(w, err)
-		return
-	} else if auth, err := s.backend.PerformUserAuthorizationReview(ctx, rd); err != nil {
-		httputils.EncodeError(w, err)
-		return
-	} else if query, err := s.getQuery(rd, sel, auth); err != nil {
-		httputils.EncodeError(w, err)
-		return
-	} else if aggs, err := s.backend.RunQuery(ctx, rd, query); err != nil {
-		httputils.EncodeError(w, err)
-		return
-	} else if !rd.IsTimeSeries {
+	if !rd.IsTimeSeries {
 		// There is no time series, therefore the data is all in the main bucket.
 		res.Buckets = append(res.Buckets, v1.AggregationTimeBucket{
 			StartTime:    metav1.Time{Time: rd.AggregationRequest.TimeRange.From},
@@ -112,14 +250,9 @@ func (s *aggregation) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	} else {
 		// There is a time series. The time aggregation is in the main bucket and then the data for each time
 		// bucket is in the sub aggregation.
-		timebuckets, ok := aggs.AutoDateHistogram(timeBucket)
+		timebuckets, ok := aggs.AutoDateHistogram(lapi.TimeSeriesBucketName)
 		if !ok {
-			httputils.EncodeError(w, &httputils.HttpStatusError{
-				Status: http.StatusInternalServerError,
-				Msg:    "no valid time buckets in aggregation response",
-				Err:    errors.New("no valid time buckets in aggregation response"),
-			})
-			return
+			return nil, fmt.Errorf("no valid time buckets in aggregation response")
 		}
 		for _, b := range timebuckets.Buckets {
 			// Pull out the aggregation results.
@@ -135,21 +268,11 @@ func (s *aggregation) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			})
 		}
 	}
-
-	httputils.Encode(w, res)
-	log.Debugf("Aggregation request took %s", time.Since(start))
-}
-
-type rawAgg struct {
-	json.RawMessage
-}
-
-func (a rawAgg) Source() (interface{}, error) {
-	return a.RawMessage, nil
+	return &res, nil
 }
 
 // getAggregationRequest parses the request from the HTTP request body.
-func (s *aggregation) getAggregationRequest(w http.ResponseWriter, req *http.Request) (*RequestData, error) {
+func getAggregationRequest(w http.ResponseWriter, req *http.Request) (*RequestData, error) {
 	// Extract the request from the body.
 	var ar v1.AggregationRequest
 
@@ -175,35 +298,11 @@ func (s *aggregation) getAggregationRequest(w http.ResponseWriter, req *http.Req
 	if len(ar.Aggregations) == 0 {
 		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains no aggregations", nil)
 	}
-
-	// If the request is for a time series then determine the number of buckets based on the interval size and the
-	// minimum sample period.
-	var buckets int
-	var aggs map[string]elastic.Aggregation
-	if buckets = getNumBuckets(ar); buckets != 0 {
-		// Modify the user supplied aggregation to be nested within a histogram aggregation for the time field.
-		adagg := elastic.NewAutoDateHistogramAggregation().
-			Field(s.indexHelper.GetTimeField()).
-			Buckets(buckets)
-		for an, av := range ar.Aggregations {
-			adagg = adagg.SubAggregation(an, rawAgg{av})
-		}
-		aggs = map[string]elastic.Aggregation{
-			timeBucket: adagg,
-		}
-	} else {
-		aggs = make(map[string]elastic.Aggregation)
-		for an, av := range ar.Aggregations {
-			aggs[an] = rawAgg{av}
-		}
-	}
-
 	return &RequestData{
 		HTTPRequest:        req,
 		AggregationRequest: ar,
-		Index:              s.indexHelper.GetIndex(elasticvariant.AddIndexInfix(ar.Cluster)),
-		IsTimeSeries:       buckets != 0,
-		Aggregations:       aggs,
+		IsTimeSeries:       ar.IncludeTimeSeries,
+		NumBuckets:         getNumBuckets(ar),
 	}, nil
 }
 
@@ -219,30 +318,10 @@ func getNumBuckets(ar v1.AggregationRequest) int {
 
 	numMinIntervals := duration / minAggregationInterval
 	if numMinIntervals < minTimeBuckets {
-		return 0
+		return minTimeBuckets
 	} else if numMinIntervals <= maxTimeBuckets {
 		return int(numMinIntervals)
 	} else {
 		return maxTimeBuckets
 	}
-}
-
-// getQuery returns the query for the aggregation. This is a combination of the users selector, a users RBAC limiting
-// query, and the time range.
-func (s *aggregation) getQuery(rd *RequestData, sel elastic.Query, auth []apiv3.AuthorizedResourceVerbs) (elastic.Query, error) {
-	q := elastic.NewBoolQuery()
-	if sel != nil {
-		q = q.Must(sel)
-	}
-
-	if rbac, err := s.indexHelper.NewRBACQuery(auth); err != nil {
-		return nil, err
-	} else if rbac != nil {
-		q = q.Must(rbac)
-	}
-
-	tr := s.indexHelper.NewTimeRangeQuery(rd.AggregationRequest.TimeRange.From, rd.AggregationRequest.TimeRange.To)
-	q = q.Must(tr)
-
-	return q, nil
 }

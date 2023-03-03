@@ -5,6 +5,7 @@ package v1
 import (
 	"bytes"
 	"encoding/base64"
+	gojson "encoding/json"
 	"fmt"
 	"net"
 	"sort"
@@ -13,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
@@ -25,6 +26,13 @@ import (
 type DNSLogParams struct {
 	QueryParams        `json:",inline" validate:"required"`
 	LogSelectionParams `json:",inline"`
+}
+
+type DNSAggregationParams struct {
+	// Inherit all the normal DNS log selection parameters.
+	DNSLogParams `json:",inline"`
+	Aggregations map[string]gojson.RawMessage `json:"aggregations"`
+	NumBuckets   int                          `json:"num_buckets"`
 }
 
 type DNSLog struct {
@@ -291,7 +299,7 @@ func toDNSClass(val string) DNSClass {
 	if strings.HasPrefix(val, "#") {
 		code, err := strconv.Atoi(strings.TrimPrefix(val, "#"))
 		if err != nil {
-			log.Warnf("Failed to recognize DNS Class %s. Will default to 0", val)
+			logrus.Warnf("Failed to recognize DNS Class %s. Will default to 0", val)
 			return DNSClass(0)
 		}
 
@@ -310,7 +318,7 @@ func toDNSClass(val string) DNSClass {
 	case "any":
 		return DNSClass(layers.DNSClassAny)
 	default:
-		log.Warnf("Failed to recognize DNS Class %s. Will default to 0", val)
+		logrus.Warnf("Failed to recognize DNS Class %s. Will default to 0", val)
 		return DNSClass(0)
 	}
 }
@@ -352,7 +360,7 @@ func toDNSType(val string) DNSType {
 	if strings.HasPrefix(val, "#") {
 		code, err := strconv.Atoi(strings.TrimPrefix(val, "#"))
 		if err != nil {
-			log.Warnf("Failed to recognize DNS Type %s. Will default to 0", val)
+			logrus.Warnf("Failed to recognize DNS Type %s. Will default to 0", val)
 			return DNSType(0)
 		}
 
@@ -401,7 +409,7 @@ func toDNSType(val string) DNSType {
 	case "URI":
 		return DNSType(layers.DNSTypeURI)
 	default:
-		log.Warnf("Failed to recognize DNS Type %s. Will default to 0", val)
+		logrus.Warnf("Failed to recognize DNS Type %s. Will default to 0", val)
 		return DNSType(0)
 	}
 }
@@ -493,7 +501,6 @@ func (d *DNSRRSets) UnmarshalJSON(data []byte) error {
 			rrSets.Add(dnsName, rdata)
 		}
 	}
-
 	*d = rrSets
 	return nil
 }
@@ -711,10 +718,15 @@ type DNSServer struct {
 }
 
 type dnsServerEncoded struct {
+	// Include the fields from Endpoint.
 	Name      string `json:"name"`
 	NameAggr  string `json:"name_aggr"`
 	Namespace string `json:"namespace"`
-	IP        string `json:"ip"`
+	// Type is not serialized for DNS servers.
+
+	// As well as any other DNSServer fields.
+	IP     string            `json:"ip"`
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 func (d *DNSServer) MarshalJSON() ([]byte, error) {
@@ -732,6 +744,7 @@ func (d *DNSServer) MarshalJSON() ([]byte, error) {
 		NameAggr:  d.AggregatedName,
 		Namespace: d.Namespace,
 		IP:        ip,
+		Labels:    d.Labels,
 	})
 }
 
@@ -745,6 +758,7 @@ func (d *DNSServer) UnmarshalJSON(data []byte) error {
 	d.AggregatedName = dnsServerEncoded.NameAggr
 	d.Namespace = dnsServerEncoded.Namespace
 	d.IP = net.ParseIP(dnsServerEncoded.IP)
+	d.Labels = dnsServerEncoded.Labels
 
 	return nil
 }

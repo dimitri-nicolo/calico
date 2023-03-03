@@ -15,9 +15,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
-var (
-	searchURLPattern *regexp.Regexp = regexp.MustCompile(`^/(.*)/_search$`)
-)
+var searchURLPattern *regexp.Regexp = regexp.MustCompile(`^/(.*)/_search$`)
 
 // RawQueryHandle validates raw Elastic requests sent from Manager.
 // It only accepts Elastic search requests in the following definition:

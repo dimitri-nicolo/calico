@@ -2,10 +2,20 @@
 
 package v1
 
+import (
+	"encoding/json"
+)
+
 // L7LogParams define querying parameters to retrieve L7 logs
 type L7LogParams struct {
 	QueryParams        `json:",inline" validate:"required"`
 	LogSelectionParams `json:",inline"`
+}
+
+type L7AggregationParams struct {
+	L7LogParams  `json:",inline"`
+	Aggregations map[string]json.RawMessage `json:"aggregations"`
+	NumBuckets   int                        `json:"num_buckets"`
 }
 
 // L7Log is the structure which defines a single instance of an L7 flow log.

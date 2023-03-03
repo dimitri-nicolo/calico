@@ -7,6 +7,7 @@ import "github.com/projectcalico/calico/linseed/pkg/client/rest"
 type MockClient interface {
 	Client
 	SetResults(results ...rest.MockResult)
+	Requests() []*rest.MockRequest
 }
 
 type mockClient struct {
@@ -71,4 +72,8 @@ func NewMockClient(tenantID string, results ...rest.MockResult) MockClient {
 
 func (m *mockClient) SetResults(results ...rest.MockResult) {
 	m.restClient = rest.NewMockClient(results...)
+}
+
+func (m *mockClient) Requests() []*rest.MockRequest {
+	return m.restClient.(*rest.MockRESTClient).Requests()
 }

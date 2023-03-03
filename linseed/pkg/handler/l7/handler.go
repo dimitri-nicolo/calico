@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/linseed/pkg/handler"
@@ -22,6 +23,7 @@ import (
 const (
 	FlowPath    = "/l7"
 	LogPath     = "/l7/logs"
+	AggsPath    = "/l7/logs/aggregation"
 	LogPathBulk = "/l7/logs/bulk"
 )
 
@@ -53,6 +55,11 @@ func (h l7) APIS() []handler.API {
 			Method:  "POST",
 			URL:     LogPath,
 			Handler: h.GetLogs(),
+		},
+		{
+			Method:  "POST",
+			URL:     AggsPath,
+			Handler: h.Aggregation(),
 		},
 	}
 }
@@ -178,6 +185,49 @@ func (h l7) Bulk() http.HandlerFunc {
 			return
 		}
 		log.Debugf("%s response is: %+v", LogPathBulk, response)
+		httputils.Encode(w, response)
+	}
+}
+
+func (h l7) Aggregation() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		reqParams, err := handler.DecodeAndValidateReqParams[v1.L7AggregationParams](w, req)
+		if err != nil {
+			log.WithError(err).Error("Failed to decode/validate request parameters")
+			var httpErr *v1.HTTPError
+			if errors.As(err, &httpErr) {
+				httputils.JSONError(w, httpErr, httpErr.Status)
+			} else {
+				httputils.JSONError(w, &v1.HTTPError{
+					Msg:    err.Error(),
+					Status: http.StatusBadRequest,
+				}, http.StatusBadRequest)
+			}
+			return
+		}
+
+		if reqParams.Timeout == nil {
+			reqParams.Timeout = &metav1.Duration{Duration: v1.DefaultTimeOut}
+		}
+
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: middleware.ClusterIDFromContext(req.Context()),
+			Tenant:  middleware.TenantIDFromContext(req.Context()),
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
+		defer cancel()
+		response, err := h.logs.Aggregations(ctx, clusterInfo, reqParams)
+		if err != nil {
+			log.WithError(err).Error("Failed to list DNS stats")
+			httputils.JSONError(w, &v1.HTTPError{
+				Status: http.StatusInternalServerError,
+				Msg:    err.Error(),
+			}, http.StatusInternalServerError)
+			return
+		}
+
+		logrus.Debugf("%s response is: %+v", AggsPath, response)
 		httputils.Encode(w, response)
 	}
 }

@@ -6,15 +6,21 @@ import (
 )
 
 func NewMockClient(results ...MockResult) RESTClient {
-	return &mockRestClient{results: results}
+	return &MockRESTClient{results: results, requests: []*MockRequest{}}
 }
 
-type mockRestClient struct {
-	results []MockResult
-	called  int
+type MockRESTClient struct {
+	results  []MockResult
+	called   int
+	requests []*MockRequest
 }
 
-func (m *mockRestClient) Verb(v string) Request {
+// Returns the MockRequets made by this client.
+func (m *MockRESTClient) Requests() []*MockRequest {
+	return m.requests
+}
+
+func (m *MockRESTClient) Verb(v string) Request {
 	// Return the nth request with its expected result.
 	if m.called > len(m.results) {
 		panic(fmt.Sprintf("Mock client called %d times, but only have %d results", m.called+1, len(m.results)))
@@ -23,24 +29,27 @@ func (m *mockRestClient) Verb(v string) Request {
 	}
 	result := m.results[m.called]
 	m.called++
-	return NewMockRequest(m, &result).Verb(v)
+	req := NewMockRequest(m, &result).Verb(v)
+	mr := req.(*MockRequest)
+	m.requests = append(m.requests, mr)
+	return req
 }
 
-func (m *mockRestClient) Post() Request {
+func (m *MockRESTClient) Post() Request {
 	return m.Verb("POST")
 }
 
 // BaseURL should never be used by the mock client.
-func (m *mockRestClient) BaseURL() string {
+func (m *MockRESTClient) BaseURL() string {
 	panic("not implemented")
 }
 
 // Tenant should never be used by the mock client.
-func (m *mockRestClient) Tenant() string {
+func (m *MockRESTClient) Tenant() string {
 	panic("not implemented")
 }
 
 // HTTPClient should never be used by the mock client.
-func (m *mockRestClient) HTTPClient() *http.Client {
+func (m *MockRESTClient) HTTPClient() *http.Client {
 	panic("not implemented")
 }

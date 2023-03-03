@@ -25,7 +25,7 @@ func LogRequestHeaders(h http.Handler) http.Handler {
 				"method":     req.Method,
 				"path":       req.RequestURI,
 				"remoteAddr": req.RemoteAddr,
-			}).Info("Request received")
+			}).Debug("Request received")
 		}
 		h.ServeHTTP(w, req)
 	})

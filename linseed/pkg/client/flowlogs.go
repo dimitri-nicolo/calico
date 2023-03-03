@@ -4,8 +4,10 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 
+	"github.com/olivere/elastic/v7"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
@@ -14,6 +16,7 @@ import (
 type FlowLogsInterface interface {
 	List(context.Context, v1.Params) (*v1.List[v1.FlowLog], error)
 	Create(context.Context, []v1.FlowLog) (*v1.BulkResponse, error)
+	Aggregations(context.Context, v1.Params) (elastic.Aggregations, error)
 }
 
 // FlowLogs implements FlowLogsInterface.
@@ -68,4 +71,18 @@ func (f *flowLogs) Create(ctx context.Context, flowLogs []v1.FlowLog) (*v1.BulkR
 		Do(ctx).
 		Into(&resp)
 	return &resp, err
+}
+
+func (f *flowLogs) Aggregations(ctx context.Context, params v1.Params) (elastic.Aggregations, error) {
+	aggs := elastic.Aggregations{}
+	err := f.restClient.Post().
+		Path("/flows/logs/aggregation").
+		Params(params).
+		Cluster(f.clusterID).
+		Do(ctx).
+		Into(&aggs)
+	if err != nil {
+		return nil, err
+	}
+	return aggs, nil
 }

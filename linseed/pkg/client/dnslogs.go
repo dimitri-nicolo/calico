@@ -5,8 +5,9 @@ package client
 import (
 	"context"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
+	"github.com/olivere/elastic/v7"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
@@ -15,6 +16,7 @@ import (
 type DNSLogsInterface interface {
 	List(context.Context, v1.Params) (*v1.List[v1.DNSLog], error)
 	Create(context.Context, []v1.DNSLog) (*v1.BulkResponse, error)
+	Aggregations(context.Context, v1.Params) (elastic.Aggregations, error)
 }
 
 // DNSLogs implements DNSLogsInterface.
@@ -41,6 +43,20 @@ func (f *dnsLogs) List(ctx context.Context, params v1.Params) (*v1.List[v1.DNSLo
 		return nil, err
 	}
 	return &dnsLogs, nil
+}
+
+func (f *dnsLogs) Aggregations(ctx context.Context, params v1.Params) (elastic.Aggregations, error) {
+	aggs := elastic.Aggregations{}
+	err := f.restClient.Post().
+		Path("/dns/logs/aggregation").
+		Params(params).
+		Cluster(f.clusterID).
+		Do(ctx).
+		Into(&aggs)
+	if err != nil {
+		return nil, err
+	}
+	return aggs, nil
 }
 
 func (f *dnsLogs) Create(ctx context.Context, dnsLogs []v1.DNSLog) (*v1.BulkResponse, error) {
