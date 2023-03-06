@@ -32,6 +32,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/bpf/polprog"
 	"github.com/projectcalico/calico/felix/bpf/state"
+	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/proto"
 )
@@ -2891,9 +2892,9 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 	}()
 
 	// Give the policy program somewhere to jump to.
-	jumpMapIndex := 1 // IPv4 Allowed program
+	jumpMapIndex := tcdefs.ProgIndexAllowed
 	if tp.ForIPv6() {
-		jumpMapIndex = 7 // IPv6 Allowed program
+		jumpMapIndex = tcdefs.ProgIndexV6Allowed
 	}
 	epiFD := installAllowedProgram(tcJumpMap, jumpMapIndex)
 	defer func() {
@@ -2901,9 +2902,9 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 		Expect(err).NotTo(HaveOccurred())
 	}()
 
-	jumpMapIndex = 3 // IPv4 Drop program
+	jumpMapIndex = tcdefs.ProgIndexDrop
 	if tp.ForIPv6() {
-		jumpMapIndex = 9 // IPv6 Drop program
+		jumpMapIndex = tcdefs.ProgIndexV6Drop
 	}
 	dropFD := installDropProgram(tcJumpMap, jumpMapIndex)
 	defer func() {
