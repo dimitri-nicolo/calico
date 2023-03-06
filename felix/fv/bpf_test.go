@@ -4057,6 +4057,15 @@ func checkNodeConntrack(felixes []*infrastructure.Felix) error {
 				if strings.Contains(line, felix.IP) {
 					continue lineLoop
 				}
+				if felix.ExpectedIPIPTunnelAddr != "" && strings.Contains(line, felix.ExpectedIPIPTunnelAddr) {
+					continue lineLoop
+				}
+				if felix.ExpectedVXLANTunnelAddr != "" && strings.Contains(line, felix.ExpectedVXLANTunnelAddr) {
+					continue lineLoop
+				}
+				if felix.ExpectedWireguardTunnelAddr != "" && strings.Contains(line, felix.ExpectedWireguardTunnelAddr) {
+					continue lineLoop
+				}
 				// Ignore DHCP
 				if strings.Contains(line, "sport=67 dport=68") {
 					continue lineLoop
@@ -4097,7 +4106,7 @@ func conntrackFlushWorkloadEntries(felixes []*infrastructure.Felix) func() {
 						// Expected "error" when there are no matching flows.
 						continue
 					}
-					ExpectWithOffset(1, err).NotTo(HaveOccurred(), "conntrack -F failed")
+					ExpectWithOffset(1, err).NotTo(HaveOccurred(), "conntrack -D failed")
 				}
 			}
 		}
@@ -4106,6 +4115,7 @@ func conntrackFlushWorkloadEntries(felixes []*infrastructure.Felix) func() {
 
 func conntrackChecks(felixes []*infrastructure.Felix) []interface{} {
 	return []interface{}{
+		CheckWithInit(conntrackFlushWorkloadEntries(felixes)),
 		CheckWithFinalTest(conntrackCheck(felixes)),
 		CheckWithBeforeRetry(conntrackFlushWorkloadEntries(felixes)),
 	}
