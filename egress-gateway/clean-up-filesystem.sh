@@ -41,12 +41,10 @@ bin_allow_list_patterns=(
   # eg dependencies.
   '/ip$' # iproute2; used to add/manipulate routes etc.
   'ping'
-
   # iptables/ip sets
   xtables
   iptables
   ip6tables
-  ipset
 
   # kmod is a multi-binary backing depmod/insmod/etc; used by iptables
   kmod depmod insmod modinfo modprobe rmmod lsmod
@@ -55,55 +53,12 @@ bin_allow_list_patterns=(
   '\['
   alias
   awk
-  basename
   coreutils
   '/bash$'
   '/sh$'
-  '/cat$'
-  '/cd$'
-  '/cp$'
-  '/ln$'
-  '/date$'
-  '/ls$'
-  echo
-  '/env$'
-  false
-  true
-  getopt
-  '/hostname$'
-  '/gzip$'
-  '/grep$'
-  '/nice$'
-  join
-  '/kill$'
-  mkdir
-  mknod
-  more
-  less
-  printf
-  '/read$'
-  readlink
   '/rm$'
-  '/sed$'
-  sleep
-  sort
-  '/stat$'
-  tail
-  '/tc$'
-  touch
-  '/tee$'
-  timeout
-  '/test$'
-  ulimit
-  uniq
-  wait
-  which
-  whoami
-  yes
-  zcat
-  zless
-  zmore
-
+  '/ls$'
+  '/cd$'
   # Used by this script.
   '/find$'
   '/ldd$'
@@ -201,7 +156,7 @@ while read -r path; do
     continue
   fi
   # Well-known plugins, not directly linked.
-  if [[ "$path" =~ xtables|netfilter|conntrack|ct_|pam|libnss ]] && ! [[ "$path" =~ systemd ]] ; then
+  if [[ "$path" =~ xtables|netfilter|conntrack|ct_ ]] && ! [[ "$path" =~ systemd ]] ; then
     echo "PLUGIN: $path"
     libs_to_keep[$path]=true
     continue
@@ -216,59 +171,39 @@ packages_to_keep=(
   ca-certificates
   conntrack-tools
   coreutils-single
-  crypto-policies
   filesystem
   findutils
   gawk
   glibc
   gmp
-  grep
-  gzip
   iproute
   ipset
   iptables
   iputils
   kmod
-  langpacks
   libacl
   libattr
   libcap
   libcrypto
   libelf
   libgcc
-  libibverbs
   libidn2
-  libnl
   libmnl
   libnetfilter
   libnfnetlink
   libnftnl
-  libnss
   libpcap
-  libpwquality
   libselinux
   libsigsegv
   libunistring
-  libzstd
   mpfr
   ncurses
-  net-tools
   openssl-libs
-  p11-kit-trust
-  pam
   pcre
   readline
-  redhat-release
-  rootfiles
   rpm
   sed
-  setup
-  shadow-utils
-  shared-mime-info
-  systemd-libs
   tzdata
-  util-linux
-  which
   xz-libs
   zlib
 )
