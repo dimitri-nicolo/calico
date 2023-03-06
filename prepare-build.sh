@@ -12,5 +12,6 @@ fi
 
 # Prepare creating an image
 cd cloud-on-k8s
+patch -i ../go-deps.patch
 make go-generate
 make generate-config-file
