@@ -40,7 +40,7 @@ for pattern in "${excluded_files[@]}"; do
 done
 
 problems="$(grep -r -I -i "${grep_args[@]}" -f "$my_dir/banned-regexps.txt" |
-  grep -v -f "$my_dir/banned-regexps-exceptions.txt")"
+  grep -v -f "$my_dir/banned-regexps-exceptions.txt" | cut -c -200 )"
 
 if [ "$problems" ]; then
   echo "Some files matched the banned words list:"
