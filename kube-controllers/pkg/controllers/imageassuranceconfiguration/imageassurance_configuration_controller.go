@@ -95,24 +95,20 @@ func New(
 			&corev1.Secret{}, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 
-		// In managed clusters we only watch for secret deletions of tigera-image-assurance-admission-controller-api-access
-		// and re-create them if they are deleted. Watching for their updates caused a reconcile loop.
-		// TODO: We need to refactor this later to include secret update events.
 		w.AddWatch(
 			cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", r.imageAssuranceNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ManagedIAAdmissionControllerResourceName))),
-			&corev1.Secret{}, worker.ResourceWatchDelete,
+			&corev1.Secret{}, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 
-		// In managed clusters we only watch for secret deletions of tigera-image-assurance-cr-adaptor-api-access
-		// and re-create them if they are deleted. Watching for their updates caused a reconcile loop.
-		// TODO: We need to refactor this later to include secret update events.
 		w.AddWatch(
 			cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", r.imageAssuranceNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ManagedIACRAdaptorResourceName))),
-			&corev1.Secret{}, worker.ResourceWatchDelete,
+			&corev1.Secret{}, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 
+		// We skip add events since kube controllers creates this in the managed cluster (via copying it from the
+		// management cluster).
 		w.AddWatch(
 			cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "configmaps", r.imageAssuranceNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceConfigMapName))),
@@ -134,13 +130,21 @@ func New(
 			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
 		)
 
-		// Watch for changes to the service accounts created by the reconciler.
+		// Watch for changes to the service accounts created by the reconciler. Note that we don't watch for add events
+		// since kube controllers is the one that creates these resources.
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat,
 					r.clusterName)))),
 			&corev1.ServiceAccount{},
-			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		)
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat,
+					r.clusterName)))),
+			&corev1.Secret{},
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 
 		w.AddWatch(
@@ -148,51 +152,84 @@ func New(
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat,
 					r.clusterName)))),
 			&corev1.ServiceAccount{},
-			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		)
+
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat,
+					r.clusterName)))),
+			&corev1.Secret{},
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 	}
 
 	if management {
-		// Watch for changes to the service accounts created by the reconciler.
+		// Watch for changes to the service accounts and their corresponding secrets created by the reconciler. Note that
+		// we don't watch for add events since kube controllers is the one that creates these resources.
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceIDSControllerServiceAccountName))),
 			&corev1.ServiceAccount{},
-			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		)
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceIDSControllerServiceAccountName))),
+			&corev1.Secret{},
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 
-		// Watch for changes to the service accounts created by the reconciler.
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceScannerServiceAccountName))),
 			&corev1.ServiceAccount{},
-			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		)
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceScannerServiceAccountName))),
+			&corev1.Secret{},
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 
-		// Watch for changes to the service accounts created by the reconciler.
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceOperatorServiceAccountName))),
 			&corev1.ServiceAccount{},
-			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceOperatorServiceAccountName))),
+			&corev1.Secret{},
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		)
+
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", resource.ManagerNameSpaceName,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceScannerCLIServiceAccountName))),
 			&corev1.ServiceAccount{},
-			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.ManagerNameSpaceName,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", r.scannerCLITokenSecretName))),
 			&corev1.Secret{},
-			worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+			worker.ResourceWatchDelete, worker.ResourceWatchUpdate,
 		)
+
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceRuntimeCleanerServiceAccountName))),
 			&corev1.ServiceAccount{},
-			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		)
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceRuntimeCleanerServiceAccountName))),
+			&corev1.Secret{},
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 	}
 

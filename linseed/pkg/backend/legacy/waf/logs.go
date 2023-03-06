@@ -89,7 +89,7 @@ func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WA
 	// Build the query.
 	query := b.client.Search().
 		Index(b.index(i)).
-		Size(opts.QueryParams.GetMaxResults()).
+		Size(opts.QueryParams.GetMaxPageSize()).
 		Query(b.buildQuery(i, opts))
 
 	results, err := query.Do(ctx)

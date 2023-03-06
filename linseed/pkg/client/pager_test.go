@@ -271,7 +271,7 @@ func TestPager(t *testing.T) {
 		// Params configure the parameeters for each individual
 		// page request. For this, set a max page size of 2.
 		params := &v1.L3FlowParams{}
-		params.MaxResults = 2
+		params.MaxPageSize = 2
 
 		// Perform a paged list, specifying a max results of 5.
 		opt := client.WithMaxResults[v1.L3Flow](5)

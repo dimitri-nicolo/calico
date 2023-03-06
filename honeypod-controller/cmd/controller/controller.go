@@ -17,8 +17,8 @@ import (
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
-	"github.com/projectcalico/calico/honeypod-controller/pkg/events"
 	hp "github.com/projectcalico/calico/honeypod-controller/pkg/processor"
 	"github.com/projectcalico/calico/honeypod-controller/pkg/snort"
 
@@ -27,7 +27,7 @@ import (
 )
 
 func getNodeName() (string, error) {
-	//Get node name by reading NODENAME env variable.
+	// Get node name by reading NODENAME env variable.
 	nodename := os.Getenv("NODENAME")
 	log.Info("Honeypod controller is running on node: ", nodename)
 	if nodename == "" {
@@ -39,7 +39,7 @@ func getNodeName() (string, error) {
 func GetPcaps(e *api.EventsData, path string) ([]string, error) {
 	var matches []string
 	s := fmt.Sprintf("%s/%s/%s/%s", path, e.DestNamespace, hp.PacketCapture, e.DestNameAggr)
-	//Check if packet capture directory is missing and look for pcaps that matches Alert's destination pod
+	// Check if packet capture directory is missing and look for pcaps that matches Alert's destination pod
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		log.WithError(err).Error("/pcap directory missing")
 		return matches, err
@@ -62,7 +62,7 @@ func validateAlerts(res *api.EventResult, node string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal honeypod alert.record")
 	}
-	record := &events.HoneypodAlertRecord{}
+	record := &v1.HoneypodAlertRecord{}
 	err = json.Unmarshal(b, record)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal honeypod alert.record")
@@ -105,7 +105,7 @@ func loop(p *hp.HoneyPodLogProcessor, node string) error {
 		}
 	}
 
-	var store = snort.NewStore(p.LastProcessingTime)
+	store := snort.NewStore(p.LastProcessingTime)
 	// Parallel processing of HoneyPod alerts
 	for _, alert := range filteredAlerts {
 		go func(alert *api.EventsData) {

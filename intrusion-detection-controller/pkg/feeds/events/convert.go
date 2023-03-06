@@ -11,6 +11,7 @@ import (
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 )
 
@@ -48,7 +49,7 @@ func ConvertFlowLog(flowLog FlowLogJSONOutput, key db.QueryKey, hit *elastic.Sea
 			DestNamespace:   flowLog.DestNamespace,
 			DestName:        flowLog.DestName,
 			DestNameAggr:    flowLog.DestNameAggr,
-			Record: SuspiciousIPEventRecord{
+			Record: v1.SuspiciousIPEventRecord{
 				FlowAction:       flowLog.Action,
 				FlowLogID:        hit.Id,
 				Protocol:         flowLog.Proto,
@@ -138,7 +139,7 @@ func ConvertDNSLog(l DNSLog, key db.QueryKey, hit *elastic.SearchHit, domains ma
 			SourceNamespace: l.ClientNamespace,
 			SourceName:      l.ClientName,
 			SourceNameAggr:  l.ClientNameAggr,
-			Record: SuspiciousDomainEventRecord{
+			Record: v1.SuspiciousDomainEventRecord{
 				DNSLogID:          hit.Id,
 				Feeds:             feeds,
 				SuspiciousDomains: sDomains,

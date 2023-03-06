@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/linseed/pkg/handler"
 
@@ -23,6 +22,7 @@ import (
 const (
 	FlowPath    = "/dns"
 	LogPath     = "/dns/logs"
+	AggsPath    = "/dns/logs/aggregation"
 	LogPathBulk = "/dns/logs/bulk"
 )
 
@@ -54,6 +54,11 @@ func (h dns) APIS() []handler.API {
 			Method:  "POST",
 			URL:     LogPath,
 			Handler: h.GetLogs(),
+		},
+		{
+			Method:  "POST",
+			URL:     AggsPath,
+			Handler: h.Aggregation(),
 		},
 	}
 }
@@ -105,7 +110,7 @@ func (h dns) GetLogs() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		reqParams, err := handler.DecodeAndValidateReqParams[v1.DNSLogParams](w, req)
 		if err != nil {
-			log.WithError(err).Error("Failed to decode/validate request parameters")
+			logrus.WithError(err).Error("Failed to decode/validate request parameters")
 			var httpErr *v1.HTTPError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
@@ -131,7 +136,7 @@ func (h dns) GetLogs() http.HandlerFunc {
 		defer cancel()
 		response, err := h.logs.List(ctx, clusterInfo, reqParams)
 		if err != nil {
-			log.WithError(err).Error("Failed to list DNS logs")
+			logrus.WithError(err).Error("Failed to list DNS logs")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
@@ -144,12 +149,56 @@ func (h dns) GetLogs() http.HandlerFunc {
 	}
 }
 
+// Aggregation handles retrieval of time-series DNS aggregated statistics.
+func (h dns) Aggregation() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		reqParams, err := handler.DecodeAndValidateReqParams[v1.DNSAggregationParams](w, req)
+		if err != nil {
+			logrus.WithError(err).Error("Failed to decode/validate request parameters")
+			var httpErr *v1.HTTPError
+			if errors.As(err, &httpErr) {
+				httputils.JSONError(w, httpErr, httpErr.Status)
+			} else {
+				httputils.JSONError(w, &v1.HTTPError{
+					Msg:    err.Error(),
+					Status: http.StatusBadRequest,
+				}, http.StatusBadRequest)
+			}
+			return
+		}
+
+		if reqParams.Timeout == nil {
+			reqParams.Timeout = &metav1.Duration{Duration: v1.DefaultTimeOut}
+		}
+
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: middleware.ClusterIDFromContext(req.Context()),
+			Tenant:  middleware.TenantIDFromContext(req.Context()),
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
+		defer cancel()
+		response, err := h.logs.Aggregations(ctx, clusterInfo, reqParams)
+		if err != nil {
+			logrus.WithError(err).Error("Failed to list DNS stats")
+			httputils.JSONError(w, &v1.HTTPError{
+				Status: http.StatusInternalServerError,
+				Msg:    err.Error(),
+			}, http.StatusInternalServerError)
+			return
+		}
+
+		logrus.Debugf("%s response is: %+v", AggsPath, response)
+		httputils.Encode(w, response)
+	}
+}
+
 // Bulk handles bulk ingestion requests to add logs, typically from fluentd.
 func (h dns) Bulk() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		logs, err := handler.DecodeAndValidateBulkParams[v1.DNSLog](w, req)
 		if err != nil {
-			log.WithError(err).Error("Failed to decode/validate request parameters")
+			logrus.WithError(err).Error("Failed to decode/validate request parameters")
 			var httpErr *v1.HTTPError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
@@ -171,7 +220,7 @@ func (h dns) Bulk() http.HandlerFunc {
 
 		response, err := h.logs.Create(ctx, clusterInfo, logs)
 		if err != nil {
-			log.WithError(err).Error("Failed to ingest DNS logs")
+			logrus.WithError(err).Error("Failed to ingest DNS logs")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),

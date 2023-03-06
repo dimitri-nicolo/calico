@@ -3,20 +3,22 @@
 package flows_test
 
 import (
+	"context"
+	"fmt"
 	"testing"
 	"time"
 
-	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-
-	"github.com/projectcalico/calico/linseed/pkg/testutils"
-
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
+	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
+	gojson "encoding/json"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 // TestCreateFlowLog tests running a real elasticsearch query to create a flow log.
@@ -222,4 +224,145 @@ func TestFlowLogFiltering(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestAggregations tests running a real elasticsearch query to get aggregations.
+func TestAggregations(t *testing.T) {
+	t.Run("should return time-series flow log aggregation results", func(t *testing.T) {
+		defer setupTest(t)()
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		// Start the test numLogs minutes in the past.
+		numLogs := 5
+		timeBetweenLogs := 10 * time.Second
+		testStart := time.Unix(0, 0)
+		now := testStart.Add(time.Duration(numLogs) * time.Minute)
+
+		// Several dummy logs.
+		logs := []v1.FlowLog{}
+		for i := 1; i < numLogs; i++ {
+			start := testStart.Add(time.Duration(i) * time.Second)
+			end := start.Add(timeBetweenLogs)
+			log := v1.FlowLog{
+				StartTime: start.Unix(),
+				EndTime:   end.Unix(),
+				BytesIn:   1,
+			}
+			logs = append(logs, log)
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		resp, err := flb.Create(ctx, clusterInfo, logs)
+		require.NoError(t, err)
+		require.Empty(t, resp.Errors)
+
+		// Refresh.
+		index := fmt.Sprintf("tigera_secure_ee_flows.%s.", cluster)
+		err = backendutils.RefreshIndex(ctx, client, index)
+		require.NoError(t, err)
+
+		params := v1.FlowLogAggregationParams{}
+		params.TimeRange = &lmav1.TimeRange{}
+		params.TimeRange.From = testStart
+		params.TimeRange.To = now
+		params.NumBuckets = 4
+
+		// Add a simple aggregation to add up the total bytes_in from the logs.
+		sumAgg := elastic.NewSumAggregation().Field("bytes_in")
+		src, err := sumAgg.Source()
+		require.NoError(t, err)
+		bytes, err := json.Marshal(src)
+		require.NoError(t, err)
+		params.Aggregations = map[string]gojson.RawMessage{"count": bytes}
+
+		// Use the backend to perform a query.
+		aggs, err := flb.Aggregations(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+		require.NotNil(t, aggs)
+
+		ts, ok := aggs.AutoDateHistogram("tb")
+		require.True(t, ok)
+
+		// We asked for 4 buckets.
+		require.Len(t, ts.Buckets, 4)
+
+		times := []string{"11", "12", "13", "14"}
+
+		for i, b := range ts.Buckets {
+			require.Equal(t, int64(1), b.DocCount, fmt.Sprintf("Bucket %d", i))
+
+			// We asked for a count agg, which should include a single log
+			// in each bucket.
+			count, ok := b.Sum("count")
+			require.True(t, ok, "Bucket missing count agg")
+			require.NotNil(t, count.Value)
+			require.Equal(t, float64(1), *count.Value)
+
+			// The key should be the timestamp for the bucket.
+			require.NotNil(t, b.KeyAsString)
+			require.Equal(t, times[i], *b.KeyAsString)
+		}
+	})
+
+	t.Run("should return aggregate stats", func(t *testing.T) {
+		defer setupTest(t)()
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		// Start the test numLogs minutes in the past.
+		numLogs := 5
+		timeBetweenLogs := 10 * time.Second
+		testStart := time.Unix(0, 0)
+		now := testStart.Add(time.Duration(numLogs) * time.Minute)
+
+		// Several dummy logs.
+		logs := []v1.FlowLog{}
+		for i := 1; i < numLogs; i++ {
+			start := testStart.Add(time.Duration(i) * time.Second)
+			end := start.Add(timeBetweenLogs)
+			log := v1.FlowLog{
+				StartTime: start.Unix(),
+				EndTime:   end.Unix(),
+				BytesIn:   1,
+			}
+			logs = append(logs, log)
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		resp, err := flb.Create(ctx, clusterInfo, logs)
+		require.NoError(t, err)
+		require.Empty(t, resp.Errors)
+
+		// Refresh.
+		index := fmt.Sprintf("tigera_secure_ee_flows.%s.", cluster)
+		err = backendutils.RefreshIndex(ctx, client, index)
+		require.NoError(t, err)
+
+		params := v1.FlowLogAggregationParams{}
+		params.TimeRange = &lmav1.TimeRange{}
+		params.TimeRange.From = testStart
+		params.TimeRange.To = now
+		params.NumBuckets = 0 // Return aggregated stats over the whole time range.
+
+		// Add a simple aggregation to add up the total bytes_in from the logs.
+		sumAgg := elastic.NewSumAggregation().Field("bytes_in")
+		src, err := sumAgg.Source()
+		require.NoError(t, err)
+		bytes, err := json.Marshal(src)
+		require.NoError(t, err)
+		params.Aggregations = map[string]gojson.RawMessage{"count": bytes}
+
+		// Use the backend to perform a stats query.
+		result, err := flb.Aggregations(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+
+		// We should get a sum aggregation with all 4 logs.
+		count, ok := result.ValueCount("count")
+		require.True(t, ok)
+		require.NotNil(t, count.Value)
+		require.Equal(t, float64(4), *count.Value)
+	})
 }

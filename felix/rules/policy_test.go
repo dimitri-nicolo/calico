@@ -202,7 +202,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		IptablesMarkDrop:                 0x800,
 		IptablesMarkDNSPolicy:            0x00001,
 		IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-		IptablesLogPrefix:                "calico-drop",
+		IptablesLogPrefix:                "calico-packet",
 		IptablesMarkEndpoint:             0xff000,
 	}
 
@@ -348,7 +348,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			Expect(len(rules)).To(Equal(1))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
-			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-drop"}))
+			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-packet"}))
 			By("Rendering an explicit log prefix")
 			logRule.LogPrefix = "foobar"
 			rules = renderer.ProtoRuleToIptablesRules(&logRule, uint8(ipVer),
@@ -374,7 +374,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			// For deny, should be one match rule that just does the DROP.
 			Expect(len(rules)).To(Equal(1))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
-			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-drop"}))
+			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-packet"}))
 			By("Rendering an explicit log prefix")
 			logRule.LogPrefix = "foobar"
 			rules = renderer.ProtoRuleToIptablesRules(&logRule, uint8(ipVer),
@@ -716,7 +716,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(rules[3]).To(Equal(iptables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.LogAction{
-					Prefix: "calico-drop",
+					Prefix: "calico-packet",
 				},
 			}))
 			Expect(rules[4]).To(Equal(iptables.Rule{
@@ -787,7 +787,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(rules[2]).To(Equal(iptables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.LogAction{
-					Prefix: "calico-drop",
+					Prefix: "calico-packet",
 				},
 			}))
 			Expect(rules[3]).To(Equal(iptables.Rule{
@@ -1667,7 +1667,7 @@ var _ = Describe("rule metadata tests", func() {
 		IptablesMarkScratch0:             0x200,
 		IptablesMarkScratch1:             0x400,
 		IptablesMarkDrop:                 0x800,
-		IptablesLogPrefix:                "calico-drop",
+		IptablesLogPrefix:                "calico-packet",
 		IptablesMarkDNSPolicy:            0x00001,
 		IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 		IptablesMarkEndpoint:             0xff000,
@@ -1807,7 +1807,7 @@ var _ = Describe("DNS policy rules", func() {
 		IptablesMarkScratch0:             0x200,
 		IptablesMarkScratch1:             0x400,
 		IptablesMarkDrop:                 0x800,
-		IptablesLogPrefix:                "calico-drop",
+		IptablesLogPrefix:                "calico-packet",
 		IptablesMarkDNSPolicy:            0x00001,
 		IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 		IptablesMarkEndpoint:             0xff000,

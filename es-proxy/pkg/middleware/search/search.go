@@ -189,7 +189,7 @@ func intoLogParams(ctx context.Context, h lmaindex.Helper, request *v1.SearchReq
 
 	// Get the user's permissions. We'll pass these to Linseed to filter out logs that
 	// the user doens't have permission to view.
-	verbs, err := authReview.PerformReviewForElasticLogs(ctx, request.ClusterName)
+	verbs, err := authReview.PerformReview(ctx, request.ClusterName)
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func intoLogParams(ctx context.Context, h lmaindex.Helper, request *v1.SearchReq
 
 	// Configure pagination, timeout, etc.
 	params.SetTimeout(request.Timeout)
-	params.SetMaxResults(request.PageSize)
+	params.SetMaxPageSize(request.PageSize)
 	if request.PageNum != 0 {
 		// TODO: Ideally, clients don't know the format of the AfterKey. In order to satisfy
 		// the exising UI API, we need to for now.
@@ -362,7 +362,7 @@ func searchLogs[T any](
 	authReview middleware.AuthorizationReview,
 	k8sClient datastore.ClientSet,
 ) (*v1.SearchResponse, error) {
-	pageSize := params.GetMaxResults()
+	pageSize := params.GetMaxPageSize()
 
 	// Perform the query.
 	start := time.Now()

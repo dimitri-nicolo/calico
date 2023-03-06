@@ -25,8 +25,7 @@ type AggregationRequest struct {
 	// time bucket.
 	IncludeTimeSeries bool `json:"include_time_series" validate:"omitempty"`
 
-	// The aggregation to perform. This is a set of named aggregations, each aggregation is a raw elasticsearch
-	// aggregation type.
+	// The aggregation to perform. This is a set of named aggregations, each aggregation is a raw elasticsearch aggregation type.
 	Aggregations map[string]json.RawMessage `json:"aggregations" validate:"required"`
 
 	// Timeout for the request. Defaults to 60s.

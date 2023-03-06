@@ -6,6 +6,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/olivere/elastic/v7"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
@@ -14,6 +16,7 @@ import (
 type L7LogsInterface interface {
 	List(context.Context, v1.Params) (*v1.List[v1.L7Log], error)
 	Create(context.Context, []v1.L7Log) (*v1.BulkResponse, error)
+	Aggregations(context.Context, v1.Params) (elastic.Aggregations, error)
 }
 
 // L7Logs implements L7LogsInterface.
@@ -40,6 +43,20 @@ func (f *l7Logs) List(ctx context.Context, params v1.Params) (*v1.List[v1.L7Log]
 		return nil, err
 	}
 	return &l7Logs, nil
+}
+
+func (f *l7Logs) Aggregations(ctx context.Context, params v1.Params) (elastic.Aggregations, error) {
+	aggs := elastic.Aggregations{}
+	err := f.restClient.Post().
+		Path("/l7/logs/aggregation").
+		Params(params).
+		Cluster(f.clusterID).
+		Do(ctx).
+		Into(&aggs)
+	if err != nil {
+		return nil, err
+	}
+	return aggs, nil
 }
 
 func (f *l7Logs) Create(ctx context.Context, l7Logs []v1.L7Log) (*v1.BulkResponse, error) {

@@ -36,7 +36,7 @@ type userAuthorizationReviewMock struct {
 
 // PerformReviewForElasticLogs wraps a mocked version of the authorization review method
 // PerformReviewForElasticLogs.
-func (a userAuthorizationReviewMock) PerformReviewForElasticLogs(
+func (a userAuthorizationReviewMock) PerformReview(
 	ctx context.Context, cluster string,
 ) ([]libcalicov3.AuthorizedResourceVerbs, error) {
 	return a.verbs, a.err
@@ -192,7 +192,7 @@ var _ = Describe("Service middleware tests", func() {
 			// mock auth review returns error
 			mockUserAuthReviewFailed := userAuthorizationReviewMock{
 				verbs: []libcalicov3.AuthorizedResourceVerbs{},
-				err:   fmt.Errorf("PerformReviewForElasticLogs failed"),
+				err:   fmt.Errorf("PerformReview failed"),
 			}
 
 			rr := httptest.NewRecorder()

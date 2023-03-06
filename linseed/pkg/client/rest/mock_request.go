@@ -9,46 +9,50 @@ import (
 
 // Produce a new mock request, used to mock request results from Linseed.
 func NewMockRequest(c RESTClient, result *MockResult) Request {
-	return &mockRequest{
+	return &MockRequest{
 		realRequest: NewRequest(c).(*request),
-		result:      result,
+		Result:      result,
 	}
 }
 
-type mockRequest struct {
+type MockRequest struct {
 	// Wrap a real request so that we can rely on its logic where needed.
 	realRequest *request
 
-	// Mock result to return on call to Do()
-	result *MockResult
+	// Mock Result to return on call to Do()
+	Result *MockResult
 }
 
-func (m *mockRequest) Verb(v string) Request {
+func (m *MockRequest) GetParams() interface{} {
+	return m.realRequest.params
+}
+
+func (m *MockRequest) Verb(v string) Request {
 	m.realRequest.Verb(v)
 	return m
 }
 
-func (m *mockRequest) Params(p any) Request {
+func (m *MockRequest) Params(p any) Request {
 	m.realRequest.Params(p)
 	return m
 }
 
-func (m *mockRequest) BodyJSON(b any) Request {
+func (m *MockRequest) BodyJSON(b any) Request {
 	m.realRequest.BodyJSON(b)
 	return m
 }
 
-func (m *mockRequest) Path(p string) Request {
+func (m *MockRequest) Path(p string) Request {
 	m.realRequest.Path(p)
 	return m
 }
 
-func (m *mockRequest) Cluster(c string) Request {
+func (m *MockRequest) Cluster(c string) Request {
 	m.realRequest.Cluster(c)
 	return m
 }
 
-func (m *mockRequest) ContentType(t string) Request {
+func (m *MockRequest) ContentType(t string) Request {
 	m.realRequest.ContentType(t)
 	return m
 }
@@ -56,15 +60,15 @@ func (m *mockRequest) ContentType(t string) Request {
 // This is where the magic happens. Do() simulates a
 // real response from Linseed. The mock client stack provides a
 // hook for callers to return custom results here.
-func (m *mockRequest) Do(ctx context.Context) *Result {
+func (m *MockRequest) Do(ctx context.Context) *Result {
 	// Populate metadata about the request.
-	m.result.Called = true
-	m.result.Path = m.realRequest.path
-	m.result.Verb = m.realRequest.verb
+	m.Result.Called = true
+	m.Result.Path = m.realRequest.path
+	m.Result.Verb = m.realRequest.verb
 	return &Result{
-		err:        m.result.Err,
-		body:       m.result.body(),
-		statusCode: m.result.statusCode(),
+		err:        m.Result.Err,
+		body:       m.Result.body(),
+		statusCode: m.Result.statusCode(),
 		path:       "/mock/request",
 	}
 }

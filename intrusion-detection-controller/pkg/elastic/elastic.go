@@ -103,7 +103,6 @@ func NewService(lmaCLI lma.Client, indexSettings IndexSettings) *Elastic {
 		forwarderConfigMappingCreated: make(chan struct{}),
 		indexSettings:                 indexSettings,
 	}
-
 }
 
 func (e *Elastic) Run(ctx context.Context) {
@@ -134,7 +133,6 @@ func (e *Elastic) Run(ctx context.Context) {
 				}).Error("Could not create index")
 			}
 		}()
-
 	})
 }
 
@@ -427,7 +425,6 @@ func splitStringSliceToInterface(set []string) [][]interface{} {
 		}
 	}
 	return terms
-
 }
 
 func (e *Elastic) DeleteIPSet(ctx context.Context, m db.Meta) error {
@@ -484,7 +481,6 @@ func (e *Elastic) GetForwarderConfig(ctx context.Context, id string) (*db.Forwar
 		Query(elastic.NewTermQuery("_id", id)). // query for the singleton doc by ID
 		From(0).Size(1).                        // retrieve the single document containing the forwarder config
 		Do(ctx)                                 // execute
-
 	if err != nil {
 		return nil, err
 	}

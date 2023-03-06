@@ -5,6 +5,8 @@ package api
 import (
 	"context"
 
+	"github.com/olivere/elastic/v7"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -20,6 +22,9 @@ type FlowLogBackend interface {
 
 	// List lists logs that match the given parameters.
 	List(context.Context, ClusterInfo, *v1.FlowLogParams) (*v1.List[v1.FlowLog], error)
+
+	// Gets flow log aggregations
+	Aggregations(context.Context, ClusterInfo, *v1.FlowLogAggregationParams) (*elastic.Aggregations, error)
 }
 
 // ProcessBackend defines the interface for interacting with process information.
@@ -40,6 +45,9 @@ type L7LogBackend interface {
 
 	// List lists logs that match the given parameters.
 	List(context.Context, ClusterInfo, *v1.L7LogParams) (*v1.List[v1.L7Log], error)
+
+	// Gets L7 log aggregations
+	Aggregations(context.Context, ClusterInfo, *v1.L7AggregationParams) (*elastic.Aggregations, error)
 }
 
 // DNSFlowBackend defines the interface for interacting with DNS flows
@@ -54,6 +62,9 @@ type DNSLogBackend interface {
 
 	// List lists logs that match the given parameters.
 	List(context.Context, ClusterInfo, *v1.DNSLogParams) (*v1.List[v1.DNSLog], error)
+
+	// Gets DNS log aggregations
+	Aggregations(context.Context, ClusterInfo, *v1.DNSAggregationParams) (*elastic.Aggregations, error)
 }
 
 // AuditBackend defines the interface for interacting with audit logs.

@@ -20,8 +20,8 @@ var _ Params = &QueryParams{}
 const DefaultTimeOut = 60 * time.Second
 
 type Params interface {
-	GetMaxResults() int
-	SetMaxResults(int)
+	GetMaxPageSize() int
+	SetMaxPageSize(int)
 	SetAfterKey(map[string]interface{})
 	GetAfterKey() map[string]interface{}
 	SetTimeout(*v1.Duration)
@@ -47,7 +47,7 @@ type QueryParams struct {
 	Timeout *v1.Duration `json:"timeout" validate:"omitempty"`
 
 	// Limit the maximum number of returned results.
-	MaxResults int `json:"max_results"`
+	MaxPageSize int `json:"max_page_size"`
 
 	// AfterKey is used for pagination. If set, the query will start from the given AfterKey.
 	// This is generally passed straight through to the datastore, and its type cannot be
@@ -55,15 +55,15 @@ type QueryParams struct {
 	AfterKey map[string]interface{} `json:"after_key"`
 }
 
-func (p *QueryParams) SetMaxResults(i int) {
-	p.MaxResults = i
+func (p *QueryParams) SetMaxPageSize(i int) {
+	p.MaxPageSize = i
 }
 
-func (p *QueryParams) GetMaxResults() int {
-	if p == nil || p.MaxResults == 0 {
+func (p *QueryParams) GetMaxPageSize() int {
+	if p == nil || p.MaxPageSize == 0 {
 		return 1000
 	}
-	return p.MaxResults
+	return p.MaxPageSize
 }
 
 func (p *QueryParams) SetAfterKey(k map[string]interface{}) {

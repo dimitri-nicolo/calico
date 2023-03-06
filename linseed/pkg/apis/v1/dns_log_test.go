@@ -794,26 +794,29 @@ func TestDNSServer_MarshalJSON(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"any endpoint",
-			fields{
+			name: "any endpoint",
+			fields: fields{
 				Endpoint: Endpoint{"wep", "e", "e-*", "ns", 0},
 				IP:       net.ParseIP("1.2.3.4"),
 			},
-			[]byte(`{"name":"e","name_aggr":"e-*","namespace":"ns","ip":"1.2.3.4"}`), false,
+			want:    []byte(`{"name":"e","name_aggr":"e-*","namespace":"ns","ip":"1.2.3.4"}`),
+			wantErr: false,
 		},
 		{
-			"any endpoint with labels",
-			fields{
+			name: "any endpoint with labels",
+			fields: fields{
 				Endpoint: Endpoint{"wep", "e", "e-*", "ns", 0},
 				IP:       net.ParseIP("1.2.3.4"),
 				Labels:   map[string]string{"key": "value"},
 			},
-			[]byte(`{"name":"e","name_aggr":"e-*","namespace":"ns","ip":"1.2.3.4"}`), false,
+			want:    []byte(`{"name":"e","name_aggr":"e-*","namespace":"ns","ip":"1.2.3.4","labels":{"key":"value"}}`),
+			wantErr: false,
 		},
 		{
-			"empty json",
-			fields{},
-			[]byte(`{"name":"","name_aggr":"","namespace":"","ip":""}`), false,
+			name:    "empty json",
+			fields:  fields{},
+			want:    []byte(`{"name":"","name_aggr":"","namespace":"","ip":""}`),
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -843,25 +846,25 @@ func TestDNSServer_UnmarshalJSON(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"unmarshal dns server",
-			[]byte(`{"name":"e","name_aggr":"e-*","namespace":"ns","ip":"1.2.3.4"}`),
-			&DNSServer{
+			name: "unmarshal dns server",
+			data: []byte(`{"name":"e","name_aggr":"e-*","namespace":"ns","ip":"1.2.3.4"}`),
+			want: &DNSServer{
 				Endpoint: Endpoint{Name: "e", AggregatedName: "e-*", Namespace: "ns"},
 				IP:       net.ParseIP("1.2.3.4"),
 			},
-			false,
+			wantErr: false,
 		},
 		{
-			"empty fields",
-			[]byte(`{"name":"","name_aggr":"","namespace":"","ip":""}`),
-			&DNSServer{},
-			false,
+			name:    "empty fields",
+			data:    []byte(`{"name":"","name_aggr":"","namespace":"","ip":""}`),
+			want:    &DNSServer{},
+			wantErr: false,
 		},
 		{
-			"empty string",
-			[]byte(``),
-			&DNSServer{},
-			true,
+			name:    "empty string",
+			data:    []byte(``),
+			want:    &DNSServer{},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

@@ -1,9 +1,12 @@
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
 package l7
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	elastic "github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
@@ -80,39 +83,47 @@ func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1
 	}, nil
 }
 
+func (b *l7LogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.L7AggregationParams) (*elastic.Aggregations, error) {
+	// Get the base query.
+	search, _, err := b.getSearch(ctx, i, &opts.L7LogParams)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add in any aggregations provided by the client. We need to handle two cases - one where this is a
+	// time-series request, and another when it's just an aggregation request.
+	if opts.NumBuckets > 0 {
+		// Time-series.
+		hist := elastic.NewAutoDateHistogramAggregation().
+			Field(b.helper.GetTimeField()).
+			Buckets(opts.NumBuckets)
+		for name, agg := range opts.Aggregations {
+			hist = hist.SubAggregation(name, logtools.RawAggregation{RawMessage: agg})
+		}
+		search.Aggregation(v1.TimeSeriesBucketName, hist)
+	} else {
+		// Not time-series. Just add the aggs as they are.
+		for name, agg := range opts.Aggregations {
+			search = search.Aggregation(name, logtools.RawAggregation{RawMessage: agg})
+		}
+	}
+
+	// Do the search.
+	results, err := search.Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &results.Aggregations, nil
+}
+
 // List lists logs that match the given parameters.
 func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.L7LogParams) (*v1.List[v1.L7Log], error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("no cluster ID on request")
-	}
-
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(opts)
+	query, startFrom, err := b.getSearch(ctx, i, opts)
 	if err != nil {
 		return nil, err
-	}
-
-	q, err := logtools.BuildQuery(b.helper, i, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build the query, sorting by time.
-	query := b.client.Search().
-		Index(b.index(i)).
-		Size(opts.QueryParams.GetMaxResults()).
-		From(startFrom).
-		Query(q)
-
-	// Configure sorting.
-	if len(opts.Sort) != 0 {
-		for _, s := range opts.Sort {
-			query.Sort(s.Field, !s.Descending)
-		}
-	} else {
-		query.Sort(b.helper.GetTimeField(), true)
 	}
 
 	results, err := query.Do(ctx)
@@ -133,7 +144,7 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.L7L
 
 	// Determine the AfterKey to return.
 	var ak map[string]interface{}
-	if numHits := len(results.Hits.Hits); numHits < opts.QueryParams.GetMaxResults() {
+	if numHits := len(results.Hits.Hits); numHits < opts.QueryParams.GetMaxPageSize() {
 		// We fully satisfied the request, no afterkey.
 		ak = nil
 	} else {
@@ -149,6 +160,40 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.L7L
 		TotalHits: results.TotalHits(),
 		AfterKey:  ak,
 	}, nil
+}
+
+func (b *l7LogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v1.L7LogParams) (*elastic.SearchService, int, error) {
+	if i.Cluster == "" {
+		return nil, 0, fmt.Errorf("no cluster ID on request")
+	}
+
+	// Get the startFrom param, if any.
+	startFrom, err := logtools.StartFrom(opts)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	q, err := logtools.BuildQuery(b.helper, i, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Build the query.
+	query := b.client.Search().
+		Index(b.index(i)).
+		Size(opts.QueryParams.GetMaxPageSize()).
+		From(startFrom).
+		Query(q)
+
+	// Configure sorting.
+	if len(opts.Sort) != 0 {
+		for _, s := range opts.Sort {
+			query.Sort(s.Field, !s.Descending)
+		}
+	} else {
+		query.Sort(b.helper.GetTimeField(), true)
+	}
+	return query, startFrom, nil
 }
 
 func (b *l7LogBackend) index(i bapi.ClusterInfo) string {

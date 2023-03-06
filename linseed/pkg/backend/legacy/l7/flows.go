@@ -110,7 +110,7 @@ func (b *l7FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.L
 		AggMaxInfos:             b.aggMaxs,
 		AggMinInfos:             b.aggMins,
 		AggMeanInfos:            b.aggMeans,
-		MaxBucketsPerQuery:      opts.GetMaxResults(),
+		MaxBucketsPerQuery:      opts.GetMaxPageSize(),
 	}
 
 	log.Debugf("Listing flows from index %s", query.DocumentIndex)

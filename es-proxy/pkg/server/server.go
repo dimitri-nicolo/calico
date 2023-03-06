@@ -31,7 +31,6 @@ import (
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/list"
 
@@ -163,7 +162,7 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.FlowLogs())))))
+					aggregation.NewHandler(linseed, k8sClientSetFactory, aggregation.TypeFlows)))))
 	sm.Handle("/flowLogs/search",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
@@ -178,7 +177,7 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.DnsLogs())))))
+					aggregation.NewHandler(linseed, k8sClientSetFactory, aggregation.TypeDNS)))))
 	sm.Handle("/dnsLogs/search",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authn,
@@ -193,7 +192,7 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(l7ResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.L7Logs())))))
+					aggregation.NewHandler(linseed, k8sClientSetFactory, aggregation.TypeL7)))))
 	sm.Handle("/l7Logs/search",
 		middleware.ClusterRequestToResource(l7ResourceName,
 			middleware.AuthenticateRequest(authn,
@@ -232,9 +231,8 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					application.ApplicationHandler(
-						lmaindex.L7Logs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						esClient.Backend(),
+						linseed,
 						application.ApplicationTypeService,
 					)))))
 	sm.Handle("/urls",
@@ -242,9 +240,8 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					application.ApplicationHandler(
-						lmaindex.L7Logs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						esClient.Backend(),
+						linseed,
 						application.ApplicationTypeURL,
 					)))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.

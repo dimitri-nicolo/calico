@@ -2,12 +2,22 @@
 
 package v1
 
-import "net"
+import (
+	"encoding/json"
+	"net"
+)
 
 // FlowLogParams define querying parameters to retrieve flow logs
 type FlowLogParams struct {
 	QueryParams        `json:",inline" validate:"required"`
 	LogSelectionParams `json:",inline"`
+}
+
+type FlowLogAggregationParams struct {
+	// Inherit all the normal DNS log selection parameters.
+	FlowLogParams `json:",inline"`
+	Aggregations  map[string]json.RawMessage `json:"aggregations"`
+	NumBuckets    int                        `json:"num_buckets"`
 }
 
 // FlowLog is the input format to ingest flow logs

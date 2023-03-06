@@ -116,7 +116,7 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 	// Build the query.
 	query := b.client.Search().
 		Index(b.index(opts.Type, i)).
-		Size(opts.GetMaxResults()).
+		Size(opts.GetMaxPageSize()).
 		Query(b.buildQuery(i, opts))
 
 	results, err := query.Do(ctx)

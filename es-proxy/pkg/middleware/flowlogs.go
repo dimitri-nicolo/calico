@@ -319,9 +319,9 @@ func buildFlowParams(params *FlowLogsParams) *lapi.L3FlowParams {
 
 	// We will limit the entire response later, but
 	// don't increase the page size above 1000.
-	fp.MaxResults = int(params.Limit)
+	fp.MaxPageSize = int(params.Limit)
 	if params.Limit > 1000 {
-		fp.MaxResults = 1000
+		fp.MaxPageSize = 1000
 	}
 	if len(params.Actions) > 0 {
 		fp.Actions = []lapi.FlowAction{}

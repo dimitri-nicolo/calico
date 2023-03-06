@@ -88,7 +88,7 @@ func processProcessRequest(
 	params.TimeRange = request.TimeRange
 	params.Selector = request.Selector
 
-	verbs, err := authReview.PerformReviewForElasticLogs(ctx, request.ClusterName)
+	verbs, err := authReview.PerformReview(ctx, request.ClusterName)
 	if err != nil {
 		return nil, err
 	}

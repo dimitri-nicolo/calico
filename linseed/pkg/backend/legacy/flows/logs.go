@@ -4,8 +4,9 @@ package flows
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/sirupsen/logrus"
 
@@ -86,35 +87,9 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.FlowLogParams) (*v1.List[v1.FlowLog], error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("no cluster ID on request")
-	}
-
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(opts)
+	query, startFrom, err := b.getSearch(ctx, i, opts)
 	if err != nil {
 		return nil, err
-	}
-
-	q, err := logtools.BuildQuery(b.helper, i, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build the query, sorting by time.
-	query := b.client.Search().
-		Index(b.index(i)).
-		Size(opts.QueryParams.GetMaxResults()).
-		From(startFrom).
-		Query(q)
-
-	// Configure sorting.
-	if len(opts.Sort) != 0 {
-		for _, s := range opts.Sort {
-			query.Sort(s.Field, !s.Descending)
-		}
-	} else {
-		query.Sort(b.helper.GetTimeField(), true)
 	}
 
 	results, err := query.Do(ctx)
@@ -135,7 +110,7 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 
 	// Determine the AfterKey to return.
 	var ak map[string]interface{}
-	if numHits := len(results.Hits.Hits); numHits < opts.QueryParams.GetMaxResults() {
+	if numHits := len(results.Hits.Hits); numHits < opts.QueryParams.GetMaxPageSize() {
 		// We fully satisfied the request, no afterkey.
 		ak = nil
 	} else {
@@ -151,6 +126,74 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 		TotalHits: results.TotalHits(),
 		AfterKey:  ak,
 	}, nil
+}
+
+func (b *flowLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.FlowLogAggregationParams) (*elastic.Aggregations, error) {
+	// Get the base query.
+	search, _, err := b.getSearch(ctx, i, &opts.FlowLogParams)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add in any aggregations provided by the client. We need to handle two cases - one where this is a
+	// time-series request, and another when it's just an aggregation request.
+	if opts.NumBuckets > 0 {
+		// Time-series.
+		hist := elastic.NewAutoDateHistogramAggregation().
+			Field(b.helper.GetTimeField()).
+			Buckets(opts.NumBuckets)
+		for name, agg := range opts.Aggregations {
+			hist = hist.SubAggregation(name, logtools.RawAggregation{RawMessage: agg})
+		}
+		search.Aggregation(v1.TimeSeriesBucketName, hist)
+	} else {
+		// Not time-series. Just add the aggs as they are.
+		for name, agg := range opts.Aggregations {
+			search = search.Aggregation(name, logtools.RawAggregation{RawMessage: agg})
+		}
+	}
+
+	// Do the search.
+	results, err := search.Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &results.Aggregations, nil
+}
+
+func (b *flowLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v1.FlowLogParams) (*elastic.SearchService, int, error) {
+	if i.Cluster == "" {
+		return nil, 0, fmt.Errorf("no cluster ID on request")
+	}
+
+	// Get the startFrom param, if any.
+	startFrom, err := logtools.StartFrom(opts)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	q, err := logtools.BuildQuery(b.helper, i, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Build the query, sorting by time.
+	query := b.client.Search().
+		Index(b.index(i)).
+		Size(opts.QueryParams.GetMaxPageSize()).
+		From(startFrom).
+		Query(q)
+
+	// Configure sorting.
+	if len(opts.Sort) != 0 {
+		for _, s := range opts.Sort {
+			query.Sort(s.Field, !s.Descending)
+		}
+	} else {
+		query.Sort(b.helper.GetTimeField(), true)
+	}
+	return query, startFrom, nil
 }
 
 func (b *flowLogBackend) index(i bapi.ClusterInfo) string {

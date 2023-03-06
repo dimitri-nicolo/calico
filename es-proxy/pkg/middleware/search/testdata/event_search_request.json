@@ -1,7 +1,7 @@
 {
 	"time_range":null,
 	"timeout":"1m0s",
-	"max_results":100,
+	"max_page_size":100,
 	"after_key":null,
 	"permissions":[
 		{
