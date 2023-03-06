@@ -143,6 +143,8 @@ require (
 	sigs.k8s.io/kind v0.17.0
 )
 
+require gopkg.in/yaml.v3 v3.0.1
+
 require (
 	cloud.google.com/go/compute v1.14.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
@@ -347,7 +349,6 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/postgres v1.3.10 // indirect
 	gorm.io/gorm v1.23.10 // indirect
 	howett.net/plist v1.0.0 // indirect
