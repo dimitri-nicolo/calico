@@ -39,6 +39,14 @@ clean:
 	rm -rf ./bin
 	rm -f $(SUB_CHARTS)
 
+ci-preflight-checks:
+	$(MAKE) check-language
+	$(MAKE) generate
+	$(MAKE) check-dirty
+
+check-language:
+	./hack/check-language.sh
+
 generate:
 	$(MAKE) gen-semaphore-yaml
 	$(MAKE) -C api gen-files

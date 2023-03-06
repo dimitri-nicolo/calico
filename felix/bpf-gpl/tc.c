@@ -321,9 +321,9 @@ static CALI_BPF_INLINE void calico_tc_process_ct_lookup(struct cali_tc_ctx *ctx)
 				// egress gateway, and when the egress gateway is on a different
 				// node than the client, we'll get a CT miss here for the original
 				// (unencapped) client pod -> destination flow.  We want to create
-				// that CT state and mark it as whitelisted on both sides, because a
+				// that CT state and mark it as approved on both sides, because a
 				// mid-flow TCP packet will not be allowed on the FROM_HOST side if
-				// it isn't already whitelisted.
+				// it isn't already approved.
 				CALI_DEBUG("CT mid-flow miss from egress gateway\n");
 				ctx->state->ct_result.rc = CALI_CT_NEW | CT_RES_ALLOW_FROM_SIDE;
 #endif

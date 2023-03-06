@@ -396,7 +396,7 @@ var _ = Describe("RouteGenerator", func() {
 		})
 
 		Context("onSvc[Add|Delete]", func() {
-			It("should add the service's cluster IP and whitelisted external IPs into the svcRouteMap", func() {
+			It("should add the service's cluster IP and approved external IPs into the svcRouteMap", func() {
 				// add
 				initRevision := rg.client.cacheRevision
 				rg.onSvcAdd(svc)
@@ -507,7 +507,7 @@ var _ = Describe("RouteGenerator", func() {
 		})
 
 		Context("onSvcUpdate", func() {
-			It("should add the service's cluster IP and whitelisted external IPs into the svcRouteMap and then remove them for unsupported service type", func() {
+			It("should add the service's cluster IP and approved external IPs into the svcRouteMap and then remove them for unsupported service type", func() {
 				initRevision := rg.client.cacheRevision
 				rg.onSvcUpdate(nil, svc)
 				Expect(rg.client.cacheRevision).To(Equal(initRevision + 2))
@@ -556,7 +556,7 @@ var _ = Describe("RouteGenerator", func() {
 		})
 
 		Context("onEp[Add|Delete]", func() {
-			It("should add the service's cluster IP and whitelisted external IPs into the svcRouteMap", func() {
+			It("should add the service's cluster IP and approved external IPs into the svcRouteMap", func() {
 				// add
 				initRevision := rg.client.cacheRevision
 				rg.onEPAdd(ep)
@@ -595,7 +595,7 @@ var _ = Describe("RouteGenerator", func() {
 		})
 
 		Context("onEpDelete", func() {
-			It("should add the service's cluster IP and whitelisted external IPs into the svcRouteMap and then remove it for unsupported service type", func() {
+			It("should add the service's cluster IP and approved external IPs into the svcRouteMap and then remove it for unsupported service type", func() {
 				initRevision := rg.client.cacheRevision
 				rg.onEPUpdate(nil, ep)
 				Expect(rg.client.cacheRevision).To(Equal(initRevision + 2))
