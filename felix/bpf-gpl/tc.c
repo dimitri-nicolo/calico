@@ -50,6 +50,8 @@
 #include "egw.h"
 #include "rule_counters.h"
 
+#define HAS_HOST_CONFLICT_PROG CALI_F_TO_HEP
+
 #if !defined(__BPFTOOL_LOADER__)
 const volatile struct cali_tc_globals __globals;
 #endif
@@ -270,7 +272,7 @@ static CALI_BPF_INLINE void calico_tc_process_ct_lookup(struct cali_tc_ctx *ctx)
 	/* Handle reporting DNS packets up to Felix userspace. */
 	calico_dns_check(ctx);
 
-	if (CALI_F_TO_HEP &&
+	if (HAS_HOST_CONFLICT_PROG &&
 			(ctx->state->ct_result.flags & CALI_CT_FLAG_VIA_NAT_IF) &&
 			!(ctx->skb->mark & (CALI_SKB_MARK_FROM_NAT_IFACE_OUT | CALI_SKB_MARK_SEEN))) {
 		CALI_DEBUG("Host source SNAT conflict\n");
@@ -479,11 +481,11 @@ syn_force_policy:
 				goto skip_policy;
 			}
 		} else if (CALI_F_TO_WEP) {
-			if (EGW_HEALTH_PORT && (ctx->state->ip_proto == IPPROTO_TCP) && 
+			if (EGW_HEALTH_PORT && (ctx->state->ip_proto == IPPROTO_TCP) &&
 					(ctx->state->dport == EGW_HEALTH_PORT)) {
 				CALI_DEBUG("Allow health check traffic to EGW pod\n");
 				goto skip_policy;
-			}	       
+			}
 			goto deny;
 		}
 	}
@@ -519,7 +521,7 @@ syn_force_policy:
 				ctx->state->flags |= CALI_ST_NAT_OUTGOING;
 			}
 		}
-		
+
 		/* If 3rd party CNI is used and dest is outside cluster. See commit fc711b192f for details. */
 		if (!(r->flags & CALI_RT_IN_POOL)) {
 			CALI_DEBUG("Source %x not in IP pool\n", bpf_ntohl(ctx->state->ip_src));
@@ -1523,6 +1525,7 @@ deny:
 	return TC_ACT_SHOT;
 }
 
+#if HAS_HOST_CONFLICT_PROG
 SEC("classifier/tc/host_ct_conflict")
 int calico_tc_host_ct_conflict(struct __sk_buff *skb)
 {
@@ -1596,6 +1599,7 @@ int calico_tc_host_ct_conflict(struct __sk_buff *skb)
 deny:
 	return TC_ACT_SHOT;
 }
+#endif /* HAS_HOST_CONFLICT_PROG */
 
 SEC("classifier/tc/drop")
 int calico_tc_skb_drop(struct __sk_buff *skb)
