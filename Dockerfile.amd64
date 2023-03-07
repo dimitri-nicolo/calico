@@ -26,7 +26,7 @@ WORKDIR /elastic-build/elasticsearch-${ELASTIC_VERSION}
 
 RUN patch -p1 < /elastic-build/update-deps.patch
 
-RUN JAVA_HOME=/usr/lib/jvm/java-17-openjdk \
+RUN JAVA_HOME=/usr/lib/jvm/java-17-openjdk JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 \
     /elastic-build/gradle-${GRADLE_VERSION}/bin/gradle :distribution:archives:linux-tar:assemble \
     -Dbuild.snapshot=false \
     -Dlicense.key=x-pack/license-tools/src/test/resources/public.key
