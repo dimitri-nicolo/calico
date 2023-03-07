@@ -7,6 +7,7 @@ package imageassuranceconfiguration
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
@@ -19,6 +20,10 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+)
+
+const (
+	workerResyncPeriod = 1 * time.Hour
 )
 
 type imageAssuranceConfigController struct {
@@ -59,7 +64,7 @@ func New(
 
 	// The high requeue attempts is because it's unlikely we would receive an event after failure to re trigger a
 	// reconcile, meaning a temporary service disruption could lead to image assurance credentials not being propagated.
-	w := worker.New(r, worker.WithMaxRequeueAttempts(20))
+	w := worker.New(r, worker.WithMaxRequeueAttempts(20), worker.WithResyncPeriod(workerResyncPeriod))
 
 	var err error
 	utils.AddWatchForActiveOperator(w, r.managementK8sCLI)

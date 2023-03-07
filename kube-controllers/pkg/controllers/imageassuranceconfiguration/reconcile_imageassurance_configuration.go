@@ -8,6 +8,7 @@ package imageassuranceconfiguration
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
@@ -18,10 +19,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-// token expiration time for all token requests, defaults to 100 years
-var defaultTokenExpirationSeconds int64 = 100 * 365 * 86400
+// defaultTokenExpirationSeconds is used to set the expiration of the tokens created here. It's set to 48 hours, the
+// maximum allowed by kubernetes.
+var defaultTokenExpirationSeconds = (int64)(60 * 60 * 48)
+
+// defaultTokenExpiryThreshold represents the threshold used to recreate service account tokens when the time left until
+// the token expires is less than this value.
+const defaultTokenExpiryThreshold = 6 * time.Hour
 
 type reconciler struct {
 	clusterName string
@@ -302,11 +310,23 @@ func (c *reconciler) createServiceAccountWithToken(saName, tokenSecretName, name
 		}
 	}
 
-	if token := secret.Data["token"]; len(token) == 0 {
+	valid, err := isTokenValid(secret.Data["token"], time.Now())
+	if !valid {
+		// We don't return when there's an error here because an error means that the token is somehow invalid and needs
+		// to be regenerated to be valid (i.e. if it's expired it returns an error), which is what this block does.
+		if err != nil {
+			log.WithError(err).Errorf("An error occurred checking the validity of the token in %s/%s.", secret.Name, secret.Namespace)
+		}
+		log.Debugf("Recreating invalid token for %s/%s.", secret.Name, secret.Namespace)
+
 		tokenRequest := getTokenRequestDefinitionWithSecret(tokenSecretName, namespace, secret)
 		tokenResp, err := resource.WriteServiceAccountTokenRequestToK8s(c.managementK8sCLI, tokenRequest, sa.Name)
 		if err != nil {
 			return nil, nil, err
+		}
+
+		if secret.Data == nil {
+			secret.Data = map[string][]byte{}
 		}
 
 		// Update the empty secret in management cluster with token data.
@@ -317,4 +337,40 @@ func (c *reconciler) createServiceAccountWithToken(saName, tokenSecretName, name
 	}
 
 	return sa, secret, nil
+}
+
+// isTokenValid checks that the token is valid, specifically:
+// - it is not empty
+// - no errors occur while parsing it (using the jwt library that verifies it
+// - the duration left until the token expires is not less than the threshold
+func isTokenValid(rawToken []byte, t time.Time) (bool, error) {
+	if len(rawToken) < 1 {
+		return false, nil
+	}
+
+	token, err := jwt.ParseString(string(rawToken), jwt.WithVerify(false))
+	if err != nil {
+		return false, err
+	}
+
+	if log.GetLevel() >= log.DebugLevel {
+		log.WithField("Private Claims", token.PrivateClaims()).Debugf("Token expires in %d seconds.", convertDurationToSeconds(token.Expiration().Sub(t)))
+	}
+
+	if token.Expiration().Sub(t) < defaultTokenExpiryThreshold {
+		if log.GetLevel() >= log.DebugLevel {
+			log.WithField("Private Claims", token.PrivateClaims()).Debugf("Token has reached it's expiry threshold (%d).", convertDurationToSeconds(defaultTokenExpiryThreshold))
+		}
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func convertDurationToSeconds(duration time.Duration) time.Duration {
+	if duration == 0 {
+		return duration
+	}
+
+	return duration / (1000 * time.Millisecond)
 }
