@@ -32,8 +32,8 @@ RUN apk update && apk upgrade \
  && gem install bigdecimal -v 1.4.4 \
  && gem install resolv -v 0.2.1 \
  && gem install \
-        bundler:2.3.19 \
-        cgi:0.3.5 \
+        bundler:2.4.7 \
+        cgi:0.3.6 \
         elasticsearch-api:7.17.7 \
         elasticsearch-transport:7.17.7 \
         elasticsearch-xpack:7.17.7 \
