@@ -17,7 +17,7 @@ package resources
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var _ = Describe("k8s sync label validation tests", func() {

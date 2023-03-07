@@ -40,9 +40,21 @@ clean:
 	rm -f $(SUB_CHARTS)
 
 ci-preflight-checks:
+	$(MAKE) check-gotchas
 	$(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.
 	$(MAKE) generate
 	$(MAKE) check-dirty
+
+check-gotchas:
+	@if grep github.com/projectcalico/api go.mod; then \
+	  echo; \
+	  echo "calico-private go.mod should not reference github.com/projectcalico/api"; \
+	  echo "Perhaps an import was merged across from open source without being"; \
+	  echo "updated to github.com/tigera/api ?"; \
+	  echo; \
+	  exit 1; \
+	fi
+
 
 check-language:
 	./hack/check-language.sh

@@ -364,8 +364,8 @@ func xdpTest(getInfra infrastructure.InfraFactory, proto string) {
 				Expect(utils.LastRunOutput).To(ContainSubstring(`100% packet loss`))
 				Expect(doPing()).To(HaveOccurred())
 
-				if !bpfEnabled {
-					output, err := felixes[server].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default/default.xft")
+				if !BPFMode() {
+					output, err := felixes[srvr].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default/default.xft")
 					// the only rule that refers to a cali40-prefixed ipset should
 					// have 0 packets/bytes because the icmp packets should've been
 					// blocked by XDP
