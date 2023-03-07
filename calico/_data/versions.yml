@@ -61,7 +61,7 @@
       image: tigera/kibana
       version: master
     eck-elasticsearch:
-      version: 7.17.7
+      version: 7.17.9
     elasticsearch:
       image: tigera/elasticsearch
       version: master
