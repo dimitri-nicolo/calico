@@ -1,4 +1,0 @@
-[submodule "kibana"]
-	path = kibana
-	url = git@github.com:elastic/kibana.git
-	branch = 7.17
