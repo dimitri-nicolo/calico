@@ -5,9 +5,9 @@ PACKAGE_NAME ?= github.com/tigera/calico-private/honeypod-prototype
 ##############################################################################
 # constants
 ##############################################################################
-HONEYPOD_IMAGE						?=tigera/honeypod
+HONEYPOD_IMAGE						?=honeypod
 HONEYPOD_IMAGE_LOCATION				?=./compromised_k8s_pod/ip_enumeration/build
-HONEYPOD_EXP_SERVICE_IMAGE			?=tigera/honeypod-exp-service
+HONEYPOD_EXP_SERVICE_IMAGE			?=honeypod-exp-service
 HONEYPOD_EXP_SERVICE_HTML_LOCATION	?= ./compromised_k8s_pod/exposed_service_nginx/build/html
 HONEYPOD_EXP_SERVICE_LOCATION 		?=./compromised_k8s_pod/exposed_service_nginx/build
 BUILD_IMAGES 						?=$(HONEYPOD_IMAGE) $(HONEYPOD_EXP_SERVICE_IMAGE)
@@ -49,18 +49,15 @@ HONEYPOD_EXP_SERVICE_CREATED=.honeypod-exp-service.created-$(ARCH)
 
 $(HONEYPOD_IMAGE): $(HONEYPOD_CONTAINER_CREATED)
 $(HONEYPOD_CONTAINER_CREATED):
-	docker build -t $(HONEYPOD_IMAGE):latest-$(ARCH) --file $(HONEYPOD_IMAGE_LOCATION)/Dockerfile.$(ARCH) .
-ifeq ($(ARCH),amd64)
-	docker tag $(HONEYPOD_IMAGE):latest-$(ARCH) $(HONEYPOD_IMAGE):latest
-endif
+	$(DOCKER_BUILD) -t $(HONEYPOD_IMAGE):latest-$(ARCH) -f $(HONEYPOD_IMAGE_LOCATION)/Dockerfile.$(ARCH) .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(HONEYPOD_IMAGE)
 	touch $@
+
 
 $(HONEYPOD_EXP_SERVICE_IMAGE): $(HONEYPOD_EXP_SERVICE_CREATED)
 $(HONEYPOD_EXP_SERVICE_CREATED):
-	docker build -t $(HONEYPOD_EXP_SERVICE_IMAGE):latest-$(ARCH) --build-arg HTML_LOCATION=$(HONEYPOD_EXP_SERVICE_HTML_LOCATION) --file $(HONEYPOD_EXP_SERVICE_LOCATION)/Dockerfile.$(ARCH) .
-ifeq ($(ARCH),amd64)
-	docker tag $(HONEYPOD_EXP_SERVICE_IMAGE):latest-$(ARCH) $(HONEYPOD_EXP_SERVICE_IMAGE):latest
-endif
+	$(DOCKER_BUILD) -t $(HONEYPOD_EXP_SERVICE_IMAGE):latest-$(ARCH) --build-arg HTML_LOCATION=$(HONEYPOD_EXP_SERVICE_HTML_LOCATION) -f $(HONEYPOD_EXP_SERVICE_LOCATION)/Dockerfile.$(ARCH) .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(HONEYPOD_EXP_SERVICE_IMAGE)
 	touch $@
 
 ###############################################################################
