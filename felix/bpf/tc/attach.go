@@ -125,19 +125,19 @@ func (ap *AttachPoint) AttachProgram() (int, error) {
 		ap.VethNS = uint16(l.Attrs().NetNsID)
 	}
 
-	tempDir, err := os.MkdirTemp("", "calico-tc")
-	if err != nil {
-		return -1, fmt.Errorf("failed to create temporary directory: %w", err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
-
 	filename := ap.FileName()
 	preCompiledBinary := path.Join(bpf.ObjectDir, filename)
 	binaryToLoad := preCompiledBinary
 
 	if ap.loadLogging() {
+		tempDir, err := os.MkdirTemp("", "calico-tc")
+		if err != nil {
+			return -1, fmt.Errorf("failed to create temporary directory: %w", err)
+		}
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
+
 		tempBinary := path.Join(tempDir, filename)
 
 		err = ap.patchLogPrefix(logCxt, preCompiledBinary, tempBinary)
