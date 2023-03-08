@@ -50,6 +50,8 @@ type worker struct {
 	reconciler         Reconciler
 	watches            []watch
 	maxRequeueAttempts int
+
+	resyncPeriod time.Duration
 }
 
 // watch contains the information needed to create a resource watch
@@ -138,7 +140,7 @@ func (w *worker) Run(workerCount int, stop chan struct{}) {
 	defer w.ShutDown()
 
 	for _, watch := range w.watches {
-		_, ctrl := cache.NewIndexerInformer(watch.listWatcher, watch.obj, 0, w.resourceEventHandlerFuncs(watch.handlers...),
+		_, ctrl := cache.NewIndexerInformer(watch.listWatcher, watch.obj, w.resyncPeriod, w.resourceEventHandlerFuncs(watch.handlers...),
 			cache.Indexers{})
 
 		go ctrl.Run(stop)

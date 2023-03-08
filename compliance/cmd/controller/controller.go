@@ -23,7 +23,7 @@ import (
 
 const (
 	// The health name for the controller component.
-	healthReporterName = "compliance-controller"
+	healthReporterName = "ComplianceController"
 )
 
 var ver bool

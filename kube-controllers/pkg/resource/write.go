@@ -40,19 +40,29 @@ func WriteConfigMapToK8s(cli kubernetes.Interface, configMap *corev1.ConfigMap) 
 // Secret creates or updates the given corev1.Secret using the given kuberenetes.Clientset depending on whether or
 // not the given Secret exists in the k8s cluster
 func WriteSecretToK8s(cli kubernetes.Interface, secret *corev1.Secret) error {
+	var created *corev1.Secret
+	var err error
+
 	ctx := context.Background()
 
-	if _, err := cli.CoreV1().Secrets(secret.Namespace).Get(ctx, secret.Name, metav1.GetOptions{}); err != nil {
+	if _, err = cli.CoreV1().Secrets(secret.Namespace).Get(ctx, secret.Name, metav1.GetOptions{}); err != nil {
 		if !errors.IsNotFound(err) {
 			return err
 		}
-		if _, err := cli.CoreV1().Secrets(secret.Namespace).Create(ctx, secret, metav1.CreateOptions{}); err != nil {
+		if created, err = cli.CoreV1().Secrets(secret.Namespace).Create(ctx, secret, metav1.CreateOptions{}); err != nil {
 			return err
 		}
 	} else {
-		if _, err := cli.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
+		if created, err = cli.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
 			return err
 		}
+	}
+
+	// Assign the created secret to the given one.
+	*secret = *created
+	// If this is a new secret, default Data to an empty map for backwards compatability.
+	if secret.Data == nil {
+		secret.Data = map[string][]byte{}
 	}
 	return nil
 }
