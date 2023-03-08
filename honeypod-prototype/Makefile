@@ -5,12 +5,13 @@ PACKAGE_NAME ?= github.com/tigera/calico-private/honeypod-prototype
 ##############################################################################
 # constants
 ##############################################################################
-HONEYPOD_IMAGE						?=honeypod
-HONEYPOD_IMAGE_LOCATION				?=./compromised_k8s_pod/ip_enumeration/build
-HONEYPOD_EXP_SERVICE_IMAGE			?=honeypod-exp-service
-HONEYPOD_EXP_SERVICE_HTML_LOCATION	?= ./compromised_k8s_pod/exposed_service_nginx/build/html
-HONEYPOD_EXP_SERVICE_LOCATION 		?=./compromised_k8s_pod/exposed_service_nginx/build
-BUILD_IMAGES 						?=$(HONEYPOD_IMAGE) $(HONEYPOD_EXP_SERVICE_IMAGE)
+HONEYPOD_IMAGE                      ?=honeypod
+HONEYPOD_IMAGE_LOCATION             ?=./compromised_k8s_pod/ip_enumeration/build
+HONEYPOD_EXP_SERVICE_IMAGE          ?=honeypod-exp-service
+HONEYPOD_EXP_SERVICE_HTML_LOCATION  ?= ./compromised_k8s_pod/exposed_service_nginx/build/html
+HONEYPOD_EXP_SERVICE_LOCATION       ?=./compromised_k8s_pod/exposed_service_nginx/build
+BUILD_IMAGES                        ?=$(HONEYPOD_IMAGE) $(HONEYPOD_EXP_SERVICE_IMAGE)
+ARCHES                              ?=amd64
 
 RELEASE_BRANCH_PREFIX				?=release-calient
 DEV_TAG_SUFFIX						?=calient-0.dev
@@ -32,12 +33,15 @@ include ../lib.Makefile
 ###############################################################################
 # BUILD IMAGE
 ###############################################################################
+.PHONY: build
+build:
+
 # Build the docker image.
 .PHONY: image $(BUILD_IMAGES)
 
 # by default, build the image for the target architecture
 .PHONY: image-all
-image-all: $(addprefix sub-image-,$(ARCHES))
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
