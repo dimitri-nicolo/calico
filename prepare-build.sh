@@ -12,6 +12,5 @@ fi
 
 # Prepare creating an image
 cd cloud-on-k8s
-patch -p1 -i ../patches/0001-Update-go-restful-to-v3.10.1.patch
 make go-generate
 make generate-config-file
