@@ -332,7 +332,7 @@ func xdpTest(getInfra infrastructure.InfraFactory, proto string) {
 				Expect(doHping()).To(HaveOccurred())
 
 				if !BPFMode() {
-					output, err := felixes[srvr].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xdpf")
+					output, err := felixes[srvr].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default/default.xdpf")
 					// the only rule that refers to a cali40-prefixed ipset should
 					// have 0 packets/bytes because the raw small packets should've been
 					// blocked by XDP
@@ -365,7 +365,7 @@ func xdpTest(getInfra infrastructure.InfraFactory, proto string) {
 				Expect(doPing()).To(HaveOccurred())
 
 				if !BPFMode() {
-					output, err := felixes[srvr].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default/default.xft")
+					output, err := felixes[srvr].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default/default.xdpf")
 					// the only rule that refers to a cali40-prefixed ipset should
 					// have 0 packets/bytes because the icmp packets should've been
 					// blocked by XDP
@@ -403,7 +403,7 @@ func xdpTest(getInfra infrastructure.InfraFactory, proto string) {
 					// the only rule that refers to a cali40-prefixed ipset should have 0 packets/bytes
 					Eventually(func() string {
 						out, _ := felixes[srvr].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L",
-							"cali-pi-default.xdpf")
+							"cali-pi-default/default.xdpf")
 						return out
 
 					}).Should(MatchRegexp(`(?m)^\s+0\s+0.*cali40s:`))
@@ -512,7 +512,7 @@ func xdpTest(getInfra infrastructure.InfraFactory, proto string) {
 					// the only rule that refers to a cali40-prefixed ipset should have 0 packets/bytes
 					Eventually(func() string {
 						out, _ := felixes[srvr].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L",
-							"cali-pi-default.xdpf")
+							"cali-pi-default/default.xdpf")
 						return out
 
 					}).Should(MatchRegexp(`(?m)^\s+0\s+0.*cali40s:`))
