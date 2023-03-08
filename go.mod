@@ -144,12 +144,7 @@ require (
 	sigs.k8s.io/kind v0.17.0
 )
 
-require gopkg.in/yaml.v3 v3.0.1
-
-require (
-	github.com/lestrrat-go/jwx/v2 v2.0.8
-	gopkg.in/yaml.v3 v3.0.1
-)
+require github.com/lestrrat-go/jwx/v2 v2.0.8
 
 require (
 	cloud.google.com/go/compute v1.14.0 // indirect
