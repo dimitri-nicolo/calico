@@ -1,5 +1,5 @@
+.eck-operator.downloaded
 .go-pkg-cache
-.idea
 Makefile.*
-bin
-.vscode/
+bin/
+cloud-on-k8s/
