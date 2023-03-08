@@ -115,10 +115,25 @@ const (
 	GlobalsEgressIPEnabled  uint32 = 32
 )
 
-type BpfGlobalData struct {
+type TcGlobalData struct {
+	HostIP        uint32
+	IntfIP        uint32
+	ExtToSvcMark  uint32
+	Tmtu          uint16
+	VxlanPort     uint16
+	PSNatStart    uint16
+	PSNatLen      uint16
+	HostTunnelIP  uint32
+	VethNS        uint16
+	Flags         uint32
+	WgPort        uint16
+	NatIn         uint32
+	NatOut        uint32
+	EgwVxlanPort  uint16
+	EgwHealthPort uint16
 }
 
-func TcSetGlobals(m *Map, globalData BpfGlobalData) error {
+func TcSetGlobals(_ *Map, globalData TcGlobalData) error {
 	panic("LIBBPF syscall stub")
 }
 
