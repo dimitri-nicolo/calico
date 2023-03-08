@@ -65,10 +65,6 @@ COPY syslog-environment.sh /bin/
 COPY syslog-config.sh /bin/
 RUN chmod +x /bin/syslog-config.sh /bin/syslog-environment.sh
 
-COPY linseed-environment.sh /bin/
-COPY linseed-config.sh /bin/
-RUN chmod +x /bin/linseed-config.sh /bin/linseed-environment.sh
-
 COPY splunk-environment.sh /bin/
 RUN chmod +x /bin/splunk-environment.sh
 
@@ -142,8 +138,6 @@ COPY --from=builder /bin/readiness.sh /bin/readiness.sh
 COPY --from=builder /bin/liveness.sh /bin/liveness.sh
 COPY --from=builder /bin/syslog-environment.sh /bin/syslog-environment.sh
 COPY --from=builder /bin/syslog-config.sh /bin/syslog-config.sh
-COPY --from=builder /bin/linseed-environment.sh /bin/linseed-environment.sh
-COPY --from=builder /bin/linseed-config.sh /bin/linseed-config.sh
 COPY --from=builder /bin/splunk-environment.sh /bin/splunk-environment.sh
 COPY --from=builder /bin/splunk-config.sh /bin/splunk-config.sh
 COPY --from=builder /bin/sumo-environment.sh /bin/sumo-environment.sh

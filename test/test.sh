@@ -322,7 +322,7 @@ EOM
 checkConfiguration $TEST_DIR/tmp/splunk-self-signed-ca.env splunk-self-signed-ca "Splunk - self signed ca config"
 
 
-# Test with linssed enabled
+# Test with linseed enabled
 cat > $TEST_DIR/tmp/linseed.env << EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true

@@ -115,8 +115,6 @@ ENV ELASTIC_BGP_INDEX_REPLICAS=0
 ENV ELASTIC_RUNTIME_INDEX_SHARDS=1
 ENV ELASTIC_RUNTIME_INDEX_REPLICAS=0
 
-ENV LINSEED_ENABLED=true
-
 ENV SYSLOG_PACKET_SIZE=1024
 
 #LINSEED DEFAULT PARAMS
@@ -139,8 +137,6 @@ COPY sumo-environment.sh /bin/
 COPY sumo-config.sh /bin/
 COPY ee_entrypoint.sh /bin/
 COPY eks/bin/eks-log-forwarder-startup.exe /bin/
-COPY linseed-environment.sh /bin/
-COPY linseed-config.sh /bin/
 
 RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_flows" \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_dns" \

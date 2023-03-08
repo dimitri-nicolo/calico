@@ -34,9 +34,13 @@ if [ "${MANAGED_K8S}" == "true" ]; then
 
   # match
   if [ -z ${DISABLE_ES_AUDIT_KUBE_LOG} ] || [ "${DISABLE_ES_AUDIT_KUBE_LOG}" == "false" ]; then
-    cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-kube-audit.conf ${ROOT_DIR}/fluentd/etc/output_kube_audit/out-es.conf
-    if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
-        remove_secure_es_conf kube_audit
+    if [ -z ${LINSEED_ENABLED} ] || [ "${LINSEED_ENABLED}" == "false" ]; then
+      cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-kube-audit.conf ${ROOT_DIR}/fluentd/etc/output_kube_audit/out-es.conf
+      if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
+          remove_secure_es_conf kube_audit
+      fi
+    else
+      cp ${ROOT_DIR}/fluentd/etc/outputs/out-linseed-kube-audit.conf ${ROOT_DIR}/fluentd/etc/output_kube_audit/out-linseed-kube-audit.conf
     fi
   fi
   if [ "${S3_STORAGE}" == "true" ]; then
@@ -45,9 +49,6 @@ if [ "${MANAGED_K8S}" == "true" ]; then
 
   source ${ROOT_DIR}/bin/syslog-environment.sh
   source ${ROOT_DIR}/bin/syslog-config.sh
-
-  source ${ROOT_DIR}/bin/linseed-environment.sh
-  source ${ROOT_DIR}/bin/linseed-config.sh
 
   source ${ROOT_DIR}/bin/splunk-environment.sh
   source ${ROOT_DIR}/bin/splunk-config.sh
@@ -135,28 +136,56 @@ echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
 # another output destination is enabled, we may need to disable the output match directive for the log type completely (see later
 # on in this script).
 if [ -z ${DISABLE_ES_FLOW_LOG} ] || [ "${DISABLE_ES_FLOW_LOG}" == "false" ]; then
-  cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-flows.conf ${ROOT_DIR}/fluentd/etc/output_flows/out-es.conf
+  if [ -z ${LINSEED_ENABLED} ] || [ "${LINSEED_ENABLED}" == "false" ]; then
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-flows.conf ${ROOT_DIR}/fluentd/etc/output_flows/out-es.conf
+  else
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-linseed-flows.conf ${ROOT_DIR}/fluentd/etc/output_flows/out-linseed-flows.conf
+  fi
 fi
 if [ -z ${DISABLE_ES_DNS_LOG} ] || [ "${DISABLE_ES_DNS_LOG}" == "false" ]; then
-  cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-dns.conf ${ROOT_DIR}/fluentd/etc/output_dns/out-es.conf
+  if [ -z ${LINSEED_ENABLED} ] || [ "${LINSEED_ENABLED}" == "false" ]; then
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-dns.conf ${ROOT_DIR}/fluentd/etc/output_dns/out-es.conf
+  else
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-linseed-dns.conf ${ROOT_DIR}/fluentd/etc/output_dns/out-linseed-dns.conf
+  fi
 fi
 if [ -z ${DISABLE_ES_AUDIT_EE_LOG} ] || [ "${DISABLE_ES_AUDIT_EE_LOG}" == "false" ]; then
-  cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-tsee-audit.conf ${ROOT_DIR}/fluentd/etc/output_tsee_audit/out-es.conf
+  if [ -z ${LINSEED_ENABLED} ] || [ "${LINSEED_ENABLED}" == "false" ]; then
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-tsee-audit.conf ${ROOT_DIR}/fluentd/etc/output_tsee_audit/out-es.conf
+  else
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-linseed-ee-audit.conf ${ROOT_DIR}/fluentd/etc/output_tsee_audit/out-linseed-ee-audit.conf
+  fi
 fi
 if [ -z ${DISABLE_ES_AUDIT_KUBE_LOG} ] || [ "${DISABLE_ES_AUDIT_KUBE_LOG}" == "false" ]; then
-  cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-kube-audit.conf ${ROOT_DIR}/fluentd/etc/output_kube_audit/out-es.conf
+  if [ -z ${LINSEED_ENABLED} ] || [ "${LINSEED_ENABLED}" == "false" ]; then
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-kube-audit.conf ${ROOT_DIR}/fluentd/etc/output_kube_audit/out-es.conf
+  else
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-linseed-kube-audit.conf ${ROOT_DIR}/fluentd/etc/output_kube_audit/out-linseed-kube-audit.conf
+  fi
 fi
 if [ -z ${DISABLE_ES_BGP_LOG} ] || [ "${DISABLE_ES_BGP_LOG}" == "false" ]; then
-  cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-bgp.conf ${ROOT_DIR}/fluentd/etc/output_bgp/out-es.conf
+  if [ -z ${LINSEED_ENABLED} ] || [ "${LINSEED_ENABLED}" == "false" ]; then
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-bgp.conf ${ROOT_DIR}/fluentd/etc/output_bgp/out-es.conf
+  else
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-linseed-bgp.conf ${ROOT_DIR}/fluentd/etc/output_bgp/out-linseed-bgp.conf
+  fi
 fi
 if [ -z ${DISABLE_ES_L7_LOG} ] || [ "${DISABLE_ES_L7_LOG}" == "false" ]; then
-  cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-l7.conf ${ROOT_DIR}/fluentd/etc/output_l7/out-es.conf
+  if [ -z ${LINSEED_ENABLED} ] || [ "${LINSEED_ENABLED}" == "false" ]; then
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-l7.conf ${ROOT_DIR}/fluentd/etc/output_l7/out-es.conf
+  else
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-linseed-l7.conf ${ROOT_DIR}/fluentd/etc/output_l7/out-linseed-l7.conf
+  fi
 fi
 if [ -z ${DISABLE_ES_RUNTIME_LOG} ] || [ "${DISABLE_ES_RUNTIME_LOG}" == "false" ]; then
   cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-runtime.conf ${ROOT_DIR}/fluentd/etc/output_runtime/out-es.conf
 fi
 if [ -z ${DISABLE_ES_WAF_LOG} ] || [ "${DISABLE_ES_WAF_LOG}" == "false" ]; then
-  cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-waf.conf ${ROOT_DIR}/fluentd/etc/output_waf/out-es.conf
+    if [ -z ${LINSEED_ENABLED} ] || [ "${LINSEED_ENABLED}" == "false" ]; then
+      cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-waf.conf ${ROOT_DIR}/fluentd/etc/output_waf/out-es.conf
+    else
+      cp ${ROOT_DIR}/fluentd/etc/outputs/out-linseed-waf.conf ${ROOT_DIR}/fluentd/etc/output_waf/out-linseed-waf.conf
+    fi
 fi
 # Check if we should strip out the secure settings from the configuration file.
 if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
@@ -183,9 +212,6 @@ source ${ROOT_DIR}/bin/splunk-config.sh
 
 source ${ROOT_DIR}/bin/sumo-environment.sh
 source ${ROOT_DIR}/bin/sumo-config.sh
-
-source ${ROOT_DIR}/bin/linseed-environment.sh
-source ${ROOT_DIR}/bin/linseed-config.sh
 
 # Determine which output match directives to include.
 
