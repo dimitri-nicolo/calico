@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	healthReporterName   = "panorama-controller"
+	healthReporterName   = "PanoramaController"
 	healthReportInterval = time.Second * 10
 )
 

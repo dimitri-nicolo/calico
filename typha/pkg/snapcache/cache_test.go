@@ -103,7 +103,7 @@ var _ = Describe("Snapshot cache FV tests", func() {
 
 	BeforeEach(func() {
 		log.SetLevel(log.InfoLevel)
-		mockHealth = &healthRecorder{expectedName: "my-cache"}
+		mockHealth = &healthRecorder{expectedName: "Cache"}
 		cacheConfig = snapcache.Config{
 			MaxBatchSize:     10,
 			WakeUpInterval:   10 * time.Second,

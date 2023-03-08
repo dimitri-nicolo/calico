@@ -81,7 +81,7 @@ func run() {
 
 	// Create a health aggregator and mark us as alive.
 	// For now, we don't do periodic updates to our health, so don't set a timeout.
-	const healthName = "startup"
+	const healthName = "Startup"
 	healthAggregator := health.NewHealthAggregator()
 	healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true}, 0)
 

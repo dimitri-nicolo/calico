@@ -66,7 +66,7 @@ type routeStore struct {
 }
 
 // NewRouteStore instantiates a new store for route updates
-const healthName = "datastore connection"
+const healthName = "DatastoreConnection"
 
 func NewRouteStore(getUpdatesPipeline func() <-chan *proto.ToDataplane, egressPodIP net.IP, healthAgg *health.HealthAggregator, healthTimeout time.Duration) *routeStore {
 	healthAgg.RegisterReporter(healthName, &health.HealthReport{Ready: true}, healthTimeout)

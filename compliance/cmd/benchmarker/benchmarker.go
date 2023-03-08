@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	healthReporterName = "compliance-benchmarker"
+	healthReporterName = "ComplianceBenchmarker"
 )
 
 func main() {

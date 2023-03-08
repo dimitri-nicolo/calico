@@ -3,10 +3,9 @@
 package collector
 
 import (
+	"fmt"
 	"sync"
 	"time"
-
-	"fmt"
 
 	"github.com/gavv/monotime"
 	log "github.com/sirupsen/logrus"
@@ -51,11 +50,11 @@ type FlowLogsReporter struct {
 	flowLogAvgMutex       sync.RWMutex
 
 	// TODO(rlb): Not currently used
-	//stats     *tupleStore
+	// stats     *tupleStore
 }
 
 const (
-	healthName     = "cloud_watch_reporter"
+	healthName     = "CloudWatchReporter"
 	healthInterval = 10 * time.Second
 )
 
@@ -123,7 +122,7 @@ func NewFlowLogsReporter(dispatchers map[string]LogDispatcher, flushInterval tim
 		flushIntervalDuration: flushInterval.Seconds(),
 		flowLogAvgMutex:       sync.RWMutex{},
 		// TODO(rlb): Not currently used
-		//stats:            NewTupleStore(),
+		// stats:            NewTupleStore(),
 	}
 }
 
@@ -146,7 +145,7 @@ func newFlowLogsReporterTest(dispatchers map[string]LogDispatcher, healthAggrega
 		flowLogAvgMutex: sync.RWMutex{},
 
 		// TODO(rlb): Not currently used
-		//stats:            NewTupleStore(),
+		// stats:            NewTupleStore(),
 	}
 }
 

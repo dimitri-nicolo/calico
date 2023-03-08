@@ -38,7 +38,7 @@ var (
 )
 
 const (
-	healthReporterName       = "deep-packet-inspection"
+	healthReporterName       = "DeepPacketInspection"
 	elasticRetrySendInterval = 30 * time.Second
 	fileMaintenanceInterval  = 5 * time.Minute
 )
