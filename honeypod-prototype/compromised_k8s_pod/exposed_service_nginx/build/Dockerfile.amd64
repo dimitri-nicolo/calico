@@ -1,0 +1,4 @@
+ARG HTML_LOCATION
+FROM nginxinc/nginx-unprivileged:stable-alpine
+
+COPY ${HTML_LOCATION} /usr/share/nginx/html
