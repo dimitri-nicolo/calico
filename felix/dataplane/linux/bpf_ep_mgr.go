@@ -344,12 +344,12 @@ func newBPFEndpointManager(
 		ruleRenderer:        iptablesRuleRenderer,
 		iptablesFilterTable: iptablesFilterTable,
 		onStillAlive:        livenessCallback,
-		lookupsCache:     lookupsCache,
+		lookupsCache:        lookupsCache,
 		hostIfaceToEpMap:    map[string]proto.HostEndpoint{},
 		ifaceToIpMap:        map[string]net.IP{},
 		opReporter:          opReporter,
-		actionOnDrop:     actionOnDrop,
-		enableTcpStats:   enableTcpStats,
+		actionOnDrop:        actionOnDrop,
+		enableTcpStats:      enableTcpStats,
 		// ipv6Enabled Should be set to config.Ipv6Enabled, but for now it is better
 		// to set it to BPFIpv6Enabled which is a dedicated flag for development of IPv6.
 		// TODO: set ipv6Enabled to config.Ipv6Enabled when IPv6 support is complete
