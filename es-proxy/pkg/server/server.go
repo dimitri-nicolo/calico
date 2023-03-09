@@ -49,10 +49,11 @@ var (
 // indices or index patterns from here and these parameters are
 // only required in such cases.
 const (
-	dnsLogsResourceName  = "dns"
-	eventsResourceName   = "events"
-	flowLogsResourceName = "flows"
-	l7ResourceName       = "l7"
+	dnsLogsResourceName   = "dns"
+	eventsResourceName    = "events"
+	flowLogsResourceName  = "flows"
+	l7ResourceName        = "l7"
+	auditLogsResourceName = "audit"
 )
 
 func Start(cfg *Config) error {
@@ -219,6 +220,13 @@ func Start(cfg *Config) error {
 						k8sClientSet,
 						linseed,
 					)))))
+
+	sm.Handle("/auditlogs",
+		middleware.ClusterRequestToResource(auditLogsResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					audit.NewHandler(linseed)))))
+
 	sm.Handle("/processes",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
@@ -269,8 +277,6 @@ func Start(cfg *Config) error {
 	sm.Handle("/user",
 		middleware.AuthenticateRequest(authn,
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
-
-	sm.Handle("/auditlogs", middleware.AuthenticateRequest(authn, audit.NewHandler(linseed)))
 
 	// Handle raw ES queries with the raw handler.
 	sm.Handle("/",
