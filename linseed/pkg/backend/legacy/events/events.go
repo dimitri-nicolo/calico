@@ -164,11 +164,25 @@ func (b *eventsBackend) Dismiss(ctx context.Context, i api.ClusterInfo, events [
 		return nil, fmt.Errorf("failed to dismiss events: %s", err)
 	}
 
+	// Convert individual success / failure responses.
+	upd := []v1.BulkItem{}
+	for _, i := range resp.Updated() {
+		bi := v1.BulkItem{ID: i.Id}
+		switch i.Status {
+		case 200:
+			bi.Status = v1.StatusOK
+		default:
+			bi.Status = v1.StatusFailed
+		}
+		upd = append(upd, bi)
+	}
+
 	return &v1.BulkResponse{
 		Total:     len(resp.Items),
 		Succeeded: len(resp.Succeeded()),
 		Failed:    len(resp.Failed()),
 		Errors:    v1.GetBulkErrors(resp),
+		Updated:   upd,
 	}, nil
 }
 
@@ -191,11 +205,25 @@ func (b *eventsBackend) Delete(ctx context.Context, i api.ClusterInfo, events []
 		return nil, fmt.Errorf("failed to dismiss events: %s", err)
 	}
 
+	// Convert individual success / failure responses.
+	del := []v1.BulkItem{}
+	for _, i := range resp.Deleted() {
+		bi := v1.BulkItem{ID: i.Id}
+		switch i.Status {
+		case 200:
+			bi.Status = v1.StatusOK
+		default:
+			bi.Status = v1.StatusFailed
+		}
+		del = append(del, bi)
+	}
+
 	return &v1.BulkResponse{
 		Total:     len(resp.Items),
 		Succeeded: len(resp.Succeeded()),
 		Failed:    len(resp.Failed()),
 		Errors:    v1.GetBulkErrors(resp),
+		Deleted:   del,
 	}, nil
 }
 

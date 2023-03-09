@@ -9,4 +9,21 @@ type BulkResponse struct {
 	Failed    int `json:"failed"`
 
 	Errors []BulkError `json:"errors,omitempty"`
+
+	// Specific items and their status.
+	Created []BulkItem
+	Deleted []BulkItem
+	Updated []BulkItem
+}
+
+type BulkItemStatus string
+
+const (
+	StatusOK     BulkItemStatus = "OK"
+	StatusFailed BulkItemStatus = "Failed"
+)
+
+type BulkItem struct {
+	ID     string
+	Status BulkItemStatus
 }

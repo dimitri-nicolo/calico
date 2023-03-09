@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
@@ -26,8 +27,7 @@ func EventHandler(lsclient client.Client) http.Handler {
 			return
 		}
 
-		// perform elastic bulk actions.
-		// only delete and dismiss actions are supported for events.
+		// Perform bulk actions - only delete and dismiss actions are supported for events.
 		resp, err := processEventRequest(r, lsclient, params)
 		if err != nil {
 			httputils.EncodeError(w, err)
@@ -132,17 +132,24 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 	resp.Errors = resp.Errors || len(dismissResp.Errors) > 0
 	resp.Errors = resp.Errors || len(delResp.Errors) > 0
 
-	// Populate items array in response.
-	// items := make([]*elastic.BulkResponseItem, 0)
-	// items = append(items, response.Deleted()...)
-	// items = append(items, response.Updated()...)
-	// resp.Items = make([]v1.BulkEventResponseItem, len(items))
-	// for i, item := range items {
-	// 	resp.Items[i].Index = item.Index
-	// 	resp.Items[i].ID = item.Id
-	// 	resp.Items[i].Result = item.Result
-	// 	resp.Items[i].Status = item.Status
-	// }
+	// For legacy reasons, the UI expects elastic.BulkResponseItems.
+	// Ideally we swich the UI so we don't need this conversion.
+	items := make([]*elastic.BulkResponseItem, 0)
+	for _, d := range append(delResp.Deleted, dismissResp.Updated...) {
+		item := elastic.BulkResponseItem{
+			Id:    d.ID,
+			Index: "tigera_secure_ee_events",
+		}
+		switch d.Status {
+		case lapi.StatusOK:
+			item.Status = 200
+			item.Result = "OK"
+		default:
+			item.Status = 500
+			item.Result = "Failed"
+		}
+		items = append(items, &item)
+	}
 
 	return &resp, nil
 }
