@@ -15,6 +15,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -88,9 +89,16 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 		return nil, fmt.Errorf("no cluster ID on request")
 	}
 
+	// Get the startFrom param, if any.
+	startFrom, err := logtools.StartFrom(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	// Build the query.
 	query := b.client.Search().
 		Index(b.index(i)).
+		From(startFrom).
 		Size(opts.QueryParams.GetMaxPageSize()).
 		Query(b.buildQuery(i, opts))
 
@@ -113,7 +121,7 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 	return &v1.List[v1.BGPLog]{
 		TotalHits: int64(len(logs)),
 		Items:     logs,
-		AfterKey:  nil, // TODO: Support pagination.
+		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom),
 	}, nil
 }
 

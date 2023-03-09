@@ -49,6 +49,9 @@ type AuditLogParams struct {
 
 	// Response code match.
 	ResponseCodes []int32 `json:"response_codes"`
+
+	// Match on the author of the change.
+	Authors []string `json:"authors"`
 }
 
 // ObjectReference is the set of fields we support in query requests

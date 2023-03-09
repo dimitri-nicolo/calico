@@ -15,6 +15,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -114,10 +115,17 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 		return nil, fmt.Errorf("invalid audit log type: %s", opts.Type)
 	}
 
+	// Get the startFrom param, if any.
+	startFrom, err := logtools.StartFrom(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	// Build the query.
 	query := b.client.Search().
 		Index(b.index(opts.Type, i)).
 		Size(opts.GetMaxPageSize()).
+		From(startFrom).
 		Query(b.buildQuery(i, opts)).
 		Sort("stageTimestamp", false)
 
@@ -138,27 +146,23 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 	}
 
 	return &v1.List[v1.AuditLog]{
-		TotalHits: int64(len(events)),
+		TotalHits: results.TotalHits(),
 		Items:     events,
-		AfterKey:  nil, // TODO: Support pagination.
+		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom),
 	}, nil
 }
 
 // buildQuery builds an elastic query using the given parameters.
 func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams) elastic.Query {
-	// Parse times from the request. We default to a time-range query
-	// if no other search parameters are given.
+	query := elastic.NewBoolQuery()
+
+	// Time-range based query.
 	var start, end time.Time
 	if opts.TimeRange != nil {
 		start = opts.TimeRange.From
 		end = opts.TimeRange.To
-	} else {
-		// Default to the latest 5 minute window.
-		start = time.Now().Add(-5 * time.Minute)
-		end = time.Now()
+		query.Filter(elastic.NewRangeQuery("requestReceivedTimestamp").Gt(start).Lte(end))
 	}
-	query := elastic.NewBoolQuery()
-	query.Filter(elastic.NewRangeQuery("requestReceivedTimestamp").Gt(start).Lte(end))
 
 	// Check if any resource kinds were specified.
 	if len(opts.Kinds) > 0 {
@@ -167,6 +171,15 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 			values = append(values, a)
 		}
 		query.Filter(elastic.NewTermsQuery("objectRef.resource", values...))
+	}
+
+	// Match on author.
+	if len(opts.Authors) > 0 {
+		values := []interface{}{}
+		for _, a := range opts.Authors {
+			values = append(values, a)
+		}
+		query.Filter(elastic.NewTermsQuery("user.username", values...))
 	}
 
 	// Match on verb.
@@ -205,11 +218,9 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 	)
 
 	// Only match on RequestResponse level audit logs.
-	// TODO: Does this need to be configurable?
 	query.Must(elastic.NewMatchQuery("level", "RequestResponse"))
 
 	// Only match on logs who have a complete response.
-	// TODO: Does this need to be configurable?
 	query.Must(elastic.NewMatchQuery("stage", "ResponseComplete"))
 
 	return query

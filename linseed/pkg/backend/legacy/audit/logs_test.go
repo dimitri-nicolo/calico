@@ -239,6 +239,9 @@ func TestAuditLogFiltering(t *testing.T) {
 		// Whether to perform an equality comparison on the returned
 		// logs. Can be useful for tests where stats differ.
 		SkipComparison bool
+
+		// Whether or not to filter based on time range.
+		AllTime bool
 	}
 
 	numExpected := func(tc testCase) int {
@@ -294,6 +297,15 @@ func TestAuditLogFiltering(t *testing.T) {
 			ExpectLog2: false,
 		},
 		{
+			Name: "should filter based on author",
+			Params: v1.AuditLogParams{
+				Authors: []string{"garfunkel"},
+				Type:    v1.AuditLogTypeEE,
+			},
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
+		{
 			Name: "should filter based on namespace",
 			Params: v1.AuditLogParams{
 				Type: v1.AuditLogTypeEE,
@@ -318,6 +330,16 @@ func TestAuditLogFiltering(t *testing.T) {
 			Params: v1.AuditLogParams{
 				Type: v1.AuditLogTypeAny,
 			},
+			ExpectLog1: true,
+			ExpectLog2: true,
+			ExpectKube: true,
+		},
+		{
+			Name: "should support queries that don't include a time range",
+			Params: v1.AuditLogParams{
+				Type: v1.AuditLogTypeAny,
+			},
+			AllTime:    true,
 			ExpectLog1: true,
 			ExpectLog2: true,
 			ExpectKube: true,
@@ -361,8 +383,8 @@ func TestAuditLogFiltering(t *testing.T) {
 					RequestURI: "/apis/v3/projectcalico.org",
 					Verb:       "PUT",
 					User: authnv1.UserInfo{
-						Username: "user",
-						UID:      "uid",
+						Username: "garfunkel",
+						UID:      "1234",
 						Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
 					},
 					ImpersonatedUser: &authnv1.UserInfo{
@@ -405,8 +427,8 @@ func TestAuditLogFiltering(t *testing.T) {
 					RequestURI: "/apis/v3/projectcalico.org",
 					Verb:       "PUT",
 					User: authnv1.UserInfo{
-						Username: "user",
-						UID:      "uid",
+						Username: "oates",
+						UID:      "0987",
 						Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
 					},
 					ImpersonatedUser: &authnv1.UserInfo{
@@ -460,7 +482,7 @@ func TestAuditLogFiltering(t *testing.T) {
 					RequestURI: "/apis/v1/namespaces",
 					Verb:       "GET",
 					User: authnv1.UserInfo{
-						Username: "user",
+						Username: "prince",
 						UID:      "uid",
 						Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
 					},
