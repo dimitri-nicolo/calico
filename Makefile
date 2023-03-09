@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/tigera/eck-operator-docker
-GO_BUILD_VER?=v0.78
+GO_BUILD_VER?=v0.81
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_ECK_OPERATOR_DOCKER_PROJECT_ID)
@@ -12,13 +12,13 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-GO_VERSION  ?=1.18
+ECK_OPERATOR_VERSION = 2.6.1
 
 VERSION ?= $(shell cat cloud-on-k8s/VERSION)
-LDFLAGS ?= "-X github.com/elastic/cloud-on-k8s/pkg/about.version=$(VERSION) \
+LDFLAGS ?= -X github.com/elastic/cloud-on-k8s/pkg/about.version=$(VERSION) \
 	-X github.com/elastic/cloud-on-k8s/pkg/about.buildHash=$(shell cd cloud-on-k8s && git rev-parse --short=8 --verify HEAD) \
 	-X github.com/elastic/cloud-on-k8s/pkg/about.buildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ') \
-	-X github.com/elastic/cloud-on-k8s/pkg/about.buildSnapshot=false"
+	-X github.com/elastic/cloud-on-k8s/pkg/about.buildSnapshot=false
 
 ###############################################################################
 # Download and include Makefile.common
@@ -37,6 +37,11 @@ Makefile.common.$(MAKE_BRANCH):
 
 include Makefile.common
 
+###############################################################################
+# Build
+###############################################################################
+ECK_OPERATOR_DOWNLOADED=.eck-operator.downloaded
+
 # Add --squash argument for CICD pipeline runs only to avoid setting "experimental",
 # for Docker processes on personal machine.
 # DOCKER_SQUASH is defaulted to be empty but can be set `DOCKER_SQUASH=--squash make image` 
@@ -52,13 +57,33 @@ else
 CGO_ENABLED=0
 endif
 
+.PHONY: init-source
+init-source: $(ECK_OPERATOR_DOWNLOADED)
+$(ECK_OPERATOR_DOWNLOADED):
+	mkdir -p cloud-on-k8s
+	curl -sfL https://github.com/elastic/cloud-on-k8s/archive/refs/tags/$(ECK_OPERATOR_VERSION).tar.gz | tar xz --strip-components 1 -C cloud-on-k8s
+	touch $@
+
 build: bin/$(ECK_OPERATOR_NAME)-$(ARCH)
 
-bin/$(ECK_OPERATOR_NAME)-$(ARCH): prepare-build
+bin/$(ECK_OPERATOR_NAME)-$(ARCH): $(ECK_OPERATOR_DOWNLOADED)
 	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			cd cloud-on-k8s && go build -o ../$@ -v -ldflags $(LDFLAGS) cmd/main.go'
+			cd cloud-on-k8s && \
+			make go-generate && \
+			make generate-config-file && \
+			go build -o ../$@ -v -ldflags "$(LDFLAGS) -s -w" cmd/main.go'
 
+.PHONY: clean
+clean:
+	rm -fr bin/ cloud-on-k8s/
+	rm -f $(ECK_OPERATOR_DOWNLOADED)
+	-docker image rm -f $$(docker images $(ECK_OPERATOR_IMAGE) -a -q)
+
+###############################################################################
+# Image
+###############################################################################
+.PHONY: image
 image: $(ECK_OPERATOR_IMAGE)
 $(ECK_OPERATOR_IMAGE): $(ECK_OPERATOR_IMAGE)-$(ARCH)
 $(ECK_OPERATOR_IMAGE)-$(ARCH): build
@@ -67,15 +92,5 @@ ifeq ($(ARCH),amd64)
 	docker tag $(ECK_OPERATOR_IMAGE):latest-$(ARCH) $(ECK_OPERATOR_IMAGE):latest
 endif
 
-prepare-build:
-	git submodule update --init --recursive
-	$(DOCKER_GO_BUILD) bash -x prepare-build.sh
-
 .PHONY: cd
 cd: image cd-common
-
-.PHONY: clean
-clean:
-	rm -rf bin \
-		   .go-pkg-cache \
-		   Makefile.*
