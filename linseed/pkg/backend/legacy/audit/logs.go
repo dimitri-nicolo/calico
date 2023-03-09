@@ -230,7 +230,7 @@ func (b *auditLogBackend) index(kind v1.AuditLogType, i bapi.ClusterInfo) string
 	base := fmt.Sprintf("tigera_secure_ee_audit_%s", kind)
 	if kind == v1.AuditLogTypeAny {
 		// Return both kube and EE logs.
-		base = fmt.Sprintf("tigera_secure_ee_audit_*")
+		base = "tigera_secure_ee_audit_*"
 	}
 	if i.Tenant != "" {
 		// If a tenant is provided, then we must include it in the index.

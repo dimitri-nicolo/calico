@@ -350,7 +350,6 @@ func searchEvents(
 
 type Hit[T any] struct {
 	ID     string `json:"id,omitempty"`
-	Index  string `json:"index,omitempty"`
 	Source T      `json:"source"`
 }
 
@@ -380,16 +379,14 @@ func searchLogs[T any](
 	// as many results as we can.
 	var hits []gojson.RawMessage
 	for _, item := range items.Items {
-		// ID and Index are only set on some objects.
-		var idx, id string
+		// ID is only set when the UI needs it.
+		var id string
 		switch i := any(item).(type) {
 		case lapi.Event:
-			idx = i.Index
 			id = i.ID
 		}
 		hit := Hit[T]{
 			ID:     id,
-			Index:  idx,
 			Source: item,
 		}
 		hitJSON, err := json.Marshal(hit)

@@ -123,7 +123,6 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 			continue
 		}
 		event.ID = h.Id
-		event.Index = h.Index
 		events = append(events, event)
 	}
 

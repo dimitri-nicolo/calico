@@ -78,7 +78,7 @@ func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkEventReq
 	}
 
 	for _, item := range items {
-		if item.ID == "" || item.Index == "" {
+		if item.ID == "" {
 			return nil, &httputils.HttpStatusError{
 				Status: http.StatusBadRequest,
 				Msg:    middleware.ErrParseRequest.Error(),
@@ -144,8 +144,7 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 	}
 	for _, d := range all {
 		item := elastic.BulkResponseItem{
-			Id:    d.ID,
-			Index: "tigera_secure_ee_events",
+			Id: d.ID,
 		}
 		switch d.Status {
 		case lapi.StatusOK:

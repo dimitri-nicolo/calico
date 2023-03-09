@@ -11,9 +11,9 @@ type BulkResponse struct {
 	Errors []BulkError `json:"errors,omitempty"`
 
 	// Specific items and their status.
-	Created []BulkItem
-	Deleted []BulkItem
-	Updated []BulkItem
+	Created []BulkItem `json:"created"`
+	Deleted []BulkItem `json:"deleted"`
+	Updated []BulkItem `json:"updated"`
 }
 
 type BulkItemStatus string
@@ -24,6 +24,6 @@ const (
 )
 
 type BulkItem struct {
-	ID     string
-	Status BulkItemStatus
+	ID     string         `json:"id"`
+	Status BulkItemStatus `json:"status"`
 }
