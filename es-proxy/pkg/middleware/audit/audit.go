@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
@@ -40,8 +40,7 @@ func NewHandler(lsclient client.Client) http.Handler {
 func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, string, error) {
 	type auditRequest struct {
 		v1.AuditLogParams `json:",inline"`
-		Cluster           string `json:"cluster"`
-		Page              int    `json:"page"`
+		Page              int `json:"page"`
 	}
 
 	params := auditRequest{}
@@ -60,10 +59,6 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, s
 		}
 	}
 
-	if params.Cluster == "" {
-		params.Cluster = datastore.DefaultCluster
-	}
-
 	// Ideally, clients don't know the syntax of the after key, but
 	// for paged lists we currently need this.
 	params.SetAfterKey(map[string]interface{}{
@@ -78,5 +73,8 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, s
 		}
 	}
 
-	return &params.AuditLogParams, params.Cluster, nil
+	// Extract the cluster ID header.
+	cluster := middleware.MaybeParseClusterNameFromRequest(r)
+
+	return &params.AuditLogParams, cluster, nil
 }
