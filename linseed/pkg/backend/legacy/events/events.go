@@ -123,6 +123,7 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 			continue
 		}
 		event.ID = h.Id
+		event.Index = h.Index
 		events = append(events, event)
 	}
 
@@ -158,8 +159,9 @@ func (b *eventsBackend) Dismiss(ctx context.Context, i api.ClusterInfo, events [
 		bulk.Add(req)
 	}
 
-	// Send the bulk request.
-	resp, err := bulk.Do(ctx)
+	// Send the bulk request. Wait for results to be refreshed before replying,
+	// so that subsequent reads show consistent data.
+	resp, err := bulk.Refresh("wait_for").Do(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dismiss events: %s", err)
 	}
@@ -199,8 +201,9 @@ func (b *eventsBackend) Delete(ctx context.Context, i api.ClusterInfo, events []
 		bulk.Add(req)
 	}
 
-	// Send the bulk request.
-	resp, err := bulk.Do(ctx)
+	// Send the bulk request. Wait for results to be refreshed before replying,
+	// so that subsequent reads show consistent data.
+	resp, err := bulk.Refresh("wait_for").Do(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dismiss events: %s", err)
 	}

@@ -12,8 +12,7 @@ import (
 	gojson "encoding/json"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -101,7 +100,7 @@ func search(
 func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.SearchRequest, error) {
 	// Validate http method.
 	if r.Method != http.MethodGet && r.Method != http.MethodPost {
-		log.WithError(middleware.ErrInvalidMethod).Info("Invalid http method.")
+		logrus.WithError(middleware.ErrInvalidMethod).Info("Invalid http method.")
 
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusMethodNotAllowed,
@@ -120,10 +119,10 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	if err := httputils.Decode(w, r, &params); err != nil {
 		var mr *httputils.HttpStatusError
 		if errors.As(err, &mr) {
-			log.WithError(mr.Err).Info(mr.Msg)
+			logrus.WithError(mr.Err).Info(mr.Msg)
 			return nil, mr
 		} else {
-			log.WithError(mr.Err).Info("Error validating /search request.")
+			logrus.WithError(mr.Err).Info("Error validating /search request.")
 			return nil, &httputils.HttpStatusError{
 				Status: http.StatusMethodNotAllowed,
 				Msg:    http.StatusText(http.StatusInternalServerError),
@@ -304,7 +303,7 @@ func searchEvents(
 	// to exclude events which match exceptions created by users.
 	eventExceptionList, err := k8sClient.AlertExceptions().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		log.WithError(err).Error("failed to list alert exceptions")
+		logrus.WithError(err).Error("failed to list alert exceptions")
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusInternalServerError,
 			Msg:    err.Error(),
@@ -318,14 +317,14 @@ func searchEvents(
 		if alertException.Spec.StartTime.Before(now) {
 			if alertException.Spec.EndTime != nil && alertException.Spec.EndTime.Before(now) {
 				// skip expired alert exceptions
-				log.Debugf(`skipping expired alert exception="%s"`, alertException.GetName())
+				logrus.Debugf(`skipping expired alert exception="%s"`, alertException.GetName())
 				continue
 			}
 
 			// Validate the selector first.
 			_, err := lmaindex.Alerts().NewSelectorQuery(alertException.Spec.Selector)
 			if err != nil {
-				log.WithError(err).Warnf(`ignoring alert exception="%s", failed to parse selector="%s"`,
+				logrus.WithError(err).Warnf(`ignoring alert exception="%s", failed to parse selector="%s"`,
 					alertException.GetName(), alertException.Spec.Selector)
 				continue
 			}
@@ -350,7 +349,9 @@ func searchEvents(
 }
 
 type Hit[T any] struct {
-	Source T `json:"source"`
+	ID     string `json:"id,omitempty"`
+	Index  string `json:"index,omitempty"`
+	Source T      `json:"source"`
 }
 
 // searchLogs performs a search against the Linseed API for logs that match the given
@@ -379,12 +380,21 @@ func searchLogs[T any](
 	// as many results as we can.
 	var hits []gojson.RawMessage
 	for _, item := range items.Items {
+		// ID and Index are only set on some objects.
+		var idx, id string
+		switch i := any(item).(type) {
+		case lapi.Event:
+			idx = i.Index
+			id = i.ID
+		}
 		hit := Hit[T]{
+			ID:     id,
+			Index:  idx,
 			Source: item,
 		}
 		hitJSON, err := json.Marshal(hit)
 		if err != nil {
-			log.WithError(err).WithField("hit", hit).Error("Error marshaling search result")
+			logrus.WithError(err).WithField("hit", hit).Error("Error marshaling search result")
 			return nil, &httputils.HttpStatusError{
 				Status: http.StatusInternalServerError,
 				Msg:    "error marshaling search result from linseed",

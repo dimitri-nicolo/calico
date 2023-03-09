@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/olivere/elastic/v7"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
@@ -41,7 +41,7 @@ func EventHandler(lsclient client.Client) http.Handler {
 func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkEventRequest, error) {
 	// events handler
 	if r.Method != http.MethodPost {
-		log.WithError(middleware.ErrInvalidMethod).Infof("Invalid http method %s for /events/bulk.", r.Method)
+		logrus.WithError(middleware.ErrInvalidMethod).Infof("Invalid http method %s for /events/bulk.", r.Method)
 
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusMethodNotAllowed,
@@ -56,10 +56,10 @@ func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkEventReq
 	if err := httputils.Decode(w, r, &params); err != nil {
 		var mr *httputils.HttpStatusError
 		if errors.As(err, &mr) {
-			log.WithError(mr.Err).Info(mr.Msg)
+			logrus.WithError(mr.Err).Info(mr.Msg)
 			return nil, mr
 		} else {
-			log.WithError(mr.Err).Info("Error validating event bulk requests.")
+			logrus.WithError(mr.Err).Info("Error validating event bulk requests.")
 			return nil, &httputils.HttpStatusError{
 				Status: http.StatusBadRequest,
 				Msg:    http.StatusText(http.StatusInternalServerError),
@@ -119,7 +119,7 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 	}
 	if params.Dismiss != nil {
 		eventsToDismiss := []lapi.Event{}
-		for _, item := range params.Delete.Items {
+		for _, item := range params.Dismiss.Items {
 			eventsToDismiss = append(eventsToDismiss, lapi.Event{ID: item.ID})
 		}
 		dismissResp, err = lsclient.Events(params.ClusterName).Dismiss(ctx, eventsToDismiss)
@@ -129,13 +129,20 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 	}
 
 	// Populate bulk response errors.
-	resp.Errors = resp.Errors || len(dismissResp.Errors) > 0
-	resp.Errors = resp.Errors || len(delResp.Errors) > 0
+	resp.Errors = resp.Errors || (dismissResp != nil && len(dismissResp.Errors) > 0)
+	resp.Errors = resp.Errors || (delResp != nil && len(delResp.Errors) > 0)
 
 	// For legacy reasons, the UI expects elastic.BulkResponseItems.
 	// Ideally we swich the UI so we don't need this conversion.
 	items := make([]*elastic.BulkResponseItem, 0)
-	for _, d := range append(delResp.Deleted, dismissResp.Updated...) {
+	var all []lapi.BulkItem
+	if dismissResp != nil {
+		all = append(all, dismissResp.Updated...)
+	}
+	if delResp != nil {
+		all = append(all, delResp.Updated...)
+	}
+	for _, d := range all {
 		item := elastic.BulkResponseItem{
 			Id:    d.ID,
 			Index: "tigera_secure_ee_events",
