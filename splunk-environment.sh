@@ -13,7 +13,6 @@ if [[ "${SPLUNK_AUDIT_LOG}" == "true" || "${SPLUNK_AUDIT_TSEE_LOG}" == "true" ||
   export SPLUNK_PROTOCOL=${SPLUNK_PROTOCOL:-"https"}
   export SPLUNK_FLUSH_INTERVAL=${SPLUNK_FLUSH_INTERVAL:-"5s"}
   export SPLUNK_FLUSH_THREAD_COUNT=${SPLUNK_FLUSH_THREAD_COUNT:-"2"}
-  export SPLUNK_CA_FILE=${SPLUNK_CA_FILE:-"nil"}
 
   # Optional Splunk audit log output
   export SPLUNK_AUDIT_HEC_HOST=${SPLUNK_AUDIT_HEC_HOST:-$SPLUNK_HEC_HOST}
