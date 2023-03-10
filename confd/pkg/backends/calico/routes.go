@@ -241,9 +241,9 @@ func (rg *routeGenerator) getAllRoutesForService(svc *v1.Service) []string {
 
 	if svc.Spec.ExternalIPs != nil {
 		for _, externalIP := range svc.Spec.ExternalIPs {
-			// Only advertise whitelisted external IPs
+			// Only advertise allowed external IPs
 			if !rg.isAllowedExternalIP(externalIP) {
-				log.WithFields(log.Fields{"ip": externalIP, "svc": svcID}).Info("Cannot advertise External IP - not whitelisted")
+				log.WithFields(log.Fields{"ip": externalIP, "svc": svcID}).Info("Cannot advertise External IP - not in allow list")
 				continue
 			}
 			routes = append(routes, externalIP)
@@ -253,9 +253,9 @@ func (rg *routeGenerator) getAllRoutesForService(svc *v1.Service) []string {
 	if svc.Status.LoadBalancer.Ingress != nil {
 		for _, lbIngress := range svc.Status.LoadBalancer.Ingress {
 			if len(lbIngress.IP) > 0 {
-				// Only advertise whitelisted LB IPs
+				// Only advertise allowed LB IPs
 				if !rg.isAllowedLoadBalancerIP(lbIngress.IP) {
-					log.WithFields(log.Fields{"ip": lbIngress.IP, "svc": svcID}).Info("Cannot advertise LoadBalancer IP - not whitelisted")
+					log.WithFields(log.Fields{"ip": lbIngress.IP, "svc": svcID}).Info("Cannot advertise LoadBalancer IP - not not in allow list")
 					continue
 				}
 				routes = append(routes, lbIngress.IP)
@@ -308,7 +308,7 @@ func (rg *routeGenerator) setRoutesForKey(key string, routes []string) {
 }
 
 // isAllowedExternalIP determines if the given IP is in the list of
-// whitelisted External IP CIDRs given in the default bgpconfiguration.
+// allowed External IP CIDRs given in the default bgpconfiguration.
 func (rg *routeGenerator) isAllowedExternalIP(externalIP string) bool {
 	ip := net.ParseIP(externalIP)
 	if ip == nil {
@@ -327,7 +327,7 @@ func (rg *routeGenerator) isAllowedExternalIP(externalIP string) bool {
 }
 
 // isAllowedLoadBalancerIP determines if the given IP is in the list of
-// whitelisted LoadBalancer CIDRs given in the default bgpconfiguration.
+// allowed LoadBalancer CIDRs given in the default bgpconfiguration.
 func (rg *routeGenerator) isAllowedLoadBalancerIP(loadBalancerIP string) bool {
 	ip := net.ParseIP(loadBalancerIP)
 	if ip == nil {
@@ -338,6 +338,29 @@ func (rg *routeGenerator) isAllowedLoadBalancerIP(loadBalancerIP string) bool {
 	for _, allowedNet := range rg.client.GetLoadBalancerIPs() {
 		if allowedNet.Contains(ip) {
 			return true
+		}
+	}
+
+	// Guilty until proven innocent
+	return false
+}
+
+// isSingleLoadBalancerIP determines if the given IP is in the list of
+// allowed LoadBalancer CIDRs given in the default bgpconfiguration
+// and is a single IP entry (/32 for IPV4 or /128 for IPV6)
+func (rg *routeGenerator) isSingleLoadBalancerIP(loadBalancerIP string) bool {
+
+	ip := net.ParseIP(loadBalancerIP)
+	if ip == nil {
+		log.Errorf("Could not parse service LB IP: %s", loadBalancerIP)
+		return false
+	}
+
+	for _, allowedNet := range rg.client.GetLoadBalancerIPs() {
+		if allowedNet.Contains(ip) {
+			if ones, bits := allowedNet.Mask.Size(); ones == bits {
+				return true
+			}
 		}
 	}
 
@@ -397,6 +420,12 @@ func (rg *routeGenerator) advertiseThisService(svc *v1.Service, ep *v1.Endpoints
 			logc.Debug("Skipping ClusterIP service without annotation override")
 			return false
 		}
+	}
+
+	// we need to announce single IPs for services of type LoadBalancer and externalTrafficPolicy Cluster
+	if svc.Spec.Type == v1.ServiceTypeLoadBalancer && svc.Spec.ExternalTrafficPolicy == v1.ServiceExternalTrafficPolicyTypeCluster && rg.isSingleLoadBalancerIP(svc.Spec.LoadBalancerIP) {
+		logc.Debug("Advertising load balancer of type cluster because of single IP definition")
+		return true
 	}
 
 	// advertise NodePort/LoadBalancer services only if their traffic policy is local, since we advertise the entire cluster IP range.

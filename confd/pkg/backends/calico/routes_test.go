@@ -23,6 +23,9 @@ const (
 	// Range and specific IP for external IP test.
 	externalIPRange2 = "172.217.3.5/32"
 	externalIP2      = "172.217.3.5"
+
+	// Specific IP for loadbalancer IP test.
+	loadBalancerIP1 = "172.217.4.10"
 )
 
 func addEndpointSubset(ep *v1.Endpoints, nodename string) {
@@ -83,6 +86,28 @@ func buildSimpleService2() (svc *v1.Service, ep *v1.Endpoints) {
 			ClusterIP:             "127.0.0.5",
 			ExternalTrafficPolicy: v1.ServiceExternalTrafficPolicyTypeLocal,
 			ExternalIPs:           []string{externalIP1, externalIP2},
+		},
+	}
+	ep = &v1.Endpoints{
+		ObjectMeta: meta,
+	}
+	return
+}
+
+func buildSimpleService3() (svc *v1.Service, ep *v1.Endpoints) {
+	meta := metav1.ObjectMeta{Namespace: "foo", Name: "lb"}
+	svc = &v1.Service{
+		ObjectMeta: meta,
+		Spec: v1.ServiceSpec{
+			Type:                  v1.ServiceTypeLoadBalancer,
+			ClusterIP:             "127.0.0.10",
+			ExternalTrafficPolicy: v1.ServiceExternalTrafficPolicyTypeLocal,
+			LoadBalancerIP:        loadBalancerIP1,
+		},
+		Status: v1.ServiceStatus{
+			LoadBalancer: v1.LoadBalancerStatus{
+				Ingress: []v1.LoadBalancerIngress{{IP: loadBalancerIP1}},
+			},
 		},
 	}
 	ep = &v1.Endpoints{
@@ -274,29 +299,35 @@ var _ = Describe("RouteGenerator", func() {
 
 	Describe("resourceInformerHandlers", func() {
 		var (
-			svc, svc2 *v1.Service
-			ep, ep2   *v1.Endpoints
-			svcInt    *v1.Service
-			epInt     *v1.Endpoints
+			svc, svc2, svc3 *v1.Service
+			ep, ep2, ep3    *v1.Endpoints
+			svcInt          *v1.Service
+			epInt           *v1.Endpoints
 		)
 
 		BeforeEach(func() {
 			svc, ep = buildSimpleExternalService()
 			svc2, ep2 = buildSimpleService2()
+			svc3, ep3 = buildSimpleService3()
 			svcInt, epInt = buildSimpleInternalService(true)
 
 			addEndpointSubset(ep, rg.nodeName)
 			addEndpointSubset(ep2, rg.nodeName)
+			addEndpointSubset(ep3, rg.nodeName)
 			addEndpointSubset(epInt, rg.nodeName)
 			err := rg.epIndexer.Add(ep)
 			Expect(err).NotTo(HaveOccurred())
 			err = rg.epIndexer.Add(ep2)
+			Expect(err).NotTo(HaveOccurred())
+			err = rg.epIndexer.Add(ep3)
 			Expect(err).NotTo(HaveOccurred())
 			err = rg.epIndexer.Add(epInt)
 			Expect(err).NotTo(HaveOccurred())
 			err = rg.svcIndexer.Add(svc)
 			Expect(err).NotTo(HaveOccurred())
 			err = rg.svcIndexer.Add(svc2)
+			Expect(err).NotTo(HaveOccurred())
+			err = rg.svcIndexer.Add(svc3)
 			Expect(err).NotTo(HaveOccurred())
 			err = rg.svcIndexer.Add(svcInt)
 			Expect(err).NotTo(HaveOccurred())
@@ -365,7 +396,7 @@ var _ = Describe("RouteGenerator", func() {
 		})
 
 		Context("onSvc[Add|Delete]", func() {
-			It("should add the service's cluster IP and whitelisted external IPs into the svcRouteMap", func() {
+			It("should add the service's cluster IP and approved external IPs into the svcRouteMap", func() {
 				// add
 				initRevision := rg.client.cacheRevision
 				rg.onSvcAdd(svc)
@@ -476,7 +507,7 @@ var _ = Describe("RouteGenerator", func() {
 		})
 
 		Context("onSvcUpdate", func() {
-			It("should add the service's cluster IP and whitelisted external IPs into the svcRouteMap and then remove them for unsupported service type", func() {
+			It("should add the service's cluster IP and approved external IPs into the svcRouteMap and then remove them for unsupported service type", func() {
 				initRevision := rg.client.cacheRevision
 				rg.onSvcUpdate(nil, svc)
 				Expect(rg.client.cacheRevision).To(Equal(initRevision + 2))
@@ -525,7 +556,7 @@ var _ = Describe("RouteGenerator", func() {
 		})
 
 		Context("onEp[Add|Delete]", func() {
-			It("should add the service's cluster IP and whitelisted external IPs into the svcRouteMap", func() {
+			It("should add the service's cluster IP and approved external IPs into the svcRouteMap", func() {
 				// add
 				initRevision := rg.client.cacheRevision
 				rg.onEPAdd(ep)
@@ -564,7 +595,7 @@ var _ = Describe("RouteGenerator", func() {
 		})
 
 		Context("onEpDelete", func() {
-			It("should add the service's cluster IP and whitelisted external IPs into the svcRouteMap and then remove it for unsupported service type", func() {
+			It("should add the service's cluster IP and approved external IPs into the svcRouteMap and then remove it for unsupported service type", func() {
 				initRevision := rg.client.cacheRevision
 				rg.onEPUpdate(nil, ep)
 				Expect(rg.client.cacheRevision).To(Equal(initRevision + 2))
@@ -702,6 +733,59 @@ var _ = Describe("RouteGenerator", func() {
 				// Finally, remove BGPConfiguration. It should withdraw the route
 				// and delete the refcount entry.
 				rg.client.onExternalIPsUpdate([]string{})
+				Expect(rg.client.cache).NotTo(HaveKey(key))
+				Expect(rg.client.programmedRouteRefCount).NotTo(HaveKey(key))
+			})
+
+			// This test simulates a situation where BGPConfiguration has a /32 route that exactly matches
+			// a LoadBalancer with ExternalTrafficPolicy set to Local. The route should only be advertised
+			// when the Service is created, and not when the BGPConfiguration is created.
+			It("should handle /32 routes for LoadBalancerIPs", func() {
+				// BeforeEach creates a service. Remove it before the test, since we want to start
+				// this test without the service in place. svc3 is a LoadBalancer service with external traffic
+				// policy of Local.
+				err := rg.epIndexer.Delete(ep3)
+				Expect(err).NotTo(HaveOccurred())
+				err = rg.svcIndexer.Delete(svc3)
+				Expect(err).NotTo(HaveOccurred())
+
+				// The key we expect to be used for the LB IP.
+				key := "/calico/staticroutes/" + loadBalancerIP1 + "-32"
+
+				// Trigger programming of valid routes from the route generator for any known services.
+				// We don't have a BGPConfiguration update or services yet, so we shouldn't receive any routes.
+				By("Resyncing routes at start of test")
+				rg.resyncKnownRoutes()
+				Expect(rg.client.cache[key]).To(Equal(""))
+				Expect(rg.client.programmedRouteRefCount[key]).To(Equal(0))
+
+				// Simulate an event from the syncer which sets the LoadBalancer IP range containing only the service's loadBalancerIP.
+				// We use a /32 route to trigger the situation under test.
+				loadBalancerIPRangeSingle := fmt.Sprintf("%s/32", loadBalancerIP1)
+				By("onLoadBalancerIPsUpdate to include /32 route")
+				rg.client.onLoadBalancerIPsUpdate([]string{loadBalancerIPRangeSingle})
+				rg.resyncKnownRoutes()
+
+				// No routes should be advertised yet.
+				Expect(rg.client.cache[key]).To(Equal(""))
+				Expect(rg.client.programmedRouteRefCount[key]).To(Equal(0))
+
+				// Now add the service.
+				err = rg.epIndexer.Add(ep3)
+				Expect(err).NotTo(HaveOccurred())
+				err = rg.svcIndexer.Add(svc3)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Expect that we advertise the /32 LB IP from the Service.
+				By("Resyncing routes from route generator")
+				rg.resyncKnownRoutes()
+				Expect(rg.client.cache[key]).To(Equal(loadBalancerIP1 + "/32"))
+				Expect(rg.client.programmedRouteRefCount[key]).To(Equal(1))
+
+				// Finally, remove BGPConfiguration. It should withdraw the route
+				// and delete the refcount entry.
+				rg.client.onLoadBalancerIPsUpdate([]string{})
+				rg.resyncKnownRoutes()
 				Expect(rg.client.cache).NotTo(HaveKey(key))
 				Expect(rg.client.programmedRouteRefCount).NotTo(HaveKey(key))
 			})

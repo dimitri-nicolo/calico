@@ -51,12 +51,14 @@ type Checker struct {
 	expectations     []Expectation
 	CheckSNAT        bool
 	RetriesDisabled  bool
+	MinTimeout       time.Duration
 	StaggerStartBy   time.Duration
 
 	// OnFail, if set, will be called instead of ginkgo.Fail().  (Useful for testing the checker itself.)
 	OnFail func(msg string)
 
 	description string
+	init        func()       // called before testing starts
 	beforeRetry func()       // called when a test fails and before it is retried
 	finalTest   func() error // called after connectivity test, if it is successful, may fail the test.
 }
@@ -68,6 +70,13 @@ type CheckerOpt func(*Checker)
 func CheckWithDescription(desc string) CheckerOpt {
 	return func(c *Checker) {
 		c.description = desc
+	}
+}
+
+func CheckWithInit(f func()) CheckerOpt {
+	return func(c *Checker) {
+		log.Debug("CheckWithInit set")
+		c.init = f
 	}
 }
 
@@ -299,6 +308,9 @@ func (c *Checker) CheckConnectivityWithTimeout(timeout time.Duration, opts ...in
 }
 
 func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout time.Duration, opts ...interface{}) {
+	if c.MinTimeout > timeout {
+		timeout = c.MinTimeout
+	}
 	log.Info("Starting connectivity check...")
 	for _, o := range opts {
 		switch v := o.(type) {
@@ -319,6 +331,10 @@ func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout tim
 	var actualConn []*Result
 	var actualConnPretty []string
 	var finalErr error
+
+	if c.init != nil {
+		c.init()
+	}
 
 	for {
 		checkStartTime := time.Now()

@@ -122,7 +122,7 @@ func TcSetGlobals(m *Map, globalData BpfGlobalData) error {
 	panic("LIBBPF syscall stub")
 }
 
-func CTLBSetGlobals(_ *Map, _ time.Duration) error {
+func CTLBSetGlobals(_ *Map, _ time.Duration, _ bool) error {
 	panic("LIBBPF syscall stub")
 }
 

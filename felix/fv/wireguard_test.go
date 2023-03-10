@@ -1129,7 +1129,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3 node 
 	)
 
 	BeforeEach(func() {
-		//TODO: add IPv6 coverage when enabling this back
+		// TODO: add IPv6 coverage when enabling this back
 		Skip("Skipping WireGuard tests for now due to unreliability.")
 
 		// Run these tests only when the Host has Wireguard kernel module available.
@@ -1401,7 +1401,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3-node 
 	)
 
 	BeforeEach(func() {
-		//TODO: add IPv6 coverage when enabling this back
+		// TODO: add IPv6 coverage when enabling this back
 		Skip("Skipping WireGuard tests for now due to unreliability.")
 
 		// Run these tests only when the Host has Wireguard kernel module available.

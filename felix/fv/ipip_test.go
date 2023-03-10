@@ -110,6 +110,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ IPIP topology before adding
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
 				felix.Exec("ip", "a")
+				if BPFMode() {
+					felix.Exec("calico-bpf", "policy", "dump", "eth0", "all")
+				}
 			}
 		}
 
@@ -354,7 +357,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ IPIP topology before adding
 			}
 
 			if bpfEnabled {
-				Eventually(felixes[1].NumTCBPFProgsEth0, "5s", "200ms").Should(Equal(2))
+				Eventually(felixes[1].NumTCBPFProgsEth0, "30s", "200ms").Should(Equal(2))
 			} else {
 				for _, f := range felixes {
 					// Removing the BGP config triggers a Felix restart and Felix has a 2s timer during

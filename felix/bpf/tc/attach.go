@@ -70,6 +70,8 @@ type AttachPoint struct {
 	IPv6Enabled             bool
 	MapSizes                map[string]uint32
 	RPFStrictEnabled        bool
+	NATin                   uint32
+	NATout                  uint32
 	EGWVxlanPort            uint16
 	EgressIPEnabled         bool
 	EgressGatewayHealthPort uint16
@@ -80,7 +82,7 @@ var ErrDeviceNotFound = errors.New("device not found")
 var ErrInterrupted = errors.New("dump interrupted")
 var prefHandleRe = regexp.MustCompile(`pref ([^ ]+) .* handle ([^ ]+)`)
 
-func (ap AttachPoint) Log() *log.Entry {
+func (ap *AttachPoint) Log() *log.Entry {
 	return log.WithFields(log.Fields{
 		"iface": ap.Iface,
 		"type":  ap.Type,
@@ -88,7 +90,11 @@ func (ap AttachPoint) Log() *log.Entry {
 	})
 }
 
-func (ap AttachPoint) AlreadyAttached(object string) (int, bool) {
+func (ap *AttachPoint) loadLogging() bool {
+	return strings.ToLower(ap.LogLevel) != "off"
+}
+
+func (ap *AttachPoint) AlreadyAttached(object string) (int, bool) {
 	logCxt := log.WithField("attachPoint", ap)
 	progID, err := ap.ProgramID()
 	if err != nil {
@@ -115,7 +121,7 @@ func (ap AttachPoint) AlreadyAttached(object string) (int, bool) {
 }
 
 // AttachProgram attaches a BPF program from a file to the TC attach point
-func (ap AttachPoint) AttachProgram() (int, error) {
+func (ap *AttachPoint) AttachProgram() (int, error) {
 	logCxt := log.WithField("attachPoint", ap)
 
 	if ap.Type == EpTypeWorkload {
@@ -136,12 +142,18 @@ func (ap AttachPoint) AttachProgram() (int, error) {
 
 	filename := ap.FileName()
 	preCompiledBinary := path.Join(bpf.ObjectDir, filename)
-	tempBinary := path.Join(tempDir, filename)
+	binaryToLoad := preCompiledBinary
 
-	err = ap.patchLogPrefix(logCxt, preCompiledBinary, tempBinary)
-	if err != nil {
-		logCxt.WithError(err).Error("Failed to patch binary")
-		return -1, err
+	if ap.loadLogging() {
+		tempBinary := path.Join(tempDir, filename)
+
+		err = ap.patchLogPrefix(logCxt, preCompiledBinary, tempBinary)
+		if err != nil {
+			logCxt.WithError(err).Error("Failed to patch binary")
+			return -1, err
+		}
+
+		binaryToLoad = tempBinary
 	}
 
 	// Using the RLock allows multiple attach calls to proceed in parallel unless
@@ -155,7 +167,7 @@ func (ap AttachPoint) AttachProgram() (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	obj, err := libbpf.OpenObject(tempBinary)
+	obj, err := libbpf.OpenObject(binaryToLoad)
 	if err != nil {
 		return -1, err
 	}
@@ -195,12 +207,7 @@ func (ap AttachPoint) AttachProgram() (int, error) {
 		return -1, fmt.Errorf("error loading program: %w", err)
 	}
 
-	isHost := false
-	if ap.Type == "host" || ap.Type == "nat" {
-		isHost = true
-	}
-
-	err = updateJumpMap(obj, isHost, ap.IPv6Enabled)
+	err = ap.updateJumpMap(obj)
 	if err != nil {
 		logCxt.Warn("Failed to update jump map")
 		return -1, fmt.Errorf("error updating jump map %v", err)
@@ -250,7 +257,7 @@ func (ap AttachPoint) AttachProgram() (int, error) {
 	return progId, nil
 }
 
-func (ap AttachPoint) patchLogPrefix(logCtx *log.Entry, ifile, ofile string) error {
+func (ap *AttachPoint) patchLogPrefix(logCtx *log.Entry, ifile, ofile string) error {
 	b, err := bpf.BinaryFromFile(ifile)
 	if err != nil {
 		return fmt.Errorf("failed to read pre-compiled BPF binary: %w", err)
@@ -299,7 +306,7 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 	return err
 }
 
-func (ap AttachPoint) DetachProgram() error {
+func (ap *AttachPoint) DetachProgram() error {
 	// We never detach TC programs, so this should not be called.
 	ap.Log().Panic("DetachProgram is not implemented for TC")
 	return nil
@@ -356,7 +363,7 @@ type attachedProg struct {
 	handle string
 }
 
-func (ap AttachPoint) listAttachedPrograms() ([]attachedProg, error) {
+func (ap *AttachPoint) listAttachedPrograms() ([]attachedProg, error) {
 	out, err := ExecTC("filter", "show", "dev", ap.Iface, string(ap.Hook))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tc filters on interface: %w", err)
@@ -397,7 +404,7 @@ func patchVethNs(nsId uint16, ifile, ofile string) error {
 }
 
 // ProgramName returns the name of the program associated with this AttachPoint
-func (ap AttachPoint) ProgramName() string {
+func (ap *AttachPoint) ProgramName() string {
 	return SectionName(ap.Type, ap.ToOrFrom)
 }
 
@@ -430,11 +437,11 @@ func (ap *AttachPoint) ProgramID() (int, error) {
 }
 
 // FileName return the file the AttachPoint will load the program from
-func (ap AttachPoint) FileName() string {
+func (ap *AttachPoint) FileName() string {
 	return ProgFilename(ap.Type, ap.ToOrFrom, ap.ToHostDrop, ap.FIB, ap.DSR, ap.LogLevel, bpfutils.BTFEnabled)
 }
 
-func (ap AttachPoint) IsAttached() (bool, error) {
+func (ap *AttachPoint) IsAttached() (bool, error) {
 	hasQ, err := HasQdisc(ap.Iface)
 	if err != nil {
 		return false, err
@@ -649,11 +656,11 @@ func RemoveQdisc(ifaceName string) error {
 
 // Return a key that uniquely identifies this attach point, amongst all of the possible attach
 // points associated with a single given interface.
-func (ap AttachPoint) JumpMapFDMapKey() string {
+func (ap *AttachPoint) JumpMapFDMapKey() string {
 	return string(ap.Hook)
 }
 
-func (ap AttachPoint) IfaceName() string {
+func (ap *AttachPoint) IfaceName() string {
 	return ap.Iface
 }
 
@@ -666,11 +673,11 @@ func ConfigureVethNS(m *libbpf.Map, VethNS uint16) error {
 	return libbpf.TcSetGlobals(m, bpfGlobalData)
 }
 
-func (ap AttachPoint) HookName() bpf.Hook {
+func (ap *AttachPoint) HookName() bpf.Hook {
 	return ap.Hook
 }
 
-func (ap AttachPoint) Config() string {
+func (ap *AttachPoint) Config() string {
 	return fmt.Sprintf("%+v", ap)
 }
 
@@ -682,12 +689,14 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		PSNatLen:      ap.PSNATEnd,
 		VethNS:        ap.VethNS,
 		WgPort:        ap.WgPort,
+		NatIn:         ap.NATin,
+		NatOut:        ap.NATout,
 		EgwVxlanPort:  ap.EGWVxlanPort,
 		EgwHealthPort: ap.EgressGatewayHealthPort,
 	}
 	var err error
 
-	globalData.HostIP, err = convertIPToUint32(ap.HostIP)
+	globalData.HostIP, err = convertIPToUint32(ap.HostIP, "host IP")
 	if err != nil {
 		return err
 	}
@@ -696,7 +705,7 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		globalData.VxlanPort = 4789
 	}
 
-	globalData.IntfIP, err = convertIPToUint32(ap.IntfIP)
+	globalData.IntfIP, err = convertIPToUint32(ap.IntfIP, "interface IP")
 	if err != nil {
 		return err
 	}
@@ -724,7 +733,7 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	globalData.HostTunnelIP = globalData.HostIP
 
 	if ap.HostTunnelIP != nil {
-		globalData.HostTunnelIP, err = convertIPToUint32(ap.HostTunnelIP)
+		globalData.HostTunnelIP, err = convertIPToUint32(ap.HostTunnelIP, "host tunnel IP")
 		if err != nil {
 			return err
 		}
@@ -739,9 +748,27 @@ func (ap *AttachPoint) setMapSize(m *libbpf.Map) error {
 	return nil
 }
 
-func updateJumpMap(obj *libbpf.Obj, isHost bool, ipv6Enabled bool) error {
+func (ap *AttachPoint) hasPolicyProg() bool {
+	switch ap.Type {
+	case EpTypeHost, EpTypeNAT, EpTypeLO:
+		return false
+	}
+
+	return true
+}
+
+func (ap *AttachPoint) hasHostConflictProg() bool {
+	switch ap.Type {
+	case EpTypeWorkload:
+		return false
+	}
+
+	return ap.ToOrFrom == ToEp
+}
+
+func (ap *AttachPoint) updateJumpMap(obj *libbpf.Obj) error {
 	ipVersions := []string{"IPv4"}
-	if ipv6Enabled {
+	if ap.IPv6Enabled {
 		ipVersions = append(ipVersions, "IPv6")
 	}
 
@@ -749,7 +776,10 @@ func updateJumpMap(obj *libbpf.Obj, isHost bool, ipv6Enabled bool) error {
 
 	for _, ipFamily := range ipVersions {
 		for _, idx := range tcdefs.JumpMapIndexes[ipFamily] {
-			if isHost && (idx == tcdefs.ProgIndexPolicy || idx == tcdefs.ProgIndexV6Policy) {
+			if (idx == tcdefs.ProgIndexPolicy || idx == tcdefs.ProgIndexV6Policy) && !ap.hasPolicyProg() {
+				continue
+			}
+			if idx == tcdefs.ProgIndexHostCtConflict && !ap.hasHostConflictProg() {
 				continue
 			}
 			err := obj.UpdateJumpMap(mapName, tcdefs.ProgramNames[idx], idx)
@@ -762,10 +792,10 @@ func updateJumpMap(obj *libbpf.Obj, isHost bool, ipv6Enabled bool) error {
 	return nil
 }
 
-func convertIPToUint32(ip net.IP) (uint32, error) {
+func convertIPToUint32(ip net.IP, name string) (uint32, error) {
 	ipv4 := ip.To4()
 	if ipv4 == nil {
-		return 0, fmt.Errorf("ip addr nil")
+		return 0, fmt.Errorf("%s IP addr is nil", name)
 	}
 	return binary.LittleEndian.Uint32([]byte(ipv4)), nil
 }

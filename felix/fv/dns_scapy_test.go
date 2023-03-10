@@ -106,8 +106,8 @@ func fileHasMapping(lname, rname string) func() error {
 }
 
 func makeBPFConntrackEntry(ifIndex int, aIP, bIP net.IP, trusted bool) (conntrack.Key, conntrack.Value) {
-	a2bLeg := conntrack.Leg{Opener: true, Ifindex: uint32(ifIndex), Whitelisted: true}
-	b2aLeg := conntrack.Leg{Opener: false, Whitelisted: true}
+	a2bLeg := conntrack.Leg{Opener: true, Ifindex: uint32(ifIndex), Approved: true}
+	b2aLeg := conntrack.Leg{Opener: false, Approved: true}
 
 	// BPF conntrack map convention is for the first IP to be the smaller one.  Bizarrely, the
 	// "smaller" comparison here is with little endian byte ordering.
@@ -147,7 +147,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	)
 
 	dnsServerSetup := func(scapy *containers.Container, trusted bool) {
-		if !bpfEnabled {
+		if !BPFMode() {
 			// Establish conntrack state, in Felix, as though the workload just sent a DNS
 			// request to the specified scapy.
 			felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", scapy.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
@@ -222,7 +222,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					iiStr := strconv.Itoa(ii)
 					w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 					w[ii].Configure(client)
-					if bpfEnabled {
+					if BPFMode() {
 						ensureBPFProgramsAttached(felix)
 					}
 				}
@@ -231,7 +231,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			// Stop etcd and workloads, collecting some state if anything failed.
 			AfterEach(func() {
 				if CurrentGinkgoTestDescription().Failed {
-					if bpfEnabled {
+					if BPFMode() {
 						felix.Exec("calico-bpf", "ipsets", "dump")
 					}
 					felix.Exec("ipset", "list")
@@ -714,7 +714,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 			iiStr := strconv.Itoa(ii)
 			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
-			if bpfEnabled {
+			if BPFMode() {
 				ensureBPFProgramsAttached(felix)
 			}
 		}
@@ -740,7 +740,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 	// Stop etcd and workloads, collecting some state if anything failed.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			if bpfEnabled {
+			if BPFMode() {
 				felix.Exec("calico-bpf", "ipsets", "dump")
 			}
 			felix.Exec("ipset", "list")
@@ -762,7 +762,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 	})
 
 	dnsServerSetup := func(scapy *containers.Container) {
-		if !bpfEnabled {
+		if !BPFMode() {
 			// Establish conntrack state, in Felix, as though the workload just sent a DNS
 			// request to the specified scapy.  Note that for this group of tests, scapy shares
 			// Felix's namespace and so has the same IP as Felix.
@@ -864,7 +864,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		<-felix.WatchStdoutFor(regexp.MustCompile("Felix starting up"))
 		log.Info("Felix has restarted")
 
-		if bpfEnabled {
+		if BPFMode() {
 			ensureBPFProgramsAttached(felix)
 			ensureBPFProgramsAttached(server)
 			// Wait for trusted DNS servers ipset to be populated.
@@ -1004,7 +1004,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 			clientContainer = c.Container
 			clientIP = c.IP
 			clientNamespace = "-"
-			allowHostLatencyBug = !bpfEnabled
+			allowHostLatencyBug = !BPFMode()
 		}
 		switch s := server.(type) {
 		case *workload.Workload:
@@ -1017,7 +1017,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 			serverContainer = s.Container
 			serverIP = s.IP
 			serverNamespace = "-"
-			allowHostLatencyBug = !bpfEnabled
+			allowHostLatencyBug = !BPFMode()
 		}
 		dnsLogC := felix.WatchStdoutFor(regexp.MustCompile("WARNING.*DNS"))
 		clientContainer.ExecWithInput(dnsRequestBytes(1), "test-connection",

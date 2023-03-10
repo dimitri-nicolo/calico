@@ -80,7 +80,7 @@ and client are on different nodes:
 - CT miss is expected because the unencapped flow has not previously
   been seen here.
 - This would normally be mid-flow TCP, handled by drop to iptables,
-  but in the `EGRESS_GATEWAY` case we handle as `CT_NEW` and whitelist
+  but in the `EGRESS_GATEWAY` case we handle as `CT_NEW` and approved
   both sides, because otherwise a mid-flow TCP packet will be
   considered invalid on the `FROM_HOST` side (at the following host or
   tunnel interface leaving the gateway node).

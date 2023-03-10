@@ -628,7 +628,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 		})
 	})
 
-	Describe("applying updates when underlying iptables have changed in a whitelisted chain", func() {
+	Describe("applying updates when underlying iptables have changed in a approved chain", func() {
 		BeforeEach(func() {
 			table.InsertOrAppendRules("FORWARD", []Rule{
 				{Action: AcceptAction{}},
@@ -693,7 +693,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 		})
 	})
 
-	Describe("applying updates when underlying iptables have changed in a non-whitelisted chain", func() {
+	Describe("applying updates when underlying iptables have changed in a non-approved chain", func() {
 		BeforeEach(func() {
 			table.InsertOrAppendRules("FORWARD", []Rule{
 				{Action: JumpAction{Target: "non-cali-chain"}},

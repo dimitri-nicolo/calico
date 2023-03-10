@@ -326,6 +326,8 @@ type TcGlobalData struct {
 	VethNS        uint16
 	Flags         uint32
 	WgPort        uint16
+	NatIn         uint32
+	NatOut        uint32
 	EgwVxlanPort  uint16
 	EgwHealthPort uint16
 }
@@ -346,6 +348,8 @@ func TcSetGlobals(
 		C.ushort(globalData.VethNS),
 		C.uint(globalData.Flags),
 		C.ushort(globalData.WgPort),
+		C.uint(globalData.NatIn),
+		C.uint(globalData.NatOut),
 		C.ushort(globalData.EgwVxlanPort),
 		C.ushort(globalData.EgwHealthPort),
 	)
@@ -353,9 +357,9 @@ func TcSetGlobals(
 	return err
 }
 
-func CTLBSetGlobals(m *Map, udpNotSeen time.Duration) error {
+func CTLBSetGlobals(m *Map, udpNotSeen time.Duration, excludeUDP bool) error {
 	udpNotSeen /= time.Second // Convert to seconds
-	_, err := C.bpf_ctlb_set_globals(m.bpfMap, C.uint(udpNotSeen))
+	_, err := C.bpf_ctlb_set_globals(m.bpfMap, C.uint(udpNotSeen), C.bool(excludeUDP))
 
 	return err
 }

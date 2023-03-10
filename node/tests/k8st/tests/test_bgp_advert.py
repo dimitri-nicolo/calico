@@ -472,7 +472,7 @@ EOF
         """
         with DiagsCollector():
 
-            # Whitelist two IP ranges for the external IPs we'll test with
+            # Allow two IP ranges for the external IPs we'll test with
             calicoctl("""apply -f - << EOF
 apiVersion: projectcalico.org/v3
 kind: BGPConfiguration
@@ -563,7 +563,7 @@ EOF
         """
         with DiagsCollector():
 
-            # Whitelist IP ranges for the LB IPs we'll test with
+            # Allow IP ranges for the LB IPs we'll test with
             calicoctl("""apply -f - << EOF
 apiVersion: projectcalico.org/v3
 kind: BGPConfiguration

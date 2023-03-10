@@ -17,6 +17,8 @@ struct cali_tc_globals {
 	__be32 host_tunnel_ip;
 	__be32 flags;
 	__be16 wg_port;
+	__u32 natin_idx;
+	__u32 natout_idx;
 	__be16 egw_vxlan_port;
 	__be16 egw_health_port;
 };
@@ -33,6 +35,7 @@ enum cali_globals_flags {
 
 struct cali_ctlb_globals {
 	__be32 udp_not_seen_timeo;
+	bool exclude_udp;
 };
 
 #endif /* __CALI_GLOBALS_H__ */

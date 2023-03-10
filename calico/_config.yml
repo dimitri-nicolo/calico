@@ -50,7 +50,7 @@ imageNames:
   kubeControllers: tigera/kube-controllers
   calicoKubeControllers: calico/kube-controllers
   calico-upgrade: calico/upgrade
-  flannel: quay.io/coreos/flannel
+  flannel: docker.io/flannelcni/flannel
   dikastes: tigera/dikastes
   flannelMigration: calico/flannel-migration-controller
   pilot-webhook: calico/pilot-webhook
