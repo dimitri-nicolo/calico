@@ -278,11 +278,6 @@ func Start(cfg *Config) error {
 		middleware.AuthenticateRequest(authn,
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
 
-	// Handle raw ES queries with the raw handler.
-	sm.Handle("/",
-		middleware.AuthenticateRequest(authn,
-			rawquery.RawQueryHandler(esClient.Backend())))
-
 	if !cfg.ElasticKibanaDisabled {
 		kibanaTLSConfig := calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
 		kibanaTLSConfig.InsecureSkipVerify = true
