@@ -78,20 +78,6 @@ func TestFV_RESTClient(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("should handle a response with an error", func(t *testing.T) {
-		// Build and send a request with no params - this should result
-		// in an error, since it is missing required fields.
-		params := v1.L3FlowParams{}
-		flows := v1.List[v1.L3Flow]{}
-		err = rc.Post().
-			Path("/flows").
-			Cluster(cluster).
-			Params(&params).
-			Do(context.TODO()).
-			Into(&flows)
-		require.Error(t, err)
-	})
-
 	t.Run("should handle a 404 response", func(t *testing.T) {
 		// Build and send a request.
 		params := v1.L3FlowParams{

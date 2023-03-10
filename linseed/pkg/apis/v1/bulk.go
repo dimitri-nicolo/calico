@@ -11,9 +11,9 @@ type BulkResponse struct {
 	Errors []BulkError `json:"errors,omitempty"`
 
 	// Specific items and their status.
-	Created []BulkItem `json:"created"`
-	Deleted []BulkItem `json:"deleted"`
-	Updated []BulkItem `json:"updated"`
+	Created []BulkItem `json:"created,omitempty"`
+	Deleted []BulkItem `json:"deleted,omitempty"`
+	Updated []BulkItem `json:"updated,omitempty"`
 }
 
 type BulkItem struct {

@@ -126,15 +126,18 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 		Index(b.index(opts.Type, i)).
 		Size(opts.GetMaxPageSize()).
 		From(startFrom).
-		Query(b.buildQuery(i, opts)).
-		Sort("stageTimestamp", false)
+		Query(b.buildQuery(i, opts))
+
+	for _, sort := range opts.Sort {
+		query.Sort(sort.Field, !sort.Descending)
+	}
 
 	results, err := query.Do(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	events := []v1.AuditLog{}
+	auditLogs := []v1.AuditLog{}
 	for _, h := range results.Hits.Hits {
 		e := v1.AuditLog{}
 		err = json.Unmarshal(h.Source, &e)
@@ -142,12 +145,12 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 			log.WithError(err).Error("Error unmarshalling audit log")
 			continue
 		}
-		events = append(events, e)
+		auditLogs = append(auditLogs, e)
 	}
 
 	return &v1.List[v1.AuditLog]{
 		TotalHits: results.TotalHits(),
-		Items:     events,
+		Items:     auditLogs,
 		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom),
 	}, nil
 }
@@ -199,6 +202,13 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 		if opts.ObjectRef.Namespace != "" {
 			query.Filter(elastic.NewTermQuery("objectRef.namespace", opts.ObjectRef.Namespace))
 		}
+
+		// Exclude any logs with no object information if an object ref is given.
+		query.MustNot(
+			elastic.NewTermQuery("responseObject.metadata", "{}"),
+			elastic.NewTermQuery("objectRef", "{}"),
+			elastic.NewTermQuery("RequestObject", "{}"),
+		)
 	}
 
 	// Match on response codes.
@@ -210,18 +220,21 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 		query.Filter(elastic.NewTermsQuery("responseStatus.code", values...))
 	}
 
-	// Exclude any empty logs.
-	query.MustNot(
-		elastic.NewTermQuery("responseObject.metadata", "{}"),
-		elastic.NewTermQuery("objectRef", "{}"),
-		elastic.NewTermQuery("RequestObject", "{}"),
-	)
+	if len(opts.Stages) > 0 {
+		values := []interface{}{}
+		for _, a := range opts.Stages {
+			values = append(values, a)
+		}
+		query.Filter(elastic.NewTermsQuery("stage", values...))
+	}
 
-	// Only match on RequestResponse level audit logs.
-	query.Must(elastic.NewMatchQuery("level", "RequestResponse"))
-
-	// Only match on logs who have a complete response.
-	query.Must(elastic.NewMatchQuery("stage", "ResponseComplete"))
+	if len(opts.Levels) > 0 {
+		values := []interface{}{}
+		for _, a := range opts.Levels {
+			values = append(values, a)
+		}
+		query.Filter(elastic.NewTermsQuery("level", values...))
+	}
 
 	return query
 }

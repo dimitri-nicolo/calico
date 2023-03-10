@@ -74,6 +74,16 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, s
 		}
 	}
 
+	// Set some constant fields. The UI always wants these set.
+	params.Levels = []string{"RequestResponse"}
+	params.Stages = []string{"RequestComplete"}
+	params.Sort = []v1.SearchRequestSortBy{
+		{
+			Field:      "stageTimestamp",
+			Descending: true,
+		},
+	}
+
 	// Extract the cluster ID header.
 	cluster := middleware.MaybeParseClusterNameFromRequest(r)
 

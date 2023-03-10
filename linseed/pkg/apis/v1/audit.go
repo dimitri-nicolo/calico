@@ -37,6 +37,9 @@ type AuditLogParams struct {
 	QueryParams `json:",inline" validate:"required"`
 	Type        AuditLogType `json:"type"`
 
+	// Sort configures the sorting of results.
+	Sort []SearchRequestSortBy `json:"sort"`
+
 	// Configure filtering based on object kind. Response will include
 	// any objects that match any of the given kinds.
 	Kinds []Kind `json:"kinds"`
@@ -52,6 +55,12 @@ type AuditLogParams struct {
 
 	// Match on the author of the change.
 	Authors []string `json:"authors"`
+
+	// Match on stage.
+	Stages []string `json:"stages"`
+
+	// Match on level.
+	Levels []string `json:"levels"`
 }
 
 // ObjectReference is the set of fields we support in query requests

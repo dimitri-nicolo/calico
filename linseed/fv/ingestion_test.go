@@ -263,7 +263,7 @@ func TestFV_KubeAuditIngestion(t *testing.T) {
 		resultList, err := cli.AuditLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.NotNil(t, resultList)
-
+		require.Equal(t, 32, len(resultList.Items))
 		require.Equal(t, int64(32), resultList.TotalHits)
 
 		var esLogs []string
