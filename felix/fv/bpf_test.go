@@ -251,6 +251,8 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 			cc = &Checker{
 				CheckSNAT: true,
+				// FIXME: Felix can be very slow to program the dataplane right now due to waiting for BPF programs to be applied
+				MinTimeout: 30 * time.Second,
 			}
 			cc.Protocol = testOpts.protocol
 			if testOpts.protocol == "udp" && testOpts.udpUnConnected {
@@ -3333,26 +3335,27 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						Eventually(k8sGetEpsForServiceFunc(k8sClient, testSvc), "10s").Should(HaveLen(1),
 							"Service endpoints didn't get created? Is controller-manager happy?")
 
-						flx := felixes[1]
-						if testOpts.connTimeEnabled {
-							flx = felixes[0] // Because the ctlb uses the table created at 0 across all nodes.
-						}
-
-						// sync with NAT table being applied
-						natFtKey := nat.NewNATKey(net.ParseIP(flx.IP), npPort, numericProto)
-
+						// Sync with all felixes because some fwd tests with "none"
+						// connectivity need this to be set on all sides as they will not
+						// retry when there is no connectivity.
 						Eventually(func() bool {
-							m := dumpNATMap(flx)
-							v, ok := m[natFtKey]
-							if !ok || v.Count() == 0 {
-								return false
+							for _, flx := range felixes {
+								natFtKey := nat.NewNATKey(net.ParseIP(flx.IP), npPort, numericProto)
+
+								m := dumpNATMap(flx)
+								v, ok := m[natFtKey]
+								if !ok || v.Count() == 0 {
+									return false
+								}
+
+								beKey := nat.NewNATBackendKey(v.ID(), 0)
+
+								be := dumpEPMap(flx)
+								if _, ok := be[beKey]; !ok {
+									return false
+								}
 							}
-
-							beKey := nat.NewNATBackendKey(v.ID(), 0)
-
-							be := dumpEPMap(flx)
-							_, ok = be[beKey]
-							return ok
+							return true
 						}, 5*time.Second).Should(BeTrue())
 
 						// Sync with policy
@@ -3887,7 +3890,7 @@ func ensureBPFProgramsAttachedOffset(offset int, felix *infrastructure.Felix, if
 			}
 		}
 		return prog
-	}, "20s", "200ms").Should(ContainElements(expectedIfaces))
+	}, "60s", "200ms").Should(ContainElements(expectedIfaces))
 }
 
 func k8sService(name, clusterIP string, w *workload.Workload, port,

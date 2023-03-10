@@ -696,7 +696,7 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	}
 	var err error
 
-	globalData.HostIP, err = convertIPToUint32(ap.HostIP)
+	globalData.HostIP, err = convertIPToUint32(ap.HostIP, "host IP")
 	if err != nil {
 		return err
 	}
@@ -705,7 +705,7 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		globalData.VxlanPort = 4789
 	}
 
-	globalData.IntfIP, err = convertIPToUint32(ap.IntfIP)
+	globalData.IntfIP, err = convertIPToUint32(ap.IntfIP, "interface IP")
 	if err != nil {
 		return err
 	}
@@ -733,7 +733,7 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	globalData.HostTunnelIP = globalData.HostIP
 
 	if ap.HostTunnelIP != nil {
-		globalData.HostTunnelIP, err = convertIPToUint32(ap.HostTunnelIP)
+		globalData.HostTunnelIP, err = convertIPToUint32(ap.HostTunnelIP, "host tunnel IP")
 		if err != nil {
 			return err
 		}
@@ -792,10 +792,10 @@ func (ap *AttachPoint) updateJumpMap(obj *libbpf.Obj) error {
 	return nil
 }
 
-func convertIPToUint32(ip net.IP) (uint32, error) {
+func convertIPToUint32(ip net.IP, name string) (uint32, error) {
 	ipv4 := ip.To4()
 	if ipv4 == nil {
-		return 0, fmt.Errorf("ip addr nil")
+		return 0, fmt.Errorf("%s IP addr is nil", name)
 	}
 	return binary.LittleEndian.Uint32([]byte(ipv4)), nil
 }

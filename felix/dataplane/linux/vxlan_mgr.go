@@ -270,6 +270,7 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 
 		m.logCtx.WithField("msg", msg).Debug("VXLAN data plane received VTEP update")
 		if msg.Node == m.hostname {
+			m.logCtx.WithField("msg", msg).Info("Local VTEP was updated")
 			m.setLocalVTEP(msg)
 		} else {
 			m.vtepsByNode[msg.Node] = msg
@@ -279,6 +280,7 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 	case *proto.VXLANTunnelEndpointRemove:
 		m.logCtx.WithField("msg", msg).Debug("VXLAN data plane received VTEP remove")
 		if msg.Node == m.hostname {
+			m.logCtx.WithField("msg", msg).Info("Local VTEP was removed")
 			m.setLocalVTEP(nil)
 		} else {
 			delete(m.vtepsByNode, msg.Node)
