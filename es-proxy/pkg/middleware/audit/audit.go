@@ -7,11 +7,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	"github.com/sirupsen/logrus"
 )
 
 func NewHandler(lsclient client.Client) http.Handler {

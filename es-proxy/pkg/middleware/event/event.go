@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
@@ -134,27 +133,41 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 
 	// For legacy reasons, the UI expects elastic.BulkResponseItems.
 	// Ideally we swich the UI so we don't need this conversion.
-	items := make([]*elastic.BulkResponseItem, 0)
-	var all []lapi.BulkItem
-	if dismissResp != nil {
-		all = append(all, dismissResp.Updated...)
-	}
 	if delResp != nil {
-		all = append(all, delResp.Updated...)
+		for _, d := range delResp.Deleted {
+			item := v1.BulkEventResponseItem{
+				ID:     d.ID,
+				Status: d.Status,
+			}
+			switch d.Status {
+			case http.StatusOK:
+				item.Result = "deleted"
+			default:
+				item.Error = &v1.BulkEventErrorDetails{
+					Type:   "unknown",
+					Reason: "unknown",
+				}
+			}
+			resp.Items = append(resp.Items, item)
+		}
 	}
-	for _, d := range all {
-		item := elastic.BulkResponseItem{
-			Id: d.ID,
+	if dismissResp != nil {
+		for _, d := range dismissResp.Updated {
+			item := v1.BulkEventResponseItem{
+				ID:     d.ID,
+				Status: d.Status,
+			}
+			switch d.Status {
+			case http.StatusOK:
+				item.Result = "updated"
+			default:
+				item.Error = &v1.BulkEventErrorDetails{
+					Type:   "unknown",
+					Reason: "unknown",
+				}
+			}
+			resp.Items = append(resp.Items, item)
 		}
-		switch d.Status {
-		case lapi.StatusOK:
-			item.Status = 200
-			item.Result = "OK"
-		default:
-			item.Status = 500
-			item.Result = "Failed"
-		}
-		items = append(items, &item)
 	}
 
 	return &resp, nil

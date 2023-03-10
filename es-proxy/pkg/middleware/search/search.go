@@ -11,8 +11,9 @@ import (
 
 	gojson "encoding/json"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

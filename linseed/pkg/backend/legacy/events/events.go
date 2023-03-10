@@ -168,13 +168,7 @@ func (b *eventsBackend) Dismiss(ctx context.Context, i api.ClusterInfo, events [
 	// Convert individual success / failure responses.
 	upd := []v1.BulkItem{}
 	for _, i := range resp.Updated() {
-		bi := v1.BulkItem{ID: i.Id}
-		switch i.Status {
-		case 200:
-			bi.Status = v1.StatusOK
-		default:
-			bi.Status = v1.StatusFailed
-		}
+		bi := v1.BulkItem{ID: i.Id, Status: i.Status}
 		upd = append(upd, bi)
 	}
 
@@ -210,13 +204,7 @@ func (b *eventsBackend) Delete(ctx context.Context, i api.ClusterInfo, events []
 	// Convert individual success / failure responses.
 	del := []v1.BulkItem{}
 	for _, i := range resp.Deleted() {
-		bi := v1.BulkItem{ID: i.Id}
-		switch i.Status {
-		case 200:
-			bi.Status = v1.StatusOK
-		default:
-			bi.Status = v1.StatusFailed
-		}
+		bi := v1.BulkItem{ID: i.Id, Status: i.Status}
 		del = append(del, bi)
 	}
 
