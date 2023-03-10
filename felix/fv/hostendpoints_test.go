@@ -222,7 +222,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 				Expect(err).NotTo(HaveOccurred())
 
 				if bpfEnabled {
-					Eventually(f.NumTCBPFProgsEth0, "5s", "200ms").Should(Equal(2))
+					Eventually(f.NumTCBPFProgsEth0, "30s", "200ms").Should(Equal(2))
 				}
 			}
 

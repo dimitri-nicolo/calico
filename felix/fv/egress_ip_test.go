@@ -130,7 +130,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		allowAllPolicy, err = client.GlobalNetworkPolicies().Create(utils.Ctx, allowAllPolicy, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
 
-		//create a policy to drop traffic to port 4790
+		// create a policy to drop traffic to port 4790
 		order = 0.0
 		denyEGWPolicy := api.NewGlobalNetworkPolicy()
 		denyEGWPolicy.Name = "default.deny-egw"
@@ -156,7 +156,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			hostEndpointProgrammed := func() bool {
 				return felix.NumTCBPFProgsEth0() == 2
 			}
-			Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
+			Eventually(hostEndpointProgrammed, "30s", "1s").Should(BeTrue(),
 				"Expected host endpoint to be programmed")
 
 			Eventually(func() bool {

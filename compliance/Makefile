@@ -97,7 +97,7 @@ bin/benchmarker-$(ARCH): $(SRC_FILES)
 
 K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
 check-kube-bench-update:
-	if [ "$(K8S_CLIENT_VERSION)" = "v0.25.6" ]; then \
+	if [ "$(K8S_CLIENT_VERSION)" = "v0.25.7" ]; then \
 		echo "No need for kube-bench update"; \
 	else \
 		echo "************ \n"; \

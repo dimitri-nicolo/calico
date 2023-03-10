@@ -1471,7 +1471,7 @@ func (fc *DataplaneConnector) shutDownProcess(reason string) {
 	// Send a failure report to the managed shutdown thread then give it
 	// a few seconds to do the shutdown.
 	fc.failureReportChan <- reason
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 	// The graceful shutdown failed, terminate the process.
 	log.Panic("Managed shutdown failed. Panicking.")
 }

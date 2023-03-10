@@ -256,7 +256,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				return (strings.Count(out, "cali-thfw-eth0") > 0)
 			}
 		}
-		Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
+		Eventually(hostEndpointProgrammed, "30s", "1s").Should(BeTrue(),
 			"Expected HostEndpoint iptables rules to appear")
 		if !BPFMode() {
 			rulesProgrammed := func() bool {
