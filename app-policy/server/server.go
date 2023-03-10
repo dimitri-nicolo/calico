@@ -15,7 +15,7 @@ import (
 
 	"github.com/projectcalico/calico/app-policy/checker"
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/app-policy/proto"
+	dikastesproto "github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/app-policy/syncher"
 	"github.com/projectcalico/calico/app-policy/uds"
@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	_ proto.HealthzServer
+	_ dikastesproto.HealthzServer
 )
 
 type Dikastes struct {

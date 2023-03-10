@@ -9,7 +9,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/projectcalico/calico/app-policy/proto"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 var _ proto.PolicySyncServer = (*FakePolicySync)(nil)

@@ -9,7 +9,7 @@ import (
 
 	"google.golang.org/genproto/googleapis/rpc/code"
 
-	"github.com/projectcalico/calico/app-policy/proto"
+	"github.com/projectcalico/calico/felix/proto"
 
 	"github.com/projectcalico/calico/felix/tproxydefs"
 )

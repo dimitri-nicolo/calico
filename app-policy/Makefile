@@ -10,7 +10,7 @@ PACKAGE_NAME = github.com/projectcalico/calico/app-policy
 LOCAL_USER_ID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
-GENERATED_FILES=proto/felixbackend.pb.go proto/healthz.pb.go
+GENERATED_FILES=../felix/proto/felixbackend.pb.go proto/healthz.pb.go
 SRC_FILES=$(shell find . -name '*.go' |grep -v vendor) $(GENERATED_FILES)
 
 RELEASE_BRANCH_PREFIX ?= release-calient
@@ -94,6 +94,17 @@ bin/healthz-s390x: ARCH=s390x
 bin/healthz-%: protobuf $(SRC_FILES)
 	$(call build_static_cgo_boring_binary, ./cmd/healthz, $@)
 
+
+###############################################################################
+# Protobufs, 
+#
+# 1. defer to felix's makefile for felixbackend stuff
+# 2. build proto for healthz
+###############################################################################
+
+../felix/proto/felixbackend.pb.go: ../felix/proto/felixbackend.proto
+	$(MAKE) --directory ../felix protobuf
+
 # We use gogofast for protobuf compilation.  Regular gogo is incompatible with
 # gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
 # case.  See https://github.com/gogo/protobuf/issues/386 for more details.
@@ -104,15 +115,7 @@ bin/healthz-%: protobuf $(SRC_FILES)
 PROTOC_IMPORTS =  -I proto\
 		  -I ./
 
-protobuf: proto/felixbackend.pb.go proto/healthz.pb.go
-
-proto/felixbackend.pb.go: proto/felixbackend.proto
-	$(DOCKER_RUN) -v $(CURDIR):/src:rw --user $(LOCAL_USER_ID):$(LOCAL_USER_ID) \
-		      $(PROTOC_CONTAINER) \
-		      $(PROTOC_IMPORTS) \
-		      proto/*.proto \
-		      --gogofast_out=plugins=grpc:proto
-	$(MAKE) fix
+protobuf: $(GENERATED_FILES)
 
 proto/healthz.pb.go: proto/healthz.proto
 	$(DOCKER_RUN) -v $(CURDIR):/src:rw --user $(LOCAL_USER_ID):$(LOCAL_USER_ID) \

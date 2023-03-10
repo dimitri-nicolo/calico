@@ -25,8 +25,9 @@ import (
 
 	"github.com/projectcalico/calico/app-policy/health"
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/app-policy/proto"
+	dikastesproto "github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/statscache"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 const (
@@ -83,7 +84,7 @@ func NewClient(target string, policyStoreManager policystore.PolicyStoreManager,
 }
 
 func (s *SyncClient) RegisterGRPCServices(gs *grpc.Server) {
-	proto.RegisterHealthzServer(gs, health.NewHealthCheckService(s))
+	dikastesproto.RegisterHealthzServer(gs, health.NewHealthCheckService(s))
 }
 
 func (s *SyncClient) Start(ctx context.Context, dpStats <-chan statscache.DPStats) {

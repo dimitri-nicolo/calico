@@ -7,7 +7,7 @@ import (
 	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/app-policy/proto"
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/tproxydefs"
 )
 

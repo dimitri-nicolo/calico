@@ -1,8 +1,8 @@
 package types
 
 import (
-	"github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 type IPToEndpointsIndex interface {

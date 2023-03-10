@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/projectcalico/calico/app-policy/checker"
-	"github.com/projectcalico/calico/app-policy/proto"
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/tproxydefs"
 )
 

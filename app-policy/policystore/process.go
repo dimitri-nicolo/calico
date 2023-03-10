@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/app-policy/proto"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 // ProcessUpdate -  Update the PolicyStore with the information passed over the Sync API.
