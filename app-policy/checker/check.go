@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"

@@ -29,9 +29,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/app-policy/uds"
+	"github.com/projectcalico/calico/felix/proto"
 
 	"google.golang.org/grpc"
 )

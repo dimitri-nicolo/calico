@@ -13,8 +13,8 @@ import (
 
 	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 
-	"github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/server"
+	"github.com/projectcalico/calico/felix/proto"
 
 	fakepolicysync "github.com/projectcalico/calico/app-policy/test/fv/policysync"
 )

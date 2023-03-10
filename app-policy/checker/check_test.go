@@ -23,7 +23,7 @@ import (
 	"github.com/gogo/googleapis/google/rpc"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/app-policy/proto"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 // actionFromString should parse strings in case insensitive mode.

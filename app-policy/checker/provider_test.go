@@ -9,8 +9,8 @@ import (
 
 	"github.com/projectcalico/calico/app-policy/checker"
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/statscache"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 func TestCheckAuthScenarios(t *testing.T) {
