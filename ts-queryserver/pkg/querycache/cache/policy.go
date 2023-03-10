@@ -538,6 +538,16 @@ type policyData struct {
 	v1Policy  *model.Policy
 }
 
+func (d *policyData) GetAnnotations() map[string]string {
+	switch r := d.resource.(type) {
+	case *apiv3.NetworkPolicy:
+		return r.Annotations
+	case *apiv3.GlobalNetworkPolicy:
+		return r.Annotations
+	}
+	return map[string]string{}
+}
+
 func (d *policyData) GetEndpointCounts() api.EndpointCounts {
 	return d.endpoints
 }

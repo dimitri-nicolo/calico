@@ -2,6 +2,7 @@
 package api
 
 type Policy interface {
+	GetAnnotations() map[string]string
 	GetResource() Resource
 	GetTier() string
 	GetEndpointCounts() EndpointCounts

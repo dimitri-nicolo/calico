@@ -458,6 +458,7 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int) *Policy {
 		Namespace:            res.GetObjectMeta().GetNamespace(),
 		Kind:                 res.GetObjectKind().GroupVersionKind().Kind,
 		Tier:                 p.GetTier(),
+		Annotations:          p.GetAnnotations(),
 		NumHostEndpoints:     ep.NumHostEndpoints,
 		NumWorkloadEndpoints: ep.NumWorkloadEndpoints,
 		Ingress:              c.convertRules(p.GetRuleEndpointCounts().Ingress),

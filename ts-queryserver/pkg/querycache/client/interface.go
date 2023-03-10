@@ -99,15 +99,16 @@ type QueryPoliciesResp struct {
 }
 
 type Policy struct {
-	Index                int             `json:"index"`
-	Kind                 string          `json:"kind"`
-	Name                 string          `json:"name"`
-	Namespace            string          `json:"namespace,omitempty"`
-	Tier                 string          `json:"tier"`
-	NumHostEndpoints     int             `json:"numHostEndpoints"`
-	NumWorkloadEndpoints int             `json:"numWorkloadEndpoints"`
-	Ingress              []RuleDirection `json:"ingressRules"`
-	Egress               []RuleDirection `json:"egressRules"`
+	Index                int               `json:"index"`
+	Kind                 string            `json:"kind"`
+	Name                 string            `json:"name"`
+	Namespace            string            `json:"namespace,omitempty"`
+	Tier                 string            `json:"tier"`
+	Annotations          map[string]string `json:"annotations"`
+	NumHostEndpoints     int               `json:"numHostEndpoints"`
+	NumWorkloadEndpoints int               `json:"numWorkloadEndpoints"`
+	Ingress              []RuleDirection   `json:"ingressRules"`
+	Egress               []RuleDirection   `json:"egressRules"`
 }
 
 type RuleDirection struct {
