@@ -14,8 +14,8 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/statscache"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 func TestCheckStoreNoHTTP(t *testing.T) {

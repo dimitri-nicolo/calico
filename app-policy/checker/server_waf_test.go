@@ -13,9 +13,9 @@ import (
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/app-policy/waf"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 func TestWAFProcessHttpRequestHTTPGetAllowed(t *testing.T) {

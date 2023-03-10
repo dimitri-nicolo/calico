@@ -4,9 +4,9 @@ package policystore
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/types"
 	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 type workloadUpdateHandler struct {

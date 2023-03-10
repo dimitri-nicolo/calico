@@ -9,9 +9,9 @@ import (
 
 	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 
-	"github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/server"
 	fakepolicysync "github.com/projectcalico/calico/app-policy/test/fv/policysync"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 type dikastesHarness struct {
