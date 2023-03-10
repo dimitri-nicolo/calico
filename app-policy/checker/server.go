@@ -74,7 +74,9 @@ func (as *authServer) RegisterGRPCServices(gs *grpc.Server) {
 func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*authz.CheckResponse, error) {
 	hostname, _ := os.Hostname()
 	logCtx := log.WithContext(ctx).WithField("hostname", hostname)
-	logCtx.Debug("Check start: ", req.String())
+	if logCtx.Logger.IsLevelEnabled(log.DebugLevel) {
+		logCtx.Debug("Check start: ", req.Attributes.String())
+	}
 
 	resp := &authz.CheckResponse{Status: &status.Status{Code: INTERNAL}}
 	var err error
@@ -120,6 +122,10 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 				break T
 			}
 		}
+		logCtx.Debugf(
+			"All checks complete. final response is: %s",
+			code.Code(resp.Status.Code),
+		)
 
 		// all checks returned unknown
 		if unknownChecks == len(as.checkProviders) {
@@ -134,7 +140,12 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 		}
 	})
 
-	logCtx.Debug("Check complete: ", req.String())
+	if logCtx.Logger.IsLevelEnabled(log.DebugLevel) {
+		logCtx.WithFields(log.Fields{
+			"code": code.Code(resp.Status.Code),
+			"msg":  resp.Status.Message,
+		}).Debug("Check complete: ", req.String())
+	}
 
 	return resp, nil
 }

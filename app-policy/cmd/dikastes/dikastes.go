@@ -39,7 +39,7 @@ Options:
   -l --listen <port>        Unix domain socket path [default: /var/run/dikastes/dikastes.sock]
   -d --dial <target>        Target to dial. [default: localhost:50051]
   -r --rules <target>       Directory where WAF rules are stored.
-  --log-level               Log at specified level e.g. [default: info].
+  --log-level <level>       Log at specified level e.g. [default: info].
 `
 
 var VERSION string = "dev"
