@@ -53,6 +53,8 @@ endif
 # We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), $(filter $(ARCH),amd64))
 CGO_ENABLED=1
+GOEXPERIMENT=boringcrypto
+TAGS=osusergo,netgo
 else
 CGO_ENABLED=0
 endif
@@ -67,12 +69,15 @@ $(ECK_OPERATOR_DOWNLOADED):
 build: bin/$(ECK_OPERATOR_NAME)-$(ARCH)
 
 bin/$(ECK_OPERATOR_NAME)-$(ARCH): $(ECK_OPERATOR_DOWNLOADED)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e GOEXPERIMENT=$(GOEXPERIMENT) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			cd cloud-on-k8s && \
 			make go-generate && \
 			make generate-config-file && \
-			go build -o ../$@ -v -ldflags "$(LDFLAGS) -s -w" cmd/main.go'
+			go build -buildvcs=false -o ../$@ -v -tags $(TAGS) -ldflags "$(LDFLAGS) -linkmode external -extldflags -static -s -w" cmd/main.go'
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'strings bin/eck-operator-$(ARCH) | grep '_Cfunc__goboringcrypto_' 1> /dev/null'
+endif
 
 .PHONY: clean
 clean:
