@@ -1,6 +1,6 @@
 .PHONY: cd image
 PACKAGE_NAME?=github.com/tigera/kibana-docker
-GO_BUILD_VER?=v0.80
+GO_BUILD_VER?=v0.81
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_KIBANA_DOCKER_PROJECT_ID)
@@ -13,12 +13,7 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-# Add --squash argument for CICD pipeline runs only to avoid setting "experimental",
-# for Docker processes on personal machine.
-# set `DOCKER_BUILD=--squash make image` to squash images locally.
-ifdef CI
-DOCKER_BUILD+= --squash
-endif
+KIBANA_VERSION = 7.17.9
 
 # Set GTM_INTEGRATION explicitly so that in case the defaults change, we will still not
 # accidentally enable the integration
@@ -46,32 +41,44 @@ Makefile.common.$(MAKE_BRANCH):
 
 include Makefile.common
 
-build:
-	git submodule init
-	git submodule update
+###############################################################################
+# Build
+###############################################################################
+KIBANA_DOWNLOADED=.kibana.downloaded
 
-clean:
-	rm -f Makefile.*
-	git submodule foreach --recursive git reset --hard
-	git submodule foreach --recursive git clean -dfx
+# Add --squash argument for CICD pipeline runs only to avoid setting "experimental",
+# for Docker processes on personal machine.
+# set `DOCKER_BUILD=--squash make image` to squash images locally.
+ifdef CI
+DOCKER_BUILD+= --squash
+endif
 
-kibana-patch:
+.PHONY: init-source
+init-source: $(KIBANA_DOWNLOADED)
+$(KIBANA_DOWNLOADED):
+	mkdir -p kibana
+	curl -sfL https://github.com/elastic/kibana/archive/refs/tags/v$(KIBANA_VERSION).tar.gz | tar xz --strip-components 1 -C kibana
 	patch -d kibana -p1 < patches/0001-Apply-Tigera-customizations-to-Kibana.patch
+	touch $@
 
-kibana-bootstrap: kibana-patch
-	bash -l -c '\
-		cd kibana && \
-		nvm install && nvm use && \
-		yarn kbn bootstrap'
+.PHONY: build
+build: $(KIBANA_DOWNLOADED)
+	cd kibana && \
+	. $(NVM_DIR)/nvm.sh && nvm install && nvm use && \
+	BUILD_TS_REFS_CACHE_ENABLE=false yarn kbn bootstrap && \
+	yarn build --docker-images --skip-docker-ubuntu --release
 
-kibana-image: kibana-bootstrap
-	bash -l -c '\
-		cd kibana && \
-		nvm install && nvm use && \
-		yarn build --docker-images --skip-docker-ubi --release'
+.PHONY: clean
+clean:
+	rm -fr kibana/
+	rm -f $(KIBANA_DOWNLOADED)
+	-docker image rm -f $$(docker images $(KIBANA_IMAGE) -a -q)
+	-docker image rm -f $$(docker images docker.elastic.co/kibana/kibana-ubi8 -a -q)
 
-KIBANA_VERSION=$(shell jq -r '.version' kibana/package.json)
-
+###############################################################################
+# Image
+###############################################################################
+.PHONY: image
 image: $(KIBANA_IMAGE)
 $(KIBANA_IMAGE):
 	docker build $(DOCKER_BUILD) \
@@ -83,4 +90,7 @@ ifeq ($(ARCH),amd64)
 	docker tag $(KIBANA_IMAGE):latest-$(ARCH) $(KIBANA_IMAGE):latest
 endif
 
+###############################################################################
+# CD
+###############################################################################
 cd: image cd-common

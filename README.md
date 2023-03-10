@@ -4,11 +4,11 @@ Upstream Kibana with Tigera branding. Check Kibana submodule for upstream Kibana
 
 ## Build the image
 
-Run `make ci` to get the final Tigera customized Kibana image. Even though the `Dockerfile.amd64` is based on `docker.elastic.co/kibana/kibana`, it is not the official Kibana image. You can run `make kibana-image` to get the patched Kibana base image locally and build the final image from it.
+Run `make ci` to get the final Tigera customized Kibana image. Even though the `Dockerfile.amd64` is based on `docker.elastic.co/kibana/kibana`, it is not the official Kibana image. You can run `make build` to get the patched Kibana base image locally and build the final image from it.
 
 ## Update version and patch
 
-To update Kibana version, follow the standard [git submodule](https://git-scm.com/docs/git-submodule) update process to update the Kibana submodule hash reference.
+To update Kibana version, update the `KIBANA_VERSION` variable in the `Makefile`.
 
 To update Tigera customization patch, follow the next steps:
 
