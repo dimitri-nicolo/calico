@@ -38,7 +38,7 @@ import (
 
 // Controller health
 const (
-	healthReporterName   = "fortimanager-selector-controller"
+	healthReporterName   = "FortimanagerSelectorController"
 	healthReportInterval = time.Second * 10
 )
 
@@ -220,9 +220,9 @@ func NewSelectorsController(ctx context.Context, cfg *config.Config, h *health.H
 
 // Get label selector for selecting network policies
 func getPolicySelectorLabel(policySelector string) string {
-	//Remove single quotes from selector expression.
-	//Single quotes in selector expression isn't processed by kubernetes api's
-	//especially by option selector.
+	// Remove single quotes from selector expression.
+	// Single quotes in selector expression isn't processed by kubernetes api's
+	// especially by option selector.
 	return strings.Replace(policySelector, "'", "", -1)
 }
 
@@ -237,7 +237,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 		"NameSpaceSelector": cfg.FwPolicyNamespaceSelector,
 		"label":             getPolicySelectorLabel(cfg.FwPolicySelectorExpression),
 	}).Info("Forti network policy selectors")
-	//ListWatcher for all GlobalNetwork Policies
+	// ListWatcher for all GlobalNetwork Policies
 	lw := &cache.ListWatch{
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 			options.LabelSelector = getPolicySelectorLabel(cfg.FwPolicySelectorExpression)
@@ -249,19 +249,19 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 		},
 	}
 
-	//Informer for Gnp
+	// Informer for Gnp
 	_, gnpInformer := cache.NewIndexerInformer(lw, &v3.GlobalNetworkPolicy{}, 0, cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			//Handle GNP add events
+			// Handle GNP add events
 			log.Debugf("Got Add Event for GNP: %+v", obj)
 			gnp := obj.(*v3.GlobalNetworkPolicy)
 
-			//Create address Group
+			// Create address Group
 			addrGroup := AddressGroup{
 				Name:    gnp.Name,
 				Members: set.New[string](),
 			}
-			//Insert Address Group in Cache
+			// Insert Address Group in Cache
 			for _, cache := range devToRcacheAddrGrp {
 				cache.Set(gnp.Name, addrGroup)
 			}
@@ -270,7 +270,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 			gnpToPods[gnp.Name] = resources.NewSet()
 
 			gnp.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
-			//Create an update
+			// Create an update
 			updates := []syncer.Update{
 				syncer.Update{
 					Type:       syncer.UpdateTypeSet,
@@ -278,32 +278,32 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 					Resource:   gnp,
 				},
 			}
-			//Dispatch to syncer
+			// Dispatch to syncer
 			log.Debugf("Dispatching GNP updates : %+v", updates)
 			syncerUpdateChan <- updates
 
 		},
 		UpdateFunc: func(oldObj interface{}, newObj interface{}) {
-			//Handle GNP add events
+			// Handle GNP add events
 			log.Debugf("Got UPDATE event for new GNP: %+v", newObj)
 			log.Debugf("Got UPDATE event for old GNP: %+v", oldObj)
 
 			gnpNew := newObj.(*v3.GlobalNetworkPolicy)
 			gnpOld := oldObj.(*v3.GlobalNetworkPolicy)
 
-			//If there is no change in Tier, Selector and name just return
+			// If there is no change in Tier, Selector and name just return
 			if gnpNew.Name == gnpOld.Name && gnpNew.Spec.Selector == gnpOld.Spec.Selector {
 				log.Debug("No change in UPDATE event for GNP's")
 				return
 			}
 
-			//Create address Group
+			// Create address Group
 			addrGroup := AddressGroup{
 				Name:    gnpNew.Name,
 				Members: set.New[string](),
 			}
 
-			//Update Address Group in Cache
+			// Update Address Group in Cache
 			for _, cache := range devToRcacheAddrGrp {
 				cache.Set(gnpNew.Name, addrGroup)
 			}
@@ -313,7 +313,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 			gnpToNodes[gnpNew.Name] = set.New[string]()
 			gnpToPods[gnpNew.Name] = resources.NewSet()
 
-			//Create an update
+			// Create an update
 			updates := []syncer.Update{
 				syncer.Update{
 					Type:       syncer.UpdateTypeSet,
@@ -321,7 +321,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 					Resource:   gnpNew,
 				},
 			}
-			//Dispatch to syncer
+			// Dispatch to syncer
 			log.Debugf("Dispatching GNP updates : %+v", updates)
 			syncerUpdateChan <- updates
 
@@ -350,7 +350,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 				},
 			}
 
-			//Dispatch to syncer
+			// Dispatch to syncer
 			log.Debugf("Dispatching GNP updates : %+v", updates)
 			syncerUpdateChan <- updates
 
@@ -382,7 +382,7 @@ func (sc *SelectorsController) Run() {
 	// Start XrefCache updater/worker so that updates from our pod informer
 	// can be dispatched to the XrefCache.
 	log.Infof("Starting XrefCache worker")
-	//go sc.runXrefCacheWorker()
+	// go sc.runXrefCacheWorker()
 	go sc.runXrefCacheWorker()
 	defer close(sc.syncerUpdateChan)
 
@@ -612,7 +612,7 @@ func (sc *SelectorsController) syncToFortiGateAddr(key, dev string) error {
 		clog.Debug("Create/Update FirewallAddress in FortiGate")
 		addr := obj.(fortilib.RespFortiGateFWAddressData)
 
-		//Create a Firewall Object in Fortidevice
+		// Create a Firewall Object in Fortidevice
 		fortiFWAddr := fortilib.FortiFWAddress{
 			Name:    addr.Name,
 			IpAddr:  addr.Subnet,

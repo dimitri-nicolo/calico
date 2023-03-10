@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tigera-internal-3
+  namespace: tigera-internal
+spec:
+  selector:
+    matchLabels:
+      app: tigera-internal-3
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: tigera-internal-3
+    spec:
+      imagePullSecrets:
+      - name: tigera-pull-secret
+      containers:
+      - name: tigera-internal-dashboard
+        image: quay.io/tigera/honeypod-exp-service:v2.7.0
+        ports:
+        - containerPort: 8888
+        - containerPort: 443
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: tigera-dashboard-internal-debug
+  namespace: tigera-internal 
+  labels:
+    app: tigera-dashboard-internal-debug
+spec:
+  ports:
+    - port: 8888
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: tigera-internal-3
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: tigera-dashboard-internal-service
+  namespace: tigera-internal 
+  labels:
+    app: tigera-dashboard-internal-service
+spec:
+  ports:
+    - port: 443 
+      protocol: TCP
+  selector:
+    app: tigera-internal-3
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlertTemplate
+metadata:
+  name: honeypod.fake.svc
+spec:
+  description: "Alerts on Honeypod accessed via fake debug service"
+  summary: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="8080"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod.fake.svc
+spec:
+  description: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="8080"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---

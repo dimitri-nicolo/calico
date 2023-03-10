@@ -61,7 +61,7 @@
       image: tigera/kibana
       version: master
     eck-elasticsearch:
-      version: 7.17.7
+      version: 7.17.9
     elasticsearch:
       image: tigera/elasticsearch
       version: master
@@ -161,12 +161,12 @@
       image: tigera/deep-packet-inspection
       version: master
     eck-elasticsearch-operator:
-      version: 2.5.0
+      version: 2.6.1
     elasticsearch-operator:
       image: tigera/eck-operator
       version: master
     coreos-alertmanager:
-      version: v0.23.0
+      version: v0.25.0
     alertmanager:
       image: tigera/alertmanager
       version: master

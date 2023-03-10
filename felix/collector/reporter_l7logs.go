@@ -46,7 +46,7 @@ type L7LogReporter struct {
 }
 
 const (
-	l7HealthName     = "l7_reporter"
+	l7HealthName     = "L7Reporter"
 	l7HealthInterval = 10 * time.Second
 )
 

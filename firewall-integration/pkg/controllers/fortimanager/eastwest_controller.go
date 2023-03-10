@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	healthReporterNameEW   = "fortimanager-ew-controller"
+	healthReporterNameEW   = "FortimanagerEastWestController"
 	healthReportIntervalEW = time.Second * 10
 	SystemTierLabel        = "projectcalico.org/system-tier"
 )

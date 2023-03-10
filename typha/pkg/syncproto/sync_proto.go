@@ -229,6 +229,22 @@ const (
 	NumSyncerTypes = iota
 )
 
+func (t SyncerType) HealthName() string {
+	switch t {
+	case SyncerTypeFelix:
+		return "Felix"
+	case SyncerTypeBGP:
+		return "BGP"
+	case SyncerTypeTunnelIPAllocation:
+		return "TunnelIPAllocation"
+	case SyncerTypeNodeStatus:
+		return "NodeStatus"
+	case SyncerTypeDPI:
+		return "DPI"
+	}
+	return string(t)
+}
+
 var (
 	// AllSyncerTypes contains each of the SyncerType constants. We use an array rather than a slice for a
 	// compile-time length check.

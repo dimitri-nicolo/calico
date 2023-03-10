@@ -15,7 +15,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 
-const HealthName = "icmp probes"
+const HealthName = "ICMPProbes"
 
 func StartBackgroundICMPProbes(ctx context.Context, addrs []net.IP, interval time.Duration, timeout time.Duration, healthAgg *health.HealthAggregator) error {
 	healthAgg.RegisterReporter(HealthName, &health.HealthReport{Ready: true}, timeout)

@@ -68,7 +68,7 @@ var (
 )
 
 const (
-	egressHealthName = "egress-networking-in-sync"
+	egressHealthName = "EgressNetworkingInSync"
 )
 
 type egressIPSets interface {

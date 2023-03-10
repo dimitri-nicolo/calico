@@ -109,7 +109,7 @@ func NewDynamicAddressGroupsController(
 		cfg:                           cfg,
 		deviceGroup:                   cfg.FwDeviceGroup,
 		pancli:                        pcl,
-		healthReporterName:            "tigera-address-groups-controller",
+		healthReporterName:            "TigeraAddressGroupsController",
 		healthReportIntervalDuration:  panoramaHealthReportInterval,
 		healthReportIntervalMaxJitter: panoramaHealthReportInterval / jitterDenominator,
 		inSync:                        make(chan struct{}),
@@ -142,7 +142,7 @@ func NewDynamicAddressGroupsController(
 	if len(dagc.deviceGroup) == 0 {
 		dagc.deviceGroup = PanoramaSharedDeviceGroup
 	} else {
-		//Query the device group to verify its existence. Return an error if the API returns an error.
+		// Query the device group to verify its existence. Return an error if the API returns an error.
 		err = panutils.QueryDeviceGroup(dagc.pancli, dagc.deviceGroup)
 		// API has failed to successfully query the provided device group, no reason to run controller.
 		if err != nil {

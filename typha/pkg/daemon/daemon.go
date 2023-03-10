@@ -369,6 +369,7 @@ func (t *TyphaDaemon) addSyncerPipeline(
 		MaxBatchSize:     t.ConfigParams.SnapshotCacheMaxBatchSize,
 		HealthAggregator: t.healthAggregator,
 		Name:             string(syncerType),
+		HealthName:       syncerType.HealthName() + "Cache",
 	})
 
 	pipeline := &syncerPipeline{

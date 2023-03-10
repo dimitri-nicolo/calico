@@ -24,6 +24,8 @@ var resourceNameToElasticsearchRole = map[string]string{
 	"events":     formatRoleName(esusers.ElasticsearchRoleNameEventsViewer),
 	"dns":        formatRoleName(esusers.ElasticsearchRoleNameDNSViewer),
 	"l7":         formatRoleName(esusers.ElasticsearchRoleNameL7Viewer),
+	"waf":        formatRoleName(esusers.ElasticsearchRoleNameWafViewer),
+	"runtime":    formatRoleName(esusers.ElasticsearchRoleNameRuntimeViewer),
 }
 
 var resourceNameToGlobalElasticsearchRoles = map[string]string{

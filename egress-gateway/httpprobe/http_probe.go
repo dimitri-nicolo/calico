@@ -16,7 +16,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 
-const HealthName = "http probes"
+const HealthName = "HTTPProbes"
 
 func StartBackgroundHTTPProbe(ctx context.Context, urls []string, interval time.Duration, timeout time.Duration, healthAgg *health.HealthAggregator) error {
 	healthAgg.RegisterReporter(HealthName, &health.HealthReport{Ready: true}, timeout)

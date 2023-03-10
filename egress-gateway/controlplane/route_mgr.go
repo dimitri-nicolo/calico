@@ -71,7 +71,7 @@ const (
 	jitter          = 0.1
 )
 
-const healthName = "dataplane"
+const healthName = "Dataplane"
 
 // NewRouteManager constructs a new route manager, registered with RouteStore 's', which will tunnel packets through the provided interface
 func NewRouteManager(s data.RouteStore, egressTunnelIfaceName string, vni int, healthAgg *health.HealthAggregator, opts ...RouteManagerOpt) *RouteManager {

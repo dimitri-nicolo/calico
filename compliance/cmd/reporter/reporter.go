@@ -21,7 +21,7 @@ import (
 
 const (
 	// The health name for the reporter component.
-	healthReporterName = "compliance-reporter"
+	healthReporterName = "ComplianceReporter"
 )
 
 var ver bool
