@@ -32,6 +32,7 @@ require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/elastic/cloud-on-k8s/v2 v2.0.0-20230111163007-62f2e278e418
 	github.com/elastic/go-elasticsearch/v7 v7.17.7
+	// build error after upgrading to a newer version
 	github.com/envoyproxy/go-control-plane v0.10.1
 	github.com/florianl/go-nfqueue v1.2.0
 	github.com/fsnotify/fsnotify v1.6.0
@@ -63,6 +64,7 @@ require (
 	github.com/juju/clock v0.0.0-20190205081909-9c5c9712527c
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f
 	github.com/juju/mutex v0.0.0-20180619145857-d21b13acf4bf
+	// build error after upgrading to a newer version
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.2.0
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/kelseyhightower/envconfig v1.4.0
