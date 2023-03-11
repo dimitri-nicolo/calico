@@ -23,8 +23,8 @@ require (
 	github.com/buger/jsonparser v1.1.1
 	github.com/caimeo/iniflags v0.0.0-20171110233946-ef4ae6c5cd79
 	github.com/container-storage-interface/spec v1.7.0
-	github.com/containernetworking/cni v1.0.1
-	github.com/containernetworking/plugins v1.0.1
+	github.com/containernetworking/cni v1.1.1
+	github.com/containernetworking/plugins v1.1.1
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/coreos/go-semver v0.3.1
 	github.com/davecgh/go-spew v1.1.1
