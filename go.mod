@@ -123,6 +123,7 @@ require (
 	google.golang.org/protobuf v1.29.1
 	// validator.v9 must be at v9.30.2
 	gopkg.in/go-playground/validator.v9 v9.30.2
+	// permission denies in felix FV tests after upgrading to a newer version
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/tchap/go-patricia.v2 v2.3.0
