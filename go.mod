@@ -34,7 +34,7 @@ require (
 	github.com/elastic/go-elasticsearch/v7 v7.17.7
 	// build error after upgrading to a newer version
 	github.com/envoyproxy/go-control-plane v0.10.1
-	github.com/florianl/go-nfqueue v1.2.0
+	github.com/florianl/go-nfqueue v1.3.1
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424
 	github.com/ghodss/yaml v1.0.0
