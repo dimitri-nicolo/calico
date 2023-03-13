@@ -106,6 +106,17 @@ var _ = Context("Config update tests, after starting felix", func() {
 		}
 		config, err = client.FelixConfigurations().Create(ctx, config, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
+
+		config := api.NewFelixConfiguration()
+		config.Name = "default"
+		config.Spec.HealthTimeoutOverrides = []api.HealthTimeoutOverride{
+			{
+				Name:    "InternalDataplaneMainLoop",
+				Timeout: metav1.Duration{Duration: 20 * time.Second},
+			},
+		}
+		config, err = client.FelixConfigurations().Create(ctx, config, options.SetOptions{})
+		Expect(err).NotTo(HaveOccurred())
 	}
 
 	Context("after updating config that felix can handle", func() {
