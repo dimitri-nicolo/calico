@@ -55,6 +55,10 @@ promotions:
   pipeline_file: push-images/node.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push mock-node images
+  pipeline_file: push-images/mock-node.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push anomaly-detection-api images
   pipeline_file: push-images/anomaly-detection-api.yml
   auto_promote:
@@ -579,6 +583,17 @@ blocks:
         value: "sig-network.*Conformance"
       commands:
       - .semaphore/run-and-monitor e2e-test.log make e2e-test
+
+- name: "Mock node"
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/mocknode/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    jobs:
+    - name: "Mock node"
+      commands:
+      - cd mocknode
+      - ../.semaphore/run-and-monitor make-ci.log make ci
 
 - name: "kube-controllers: Tests"
   run:
