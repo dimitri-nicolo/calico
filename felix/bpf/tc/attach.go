@@ -108,6 +108,44 @@ func (ap *AttachPoint) AlreadyAttached(object string) (int, bool) {
 	return -1, false
 }
 
+func (ap *AttachPoint) loadObject(ipVer int, file string) (*libbpf.Obj, error) {
+	obj, err := libbpf.OpenObject(file)
+	if err != nil {
+		return nil, err
+	}
+
+	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
+		// In case of global variables, libbpf creates an internal map <prog_name>.rodata
+		// The values are read only for the BPF programs, but can be set to a value from
+		// userspace before the program is loaded.
+		if m.IsMapInternal() {
+			if err := ap.ConfigureProgram(m); err != nil {
+				return nil, fmt.Errorf("failed to configure %s: %w", file, err)
+			}
+			continue
+		}
+
+		if err := ap.setMapSize(m); err != nil {
+			return nil, fmt.Errorf("error setting map size %s : %w", m.Name(), err)
+		}
+		pinPath := bpf.MapPinPath(m.Type(), m.Name(), ap.Iface, ap.Hook)
+		if err := m.SetPinPath(pinPath); err != nil {
+			return nil, fmt.Errorf("error pinning map %s: %w", m.Name(), err)
+		}
+	}
+
+	if err := obj.Load(); err != nil {
+		return nil, fmt.Errorf("error loading program: %w", err)
+	}
+
+	err = ap.updateJumpMap(ipVer, obj)
+	if err != nil {
+		return nil, fmt.Errorf("error updating jump map %v", err)
+	}
+
+	return obj, nil
+}
+
 // AttachProgram attaches a BPF program from a file to the TC attach point
 func (ap *AttachPoint) AttachProgram() (int, error) {
 	logCxt := log.WithField("attachPoint", ap)
@@ -120,37 +158,12 @@ func (ap *AttachPoint) AttachProgram() (int, error) {
 		ap.VethNS = uint16(l.Attrs().NetNsID)
 	}
 
-	filename := ap.FileName()
+	filename := ap.FileName(4)
 	binaryToLoad := path.Join(bpf.ObjectDir, filename)
 
 	progsToClean, err := ap.listAttachedPrograms()
 	if err != nil {
 		return -1, err
-	}
-	obj, err := libbpf.OpenObject(binaryToLoad)
-	if err != nil {
-		return -1, err
-	}
-	defer obj.Close()
-
-	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
-		// In case of global variables, libbpf creates an internal map <prog_name>.rodata
-		// The values are read only for the BPF programs, but can be set to a value from
-		// userspace before the program is loaded.
-		if m.IsMapInternal() {
-			if err := ap.ConfigureProgram(m); err != nil {
-				return -1, fmt.Errorf("failed to configure %s: %w", filename, err)
-			}
-			continue
-		}
-
-		if err := ap.setMapSize(m); err != nil {
-			return -1, fmt.Errorf("error setting map size %s : %w", m.Name(), err)
-		}
-		pinPath := bpf.MapPinPath(m.Type(), m.Name(), ap.Iface, ap.Hook)
-		if err := m.SetPinPath(pinPath); err != nil {
-			return -1, fmt.Errorf("error pinning map %s: %w", m.Name(), err)
-		}
 	}
 
 	// Check if the bpf object is already attached, and we should skip
@@ -162,15 +175,21 @@ func (ap *AttachPoint) AttachProgram() (int, error) {
 	}
 	logCxt.Debugf("Continue with attaching BPF program %s", filename)
 
-	if err := obj.Load(); err != nil {
-		logCxt.Warn("Failed to load program")
-		return -1, fmt.Errorf("error loading program: %w", err)
-	}
-
-	err = ap.updateJumpMap(obj)
+	obj, err := ap.loadObject(4, binaryToLoad)
 	if err != nil {
-		logCxt.Warn("Failed to update jump map")
-		return -1, fmt.Errorf("error updating jump map %v", err)
+		logCxt.Warn("Failed to load program")
+		return -1, fmt.Errorf("object v4: %w", err)
+	}
+	defer obj.Close()
+
+	if ap.IPv6Enabled {
+		filename := ap.FileName(6)
+		obj, err := ap.loadObject(6, path.Join(bpf.ObjectDir, filename))
+		if err != nil {
+			logCxt.Warn("Failed to load program")
+			return -1, fmt.Errorf("object v6: %w", err)
+		}
+		defer obj.Close()
 	}
 
 	progId, err := obj.AttachClassifier(SectionName(ap.Type, ap.ToOrFrom), ap.Iface, string(ap.Hook))
@@ -393,8 +412,8 @@ func (ap *AttachPoint) ProgramID() (int, error) {
 }
 
 // FileName return the file the AttachPoint will load the program from
-func (ap *AttachPoint) FileName() string {
-	return ProgFilename(ap.Type, ap.ToOrFrom, ap.ToHostDrop, ap.FIB, ap.DSR, ap.LogLevel, bpfutils.BTFEnabled)
+func (ap *AttachPoint) FileName(ipVer int) string {
+	return ProgFilename(ipVer, ap.Type, ap.ToOrFrom, ap.ToHostDrop, ap.FIB, ap.DSR, ap.LogLevel, bpfutils.BTFEnabled)
 }
 
 func (ap *AttachPoint) IsAttached() (bool, error) {
@@ -573,26 +592,24 @@ func (ap *AttachPoint) hasHostConflictProg() bool {
 	return ap.ToOrFrom == ToEp
 }
 
-func (ap *AttachPoint) updateJumpMap(obj *libbpf.Obj) error {
-	ipVersions := []string{"IPv4"}
-	if ap.IPv6Enabled {
-		ipVersions = append(ipVersions, "IPv6")
+func (ap *AttachPoint) updateJumpMap(ipVer int, obj *libbpf.Obj) error {
+	ipVersion := "IPv4"
+	if ipVer == 6 {
+		ipVersion = "IPv6"
 	}
 
 	mapName := bpf.JumpMapName()
 
-	for _, ipFamily := range ipVersions {
-		for _, idx := range tcdefs.JumpMapIndexes[ipFamily] {
-			if (idx == tcdefs.ProgIndexPolicy || idx == tcdefs.ProgIndexV6Policy) && !ap.hasPolicyProg() {
-				continue
-			}
-			if idx == tcdefs.ProgIndexHostCtConflict && !ap.hasHostConflictProg() {
-				continue
-			}
-			err := obj.UpdateJumpMap(mapName, tcdefs.ProgramNames[idx], idx)
-			if err != nil {
-				return fmt.Errorf("error updating %v %s program: %w", ipFamily, tcdefs.ProgramNames[idx], err)
-			}
+	for _, idx := range tcdefs.JumpMapIndexes[ipVersion] {
+		if (idx == tcdefs.ProgIndexPolicy || idx == tcdefs.ProgIndexV6Policy) && !ap.hasPolicyProg() {
+			continue
+		}
+		if idx == tcdefs.ProgIndexHostCtConflict && !ap.hasHostConflictProg() {
+			continue
+		}
+		err := obj.UpdateJumpMap(mapName, tcdefs.ProgramNames[idx], idx)
+		if err != nil {
+			return fmt.Errorf("error updating %v %s program: %w", ipVersion, tcdefs.ProgramNames[idx], err)
 		}
 	}
 

@@ -22,5 +22,3 @@ int calico_tcp_stats(struct __sk_buff *skb)
 
 	return TC_ACT_UNSPEC;
 }
-
-char ____license[] __attribute__((section("license"), used)) = "GPL";

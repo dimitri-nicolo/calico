@@ -29,6 +29,3 @@ SEC("kprobe/tcp_connect")
 int BPF_KPROBE(tcp_connect) {
 	return kprobe_stats_body(ctx, IPPROTO_TCP, 1, true);
 }
-
-char ____license[] __attribute__((section("license"), used)) = "GPL";
-

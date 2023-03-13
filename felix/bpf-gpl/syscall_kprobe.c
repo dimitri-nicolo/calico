@@ -56,6 +56,3 @@ int BPF_KPROBE(__x64_sys_execve)
 	}
         return 0;
 }
-
-char ____license[] __attribute__((section("license"), used)) = "GPL";
-

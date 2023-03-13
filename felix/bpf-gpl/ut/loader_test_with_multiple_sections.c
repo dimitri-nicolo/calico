@@ -19,5 +19,3 @@ int kprobe__tcp_recvmsg(struct pt_regs *ctx)
 	CALI_DEBUG("Test loader: tcp_sendmsg");
 	return 0;
 }
-char ____license[] __attribute__((section("license"), used)) = "GPL";
-

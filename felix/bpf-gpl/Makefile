@@ -50,7 +50,9 @@ UT_C_FILES:=$(shell find ut -name '*.c')
 UT_OBJS:=$(UT_C_FILES:.c=.o) $(shell ./list-ut-objs)
 
 OBJS:=$(shell ./list-objs)
-C_FILES:=tc.c xdp.c connect_balancer.c tcp_kprobe.c udp_kprobe.c tcp_stats.c syscall_kprobe.c
+C_FILES:=tc.c tc6.c connect_balancer.c connect_balancer_v6.c xdp.c
+# EE only files
+C_FILES+=tcp_kprobe.c udp_kprobe.c tcp_stats.c syscall_kprobe.c
 
 all: $(OBJS)
 ut-objs: $(UT_OBJS)
@@ -85,6 +87,10 @@ ut/%.ll: ut/%.c ut/ut.h tc.c tc.d
 to%.ll: tc.c tc.d calculate-flags
 	$(COMPILE)
 from%.ll: tc.c tc.d calculate-flags
+	$(COMPILE)
+to%_v6.ll: tc6.c tc.d calculate-flags
+	$(COMPILE)
+from%_v6.ll: tc6.c tc.d calculate-flags
 	$(COMPILE)
 test%.ll: tc.c tc.d calculate-flags
 	$(COMPILE)

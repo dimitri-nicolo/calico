@@ -36,6 +36,3 @@ int BPF_KPROBE(udpv6_sendmsg)
 {
         return kprobe_stats_body(ctx, IPPROTO_UDP, 1, false);
 }
-
-char ____license[] __attribute__((section("license"), used)) = "GPL";
-

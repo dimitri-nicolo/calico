@@ -114,6 +114,7 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 									for _, isEgw := range egw {
 										for _, egIpEnabled := range egIPEnabled {
 											ap := tc.AttachPoint{
+												IPv6Enabled:     true,
 												Type:            epType,
 												ToOrFrom:        toOrFrom,
 												Hook:            bpf.HookIngress,
@@ -128,9 +129,9 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 												EgressIPEnabled: egIpEnabled,
 											}
 
-											t.Run(ap.FileName(), func(t *testing.T) {
+											t.Run(ap.FileName(4), func(t *testing.T) {
 												RegisterTestingT(t)
-												logCxt.Debugf("Testing %v in %v", ap.ProgramName(), ap.FileName())
+												logCxt.Debugf("Testing %v in %v", ap.ProgramName(), ap.FileName(4))
 
 												vethName, veth := createVeth()
 												defer deleteLink(veth)

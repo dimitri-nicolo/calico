@@ -71,6 +71,3 @@ int kprobe__tcp_sendmsg(struct pt_regs *ctx)
 	}
 	return 0;
 }
-
-char ____license[] __attribute__((section("license"), used)) = "GPL";
-
