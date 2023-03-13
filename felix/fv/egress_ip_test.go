@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -352,6 +353,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 				cc = &connectivity.Checker{
 					Protocol: protocol,
+				}
+				if BPFMode() {
+					cc.MinTimeout = 30 * time.Second
 				}
 			})
 
