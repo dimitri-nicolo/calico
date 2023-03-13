@@ -351,6 +351,18 @@ func CTLBSetGlobals(m *Map, udpNotSeen time.Duration, excludeUDP bool) error {
 	return err
 }
 
+func TcSetStatsGlobals(
+	m *Map,
+	globalData TcStatsGlobalData,
+) error {
+
+	_, err := C.bpf_tc_stats_set_globals(m.bpfMap,
+		C.ushort(globalData.VethNS),
+	)
+
+	return err
+}
+
 func NumPossibleCPUs() (int, error) {
 	ncpus := int(C.num_possible_cpu())
 	if ncpus < 0 {

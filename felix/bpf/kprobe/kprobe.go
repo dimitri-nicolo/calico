@@ -113,7 +113,7 @@ func (k *bpfKprobe) installKprobe(typ string, fns []string) error {
 	filename := path.Join(bpf.ObjectDir, progFileName(typ, k.logLevel))
 	obj, err := libbpf.OpenObject(filename)
 	if err != nil {
-		return fmt.Errorf("error loading kprobe program %s :%w", filename, err)
+		return fmt.Errorf("error loading kprobe program %s: %w", filename, err)
 	}
 	k.objMap[typ] = obj
 	baseDir := "/sys/fs/bpf/tc/globals"
@@ -126,13 +126,13 @@ func (k *bpfKprobe) installKprobe(typ string, fns []string) error {
 	}
 	err = obj.Load()
 	if err != nil {
-		return fmt.Errorf("error loading program %v", err)
+		return fmt.Errorf("error loading program: %w", err)
 	}
 
 	for _, fn := range fns {
 		link, err := obj.AttachKprobe(fn, fn)
 		if err != nil {
-			return fmt.Errorf("error attaching kprobe to fn %s :%w", fn, err)
+			return fmt.Errorf("error attaching kprobe to fn %s: %w", fn, err)
 		}
 		k.linkMap[fn] = link
 	}

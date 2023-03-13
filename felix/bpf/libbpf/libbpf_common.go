@@ -32,3 +32,7 @@ type TcGlobalData struct {
 	EgwVxlanPort  uint16
 	EgwHealthPort uint16
 }
+
+type TcStatsGlobalData struct {
+	VethNS uint16
+}

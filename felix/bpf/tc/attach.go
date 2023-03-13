@@ -491,8 +491,10 @@ func (ap AttachPoint) MustReattach() bool {
 }
 
 func ConfigureVethNS(m *libbpf.Map, VethNS uint16) error {
-	bpfGlobalData := libbpf.TcGlobalData{VethNS: VethNS}
-	return libbpf.TcSetGlobals(m, bpfGlobalData)
+	bpfGlobalData := libbpf.TcStatsGlobalData{
+		VethNS: VethNS,
+	}
+	return libbpf.TcSetStatsGlobals(m, bpfGlobalData)
 }
 
 func (ap *AttachPoint) HookName() bpf.Hook {

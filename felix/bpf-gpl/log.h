@@ -27,7 +27,7 @@
 		bpf_trace_printk(fmt, sizeof(fmt), ## __VA_ARGS__); \
 } while (0)
 
-#if !defined(UNITTEST) && !defined(__BPFTOOL_LOADER__) && ! (CALI_F_XDP) && !CALI_F_CGROUP
+#if !defined(UNITTEST) && !defined(__BPFTOOL_LOADER__) && !(CALI_F_XDP) && !(CALI_F_CGROUP) && !(CALI_F_KPROBE) && !(CALI_F_STATS)
 extern const volatile struct cali_tc_globals __globals;
 #define CALI_TC_LOG(fmt, ...) CALI_LOG("%s" fmt, __globals.iface_name, ## __VA_ARGS__)
 #else
@@ -57,6 +57,10 @@ extern const volatile struct cali_tc_globals __globals;
 #define CALI_LOG_FLAG(flags, fmt, ...) do { \
 	if ((flags) & CALI_CGROUP) { \
 		CALI_LOG("CTLB------------: " fmt, ## __VA_ARGS__); \
+	} else if ((flags) & CALI_KPROBE) { \
+		CALI_LOG("CALI KPROBE- ---: " fmt, ## __VA_ARGS__); \
+	} else if ((flags) & CALI_STATS) { \
+		CALI_LOG("CALI STATS------: " fmt, ## __VA_ARGS__); \
 	} else if ((flags) & CALI_XDP_PROG) { \
 		CALI_LOG("CALICOLO---------X: " fmt, ## __VA_ARGS__); \
 	} else if (((flags) & CALI_TC_HOST_EP) && ((flags) & CALI_TC_INGRESS)) { \

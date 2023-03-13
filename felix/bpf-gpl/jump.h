@@ -5,7 +5,8 @@
 #ifndef __CALI_BPF_JUMP_H__
 #define __CALI_BPF_JUMP_H__
 
-#include "conntrack.h"
+#include "types.h"
+#include "log.h"
 #include "policy.h"
 
 CALI_MAP(cali_state, 2,

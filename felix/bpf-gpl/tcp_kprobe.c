@@ -2,11 +2,11 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
-#include <linux/in.h>
-
+#include "bpf.h"
 #include "sock.h"
 #include "events_kprobe.h"
 #include "kprobe.h"
+
 #include <bpf_helpers.h>
 #include <bpf_tracing.h>
 

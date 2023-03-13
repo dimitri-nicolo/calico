@@ -39,4 +39,8 @@ struct cali_ctlb_globals {
 	bool exclude_udp;
 };
 
+struct cali_stats_globals {
+	__be16 if_ns;
+};
+
 #endif /* __CALI_GLOBALS_H__ */

@@ -2,12 +2,16 @@
 // Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
+#include "bpf.h"
+#include "globals.h"
+
+const volatile struct cali_stats_globals __globals;
+
 #include "events.h"
 #include "tcp_stats.h"
 #include "socket_lookup.h"
-#include "globals.h"
+#include "skb.h"
 
-const volatile struct cali_tc_globals __globals;
 SEC("classifier/tc/calico_tcp_stats")
 int calico_tcp_stats(struct __sk_buff *skb)
 {
