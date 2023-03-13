@@ -15,6 +15,9 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
+// Timeout for all requests to this API.
+const timeout = 20 * time.Second
+
 func NewHandler(lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse the request.
@@ -24,7 +27,7 @@ func NewHandler(lsclient client.Client) http.Handler {
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
 
 		items, err := lsclient.AuditLogs(cluster).List(ctx, params)
@@ -39,6 +42,15 @@ func NewHandler(lsclient client.Client) http.Handler {
 }
 
 func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, string, error) {
+	if r.Method != http.MethodPost {
+		logrus.WithError(middleware.ErrInvalidMethod).Info("Invalid http method.")
+		return nil, "", &httputils.HttpStatusError{
+			Status: http.StatusMethodNotAllowed,
+			Msg:    middleware.ErrInvalidMethod.Error(),
+			Err:    middleware.ErrInvalidMethod,
+		}
+	}
+
 	type auditRequest struct {
 		v1.AuditLogParams `json:",inline"`
 		Page              int `json:"page"`
@@ -51,7 +63,7 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, s
 			logrus.WithError(e.Err).Info(e.Msg)
 			return nil, "", e
 		} else {
-			logrus.WithError(e.Err).Info("Error validating process requests.")
+			logrus.WithError(e.Err).Info("Error validating audit requests.")
 			return nil, "", &httputils.HttpStatusError{
 				Status: http.StatusBadRequest,
 				Msg:    http.StatusText(http.StatusInternalServerError),

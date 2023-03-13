@@ -270,11 +270,11 @@ func TestAuditLogFiltering(t *testing.T) {
 		{
 			Name: "should filter based on type",
 			Params: v1.AuditLogParams{
-				Kinds: []v1.Kind{v1.KindNetworkPolicy},
-				Type:  v1.AuditLogTypeKube,
+				Type: v1.AuditLogTypeKube,
 			},
 			ExpectLog1: false,
 			ExpectLog2: false,
+			ExpectKube: true,
 		},
 		{
 			Name: "should filter based on kind",
@@ -347,9 +347,9 @@ func TestAuditLogFiltering(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		// Each testcase creates multiple flow logs, and then uses
+		// Each testcase creates multiple audit logs, and then uses
 		// different filtering parameters provided in the params
-		// to query one or more flow logs.
+		// to query one or more audit logs.
 		t.Run(testcase.Name, func(t *testing.T) {
 			defer setupTest(t)()
 
@@ -521,7 +521,7 @@ func TestAuditLogFiltering(t *testing.T) {
 			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_audit_*")
 			require.NoError(t, err)
 
-			// Query for flow logs.
+			// Query for audit logs.
 			r, err := b.List(ctx, clusterInfo, &testcase.Params)
 			require.NoError(t, err)
 			require.Len(t, r.Items, numExpected(testcase))
