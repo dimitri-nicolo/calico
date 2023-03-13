@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/howeyc/fsnotify"
+	"github.com/fsnotify/fsnotify"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nmrshll/go-cp"
 	"github.com/prometheus/common/log"
@@ -274,7 +274,7 @@ func Install() error {
 		go func() {
 			for {
 				select {
-				case <-watcher.Event:
+				case <-watcher.Events:
 					logrus.Infoln("Updating installed secrets at:", time.Now().String())
 					files, err := os.ReadDir(c.TLSAssetsDir)
 					if err != nil {
@@ -286,13 +286,13 @@ func Install() error {
 							continue
 						}
 					}
-				case err := <-watcher.Error:
+				case err := <-watcher.Errors:
 					logrus.Fatal(err)
 				}
 			}
 		}()
 
-		err = watcher.Watch(filename)
+		err = watcher.Add(filename)
 		if err != nil {
 			logrus.Fatal(err)
 		}

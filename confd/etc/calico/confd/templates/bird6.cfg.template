@@ -35,8 +35,17 @@ template kernel kernel_template {
   import all;
 }
 
+{{- $ignored_interfaces := ""}}
+{{- $node_ignored_interfaces_key := printf "/host/%s/ignored_interfaces" (getenv "NODENAME")}}
+{{- if exists $node_ignored_interfaces_key }}{{$ignored_interfaces = getv $node_ignored_interfaces_key}}
+{{- else if exists "/global/ignored_interfaces" }}{{$ignored_interfaces = getv "/global/ignored_interfaces"}}
+{{- end}}
+
 template direct direct_template {
 {{- template "LOGGING"}}
+{{- if ne "" $ignored_interfaces}}{{$ifaces := split $ignored_interfaces ","}}
+  interface {{range $ifaces}}-"{{.}}", {{end}}-"cali*", -"kube-ipvs*", "*";
+{{- else}}
   interface -"cali*", -"kube-ipvs*", "*"; # Exclude cali* and kube-ipvs* but
                                           # include everything else.  In
                                           # IPVS-mode, kube-proxy creates a
@@ -46,6 +55,7 @@ template direct direct_template {
                                           # cluster IP. We use static routes
                                           # for when we legitimately want to
                                           # export cluster IPs.
+{{- end}}
 }
 
 {{- $node_ip_key := printf "/bgp/v1/host/%s/ip_addr_v4" $node_name }}{{$node_ip := getv $node_ip_key}}

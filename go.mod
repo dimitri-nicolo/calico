@@ -34,6 +34,7 @@ require (
 	github.com/elastic/go-elasticsearch/v7 v7.17.7
 	github.com/envoyproxy/go-control-plane v0.10.1
 	github.com/florianl/go-nfqueue v1.2.0
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-chi/chi/v5 v5.0.8
@@ -53,7 +54,6 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87
-	github.com/howeyc/fsnotify v0.9.0
 	github.com/hpcloud/tail v1.0.0
 	github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07
 	github.com/jarcoal/httpmock v1.3.0
@@ -214,7 +214,6 @@ require (
 	github.com/felixge/fgprof v0.9.3 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
-	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/zapr v1.2.3 // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect

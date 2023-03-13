@@ -18,13 +18,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
-	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+
+	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -85,6 +84,8 @@ var interestingPaths = []string{
 	"/calico/felix/v2//foo/host",
 	"/calico/felix/v2/region-Europe/host/h1/status",
 	"/calico/resources/v3/projectcalico.org/foo/bar/baz",
+	// Note: using % encoding in some areas where we don't really expect it here, but the parser
+	// does handle it, and it helps to prime the fuzzer.
 	"/bar/v1/host/foobar/workload/open%2fstack/work%2fload/endpoint/end%2fpoint",
 	"/calico/v1/host/foobar/workload/open%2fstack/work%2fload/endpoint/end%2fpoint",
 	"/calico/resources/v3/projectcalico.org/felixconfigurations/default",
