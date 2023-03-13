@@ -182,7 +182,7 @@ func StartSingleNodeTopology(options TopologyOptions, infra DatastoreInfra) (fel
 //     index in the returned array.  When creating workloads, use IPs from the relevant block.
 //   - Configures the Tunnel IP for each host as 10.65.x.1.
 func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (felixes []*Felix, client client.Interface) {
-	log.Infof("Starting a %d-node topology.", n)
+	log.WithField("options", opts).Infof("Starting a %d-node topology", n)
 	success := false
 	var err error
 	startTime := time.Now()
@@ -201,6 +201,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 	if opts.VXLANMode == "" {
 		opts.VXLANMode = api.VXLANModeNever
 	}
+
 	// Get client.
 	client = infra.GetCalicoClient()
 	mustInitDatastore(client)
@@ -304,7 +305,6 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 			kdd.SetExternalIP(felix, i)
 			expectedIPs = append(expectedIPs, felix.ExternalIP)
 		}
-
 		setUpBGPNodeIPAndIPIPTunnelIP := n > 1 || opts.NeedNodeIP
 		if opts.IPIPEnabled {
 			infra.SetExpectedIPIPTunnelAddr(felix, i, setUpBGPNodeIPAndIPIPTunnelIP)

@@ -63,7 +63,7 @@ type Felix struct {
 	// IP of the Typha that this Felix is using (if any).
 	TyphaIP string
 
-	// If sets, acts like an external IP of a node. Filled in by SetExternalIP().
+	// If set, acts like an external IP of a node. Filled in by SetExternalIP().
 	ExternalIP string
 
 	startupDelayed   bool
