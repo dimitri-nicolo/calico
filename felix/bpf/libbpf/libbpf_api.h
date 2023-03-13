@@ -128,6 +128,7 @@ int bpf_link_destroy(struct bpf_link *link) {
 }
 
 void bpf_tc_set_globals(struct bpf_map *map,
+			char *iface_name,
 			uint host_ip,
 			uint intf_ip,
 			uint ext_to_svc_mark,
@@ -161,6 +162,9 @@ void bpf_tc_set_globals(struct bpf_map *map,
 		.egw_vxlan_port = egw_vxlan_port,
 		.egw_health_port = egw_health_port,
 	};
+
+	strncpy(data.iface_name, iface_name, sizeof(data.iface_name));
+	data.iface_name[sizeof(data.iface_name)-1] = '\0';
 
 	set_errno(bpf_map__set_initial_value(map, (void*)(&data), sizeof(data)));
 }

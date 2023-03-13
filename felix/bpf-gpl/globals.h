@@ -19,6 +19,7 @@ struct cali_tc_globals {
 	__be16 wg_port;
 	__u32 natin_idx;
 	__u32 natout_idx;
+	__u8 iface_name[16];
 	__be16 egw_vxlan_port;
 	__be16 egw_health_port;
 };
