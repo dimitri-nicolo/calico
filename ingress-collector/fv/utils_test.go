@@ -13,11 +13,11 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/tigera/ingress-collector/pkg/collector"
-	"github.com/tigera/ingress-collector/pkg/config"
-	"github.com/tigera/ingress-collector/pkg/felixclient"
-	"github.com/tigera/ingress-collector/proto"
-	"github.com/tigera/ingress-collector/uds"
+	"github.com/projectcalico/calico/ingress-collector/pkg/collector"
+	"github.com/projectcalico/calico/ingress-collector/pkg/config"
+	"github.com/projectcalico/calico/ingress-collector/pkg/felixclient"
+	"github.com/projectcalico/calico/ingress-collector/proto"
+	"github.com/projectcalico/calico/ingress-collector/uds"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )

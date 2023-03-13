@@ -12,7 +12,7 @@ import (
 	"github.com/hpcloud/tail"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/ingress-collector/pkg/config"
+	"github.com/projectcalico/calico/ingress-collector/pkg/config"
 )
 
 const INGRESSLOGJSONPREFIX = "tigera_secure_ee_ingress:"

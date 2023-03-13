@@ -5,7 +5,7 @@ package collector
 import (
 	"context"
 
-	"github.com/tigera/ingress-collector/pkg/config"
+	"github.com/projectcalico/calico/ingress-collector/pkg/config"
 )
 
 type IngressCollector interface {

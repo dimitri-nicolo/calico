@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/ingress-collector/pkg/config"
+	"github.com/projectcalico/calico/ingress-collector/pkg/config"
 )
 
 var (
