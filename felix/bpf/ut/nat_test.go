@@ -589,8 +589,6 @@ func TestNATNodePort(t *testing.T) {
 		Expect(res.Retval).To(Equal(resTC_ACT_SHOT))
 	})
 
-	hostIP = net.IPv4(0, 0, 0, 0) // workloads do not have it set
-
 	skbMark = tcdefs.MarkSeen
 
 	// Insert the reverse route for backend for RPF check.
@@ -662,7 +660,7 @@ func TestNATNodePort(t *testing.T) {
 		ipv4L := pktR.Layer(layers.LayerTypeIPv4)
 		Expect(ipv4L).NotTo(BeNil())
 		ipv4R := ipv4L.(*layers.IPv4)
-		Expect(ipv4R.SrcIP.String()).To(Equal(natIP.String()))
+		Expect(ipv4R.SrcIP.String()).To(Equal(hostIP.String()))
 		Expect(ipv4R.DstIP.String()).To(Equal(node1ip.String()))
 
 		checkVxlan(pktR)
@@ -672,7 +670,7 @@ func TestNATNodePort(t *testing.T) {
 
 	dumpCTMap(ctMap)
 
-	expectMark(tcdefs.MarkSeenBypassForwardSourceFixup)
+	expectMark(tcdefs.MarkSeen)
 
 	hostIP = node2ip
 
