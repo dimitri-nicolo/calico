@@ -38,33 +38,35 @@ import (
 )
 
 type AttachPoint struct {
-	Type                    EndpointType
-	ToOrFrom                ToOrFromEp
-	Hook                    bpf.Hook
-	Iface                   string
-	LogLevel                string
-	HostIP                  net.IP
-	HostTunnelIP            net.IP
-	IntfIP                  net.IP
-	FIB                     bool
-	ToHostDrop              bool
-	DSR                     bool
-	TunnelMTU               uint16
-	VXLANPort               uint16
-	WgPort                  uint16
-	ExtToServiceConnmark    uint32
+	Type                 EndpointType
+	ToOrFrom             ToOrFromEp
+	Hook                 bpf.Hook
+	Iface                string
+	LogLevel             string
+	HostIP               net.IP
+	HostTunnelIP         net.IP
+	IntfIP               net.IP
+	FIB                  bool
+	ToHostDrop           bool
+	DSR                  bool
+	TunnelMTU            uint16
+	VXLANPort            uint16
+	WgPort               uint16
+	ExtToServiceConnmark uint32
+	PSNATStart           uint16
+	PSNATEnd             uint16
+	IPv6Enabled          bool
+	MapSizes             map[string]uint32
+	RPFEnforceOption     uint8
+	NATin                uint32
+	NATout               uint32
+
+	// EE only
 	VethNS                  uint16
 	EnableTCPStats          bool
 	IsEgressGateway         bool
 	IsEgressClient          bool
 	ForceReattach           bool
-	PSNATStart              uint16
-	PSNATEnd                uint16
-	IPv6Enabled             bool
-	MapSizes                map[string]uint32
-	RPFStrictEnabled        bool
-	NATin                   uint32
-	NATout                  uint32
 	EGWVxlanPort            uint16
 	EgressIPEnabled         bool
 	EgressGatewayHealthPort uint16
@@ -534,13 +536,24 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		return err
 	}
 
+	if ap.IPv6Enabled {
+		globalData.Flags |= libbpf.GlobalsIPv6Enabled
+	}
+
+	switch ap.RPFEnforceOption {
+	case tcdefs.RPFEnforceOptionStrict:
+		globalData.Flags |= libbpf.GlobalsRPFOptionEnabled
+		globalData.Flags |= libbpf.GlobalsRPFOptionStrict
+	case tcdefs.RPFEnforceOptionLoose:
+		globalData.Flags |= libbpf.GlobalsRPFOptionEnabled
+	}
+
+	// EE only
+
 	if ap.EgressIPEnabled {
 		globalData.Flags |= libbpf.GlobalsEgressIPEnabled
 	}
 
-	if ap.IPv6Enabled {
-		globalData.Flags |= libbpf.GlobalsIPv6Enabled
-	}
 	if ap.EnableTCPStats {
 		globalData.Flags |= libbpf.GlobalsTCPStatsEnabled
 	}

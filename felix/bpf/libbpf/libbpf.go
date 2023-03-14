@@ -368,7 +368,8 @@ const (
 	GlobalsTCPStatsEnabled  uint32 = C.CALI_GLOBALS_TCP_STATS_ENABLED
 	GlobalsIsEgressGateway  uint32 = C.CALI_GLOBALS_IS_EGRESS_GATEWAY
 	GlobalsIsEgressClient   uint32 = C.CALI_GLOBALS_IS_EGRESS_CLIENT
-	GlobalsRPFStrictEnabled uint32 = C.CALI_GLOBALS_RPF_STRICT_ENABLED
+	GlobalsRPFOptionEnabled uint32 = C.CALI_GLOBALS_RPF_OPTION_ENABLED
+	GlobalsRPFOptionStrict  uint32 = C.CALI_GLOBALS_RPF_OPTION_STRICT
 	GlobalsEgressIPEnabled  uint32 = C.CALI_GLOBALS_IS_EGRESS_IP_ENABLED
 )
 

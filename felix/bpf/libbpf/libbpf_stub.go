@@ -111,8 +111,9 @@ const (
 	GlobalsTCPStatsEnabled  uint32 = 2
 	GlobalsIsEgressGateway  uint32 = 4
 	GlobalsIsEgressClient   uint32 = 8
-	GlobalsRPFStrictEnabled uint32 = 16
-	GlobalsEgressIPEnabled  uint32 = 32
+	GlobalsRPFOptionEnabled uint32 = 16
+	GlobalsRPFOptionStrict  uint32 = 32
+	GlobalsEgressIPEnabled  uint32 = 12345
 )
 
 func TcSetGlobals(_ *Map, globalData *TcGlobalData) error {
