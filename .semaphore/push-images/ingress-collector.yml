@@ -1,5 +1,5 @@
 version: v1.0
-name: Publish intrusion-detection-controller images
+name: Publish ingress-collector images
 agent:
   machine:
     type: e1-standard-2
@@ -11,7 +11,7 @@ execution_time_limit:
 blocks:
   # Build and push images.
   # We'll only do this on non-PR builds, where we have credentials to do so.
-  - name: "Publish intrusion-detection-controller images"
+  - name: "Publish ingress-collector images"
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
@@ -37,13 +37,9 @@ blocks:
       - name: docker
       - name: google-service-account-for-gcr
       jobs:
-      - name: "intrusion-detection-controller"
+      - name: "ingress-collector"
         env_vars:
         - name: DEV_REGISTRIES
           value: gcr.io/unique-caldron-775/cnx/tigera
         commands:
-        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C intrusion-detection-controller image-all cd CONFIRM=true; fi
-        # Run CD for the cloud build of intrusion-detection-controller.
-        - make -C intrusion-detection-controller clean
-        - export TESLA=true
-        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C intrusion-detection-controller image-all cd CONFIRM=true; fi
+        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C ingress-collector image-all cd CONFIRM=true; fi

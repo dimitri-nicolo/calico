@@ -95,6 +95,10 @@ promotions:
   pipeline_file: push-images/honeypod-prototype.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push ingress-collector images
+  pipeline_file: push-images/ingress-collector.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push intrusion-detection-controller images
   pipeline_file: push-images/intrusion-detection-controller.yml
   auto_promote:
@@ -927,6 +931,21 @@ blocks:
       - name: "honeypod-prototype tests"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: 'ingress-collector'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/logutils/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd ingress-collector
+    jobs:
+    - name: "ingress-collector tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: 'intrusion-detection-controller'
   run:
