@@ -131,16 +131,26 @@ func (t *TCPDump) readStdout() {
 		logEnabled := t.logEnabled
 		t.lock.Unlock()
 
-		if logEnabled {
-			logrus.Infof("[%s] %s", t.containerName, line)
-		}
 		t.lock.Lock()
-		for _, m := range t.matchers {
+		hits := map[string]int{}
+		for name, m := range t.matchers {
 			if m.regex.MatchString(line) {
 				m.count++
+				hits[name] = m.count
 			}
 		}
 		t.lock.Unlock()
+
+		if logEnabled {
+			hitsStr := ""
+			if len(hits) > 0 {
+				hitsStr = "HIT: "
+				for n, c := range hits {
+					hitsStr += fmt.Sprint(n, ":", c, " ")
+				}
+			}
+			logrus.Infof("[%s] %s %v", t.containerName, line, hitsStr)
+		}
 	}
 	logrus.WithError(s.Err()).Info("TCPDump stdout finished")
 }
