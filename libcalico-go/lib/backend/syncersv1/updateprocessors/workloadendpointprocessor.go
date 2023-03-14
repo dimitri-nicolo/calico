@@ -16,6 +16,7 @@ package updateprocessors
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -50,7 +51,6 @@ func ConvertWorkloadEndpointV3ToV1Key(v3key model.ResourceKey) (model.Key, error
 		WorkloadID:     v3key.Namespace + "/" + parts[2],
 		EndpointID:     parts[3],
 	}, nil
-
 }
 
 func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
@@ -189,8 +189,14 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 			_, ipn, err := cnet.ParseCIDROrIP(prefix)
 			if err != nil {
 				return nil, err
+			} else if ipn == nil {
+				return nil, fmt.Errorf("failed to parse AllowSpoofedSourcePrefix (%s)", prefix)
 			}
-			allowedSources = append(allowedSources, *(ipn.Network()))
+			nw := ipn.Network()
+			if nw == nil {
+				return nil, fmt.Errorf("failed to parse AllowSpoofedSourcePrefix (%s) to network", prefix)
+			}
+			allowedSources = append(allowedSources, *nw)
 		}
 	}
 

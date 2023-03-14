@@ -61,6 +61,10 @@ struct bpf_map_def_extended {
 #define CALI_TC_NAT_IF	(1<<7)
 #define CALI_TC_LO	(1<<8)
 
+/* EE only */
+#define CALI_KPROBE	(1<<24)
+#define CALI_STATS	(1<<25)
+
 #ifndef CALI_DROP_WORKLOAD_TO_HOST
 #define CALI_DROP_WORKLOAD_TO_HOST false
 #endif
@@ -98,6 +102,10 @@ struct bpf_map_def_extended {
 #define CALI_F_CGROUP	(((CALI_COMPILE_FLAGS) & CALI_CGROUP) != 0)
 #define CALI_F_DSR	(CALI_COMPILE_FLAGS & CALI_TC_DSR)
 
+/* EE only */
+#define CALI_F_KPROBE	(((CALI_COMPILE_FLAGS) & CALI_KPROBE) != 0)
+#define CALI_F_STATS	(((CALI_COMPILE_FLAGS) & CALI_STATS) != 0)
+
 #define CALI_RES_REDIR_BACK	108 /* packet should be sent back the same iface */
 #define CALI_RES_REDIR_IFINDEX	109 /* packet should be sent straight to
 				     * state->ct_result->ifindex_fwd
@@ -116,10 +124,10 @@ struct bpf_map_def_extended {
 static CALI_BPF_INLINE void __compile_asserts(void) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-local-typedef"
-	/* Either CALI_CGROUP is set or the other TC flags */
+	/* Either CALI_CGROUP or CALI_KPROBE or CALI_STATS is set or the other TC flags */
 	COMPILE_TIME_ASSERT(
 		CALI_COMPILE_FLAGS == 0 ||
-		!!(CALI_COMPILE_FLAGS & CALI_CGROUP) !=
+		!!(CALI_COMPILE_FLAGS & (CALI_CGROUP | CALI_KPROBE | CALI_STATS)) !=
 		!!(CALI_COMPILE_FLAGS & (CALI_TC_HOST_EP | CALI_TC_INGRESS | CALI_TC_TUNNEL | CALI_TC_DSR | CALI_XDP_PROG))
 	);
 	COMPILE_TIME_ASSERT(!CALI_F_DSR || (CALI_F_DSR && CALI_F_FROM_WEP) || (CALI_F_DSR && CALI_F_HEP));
@@ -176,12 +184,8 @@ enum calico_skb_mark {
 	/* "BYPASS_FWD" is a special case of "BYPASS" used when a packet returns from one of our
 	 * VXLAN tunnels.  It tells the downstream program to forward the packet. */
 	CALI_SKB_MARK_BYPASS_FWD             = CALI_SKB_MARK_BYPASS  | 0x00300000,
-	/* "BYPASS_FWD_SRC_FIXUP" is a special case of "BYPASS" used when a from-workload program
-	 * is returning a packet to our VXLAN tunnel.  The from-workload program does the encapsulation
-	 * but, due to RPF, it cannot set the source IP of the outer IP header.  The mark bit
-	 * tells the downstream HEP program to fix up the source IP to be the host IP as it leaves the
-	 * host namespace. */
-	CALI_SKB_MARK_BYPASS_FWD_SRC_FIXUP   = CALI_SKB_MARK_BYPASS  | 0x00500000,
+	/* Now unused mark */
+	CALI_SKB_MARK_free_to_use            = CALI_SKB_MARK_BYPASS  | 0x00500000,
 	CALI_SKB_MARK_BYPASS_MASK            = CALI_SKB_MARK_SEEN_MASK | 0x02700000,
 	/* The FALLTHROUGH bit is used by programs that are towards the host namespace to indicate
 	 * that the packet is not known in BPF conntrack. We have iptables rules to drop or allow
@@ -251,7 +255,7 @@ static CALI_BPF_INLINE void ip_dec_ttl(struct iphdr *ip)
 
 #if !defined(__BPFTOOL_LOADER__) && (!CALI_F_XDP)
 
-#if !CALI_F_CGROUP
+#if !CALI_F_CGROUP && !CALI_F_KPROBE && !CALI_F_STATS
 extern const volatile struct cali_tc_globals __globals;
 #endif
 
@@ -369,5 +373,6 @@ struct {										\
 #define CALI_MAP_V1(name, map_type, key_type, val_type, size, flags, pin)		\
 		CALI_MAP(name,, map_type, key_type, val_type, size, flags, pin)
 
+char ____license[] __attribute__((section("license"), used)) = "GPL";
 
 #endif /* __CALI_BPF_H__ */

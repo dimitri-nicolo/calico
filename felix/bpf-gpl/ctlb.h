@@ -1,3 +1,7 @@
+// Project Calico BPF dataplane programs.
+// Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+
 #ifndef _CTLB_H_
 #define _CTLB_H_
 

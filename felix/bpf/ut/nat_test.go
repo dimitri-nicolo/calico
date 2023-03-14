@@ -456,7 +456,7 @@ func TestNATNodePort(t *testing.T) {
 	Expect(v.Type()).To(Equal(conntrack.TypeNATReverse))
 	Expect(v.Flags()).To(Equal(conntrack3.FlagNATNPFwd))
 
-	expectMark(tcdefs.MarkSeenBypassForwardSourceFixup)
+	expectMark(tcdefs.MarkSeenBypassForward)
 	// Leaving node 1
 	runBpfTest(t, "calico_to_host_ep", nil, func(bpfrun bpfProgRunFn) {
 		res, err := bpfrun(encapedPkt)
@@ -589,8 +589,6 @@ func TestNATNodePort(t *testing.T) {
 		Expect(res.Retval).To(Equal(resTC_ACT_SHOT))
 	})
 
-	hostIP = net.IPv4(0, 0, 0, 0) // workloads do not have it set
-
 	skbMark = tcdefs.MarkSeen
 
 	// Insert the reverse route for backend for RPF check.
@@ -662,7 +660,7 @@ func TestNATNodePort(t *testing.T) {
 		ipv4L := pktR.Layer(layers.LayerTypeIPv4)
 		Expect(ipv4L).NotTo(BeNil())
 		ipv4R := ipv4L.(*layers.IPv4)
-		Expect(ipv4R.SrcIP.String()).To(Equal(natIP.String()))
+		Expect(ipv4R.SrcIP.String()).To(Equal(hostIP.String()))
 		Expect(ipv4R.DstIP.String()).To(Equal(node1ip.String()))
 
 		checkVxlan(pktR)
@@ -672,7 +670,7 @@ func TestNATNodePort(t *testing.T) {
 
 	dumpCTMap(ctMap)
 
-	expectMark(tcdefs.MarkSeenBypassForwardSourceFixup)
+	expectMark(tcdefs.MarkSeen)
 
 	hostIP = node2ip
 
@@ -806,7 +804,7 @@ func TestNATNodePort(t *testing.T) {
 		checkVxlanEncap(pktR, false, ipv4, udp, payload)
 	})
 
-	expectMark(tcdefs.MarkSeenBypassForwardSourceFixup)
+	expectMark(tcdefs.MarkSeenBypassForward)
 
 	/*
 	 * TEST that unknown VNI is passed through
@@ -1146,7 +1144,7 @@ func TestNATNodePortMultiNIC(t *testing.T) {
 
 	var encapedPkt []byte
 
-	hostIP = node1ip2
+	hostIP = node1ip
 	skbMark = 0
 
 	// Setup routing
@@ -1208,7 +1206,7 @@ func TestNATNodePortMultiNIC(t *testing.T) {
 
 	dumpCTMap(ctMap)
 
-	expectMark(tcdefs.MarkSeenBypassForwardSourceFixup)
+	expectMark(tcdefs.MarkSeenBypassForward)
 
 	hostIP = node1ip
 	var encapedGoPkt gopacket.Packet
@@ -1916,7 +1914,7 @@ func TestNATNodePortIngressDSR(t *testing.T) {
 
 		checkVxlanEncap(pktR, false, ipv4, udp, payload)
 	})
-	expectMark(tcdefs.MarkSeenBypassForwardSourceFixup)
+	expectMark(tcdefs.MarkSeenBypassForward)
 
 	dumpCTMap(ctMap)
 

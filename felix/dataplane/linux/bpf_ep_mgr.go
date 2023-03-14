@@ -668,6 +668,7 @@ func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceUpdate) {
 					log.WithError(err).Warnf("Failed to set rp_filter for %s.", update.Name)
 				}
 			}
+			_ = m.dp.setAcceptLocal(update.Name, true)
 			if _, hostEpConfigured := m.hostIfaceToEpMap[update.Name]; m.wildcardExists && !hostEpConfigured {
 				log.Debugf("Map host-* endpoint for %v", update.Name)
 				m.addHEPToIndexes(update.Name, &m.wildcardHostEndpoint)
@@ -947,7 +948,7 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 			if err == nil {
 				// This is required to allow NodePort forwarding with
 				// encapsulation with the host's IP as the source address
-				err = m.dp.setAcceptLocal(iface, true)
+				_ = m.dp.setAcceptLocal(iface, true)
 			}
 			mutex.Lock()
 			errs[iface] = err
@@ -1017,7 +1018,7 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 			defer sem.Release(1)
 			err := m.applyPolicy(ifaceName)
 			if err == nil {
-				err = m.dp.setAcceptLocal(ifaceName, true)
+				_ = m.dp.setAcceptLocal(ifaceName, true)
 			}
 			mutex.Lock()
 			errs[ifaceName] = err
@@ -1187,9 +1188,14 @@ func isLinkNotFoundError(err error) bool {
 var calicoRouterIP = net.IPv4(169, 254, 1, 1).To4()
 
 func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *proto.WorkloadEndpoint, polDirection PolDirection) error {
+
+	if m.hostIP == nil {
+		// Do not bother and wait
+		return fmt.Errorf("unknown host IP")
+	}
+
 	ap := m.calculateTCAttachPoint(polDirection, ifaceName)
-	// Host side of the veth is always configured as 169.254.1.1.
-	ap.HostIP = calicoRouterIP
+	ap.HostIP = m.hostIP
 	// * Since we don't pass packet length when doing fib lookup, MTU check is skipped.
 	// * Hence it is safe to set the tunnel mtu same as veth mtu
 	ap.TunnelMTU = uint16(m.vxlanMTU)
@@ -1278,6 +1284,12 @@ func (m *bpfEndpointManager) ifaceIsUp(ifaceName string) (up bool) {
 }
 
 func (m *bpfEndpointManager) attachDataIfaceProgram(ifaceName string, ep *proto.HostEndpoint, polDirection PolDirection) error {
+
+	if m.hostIP == nil {
+		// Do not bother and wait
+		return fmt.Errorf("unknown host IP")
+	}
+
 	ap := m.calculateTCAttachPoint(polDirection, ifaceName)
 	ap.HostIP = m.hostIP
 	ap.TunnelMTU = uint16(m.vxlanMTU)

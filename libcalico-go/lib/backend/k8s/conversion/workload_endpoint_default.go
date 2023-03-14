@@ -238,13 +238,24 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 	}
 
 	// Handle source IP spoofing annotation
-	var requestedSourcePrefixes []string
+	var sourcePrefixes []string
 	if annotation, ok := pod.Annotations["cni.projectcalico.org/allowedSourcePrefixes"]; ok && annotation != "" {
 		// Parse Annotation data
+		var requestedSourcePrefixes []string
 		err := json.Unmarshal([]byte(annotation), &requestedSourcePrefixes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse '%s' as JSON: %s", annotation, err)
 		}
+
+		// Filter out any invalid entries and normalize the CIDRs.
+		for _, prefix := range requestedSourcePrefixes {
+			if _, n, err := cnet.ParseCIDR(prefix); err != nil {
+				return nil, fmt.Errorf("failed to parse '%s' as a CIDR: %s", prefix, err)
+			} else {
+				sourcePrefixes = append(sourcePrefixes, n.String())
+			}
+		}
+
 	}
 
 	// Map any named ports through.
@@ -319,7 +330,7 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		AWSElasticIPs:              awsElasticIPs,
 		EgressGateway:              egressAnnotationsToV3Spec(pod.Annotations),
 		ServiceAccountName:         pod.Spec.ServiceAccountName,
-		AllowSpoofedSourcePrefixes: requestedSourcePrefixes,
+		AllowSpoofedSourcePrefixes: sourcePrefixes,
 		ExternalNetworkNames:       externalNetworks,
 	}
 	wep.Status = libapiv3.WorkloadEndpointStatus{

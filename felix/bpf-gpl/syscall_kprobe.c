@@ -2,9 +2,11 @@
 // Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
-#include <linux/in.h>
+#include "bpf.h"
 #include "events_kprobe.h"
 #include "kprobe.h"
+
+#include <linux/in.h>
 #include <bpf_helpers.h>
 #include <bpf_tracing.h>
 
@@ -56,6 +58,3 @@ int BPF_KPROBE(__x64_sys_execve)
 	}
         return 0;
 }
-
-char ____license[] __attribute__((section("license"), used)) = "GPL";
-

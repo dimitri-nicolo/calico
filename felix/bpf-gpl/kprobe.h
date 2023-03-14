@@ -5,6 +5,8 @@
 #ifndef __CALI_KPROBE_H__
 #define __CALI_KPROBE_H__
 
+#include <linux/in.h>
+
 #include "bpf.h"
 #include "tracing.h"
 
