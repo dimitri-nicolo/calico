@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -16,9 +16,8 @@ import (
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 	"github.com/projectcalico/calico/l7-collector/pkg/felixclient"
 	"github.com/projectcalico/calico/l7-collector/proto"
-	"github.com/projectcalico/calico/l7-collector/uds"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/uds"
 )
 
 const ListenerSocket = "policysync.sock"

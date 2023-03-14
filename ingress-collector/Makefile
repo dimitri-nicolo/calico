@@ -22,7 +22,7 @@ LDFLAGS=-X main.VERSION=$(GIT_VERSION) \
 
 SRC_FILES=$(shell find cmd pkg uds -name '*.go') \
 	$(shell find ../felix/proto -name '*.go') \
-	$(shell find ../libcalico-go/lib/logutils -name '*.go')
+	$(shell find ../libcalico-go/lib -name '*.go')
 
 .PHONY: build
 build: bin/ingress-collector-$(ARCH)

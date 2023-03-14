@@ -647,7 +647,7 @@ blocks:
 
 - name: "app-policy"
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/app-policy/', '/felix/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     prologue:
@@ -934,7 +934,7 @@ blocks:
 
 - name: 'ingress-collector'
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/logutils/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:
@@ -964,7 +964,7 @@ blocks:
 
 - name: "l7-collector"
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/l7-collector/', '/libcalico-go/lib/testutils'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/l7-collector/', '/libcalico-go/lib/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     prologue:

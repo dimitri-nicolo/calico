@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package main
 
@@ -10,7 +10,7 @@ import (
 	"github.com/projectcalico/calico/l7-collector/pkg/collector"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 	"github.com/projectcalico/calico/l7-collector/pkg/felixclient"
-	"github.com/projectcalico/calico/l7-collector/uds"
+	"github.com/projectcalico/calico/libcalico-go/lib/uds"
 )
 
 func main() {
