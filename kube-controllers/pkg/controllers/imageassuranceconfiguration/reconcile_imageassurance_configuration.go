@@ -319,7 +319,7 @@ func (c *reconciler) createServiceAccountWithToken(saName, tokenSecretName, name
 		}
 		log.Debugf("Recreating invalid token for %s/%s.", secret.Name, secret.Namespace)
 
-		tokenRequest := getTokenRequestDefinitionWithSecret(tokenSecretName, namespace, secret)
+		tokenRequest := getTokenRequestDefinitionWithSecret(saName, namespace, secret)
 		tokenResp, err := resource.WriteServiceAccountTokenRequestToK8s(c.managementK8sCLI, tokenRequest, sa.Name)
 		if err != nil {
 			return nil, nil, err
