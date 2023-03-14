@@ -41,7 +41,9 @@ type LogParams interface {
 // QueryParams are request parameters that are shared across all APIs
 type QueryParams struct {
 	// TimeRange will filter data generated within the specified time range
-	TimeRange *lmav1.TimeRange `json:"time_range" validate:"required"`
+	// If omitted, the server will default to an appropriate time range depending on
+	// the requested resource.
+	TimeRange *lmav1.TimeRange `json:"time_range" validate:"omitempty"`
 
 	// Timeout will limit requests to read/write data to the desired duration
 	Timeout *v1.Duration `json:"timeout" validate:"omitempty"`

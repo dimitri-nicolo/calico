@@ -30,14 +30,6 @@ func setupTest(t *testing.T) func() {
 	}
 }
 
-// The expected error returned from the server when there are no parameters provided.
-const errNoInput = `
-{
-  "Status": 400,
-  "Msg": "error with field TimeRange = '\u003cnil\u003e' (Reason: failed to validate Field: TimeRange because of Tag: required )"
-}
-`
-
 // A valid query input that provides the necessary time range parameters.
 const withinTimeRange = `
 {
@@ -61,11 +53,11 @@ func TestL7FlowsHandler(t *testing.T) {
 		want         testResult
 		backendFlows []v1.L7Flow
 	}{
-		// Failure to parse request and validate
+		// OK response, no data
 		{
 			name:         "empty json",
 			reqBody:      "{}",
-			want:         testResult{400, errNoInput},
+			want:         testResult{200, ""},
 			backendFlows: []v1.L7Flow{},
 		},
 

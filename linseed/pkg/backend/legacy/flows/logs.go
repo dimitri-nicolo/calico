@@ -108,23 +108,10 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 		logs = append(logs, l)
 	}
 
-	// Determine the AfterKey to return.
-	var ak map[string]interface{}
-	if numHits := len(results.Hits.Hits); numHits < opts.QueryParams.GetMaxPageSize() {
-		// We fully satisfied the request, no afterkey.
-		ak = nil
-	} else {
-		// There are more hits, return an afterKey the client can use for pagination.
-		// We add the number of hits to the start from provided on the request, if any.
-		ak = map[string]interface{}{
-			"startFrom": startFrom + len(results.Hits.Hits),
-		}
-	}
-
 	return &v1.List[v1.FlowLog]{
 		Items:     logs,
 		TotalHits: results.TotalHits(),
-		AfterKey:  ak,
+		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom),
 	}, nil
 }
 

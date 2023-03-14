@@ -46,6 +46,18 @@ func (h events) APIS() []handler.API {
 			URL:     EventsPathBulk,
 			Handler: h.Bulk(),
 		},
+		{
+			// Bulk dismissal for events.
+			Method:  "PUT",
+			URL:     EventsPathBulk,
+			Handler: h.Bulk(),
+		},
+		{
+			// Bulk delete for events.
+			Method:  "DELETE",
+			URL:     EventsPathBulk,
+			Handler: h.Bulk(),
+		},
 	}
 }
 
@@ -94,7 +106,7 @@ func (h events) List() http.HandlerFunc {
 
 func (h events) Bulk() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		logs, err := handler.DecodeAndValidateBulkParams[v1.Event](w, req)
+		events, err := handler.DecodeAndValidateBulkParams[v1.Event](w, req)
 		if err != nil {
 			logrus.WithError(err).Error("Failed to decode/validate request parameters")
 			var httpErr *v1.HTTPError
@@ -116,16 +128,40 @@ func (h events) Bulk() http.HandlerFunc {
 			Tenant:  middleware.TenantIDFromContext(req.Context()),
 		}
 
-		response, err := h.backend.Create(ctx, clusterInfo, logs)
+		// The bulk API supports multiple operations. Determine which backend
+		// handler to use.
+		type bulkHandler func(context.Context, bapi.ClusterInfo, []v1.Event) (*v1.BulkResponse, error)
+		var handler bulkHandler
+		switch req.Method {
+		case http.MethodPost:
+			// Create events.
+			handler = h.backend.Create
+		case http.MethodPut:
+			// Dismiss events.
+			handler = h.backend.Dismiss
+		case http.MethodDelete:
+			// Delete events.
+			handler = h.backend.Delete
+		default:
+			// Unsupported method.
+			httputils.JSONError(w, &v1.HTTPError{
+				Msg:    "unsupported method",
+				Status: http.StatusMethodNotAllowed,
+			}, http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Call the chosen handler.
+		response, err := handler(ctx, clusterInfo, events)
 		if err != nil {
-			logrus.WithError(err).Error("Failed to ingest events")
+			logrus.WithError(err).Error("Failed to perform bulk action on events")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
 			}, http.StatusInternalServerError)
 			return
 		}
-		logrus.Debugf("%s response is: %+v", EventsPathBulk, response)
+		logrus.Debugf("%s %s response is: %+v", req.Method, EventsPathBulk, response)
 		httputils.Encode(w, response)
 	}
 }

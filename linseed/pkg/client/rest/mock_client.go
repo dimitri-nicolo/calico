@@ -39,6 +39,14 @@ func (m *MockRESTClient) Post() Request {
 	return m.Verb("POST")
 }
 
+func (m *MockRESTClient) Put() Request {
+	return m.Verb("PUT")
+}
+
+func (m *MockRESTClient) Delete() Request {
+	return m.Verb("DELETE")
+}
+
 // BaseURL should never be used by the mock client.
 func (m *MockRESTClient) BaseURL() string {
 	panic("not implemented")

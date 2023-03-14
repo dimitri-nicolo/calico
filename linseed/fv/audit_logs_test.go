@@ -107,16 +107,16 @@ func TestFV_AuditEE(t *testing.T) {
 		params := v1.AuditLogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
-					From: time.Now().Add(-5 * time.Second),
-					To:   time.Now().Add(5 * time.Second),
+					From: reqTime.Add(-5 * time.Second),
+					To:   reqTime.Add(5 * time.Second),
 				},
 			},
 			Type: v1.AuditLogTypeEE,
 		}
 		resp, err := cli.AuditLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
-
 		require.Len(t, resp.Items, 1)
+
 		// Reset the time as it microseconds to not match perfectly
 		require.NotEqual(t, "", resp.Items[0].RequestReceivedTimestamp)
 		resp.Items[0].RequestReceivedTimestamp = metav1.NewMicroTime(reqTime)
@@ -163,8 +163,8 @@ func TestFV_AuditEE(t *testing.T) {
 		params := v1.AuditLogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
-					From: time.Now().Add(-5 * time.Second),
-					To:   time.Now().Add(5 * time.Second),
+					From: reqTime.Add(-5 * time.Second),
+					To:   reqTime.Add(5 * time.Second),
 				},
 			},
 			Type: v1.AuditLogTypeKube,

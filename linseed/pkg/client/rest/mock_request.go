@@ -86,6 +86,9 @@ type MockResult struct {
 }
 
 func (m *MockResult) body() []byte {
+	if bs, ok := m.Body.([]byte); ok {
+		return bs
+	}
 	bs, err := json.Marshal(m.Body)
 	if err != nil {
 		panic(err)
