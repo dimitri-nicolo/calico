@@ -21,6 +21,7 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/aggregation"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/application"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware/audit"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/event"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/process"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/rawquery"
@@ -48,10 +49,11 @@ var (
 // indices or index patterns from here and these parameters are
 // only required in such cases.
 const (
-	dnsLogsResourceName  = "dns"
-	eventsResourceName   = "events"
-	flowLogsResourceName = "flows"
-	l7ResourceName       = "l7"
+	dnsLogsResourceName   = "dns"
+	eventsResourceName    = "events"
+	flowLogsResourceName  = "flows"
+	l7ResourceName        = "l7"
+	auditLogsResourceName = "audit"
 )
 
 func Start(cfg *Config) error {
@@ -207,7 +209,7 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					event.EventHandler(esClientFactory)))))
+					event.EventHandler(linseed)))))
 	sm.Handle("/events/search",
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,
@@ -218,6 +220,13 @@ func Start(cfg *Config) error {
 						k8sClientSet,
 						linseed,
 					)))))
+
+	sm.Handle("/auditlogs",
+		middleware.ClusterRequestToResource(auditLogsResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					audit.NewHandler(linseed)))))
+
 	sm.Handle("/processes",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,

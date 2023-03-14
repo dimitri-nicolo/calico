@@ -117,4 +117,64 @@ func TestFV_Events(t *testing.T) {
 		resp.Items[0].ID = ""
 		require.Equal(t, events, resp.Items)
 	})
+
+	t.Run("should dismiss and delete events", func(t *testing.T) {
+		defer eventsSetupAndTeardown(t)()
+
+		// Create a basic event.
+		events := []v1.Event{
+			{
+				Time:        time.Now().Unix(),
+				Description: "A rather uneventful evening",
+				Origin:      "TODO",
+				Severity:    1,
+				Type:        "TODO",
+			},
+		}
+		bulk, err := cli.Events(cluster).Create(ctx, events)
+		require.NoError(t, err)
+		require.Equal(t, bulk.Succeeded, 1, "create event did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+
+		// Read it back.
+		params := v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Second),
+					To:   time.Now().Add(5 * time.Second),
+				},
+			},
+		}
+		resp, err := cli.Events(cluster).List(ctx, &params)
+		require.NoError(t, err)
+
+		// The ID should be set, it should not be dismissed.
+		require.NotEqual(t, "", resp.Items[0].ID)
+		require.False(t, resp.Items[0].Dismissed)
+
+		// We should be able to dismiss the event.
+		bulk, err = cli.Events(cluster).Dismiss(ctx, resp.Items)
+		require.NoError(t, err)
+		require.Equal(t, bulk.Succeeded, 1, "dismiss event did not succeed")
+
+		// Reading it back should show the event as dismissed.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+		resp, err = cli.Events(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.Len(t, resp.Items, 1)
+		require.True(t, resp.Items[0].Dismissed)
+
+		// Now, delete the event.
+		bulk, err = cli.Events(cluster).Delete(ctx, resp.Items)
+		require.NoError(t, err)
+		require.Equal(t, bulk.Succeeded, 1, "delete event did not succeed")
+
+		// Reading it back should show the no events.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+		resp, err = cli.Events(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.Len(t, resp.Items, 0)
+	})
 }

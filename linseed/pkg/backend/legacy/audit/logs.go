@@ -15,6 +15,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -107,24 +108,36 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 	switch opts.Type {
 	case v1.AuditLogTypeEE:
 	case v1.AuditLogTypeKube:
+	case v1.AuditLogTypeAny:
 	case "":
 		return nil, fmt.Errorf("no audit log type provided on List request")
 	default:
 		return nil, fmt.Errorf("invalid audit log type: %s", opts.Type)
 	}
 
+	// Get the startFrom param, if any.
+	startFrom, err := logtools.StartFrom(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	// Build the query.
 	query := b.client.Search().
 		Index(b.index(opts.Type, i)).
 		Size(opts.GetMaxPageSize()).
+		From(startFrom).
 		Query(b.buildQuery(i, opts))
+
+	for _, sort := range opts.Sort {
+		query.Sort(sort.Field, !sort.Descending)
+	}
 
 	results, err := query.Do(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	events := []v1.AuditLog{}
+	auditLogs := []v1.AuditLog{}
 	for _, h := range results.Hits.Hits {
 		e := v1.AuditLog{}
 		err = json.Unmarshal(h.Source, &e)
@@ -132,40 +145,113 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 			log.WithError(err).Error("Error unmarshalling audit log")
 			continue
 		}
-		events = append(events, e)
+		auditLogs = append(auditLogs, e)
 	}
 
 	return &v1.List[v1.AuditLog]{
-		TotalHits: int64(len(events)),
-		Items:     events,
-		AfterKey:  nil, // TODO: Support pagination.
+		TotalHits: results.TotalHits(),
+		Items:     auditLogs,
+		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom),
 	}, nil
 }
 
 // buildQuery builds an elastic query using the given parameters.
 func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams) elastic.Query {
-	// Parse times from the request. We default to a time-range query
-	// if no other search parameters are given.
+	query := elastic.NewBoolQuery()
+
+	// Time-range based query.
 	var start, end time.Time
 	if opts.TimeRange != nil {
 		start = opts.TimeRange.From
 		end = opts.TimeRange.To
-	} else {
-		// Default to the latest 5 minute window.
-		start = time.Now().Add(-5 * time.Minute)
-		end = time.Now()
+		query.Filter(elastic.NewRangeQuery("requestReceivedTimestamp").Gt(start).Lte(end))
 	}
-	return elastic.NewRangeQuery("requestReceivedTimestamp").Gt(start).Lte(end)
+
+	// Check if any resource kinds were specified.
+	if len(opts.Kinds) > 0 {
+		values := []interface{}{}
+		for _, a := range opts.Kinds {
+			values = append(values, a)
+		}
+		query.Filter(elastic.NewTermsQuery("objectRef.resource", values...))
+	}
+
+	// Match on author.
+	if len(opts.Authors) > 0 {
+		values := []interface{}{}
+		for _, a := range opts.Authors {
+			values = append(values, a)
+		}
+		query.Filter(elastic.NewTermsQuery("user.username", values...))
+	}
+
+	// Match on verb.
+	if len(opts.Verbs) > 0 {
+		values := []interface{}{}
+		for _, a := range opts.Verbs {
+			values = append(values, a)
+		}
+		query.Must(elastic.NewTermsQuery("verb", values...))
+	}
+
+	// Match on object.
+	if opts.ObjectRef != nil {
+		if opts.ObjectRef.Name != "" {
+			query.Filter(elastic.NewTermQuery("objectRef.name", opts.ObjectRef.Name))
+		}
+		if opts.ObjectRef.Namespace != "" {
+			query.Filter(elastic.NewTermQuery("objectRef.namespace", opts.ObjectRef.Namespace))
+		}
+
+		// Exclude any logs with no object information if an object ref is given.
+		query.MustNot(
+			elastic.NewTermQuery("responseObject.metadata", "{}"),
+			elastic.NewTermQuery("objectRef", "{}"),
+			elastic.NewTermQuery("RequestObject", "{}"),
+		)
+	}
+
+	// Match on response codes.
+	if len(opts.ResponseCodes) > 0 {
+		values := []interface{}{}
+		for _, a := range opts.ResponseCodes {
+			values = append(values, a)
+		}
+		query.Filter(elastic.NewTermsQuery("responseStatus.code", values...))
+	}
+
+	if len(opts.Stages) > 0 {
+		values := []interface{}{}
+		for _, a := range opts.Stages {
+			values = append(values, a)
+		}
+		query.Filter(elastic.NewTermsQuery("stage", values...))
+	}
+
+	if len(opts.Levels) > 0 {
+		values := []interface{}{}
+		for _, a := range opts.Levels {
+			values = append(values, a)
+		}
+		query.Filter(elastic.NewTermsQuery("level", values...))
+	}
+
+	return query
 }
 
 func (b *auditLogBackend) index(kind v1.AuditLogType, i bapi.ClusterInfo) string {
+	base := fmt.Sprintf("tigera_secure_ee_audit_%s", kind)
+	if kind == v1.AuditLogTypeAny {
+		// Return both kube and EE logs.
+		base = "tigera_secure_ee_audit_*"
+	}
 	if i.Tenant != "" {
 		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.%s.*", kind, i.Tenant, i.Cluster)
+		return fmt.Sprintf("%s.%s.%s.*", base, i.Tenant, i.Cluster)
 	}
 
 	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.*", kind, i.Cluster)
+	return fmt.Sprintf("%s.%s.*", base, i.Cluster)
 }
 
 func (b *auditLogBackend) writeAlias(kind v1.AuditLogType, i bapi.ClusterInfo) string {

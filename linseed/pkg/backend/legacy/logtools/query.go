@@ -57,7 +57,7 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (*elas
 }
 
 // StartFrom parses the given parameters to determine which log to start from in the ES query.
-func StartFrom(opts v1.LogParams) (int, error) {
+func StartFrom(opts v1.Params) (int, error) {
 	if ak := opts.GetAfterKey(); ak != nil {
 		if val, ok := ak["startFrom"]; ok {
 			switch v := val.(type) {
@@ -80,4 +80,21 @@ func StartFrom(opts v1.LogParams) (int, error) {
 	}
 	logrus.Trace("Starting query from 0")
 	return 0, nil
+}
+
+// NextStartFromAfterKey generates an AfterKey to use for log queries that use startFrom to pass
+// the document index from which to start the next page of results.
+func NextStartFromAfterKey(opts v1.Params, numHits, prevStartFrom int) map[string]interface{} {
+	var ak map[string]interface{}
+	if numHits < opts.GetMaxPageSize() {
+		// We fully satisfied the request, no afterkey.
+		ak = nil
+	} else {
+		// There are more hits, return an afterKey the client can use for pagination.
+		// We add the number of hits to the start from provided on the request, if any.
+		ak = map[string]interface{}{
+			"startFrom": prevStartFrom + numHits,
+		}
+	}
+	return ak
 }

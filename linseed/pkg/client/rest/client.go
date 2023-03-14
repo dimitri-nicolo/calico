@@ -23,6 +23,8 @@ type RESTClient interface {
 	HTTPClient() *http.Client
 	Verb(string) Request
 	Post() Request
+	Put() Request
+	Delete() Request
 }
 
 type restClient struct {
@@ -111,7 +113,15 @@ func (c *restClient) Verb(verb string) Request {
 }
 
 func (c *restClient) Post() Request {
-	return c.Verb("POST")
+	return c.Verb(http.MethodPost)
+}
+
+func (c *restClient) Put() Request {
+	return c.Verb(http.MethodPut)
+}
+
+func (c *restClient) Delete() Request {
+	return c.Verb(http.MethodDelete)
 }
 
 func (c *restClient) BaseURL() string {

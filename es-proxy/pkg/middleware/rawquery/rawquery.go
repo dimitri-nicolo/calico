@@ -22,11 +22,7 @@ var searchURLPattern *regexp.Regexp = regexp.MustCompile(`^/(.*)/_search$`)
 //  1. HTTP method: POST.
 //  2. HTTP url: /<index>/_search.
 //
-// In Manager, the following pages are still sending raw Elastic search requests.
-//  1. Dashboard page: total alerts count <= Calico Enterprise v3.12.
-//  2. Alert List page: fetch security events <= Calico Enterprise v3.12.
-//  3. Alert List page: fetch Kibana index pattern for logs.
-//  4. Timeline page: fetch audit logs.
+// This is only used for kibana queries now.
 func RawQueryHandler(client *elastic.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// parse raw elastic request.
