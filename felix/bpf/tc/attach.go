@@ -563,9 +563,6 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	if ap.IsEgressClient {
 		globalData.Flags |= libbpf.GlobalsIsEgressClient
 	}
-	if ap.RPFStrictEnabled {
-		globalData.Flags |= libbpf.GlobalsRPFStrictEnabled
-	}
 
 	globalData.HostTunnelIP = globalData.HostIP
 
