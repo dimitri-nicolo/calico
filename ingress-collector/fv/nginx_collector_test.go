@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/ingress-collector/proto"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 var handler *CollectorTestHandler

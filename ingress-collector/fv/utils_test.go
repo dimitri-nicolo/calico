@@ -5,7 +5,6 @@ package fv_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -13,12 +12,11 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/ingress-collector/pkg/collector"
 	"github.com/projectcalico/calico/ingress-collector/pkg/config"
 	"github.com/projectcalico/calico/ingress-collector/pkg/felixclient"
-	"github.com/projectcalico/calico/ingress-collector/proto"
 	"github.com/projectcalico/calico/ingress-collector/uds"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
@@ -118,7 +116,7 @@ func createTestConfig() *config.Config {
 }
 
 func makeTmpListenerDir() string {
-	dirPath, err := ioutil.TempDir("/tmp", "felixut")
+	dirPath, err := os.MkdirTemp("", "felixut")
 	if err != nil {
 		return ""
 	}

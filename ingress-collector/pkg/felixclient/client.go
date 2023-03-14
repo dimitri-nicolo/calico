@@ -9,8 +9,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/ingress-collector/pkg/collector"
-	"github.com/projectcalico/calico/ingress-collector/proto"
 )
 
 type FelixClient interface {
@@ -143,7 +143,7 @@ func (fc *felixClient) dataPlaneStatsFromIngressLog(logData collector.IngressLog
 		DstIp:    logData.DstIp,
 		SrcPort:  logData.SrcPort,
 		DstPort:  logData.DstPort,
-		Protocol: &proto.Protocol{&proto.Protocol_Name{logData.Protocol}},
+		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: logData.Protocol}},
 	}
 
 	// Empty values are represented as "-" in Nginx logs
@@ -166,8 +166,8 @@ func (fc *felixClient) dataPlaneStatsFromIngressLog(logData collector.IngressLog
 
 	// Only capture the header information if it exists.
 	if logData.XForwardedFor != "" || logData.XRealIp != "" {
-		d.HttpData = []*proto.HttpData{
-			&proto.HttpData{
+		d.HttpData = []*proto.HTTPData{
+			{
 				XForwardedFor: logData.XForwardedFor,
 				XRealIp:       logData.XRealIp,
 			},

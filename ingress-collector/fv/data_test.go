@@ -3,7 +3,7 @@
 package fv_test
 
 import (
-	"github.com/projectcalico/calico/ingress-collector/proto"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 var (
@@ -21,15 +21,15 @@ var (
 		DstIp:    "10.1.1.10",
 		SrcPort:  int32(1),
 		DstPort:  int32(2),
-		Protocol: &proto.Protocol{&proto.Protocol_Name{"tcp"}},
-		HttpData: []*proto.HttpData{
-			&proto.HttpData{
+		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
+		HttpData: []*proto.HTTPData{
+			{
 				XForwardedFor: "1.1.1.1",
 				XRealIp:       "2.2.2.2",
 			},
 		},
 		Stats: []*proto.Statistic{
-			&proto.Statistic{
+			{
 				Direction:  proto.Statistic_IN,
 				Relativity: proto.Statistic_DELTA,
 				Kind:       proto.Statistic_INGRESS_DATA,
@@ -43,23 +43,23 @@ var (
 		DstIp:    "10.1.1.10",
 		SrcPort:  int32(1),
 		DstPort:  int32(2),
-		Protocol: &proto.Protocol{&proto.Protocol_Name{"tcp"}},
-		HttpData: []*proto.HttpData{
-			&proto.HttpData{
+		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
+		HttpData: []*proto.HTTPData{
+			{
 				XForwardedFor: "1.1.1.1",
 				XRealIp:       "2.2.2.2",
 			},
-			&proto.HttpData{
+			{
 				XForwardedFor: "8.8.8.8",
 				XRealIp:       "3.3.3.3",
 			},
-			&proto.HttpData{
+			{
 				XForwardedFor: "9.9.9.9",
 				XRealIp:       "4.4.4.4",
 			},
 		},
 		Stats: []*proto.Statistic{
-			&proto.Statistic{
+			{
 				Direction:  proto.Statistic_IN,
 				Relativity: proto.Statistic_DELTA,
 				Kind:       proto.Statistic_INGRESS_DATA,
@@ -73,31 +73,31 @@ var (
 		DstIp:    "10.1.1.10",
 		SrcPort:  int32(1),
 		DstPort:  int32(2),
-		Protocol: &proto.Protocol{&proto.Protocol_Name{"tcp"}},
-		HttpData: []*proto.HttpData{
-			&proto.HttpData{
+		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
+		HttpData: []*proto.HTTPData{
+			{
 				XForwardedFor: "1.1.1.1",
 				XRealIp:       "2.2.2.2",
 			},
-			&proto.HttpData{
+			{
 				XForwardedFor: "8.8.8.8",
 				XRealIp:       "3.3.3.3",
 			},
-			&proto.HttpData{
+			{
 				XForwardedFor: "9.9.9.9",
 				XRealIp:       "4.4.4.4",
 			},
-			&proto.HttpData{
+			{
 				XForwardedFor: "10.10.10.10",
 				XRealIp:       "5.5.5.5",
 			},
-			&proto.HttpData{
+			{
 				XForwardedFor: "11.11.11.11",
 				XRealIp:       "6.6.6.6",
 			},
 		},
 		Stats: []*proto.Statistic{
-			&proto.Statistic{
+			{
 				Direction:  proto.Statistic_IN,
 				Relativity: proto.Statistic_DELTA,
 				Kind:       proto.Statistic_INGRESS_DATA,
@@ -111,15 +111,15 @@ var (
 		DstIp:    "10.1.1.10",
 		SrcPort:  int32(10),
 		DstPort:  int32(20),
-		Protocol: &proto.Protocol{&proto.Protocol_Name{"tcp"}},
-		HttpData: []*proto.HttpData{
-			&proto.HttpData{
+		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
+		HttpData: []*proto.HTTPData{
+			{
 				XForwardedFor: "13.13.13.13",
 				XRealIp:       "10.10.10.10",
 			},
 		},
 		Stats: []*proto.Statistic{
-			&proto.Statistic{
+			{
 				Direction:  proto.Statistic_IN,
 				Relativity: proto.Statistic_DELTA,
 				Kind:       proto.Statistic_INGRESS_DATA,

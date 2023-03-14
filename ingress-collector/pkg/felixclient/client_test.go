@@ -6,8 +6,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/ingress-collector/pkg/collector"
-	"github.com/projectcalico/calico/ingress-collector/proto"
 )
 
 var (
@@ -93,7 +93,7 @@ var _ = Describe("Felix Client Converting IngressLog to DataplaneStats test", fu
 			Expect(dpStats.DstIp).To(Equal(fullLog.DstIp))
 			Expect(dpStats.SrcPort).To(Equal(fullLog.SrcPort))
 			Expect(dpStats.DstPort).To(Equal(fullLog.DstPort))
-			Expect(dpStats.Protocol).To(Equal(&proto.Protocol{&proto.Protocol_Name{fullLog.Protocol}}))
+			Expect(dpStats.Protocol).To(Equal(&proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: fullLog.Protocol}}))
 			Expect(dpStats.HttpData[0].XForwardedFor).To(Equal(fullLog.XForwardedFor))
 			Expect(dpStats.HttpData[0].XRealIp).To(Equal(fullLog.XRealIp))
 		})
@@ -105,7 +105,7 @@ var _ = Describe("Felix Client Converting IngressLog to DataplaneStats test", fu
 			Expect(dpStats.DstIp).To(Equal(noProtoLog.DstIp))
 			Expect(dpStats.SrcPort).To(Equal(noProtoLog.SrcPort))
 			Expect(dpStats.DstPort).To(Equal(noProtoLog.DstPort))
-			Expect(dpStats.Protocol).To(Equal(&proto.Protocol{&proto.Protocol_Name{"tcp"}}))
+			Expect(dpStats.Protocol).To(Equal(&proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}}))
 			Expect(dpStats.HttpData[0].XForwardedFor).To(Equal(noProtoLog.XForwardedFor))
 			Expect(dpStats.HttpData[0].XRealIp).To(Equal(noProtoLog.XRealIp))
 		})
@@ -117,7 +117,7 @@ var _ = Describe("Felix Client Converting IngressLog to DataplaneStats test", fu
 			Expect(dpStats.DstIp).To(Equal(multipleForwardLog.DstIp))
 			Expect(dpStats.SrcPort).To(Equal(multipleForwardLog.SrcPort))
 			Expect(dpStats.DstPort).To(Equal(multipleForwardLog.DstPort))
-			Expect(dpStats.Protocol).To(Equal(&proto.Protocol{&proto.Protocol_Name{multipleForwardLog.Protocol}}))
+			Expect(dpStats.Protocol).To(Equal(&proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: multipleForwardLog.Protocol}}))
 			Expect(dpStats.HttpData[0].XForwardedFor).To(Equal("1.1.1.1"))
 			Expect(dpStats.HttpData[0].XRealIp).To(Equal(multipleForwardLog.XRealIp))
 		})
@@ -129,7 +129,7 @@ var _ = Describe("Felix Client Converting IngressLog to DataplaneStats test", fu
 			Expect(dpStats.DstIp).To(Equal(emptyForwardLog.DstIp))
 			Expect(dpStats.SrcPort).To(Equal(emptyForwardLog.SrcPort))
 			Expect(dpStats.DstPort).To(Equal(emptyForwardLog.DstPort))
-			Expect(dpStats.Protocol).To(Equal(&proto.Protocol{&proto.Protocol_Name{emptyForwardLog.Protocol}}))
+			Expect(dpStats.Protocol).To(Equal(&proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: emptyForwardLog.Protocol}}))
 			Expect(dpStats.HttpData[0].XForwardedFor).To(Equal(""))
 			Expect(dpStats.HttpData[0].XRealIp).To(Equal(emptyForwardLog.XRealIp))
 
@@ -138,7 +138,7 @@ var _ = Describe("Felix Client Converting IngressLog to DataplaneStats test", fu
 			Expect(dpStats.DstIp).To(Equal(emptyRealLog.DstIp))
 			Expect(dpStats.SrcPort).To(Equal(emptyRealLog.SrcPort))
 			Expect(dpStats.DstPort).To(Equal(emptyRealLog.DstPort))
-			Expect(dpStats.Protocol).To(Equal(&proto.Protocol{&proto.Protocol_Name{emptyRealLog.Protocol}}))
+			Expect(dpStats.Protocol).To(Equal(&proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: emptyRealLog.Protocol}}))
 			Expect(dpStats.HttpData[0].XForwardedFor).To(Equal(emptyRealLog.XForwardedFor))
 			Expect(dpStats.HttpData[0].XRealIp).To(Equal(""))
 		})
@@ -150,7 +150,7 @@ var _ = Describe("Felix Client Converting IngressLog to DataplaneStats test", fu
 			Expect(dpStats.DstIp).To(Equal(emptyHeaderLog.DstIp))
 			Expect(dpStats.SrcPort).To(Equal(emptyHeaderLog.SrcPort))
 			Expect(dpStats.DstPort).To(Equal(emptyHeaderLog.DstPort))
-			Expect(dpStats.Protocol).To(Equal(&proto.Protocol{&proto.Protocol_Name{emptyHeaderLog.Protocol}}))
+			Expect(dpStats.Protocol).To(Equal(&proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: emptyHeaderLog.Protocol}}))
 			Expect(len(dpStats.HttpData)).To(Equal(0))
 		})
 	})

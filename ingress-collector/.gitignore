@@ -1,8 +1,0 @@
-vendor/
-proto/*.pb.go
-.go-pkg-cache/
-bin/
-report/
-Makefile.common*
-.ingress-collector.created*
-.vscode/
