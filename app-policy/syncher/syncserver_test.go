@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,17 +23,16 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+
+	"google.golang.org/grpc"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/statscache"
-	"github.com/projectcalico/calico/app-policy/uds"
 	"github.com/projectcalico/calico/felix/proto"
-
-	"google.golang.org/grpc"
+	"github.com/projectcalico/calico/libcalico-go/lib/uds"
 )
 
 var _ policystore.PolicyStoreManager = (*mockPolicyStoreManager)(nil)

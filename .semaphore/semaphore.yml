@@ -97,6 +97,10 @@ promotions:
   pipeline_file: push-images/honeypod-prototype.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push ingress-collector images
+  pipeline_file: push-images/ingress-collector.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push intrusion-detection-controller images
   pipeline_file: push-images/intrusion-detection-controller.yml
   auto_promote:
@@ -645,7 +649,7 @@ blocks:
 
 - name: "app-policy"
   run:
-    when: "false or change_in(['/*', '/app-policy/', '/felix/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "false or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     prologue:
@@ -930,6 +934,21 @@ blocks:
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
 
+- name: 'ingress-collector'
+  run:
+    when: "false or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd ingress-collector
+    jobs:
+    - name: "ingress-collector tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
 - name: 'intrusion-detection-controller'
   run:
     when: "false or change_in(['/*', '/intrusion-detection-controller/', '/api/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -947,7 +966,7 @@ blocks:
 
 - name: "l7-collector"
   run:
-    when: "false or change_in(['/*', '/l7-collector/', '/libcalico-go/lib/testutils'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "false or change_in(['/*', '/l7-collector/', '/libcalico-go/lib/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     prologue:
