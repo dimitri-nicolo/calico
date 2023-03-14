@@ -11,8 +11,7 @@ CALI_MAP_V1(cali_perf_evnt,
 		BPF_MAP_TYPE_PERF_EVENT_ARRAY,
 		__u32, __u32,
 		512,
-		0,
-		MAP_PIN_GLOBAL);
+		0)
 
 /* We need the header to be 64bit of size so that any 64bit fields in the
  * message structures that embed this header are also aligned.

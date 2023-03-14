@@ -30,6 +30,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/asm"
 	"github.com/projectcalico/calico/felix/bpf/ipsets"
+	"github.com/projectcalico/calico/felix/bpf/jump"
 	"github.com/projectcalico/calico/felix/bpf/polprog"
 	"github.com/projectcalico/calico/felix/bpf/state"
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
@@ -121,7 +122,7 @@ func TestLoadKitchenSinkPolicy(t *testing.T) {
 
 	cleanIPSetMap()
 
-	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), tcJumpMap.MapFD())
+	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), jumpMap.MapFD())
 	insns, err := pg.Instructions(polprog.Rules{
 		Tiers: []polprog.Tier{{
 			Name: "base tier",
@@ -2873,8 +2874,13 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 
 	setUpIPSets(tp.IPSets(), realAlloc, ipsMap)
 
+	jumpMap = jump.MapForTest(&bpf.MapContext{})
+	_ = unix.Unlink(jumpMap.Path())
+	err := jumpMap.EnsureExists()
+	Expect(err).NotTo(HaveOccurred())
+
 	// Build the program.
-	pg := polprog.NewBuilder(forceAlloc, ipsMap.MapFD(), testStateMap.MapFD(), tcJumpMap.MapFD(), polprogOpts...)
+	pg := polprog.NewBuilder(forceAlloc, ipsMap.MapFD(), testStateMap.MapFD(), jumpMap.MapFD(), polprogOpts...)
 	if tp.ForIPv6() {
 		pg.EnableIPv6Mode()
 	}
@@ -2896,7 +2902,7 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 	if tp.ForIPv6() {
 		jumpMapIndex = tcdefs.ProgIndexV6Allowed
 	}
-	epiFD := installAllowedProgram(tcJumpMap, jumpMapIndex)
+	epiFD := installAllowedProgram(jumpMap, jumpMapIndex)
 	defer func() {
 		err := epiFD.Close()
 		Expect(err).NotTo(HaveOccurred())
@@ -2906,7 +2912,7 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 	if tp.ForIPv6() {
 		jumpMapIndex = tcdefs.ProgIndexV6Drop
 	}
-	dropFD := installDropProgram(tcJumpMap, jumpMapIndex)
+	dropFD := installDropProgram(jumpMap, jumpMapIndex)
 	defer func() {
 		err := dropFD.Close()
 		Expect(err).NotTo(HaveOccurred())

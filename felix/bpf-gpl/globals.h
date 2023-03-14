@@ -39,6 +39,10 @@ struct cali_ctlb_globals {
 	bool exclude_udp;
 };
 
+struct cali_xdp_globals {
+	__u8 iface_name[16];
+};
+
 struct cali_stats_globals {
 	__be16 if_ns;
 };
