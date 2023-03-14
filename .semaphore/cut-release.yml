@@ -66,6 +66,10 @@ promotions:
     pipeline_file: ../node/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut mock-node Release
+    pipeline_file: ../mocknode/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut Typha Release
     pipeline_file: ../typha/.semaphore/cut-release.yml
     auto_promote:
