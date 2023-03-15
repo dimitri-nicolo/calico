@@ -1812,7 +1812,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				Context("with egress gateway role and iface up", func() {
 					JustBeforeEach(func() {
 						nlDataplane.AddIface(28, "cali12345-ab", true, true)
-						epMgr.OnUpdate(&ifaceUpdate{
+						epMgr.OnUpdate(&ifaceStateUpdate{
 							Name:  "cali12345-ab",
 							State: "up",
 						})
@@ -1917,7 +1917,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 							Expect(err).ToNot(HaveOccurred())
 
 							By("signaling WEP iface down")
-							epMgr.OnUpdate(&ifaceUpdate{
+							epMgr.OnUpdate(&ifaceStateUpdate{
 								Name:  "cali12345-ab",
 								State: "down",
 							})
@@ -1938,7 +1938,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 							nlDataplane.AddIface(28, "cali12345-ab", true, true)
 
 							By("signaling WEP iface up")
-							epMgr.OnUpdate(&ifaceUpdate{
+							epMgr.OnUpdate(&ifaceStateUpdate{
 								Name:  "cali12345-ab",
 								State: "up",
 							})

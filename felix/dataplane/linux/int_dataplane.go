@@ -531,7 +531,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		config:         config,
 		applyThrottle:  throttle.New(10),
 		loopSummarizer: logutils.NewSummarizer("dataplane reconciliation loops"),
-		stopChan:         stopChan,
+		stopChan:       stopChan,
 	}
 
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
@@ -2346,9 +2346,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 		case msg := <-d.egwHealthReportC:
 			d.egressIPManager.OnEGWHealthReport(msg)
 			// Drain the rest of the channel.  This makes sure that we combine work if we're getting backed up.
-			for _, msg := range drainChan(d.egwHealthReportC, 1000) {
-				d.egressIPManager.OnEGWHealthReport(msg)
-			}
+			drainChan(d.egwHealthReportC, d.egressIPManager.OnEGWHealthReport)
 		case <-ipSetsRefreshC:
 			log.Debug("Refreshing IP sets state")
 			d.forceIPSetsRefresh = true
@@ -2378,10 +2376,12 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			time.Sleep(1 * time.Hour)
 			log.Panic("Woke up after 1 hour, something's probably wrong with the test.")
 		case stopWG := <-d.stopChan:
-			defer stopWG.Done()
-			if err := d.domainInfoStore.SaveMappingsV1(); err != nil {
-				log.WithError(err).Warning("Failed to save mappings to file on Felix shutdown")
-			}
+			func() { // Avoid linter warnings on the "defer".
+				defer stopWG.Done()
+				if err := d.domainInfoStore.SaveMappingsV1(); err != nil {
+					log.WithError(err).Warning("Failed to save mappings to file on Felix shutdown")
+				}
+			}()
 			return
 		}
 
