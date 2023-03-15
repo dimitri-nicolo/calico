@@ -88,8 +88,8 @@ import (
 )
 
 const (
-	// msgPeekLimit is the maximum number of messages we'll try to grab from the to-dataplane
-	// channel before we apply the changes.  Higher values allow us to batch up more work on
+	// msgPeekLimit is the maximum number of messages we'll try to grab from our channels
+	// before we apply the changes.  Higher values allow us to batch up more work on
 	// the channel for greater throughput when we're under load (at cost of higher latency).
 	msgPeekLimit = 100
 
@@ -377,9 +377,8 @@ type InternalDataplane struct {
 	wireguardManager   *wireguardManager
 	wireguardManagerV6 *wireguardManager
 
-	ifaceMonitor     *ifacemonitor.InterfaceMonitor
-	ifaceUpdates     chan *ifaceUpdate
-	ifaceAddrUpdates chan *ifaceAddrsUpdate
+	ifaceMonitor *ifacemonitor.InterfaceMonitor
+	ifaceUpdates chan any
 
 	endpointStatusCombiner *endpointStatusCombiner
 
@@ -391,6 +390,13 @@ type InternalDataplane struct {
 	ruleRenderer            rules.RuleRenderer
 
 	lookupCache *calc.LookupsCache
+
+	// datastoreInSync is set to true after we receive the "in sync" message from the datastore.
+	// We delay programming of the dataplane until we're in sync with the datastore.
+	datastoreInSync bool
+	// ifaceMonitorInSync is set to true after the interface monitor reports that it is in sync.
+	// As above, we block dataplane updates until we get that message.
+	ifaceMonitorInSync bool
 
 	// dataplaneNeedsSync is set if the dataplane is dirty in some way, i.e. we need to
 	// call apply().
@@ -427,6 +433,12 @@ type InternalDataplane struct {
 	callbacks         *common.Callbacks
 
 	loopSummarizer *logutils.Summarizer
+
+	// Fields used to accumulate counts of messages of various types before we report them to
+	// prometheus.
+	datastoreBatchSize   int
+	linkUpdateBatchSize  int
+	addrsUpdateBatchSize int
 
 	dnsDeniedPacketProcessor   dnsdeniedpacket.PacketProcessor
 	dnsResponsePacketProcessor dnsresponsepacket.PacketProcessor
@@ -511,15 +523,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	dp := &InternalDataplane{
-		toDataplane:      make(chan interface{}, msgPeekLimit),
-		fromDataplane:    make(chan interface{}, 100),
-		ruleRenderer:     ruleRenderer,
-		ifaceMonitor:     ifacemonitor.New(config.IfaceMonitorConfig, featureDetector, config.FatalErrorRestartCallback),
-		ifaceUpdates:     make(chan *ifaceUpdate, 100),
-		ifaceAddrUpdates: make(chan *ifaceAddrsUpdate, 100),
-		config:           config,
-		applyThrottle:    throttle.New(10),
-		loopSummarizer:   logutils.NewSummarizer("dataplane reconciliation loops"),
+		toDataplane:    make(chan interface{}, msgPeekLimit),
+		fromDataplane:  make(chan interface{}, 100),
+		ruleRenderer:   ruleRenderer,
+		ifaceMonitor:   ifacemonitor.New(config.IfaceMonitorConfig, featureDetector, config.FatalErrorRestartCallback),
+		ifaceUpdates:   make(chan any, 100),
+		config:         config,
+		applyThrottle:  throttle.New(10),
+		loopSummarizer: logutils.NewSummarizer("dataplane reconciliation loops"),
 		stopChan:         stopChan,
 	}
 
@@ -527,6 +538,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	dp.ifaceMonitor.StateCallback = dp.onIfaceStateChange
 	dp.ifaceMonitor.AddrCallback = dp.onIfaceAddrsChange
+	dp.ifaceMonitor.InSyncCallback = dp.onIfaceInSync
 
 	backendMode := environment.DetectBackend(config.LookPathOverride, cmdshim.NewRealCmd, config.IptablesBackend)
 
@@ -1858,6 +1870,15 @@ func (d *InternalDataplane) Stop() {
 	}
 }
 
+// onIfaceInSync is used as a callback from the interface monitor.  We use it to send a message back to
+// the main goroutine via a channel.
+func (d *InternalDataplane) onIfaceInSync() {
+	d.ifaceUpdates <- &ifaceInSync{}
+}
+
+type ifaceInSync struct {
+}
+
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
 func (d *InternalDataplane) onIfaceStateChange(ifaceName string, state ifacemonitor.State, ifIndex int) {
 	log.WithFields(log.Fields{
@@ -1865,14 +1886,14 @@ func (d *InternalDataplane) onIfaceStateChange(ifaceName string, state ifacemoni
 		"ifIndex":   ifIndex,
 		"state":     state,
 	}).Info("Linux interface state changed.")
-	d.ifaceUpdates <- &ifaceUpdate{
+	d.ifaceUpdates <- &ifaceStateUpdate{
 		Name:  ifaceName,
 		State: state,
 		Index: ifIndex,
 	}
 }
 
-type ifaceUpdate struct {
+type ifaceStateUpdate struct {
 	Name  string
 	State ifacemonitor.State
 	Index int
@@ -1901,7 +1922,7 @@ func (d *InternalDataplane) onIfaceAddrsChange(ifaceName string, addrs set.Set[s
 		"ifaceName": ifaceName,
 		"addrs":     addrs,
 	}).Info("Linux interface addrs changed.")
-	d.ifaceAddrUpdates <- &ifaceAddrsUpdate{
+	d.ifaceUpdates <- &ifaceAddrsUpdate{
 		Name:  ifaceName,
 		Addrs: addrs,
 	}
@@ -2296,148 +2317,26 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 	retryTicker := time.NewTicker(10 * time.Second)
 
 	// If configured, start tickers to refresh the IP sets and routing table entries.
-	var ipSetsRefreshC <-chan time.Time
-	if d.config.IPSetsRefreshInterval > 0 {
-		log.WithField("interval", d.config.IptablesRefreshInterval).Info(
-			"Will refresh IP sets on timer")
-		refreshTicker := jitter.NewTicker(
-			d.config.IPSetsRefreshInterval,
-			d.config.IPSetsRefreshInterval/10,
-		)
-		ipSetsRefreshC = refreshTicker.Channel()
-	}
-	var routeRefreshC <-chan time.Time
-	if d.config.RouteRefreshInterval > 0 {
-		log.WithField("interval", d.config.RouteRefreshInterval).Info(
-			"Will refresh routes on timer")
-		refreshTicker := jitter.NewTicker(
-			d.config.RouteRefreshInterval,
-			d.config.RouteRefreshInterval/10,
-		)
-		routeRefreshC = refreshTicker.Channel()
-	}
+	ipSetsRefreshC := newRefreshTicker("IP sets", d.config.IPSetsRefreshInterval)
+	routeRefreshC := newRefreshTicker("routes", d.config.RouteRefreshInterval)
 	var xdpRefreshC <-chan time.Time
-	if d.config.XDPRefreshInterval > 0 && d.xdpState != nil {
-		log.WithField("interval", d.config.XDPRefreshInterval).Info(
-			"Will refresh XDP on timer")
-		refreshTicker := jitter.NewTicker(
-			d.config.XDPRefreshInterval,
-			d.config.XDPRefreshInterval/10,
-		)
-		xdpRefreshC = refreshTicker.Channel()
+	if d.xdpState != nil {
+		xdpRefreshC = newRefreshTicker("XDP state", d.config.XDPRefreshInterval)
 	}
-	var ipSecRefreshC <-chan time.Time
-	if d.config.IPSecPolicyRefreshInterval > 0 {
-		log.WithField("interval", d.config.IPSecPolicyRefreshInterval).Info(
-			"Will recheck IPsec policy on timer")
-		refreshTicker := jitter.NewTicker(
-			d.config.IPSecPolicyRefreshInterval,
-			d.config.IPSecPolicyRefreshInterval/10,
-		)
-		ipSecRefreshC = refreshTicker.Channel()
-	}
+	ipSecRefreshC := newRefreshTicker("IPsec policy", d.config.XDPRefreshInterval)
 
-	// Fill the apply throttle leaky bucket.
+	// Implement a simple leaky bucket throttle to control how often we refresh the dataplane.
+	// This makes sure that we tend to favour processing updates from the datastore if we're
+	// under load.
 	throttleC := jitter.NewTicker(100*time.Millisecond, 10*time.Millisecond).Channel()
 	beingThrottled := false
 
-	datastoreInSync := false
-
-	processMsgFromCalcGraph := func(msg interface{}) {
-		log.WithField("msg", proto.MsgStringer{Msg: msg}).Infof(
-			"Received %T update from calculation graph", msg)
-		d.recordMsgStat(msg)
-		for _, mgr := range d.allManagers {
-			mgr.OnUpdate(msg)
-		}
-		switch msg.(type) {
-		case *proto.InSync:
-			log.WithField("timeSinceStart", time.Since(processStartTime)).Info(
-				"Datastore in sync, flushing the dataplane for the first time...")
-			datastoreInSync = true
-		}
-	}
-
-	processIfaceUpdate := func(ifaceUpdate *ifaceUpdate) {
-		log.WithField("msg", ifaceUpdate).Info("Received interface update")
-		if ifaceUpdate.Name == KubeIPVSInterface {
-			d.checkIPVSConfigOnStateUpdate(ifaceUpdate.State)
-			return
-		}
-
-		for _, mgr := range d.allManagers {
-			mgr.OnUpdate(ifaceUpdate)
-		}
-
-		for _, mgr := range d.managersWithRouteTables {
-			for _, routeTable := range mgr.GetRouteTableSyncers() {
-				routeTable.OnIfaceStateChanged(ifaceUpdate.Name, ifaceUpdate.State)
-			}
-		}
-	}
-
-	processAddrsUpdate := func(ifaceAddrsUpdate *ifaceAddrsUpdate) {
-		log.WithField("msg", ifaceAddrsUpdate).Info("Received interface addresses update")
-		for _, mgr := range d.allManagers {
-			mgr.OnUpdate(ifaceAddrsUpdate)
-		}
-	}
-
-	// Track domain info callbacks used to notify when domain updates have been programmed.
 	for {
 		select {
 		case msg := <-d.toDataplane:
-			// Process the message we received, then opportunistically process any other
-			// pending messages.
-			batchSize := 1
-			processMsgFromCalcGraph(msg)
-		msgLoop1:
-			for i := 0; i < msgPeekLimit; i++ {
-				select {
-				case msg := <-d.toDataplane:
-					processMsgFromCalcGraph(msg)
-					batchSize++
-				default:
-					// Channel blocked so we must be caught up.
-					break msgLoop1
-				}
-			}
-			d.dataplaneNeedsSync = true
-			summaryBatchSize.Observe(float64(batchSize))
+			d.onDatastoreMessage(msg)
 		case ifaceUpdate := <-d.ifaceUpdates:
-			// Process the message we received, then opportunistically process any other
-			// pending messages.
-			batchSize := 1
-			processIfaceUpdate(ifaceUpdate)
-		msgLoop2:
-			for i := 0; i < msgPeekLimit; i++ {
-				select {
-				case ifaceUpdate := <-d.ifaceUpdates:
-					processIfaceUpdate(ifaceUpdate)
-					batchSize++
-				default:
-					// Channel blocked so we must be caught up.
-					break msgLoop2
-				}
-			}
-			d.dataplaneNeedsSync = true
-			summaryIfaceBatchSize.Observe(float64(batchSize))
-		case ifaceAddrsUpdate := <-d.ifaceAddrUpdates:
-			batchSize := 1
-			processAddrsUpdate(ifaceAddrsUpdate)
-		msgLoop3:
-			for i := 0; i < msgPeekLimit; i++ {
-				select {
-				case ifaceAddrsUpdate := <-d.ifaceAddrUpdates:
-					processAddrsUpdate(ifaceAddrsUpdate)
-					batchSize++
-				default:
-					// Channel blocked so we must be caught up.
-					break msgLoop3
-				}
-			}
-			summaryAddrBatchSize.Observe(float64(batchSize))
-			d.dataplaneNeedsSync = true
+			d.onIfaceMonitorMessage(ifaceUpdate)
 		case <-d.domainInfoStore.UpdatesReadyChannel():
 			if d.domainInfoStore.HandleUpdates() {
 				d.dataplaneNeedsSync = true
@@ -2486,7 +2385,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			return
 		}
 
-		if datastoreInSync && d.dataplaneNeedsSync {
+		if d.datastoreInSync && d.ifaceMonitorInSync && d.dataplaneNeedsSync {
 			// Dataplane is out-of-sync, check if we're throttled.
 			if d.applyThrottle.Admit() {
 				if beingThrottled && d.applyThrottle.WouldAdmit() {
@@ -2531,11 +2430,121 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 	}
 }
 
-func drainChan[T any](c <-chan T, limit int) (result []T) {
-	for i := 0; i < limit; i++ {
+func newRefreshTicker(name string, interval time.Duration) <-chan time.Time {
+	if interval <= 0 {
+		log.Infof("Refresh of %s on timer disabled", name)
+		return nil
+	}
+	log.WithField("interval", interval).Infof("Will refresh %s on timer", name)
+	refreshTicker := jitter.NewTicker(interval, interval/10)
+	return refreshTicker.Channel()
+}
+
+// onDatastoreMessage is called when we get a message from the calculation graph
+// it opportunistically processes a match of messages from its channel.
+func (d *InternalDataplane) onDatastoreMessage(msg interface{}) {
+	d.datastoreBatchSize = 1
+
+	// Process the message we received, then opportunistically process any other
+	// pending messages.  This helps to avoid doing two dataplane updates in quick
+	// succession (and hence increasing latency) if we're _not_ being throttled.
+	d.processMsgFromCalcGraph(msg)
+	drainChan(d.toDataplane, d.processMsgFromCalcGraph)
+
+	summaryBatchSize.Observe(float64(d.datastoreBatchSize))
+}
+
+func (d *InternalDataplane) processMsgFromCalcGraph(msg interface{}) {
+	log.WithField("msg", proto.MsgStringer{Msg: msg}).Infof("Received %T update from calculation graph", msg)
+	d.datastoreBatchSize++
+	d.dataplaneNeedsSync = true
+	d.recordMsgStat(msg)
+	for _, mgr := range d.allManagers {
+		mgr.OnUpdate(msg)
+	}
+	switch msg.(type) {
+	case *proto.InSync:
+		log.WithField("timeSinceStart", time.Since(processStartTime)).Info(
+			"Datastore in sync, flushing the dataplane for the first time...")
+		d.datastoreInSync = true
+	}
+}
+
+// onIfaceMonitorMessage is called when we get a message from the interface monitor
+// it opportunistically processes a match of messages from its channel.
+func (d *InternalDataplane) onIfaceMonitorMessage(ifaceUpdate any) {
+	// Separate stats for historic reasons: there use to be two channels.
+	d.linkUpdateBatchSize = 0
+	d.addrsUpdateBatchSize = 0
+
+	// As for datastore messages, the interface monitor can send many messages in one go, so we
+	// opportunistically process a batch even if we're not being throttled.
+	d.processIfaceUpdate(ifaceUpdate)
+	drainChan(d.ifaceUpdates, d.processIfaceUpdate)
+
+	d.dataplaneNeedsSync = true
+	if d.linkUpdateBatchSize > 0 {
+		summaryIfaceBatchSize.Observe(float64(d.linkUpdateBatchSize))
+	}
+	if d.addrsUpdateBatchSize > 0 {
+		summaryAddrBatchSize.Observe(float64(d.addrsUpdateBatchSize))
+	}
+}
+
+func (d *InternalDataplane) processIfaceUpdate(ifaceUpdate any) {
+	switch ifaceUpdateMsg := ifaceUpdate.(type) {
+	case *ifaceStateUpdate:
+		d.processIfaceStateUpdate(ifaceUpdateMsg)
+	case *ifaceAddrsUpdate:
+		d.processIfaceAddrsUpdate(ifaceUpdateMsg)
+	case *ifaceInSync:
+		d.processIfaceInSync()
+	}
+}
+
+func (d *InternalDataplane) processIfaceInSync() {
+	if d.ifaceMonitorInSync {
+		return
+	}
+	log.Info("Interface monitor now in sync.")
+	d.ifaceMonitorInSync = true
+	d.dataplaneNeedsSync = true
+}
+
+func (d *InternalDataplane) processIfaceStateUpdate(ifaceUpdate *ifaceStateUpdate) {
+	log.WithField("msg", ifaceUpdate).Info("Received interface update")
+	d.dataplaneNeedsSync = true
+	d.linkUpdateBatchSize++
+	if ifaceUpdate.Name == KubeIPVSInterface {
+		d.checkIPVSConfigOnStateUpdate(ifaceUpdate.State)
+		return
+	}
+
+	for _, mgr := range d.allManagers {
+		mgr.OnUpdate(ifaceUpdate)
+	}
+
+	for _, mgr := range d.managersWithRouteTables {
+		for _, routeTable := range mgr.GetRouteTableSyncers() {
+			routeTable.OnIfaceStateChanged(ifaceUpdate.Name, ifaceUpdate.State)
+		}
+	}
+}
+
+func (d *InternalDataplane) processIfaceAddrsUpdate(ifaceAddrsUpdate *ifaceAddrsUpdate) {
+	log.WithField("msg", ifaceAddrsUpdate).Info("Received interface addresses update")
+	d.dataplaneNeedsSync = true
+	d.addrsUpdateBatchSize++
+	for _, mgr := range d.allManagers {
+		mgr.OnUpdate(ifaceAddrsUpdate)
+	}
+}
+
+func drainChan[T any](c <-chan T, f func(T)) {
+	for i := 0; i < msgPeekLimit; i++ {
 		select {
 		case v := <-c:
-			result = append(result, v)
+			f(v)
 		default:
 			return
 		}
@@ -2901,7 +2910,7 @@ func (d *InternalDataplane) reportHealth() {
 	if d.config.HealthAggregator != nil {
 		d.config.HealthAggregator.Report(
 			healthName,
-			&health.HealthReport{Live: true, Ready: d.doneFirstApply},
+			&health.HealthReport{Live: true, Ready: d.doneFirstApply && d.ifaceMonitorInSync},
 		)
 	}
 }
