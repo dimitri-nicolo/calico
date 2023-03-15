@@ -72,11 +72,13 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, s
 		}
 	}
 
-	// Ideally, clients don't know the syntax of the after key, but
-	// for paged lists we currently need this.
-	params.SetAfterKey(map[string]interface{}{
-		"startFrom": params.Page * params.MaxPageSize,
-	})
+	if params.Page != 0 {
+		// Ideally, clients don't know the syntax of the after key, but
+		// for paged lists we currently need this.
+		params.SetAfterKey(map[string]interface{}{
+			"startFrom": params.Page * params.MaxPageSize,
+		})
+	}
 
 	// Verify required fields.
 	if params.Type == "" {
@@ -88,7 +90,7 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, s
 
 	// Set some constant fields. The UI always wants these set.
 	params.Levels = []string{"RequestResponse"}
-	params.Stages = []string{"RequestComplete"}
+	params.Stages = []string{"ResponseComplete"}
 	params.Sort = []v1.SearchRequestSortBy{
 		{
 			Field:      "stageTimestamp",

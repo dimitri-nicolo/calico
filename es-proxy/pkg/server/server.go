@@ -53,7 +53,7 @@ const (
 	eventsResourceName    = "events"
 	flowLogsResourceName  = "flows"
 	l7ResourceName        = "l7"
-	auditLogsResourceName = "audit"
+	auditLogsResourceName = "audit*"
 )
 
 func Start(cfg *Config) error {

@@ -344,6 +344,26 @@ func TestAuditLogFiltering(t *testing.T) {
 			ExpectLog2: true,
 			ExpectKube: true,
 		},
+		{
+			Name: "should support matching on Level",
+			Params: v1.AuditLogParams{
+				Type:   v1.AuditLogTypeEE,
+				Levels: []string{"RequestResponse"},
+			},
+			AllTime:    true,
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
+		{
+			Name: "should support matching on Stage",
+			Params: v1.AuditLogParams{
+				Type:   v1.AuditLogTypeEE,
+				Stages: []string{"ResponseComplete"},
+			},
+			AllTime:    true,
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
 	}
 
 	for _, testcase := range testcases {
@@ -422,8 +442,8 @@ func TestAuditLogFiltering(t *testing.T) {
 				Event: kaudit.Event{
 					TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
 					AuditID:    types.UID("audit-log-two"),
-					Stage:      kaudit.StageResponseComplete,
-					Level:      kaudit.LevelRequestResponse,
+					Stage:      kaudit.StageRequestReceived,
+					Level:      kaudit.LevelRequest,
 					RequestURI: "/apis/v3/projectcalico.org",
 					Verb:       "PUT",
 					User: authnv1.UserInfo{

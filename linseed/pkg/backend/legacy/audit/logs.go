@@ -121,12 +121,17 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 		return nil, err
 	}
 
+	q, err := b.buildQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
+
 	// Build the query.
 	query := b.client.Search().
 		Index(b.index(opts.Type, i)).
 		Size(opts.GetMaxPageSize()).
 		From(startFrom).
-		Query(b.buildQuery(i, opts))
+		Query(q)
 
 	for _, sort := range opts.Sort {
 		query.Sort(sort.Field, !sort.Descending)
@@ -156,7 +161,7 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams) elastic.Query {
+func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams) (elastic.Query, error) {
 	query := elastic.NewBoolQuery()
 
 	// Time-range based query.
@@ -220,12 +225,13 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 		query.Filter(elastic.NewTermsQuery("responseStatus.code", values...))
 	}
 
-	if len(opts.Stages) > 0 {
-		values := []interface{}{}
-		for _, a := range opts.Stages {
-			values = append(values, a)
-		}
-		query.Filter(elastic.NewTermsQuery("stage", values...))
+	if len(opts.Stages) == 1 {
+		query.Must(elastic.NewMatchQuery("stage", opts.Stages[0]))
+	} else if len(opts.Stages) > 1 {
+		// We only support a single stage at the moment.
+		// Stage is defined as a text field, which means terms queries
+		// don't work.
+		return nil, fmt.Errorf("At most one stage may be present on audit log query")
 	}
 
 	if len(opts.Levels) > 0 {
@@ -236,7 +242,7 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 		query.Filter(elastic.NewTermsQuery("level", values...))
 	}
 
-	return query
+	return query, nil
 }
 
 func (b *auditLogBackend) index(kind v1.AuditLogType, i bapi.ClusterInfo) string {
