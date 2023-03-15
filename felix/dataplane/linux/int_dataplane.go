@@ -492,6 +492,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
+
 	if ruleRenderer == nil {
 
 		if config.RulesConfig.KubernetesProvider == felixconfig.ProviderEKS {
@@ -1193,6 +1194,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.endpointsSourceV4 = epManager
 	dp.RegisterManager(newFloatingIPManager(natTableV4, ruleRenderer, 4, config.FloatingIPsEnabled))
 	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, config.MaxIPSetSize, 4))
+	dp.RegisterManager(newNodeLocalDNSManager(ruleRenderer, 4, rawTableV4, config.BPFEnabled))
+
 	if config.RulesConfig.IPIPEnabled {
 		// Create and maintain the IPIP tunnel device
 		dp.ipipManager = newIPIPManager(ipSetsV4, config.MaxIPSetSize, config.ExternalNodesCidrs, dp.config)
@@ -1376,6 +1379,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(newFloatingIPManager(natTableV6, ruleRenderer, 6, config.FloatingIPsEnabled))
 		dp.RegisterManager(newMasqManager(ipSetsV6, natTableV6, ruleRenderer, config.MaxIPSetSize, 6))
 		dp.RegisterManager(newServiceLoopManager(filterTableV6, ruleRenderer, 6))
+		dp.RegisterManager(newNodeLocalDNSManager(ruleRenderer, 6, rawTableV6, config.BPFEnabled))
 
 		// Add a manager for IPv6 wireguard configuration. This is added irrespective of whether wireguard is actually enabled
 		// because it may need to tidy up some of the routing rules when disabled.
@@ -2163,6 +2167,9 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 
 func (d *InternalDataplane) setUpIptablesNormal() {
 	for _, t := range d.iptablesRawTables {
+		// the cali-PREROUTING and cali-OUTPUT chains created by through
+		// StaticRawTableChains will later be referenced by nodeLocalDNSManager
+		// to write NFLOG rules supporting DNS Policies
 		rawChains := d.ruleRenderer.StaticRawTableChains(t.IPVersion)
 		t.UpdateChains(rawChains)
 		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
@@ -2764,6 +2771,7 @@ func (d *InternalDataplane) apply() {
 			iptablesWG.Done()
 		}(t)
 	}
+
 	iptablesWG.Wait()
 
 	// Stop the background ipsets update and wait for it to complete.
