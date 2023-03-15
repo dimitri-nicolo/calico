@@ -2,7 +2,7 @@ include ../metadata.mk
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/ingress-collector
 
-INGRESS_COLLECTOR_IMAGE ?=tigera/ingress-collector
+INGRESS_COLLECTOR_IMAGE ?=ingress-collector
 BUILD_IMAGES            ?=$(INGRESS_COLLECTOR_IMAGE)
 
 ##############################################################################
@@ -20,7 +20,7 @@ LDFLAGS=-X main.VERSION=$(GIT_VERSION) \
 	-X main.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
 	-X main.GIT_REVISION=$(GIT_COMMIT)
 
-SRC_FILES=$(shell find cmd pkg uds -name '*.go') \
+SRC_FILES=$(shell find cmd pkg -name '*.go') \
 	$(shell find ../felix/proto -name '*.go') \
 	$(shell find ../libcalico-go/lib -name '*.go')
 
