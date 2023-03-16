@@ -13,10 +13,10 @@ require (
 	github.com/aquasecurity/kube-bench v0.6.12
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/aws/aws-sdk-go-v2 v1.17.5
-	github.com/aws/aws-sdk-go-v2/config v1.18.15
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.23
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.88.0
+	github.com/aws/aws-sdk-go-v2 v1.17.6
+	github.com/aws/aws-sdk-go-v2/config v1.18.17
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.90.0
 	github.com/aws/smithy-go v1.13.5
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f
 	github.com/bronze1man/goStrongswanVici v0.0.0-20190828090544-27d02f80ba40
@@ -178,15 +178,15 @@ require (
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
 	github.com/aws/aws-sdk-go v1.43.41 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.13.15 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.29 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.23 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.30 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.23 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.13.17 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.30 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.24 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.31 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.24 // indirect
 	github.com/aws/aws-sdk-go-v2/service/securityhub v1.23.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.12.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.18.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.12.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.18.6 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bi-zone/etw v0.0.0-20200916105032-b215904fae4f // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
