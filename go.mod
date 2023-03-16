@@ -72,7 +72,7 @@ require (
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
 	github.com/lestrrat-go/jwx/v2 v2.0.8
 	github.com/libp2p/go-reuseport v0.2.0
-	github.com/mcuadros/go-version v0.0.0-20190308113854-92cdf37c5b75
+	github.com/mcuadros/go-version v0.0.0-20190830083331-035f6764e8d2
 	github.com/mdlayher/netlink v1.7.1
 	github.com/mipearson/rfw v0.0.0-20170619235010-6f0a6f3266ba
 	github.com/mitchellh/go-homedir v1.1.0
