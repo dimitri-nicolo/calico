@@ -33,10 +33,7 @@ build: bin/cub-generator-$(ARCH)
 
 .PHONY: bin/cub-generator-$(ARCH)
 bin/cub-generator-$(ARCH): $(SRC_FILES)
-		$(DOCKER_GO_BUILD_CGO) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -buildvcs=false -o $@ -v -ldflags "$(LDFLAGS)" cmd/$*/*.go'
-
+	$(call build_static_cgo_boring_binary, cmd/$*/*.go, $@)
 
 ###############################################################################
 # Tests
