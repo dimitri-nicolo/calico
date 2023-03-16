@@ -524,50 +524,45 @@ blocks:
     - name: "Node: CI"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
-    - name: "Node: k8s-test"
-      commands:
-      - ../.semaphore/run-and-monitor k8s-test.log make k8s-test
-    - name: "Node: dual-tor"
-      commands:
-      - ../.semaphore/run-and-monitor dual-tor-test.log make dual-tor-test
     epilogue:
       always:
         commands:
         - test-results publish ./report/nosetests.xml --name "node-ci" || true
-        - test-results publish ./report/k8s-tests.xml --name "node-k8s-test" || true
 
-- name: "Node/egress gateway tests"
+- name: "Node/kind-cluster tests"
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/egress-gateway/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
-    agent:
-      machine:
-        type: e1-standard-8
-        os_image: ubuntu2004
-    secrets:
-    # Mount a secret for pulling images from GCR, and a license for the k8s FVs
-    - name: tigera-dev-ci-pull-credentials
-    - name: google-service-account-for-gcr
-    - name: test-customer-license
     prologue:
       commands:
       - cd node
+      - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
+      - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+      - export ZONE=europe-west3-c
+      - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-
+      - echo VM_PREFIX=${VM_PREFIX}
+      - export REPO_NAME=$(basename $(pwd))
+      - export VM_DISK_SIZE=80GB
+      - mkdir artifacts
+      - ../.semaphore/vms/create-test-vms ${ZONE} ${VM_PREFIX}
     jobs:
-    - name: "Node: egress-ip no-overlay"
+    - name: "Node: kind-cluster tests"
+      execution_time_limit:
+        minutes: 120
       commands:
-      - ../.semaphore/run-and-monitor egress-ip-test.log make egress-ip-test K8ST_TO_RUN="-A egress_ip_no_overlay"
-    - name: "Node: egress-ip ipip"
-      commands:
-      - ../.semaphore/run-and-monitor egress-ip-test.log make egress-ip-test K8ST_TO_RUN="-A egress_ip_ipip"
-    - name: "Node: egress-ip vxlan"
-      commands:
-      - ../.semaphore/run-and-monitor egress-ip-test.log make egress-ip-test K8ST_TO_RUN="-A egress_ip_vxlan"
+      - ../.semaphore/vms/run-tests-on-vms ${ZONE} ${VM_PREFIX}
     epilogue:
       always:
         commands:
-        - test-results publish ./report/nosetests.xml --name "node-ci" || true
-        - test-results publish ./report/k8s-tests.xml --name "node-k8s-test" || true
+          - ../.semaphore/vms/publish-artifacts
+          - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
+          - test-results publish ./report/*.xml --name "node-kind-tests" || true
+    secrets:
+    - name: google-service-account-for-gcr
+    - name: google-service-account-for-gce
+    - name: tigera-dev-ci-pull-credentials
+    - name: test-customer-license
 
 - name: "Node: build all architectures"
   run:

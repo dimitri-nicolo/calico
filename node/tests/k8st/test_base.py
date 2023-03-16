@@ -14,15 +14,17 @@
 import json
 import logging
 import os
+import re
 import subprocess
 import time
+from datetime import datetime
 from pprint import pformat
 from unittest import TestCase
 
 from deepdiff import DeepDiff
 from kubernetes import client, config
 
-from utils.utils import retry_until_success, run, kubectl
+from utils.utils import retry_until_success, run, kubectl, copy_cnx_pull_secret
 
 logger = logging.getLogger(__name__)
 
@@ -260,6 +262,128 @@ class TestBase(TestCase):
         return kubectl("scale deployment %s -n %s --replicas %s" %
                        (deployment, ns, replicas)).strip()
 
+    def create_egress_gateway_pod(self, host, name, egress_pool_cidr, color="red", ns="default", termgraceperiod=0, probe_url="", icmp_probes="", external_networks=""):
+        """
+        Create egress gateway pod, with an IP from that pool.
+        """
+        copy_cnx_pull_secret(ns)
+
+        ext_net_annotation = ""
+        if external_networks != "":
+            ext_net_val = ""
+            if isinstance(external_networks, list):
+                ext_net_val = "\\\"" + "\\\", \\\"".join(external_networks) + "\\\""
+            else:
+                ext_net_val = "\\\"" + external_networks + "\\\""
+            ext_net_annotation = """egress.projectcalico.org/externalNetworkNames: "[%s]"
+""" % ext_net_val
+
+        gateway = Pod(ns, name, image=None, yaml="""
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    cni.projectcalico.org/ipv4pools: "[\\\"%s\\\"]"
+    %s
+  labels:
+    color: %s
+  name: %s
+  namespace: %s
+spec:
+  imagePullSecrets:
+  - name: cnx-pull-secret
+  initContainers:
+  - name: egress-gateway-init
+    image: docker.io/tigera/egress-gateway:latest-amd64
+    env:
+    - name: EGRESS_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: EGRESS_VXLAN_PORT
+      value: "4790"
+    - name: EGRESS_VXLAN_VNI
+      value: "4097"
+    imagePullPolicy: Never
+    securityContext:
+      privileged: true
+    command: ["/init-gateway.sh"]
+  containers:
+  - name: gateway
+    image: docker.io/tigera/egress-gateway:latest-amd64
+    env:
+    # Optional: comma-delimited list of IP addresses to send ICMP pings to; if all probes fail, the egress
+    # gateway will report non-ready.
+    - name: ICMP_PROBE_IPS
+      value: "%s"
+    # Only used if ICMP_PROBE_IPS is non-empty: interval to send probes.
+    - name: ICMP_PROBE_INTERVAL
+      value: "1s"
+    # Only used if ICMP_PROBE_IPS is non-empty: timeout on each probe.
+    - name: ICMP_PROBE_TIMEOUT
+      value: "3s"
+    # Optional HTTP URL to send periodic probes to; if the probe fails that is reflected in 
+    # the health reported on the health port.
+    - name: HTTP_PROBE_URL
+      value: "%s"
+    # Only used if HTTP_PROBE_URL is non-empty: interval to send probes.
+    - name: HTTP_PROBE_INTERVAL
+      value: "10s"
+    # Only used if HTTP_PROBE_URL is non-empty: timeout before reporting non-ready if there are no successful probes.
+    - name: HTTP_PROBE_TIMEOUT
+      value: "30s"
+    # Port that the egress gateway serves its health reports.  Must match the readiness probe and health
+    # port defined below.
+    - name: HEALTH_PORT
+      value: "8080"
+    - name: LOG_SEVERITY
+      value: "Info"
+    - name: EGRESS_VXLAN_VNI
+      value: "4097"
+    # Use downward API to tell the pod its own IP address.
+    - name: EGRESS_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    imagePullPolicy: Never
+    securityContext:
+      capabilities:
+        add: ["NET_ADMIN"]
+    command: ["/start-gateway.sh"]
+    volumeMounts:
+        - mountPath: /var/run/calico
+          name: policysync
+    ports:
+        - name: health
+          containerPort: 8080
+    readinessProbe:
+        httpGet:
+          path: /readiness
+          port: 8080
+        initialDelaySeconds: 3
+        periodSeconds: 3
+  nodeName: %s
+  terminationGracePeriodSeconds: %d
+  volumes:
+      - flexVolume:
+          driver: nodeagent/uds
+        name: policysync
+""" % (egress_pool_cidr, ext_net_annotation, color, name, ns, icmp_probes, probe_url, host, termgraceperiod))
+        self.add_cleanup(gateway.delete)
+
+        return gateway
+
+    def get_calico_node_pod(self, nodeName):
+        """Get the calico-node pod name for a given kind node"""
+        def fn():
+            calicoPod = kubectl("-n kube-system get pods -o wide | grep calico-node | grep '%s '| cut -d' ' -f1" % nodeName)
+            if calicoPod is None:
+                raise Exception('calicoPod is None')
+            return calicoPod.strip()
+        calicoPod = retry_until_success(fn)
+        return calicoPod
+
+
 # Default is for K8ST tests to run vanilla tests, and not to run
 # specialized tests (e.g., dual_dor, egress_ip).
 # Individual test classes can override this.
@@ -403,3 +527,79 @@ class TestBaseV6(TestBase):
 
     def get_routes(self):
         return run("docker exec kube-node-extra ip -6 r")
+
+class NetcatServerTCP(Container):
+
+    def __init__(self, port):
+        super(NetcatServerTCP, self).__init__("subfuzion/netcat", "-v -l -k -p %d" % port, "--privileged")
+        self.port = port
+
+    def get_recent_client_ip(self):
+        ip = None
+        for attempt in range(3):
+            for line in self.logs().split('\n'):
+                m = re.match(r"Connection from ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+) [0-9]+ received", line)
+                if m:
+                    ip = m.group(1)
+            if ip is not None:
+                return ip
+            else:
+                time.sleep(1)
+        assert False, "Couldn't find a recent client IP in the logs."
+
+class NetcatClientTCP(Pod):
+
+    def __init__(self, ns, name, node=None, labels=None, annotations=None):
+        cmd = ["sleep", "3600"]
+        super(NetcatClientTCP, self).__init__(ns, name, image="alpine", node=node, labels=labels, annotations=annotations, cmd=cmd)
+        self.last_output = ""
+
+    def can_connect(self, ip, port, command="nc"):
+        run("docker exec %s ip rule" % self.nodename, allow_fail=True)
+        run("docker exec %s ip r l table 250" % self.nodename, allow_fail=True)
+        run("docker exec %s ip r l table 249" % self.nodename, allow_fail=True)
+        try:
+            self.check_connected(ip, port, command)
+            logger.info("'%s' connected, as expected", self.name)
+        except subprocess.CalledProcessError:
+            logger.exception("Failed to access server")
+            logger.warning("'%s' failed to connect, when connection was expected", self.name)
+            raise self.ConnectionError
+
+    def cannot_connect(self, ip, port, command="nc"):
+        try:
+            self.check_connected(ip, port, command)
+            logger.warning("'%s' unexpectedly connected", self.name)
+            raise self.ConnectionError
+        except subprocess.CalledProcessError:
+            logger.info("'%s' failed to connect, as expected", self.name)
+
+    def check_connected(self, ip, port, command="nc"):
+        self.last_output = ""
+        if command == "nc":
+            self.last_output = self.execute("nc -w 2 %s %d </dev/null" % (ip, port), timeout=3)
+        elif command == "wget":
+            self.last_output = self.execute("wget -T 2 %s:%d -O -" % (ip, port))
+        else:
+            raise Exception('received invalid command')
+
+    def has_egress_annotations(self, egress_ip, now, termination_grace_period):
+        error_margin = 3
+        annotations = self.annotations
+        gateway_ip = annotations["egress.projectcalico.org/gatewayMaintenanceGatewayIP"]
+        if gateway_ip != egress_ip:
+            raise Exception('egress.projectcalico.org/gatewayMaintenanceGatewayCIDR annotation expected to be: %s, but was: %s. Annotations were: %s' % (egress_ip, gateway_ip, annotations))
+        started_str = annotations["egress.projectcalico.org/gatewayMaintenanceStartedTimestamp"]
+        started = datetime.strptime(started_str, "%Y-%m-%dT%H:%M:%SZ")
+        if abs((started - now).total_seconds()) > error_margin:
+            raise Exception('egress.projectcalico.org/gatewayMaintenanceStartedTimestamp annotation expected to be: within %ds of %s, but was: %s. Annotations were: %s' % (error_margin, now, started_str, annotations))
+        finished_str = annotations["egress.projectcalico.org/gatewayMaintenanceFinishedTimestamp"]
+        finished = datetime.strptime(finished_str, "%Y-%m-%dT%H:%M:%SZ")
+        if abs((finished - started).total_seconds()) > (error_margin + termination_grace_period):
+            raise Exception('egress.projectcalico.org/gatewayMaintenanceFinishedTimestamp annotation expected to be: within %ds of %s, but was: %s. Annotations were: %s' % ((error_margin + termination_grace_period), started, finished_str, annotations))
+
+    def get_last_output(self):
+        return self.last_output
+
+    class ConnectionError(Exception):
+        pass

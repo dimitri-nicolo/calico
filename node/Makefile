@@ -72,6 +72,7 @@ endif
 # Versions and location of dependencies used in the build.
 BIRD_IMAGE ?= calico/bird:$(BIRD_VERSION)-$(ARCH)
 BIRD_SOURCE=filesystem/included-source/bird-$(BIRD_VERSION).tar.gz
+BIRD_DIND_IMAGE ?= calico/bird-dind:$(BIRD_VERSION)-$(ARCH)
 FELIX_GPL_SOURCE=filesystem/included-source/felix-ebpf-gpl.tar.gz
 INCLUDED_SOURCE=$(BIRD_SOURCE) $(FELIX_GPL_SOURCE)
 
@@ -456,15 +457,15 @@ DUAL_TOR_ST_TO_RUN=dual-tor-tests/test_dual_tor.py -s --nocapture --nologcapture
 .PHONY: dual-tor-run-test
 dual-tor-run-test:
 	docker run -t --rm \
-	    -v $(PWD):/code \
+	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v ${HOME}/.kube/kind-config-kind:/root/.kube/config \
-	    -v $(PWD)/kubectl:/root/bin/kubectl \
+	    -v $(CURDIR)/kubectl:/root/bin/kubectl \
 	    --privileged \
 	    --net host \
 	${TEST_CONTAINER_NAME} \
 	    sh -c 'echo "container started.." && cp /root/bin/kubectl /bin/kubectl && echo "kubectl copied." && \
-	     cd /code/tests/k8st && nosetests $(DUAL_TOR_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-tests.xml" --with-timer'
+	     cd /code/tests/k8st && nosetests $(DUAL_TOR_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-dual-tor-tests.xml" --with-timer'
 
 .PHONY: dual-tor-cleanup
 dual-tor-cleanup:
@@ -488,6 +489,7 @@ tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 ## reconfigure the cluster configuration.
 K8ST_TO_RUN ?= -A vanilla
 EGRESS_KIND_CONFIG=./tests/k8st/egress-ip-tests/kind.config
+K8ST_REPORT_FILENAME ?= k8s-tests.xml
 
 .PHONY: egress-ip-test
 egress-ip-test:
@@ -516,10 +518,43 @@ kind-k8st-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	    --net host \
 	${TEST_CONTAINER_NAME} \
 	    sh -c 'echo "container started.." && \
-	     cd /code/tests/k8st && nosetests $(K8ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-tests.xml" --with-timer'
+	     cd /code/tests/k8st && nosetests $(K8ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/$(K8ST_REPORT_FILENAME)" --with-timer'
 
 .PHONY: kind-k8st-cleanup
 kind-k8st-cleanup: kind-cluster-destroy
+
+.PHONY: external-network-test
+external-network-test:
+	$(MAKE) kind-k8st-setup
+	$(MAKE) external-network-setup
+	$(MAKE) external-network-run-test
+	$(MAKE) external-network-cleanup
+	$(MAKE) kind-k8st-cleanup
+
+.PHONY: external-network-setup
+EXTERNAL_NETWORK_DIR=tests/k8st/external-network
+external-network-setup: .calico_test.created external-network-cleanup kubectl dist/calicoctl
+	STEPS=setup \
+	ROUTER_IMAGE=$(BIRD_DIND_IMAGE) CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
+
+EXTERNAL_NETWORK_ST_TO_RUN=external-network-tests/test_external_network.py -s --nocapture --nologcapture
+.PHONY: external-network-run-test
+external-network-run-test:
+	@echo "Starting to run external network tests..."
+	docker run -t --rm \
+	    -v $(CURDIR):/code \
+	    -v /var/run/docker.sock:/var/run/docker.sock \
+	    -v $(KIND_KUBECONFIG):/root/.kube/config \
+	    -v $(CURDIR)/kubectl:/root/bin/kubectl \
+	    --privileged \
+	    --net host \
+	${TEST_CONTAINER_NAME} \
+	    sh -c 'echo "container started..." && cp /root/bin/kubectl /bin/kubectl && echo "kubectl copied." && \
+	     cd /code/tests/k8st && nosetests $(EXTERNAL_NETWORK_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-enet-tests.xml" --with-timer'
+
+.PHONY: external-network-cleanup
+external-network-cleanup:
+	-STEPS=cleanup $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
 # Needed for Semaphore CI (where disk space is a real issue during k8s-test)
 .PHONY: remove-go-build-image

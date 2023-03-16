@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 from random import randint
 
-from tests.k8st.test_base import Container, Pod, TestBase
+from tests.k8st.test_base import NetcatServerTCP, NetcatClientTCP, Pod, TestBase
 from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, \
         node_info, retry_until_success, stop_for_debug, update_ds_env
 
@@ -124,9 +124,9 @@ EOF
 
         with DiagsCollector():
             # Create egress gateways, with an IP from that pool.
-            gw = self.create_gateway_pod("kind-worker", "gw", self.egress_cidr)
-            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
-            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
+            gw = self.create_egress_gateway_pod("kind-worker", "gw", self.egress_cidr)
+            gw2 = self.create_egress_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
+            gw3 = self.create_egress_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
             for g in [gw, gw2, gw3]:
                 g.wait_ready()
 
@@ -185,9 +185,9 @@ EOF
 
             # Create gateway pods again.
             # Validate ECMP routes works again.
-            gw = self.create_gateway_pod("kind-worker", "gw", self.egress_cidr)
-            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
-            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
+            gw = self.create_egress_gateway_pod("kind-worker", "gw", self.egress_cidr)
+            gw2 = self.create_egress_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
+            gw3 = self.create_egress_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
             gw_ips = [gw.ip, gw2.ip, gw3.ip]
             for g in [gw, gw2, gw3]:
                 g.wait_ready()
@@ -219,9 +219,9 @@ EOF
 
             # Create a few egress gateways.  We set each one up with a different ICMP probe so that we can
             # break each one's probe separately.
-            gw = self.create_gateway_pod("kind-worker", "gw", self.egress_cidr, icmp_probes=servers[0].ip)
-            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr, icmp_probes=servers[1].ip)
-            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, icmp_probes=servers[2].ip)
+            gw = self.create_egress_gateway_pod("kind-worker", "gw", self.egress_cidr, icmp_probes=servers[0].ip)
+            gw2 = self.create_egress_gateway_pod("kind-worker2", "gw2", self.egress_cidr, icmp_probes=servers[1].ip)
+            gw3 = self.create_egress_gateway_pod("kind-worker3", "gw3", self.egress_cidr, icmp_probes=servers[2].ip)
 
             for s in servers:
                 s.wait_running()
@@ -276,15 +276,15 @@ EOF
             # Create egress gateways, with an IP from that pool.
             self.create_namespace("ns2", labels={"egress": "yes"})
             self.create_namespace("ns3", labels={"egress": "yes"})
-            gw = self.create_gateway_pod("kind-worker", "gw", self.egress_cidr)
+            gw = self.create_egress_gateway_pod("kind-worker", "gw", self.egress_cidr)
 
             # blue gateways, different host, different namespaces
-            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr, ns="ns2", color="blue")
-            gw2_1 = self.create_gateway_pod("kind-worker", "gw2-1", self.egress_cidr, ns="default", color="blue")
+            gw2 = self.create_egress_gateway_pod("kind-worker2", "gw2", self.egress_cidr, ns="ns2", color="blue")
+            gw2_1 = self.create_egress_gateway_pod("kind-worker", "gw2-1", self.egress_cidr, ns="default", color="blue")
 
             # red gateways, same host, same namespaces
-            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, ns="ns3")
-            gw3_1 = self.create_gateway_pod("kind-worker3", "gw3-1", self.egress_cidr, ns="ns3")
+            gw3 = self.create_egress_gateway_pod("kind-worker3", "gw3", self.egress_cidr, ns="ns3")
+            gw3_1 = self.create_egress_gateway_pod("kind-worker3", "gw3-1", self.egress_cidr, ns="ns3")
             for g in [gw, gw2, gw2_1, gw3, gw3_1]:
                 g.wait_ready()
 
@@ -373,8 +373,8 @@ EOF
             # Support mode is EnabledPerNamespaceOrPerPod.
 
             # Create two gateway pods
-            gw_red = self.create_gateway_pod("kind-worker", "gw-red", self.egress_cidr)
-            gw_blue = self.create_gateway_pod("kind-worker2", "gw-blue", self.egress_cidr, color="blue")
+            gw_red = self.create_egress_gateway_pod("kind-worker", "gw-red", self.egress_cidr)
+            gw_blue = self.create_egress_gateway_pod("kind-worker2", "gw-blue", self.egress_cidr, color="blue")
             for g in [gw_blue, gw_red]:
                 g.wait_ready()
 
@@ -591,9 +591,9 @@ EOF
         with DiagsCollector():
             # Create egress gateways, with an IP from that pool.
             termination_grace_period = 10
-            gw = self.create_gateway_pod("kind-worker", "gw", self.egress_cidr, "red", "default", termination_grace_period)
-            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr, "red", "default", termination_grace_period)
-            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, "red", "default", termination_grace_period)
+            gw = self.create_egress_gateway_pod("kind-worker", "gw", self.egress_cidr, "red", "default", termination_grace_period)
+            gw2 = self.create_egress_gateway_pod("kind-worker2", "gw2", self.egress_cidr, "red", "default", termination_grace_period)
+            gw3 = self.create_egress_gateway_pod("kind-worker3", "gw3", self.egress_cidr, "red", "default", termination_grace_period)
             for g in [gw, gw2, gw3]:
                 g.wait_ready()
 
@@ -631,8 +631,8 @@ EOF
             patch_ippool("egress-ippool-1", "Never", "Never")
 
             # creating egress gateway pods
-            gw_red = self.create_gateway_pod("kind-worker", "gw-red", self.egress_cidr)
-            gw_blue = self.create_gateway_pod("kind-worker2", "gw-blue",
+            gw_red = self.create_egress_gateway_pod("kind-worker", "gw-red", self.egress_cidr)
+            gw_blue = self.create_egress_gateway_pod("kind-worker2", "gw-blue",
                     self.egress_cidr, color="blue")
             for g in [gw_blue, gw_red]:
                 g.wait_ready()
@@ -723,9 +723,9 @@ EOF
     def test_max_hops_pod_annotation(self):
         with DiagsCollector():
             # Create 3 egress gateways, with an IP from that pool.
-            gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr)
-            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
-            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
+            gw1 = self.create_egress_gateway_pod("kind-worker", "gw1", self.egress_cidr)
+            gw2 = self.create_egress_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
+            gw3 = self.create_egress_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
             for g in [gw1, gw2, gw3]:
                 g.wait_ready()
             _log.info("test_max_hops_pod_annotation: created gw pods [%s, %s, %s]", gw1.ip, gw2.ip, gw3.ip)
@@ -792,9 +792,9 @@ EOF
                 "egress.projectcalico.org/selector": "color == 'red'",
                 "egress.projectcalico.org/namespaceSelector": "all()",
             })
-            gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr, ns=client_ns)
-            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr, ns=client_ns)
-            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, ns=client_ns)
+            gw1 = self.create_egress_gateway_pod("kind-worker", "gw1", self.egress_cidr, ns=client_ns)
+            gw2 = self.create_egress_gateway_pod("kind-worker2", "gw2", self.egress_cidr, ns=client_ns)
+            gw3 = self.create_egress_gateway_pod("kind-worker3", "gw3", self.egress_cidr, ns=client_ns)
             for g in [gw1, gw2, gw3]:
                 g.wait_ready()
             _log.info("test_max_hops_namespace_annotation: created gw pods [%s, %s, %s]", gw1.ip, gw2.ip, gw3.ip)
@@ -860,9 +860,9 @@ EOF
             self.add_cleanup(undo_route_table_range)
 
             # Create 3 egress gateways, with an IP from that pool.
-            gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr)
-            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
-            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
+            gw1 = self.create_egress_gateway_pod("kind-worker", "gw1", self.egress_cidr)
+            gw2 = self.create_egress_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
+            gw3 = self.create_egress_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
             for g in [gw1, gw2, gw3]:
                 g.wait_ready()
             _log.info("test_max_hops: created gw pods [%s, %s, %s]", gw1.ip, gw2.ip, gw3.ip)
@@ -1091,7 +1091,7 @@ EOF
         server.wait_running()
 
         # Create egress gateway, with an IP from that pool.  Configure it to ping the server.
-        gateway = self.create_gateway_pod(gateway_node, "gw", self.egress_cidr, icmp_probes=server.ip)
+        gateway = self.create_egress_gateway_pod(gateway_node, "gw", self.egress_cidr, icmp_probes=server.ip)
 
         client_ns = "default"
         client = NetcatClientTCP(client_ns, "test1", node="kind-worker", labels={"app": "client"}, annotations={
@@ -1180,185 +1180,8 @@ spec:
 
         return pod.ip, svc_ip, 8080, int(node_port)
 
-    def create_gateway_pod(self, host, name, egress_cidr, color="red", ns="default", termgraceperiod=0, probe_url="", icmp_probes=""):
-        """
-        Create egress gateway pod, with an IP from that pool.
-        """
-        self.copy_pull_secret(ns)
-
-        gateway = Pod(ns, name, image=None, yaml="""
-apiVersion: v1
-kind: Pod
-metadata:
-  annotations:
-    cni.projectcalico.org/ipv4pools: "[\\\"%s\\\"]"
-  labels:
-    color: %s
-  name: %s
-  namespace: %s
-spec:
-  imagePullSecrets:
-  - name: cnx-pull-secret
-  initContainers:
-  - name: egress-gateway-init
-    image: docker.io/tigera/egress-gateway:latest-amd64
-    env:
-    - name: EGRESS_POD_IP
-      valueFrom:
-        fieldRef:
-          fieldPath: status.podIP
-    - name: EGRESS_VXLAN_PORT
-      value: "4790"
-    - name: EGRESS_VXLAN_VNI
-      value: "4097"
-    imagePullPolicy: Never
-    securityContext:
-      privileged: true
-    command: ["/init-gateway.sh"]
-  containers:
-  - name: gateway
-    image: docker.io/tigera/egress-gateway:latest-amd64
-    env:
-    # Optional: comma-delimited list of IP addresses to send ICMP pings to; if all probes fail, the egress
-    # gateway will report non-ready.
-    - name: ICMP_PROBE_IPS
-      value: "%s"
-    # Only used if ICMP_PROBE_IPS is non-empty: interval to send probes.
-    - name: ICMP_PROBE_INTERVAL
-      value: "1s"
-    # Only used if ICMP_PROBE_IPS is non-empty: timeout on each probe.
-    - name: ICMP_PROBE_TIMEOUT
-      value: "3s"
-    # Optional HTTP URL to send periodic probes to; if the probe fails that is reflected in 
-    # the health reported on the health port.
-    - name: HTTP_PROBE_URL
-      value: "%s"
-    # Only used if HTTP_PROBE_URL is non-empty: interval to send probes.
-    - name: HTTP_PROBE_INTERVAL
-      value: "10s"
-    # Only used if HTTP_PROBE_URL is non-empty: timeout before reporting non-ready if there are no successful probes.
-    - name: HTTP_PROBE_TIMEOUT
-      value: "30s"
-    # Port that the egress gateway serves its health reports.  Must match the readiness probe and health
-    # port defined below.
-    - name: HEALTH_PORT
-      value: "8080"
-    - name: LOG_SEVERITY
-      value: "Info"
-    - name: EGRESS_VXLAN_VNI
-      value: "4097"
-    # Use downward API to tell the pod its own IP address.
-    - name: EGRESS_POD_IP
-      valueFrom:
-        fieldRef:
-          fieldPath: status.podIP
-    imagePullPolicy: Never
-    securityContext:
-      capabilities:
-        add: ["NET_ADMIN"]
-    command: ["/start-gateway.sh"]
-    volumeMounts:
-        - mountPath: /var/run/calico
-          name: policysync
-    ports:
-        - name: health
-          containerPort: 8080
-    readinessProbe:
-        httpGet:
-          path: /readiness
-          port: 8080
-        initialDelaySeconds: 3
-        periodSeconds: 3
-  nodeName: %s
-  terminationGracePeriodSeconds: %d
-  volumes:
-      - flexVolume:
-          driver: nodeagent/uds
-        name: policysync
-""" % (egress_cidr, color, name, ns, icmp_probes, probe_url, host, termgraceperiod))
-        self.add_cleanup(gateway.delete)
-
-        return gateway
-
 _TestEgressIP.vanilla = False
 _TestEgressIP.egress_ip = True
-
-
-class NetcatServerTCP(Container):
-
-    def __init__(self, port):
-        super(NetcatServerTCP, self).__init__("subfuzion/netcat", "-v -l -k -p %d" % port, "--privileged")
-        self.port = port
-
-    def get_recent_client_ip(self):
-        ip = None
-        for attempt in range(3):
-            for line in self.logs().split('\n'):
-                m = re.match(r"Connection from ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+) [0-9]+ received", line)
-                if m:
-                    ip = m.group(1)
-            if ip is not None:
-                return ip
-            else:
-                time.sleep(1)
-        assert False, "Couldn't find a recent client IP in the logs."
-
-class NetcatClientTCP(Pod):
-
-    def __init__(self, ns, name, node=None, labels=None, annotations=None):
-        cmd = ["sleep", "3600"]
-        super(NetcatClientTCP, self).__init__(ns, name, image="alpine", node=node, labels=labels, annotations=annotations, cmd=cmd)
-        self.last_output = ""
-
-    def can_connect(self, ip, port, command="nc"):
-        run("docker exec %s ip rule" % self.nodename, allow_fail=True)
-        run("docker exec %s ip r l table 250" % self.nodename, allow_fail=True)
-        run("docker exec %s ip r l table 249" % self.nodename, allow_fail=True)
-        try:
-            self.check_connected(ip, port, command)
-            _log.info("'%s' connected, as expected", self.name)
-        except subprocess.CalledProcessError:
-            _log.exception("Failed to access server")
-            _log.warning("'%s' failed to connect, when connection was expected", self.name)
-            raise self.ConnectionError
-
-    def cannot_connect(self, ip, port, command="nc"):
-        try:
-            self.check_connected(ip, port, command)
-            _log.warning("'%s' unexpectedly connected", self.name)
-            raise self.ConnectionError
-        except subprocess.CalledProcessError:
-            _log.info("'%s' failed to connect, as expected", self.name)
-
-    def check_connected(self, ip, port, command="nc"):
-        self.last_output = ""
-        if command == "nc":
-            self.last_output = self.execute("nc -w 2 %s %d </dev/null" % (ip, port), timeout=3)
-        elif command == "wget":
-            self.last_output = self.execute("wget -T 2 %s:%d -O -" % (ip, port))
-        else:
-            raise Exception('received invalid command')
-
-    def has_egress_annotations(self, egress_ip, now, termination_grace_period):
-        error_margin = 3
-        annotations = self.annotations
-        gateway_ip = annotations["egress.projectcalico.org/gatewayMaintenanceGatewayIP"]
-        if gateway_ip != egress_ip:
-            raise Exception('egress.projectcalico.org/gatewayMaintenanceGatewayCIDR annotation expected to be: %s, but was: %s. Annotations were: %s' % (egress_ip, gateway_ip, annotations))
-        started_str = annotations["egress.projectcalico.org/gatewayMaintenanceStartedTimestamp"]
-        started = datetime.strptime(started_str, "%Y-%m-%dT%H:%M:%SZ")
-        if abs((started - now).total_seconds()) > error_margin:
-            raise Exception('egress.projectcalico.org/gatewayMaintenanceStartedTimestamp annotation expected to be: within %ds of %s, but was: %s. Annotations were: %s' % (error_margin, now, started_str, annotations))
-        finished_str = annotations["egress.projectcalico.org/gatewayMaintenanceFinishedTimestamp"]
-        finished = datetime.strptime(finished_str, "%Y-%m-%dT%H:%M:%SZ")
-        if abs((finished - started).total_seconds()) > (error_margin + termination_grace_period):
-            raise Exception('egress.projectcalico.org/gatewayMaintenanceFinishedTimestamp annotation expected to be: within %ds of %s, but was: %s. Annotations were: %s' % ((error_margin + termination_grace_period), started, finished_str, annotations))
-
-    def get_last_output(self):
-        return self.last_output
-
-    class ConnectionError(Exception):
-        pass
 
 class TestEgressIPNoOverlay(_TestEgressIP):
     @classmethod
