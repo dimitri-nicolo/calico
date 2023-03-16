@@ -22,7 +22,7 @@ require (
 	github.com/bronze1man/goStrongswanVici v0.0.0-20190828090544-27d02f80ba40
 	github.com/buger/jsonparser v1.1.1
 	github.com/caimeo/iniflags v0.0.0-20171110233946-ef4ae6c5cd79
-	github.com/container-storage-interface/spec v1.7.0
+	github.com/container-storage-interface/spec v1.8.0
 	github.com/containernetworking/cni v1.1.1
 	github.com/containernetworking/plugins v1.1.1
 	github.com/coreos/go-oidc v2.2.1+incompatible
