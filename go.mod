@@ -61,7 +61,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/jpillora/backoff v1.0.0
 	github.com/json-iterator/go v1.1.12
-	github.com/juju/clock v1.0.2
+	github.com/juju/clock v1.0.3
 	github.com/juju/errors v1.0.0
 	github.com/juju/mutex v0.0.0-20180619145857-d21b13acf4bf
 	// build error after upgrading to a newer version
