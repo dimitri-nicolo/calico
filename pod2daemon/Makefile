@@ -71,7 +71,7 @@ bin/csi-driver-amd64: $(SRC_FILES)
 	$(call build_static_cgo_boring_binary, csidriver/main.go, $@)
 
 UPSTREAM_REGISTRAR_PROJECT ?= kubernetes-csi/$(REGISTRAR_IMAGE)
-UPSTREAM_REGISTRAR_TAG     ?= v2.5.1
+UPSTREAM_REGISTRAR_TAG     ?= v2.7.0
 
 REGISTRAR_TIGERA_BUILD_CMD="cd /go/src/github.com/$(UPSTREAM_REGISTRAR_PROJECT) && \
                     			  go build -buildvcs=false -tags $(TAGS) -v -o bin/csi-node-driver-registrar cmd/csi-node-driver-registrar/*.go"
@@ -109,6 +109,8 @@ clone-registrar-upstream:
 ifeq ("$(wildcard ./$(REGISTRAR_IMAGE))", "")
 	@echo "Directory does not exist."
 	git clone --depth 1 --branch $(UPSTREAM_REGISTRAR_TAG) --single-branch https://github.com/$(UPSTREAM_REGISTRAR_PROJECT).git
+	patch -d node-driver-registrar -p1 < patches/0001-Update-x-dependencies.patch
+	rm -rf node-driver-registrar/vendor
 else
 	@echo "Upstream repo already cloned."
 endif
