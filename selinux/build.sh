@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -x
 
-make -f /usr/share/selinux/devel/Makefile calico-enterprise.pp
+make -f /usr/share/selinux/devel/Makefile calico.pp
 
 cd build/
 
@@ -13,4 +13,4 @@ rpmbuild \
     --define "_specdir $PWD/.." \
     --define "_srcrpmdir $PWD/dist/source" \
     --define "_topdir $PWD/rpmbuild" \
-    -ba ../calico-enterprise-selinux.spec
+    -ba ../calico-selinux.spec
