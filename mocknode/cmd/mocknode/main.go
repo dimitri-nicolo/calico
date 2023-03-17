@@ -11,6 +11,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/typha/pkg/discovery"
 	"github.com/projectcalico/calico/typha/pkg/syncclient"
 	"github.com/projectcalico/calico/typha/pkg/syncproto"
@@ -115,7 +116,7 @@ func main() {
 		"version": VERSION,
 	}).Info("Mock Calico Node starting up")
 
-	name, err := os.Hostname()
+	name, err := names.Hostname()
 	if err != nil {
 		logrus.WithError(err).Panic("Failed to get hostname")
 	}
