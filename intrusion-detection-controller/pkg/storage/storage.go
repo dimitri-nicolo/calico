@@ -1,6 +1,6 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package elastic
+package storage
 
 import (
 	"context"
@@ -13,11 +13,16 @@ import (
 	"sync"
 	"time"
 
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	"github.com/araddon/dateparse"
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -28,19 +33,12 @@ import (
 const (
 	IPSetIndexPattern           = ".tigera.ipset.%s"
 	DomainNameSetIndexPattern   = ".tigera.domainnameset.%s"
-	FlowLogIndexPattern         = "tigera_secure_ee_flows.%s.*"
-	DNSLogIndexPattern          = "tigera_secure_ee_dns.%s.*"
-	EventIndexPattern           = "tigera_secure_ee_events.%s.lma"
-	AuditIndexPattern           = "tigera_secure_ee_audit_*.%s.*"
 	ForwarderConfigIndexPattern = ".tigera.forwarderconfig.%s"
 	WatchNamePrefixPattern      = "tigera_secure_ee_watch.%s."
 	QuerySize                   = 1000
-	AuditQuerySize              = 0
 	MaxClauseCount              = 1024
 	CreateIndexFailureDelay     = time.Second * 15
 	CreateIndexWaitTimeout      = time.Minute
-	Create                      = "create"
-	Delete                      = "delete"
 	DefaultReplicas             = 0
 	DefaultShards               = 5
 )
@@ -48,10 +46,6 @@ const (
 var (
 	IPSetIndex           string
 	DomainNameSetIndex   string
-	EventIndex           string
-	FlowLogIndex         string
-	DNSLogIndex          string
-	AuditIndex           string
 	WatchNamePrefix      string
 	ForwarderConfigIndex string // ForwarderConfigIndex is an index for maintaining internal state for the event forwarder
 )
@@ -63,27 +57,25 @@ func init() {
 	}
 	IPSetIndex = fmt.Sprintf(IPSetIndexPattern, clusterName)
 	DomainNameSetIndex = fmt.Sprintf(DomainNameSetIndexPattern, clusterName)
-	EventIndex = fmt.Sprintf(EventIndexPattern, clusterName)
-	FlowLogIndex = fmt.Sprintf(FlowLogIndexPattern, clusterName)
-	DNSLogIndex = fmt.Sprintf(DNSLogIndexPattern, clusterName)
-	AuditIndex = fmt.Sprintf(AuditIndexPattern, clusterName)
 	WatchNamePrefix = fmt.Sprintf(WatchNamePrefixPattern, clusterName)
 	ForwarderConfigIndex = fmt.Sprintf(ForwarderConfigIndexPattern, clusterName)
 }
 
 type ipSetDoc struct {
-	CreatedAt time.Time    `json:"created_at"`
-	IPs       db.IPSetSpec `json:"ips"`
+	CreatedAt time.Time `json:"created_at"`
+	IPs       IPSetSpec `json:"ips"`
 }
 
 type domainNameSetDoc struct {
-	CreatedAt time.Time            `json:"created_at"`
-	Domains   db.DomainNameSetSpec `json:"domains"`
+	CreatedAt time.Time         `json:"created_at"`
+	Domains   DomainNameSetSpec `json:"domains"`
 }
 
-type Elastic struct {
+type Service struct {
 	lmaCLI                        lma.Client
 	c                             *elastic.Client
+	lsClient                      client.Client
+	clusterName                   string
 	ipSetMappingCreated           chan struct{}
 	domainNameSetMappingCreated   chan struct{}
 	eventMappingCreated           chan struct{}
@@ -93,10 +85,12 @@ type Elastic struct {
 	indexSettings                 IndexSettings
 }
 
-func NewService(lmaCLI lma.Client, indexSettings IndexSettings) *Elastic {
-	return &Elastic{
+func NewService(lmaCLI lma.Client, lsClient client.Client, clusterName string, indexSettings IndexSettings) *Service {
+	return &Service{
 		lmaCLI:                        lmaCLI,
 		c:                             lmaCLI.Backend(),
+		lsClient:                      lsClient,
+		clusterName:                   clusterName,
 		ipSetMappingCreated:           make(chan struct{}),
 		domainNameSetMappingCreated:   make(chan struct{}),
 		eventMappingCreated:           make(chan struct{}),
@@ -105,7 +99,7 @@ func NewService(lmaCLI lma.Client, indexSettings IndexSettings) *Elastic {
 	}
 }
 
-func (e *Elastic) Run(ctx context.Context) {
+func (e *Service) Run(ctx context.Context) {
 	e.once.Do(func() {
 		ctx, e.cancel = context.WithCancel(ctx)
 		go func() {
@@ -136,24 +130,24 @@ func (e *Elastic) Run(ctx context.Context) {
 	})
 }
 
-func (e *Elastic) Close() {
+func (e *Service) Close() {
 	e.cancel()
 }
 
-func (e *Elastic) ListIPSets(ctx context.Context) ([]db.Meta, error) {
+func (e *Service) ListIPSets(ctx context.Context) ([]Meta, error) {
 	return e.listSets(ctx, IPSetIndex)
 }
 
-func (e *Elastic) ListDomainNameSets(ctx context.Context) ([]db.Meta, error) {
+func (e *Service) ListDomainNameSets(ctx context.Context) ([]Meta, error) {
 	return e.listSets(ctx, DomainNameSetIndex)
 }
 
-func (e *Elastic) listSets(ctx context.Context, idx string) ([]db.Meta, error) {
+func (e *Service) listSets(ctx context.Context, idx string) ([]Meta, error) {
 	q := elastic.NewMatchAllQuery()
 	scroller := e.c.Scroll(idx).FetchSource(false).Query(q)
 	defer scroller.Clear(ctx) // nolint: errcheck
 
-	var ids []db.Meta
+	var ids []Meta
 	for {
 		res, err := scroller.Do(ctx)
 		if err == io.EOF {
@@ -167,7 +161,7 @@ func (e *Elastic) listSets(ctx context.Context, idx string) ([]db.Meta, error) {
 			return nil, err
 		}
 		for _, hit := range res.Hits.Hits {
-			ids = append(ids, db.Meta{
+			ids = append(ids, Meta{
 				Name:        hit.Id,
 				SeqNo:       hit.SeqNo,
 				PrimaryTerm: hit.PrimaryTerm,
@@ -176,17 +170,17 @@ func (e *Elastic) listSets(ctx context.Context, idx string) ([]db.Meta, error) {
 	}
 }
 
-func (e *Elastic) PutIPSet(ctx context.Context, name string, set db.IPSetSpec) error {
+func (e *Service) PutIPSet(ctx context.Context, name string, set IPSetSpec) error {
 	body := ipSetDoc{CreatedAt: time.Now(), IPs: set}
 	return e.putSet(ctx, name, IPSetIndex, e.ipSetMappingCreated, body)
 }
 
-func (e *Elastic) PutDomainNameSet(ctx context.Context, name string, set db.DomainNameSetSpec) error {
+func (e *Service) PutDomainNameSet(ctx context.Context, name string, set DomainNameSetSpec) error {
 	body := domainNameSetDoc{CreatedAt: time.Now(), Domains: set}
 	return e.putSet(ctx, name, DomainNameSetIndex, e.domainNameSetMappingCreated, body)
 }
 
-func (e *Elastic) putSet(ctx context.Context, name string, idx string, c <-chan struct{}, body interface{}) error {
+func (e *Service) putSet(ctx context.Context, name string, idx string, c <-chan struct{}, body interface{}) error {
 	// Wait for the Sets Mapping to be created
 	if err := util.WaitForChannel(ctx, c, CreateIndexWaitTimeout); err != nil {
 		return err
@@ -199,7 +193,7 @@ func (e *Elastic) putSet(ctx context.Context, name string, idx string, c <-chan 
 	return err
 }
 
-func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, error) {
+func (e *Service) GetIPSet(ctx context.Context, name string) (IPSetSpec, error) {
 	doc, err := e.get(ctx, IPSetIndex, name)
 	if err != nil {
 		return nil, err
@@ -213,7 +207,7 @@ func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, erro
 	if !ok {
 		return nil, fmt.Errorf("unknown type for %#v", i)
 	}
-	ips := db.IPSetSpec{}
+	ips := IPSetSpec{}
 	for _, v := range ia {
 		s, ok := v.(string)
 		if !ok {
@@ -225,7 +219,7 @@ func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, erro
 	return ips, nil
 }
 
-func (e *Elastic) GetDomainNameSet(ctx context.Context, name string) (db.DomainNameSetSpec, error) {
+func (e *Service) GetDomainNameSet(ctx context.Context, name string) (DomainNameSetSpec, error) {
 	doc, err := e.get(ctx, DomainNameSetIndex, name)
 	if err != nil {
 		return nil, err
@@ -239,7 +233,7 @@ func (e *Elastic) GetDomainNameSet(ctx context.Context, name string) (db.DomainN
 	if !ok {
 		return nil, fmt.Errorf("unknown type for %#v", domains)
 	}
-	result := db.DomainNameSetSpec{}
+	result := DomainNameSetSpec{}
 	for _, d := range idomains {
 		s, ok := d.(string)
 		if !ok {
@@ -251,7 +245,7 @@ func (e *Elastic) GetDomainNameSet(ctx context.Context, name string) (db.DomainN
 	return result, nil
 }
 
-func (e *Elastic) get(ctx context.Context, idx, name string) (map[string]interface{}, error) {
+func (e *Service) get(ctx context.Context, idx, name string) (map[string]interface{}, error) {
 	res, err := e.c.Get().Index(idx).Id(name).Do(ctx)
 	if err != nil {
 		return nil, err
@@ -266,15 +260,15 @@ func (e *Elastic) get(ctx context.Context, idx, name string) (map[string]interfa
 	return doc, err
 }
 
-func (e *Elastic) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
+func (e *Service) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
 	return e.getSetModified(ctx, name, IPSetIndex)
 }
 
-func (e *Elastic) GetDomainNameSetModified(ctx context.Context, name string) (time.Time, error) {
+func (e *Service) GetDomainNameSetModified(ctx context.Context, name string) (time.Time, error) {
 	return e.getSetModified(ctx, name, DomainNameSetIndex)
 }
 
-func (e *Elastic) getSetModified(ctx context.Context, name, idx string) (time.Time, error) {
+func (e *Service) getSetModified(ctx context.Context, name, idx string) (time.Time, error) {
 	res, err := e.c.Get().Index(idx).Id(name).FetchSourceContext(elastic.NewFetchSourceContext(true).Include("created_at")).Do(ctx)
 	if err != nil {
 		return time.Time{}, err
@@ -303,15 +297,15 @@ func (e *Elastic) getSetModified(ctx context.Context, name, idx string) (time.Ti
 type SetQuerier interface {
 	// QueryIPSet queries the flow log by IPs specified in the feed's IPSet.
 	// It returns a queryIterator, the latest IPSet hash, and error if any happens during the querying
-	QueryIPSet(ctx context.Context, feed *apiV3.GlobalThreatFeed) (queryIterator Iterator, newSetHash string, err error)
+	QueryIPSet(ctx context.Context, feed *apiV3.GlobalThreatFeed) (queryIterator Iterator[lsv1.FlowLog], newSetHash string, err error)
 	// QueryDomainNameSet queries the DNS log by domain names specified in the feed's DomainNameSet.
 	// It returns a queryIterator, the latest DomainNameSet hash, and error if any happens during the querying
-	QueryDomainNameSet(ctx context.Context, set db.DomainNameSetSpec, feed *apiV3.GlobalThreatFeed) (queryIterator Iterator, newSetHash string, err error)
+	QueryDomainNameSet(ctx context.Context, set DomainNameSetSpec, feed *apiV3.GlobalThreatFeed) (queryIterator Iterator[lsv1.DNSLog], newSetHash string, err error)
 	// GetDomainNameSet queries and outputs all the domain names specified in the feed's DomainNameSet.
-	GetDomainNameSet(ctx context.Context, name string) (db.DomainNameSetSpec, error)
+	GetDomainNameSet(ctx context.Context, name string) (DomainNameSetSpec, error)
 }
 
-func (e *Elastic) QueryIPSet(ctx context.Context, feed *apiV3.GlobalThreatFeed) (Iterator, string, error) {
+func (e *Service) QueryIPSet(ctx context.Context, feed *apiV3.GlobalThreatFeed) (Iterator[lsv1.FlowLog], string, error) {
 	ipset, err := e.GetIPSet(ctx, feed.Name)
 	if err != nil {
 		return nil, "", err
@@ -319,107 +313,123 @@ func (e *Elastic) QueryIPSet(ctx context.Context, feed *apiV3.GlobalThreatFeed) 
 
 	newIpSetHash := util.ComputeSha256Hash(ipset)
 	var fromTimestamp time.Time
-	currentIpSetHash := feed.Annotations[db.IpSetHashKey]
+	currentIpSetHash := feed.Annotations[IpSetHashKey]
 	// If the ipSet has changed we need to query from the beginning of time, otherwise query from the last successful time
 	if feed.Status.LastSuccessfulSearch != nil && strings.Compare(newIpSetHash, currentIpSetHash) == 0 {
 		fromTimestamp = feed.Status.LastSuccessfulSearch.Time
 	}
 
-	queryTerms := splitIPSetToInterface(ipset)
+	// Create the list pager for flow logs
+	var tr lmav1.TimeRange
+	tr.From = fromTimestamp
+	tr.To = time.Now()
 
-	f := func(ipset, field string, terms []interface{}) *elastic.ScrollService {
-		filters := []elastic.Query{elastic.NewTermsQuery(field, terms...)}
-		if !fromTimestamp.IsZero() {
-			filters = append(filters, elastic.NewRangeQuery("@timestamp").Gt(fromTimestamp))
-		}
-		boolQuery := elastic.NewBoolQuery().Filter(filters...)
-		return e.c.Scroll(FlowLogIndex).SortBy(elastic.SortByDoc{}).Query(boolQuery).Size(QuerySize)
-	}
+	queryTerms := splitIPSet(ipset)
+	var queries []queryEntry[lsv1.FlowLog, lsv1.FlowLogParams]
 
-	var scrollers []scrollerEntry
 	for _, t := range queryTerms {
-		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyFlowLogSourceIP, scroller: f(feed.Name, "source_ip", t), terms: t})
-		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyFlowLogDestIP, scroller: f(feed.Name, "dest_ip", t), terms: t})
+		matchSource := flowParams(tr, lsv1.MatchTypeSource, t)
+		queries = append(queries, queryEntry[lsv1.FlowLog, lsv1.FlowLogParams]{
+			key:         QueryKeyFlowLogSourceIP,
+			queryParams: matchSource,
+			listPager:   client.NewListPager[lsv1.FlowLog](&matchSource),
+			listFn:      e.lsClient.FlowLogs(e.clusterName).List,
+		})
+
+		matchDestination := flowParams(tr, lsv1.MatchTypeDest, t)
+		queries = append(queries, queryEntry[lsv1.FlowLog, lsv1.FlowLogParams]{
+			key:         QueryKeyFlowLogDestIP,
+			queryParams: matchDestination,
+			listPager:   client.NewListPager[lsv1.FlowLog](&matchDestination),
+			listFn:      e.lsClient.FlowLogs(e.clusterName).List,
+		})
 	}
-	return newQueryIterator(ctx, scrollers, feed.Name), newIpSetHash, nil
+
+	return newQueryIterator(ctx, queries, feed.Name), newIpSetHash, nil
 }
 
-func (e *Elastic) QueryDomainNameSet(ctx context.Context, domainNameSet db.DomainNameSetSpec, feed *apiV3.GlobalThreatFeed) (Iterator, string, error) {
+func flowParams(tr lmav1.TimeRange, matchType lsv1.MatchType, t []string) lsv1.FlowLogParams {
+	matchSource := lsv1.FlowLogParams{QueryParams: lsv1.QueryParams{TimeRange: &tr}}
+	matchSource.IPMatches = []lsv1.IPMatch{
+		{
+			Type: matchType,
+			IPs:  t,
+		},
+	}
+	matchSource.SetMaxPageSize(QuerySize)
+	return matchSource
+}
+
+func (e *Service) QueryDomainNameSet(ctx context.Context, domainNameSet DomainNameSetSpec, feed *apiV3.GlobalThreatFeed) (Iterator[lsv1.DNSLog], string, error) {
 	newDomainNameSetHash := util.ComputeSha256Hash(domainNameSet)
 	var fromTimestamp time.Time
-	currentDomainNameSetHash := feed.Annotations[db.DomainNameSetHashKey]
+	currentDomainNameSetHash := feed.Annotations[DomainNameSetHashKey]
 	// If the domainNameSet has changed we need to query from the beginning of time, otherwise query from the last successful time
 	if feed.Status.LastSuccessfulSearch != nil && strings.Compare(newDomainNameSetHash, currentDomainNameSetHash) == 0 {
 		fromTimestamp = feed.Status.LastSuccessfulSearch.Time
 	}
 
-	queryTerms := splitDomainNameSetToInterface(domainNameSet)
+	queryTerms := splitDomainNameSet(domainNameSet)
 
-	var scrollers []scrollerEntry
-
-	// Ordering is important for the scrollers, so that we get more relevant results earlier. The caller
+	// Ordering is important for the queries, so that we get more relevant results earlier. The caller
 	// wants to de-duplicate events that point to the same DNS query. For example, a DNS query for www.example.com
 	// will create a DNS log with www.example.com in both the qname and one of the rrsets.name. We only want to emit
 	// one security event in this case, and the most relevant one is the one that says a pod queried directly for
 	// for a name on our threat list.
 
-	// QName scrollers
+	// Create the list pager for flow logs
+	var tr lmav1.TimeRange
+	tr.From = fromTimestamp
+	tr.To = time.Now()
+
+	var queries []queryEntry[lsv1.DNSLog, lsv1.DNSLogParams]
 	for _, t := range queryTerms {
-		filters := []elastic.Query{elastic.NewTermsQuery("qname", t...)}
-		if !fromTimestamp.IsZero() {
-			filters = append(filters, elastic.NewRangeQuery("@timestamp").Gt(fromTimestamp))
-		}
-		qnameQuery := elastic.NewBoolQuery().Filter(filters...)
-		qname := e.c.Scroll(DNSLogIndex).
-			SortBy(elastic.SortByDoc{}).
-			Size(QuerySize).
-			Query(qnameQuery)
-		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyDNSLogQName, scroller: qname, terms: t})
+		matchQname := dnsLogParams(tr, lsv1.DomainMatchQname, t)
+		queries = append(queries, queryEntry[lsv1.DNSLog, lsv1.DNSLogParams]{
+			key:         QueryKeyDNSLogQName,
+			queryParams: matchQname,
+			listPager:   client.NewListPager[lsv1.DNSLog](&matchQname), listFn: e.lsClient.DNSLogs("cluster").List,
+		})
+		matchRRSet := dnsLogParams(tr, lsv1.DomainMatchRRSet, t)
+		queries = append(queries, queryEntry[lsv1.DNSLog, lsv1.DNSLogParams]{
+			key:       QueryKeyDNSLogRRSetsName,
+			listPager: client.NewListPager[lsv1.DNSLog](&matchRRSet), listFn: e.lsClient.DNSLogs("cluster").List,
+		})
+		matchRRData := dnsLogParams(tr, lsv1.DomainMatchRRData, t)
+		queries = append(queries, queryEntry[lsv1.DNSLog, lsv1.DNSLogParams]{
+			key:       QueryKeyDNSLogRRSetsRData,
+			listPager: client.NewListPager[lsv1.DNSLog](&matchRRData), listFn: e.lsClient.DNSLogs("cluster").List,
+		})
 	}
 
-	// RRSet.name scrollers
-	for _, t := range queryTerms {
-		filters := []elastic.Query{elastic.NewNestedQuery("rrsets", elastic.NewTermsQuery("rrsets.name", t...))}
-		if !fromTimestamp.IsZero() {
-			filters = append(filters, elastic.NewRangeQuery("@timestamp").Gt(fromTimestamp))
-		}
-		rrsnQuery := elastic.NewBoolQuery().Filter(filters...)
-		rrsn := e.c.Scroll(DNSLogIndex).
-			SortBy(elastic.SortByDoc{}).
-			Size(QuerySize).
-			Query(rrsnQuery)
-		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyDNSLogRRSetsName, scroller: rrsn, terms: t})
+	return newQueryIterator(ctx, queries, feed.Name), newDomainNameSetHash, nil
+}
+
+func dnsLogParams(tr lmav1.TimeRange, matchType lsv1.DomainMatchType, domainNameSet DomainNameSetSpec) lsv1.DNSLogParams {
+	matchQname := lsv1.DNSLogParams{QueryParams: lsv1.QueryParams{TimeRange: &tr}}
+	matchQname.DomainMatches = []lsv1.DomainMatch{
+		{
+			Type:    matchType,
+			Domains: domainNameSet,
+		},
 	}
-
-	// RRSet.rdata scrollers
-	for _, t := range queryTerms {
-		filters := []elastic.Query{elastic.NewNestedQuery("rrsets", elastic.NewTermsQuery("rrsets.rdata", t...))}
-		if !fromTimestamp.IsZero() {
-			filters = append(filters, elastic.NewRangeQuery("@timestamp").Gt(fromTimestamp))
-		}
-		rrsrdQuery := elastic.NewBoolQuery().Filter(filters...)
-		rrsrd := e.c.Scroll(DNSLogIndex).
-			SortBy(elastic.SortByDoc{}).
-			Size(QuerySize).
-			Query(rrsrdQuery)
-		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyDNSLogRRSetsRData, scroller: rrsrd, terms: t})
-	}
-	return newQueryIterator(ctx, scrollers, feed.Name), newDomainNameSetHash, nil
+	matchQname.SetMaxPageSize(QuerySize)
+	return matchQname
 }
 
-func splitIPSetToInterface(ipset db.IPSetSpec) [][]interface{} {
-	return splitStringSliceToInterface(ipset)
+func splitIPSet(ipset IPSetSpec) [][]string {
+	return splitStringSlice(ipset)
 }
 
-func splitDomainNameSetToInterface(set db.DomainNameSetSpec) [][]interface{} {
-	return splitStringSliceToInterface(set)
+func splitDomainNameSet(set DomainNameSetSpec) [][]string {
+	return splitStringSlice(set)
 }
 
-func splitStringSliceToInterface(set []string) [][]interface{} {
-	terms := make([][]interface{}, 1)
+func splitStringSlice(set []string) [][]string {
+	terms := make([][]string, 1)
 	for _, t := range set {
 		if len(terms[len(terms)-1]) >= MaxClauseCount {
-			terms = append(terms, []interface{}{t})
+			terms = append(terms, []string{t})
 		} else {
 			terms[len(terms)-1] = append(terms[len(terms)-1], t)
 		}
@@ -427,15 +437,15 @@ func splitStringSliceToInterface(set []string) [][]interface{} {
 	return terms
 }
 
-func (e *Elastic) DeleteIPSet(ctx context.Context, m db.Meta) error {
+func (e *Service) DeleteIPSet(ctx context.Context, m Meta) error {
 	return e.deleteSet(ctx, m, IPSetIndex)
 }
 
-func (e *Elastic) DeleteDomainNameSet(ctx context.Context, m db.Meta) error {
+func (e *Service) DeleteDomainNameSet(ctx context.Context, m Meta) error {
 	return e.deleteSet(ctx, m, DomainNameSetIndex)
 }
 
-func (e *Elastic) deleteSet(ctx context.Context, m db.Meta, idx string) error {
+func (e *Service) deleteSet(ctx context.Context, m Meta, idx string) error {
 	ds := e.c.Delete().Index(idx).Id(m.Name)
 	if m.SeqNo != nil {
 		ds = ds.IfSeqNo(*m.SeqNo)
@@ -447,19 +457,22 @@ func (e *Elastic) deleteSet(ctx context.Context, m db.Meta, idx string) error {
 	return err
 }
 
-func (e *Elastic) PutSecurityEventWithID(ctx context.Context, f db.SecurityEventInterface) error {
-	_, err := e.lmaCLI.PutSecurityEventWithID(ctx, f.GetEventsData(), f.GetID())
+func (e *Service) PutSecurityEventWithID(ctx context.Context, f []lsv1.Event) error {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	_, err := e.lsClient.Events(e.clusterName).Create(ctx, f)
 	return err
 }
 
 // GetSecurityEvents retrieves a listing of security events from ES sorted in ascending order,
 // where each events time falls within the range given by start and end time.
-func (e *Elastic) GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) <-chan *lmaAPI.EventResult {
+func (e *Service) GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) <-chan *lmaAPI.EventResult {
 	return e.lmaCLI.SearchSecurityEvents(ctx, &start, &end, nil, allClusters)
 }
 
 // PutForwarderConfig saves the given ForwarderConfig object back to the datastore.
-func (e *Elastic) PutForwarderConfig(ctx context.Context, id string, f *db.ForwarderConfig) error {
+func (e *Service) PutForwarderConfig(ctx context.Context, id string, f *ForwarderConfig) error {
 	l := log.WithFields(log.Fields{"func": "PutForwarderConfig"})
 	// Wait for the SecurityEvent Mapping to be created
 	if err := util.WaitForChannel(ctx, e.forwarderConfigMappingCreated, CreateIndexWaitTimeout); err != nil {
@@ -472,7 +485,7 @@ func (e *Elastic) PutForwarderConfig(ctx context.Context, id string, f *db.Forwa
 }
 
 // GetForwarderConfig retrieves the forwarder config (which will be a singleton).
-func (e *Elastic) GetForwarderConfig(ctx context.Context, id string) (*db.ForwarderConfig, error) {
+func (e *Service) GetForwarderConfig(ctx context.Context, id string) (*ForwarderConfig, error) {
 	l := log.WithFields(log.Fields{"func": "GetForwarderConfig"})
 	l.Debugf("Search for config with id[%s]", id)
 
@@ -491,7 +504,7 @@ func (e *Elastic) GetForwarderConfig(ctx context.Context, id string) (*db.Forwar
 	if searchResult.Hits.TotalHits.Value > 0 {
 		hit := searchResult.Hits.Hits[0]
 		l.Debugf("Selecting forwarder config with id[%s]", hit.Id)
-		var config db.ForwarderConfig
+		var config ForwarderConfig
 		if err := json.Unmarshal(hit.Source, &config); err != nil {
 			return nil, err
 		}
@@ -499,66 +512,4 @@ func (e *Elastic) GetForwarderConfig(ctx context.Context, id string) (*db.Forwar
 	}
 
 	return nil, nil
-}
-
-func (e *Elastic) ObjectCreatedBetween(
-	ctx context.Context, resource, namespace, name string, before, after time.Time,
-) (bool, error) {
-	return e.auditObjectCreatedDeletedBetween(ctx, Create, resource, namespace, name, before, after)
-}
-
-func (e *Elastic) ObjectDeletedBetween(
-	ctx context.Context, resource, namespace, name string, before, after time.Time,
-) (bool, error) {
-	return e.auditObjectCreatedDeletedBetween(ctx, Delete, resource, namespace, name, before, after)
-}
-
-func (e *Elastic) auditObjectCreatedDeletedBetween(
-	ctx context.Context,
-	verb, resource, namespace, name string,
-	before, after time.Time,
-) (bool, error) {
-	switch {
-	case verb == "":
-		panic("missing verb parameter")
-	case resource == "":
-		panic("missing resource parameter")
-	case name == "":
-		return false, errors.New("missing name parameter")
-	}
-
-	// Build query using given fields.
-	queries := []elastic.Query{
-		elastic.NewRangeQuery("stageTimestamp").Gte(after).Lte(before),
-		elastic.NewMatchQuery("verb", verb),
-		elastic.NewMatchQuery("objectRef.resource", resource),
-		elastic.NewMatchQuery("objectRef.name", name),
-	}
-
-	if namespace != "" {
-		queries = append(queries, elastic.NewMatchQuery("objectRef.namespace", namespace))
-	}
-
-	query := elastic.NewBoolQuery().Filter(queries...)
-
-	// Get the number of matching entries.
-	result, err := elastic.NewSearchService(e.c).Index(AuditIndex).Size(AuditQuerySize).Query(query).Do(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	rval := result.TotalHits() > 0
-
-	log.WithFields(log.Fields{
-		"verb":      verb,
-		"resource":  resource,
-		"namespace": namespace,
-		"name":      name,
-		"before":    fmt.Sprint(before),
-		"after":     fmt.Sprint(after),
-		"totalHits": result.TotalHits(),
-		"found":     rval,
-	}).Debug("AuditLog query results")
-
-	return rval, nil
 }

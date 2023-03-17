@@ -12,10 +12,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
-	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/alert"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
+	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"

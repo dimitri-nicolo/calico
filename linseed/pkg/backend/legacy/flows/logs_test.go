@@ -215,12 +215,14 @@ func TestFlowLogFiltering(t *testing.T) {
 				return
 			}
 
+			copyOfLogs := backendutils.AssertLogIDAndCopyFlowLogsWithoutID(t, r)
+
 			// Assert that the correct logs are returned.
 			if testcase.ExpectLog1 {
-				require.Contains(t, r.Items, *fl1)
+				require.Contains(t, copyOfLogs, *fl1)
 			}
 			if testcase.ExpectLog2 {
-				require.Contains(t, r.Items, *fl2)
+				require.Contains(t, copyOfLogs, *fl2)
 			}
 		})
 	}

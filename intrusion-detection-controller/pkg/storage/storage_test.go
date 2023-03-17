@@ -1,11 +1,10 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package elastic
+package storage
 
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,15 +12,19 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"text/template"
 	"time"
+
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
 	"github.com/araddon/dateparse"
 	. "github.com/onsi/gomega"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
@@ -32,9 +35,7 @@ const (
 	baseURI = "http://127.0.0.1:9200"
 )
 
-var (
-	oneMinuteAgo time.Time
-)
+var oneMinuteAgo time.Time
 
 func TestElastic_GetIPSet(t *testing.T) {
 	g := NewGomegaWithT(t)
@@ -47,7 +48,9 @@ func TestElastic_GetIPSet(t *testing.T) {
 
 	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(lmaESCli, DefaultIndexSettings())
+	// mock linseed client
+	lsc := lsclient.NewMockClient("")
+	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -83,7 +86,9 @@ func TestElastic_GetIPSetModified(t *testing.T) {
 
 	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(lmaESCli, DefaultIndexSettings())
+	// mock linseed client
+	lsc := lsclient.NewMockClient("")
+	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -123,7 +128,44 @@ func TestElastic_QueryIPSet(t *testing.T) {
 
 	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(lmaESCli, DefaultIndexSettings())
+	results := []rest.MockResult{}
+	results = append(results, rest.MockResult{
+		Body: v1.List[v1.FlowLog]{
+			Items: []v1.FlowLog{
+				{
+					SourceIP: strPtr("35.32.82.134"),
+					DestIP:   strPtr("10.10.1.20"),
+					ID:       "BQ15nGkBixKz5K3LBMRy",
+				},
+				{
+					SourceIP: strPtr("35.32.82.134"),
+					DestIP:   strPtr("10.10.1.20"),
+					ID:       "BQ15nGkBixKz5K3LBMRz",
+				},
+			},
+			TotalHits: 2,
+		},
+	})
+	results = append(results, rest.MockResult{
+		Body: v1.List[v1.FlowLog]{
+			Items: []v1.FlowLog{
+				{
+					SourceIP: strPtr("35.32.82.134"),
+					DestIP:   strPtr("10.10.1.20"),
+					ID:       "BQ15nGkBixKz5K3LBMRy",
+				},
+				{
+					SourceIP: strPtr("35.32.82.134"),
+					DestIP:   strPtr("10.10.1.20"),
+					ID:       "BQ15nGkBixKz5K3LBMRz",
+				},
+			},
+			TotalHits: 2,
+		},
+	})
+
+	lsc := lsclient.NewMockClient("", results...)
+	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -141,7 +183,7 @@ func TestElastic_QueryIPSet(t *testing.T) {
 	for itr.Next() {
 		c++
 		_, val := itr.Value()
-		vals = append(vals, val.Source)
+		vals = append(vals, val)
 	}
 	g.Expect(itr.Err()).ShouldNot(HaveOccurred())
 	g.Expect(c).Should(Equal(4))
@@ -160,7 +202,38 @@ func TestElastic_QueryIPSet_SameIPSet(t *testing.T) {
 
 	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(lmaESCli, DefaultIndexSettings())
+	results := []rest.MockResult{}
+	results = append(results, rest.MockResult{
+		Body: v1.List[v1.FlowLog]{
+			Items: []v1.FlowLog{
+				{
+					SourceIP:  strPtr("35.32.82.134"),
+					DestIP:    strPtr("10.10.1.20"),
+					ID:        "BQ15nGkBixKz5K3LBMRy",
+					StartTime: 1536897600,
+					EndTime:   1536897900,
+				},
+			},
+			TotalHits: 1,
+		},
+	})
+	results = append(results, rest.MockResult{
+		Body: v1.List[v1.FlowLog]{
+			Items: []v1.FlowLog{
+				{
+					SourceIP:  strPtr("35.32.82.134"),
+					DestIP:    strPtr("10.10.1.20"),
+					ID:        "BQ15nGkBixKz5K3LBMRy",
+					StartTime: 1536897600,
+					EndTime:   1536897900,
+				},
+			},
+			TotalHits: 1,
+		},
+	})
+
+	lsc := lsclient.NewMockClient("", results...)
+	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -172,7 +245,7 @@ func TestElastic_QueryIPSet_SameIPSet(t *testing.T) {
 
 	cachedIpSet, err := e.GetIPSet(ctx, "test1")
 	g.Expect(err).NotTo(HaveOccurred())
-	toBeUpdated.SetAnnotations(map[string]string{db.IpSetHashKey: util.ComputeSha256Hash(cachedIpSet)})
+	toBeUpdated.SetAnnotations(map[string]string{IpSetHashKey: util.ComputeSha256Hash(cachedIpSet)})
 
 	roundTripper.params = make(map[string]interface{})
 	roundTripper.params["fromTimeStamp"] = oneMinuteAgo.Format(time.RFC3339Nano)
@@ -185,7 +258,7 @@ func TestElastic_QueryIPSet_SameIPSet(t *testing.T) {
 	for itr.Next() {
 		c++
 		_, val := itr.Value()
-		vals = append(vals, val.Source)
+		vals = append(vals, val)
 	}
 	g.Expect(itr.Err()).ShouldNot(HaveOccurred())
 	g.Expect(c).Should(Equal(2))
@@ -203,7 +276,21 @@ func TestElastic_QueryIPSet_Big(t *testing.T) {
 
 	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(lmaESCli, DefaultIndexSettings())
+	results := []rest.MockResult{}
+	results = append(results, rest.MockResult{
+		Body: v1.List[v1.FlowLog]{
+			Items: []v1.FlowLog{},
+		},
+	})
+	results = append(results, rest.MockResult{
+		Body: v1.List[v1.FlowLog]{
+			Items: []v1.FlowLog{},
+		},
+	})
+
+	lsc := lsclient.NewMockClient("", results...)
+
+	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -213,13 +300,17 @@ func TestElastic_QueryIPSet_Big(t *testing.T) {
 	i, _, err := e.QueryIPSet(ctx, testFeed)
 	g.Expect(err).ShouldNot(HaveOccurred())
 
-	itr := i.(*queryIterator)
+	itr := i.(*queryIterator[v1.FlowLog, v1.FlowLogParams])
 
-	g.Expect(itr.scrollers).Should(HaveLen(4), "Input was split into 2x2 arrays")
-	g.Expect(itr.scrollers[0].terms).Should(HaveLen(MaxClauseCount))
-	g.Expect(itr.scrollers[1].terms).Should(HaveLen(MaxClauseCount))
-	g.Expect(itr.scrollers[2].terms).Should(HaveLen(256))
-	g.Expect(itr.scrollers[3].terms).Should(HaveLen(256))
+	g.Expect(itr.queries).Should(HaveLen(4), "Input was split into 2x2 arrays")
+	g.Expect(itr.queries[0].queryParams.IPMatches).Should(HaveLen(1))
+	g.Expect(itr.queries[0].queryParams.IPMatches[0].IPs).Should(HaveLen(MaxClauseCount))
+	g.Expect(itr.queries[1].queryParams.IPMatches).Should(HaveLen(1))
+	g.Expect(itr.queries[1].queryParams.IPMatches[0].IPs).Should(HaveLen(MaxClauseCount))
+	g.Expect(itr.queries[2].queryParams.IPMatches).Should(HaveLen(1))
+	g.Expect(itr.queries[2].queryParams.IPMatches[0].IPs).Should(HaveLen(256))
+	g.Expect(itr.queries[3].queryParams.IPMatches).Should(HaveLen(1))
+	g.Expect(itr.queries[3].queryParams.IPMatches[0].IPs).Should(HaveLen(256))
 }
 
 func TestElastic_ListSets(t *testing.T) {
@@ -234,7 +325,9 @@ func TestElastic_ListSets(t *testing.T) {
 
 	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(lmaESCli, DefaultIndexSettings())
+	// mock linseed client
+	lsc := lsclient.NewMockClient("")
+	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -276,19 +369,20 @@ func TestElastic_Put_Set(t *testing.T) {
 
 	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(lmaESCli, DefaultIndexSettings())
+	lsc := lsclient.NewMockClient("")
+	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
 	close(e.ipSetMappingCreated)
 
-	err = e.PutIPSet(ctx, "test1", db.IPSetSpec{"1.2.3.4"})
+	err = e.PutIPSet(ctx, "test1", IPSetSpec{"1.2.3.4"})
 	g.Expect(err).ToNot(HaveOccurred())
 
 	close(e.domainNameSetMappingCreated)
 
-	err = e.PutDomainNameSet(ctx, "test1", db.DomainNameSetSpec{"hackers.and.badguys"})
+	err = e.PutDomainNameSet(ctx, "test1", DomainNameSetSpec{"hackers.and.badguys"})
 	g.Expect(err).ToNot(HaveOccurred())
 }
 
@@ -298,12 +392,12 @@ func TestSplitIPSetToInterface(t *testing.T) {
 	mul := 2
 	offset := 11
 
-	var input db.IPSetSpec
+	var input IPSetSpec
 	for i := 0; i < mul*MaxClauseCount+offset; i++ {
 		input = append(input, fmt.Sprintf("%d", i))
 	}
 
-	output := splitIPSetToInterface(input)
+	output := splitIPSet(input)
 
 	g.Expect(len(output)).Should(Equal(mul + 1))
 	for i := 0; i < mul; i++ {
@@ -330,17 +424,18 @@ func TestElastic_Delete_Set(t *testing.T) {
 
 	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(lmaESCli, DefaultIndexSettings())
+	lsc := lsclient.NewMockClient("")
+	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	err = e.DeleteIPSet(ctx, db.Meta{Name: "test"})
+	err = e.DeleteIPSet(ctx, Meta{Name: "test"})
 	g.Expect(err).ToNot(HaveOccurred())
 
 	three := int64(3)
 	four := int64(4)
-	err = e.DeleteDomainNameSet(ctx, db.Meta{Name: "test", SeqNo: &three, PrimaryTerm: &four})
+	err = e.DeleteDomainNameSet(ctx, Meta{Name: "test", SeqNo: &three, PrimaryTerm: &four})
 	g.Expect(err).ToNot(HaveOccurred())
 }
 
@@ -448,63 +543,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 
 		}
 	case "POST":
-		b, _ := io.ReadAll(req.Body)
-		_ = req.Body.Close()
-		body := string(b)
-		req.Body = io.NopCloser(bytes.NewReader(b))
-
 		switch req.URL.String() {
-		// QueryIPSet
-		case baseURI + "/tigera_secure_ee_flows.cluster.%2A/_search?scroll=5m&size=1000":
-			switch body {
-			// QueryIPSet source_ip query
-			case mustGetString("test_files/3.1.q.json"):
-				return &http.Response{
-					StatusCode: 200,
-					Request:    req,
-					Body:       mustOpen("test_files/3.1.r.json"),
-				}, nil
-
-			// QueryIPSet dest_ip query
-			case mustGetString("test_files/3.3.q.json"):
-				return &http.Response{
-					StatusCode: 200,
-					Request:    req,
-					Body:       mustOpen("test_files/3.3.r.json"),
-				}, nil
-
-			case mustGetTemplate("test_files/source_ip_with_timestamp_query.json", t.params):
-				return &http.Response{
-					StatusCode: 200,
-					Request:    req,
-					Body:       mustOpen("test_files/source_ip_with_timestamp_result.json"),
-				}, nil
-
-			case mustGetTemplate("test_files/dest_ip_with_timestamp_query.json", t.params):
-				return &http.Response{
-					StatusCode: 200,
-					Request:    req,
-					Body:       mustOpen("test_files/dest_ip_with_timestamp_result.json"),
-				}, nil
-			}
-		case baseURI + "/_search/scroll":
-			switch body {
-			// QueryIPSet source_ip query
-			case mustGetString("test_files/3.2.q.json"):
-				return &http.Response{
-					StatusCode: 200,
-					Request:    req,
-					Body:       mustOpen("test_files/3.2.r.json"),
-				}, nil
-			// QueryIPSet dest_ip query
-			case mustGetString("test_files/3.4.q.json"):
-				return &http.Response{
-					StatusCode: 200,
-					Request:    req,
-					Body:       mustOpen("test_files/3.4.r.json"),
-				}, nil
-			}
-
 		case baseURI + "/.tigera.ipset.cluster/_search?scroll=5m":
 			return &http.Response{
 				StatusCode: t.listStatus,
@@ -592,42 +631,6 @@ func mustOpen(name string) io.ReadCloser {
 	return f
 }
 
-func mustGetString(name string) string {
-	f, err := os.Open(name)
-	if err != nil {
-		panic(err)
-	}
-	b, err := io.ReadAll(f)
-	if err != nil {
-		panic(err)
-	}
-	err = f.Close()
-	if err != nil {
-		panic(err)
-	}
-
-	return strings.Trim(string(b), " \r\n\t")
-}
-
-func mustGetTemplate(fileName string, replacements map[string]interface{}) string {
-	jsonTemplate, err := template.ParseFiles(fileName)
-	if err != nil {
-		panic(err)
-	}
-
-	buf := bytes.Buffer{}
-	if jsonTemplate != nil {
-		err = jsonTemplate.Execute(&buf, replacements)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	compact := bytes.Buffer{}
-	err = json.Compact(&compact, buf.Bytes())
-	if err != nil {
-		panic(err)
-	}
-
-	return strings.Trim(compact.String(), " \r\n\t")
+func strPtr(val string) *string {
+	return &val
 }

@@ -14,7 +14,17 @@ type Config struct {
 	ElasticUsername string `envconfig:"ELASTIC_USER"`
 	ElasticPassword string `envconfig:"ELASTIC_PASSWORD"`
 
-	FIPSMode bool `envconfig:"FIPS_MODE" default:"false"`
+	FIPSMode bool `envconfig:"FIPS_MODE_ENABLED" default:"false"`
+
+	// Linseed configuration
+	LinseedURL        string `envconfig:"LINSEED_URL" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
+	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
+
+	// MCM configuration
+	ClusterName              string `envconfig:"CLUSTER_NAME" default:"cluster"`
+	MultiClusterForwardingCA string `envconfig:"MULTI_CLUSTER_FORWARDING_CA" default:"/manager-tls/cert"`
 }
 
 func GetConfig() (*Config, error) {

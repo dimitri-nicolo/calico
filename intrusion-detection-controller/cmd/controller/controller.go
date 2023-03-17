@@ -11,13 +11,17 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/config"
+
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
+
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/rbac"
 	syncElastic "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/elastic"
@@ -30,6 +34,7 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/managedcluster"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/version"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -76,26 +81,26 @@ func main() {
 	defer cancel()
 
 	kubeconfig := os.Getenv("KUBECONFIG")
-	var config *rest.Config
+	var k8sConfig *rest.Config
 	var err error
 	if kubeconfig == "" {
-		// creates the in-cluster config
-		config, err = rest.InClusterConfig()
+		// creates the in-cluster k8sConfig
+		k8sConfig, err = rest.InClusterConfig()
 		if err != nil {
 			panic(err.Error())
 		}
 	} else {
-		// creates a config from supplied kubeconfig
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		// creates a k8sConfig from supplied kubeconfig
+		k8sConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			panic(err.Error())
 		}
 	}
-	k8sClient, err := kubernetes.NewForConfig(config)
+	k8sClient, err := kubernetes.NewForConfig(k8sConfig)
 	if err != nil {
 		panic(err.Error())
 	}
-	calicoClient, err := calicoclient.NewForConfig(config)
+	calicoClient, err := calicoclient.NewForConfig(k8sConfig)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -109,12 +114,26 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("Could not connect to Elasticsearch")
 	}
-	if err := lmaESClient.CreateEventsIndex(ctx); err != nil {
-		log.WithError(err).Fatal("Failed to create events index")
+
+	cfg, err := config.GetConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Create linseed Client.
+	lsConfig := lsrest.Config{
+		URL:             cfg.LinseedURL,
+		CACertPath:      cfg.LinseedCA,
+		ClientKeyPath:   cfg.LinseedClientKey,
+		ClientCertPath:  cfg.LinseedClientCert,
+		FIPSModeEnabled: cfg.FIPSMode,
+	}
+	linseed, err := lsclient.NewClient("", lsConfig)
+	if err != nil {
+		log.WithError(err).Fatal("failed to create linseed client")
 	}
 
-	indexSettings := elastic.IndexSettings{Replicas: envCfg.ElasticReplicas, Shards: envCfg.ElasticShards}
-	e := elastic.NewService(lmaESClient, indexSettings)
+	indexSettings := storage.IndexSettings{Replicas: envCfg.ElasticReplicas, Shards: envCfg.ElasticShards}
+	e := storage.NewService(lmaESClient, linseed, cfg.ClusterName, indexSettings)
 	e.Run(ctx)
 	defer e.Close()
 
@@ -173,10 +192,10 @@ func main() {
 
 	valueEnableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
 
-	var enableForwarding = (err == nil && valueEnableForwarding)
+	enableForwarding := (err == nil && valueEnableForwarding)
 	var healthPingers health.Pingers
 
-	var enableFeeds = (os.Getenv("DISABLE_FEEDS") != "yes")
+	enableFeeds := (os.Getenv("DISABLE_FEEDS") != "yes")
 	if enableFeeds {
 		healthPingers = append(healthPingers, s)
 	}
@@ -217,7 +236,7 @@ func main() {
 
 		managedClusterController = managedcluster.NewManagedClusterController(calicoClient, lmaESClient, k8sClient,
 			enableAnomalyDetection, anomalyTrainingController, anomalyDetectionController, indexSettings, TigeraIntrusionDetectionNamespace,
-			util.ManagedClusterClient(config, multiClusterForwardingEndpoint, multiClusterForwardingCA), fipsModeEnabled)
+			util.ManagedClusterClient(k8sConfig, multiClusterForwardingEndpoint, multiClusterForwardingCA), fipsModeEnabled)
 	}
 
 	f := forwarder.NewEventForwarder("eventforwarder-1", e)

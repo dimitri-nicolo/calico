@@ -16,8 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -26,7 +25,7 @@ var _ = Describe("Event forwarder", func() {
 	var (
 		ctx         context.Context
 		cancel      context.CancelFunc
-		esSvc       *elastic.Elastic
+		esSvc       *storage.Service
 		clusterName string
 		startTime   time.Time
 		endTime     time.Time
@@ -47,7 +46,7 @@ var _ = Describe("Event forwarder", func() {
 			Host:   "localhost:9200",
 		}
 		ctx, cancel = context.WithCancel(context.Background())
-		indexSettings := elastic.DefaultIndexSettings()
+		indexSettings := storage.DefaultIndexSettings()
 		lmaESCli, err = lma.New(&http.Client{}, u, "", "", clusterName, 1, 0, true, indexSettings.Replicas, indexSettings.Shards)
 		if err != nil {
 			panic("could not create unit under test: " + err.Error())
@@ -59,10 +58,10 @@ var _ = Describe("Event forwarder", func() {
 		err = lmaESCli.CreateEventsIndex(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		esSvc = elastic.NewService(lmaESCli, indexSettings)
+		esSvc = storage.NewService(lmaESCli, nil, "", indexSettings)
 		esSvc.Run(ctx)
 
-		//Populate events index with enough test data that needs scrolling
+		// Populate events index with enough test data that needs scrolling
 		totalDocs = 1550
 		for i := 0; i < totalDocs; i++ {
 			_, err := lmaESCli.PutSecurityEvent(ctx, lmaAPI.EventsData{
@@ -114,7 +113,7 @@ var _ = Describe("Event forwarder", func() {
 			ctx:        ctx,
 			events:     esSvc,
 			dispatcher: dispatcher,
-			config:     &db.ForwarderConfig{},
+			config:     &storage.ForwarderConfig{},
 		}
 
 		err := eventFwdr.retrieveAndForward(startTime, endTime, 1, 30*time.Second)

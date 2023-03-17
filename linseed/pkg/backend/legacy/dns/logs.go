@@ -136,6 +136,7 @@ func (b *dnsLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.DN
 			log.WithError(err).Error("Error unmarshalling log")
 			continue
 		}
+		l.ID = h.Id
 		logs = append(logs, l)
 	}
 
@@ -157,7 +158,7 @@ func (b *dnsLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *
 		return nil, 0, err
 	}
 
-	q, err := logtools.BuildQuery(b.helper, i, opts)
+	q, err := b.buildQuery(i, opts)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -178,6 +179,42 @@ func (b *dnsLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *
 		query.Sort(b.helper.GetTimeField(), true)
 	}
 	return query, startFrom, nil
+}
+
+// buildQuery builds an elastic query using the given parameters.
+func (b *dnsLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.DNSLogParams) (elastic.Query, error) {
+	// Start with the base dns log query using common fields.
+	query, err := logtools.BuildQuery(b.helper, i, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(opts.DomainMatches) > 0 {
+		for _, match := range opts.DomainMatches {
+			// Get the list of values as an interface{}, as needed for a terms query.
+			values := []interface{}{}
+			for _, t := range match.Domains {
+				values = append(values, t)
+			}
+
+			switch match.Type {
+			case v1.DomainMatchQname:
+				query.Filter(elastic.NewTermsQuery("qname", values...))
+			case v1.DomainMatchRRSet:
+				query.Filter(elastic.NewNestedQuery("rrsets", elastic.NewTermsQuery("rrsets.name", values...)))
+			case v1.DomainMatchRRData:
+				query.Filter(elastic.NewNestedQuery("rrsets", elastic.NewTermsQuery("rrsets.rdata", values...)))
+			default:
+				query.Filter(elastic.NewBoolQuery().Should(
+					elastic.NewTermsQuery("qname", values...),
+					elastic.NewNestedQuery("rrsets", elastic.NewTermsQuery("rrsets.name", values...)),
+					elastic.NewNestedQuery("rrsets", elastic.NewTermsQuery("rrsets.rdata", values...)),
+				).MinimumNumberShouldMatch(1))
+			}
+		}
+	}
+
+	return query, nil
 }
 
 func (b *dnsLogBackend) index(i bapi.ClusterInfo) string {
