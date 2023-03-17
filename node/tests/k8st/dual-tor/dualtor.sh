@@ -553,7 +553,7 @@ EOF
     ${kubectl} get po -A -o wide
 
     # Edit the calico-node DaemonSet so we can make calico-node restarts take longer.
-    ${KIND} get nodes | xargs -n1 -I {} kubectl label no {} ctd=f
+    ${KIND} get nodes | xargs -n1 -I {} ${kubectl} label no {} ctd=f
     cat <<EOF | ${kubectl} patch ds calico-node -n calico-system --patch "$(cat -)"
 metadata:
   annotations:
