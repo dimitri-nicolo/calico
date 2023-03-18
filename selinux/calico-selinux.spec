@@ -16,16 +16,16 @@ restorecon -FR /mnt/tigera
 %define container_policyver 2.167.0-1
 %define container_policy_epoch 2
 
-Name:       calico-enterprise-selinux
+Name:       calico-selinux
 Version:    1.0
 Release:    1%{?dist}
-Summary:    SELinux policy module for Calico Enterprise
+Summary:    SELinux policy module for Calico
 
 Group:      System Environment/Base
 License:    Proprietary
 URL:        https://tigera.io
-Source0:    calico-enterprise.pp
-Source1:    calico-enterprise.if
+Source0:    calico.pp
+Source1:    calico.if
 
 Requires: policycoreutils, libselinux-utils
 Requires(post): selinux-policy-base >= %{selinux_policyver}
@@ -37,7 +37,7 @@ BuildArch: noarch
 Provides: %{name} = %{version}-%{release}
 
 %description
-This package installs and sets up the SELinux policy security module for Calico Enterprise.
+This package installs and sets up the SELinux policy security module for Calico.
 
 %install
 install -d %{buildroot}%{_datadir}/selinux/packages
@@ -50,7 +50,7 @@ install -d %{buildroot}/etc/selinux/targeted/contexts/users/
 %selinux_relabel_pre
 
 %post
-semodule -n -i %{_datadir}/selinux/packages/calico-enterprise.pp
+semodule -n -i %{_datadir}/selinux/packages/calico.pp
 if /usr/sbin/selinuxenabled ; then
     /usr/sbin/load_policy
     %calico_relabel_files
@@ -58,15 +58,15 @@ fi;
 
 %postun
 if [ $1 -eq 0 ]; then
-    %selinux_modules_uninstall calico-enterprise
+    %selinux_modules_uninstall calico
 fi;
 
 %posttrans
 %selinux_relabel_post
 
 %files
-%attr(0600,root,root) %{_datadir}/selinux/packages/calico-enterprise.pp
-%{_datadir}/selinux/devel/include/contrib/calico-enterprise.if
+%attr(0600,root,root) %{_datadir}/selinux/packages/calico.pp
+%{_datadir}/selinux/devel/include/contrib/calico.if
 
 %changelog
 * Fri Jan 13 2023 Jiawei Huang <jiawei@tigera.io> - 1.0-1

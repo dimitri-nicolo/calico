@@ -1,6 +1,6 @@
 # Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-policy_module(calico-enterprise, 1.0.0)
+policy_module(calico, 1.0.0)
 
 gen_require(`
     type container_file_t;
