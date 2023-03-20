@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/tigera/elasticsearch-metrics
-GO_BUILD_VER?=v0.78
+GO_BUILD_VER?=v0.82
 
 ELASTICSEARCH_METRICS_IMAGE ?=tigera/elasticsearch-metrics
 BUILD_IMAGES                ?=$(ELASTICSEARCH_METRICS_IMAGE)
@@ -35,6 +35,8 @@ clean:
 # We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), $(filter $(ARCH),amd64))
 CGO_ENABLED=1
+GOEXPERIMENT=boringcrypto
+TAGS=osusergo,netgo
 else
 CGO_ENABLED=0
 endif
@@ -43,9 +45,12 @@ build: bin/elasticsearch-metrics-$(ARCH)
 
 .PHONY: bin/elasticsearch-metrics-$(ARCH)
 bin/elasticsearch-metrics-$(ARCH):
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e GOEXPERIMENT=$(GOEXPERIMENT) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/*.go'
+			go build -buildvcs=false -o $@ -v -tags $(TAGS) -ldflags "$(LDFLAGS) -linkmode external -extldflags -static -s -w" cmd/*.go'
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'strings bin/elasticsearch-metrics-$(ARCH) | grep '_Cfunc__goboringcrypto_' 1> /dev/null'
+endif
 
 image: $(ELASTICSEARCH_METRICS_IMAGE)
 $(ELASTICSEARCH_METRICS_IMAGE): $(ELASTICSEARCH_METRICS_IMAGE)-$(ARCH)
