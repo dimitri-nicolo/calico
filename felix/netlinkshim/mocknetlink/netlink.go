@@ -44,6 +44,7 @@ func New() *MockNetlinkDataplane {
 				Table:    253,
 			},
 		},
+		SetStrictCheckErr: SimulatedError,
 	}
 	dp.ResetDeltas()
 	dp.AddIface(1, "lo", true, true)
@@ -230,6 +231,7 @@ type MockNetlinkDataplane struct {
 
 	PersistFailures                bool
 	FailuresToSimulate             FailFlags
+	SetStrictCheckErr              error
 	DeleteInterfaceAfterLinkByName bool
 
 	addedArpEntries set.Set[string]
@@ -363,7 +365,7 @@ func (d *MockNetlinkDataplane) SetStrictCheck(b bool) error {
 
 	Expect(d.NetlinkOpen).To(BeTrue())
 	if d.shouldFail(FailNextSetStrict) {
-		return SimulatedError
+		return d.SetStrictCheckErr
 	}
 	d.StrictEnabled = b
 	return nil

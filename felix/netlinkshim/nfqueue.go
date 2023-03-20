@@ -1,5 +1,7 @@
 // Copyright (c) 2022 Tigera, Inc. All rights reserved.
 
+//go:build !windows
+
 package netlinkshim
 
 import (
