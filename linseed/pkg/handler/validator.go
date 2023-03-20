@@ -88,7 +88,7 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 		}
 	}
 
-	trimBody := bytes.Trim(body, "\n")
+	trimBody := bytes.Trim(body, "\r\n")
 	d := json.NewDecoder(bytes.NewReader(trimBody))
 	d.DisallowUnknownFields()
 	for {
