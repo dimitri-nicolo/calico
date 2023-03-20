@@ -106,7 +106,18 @@ RUN yum install -y --setopt=tsflags=nodocs \
  && rm -rf ruby-$RUBY_FULL_VERSION.tar.gz \
  && rm -rf ruby-$RUBY_FULL_VERSION \
  && rm -rf /fluentd/cloned \
- && gem sources --clear-all
+ && gem sources --clear-all \
+# remove pre-installed packages in ruby that may have high CVE issues
+ && rm -rf /var/lib/ruby/gems/*/cache/*.gem \
+       /var/lib/ruby/gems/2.*/gems/fluentd-*/test \
+       /var/lib/ruby/lib/ruby/gems/2.7.0/gems/bundler-2.1.4 \
+       /var/lib/ruby/lib/ruby/gems/2.7.0/specifications/default/bundler-2.1.4.gemspec \
+       /var/lib/ruby/lib/ruby/2.7.0/bundler \
+       /var/lib/ruby/lib/ruby/gems/2.7.0/specifications/default/cgi-0.1.0.1.gemspec \
+       /ruby-2.7.5.tar.gz \
+       /ruby-2.7.5 \
+ && yum remove -y make wget gcc gcc-c++ git patch vim-minimal zlib-devel libcom_err-devel python3-libxml python3-libxml2 \
+ && yum clean all
 
 # Configure scripts and create directories fluentD needs
 
