@@ -22,6 +22,11 @@ type Config struct {
 	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
 
+	// Tenant configuration for Calico Cloud.
+	// Note the environment variable doesn't match the field name. This is for backwards compat
+	// with the cloud operator, and will be udpated in the future.
+	Tenant string `envconfig:"ELASTIC_INDEX_MIDFIX"`
+
 	// MCM configuration
 	ClusterName              string `envconfig:"CLUSTER_NAME" default:"cluster"`
 	MultiClusterForwardingCA string `envconfig:"MULTI_CLUSTER_FORWARDING_CA" default:"/manager-tls/cert"`

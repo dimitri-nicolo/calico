@@ -14,9 +14,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/list"
-	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 const (
@@ -24,9 +24,7 @@ const (
 	keepAliveInterval = 10 * time.Second
 )
 
-var (
-	allResources = resources.GetAllResourceHelpers()
-)
+var allResources = resources.GetAllResourceHelpers()
 
 // Run is the entrypoint to start running the snapshotter.
 func Run(ctx context.Context, cfg *config.Config, listSrc list.Source, listDest api.ListDestination, healthy func(bool)) error {
@@ -137,7 +135,7 @@ type resourceSnapshotter struct {
 }
 
 func (r *resourceSnapshotter) maybeTakeSnapshot(prev, next time.Time) error {
-	// If timeOfLastSnapshot is not known then populate from an elastic search query.
+	// If timeOfLastSnapshot is not known then populate from a linseed query.
 	if r.timeOfLastSnapshot == nil {
 		dayAgo := time.Now().Add(-oneDay)
 		trlist, err := r.listDest.RetrieveList(r.kind, &dayAgo, nil, false)

@@ -13,16 +13,18 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	krest "k8s.io/client-go/rest"
 	"k8s.io/klog"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/compliance/pkg/server"
 	"github.com/projectcalico/calico/compliance/pkg/tls"
 	"github.com/projectcalico/calico/compliance/pkg/version"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var (
@@ -63,11 +65,11 @@ func main() {
 	}
 
 	var authn auth.JWTAuth
-	restConfig, err := rest.InClusterConfig()
+	restConfig, err := krest.InClusterConfig()
 	if err != nil {
 		log.Fatal("Unable to create client config", err)
 	}
-	//restConfig.
+
 	k8sCli, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		log.Fatal("Unable to create kubernetes interface", err)
@@ -97,8 +99,22 @@ func main() {
 		log.Fatal("Unable to create authenticator", err)
 	}
 
-	esClientFactory := elastic.NewClusterContextClientFactory(elastic.MustLoadConfig())
-	s := server.New(k8sClientFactory, esClientFactory, authn, ":"+*apiPort, *keyPath, *certPath, cfg.FIPSModeEnabled)
+	// Create a linseed client.
+	config := rest.Config{
+		URL:             cfg.LinseedURL,
+		CACertPath:      cfg.LinseedCA,
+		ClientKeyPath:   cfg.LinseedClientKey,
+		ClientCertPath:  cfg.LinseedClientCert,
+		FIPSModeEnabled: cfg.FIPSModeEnabled,
+	}
+	linseed, err := client.NewClient(cfg.Tenant, config)
+	if err != nil {
+		log.WithError(err).Fatal("failed to create linseed client")
+	}
+
+	// Create a factory for producing ComplianceStores scoped to a particular cluster.
+	factory := api.NewStoreFactory(linseed)
+	s := server.New(k8sClientFactory, factory, authn, ":"+*apiPort, *keyPath, *certPath, cfg.FIPSModeEnabled)
 	s.Start()
 
 	// Setup signals.

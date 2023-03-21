@@ -14,8 +14,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/benchmark"
-	"github.com/projectcalico/calico/lma/pkg/api"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 // Benchmarker implements benchmark.Executor
@@ -29,8 +30,8 @@ func NewBenchmarker() api.BenchmarksExecutor {
 }
 
 // ExecuteBenchmarks determines the appropriate benchmarker to run for the given benchmark type.
-func (b *Benchmarker) ExecuteBenchmarks(ctx context.Context, ct api.BenchmarkType, nodename string) (*api.Benchmarks, error) {
-	if ct == api.TypeKubernetes {
+func (b *Benchmarker) ExecuteBenchmarks(ctx context.Context, ct v1.BenchmarkType, nodename string) (*v1.Benchmarks, error) {
+	if ct == v1.TypeKubernetes {
 		return b.executeKubeBenchmark(ctx, nodename)
 	}
 	return nil, fmt.Errorf("no handler found for benchmark type %s", ct)
@@ -42,7 +43,7 @@ func configExists(cfgPath string) bool {
 }
 
 // executeKubeBenchmark executes kube-bench.
-func (b *Benchmarker) executeKubeBenchmark(ctx context.Context, nodename string) (*api.Benchmarks, error) {
+func (b *Benchmarker) executeKubeBenchmark(ctx context.Context, nodename string) (*v1.Benchmarks, error) {
 	var args []string
 	args = append(args, "--config", "/etc/kube-bench/cfg/config.yaml")
 	args = append(args, "--config-dir", "/etc/kube-bench/cfg")
@@ -53,7 +54,6 @@ func (b *Benchmarker) executeKubeBenchmark(ctx context.Context, nodename string)
 	ts := time.Now()
 	cmd := exec.Command("kube-bench", args...)
 	out, err := cmd.CombinedOutput()
-
 	if err != nil {
 		log.WithField("output", string(out)).WithError(err).Error("Failed to execute kubernetes benchmarker")
 		return nil, err
@@ -73,10 +73,10 @@ func (b *Benchmarker) executeKubeBenchmark(ctx context.Context, nodename string)
 		return nil, fmt.Errorf("no results found on benchmarker execution")
 	}
 
-	return &api.Benchmarks{
+	return &v1.Benchmarks{
 		Version:           totals.Controls[0].Version,
 		KubernetesVersion: totals.Controls[0].Version,
-		Type:              api.TypeKubernetes,
+		Type:              v1.TypeKubernetes,
 		NodeName:          nodename,
 		Timestamp:         metav1.Time{Time: ts},
 		Tests:             benchmark.TestsFromKubeBenchControls(totals.Controls),

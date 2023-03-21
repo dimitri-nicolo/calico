@@ -1,4 +1,5 @@
 {
+  "dynamic": "false",
   "properties": {
     "time": {
       "type": "date",
@@ -13,17 +14,11 @@
     "severity": {
       "type": "long"
     },
+    "origin": {
+      "type": "keyword"
+    },
     "dismissed": {
       "type": "boolean"
-    },
-    "flow_log_index": {
-      "type": "keyword"
-    },
-    "flow_log_id": {
-      "type": "keyword"
-    },
-    "protocol": {
-      "type": "keyword"
     },
     "source_ip": {
       "type": "ip",
@@ -37,6 +32,9 @@
       "type": "keyword"
     },
     "source_name": {
+      "type": "keyword"
+    },
+    "source_name_aggr": {
       "type": "keyword"
     },
     "dest_ip": {
@@ -53,26 +51,14 @@
     "dest_name": {
       "type": "keyword"
     },
-    "flow_action": {
+    "dest_name_aggr": {
       "type": "keyword"
     },
-    "sources": {
+    "host": {
       "type": "keyword"
     },
-    "suspicious_prefix": {
-      "type": "keyword"
-    },
-    "anomaly_record": {
+    "record": {
       "type": "object"
-    },
-    "dns_log_index": {
-      "type": "keyword"
-    },
-    "dns_log_id": {
-      "type": "keyword"
-    },
-    "suspicious_domains": {
-      "type": "keyword"
     }
   }
 }

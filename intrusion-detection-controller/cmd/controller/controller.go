@@ -127,7 +127,7 @@ func main() {
 		ClientCertPath:  cfg.LinseedClientCert,
 		FIPSModeEnabled: cfg.FIPSMode,
 	}
-	linseed, err := lsclient.NewClient("", lsConfig)
+	linseed, err := lsclient.NewClient(cfg.Tenant, lsConfig)
 	if err != nil {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}

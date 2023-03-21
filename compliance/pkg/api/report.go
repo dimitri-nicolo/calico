@@ -2,24 +2,23 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	uuid "github.com/satori/go.uuid"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lma "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 type ReportRetriever interface {
 	RetrieveArchivedReportTypeAndNames(cxt context.Context, q ReportQueryParams) ([]ReportTypeAndName, error)
 	RetrieveArchivedReportSummaries(cxt context.Context, q ReportQueryParams) (*ArchivedReportSummaries, error)
-	RetrieveArchivedReport(id string) (*ArchivedReportData, error)
-	RetrieveArchivedReportSummary(id string) (*ArchivedReportData, error)
-	RetrieveLastArchivedReportSummary(name string) (*ArchivedReportData, error)
+	RetrieveArchivedReport(ctx context.Context, id string) (*v1.ReportData, error)
+	RetrieveLastArchivedReportSummary(ctx context.Context, name string) (*v1.ReportData, error)
 }
 
 type ReportStorer interface {
-	StoreArchivedReport(r *ArchivedReportData) error
+	StoreArchivedReport(r *v1.ReportData) error
 }
 
 type AuditLogReportHandler interface {
@@ -27,7 +26,7 @@ type AuditLogReportHandler interface {
 }
 
 type FlowLogReportHandler interface {
-	SearchFlowLogs(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *FlowLogResult
+	SearchFlowLogs(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *lma.FlowLogResult
 }
 
 type ReportQueryParams struct {
@@ -72,7 +71,7 @@ type ArchivedReportSummaries struct {
 	Count int
 
 	// The set of report summaries.
-	Reports []*ArchivedReportData
+	Reports []*v1.ReportData
 }
 
 type ReportSortBy struct {
@@ -83,20 +82,6 @@ type ReportSortBy struct {
 	Ascending bool
 }
 
-type ArchivedReportData struct {
-	*apiv3.ReportData `json:",inline"`
-	UISummary         string `json:"uiSummary"`
-}
-
-func (r *ArchivedReportData) UID() string {
-	name := fmt.Sprintf("%s::%s::%s", r.ReportData.ReportName, r.ReportData.StartTime.Format(time.RFC3339), r.ReportData.EndTime.Format(time.RFC3339))
-	id := uuid.NewV5(uuid.NamespaceURL, name) //V5 uuids are deterministic
-
-	// Encode the report name and report type name into the UID - we use this so that we can perform RBAC without
-	// needing to download the report.
-	return fmt.Sprintf("%s_%s_%s", r.ReportData.ReportName, r.ReportData.ReportTypeName, id.String())
-}
-
-func NewArchivedReport(reportData *apiv3.ReportData, uiSummary string) *ArchivedReportData {
-	return &ArchivedReportData{reportData, uiSummary}
+func NewArchivedReport(reportData *apiv3.ReportData, uiSummary string) *v1.ReportData {
+	return &v1.ReportData{ReportData: reportData, UISummary: uiSummary}
 }

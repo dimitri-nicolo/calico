@@ -6,8 +6,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
-	"github.com/projectcalico/calico/lma/pkg/api"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 const (
@@ -26,8 +27,8 @@ func Run(ctx context.Context, cfg *config.Config, executor api.BenchmarksExecuto
 		query:              query,
 		store:              store,
 		healthy:            healthy,
-		lastBenchmarks:     make(map[api.BenchmarkType]*api.Benchmarks),
-		lastExecutionTimes: make(map[api.BenchmarkType]time.Time),
+		lastBenchmarks:     make(map[v1.BenchmarkType]*v1.Benchmarks),
+		lastExecutionTimes: make(map[v1.BenchmarkType]time.Time),
 	}).run()
 }
 
@@ -38,8 +39,8 @@ type benchmarker struct {
 	executor           api.BenchmarksExecutor
 	query              api.BenchmarksQuery
 	store              api.BenchmarksStore
-	lastBenchmarks     map[api.BenchmarkType]*api.Benchmarks
-	lastExecutionTimes map[api.BenchmarkType]time.Time
+	lastBenchmarks     map[v1.BenchmarkType]*v1.Benchmarks
+	lastExecutionTimes map[v1.BenchmarkType]time.Time
 }
 
 func (b *benchmarker) run() error {
@@ -72,7 +73,7 @@ func (b *benchmarker) run() error {
 }
 
 // checks if benchmarking is needed for a given benchmark type
-func (b *benchmarker) needBenchmark(bt api.BenchmarkType) bool {
+func (b *benchmarker) needBenchmark(bt v1.BenchmarkType) bool {
 	// if there is no last benchmark or if one hour elapsed from time of last benchmark then we need to do it.
 	if _, found := b.lastBenchmarks[bt]; !found {
 		return true
@@ -85,11 +86,10 @@ func (b *benchmarker) needBenchmark(bt api.BenchmarkType) bool {
 	return true
 }
 
-// executes benchmark for a given type, stores the results to elastic search if required.
-func (b *benchmarker) executeBenchmark(ctx context.Context, bt api.BenchmarkType) error {
+// executes benchmark for a given type, stores the results to linseed if required.
+func (b *benchmarker) executeBenchmark(ctx context.Context, bt v1.BenchmarkType) error {
 	log.Infof("executing benchmark on node %+v", b.cfg.NodeName)
 	current, err := b.executor.ExecuteBenchmarks(ctx, bt, b.cfg.NodeName)
-
 	if err != nil {
 		log.WithError(err).Error("failed to execute benchmark")
 		return err
@@ -103,11 +103,11 @@ func (b *benchmarker) executeBenchmark(ctx context.Context, bt api.BenchmarkType
 	b.lastExecutionTimes[bt] = time.Now()
 	// don't store results if they are same as previous execution
 	if last := b.lastBenchmarks[bt]; last != nil && current.Equal(*last) && last.Timestamp.Time.Add(elasticStorageFrequency).After(time.Now()) {
-		log.Info("no change in benchmark results, skip storing to elastic search")
+		log.Info("no change in benchmark results, skip storing to linseed")
 		return nil
 	}
 
-	log.Info("storing benchmark results to elastic search")
+	log.Info("storing benchmark results to linseed")
 	if err := b.store.StoreBenchmarks(ctx, current); err != nil {
 		log.WithError(err).Error("error in storing benchmark results")
 		return err
@@ -117,14 +117,14 @@ func (b *benchmarker) executeBenchmark(ctx context.Context, bt api.BenchmarkType
 	return nil
 }
 
-// sets lastBenchmarks for a given benchmark type, if lastBenchmarks is not set checks elastic search
-func (b *benchmarker) setLastBenchmark(ctx context.Context, bt api.BenchmarkType) error {
+// sets lastBenchmarks for a given benchmark type, if lastBenchmarks is not set checks linseed
+func (b *benchmarker) setLastBenchmark(ctx context.Context, bt v1.BenchmarkType) error {
 	// if last benchmark is already set return.
 	if _, found := b.lastBenchmarks[bt]; found {
 		return nil
 	}
-	// if last benchmark is not set, query elastic search for last executed benchmarks.
-	result := <-b.query.RetrieveLatestBenchmarks(ctx, bt, []api.BenchmarkFilter{{NodeNames: []string{b.cfg.NodeName}}},
+	// if last benchmark is not set, query linseed for last executed benchmarks.
+	result := <-b.query.RetrieveLatestBenchmarks(ctx, bt, []v1.BenchmarksFilter{{NodeNames: []string{b.cfg.NodeName}}},
 		time.Now().Add(-elasticQueryCutOff), time.Now())
 
 	if result.Err != nil {
@@ -135,7 +135,7 @@ func (b *benchmarker) setLastBenchmark(ctx context.Context, bt api.BenchmarkType
 	return nil
 }
 
-func (b *benchmarker) benchmark(c context.Context, bt api.BenchmarkType) error {
+func (b *benchmarker) benchmark(c context.Context, bt v1.BenchmarkType) error {
 	ctx, cancel := context.WithTimeout(c, benchmarkTimeout)
 	defer cancel()
 
@@ -158,5 +158,4 @@ func (b *benchmarker) benchmark(c context.Context, bt api.BenchmarkType) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-
 }

@@ -55,6 +55,24 @@ type DNSFlowBackend interface {
 	List(context.Context, ClusterInfo, *v1.DNSFlowParams) (*v1.List[v1.DNSFlow], error)
 }
 
+// ReportsBackend defines the interface for interacting with compliance reports
+type ReportsBackend interface {
+	List(context.Context, ClusterInfo, *v1.ReportDataParams) (*v1.List[v1.ReportData], error)
+	Create(context.Context, ClusterInfo, []v1.ReportData) (*v1.BulkResponse, error)
+}
+
+// SnapshotsBackend defines the interface for interacting with compliance snapshots
+type SnapshotsBackend interface {
+	List(context.Context, ClusterInfo, *v1.SnapshotParams) (*v1.List[v1.Snapshot], error)
+	Create(context.Context, ClusterInfo, []v1.Snapshot) (*v1.BulkResponse, error)
+}
+
+// BenchmarksBackend defines the interface for interacting with compliance benchmarks
+type BenchmarksBackend interface {
+	List(context.Context, ClusterInfo, *v1.BenchmarksParams) (*v1.List[v1.Benchmarks], error)
+	Create(context.Context, ClusterInfo, []v1.Benchmarks) (*v1.BulkResponse, error)
+}
+
 // DNSLogBackend defines the interface for interacting with DNS logs
 type DNSLogBackend interface {
 	// Create creates the given logs.
@@ -122,6 +140,9 @@ const (
 	BGPLogs       LogsType = "bgp"
 	Events        LogsType = "events"
 	WAFLogs       LogsType = "waf"
+	ReportData    LogsType = "compliance_reports"
+	Snapshots     LogsType = "snapshots"
+	Benchmarks    LogsType = "benchmark_results"
 )
 
 // Cache is a cache for the templates in order

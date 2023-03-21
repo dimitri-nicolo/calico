@@ -63,6 +63,10 @@ func (c *mockClient) Processes(cluster string) ProcessesInterface {
 	return newProcesses(c, cluster)
 }
 
+func (c *mockClient) Compliance(cluster string) ComplianceInterface {
+	return newCompliance(c, cluster)
+}
+
 func NewMockClient(tenantID string, results ...rest.MockResult) MockClient {
 	return &mockClient{
 		restClient: rest.NewMockClient(results...),

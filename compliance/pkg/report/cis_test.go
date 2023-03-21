@@ -2,33 +2,34 @@
 package report
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"context"
 	"errors"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	api "github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/flow"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-	api "github.com/projectcalico/calico/lma/pkg/api"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (
-	node1 = &api.Benchmarks{
+	node1 = &v1.Benchmarks{
 		Version:           "1.1.2",
 		KubernetesVersion: "1.13.1",
-		Type:              api.TypeKubernetes,
+		Type:              v1.TypeKubernetes,
 		NodeName:          "node-1",
 		Timestamp:         metav1.Now(),
-		Tests: []api.BenchmarkTest{
+		Tests: []v1.BenchmarkTest{
 			{
 				Section:     "2.0",
 				SectionDesc: "desc-2.0",
@@ -78,12 +79,12 @@ var (
 	}
 
 	// Node2 - all section1 is not scored
-	node2 = &api.Benchmarks{
+	node2 = &v1.Benchmarks{
 		Version:   "1.1.2",
-		Type:      api.TypeKubernetes,
+		Type:      v1.TypeKubernetes,
 		NodeName:  "node-2",
 		Timestamp: metav1.Now(),
-		Tests: []api.BenchmarkTest{
+		Tests: []v1.BenchmarkTest{
 			{
 				Section:     "1.0",
 				SectionDesc: "desc-1.0",
@@ -114,12 +115,12 @@ var (
 		},
 	}
 
-	node3 = &api.Benchmarks{
+	node3 = &v1.Benchmarks{
 		Version:   "1.1.2",
-		Type:      api.TypeKubernetes,
+		Type:      v1.TypeKubernetes,
 		NodeName:  "node-abc",
 		Timestamp: metav1.Now(),
-		Tests: []api.BenchmarkTest{
+		Tests: []v1.BenchmarkTest{
 			{
 				Section:     "1.0",
 				SectionDesc: "desc-1.0",
@@ -161,7 +162,7 @@ type fakeBenchmarker struct {
 }
 
 func (b *fakeBenchmarker) RetrieveLatestBenchmarks(
-	ctx context.Context, ct api.BenchmarkType, filters []api.BenchmarkFilter, start, end time.Time,
+	ctx context.Context, ct v1.BenchmarkType, filters []v1.BenchmarksFilter, start, end time.Time,
 ) <-chan api.BenchmarksResult {
 	b.start = start
 	b.end = end
@@ -1295,12 +1296,12 @@ var _ = Describe("CIS report tests", func() {
 		By("Setting the results to return 1 node with duplicate tests")
 		benchmarker.results = []api.BenchmarksResult{
 			{
-				Benchmarks: &api.Benchmarks{
+				Benchmarks: &v1.Benchmarks{
 					Version:   "1.1.2",
-					Type:      api.TypeKubernetes,
+					Type:      v1.TypeKubernetes,
 					NodeName:  "node-1",
 					Timestamp: metav1.Now(),
-					Tests: []api.BenchmarkTest{
+					Tests: []v1.BenchmarkTest{
 						{
 							Section:     "1.1",
 							SectionDesc: "desc-1.1",
@@ -1375,9 +1376,9 @@ var _ = Describe("CIS report tests", func() {
 		By("Setting the results to return 1 node with an error")
 		benchmarker.results = []api.BenchmarksResult{
 			{
-				Benchmarks: &api.Benchmarks{
+				Benchmarks: &v1.Benchmarks{
 					Version:   "1.1.2",
-					Type:      api.TypeKubernetes,
+					Type:      v1.TypeKubernetes,
 					NodeName:  "node-1",
 					Timestamp: metav1.Now(),
 					Error:     "It didn't work",
@@ -1433,12 +1434,12 @@ var _ = Describe("CIS report tests", func() {
 		By("Setting results with one failed, one passed in different sections")
 		benchmarker.results = []api.BenchmarksResult{
 			{
-				Benchmarks: &api.Benchmarks{
+				Benchmarks: &v1.Benchmarks{
 					Version:   "1.1.2",
-					Type:      api.TypeKubernetes,
+					Type:      v1.TypeKubernetes,
 					NodeName:  "node-1",
 					Timestamp: metav1.Now(),
-					Tests: []api.BenchmarkTest{
+					Tests: []v1.BenchmarkTest{
 						{
 							Section:     "1.1",
 							SectionDesc: "desc-1.1",

@@ -15,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/linseed/pkg/handler/audit"
 	"github.com/projectcalico/calico/linseed/pkg/handler/bgp"
+	"github.com/projectcalico/calico/linseed/pkg/handler/compliance"
 	"github.com/projectcalico/calico/linseed/pkg/handler/dns"
 	"github.com/projectcalico/calico/linseed/pkg/handler/events"
 	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
@@ -26,6 +27,7 @@ import (
 
 	auditbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/audit"
 	bgpbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/bgp"
+	compliancebackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/compliance"
 	dnsbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/dns"
 	eventbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/events"
 	flowbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
@@ -101,6 +103,9 @@ func run() {
 	bgpBackend := bgpbackend.NewBackend(esClient, cache)
 	procBackend := procbackend.NewBackend(esClient)
 	wafBackend := wafbackend.NewBackend(esClient, cache)
+	reportsBackend := compliancebackend.NewReportsBackend(esClient, cache)
+	snapshotsBackend := compliancebackend.NewSnapshotBackend(esClient, cache)
+	benchmarksBackend := compliancebackend.NewBenchmarksBackend(esClient, cache)
 
 	// Configure options used to launch the server.
 	opts := []server.Option{
@@ -114,6 +119,7 @@ func run() {
 			bgp.New(bgpBackend),
 			processes.New(procBackend),
 			waf.New(wafBackend),
+			compliance.New(benchmarksBackend, snapshotsBackend, reportsBackend),
 		)...),
 		server.WithRoutes(server.UtilityRoutes()...),
 	}

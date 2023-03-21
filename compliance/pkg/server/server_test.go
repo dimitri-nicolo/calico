@@ -15,10 +15,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/compliance/pkg/server"
 	"github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 // startTester starts and returns a server tester. This can be used to issue summary and report queries and to
@@ -26,8 +26,7 @@ import (
 //
 // The Calico and Report stores are mocked out, and the responses controlled via the control parameters in the
 // tester struct.
-func startTester(mockClientSetFactory *datastore.MockClusterCtxK8sClientFactory, mockESFactory *elastic.MockClusterContextClientFactory,
-	authenticator auth.JWTAuth) *tester {
+func startTester(mockClientSetFactory *datastore.MockClusterCtxK8sClientFactory, sf api.StoreFactory, authenticator auth.JWTAuth) *tester {
 	// Create a new tester, defaulting permissions to allow lists.
 	t := &tester{}
 	// Choose an arbitrary port for the server to listen on.
@@ -40,7 +39,7 @@ func startTester(mockClientSetFactory *datastore.MockClusterCtxK8sClientFactory,
 
 	By("Starting the compliance server")
 
-	s := server.New(mockClientSetFactory, mockESFactory, authenticator, t.addr, "", "", true)
+	s := server.New(mockClientSetFactory, sf, authenticator, t.addr, "", "", true)
 	s.Start()
 	t.server = s
 	t.client = &http.Client{Timeout: time.Second * 10}
@@ -107,12 +106,12 @@ func (t *tester) downloadSingle(id string, expStatus int, forecast forecastFile)
 
 	Expect(r.StatusCode).To(Equal(expStatus))
 
-	//if we were not testing for an OK status we are done
+	// if we were not testing for an OK status we are done
 	if expStatus != http.StatusOK {
 		return
 	}
 
-	//check the file type that was downloaded
+	// check the file type that was downloaded
 	condisp := r.Header.Get("Content-Disposition")
 	Expect(condisp).Should(HavePrefix("attachment; filename="))
 	Expect(condisp).Should(HaveSuffix(forecast.Format))
@@ -139,28 +138,28 @@ func (t *tester) downloadMulti(id string, expStatus int, forecasts []forecastFil
 
 	Expect(r.StatusCode).To(Equal(expStatus))
 
-	//if we were not testing for an OK status we are done
+	// if we were not testing for an OK status we are done
 	if expStatus != http.StatusOK {
 		return
 	}
 
-	//check the file type that was downloaded
+	// check the file type that was downloaded
 	condisp := r.Header.Get("Content-Disposition")
 	Expect(condisp).Should(HavePrefix("attachment; filename="))
 	Expect(condisp).Should(HaveSuffix(".zip"))
 
-	//inspect the content
+	// inspect the content
 	defer r.Body.Close()
 	bodyBytes, err := io.ReadAll(r.Body)
 	Expect(err).NotTo(HaveOccurred())
 
-	//unzip the the file
+	// unzip the the file
 	breader := bytes.NewReader(bodyBytes)
 	zr, err := zip.NewReader(breader, int64(len(bodyBytes)))
 	Expect(err).NotTo(HaveOccurred())
 
-	//extract the files into the files structure
-	var files = make(map[string][]byte)
+	// extract the files into the files structure
+	files := make(map[string][]byte)
 	for _, f := range zr.File {
 		// expect the file modified hour to be with in last one minute threshold
 		Expect(time.Now()).Should(BeTemporally("~", f.FileHeader.Modified, time.Minute))
@@ -171,10 +170,10 @@ func (t *tester) downloadMulti(id string, expStatus int, forecasts []forecastFil
 		files[f.Name] = b.Bytes()
 	}
 
-	//determine the base file name we should be looking for based on the zip file
+	// determine the base file name we should be looking for based on the zip file
 	base := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(condisp, "attachment; filename="), ".zip"))
 
-	//validate the file names and file content
+	// validate the file names and file content
 	for _, fc := range forecasts {
 		fn := fmt.Sprintf("%s-%s", base, fc.Format)
 		Expect(files).To(HaveKeyWithValue(fn, []byte(fc.FileContent)))

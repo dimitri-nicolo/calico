@@ -14,27 +14,26 @@ import (
 
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 // New creates a new server.
-func New(csFactory datastore.ClusterCtxK8sClientFactory, esFactory elastic.ClusterContextClientFactory,
-	authenticator auth.JWTAuth, addr string, key string, cert string, fipsMode bool) ServerControl {
-
+func New(csFactory datastore.ClusterCtxK8sClientFactory, f api.StoreFactory,
+	authenticator auth.JWTAuth, addr string, key string, cert string, fipsMode bool,
+) ServerControl {
 	s := &server{
 		key:       key,
 		cert:      cert,
 		csFactory: csFactory,
-		esFactory: esFactory,
+		factory:   f,
 	}
+
 	// Create a new pattern matching MUX.
 	mux := pat.New()
 	mux.Get(UrlVersion, http.HandlerFunc(s.handleVersion))
-	// TODO(rlb): Should really handle get on a report too.
-	// mux.Get(urlGet, http.HandlerFunc(s.handleVersion))
 
 	// We always authenticate in the local cluster (where server is running). This will add UserInfo to the context.
 	// The the UserInfo will be used for authz in the target cluster (which could be a different cluster in a multi-
@@ -72,8 +71,8 @@ type server struct {
 	key       string
 	cert      string
 	wg        sync.WaitGroup
+	factory   api.StoreFactory
 	csFactory datastore.ClusterCtxK8sClientFactory
-	esFactory elastic.ClusterContextClientFactory
 
 	// Track all of the reports and report types. We don't expect these to change too often, so we only need to
 	// update the lists every so often. Access to this data should be through getReportTypes.

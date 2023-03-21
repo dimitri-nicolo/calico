@@ -6,20 +6,11 @@ import (
 	"time"
 
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
+
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-const (
-	EventVerbCreate = "create"
-	EventVerbUpdate = "update"
-	EventVerbPatch  = "patch"
-	EventVerbDelete = "delete"
-)
-
-var (
-	EventConfigurationVerbs = []string{
-		EventVerbCreate, EventVerbUpdate, EventVerbPatch, EventVerbDelete,
-	}
-)
+var EventConfigurationVerbs = []v1.Verb{v1.Create, v1.Update, v1.Patch, v1.Delete}
 
 type AuditEventResult struct {
 	*auditv1.Event

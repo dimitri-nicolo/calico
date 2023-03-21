@@ -7,14 +7,13 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/projectcalico/calico/compliance/pkg/api"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-type MockReportRetriever struct {
-}
+type MockReportRetriever struct{}
 
-func (c *MockReportRetriever) RetrieveArchivedReport(id string) (*api.ArchivedReportData, error) {
-
+func (c *MockReportRetriever) RetrieveArchivedReport(id string) (*v1.ReportData, error) {
 	rd := apiv3.ReportData{}
 	rd.ReportName = "Report0"
 	rd.ReportSpec = apiv3.ReportSpec{ReportType: "inventory"}
@@ -29,12 +28,10 @@ func (c *MockReportRetriever) RetrieveArchivedReport(id string) (*api.ArchivedRe
 	r := api.NewArchivedReport(&rd, "UI summary 0")
 
 	return r, nil
-
 }
 
-func (c *MockReportRetriever) RetrieveArchivedReportSummaries() ([]*api.ArchivedReportData, error) {
-
-	rl := make([]*api.ArchivedReportData, 5)
+func (c *MockReportRetriever) RetrieveArchivedReportSummaries() ([]*v1.ReportData, error) {
+	rl := make([]*v1.ReportData, 5)
 
 	for i := 0; i < 5; i++ {
 		rd := apiv3.ReportData{}

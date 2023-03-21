@@ -37,6 +37,18 @@ type Config struct {
 	// Snapshotter specific data.
 	SnapshotHour int `envconfig:"TIGERA_COMPLIANCE_SNAPSHOT_HOUR" default:"0"`
 
+	// Linseed configuration.
+	LinseedURL        string `envconfig:"LINSEED_URL" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
+	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
+
+	// Cluster name, for components that serve a single cluster.
+	Cluster string `envconfig:"CLUSTER"`
+
+	// Tenant configuration for Calico Cloud.
+	Tenant string `envconfig:"TENANT"`
+
 	// Controller specific data.
 	Namespace                  string        `envconfig:"TIGERA_COMPLIANCE_JOB_NAMESPACE" default:"calico-monitoring"`
 	JobStartDelay              time.Duration `envconfig:"TIGERA_COMPLIANCE_JOB_START_DELAY" default:"30m"`

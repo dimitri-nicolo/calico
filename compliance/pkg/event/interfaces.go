@@ -9,8 +9,7 @@ import (
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
-	api "github.com/projectcalico/calico/lma/pkg/api"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 // ExtractResourceFromAuditEvent determines the resource kind located within an audit event
@@ -33,8 +32,8 @@ func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, er
 	}
 
 	// Check that the event is configuration event.
-	switch event.Verb {
-	case api.EventVerbCreate, api.EventVerbUpdate, api.EventVerbPatch, api.EventVerbDelete:
+	switch v1.Verb(event.Verb) {
+	case v1.Create, v1.Update, v1.Patch, v1.Delete:
 		log.Debug("Event is a configuration event - continue processing")
 	default:
 		log.Debugf("Event verb is %s - skipping", event.Verb)
@@ -66,7 +65,7 @@ func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, er
 	// Create a new resource to unmarshal the event into.
 	res := rh.NewResource()
 
-	if event.Verb == api.EventVerbDelete {
+	if event.Verb == string(v1.Delete) {
 		// This is a delete event, the response object will not be extractable so just return what we can.
 		//
 		// Sanity check that we have a name specified. It must be specified in the ObjectRef for a delete event although

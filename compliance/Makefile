@@ -17,6 +17,13 @@ BUILD_IMAGES ?=$(COMPLIANCE_SERVER_IMAGE) \
 	$(COMPLIANCE_REPORTER_IMAGE) \
 	$(COMPLIANCE_BENCHMARKER_IMAGE)
 
+MOCKERY_FILE_PATHS= \
+	pkg/api/ReportEventFetcher \
+	pkg/api/ListDestination \
+	pkg/api/ComplianceStore \
+	pkg/api/StoreFactory
+
+
 ##############################################################################
 # Include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -216,9 +223,12 @@ clean:
 # Tests
 ###############################################################################
 .PHONY: ut
-ut combined.coverprofile: run-elastic
+ut combined.coverprofile: run-elastic run-linseed
 	@echo Running Go UTs.
-	$(DOCKER_RUN) -e ELASTIC_HOST=localhost $(CALICO_BUILD) utils/run-coverage sh -c '$(GIT_CONFIG_SSH)'
+	$(DOCKER_RUN) -e LINSEED_DIR=$(PWD)/../linseed $(CALICO_BUILD) utils/run-coverage sh -c '$(GIT_CONFIG_SSH)'
+
+run-linseed:
+	$(MAKE) -C ../linseed image run-image
 
 ###############################################################################
 # CI/CD

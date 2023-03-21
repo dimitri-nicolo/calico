@@ -11,13 +11,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
-//yaml "gopkg.in/yaml.v2"
+const (
+	IndexTimeFormat = "20060102"
+)
+
+// yaml "gopkg.in/yaml.v2"
 
 // filesystem:
 //   playbook (scale point, scale by namespace)
@@ -100,12 +105,12 @@ func NewScaleLoader(base string, playbookCfg []PlaybookCfg) (*scaleloader, error
 
 var DatastoreRevision int
 
-func (sl *scaleloader) PopulateES(start time.Time, timeperiod time.Duration, es elastic.Client) {
+func (sl *scaleloader) PopulateES(start time.Time, timeperiod time.Duration, es elastic.Client, store api.ComplianceStore) {
 	DatastoreRevision = 100
 
 	initResVer := 50
 
-	sl.writeSnapshot(initResVer, start, es)
+	sl.writeSnapshot(initResVer, start, store)
 
 	// Initialize minimum timestep to a day
 	timeStep := time.Hour * 24
@@ -129,7 +134,7 @@ func (sl *scaleloader) PopulateES(start time.Time, timeperiod time.Duration, es 
 	logrus.WithField("time", end).Info("Time used for end")
 }
 
-func (sl *scaleloader) writeSnapshot(resVer int, snapTime time.Time, es elastic.Client) {
+func (sl *scaleloader) writeSnapshot(resVer int, snapTime time.Time, store api.ComplianceStore) {
 	// If you know how to make this function nicer please do.
 
 	listItems := make(map[metav1.TypeMeta][]runtime.Object)
@@ -161,7 +166,7 @@ func (sl *scaleloader) writeSnapshot(resVer int, snapTime time.Time, es elastic.
 			RequestCompletedTimestamp: metav1.Time{Time: snapTime},
 		}
 
-		if err := es.StoreList(rh.TypeMeta(), trl); err != nil {
+		if err := store.StoreList(rh.TypeMeta(), trl); err != nil {
 			logrus.WithError(err).Fatalf("Failed to write snapshot for %s/%s", rh.TypeMeta().APIVersion, rh.TypeMeta().Kind)
 		}
 	}
@@ -181,7 +186,7 @@ func (sl *scaleloader) writeStep(s Step, es elastic.Client, t time.Time, log *lo
 		log.WithError(err).Error("Error generating Step msg")
 		return
 	}
-	index := fmt.Sprintf("%s.%s.%s", s.GetIndex(), sl.indexSuffix, t.Format(elastic.IndexTimeFormat))
+	index := fmt.Sprintf("%s.%s.%s", s.GetIndex(), sl.indexSuffix, t.Format(IndexTimeFormat))
 	for r := 0; ; r++ {
 		res, err := es.Backend().Index().
 			Index(index).

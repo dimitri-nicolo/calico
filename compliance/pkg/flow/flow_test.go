@@ -8,7 +8,6 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/compliance/pkg/flow"
-	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 const (
@@ -86,8 +85,8 @@ var _ = Describe("Flow", func() {
 		filter.TrackNamespaceAndEndpoint("", hep1, node1)
 
 		By("verifying that it matches the endpoint name and aggregated name")
-		Expect(filter.FilterInEndpoint(api.FlowLogGlobalNamespace, hep1)).To(BeTrue())
-		Expect(filter.FilterInAggregateName(api.FlowLogGlobalNamespace, node1)).To(BeTrue())
+		Expect(filter.FilterInEndpoint(flow.FlowLogGlobalNamespace, hep1)).To(BeTrue())
+		Expect(filter.FilterInAggregateName(flow.FlowLogGlobalNamespace, node1)).To(BeTrue())
 	})
 	It("matches flows", func() {
 		By("tracking endpoints")

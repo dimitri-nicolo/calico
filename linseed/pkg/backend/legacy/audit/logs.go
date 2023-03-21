@@ -200,13 +200,36 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 	}
 
 	// Match on object.
-	if opts.ObjectRef != nil {
-		if opts.ObjectRef.Name != "" {
-			query.Filter(elastic.NewTermQuery("objectRef.name", opts.ObjectRef.Name))
+	if len(opts.ObjectRefs) > 0 {
+		objectMatches := []elastic.Query{}
+		for _, o := range opts.ObjectRefs {
+			objFilter := elastic.NewBoolQuery()
+			if o.Resource != "" {
+				objFilter.Filter(elastic.NewTermQuery("objectRef.resource", o.Resource))
+			}
+			if o.APIGroup != "" {
+				objFilter.Filter(elastic.NewTermQuery("objectRef.apiGroup", o.APIGroup))
+			}
+			if o.APIVersion != "" {
+				objFilter.Filter(elastic.NewTermQuery("objectRef.apiVersion", o.APIVersion))
+			}
+			if o.Name != "" {
+				objFilter.Filter(elastic.NewTermQuery("objectRef.name", o.Name))
+			}
+			if o.Namespace != "" {
+				if o.Namespace == "-" {
+					// Match on lack of a namespace.
+					objFilter.MustNot(elastic.NewExistsQuery("objectRef.namespace"))
+				} else {
+					// Match on the namespace value.
+					objFilter.Filter(elastic.NewTermQuery("objectRef.namespace", o.Namespace))
+				}
+			}
+			objectMatches = append(objectMatches, objFilter)
 		}
-		if opts.ObjectRef.Namespace != "" {
-			query.Filter(elastic.NewTermQuery("objectRef.namespace", opts.ObjectRef.Namespace))
-		}
+
+		// We must match at least one of the provided object references.
+		query.Must(elastic.NewBoolQuery().Should(objectMatches...))
 
 		// Exclude any logs with no object information if an object ref is given.
 		query.MustNot(
@@ -261,5 +284,8 @@ func (b *auditLogBackend) index(kind v1.AuditLogType, i bapi.ClusterInfo) string
 }
 
 func (b *auditLogBackend) writeAlias(kind v1.AuditLogType, i bapi.ClusterInfo) string {
+	if i.Tenant != "" {
+		return fmt.Sprintf("tigera_secure_ee_audit.%s.%s.", i.Tenant, i.Cluster)
+	}
 	return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.", kind, i.Cluster)
 }
