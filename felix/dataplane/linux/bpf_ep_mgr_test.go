@@ -274,7 +274,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 	})
 
 	newBpfEpMgr := func() {
-		bpfEpMgr, _ = newBPFEndpointManager(
+		var err error
+		bpfEpMgr, err = newBPFEndpointManager(
 			dp,
 			&Config{
 				Hostname:              "uthost",
@@ -305,6 +306,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			actionOnDrop,
 			enableTcpStats,
 		)
+		Expect(err).NotTo(HaveOccurred())
 		bpfEpMgr.Features = environment.NewFeatureDetector(nil).GetFeatures()
 		bpfEpMgr.hostIP = net.ParseIP("1.2.3.4")
 	}
@@ -486,7 +488,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 				dp.ensureStartedFn = func() {
 					bpfEpMgr.initAttaches = map[string]bpf.EPAttachInfo{
-						"eth0": {TCId: 12345},
+						"eth0": {Ingress: 12345},
 					}
 				}
 
