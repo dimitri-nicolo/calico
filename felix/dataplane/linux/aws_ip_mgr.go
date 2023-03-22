@@ -193,7 +193,7 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 		a.onWorkloadEndpointRemoved(msg)
 	case *proto.RouteRemove:
 		a.onRouteUpdate(ip.MustParseCIDROrIP(msg.Dst), nil)
-	case *ifaceUpdate:
+	case *ifaceStateUpdate:
 		a.onIfaceUpdate(msg)
 	case *ifaceAddrsUpdate:
 		a.onIfaceAddrsUpdate(msg)
@@ -315,7 +315,7 @@ func (a *awsIPManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 	}
 }
 
-func (a *awsIPManager) onIfaceUpdate(msg *ifaceUpdate) {
+func (a *awsIPManager) onIfaceUpdate(msg *ifaceStateUpdate) {
 	// Keep track of what interfaces we've seen so we can trigger a resync if we're waiting for a new
 	// ENI to show up.
 	if msg.State == ifacemonitor.StateNotPresent {
