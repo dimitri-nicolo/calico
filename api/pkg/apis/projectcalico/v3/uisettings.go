@@ -151,7 +151,33 @@ type UIGraphNodeView struct {
 
 // UIDashboard contains the data for a UI dashboard.
 type UIDashboard struct {
-	// TBD
+	DashboardData []DashboardData `json:"dashboardData,omitempty" validate:"omitempty"`
+}
+
+type DashboardData struct {
+	SelectedNamespace string `json:"selectedNamespace,omitempty" validate:"omitempty"`
+
+	DashboardType string `json:"dashboardType,omitempty" validate:"omitempty"`
+
+	Layout DashboardLayout `json:"layout,omitempty" validate:"omitempty"`
+}
+
+type DashboardLayout struct {
+	Index  string `json:"index,omitempty" validate:"omitempty"`
+	XPos   uint32 `json:"xPos,omitempty" validate:"omitempty"`
+	YPos   uint32 `json:"yPos,omitempty" validate:"omitempty"`
+	Width  uint32 `json:"width,omitempty" validate:"omitempty"`
+	Height uint32 `json:"height,omitempty" validate:"omitempty"`
+
+	MinWidth uint32 `json:"minWidth,omitempty" validate:"omitempty"`
+	MaxWidth uint32 `json:"maxWidth,omitempty" validate:"omitempty"`
+
+	MinHeight uint32 `json:"minHeight,omitempty" validate:"omitempty"`
+	MaxHeight uint32 `json:"maxHeight,omitempty" validate:"omitempty"`
+
+	IsResizable       bool `json:"isResizable,omitempty" validate:"omitempty"`
+	IsVisible         bool `json:"isVisible,omitempty" validate:"omitempty"`
+	IsInNamesapceView bool `json:"isInNamespaceView,omitempty" validate:"omitempty"`
 }
 
 // +genclient:nonNamespaced

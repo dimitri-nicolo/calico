@@ -9218,6 +9218,51 @@ spec:
               dashboard:
                 description: Dashboard data. One of View, Layer or Dashboard should
                   be specified.
+                properties:
+                  dashboardData:
+                    items:
+                      properties:
+                        dashboardType:
+                          type: string
+                        layout:
+                          properties:
+                            height:
+                              format: int32
+                              type: integer
+                            index:
+                              type: string
+                            isInNamespaceView:
+                              type: boolean
+                            isResizable:
+                              type: boolean
+                            isVisible:
+                              type: boolean
+                            maxHeight:
+                              format: int32
+                              type: integer
+                            maxWidth:
+                              format: int32
+                              type: integer
+                            minHeight:
+                              format: int32
+                              type: integer
+                            minWidth:
+                              format: int32
+                              type: integer
+                            width:
+                              format: int32
+                              type: integer
+                            xPos:
+                              format: int32
+                              type: integer
+                            yPos:
+                              format: int32
+                              type: integer
+                          type: object
+                        selectedNamespace:
+                          type: string
+                      type: object
+                    type: array
                 type: object
               description:
                 description: This description is displayed by the UI.
