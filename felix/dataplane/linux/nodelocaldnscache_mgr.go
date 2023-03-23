@@ -8,7 +8,6 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/rules"
@@ -25,7 +24,6 @@ type nodeLocalDNSManager struct {
 	ruleRenderer rules.RuleRenderer
 	rawTables    iptablesTable
 	ipVersion    uint8
-	bpfEnabled   bool
 
 	nodeLocalDNSCachePresent bool
 	nodeLocalAddrs           set.Set[string]
@@ -36,13 +34,11 @@ func newNodeLocalDNSManager(
 	ruleRenderer rules.RuleRenderer,
 	ipVersion uint8,
 	rawTables iptablesTable,
-	bpfEnabled bool,
 ) *nodeLocalDNSManager {
 	return &nodeLocalDNSManager{
 		ruleRenderer: ruleRenderer,
 		ipVersion:    ipVersion,
 		rawTables:    rawTables,
-		bpfEnabled:   bpfEnabled,
 		dirty:        true,
 	}
 }
@@ -104,11 +100,6 @@ func (m *nodeLocalDNSManager) CompleteDeferredWork() error {
 }
 
 func (m *nodeLocalDNSManager) updateCaliRawChainsWithNodelocalDNSRules(dnsServerPorts []config.ServerPort) {
-	tcpBypassMark := uint32(0)
-	if m.bpfEnabled {
-		tcpBypassMark = tcdefs.MarkSeenBypass
-	}
 	m.rawTables.UpdateChain(m.ruleRenderer.StaticRawPreroutingChain(m.ipVersion, dnsServerPorts))
-	m.rawTables.UpdateChain(m.ruleRenderer.StaticRawOutputChain(tcpBypassMark, dnsServerPorts))
-
+	m.rawTables.UpdateChain(m.ruleRenderer.StaticRawOutputChain(0, dnsServerPorts))
 }

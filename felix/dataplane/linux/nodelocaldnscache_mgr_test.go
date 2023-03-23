@@ -53,7 +53,6 @@ var _ = Describe("NodeLocalDNSCache", func() {
 			ruleRenderer,
 			4,
 			rawTable,
-			false,
 		)
 	})
 
