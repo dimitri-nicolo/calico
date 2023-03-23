@@ -268,8 +268,6 @@ type RuleRenderer interface {
 	StaticRawTableChains(ipVersion uint8) []*iptables.Chain
 	StaticBPFModeRawChains(ipVersion uint8, wgEncryptHost, disableConntrack bool) []*iptables.Chain
 	StaticMangleTableChains(ipVersion uint8) []*iptables.Chain
-	StaticRawOutputChain(tcBypassMark uint32, nodelocaldnsBroadcastedIPs []config.ServerPort) *iptables.Chain
-	StaticRawPreroutingChain(ipVersion uint8, nodelocaldnsBroadcastedIPs []config.ServerPort) *iptables.Chain
 
 	WorkloadDispatchChains(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain
 	WorkloadRPFDispatchChains(ipVersion uint8, gatewayInterfaceNames []string) []*iptables.Chain

@@ -120,7 +120,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 	})
 
 	It("should not fail on an interface update before an AWS update", func() {
-		m.OnUpdate(&ifaceStateUpdate{
+		m.OnUpdate(&ifaceUpdate{
 			Name:  "eth1",
 			Index: 123,
 			State: ifacemonitor.StateDown,
@@ -619,7 +619,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 				Expect(secondaryLink.addrs).To(BeEmpty())
 
 				// But sending in an interface update should trigger it.
-				m.OnUpdate(&ifaceStateUpdate{
+				m.OnUpdate(&ifaceUpdate{
 					Name:  "eth1",
 					Index: 123,
 					State: ifacemonitor.StateDown,
@@ -697,7 +697,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 
 				// Interface shows up.
 				fakes.AddFakeLink(secondaryLink)
-				m.OnUpdate(&ifaceStateUpdate{
+				m.OnUpdate(&ifaceUpdate{
 					Name:  "eth1",
 					Index: 123,
 					State: ifacemonitor.StateDown,
@@ -709,7 +709,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 
 				// Interface re-added with new index
 				secondaryLink.addrs = nil
-				m.OnUpdate(&ifaceStateUpdate{
+				m.OnUpdate(&ifaceUpdate{
 					Name:  "eth1",
 					Index: 124,
 					State: ifacemonitor.StateDown,
@@ -720,7 +720,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 				expectSecondaryLinkConfigured()
 
 				// Resulting signal of the interface going up shouldn't cause a resync.
-				m.OnUpdate(&ifaceStateUpdate{
+				m.OnUpdate(&ifaceUpdate{
 					Name:  "eth1",
 					Index: 124,
 					State: ifacemonitor.StateUp,
@@ -729,7 +729,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 
 				// Resulting signal of the interface going up shouldn't cause a resync but if it goes down
 				// then we do care.
-				m.OnUpdate(&ifaceStateUpdate{
+				m.OnUpdate(&ifaceUpdate{
 					Name:  "eth1",
 					Index: 124,
 					State: ifacemonitor.StateDown,
@@ -740,7 +740,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 			It("should handle an unexpected IP being added to an interface.", func() {
 				// Interface shows up.
 				fakes.AddFakeLink(secondaryLink)
-				m.OnUpdate(&ifaceStateUpdate{
+				m.OnUpdate(&ifaceUpdate{
 					Name:  "eth1",
 					Index: 123,
 					State: ifacemonitor.StateDown,
@@ -774,7 +774,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 
 				// Interface shows up.
 				fakes.AddFakeLink(secondaryLink)
-				m.OnUpdate(&ifaceStateUpdate{
+				m.OnUpdate(&ifaceUpdate{
 					Name:  "eth1",
 					Index: 123,
 					State: ifacemonitor.StateDown,
@@ -788,7 +788,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 				secondaryLink.addrs = nil
 
 				// Delete.
-				m.OnUpdate(&ifaceStateUpdate{
+				m.OnUpdate(&ifaceUpdate{
 					Name:  "eth1",
 					Index: 123,
 					State: ifacemonitor.StateNotPresent,
@@ -796,7 +796,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
 				// Re-add
-				m.OnUpdate(&ifaceStateUpdate{
+				m.OnUpdate(&ifaceUpdate{
 					Name:  "eth1",
 					Index: 124,
 					State: ifacemonitor.StateDown,
@@ -1005,7 +1005,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 
 					// Take the link away and signal the manager.
 					fakes.RemoveFakeLink(thirdLink)
-					m.OnUpdate(&ifaceStateUpdate{
+					m.OnUpdate(&ifaceUpdate{
 						Name:  "eth2",
 						Index: 123,
 						State: ifacemonitor.StateDown,
@@ -1100,7 +1100,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 				It("should handle an interface IP removed.", func() {
 					// Interface shows up.
 					fakes.AddFakeLink(secondaryLink)
-					m.OnUpdate(&ifaceStateUpdate{
+					m.OnUpdate(&ifaceUpdate{
 						Name:  "eth1",
 						Index: 123,
 						State: ifacemonitor.StateDown,

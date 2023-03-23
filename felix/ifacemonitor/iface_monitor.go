@@ -52,7 +52,6 @@ const (
 
 type InterfaceStateCallback func(ifaceName string, ifaceState State, ifIndex int)
 type AddrStateCallback func(ifaceName string, addrs set.Set[string])
-type InSyncCallback func()
 
 type Config struct {
 	// InterfaceExcludes is a list of interface names that we don't want callbacks for.
@@ -73,7 +72,6 @@ type InterfaceMonitor struct {
 
 	StateCallback    InterfaceStateCallback
 	AddrCallback     AddrStateCallback
-	InSyncCallback   InSyncCallback
 	fatalErrCallback func(error)
 }
 
@@ -149,8 +147,6 @@ func (m *InterfaceMonitor) MonitorInterfaces() {
 			return
 		}
 
-		// Let the main goroutine know that we're in sync in order to unblock dataplane programming.
-		m.InSyncCallback()
 	readLoop:
 		for {
 			log.WithFields(log.Fields{

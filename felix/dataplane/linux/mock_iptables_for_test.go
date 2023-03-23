@@ -104,7 +104,3 @@ func (t *mockTable) checkChainsSameAsBefore() {
 
 	Expect(currentChains).To(Equal(expectedChains), t.Table+" chains incorrect")
 }
-
-func (t *mockTable) getCurrentChainByName(name string) *iptables.Chain {
-	return t.currentChains[name]
-}

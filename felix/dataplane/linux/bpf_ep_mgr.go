@@ -477,7 +477,7 @@ func (m *bpfEndpointManager) OnUpdate(msg interface{}) {
 	// Updates from the dataplane:
 
 	// Interface updates.
-	case *ifaceStateUpdate:
+	case *ifaceUpdate:
 		m.onInterfaceUpdate(msg)
 	case *ifaceAddrsUpdate:
 		m.onInterfaceAddrsUpdate(msg)
@@ -621,7 +621,7 @@ func (m *bpfEndpointManager) cleanupOldAttach(iface string, ai bpf.EPAttachInfo)
 	return nil
 }
 
-func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceStateUpdate) {
+func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceUpdate) {
 	log.Debugf("Interface update for %v, state %v", update.Name, update.State)
 	// Should be safe without the lock since there shouldn't be any active background threads
 	// but taking it now makes us robust to refactoring.

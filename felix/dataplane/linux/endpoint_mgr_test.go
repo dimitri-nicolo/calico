@@ -1148,7 +1148,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 		Context("with host interfaces eth0, lo", func() {
 			JustBeforeEach(func() {
-				epMgr.OnUpdate(&ifaceStateUpdate{
+				epMgr.OnUpdate(&ifaceUpdate{
 					Name:  "eth0",
 					State: "up",
 				})
@@ -1156,7 +1156,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 					Name:  "eth0",
 					Addrs: eth0Addrs,
 				})
-				epMgr.OnUpdate(&ifaceStateUpdate{
+				epMgr.OnUpdate(&ifaceUpdate{
 					Name:  "lo",
 					State: "up",
 				})
@@ -1545,7 +1545,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 				Context("with another host interface eth1", func() {
 					JustBeforeEach(func() {
-						epMgr.OnUpdate(&ifaceStateUpdate{
+						epMgr.OnUpdate(&ifaceUpdate{
 							Name:  "eth1",
 							State: "up",
 						})
@@ -1747,7 +1747,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 			Context("with interface signaled", func() {
 				JustBeforeEach(func() {
-					epMgr.OnUpdate(&ifaceStateUpdate{
+					epMgr.OnUpdate(&ifaceUpdate{
 						Name:  "eth0",
 						State: "up",
 					})
@@ -1812,7 +1812,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				Context("with egress gateway role and iface up", func() {
 					JustBeforeEach(func() {
 						nlDataplane.AddIface(28, "cali12345-ab", true, true)
-						epMgr.OnUpdate(&ifaceStateUpdate{
+						epMgr.OnUpdate(&ifaceUpdate{
 							Name:  "cali12345-ab",
 							State: "up",
 						})
@@ -1917,7 +1917,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 							Expect(err).ToNot(HaveOccurred())
 
 							By("signaling WEP iface down")
-							epMgr.OnUpdate(&ifaceStateUpdate{
+							epMgr.OnUpdate(&ifaceUpdate{
 								Name:  "cali12345-ab",
 								State: "down",
 							})
@@ -1938,7 +1938,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 							nlDataplane.AddIface(28, "cali12345-ab", true, true)
 
 							By("signaling WEP iface up")
-							epMgr.OnUpdate(&ifaceStateUpdate{
+							epMgr.OnUpdate(&ifaceUpdate{
 								Name:  "cali12345-ab",
 								State: "up",
 							})
@@ -2163,7 +2163,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				Context("with updates for the workload's iface and proc/sys failure", func() {
 					JustBeforeEach(func() {
 						mockProcSys.Fail = true
-						epMgr.OnUpdate(&ifaceStateUpdate{
+						epMgr.OnUpdate(&ifaceUpdate{
 							Name:  "cali12345-ab",
 							State: "up",
 						})
@@ -2182,7 +2182,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 				Context("with updates for the workload's iface", func() {
 					JustBeforeEach(func() {
-						epMgr.OnUpdate(&ifaceStateUpdate{
+						epMgr.OnUpdate(&ifaceUpdate{
 							Name:  "cali12345-ab",
 							State: "up",
 						})
@@ -2354,7 +2354,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 					Context("changing the endpoint to another up interface", func() {
 						JustBeforeEach(func() {
-							epMgr.OnUpdate(&ifaceStateUpdate{
+							epMgr.OnUpdate(&ifaceUpdate{
 								Name:  "cali12345-cd",
 								State: "up",
 							})
@@ -2409,7 +2409,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				var (
 					wlEPID1        proto.WorkloadEndpointID
 					workloadUpdate *proto.WorkloadEndpointUpdate
-					interfaceUp    *ifaceStateUpdate
+					interfaceUp    *ifaceUpdate
 				)
 
 				BeforeEach(func() {
@@ -2431,7 +2431,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 							AllowSpoofedSourcePrefixes: []string{"8.8.8.8/32"},
 						},
 					}
-					interfaceUp = &ifaceStateUpdate{
+					interfaceUp = &ifaceUpdate{
 						Name:  "cali23456-cd",
 						State: "up",
 					}
