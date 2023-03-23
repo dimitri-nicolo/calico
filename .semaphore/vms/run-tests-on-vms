@@ -44,13 +44,13 @@ for batch in "${batches[@]}"; do
     enet)
       cmd="make --directory=calico/${REPO_NAME} external-network-test"
       ;;
-    egress-ip-no-overlay)
+    egw-none)
       cmd="K8ST_TO_RUN=\"-A egress_ip_no_overlay\" K8ST_REPORT_FILENAME=node-k8s-egress-ip-no-overlay.xml make --directory=calico/${REPO_NAME} egress-ip-test"
       ;;
-    egress-ip-ipip)
+    egw-ipip)
       cmd="K8ST_TO_RUN=\"-A egress_ip_ipip\" K8ST_REPORT_FILENAME=node-k8s-egress-ip-ipip.xml make --directory=calico/${REPO_NAME} egress-ip-test"
       ;;
-    egress-ip-vxlan)
+    egw-vxlan)
       cmd="K8ST_TO_RUN=\"-A egress_ip_vxlan\" K8ST_REPORT_FILENAME=node-k8s-egress-ip-vxlan.xml make --directory=calico/${REPO_NAME} egress-ip-test"
       ;;
     *)
