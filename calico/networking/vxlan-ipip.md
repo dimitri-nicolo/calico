@@ -112,6 +112,8 @@ spec:
 
 #### Configure VXLAN encapsulation for only cross subnet traffic
 
+VXLAN in IPv6 is only supported for kernel versions >= 3.12
+
 VXLAN encapsulation can be performed selectively, and only for traffic crossing subnet boundaries.
 
 To enable this feature, set `vxlanMode` to `CrossSubnet`.
