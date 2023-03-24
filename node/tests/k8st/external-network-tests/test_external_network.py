@@ -438,6 +438,58 @@ EOF
             client_red.check_connected(server_C_addr, 80, command="wget")
             self.assertIn("server C", client_red.last_output)
 
+    def _test_external_net_multihop(self, ipv4_encap):
+        """Test case for externalnetwork in which the external peer is not
+        directly connected to the cluster. In this case, the cluster node
+        kind-worker peers with bird-d1 through one hop via node-d1. Check
+        that this external network can be reached correctly."""
+        assert ipv4_encap in ["IPIP", "VXLAN", "None"]
+        with DiagsCollector():
+            # Create egress gateway IP pool and patch default IP pool
+            block_size = "29"
+            egress_pool_cidr = "10.10.10.0/%s" % block_size
+            self._setup_ippools(ipv4_encap, egress_pool_cidr, block_size)
+
+            # Create ExternalNetwork
+            kubectl("""apply -f - << EOF
+kind: ExternalNetwork
+apiVersion: projectcalico.org/v3
+metadata:
+  name: greennet
+spec:
+  routeTableIndex: 700
+EOF
+""")
+            self.add_cleanup(lambda: kubectl("delete externalnetwork greennet", allow_fail=True))
+
+            # Assign BGP peer to external network
+            self._patch_peer_external_net("peer-d1", "greennet")
+
+            # Create egress gateway
+            gw_green = self.create_egress_gateway_pod("kind-worker", "gw-green", egress_pool_cidr, color="green", external_networks=["greennet"])
+            gw_green.wait_ready()
+
+            # Add bootstrap route to the route table for greennet in the calico-node pod running on kind-worker
+            kubectl("exec -n kube-system %s -- ip route add 172.31.51.0/24 via 172.31.41.1 table 700" % self.get_calico_node_pod("kind-worker"))
+            self.add_cleanup(lambda: kubectl("exec -n kube-system %s -- ip route del 172.31.51.0/24 via 172.31.41.1 table 700" % self.get_calico_node_pod("kind-worker"), allow_fail=True))
+
+            # Add bootstrap route to the EGW IP pool on node-d1
+            run("docker exec node-d1 ip route add %s via 172.31.41.4" % egress_pool_cidr)
+            self.add_cleanup(lambda: run("docker exec node-d1 ip route del %s via 172.31.41.4" % egress_pool_cidr))
+
+            # Create a client with annotation overrides to use the egw
+            client_green = NetcatClientTCP("default", "test-green", node="kind-worker2", annotations={
+                "egress.projectcalico.org/selector": "color == 'green'",
+                "egress.projectcalico.org/namespaceSelector": "all()",
+            })
+            self.add_cleanup(client_green.delete)
+            client_green.wait_ready()
+
+            server_D_addr = "172.31.91.1"
+            # Verify that the server can be reached
+            client_green.check_connected(server_D_addr, 80, command="wget")
+            self.assertIn("server D", client_green.last_output)
+
     def test_external_net_basic_ipip(self):
         self._test_external_net_basic(ipv4_encap="IPIP")
 
@@ -452,5 +504,11 @@ EOF
 
     def test_external_net_switchover_no_overlay(self):
         self._test_external_net_switchover(ipv4_encap="None")
+
+    def test_external_net_multihop_vxlan(self):
+        self._test_external_net_multihop(ipv4_encap="VXLAN")
+
+    def test_external_net_multihop_no_overlay(self):
+        self._test_external_net_multihop(ipv4_encap="None")
 
 TestExternalNetwork.vanilla = False

@@ -94,6 +94,26 @@ spec:
   peerIP: fd00:0:1234:3333::1
   asNumber: 64512
   sourceAddress: None
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: peer-d1
+spec:
+  nodeSelector: "egress == 'true'"
+  peerIP: 172.31.51.1
+  asNumber: 64512
+  sourceAddress: None
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: peer-d1-v6
+spec:
+  nodeSelector: "egress == 'true'"
+  peerIP: fd00:0:1234:5555::1
+  asNumber: 64512
+  sourceAddress: None
 EOF
 
     # Label and annotate nodes.
@@ -113,46 +133,64 @@ function do_setup {
 
     # Create docker networks for this topology:
     #
-    #    +---------+            +---------+                           +---------+
-    #    | nginx-a |            | nginx-b |                           | nginx-c |
-    #    +---------+            +---------+                           +---------+
-    #         | .1                | .1                                    |.1
-    #         |                   |                                       |
-    #         | 172.31.91         | 172.31.91                             | 172.31.101
-    #         | 'servernetA'      | 'servernetB'                          | 'servernetC'
-    #         |                   |                                       |
-    #         |                   |                                       |
-    #         |.2                 |.2                                     |.2
-    #    +---------+         +---------+         +---------+          +---------+
-    #    | bird-a1 |         | bird-b1 |---------| bird-b2 |          | bird-c1 |
-    #    +---------+         +---------+         +---------+          +---------+
-    #         |.1                 |.1                 |.3                 |.1
-    #         |                   |                   |                   |
-    #         |                   |--------------------                   |
-    #         | 172.31.11         | 172.31.21                             | 172.31.31
-    #         |  'enetA'          |  'enetB'                              |  'enetC'
-    #         |                   |                                       |
-    #         |.4                 |.4                                     |.4
-    #  +---------------------------------------------------------------------------------+
-    #  |                                                                                 |
-    #  +---------------------------------------------------------------------------------+
+    #    +---------+            +---------+                       +---------+                                  +---------+
+    #    | nginx-a |            | nginx-b |                       | nginx-c |                                  | nginx-d |
+    #    +---------+            +---------+                       +---------+                                  +---------+
+    #         | .1                | .1                                |.1                                          | .1
+    #         |                   |                                   |                                            |
+    #         | 172.31.91         | 172.31.91                         | 172.31.101                                 | 172.31.91
+    #         | 'servernetA'      | 'servernetB'                      | 'servernetC'                               | 'servernetD'
+    #         |                   |                                   |                                            |
+    #         |                   |                                   |                             'enetD2'       |
+    #         |.2                 |.2                                 |.2                           172.31.51      |.2
+    #    +---------+         +---------+         +---------+      +---------+         +---------+ .4        .1 +---------+
+    #    | bird-a1 |         | bird-b1 |---------| bird-b2 |      | bird-c1 |         | node-d1 |--------------| bird-d1 |
+    #    +---------+         +---------+         +---------+      +---------+         +---------+              +---------+
+    #         |.1                 |.1                 |.3             |.1                  |.1
+    #         |                   |                   |               |                    |
+    #         |                   |--------------------               |                    |
+    #         | 172.31.11         | 172.31.21                         | 172.31.31          | 172.31.41
+    #         |  'enetA'          |  'enetB'                          |  'enetC'           |  'enetD1'
+    #         |                   |                                   |                    |
+    #         |.4                 |.4                                 |.4                  |.4
+    #  +---------------------------------------------------------------------------------------------------+
+    #  |                                                                                                   |
+    #  +---------------------------------------------------------------------------------------------------+
     #                  kind-worker (node ip 172.24.0.x)
 
     # Create external networks
     docker network create --subnet=172.31.11.0/24 --gateway 172.31.11.2 --ipv6 --subnet=fd00:0:1234:1111::/64 --gateway fd00:0:1234:1111::2 enetA
     docker network create --subnet=172.31.21.0/24 --gateway 172.31.21.2 --ipv6 --subnet=fd00:0:1234:2222::/64 --gateway fd00:0:1234:2222::2 enetB
     docker network create --subnet=172.31.31.0/24 --gateway 172.31.31.2 --ipv6 --subnet=fd00:0:1234:3333::/64 --gateway fd00:0:1234:3333::2 enetC
+    docker network create --subnet=172.31.41.0/24 --gateway 172.31.41.2 --ipv6 --subnet=fd00:0:1234:4444::/64 --gateway fd00:0:1234:4444::2 enetD1
+    docker network create --subnet=172.31.51.0/24 --gateway 172.31.51.2 --ipv6 --subnet=fd00:0:1234:5555::/64 --gateway fd00:0:1234:5555::2 enetD2
 
     # Create routers on external networks
     docker run -d --privileged --net=enetA --ip=172.31.11.1 --ip6=fd00:0:1234:1111::1 --name=bird-a1 ${ROUTER_IMAGE}
     docker run -d --privileged --net=enetB --ip=172.31.21.1 --ip6=fd00:0:1234:2222::1 --name=bird-b1 ${ROUTER_IMAGE}
     docker run -d --privileged --net=enetB --ip=172.31.21.3 --ip6=fd00:0:1234:2222::3 --name=bird-b2 ${ROUTER_IMAGE}
     docker run -d --privileged --net=enetC --ip=172.31.31.1 --ip6=fd00:0:1234:3333::1 --name=bird-c1 ${ROUTER_IMAGE}
+    docker run -d --privileged --net=enetD1 --ip=172.31.41.1 --ip6=fd00:0:1234:4444::1 --name=node-d1 ${ROUTER_IMAGE}
+    docker run -d --privileged --net=enetD2 --ip=172.31.51.1 --ip6=fd00:0:1234:5555::1 --name=bird-d1 ${ROUTER_IMAGE}
 
     # Connect kind-worker to networks
     docker network connect --ip=172.31.11.4 --ip6=fd00:0:1234:1111::4 enetA kind-worker
     docker network connect --ip=172.31.21.4 --ip6=fd00:0:1234:2222::4 enetB kind-worker
     docker network connect --ip=172.31.31.4 --ip6=fd00:0:1234:3333::4 enetC kind-worker
+    docker network connect --ip=172.31.41.4 --ip6=fd00:0:1234:4444::4 enetD1 kind-worker
+
+    # Connect node-d1 to bird-d1 via the enetD2 network
+    docker network connect --ip=172.31.51.4 --ip6=fd00:0:1234:5555::4 enetD2 node-d1
+
+    # Add bootstrap routes to enable kind-worker and bird-d1 to reach each other
+    docker exec kind-worker ip route add 172.31.51.0/24 via 172.31.41.1
+    docker exec kind-worker ip -6 route add fd00:0:1234:5555::/64 via fd00:0:1234:4444::1
+    docker exec bird-d1 ip route add 172.31.41.0/24 via 172.31.51.4
+    docker exec bird-d1 ip -6 route add fd00:0:1234:4444::/64 via fd00:0:1234:5555::4
+
+    # Add bootstrap routes to node-d1 to enable it to reach the nginx-d server
+    docker exec node-d1 ip route add 172.31.91.0/24 via 172.31.51.1
+    docker exec node-d1 ip -6 route add fd00:0:1234:9999::/64 via fd00:0:1234:5555::1
 
     # Common BGP peer templates used in router configuration
     ipv4_template="template bgp nodes {
@@ -262,6 +300,62 @@ protocol bgp node1 from nodes {
 EOF
     docker exec bird-c1 birdcl6 configure
 
+    cat <<EOF | docker exec -i bird-d1 sh -c "cat > /etc/bird/nodes-enetD.conf"
+log "/var/log/bird.log" all;
+template bgp nodes {
+  description "Connection to BGP peer";
+  local as 64512;
+  multihop;
+  gateway recursive;
+  import all;
+  export filter {
+      #if net ~ 172.31.41.0/24 then reject;
+      if net ~ 172.31.51.0/24 then reject;
+      if net = 0.0.0.0/0 then reject;
+      accept;
+  };
+  add paths on;
+  graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
+  connect delay time 2;
+  connect retry time 5;
+  error wait time 5,30;
+}
+protocol bgp node1 from nodes {
+  neighbor 172.31.41.4 as 64512;
+}
+EOF
+    docker exec bird-d1 birdcl configure
+
+    cat <<EOF | docker exec -i bird-d1 sh -c "cat > /etc/bird6/nodes-enetD-v6.conf"
+log "/var/log/bird.log" all;
+template bgp nodes {
+  description "Connection to BGP peer";
+  local as 64512;
+  multihop;
+  gateway recursive;
+  import all;
+  export filter {
+      if net ~ fd00:0:1234:4444::/64 then reject;
+      if net ~ fd00:0:1234:5555::/64 then reject;
+      if net = ::/0 then reject;
+      accept;
+  };
+  add paths on;
+  graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
+  connect delay time 2;
+  connect retry time 5;
+  error wait time 5,30;
+}
+protocol bgp node1 from nodes {
+  neighbor fd00:0:1234:4444::4 as 64512;
+}
+EOF
+    docker exec bird-d1 birdcl6 configure
+
     # Create BGPConfiguration, BGPPeers etc.
     add_calico_resources
 
@@ -270,11 +364,12 @@ EOF
     docker exec bird-b1 ip route add blackhole 10.233.21.8
     docker exec bird-b2 ip route add blackhole 10.233.21.9
     docker exec bird-c1 ip route add blackhole 10.233.31.8
+    docker exec bird-d1 ip route add blackhole 10.233.41.8
 
     # Wait for dockerd (docker-in-docker) to start in the containers
     (
     set +e # do manual error checking to be able to output more details
-    for container in bird-a1 bird-b1 bird-b2 bird-c1; do
+    for container in bird-a1 bird-b1 bird-b2 bird-c1 bird-d1; do
         timeout 60s sh -c "echo Wait for docker-in-docker to be ready on $container:; docker exec $container docker ps; ret=\$?; while [ \$ret -ne 0 ]; do docker exec $container docker ps; ret=\$?; sleep 5s; done;"; if [ $? -eq 0 ]; then echo dockerd started on $container; else echo dockerd failed to start on $container after a 60s timeout; exit 1; fi;
     done
     )
@@ -303,11 +398,19 @@ server C
 EOF
     docker exec bird-c1 chmod -R 0755 /tmp/nginx/
     docker exec bird-c1 docker run --network servernetC --ip 172.31.101.1 --ip6 fd00:0:1234:1010::1 -d --restart always --name nginx-c -v /tmp/nginx/:/usr/share/nginx/html:ro nginx
+
+    docker exec bird-d1 docker network create --subnet 172.31.91.0/24 --gateway 172.31.91.2 servernetD --ipv6 --subnet=fd00:0:1234:9999::/64 --gateway fd00:0:1234:9999::2
+    docker exec bird-d1 mkdir -p /tmp/nginx
+    cat <<EOF | docker exec -i bird-d1 sh -c "cat > /tmp/nginx/index.html"
+server D
+EOF
+    docker exec bird-d1 chmod -R 0755 /tmp/nginx/
+    docker exec bird-d1 docker run --network servernetD --ip 172.31.91.1 --ip6 fd00:0:1234:9999::1 -d --restart always --name nginx-d -v /tmp/nginx/:/usr/share/nginx/html:ro nginx
 }
 
 function do_cleanup {
     # Remove calico resources
-    ${kubectl} delete bgppeer peer-a1 peer-a1-v6 peer-b1 peer-b1-v6 peer-b2 peer-b2-v6 peer-c1 peer-c1-v6 || true
+    ${kubectl} delete bgppeer peer-a1 peer-a1-v6 peer-b1 peer-b1-v6 peer-b2 peer-b2-v6 peer-c1 peer-c1-v6 peer-d1 peer-d1-v6 || true
 
     # Revert node label and annotations
     ${kubectl} label node kind-worker egress- --overwrite || true
@@ -315,13 +418,18 @@ function do_cleanup {
     ${kubectl} set env daemonset/calico-node -n kube-system IP_AUTODETECTION_METHOD=first-found || true
     ${kubectl} set env daemonset/calico-node -n kube-system IP6_AUTODETECTION_METHOD=first-found || true
 
-    docker rm -f bird-a1 bird-b1 bird-b2 bird-c1
+    # Remove bootstrap routes from kind-worker
+    docker exec kind-worker ip route del 172.31.51.0/24 via 172.31.41.1 || true
+    docker exec kind-worker ip -6 route del fd00:0:1234:5555::/64 via fd00:0:1234:4444::1 || true
+
+    docker rm -f bird-a1 bird-b1 bird-b2 bird-c1 node-d1 bird-d1
 
     docker network disconnect enetA kind-worker || true
     docker network disconnect enetB kind-worker || true
     docker network disconnect enetC kind-worker || true
+    docker network disconnect enetD1 kind-worker || true
     docker network disconnect enetC kind-worker3 || true
-    docker network rm enetA enetB enetC || true
+    docker network rm enetA enetB enetC enetD1 enetD2 || true
 
     docker network ls
     docker ps -a
