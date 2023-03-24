@@ -612,7 +612,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 			if testOpts.protocol != "udp" { // No need to run these tests per-protocol.
 
-				mapPath := conntrack.Map(&bpf.MapContext{}).Path()
+				mapPath := conntrack.Map().Path()
 
 				Describe("with map repinning enabled", func() {
 					BeforeEach(func() {
@@ -2359,7 +2359,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							Eventually(func() nat.BackendValue {
 								// Remove the affinity entry to emulate timer
 								// expiring / no prior affinity.
-								m := nat.AffinityMap(&bpf.MapContext{})
+								m := nat.AffinityMap()
 								cmd, err := bpf.MapDeleteKeyCmd(m, mkey.AsBytes())
 								Expect(err).NotTo(HaveOccurred())
 								err = felixes[0].ExecMayFail(cmd...)
@@ -3824,42 +3824,42 @@ retry:
 }
 
 func dumpNATMap(felix *infrastructure.Felix) nat.MapMem {
-	bm := nat.FrontendMap(&bpf.MapContext{})
+	bm := nat.FrontendMap()
 	m := make(nat.MapMem)
 	dumpBPFMap(felix, bm, nat.MapMemIter(m))
 	return m
 }
 
 func dumpEPMap(felix *infrastructure.Felix) nat.BackendMapMem {
-	bm := nat.BackendMap(&bpf.MapContext{})
+	bm := nat.BackendMap()
 	m := make(nat.BackendMapMem)
 	dumpBPFMap(felix, bm, nat.BackendMapMemIter(m))
 	return m
 }
 
 func dumpAffMap(felix *infrastructure.Felix) nat.AffinityMapMem {
-	bm := nat.AffinityMap(&bpf.MapContext{})
+	bm := nat.AffinityMap()
 	m := make(nat.AffinityMapMem)
 	dumpBPFMap(felix, bm, nat.AffinityMapMemIter(m))
 	return m
 }
 
 func dumpCTMap(felix *infrastructure.Felix) conntrack.MapMem {
-	bm := conntrack.Map(&bpf.MapContext{})
+	bm := conntrack.Map()
 	m := make(conntrack.MapMem)
 	dumpBPFMap(felix, bm, conntrack.MapMemIter(m))
 	return m
 }
 
 func dumpSendRecvMap(felix *infrastructure.Felix) nat.SendRecvMsgMapMem {
-	bm := nat.SendRecvMsgMap(&bpf.MapContext{})
+	bm := nat.SendRecvMsgMap()
 	m := make(nat.SendRecvMsgMapMem)
 	dumpBPFMap(felix, bm, nat.SendRecvMsgMapMemIter(m))
 	return m
 }
 
 func dumpIfStateMap(felix *infrastructure.Felix) ifstate.MapMem {
-	im := ifstate.Map(&bpf.MapContext{})
+	im := ifstate.Map()
 	m := make(ifstate.MapMem)
 	dumpBPFMap(felix, im, ifstate.MapMemIter(m))
 	return m

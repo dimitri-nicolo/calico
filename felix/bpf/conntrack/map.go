@@ -31,11 +31,14 @@ import (
 	curVer "github.com/projectcalico/calico/felix/bpf/conntrack/v3"
 )
 
-//	struct calico_ct_key {
-//	  uint32_t protocol;
-//	  __be32 addr_a, addr_b; // NBO
-//	  uint16_t port_a, port_b; // HBO
-//	};
+func init() {
+	SetMapSize(MapParams.MaxEntries)
+}
+
+func SetMapSize(size int) {
+	bpf.SetMapSize(MapParams.VersionedName(), size)
+}
+
 const KeySize = curVer.KeySize
 
 const (
@@ -87,16 +90,16 @@ type Leg = curVer.Leg
 
 var MapParams = curVer.MapParams
 
-func Map(mc *bpf.MapContext) bpf.Map {
-	b := mc.NewPinnedMap(MapParams)
+func Map() bpf.Map {
+	b := bpf.NewPinnedMap(MapParams)
 	b.(*bpf.PinnedMap).UpgradeFn = upgrade.UpgradeBPFMap
 	b.(*bpf.PinnedMap).GetMapParams = GetMapParams
 	b.(*bpf.PinnedMap).KVasUpgradable = GetKeyValueTypeFromVersion
 	return b
 }
 
-func MapV2(mc *bpf.MapContext) bpf.Map {
-	return mc.NewPinnedMap(v2.MapParams)
+func MapV2() bpf.Map {
+	return bpf.NewPinnedMap(v2.MapParams)
 }
 
 const (

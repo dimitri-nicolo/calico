@@ -23,7 +23,6 @@ import (
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/arp"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	conntrack3 "github.com/projectcalico/calico/felix/bpf/conntrack/v3"
@@ -46,12 +45,11 @@ func TestNATPodPodXNode(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 	udp := l4.(*layers.UDP)
 
-	mc := &bpf.MapContext{}
-	natMap := nat.FrontendMap(mc)
+	natMap := nat.FrontendMap()
 	err = natMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	natBEMap := nat.BackendMap(mc)
+	natBEMap := nat.BackendMap()
 	err = natBEMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -70,7 +68,7 @@ func TestNATPodPodXNode(t *testing.T) {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	ctMap := conntrack.Map(mc)
+	ctMap := conntrack.Map()
 	err = ctMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	resetCTMap(ctMap) // ensure it is clean
@@ -334,12 +332,11 @@ func TestNATNodePort(t *testing.T) {
 	_, ipv4, l4, payload, pktBytes, err := testPacketUDPDefaultNP(node1ip)
 	Expect(err).NotTo(HaveOccurred())
 	udp := l4.(*layers.UDP)
-	mc := &bpf.MapContext{}
-	natMap := nat.FrontendMap(mc)
+	natMap := nat.FrontendMap()
 	err = natMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	natBEMap := nat.BackendMap(mc)
+	natBEMap := nat.BackendMap()
 	err = natBEMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -363,7 +360,7 @@ func TestNATNodePort(t *testing.T) {
 		Mask: net.IPv4Mask(255, 255, 255, 0),
 	}
 
-	ctMap := conntrack.Map(mc)
+	ctMap := conntrack.Map()
 	err = ctMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	resetCTMap(ctMap) // ensure it is clean
@@ -383,7 +380,7 @@ func TestNATNodePort(t *testing.T) {
 	})
 
 	// Setup routing
-	rtMap := routes.Map(mc)
+	rtMap := routes.Map()
 	err = rtMap.EnsureExists()
 	defer resetRTMap(rtMap)
 	Expect(err).NotTo(HaveOccurred())
@@ -946,12 +943,11 @@ func TestNATNodePortNoFWD(t *testing.T) {
 	_, ipv4, l4, _, pktBytes, err := testPacketUDPDefaultNP(node1ip)
 	Expect(err).NotTo(HaveOccurred())
 	udp := l4.(*layers.UDP)
-	mc := &bpf.MapContext{}
-	natMap := nat.FrontendMap(mc)
+	natMap := nat.FrontendMap()
 	err = natMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	natBEMap := nat.BackendMap(mc)
+	natBEMap := nat.BackendMap()
 	err = natBEMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -971,7 +967,7 @@ func TestNATNodePortNoFWD(t *testing.T) {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	ctMap := conntrack.Map(mc)
+	ctMap := conntrack.Map()
 	err = ctMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	resetCTMap(ctMap) // ensure it is clean
@@ -982,7 +978,7 @@ func TestNATNodePortNoFWD(t *testing.T) {
 	skbMark = 0
 
 	// Setup routing
-	rtMap := routes.Map(mc)
+	rtMap := routes.Map()
 	err = rtMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	defer resetRTMap(rtMap)
@@ -1100,12 +1096,11 @@ func TestNATNodePortMultiNIC(t *testing.T) {
 	_, ipv4, l4, payload, pktBytes, err := testPacketUDPDefaultNP(node1ip2)
 	Expect(err).NotTo(HaveOccurred())
 	udp := l4.(*layers.UDP)
-	mc := &bpf.MapContext{}
-	natMap := nat.FrontendMap(mc)
+	natMap := nat.FrontendMap()
 	err = natMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	natBEMap := nat.BackendMap(mc)
+	natBEMap := nat.BackendMap()
 	err = natBEMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -1137,7 +1132,7 @@ func TestNATNodePortMultiNIC(t *testing.T) {
 		Mask: net.IPv4Mask(255, 255, 255, 0),
 	}
 
-	ctMap := conntrack.Map(mc)
+	ctMap := conntrack.Map()
 	err = ctMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	resetCTMap(ctMap) // ensure it is clean
@@ -1148,7 +1143,7 @@ func TestNATNodePortMultiNIC(t *testing.T) {
 	skbMark = 0
 
 	// Setup routing
-	rtMap := routes.Map(mc)
+	rtMap := routes.Map()
 	err = rtMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	defer resetRTMap(rtMap)
@@ -1375,12 +1370,11 @@ func TestNATNodePortICMPTooBig(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 	udp := l4.(*layers.UDP)
 
-	mc := &bpf.MapContext{}
-	natMap := nat.FrontendMap(mc)
+	natMap := nat.FrontendMap()
 	err = natMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	natBEMap := nat.BackendMap(mc)
+	natBEMap := nat.BackendMap()
 	err = natBEMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -1405,7 +1399,7 @@ func TestNATNodePortICMPTooBig(t *testing.T) {
 		Mask: net.IPv4Mask(255, 255, 255, 0),
 	}
 
-	rtMap := routes.Map(mc)
+	rtMap := routes.Map()
 	err = rtMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	defer resetRTMap(rtMap)
@@ -1416,7 +1410,7 @@ func TestNATNodePortICMPTooBig(t *testing.T) {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	ctMap := conntrack.Map(mc)
+	ctMap := conntrack.Map()
 	err = ctMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	resetCTMap(ctMap) // ensure it is clean
@@ -1542,16 +1536,15 @@ func TestNATSYNRetryGoesToSameBackend(t *testing.T) {
 	cleanUpMaps()
 	defer cleanUpMaps()
 
-	mc := &bpf.MapContext{}
-	natMap := nat.FrontendMap(mc)
+	natMap := nat.FrontendMap()
 	err := natMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	natBEMap := nat.BackendMap(mc)
+	natBEMap := nat.BackendMap()
 	err = natBEMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	ctMap := conntrack.Map(mc)
+	ctMap := conntrack.Map()
 	err = ctMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -1670,20 +1663,19 @@ func TestNATAffinity(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 	udp := l4.(*layers.UDP)
 
-	mc := &bpf.MapContext{}
-	natMap := nat.FrontendMap(mc)
+	natMap := nat.FrontendMap()
 	err = natMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	natBEMap := nat.BackendMap(mc)
+	natBEMap := nat.BackendMap()
 	err = natBEMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	natAffMap := nat.AffinityMap(mc)
+	natAffMap := nat.AffinityMap()
 	err = natAffMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	ctMap := conntrack.Map(mc)
+	ctMap := conntrack.Map()
 	err = ctMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -1846,12 +1838,11 @@ func TestNATNodePortIngressDSR(t *testing.T) {
 	_, ipv4, l4, payload, pktBytes, err := testPacketUDPDefault()
 	Expect(err).NotTo(HaveOccurred())
 	udp := l4.(*layers.UDP)
-	mc := &bpf.MapContext{}
-	natMap := nat.FrontendMap(mc)
+	natMap := nat.FrontendMap()
 	err = natMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	natBEMap := nat.BackendMap(mc)
+	natBEMap := nat.BackendMap()
 	err = natBEMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -1875,7 +1866,7 @@ func TestNATNodePortIngressDSR(t *testing.T) {
 		Mask: net.IPv4Mask(255, 255, 255, 0),
 	}
 
-	ctMap := conntrack.Map(mc)
+	ctMap := conntrack.Map()
 	err = ctMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	resetCTMap(ctMap) // ensure it is clean
@@ -1885,7 +1876,7 @@ func TestNATNodePortIngressDSR(t *testing.T) {
 	skbMark = 0
 
 	// Setup routing
-	rtMap := routes.Map(mc)
+	rtMap := routes.Map()
 	err = rtMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	defer resetRTMap(rtMap)
@@ -2241,12 +2232,11 @@ func TestNATHostRemoteNPLocalPod(t *testing.T) {
 	_, ipv4, l4, _, pktBytes, err := testPacketUDPDefaultNP(node2ip)
 	Expect(err).NotTo(HaveOccurred())
 	udp := l4.(*layers.UDP)
-	mc := &bpf.MapContext{}
-	natMap := nat.FrontendMap(mc)
+	natMap := nat.FrontendMap()
 	err = natMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	natBEMap := nat.BackendMap(mc)
+	natBEMap := nat.BackendMap()
 	err = natBEMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -2271,7 +2261,7 @@ func TestNATHostRemoteNPLocalPod(t *testing.T) {
 		Mask: net.IPv4Mask(255, 255, 255, 0),
 	}
 
-	ctMap := conntrack.Map(mc)
+	ctMap := conntrack.Map()
 	err = ctMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	resetCTMap(ctMap) // ensure it is clean
@@ -2282,7 +2272,7 @@ func TestNATHostRemoteNPLocalPod(t *testing.T) {
 	skbMark = 0
 
 	// Setup routing
-	rtMap := routes.Map(mc)
+	rtMap := routes.Map()
 	err = rtMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	defer resetRTMap(rtMap)

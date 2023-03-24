@@ -39,8 +39,8 @@ const (
 )
 
 // Map returns a bpf map suitable for perf events
-func Map(mc *bpf.MapContext, name string, maxCPUs int) bpf.Map {
-	return mc.NewPinnedMap(bpf.MapParameters{
+func Map(name string, maxCPUs int) bpf.Map {
+	return bpf.NewPinnedMap(bpf.MapParameters{
 		Filename:   "/sys/fs/bpf/tc/globals/cali_" + name,
 		Type:       "perf_event_array",
 		KeySize:    4, // must be 4

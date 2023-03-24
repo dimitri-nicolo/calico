@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,14 @@ import (
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/ip"
 )
+
+func init() {
+	SetMapSize(MapParameters.MaxEntries)
+}
+
+func SetMapSize(size int) {
+	bpf.SetMapSize(MapParameters.VersionedName(), size)
+}
 
 // struct cali_rt_key {
 // __u32 mask;
@@ -186,7 +194,6 @@ func NewValueWithIfIndex(flags Flags, ifIndex int) Value {
 }
 
 var MapParameters = bpf.MapParameters{
-	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_routes",
 	Type:       "lpm_trie",
 	KeySize:    KeySize,
 	ValueSize:  ValueSize,
@@ -195,8 +202,8 @@ var MapParameters = bpf.MapParameters{
 	Flags:      unix.BPF_F_NO_PREALLOC,
 }
 
-func Map(mc *bpf.MapContext) bpf.Map {
-	return mc.NewPinnedMap(MapParameters)
+func Map() bpf.Map {
+	return bpf.NewPinnedMap(MapParameters)
 }
 
 type MapMem map[Key]Value
