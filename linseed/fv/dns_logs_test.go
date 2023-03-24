@@ -22,8 +22,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -39,13 +37,7 @@ func dnslogSetupAndTeardown(t *testing.T) func() {
 	lmaClient = lmaelastic.NewWithClient(esClient)
 
 	// Instantiate a client.
-	cfg := rest.Config{
-		CACertPath:     "cert/RootCA.crt",
-		URL:            "https://localhost:8444/",
-		ClientCertPath: "cert/localhost.crt",
-		ClientKeyPath:  "cert/localhost.key",
-	}
-	cli, err = client.NewClient("", cfg)
+	cli, err = NewLinseedClient()
 	require.NoError(t, err)
 
 	// Create a random cluster name for each test to make sure we don't

@@ -1,0 +1,60 @@
+# This ClusterRole provides Linseed the necessary permissions
+# required for executing FV tests.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tigera-linseed
+rules:
+- apiGroups: ["authentication.k8s.io"]
+  resources: ["tokenreviews"]
+  verbs: ["create"]
+- apiGroups: ["authorization.k8s.io"]
+  resources: ["subjectaccessreviews"]
+  verbs: ["create"]
+
+---
+
+# This ClusterRoleBinding binds the above ClusterRole to the service account
+# created as part of FV setup.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-linseed
+subjects:
+- kind: ServiceAccount
+  name: tigera-linseed
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: tigera-linseed
+  apiGroup: rbac.authorization.k8s.io
+
+--- 
+
+# This ClusterRole provides the FV client with permissions required for the tests.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tigera-linseed-fv
+rules:
+- apiGroups: ["linseed.tigera.io"]
+  resources: ["*"]
+  verbs: ["*"]
+
+---
+
+# This ClusterRoleBinding binds the above ClusterRole to the fv client service account
+# created as part of FV setup.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-linseed-fv
+subjects:
+- kind: ServiceAccount
+  name: tigera-linseed-fv
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: tigera-linseed-fv
+  apiGroup: rbac.authorization.k8s.io
+

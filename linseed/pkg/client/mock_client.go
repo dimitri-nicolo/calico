@@ -71,6 +71,10 @@ func (c *mockClient) RuntimeReports(cluster string) RuntimeReportsInterface {
 	return newRuntimeReports(c, cluster)
 }
 
+func (c *mockClient) Token() []byte {
+	return nil
+}
+
 func NewMockClient(tenantID string, results ...rest.MockResult) MockClient {
 	return &mockClient{
 		restClient: rest.NewMockClient(results...),

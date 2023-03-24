@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -25,13 +26,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Token to use for HTTP requests against Linseed.
+var token []byte
+
 func setupLinseedFV(t *testing.T) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
 
 	// Create an ES client.
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
+	var err error
+	esClient, err = elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 
 	// Random cluster name to prevent overlap with other tests.
@@ -40,6 +45,10 @@ func setupLinseedFV(t *testing.T) func() {
 	// Set up context with a timeout.
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+
+	// Get the token to use in HTTP authorization header.
+	token, err = os.ReadFile(TokenPath)
+	require.NoError(t, err)
 
 	return func() {
 		// Cleanup any data that might left over from a previous failed run.
@@ -67,19 +76,19 @@ func TestFV_Linseed(t *testing.T) {
 	}{
 		{
 			name: "should return 404 for /",
-			path: "/", method: "GET", wantStatusCode: 404, wantBody: "404 page not found",
+			path: "/", method: "GET", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"No matching authz options for GET /"}`,
 		},
 		{
 			name: "should return 404 for /foo",
-			path: "/foo", method: "GET", wantStatusCode: 404, wantBody: "404 page not found",
+			path: "/foo", method: "GET", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"No matching authz options for GET /foo"}`,
 		},
 		{
 			name: "should return 404 for /api/v1/flows/foo",
-			path: "/api/v1/flows/foo", method: "GET", wantStatusCode: 404, wantBody: "404 page not found",
+			path: "/api/v1/flows/foo", method: "GET", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"No matching authz options for GET /api/v1/flows/foo"}`,
 		},
 		{
-			name: "should return 405 for DELETE /version",
-			path: "/version", method: "DELETE", wantStatusCode: 405, wantBody: "",
+			name: "should return 404 for DELETE /version",
+			path: "/version", method: "DELETE", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"No matching authz options for DELETE /version"}`,
 		},
 		{
 			name: "should return 415 unsupported content type for /api/v1/flows",
@@ -98,7 +107,7 @@ func TestFV_Linseed(t *testing.T) {
 			defer setupLinseedFV(t)()
 
 			client := mTLSClient(t)
-			httpReqSpec := noBodyHTTPReqSpec(tt.method, fmt.Sprintf("https://%s%s", addr, tt.path), tenant, cluster)
+			httpReqSpec := noBodyHTTPReqSpec(tt.method, fmt.Sprintf("https://%s%s", addr, tt.path), tenant, cluster, token)
 			httpReqSpec.AddHeaders(tt.headers)
 			httpReqSpec.SetBody(tt.body)
 			res, resBody := doRequest(t, client, httpReqSpec)
@@ -112,7 +121,7 @@ func TestFV_Linseed(t *testing.T) {
 		defer setupLinseedFV(t)()
 
 		client := &http.Client{}
-		res, resBody := doRequest(t, client, noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/", addr), tenant, cluster))
+		res, resBody := doRequest(t, client, noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/", addr), tenant, cluster, nil))
 
 		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 		assert.Equal(t, "Client sent an HTTP request to an HTTPS server.", strings.Trim(string(resBody), "\n"))
@@ -152,7 +161,7 @@ func TestFV_Linseed(t *testing.T) {
 		defer setupLinseedFV(t)()
 
 		client := mTLSClient(t)
-		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/readiness", healthAddr), tenant, cluster)
+		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/readiness", healthAddr), tenant, cluster, token)
 		res, _ := doRequest(t, client, httpReqSpec)
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 	})
@@ -161,7 +170,7 @@ func TestFV_Linseed(t *testing.T) {
 		defer setupLinseedFV(t)()
 
 		client := mTLSClient(t)
-		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/liveness", healthAddr), tenant, cluster)
+		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/liveness", healthAddr), tenant, cluster, token)
 		res, _ := doRequest(t, client, httpReqSpec)
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 	})

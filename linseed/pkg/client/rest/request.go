@@ -145,6 +145,12 @@ func (r *request) Do(ctx context.Context) *Result {
 		req.Header.Set("Content-Type", r.contentType)
 	}
 
+	if token, err := r.client.Token(); err != nil {
+		return &Result{err: err}
+	} else if len(token) > 0 {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", string(token)))
+	}
+
 	// Perform the request.
 	response, err := r.client.HTTPClient().Do(req)
 	if err != nil {

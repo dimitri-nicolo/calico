@@ -99,9 +99,9 @@ func (c *client) RuntimeReports(cluster string) RuntimeReportsInterface {
 	return newRuntimeReports(c, cluster)
 }
 
-func NewClient(tenantID string, cfg rest.Config) (Client, error) {
+func NewClient(tenantID string, cfg rest.Config, opts ...rest.ClientOption) (Client, error) {
 	logrus.Infof("Creating new linseed client with config: %#v", cfg)
-	rc, err := rest.NewClient(tenantID, cfg)
+	rc, err := rest.NewClient(tenantID, cfg, opts...)
 	if err != nil {
 		return nil, err
 	}

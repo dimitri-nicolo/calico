@@ -20,6 +20,7 @@ import (
 type RESTClient interface {
 	BaseURL() string
 	Tenant() string
+	Token() ([]byte, error)
 	HTTPClient() *http.Client
 	Verb(string) Request
 	Post() Request
@@ -28,10 +29,11 @@ type RESTClient interface {
 }
 
 type restClient struct {
-	config Config
-	client *http.Client
-
-	tenantID string
+	// Configuration, input by caller.
+	config    Config
+	client    *http.Client
+	tenantID  string
+	tokenPath string
 }
 
 type Config struct {
@@ -54,18 +56,37 @@ type Config struct {
 	FIPSModeEnabled bool
 }
 
+type ClientOption func(*restClient) error
+
+// WithTokenPath sets the token path to use for this client.
+// The client will load this token on each request to allow for token rotation.
+func WithTokenPath(path string) ClientOption {
+	return func(c *restClient) error {
+		if path == "" {
+			return fmt.Errorf("token path cannot be empty")
+		}
+		c.tokenPath = path
+		return nil
+	}
+}
+
 // NewClient returns a new restClient.
-func NewClient(tenantID string, cfg Config) (RESTClient, error) {
+func NewClient(tenantID string, cfg Config, opts ...ClientOption) (RESTClient, error) {
 	httpClient, err := newHTTPClient(cfg)
 	if err != nil {
 		return nil, err
 	}
-
-	return &restClient{
+	rc := &restClient{
 		config:   cfg,
 		tenantID: tenantID,
 		client:   httpClient,
-	}, nil
+	}
+	for _, opt := range opts {
+		if err = opt(rc); err != nil {
+			return nil, err
+		}
+	}
+	return rc, nil
 }
 
 func newHTTPClient(cfg Config) (*http.Client, error) {
@@ -134,4 +155,15 @@ func (c *restClient) Tenant() string {
 
 func (c *restClient) HTTPClient() *http.Client {
 	return c.client
+}
+
+func (c *restClient) Token() ([]byte, error) {
+	if c.tokenPath == "" {
+		return nil, nil
+	}
+	token, err := os.ReadFile(c.tokenPath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load Linseed token from %s: %s", c.tokenPath, err)
+	}
+	return token, nil
 }

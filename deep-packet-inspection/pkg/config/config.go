@@ -32,6 +32,7 @@ type Config struct {
 	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
 	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
+	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 	FIPSModeEnabled   bool   `envconfig:"FIPS_MODE_ENABLED" default:"false"`
 
 	// All the below config variables are used by typha to establish connection and they should not use split_words

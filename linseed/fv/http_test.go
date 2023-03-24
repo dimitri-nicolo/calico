@@ -13,12 +13,14 @@ import (
 	"crypto/x509/pkix"
 	"embed"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"math/big"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,8 +47,8 @@ func (h *httpReqSpec) SetBody(body string) {
 	h.body = []byte(body)
 }
 
-func noBodyHTTPReqSpec(method, url, tenant, cluster string) httpReqSpec {
-	return httpReqSpec{
+func noBodyHTTPReqSpec(method, url, tenant, cluster string, token []byte) httpReqSpec {
+	s := httpReqSpec{
 		method: method,
 		url:    url,
 		headers: map[string]string{
@@ -54,10 +56,14 @@ func noBodyHTTPReqSpec(method, url, tenant, cluster string) httpReqSpec {
 			"x-tenant-id":  cluster,
 		},
 	}
+	if len(token) > 0 {
+		s.headers["Authorization"] = fmt.Sprintf("Bearer %s", string(token))
+	}
+	return s
 }
 
-func xndJSONPostHTTPReqSpec(url, tenant, cluster string, body []byte) httpReqSpec {
-	return httpReqSpec{
+func xndJSONPostHTTPReqSpec(url, tenant, cluster string, token, body []byte) httpReqSpec {
+	s := httpReqSpec{
 		method: "POST",
 		url:    url,
 		headers: map[string]string{
@@ -67,6 +73,10 @@ func xndJSONPostHTTPReqSpec(url, tenant, cluster string, body []byte) httpReqSpe
 		},
 		body: body,
 	}
+	if len(token) > 0 {
+		s.headers["Authorization"] = fmt.Sprintf("Bearer %s", string(token))
+	}
+	return s
 }
 
 func doRequest(t *testing.T, client *http.Client, spec httpReqSpec) (*http.Response, []byte) {
@@ -80,6 +90,7 @@ func doRequest(t *testing.T, client *http.Client, spec httpReqSpec) (*http.Respo
 	res, err = client.Do(req)
 	require.NoError(t, err)
 	defer res.Body.Close()
+	logrus.Info(res.Body)
 
 	var resBody []byte
 	resBody, err = io.ReadAll(res.Body)
@@ -161,7 +172,8 @@ func mustCreateCAKeyPair(t *testing.T) (*x509.Certificate, *rsa.PrivateKey) {
 		IsCA:                  true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
-		BasicConstraintsValid: true}
+		BasicConstraintsValid: true,
+	}
 
 	// Generate a private key
 	key, err := rsa.GenerateKey(rand.Reader, 4096)
@@ -193,7 +205,8 @@ func mustCreateClientKeyPair(t *testing.T) (*x509.Certificate, *rsa.PrivateKey) 
 }
 
 func signAndEncodeCert(t *testing.T, ca *x509.Certificate, caPrivateKey *rsa.PrivateKey,
-	cert *x509.Certificate, key *rsa.PrivateKey) []byte {
+	cert *x509.Certificate, key *rsa.PrivateKey,
+) []byte {
 	// Sign the certificate with the provided CA
 	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, &key.PublicKey, caPrivateKey)
 	require.NoError(t, err)

@@ -61,3 +61,7 @@ func (m *MockRESTClient) Tenant() string {
 func (m *MockRESTClient) HTTPClient() *http.Client {
 	panic("not implemented")
 }
+
+func (m *MockRESTClient) Token() ([]byte, error) {
+	return nil, nil
+}

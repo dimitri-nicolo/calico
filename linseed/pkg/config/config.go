@@ -17,6 +17,8 @@ type Config struct {
 	Host     string
 	LogLevel string `default:"INFO" split_words:"true"`
 
+	Kubeconfig string `envconfig:"KUBECONFIG"`
+
 	// Certificate presented to the client for TLS verification.
 	HTTPSCert string `default:"/certs/https/tls.crt" split_words:"true"`
 	HTTPSKey  string `default:"/certs/https/tls.key" split_words:"true"`
@@ -24,9 +26,13 @@ type Config struct {
 	// Metrics endpoint configurations.
 	EnableMetrics bool `default:"false" split_words:"true"`
 	MetricsPort   int  `default:"9095" split_words:"true"`
+
 	// Certificates used to secure metrics endpoint via TLS
 	MetricsCert string `default:"/certs/https/tls.crt" split_words:"true"`
 	MetricsKey  string `default:"/certs/https/tls.key" split_words:"true"`
+
+	// Key used for generation and verification of access tokens.
+	TokenKey string `default:"/certs/https/tokens.key" split_words:"true"`
 
 	// Used to verify client certificates for mTLS.
 	CACert string `default:"/certs/https/client.crt" split_words:"true"`
@@ -39,6 +45,13 @@ type Config struct {
 	// If left empty, x-tenant-id header is not required as Linseed will run in a
 	// single-tenant environment
 	ExpectedTenantID string `default:"" split_words:"true"`
+
+	// Whether or not to run the token controller. This must be true for management clusters.
+	TokenControllerEnabled bool `envconfig:"TOKEN_CONTROLLER_ENABLED" default:"false"`
+
+	// Configuration for Voltron access.
+	MultiClusterForwardingEndpoint string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
+	MultiClusterForwardingCA       string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
 
 	// Elastic configuration
 	ElasticScheme          string `envconfig:"ELASTIC_SCHEME" default:"https"`

@@ -10,6 +10,8 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	authzv1 "k8s.io/api/authorization/v1"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/handler"
@@ -36,27 +38,31 @@ func (h events) APIS() []handler.API {
 	return []handler.API{
 		{
 			// Base URL queries for events.
-			Method:  "POST",
-			URL:     EventsPath,
-			Handler: h.List(),
+			Method:          "POST",
+			URL:             EventsPath,
+			Handler:         h.List(),
+			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Get, Group: handler.APIGroup, Resource: "events"},
 		},
 		{
 			// Bulk creation for events.
-			Method:  "POST",
-			URL:     EventsPathBulk,
-			Handler: h.Bulk(),
+			Method:          "POST",
+			URL:             EventsPathBulk,
+			Handler:         h.Bulk(),
+			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Create, Group: handler.APIGroup, Resource: "events"},
 		},
 		{
 			// Bulk dismissal for events.
-			Method:  "PUT",
-			URL:     EventsPathBulk,
-			Handler: h.Bulk(),
+			Method:          "PUT",
+			URL:             EventsPathBulk,
+			Handler:         h.Bulk(),
+			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Dismiss, Group: handler.APIGroup, Resource: "events"},
 		},
 		{
 			// Bulk delete for events.
-			Method:  "DELETE",
-			URL:     EventsPathBulk,
-			Handler: h.Bulk(),
+			Method:          "DELETE",
+			URL:             EventsPathBulk,
+			Handler:         h.Bulk(),
+			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Delete, Group: handler.APIGroup, Resource: "events"},
 		},
 	}
 }

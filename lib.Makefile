@@ -1235,7 +1235,7 @@ run-k8s-apiserver: stop-k8s-apiserver run-etcd
 		--max-requests-inflight=0
 
 	# Wait until the apiserver is accepting requests.
-	while ! docker exec $(APISERVER_NAME) kubectl get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
+	while ! docker exec $(APISERVER_NAME) kubectl get namespace default; do echo "Waiting for apiserver to come up..."; sleep 2; done
 
 	# Wait until we can configure a cluster role binding which allows anonymous auth.
 	while ! docker exec $(APISERVER_NAME) kubectl create \

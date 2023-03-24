@@ -9,14 +9,15 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/linseed/pkg/config"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/projectcalico/calico/linseed/pkg/handler"
 	"github.com/projectcalico/calico/linseed/pkg/middleware"
+	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
@@ -33,7 +34,11 @@ func UnpackRoutes(handlers ...handler.Handler) []Route {
 
 	for _, h := range handlers {
 		for _, m := range h.APIS() {
-			routes = append(routes, []Route{{m.Method, m.URL, m.Handler}}...)
+			if m.AuthzAttributes != nil {
+				routes = append(routes, []Route{{m.Method, m.URL, m.Handler}}...)
+			} else {
+				logrus.WithField("api", m).Warn("Skipping API with no authorization configured")
+			}
 		}
 	}
 
@@ -48,9 +53,10 @@ func UtilityRoutes() []Route {
 }
 
 // Middlewares defines all available intermediary handlers
-func Middlewares(cfg config.Config) []func(http.Handler) http.Handler {
+func Middlewares(cfg config.Config, authn auth.Authenticator, authz *middleware.KubernetesAuthzTracker) []func(http.Handler) http.Handler {
 	clusterInfo := middleware.NewClusterInfo(cfg.ExpectedTenantID)
 	metrics := middleware.Metrics{}
+	tokenAuth := middleware.NewTokenAuth(authn, authz)
 	return []func(http.Handler) http.Handler{
 		// LogRequestHeaders needs to be placed before any middlewares that mutate the request
 		httputils.LogRequestHeaders,
@@ -60,6 +66,8 @@ func Middlewares(cfg config.Config) []func(http.Handler) http.Handler {
 		chimiddleware.AllowContentType("application/json", "application/x-ndjson"),
 		// ClusterInfo will extract cluster and tenant information from the request to identify the caller
 		clusterInfo.Extract(),
+		// Authenticate tokens.
+		tokenAuth.Do(),
 		// Metrics will track all relevant information for requests
 		metrics.Track(),
 	}

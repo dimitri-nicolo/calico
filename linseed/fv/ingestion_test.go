@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -17,9 +18,6 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
-	"github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
@@ -50,13 +48,11 @@ func ingestionSetupAndTeardown(t *testing.T, index string) func() {
 	lmaClient = lmaelastic.NewWithClient(esClient)
 
 	// Instantiate a client.
-	cfg := rest.Config{
-		CACertPath:     "cert/RootCA.crt",
-		URL:            "https://localhost:8444/",
-		ClientCertPath: "cert/localhost.crt",
-		ClientKeyPath:  "cert/localhost.key",
-	}
-	cli, err = client.NewClient("", cfg)
+	cli, err = NewLinseedClient()
+	require.NoError(t, err)
+
+	// Get the token to use in HTTP authorization header.
+	token, err = os.ReadFile(TokenPath)
 	require.NoError(t, err)
 
 	// Set up context with a timeout.
@@ -82,7 +78,7 @@ func TestFV_FlowIngestion(t *testing.T) {
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(flowLogs))
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(flowLogs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -132,7 +128,7 @@ func TestFV_DNSIngestion(t *testing.T) {
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(dnsLogs))
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(dnsLogs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -187,7 +183,7 @@ func TestFV_L7Ingestion(t *testing.T) {
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(l7Logs))
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(l7Logs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -236,7 +232,7 @@ func TestFV_KubeAuditIngestion(t *testing.T) {
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(kubeAuditLogs))
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(kubeAuditLogs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -290,7 +286,7 @@ func TestFV_EEAuditIngestion(t *testing.T) {
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(eeAuditLogs))
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(eeAuditLogs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -344,7 +340,7 @@ func TestFV_BGPIngestion(t *testing.T) {
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(bgpLogs))
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(bgpLogs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -400,7 +396,7 @@ func TestFV_WAFIngestion(t *testing.T) {
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(wafLogs))
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(wafLogs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -454,7 +450,7 @@ func TestFV_RuntimeIngestion(t *testing.T) {
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(runtimeReports))
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(runtimeReports))
 
 		// make the request to ingest runtime reports
 		res, resBody := doRequest(t, httpClient, spec)

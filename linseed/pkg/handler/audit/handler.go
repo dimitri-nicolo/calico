@@ -14,6 +14,8 @@ import (
 
 	"github.com/projectcalico/calico/linseed/pkg/handler"
 
+	authzv1 "k8s.io/api/authorization/v1"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/middleware"
@@ -41,19 +43,22 @@ func New(logs bapi.AuditBackend) *audit {
 func (h audit) APIS() []handler.API {
 	return []handler.API{
 		{
-			Method:  "POST",
-			URL:     LogPath,
-			Handler: h.GetLogs(),
+			Method:          "POST",
+			URL:             LogPath,
+			Handler:         h.GetLogs(),
+			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Get, Group: handler.APIGroup, Resource: "auditlogs"},
 		},
 		{
-			Method:  "POST",
-			URL:     fmt.Sprintf(LogPathBulkPattern, v1.AuditLogTypeEE),
-			Handler: h.BulkAuditEE(),
+			Method:          "POST",
+			URL:             fmt.Sprintf(LogPathBulkPattern, v1.AuditLogTypeEE),
+			Handler:         h.BulkAuditEE(),
+			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Create, Group: handler.APIGroup, Resource: "ee_auditlogs"},
 		},
 		{
-			Method:  "POST",
-			URL:     fmt.Sprintf(LogPathBulkPattern, v1.AuditLogTypeKube),
-			Handler: h.BulkAuditKube(),
+			Method:          "POST",
+			URL:             fmt.Sprintf(LogPathBulkPattern, v1.AuditLogTypeKube),
+			Handler:         h.BulkAuditKube(),
+			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Create, Group: handler.APIGroup, Resource: "kube_auditlogs"},
 		},
 		{
 			Method:  "POST",
