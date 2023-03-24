@@ -233,13 +233,14 @@ module Fluent::Plugin
             when :put
               Net::HTTP::Put.new(uri.request_uri)
             end
+
       # custom change for calico Authorization bearer token support.
+      set_headers(req, chunk)
       if @authentication == :basic
          req.basic_auth(@username, @password)
       elsif @authentication == :bearer
-         req['authorization'] = "bearer #{@token}"
+         req['Authorization'] = "Bearer #{@token}"
       end
-      set_headers(req, chunk)
       req.body = @json_array ? "[#{chunk.read.chop}]" : chunk.read
       req
     end
