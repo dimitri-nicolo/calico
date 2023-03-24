@@ -95,7 +95,7 @@ func (c *captureManager) OnUpdate(protoBufMsg interface{}) {
 			// store a packet capture id to workload endpoint id
 			c.pendingPacketCaptures[key] = nil
 		}
-	case *ifaceUpdate:
+	case *ifaceStateUpdate:
 		// store interface name to its state
 		log.WithField("msg", protoBufMsg).Debug("Received ifaceUpdate")
 		c.pendingInterfaceUpdates[msg.Name] = msg.State
