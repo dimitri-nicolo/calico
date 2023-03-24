@@ -108,6 +108,9 @@ type Config struct {
 	// Enabling it reduces some load on the managed cluster while also adding a second control
 	// of allow / deny based on the ManagedCluster RBAC.
 	CheckManagedClusterAuthorizationBeforeProxy bool `default:"false" split_words:"true"`
+
+	// enable logging of all http requests to the clusterMuxer
+	HTTPAccessLoggingEnabled bool `default:"false" split_words:"true"`
 }
 
 func (cfg Config) String() string {

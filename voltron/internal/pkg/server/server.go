@@ -17,9 +17,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
 	log "github.com/sirupsen/logrus"
-
 	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/rest"
@@ -29,6 +27,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
@@ -93,6 +92,8 @@ type Server struct {
 
 	// checkManagedClusterAuthorizationBeforeProxy
 	checkManagedClusterAuthorizationBeforeProxy bool
+
+	accessLogger *accesslog.Logger
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
@@ -134,7 +135,12 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 		ReadTimeout: DefaultReadTimeout,
 	}
 
-	srv.proxyMux.HandleFunc("/", srv.clusterMuxer)
+	var rootHandler = srv.clusterMuxer
+	if srv.accessLogger != nil {
+		rootHandler = srv.accessLogger.WrapHandler(rootHandler)
+	}
+
+	srv.proxyMux.HandleFunc("/", rootHandler)
 	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
 
 	var tunOpts []tunnel.ServerOption
@@ -464,4 +470,11 @@ func (s *Server) WatchK8sWithSync(syncC chan<- error) error {
 	}
 
 	return s.clusters.watchK8s(s.ctx, syncC)
+}
+
+// FlushAccessLogs exposed for testing
+func (s *Server) FlushAccessLogs() {
+	if s.accessLogger != nil {
+		s.accessLogger.Flush()
+	}
 }

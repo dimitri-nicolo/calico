@@ -17,6 +17,7 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 )
 
@@ -139,6 +140,23 @@ func main() {
 		}
 
 		log.WithField("map", sniServiceMap).Info("SNI map")
+
+		if cfg.HTTPAccessLoggingEnabled {
+			logOpts := []accesslog.Option{
+				accesslog.WithRequestHeader(server.ClusterHeaderField, "xClusterID"),
+				accesslog.WithRequestHeader("UserAgent", "userAgent"),
+			}
+
+			if cfg.OIDCAuthEnabled {
+				logOpts = append(logOpts, accesslog.WithStandardJWTClaims())
+				logOpts = append(logOpts, accesslog.WithStringJWTClaim(cfg.OIDCAuthUsernameClaim, "username"))
+				if cfg.CalicoCloudRequireTenantClaim {
+					logOpts = append(logOpts, accesslog.WithStringJWTClaim("https://calicocloud.io/tenantID", "ccTenantID"))
+				}
+			}
+
+			server.WithHTTPAccessLogging(logOpts...)
+		}
 
 		opts = append(opts,
 			server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),

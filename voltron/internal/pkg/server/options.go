@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
 )
 
 // Option is a common format for New() options
@@ -187,6 +188,19 @@ func WithFIPSModeEnabled(fipsModeEnabled bool) Option {
 func WithCheckManagedClusterAuthorizationBeforeProxy(checkManagedClusterAuthorizationBeforeProxy bool) Option {
 	return func(s *Server) error {
 		s.checkManagedClusterAuthorizationBeforeProxy = checkManagedClusterAuthorizationBeforeProxy
+		return nil
+	}
+}
+
+// WithHTTPAccessLogging enables writing of http access logs to stdout
+func WithHTTPAccessLogging(options ...accesslog.Option) Option {
+	return func(s *Server) error {
+		logger, err := accesslog.New(options...)
+		if err != nil {
+			return err
+		}
+
+		s.accessLogger = logger
 		return nil
 	}
 }
