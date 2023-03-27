@@ -951,6 +951,17 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 			ct_ctx_nat.flags |= CALI_CT_FLAG_VIA_NAT_IF;
 		}
 
+		/* If we just received the first packet for a NP forwarded from a
+		 * different node via a tunnel and we are in DSR mode and there are optout
+		 * CIDRs from DSR, we need to make a check if this client also opted out
+		 * and save the information in conntrack.
+		 */
+		if (CALI_F_FROM_HEP && CALI_F_DSR && (GLOBAL_FLAGS & CALI_GLOBALS_NO_DSR_CIDRS)) {
+			if (state->tun_ip && cali_rt_lookup_flags(state->ip_src) & CALI_RT_NO_DSR) {
+				ct_ctx_nat.flags |= CALI_CT_FLAG_NP_NO_DSR;
+			}
+		}
+
 		if (state->ip_proto == IPPROTO_TCP) {
 			if (skb_refresh_validate_ptrs(ctx, TCP_SIZE)) {
 				deny_reason(ctx, CALI_REASON_SHORT);
@@ -1048,7 +1059,8 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 				if (encap_needed) {
 					if (CALI_F_FROM_HEP && state->tun_ip == 0) {
 						if (CALI_F_DSR) {
-							ct_ctx_nat.flags |= CALI_CT_FLAG_DSR_FWD;
+							ct_ctx_nat.flags |= CALI_CT_FLAG_DSR_FWD |
+								(state->ct_result.flags & CALI_CT_FLAG_NP_NO_DSR);
 						}
 						ct_ctx_nat.flags |= CALI_CT_FLAG_NP_FWD;
 					}
@@ -1169,7 +1181,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 		 */
 		if (ct_related && state->ip_proto == IPPROTO_ICMP
 				&& state->ct_result.tun_ip
-				&& !CALI_F_DSR) {
+				&& (!CALI_F_DSR || (state->ct_result.flags & CALI_CT_FLAG_NP_NO_DSR))) {
 			if (dnat_return_should_encap()) {
 				CALI_DEBUG("Returning related ICMP from workload to tunnel\n");
 			} else if (CALI_F_TO_HEP) {
@@ -1200,7 +1212,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 				bpf_ntohl(state->ct_result.nat_ip), state->ct_result.nat_port);
 
 		if (dnat_return_should_encap() && state->ct_result.tun_ip) {
-			if (CALI_F_DSR) {
+			if (CALI_F_DSR && !(state->ct_result.flags & CALI_CT_FLAG_NP_NO_DSR)) {
 				/* SNAT will be done after routing, when leaving HEP */
 				CALI_DEBUG("DSR enabled, skipping SNAT + encap\n");
 				goto allow;

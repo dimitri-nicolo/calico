@@ -366,6 +366,7 @@ const (
 	GlobalsRPFOptionEnabled uint32 = C.CALI_GLOBALS_RPF_OPTION_ENABLED
 	GlobalsRPFOptionStrict  uint32 = C.CALI_GLOBALS_RPF_OPTION_STRICT
 	GlobalsEgressIPEnabled  uint32 = C.CALI_GLOBALS_IS_EGRESS_IP_ENABLED
+	GlobalsNoDSRCidrs       uint32 = C.CALI_GLOBALS_NO_DSR_CIDRS
 )
 
 func TcSetGlobals(

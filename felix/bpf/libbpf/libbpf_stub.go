@@ -114,6 +114,7 @@ const (
 	GlobalsRPFOptionEnabled uint32 = 16
 	GlobalsRPFOptionStrict  uint32 = 32
 	GlobalsEgressIPEnabled  uint32 = 12345
+	GlobalsNoDSRCidrs       uint32 = 12345
 )
 
 func TcSetGlobals(_ *Map, globalData *TcGlobalData) error {

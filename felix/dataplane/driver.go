@@ -516,6 +516,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 		if configParams.BPFExternalServiceMode == "dsr" {
 			dpConfig.BPFNodePortDSREnabled = true
+			dpConfig.BPFDSROptoutCIDRs = configParams.BPFDSROptoutCIDRs
 		}
 
 		stopChan := make(chan *sync.WaitGroup, 1)
