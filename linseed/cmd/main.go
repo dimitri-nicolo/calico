@@ -87,25 +87,31 @@ func run() {
 	healthAggregator := health.NewHealthAggregator()
 	healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true}, 0)
 
-	// TODO: check if we need to add es connection as part of the ready probe
-	esClient := backend.MustGetElasticClient(toElasticConfig(cfg))
-	cache := templates.NewTemplateCache(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
+	esClient := backend.MustGetElasticClient(cfg)
+	// Create template caches for indices with special shards / replicas configuration
+	defaultCache := templates.NewTemplateCache(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
+	flowCache := templates.NewTemplateCache(esClient, cfg.ElasticFlowShards, cfg.ElasticFlowReplicas)
+	dnsCache := templates.NewTemplateCache(esClient, cfg.ElasticDNSShards, cfg.ElasticDNSReplicas)
+	l7Cache := templates.NewTemplateCache(esClient, cfg.ElasticL7Shards, cfg.ElasticL7Replicas)
+	auditCache := templates.NewTemplateCache(esClient, cfg.ElasticAuditShards, cfg.ElasticAuditReplicas)
+	bgpCache := templates.NewTemplateCache(esClient, cfg.ElasticBGPShards, cfg.ElasticBGPReplicas)
 
 	// Create all the necessary backends.
-	flowLogBackend := flowbackend.NewFlowLogBackend(esClient, cache)
-	eventBackend := eventbackend.NewBackend(esClient, cache)
+	flowLogBackend := flowbackend.NewFlowLogBackend(esClient, flowCache)
+	eventBackend := eventbackend.NewBackend(esClient, defaultCache)
 	flowBackend := flowbackend.NewFlowBackend(esClient)
 	dnsFlowBackend := dnsbackend.NewDNSFlowBackend(esClient)
-	dnsLogBackend := dnsbackend.NewDNSLogBackend(esClient, cache)
+	dnsLogBackend := dnsbackend.NewDNSLogBackend(esClient, dnsCache)
 	l7FlowBackend := l7backend.NewL7FlowBackend(esClient)
-	l7LogBackend := l7backend.NewL7LogBackend(esClient, cache)
-	auditBackend := auditbackend.NewBackend(esClient, cache)
-	bgpBackend := bgpbackend.NewBackend(esClient, cache)
+	l7LogBackend := l7backend.NewL7LogBackend(esClient, l7Cache)
+	auditBackend := auditbackend.NewBackend(esClient, auditCache)
+	bgpBackend := bgpbackend.NewBackend(esClient, bgpCache)
 	procBackend := procbackend.NewBackend(esClient)
-	wafBackend := wafbackend.NewBackend(esClient, cache)
-	reportsBackend := compliancebackend.NewReportsBackend(esClient, cache)
-	snapshotsBackend := compliancebackend.NewSnapshotBackend(esClient, cache)
-	benchmarksBackend := compliancebackend.NewBenchmarksBackend(esClient, cache)
+	wafBackend := wafbackend.NewBackend(esClient, defaultCache)
+
+	reportsBackend := compliancebackend.NewReportsBackend(esClient, defaultCache)
+	snapshotsBackend := compliancebackend.NewSnapshotBackend(esClient, defaultCache)
+	benchmarksBackend := compliancebackend.NewBenchmarksBackend(esClient, defaultCache)
 
 	// Configure options used to launch the server.
 	opts := []server.Option{
@@ -159,34 +165,6 @@ func run() {
 		logrus.Fatalf("server shutdown failed: %+v", err)
 	}
 	logrus.Info("Server is shutting down")
-}
-
-func toElasticConfig(cfg config.Config) backend.ElasticConfig {
-	if cfg.ElasticUsername == "" || cfg.ElasticPassword == "" {
-		logrus.Warn("No credentials were passed in for Elastic. Will connect to ES without credentials")
-
-		return backend.ElasticConfig{
-			URL:             cfg.ElasticEndpoint,
-			LogLevel:        cfg.LogLevel,
-			FIPSModeEnabled: cfg.FIPSModeEnabled,
-			GZIPEnabled:     cfg.ElasticGZIPEnabled,
-			Scheme:          cfg.ElasticScheme,
-			EnableSniffing:  cfg.ElasticSniffingEnabled,
-		}
-	}
-
-	return backend.ElasticConfig{
-		URL:               cfg.ElasticEndpoint,
-		Username:          cfg.ElasticUsername,
-		Password:          cfg.ElasticPassword,
-		LogLevel:          cfg.LogLevel,
-		CACertPath:        cfg.ElasticCABundlePath,
-		ClientCertPath:    cfg.ElasticClientCertPath,
-		ClientCertKeyPath: cfg.ElasticClientKeyPath,
-		FIPSModeEnabled:   cfg.FIPSModeEnabled,
-		GZIPEnabled:       cfg.ElasticGZIPEnabled,
-		Scheme:            cfg.ElasticScheme,
-	}
 }
 
 // doHealthCheck checks the local readiness or liveness endpoint and prints its status.

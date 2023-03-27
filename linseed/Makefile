@@ -115,8 +115,8 @@ run-image: stop-image run-elastic
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.crt:/certs/https/tls.crt \
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.key:/certs/https/tls.key \
 		-v $(REPO_ROOT)/linseed/fv/cert/RootCA.crt:/certs/https/client.crt \
-		-e LINSEED_ELASTIC_ENDPOINT="http://localhost:9200" \
-		-e LINSEED_ELASTIC_SCHEME="http" \
+		-e ELASTIC_HOST="localhost" \
+		-e ELASTIC_SCHEME="http" \
 		-e LINSEED_LOG_LEVEL="debug" \
 		tigera/$(LINSEED_IMAGE):latest
 	# Wait until Linseed is accepting requests on its readiness port.
