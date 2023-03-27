@@ -3909,7 +3909,7 @@ func ensureBPFProgramsAttachedOffset(offset int, felix *infrastructure.Felix, if
 			}
 		}
 		return prog
-	}, "60s", "200ms").Should(ContainElements(expectedIfaces))
+	}, "1m", "1s").Should(ContainElements(expectedIfaces))
 }
 
 func k8sService(name, clusterIP string, w *workload.Workload, port,

@@ -95,7 +95,7 @@ func TestReattachPrograms(t *testing.T) {
 	Expect(countJumpMaps()).To(BeNumerically("==", startingJumpMaps+1), "unexpected number of jump maps")
 	Expect(countTCDirs()).To(BeNumerically("==", startingTCDirs+1), "unexpected number of TC dirs")
 	Expect(countHashFiles()).To(BeNumerically("==", startingHashFiles+1), "unexpected number of hash files")
-	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), "ingress")).To(BeARegularFile())
+	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), bpf.HookIngress)).To(BeARegularFile())
 
 	// Reattach the same TC program
 	t.Log("Replacing program should not add another map and dir")
@@ -105,7 +105,7 @@ func TestReattachPrograms(t *testing.T) {
 	Expect(countJumpMaps()).To(BeNumerically("==", startingJumpMaps+1), "unexpected number of jump maps")
 	Expect(countTCDirs()).To(BeNumerically("==", startingTCDirs+1), "unexpected number of TC dirs")
 	Expect(countHashFiles()).To(BeNumerically("==", startingHashFiles+1), "unexpected number of hash files")
-	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), "ingress")).To(BeARegularFile())
+	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), bpf.HookIngress)).To(BeARegularFile())
 
 	t.Log("Replacing program should not add another map and dir")
 	ap1.HostIP = net.ParseIP("10.0.0.3")
@@ -126,8 +126,8 @@ func TestReattachPrograms(t *testing.T) {
 	Expect(countJumpMaps()).To(BeNumerically("==", startingJumpMaps+2), "unexpected number of jump maps")
 	Expect(countTCDirs()).To(BeNumerically("==", startingTCDirs+2), "unexpected number of TC dirs")
 	Expect(countHashFiles()).To(BeNumerically("==", startingHashFiles+2), "unexpected number of hash files")
-	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), "ingress")).To(BeARegularFile())
-	Expect(bpf.RuntimeJSONFilename(ap2.IfaceName(), "egress")).To(BeARegularFile())
+	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), bpf.HookIngress)).To(BeARegularFile())
+	Expect(bpf.RuntimeJSONFilename(ap2.IfaceName(), bpf.HookEgress)).To(BeARegularFile())
 
 	// Attach the first XDP program
 	t.Log("Adding another program (XDP), should add one dir and one map")
@@ -138,9 +138,9 @@ func TestReattachPrograms(t *testing.T) {
 	Expect(countJumpMaps()).To(BeNumerically("==", startingJumpMaps+3), "unexpected number of jump maps")
 	Expect(countTCDirs()).To(BeNumerically("==", startingTCDirs+3), "unexpected number of TC dirs")
 	Expect(countHashFiles()).To(BeNumerically("==", startingHashFiles+3), "unexpected number of hash files")
-	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), "ingress")).To(BeARegularFile())
-	Expect(bpf.RuntimeJSONFilename(ap2.IfaceName(), "egress")).To(BeARegularFile())
-	Expect(bpf.RuntimeJSONFilename(ap3.IfaceName(), "xdp")).To(BeARegularFile())
+	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), bpf.HookIngress)).To(BeARegularFile())
+	Expect(bpf.RuntimeJSONFilename(ap2.IfaceName(), bpf.HookEgress)).To(BeARegularFile())
+	Expect(bpf.RuntimeJSONFilename(ap3.IfaceName(), bpf.HookXDP)).To(BeARegularFile())
 
 	list, err := bpf.ListCalicoAttached()
 	Expect(err).NotTo(HaveOccurred())
@@ -161,9 +161,9 @@ func TestReattachPrograms(t *testing.T) {
 	Expect(countJumpMaps()).To(BeNumerically("==", startingJumpMaps+3), "unexpected number of jump maps")
 	Expect(countTCDirs()).To(BeNumerically("==", startingTCDirs+3), "unexpected number of TC dirs")
 	Expect(countHashFiles()).To(BeNumerically("==", startingHashFiles+3), "unexpected number of hash files")
-	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), "ingress")).To(BeARegularFile())
-	Expect(bpf.RuntimeJSONFilename(ap2.IfaceName(), "egress")).To(BeARegularFile())
-	Expect(bpf.RuntimeJSONFilename(ap3.IfaceName(), "xdp")).To(BeARegularFile())
+	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), bpf.HookIngress)).To(BeARegularFile())
+	Expect(bpf.RuntimeJSONFilename(ap2.IfaceName(), bpf.HookEgress)).To(BeARegularFile())
+	Expect(bpf.RuntimeJSONFilename(ap3.IfaceName(), bpf.HookXDP)).To(BeARegularFile())
 
 	// Remove both TC programs
 	t.Log("Removing all TC programs and cleaning up their jump maps, should keep only one jump map and hash file")
@@ -175,9 +175,9 @@ func TestReattachPrograms(t *testing.T) {
 	Expect(countJumpMaps()).To(BeNumerically("==", startingJumpMaps+1), "unexpected number of jump maps")
 	Expect(countTCDirs()).To(BeNumerically("==", startingTCDirs+1), "unexpected number of TC dirs")
 	Expect(countHashFiles()).To(BeNumerically("==", startingHashFiles+1), "unexpected number of hash files")
-	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), "ingress")).ToNot(BeAnExistingFile())
-	Expect(bpf.RuntimeJSONFilename(ap2.IfaceName(), "egress")).ToNot(BeAnExistingFile())
-	Expect(bpf.RuntimeJSONFilename(ap3.IfaceName(), "xdp")).To(BeARegularFile())
+	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), bpf.HookIngress)).ToNot(BeAnExistingFile())
+	Expect(bpf.RuntimeJSONFilename(ap2.IfaceName(), bpf.HookEgress)).ToNot(BeAnExistingFile())
+	Expect(bpf.RuntimeJSONFilename(ap3.IfaceName(), bpf.HookXDP)).To(BeARegularFile())
 
 	// Reattach the same XDP program, nothing should change
 	t.Log("Reattaching the same XDP program, should not add any dir or map")
@@ -188,9 +188,9 @@ func TestReattachPrograms(t *testing.T) {
 	Expect(countJumpMaps()).To(BeNumerically("==", startingJumpMaps+1), "unexpected number of jump maps")
 	Expect(countTCDirs()).To(BeNumerically("==", startingTCDirs+1), "unexpected number of TC dirs")
 	Expect(countHashFiles()).To(BeNumerically("==", startingHashFiles+1), "unexpected number of hash files")
-	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), "ingress")).ToNot(BeAnExistingFile())
-	Expect(bpf.RuntimeJSONFilename(ap2.IfaceName(), "egress")).ToNot(BeAnExistingFile())
-	Expect(bpf.RuntimeJSONFilename(ap3.IfaceName(), "xdp")).To(BeARegularFile())
+	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), bpf.HookIngress)).ToNot(BeAnExistingFile())
+	Expect(bpf.RuntimeJSONFilename(ap2.IfaceName(), bpf.HookEgress)).ToNot(BeAnExistingFile())
+	Expect(bpf.RuntimeJSONFilename(ap3.IfaceName(), bpf.HookXDP)).To(BeARegularFile())
 
 	// Remove the XDP program, everything should go back to the initial state
 	t.Log("Removing the XDP program and cleaning up its jump map, should return to base state")
@@ -200,9 +200,9 @@ func TestReattachPrograms(t *testing.T) {
 	Expect(countJumpMaps()).To(BeNumerically("==", startingJumpMaps), "unexpected number of jump maps")
 	Expect(countTCDirs()).To(BeNumerically("==", startingTCDirs), "unexpected number of TC dirs")
 	Expect(countHashFiles()).To(BeNumerically("==", startingHashFiles), "unexpected number of hash files")
-	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), "ingress")).ToNot(BeAnExistingFile())
-	Expect(bpf.RuntimeJSONFilename(ap2.IfaceName(), "egress")).ToNot(BeAnExistingFile())
-	Expect(bpf.RuntimeJSONFilename(ap3.IfaceName(), "xdp")).ToNot(BeAnExistingFile())
+	Expect(bpf.RuntimeJSONFilename(ap1.IfaceName(), bpf.HookIngress)).ToNot(BeAnExistingFile())
+	Expect(bpf.RuntimeJSONFilename(ap2.IfaceName(), bpf.HookEgress)).ToNot(BeAnExistingFile())
+	Expect(bpf.RuntimeJSONFilename(ap3.IfaceName(), bpf.HookXDP)).ToNot(BeAnExistingFile())
 }
 
 func countJumpMaps() int {

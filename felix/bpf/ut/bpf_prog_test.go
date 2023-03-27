@@ -443,7 +443,7 @@ func initMapsOnce() {
 		arpMap = arp.Map()
 		perfMap = perf.Map("perf_evnt", 512)
 		fsafeMap = failsafes.Map()
-		countersMap = counters.MapForTest()
+		countersMap = counters.Map()
 		ifstateMap = ifstate.Map()
 
 		allMaps = []bpf.Map{natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap,
