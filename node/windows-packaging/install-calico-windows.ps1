@@ -1,7 +1,4 @@
----
-layout: null
----
-# Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
+# Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,20 +13,16 @@ layout: null
 # limitations under the License.
 <#
 .DESCRIPTION
-    This script installs and starts {{site.prodname}} services on a Windows node.
+    This script installs and starts Calico services on a Windows node.
 
     Note: EKS requires downloading kubectl.exe to c:\k before running this script: https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
 #>
 
 Param(
-    # Note: we don't publish a release artifact for the "master" branch. To test
-    # against master, build calico-windows.zip from projectcalico/node.
-{%- if site.url contains "projectcalico" %}
-    [parameter(Mandatory = $false)] $ReleaseBaseURL="https://github.com/projectcalico/calico/releases/download/{{site.data.versions.first.components["calico/node"].version}}/",
-    [parameter(Mandatory = $false)] $ReleaseFile="calico-windows-{{site.data.versions.first.components["calico/node"].version}}.zip",
-{%- else %}
-    [parameter(Mandatory = $false)] $ReleaseBaseURL="{{site.url}}/files/windows/",
-{%- endif %}
+    # Note: This URL only works for releases. To test development code, build calico-windows.zip from source.
+    # VERSION is replaced by our build tooling.
+    [parameter(Mandatory = $false)] $ReleaseBaseURL="https://github.com/projectcalico/calico/releases/download/VERSION/",
+    [parameter(Mandatory = $false)] $ReleaseFile="calico-windows-VERSION.zip",
     [parameter(Mandatory = $false)] $KubeVersion="",
     [parameter(Mandatory = $false)] $StartCalico="yes",
     # As of Kubernetes version v1.24.0, service account token secrets are no longer automatically created. But this installation script uses that secret
@@ -166,7 +159,7 @@ function GetBackendType()
     if ($Datastore -EQ "kubernetes") {
         $encap=c:\k\kubectl.exe --kubeconfig="$KubeConfigPath" get felixconfigurations.crd.projectcalico.org default -o jsonpath='{.spec.ipipEnabled}'
         if ($encap -EQ "true") {
-            throw "{{site.prodname}} on Linux has IPIP enabled. IPIP is not supported on Windows nodes."
+            throw "Calico on Linux has IPIP enabled. IPIP is not supported on Windows nodes."
         }
 
         # Check FelixConfig first.
