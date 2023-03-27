@@ -18,7 +18,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -228,7 +227,7 @@ func setupAndRun(logger testLogger, loglevel, section string, rules *polprog.Rul
 		o(&topts)
 	}
 
-	tempDir, err := ioutil.TempDir("", "calico-bpf-")
+	tempDir, err := os.MkdirTemp("", "calico-bpf-")
 	Expect(err).NotTo(HaveOccurred())
 	defer os.RemoveAll(tempDir)
 
@@ -735,7 +734,7 @@ func runBpfUnitTest(t *testing.T, source string, testFn func(bpfProgRunFn), opts
 		log.SetLevel(topts.logLevel)
 	}
 
-	tempDir, err := ioutil.TempDir("", "calico-bpf-")
+	tempDir, err := os.MkdirTemp("", "calico-bpf-")
 	Expect(err).NotTo(HaveOccurred())
 	defer os.RemoveAll(tempDir)
 
