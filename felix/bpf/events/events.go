@@ -80,10 +80,10 @@ type Events interface {
 }
 
 // New creates a new Events object to consume events.
-func New(mc *bpf.MapContext, src Source) (Events, error) {
+func New(src Source) (Events, error) {
 	switch src {
 	case SourcePerfEvents:
-		return newPerfEvents(mc)
+		return newPerfEvents()
 	}
 
 	return nil, errors.Errorf("unknown events source: %s", src)
@@ -96,12 +96,12 @@ type perfEventsReader struct {
 	next func() (Event, error)
 }
 
-func newPerfEvents(mc *bpf.MapContext) (Events, error) {
+func newPerfEvents() (Events, error) {
 	if runtime.NumCPU() > MaxCPUs {
 		return nil, errors.Errorf("more cpus (%d) than the max supported (%d)", runtime.NumCPU(), 128)
 	}
 
-	perfMap := perf.Map(mc, "perf_evnt", MaxCPUs)
+	perfMap := perf.Map("perf_evnt", MaxCPUs)
 	if err := perfMap.EnsureExists(); err != nil {
 		return nil, err
 	}

@@ -25,7 +25,6 @@ const keySize = 36
 const keyValueSize = 8
 
 var SocketStatsMapParameters = bpf.MapParameters{
-	Filename:   "/sys/fs/bpf/tc/globals/cali_sstats",
 	Type:       "lru_hash",
 	KeySize:    keySize,
 	ValueSize:  keyValueSize,
@@ -34,6 +33,6 @@ var SocketStatsMapParameters = bpf.MapParameters{
 	Version:    2,
 }
 
-func SocketStatsMap(mc *bpf.MapContext) bpf.Map {
-	return mc.NewPinnedMap(SocketStatsMapParameters)
+func SocketStatsMap() bpf.Map {
+	return bpf.NewPinnedMap(SocketStatsMapParameters)
 }

@@ -656,7 +656,7 @@ func (b *PinnedMap) EnsureExists() error {
 		// In older kernels, map create returns EINVAL when we specify the
 		// "name" argument. Retry with empty map name.
 		logrus.WithField("name", b.VersionedName()).Warn("Try recreating map with empty name ")
-		cmd = exec.Command("bpftool", "map", "create", b.versionedFilename(),
+		cmd = exec.Command("bpftool", "map", "create", b.VersionedFilename(),
 			"type", b.Type,
 			"key", fmt.Sprint(b.KeySize),
 			"value", fmt.Sprint(b.ValueSize),

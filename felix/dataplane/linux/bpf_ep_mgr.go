@@ -2243,7 +2243,7 @@ func (m *bpfEndpointManager) doUpdatePolicyProgram(progName string, jumpMapFD bp
 	}
 
 	pg := polprog.NewBuilder(m.ipSetIDAlloc, m.maps.IpsetsMap.MapFD(),
-		m.maps.StateMap.MapFD(), jumpMapFD, m.bpfPolicyDebugEnabled)
+		m.maps.StateMap.MapFD(), jumpMapFD, opts...)
 	if ipFamily == proto.IPVersion_IPV6 {
 		pg.EnableIPv6Mode()
 	}

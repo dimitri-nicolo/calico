@@ -61,7 +61,6 @@ import (
 	bpfroutes "github.com/projectcalico/calico/felix/bpf/routes"
 
 	"github.com/projectcalico/calico/felix/bpf/tc"
-	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/collector"
@@ -69,13 +68,11 @@ import (
 	felixconfig "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dataplane/common"
 	"github.com/projectcalico/calico/felix/dataplane/linux/debugconsole"
-	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/ipsec"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/iptables"
-	"github.com/projectcalico/calico/felix/iptables/cmdshim"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/k8sutils"
 	"github.com/projectcalico/calico/felix/labelindex"
@@ -846,7 +843,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		bpfEvnt              events.Events
 		bpfEventPoller       *bpfEventPoller
-		bpfEndpointManager   *bpfEndpointManager
 		eventProtoStatsSink  *events.EventProtoStatsSink
 		eventTcpStatsSink    *events.EventTcpStatsSink
 		eventProcessPathSink *events.EventProcessPathSink
@@ -859,7 +855,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if config.BPFEnabled || config.FlowLogsCollectProcessInfo || config.FlowLogsCollectTcpStats {
 		var err error
-		bpfEvnt, err = events.New(bpfMapContext, events.SourcePerfEvents)
+		bpfEvnt, err = events.New(events.SourcePerfEvents)
 		if err != nil {
 			log.WithError(err).Error("Failed to create perf event")
 			config.FlowLogsCollectProcessInfo = false
@@ -889,7 +885,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 	if config.FlowLogsCollectProcessInfo {
 		installKprobes := func() error {
-			kp := kprobe.New(config.BPFLogLevel, bpfEvnt, bpfMapContext)
+			kp := kprobe.New(config.BPFLogLevel, bpfEvnt)
 			if kp != nil {
 				if config.FlowLogsCollectProcessPath {
 					err = kp.AttachSyscall()
@@ -929,7 +925,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.FlowLogsCollectTcpStats {
 		eventTcpStatsSink = events.NewEventTcpStatsSink()
 		bpfEventPoller.Register(events.TypeTcpStats, eventTcpStatsSink.HandleEvent)
-		socketStatsMap := stats.SocketStatsMap(bpfMapContext)
+		socketStatsMap := stats.SocketStatsMap()
 		err := socketStatsMap.EnsureExists()
 		if err != nil {
 			log.WithError(err).Error("Failed to create socket stats BPF map. Disabling socket stats collection")
