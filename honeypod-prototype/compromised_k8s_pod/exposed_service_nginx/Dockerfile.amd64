@@ -1,8 +1,9 @@
-ARG HTML_LOCATION
 FROM nginxinc/nginx-unprivileged:stable-alpine
 
 USER 0
-RUN apk upgrade --no-cache
-USER nginx:nginx
 
-COPY ${HTML_LOCATION} /usr/share/nginx/html
+RUN apk upgrade --no-cache
+
+USER 10001:10001
+
+COPY index.html /usr/share/nginx/html/index.html
