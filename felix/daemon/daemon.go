@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -29,6 +30,8 @@ import (
 	"time"
 
 	k8sresources "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -548,6 +551,12 @@ configRetry:
 		)
 		policySyncAPIBinder = binder.NewBinder(configParams.PolicySyncPathPrefix)
 		policySyncServer.RegisterGrpc(policySyncAPIBinder.Server())
+		// let's setup a separate grpc server with a normal port listener, so we can kubefwd to it
+		gs, lis := setupAuxiliaryServer(ctx, policySyncServer.RegisterGrpc)
+		defer func() {
+			gs.GracefulStop()
+			log.Error(lis.Close())
+		}()
 		calcGraphClientChannels = append(calcGraphClientChannels, toPolicySync)
 	}
 
@@ -1640,4 +1649,31 @@ func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMoni
 		return true
 	}
 	return false
+}
+
+// setupAuxiliaryServer - a hidden server only activated by setting FELIX_ADDITIONAL_GRPC_LISTEN_PORT.
+// *** meant to be used as development-only ***
+//
+// can also use FELIX_ENABLE_GRPC_REFLECTION during development to interact with felix policysync using grpcurl or similar reflection client
+func setupAuxiliaryServer(ctx context.Context, registerWithCb func(*grpc.Server)) (_ *grpc.Server, _ net.Listener) {
+	if auxListenPort, ok := os.LookupEnv("FELIX_ADDITIONAL_GRPC_LISTEN_PORT"); ok && auxListenPort != "" {
+		log.WithField("auxListenPort", "auxListenPort").Info("PolicySync Auxiliary Server also enabled")
+		lis, err := net.Listen("tcp", auxListenPort)
+		if err != nil {
+			log.Warnf("could not listen to port '%s'. error: %w", auxListenPort, err)
+			return
+		}
+		gs := grpc.NewServer()
+		if _, ok := os.LookupEnv("FELIX_ENABLE_GRPC_REFLECTION"); ok {
+			reflection.Register(gs)
+		}
+		registerWithCb(gs)
+		go func() {
+			if err := gs.Serve(lis); err != nil {
+				log.Warnf("failed to serve auxiliary server: %v", err)
+			}
+		}()
+		return gs, lis
+	}
+	return
 }
