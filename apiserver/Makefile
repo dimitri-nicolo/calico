@@ -58,6 +58,17 @@ LDFLAGS = -X $(PACKAGE_NAME)/cmd/apiserver/server.VERSION=$(APISERVER_VERSION) \
 
 include ../lib.Makefile
 
+# TODO Add s390x back to VALIDARCHES. Excluding it should be temporary since
+# there are currently issues in our pipeline with building s390x images. Remove
+# this command once the s390x build pipeline has been fixed.
+VALIDARCHES=amd64
+
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
 
 # Use ARCH specific build image.
 CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
