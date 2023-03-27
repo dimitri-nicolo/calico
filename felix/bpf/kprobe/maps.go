@@ -18,7 +18,7 @@
 package kprobe
 
 import (
-	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 )
 
 const statsKeySize = 44
@@ -26,7 +26,7 @@ const statsValueSize = 16
 const execPathKeySize = 4
 const execPathValueSize = 460
 
-var KpStatsMapParameters = bpf.MapParameters{
+var KpStatsMapParameters = maps.MapParameters{
 	Type:       "lru_hash",
 	KeySize:    statsKeySize,
 	ValueSize:  statsValueSize,
@@ -35,7 +35,7 @@ var KpStatsMapParameters = bpf.MapParameters{
 	Version:    2,
 }
 
-var epathMapParameters = bpf.MapParameters{
+var epathMapParameters = maps.MapParameters{
 	Type:       "lru_hash",
 	KeySize:    execPathKeySize,
 	ValueSize:  execPathValueSize,
@@ -44,7 +44,7 @@ var epathMapParameters = bpf.MapParameters{
 	Version:    2,
 }
 
-var execMapParameters = bpf.MapParameters{
+var execMapParameters = maps.MapParameters{
 	Type:       "percpu_array",
 	KeySize:    execPathKeySize,
 	ValueSize:  execPathValueSize,
@@ -53,14 +53,14 @@ var execMapParameters = bpf.MapParameters{
 	Version:    2,
 }
 
-func MapKpStats() bpf.Map {
-	return bpf.NewPinnedMap(KpStatsMapParameters)
+func MapKpStats() maps.Map {
+	return maps.NewPinnedMap(KpStatsMapParameters)
 }
 
-func MapEpath() bpf.Map {
-	return bpf.NewPinnedMap(epathMapParameters)
+func MapEpath() maps.Map {
+	return maps.NewPinnedMap(epathMapParameters)
 }
 
-func MapExec() bpf.Map {
-	return bpf.NewPinnedMap(execMapParameters)
+func MapExec() maps.Map {
+	return maps.NewPinnedMap(execMapParameters)
 }

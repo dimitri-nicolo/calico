@@ -1,7 +1,4 @@
-//go:build !windows
-// +build !windows
-
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,22 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stats
+package bpfdefs
 
-import "github.com/projectcalico/calico/felix/bpf/maps"
+const (
+	DefaultBPFfsPath = "/sys/fs/bpf"
+	CgroupV2Path     = "/run/calico/cgroup"
 
-const keySize = 36
-const keyValueSize = 8
-
-var SocketStatsMapParameters = maps.MapParameters{
-	Type:       "lru_hash",
-	KeySize:    keySize,
-	ValueSize:  keyValueSize,
-	MaxEntries: 511000,
-	Name:       "cali_sstats",
-	Version:    2,
-}
-
-func SocketStatsMap() maps.Map {
-	return maps.NewPinnedMap(SocketStatsMapParameters)
-}
+	GlobalPinDir = DefaultBPFfsPath + "/tc/globals/"
+)

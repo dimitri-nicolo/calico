@@ -23,6 +23,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 )
 
 const (
@@ -40,7 +41,7 @@ type kprobeFDs struct {
 
 type bpfKprobe struct {
 	logLevel   string
-	kpStatsMap bpf.Map
+	kpStatsMap maps.Map
 	evnt       events.Events
 	objMap     map[string]*libbpf.Obj
 	linkMap    map[string]*libbpf.Link

@@ -27,22 +27,22 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/ip"
 )
 
 func init() {
-	bpf.SetMapSize(FrontendMapParameters.VersionedName(), FrontendMapParameters.MaxEntries)
-	bpf.SetMapSize(BackendMapParameters.VersionedName(), BackendMapParameters.MaxEntries)
-	bpf.SetMapSize(AffinityMapParameters.VersionedName(), AffinityMapParameters.MaxEntries)
-	bpf.SetMapSize(SendRecvMsgMapParameters.VersionedName(), SendRecvMsgMapParameters.MaxEntries)
-	bpf.SetMapSize(CTNATsMapParameters.VersionedName(), CTNATsMapParameters.MaxEntries)
+	maps.SetSize(FrontendMapParameters.VersionedName(), FrontendMapParameters.MaxEntries)
+	maps.SetSize(BackendMapParameters.VersionedName(), BackendMapParameters.MaxEntries)
+	maps.SetSize(AffinityMapParameters.VersionedName(), AffinityMapParameters.MaxEntries)
+	maps.SetSize(SendRecvMsgMapParameters.VersionedName(), SendRecvMsgMapParameters.MaxEntries)
+	maps.SetSize(CTNATsMapParameters.VersionedName(), CTNATsMapParameters.MaxEntries)
 }
 
 func SetMapSizes(fsize, bsize, asize int) {
-	bpf.SetMapSize(FrontendMapParameters.VersionedName(), fsize)
-	bpf.SetMapSize(BackendMapParameters.VersionedName(), bsize)
-	bpf.SetMapSize(AffinityMapParameters.VersionedName(), asize)
+	maps.SetSize(FrontendMapParameters.VersionedName(), fsize)
+	maps.SetSize(BackendMapParameters.VersionedName(), bsize)
+	maps.SetSize(AffinityMapParameters.VersionedName(), asize)
 }
 
 //	struct calico_nat_v4_key {
@@ -310,7 +310,7 @@ func BackendValueFromBytes(b []byte) BackendValue {
 	return v
 }
 
-var FrontendMapParameters = bpf.MapParameters{
+var FrontendMapParameters = maps.MapParameters{
 	Type:       "lpm_trie",
 	KeySize:    frontendKeySize,
 	ValueSize:  frontendValueSize,
@@ -320,11 +320,11 @@ var FrontendMapParameters = bpf.MapParameters{
 	Version:    3,
 }
 
-func FrontendMap() bpf.MapWithExistsCheck {
-	return bpf.NewPinnedMap(FrontendMapParameters)
+func FrontendMap() maps.MapWithExistsCheck {
+	return maps.NewPinnedMap(FrontendMapParameters)
 }
 
-var BackendMapParameters = bpf.MapParameters{
+var BackendMapParameters = maps.MapParameters{
 	Type:       "hash",
 	KeySize:    backendKeySize,
 	ValueSize:  backendValueSize,
@@ -333,8 +333,8 @@ var BackendMapParameters = bpf.MapParameters{
 	Flags:      unix.BPF_F_NO_PREALLOC,
 }
 
-func BackendMap() bpf.MapWithExistsCheck {
-	return bpf.NewPinnedMap(BackendMapParameters)
+func BackendMap() maps.MapWithExistsCheck {
+	return maps.NewPinnedMap(BackendMapParameters)
 }
 
 // NATMapMem represents FrontendMap loaded into memory
@@ -357,14 +357,19 @@ func (m MapMem) Equal(cmp MapMem) bool {
 }
 
 // LoadFrontendMap loads the NAT map into a go map or returns an error
-func LoadFrontendMap(m bpf.Map) (MapMem, error) {
+func LoadFrontendMap(m maps.Map) (MapMem, error) {
 	ret := make(MapMem)
 
 	if err := m.Open(); err != nil {
 		return nil, err
 	}
 
-	err := m.Iter(MapMemIter(ret))
+	iterFn := MapMemIter(ret)
+
+	err := m.Iter(func(k, v []byte) maps.IteratorAction {
+		iterFn(k, v)
+		return maps.IterNone
+	})
 	if err != nil {
 		ret = nil
 	}
@@ -372,12 +377,12 @@ func LoadFrontendMap(m bpf.Map) (MapMem, error) {
 	return ret, err
 }
 
-// MapMemIter returns bpf.MapIter that loads the provided NATMapMem
-func MapMemIter(m MapMem) bpf.IterCallback {
+// MapMemIter returns maps.MapIter that loads the provided NATMapMem
+func MapMemIter(m MapMem) func(k, v []byte) {
 	ks := len(FrontendKey{})
 	vs := len(FrontendValue{})
 
-	return func(k, v []byte) bpf.IteratorAction {
+	return func(k, v []byte) {
 		var key FrontendKey
 		copy(key[:ks], k[:ks])
 
@@ -385,7 +390,6 @@ func MapMemIter(m MapMem) bpf.IterCallback {
 		copy(val[:vs], v[:vs])
 
 		m[key] = val
-		return bpf.IterNone
 	}
 }
 
@@ -409,14 +413,19 @@ func (m BackendMapMem) Equal(cmp BackendMapMem) bool {
 }
 
 // LoadBackendMap loads the NATBackend map into a go map or returns an error
-func LoadBackendMap(m bpf.Map) (BackendMapMem, error) {
+func LoadBackendMap(m maps.Map) (BackendMapMem, error) {
 	ret := make(BackendMapMem)
 
 	if err := m.Open(); err != nil {
 		return nil, err
 	}
 
-	err := m.Iter(BackendMapMemIter(ret))
+	iterFn := BackendMapMemIter(ret)
+
+	err := m.Iter(func(k, v []byte) maps.IteratorAction {
+		iterFn(k, v)
+		return maps.IterNone
+	})
 	if err != nil {
 		ret = nil
 	}
@@ -424,12 +433,12 @@ func LoadBackendMap(m bpf.Map) (BackendMapMem, error) {
 	return ret, err
 }
 
-// BackendMapMemIter returns bpf.MapIter that loads the provided NATBackendMapMem
-func BackendMapMemIter(m BackendMapMem) bpf.IterCallback {
+// BackendMapMemIter returns maps.MapIter that loads the provided NATBackendMapMem
+func BackendMapMemIter(m BackendMapMem) func(k, v []byte) {
 	ks := len(BackendKey{})
 	vs := len(BackendValue{})
 
-	return func(k, v []byte) bpf.IteratorAction {
+	return func(k, v []byte) {
 		var key BackendKey
 		copy(key[:ks], k[:ks])
 
@@ -437,7 +446,6 @@ func BackendMapMemIter(m BackendMapMem) bpf.IterCallback {
 		copy(val[:vs], v[:vs])
 
 		m[key] = val
-		return bpf.IterNone
 	}
 }
 
@@ -560,7 +568,7 @@ func (v AffinityValue) AsBytes() []byte {
 }
 
 // AffinityMapParameters describe the AffinityMap
-var AffinityMapParameters = bpf.MapParameters{
+var AffinityMapParameters = maps.MapParameters{
 	Type:       "lru_hash",
 	KeySize:    affinityKeySize,
 	ValueSize:  affinityValueSize,
@@ -569,22 +577,27 @@ var AffinityMapParameters = bpf.MapParameters{
 }
 
 // AffinityMap returns an instance of an affinity map
-func AffinityMap() bpf.Map {
-	return bpf.NewPinnedMap(AffinityMapParameters)
+func AffinityMap() maps.Map {
+	return maps.NewPinnedMap(AffinityMapParameters)
 }
 
 // AffinityMapMem represents affinity map in memory
 type AffinityMapMem map[AffinityKey]AffinityValue
 
 // LoadAffinityMap loads affinity map into memory
-func LoadAffinityMap(m bpf.Map) (AffinityMapMem, error) {
+func LoadAffinityMap(m maps.Map) (AffinityMapMem, error) {
 	ret := make(AffinityMapMem)
 
 	if err := m.Open(); err != nil {
 		return nil, err
 	}
 
-	err := m.Iter(AffinityMapMemIter(ret))
+	iterFn := AffinityMapMemIter(ret)
+
+	err := m.Iter(func(k, v []byte) maps.IteratorAction {
+		iterFn(k, v)
+		return maps.IterNone
+	})
 	if err != nil {
 		ret = nil
 	}
@@ -592,12 +605,12 @@ func LoadAffinityMap(m bpf.Map) (AffinityMapMem, error) {
 	return ret, err
 }
 
-// AffinityMapMemIter returns bpf.MapIter that loads the provided AffinityMapMem
-func AffinityMapMemIter(m AffinityMapMem) bpf.IterCallback {
+// AffinityMapMemIter returns maps.MapIter that loads the provided AffinityMapMem
+func AffinityMapMemIter(m AffinityMapMem) func(k, v []byte) {
 	ks := len(AffinityKey{})
 	vs := len(AffinityValue{})
 
-	return func(k, v []byte) bpf.IteratorAction {
+	return func(k, v []byte) {
 		var key AffinityKey
 		copy(key[:ks], k[:ks])
 
@@ -605,7 +618,6 @@ func AffinityMapMemIter(m AffinityMapMem) bpf.IterCallback {
 		copy(val[:vs], v[:vs])
 
 		m[key] = val
-		return bpf.IterNone
 	}
 }
 
@@ -668,7 +680,7 @@ func (v SendRecvMsgValue) String() string {
 }
 
 // SendRecvMsgMapParameters define SendRecvMsgMap
-var SendRecvMsgMapParameters = bpf.MapParameters{
+var SendRecvMsgMapParameters = maps.MapParameters{
 	Type:       "lru_hash",
 	KeySize:    sendRecvMsgKeySize,
 	ValueSize:  sendRecvMsgValueSize,
@@ -676,7 +688,7 @@ var SendRecvMsgMapParameters = bpf.MapParameters{
 	Name:       "cali_v4_srmsg",
 }
 
-var CTNATsMapParameters = bpf.MapParameters{
+var CTNATsMapParameters = maps.MapParameters{
 	Type:       "lru_hash",
 	KeySize:    ctNATsMsgKeySize,
 	ValueSize:  sendRecvMsgValueSize,
@@ -686,22 +698,27 @@ var CTNATsMapParameters = bpf.MapParameters{
 
 // SendRecvMsgMap tracks reverse translations for sendmsg/recvmsg of
 // unconnected UDP
-func SendRecvMsgMap() bpf.Map {
-	return bpf.NewPinnedMap(SendRecvMsgMapParameters)
+func SendRecvMsgMap() maps.Map {
+	return maps.NewPinnedMap(SendRecvMsgMapParameters)
 }
 
-func AllNATsMsgMap() bpf.Map {
-	return bpf.NewPinnedMap(CTNATsMapParameters)
+func AllNATsMsgMap() maps.Map {
+	return maps.NewPinnedMap(CTNATsMapParameters)
 }
 
 // SendRecvMsgMapMem represents affinity map in memory
 type SendRecvMsgMapMem map[SendRecvMsgKey]SendRecvMsgValue
 
 // LoadSendRecvMsgMap loads affinity map into memory
-func LoadSendRecvMsgMap(m bpf.Map) (SendRecvMsgMapMem, error) {
+func LoadSendRecvMsgMap(m maps.Map) (SendRecvMsgMapMem, error) {
 	ret := make(SendRecvMsgMapMem)
 
-	err := m.Iter(SendRecvMsgMapMemIter(ret))
+	iterFn := SendRecvMsgMapMemIter(ret)
+
+	err := m.Iter(func(k, v []byte) maps.IteratorAction {
+		iterFn(k, v)
+		return maps.IterNone
+	})
 	if err != nil {
 		ret = nil
 	}
@@ -709,12 +726,12 @@ func LoadSendRecvMsgMap(m bpf.Map) (SendRecvMsgMapMem, error) {
 	return ret, err
 }
 
-// SendRecvMsgMapMemIter returns bpf.MapIter that loads the provided SendRecvMsgMapMem
-func SendRecvMsgMapMemIter(m SendRecvMsgMapMem) bpf.IterCallback {
+// SendRecvMsgMapMemIter returns maps.MapIter that loads the provided SendRecvMsgMapMem
+func SendRecvMsgMapMemIter(m SendRecvMsgMapMem) func(k, v []byte) {
 	ks := len(SendRecvMsgKey{})
 	vs := len(SendRecvMsgValue{})
 
-	return func(k, v []byte) bpf.IteratorAction {
+	return func(k, v []byte) {
 		var key SendRecvMsgKey
 		copy(key[:ks], k[:ks])
 
@@ -722,6 +739,5 @@ func SendRecvMsgMapMemIter(m SendRecvMsgMapMem) bpf.IterCallback {
 		copy(val[:vs], v[:vs])
 
 		m[key] = val
-		return bpf.IterNone
 	}
 }

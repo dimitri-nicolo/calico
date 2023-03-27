@@ -12,7 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/bpf/perf"
 	"github.com/projectcalico/calico/felix/bpf/state"
 )
@@ -75,7 +75,7 @@ type eventRaw interface {
 // Events is an interface for consuming events
 type Events interface {
 	Next() (Event, error)
-	Map() bpf.Map
+	Map() maps.Map
 	Close() error
 }
 
@@ -91,7 +91,7 @@ func New(src Source) (Events, error) {
 
 type perfEventsReader struct {
 	events perf.Perf
-	bpfMap bpf.Map
+	bpfMap maps.Map
 
 	next func() (Event, error)
 }
@@ -147,7 +147,7 @@ func (e *perfEventsReader) Next() (Event, error) {
 	return e.next()
 }
 
-func (e *perfEventsReader) Map() bpf.Map {
+func (e *perfEventsReader) Map() maps.Map {
 	return e.bpfMap
 }
 

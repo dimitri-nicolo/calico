@@ -23,9 +23,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/bpf"
-	"github.com/projectcalico/calico/felix/bpf/bpfmap/upgrade"
 	v2 "github.com/projectcalico/calico/felix/bpf/conntrack/v2"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 
 	// When adding a new ct version, change curVer to point to the new version
 	curVer "github.com/projectcalico/calico/felix/bpf/conntrack/v3"
@@ -36,7 +35,7 @@ func init() {
 }
 
 func SetMapSize(size int) {
-	bpf.SetMapSize(MapParams.VersionedName(), size)
+	maps.SetSize(MapParams.VersionedName(), size)
 }
 
 const KeySize = curVer.KeySize
@@ -90,16 +89,16 @@ type Leg = curVer.Leg
 
 var MapParams = curVer.MapParams
 
-func Map() bpf.Map {
-	b := bpf.NewPinnedMap(MapParams)
-	b.(*bpf.PinnedMap).UpgradeFn = upgrade.UpgradeBPFMap
-	b.(*bpf.PinnedMap).GetMapParams = GetMapParams
-	b.(*bpf.PinnedMap).KVasUpgradable = GetKeyValueTypeFromVersion
+func Map() maps.Map {
+	b := maps.NewPinnedMap(MapParams)
+	b.(*maps.PinnedMap).UpgradeFn = maps.Upgrade
+	b.(*maps.PinnedMap).GetMapParams = GetMapParams
+	b.(*maps.PinnedMap).KVasUpgradable = GetKeyValueTypeFromVersion
 	return b
 }
 
-func MapV2() bpf.Map {
-	return bpf.NewPinnedMap(v2.MapParams)
+func MapV2() maps.Map {
+	return maps.NewPinnedMap(v2.MapParams)
 }
 
 const (
@@ -129,13 +128,13 @@ func ValueFromBytes(v []byte) Value {
 type MapMem = curVer.MapMem
 
 // LoadMapMem loads ConntrackMap into memory
-func LoadMapMem(m bpf.Map) (MapMem, error) {
+func LoadMapMem(m maps.Map) (MapMem, error) {
 	ret, err := curVer.LoadMapMem(m)
 	return ret, err
 }
 
-// MapMemIter returns bpf.MapIter that loads the provided MapMem
-func MapMemIter(m MapMem) bpf.IterCallback {
+// MapMemIter returns maps.MapIter that loads the provided MapMem
+func MapMemIter(m MapMem) func(k, v []byte) {
 	return curVer.MapMemIter(m)
 }
 
@@ -167,7 +166,7 @@ func StringToValue(str string) Value {
 	return BytesToValue([]byte(str))
 }
 
-func GetMapParams(version int) bpf.MapParameters {
+func GetMapParams(version int) maps.MapParameters {
 	switch version {
 	case 2:
 		return v2.MapParams
@@ -178,7 +177,7 @@ func GetMapParams(version int) bpf.MapParameters {
 	}
 }
 
-func GetKeyValueTypeFromVersion(version int, k, v []byte) (bpf.Upgradable, bpf.Upgradable) {
+func GetKeyValueTypeFromVersion(version int, k, v []byte) (maps.Upgradable, maps.Upgradable) {
 	switch version {
 	case 2:
 		var key v2.Key

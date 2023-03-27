@@ -133,7 +133,7 @@ func TcSetStatsGlobals(_ *Map, _ TcStatsGlobalData) error {
 	panic("LIBBPF syscall stub")
 }
 
-func (m *Map) SetMapSize(size int) error {
+func (m *Map) SetSize(size int) error {
 	panic("LIBBPF syscall stub")
 }
 
