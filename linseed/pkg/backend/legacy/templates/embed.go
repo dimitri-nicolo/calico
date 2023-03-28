@@ -32,6 +32,15 @@ var EventsMappings string
 //go:embed waf_mappings.json
 var WAFMappings string
 
+//go:embed report_mappings.json
+var ReportMappings string
+
+//go:embed benchmarks_mappings.json
+var BenchmarksMappings string
+
+//go:embed snapshots_mappings.json
+var SnapshotMappings string
+
 // SettingsLookup will keep track if an index requires special settings, add its settings template to the map.
 var SettingsLookup = map[bapi.LogsType]string{
 	bapi.DNSLogs: DNSLogSettings,
@@ -47,4 +56,7 @@ var IndexPatternsLookup = map[bapi.LogsType]string{
 	bapi.DNSLogs:       "tigera_secure_ee_dns*",
 	bapi.Events:        "tigera_secure_ee_events*",
 	bapi.WAFLogs:       "tigera_secure_ee_waf*",
+	bapi.ReportData:    "tigera_secure_ee_compliance_reports*",
+	bapi.Benchmarks:    "tigera_secure_ee_benchmark_results*",
+	bapi.Snapshots:     "tigera_secure_ee_snapshots*",
 }

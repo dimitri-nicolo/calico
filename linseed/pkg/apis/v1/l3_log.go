@@ -11,6 +11,18 @@ import (
 type FlowLogParams struct {
 	QueryParams        `json:",inline" validate:"required"`
 	LogSelectionParams `json:",inline"`
+
+	IPMatches []IPMatch `json:"ip_matches" validate:"omitempty"`
+}
+
+type IPMatch struct {
+	// Whether to match against the source ip, destination ip
+	// or either source ip or destination name ip
+	Type MatchType `json:"type"`
+
+	// Any log with a matching ip will be included. If multiple are provided,
+	// they are combined using a logical OR.
+	IPs []string `json:"ips"`
 }
 
 type FlowLogAggregationParams struct {
@@ -102,6 +114,7 @@ type FlowLog struct {
 
 	Host      string `json:"host"`
 	Timestamp int64  `json:"@timestamp"`
+	ID        string `json:"id,omitempty"`
 }
 
 type FlowLogPolicy struct {

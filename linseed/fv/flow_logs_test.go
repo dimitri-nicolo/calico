@@ -115,7 +115,7 @@ func TestFV_FlowLogs(t *testing.T) {
 		}
 		resp, err := cli.FlowLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
-		require.Equal(t, logs, resp.Items)
+		require.Equal(t, logs, testutils.AssertLogIDAndCopyFlowLogsWithoutID(t, resp))
 	})
 
 	t.Run("should support pagination", func(t *testing.T) {
@@ -161,7 +161,7 @@ func TestFV_FlowLogs(t *testing.T) {
 					EndTime:   logTime + int64(i),
 					Host:      fmt.Sprintf("%d", i),
 				},
-			}, resp.Items, fmt.Sprintf("Flow #%d did not match", i))
+			}, testutils.AssertLogIDAndCopyFlowLogsWithoutID(t, resp), fmt.Sprintf("Flow #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
 
 			// Use the afterKey for the next query.
@@ -388,7 +388,7 @@ func TestFV_FlowLogsRBAC(t *testing.T) {
 			}
 
 			if testcase.expectMatch {
-				require.Equal(t, logs, resp.Items)
+				require.Equal(t, logs, testutils.AssertLogIDAndCopyFlowLogsWithoutID(t, resp))
 			}
 		})
 	}

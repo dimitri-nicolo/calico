@@ -26,6 +26,24 @@ import (
 type DNSLogParams struct {
 	QueryParams        `json:",inline" validate:"required"`
 	LogSelectionParams `json:",inline"`
+	DomainMatches      []DomainMatch `json:"domain_matches"`
+}
+
+type DomainMatchType string
+
+const (
+	DomainMatchQname  DomainMatchType = "qname"
+	DomainMatchRRSet  DomainMatchType = "rrset"
+	DomainMatchRRData DomainMatchType = "rrdata"
+	DomainMatchAny    DomainMatchType = "any"
+)
+
+type DomainMatch struct {
+	Type DomainMatchType `json:"type"`
+
+	// Any log with a matching domain name will be included. If multiple are provided,
+	// they are combined using a logical OR.
+	Domains []string `json:"domains"`
 }
 
 type DNSAggregationParams struct {
@@ -56,6 +74,7 @@ type DNSLog struct {
 	LatencyMean     time.Duration     `json:"latency_mean"`
 	LatencyMax      time.Duration     `json:"latency_max"`
 	Host            string            `json:"host"`
+	ID              string            `json:"id,omitempty"`
 }
 
 type DNSLatency struct {

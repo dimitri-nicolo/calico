@@ -31,11 +31,9 @@ import (
 
 var _ = Describe("Test Node conversion", func() {
 	It("should parse a k8s Node to a Calico Node", func() {
-		l := map[string]string{"net.beta.kubernetes.io/role": "master"}
 		node := k8sapi.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "TestNode",
-				Labels:          l,
 				ResourceVersion: "1234",
 				Annotations: map[string]string{
 					nodeBgpIpv4AddrAnnotation: "172.17.17.10",
@@ -78,12 +76,84 @@ var _ = Describe("Test Node conversion", func() {
 		Expect(asn.String()).To(Equal("2546"))
 	})
 
-	It("should parse a k8s Node to a Calico Node with RR cluster ID", func() {
-		l := map[string]string{"net.beta.kubernetes.io/role": "master"}
+	It("should ignore RR cluster ID if its an invalid IPv4 address", func() {
 		node := k8sapi.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "TestNode",
-				Labels:          l,
+				ResourceVersion: "1234",
+				Annotations: map[string]string{
+					nodeBgpIpv4AddrAnnotation: "172.17.17.10",
+					nodeBgpCIDAnnotation:      "288.0.4.5",
+				},
+			},
+			Status: k8sapi.NodeStatus{
+				Addresses: []k8sapi.NodeAddress{
+					k8sapi.NodeAddress{
+						Type:    k8sapi.NodeInternalIP,
+						Address: "172.17.17.10",
+					},
+					k8sapi.NodeAddress{
+						Type:    k8sapi.NodeExternalIP,
+						Address: "192.168.1.100",
+					},
+					k8sapi.NodeAddress{
+						Type:    k8sapi.NodeHostName,
+						Address: "172-17-17-10",
+					},
+				},
+			},
+			Spec: k8sapi.NodeSpec{
+				PodCIDR: "10.0.0.1/24",
+			},
+		}
+
+		n, err := K8sNodeToCalico(&node, false)
+		Expect(err).NotTo(HaveOccurred())
+		rrClusterID := n.Value.(*libapiv3.Node).Spec.BGP.RouteReflectorClusterID
+		Expect(rrClusterID).To(Equal(""))
+	})
+
+	It("should ignore RR cluster ID if it an IPv6 address", func() {
+		node := k8sapi.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "TestNode",
+				ResourceVersion: "1234",
+				Annotations: map[string]string{
+					nodeBgpIpv4AddrAnnotation: "172.17.17.10",
+					nodeBgpCIDAnnotation:      "fd10::10",
+				},
+			},
+			Status: k8sapi.NodeStatus{
+				Addresses: []k8sapi.NodeAddress{
+					k8sapi.NodeAddress{
+						Type:    k8sapi.NodeInternalIP,
+						Address: "172.17.17.10",
+					},
+					k8sapi.NodeAddress{
+						Type:    k8sapi.NodeExternalIP,
+						Address: "192.168.1.100",
+					},
+					k8sapi.NodeAddress{
+						Type:    k8sapi.NodeHostName,
+						Address: "172-17-17-10",
+					},
+				},
+			},
+			Spec: k8sapi.NodeSpec{
+				PodCIDR: "10.0.0.1/24",
+			},
+		}
+
+		n, err := K8sNodeToCalico(&node, false)
+		Expect(err).NotTo(HaveOccurred())
+		rrClusterID := n.Value.(*libapiv3.Node).Spec.BGP.RouteReflectorClusterID
+		Expect(rrClusterID).To(Equal(""))
+	})
+
+	It("should parse a k8s Node to a Calico Node with RR cluster ID", func() {
+		node := k8sapi.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "TestNode",
 				ResourceVersion: "1234",
 				Annotations: map[string]string{
 					nodeBgpIpv4AddrAnnotation: "172.17.17.10",
@@ -130,11 +200,9 @@ var _ = Describe("Test Node conversion", func() {
 	})
 
 	It("should parse a k8s Node to a Calico Node with IPv6", func() {
-		l := map[string]string{"net.beta.kubernetes.io/role": "master"}
 		node := k8sapi.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "TestNode",
-				Labels:          l,
 				ResourceVersion: "1234",
 				Annotations: map[string]string{
 					nodeBgpIpv6AddrAnnotation: "fd10::10",
@@ -176,11 +244,9 @@ var _ = Describe("Test Node conversion", func() {
 	})
 
 	It("should parse a k8s Node to a Calico Node with podCIDR but no BGP config", func() {
-		l := map[string]string{"net.beta.kubernetes.io/role": "master"}
 		node := k8sapi.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "TestNode",
-				Labels:          l,
 				ResourceVersion: "1234",
 			},
 			Status: k8sapi.NodeStatus{},
@@ -238,11 +304,9 @@ var _ = Describe("Test Node conversion", func() {
 	})
 
 	It("Should parse and remove BGP info when given Calico Node with empty BGP spec", func() {
-		l := map[string]string{"net.beta.kubernetes.io/role": "master"}
 		k8sNode := &k8sapi.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "TestNode",
-				Labels:          l,
 				ResourceVersion: "1234",
 				Annotations: map[string]string{
 					nodeBgpIpv4AddrAnnotation: "172.17.17.10",
@@ -261,7 +325,7 @@ var _ = Describe("Test Node conversion", func() {
 	})
 
 	It("Should merge Calico Nodes into K8s Nodes", func() {
-		kl := map[string]string{"net.beta.kubernetes.io/role": "master"}
+		kl := map[string]string{"net.beta.kubernetes.io/role": "control-plane"}
 		cl := map[string]string{
 			"label1": "foo",
 			"label2": "bar",
@@ -318,8 +382,8 @@ var _ = Describe("Test Node conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		calicoNodeWithMergedLabels := calicoNode.DeepCopy()
-		calicoNodeWithMergedLabels.Annotations[nodeK8sLabelAnnotation] = "{\"net.beta.kubernetes.io/role\":\"master\"}"
-		calicoNodeWithMergedLabels.Labels["net.beta.kubernetes.io/role"] = "master"
+		calicoNodeWithMergedLabels.Annotations[nodeK8sLabelAnnotation] = "{\"net.beta.kubernetes.io/role\":\"control-plane\"}"
+		calicoNodeWithMergedLabels.Labels["net.beta.kubernetes.io/role"] = "control-plane"
 		calicoNodeWithMergedLabels.Spec.Addresses = []libapiv3.NodeAddress{
 			libapiv3.NodeAddress{Address: "172.17.17.10/24", Type: libapiv3.CalicoNodeIP},
 			libapiv3.NodeAddress{Address: "aa:bb:cc::ffff/120", Type: libapiv3.CalicoNodeIP},
@@ -329,7 +393,7 @@ var _ = Describe("Test Node conversion", func() {
 
 	It("Should shadow labels correctly", func() {
 		kl := map[string]string{
-			"net.beta.kubernetes.io/role": "master",
+			"net.beta.kubernetes.io/role": "control-plane",
 			"shadowed":                    "k8s-value",
 		}
 		cl := map[string]string{
@@ -368,9 +432,9 @@ var _ = Describe("Test Node conversion", func() {
 		// When we merge k8s into Calico, the k8s labels get stashed in an annotation along with the shadowed labels:
 		calicoNodeWithMergedLabels := calicoNode.DeepCopy()
 		calicoNodeWithMergedLabels.Annotations = map[string]string{}
-		calicoNodeWithMergedLabels.Annotations[nodeK8sLabelAnnotation] = "{\"net.beta.kubernetes.io/role\":\"master\",\"shadowed\":\"k8s-value\"}"
+		calicoNodeWithMergedLabels.Annotations[nodeK8sLabelAnnotation] = "{\"net.beta.kubernetes.io/role\":\"control-plane\",\"shadowed\":\"k8s-value\"}"
 		// And, the k8s labels get merged in...
-		calicoNodeWithMergedLabels.Labels["net.beta.kubernetes.io/role"] = "master"
+		calicoNodeWithMergedLabels.Labels["net.beta.kubernetes.io/role"] = "control-plane"
 		calicoNodeWithMergedLabels.Labels["shadowed"] = "k8s-value"
 		Expect(newCalicoNode.Value).To(Equal(calicoNodeWithMergedLabels))
 
@@ -406,11 +470,9 @@ var _ = Describe("Test Node conversion", func() {
 	})
 
 	It("should parse a k8s Node to a Calico Node with an IPv4IPIPTunnelAddr", func() {
-		l := map[string]string{"net.beta.kubernetes.io/role": "master"}
 		node := k8sapi.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "TestNode",
-				Labels:          l,
 				ResourceVersion: "1234",
 				Annotations: map[string]string{
 					nodeBgpIpv4AddrAnnotation:           "172.17.17.10",
@@ -543,11 +605,9 @@ var _ = Describe("Test Node conversion", func() {
 	})
 
 	It("should parse addresses of all types into Calico Node", func() {
-		l := map[string]string{"net.beta.kubernetes.io/role": "master"}
 		node := k8sapi.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "TestNode",
-				Labels:          l,
 				ResourceVersion: "1234",
 				Annotations: map[string]string{
 					nodeBgpIpv6AddrAnnotation:             "fd10::10",

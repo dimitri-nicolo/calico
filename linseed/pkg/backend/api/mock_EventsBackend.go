@@ -38,6 +38,52 @@ func (_m *MockEventsBackend) Create(_a0 context.Context, _a1 ClusterInfo, _a2 []
 	return r0, r1
 }
 
+// Delete provides a mock function with given fields: _a0, _a1, _a2
+func (_m *MockEventsBackend) Delete(_a0 context.Context, _a1 ClusterInfo, _a2 []v1.Event) (*v1.BulkResponse, error) {
+	ret := _m.Called(_a0, _a1, _a2)
+
+	var r0 *v1.BulkResponse
+	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, []v1.Event) *v1.BulkResponse); ok {
+		r0 = rf(_a0, _a1, _a2)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*v1.BulkResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, []v1.Event) error); ok {
+		r1 = rf(_a0, _a1, _a2)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Dismiss provides a mock function with given fields: _a0, _a1, _a2
+func (_m *MockEventsBackend) Dismiss(_a0 context.Context, _a1 ClusterInfo, _a2 []v1.Event) (*v1.BulkResponse, error) {
+	ret := _m.Called(_a0, _a1, _a2)
+
+	var r0 *v1.BulkResponse
+	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, []v1.Event) *v1.BulkResponse); ok {
+		r0 = rf(_a0, _a1, _a2)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*v1.BulkResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, []v1.Event) error); ok {
+		r1 = rf(_a0, _a1, _a2)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // List provides a mock function with given fields: _a0, _a1, _a2
 func (_m *MockEventsBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 *v1.EventParams) (*v1.List[v1.Event], error) {
 	ret := _m.Called(_a0, _a1, _a2)

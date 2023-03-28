@@ -10,12 +10,14 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/benchmark"
 	"github.com/projectcalico/calico/compliance/pkg/cis"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/version"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 const (
@@ -47,8 +49,19 @@ func main() {
 		h.Report(healthReporterName, &health.HealthReport{Live: healthy})
 	}
 
-	// Init elastic.
-	elasticClient := elastic.MustGetElasticClient()
+	// Create a linseed client.
+	config := rest.Config{
+		URL:             cfg.LinseedURL,
+		CACertPath:      cfg.LinseedCA,
+		ClientKeyPath:   cfg.LinseedClientKey,
+		ClientCertPath:  cfg.LinseedClientCert,
+		FIPSModeEnabled: cfg.FIPSModeEnabled,
+	}
+	linseed, err := client.NewClient(cfg.Tenant, config)
+	if err != nil {
+		log.WithError(err).Fatal("failed to create linseed client")
+	}
+	store := api.NewComplianceStore(linseed, cfg.Cluster)
 
 	// Indicate healthy
 	healthy(true)
@@ -65,7 +78,7 @@ func main() {
 	}()
 
 	// Run benchmarker.
-	if err := benchmark.Run(cxt, cfg, cis.NewBenchmarker(), elasticClient, elasticClient, healthy); err != nil {
+	if err := benchmark.Run(cxt, cfg, cis.NewBenchmarker(), store, store, healthy); err != nil {
 		log.WithError(err).Error("Hit terminating error")
 	}
 }

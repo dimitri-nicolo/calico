@@ -4,18 +4,14 @@ package events
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
-	oElastic "github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/lma/pkg/api"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -26,75 +22,69 @@ func TestSuspiciousIP_Success(t *testing.T) {
 	testFeed := &apiV3.GlobalThreatFeed{}
 	testFeed.Name = "test"
 
-	logs := []FlowLogJSONOutput{
+	logs := []v1.FlowLog{
 		{
 			SourceIP:      util.Sptr("1.2.3.4"),
+			SourcePort:    util.I64ptr(333),
 			SourceName:    "source",
 			DestIP:        util.Sptr("2.3.4.5"),
+			DestPort:      util.I64ptr(333),
 			DestNamespace: "default",
 			DestName:      "dest",
 			DestType:      "wep",
 		},
 		{
 			SourceIP:        util.Sptr("5.6.7.8"),
+			SourcePort:      util.I64ptr(333),
 			SourceName:      "source",
 			SourceNamespace: "default",
 			SourceType:      "wep",
 			DestIP:          util.Sptr("2.3.4.5"),
+			DestPort:        util.I64ptr(333),
 			DestName:        "dest",
 		},
 	}
-	var hits []*oElastic.SearchHit
-	for _, l := range logs {
-		h := &oElastic.SearchHit{}
-		src, err := json.Marshal(&l)
-		g.Expect(err).ToNot(HaveOccurred())
-		raw := json.RawMessage(src)
-		h.Source = raw
-		hits = append(hits, h)
-	}
-	// Add an extra malformed hit, which is ignored in results
-	junk := json.RawMessage([]byte("{"))
-	hits = append(hits, &oElastic.SearchHit{Source: junk})
-	i := &elastic.MockIterator{
+	i := &storage.MockIterator[v1.FlowLog]{
 		ErrorIndex: -1,
-		Hits:       hits,
-		Keys:       []db.QueryKey{db.QueryKeyFlowLogSourceIP, db.QueryKeyFlowLogDestIP, db.QueryKeyUnknown},
+		Values:     logs,
+		Keys:       []storage.QueryKey{storage.QueryKeyFlowLogSourceIP, storage.QueryKeyFlowLogDestIP},
 	}
-	q := &elastic.MockSetQuerier{Iterator: i}
+	q := &storage.MockSetQuerier{IteratorFlow: i}
 	uut := NewSuspiciousIP(q)
 
-	expected := []db.SecurityEventInterface{
-		SuspiciousIPSecurityEvent{
-			EventsData: api.EventsData{
-				Description:   "suspicious IP 1.2.3.4 from list test connected to wep default/dest",
-				Type:          SuspiciousFlow,
-				Severity:      Severity,
-				Origin:        testFeed.Name,
-				SourceIP:      util.Sptr("1.2.3.4"),
-				SourceName:    "source",
-				DestIP:        util.Sptr("2.3.4.5"),
-				DestName:      "dest",
-				DestNamespace: "default",
-				Record: v1.SuspiciousIPEventRecord{
-					Feeds: []string{"test"},
-				},
+	expected := []v1.Event{
+		{
+			ID:            "test_0__1.2.3.4_333_2.3.4.5_333",
+			Description:   "suspicious IP 1.2.3.4 from list test connected to wep default/dest",
+			Type:          SuspiciousFlow,
+			Severity:      Severity,
+			Origin:        testFeed.Name,
+			SourceIP:      util.Sptr("1.2.3.4"),
+			SourceName:    "source",
+			DestIP:        util.Sptr("2.3.4.5"),
+			DestName:      "dest",
+			DestNamespace: "default",
+			Record: v1.SuspiciousIPEventRecord{
+				Feeds: []string{"test"},
 			},
+			DestPort:   util.I64ptr(333),
+			SourcePort: util.I64ptr(333),
 		},
-		SuspiciousIPSecurityEvent{
-			EventsData: api.EventsData{
-				Description:     "wep default/source connected to suspicious IP 2.3.4.5 from list test",
-				Type:            SuspiciousFlow,
-				Severity:        Severity,
-				Origin:          testFeed.Name,
-				SourceIP:        util.Sptr("5.6.7.8"),
-				SourceName:      "source",
-				SourceNamespace: "default",
-				DestIP:          util.Sptr("2.3.4.5"),
-				DestName:        "dest",
-				Record: v1.SuspiciousIPEventRecord{
-					Feeds: []string{"test"},
-				},
+		{
+			ID:              "test_0__5.6.7.8_333_2.3.4.5_333",
+			Description:     "wep default/source connected to suspicious IP 2.3.4.5 from list test",
+			Type:            SuspiciousFlow,
+			Severity:        Severity,
+			Origin:          testFeed.Name,
+			SourceIP:        util.Sptr("5.6.7.8"),
+			SourceName:      "source",
+			SourceNamespace: "default",
+			SourcePort:      util.I64ptr(333),
+			DestIP:          util.Sptr("2.3.4.5"),
+			DestPort:        util.I64ptr(333),
+			DestName:        "dest",
+			Record: v1.SuspiciousIPEventRecord{
+				Feeds: []string{"test"},
 			},
 		},
 	}
@@ -110,7 +100,7 @@ func TestSuspiciousIP_Success(t *testing.T) {
 func TestSuspiciousIP_IterationFails(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	logs := []FlowLogJSONOutput{
+	logs := []v1.FlowLog{
 		{
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
@@ -124,22 +114,13 @@ func TestSuspiciousIP_IterationFails(t *testing.T) {
 			DestName:   "dest",
 		},
 	}
-	var hits []*oElastic.SearchHit
-	for _, l := range logs {
-		h := &oElastic.SearchHit{}
-		src, err := json.Marshal(&l)
-		g.Expect(err).ToNot(HaveOccurred())
-		raw := json.RawMessage(src)
-		h.Source = raw
-		hits = append(hits, h)
-	}
-	i := &elastic.MockIterator{
+	i := &storage.MockIterator[v1.FlowLog]{
 		Error:      errors.New("test"),
 		ErrorIndex: 1,
-		Hits:       hits,
-		Keys:       []db.QueryKey{db.QueryKeyFlowLogSourceIP, db.QueryKeyFlowLogDestIP},
+		Values:     logs,
+		Keys:       []storage.QueryKey{storage.QueryKeyFlowLogSourceIP, storage.QueryKeyFlowLogDestIP},
 	}
-	q := &elastic.MockSetQuerier{Iterator: i}
+	q := &storage.MockSetQuerier{IteratorFlow: i}
 	uut := NewSuspiciousIP(q)
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -154,7 +135,7 @@ func TestSuspiciousIP_IterationFails(t *testing.T) {
 func TestSuspiciousIP_QueryFails(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	q := &elastic.MockSetQuerier{Iterator: nil, QueryError: errors.New("query failed")}
+	q := &storage.MockSetQuerier{IteratorDNS: nil, QueryError: errors.New("query failed")}
 	uut := NewSuspiciousIP(q)
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -169,53 +150,31 @@ func TestSuspiciousIP_QueryFails(t *testing.T) {
 func TestSuspiciousDomain_Success(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	hits := []*oElastic.SearchHit{
+	logs := []v1.DNSLog{
 		{
-			Index: "idx1",
-			Id:    "id1",
-		},
-		{
-			Index: "idx1",
-			Id:    "id2",
-		},
-		// repeat
-		{
-			Index: "idx1",
-			Id:    "id1",
-		},
-	}
-	logs := []DNSLog{
-		{
+			ID:    "id1",
 			QName: "xx.yy.zzz",
 		},
 		{
+			ID:    "id2",
 			QName: "qq.rr.sss",
 		},
 		{
+			ID:    "id1",
 			QName: "aa.bb.ccc",
 		},
 	}
-	for i, l := range logs {
-		h := hits[i]
-		src, err := json.Marshal(&l)
-		g.Expect(err).ToNot(HaveOccurred())
-		raw := json.RawMessage(src)
-		h.Source = raw
-	}
-	// Add an extra malformed hit, which is ignored in results
-	junk := json.RawMessage([]byte("{"))
-	hits = append(hits, &oElastic.SearchHit{Index: "junk", Id: "junk", Source: junk})
-	i := &elastic.MockIterator{
+	i := &storage.MockIterator[v1.DNSLog]{
 		ErrorIndex: -1,
-		Hits:       hits,
-		Keys:       []db.QueryKey{db.QueryKeyDNSLogQName, db.QueryKeyDNSLogQName, db.QueryKeyDNSLogQName, db.QueryKeyUnknown},
+		Values:     logs,
+		Keys:       []storage.QueryKey{storage.QueryKeyDNSLogQName, storage.QueryKeyDNSLogQName, storage.QueryKeyDNSLogQName},
 	}
-	domains := db.DomainNameSetSpec{
+	domains := storage.DomainNameSetSpec{
 		"xx.yy.zzz",
 		"qq.rr.sss",
 		"aa.bb.ccc",
 	}
-	q := &elastic.MockSetQuerier{Iterator: i, Set: domains}
+	q := &storage.MockSetQuerier{IteratorDNS: i, Set: domains}
 	uut := NewSuspiciousDomainNameSet(q)
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -226,9 +185,9 @@ func TestSuspiciousDomain_Success(t *testing.T) {
 	results, _, _, err := uut.QuerySet(ctx, testFeed)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(results).To(HaveLen(2))
-	rec1, ok := results[0].GetEventsData().Record.(v1.SuspiciousDomainEventRecord)
+	rec1, ok := results[0].Record.(v1.SuspiciousDomainEventRecord)
 	g.Expect(ok).Should(BeTrue())
-	rec2, ok := results[1].GetEventsData().Record.(v1.SuspiciousDomainEventRecord)
+	rec2, ok := results[1].Record.(v1.SuspiciousDomainEventRecord)
 	g.Expect(ok).Should(BeTrue())
 	g.Expect(rec1.SuspiciousDomains).To(Equal([]string{"xx.yy.zzz"}))
 	g.Expect(rec2.SuspiciousDomains).To(Equal([]string{"qq.rr.sss"}))
@@ -237,36 +196,24 @@ func TestSuspiciousDomain_Success(t *testing.T) {
 func TestSuspiciousDomain_IterationFails(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	hits := []*oElastic.SearchHit{
+	logs := []v1.DNSLog{
 		{
-			Index: "idx1",
-			Id:    "id1",
-		},
-	}
-	logs := []DNSLog{
-		{
+			ID:    "id1",
 			QName: "xx.yy.zzz",
 		},
 	}
-	for i, l := range logs {
-		h := hits[i]
-		src, err := json.Marshal(&l)
-		g.Expect(err).ToNot(HaveOccurred())
-		raw := json.RawMessage(src)
-		h.Source = raw
-	}
-	i := &elastic.MockIterator{
+	i := &storage.MockIterator[v1.DNSLog]{
 		Error:      errors.New("iteration failed"),
 		ErrorIndex: 0,
-		Hits:       hits,
-		Keys:       []db.QueryKey{db.QueryKeyDNSLogQName},
+		Values:     logs,
+		Keys:       []storage.QueryKey{storage.QueryKeyDNSLogQName},
 	}
-	domains := db.DomainNameSetSpec{
+	domains := storage.DomainNameSetSpec{
 		"xx.yy.zzz",
 		"qq.rr.sss",
 		"aa.bb.ccc",
 	}
-	q := &elastic.MockSetQuerier{Iterator: i, Set: domains}
+	q := &storage.MockSetQuerier{IteratorDNS: i, Set: domains}
 	uut := NewSuspiciousDomainNameSet(q)
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -282,7 +229,7 @@ func TestSuspiciousDomain_IterationFails(t *testing.T) {
 func TestSuspiciousDomain_GetFails(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	q := &elastic.MockSetQuerier{GetError: errors.New("get failed")}
+	q := &storage.MockSetQuerier{GetError: errors.New("get failed")}
 	uut := NewSuspiciousDomainNameSet(q)
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -298,12 +245,12 @@ func TestSuspiciousDomain_GetFails(t *testing.T) {
 func TestSuspiciousDomain_QueryFails(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	domains := db.DomainNameSetSpec{
+	domains := storage.DomainNameSetSpec{
 		"xx.yy.zzz",
 		"qq.rr.sss",
 		"aa.bb.ccc",
 	}
-	q := &elastic.MockSetQuerier{Set: domains, QueryError: errors.New("query failed")}
+	q := &storage.MockSetQuerier{Set: domains, QueryError: errors.New("query failed")}
 	uut := NewSuspiciousDomainNameSet(q)
 
 	ctx, cancel := context.WithCancel(context.TODO())

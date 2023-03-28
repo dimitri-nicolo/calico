@@ -118,11 +118,10 @@ func TestCreateEvent(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	require.NotNil(t, 1, results)
 	require.Equal(t, 1, len(results.Items))
 
 	// We expect the ID to be present, but it's a random value so we
 	// can't assert on the exact value.
-	require.NotEqual(t, "", results.Items[0].ID)
-	results.Items[0].ID = ""
-	require.Equal(t, event, results.Items[0])
+	require.Equal(t, event, backendutils.AssertEventIDAndReset(t, results.Items[0]))
 }

@@ -289,12 +289,24 @@ func TestAuditLogFiltering(t *testing.T) {
 			Name: "should filter based on name",
 			Params: v1.AuditLogParams{
 				Type: v1.AuditLogTypeEE,
-				ObjectRef: &v1.ObjectReference{
-					Name: "np-1",
+				ObjectRefs: []v1.ObjectReference{
+					{Name: "np-1"},
 				},
 			},
 			ExpectLog1: true,
 			ExpectLog2: false,
+		},
+		{
+			Name: "should filter based on multiple names",
+			Params: v1.AuditLogParams{
+				Type: v1.AuditLogTypeEE,
+				ObjectRefs: []v1.ObjectReference{
+					{Name: "np-1"},
+					{Name: "gnp-1"},
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: true,
 		},
 		{
 			Name: "should filter based on author",
@@ -309,12 +321,61 @@ func TestAuditLogFiltering(t *testing.T) {
 			Name: "should filter based on namespace",
 			Params: v1.AuditLogParams{
 				Type: v1.AuditLogTypeEE,
-				ObjectRef: &v1.ObjectReference{
-					Namespace: "default",
+				ObjectRefs: []v1.ObjectReference{
+					{Namespace: "default"},
 				},
 			},
 			ExpectLog1: true,
 			ExpectLog2: false,
+		},
+		{
+			Name: "should filter based on global namespaces",
+			Params: v1.AuditLogParams{
+				Type: v1.AuditLogTypeEE,
+				ObjectRefs: []v1.ObjectReference{
+					{Namespace: "-"},
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: true,
+		},
+		{
+			Name: "should filter based on multiple namespaces",
+			Params: v1.AuditLogParams{
+				Type: v1.AuditLogTypeAny,
+				ObjectRefs: []v1.ObjectReference{
+					{Namespace: "default"},
+					{Namespace: "calico-system"},
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: false,
+			ExpectKube: true,
+		},
+		{
+			Name: "should filter based on API group",
+			Params: v1.AuditLogParams{
+				Type: v1.AuditLogTypeEE,
+				ObjectRefs: []v1.ObjectReference{
+					{APIGroup: "projectcalico.org"},
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: true,
+		},
+		{
+			Name: "should filter based on API group and version",
+			Params: v1.AuditLogParams{
+				Type: v1.AuditLogTypeEE,
+				ObjectRefs: []v1.ObjectReference{
+					{
+						APIGroup:   "projectcalico.org",
+						APIVersion: "v4",
+					},
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: true,
 		},
 		{
 			Name: "should filter based on response code",
@@ -344,6 +405,26 @@ func TestAuditLogFiltering(t *testing.T) {
 			ExpectLog2: true,
 			ExpectKube: true,
 		},
+		{
+			Name: "should support matching on Level",
+			Params: v1.AuditLogParams{
+				Type:   v1.AuditLogTypeEE,
+				Levels: []kaudit.Level{kaudit.LevelRequestResponse},
+			},
+			AllTime:    true,
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
+		{
+			Name: "should support matching on Stage",
+			Params: v1.AuditLogParams{
+				Type:   v1.AuditLogTypeEE,
+				Stages: []kaudit.Stage{kaudit.StageResponseComplete},
+			},
+			AllTime:    true,
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
 	}
 
 	for _, testcase := range testcases {
@@ -366,7 +447,7 @@ func TestAuditLogFiltering(t *testing.T) {
 			tr.To = logTime.Add(1 * time.Millisecond)
 			testcase.Params.QueryParams.TimeRange = tr
 
-			// The NetworkSet that audit log is for.
+			// The object that audit log is for.
 			obj := v3.NetworkPolicy{
 				TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
 			}
@@ -395,9 +476,11 @@ func TestAuditLogFiltering(t *testing.T) {
 					SourceIPs: []string{"1.2.3.4"},
 					UserAgent: "user-agent",
 					ObjectRef: &kaudit.ObjectReference{
-						Resource:  "networkpolicies",
-						Name:      "np-1",
-						Namespace: "default",
+						Resource:   "networkpolicies",
+						Name:       "np-1",
+						Namespace:  "default",
+						APIGroup:   "projectcalico.org",
+						APIVersion: "v3",
 					},
 					ResponseStatus: &metav1.Status{
 						Code: 200,
@@ -417,13 +500,20 @@ func TestAuditLogFiltering(t *testing.T) {
 				Name: testutils.StringPtr("ee-any"),
 			}
 
+			// The object that audit log is for.
+			obj = v3.NetworkPolicy{
+				TypeMeta: metav1.TypeMeta{Kind: "GlobalNetworkPolicy", APIVersion: "projectcalico.org/v4"},
+			}
+			objRaw2, err := json.Marshal(obj)
+			require.NoError(t, err)
+
 			// Create log #2.
 			a2 := v1.AuditLog{
 				Event: kaudit.Event{
 					TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
 					AuditID:    types.UID("audit-log-two"),
-					Stage:      kaudit.StageResponseComplete,
-					Level:      kaudit.LevelRequestResponse,
+					Stage:      kaudit.StageRequestReceived,
+					Level:      kaudit.LevelRequest,
 					RequestURI: "/apis/v3/projectcalico.org",
 					Verb:       "PUT",
 					User: authnv1.UserInfo{
@@ -439,19 +529,21 @@ func TestAuditLogFiltering(t *testing.T) {
 					SourceIPs: []string{"1.2.3.4"},
 					UserAgent: "user-agent",
 					ObjectRef: &kaudit.ObjectReference{
-						Resource:  "globalnetworkpolicies",
-						Name:      "gnp-1",
-						Namespace: "",
+						Resource:   "globalnetworkpolicies",
+						Name:       "gnp-1",
+						Namespace:  "",
+						APIGroup:   "projectcalico.org",
+						APIVersion: "v4",
 					},
 					ResponseStatus: &metav1.Status{
 						Code: 201,
 					},
 					RequestObject: &runtime.Unknown{
-						Raw:         objRaw,
+						Raw:         objRaw2,
 						ContentType: runtime.ContentTypeJSON,
 					},
 					ResponseObject: &runtime.Unknown{
-						Raw:         objRaw,
+						Raw:         objRaw2,
 						ContentType: runtime.ContentTypeJSON,
 					},
 					RequestReceivedTimestamp: metav1.NewMicroTime(logTime),
@@ -494,9 +586,11 @@ func TestAuditLogFiltering(t *testing.T) {
 					SourceIPs: []string{"1.2.3.4"},
 					UserAgent: "user-agent",
 					ObjectRef: &kaudit.ObjectReference{
-						Resource:  "daemonsets",
-						Name:      "calico-node",
-						Namespace: "calico-system",
+						Resource:   "daemonsets",
+						Name:       "calico-node",
+						Namespace:  "calico-system",
+						APIGroup:   "apps",
+						APIVersion: "v1",
 					},
 					ResponseStatus: &metav1.Status{},
 					RequestObject: &runtime.Unknown{

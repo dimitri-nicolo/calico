@@ -113,9 +113,7 @@ func TestFV_Events(t *testing.T) {
 		require.NoError(t, err)
 
 		// The ID should be set, but random, so we can't assert on its value.
-		require.NotEqual(t, "", resp.Items[0].ID)
-		resp.Items[0].ID = ""
-		require.Equal(t, events, resp.Items)
+		require.Equal(t, events, testutils.AssertLogIDAndCopyEventsWithoutID(t, resp))
 	})
 
 	t.Run("should dismiss and delete events", func(t *testing.T) {

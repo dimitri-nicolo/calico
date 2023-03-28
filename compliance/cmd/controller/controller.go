@@ -13,12 +13,14 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/controller"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/compliance/pkg/version"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 const (
@@ -66,14 +68,25 @@ func main() {
 	// Create the clientset.
 	cs := datastore.MustGetClientSet()
 
-	// Create the elastic client. We only use this to determine the last recorded report.
-	rr := elastic.MustGetElasticClient()
+	// Create the linseed client. We only use this to determine the last recorded report.
+	config := rest.Config{
+		URL:             cfg.LinseedURL,
+		CACertPath:      cfg.LinseedCA,
+		ClientKeyPath:   cfg.LinseedClientKey,
+		ClientCertPath:  cfg.LinseedClientCert,
+		FIPSModeEnabled: cfg.FIPSModeEnabled,
+	}
+	linseed, err := client.NewClient(cfg.Tenant, config)
+	if err != nil {
+		log.WithError(err).Fatal("failed to create linseed client")
+	}
+	store := api.NewComplianceStore(linseed, cfg.Cluster)
 
 	// Indicate healthy.
 	healthy()
 
 	// Create and run the controller.
-	ctrl, err := controller.NewComplianceController(cfg, cs, rr, healthy)
+	ctrl, err := controller.NewComplianceController(cfg, cs, store, healthy)
 	if err != nil {
 		panic(err)
 	}

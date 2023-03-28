@@ -13,13 +13,13 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-	"github.com/projectcalico/calico/lma/pkg/api"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 // handleDownloadReports sends one or multiple (via zip) reports to the client
@@ -39,7 +39,7 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 
 	// The report UID is constructed as <reportname>_<reporttype>_UID. Extract the report name and type from the
 	// ID and use that to validate RBAC permissions.
-	//TODO(rlb) This processing should be handled alongside the report ID construction to keep it all together.
+	// TODO(rlb) This processing should be handled alongside the report ID construction to keep it all together.
 	parts := strings.Split(uid, "_")
 	if len(parts) < 3 {
 		log.Info("Report ID is badly constructed")
@@ -57,7 +57,7 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 	}
 
 	// Create an RBAC helper to see if we can download this report
-	//TODO(rlb): Should add test to verify no ES calls are made when the user is not authorized.
+	// TODO(rlb): Should add test to verify no ES calls are made when the user is not authorized.
 	rbacHelper := NewReportRbacHelper(authorizer, request)
 	if allow, err := rbacHelper.CanViewReport(reportTypeName, reportName); err != nil {
 		log.WithError(err).Error("Unable to determine access permissions for request")
@@ -69,14 +69,9 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 		return
 	}
 
-	esClient, err := s.esFactory.ClientForCluster(clusterID)
-	if err != nil {
-		log.WithError(err).Error("failed to create elasticsearch client")
-		http.Error(response, "Internal Server Error", http.StatusInternalServerError)
-	}
-
 	// Download the report.
-	r, err := esClient.RetrieveArchivedReport(uid)
+	store := s.factory.NewStore(clusterID)
+	r, err := store.RetrieveArchivedReport(request.Context(), uid)
 	if err != nil {
 		if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
 			http.Error(response, "Report does not exist", http.StatusNotFound)
@@ -118,7 +113,7 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 	fileName := dc.generateDownloadFileName()
 	log.WithField("Filename", fileName).Debug("Setting download filename")
 
-	//set the response header and send the file
+	// set the response header and send the file
 	response.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	response.Header().Set("Content-Type", dc.contentType())
 	byteContent, err := dc.content()
@@ -130,9 +125,7 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 	http.ServeContent(response, request, fileName, time.Now(), bytes.NewReader(byteContent))
 }
 
-func (s *server) prepareReportForDownload(
-	r *api.ArchivedReportData, uid string, formats []string, rt *v3.ReportTypeSpec,
-) (*downloadContent, error) {
+func (s *server) prepareReportForDownload(r *v1.ReportData, uid string, formats []string, rt *v3.ReportTypeSpec) (*downloadContent, error) {
 	// Init the download content.
 	dc := &downloadContent{
 		startDate:  r.StartTime,
@@ -240,28 +233,27 @@ func areValidFormats(formats []string, rt *v3.ReportTypeSpec) bool {
 }
 
 func (d *downloadContent) zipContent() ([]byte, error) {
-
-	//set up the zipwriter
+	// set up the zipwriter
 	var b bytes.Buffer
 	zipWriter := zip.NewWriter(&b)
 
 	for _, f := range d.files {
 
-		//create the fileheader
+		// create the fileheader
 		fh := zip.FileHeader{
 			Method:   zip.Deflate,
 			Name:     generateFileName(d, f.outputFormat),
 			Modified: time.Now(),
 		}
 
-		//create the next header
+		// create the next header
 		writer, err := zipWriter.CreateHeader(&fh)
 		if err != nil {
 			log.WithError(err).Error("Unable to create zip file header")
 			return nil, err
 		}
 
-		//wrap the current file data in a reader and copy to the writer
+		// wrap the current file data in a reader and copy to the writer
 		contentReader := bytes.NewReader(f.data)
 		_, err = io.Copy(writer, contentReader)
 		if err != nil {
@@ -277,6 +269,6 @@ func (d *downloadContent) zipContent() ([]byte, error) {
 		return nil, err
 	}
 
-	//return the zip data
+	// return the zip data
 	return b.Bytes(), nil
 }

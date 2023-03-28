@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	"github.com/projectcalico/calico/lma/pkg/api"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -56,15 +56,11 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 		Reports: []Report{},
 	}
 
-	esClient, err := s.esFactory.ClientForCluster(clusterID)
-	if err != nil {
-		log.WithError(err).Error("failed to create elasticsearch client")
-		http.Error(response, "Internal Server Error", http.StatusInternalServerError)
-	}
+	store := s.factory.NewStore(clusterID)
 
-	// Query elastic search to determine the set of reportTypeName/reportName that match the filter.
+	// Query to determine the set of reportTypeName/reportName that match the filter.
 	var filteredReportNameAndType []api.ReportTypeAndName
-	reportNameAndTypes, err := esClient.RetrieveArchivedReportTypeAndNames(request.Context(), *qparams)
+	reportNameAndTypes, err := store.RetrieveArchivedReportTypeAndNames(request.Context(), *qparams)
 	if err != nil {
 		log.WithError(err).Error("Unable to determine access permissions for request")
 		http.Error(response, err.Error(), http.StatusServiceUnavailable)
@@ -93,6 +89,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 
 	// Update the query params to include the filtered set of report name and types.
 	qparams.Reports = filteredReportNameAndType
+
 	// Obtain the current set of configured ReportTypes.
 	rts, err := s.getReportTypes(clusterID)
 	if err != nil {
@@ -101,8 +98,8 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 		return
 	}
 
-	// Pull the report summaries from elastic
-	reportSummaries, err := esClient.RetrieveArchivedReportSummaries(request.Context(), *qparams)
+	// Pull the report summaries from linseed
+	reportSummaries, err := store.RetrieveArchivedReportSummaries(request.Context(), *qparams)
 	if err != nil {
 		errString := fmt.Sprintf("Unable to list reports: %v", err)
 		http.Error(response, errString, http.StatusServiceUnavailable)
@@ -110,7 +107,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 		return
 	}
 
-	// Set the number of pages from the elastic query.
+	// Set the number of pages from the linseed query.
 	rl.Count = reportSummaries.Count
 
 	// Turn each of the reportSummaries into Report objects that will marshal into a format for the documented API.
@@ -200,8 +197,8 @@ func GetListReportsQueryParams(vals url.Values) (*api.ReportQueryParams, error) 
 
 	return &api.ReportQueryParams{
 		Reports:  getReportsQueryParams(vals),
-		FromTime: vals.Get(UrlParamFromTime), // elastic time syntax is complex - let ES deal with validating.
-		ToTime:   vals.Get(UrlParamToTime),   // elastic time syntax is complex - let ES deal with validating.
+		FromTime: vals.Get(UrlParamFromTime),
+		ToTime:   vals.Get(UrlParamToTime),
 		Page:     page,
 		MaxItems: maxItems,
 		SortBy:   sortBy,

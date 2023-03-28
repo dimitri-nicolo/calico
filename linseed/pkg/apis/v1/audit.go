@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/apis/audit"
+	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
@@ -44,8 +45,8 @@ type AuditLogParams struct {
 	// any objects that match any of the given kinds.
 	Kinds []Kind `json:"kinds"`
 
-	// Match specific object fields.
-	ObjectRef *ObjectReference `json:"object_ref"`
+	// Match specific object fields, combined with logical OR.
+	ObjectRefs []ObjectReference `json:"object_refs"`
 
 	// Match the action taken on the resource
 	Verbs []Verb `json:"verbs"`
@@ -57,17 +58,20 @@ type AuditLogParams struct {
 	Authors []string `json:"authors"`
 
 	// Match on stage.
-	Stages []string `json:"stages"`
+	Stages []auditv1.Stage `json:"stages"`
 
 	// Match on level.
-	Levels []string `json:"levels"`
+	Levels []auditv1.Level `json:"levels"`
 }
 
 // ObjectReference is the set of fields we support in query requests
 // to filter audit logs based on their object.
 type ObjectReference struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
+	Name       string `json:"name"`
+	Namespace  string `json:"namespace"`
+	Resource   string `json:"resource"`
+	APIVersion string `json:"api_version"`
+	APIGroup   string `json:"api_group"`
 }
 
 type AuditLogType string

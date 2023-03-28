@@ -8,84 +8,79 @@ import (
 	"testing"
 	"time"
 
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
-	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // TestDoIPSet tests the case where everything is working
 func TestDoIPSet(t *testing.T) {
-	expected := []events.SuspiciousIPSecurityEvent{{
-		EventsData: api.EventsData{
+	expected := []v1.Event{
+		{
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
 			DestIP:     util.Sptr("2.3.4.5"),
 			DestName:   "dest",
 		},
-	},
 		{
-			EventsData: api.EventsData{
-				SourceIP:   util.Sptr("5.6.7.8"),
-				SourceName: "source",
-				DestIP:     util.Sptr("2.3.4.5"),
-				DestName:   "dest",
-			},
-		}}
+			SourceIP:   util.Sptr("5.6.7.8"),
+			SourceName: "source",
+			DestIP:     util.Sptr("2.3.4.5"),
+			DestName:   "dest",
+		},
+	}
 	runTest(t, true, expected, time.Now(), "", nil, -1)
 }
 
 // TestDoIPSetNoResults tests the case where no results are returned
 func TestDoIPSetNoResults(t *testing.T) {
-	expected := []events.SuspiciousIPSecurityEvent{}
+	expected := []v1.Event{}
 	runTest(t, true, expected, time.Now(), "", nil, -1)
 }
 
 // TestDoIPSetSuspiciousIPFails tests the case where suspiciousIP fails after the first result
 func TestDoIPSetSuspiciousIPFails(t *testing.T) {
-	expected := []events.SuspiciousIPSecurityEvent{}
+	expected := []v1.Event{}
 	runTest(t, false, expected, time.Time{}, "", errors.New("fail"), -1)
 }
 
 // TestDoIPSetEventsFails tests the case where the first call to events.PutSecurityEventWithID fails but the second does not
 func TestDoIPSetEventsFails(t *testing.T) {
-	expected := []events.SuspiciousIPSecurityEvent{{
-		EventsData: api.EventsData{
+	expected := []v1.Event{
+		{
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
 			DestIP:     util.Sptr("2.3.4.5"),
 			DestName:   "dest",
 		},
-	},
 		{
-			EventsData: api.EventsData{
-				SourceIP:   util.Sptr("5.6.7.8"),
-				SourceName: "source",
-				DestIP:     util.Sptr("2.3.4.5"),
-				DestName:   "dest",
-			},
-		}}
+			SourceIP:   util.Sptr("5.6.7.8"),
+			SourceName: "source",
+			DestIP:     util.Sptr("2.3.4.5"),
+			DestName:   "dest",
+		},
+	}
 
 	runTest(t, false, expected, time.Time{}, "", nil, 0)
 }
 
-func runTest(t *testing.T, successful bool, expectedSecurityEvents []events.SuspiciousIPSecurityEvent,
-	lastSuccessfulSearch time.Time, setHash string, err error, eventsErrorIdx int) {
+func runTest(t *testing.T, successful bool, expectedSecurityEvents []v1.Event,
+	lastSuccessfulSearch time.Time, setHash string, err error, eventsErrorIdx int,
+) {
 	g := NewGomegaWithT(t)
 
 	f := util.NewGlobalThreatFeedFromName("mock")
-	suspiciousIP := &db.MockSuspicious{
+	suspiciousIP := &storage.MockSuspicious{
 		Error:                err,
 		LastSuccessfulSearch: lastSuccessfulSearch,
 		SetHash:              setHash,
 	}
-	for _, e := range expectedSecurityEvents {
-		suspiciousIP.Events = append(suspiciousIP.Events, e)
-	}
-	eventsDB := &db.MockEvents{ErrorIndex: eventsErrorIdx, Events: []db.SecurityEventInterface{}}
+	suspiciousIP.Events = append(suspiciousIP.Events, expectedSecurityEvents...)
+	eventsDB := &storage.MockEvents{ErrorIndex: eventsErrorIdx, Events: []v1.Event{}}
 	uut := NewSearcher(f, 0, suspiciousIP, eventsDB).(*searcher)
 	feedCacher := cacher.NewMockGlobalThreatFeedCache()
 
@@ -120,8 +115,8 @@ func TestFlowSearcher_SetFeed(t *testing.T) {
 
 	f := util.NewGlobalThreatFeedFromName("mock")
 	f2 := util.NewGlobalThreatFeedFromName("swap")
-	suspiciousIP := &db.MockSuspicious{}
-	eventsDB := &db.MockEvents{}
+	suspiciousIP := &storage.MockSuspicious{}
+	eventsDB := &storage.MockEvents{}
 	searcher := NewSearcher(f, 0, suspiciousIP, eventsDB).(*searcher)
 
 	searcher.SetFeed(f2)

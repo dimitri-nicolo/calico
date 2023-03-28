@@ -10,6 +10,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+
+	capi "github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/archive"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/event"
@@ -19,7 +22,6 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-	api "github.com/projectcalico/calico/lma/pkg/api"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -48,16 +50,7 @@ const (
 )
 
 // Run is the entrypoint to start running the reporter.
-func Run(
-	ctx context.Context, cfg *config.Config,
-	healthy func(),
-	lister api.ListDestination,
-	eventer api.ReportEventFetcher,
-	auditer api.AuditLogReportHandler,
-	flowlogger api.FlowLogReportHandler,
-	archiver api.ReportStorer,
-	benchmarker api.BenchmarksQuery,
-) error {
+func Run(ctx context.Context, cfg *config.Config, healthy func(), store capi.ComplianceStore) error {
 	log.Info("Running reporter")
 
 	// Inidicate healthy.
@@ -68,7 +61,7 @@ func Run(
 
 	// Create the cross-reference cache that we use to monitor for changes in the relevant data.
 	xc := xrefcache.NewXrefCache(cfg, healthy)
-	replayer := replay.New(cfg.ParsedReportStart, cfg.ParsedReportEnd, lister, eventer, xc)
+	replayer := replay.New(cfg.ParsedReportStart, cfg.ParsedReportEnd, store, store, xc)
 
 	var longTermArchiver archive.LogDispatcher
 	if reportCfg.ArchiveLogsEnabled {
@@ -94,12 +87,12 @@ func Run(
 			"start": cfg.ParsedReportStart.Format(time.RFC3339),
 			"end":   cfg.ParsedReportEnd.Format(time.RFC3339),
 		}),
-		auditer:          auditer,
-		flowlogger:       flowlogger,
-		archiver:         archiver,
+		auditer:          store,
+		flowlogger:       store,
+		archiver:         store,
 		xc:               xc,
 		replayer:         replayer,
-		benchmarker:      benchmarker,
+		benchmarker:      store,
 		healthy:          healthy,
 		inScopeEndpoints: make(map[apiv3.ResourceID]*reportEndpoint),
 		services:         make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
@@ -127,10 +120,10 @@ type reporter struct {
 	clog        *log.Entry
 	xc          xrefcache.XrefCache
 	replayer    syncer.Starter
-	auditer     api.AuditLogReportHandler
-	benchmarker api.BenchmarksQuery
-	flowlogger  api.FlowLogReportHandler
-	archiver    api.ReportStorer
+	auditer     capi.AuditLogReportHandler
+	benchmarker capi.BenchmarksQuery
+	flowlogger  capi.FlowLogReportHandler
+	archiver    capi.ReportStorer
 	healthy     func()
 
 	// Consolidate the tracked in-scope endpoint events into a local cache, which will get converted and copied into
@@ -243,7 +236,7 @@ func (r *reporter) run() error {
 	// Set the generation time and store the report data.
 	r.clog.Info("Storing report into archiver")
 	r.data.GenerationTime = metav1.Now()
-	_ = r.archiver.StoreArchivedReport(&api.ArchivedReportData{
+	_ = r.archiver.StoreArchivedReport(&v1.ReportData{
 		ReportData: r.data,
 		UISummary:  summary,
 	})
@@ -259,7 +252,7 @@ func (r *reporter) run() error {
 	}
 
 	r.clog.Info("Sending report to long-term storage")
-	if err = r.longTermArchiver.Dispatch(api.ArchivedReportData{
+	if err = r.longTermArchiver.Dispatch(v1.ReportData{
 		ReportData: r.data,
 		UISummary:  summary,
 	}); err != nil {
@@ -286,7 +279,7 @@ func (r *reporter) onUpdate(update syncer.Update) {
 	zeroTrustFlags, _ := zeroTrustFlags(update.Type, xref.Flags)
 
 	// Update the endpoint and namespaces policies and services
-	//TODO(rlb): Performance improvement here - we only need to update what has actually changed in particular no
+	// TODO(rlb): Performance improvement here - we only need to update what has actually changed in particular no
 	//           need to update policies or services set if not changed. However, I have not UTd that the correct
 	//           update flags are returned, so let's not trust to luck.
 	ep.zeroTrustFlags |= zeroTrustFlags
@@ -310,7 +303,6 @@ func (r *reporter) onUpdate(update syncer.Update) {
 	// Update the namespace flags.
 	if update.ResourceID.Namespace != "" {
 		r.namespaces[toNamespace(update.ResourceID.Namespace)] |= zeroTrustFlags
-
 	}
 }
 
@@ -336,11 +328,10 @@ func (r *reporter) onStatusUpdate(status syncer.StatusUpdate) {
 }
 
 // addFlowLogEntries adds flows matching the FlowLogFilter to the ReportData.
-// Aggregated flow logs are searched Elasticsearch using the namespaces specified
+// Aggregated flow logs are searched using the namespaces specified
 // in the FlowLogFilter. Results are further filtered using the endpoint names
 // and aggregated endpoint names tracked in the FlowLogFilter.
 func (r *reporter) addFlowLogEntries() {
-
 	namespaces := make([]string, 0, len(r.flowLogFilter.Namespaces))
 	for ns := range r.flowLogFilter.Namespaces {
 		namespaces = append(namespaces, ns)
@@ -394,11 +385,11 @@ func (r *reporter) addAuditEvents() error {
 
 		// The audit event is being included. Update the stats and append the event log.
 		switch e.Verb {
-		case api.EventVerbCreate:
+		case string(v1.Create):
 			r.data.AuditSummary.NumCreate++
-		case api.EventVerbPatch, api.EventVerbUpdate:
+		case string(v1.Patch), string(v1.Update):
 			r.data.AuditSummary.NumModify++
-		case api.EventVerbDelete:
+		case string(v1.Delete):
 			r.data.AuditSummary.NumDelete++
 		}
 		r.data.AuditEvents = append(r.data.AuditEvents, *e.Event)

@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	api "github.com/projectcalico/calico/lma/pkg/api"
 )
+
+const FlowLogGlobalNamespace = "-"
 
 // Container type to hold the EndpointsReportFlow and/or an error.
 type FlowLogResult struct {
@@ -26,7 +26,7 @@ type FlowLogFilter struct {
 // namespace.
 func NewFlowLogFilter() *FlowLogFilter {
 	namespaces := map[string]bool{
-		api.FlowLogGlobalNamespace: true,
+		FlowLogGlobalNamespace: true,
 	}
 	return &FlowLogFilter{
 		Namespaces:    namespaces,
@@ -38,7 +38,7 @@ func NewFlowLogFilter() *FlowLogFilter {
 // Adds namespace, endpoint name and aggregated endpoint name to the filter.
 func (f *FlowLogFilter) TrackNamespaceAndEndpoint(namespace, endpointName, aggrEndpointName string) {
 	if namespace == "" {
-		namespace = api.FlowLogGlobalNamespace
+		namespace = FlowLogGlobalNamespace
 	}
 	f.Namespaces[namespace] = true
 	if endpointName != "" {
@@ -57,7 +57,6 @@ func (f *FlowLogFilter) FilterInFlow(erf *apiv3.EndpointsReportFlow) bool {
 		(!erf.Source.NameIsAggregationPrefix && f.FilterInEndpoint(erf.Source.Namespace, erf.Source.Name)) ||
 		(erf.Destination.NameIsAggregationPrefix && f.FilterInAggregateName(erf.Destination.Namespace, erf.Destination.Name)) ||
 		(!erf.Destination.NameIsAggregationPrefix && f.FilterInEndpoint(erf.Destination.Namespace, erf.Destination.Name))
-
 }
 
 // Check whether the endpoint (specified by namespace and name) should be filtered in.

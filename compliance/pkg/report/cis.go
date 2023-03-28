@@ -10,11 +10,11 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/compliance/pkg/docindex"
-	api "github.com/projectcalico/calico/lma/pkg/api"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 const (
-	//TODO(rlb): Presumably this will be parameterized or made a constant somewhere for the benchmarker code.
+	// TODO(rlb): Presumably this will be parameterized or made a constant somewhere for the benchmarker code.
 	// We should update to be 1.5 * benchmark interval and remove this constant.
 	DayAndHalf = 36 * time.Hour
 )
@@ -26,7 +26,7 @@ func (r *reporter) addBenchmarks() error {
 
 	// Track summary stats for this report.
 	r.data.CISBenchmarkSummary = apiv3.CISBenchmarkSummary{
-		Type: string(api.TypeKubernetes),
+		Type: string(v1.TypeKubernetes),
 	}
 
 	// Create a filter set from the report spec configuration.
@@ -62,7 +62,7 @@ func (r *reporter) addBenchmarks() error {
 	}
 	r.clog.Infof("Query benchmarks from %v to %v", start, end)
 	for b := range r.benchmarker.RetrieveLatestBenchmarks(
-		r.ctx, api.TypeKubernetes, nil, start, end,
+		r.ctx, v1.TypeKubernetes, nil, start, end,
 	) {
 		// If we received an error then log and exit.
 		if b.Err != nil {
@@ -81,7 +81,7 @@ func (r *reporter) addBenchmarks() error {
 		filter := filters.getFilter(b.Benchmarks)
 
 		// Benchmarks are returned for a given node, so create an entry for this node.
-		//TODO(rlb): What about nodes that are failing to gather results (i.e. Err != nil).
+		// TODO(rlb): What about nodes that are failing to gather results (i.e. Err != nil).
 		node := &apiv3.CISBenchmarkNode{
 			NodeName: b.Benchmarks.NodeName,
 		}
@@ -106,7 +106,7 @@ func (r *reporter) addBenchmarks() error {
 			// If this is a new section, initialize the maps for this section. We will sort the sections by section ID
 			// once we have the full set of results and sections for this set of benchmarks.
 			if _, ok := sectionResults[t.Section]; !ok {
-				//TODO(rlb): What is the section status? Not sure it should be there since it doesn't make sense to use
+				// TODO(rlb): What is the section status? Not sure it should be there since it doesn't make sense to use
 				// the same percentages as the per node stats.
 				sectionResults[t.Section] = &apiv3.CISBenchmarkSectionResult{
 					Section: t.Section,
@@ -156,7 +156,7 @@ func (r *reporter) addBenchmarks() error {
 			for _, rid := range resultIds {
 				r.clog.Debugf("Handling result %s", rid)
 				result := results[rid.Index()]
-				//TODO(rlb): Status values should be declared in libcalico-go?
+				// TODO(rlb): Status values should be declared in libcalico-go?
 				switch result.Status {
 				case "PASS":
 					section.Pass++
@@ -177,7 +177,7 @@ func (r *reporter) addBenchmarks() error {
 			}
 			switch {
 			case p >= highThreshold:
-				//TODO(rlb): Status values should be declared in libcalico-go?
+				// TODO(rlb): Status values should be declared in libcalico-go?
 				section.Status = "HIGH"
 			case p < highThreshold && p >= medThreshold:
 				section.Status = "MED"
@@ -202,7 +202,7 @@ func (r *reporter) addBenchmarks() error {
 		}
 		switch {
 		case p >= highThreshold:
-			//TODO(rlb): Status values should be declared in libcalico-go?
+			// TODO(rlb): Status values should be declared in libcalico-go?
 			node.Summary.Status = "HIGH"
 			r.data.CISBenchmarkSummary.HighCount++
 		case p < highThreshold && p >= medThreshold:
@@ -289,7 +289,7 @@ type testFilters struct {
 }
 
 // getFilter returns the filter to use on a specific set of benchmarks.
-func (t *testFilters) getFilter(b *api.Benchmarks) *testFilter {
+func (t *testFilters) getFilter(b *v1.Benchmarks) *testFilter {
 	// We use the first matching filter, so loop through to find the match.
 	for _, f := range t.filters {
 		if f.matches(b) {
@@ -321,7 +321,7 @@ type testFilter struct {
 }
 
 // include returns whether or not a benchmark test should be included in the report.
-func (f *testFilter) include(t api.BenchmarkTest) bool {
+func (f *testFilter) include(t v1.BenchmarkTest) bool {
 	if f.includeUnscored && f.includes == nil {
 		// Short circuit including everything.
 		f.clog.Debugf("Include %s: including everything", t.TestNumber)
@@ -356,7 +356,7 @@ func (f *testFilter) include(t api.BenchmarkTest) bool {
 }
 
 // matches returns whether or not the match critera match the supplied benchmarks.
-func (f *testFilter) matches(b *api.Benchmarks) bool {
+func (f *testFilter) matches(b *v1.Benchmarks) bool {
 	if f.k8sVersion != nil {
 		bv := docindex.New(b.KubernetesVersion)
 		if !f.k8sVersion.Contains(bv) {

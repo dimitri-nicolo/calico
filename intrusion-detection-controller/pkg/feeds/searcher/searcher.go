@@ -14,11 +14,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/errorcondition"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/runloop"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -32,8 +32,8 @@ type Searcher interface {
 type searcher struct {
 	feed   *v3.GlobalThreatFeed
 	period time.Duration
-	q      db.SuspiciousSet
-	events db.Events
+	q      storage.SuspiciousSet
+	events storage.Events
 	once   sync.Once
 	cancel context.CancelFunc
 }
@@ -70,23 +70,25 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 	// Ensure Global Threat Feed is Enabled before querying Elasticsearch and sending event.
 	mode := getCachedFeedResponse.GlobalThreatFeed.Spec.Mode
 	if mode != nil && *mode == v3.ThreatFeedModeEnabled {
+		log.Debug("Check if any flow logs have been generated with a suspicious IP")
 		results, lastSuccessfulSearch, setHash, err := d.q.QuerySet(ctx, getCachedFeedResponse.GlobalThreatFeed)
 		if err != nil {
 			log.WithError(err).Error("query failed")
 			utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)
 			return
 		}
-		var clean = true
-		for _, result := range results {
-			err := d.events.PutSecurityEventWithID(ctx, result)
-			if err != nil {
-				clean = false
-				utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)
-				log.WithError(err).Error("failed to store event")
-			}
+		clean := true
+		err = d.events.PutSecurityEventWithID(ctx, results)
+		if err != nil {
+			log.WithError(err).Error("failed to store events")
+			utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)
+			clean = false
 		}
+
 		if clean {
+			log.Debug("Update feed status")
 			updateFeedStatusAfterSuccessfulSearch(feedCacher, lastSuccessfulSearch)
+			log.Debug("Update feed after search")
 			updateFeedAfterSuccessfulSearch(feedCacher, setHash)
 		}
 	} else {
@@ -94,7 +96,7 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 	}
 }
 
-func NewSearcher(feed *v3.GlobalThreatFeed, period time.Duration, suspiciousSet db.SuspiciousSet, events db.Events) Searcher {
+func NewSearcher(feed *v3.GlobalThreatFeed, period time.Duration, suspiciousSet storage.SuspiciousSet, events storage.Events) Searcher {
 	return &searcher{
 		feed:   feed.DeepCopy(),
 		period: period,
@@ -122,9 +124,9 @@ func updateFeedAfterSuccessfulSearch(feedCacher cacher.GlobalThreatFeedCacher, s
 	for i := 1; i <= cacher.MaxUpdateRetry; i++ {
 		log.Debug(fmt.Sprintf("%d/%d attempt to update feed after successful search", i, cacher.MaxUpdateRetry))
 		if toBeUpdated.Spec.Content == v3.ThreatFeedContentDomainNameSet {
-			updateAnnotation(toBeUpdated, db.DomainNameSetHashKey, setHash)
+			updateAnnotation(toBeUpdated, storage.DomainNameSetHashKey, setHash)
 		} else {
-			updateAnnotation(toBeUpdated, db.IpSetHashKey, setHash)
+			updateAnnotation(toBeUpdated, storage.IpSetHashKey, setHash)
 		}
 		updateResponse := feedCacher.UpdateGlobalThreatFeed(toBeUpdated)
 		updateErr := updateResponse.Err

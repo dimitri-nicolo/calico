@@ -115,6 +115,7 @@ func TestDNS_FlowLogs(t *testing.T) {
 		}
 		resp, err := cli.DNSLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
-		require.Equal(t, logs, resp.Items)
+		actualLogs := testutils.AssertLogIDAndCopyDNSLogsWithoutID(t, resp)
+		require.Equal(t, logs, actualLogs)
 	})
 }

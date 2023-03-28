@@ -6,13 +6,13 @@ import (
 	"context"
 	"sync"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 )
 
 type MockElasticIPSetController struct {
 	m           sync.Mutex
-	sets        map[string]db.IPSetSpec
+	sets        map[string]storage.IPSetSpec
 	failFuncs   map[string]func(error)
 	feedCachers map[string]cacher.GlobalThreatFeedCacher
 	noGC        map[string]struct{}
@@ -20,7 +20,7 @@ type MockElasticIPSetController struct {
 
 func NewMockElasticIPSetController() *MockElasticIPSetController {
 	return &MockElasticIPSetController{
-		sets:        make(map[string]db.IPSetSpec),
+		sets:        make(map[string]storage.IPSetSpec),
 		failFuncs:   make(map[string]func(error)),
 		feedCachers: make(map[string]cacher.GlobalThreatFeedCacher),
 		noGC:        make(map[string]struct{}),
@@ -30,7 +30,7 @@ func NewMockElasticIPSetController() *MockElasticIPSetController {
 func (c *MockElasticIPSetController) Add(ctx context.Context, name string, set interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	c.sets[name] = set.(db.IPSetSpec)
+	c.sets[name] = set.(storage.IPSetSpec)
 	c.failFuncs[name] = f
 	c.feedCachers[name] = feedCacher
 }
@@ -66,8 +66,8 @@ func (c *MockElasticIPSetController) NotGCable() map[string]struct{} {
 	return out
 }
 
-func (c *MockElasticIPSetController) Sets() map[string]db.IPSetSpec {
-	out := make(map[string]db.IPSetSpec)
+func (c *MockElasticIPSetController) Sets() map[string]storage.IPSetSpec {
+	out := make(map[string]storage.IPSetSpec)
 	c.m.Lock()
 	defer c.m.Unlock()
 	for k, s := range c.sets {
@@ -78,7 +78,7 @@ func (c *MockElasticIPSetController) Sets() map[string]db.IPSetSpec {
 
 type MockDomainNameSetsController struct {
 	m           sync.Mutex
-	sets        map[string]db.DomainNameSetSpec
+	sets        map[string]storage.DomainNameSetSpec
 	failFuncs   map[string]func(error)
 	feedCachers map[string]cacher.GlobalThreatFeedCacher
 	noGC        map[string]struct{}
@@ -86,7 +86,7 @@ type MockDomainNameSetsController struct {
 
 func NewMockDomainNameSetsController() *MockDomainNameSetsController {
 	return &MockDomainNameSetsController{
-		sets:        make(map[string]db.DomainNameSetSpec),
+		sets:        make(map[string]storage.DomainNameSetSpec),
 		failFuncs:   make(map[string]func(error)),
 		feedCachers: make(map[string]cacher.GlobalThreatFeedCacher),
 		noGC:        make(map[string]struct{}),
@@ -96,7 +96,7 @@ func NewMockDomainNameSetsController() *MockDomainNameSetsController {
 func (c *MockDomainNameSetsController) Add(ctx context.Context, name string, set interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	c.sets[name] = set.(db.DomainNameSetSpec)
+	c.sets[name] = set.(storage.DomainNameSetSpec)
 	c.failFuncs[name] = f
 	c.feedCachers[name] = feedCacher
 }
@@ -132,8 +132,8 @@ func (c *MockDomainNameSetsController) NotGCable() map[string]struct{} {
 	return out
 }
 
-func (c *MockDomainNameSetsController) Sets() map[string]db.DomainNameSetSpec {
-	out := make(map[string]db.DomainNameSetSpec)
+func (c *MockDomainNameSetsController) Sets() map[string]storage.DomainNameSetSpec {
+	out := make(map[string]storage.DomainNameSetSpec)
 	c.m.Lock()
 	defer c.m.Unlock()
 	for k, s := range c.sets {

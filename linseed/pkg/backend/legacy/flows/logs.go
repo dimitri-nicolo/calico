@@ -105,6 +105,7 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 			log.WithError(err).Error("Error unmarshalling log")
 			continue
 		}
+		l.ID = h.Id
 		logs = append(logs, l)
 	}
 
@@ -160,7 +161,7 @@ func (b *flowLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts 
 		return nil, 0, err
 	}
 
-	q, err := logtools.BuildQuery(b.helper, i, opts)
+	q, err := b.buildQuery(i, opts)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -181,6 +182,43 @@ func (b *flowLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts 
 		query.Sort(b.helper.GetTimeField(), true)
 	}
 	return query, startFrom, nil
+}
+
+// buildQuery builds an elastic query using the given parameters.
+func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.FlowLogParams) (elastic.Query, error) {
+	// Start with the base flow log query using common fields.
+	query, err := logtools.BuildQuery(b.helper, i, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(opts.IPMatches) > 0 {
+		for _, match := range opts.IPMatches {
+			// Get the list of values as an interface{}, as needed for a terms query.
+			values := []interface{}{}
+			for _, t := range match.IPs {
+				values = append(values, t)
+			}
+
+			switch match.Type {
+			case v1.MatchTypeSource:
+				query.Filter(elastic.NewTermsQuery("source_ip", values...))
+			case v1.MatchTypeDest:
+				query.Filter(elastic.NewTermsQuery("dest_ip", values...))
+			case v1.MatchTypeAny:
+				fallthrough
+			default:
+				// By default, treat as an "any" match. Return any flows that have a source
+				// or destination name that matches.
+				query.Filter(elastic.NewBoolQuery().Should(
+					elastic.NewTermsQuery("source_ip", values...),
+					elastic.NewTermsQuery("dest_ip", values...),
+				).MinimumNumberShouldMatch(1))
+			}
+		}
+	}
+
+	return query, nil
 }
 
 func (b *flowLogBackend) index(i bapi.ClusterInfo) string {

@@ -15,9 +15,9 @@ import (
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -34,7 +34,7 @@ type dnSetContent struct {
 }
 
 type dnSetPersistence struct {
-	d db.DomainNameSet
+	d storage.DomainNameSet
 	c controller.Controller
 }
 
@@ -43,7 +43,7 @@ type dnSetGNSHandler struct {
 }
 
 func (d *dnSetContent) snapshot(r io.Reader) (interface{}, error) {
-	var snapshot db.DomainNameSetSpec
+	var snapshot storage.DomainNameSetSpec
 
 	// line handler
 	h := func(n int, entry string) {
@@ -68,7 +68,7 @@ func (p dnSetPersistence) lastModified(ctx context.Context, name string) (time.T
 }
 
 func (p dnSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
-	p.c.Add(ctx, name, snapshot.(db.DomainNameSetSpec), f, feedCacher)
+	p.c.Add(ctx, name, snapshot.(storage.DomainNameSetSpec), f, feedCacher)
 }
 
 func (d *dnSetGNSHandler) handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction) {
@@ -89,7 +89,7 @@ func (d *dnSetGNSHandler) syncFromDB(ctx context.Context, feedCacher cacher.Glob
 
 func NewDomainNameSetHTTPPuller(
 	f *calico.GlobalThreatFeed,
-	ddb db.DomainNameSet,
+	ddb storage.DomainNameSet,
 	configMapClient core.ConfigMapInterface,
 	secretsClient core.SecretInterface,
 	client *http.Client,

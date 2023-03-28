@@ -14,9 +14,9 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/spyutil"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -35,16 +35,16 @@ var cases = []testCase{
 	{
 		name: "IPSet",
 		makeUUT: func(d interface{}) reflect.Value {
-			return reflect.ValueOf(NewIPSetController(d.(db.IPSet)))
+			return reflect.ValueOf(NewIPSetController(d.(storage.IPSet)))
 		},
-		set: reflect.ValueOf(db.IPSetSpec{"1.2.3.4"}),
+		set: reflect.ValueOf(storage.IPSetSpec{"1.2.3.4"}),
 	},
 	{
 		name: "DomainNameSet",
 		makeUUT: func(d interface{}) reflect.Value {
-			return reflect.ValueOf(NewDomainNameSetController(d.(db.DomainNameSet)))
+			return reflect.ValueOf(NewDomainNameSetController(d.(storage.DomainNameSet)))
 		},
-		set: reflect.ValueOf(db.DomainNameSetSpec{"evilstuff.bad"}),
+		set: reflect.ValueOf(storage.DomainNameSetSpec{"evilstuff.bad"}),
 	},
 }
 
@@ -81,7 +81,7 @@ func TestController_Add_Success(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockSets{}
+			dbm := &storage.MockSets{}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -104,7 +104,7 @@ func TestController_Add_Success(t *testing.T) {
 				spyutil.Call{Method: "Put" + tc.name, Name: name, Value: tc.set.Interface()}))
 			g.Expect(countMethod(dbm, "Put"+tc.name)()).To(Equal(1))
 
-			dbm.Metas = append(dbm.Metas, db.Meta{Name: name})
+			dbm.Metas = append(dbm.Metas, storage.Meta{Name: name})
 
 			tkr.reconcile(t, ctx)
 
@@ -117,10 +117,9 @@ func TestController_Add_Success(t *testing.T) {
 func TestController_Delete_Success(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			g := NewWithT(t)
 			name := "testdelete"
-			dbm := &db.MockSets{Metas: []db.Meta{{Name: name}}}
+			dbm := &storage.MockSets{Metas: []storage.Meta{{Name: name}}}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -131,7 +130,7 @@ func TestController_Delete_Success(t *testing.T) {
 			run(uut, ctx)
 
 			_delete(uut, ctx, name)
-			//uut.StartReconciliation(ctx)
+			// uut.StartReconciliation(ctx)
 			uut.MethodByName("StartReconciliation").Call([]reflect.Value{reflect.ValueOf(ctx)})
 
 			// Test idempotency
@@ -157,7 +156,7 @@ func TestController_GC_Success(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockSets{}
+			dbm := &storage.MockSets{}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -166,7 +165,7 @@ func TestController_GC_Success(t *testing.T) {
 			noGCName := "shouldNotGC"
 			var gcSeqNo int64 = 7
 			var gcPrimaryTerm int64 = 8
-			dbm.Metas = append(dbm.Metas, db.Meta{Name: gcName, SeqNo: &gcSeqNo, PrimaryTerm: &gcPrimaryTerm})
+			dbm.Metas = append(dbm.Metas, storage.Meta{Name: gcName, SeqNo: &gcSeqNo, PrimaryTerm: &gcPrimaryTerm})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -195,7 +194,7 @@ func TestController_Update_Success(t *testing.T) {
 			name := "test"
 			var seqNo int64 = 11
 			var primaryTerm int64 = 12
-			dbm := &db.MockSets{Metas: []db.Meta{{Name: name, SeqNo: &seqNo, PrimaryTerm: &primaryTerm}}}
+			dbm := &storage.MockSets{Metas: []storage.Meta{{Name: name, SeqNo: &seqNo, PrimaryTerm: &primaryTerm}}}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -229,7 +228,7 @@ func TestController_Reconcile_FailToList(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockSets{Error: errors.New("test")}
+			dbm := &storage.MockSets{Error: errors.New("test")}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -264,7 +263,7 @@ func TestController_Add_FailToPut(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockSets{PutError: errors.New("test")}
+			dbm := &storage.MockSets{PutError: errors.New("test")}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -313,7 +312,7 @@ func TestController_GC_NotFound(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockSets{DeleteError: &elastic.Error{Status: http.StatusNotFound}}
+			dbm := &storage.MockSets{DeleteError: &elastic.Error{Status: http.StatusNotFound}}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -321,7 +320,7 @@ func TestController_GC_NotFound(t *testing.T) {
 			gcName := "shouldGC"
 			var gcSeqNo int64 = 7
 			var gcPrimaryTerm int64 = 8
-			dbm.Metas = append(dbm.Metas, db.Meta{Name: gcName, SeqNo: &gcSeqNo, PrimaryTerm: &gcPrimaryTerm})
+			dbm.Metas = append(dbm.Metas, storage.Meta{Name: gcName, SeqNo: &gcSeqNo, PrimaryTerm: &gcPrimaryTerm})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -351,7 +350,7 @@ func TestController_GC_Error(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockSets{DeleteError: errors.New("test")}
+			dbm := &storage.MockSets{DeleteError: errors.New("test")}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -359,7 +358,7 @@ func TestController_GC_Error(t *testing.T) {
 			gcName := "shouldGC"
 			var gcSeqNo int64 = 7
 			var gcPrimaryTerm int64 = 8
-			dbm.Metas = append(dbm.Metas, db.Meta{Name: gcName, SeqNo: &gcSeqNo, PrimaryTerm: &gcPrimaryTerm})
+			dbm.Metas = append(dbm.Metas, storage.Meta{Name: gcName, SeqNo: &gcSeqNo, PrimaryTerm: &gcPrimaryTerm})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -388,7 +387,7 @@ func TestController_GC_Error(t *testing.T) {
 func TestController_NewTicker(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			dbm := &db.MockSets{}
+			dbm := &storage.MockSets{}
 			uut := tc.makeUUT(dbm)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -428,7 +427,7 @@ func (m *mockTicker) reconcile(t *testing.T, ctx context.Context) {
 	}
 }
 
-func countMethod(client *db.MockSets, method string) func() int {
+func countMethod(client *storage.MockSets, method string) func() int {
 	return func() int {
 		n := 0
 		for _, c := range client.Calls() {

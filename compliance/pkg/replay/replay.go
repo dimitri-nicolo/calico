@@ -9,12 +9,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/event"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-	api "github.com/projectcalico/calico/lma/pkg/api"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 type replayer struct {
@@ -152,8 +153,8 @@ func (r *replayer) replay(ctx context.Context, from, to *time.Time, notifyUpdate
 		id := resources.GetResourceID(res)
 		update := syncer.Update{ResourceID: id, Resource: res}
 		clog = clog.WithFields(log.Fields{"resID": id, "kind": kind})
-		switch ev.Event.Verb {
-		case api.EventVerbCreate, api.EventVerbUpdate, api.EventVerbPatch:
+		switch v1.Verb(ev.Event.Verb) {
+		case v1.Create, v1.Update, v1.Patch:
 			clog.Debug("Set event")
 			update.Type = syncer.UpdateTypeSet
 
@@ -177,7 +178,7 @@ func (r *replayer) replay(ctx context.Context, from, to *time.Time, notifyUpdate
 				}
 			}
 			resMap[id] = res
-		case api.EventVerbDelete:
+		case v1.Delete:
 			clog.Debug("Delete event")
 
 			// Delete events will not actually contain the resource, so fix up the update from the cached value.

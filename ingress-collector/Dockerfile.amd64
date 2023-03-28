@@ -1,0 +1,5 @@
+FROM scratch
+
+COPY bin/ingress-collector-amd64 /ingress-collector
+
+CMD ["/ingress-collector"]

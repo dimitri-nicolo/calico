@@ -12,12 +12,14 @@ import (
 
 	"k8s.io/klog"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/compliance/pkg/snapshot"
 	"github.com/projectcalico/calico/compliance/pkg/version"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 const (
@@ -63,8 +65,19 @@ func main() {
 		h.Report(healthReporterName, &health.HealthReport{Live: healthy})
 	}
 
-	// Init elastic.
-	elasticClient := elastic.MustGetElasticClient()
+	// Create a linseed client.
+	config := rest.Config{
+		URL:             cfg.LinseedURL,
+		CACertPath:      cfg.LinseedCA,
+		ClientKeyPath:   cfg.LinseedClientKey,
+		ClientCertPath:  cfg.LinseedClientCert,
+		FIPSModeEnabled: cfg.FIPSModeEnabled,
+	}
+	linseed, err := client.NewClient(cfg.Tenant, config)
+	if err != nil {
+		log.WithError(err).Fatal("failed to create linseed client")
+	}
+	store := api.NewComplianceStore(linseed, cfg.Cluster)
 
 	// Create clientset.
 	datastoreClient := datastore.MustGetClientSet()
@@ -84,7 +97,7 @@ func main() {
 	}()
 
 	// Run snapshotter.
-	if err := snapshot.Run(cxt, cfg, datastoreClient, elasticClient, healthy); err != nil {
+	if err := snapshot.Run(cxt, cfg, datastoreClient, store, healthy); err != nil {
 		log.WithError(err).Error("Hit terminating error")
 	}
 }

@@ -15,16 +15,14 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/list"
-	"github.com/projectcalico/calico/lma/pkg/api"
 	lmalist "github.com/projectcalico/calico/lma/pkg/list"
 )
 
-var (
-	// Use a fixed "now" to prevent crossing over into the next hour mid-test.
-	now = time.Now()
-)
+// Use a fixed "now" to prevent crossing over into the next hour mid-test.
+var now = time.Now()
 
 var _ = Describe("Snapshot", func() {
 	var (

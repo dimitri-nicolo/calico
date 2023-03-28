@@ -1,0 +1,93 @@
+include ../metadata.mk
+
+PACKAGE_NAME ?= github.com/projectcalico/calico/ingress-collector
+
+INGRESS_COLLECTOR_IMAGE ?=ingress-collector
+BUILD_IMAGES            ?=$(INGRESS_COLLECTOR_IMAGE)
+
+##############################################################################
+# Include ../lib.Makefile before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+include ../lib.Makefile
+
+##############################################################################
+# Build
+##############################################################################
+LDFLAGS=-X main.VERSION=$(GIT_VERSION) \
+	-X main.BUILD_DATE=$(DATE) \
+	-X main.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
+	-X main.GIT_REVISION=$(GIT_COMMIT)
+
+SRC_FILES=$(shell find cmd pkg -name '*.go') \
+	$(shell find ../felix/proto -name '*.go') \
+	$(shell find ../libcalico-go/lib -name '*.go')
+
+.PHONY: build
+build: bin/ingress-collector-$(ARCH)
+bin/ingress-collector-$(ARCH): $(SRC_FILES)
+	$(call build_static_cgo_boring_binary, ./cmd/ingress-collector, $@)
+
+##############################################################################
+# Image
+##############################################################################
+INGRESS_COLLECTOR_IMAGE_CREATED=.ingress-collector.created-$(ARCH)
+
+.PHONY: image-all
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
+sub-image-%:
+	$(MAKE) image ARCH=$*
+
+.PHONY: image
+image: $(INGRESS_COLLECTOR_IMAGE)
+
+$(INGRESS_COLLECTOR_IMAGE): $(INGRESS_COLLECTOR_IMAGE_CREATED)
+$(INGRESS_COLLECTOR_IMAGE_CREATED): Dockerfile.$(ARCH) bin/ingress-collector-$(ARCH)
+	$(DOCKER_BUILD) -t $(INGRESS_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	touch $@
+
+##############################################################################
+# Clean
+##############################################################################
+.PHONY: clean
+## Clean enough that a new release build will be clean
+clean:
+	rm -fr bin
+	rm -f $(INGRESS_COLLECTOR_IMAGE_CREATED)
+	-docker image rm -f $$(docker images $(INGRESS_COLLECTOR_IMAGE) -a -q)
+
+###############################################################################
+# UTs
+###############################################################################
+WHAT?=.
+GINKGO_FOCUS?=.*
+
+.PHONY: ut
+ut:
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r --skipPackage fv -focus=$(GINKGO_FOCUS) $(GINKGO_ARGS) $(WHAT)'
+
+.PHONY: fv
+fv:
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r -focus=$(GINKGO_FOCUS) $(GINKGO_ARGS) $(WHAT)'
+
+###############################################################################
+# CI
+###############################################################################
+.PHONY: ci
+## Run what CI runs
+ci:
+	# Force ci to always run a clean before running other targets.
+	# This is intentional so that irrespective of where ci is being run from
+	# the ci target will always run a clean.
+	# This change should be reverted when common Makefile runs the ci target
+	# in a way that always runs the "clean" target.
+	$(MAKE) clean static-checks ut fv
+
+###############################################################################
+# CD
+###############################################################################
+.PHONY: cd
+## Deploys images to registry
+cd: image-all cd-common

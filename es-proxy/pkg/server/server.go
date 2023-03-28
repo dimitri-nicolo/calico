@@ -53,7 +53,7 @@ const (
 	eventsResourceName    = "events"
 	flowLogsResourceName  = "flows"
 	l7ResourceName        = "l7"
-	auditLogsResourceName = "audit"
+	auditLogsResourceName = "audit*"
 )
 
 func Start(cfg *Config) error {
@@ -114,7 +114,7 @@ func Start(cfg *Config) error {
 		ClientCertPath:  cfg.LinseedClientCert,
 		FIPSModeEnabled: cfg.FIPSModeEnabled,
 	}
-	linseed, err := lsclient.NewClient("", config)
+	linseed, err := lsclient.NewClient(cfg.ElasticIndexTenantID, config)
 	if err != nil {
 		log.WithError(err).Error("failed to create linseed client")
 		return err

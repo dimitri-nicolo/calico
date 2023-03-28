@@ -18,10 +18,11 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	. "github.com/projectcalico/calico/compliance/pkg/replay"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-	"github.com/projectcalico/calico/lma/pkg/api"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
@@ -305,7 +306,7 @@ var _ = Describe("Replay namespace deletion", func() {
 			createAuditEventChannel(&api.AuditEventResult{
 				Event: &auditv1.Event{
 					Stage: auditv1.StageResponseComplete,
-					Verb:  api.EventVerbDelete,
+					Verb:  string(v1.Delete),
 					ObjectRef: &auditv1.ObjectReference{
 						Resource:        "namespaces",
 						Name:            namespace1,
@@ -342,7 +343,7 @@ var _ = Describe("Replay namespace deletion", func() {
 			createAuditEventChannel(&api.AuditEventResult{
 				Event: &auditv1.Event{
 					Stage: auditv1.StageResponseComplete,
-					Verb:  api.EventVerbDelete,
+					Verb:  string(v1.Delete),
 					ObjectRef: &auditv1.ObjectReference{
 						Resource:        "namespaces",
 						Name:            namespace1,
@@ -376,8 +377,10 @@ var _ = Describe("Replay namespace deletion", func() {
 			}
 		})
 
-		updatedResourceList := []resources.Resource{&gnp1, &sgnp1, &gns1, &tier1, &hep1, &netset1, &np1, &snp1, &np2, &knp1, &sknp1,
-			&knp2, &ep1, &ep2, &pod1, &pod2, &sa1, &sa2, &ns1, &ns2}
+		updatedResourceList := []resources.Resource{
+			&gnp1, &sgnp1, &gns1, &tier1, &hep1, &netset1, &np1, &snp1, &np2, &knp1, &sknp1,
+			&knp2, &ep1, &ep2, &pod1, &pod2, &sa1, &sa2, &ns1, &ns2,
+		}
 		for _, resource := range updatedResourceList {
 			mockSyncerCallbacks.On("OnUpdates", []syncer.Update{{Type: syncer.UpdateTypeSet, ResourceID: resources.GetResourceID(resource), Resource: resource}})
 		}
