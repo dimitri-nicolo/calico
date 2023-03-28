@@ -66,7 +66,7 @@ func (r ExternalNetworks) validate(ctx context.Context, new *apiv3.ExternalNetwo
 				ErroredFields: []cerrors.ErroredField{{
 					Name:   "ExternalNetwork.Spec.RouteTableIndex",
 					Reason: "RouteTableIndex conflicts with an existing value",
-					Value:  new.Spec.RouteTableIndex,
+					Value:  *new.Spec.RouteTableIndex,
 				}},
 			}
 		}
