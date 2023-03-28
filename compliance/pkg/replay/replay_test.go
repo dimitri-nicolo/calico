@@ -20,10 +20,11 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/replay"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
-	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
@@ -47,7 +48,7 @@ var _ = Describe("Replay", func() {
 	var (
 		ctx = context.Background()
 
-		baseTime            = time.Date(2019, 4, 3, 20, 01, 0, 0, time.UTC)
+		baseTime            = time.Date(2019, 4, 3, 20, 0o1, 0, 0, time.UTC)
 		mockListDestination *api.MockListDestination
 		mockEventFetcher    *api.MockReportEventFetcher
 		mockSyncerCallbacks *syncer.MockSyncerCallbacks
@@ -108,9 +109,9 @@ var _ = Describe("Replay", func() {
 		npUpdate3.TypeMeta = resources.TypeCalicoNetworkPolicies
 		npUpdate3.Spec.Selector = `foo == "blah"`
 
-		auditEvent1 := newAuditEvent(api.EventVerbUpdate, audit.StageResponseComplete, &npUpdate1, &npUpdate1, baseTime.Add(30*time.Second), "101")
-		auditEvent2 := newAuditEvent(api.EventVerbUpdate, audit.StageResponseComplete, &npUpdate2, &npUpdate2, baseTime.Add(75*time.Second), "102")
-		auditEvent3 := newAuditEvent(api.EventVerbUpdate, audit.StageResponseComplete, &npUpdate3, &npUpdate3, baseTime.Add(90*time.Second), "100")
+		auditEvent1 := newAuditEvent(v1.Update, audit.StageResponseComplete, &npUpdate1, &npUpdate1, baseTime.Add(30*time.Second), "101")
+		auditEvent2 := newAuditEvent(v1.Update, audit.StageResponseComplete, &npUpdate2, &npUpdate2, baseTime.Add(75*time.Second), "102")
+		auditEvent3 := newAuditEvent(v1.Update, audit.StageResponseComplete, &npUpdate3, &npUpdate3, baseTime.Add(90*time.Second), "100")
 
 		By("Mocking the first GetAuditEvents to send just auditEvent1")
 		mockEventFetcher.On("GetAuditEvents", mock.Anything, mock.Anything, mock.Anything).Return(
@@ -141,7 +142,7 @@ var _ = Describe("Replay", func() {
 			mockListDestination.On("RetrieveList", helper.TypeMeta(), mock.Anything, mock.Anything, mock.Anything).Return(tResList, nil)
 		}
 
-		auditEvent := newAuditEvent(api.EventVerbCreate, audit.StageResponseComplete, np,
+		auditEvent := newAuditEvent(v1.Create, audit.StageResponseComplete, np,
 			&metav1.Status{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Status"}},
 			baseTime.Add(30*time.Second), "100")
 
@@ -169,7 +170,7 @@ var _ = Describe("Replay", func() {
 			mockListDestination.On("RetrieveList", helper.TypeMeta(), mock.Anything, mock.Anything, mock.Anything).Return(tResList, nil)
 		}
 
-		auditEvent := newAuditEvent(api.EventVerbUpdate, audit.StageResponseStarted, np, nil, baseTime.Add(75*time.Second), "102")
+		auditEvent := newAuditEvent(v1.Update, audit.StageResponseStarted, np, nil, baseTime.Add(75*time.Second), "102")
 		mockEventFetcher.On("GetAuditEvents", mock.Anything, mock.Anything, mock.Anything).Return(
 			createAuditEventChannel(auditEvent)).Once()
 		mockEventFetcher.On("GetAuditEvents", mock.Anything, mock.Anything, mock.Anything).Return(
@@ -194,14 +195,14 @@ func createAuditEventChannel(events ...*api.AuditEventResult) <-chan *api.AuditE
 	return auditChan
 }
 
-func newAuditEvent(verb string, stage auditv1.Stage, objRef resources.Resource, respObj interface{}, timestamp time.Time, resVer string) *api.AuditEventResult {
+func newAuditEvent(verb v1.Verb, stage auditv1.Stage, objRef resources.Resource, respObj interface{}, timestamp time.Time, resVer string) *api.AuditEventResult {
 	// Get the resource helper.
 	tm := resources.GetTypeMeta(objRef)
 	rh := resources.GetResourceHelperByTypeMeta(tm)
 
 	// Create the audit event.
 	ev := &auditv1.Event{
-		Verb:  verb,
+		Verb:  string(verb),
 		Stage: stage,
 		ObjectRef: &auditv1.ObjectReference{
 			Name:       objRef.GetObjectMeta().GetName(),

@@ -13,8 +13,6 @@ build: ut
 
 # Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
 MOCKERY_FILE_PATHS= \
-	pkg/api/ListDestination \
-	pkg/api/ReportEventFetcher \
 	pkg/auth/JWTAuth \
 	pkg/auth/RBACAuthorizer \
 	pkg/elastic/Client \

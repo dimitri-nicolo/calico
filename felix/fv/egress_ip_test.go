@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -281,6 +281,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		topologyOptions.ExtraEnvVars["FELIX_EGRESSIPSUPPORT"] = supportLevel
 		topologyOptions.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		topologyOptions.ExtraEnvVars["FELIX_EGRESSIPVXLANPORT"] = "4790"
+		// IPv6 is not supported in egress gateways
+		topologyOptions.EnableIPv6 = false
 		if overlay == OV_VXLAN {
 			topologyOptions.VXLANMode = api.VXLANModeAlways
 		}

@@ -11,9 +11,9 @@ import (
 
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	api "github.com/projectcalico/calico/lma/pkg/api"
-
 	log "github.com/sirupsen/logrus"
+
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 // LogDispatcher is the external interface for dispatchers. For now there is only the file dispatcher.
@@ -51,7 +51,7 @@ func (d *fileDispatcher) Initialize() error {
 	// Create the log directory before creating the logger.  If the logger creates it, it will do so
 	// with permission 0744, meaning that non-root users won't be able to "see" files in the
 	// directory, since "execute" permission on a directory needs to be granted.
-	err := os.MkdirAll(d.directory, 0755)
+	err := os.MkdirAll(d.directory, 0o755)
 	if err != nil {
 		return fmt.Errorf("can't make directories for new logfile: %s", err)
 	}
@@ -64,7 +64,7 @@ func (d *fileDispatcher) Initialize() error {
 }
 
 // Dispatch serializes and writes the given data. It must be a valid type of data (currently only
-// ArchivedReportData is allowed).
+// ReportData is allowed).
 func (d *fileDispatcher) Dispatch(data interface{}) error {
 	writeLog := func(b []byte) error {
 		b = append(b, '\n')
@@ -78,7 +78,7 @@ func (d *fileDispatcher) Dispatch(data interface{}) error {
 		return nil
 	}
 	switch d := data.(type) {
-	case api.ArchivedReportData:
+	case v1.ReportData:
 		log.Debug("Dispatching report data to file")
 		b, err := json.Marshal(d)
 		if err != nil {

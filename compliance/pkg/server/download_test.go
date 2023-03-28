@@ -14,43 +14,40 @@ import (
 
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var _ = Describe("Download tests", func() {
 	var mockClientSetFactory *datastore.MockClusterCtxK8sClientFactory
-	var mockESFactory *elastic.MockClusterContextClientFactory
-
+	var mockFactory *api.MockStoreFactory
 	var mockAuthenticator *lmaauth.MockJWTAuth
 	var mockRBACAuthorizer *lmaauth.MockRBACAuthorizer
-	var mockESClient *elastic.MockClient
+	var mockStore *api.MockComplianceStore
 
 	BeforeEach(func() {
 		mockClientSetFactory = new(datastore.MockClusterCtxK8sClientFactory)
-		mockESFactory = new(elastic.MockClusterContextClientFactory)
-
+		mockFactory = new(api.MockStoreFactory)
 		mockAuthenticator = new(lmaauth.MockJWTAuth)
 		mockRBACAuthorizer = new(lmaauth.MockRBACAuthorizer)
-		mockESClient = new(elastic.MockClient)
-
+		mockStore = new(api.MockComplianceStore)
 		mockAuthenticator.On("Authenticate", mock.Anything).Return(&user.DefaultInfo{}, 0, nil)
 	})
 
 	AfterEach(func() {
 		mockClientSetFactory.AssertExpectations(GinkgoT())
-		mockESFactory.AssertExpectations(GinkgoT())
+		mockFactory.AssertExpectations(GinkgoT())
 		mockAuthenticator.AssertExpectations(GinkgoT())
 		mockRBACAuthorizer.AssertExpectations(GinkgoT())
-		mockESClient.AssertExpectations(GinkgoT())
+		mockStore.AssertExpectations(GinkgoT())
 	})
 
 	DescribeTable(
 		"Authorized Report Downloads",
 		func(id string, expStatus int, forecasts []forecastFile, authorizedAttrs []*authzv1.ResourceAttributes) {
 			By("Starting a test server")
-			t := startTester(mockClientSetFactory, mockESFactory, mockAuthenticator)
+			t := startTester(mockClientSetFactory, mockFactory, mockAuthenticator)
 			defer t.stop()
 
 			for _, authorizedAttr := range authorizedAttrs {
@@ -59,8 +56,8 @@ var _ = Describe("Download tests", func() {
 
 			mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
 
-			mockESClient.On("RetrieveArchivedReport", mock.Anything).Return(reportGetTypeGet, nil)
-			mockESFactory.On("ClientForCluster", mock.Anything).Return(mockESClient, nil)
+			mockStore.On("RetrieveArchivedReport", mock.Anything, mock.Anything).Return(reportGetTypeGet, nil)
+			mockFactory.On("NewStore", mock.Anything).Return(mockStore, nil)
 
 			calicoCli := fake.NewSimpleClientset(&reportTypeGettable, &reportTypeNotGettable)
 			mockClientSetFactory.On("ClientSetForCluster", mock.Anything).Return(datastore.NewClientSet(nil, calicoCli.ProjectcalicoV3()), nil)
@@ -94,7 +91,7 @@ var _ = Describe("Download tests", func() {
 		"Unauthorized Report Downloads",
 		func(id string, expStatus int, forecasts []forecastFile, authorizedAttrs, unAuthorizedAttrs []*authzv1.ResourceAttributes) {
 			By("Starting a test server")
-			t := startTester(mockClientSetFactory, mockESFactory, mockAuthenticator)
+			t := startTester(mockClientSetFactory, mockFactory, mockAuthenticator)
 			defer t.stop()
 
 			for _, attr := range authorizedAttrs {

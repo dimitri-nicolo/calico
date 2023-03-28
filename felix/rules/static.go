@@ -46,6 +46,13 @@ const (
 	PortIKE     = 500
 )
 
+const (
+	DNSActionPrefix = "DNS"
+
+	// match the size of the conntrack rules for DNS policies expect
+	DNSNFlogExpectedPacketSize = 1024
+)
+
 func (r *DefaultRuleRenderer) tproxyInputPolicyRules(ipVersion uint8) []Rule {
 	rules := []Rule{}
 
@@ -863,11 +870,11 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 						ConntrackOrigDst(server.IP),
 					Action: NflogAction{
 						Group:  NFLOGDomainGroup,
-						Prefix: "DNS",
+						Prefix: DNSActionPrefix,
 						// Traditional DNS over UDP has a maximum size of 512 bytes,
 						// but we need to allow for headers as well (Ethernet, IP
-						// and UDP); 1024 will amply cover what we need.
-						Size: 1024,
+						// and UDP); DNSNflogExpectedPacketSize will amply cover what we need.
+						Size: DNSNFlogExpectedPacketSize,
 					},
 				},
 			)
@@ -902,11 +909,11 @@ func (r *DefaultRuleRenderer) dnsRequestSnoopingRules(ifaceMatch string, ipVersi
 					ConntrackOrigDst(server.IP),
 				Action: NflogAction{
 					Group:  NFLOGDomainGroup,
-					Prefix: "DNS",
+					Prefix: DNSActionPrefix,
 					// Traditional DNS over UDP has a maximum size of 512 bytes,
 					// but we need to allow for headers as well (Ethernet, IP
-					// and UDP); 1024 will amply cover what we need.
-					Size: 1024,
+					// and UDP); DNSNflogExpectedPacketSize will amply cover what we need.
+					Size: DNSNFlogExpectedPacketSize,
 				},
 			},
 		)
@@ -1712,13 +1719,15 @@ func (r *DefaultRuleRenderer) StaticManglePostroutingChain(ipVersion uint8) *Cha
 }
 
 func (r *DefaultRuleRenderer) StaticRawTableChains(ipVersion uint8) []*Chain {
-	return []*Chain{
+	staticRawChains := []*Chain{
 		r.failsafeInChain("raw", ipVersion),
 		r.failsafeOutChain("raw", ipVersion),
-		r.StaticRawPreroutingChain(ipVersion),
+		r.StaticRawPreroutingChain(ipVersion, nil),
 		r.WireguardIncomingMarkChain(),
-		r.StaticRawOutputChain(0),
+		r.StaticRawOutputChain(0, nil),
 	}
+
+	return staticRawChains
 }
 
 func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8,
@@ -1829,13 +1838,13 @@ func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8,
 
 	if ipVersion == 4 {
 		chains = append(chains,
-			r.StaticRawOutputChain(tcdefs.MarkSeenBypass))
+			r.StaticRawOutputChain(tcdefs.MarkSeenBypass, nil))
 	}
 
 	return chains
 }
 
-func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8) *Chain {
+func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8, nodeLocalDNSAddrs []config.ServerPort) *Chain {
 	rules := []Rule{}
 
 	// For safety, clear all our mark bits before we start.  (We could be in append mode and
@@ -1843,6 +1852,11 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8) *Chain {
 	rules = append(rules,
 		Rule{Action: ClearMarkAction{Mark: r.allCalicoMarkBits()}},
 	)
+
+	if len(nodeLocalDNSAddrs) > 0 {
+		log.Debug("Adding nodelocaldns iptables rule to cali-PREROUTING")
+		rules = append(rules, r.nodeLocalDNSPreRoutingRules(nodeLocalDNSAddrs)...)
+	}
 
 	// Set a mark on encapsulated packets coming from WireGuard to ensure the RPF check allows it
 	if ((r.WireguardEnabled && len(r.WireguardInterfaceName) > 0) || (r.WireguardEnabledV6 && len(r.WireguardInterfaceNameV6) > 0)) && r.Config.WireguardEncryptHostTraffic {
@@ -2004,7 +2018,40 @@ func (r *DefaultRuleRenderer) WireguardIncomingMarkChain() *Chain {
 	}
 }
 
-func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32) *Chain {
+func (r *DefaultRuleRenderer) nodeLocalDNSPreRoutingRules(nodeLocalDNSAddrs []config.ServerPort) []Rule {
+	rules := []Rule{}
+
+	for _, server := range nodeLocalDNSAddrs {
+		dnsLocalIPRule := []Rule{
+			{
+				Match: Match().Protocol("udp").
+					DestPorts(server.Port).
+					DestNet(server.IP),
+				Action: NflogAction{
+					Group:  NFLOGDomainGroup,
+					Prefix: DNSActionPrefix,
+					Size:   DNSNFlogExpectedPacketSize,
+				},
+			},
+			{
+				Match: Match().Protocol("tcp").
+					DestPorts(server.Port).
+					DestNet(server.IP),
+				Action: NflogAction{
+					Group:  NFLOGDomainGroup,
+					Prefix: DNSActionPrefix,
+					Size:   DNSNFlogExpectedPacketSize,
+				},
+			},
+		}
+
+		rules = append(rules, dnsLocalIPRule...)
+	}
+
+	return rules
+}
+
+func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32, nodeLocalDNSAddrs []config.ServerPort) *Chain {
 	rules := []Rule{
 		// For safety, clear all our mark bits before we start.  (We could be in
 		// append mode and another process' rules could have left the mark bit set.)
@@ -2015,6 +2062,12 @@ func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32) *Chain {
 		// return here without the mark bit set if the interface wasn't one that
 		// we're policing.
 	}
+
+	if len(nodeLocalDNSAddrs) > 0 {
+		log.Debug("Adding nodelocaldns iptables rule to cali-OUTPUT")
+		rules = append(rules, r.nodeLocalDNSOutputRules(nodeLocalDNSAddrs)...)
+	}
+
 	if tcBypassMark == 0 {
 		rules = append(rules, []Rule{
 			{
@@ -2034,10 +2087,44 @@ func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32) *Chain {
 			},
 		}...)
 	}
+
 	return &Chain{
 		Name:  ChainRawOutput,
 		Rules: rules,
 	}
+}
+
+func (r *DefaultRuleRenderer) nodeLocalDNSOutputRules(nodeLocalDNSAddrs []config.ServerPort) []Rule {
+	rules := []Rule{}
+	for _, server := range nodeLocalDNSAddrs {
+		dnsLocalIPRule := []Rule{
+			{
+				Match: Match().Protocol("udp").
+					SourcePorts(server.Port).
+					SourceNet(server.IP),
+				Action: NflogAction{
+					Group:  NFLOGDomainGroup,
+					Prefix: DNSActionPrefix,
+					Size:   DNSNFlogExpectedPacketSize,
+				},
+			},
+			{
+				Match: Match().Protocol("tcp").
+					SourcePorts(server.Port).
+					SourceNet(server.IP),
+				Action: NflogAction{
+					Group:  NFLOGDomainGroup,
+					Prefix: DNSActionPrefix,
+					Size:   DNSNFlogExpectedPacketSize,
+				},
+			},
+		}
+
+		rules = append(rules, dnsLocalIPRule...)
+	}
+
+	return rules
+
 }
 
 // DropRules combines the matchCritera and comments given in the function parameters to the drop rules calculated when

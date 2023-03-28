@@ -17,6 +17,7 @@ package rules_test
 import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/felix/rules"
 	. "github.com/projectcalico/calico/felix/rules"
 
 	"fmt"
@@ -1831,6 +1832,96 @@ var _ = Describe("Static", func() {
 				})
 			})
 		}
+	})
+
+	Describe("with nodelocaldnscache enabled", func() {
+		testNodelocalDNSBroadcastedIPs := []config.ServerPort{
+			{IP: "10.96.0.10", Port: uint16(53)},
+			{IP: "169.254.0.10", Port: uint16(53)},
+		}
+		BeforeEach(func() {
+			conf = Config{
+				WorkloadIfacePrefixes:            []string{"cali"},
+				IPIPEnabled:                      true,
+				IPIPTunnelAddress:                net.ParseIP("10.0.0.1"),
+				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
+				DNSPolicyNfqueueID:               100,
+				DNSPacketsNfqueueID:              101,
+				IptablesMarkAccept:               0x10,
+				IptablesMarkPass:                 0x20,
+				IptablesMarkScratch0:             0x40,
+				IptablesMarkScratch1:             0x80,
+				IptablesMarkEgress:               0x400,
+				IptablesMarkEndpoint:             0xff000,
+				IptablesMarkNonCaliEndpoint:      0x1000,
+				IptablesMarkDNSPolicy:            0x00001,
+				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+				IptablesMarkDrop:                 0x200,
+			}
+		})
+
+		It("should include the expected NFLOG rules in the raw output chains", func() {
+			caliRawPreRoutingChain := rr.StaticRawOutputChain(4, testNodelocalDNSBroadcastedIPs)
+			for _, serverPort := range testNodelocalDNSBroadcastedIPs {
+				Expect(caliRawPreRoutingChain.Rules).To(ContainElement(
+					Rule{
+						Match: Match().Protocol("udp").
+							SourcePorts(serverPort.Port).
+							SourceNet(serverPort.IP),
+						Action: NflogAction{
+							Group:  rules.NFLOGDomainGroup,
+							Prefix: rules.DNSActionPrefix,
+							Size:   rules.DNSNFlogExpectedPacketSize,
+						},
+					},
+				))
+				Expect(caliRawPreRoutingChain.Rules).To(ContainElement(
+					Rule{
+						Match: Match().Protocol("tcp").
+							SourcePorts(serverPort.Port).
+							SourceNet(serverPort.IP),
+						Action: NflogAction{
+							Group:  rules.NFLOGDomainGroup,
+							Prefix: rules.DNSActionPrefix,
+							Size:   rules.DNSNFlogExpectedPacketSize,
+						},
+					},
+				))
+			}
+		})
+
+		It("should include the expected NFLOG rules in the raw prerouting chains", func() {
+			caliRawOutputChain := rr.StaticRawPreroutingChain(4, testNodelocalDNSBroadcastedIPs)
+			for _, serverPort := range testNodelocalDNSBroadcastedIPs {
+				Expect(caliRawOutputChain.Rules).To(ContainElement(
+					Rule{
+						Match: Match().Protocol("udp").
+							DestPorts(serverPort.Port).
+							DestNet(serverPort.IP),
+						Action: NflogAction{
+							Group:  rules.NFLOGDomainGroup,
+							Prefix: rules.DNSActionPrefix,
+							Size:   rules.DNSNFlogExpectedPacketSize,
+						},
+					},
+				))
+				Expect(caliRawOutputChain.Rules).To(ContainElement(
+					Rule{
+						Match: Match().Protocol("tcp").
+							DestPorts(serverPort.Port).
+							DestNet(serverPort.IP),
+						Action: NflogAction{
+							Group:  rules.NFLOGDomainGroup,
+							Prefix: rules.DNSActionPrefix,
+							Size:   rules.DNSNFlogExpectedPacketSize,
+						},
+					},
+				))
+			}
+		})
+
 	})
 
 	Describe("with drop override and multiple prefixes", func() {

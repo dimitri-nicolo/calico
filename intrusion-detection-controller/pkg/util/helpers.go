@@ -4,6 +4,7 @@ package util
 
 import (
 	"fmt"
+	"net"
 )
 
 func Sptr(s string) *string {
@@ -46,4 +47,18 @@ func BoolPtr(b bool) *bool {
 func UintPtr(i uint) *uint {
 	iCopy := i
 	return &iCopy
+}
+
+func StrPtr(ip *net.IP) *string {
+	if ip == nil {
+		return nil
+	}
+
+	val := ip.String()
+	return &val
+}
+
+func IPPtr(s string) *net.IP {
+	val := net.ParseIP(s)
+	return &val
 }

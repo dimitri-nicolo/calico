@@ -12,10 +12,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
+
 	"github.com/avast/retry-go"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/runloop"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 )
@@ -187,18 +188,18 @@ type eventForwarder struct {
 	ctx    context.Context
 
 	// Provides access to retrieve events from the source data store
-	events db.Events
+	events storage.Events
 
 	// Writes data obtained by the forwarder to logs that will be taken to its final destination
 	dispatcher LogDispatcher
 
 	// Maintain state on forwarding process over time.
-	config *db.ForwarderConfig
+	config *storage.ForwarderConfig
 }
 
 // NewEventForwarder sets up a new log forwarder instance and returns it.
 // Note: Log forwarder does not currently support concurrency of multiple instances.
-func NewEventForwarder(uid string, events db.Events) EventForwarder {
+func NewEventForwarder(uid string, events storage.Events) EventForwarder {
 	log.WithFields(log.Fields{
 		"exportLogsDirectory":     settings.exportLogsDirectory,
 		"exportLogsMaxFileSizeMB": settings.exportLogsMaxFileSizeMB,
@@ -300,7 +301,7 @@ func (f *eventForwarder) Run(ctx context.Context) {
 						// from our setttings).
 						start = time.Now().Add(-settings.pollingTimeRange)
 						// Start with a blank slate for config
-						f.config = &db.ForwarderConfig{}
+						f.config = &storage.ForwarderConfig{}
 						l.Debugf("No config detected for forwarder, start from time [%v]", start)
 					}
 				}

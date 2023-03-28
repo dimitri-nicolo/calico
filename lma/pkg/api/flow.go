@@ -17,7 +17,6 @@ const (
 )
 
 const (
-	FlowLogGlobalNamespace        = "-"
 	FlowLogEndpointTypeInvalid    = ""
 	FlowLogEndpointTypeWEP        = "wep"
 	FlowLogEndpointTypeHEP        = "hep"

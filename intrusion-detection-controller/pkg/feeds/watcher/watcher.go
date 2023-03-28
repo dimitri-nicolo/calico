@@ -18,12 +18,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/puller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/searcher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -50,11 +50,11 @@ type watcher struct {
 	ipsController          controller.Controller
 	dnsController          controller.Controller
 	httpClient             *http.Client
-	ipSet                  db.IPSet
-	dnSet                  db.DomainNameSet
-	suspiciousIP           db.SuspiciousSet
-	suspiciousDomains      db.SuspiciousSet
-	events                 db.Events
+	ipSet                  storage.IPSet
+	dnSet                  storage.DomainNameSet
+	suspiciousIP           storage.SuspiciousSet
+	suspiciousDomains      storage.SuspiciousSet
+	events                 storage.Events
 	feedWatchers           map[string]*feedWatcher
 	feedWatchersMutex      sync.RWMutex
 	cancel                 context.CancelFunc
@@ -87,11 +87,11 @@ func NewWatcher(
 	ipsController controller.Controller,
 	dnsController controller.Controller,
 	httpClient *http.Client,
-	ipSet db.IPSet,
-	dnSet db.DomainNameSet,
-	suspiciousIP db.SuspiciousSet,
-	suspiciousDomains db.SuspiciousSet,
-	events db.Events,
+	ipSet storage.IPSet,
+	dnSet storage.DomainNameSet,
+	suspiciousIP storage.SuspiciousSet,
+	suspiciousDomains storage.SuspiciousSet,
+	events storage.Events,
 ) Watcher {
 	feedWatchers := map[string]*feedWatcher{}
 
@@ -173,7 +173,6 @@ func (s *watcher) Run(ctx context.Context) {
 			s.ipsController.StartReconciliation(s.ctx)
 			s.dnsController.StartReconciliation(s.ctx)
 		}()
-
 	})
 }
 

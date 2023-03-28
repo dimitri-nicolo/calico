@@ -20,6 +20,7 @@ package controller
 import (
 	"context"
 	"sync"
+	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -30,8 +31,8 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 const (
@@ -239,7 +240,9 @@ type realArchivedReportQuery struct {
 var _ archivedReportQueryInterface = &realArchivedReportQuery{}
 
 func (c *realArchivedReportQuery) GetLastReportStartEndTime(name string) (*metav1.Time, *metav1.Time, error) {
-	ar, err := c.reportRetriever.RetrieveLastArchivedReportSummary(name)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	ar, err := c.reportRetriever.RetrieveLastArchivedReportSummary(ctx, name)
 	if err != nil {
 		return nil, nil, err
 	}

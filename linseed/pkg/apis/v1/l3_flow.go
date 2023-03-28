@@ -70,7 +70,7 @@ type L3FlowParams struct {
 	// by the provided tier.
 	// For example, return flows which are allowed by the default tier.
 	// If multiple tiers are provided, they are combined with a logical OR.
-	PolicyMatches []PolicyMatch `json:"tier_matches"`
+	PolicyMatches []PolicyMatch `json:"policy_matches"`
 
 	// Statistics will include different metrics for the L3 flows that are queried
 	// The following metrics can be extracted: connection, tcp, flow and process

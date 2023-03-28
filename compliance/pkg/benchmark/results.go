@@ -4,17 +4,17 @@ package benchmark
 import (
 	"github.com/aquasecurity/kube-bench/check"
 
-	"github.com/projectcalico/calico/lma/pkg/api"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 // TestsFromKubeBenchControls transforms the kube-bench results into the compliance benchmark structure.
-func TestsFromKubeBenchControls(ctrls []*check.Controls) []api.BenchmarkTest {
-	var tests []api.BenchmarkTest
+func TestsFromKubeBenchControls(ctrls []*check.Controls) []v1.BenchmarkTest {
+	var tests []v1.BenchmarkTest
 
 	for _, ctrl := range ctrls {
 		for _, section := range ctrl.Groups {
 			for _, c := range section.Checks {
-				test := api.BenchmarkTest{
+				test := v1.BenchmarkTest{
 					Section:     section.ID,
 					SectionDesc: section.Text,
 					TestNumber:  c.ID,

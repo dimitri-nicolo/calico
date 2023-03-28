@@ -16,21 +16,19 @@ import (
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
-var (
-	wrappedInBracketsRegexp = regexp.MustCompile(`^\[.*\]$`)
-)
+var wrappedInBracketsRegexp = regexp.MustCompile(`^\[.*\]$`)
 
 type ipSetPersistence struct {
-	d db.IPSet
+	d storage.IPSet
 	c controller.Controller
 }
 
@@ -39,7 +37,7 @@ type ipSetGNSHandler struct {
 	labels        map[string]string
 	enabled       bool
 	gnsController globalnetworksets.Controller
-	d             db.IPSet
+	d             storage.IPSet
 }
 
 type ipSetContent struct {
@@ -48,7 +46,7 @@ type ipSetContent struct {
 }
 
 func (i *ipSetContent) snapshot(r io.Reader) (interface{}, error) {
-	var snapshot db.IPSetSpec
+	var snapshot storage.IPSetSpec
 	var once sync.Once
 
 	// entry handler
@@ -60,7 +58,7 @@ func (i *ipSetContent) snapshot(r io.Reader) (interface{}, error) {
 	return snapshot, err
 }
 
-func parseIP(entry string, logContext *log.Entry, n int, once *sync.Once) db.IPSetSpec {
+func parseIP(entry string, logContext *log.Entry, n int, once *sync.Once) storage.IPSetSpec {
 	if wrappedInBracketsRegexp.MatchString(entry) {
 		entry = entry[1 : len(entry)-1]
 	}
@@ -76,7 +74,7 @@ func parseIP(entry string, logContext *log.Entry, n int, once *sync.Once) db.IPS
 			})
 			return nil
 		} else {
-			return db.IPSetSpec{ipNet.String()}
+			return storage.IPSetSpec{ipNet.String()}
 		}
 	} else {
 		ip := net.ParseIP(entry)
@@ -96,7 +94,7 @@ func parseIP(entry string, logContext *log.Entry, n int, once *sync.Once) db.IPS
 			} else {
 				ipStr = ip.String() + "/128"
 			}
-			return db.IPSetSpec{ipStr}
+			return storage.IPSetSpec{ipStr}
 		}
 	}
 }
@@ -106,7 +104,7 @@ func (i ipSetPersistence) lastModified(ctx context.Context, name string) (time.T
 }
 
 func (i ipSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
-	i.c.Add(ctx, name, snapshot.(db.IPSetSpec), f, feedCacher)
+	i.c.Add(ctx, name, snapshot.(storage.IPSetSpec), f, feedCacher)
 }
 
 func (h ipSetGNSHandler) get(ctx context.Context) (interface{}, error) {
@@ -130,7 +128,7 @@ func (h *ipSetGNSHandler) syncFromDB(ctx context.Context, feedCacher cacher.Glob
 }
 
 func (h *ipSetGNSHandler) makeGNS(snapshot interface{}) *calico.GlobalNetworkSet {
-	nets := snapshot.(db.IPSetSpec)
+	nets := snapshot.(storage.IPSetSpec)
 	gns := util.NewGlobalNetworkSet(h.name)
 	gns.Labels = make(map[string]string)
 	for k, v := range h.labels {
@@ -151,7 +149,7 @@ func (h *ipSetGNSHandler) handleSnapshot(ctx context.Context, snapshot interface
 
 func NewIPSetHTTPPuller(
 	f *calico.GlobalThreatFeed,
-	ipSet db.IPSet,
+	ipSet storage.IPSet,
 	configMapClient core.ConfigMapInterface,
 	secretsClient core.SecretInterface,
 	client *http.Client,

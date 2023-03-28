@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"time"
 
+	_ "embed"
+
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
@@ -22,13 +24,20 @@ func (c *client) EventsIndexExists(ctx context.Context) (bool, error) {
 	return c.IndexExists(alias).Do(ctx)
 }
 
+var (
+	EventsIndex = "tigera_secure_ee_events"
+
+	// TODO: Remove this once honeypod and intrusion detection have been migrated to Linseed.
+	//go:embed events_mappings.json
+	eventsMapping string
+)
+
 // CreateEventsIndex creates events index with mapping if it doesn't exist.
 // It marks the new index as write index for events index alias and marks the old index (prior to CEv3.12)
 // as read index for the alias.
 // TODO CASEY: Delete this, and update anyyone using it to just wait for the index to exist. Linseed will make it.
 func (c *client) CreateEventsIndex(ctx context.Context) error {
 	alias := c.ClusterAlias(EventsIndex)
-	oldIndex := c.ClusterIndex(EventsIndex, "")
 
 	// The index pattern used in index template should only map to the new index created by CE >= v3.12, so
 	// pass the write index name to create index template.
@@ -39,26 +48,6 @@ func (c *client) CreateEventsIndex(ctx context.Context) error {
 	}
 	if err := c.ensureIndexExistsWithRetry(EventsIndex, eventsIndexTemplate, false); err != nil {
 		return err
-	}
-
-	// If there is an old events index created by Calico Enterprise prior to v3.12,
-	// add it to the alias as read index and update old events index mapping if necessary.
-	if exists, err := c.IndexExists(oldIndex).Do(ctx); err != nil {
-		log.WithError(err).Error("failed to check if index exists")
-		return err
-	} else if exists {
-		if _, err := c.Alias().Action(elastic.NewAliasAddAction(alias).Index(oldIndex).IsWriteIndex(false)).Do(ctx); err != nil {
-			log.WithError(err).Error("failed to mark old events index as read index")
-			return err
-		}
-
-		var expectedMapping map[string]interface{}
-		if err := json.Unmarshal([]byte(oldEventsMapping), &expectedMapping); err != nil {
-			return nil
-		}
-		if err := c.MaybeUpdateIndexMapping(oldIndex, expectedMapping); err != nil {
-			return err
-		}
 	}
 
 	return nil

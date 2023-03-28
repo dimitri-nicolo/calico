@@ -39,7 +39,7 @@ func (m ClusterInfo) Extract() func(next http.Handler) http.Handler {
 			if m.expectedTenantID != "" && tenant != m.expectedTenantID {
 				httputils.JSONError(w, &v1.HTTPError{
 					Status: http.StatusUnauthorized,
-					Msg:    "Missing tenant identifier",
+					Msg:    "Bad tenant identifier",
 				}, http.StatusUnauthorized)
 				return
 			}

@@ -103,6 +103,12 @@ func (c *TemplateConfig) mappings() string {
 		return EventsMappings
 	case bapi.WAFLogs:
 		return WAFMappings
+	case bapi.ReportData:
+		return ReportMappings
+	case bapi.Benchmarks:
+		return BenchmarksMappings
+	case bapi.Snapshots:
+		return SnapshotMappings
 	default:
 		panic("log type not implemented")
 	}

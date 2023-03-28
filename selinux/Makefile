@@ -3,10 +3,10 @@ include ../lib.Makefile
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/selinux
 
-SRC_FILES = calico-enterprise-selinux.spec \
-	calico-enterprise.fc \
-	calico-enterprise.if \
-	calico-enterprise.te
+SRC_FILES = calico-selinux.spec \
+	calico.fc \
+	calico.if \
+	calico.te
 
 ###############################################################################
 # Build SELinux builder image
@@ -35,10 +35,10 @@ $(SELINUX_BUILD_CONTAINER_CREATED_EL9): Dockerfile.el9
 # Build RPM
 ###############################################################################
 .PHONY: build
-build: calico-enterprise-selinux.el8.rpm calico-enterprise-selinux.el9.rpm
+build: calico-selinux.el8.rpm calico-selinux.el9.rpm
 
-.PHONY: calico-enterprise-selinux.el8.rpm
-calico-enterprise-selinux.el8.rpm: $(SRC_FILES) selinux-build.el8
+.PHONY: calico-selinux.el8.rpm
+calico-selinux.el8.rpm: $(SRC_FILES) selinux-build.el8
 	mkdir -p build
 	docker run --rm --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
 		--net=host \
@@ -47,8 +47,8 @@ calico-enterprise-selinux.el8.rpm: $(SRC_FILES) selinux-build.el8
 		-w /go/src/$(PACKAGE_NAME) $(SELINUX_BUILD_IMAGE_EL8):latest \
 		./build.sh
 
-.PHONY: calico-enterprise-selinux.el9.rpm
-calico-enterprise-selinux.el9.rpm: $(SRC_FILES) selinux-build.el9
+.PHONY: calico-selinux.el9.rpm
+calico-selinux.el9.rpm: $(SRC_FILES) selinux-build.el9
 	mkdir -p build
 	docker run --rm --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
 		--net=host \

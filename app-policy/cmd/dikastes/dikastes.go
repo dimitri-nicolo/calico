@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 
 package main
 
@@ -18,12 +18,13 @@ import (
 	"github.com/docopt/docopt-go"
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	log "github.com/sirupsen/logrus"
+
 	"google.golang.org/grpc"
 
 	"github.com/projectcalico/calico/app-policy/server"
-	"github.com/projectcalico/calico/app-policy/uds"
 	"github.com/projectcalico/calico/app-policy/waf"
 	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
+	"github.com/projectcalico/calico/libcalico-go/lib/uds"
 )
 
 const usage = `Dikastes - the decider.

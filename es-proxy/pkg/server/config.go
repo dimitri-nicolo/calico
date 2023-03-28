@@ -40,6 +40,9 @@ type Config struct {
 	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
 
+	// For Calico Cloud, the tenant ID to use.
+	ElasticIndexTenantID string `envconfig:"ELASTIC_INDEX_TENANT_ID"`
+
 	// The URL that we should proxy requests to.
 	ElasticScheme             string   `envconfig:"ELASTIC_SCHEME" default:"https"`
 	ElasticHost               string   `envconfig:"ELASTIC_HOST"`

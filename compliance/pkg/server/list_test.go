@@ -12,21 +12,21 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	authzv1 "k8s.io/api/authorization/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/compliance/pkg/server"
-	"github.com/projectcalico/calico/lma/pkg/api"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func newArchivedReportData(reportName, reportTypeName string) *api.ArchivedReportData {
-	return &api.ArchivedReportData{
+func newArchivedReportData(reportName, reportTypeName string) *v1.ReportData {
+	return &v1.ReportData{
 		UISummary: `{"foobar":"hello-100-goodbye"}`,
 		ReportData: &v3.ReportData{
 			ReportName:     reportName,
@@ -43,7 +43,7 @@ func newArchivedReportData(reportName, reportTypeName string) *api.ArchivedRepor
 
 func newGlobalReportType(typeName string) v3.GlobalReportType {
 	return v3.GlobalReportType{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: typeName,
 		},
 		Spec: v3.ReportTypeSpec{
@@ -67,8 +67,8 @@ func newGlobalReportType(typeName string) v3.GlobalReportType {
 }
 
 var (
-	now         = v1.Time{Time: time.Unix(time.Now().Unix(), 0)}
-	nowPlusHour = v1.Time{Time: now.Add(time.Hour)}
+	now         = metav1.Time{Time: time.Unix(time.Now().Unix(), 0)}
+	nowPlusHour = metav1.Time{Time: now.Add(time.Hour)}
 
 	reportTypeGettable    = newGlobalReportType("inventoryGet")
 	reportTypeNotGettable = newGlobalReportType("inventoryNoGo")
@@ -90,27 +90,25 @@ var (
 
 var _ = Describe("List", func() {
 	var mockClientSetFactory *datastore.MockClusterCtxK8sClientFactory
-	var mockESFactory *elastic.MockClusterContextClientFactory
-
+	var mockFactory *api.MockStoreFactory
 	var mockAuthenticator *lmaauth.MockJWTAuth
 	var mockRBACAuthorizer *lmaauth.MockRBACAuthorizer
-	var mockESClient *elastic.MockClient
+	var mockStore *api.MockComplianceStore
 
 	BeforeEach(func() {
 		mockClientSetFactory = new(datastore.MockClusterCtxK8sClientFactory)
-		mockESFactory = new(elastic.MockClusterContextClientFactory)
-
+		mockFactory = new(api.MockStoreFactory)
 		mockAuthenticator = new(lmaauth.MockJWTAuth)
 		mockRBACAuthorizer = new(lmaauth.MockRBACAuthorizer)
-		mockESClient = new(elastic.MockClient)
+		mockStore = new(api.MockComplianceStore)
 	})
 
 	AfterEach(func() {
 		mockClientSetFactory.AssertExpectations(GinkgoT())
-		mockESFactory.AssertExpectations(GinkgoT())
+		mockFactory.AssertExpectations(GinkgoT())
 		mockAuthenticator.AssertExpectations(GinkgoT())
 		mockRBACAuthorizer.AssertExpectations(GinkgoT())
-		mockESClient.AssertExpectations(GinkgoT())
+		mockStore.AssertExpectations(GinkgoT())
 	})
 
 	It("tests can list with Gettable Report and ReportType", func() {
@@ -136,23 +134,23 @@ var _ = Describe("List", func() {
 
 		mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
 
-		mockESClient.On("RetrieveArchivedReportTypeAndNames", mock.Anything, mock.Anything).Return([]api.ReportTypeAndName{
+		mockStore.On("RetrieveArchivedReportTypeAndNames", mock.Anything, mock.Anything).Return([]api.ReportTypeAndName{
 			{ReportTypeName: reportGetTypeGet.ReportTypeName, ReportName: reportGetTypeGet.ReportName},
 			{ReportTypeName: reportGetTypeNoGet.ReportTypeName, ReportName: reportGetTypeNoGet.ReportName},
 			{ReportTypeName: reportNoGetTypeNoGet.ReportTypeName, ReportName: reportNoGetTypeNoGet.ReportName},
 		}, nil)
 
-		mockESClient.On("RetrieveArchivedReportSummaries", mock.Anything, mock.Anything).Return(&api.ArchivedReportSummaries{
+		mockStore.On("RetrieveArchivedReportSummaries", mock.Anything, mock.Anything).Return(&api.ArchivedReportSummaries{
 			Count:   3,
-			Reports: []*api.ArchivedReportData{reportGetTypeGet, reportGetTypeNoGet, reportNoGetTypeNoGet},
+			Reports: []*v1.ReportData{reportGetTypeGet, reportGetTypeNoGet, reportNoGetTypeNoGet},
 		}, nil)
 
-		mockESFactory.On("ClientForCluster", mock.Anything).Return(mockESClient, nil)
+		mockFactory.On("NewStore", mock.Anything).Return(mockStore, nil)
 
 		calicoCli := fake.NewSimpleClientset(&reportTypeGettable, &reportTypeNotGettable)
 		mockClientSetFactory.On("ClientSetForCluster", mock.Anything).Return(datastore.NewClientSet(nil, calicoCli.ProjectcalicoV3()), nil)
 
-		t := startTester(mockClientSetFactory, mockESFactory, mockAuthenticator)
+		t := startTester(mockClientSetFactory, mockFactory, mockAuthenticator)
 
 		By("Setting responses")
 
@@ -206,7 +204,7 @@ var _ = Describe("List", func() {
 		mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
 
 		By("Starting a test server")
-		t := startTester(mockClientSetFactory, mockESFactory, mockAuthenticator)
+		t := startTester(mockClientSetFactory, mockFactory, mockAuthenticator)
 
 		By("Running a list query")
 		t.list(http.StatusUnauthorized, nil)
@@ -227,13 +225,13 @@ var _ = Describe("List", func() {
 
 		mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
 
-		mockESClient.On("RetrieveArchivedReportTypeAndNames", mock.Anything, mock.Anything).Return([]api.ReportTypeAndName{
+		mockStore.On("RetrieveArchivedReportTypeAndNames", mock.Anything, mock.Anything).Return([]api.ReportTypeAndName{
 			{ReportTypeName: reportNoGetTypeNoGet.ReportTypeName, ReportName: reportNoGetTypeNoGet.ReportName},
 		}, nil)
 
-		mockESFactory.On("ClientForCluster", mock.Anything).Return(mockESClient, nil)
+		mockFactory.On("NewStore", mock.Anything).Return(mockStore, nil)
 
-		t := startTester(mockClientSetFactory, mockESFactory, mockAuthenticator)
+		t := startTester(mockClientSetFactory, mockFactory, mockAuthenticator)
 
 		By("Running a list query")
 		t.list(http.StatusOK, []server.Report{})

@@ -10,7 +10,10 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/compliance/mockdata/scaleloader"
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -76,6 +79,20 @@ func main() {
 	// Initialize elastic.
 	es := elastic.MustGetElasticClient()
 
+	// Create a linseed client. TODO
+	config := rest.Config{
+		// URL:             cfg.LinseedURL,
+		// CACertPath:      cfg.LinseedCA,
+		// ClientKeyPath:   cfg.LinseedClientKey,
+		// ClientCertPath:  cfg.LinseedClientCert,
+		// FIPSModeEnabled: cfg.FIPSModeEnabled,
+	}
+	linseed, err := client.NewClient("", config)
+	if err != nil {
+		log.WithError(err).Fatal("failed to create linseed client")
+	}
+	store := api.NewComplianceStore(linseed, "")
+
 	var duration time.Duration
 	if scen.Duration == "" {
 		duration = time.Hour * 24
@@ -100,7 +117,7 @@ func main() {
 		}
 	}
 
-	sl.PopulateES(start, duration, es)
+	sl.PopulateES(start, duration, es, store)
 
 	// Retrieve the testdata.
 	log.Info("success")

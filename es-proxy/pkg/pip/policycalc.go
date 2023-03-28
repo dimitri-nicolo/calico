@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	compcfg "github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/replay"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
@@ -114,12 +115,15 @@ func (s *pip) syncFromArchive(cxt context.Context, params *PolicyImpactParams, c
 		return
 	}
 
+	// Create a store to use.
+	store := api.NewComplianceStore(s.lsclient, params.ClusterName)
+
 	// Populate the cache from the replayer.
 	r := replay.New(
 		*params.FromTime,
 		*params.ToTime,
-		NewLister(s.lsclient, params.ClusterName),
-		NewEventer(s.lsclient, params.ClusterName),
+		store,
+		store,
 		cb,
 	)
 	r.Start(cxt)

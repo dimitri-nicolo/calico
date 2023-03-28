@@ -12,9 +12,9 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/elastic"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -23,7 +23,7 @@ import (
 func TestQueryDomainNameSet(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	input := db.DomainNameSetSpec{
+	input := storage.DomainNameSetSpec{
 		"www.badguys.co.uk",
 		"we-love-malware.io ",
 		"z.f.com # a comment after a valid address",
@@ -35,7 +35,7 @@ func TestQueryDomainNameSet(t *testing.T) {
 		"mølmer-sørensen.gate",
 		"xn--mlmer-srensen-bnbg.gate",
 	}
-	expected := db.IPSetSpec{
+	expected := storage.IPSetSpec{
 		"www.badguys.co.uk",
 		"we-love-malware.io",
 		"z.f.com",
@@ -62,7 +62,7 @@ func TestQueryDomainNameSet(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	puller := NewDomainNameSetHTTPPuller(&testGTFDomainNameSet, &db.MockSets{}, &MockConfigMap{}, &MockSecrets{}, client, edn).(*httpPuller)
+	puller := NewDomainNameSetHTTPPuller(&testGTFDomainNameSet, &storage.MockSets{}, &MockConfigMap{}, &MockSecrets{}, client, edn).(*httpPuller)
 
 	go func() {
 		err := puller.query(ctx, feedCacher, 1, 0)
@@ -86,11 +86,11 @@ func TestQueryDomainNameSet(t *testing.T) {
 func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	input := db.DomainNameSetSpec{
+	input := storage.DomainNameSetSpec{
 		"www.badguys.co.uk",
 		"we-love-malware.io ",
 	}
-	expected := db.IPSetSpec{
+	expected := storage.IPSetSpec{
 		"www.badguys.co.uk",
 		"we-love-malware.io",
 	}
@@ -111,7 +111,7 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 
 	f := testGTFDomainNameSet.DeepCopy()
 	f.Spec.GlobalNetworkSet = &v3.GlobalNetworkSetSync{Labels: map[string]string{"key": "value"}}
-	puller := NewDomainNameSetHTTPPuller(f, &db.MockSets{}, &MockConfigMap{}, &MockSecrets{}, client, edn).(*httpPuller)
+	puller := NewDomainNameSetHTTPPuller(f, &storage.MockSets{}, &MockConfigMap{}, &MockSecrets{}, client, edn).(*httpPuller)
 
 	go func() {
 		err := puller.query(ctx, feedCacher, 1, 0)
@@ -141,7 +141,7 @@ func TestGetStartupDelayDomainNameSet(t *testing.T) {
 	defer cancel()
 
 	edn := elastic.NewMockDomainNameSetsController()
-	puller := NewDomainNameSetHTTPPuller(&testGTFDomainNameSet, &db.MockSets{
+	puller := NewDomainNameSetHTTPPuller(&testGTFDomainNameSet, &storage.MockSets{
 		Time: time.Now().Add(-time.Hour),
 	}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, edn).(*httpPuller)
 
@@ -178,8 +178,8 @@ func TestSyncGNSFromDB_DomainNameSet(t *testing.T) {
 
 	feed := testGTFDomainNameSet.DeepCopy()
 	feed.Spec.GlobalNetworkSet = &v3.GlobalNetworkSetSync{Labels: map[string]string{"key": "value"}}
-	dnSet := &db.MockSets{
-		Value: db.DomainNameSetSpec{"baddos.ooo"},
+	dnSet := &storage.MockSets{
+		Value: storage.DomainNameSetSpec{"baddos.ooo"},
 	}
 	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 

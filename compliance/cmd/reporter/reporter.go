@@ -12,11 +12,13 @@ import (
 
 	"k8s.io/klog"
 
+	capi "github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/report"
 	"github.com/projectcalico/calico/compliance/pkg/version"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 const (
@@ -61,8 +63,19 @@ func main() {
 		h.Report(healthReporterName, &health.HealthReport{Live: true})
 	}
 
-	// Init elastic.
-	elasticClient := elastic.MustGetElasticClient()
+	// Create a linseed client.
+	config := rest.Config{
+		URL:             cfg.LinseedURL,
+		CACertPath:      cfg.LinseedCA,
+		ClientKeyPath:   cfg.LinseedClientKey,
+		ClientCertPath:  cfg.LinseedClientCert,
+		FIPSModeEnabled: cfg.FIPSModeEnabled,
+	}
+	linseed, err := client.NewClient(cfg.Tenant, config)
+	if err != nil {
+		log.WithError(err).Fatal("failed to create linseed client")
+	}
+	store := capi.NewComplianceStore(linseed, cfg.Cluster)
 
 	// Setup signals.
 	sigs := make(chan os.Signal, 1)
@@ -78,10 +91,7 @@ func main() {
 	healthy()
 
 	// Run the reporter.
-	if err := report.Run(
-		cxt, cfg, healthy, elasticClient, elasticClient, elasticClient,
-		elasticClient, elasticClient, elasticClient,
-	); err != nil {
+	if err := report.Run(cxt, cfg, healthy, store); err != nil {
 		log.Panicf("Hit terminating error in reporter: %v", err)
 	}
 }

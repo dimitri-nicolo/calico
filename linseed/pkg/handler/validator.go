@@ -15,6 +15,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
@@ -43,7 +45,8 @@ type RequestParams interface {
 		v1.DNSFlowParams | v1.DNSLogParams | v1.DNSAggregationParams |
 		v1.EventParams | v1.AuditLogParams |
 		v1.BGPLogParams | v1.ProcessParams |
-		v1.WAFLogParams
+		v1.WAFLogParams |
+		v1.ReportDataParams | v1.SnapshotParams | v1.BenchmarksParams
 }
 
 // BulkRequestParams is the collection of request parameters types
@@ -52,7 +55,8 @@ type BulkRequestParams interface {
 	v1.FlowLog | v1.Event |
 		v1.L7Log | v1.DNSLog |
 		v1.AuditLog | v1.BGPLog |
-		v1.WAFLog
+		v1.WAFLog | v1.ReportData |
+		v1.Snapshot | v1.Benchmarks
 }
 
 // DecodeAndValidateBulkParams will decode and validate input parameters
@@ -88,7 +92,7 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 		}
 	}
 
-	trimBody := bytes.Trim(body, "\n")
+	trimBody := bytes.Trim(body, "\r\n")
 	d := json.NewDecoder(bytes.NewReader(trimBody))
 	d.DisallowUnknownFields()
 	for {
@@ -115,6 +119,19 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 	}
 
 	return bulkParams, nil
+}
+
+// Timeout gets the user-provided timeout from the request, or default timeout
+// if none was provided.
+func Timeout(w http.ResponseWriter, req *http.Request) (metav1.Duration, error) {
+	p := v1.QueryParams{}
+	if err := httputils.DecodeIgnoreUnknownFields(w, req, &p); err != nil {
+		return metav1.Duration{}, err
+	}
+	if p.Timeout == nil {
+		return metav1.Duration{Duration: v1.DefaultTimeOut}, nil
+	}
+	return *p.Timeout, nil
 }
 
 // DecodeAndValidateReqParams will decode and validate input parameters

@@ -96,7 +96,7 @@ func TestCreateDNSLog(t *testing.T) {
 	require.NotEqual(t, time.Time{}, actual.EndTime)
 	actual.StartTime = f.StartTime
 	actual.EndTime = f.EndTime
-	require.Equal(t, f, actual)
+	require.Equal(t, f, backendutils.AssertDNSLogIDAndReset(t, actual))
 }
 
 // TestAggregations tests running a real elasticsearch query to get aggregations.

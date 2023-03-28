@@ -26,17 +26,10 @@ SRC_FILES = $(shell find pkg cmd -name '*.go') \
 
 # We use -X to insert the version information into the placeholder variables
 # in the version package.
-VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/config/version.BuildVersion=$(GIT_VERSION) \
-                  -X $(PACKAGE_NAME)/pkg/config/version.BuildDate=$(DATE) \
-                  -X $(PACKAGE_NAME)/pkg/config/version.GitDescription=$(GIT_DESCRIPTION) \
-                  -X $(PACKAGE_NAME)/pkg/config/version.GitRevision=$(GIT_COMMIT)
-
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
+LDFLAGS = -X $(PACKAGE_NAME)/pkg/config/version.BuildVersion=$(GIT_VERSION) \
+			-X $(PACKAGE_NAME)/pkg/config/version.BuildDate=$(DATE) \
+			-X $(PACKAGE_NAME)/pkg/config/version.GitDescription=$(GIT_DESCRIPTION) \
+			-X $(PACKAGE_NAME)/pkg/config/version.GitRevision=$(GIT_COMMIT)
 
 ###############################################################################
 # BUILD BINARY
@@ -46,9 +39,7 @@ build: bin/linseed-$(ARCH)
 
 .PHONY: bin/linseed-$(ARCH)
 bin/linseed-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD_CGO) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go'
+	$(call build_static_cgo_boring_binary, cmd/$*/*.go, $@)
 
 ###############################################################################
 # BUILD IMAGE
@@ -124,8 +115,8 @@ run-image: stop-image run-elastic
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.crt:/certs/https/tls.crt \
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.key:/certs/https/tls.key \
 		-v $(REPO_ROOT)/linseed/fv/cert/RootCA.crt:/certs/https/client.crt \
-		-e LINSEED_ELASTIC_ENDPOINT="http://localhost:9200" \
-		-e LINSEED_ELASTIC_SCHEME="http" \
+		-e ELASTIC_HOST="localhost" \
+		-e ELASTIC_SCHEME="http" \
 		-e LINSEED_LOG_LEVEL="debug" \
 		tigera/$(LINSEED_IMAGE):latest
 	# Wait until Linseed is accepting requests on its readiness port.

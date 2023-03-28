@@ -48,17 +48,8 @@ type LifeCycle struct {
 }
 
 type Client interface {
-	api.BenchmarksQuery
-	api.BenchmarksStore
-	api.BenchmarksGetter
-	api.AuditLogReportHandler
-	api.FlowLogReportHandler
 	api.DNSLogReportHandler
 	api.ADLogReportHandler
-	api.ReportRetriever
-	api.ReportStorer
-	api.ReportEventFetcher
-	api.ListDestination
 	api.EventHandler
 	ClusterIndex(string, string) string
 	ClusterAlias(string) string
@@ -377,15 +368,6 @@ func (c *client) MaybeUpdateIndexMapping(index string, expectedMapping map[strin
 
 func (c *client) Backend() *elastic.Client {
 	return c.Client
-}
-
-func (c *client) Reset() {
-	_, _ = c.Client.DeleteIndex(
-		c.ClusterIndex(ReportsIndex, "*"),
-		c.ClusterIndex(SnapshotsIndex, "*"),
-		c.ClusterIndex(AuditLogIndex, "*"),
-		c.ClusterIndex(BenchmarksIndex, "*"),
-	).Do(context.Background())
 }
 
 // NewMockComplianceClient creates a mock client used for testing.

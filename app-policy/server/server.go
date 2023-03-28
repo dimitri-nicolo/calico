@@ -18,8 +18,8 @@ import (
 	dikastesproto "github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/app-policy/syncher"
-	"github.com/projectcalico/calico/app-policy/uds"
 	"github.com/projectcalico/calico/app-policy/waf"
+	"github.com/projectcalico/calico/libcalico-go/lib/uds"
 )
 
 const (

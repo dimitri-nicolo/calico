@@ -11,9 +11,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/worker"
+	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -35,7 +35,8 @@ type managedClusterController struct {
 func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
 	enableAnomalyDetection bool, anomalyTrainingController controller.AnomalyDetectionController,
 	anomalyDetectionController controller.AnomalyDetectionController, indexSettings es.IndexSettings, namespace string,
-	createManagedCalicoCLI func(string) (calicoclient.Interface, error), fipsModeEnabled bool) controller.Controller {
+	createManagedCalicoCLI func(string) (calicoclient.Interface, error), fipsModeEnabled bool,
+) controller.Controller {
 	m := &managedClusterController{
 		lmaESClient:            lmaESClient,
 		indexSettings:          indexSettings,

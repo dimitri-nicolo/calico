@@ -249,6 +249,7 @@ func TestValidateFlowLogBulkParams(t *testing.T) {
 				}
 
 			} else {
+				require.NoError(t, err)
 				if !cmp.Equal(tt.want, got) {
 					t.Errorf("want=%#v got %#v", tt.want, got)
 				}

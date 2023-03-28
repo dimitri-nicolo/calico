@@ -2,12 +2,14 @@
 package report
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"context"
 	"encoding/json"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	. "github.com/projectcalico/calico/compliance/internal/testutils"
 
 	"github.com/sirupsen/logrus"
 
@@ -18,13 +20,14 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	. "github.com/projectcalico/calico/compliance/internal/testutils"
+	api "github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/flow"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-	api "github.com/projectcalico/calico/lma/pkg/api"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lma "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // Fake replayer
@@ -56,7 +59,7 @@ func (a *fakeAuditer) SearchAuditEvents(ctx context.Context, filter *v3.AuditEve
 			var ro *runtime.Unknown
 			tm := resources.GetTypeMeta(r)
 			rh := resources.GetResourceHelperByTypeMeta(tm)
-			if verb != api.EventVerbDelete {
+			if v1.Verb(verb) != v1.Delete {
 				raw, _ := json.Marshal(r)
 				ro = &runtime.Unknown{
 					TypeMeta: runtime.TypeMeta{
@@ -95,29 +98,28 @@ func (a *fakeAuditer) SearchAuditEvents(ctx context.Context, filter *v3.AuditEve
 }
 
 type fakeReportStorer struct {
-	data *api.ArchivedReportData
+	data *v1.ReportData
 }
 
-func (r *fakeReportStorer) StoreArchivedReport(d *api.ArchivedReportData) error {
+func (r *fakeReportStorer) StoreArchivedReport(d *v1.ReportData) error {
 	r.data = d
 	return nil
 }
 
 // Fake flow reporter
-type fakeFlowReporter struct {
-}
+type fakeFlowReporter struct{}
 
-func (f *fakeFlowReporter) SearchFlowLogs(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *api.FlowLogResult {
+func (f *fakeFlowReporter) SearchFlowLogs(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *lma.FlowLogResult {
 	return nil
 }
 
 // Fake log dispatcher for archiving Compliance reports
-type fakeLogDispatcher struct {
-}
+type fakeLogDispatcher struct{}
 
 func (f *fakeLogDispatcher) Initialize() error {
 	return nil
 }
+
 func (f *fakeLogDispatcher) Dispatch(data interface{}) error {
 	return nil
 }

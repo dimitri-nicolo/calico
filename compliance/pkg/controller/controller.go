@@ -54,22 +54,20 @@ import (
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 
+	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/compliance/pkg/hashutils"
-	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // Utilities for dealing with Jobs and Reports and time.
 
-var (
-	// controllerKind contains the schema.GroupVersionKind for this controller type.
-	controllerKind = schema.GroupVersionKind{
-		Kind:    "GlobalReport",
-		Version: v3.VersionCurrent,
-		Group:   v3.Group,
-	}
-)
+// controllerKind contains the schema.GroupVersionKind for this controller type.
+var controllerKind = schema.GroupVersionKind{
+	Kind:    "GlobalReport",
+	Version: v3.VersionCurrent,
+	Group:   v3.Group,
+}
 
 const (
 	maxNameLen = 63

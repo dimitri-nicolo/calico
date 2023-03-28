@@ -8,10 +8,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
+
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 	feedutils "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
 )
@@ -43,8 +44,8 @@ type Controller interface {
 
 type Data interface {
 	Put(ctx context.Context, name string, value interface{}) error
-	List(ctx context.Context) ([]db.Meta, error)
-	Delete(ctx context.Context, m db.Meta) error
+	List(ctx context.Context) ([]storage.Meta, error)
+	Delete(ctx context.Context, m storage.Meta) error
 }
 
 func NewController(data Data, errorType string) Controller {
@@ -228,7 +229,7 @@ func (c *controller) updateObject(ctx context.Context, u update) {
 	delete(c.dirty, u.name)
 }
 
-func (c *controller) purgeObject(ctx context.Context, m db.Meta) {
+func (c *controller) purgeObject(ctx context.Context, m storage.Meta) {
 	fields := log.Fields{
 		"name": m.Name,
 	}

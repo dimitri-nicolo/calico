@@ -5,7 +5,7 @@ import (
 
 	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 
-	"github.com/projectcalico/calico/lma/pkg/api"
+	capi "github.com/projectcalico/calico/compliance/pkg/api"
 )
 
 const (
@@ -34,7 +34,7 @@ var (
 		"reportName", "reportTypeName", "generationTime", "startTime", "endTime",
 	}
 
-	DefaultSortBy = []api.ReportSortBy{
+	DefaultSortBy = []capi.ReportSortBy{
 		{Field: "startTime", Ascending: false}, {Field: "reportTypeName", Ascending: true}, {Field: "reportName", Ascending: true},
 	}
 )

@@ -111,6 +111,7 @@ func TestFV_FlowIngestion(t *testing.T) {
 
 		var esLogs []string
 		for _, log := range resultList.Items {
+			log = testutils.AssertFlowLogIDAndReset(t, log)
 			logStr, err := json.Marshal(log)
 			require.NoError(t, err)
 			esLogs = append(esLogs, string(logStr))
@@ -165,6 +166,7 @@ func TestFV_DNSIngestion(t *testing.T) {
 
 		var esLogs []string
 		for _, log := range resultList.Items {
+			log = testutils.AssertDNSLogIDAndReset(t, log)
 			logStr, err := json.Marshal(log)
 			require.NoError(t, err)
 			esLogs = append(esLogs, string(logStr))
@@ -197,7 +199,7 @@ func TestFV_L7Ingestion(t *testing.T) {
 		_, err := esClient.Refresh(index).Do(ctx)
 		require.NoError(t, err)
 
-		params := v1.DNSLogParams{
+		params := v1.L7LogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
 					From: time.Unix(1676062496, 0),

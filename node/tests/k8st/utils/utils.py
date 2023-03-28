@@ -318,8 +318,8 @@ def update_ds_env(ds, ns, env_vars):
         # hang, in a not Ready state, for about 15 minutes.  Here we want to
         # detect in case that happens again, and fail the test case if so.  We
         # do that by querying the number of nodes that have been updated, every
-        # 10s, and failing the test if that number does not change for 4 cycles
-        # i.e. for 40s.
+        # 10s, and failing the test if that number does not change for 12 cycles
+        # i.e. for 120s.
         last_number = 0
         iterations_with_no_change = 0
         while True:
@@ -332,9 +332,9 @@ def update_ds_env(ds, ns, env_vars):
                 break
             if node_ds.status.updated_number_scheduled == last_number:
                 iterations_with_no_change += 1
-                if iterations_with_no_change == 4:
+                if iterations_with_no_change == 12:
                     run("docker exec kind-control-plane conntrack -L", allow_fail=True)
-                    raise Exception("calico-node DaemonSet update failed to make progress for 40s")
+                    raise Exception("calico-node DaemonSet update failed to make progress for 120s")
             else:
                 last_number = node_ds.status.updated_number_scheduled
                 iterations_with_no_change = 0
@@ -342,3 +342,16 @@ def update_ds_env(ds, ns, env_vars):
         # Wait until all calico-node pods are ready.
         kubectl("wait pod --for=condition=Ready -l k8s-app=calico-node -n kube-system --timeout=300s")
 
+def copy_cnx_pull_secret(ns):
+    out = run("kubectl get secret cnx-pull-secret -n kube-system -o json")
+
+    # Remove revision and UID information so we can re-apply cleanly.
+    # This used to be done with --export, but that option has been removed from kubectl.
+    sec = json.loads(out)
+    del sec["metadata"]["resourceVersion"]
+    del sec["metadata"]["uid"]
+    sec["metadata"]["namespace"] = ns
+    secIn = json.dumps(sec)
+
+    # Reapply in the new namespace.
+    run("echo '%s' | kubectl apply -f -" % secIn)

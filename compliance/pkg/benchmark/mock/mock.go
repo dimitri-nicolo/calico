@@ -6,25 +6,26 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/projectcalico/calico/lma/pkg/api"
+	api "github.com/projectcalico/calico/compliance/pkg/api"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 type DB struct {
-	storage                     map[string]*api.Benchmarks
+	storage                     map[string]*v1.Benchmarks
 	NStoreCalls, NRetrieveCalls int
 }
 
 func NewMockDB() *DB {
-	return &DB{storage: map[string]*api.Benchmarks{}}
+	return &DB{storage: map[string]*v1.Benchmarks{}}
 }
 
-func (db *DB) StoreBenchmarks(ctx context.Context, b *api.Benchmarks) error {
+func (db *DB) StoreBenchmarks(ctx context.Context, b *v1.Benchmarks) error {
 	db.NStoreCalls++
 	db.storage[b.UID()] = b
 	return nil
 }
 
-func (db *DB) RetrieveLatestBenchmarks(ctx context.Context, ct api.BenchmarkType, filters []api.BenchmarkFilter, start, end time.Time) <-chan api.BenchmarksResult {
+func (db *DB) RetrieveLatestBenchmarks(ctx context.Context, ct v1.BenchmarkType, filters []v1.BenchmarksFilter, start, end time.Time) <-chan api.BenchmarksResult {
 	ch := make(chan api.BenchmarksResult, 1)
 	go func() {
 		defer close(ch)
@@ -37,20 +38,19 @@ func (db *DB) RetrieveLatestBenchmarks(ctx context.Context, ct api.BenchmarkType
 	return ch
 }
 
-func (db *DB) GetBenchmarks(ctx context.Context, id string) (*api.Benchmarks, error) {
+func (db *DB) GetBenchmarks(ctx context.Context, id string) (*v1.Benchmarks, error) {
 	return db.storage[id], nil
 }
 
-type Executor struct {
-}
+type Executor struct{}
 
-func (e *Executor) ExecuteBenchmarks(ctx context.Context, ct api.BenchmarkType, nodename string) (*api.Benchmarks, error) {
-	return &api.Benchmarks{
+func (e *Executor) ExecuteBenchmarks(ctx context.Context, ct v1.BenchmarkType, nodename string) (*v1.Benchmarks, error) {
+	return &v1.Benchmarks{
 		Version:   "1.4",
-		Type:      api.TypeKubernetes,
+		Type:      v1.TypeKubernetes,
 		NodeName:  nodename,
 		Timestamp: metav1.Time{Time: time.Now()},
-		Tests: []api.BenchmarkTest{
+		Tests: []v1.BenchmarkTest{
 			{
 				Section:     "1.1",
 				SectionDesc: "API Server",
