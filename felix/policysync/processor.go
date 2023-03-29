@@ -312,9 +312,6 @@ func (p *Processor) handleDataplane(update interface{}) {
 			"type": reflect.TypeOf(update),
 		}).Debug("Unhandled update")
 	}
-
-	// pass through updates to per-host-policy agents thus far
-	p.sendToAllPerHostAgents(update)
 }
 
 func (p *Processor) handleInSync(update *proto.InSync) {
@@ -324,6 +321,7 @@ func (p *Processor) handleInSync(update *proto.InSync) {
 	}
 	log.Info("Now in sync with the calculation graph")
 	p.receivedInSync = true
+	p.sendToAllPerHostAgents(update)
 	for _, ei := range p.updateableEndpoints() {
 		ei.sendMsg(&proto.ToDataplane_InSync{
 			InSync: &proto.InSync{},
@@ -333,9 +331,7 @@ func (p *Processor) handleInSync(update *proto.InSync) {
 
 func (p *Processor) sendToAllPerHostAgents(update interface{}) {
 	for _, c := range p.perHostPolicyAgents {
-		if upd, err := Wrap(update); err == nil {
-			c <- *upd
-		}
+		sendMsg(c, update, SubscriptionTypePerHostPolicies)
 	}
 }
 
@@ -394,10 +390,7 @@ func (p *Processor) catchUpPerHostSyncTo(perHostAgent chan<- proto.ToDataplane) 
 	}
 	// endpoints
 	for _, ei := range p.endpointsByID {
-		if upd, err := Wrap(ei.endpointUpd); err == nil {
-			perHostAgent <- *upd
-			log.Debug("sending")
-		}
+		sendMsg(perHostAgent, ei.output, SubscriptionTypePerHostPolicies)
 	}
 
 	if p.receivedInSync {
@@ -410,6 +403,7 @@ func (p *Processor) catchUpPerHostSyncTo(perHostAgent chan<- proto.ToDataplane) 
 }
 
 func (p *Processor) handleWorkloadEndpointUpdate(update *proto.WorkloadEndpointUpdate) {
+	p.sendToAllPerHostAgents(update)
 	epID := *update.Id
 	log.WithField("epID", epID).Info("Endpoint update")
 	ei, ok := p.endpointsByID[epID]
@@ -452,6 +446,7 @@ func (p *Processor) maybeSyncEndpoint(ei *EndpointInfo) {
 }
 
 func (p *Processor) handleWorkloadEndpointRemove(update *proto.WorkloadEndpointRemove) {
+	p.sendToAllPerHostAgents(update)
 	// we trust the Calc graph never to send us a remove for an endpoint it didn't tell us about
 	ei := p.endpointsByID[*update.Id]
 	if ei.output != nil {
@@ -465,6 +460,7 @@ func (p *Processor) handleWorkloadEndpointRemove(update *proto.WorkloadEndpointR
 }
 
 func (p *Processor) handleActiveProfileUpdate(update *proto.ActiveProfileUpdate) {
+	p.sendToAllPerHostAgents(update)
 	pId := *update.Id
 	profile := update.GetProfile()
 	p.profileByID[pId] = newProfileInfo(profile)
@@ -489,6 +485,7 @@ func (p *Processor) handleActiveProfileUpdate(update *proto.ActiveProfileUpdate)
 }
 
 func (p *Processor) handleActiveProfileRemove(update *proto.ActiveProfileRemove) {
+	p.sendToAllPerHostAgents(update)
 	pId := *update.Id
 	log.WithFields(log.Fields{"ProfileID": pId}).Debug("Processing ActiveProfileRemove")
 
@@ -498,6 +495,7 @@ func (p *Processor) handleActiveProfileRemove(update *proto.ActiveProfileRemove)
 }
 
 func (p *Processor) handleActivePolicyUpdate(update *proto.ActivePolicyUpdate) {
+	p.sendToAllPerHostAgents(update)
 	pId := *update.Id
 	log.WithFields(log.Fields{"PolicyID": pId}).Debug("Processing ActivePolicyUpdate")
 	policy := update.GetPolicy()
@@ -524,6 +522,7 @@ func (p *Processor) handleActivePolicyUpdate(update *proto.ActivePolicyUpdate) {
 }
 
 func (p *Processor) handleActivePolicyRemove(update *proto.ActivePolicyRemove) {
+	p.sendToAllPerHostAgents(update)
 	pId := *update.Id
 	log.WithFields(log.Fields{"PolicyID": pId}).Debug("Processing ActivePolicyRemove")
 
@@ -533,6 +532,7 @@ func (p *Processor) handleActivePolicyRemove(update *proto.ActivePolicyRemove) {
 }
 
 func (p *Processor) handleServiceAccountUpdate(update *proto.ServiceAccountUpdate) {
+	p.sendToAllPerHostAgents(update)
 	id := *update.Id
 	log.WithField("ServiceAccountID", id).Debug("Processing ServiceAccountUpdate")
 
@@ -545,6 +545,7 @@ func (p *Processor) handleServiceAccountUpdate(update *proto.ServiceAccountUpdat
 }
 
 func (p *Processor) handleServiceAccountRemove(update *proto.ServiceAccountRemove) {
+	p.sendToAllPerHostAgents(update)
 	id := *update.Id
 	log.WithField("ServiceAccountID", id).Debug("Processing ServiceAccountRemove")
 
@@ -557,6 +558,7 @@ func (p *Processor) handleServiceAccountRemove(update *proto.ServiceAccountRemov
 }
 
 func (p *Processor) handleNamespaceUpdate(update *proto.NamespaceUpdate) {
+	p.sendToAllPerHostAgents(update)
 	id := *update.Id
 	log.WithField("NamespaceID", id).Debug("Processing NamespaceUpdate")
 
@@ -569,6 +571,7 @@ func (p *Processor) handleNamespaceUpdate(update *proto.NamespaceUpdate) {
 }
 
 func (p *Processor) handleNamespaceRemove(update *proto.NamespaceRemove) {
+	p.sendToAllPerHostAgents(update)
 	id := *update.Id
 	log.WithField("NamespaceID", id).Debug("Processing NamespaceRemove")
 
@@ -589,6 +592,13 @@ func (p *Processor) handleIPSetUpdate(update *proto.IPSetUpdate) {
 		// security layer provided by ALP.
 		return
 	}
+	// gRPC has limits on message size, so break up large update if necessary.
+	updateMsg, deltaUpdateMsgs := splitIPSetUpdate(update)
+	p.sendToAllPerHostAgents(updateMsg)
+	for _, u := range deltaUpdateMsgs {
+		p.sendToAllPerHostAgents(u)
+	}
+
 	id := update.Id
 	logCxt := log.WithField("ID", id)
 	logCxt.Debug("Processing IPSetUpdate")
@@ -606,8 +616,7 @@ func (p *Processor) handleIPSetUpdate(update *proto.IPSetUpdate) {
 	logCxt.Info("Updating existing IPSet")
 	s.replaceMembers(update)
 
-	// gRPC has limits on message size, so break up large update if necessary.
-	updateMsg, deltaUpdateMsgs := splitIPSetUpdate(update)
+	// also send broken up updates done above to endpoints here
 	for _, ei := range p.updateableEndpoints() {
 		if p.referencesIPSet(ei, id) {
 			ei.syncedIPSets[id] = true
@@ -620,6 +629,8 @@ func (p *Processor) handleIPSetUpdate(update *proto.IPSetUpdate) {
 }
 
 func (p *Processor) handleIPSetDeltaUpdate(update *proto.IPSetDeltaUpdate) {
+	p.sendToAllPerHostAgents(update)
+
 	id := update.Id
 	log.WithField("ID", id).Debug("Processing IPSetDeltaUpdate")
 
@@ -642,6 +653,8 @@ func (p *Processor) handleIPSetDeltaUpdate(update *proto.IPSetDeltaUpdate) {
 }
 
 func (p *Processor) handleIPSetRemove(update *proto.IPSetRemove) {
+	p.sendToAllPerHostAgents(update)
+
 	id := update.Id
 	log.WithField("ID", id).Debug("Processing IPSetRemove")
 	delete(p.ipSetsByID, id)
