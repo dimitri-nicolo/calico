@@ -16,13 +16,12 @@ tigera.enabled: true
 tigera.licenseEdition: ${LICENSE_EDITION:-enterpriseEdition}
 EOF
 
-if [ "$GTM_INTEGRATION" == 'enabled' ]
-then
+if [[ "$GTM_INTEGRATION" == 'enabled' ]]; then
 cat >>${KIBANA_CONFIG} <<EOF
 # Google Tag Manager configuration
 csp.rules:
-    - "script-src 'unsafe-eval' 'self' 'unsafe-inline' https://www.googletagmanager.com"
-    - "img-src www.googletagmanager.com 'self' data:"
+  - "script-src 'unsafe-eval' 'self' 'unsafe-inline' https://www.googletagmanager.com"
+  - "img-src www.googletagmanager.com 'self' data:"
 
 googletagmanager.enabled: true
 googletagmanager.container: "GTM-TCNXTCJ"
