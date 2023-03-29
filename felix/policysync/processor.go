@@ -333,7 +333,7 @@ func (p *Processor) handleInSync(update *proto.InSync) {
 
 func (p *Processor) sendToAllPerHostAgents(update interface{}) {
 	for i, c := range p.perHostPolicyAgents {
-		log.Infof("sending %T update to per-host agent (%d)", update, i)
+		log.Debugf("sending %T update to per-host agent (%d)", update, i)
 		sendMsg(c, update, SubscriptionTypePerHostPolicies)
 	}
 }
