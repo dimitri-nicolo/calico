@@ -550,13 +550,19 @@ configRetry:
 		policySyncAPIBinder = binder.NewBinder(configParams.PolicySyncPathPrefix)
 		policySyncServer.RegisterGrpc(policySyncAPIBinder.Server())
 		// let's setup a separate grpc server with a normal port listener, so we can kubefwd to it
-		gs, lis := setupAuxiliaryServer(ctx, policySyncServer.RegisterGrpc)
-		defer func() {
-			gs.GracefulStop()
-			if err := lis.Close(); err != nil {
-				log.Error(err)
+		if auxListenPort, ok := os.LookupEnv("FELIX_ADDITIONAL_GRPC_LISTEN_PORT"); ok && auxListenPort != "" {
+			gs, lis, err := setupAuxiliaryServer(ctx, auxListenPort, policySyncServer.RegisterGrpc)
+			if err != nil {
+				log.Warn("was not able to setup auxiliary grpc server: ", err)
+			} else {
+				defer func() {
+					gs.GracefulStop()
+					if err := lis.Close(); err != nil {
+						log.Error(err)
+					}
+				}()
 			}
-		}()
+		}
 		calcGraphClientChannels = append(calcGraphClientChannels, toPolicySync)
 	}
 
@@ -1652,28 +1658,24 @@ func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMoni
 }
 
 // setupAuxiliaryServer - a hidden server only activated by setting FELIX_ADDITIONAL_GRPC_LISTEN_PORT.
-// *** meant to be used as development-only ***
+// *** meant to be used for development-only ***
 //
 // can also use FELIX_ENABLE_GRPC_REFLECTION during development to interact with felix policysync using grpcurl or similar reflection client
-func setupAuxiliaryServer(ctx context.Context, registerWithCb func(*grpc.Server)) (_ *grpc.Server, _ net.Listener) {
-	if auxListenPort, ok := os.LookupEnv("FELIX_ADDITIONAL_GRPC_LISTEN_PORT"); ok && auxListenPort != "" {
-		log.WithField("auxListenPort", "auxListenPort").Info("PolicySync Auxiliary Server also enabled")
-		lis, err := net.Listen("tcp", auxListenPort)
-		if err != nil {
-			log.Warnf("could not listen to port '%s'. error: %w", auxListenPort, err)
-			return
-		}
-		gs := grpc.NewServer()
-		if _, ok := os.LookupEnv("FELIX_ENABLE_GRPC_REFLECTION"); ok {
-			reflection.Register(gs)
-		}
-		registerWithCb(gs)
-		go func() {
-			if err := gs.Serve(lis); err != nil {
-				log.Warnf("failed to serve auxiliary server: %v", err)
-			}
-		}()
-		return gs, lis
+func setupAuxiliaryServer(ctx context.Context, auxListenPort string, registerWithCb func(*grpc.Server)) (*grpc.Server, net.Listener, error) {
+	log.WithField("auxListenPort", "auxListenPort").Info("PolicySync Auxiliary Server also enabled")
+	lis, err := net.Listen("tcp", auxListenPort)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not listen to port '%s'. error: %w", auxListenPort, err)
 	}
-	return
+	gs := grpc.NewServer()
+	if _, ok := os.LookupEnv("FELIX_ENABLE_GRPC_REFLECTION"); ok {
+		reflection.Register(gs)
+	}
+	registerWithCb(gs)
+	go func() {
+		if err := gs.Serve(lis); err != nil {
+			log.Warnf("failed to serve auxiliary server: %v", err)
+		}
+	}()
+	return gs, lis, nil
 }
