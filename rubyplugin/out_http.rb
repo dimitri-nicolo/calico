@@ -89,7 +89,10 @@ module Fluent::Plugin
     config_param :authentication, :enum, list: [:none, :basic, :bearer],  :default => :none
     config_param :username, :string, :default => ''
     config_param :password, :string, :default => '', :secret => true
-    config_param :token, :string, :default => '', :secret => true
+
+    # Default to reading the token from the Kubernetes serviceaccount. If an override is given,
+    # we'll use that location.
+    config_param :token, :string, :default => '/var/run/secrets/kubernetes.io/serviceaccount/token', :secret => false
 
     def initialize
       super
@@ -234,12 +237,16 @@ module Fluent::Plugin
               Net::HTTP::Put.new(uri.request_uri)
             end
 
+      # Read the token from our configured location. We load this per-request,
+      # since the token can change during the lifetime of a pod.
+      raw_token = File.open(@token).read
+
       # custom change for calico Authorization bearer token support.
       set_headers(req, chunk)
       if @authentication == :basic
          req.basic_auth(@username, @password)
       elsif @authentication == :bearer
-         req['Authorization'] = "Bearer #{@token}"
+         req['Authorization'] = "Bearer #{raw_token}"
       end
       req.body = @json_array ? "[#{chunk.read.chop}]" : chunk.read
       req
