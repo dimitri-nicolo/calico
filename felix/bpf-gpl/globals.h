@@ -30,13 +30,18 @@ enum cali_globals_flags {
 	CALI_GLOBALS_TCP_STATS_ENABLED 	= 0x00000002,
 	CALI_GLOBALS_IS_EGRESS_GATEWAY 	= 0x00000004,
 	CALI_GLOBALS_IS_EGRESS_CLIENT 	= 0x00000008,
-	CALI_GLOBALS_RPF_STRICT_ENABLED = 0x00000010,
-	CALI_GLOBALS_IS_EGRESS_IP_ENABLED = 0x00000020,
+	CALI_GLOBALS_RPF_OPTION_ENABLED	= 0x00000010,
+	CALI_GLOBALS_RPF_OPTION_STRICT	= 0x00000020,
+	CALI_GLOBALS_IS_EGRESS_IP_ENABLED = 0x00000040,
 };
 
 struct cali_ctlb_globals {
 	__be32 udp_not_seen_timeo;
 	bool exclude_udp;
+};
+
+struct cali_xdp_globals {
+	__u8 iface_name[16];
 };
 
 struct cali_stats_globals {

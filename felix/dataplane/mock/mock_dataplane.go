@@ -40,6 +40,7 @@ type MockDataplane struct {
 	activeVTEPs                    map[string]proto.VXLANTunnelEndpointUpdate
 	activeWireguardEndpoints       map[string]proto.WireguardEndpointUpdate
 	activeWireguardV6Endpoints     map[string]proto.WireguardEndpointV6Update
+	activeHostMetadataV4V6         map[string]proto.HostMetadataV4V6Update
 	activeRoutes                   set.Set[proto.RouteUpdate]
 	activeIPSecTunnels             set.Set[string]
 	activeIPSecBindings            set.Set[IPSecBinding]
@@ -147,6 +148,17 @@ func (d *MockDataplane) ActiveWireguardV6Endpoints() set.Set[proto.WireguardEndp
 	cp := set.New[proto.WireguardEndpointV6Update]()
 	for _, v := range d.activeWireguardV6Endpoints {
 		cp.Add(v)
+	}
+
+	return cp
+}
+func (d *MockDataplane) ActiveHostMetadataV4V6() map[string]proto.HostMetadataV4V6Update {
+	d.Lock()
+	defer d.Unlock()
+
+	cp := make(map[string]proto.HostMetadataV4V6Update)
+	for _, v := range d.activeHostMetadataV4V6 {
+		cp[v.Hostname] = v
 	}
 
 	return cp
@@ -297,6 +309,7 @@ func NewMockDataplane() *MockDataplane {
 		activeVTEPs:                make(map[string]proto.VXLANTunnelEndpointUpdate),
 		activeWireguardEndpoints:   make(map[string]proto.WireguardEndpointUpdate),
 		activeWireguardV6Endpoints: make(map[string]proto.WireguardEndpointV6Update),
+		activeHostMetadataV4V6:     make(map[string]proto.HostMetadataV4V6Update),
 
 		activeIPSecTunnels:             set.New[string](),
 		activeIPSecBindings:            set.New[IPSecBinding](),
@@ -535,6 +548,11 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		delete(d.activeWireguardV6Endpoints, event.Hostname)
 	case *proto.Encapsulation:
 		d.encapsulation = *event
+	case *proto.HostMetadataV4V6Update:
+		d.activeHostMetadataV4V6[event.Hostname] = *event
+	case *proto.HostMetadataV4V6Remove:
+		Expect(d.activeHostMetadataV4V6).To(HaveKey(event.Hostname), "delete for unknown HostmetadataV4V6")
+		delete(d.activeHostMetadataV4V6, event.Hostname)
 
 	// Enterprise cases below.
 	case *proto.PacketCaptureUpdate:

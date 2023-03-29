@@ -264,6 +264,17 @@ void bpf_ctlb_set_globals(struct bpf_map *map, uint udp_not_seen_timeo, bool exc
 	set_errno(bpf_map__set_initial_value(map, (void*)(&data), sizeof(data)));
 }
 
+void bpf_xdp_set_globals(struct bpf_map *map, char *iface_name)
+{
+	struct cali_xdp_globals data = {
+	};
+
+	strncpy(data.iface_name, iface_name, sizeof(data.iface_name));
+	data.iface_name[sizeof(data.iface_name)-1] = '\0';
+
+	set_errno(bpf_map__set_initial_value(map, (void*)(&data), sizeof(data)));
+}
+
 void bpf_tc_stats_set_globals(struct bpf_map *map, ushort if_ns)
 {
 	struct cali_stats_globals data = {

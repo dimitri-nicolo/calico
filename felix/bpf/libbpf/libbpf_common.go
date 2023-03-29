@@ -36,3 +36,7 @@ type TcGlobalData struct {
 type TcStatsGlobalData struct {
 	VethNS uint16
 }
+
+type XDPGlobalData struct {
+	IfaceName string
+}

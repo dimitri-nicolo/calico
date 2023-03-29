@@ -1821,7 +1821,7 @@ func (d *InternalDataplane) RegisterManager(mgr Manager) {
 	d.allManagers = append(d.allManagers, mgr)
 }
 
-func (d *InternalDataplane) Start() {
+func (d *InternalDataplane) Start(configParams *config.Config) {
 	// Do our start-of-day configuration.
 	d.doStaticDataplaneConfig()
 
@@ -1839,7 +1839,7 @@ func (d *InternalDataplane) Start() {
 		}
 		go d.egressIPManager.KeepVXLANDeviceInSync(mtu, 10*time.Second)
 	}
-	go d.loopUpdatingDataplane()
+	go d.loopUpdatingDataplane(configParams)
 	go d.loopReportingStatus()
 	go d.ifaceMonitor.MonitorInterfaces()
 	go d.monitorHostMTU()
@@ -2319,7 +2319,7 @@ func (d *InternalDataplane) shutdownXDPCompletely() error {
 	return fmt.Errorf("Failed to wipe the XDP state after %v tries over %v seconds: Error %v", maxTries, waitInterval, err)
 }
 
-func (d *InternalDataplane) loopUpdatingDataplane() {
+func (d *InternalDataplane) loopUpdatingDataplane(configParams *config.Config) {
 	log.Info("Started internal iptables dataplane driver loop")
 	healthTicks := time.NewTicker(healthInterval).C
 	d.reportHealth()

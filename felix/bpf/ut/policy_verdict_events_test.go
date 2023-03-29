@@ -153,7 +153,7 @@ func TestPolicyVerdictEvents(t *testing.T) {
 				res, err := bpfrun(pktBytes)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Retval).To(Equal(tcRes))
-			}, withExtraMap(evnts.Map()))
+			})
 
 			evnt, err := evnts.Next()
 			Expect(err).NotTo(HaveOccurred())

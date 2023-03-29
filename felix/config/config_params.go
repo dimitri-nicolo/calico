@@ -189,7 +189,7 @@ type Config struct {
 	BPFEnabled                         bool             `config:"bool;false"`
 	BPFDisableUnprivileged             bool             `config:"bool;true"`
 	BPFLogLevel                        string           `config:"oneof(off,info,debug);off;non-zero"`
-	BPFDataIfacePattern                *regexp.Regexp   `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*|tunl0$|vxlan.calico$|egress.calico$|wireguard.cali$|wg-v6.cali$)"`
+	BPFDataIfacePattern                *regexp.Regexp   `config:"regexp;^((en|wl|ww|sl|ib)[Popsx].*|(eth|wlan|wwan).*|tunl0$|vxlan.calico$|egress.calico$|wireguard.cali$|wg-v6.cali$)"`
 	BPFL3IfacePattern                  *regexp.Regexp   `config:"regexp;"`
 	BPFConnectTimeLoadBalancingEnabled bool             `config:"bool;true"`
 	BPFExternalServiceMode             string           `config:"oneof(tunnel,dsr);tunnel;non-zero"`
@@ -206,7 +206,7 @@ type Config struct {
 	BPFMapSizeIPSets                   int              `config:"int;1048576;non-zero"`
 	BPFMapSizeIfState                  int              `config:"int;1000;non-zero"`
 	BPFHostConntrackBypass             bool             `config:"bool;true"`
-	BPFEnforceRPF                      string           `config:"oneof(Disabled,Strict);Strict;non-zero"`
+	BPFEnforceRPF                      string           `config:"oneof(Disabled,Strict,Loose);Strict;non-zero"`
 	BPFPolicyDebugEnabled              bool             `config:"bool;true"`
 
 	FlowLogsCollectProcessInfo  bool `config:"bool;false"`
