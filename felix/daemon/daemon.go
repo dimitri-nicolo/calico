@@ -555,7 +555,9 @@ configRetry:
 		gs, lis := setupAuxiliaryServer(ctx, policySyncServer.RegisterGrpc)
 		defer func() {
 			gs.GracefulStop()
-			log.Error(lis.Close())
+			if err := lis.Close(); err != nil {
+				log.Error(err)
+			}
 		}()
 		calcGraphClientChannels = append(calcGraphClientChannels, toPolicySync)
 	}
