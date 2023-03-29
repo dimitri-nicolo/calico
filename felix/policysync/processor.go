@@ -708,9 +708,10 @@ func (p *Processor) handleRouteUpdate(update *proto.RouteUpdate) {
 	id := update.Dst
 	log.WithField("RouteID", id).Debug("Processing RouteUpdate")
 
+T:
 	for _, ei := range p.updateableEndpoints() {
 		if !ei.supportsIPv6Routes && strings.Contains(update.Dst, ":") {
-			return
+			continue T
 		}
 		ei.sendMsg(&proto.ToDataplane_RouteUpdate{
 			RouteUpdate: update,
@@ -723,9 +724,10 @@ func (p *Processor) handleRouteRemove(update *proto.RouteRemove) {
 	id := update.Dst
 	log.WithField("RouteID", id).Debug("Processing RouteRemove")
 
+T:
 	for _, ei := range p.updateableEndpoints() {
 		if !ei.supportsIPv6Routes && strings.Contains(update.Dst, ":") {
-			return
+			continue T
 		}
 		ei.sendMsg(&proto.ToDataplane_RouteRemove{
 			RouteRemove: update,
@@ -877,9 +879,10 @@ func (p *Processor) sendNamespaces(ei *EndpointInfo) {
 
 // sendRoutes sends all known RouteUpdates to the endpoint
 func (p *Processor) sendRoutes(ei *EndpointInfo) {
+T:
 	for _, update := range p.routesByID {
 		if !ei.supportsIPv6Routes && strings.Contains(update.Dst, ":") {
-			return
+			continue T
 		}
 		log.WithFields(log.Fields{"routeUpdate": update}).Debug("sending RouteUpdate")
 		ei.sendMsg(&proto.ToDataplane_RouteUpdate{
