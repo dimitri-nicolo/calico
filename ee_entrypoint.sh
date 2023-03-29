@@ -178,7 +178,11 @@ if [ -z ${DISABLE_ES_L7_LOG} ] || [ "${DISABLE_ES_L7_LOG}" == "false" ]; then
   fi
 fi
 if [ -z ${DISABLE_ES_RUNTIME_LOG} ] || [ "${DISABLE_ES_RUNTIME_LOG}" == "false" ]; then
-  cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-runtime.conf ${ROOT_DIR}/fluentd/etc/output_runtime/out-es.conf
+  if [ -z ${LINSEED_ENABLED} ] || [ "${LINSEED_ENABLED}" == "false" ]; then
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-runtime.conf ${ROOT_DIR}/fluentd/etc/output_runtime/out-es.conf
+  else
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-linseed-runtime.conf ${ROOT_DIR}/fluentd/etc/output_runtime/out-linseed-runtime.conf
+  fi
 fi
 if [ -z ${DISABLE_ES_WAF_LOG} ] || [ "${DISABLE_ES_WAF_LOG}" == "false" ]; then
     if [ -z ${LINSEED_ENABLED} ] || [ "${LINSEED_ENABLED}" == "false" ]; then
