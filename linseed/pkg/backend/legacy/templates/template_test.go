@@ -164,6 +164,31 @@ func TestBoostrapWAFTemplate(t *testing.T) {
 	assertTemplate(t, expectedTemplate, template)
 }
 
+func TestBoostrapRuntimeReportsTemplate(t *testing.T) {
+	cluster := backendutils.RandomClusterName()
+
+	settings := fmt.Sprintf(`{
+"lifecycle": {
+"name": "tigera_secure_ee_runtime_policy",
+"rollover_alias": "tigera_secure_ee_runtime.%s."
+}
+}`, cluster)
+
+	expectedTemplate := &Template{
+		IndexPatterns: []string{"tigera_secure_ee_runtime*"},
+		Mappings:      testutils.MustUnmarshalToMap(t, RuntimeReportsMappings),
+		Settings:      testutils.MustUnmarshalToMap(t, settings),
+	}
+
+	expectedTemplate.Settings["number_of_shards"] = 1
+	expectedTemplate.Settings["number_of_replicas"] = 0
+
+	config := NewTemplateConfig(bapi.RuntimeReports, bapi.ClusterInfo{Cluster: cluster}, WithApplication("test-app"))
+	template, err := config.Build()
+	require.NoError(t, err)
+	assertTemplate(t, expectedTemplate, template)
+}
+
 func assertTemplate(t *testing.T, expected *Template, template *Template) {
 	require.EqualValues(t, expected.IndexPatterns, template.IndexPatterns)
 	require.NotEmpty(t, template.Mappings)

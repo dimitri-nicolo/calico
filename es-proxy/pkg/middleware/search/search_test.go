@@ -258,9 +258,11 @@ var _ = Describe("SearchElasticHits", func() {
 				Timeout:     &metav1.Duration{Duration: 60 * time.Second},
 				MaxPageSize: 100,
 			},
+			QuerySortParams: lapi.QuerySortParams{
+				Sort: []lapi.SearchRequestSortBy{{Field: "test2", Descending: false}},
+			},
 			LogSelectionParams: lapi.LogSelectionParams{
 				Selector: "",
-				Sort:     []lapi.SearchRequestSortBy{{Field: "test2", Descending: false}},
 				Permissions: []libcalicov3.AuthorizedResourceVerbs{
 					{
 						APIGroup: "APIGroupVal1",
@@ -379,9 +381,12 @@ var _ = Describe("SearchElasticHits", func() {
 						Timeout:     &metav1.Duration{Duration: 60 * time.Second},
 						MaxPageSize: 100,
 					},
+					QuerySortParams: lapi.QuerySortParams{
+						Sort: []lapi.SearchRequestSortBy{{Field: "test2", Descending: false}},
+					},
+
 					LogSelectionParams: lapi.LogSelectionParams{
 						Selector: "",
-						Sort:     []lapi.SearchRequestSortBy{{Field: "test2", Descending: false}},
 						Permissions: []libcalicov3.AuthorizedResourceVerbs{
 							{
 								APIGroup: "APIGroupVal1",

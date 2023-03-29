@@ -206,7 +206,7 @@ func intoLogParams(ctx context.Context, h lmaindex.Helper, request *v1.SearchReq
 		if s.Field == "" {
 			continue
 		}
-		params.SetSort([]lapi.SearchRequestSortBy{
+		params.SetSortBy([]lapi.SearchRequestSortBy{
 			{
 				Field:      s.Field,
 				Descending: s.Descending,

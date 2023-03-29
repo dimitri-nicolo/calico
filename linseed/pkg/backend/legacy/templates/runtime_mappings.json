@@ -1,0 +1,62 @@
+{
+  "properties": {
+    "count": {
+      "type": "integer"
+    } ,
+    "type": {
+      "type": "keyword"
+    },
+    "start_time": {
+      "type": "date"
+    },
+    "end_time": {
+      "type": "date"
+    },
+    "pod": {
+      "properties": {
+        "namespace": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "name_aggr": {
+          "type": "keyword"
+        },
+        "container_name": {
+          "type": "keyword"
+        }
+      }
+    },
+    "file": {
+      "properties": {
+        "path": {
+          "type": "keyword"
+        },
+        "host_path": {
+          "type": "keyword"
+        }
+      }
+    },
+    "process_start": {
+      "properties": {
+        "args": {
+          "type": "text"
+        },
+        "hashes": {
+          "properties": {
+            "md5": {
+              "type": "keyword"
+            },
+            "sha1": {
+              "type": "keyword"
+            },
+            "sha256": {
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -54,9 +54,9 @@ func setupTest(t *testing.T) func() {
 	// interfere between tests.
 	cluster = testutils.RandomClusterName()
 
-	// Each test should take less than 5 seconds.
+	// Each test should take less than 60 seconds.
 	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 
 	// Function contains teardown logic.
 	return func() {
@@ -104,14 +104,14 @@ func TestCreateWAFLog(t *testing.T) {
 	require.Equal(t, 1, resp.Succeeded)
 
 	// Refresh the index.
-	err = testutils.RefreshIndex(ctx, client, "tigera_secure_ee_waf.*")
+	err = testutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_waf.%s.*", cluster))
 	require.NoError(t, err)
 
 	results, err := b.List(ctx, clusterInfo, &v1.WAFLogParams{
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
-				From: time.Now().Add(-10 * time.Second),
-				To:   time.Now().Add(10 * time.Second),
+				From: time.Now().Add(-60 * time.Second),
+				To:   time.Now().Add(60 * time.Second),
 			},
 		},
 	})

@@ -92,9 +92,10 @@ Linseed is deployed in namespace `tigera-elasticsearch` as part of Calico Enterp
 It establishes connections with the following components:
 - `tigera-elasticsearch/tigera-elasticsearch` pod via service `tigera-secure-es-http.tigera-elasticsearch.svc:9200`
 
-It has the following clients:
+It has the following clients, via service `tigera-linseed.tigera-elasticsearch.svc`
 - `es-proxy` container from `tigera-manager/tigera-manager` pod
 - `intrusion-detection-controller` container from `tigera-intrusion-detection/intrusion-detection-controller` pod
+- `fluentd-node` container from `tigera-fluentd/fluentd-node` pod
 
 It requires RBAC access for CREATE for authorization.k8s.io.SubjectAccessReview at namespace level.
 X509 certificates will be mounted inside the pod via operator at `/etc/pki/tls/certs/` and `/tigera-secure-linseed-cert`

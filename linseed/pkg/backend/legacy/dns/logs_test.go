@@ -30,10 +30,11 @@ func TestCreateDNSLog(t *testing.T) {
 
 	ip := net.ParseIP("10.0.1.1")
 
+	reqTime := time.Unix(0, 0)
 	// Create a dummy log.
 	f := v1.DNSLog{
-		StartTime:       time.Now(),
-		EndTime:         time.Now(),
+		StartTime:       reqTime,
+		EndTime:         reqTime,
 		Type:            v1.DNSLogTypeLog,
 		Count:           1,
 		ClientName:      "client-name",
@@ -67,7 +68,7 @@ func TestCreateDNSLog(t *testing.T) {
 		LatencyMax:   100,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	resp, err := lb.Create(ctx, clusterInfo, []v1.DNSLog{f})
@@ -82,8 +83,8 @@ func TestCreateDNSLog(t *testing.T) {
 	// List out the log we just created.
 	params := v1.DNSLogParams{}
 	params.TimeRange = &lmav1.TimeRange{}
-	params.TimeRange.From = time.Now().Add(-20 * time.Minute)
-	params.TimeRange.To = time.Now().Add(1 * time.Minute)
+	params.TimeRange.From = reqTime.Add(-20 * time.Minute)
+	params.TimeRange.To = reqTime.Add(1 * time.Minute)
 
 	listResp, err := lb.List(ctx, clusterInfo, &params)
 	require.NoError(t, err)

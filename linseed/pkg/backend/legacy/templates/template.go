@@ -24,7 +24,7 @@ type Template struct {
 // in Elastic. A template has associated an ILM policy, index patterns
 // mappings, settings and a bootstrap index to perform rollover
 type TemplateConfig struct {
-	logsType    bapi.LogsType
+	logsType    bapi.DataType
 	info        bapi.ClusterInfo
 	application string
 	shards      int
@@ -33,7 +33,7 @@ type TemplateConfig struct {
 
 // NewTemplateConfig will build a TemplateConfig based on the logs type, cluster information
 // and provided Option(s)
-func NewTemplateConfig(logsType bapi.LogsType, info bapi.ClusterInfo, opts ...Option) *TemplateConfig {
+func NewTemplateConfig(logsType bapi.DataType, info bapi.ClusterInfo, opts ...Option) *TemplateConfig {
 	defaultConfig := &TemplateConfig{logsType: logsType, info: info, shards: 1, replicas: 0, application: "fluentd"}
 
 	for _, opt := range opts {
@@ -75,7 +75,11 @@ func WithApplication(application string) Option {
 
 // TemplateName will provide the name of the template
 func (c *TemplateConfig) TemplateName() string {
-	return fmt.Sprintf("tigera_secure_ee_%s.%s.", strings.ToLower(string(c.logsType)), c.info.Cluster)
+	if c.info.Tenant == "" {
+		return fmt.Sprintf("tigera_secure_ee_%s.%s.", strings.ToLower(string(c.logsType)), c.info.Cluster)
+	}
+
+	return fmt.Sprintf("tigera_secure_ee_%s.%s.%s.", strings.ToLower(string(c.logsType)), c.info.Tenant, c.info.Cluster)
 }
 
 func (c *TemplateConfig) indexPatterns() string {
@@ -109,6 +113,8 @@ func (c *TemplateConfig) mappings() string {
 		return BenchmarksMappings
 	case bapi.Snapshots:
 		return SnapshotMappings
+	case bapi.RuntimeReports:
+		return RuntimeReportsMappings
 	default:
 		panic("log type not implemented")
 	}
@@ -129,8 +135,13 @@ func (c *TemplateConfig) ilmPolicyName() string {
 // BootstrapIndexName will construct the boostrap index name
 // to be used for rollover
 func (c *TemplateConfig) BootstrapIndexName() string {
-	return fmt.Sprintf("<tigera_secure_ee_%s.%s.%s-{now/s{yyyyMMdd}}-000001>",
-		c.logsType, c.info.Cluster, c.application)
+	if c.info.Tenant == "" {
+		return fmt.Sprintf("<tigera_secure_ee_%s.%s.%s-{now/s{yyyyMMdd}}-000001>",
+			c.logsType, c.info.Cluster, c.application)
+	}
+
+	return fmt.Sprintf("<tigera_secure_ee_%s.%s.%s.%s-{now/s{yyyyMMdd}}-000001>",
+		c.logsType, c.info.Tenant, c.info.Cluster, c.application)
 }
 
 func (c *TemplateConfig) settings() map[string]interface{} {
