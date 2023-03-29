@@ -655,6 +655,9 @@ func (p *Processor) handleRouteUpdate(update *proto.RouteUpdate) {
 	log.WithField("RouteID", id).Debug("Processing RouteUpdate")
 
 	for _, ei := range p.updateableEndpoints() {
+		if !ei.supportsIPv6Routes && strings.Contains(update.Dst, ":") {
+			return
+		}
 		ei.sendMsg(&proto.ToDataplane_RouteUpdate{
 			RouteUpdate: update,
 		})
@@ -667,6 +670,9 @@ func (p *Processor) handleRouteRemove(update *proto.RouteRemove) {
 	log.WithField("RouteID", id).Debug("Processing RouteRemove")
 
 	for _, ei := range p.updateableEndpoints() {
+		if !ei.supportsIPv6Routes && strings.Contains(update.Dst, ":") {
+			return
+		}
 		ei.sendMsg(&proto.ToDataplane_RouteRemove{
 			RouteRemove: update,
 		})
@@ -818,6 +824,9 @@ func (p *Processor) sendNamespaces(ei *EndpointInfo) {
 // sendRoutes sends all known RouteUpdates to the endpoint
 func (p *Processor) sendRoutes(ei *EndpointInfo) {
 	for _, update := range p.routesByID {
+		if !ei.supportsIPv6Routes && strings.Contains(update.Dst, ":") {
+			return
+		}
 		log.WithFields(log.Fields{"routeUpdate": update}).Debug("sending RouteUpdate")
 		ei.sendMsg(&proto.ToDataplane_RouteUpdate{
 			RouteUpdate: update,
@@ -1041,62 +1050,60 @@ func splitMembers(members []string) [][]string {
 	return out
 }
 
-func (ei *EndpointInfo) sendMsg(payload interface{}) {
-	switch ei.subscription {
+func sendMsg(output chan<- proto.ToDataplane, payload interface{}, subscription SubscriptionType) {
+	switch subscription {
 	case SubscriptionTypePerPodPolicies:
 		switch payload := payload.(type) {
 		case *proto.ToDataplane_InSync:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_ConfigUpdate:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_WorkloadEndpointUpdate:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_WorkloadEndpointRemove:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_ActiveProfileUpdate:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_ActiveProfileRemove:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_ActivePolicyUpdate:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_ActivePolicyRemove:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_ServiceAccountUpdate:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_ServiceAccountRemove:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_NamespaceUpdate:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_NamespaceRemove:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_IpsetUpdate:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_IpsetDeltaUpdate:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_IpsetRemove:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		}
 	case SubscriptionTypeL3Routes:
 		switch payload := payload.(type) {
 		case *proto.ToDataplane_InSync:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_ConfigUpdate:
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_RouteUpdate:
-			if !ei.supportsIPv6Routes && strings.Contains(payload.RouteUpdate.Dst, ":") {
-				return
-			}
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_RouteRemove:
-			if !ei.supportsIPv6Routes && strings.Contains(payload.RouteRemove.Dst, ":") {
-				return
-			}
-			ei.output <- proto.ToDataplane{Payload: payload}
+			output <- proto.ToDataplane{Payload: payload}
 		}
 	default:
 		log.WithFields(log.Fields{
-			"subscriptionType": ei.subscription.String(),
+			"subscriptionType": subscription.String(),
 			"payloadType":      reflect.TypeOf(payload),
 		}).Warn("Unknown subscription type")
 	}
+}
+
+func (ei *EndpointInfo) sendMsg(payload interface{}) {
+	sendMsg(ei.output, payload, ei.subscription)
 }
