@@ -503,7 +503,7 @@ k8s-test:
 
 .PHONY: kind-k8st-setup
 TEST_LICENSE=$(SECRETS_PATH)/license.yaml
-kind-k8st-setup: $(K8ST_IMAGE_TARS) kind-cluster-create $(TEST_LICENSE)
+kind-k8st-setup: $(K8ST_IMAGE_TARS) kind-cluster-create $(TEST_LICENSE) $(KIND_KUBECONFIG)
 	TSEE_TEST_LICENSE=$(TEST_LICENSE) GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) KUBECONFIG=$(KIND_KUBECONFIG) ARCH=$(ARCH) ./tests/k8st/deploy_resources_on_kind_cluster.sh
 
 .PHONY: kind-k8st-run-test
@@ -533,13 +533,13 @@ external-network-test:
 
 .PHONY: external-network-setup
 EXTERNAL_NETWORK_DIR=tests/k8st/external-network
-external-network-setup: .calico_test.created external-network-cleanup kubectl dist/calicoctl
+external-network-setup: .calico_test.created external-network-cleanup kubectl dist/calicoctl $(KIND_KUBECONFIG)
 	STEPS=setup \
 	ROUTER_IMAGE=$(BIRD_DIND_IMAGE) CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
 EXTERNAL_NETWORK_ST_TO_RUN=external-network-tests/test_external_network.py -s --nocapture --nologcapture
 .PHONY: external-network-run-test
-external-network-run-test:
+external-network-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	@echo "Starting to run external network tests..."
 	docker run -t --rm \
 	    -v $(CURDIR):/code \

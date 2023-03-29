@@ -93,7 +93,7 @@ func TestCreateBGPLog(t *testing.T) {
 	require.Equal(t, 1, resp.Succeeded)
 
 	// Refresh the index.
-	err = testutils.RefreshIndex(ctx, client, "tigera_secure_ee_bgp.*")
+	err = testutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_bgp.%s.*", cluster))
 	require.NoError(t, err)
 
 	// List the log, assert that it matches the one we just wrote.

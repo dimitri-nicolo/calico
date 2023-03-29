@@ -6,6 +6,7 @@ import "github.com/projectcalico/calico/libcalico-go/lib/json"
 // EventParams define querying parameters to retrieve events
 type EventParams struct {
 	QueryParams        `json:",inline" validate:"required"`
+	QuerySortParams    `json:",inline"`
 	LogSelectionParams `json:",inline"`
 }
 

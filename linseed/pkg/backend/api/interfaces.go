@@ -127,22 +127,32 @@ type EventsBackend interface {
 	Delete(context.Context, ClusterInfo, []v1.Event) (*v1.BulkResponse, error)
 }
 
-// LogsType determines the type of logs supported
+// RuntimeBackend defines the interface for interacting with runtime reports.
+type RuntimeBackend interface {
+	// Create creates the given logs.
+	Create(context.Context, ClusterInfo, []v1.Report) (*v1.BulkResponse, error)
+
+	// List lists reports that match the given parameters.
+	List(context.Context, ClusterInfo, *v1.RuntimeReportParams) (*v1.List[v1.RuntimeReport], error)
+}
+
+// DataType determines the type of logs supported
 // to be ingested via bulk APIs
-type LogsType string
+type DataType string
 
 const (
-	FlowLogs      LogsType = "flows"
-	DNSLogs       LogsType = "dns"
-	L7Logs        LogsType = "l7"
-	AuditEELogs   LogsType = "audit_ee"
-	AuditKubeLogs LogsType = "audit_kube"
-	BGPLogs       LogsType = "bgp"
-	Events        LogsType = "events"
-	WAFLogs       LogsType = "waf"
-	ReportData    LogsType = "compliance_reports"
-	Snapshots     LogsType = "snapshots"
-	Benchmarks    LogsType = "benchmark_results"
+	FlowLogs       DataType = "flows"
+	DNSLogs        DataType = "dns"
+	L7Logs         DataType = "l7"
+	AuditEELogs    DataType = "audit_ee"
+	AuditKubeLogs  DataType = "audit_kube"
+	BGPLogs        DataType = "bgp"
+	Events         DataType = "events"
+	WAFLogs        DataType = "waf"
+	ReportData     DataType = "compliance_reports"
+	Snapshots      DataType = "snapshots"
+	Benchmarks     DataType = "benchmark_results"
+	RuntimeReports DataType = "runtime"
 )
 
 // Cache is a cache for the templates in order
@@ -153,7 +163,7 @@ const (
 type Cache interface {
 	// InitializeIfNeeded will retrieve the template from the cache. If not found,
 	// tt will proceed to store a template against the pairs of
-	// LogsType and ClusterInfo. An error will be returned if template creation
+	// DataType and ClusterInfo. An error will be returned if template creation
 	// or index boostrap fails.
-	InitializeIfNeeded(context.Context, LogsType, ClusterInfo) error
+	InitializeIfNeeded(context.Context, DataType, ClusterInfo) error
 }

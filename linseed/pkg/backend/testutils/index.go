@@ -33,6 +33,12 @@ func RandomClusterName() string {
 	return name
 }
 
+func RandomTenantName() string {
+	name := fmt.Sprintf("tenant-%s", RandStringRunes(8))
+	logrus.WithField("name", name).Info("Using random tenant name for test")
+	return name
+}
+
 func RandStringRunes(n int) string {
 	letterRunes := []rune("abcdefghijklmnopqrstuvwxyz")
 	b := make([]rune, n)

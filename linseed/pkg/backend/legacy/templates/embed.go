@@ -41,22 +41,26 @@ var BenchmarksMappings string
 //go:embed snapshots_mappings.json
 var SnapshotMappings string
 
+//go:embed runtime_mappings.json
+var RuntimeReportsMappings string
+
 // SettingsLookup will keep track if an index requires special settings, add its settings template to the map.
-var SettingsLookup = map[bapi.LogsType]string{
+var SettingsLookup = map[bapi.DataType]string{
 	bapi.DNSLogs: DNSLogSettings,
 }
 
 // IndexPatternsLookup will keep track of the index patterns created
-var IndexPatternsLookup = map[bapi.LogsType]string{
-	bapi.AuditEELogs:   "tigera_secure_ee_audit_*",
-	bapi.AuditKubeLogs: "tigera_secure_ee_audit_*",
-	bapi.BGPLogs:       "tigera_secure_ee_bgp*",
-	bapi.FlowLogs:      "tigera_secure_ee_flows*",
-	bapi.L7Logs:        "tigera_secure_ee_l7*",
-	bapi.DNSLogs:       "tigera_secure_ee_dns*",
-	bapi.Events:        "tigera_secure_ee_events*",
-	bapi.WAFLogs:       "tigera_secure_ee_waf*",
-	bapi.ReportData:    "tigera_secure_ee_compliance_reports*",
-	bapi.Benchmarks:    "tigera_secure_ee_benchmark_results*",
-	bapi.Snapshots:     "tigera_secure_ee_snapshots*",
+var IndexPatternsLookup = map[bapi.DataType]string{
+	bapi.AuditEELogs:    "tigera_secure_ee_audit_*",
+	bapi.AuditKubeLogs:  "tigera_secure_ee_audit_*",
+	bapi.BGPLogs:        "tigera_secure_ee_bgp*",
+	bapi.FlowLogs:       "tigera_secure_ee_flows*",
+	bapi.L7Logs:         "tigera_secure_ee_l7*",
+	bapi.DNSLogs:        "tigera_secure_ee_dns*",
+	bapi.Events:         "tigera_secure_ee_events*",
+	bapi.WAFLogs:        "tigera_secure_ee_waf*",
+	bapi.RuntimeReports: "tigera_secure_ee_runtime*",
+	bapi.ReportData:     "tigera_secure_ee_compliance_reports*",
+	bapi.Benchmarks:     "tigera_secure_ee_benchmark_results*",
+	bapi.Snapshots:      "tigera_secure_ee_snapshots*",
 }

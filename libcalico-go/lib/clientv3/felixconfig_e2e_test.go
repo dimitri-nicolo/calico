@@ -49,6 +49,7 @@ var _ = testutils.E2eDatastoreDescribe("FelixConfiguration tests", testutils.Dat
 		DataplaneDriver:            "test-dataplane-driver1",
 		MetadataPort:               &ptrInt1,
 		FloatingIPs:                &fipDisabled,
+		RouteTableRanges:           &apiv3.RouteTableRanges{{Min: clientv3.DefaultFelixRouteTableRangeMin, Max: clientv3.DefaultFelixRouteTableRangeMax}},
 	}
 	spec2 := apiv3.FelixConfigurationSpec{
 		UseInternalDataplaneDriver: &ptrFalse,
@@ -80,7 +81,7 @@ var _ = testutils.E2eDatastoreDescribe("FelixConfiguration tests", testutils.Dat
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(ContainSubstring("resource does not exist: FelixConfiguration(" + name1 + ") with error:"))
 
-			By("Attempting to creating a new FelixConfiguration with name1/spec1 and a non-empty ResourceVersion")
+			By("Attempting to create a new FelixConfiguration with name1/spec1 and a non-empty ResourceVersion")
 			_, outError = c.FelixConfigurations().Create(ctx, &apiv3.FelixConfiguration{
 				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "12345"},
 				Spec:       spec1,
@@ -259,13 +260,13 @@ var _ = testutils.E2eDatastoreDescribe("FelixConfiguration tests", testutils.Dat
 			}
 
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
-				By("Attempting to deleting FelixConfiguration (name2)")
+				By("Attempting to delete FelixConfiguration (name2)")
 				dres, outError = c.FelixConfigurations().Delete(ctx, name2, options.DeleteOptions{})
 				Expect(outError).NotTo(HaveOccurred())
 				Expect(dres).To(MatchResource(apiv3.KindFelixConfiguration, testutils.ExpectNoNamespace, name2, spec2))
 			}
 
-			By("Attempting to deleting FelixConfiguration (name2) again")
+			By("Attempting to delete FelixConfiguration (name2) again")
 			_, outError = c.FelixConfigurations().Delete(ctx, name2, options.DeleteOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(ContainSubstring("resource does not exist: FelixConfiguration(" + name2 + ") with error:"))
@@ -279,6 +280,26 @@ var _ = testutils.E2eDatastoreDescribe("FelixConfiguration tests", testutils.Dat
 			_, outError = c.FelixConfigurations().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(ContainSubstring("resource does not exist: FelixConfiguration(" + name2 + ") with error:"))
+
+			By("Creating a new ExternalNetwork with RouteTableIndex 100")
+			enetname1 := "externalnetwork-1"
+			enetindex1 := uint32(100)
+			enetspec1 := apiv3.ExternalNetworkSpec{
+				RouteTableIndex: &enetindex1,
+			}
+			_, outError = c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: enetname1},
+				Spec:       enetspec1,
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Attempting to create a new FelixConfiguration with name1/spec1 (RouteTableRanges 1-250)")
+			_, outError = c.FelixConfigurations().Create(ctx, &apiv3.FelixConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: name1},
+				Spec:       spec1,
+			}, options.SetOptions{})
+			Expect(outError).To(HaveOccurred())
+			Expect(outError.Error()).To(Equal("error with field FelixConfiguration.Spec.RouteTableRanges = '&[{1 250}]' (RouteTableRanges conflicts with an existing ExternalNetwork's RouteTableIndex value (100))"))
 		},
 
 		// Test 1: Pass two fully populated FelixConfigurationSpecs and expect the series of operations to succeed.

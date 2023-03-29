@@ -46,7 +46,8 @@ type RequestParams interface {
 		v1.EventParams | v1.AuditLogParams |
 		v1.BGPLogParams | v1.ProcessParams |
 		v1.WAFLogParams |
-		v1.ReportDataParams | v1.SnapshotParams | v1.BenchmarksParams
+		v1.ReportDataParams | v1.SnapshotParams | v1.BenchmarksParams |
+		v1.RuntimeReportParams
 }
 
 // BulkRequestParams is the collection of request parameters types
@@ -56,7 +57,8 @@ type BulkRequestParams interface {
 		v1.L7Log | v1.DNSLog |
 		v1.AuditLog | v1.BGPLog |
 		v1.WAFLog | v1.ReportData |
-		v1.Snapshot | v1.Benchmarks
+		v1.Snapshot | v1.Benchmarks |
+		v1.Report
 }
 
 // DecodeAndValidateBulkParams will decode and validate input parameters

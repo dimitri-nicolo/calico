@@ -40,3 +40,8 @@ var bgpLogs string
 //
 //go:embed testdata/backend/waf_logs_legacy.txt
 var wafLogs string
+
+// runtimeReports is a sample runtime reports to be ingested for testing purposes
+//
+//go:embed testdata/backend/runtime_reports_legacy.txt
+var runtimeReports string

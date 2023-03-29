@@ -461,14 +461,15 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			}, options.SetOptions{})
 			Expect(outError.Error()).To(ContainSubstring("RouteTableIndex conflicts with an existing value"))
 
-			By("Creating a default FelixConfiguration with RouteTableRanges 200-299")
+			By("Removing ExternalNetwork with name1")
+			_, outError = c.ExternalNetworks().Delete(ctx, name1, options.DeleteOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Creating a default FelixConfiguration with nil RouteTableRanges")
 			felixSpec1 := apiv3.FelixConfigurationSpec{
 				DataplaneDriver: "test-dataplane-driver1",
-				RouteTableRanges: &apiv3.RouteTableRanges{
-					apiv3.RouteTableIDRange{Min: 200, Max: 299},
-				},
 			}
-			_, outError = c.FelixConfigurations().Create(
+			fcres, outError := c.FelixConfigurations().Create(
 				ctx,
 				&apiv3.FelixConfiguration{
 					ObjectMeta: metav1.ObjectMeta{Name: "default"},
@@ -476,6 +477,59 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 				},
 				options.SetOptions{},
 			)
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Creating a new ExternalNetwork with name1/spec1, table 100 within RouteTableRanges")
+			_, outError = c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: name1},
+				Spec:       spec1,
+			}, options.SetOptions{})
+			Expect(outError.Error()).To(ContainSubstring("RouteTableIndex conflicts with RouteTableRanges of FelixConfigurations"))
+
+			By("Updating the default FelixConfiguration with empty RouteTableRanges")
+			felixSpec1 = apiv3.FelixConfigurationSpec{
+				DataplaneDriver:  "test-dataplane-driver1",
+				RouteTableRanges: &apiv3.RouteTableRanges{},
+			}
+			fcres, outError = c.FelixConfigurations().Update(
+				ctx,
+				&apiv3.FelixConfiguration{
+					ObjectMeta: metav1.ObjectMeta{Name: "default", ResourceVersion: fcres.ResourceVersion, CreationTimestamp: fcres.CreationTimestamp, UID: fcres.UID},
+					Spec:       felixSpec1,
+				},
+				options.SetOptions{},
+			)
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Creating a new ExternalNetwork with name1/spec1, table 100 within RouteTableRanges")
+			_, outError = c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: name1},
+				Spec:       spec1,
+			}, options.SetOptions{})
+			Expect(outError.Error()).To(ContainSubstring("RouteTableIndex conflicts with RouteTableRanges of FelixConfigurations"))
+
+			By("Updating the default FelixConfiguration with RouteTableRanges 200-299")
+			felixSpec1 = apiv3.FelixConfigurationSpec{
+				DataplaneDriver: "test-dataplane-driver1",
+				RouteTableRanges: &apiv3.RouteTableRanges{
+					apiv3.RouteTableIDRange{Min: 200, Max: 299},
+				},
+			}
+			fcres, outError = c.FelixConfigurations().Update(
+				ctx,
+				&apiv3.FelixConfiguration{
+					ObjectMeta: metav1.ObjectMeta{Name: "default", ResourceVersion: fcres.ResourceVersion, CreationTimestamp: fcres.CreationTimestamp, UID: fcres.UID},
+					Spec:       felixSpec1,
+				},
+				options.SetOptions{},
+			)
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Creating a new ExternalNetwork with name1/spec1")
+			_, outError = c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: name1},
+				Spec:       spec1,
+			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 
 			By("Creating a new ExternalNetwork with name2/spec2, table 200 within RouteTableRanges")

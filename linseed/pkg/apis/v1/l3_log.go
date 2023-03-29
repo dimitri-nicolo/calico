@@ -10,6 +10,7 @@ import (
 // FlowLogParams define querying parameters to retrieve flow logs
 type FlowLogParams struct {
 	QueryParams        `json:",inline" validate:"required"`
+	QuerySortParams    `json:",inline"`
 	LogSelectionParams `json:",inline"`
 
 	IPMatches []IPMatch `json:"ip_matches" validate:"omitempty"`

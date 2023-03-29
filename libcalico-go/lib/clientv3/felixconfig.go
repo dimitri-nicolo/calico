@@ -16,12 +16,19 @@ package clientv3
 
 import (
 	"context"
+	"fmt"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
+)
+
+const (
+	DefaultFelixRouteTableRangeMin = 1
+	DefaultFelixRouteTableRangeMax = 250
 )
 
 // FelixConfigurationInterface has methods to work with FelixConfiguration resources.
@@ -44,6 +51,11 @@ type felixConfigurations struct {
 // if there is any.
 func (r felixConfigurations) Create(ctx context.Context, res *apiv3.FelixConfiguration, opts options.SetOptions) (*apiv3.FelixConfiguration, error) {
 	setDefaults(res)
+	// Validate before creating the resource.
+	if err := r.validate(ctx, res); err != nil {
+		return nil, err
+	}
+
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
@@ -60,6 +72,11 @@ func (r felixConfigurations) Create(ctx context.Context, res *apiv3.FelixConfigu
 // if there is any.
 func (r felixConfigurations) Update(ctx context.Context, res *apiv3.FelixConfiguration, opts options.SetOptions) (*apiv3.FelixConfiguration, error) {
 	setDefaults(res)
+	// Validate before updating the resource.
+	if err := r.validate(ctx, res); err != nil {
+		return nil, err
+	}
+
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
@@ -113,4 +130,35 @@ func setDefaults(fc *apiv3.FelixConfiguration) {
 		disabled := apiv3.FloatingIPsDisabled
 		fc.Spec.FloatingIPs = &disabled
 	}
+}
+
+// validate validates FelixConfiguration fields.
+func (r felixConfigurations) validate(ctx context.Context, new *apiv3.FelixConfiguration) error {
+	// Validate that the new RouteTableRanges do not conflict with any existing ExternalNetwork's RouteTableIndex
+	ranges := new.Spec.RouteTableRanges
+	if ranges == nil || len(*ranges) == 0 {
+		ranges = &apiv3.RouteTableRanges{{Min: DefaultFelixRouteTableRangeMin, Max: DefaultFelixRouteTableRangeMax}}
+	}
+
+	networks, err := r.client.ExternalNetworks().List(ctx, options.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, r := range *ranges {
+		for _, n := range networks.Items {
+			if n.Spec.RouteTableIndex != nil && int(*n.Spec.RouteTableIndex) >= r.Min && int(*n.Spec.RouteTableIndex) <= r.Max {
+				reason := fmt.Sprintf("RouteTableRanges conflicts with an existing ExternalNetwork's RouteTableIndex value (%d)", *n.Spec.RouteTableIndex)
+				return cerrors.ErrorValidation{
+					ErroredFields: []cerrors.ErroredField{{
+						Name:   "FelixConfiguration.Spec.RouteTableRanges",
+						Reason: reason,
+						Value:  new.Spec.RouteTableRanges,
+					}},
+				}
+			}
+		}
+	}
+
+	return nil
 }

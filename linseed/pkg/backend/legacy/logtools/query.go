@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
@@ -16,20 +18,11 @@ import (
 )
 
 // BuildQuery builds an elastic log query using the given parameters.
-func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (*elastic.BoolQuery, error) {
+func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogSelectionParams, start time.Time, end time.Time) (*elastic.BoolQuery, error) {
 	query := elastic.NewBoolQuery()
 
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
-	var start, end time.Time
-	if tr := opts.GetTimeRange(); tr != nil {
-		start = tr.From
-		end = tr.To
-	} else {
-		// Default to the latest 5 minute window.
-		start = time.Now().Add(-5 * time.Minute)
-		end = time.Now()
-	}
 	query.Filter(h.NewTimeRangeQuery(start, end))
 
 	// If RBAC constraints were given, add them in.
@@ -54,6 +47,21 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (*elas
 		}
 	}
 	return query, nil
+}
+
+func ExtractTimeRange(timeRange *lmav1.TimeRange) (time.Time, time.Time) {
+	// Parse times from the request. We default to a time-range query
+	// if no other search parameters are given.
+	var start, end time.Time
+	if timeRange != nil {
+		start = timeRange.From
+		end = timeRange.To
+	} else {
+		// Default to the start of the timeline
+		start = time.Time{}
+		end = time.Now()
+	}
+	return start, end
 }
 
 // StartFrom parses the given parameters to determine which log to start from in the ES query.

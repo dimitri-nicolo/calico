@@ -31,11 +31,16 @@ type Params interface {
 
 type LogParams interface {
 	Params
+	SortParams
 	SetSelector(string)
 	GetSelector() string
 	SetPermissions([]v3.AuthorizedResourceVerbs)
 	GetPermissions() []v3.AuthorizedResourceVerbs
-	SetSort([]SearchRequestSortBy)
+}
+
+type SortParams interface {
+	SetSortBy([]SearchRequestSortBy)
+	GetSortBy() []SearchRequestSortBy
 }
 
 // QueryParams are request parameters that are shared across all APIs
@@ -97,9 +102,6 @@ type LogSelectionParams struct {
 
 	// If present, returns only the logs that match the query.
 	Selector string `json:"selector"`
-
-	// Sort configures the sorting of results.
-	Sort []SearchRequestSortBy `json:"sort"`
 }
 
 func (l *LogSelectionParams) SetSelector(s string) {
@@ -118,10 +120,6 @@ func (l *LogSelectionParams) GetPermissions() []v3.AuthorizedResourceVerbs {
 	return l.Permissions
 }
 
-func (l *LogSelectionParams) SetSort(s []SearchRequestSortBy) {
-	l.Sort = s
-}
-
 // SearchRequestSortBy allows configuration of sorting of results.
 type SearchRequestSortBy struct {
 	// The field to sort by.
@@ -129,4 +127,19 @@ type SearchRequestSortBy struct {
 
 	// True if the returned results should be in descending order. Default is ascending order.
 	Descending bool `json:"descending,omitempty"`
+}
+
+// QuerySortParams are common for all APIs that can return
+// sorted results
+type QuerySortParams struct {
+	// Sort configures the sorting of results.
+	Sort []SearchRequestSortBy `json:"sort"`
+}
+
+func (l *QuerySortParams) SetSortBy(s []SearchRequestSortBy) {
+	l.Sort = s
+}
+
+func (l *QuerySortParams) GetSortBy() []SearchRequestSortBy {
+	return l.Sort
 }
