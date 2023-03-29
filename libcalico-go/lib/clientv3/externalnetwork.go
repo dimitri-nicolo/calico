@@ -79,17 +79,27 @@ func (r ExternalNetworks) validate(ctx context.Context, new *apiv3.ExternalNetwo
 
 	// Makes sure RouteTableIndex is not overlapping with routeTableRanges of any felix configurations.
 	for _, c := range felixConfigurations.Items {
-		if c.Spec.RouteTableRanges == nil {
-			break
-		}
-		for _, r := range *c.Spec.RouteTableRanges {
-			if int(index) >= r.Min && int(index) <= r.Max {
+		if c.Spec.RouteTableRanges == nil || len(*c.Spec.RouteTableRanges) == 0 {
+			// If RouteTableRanges is not specified in the FelixConfigurations, validate against the default range (1-250)
+			if int(index) >= DefaultFelixRouteTableRangeMin && int(index) <= DefaultFelixRouteTableRangeMax {
 				return cerrors.ErrorValidation{
 					ErroredFields: []cerrors.ErroredField{{
 						Name:   "ExternalNetwork.Spec.RouteTableIndex",
 						Reason: "RouteTableIndex conflicts with RouteTableRanges of FelixConfigurations",
-						Value:  new.Spec.RouteTableIndex,
+						Value:  *new.Spec.RouteTableIndex,
 					}},
+				}
+			}
+		} else {
+			for _, r := range *c.Spec.RouteTableRanges {
+				if int(index) >= r.Min && int(index) <= r.Max {
+					return cerrors.ErrorValidation{
+						ErroredFields: []cerrors.ErroredField{{
+							Name:   "ExternalNetwork.Spec.RouteTableIndex",
+							Reason: "RouteTableIndex conflicts with RouteTableRanges of FelixConfigurations",
+							Value:  *new.Spec.RouteTableIndex,
+						}},
+					}
 				}
 			}
 		}

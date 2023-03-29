@@ -28,6 +28,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 
 	"github.com/projectcalico/calico/felix/idalloc"
@@ -1336,7 +1337,7 @@ func (config *Config) RouteTableIndices() []idalloc.IndexRange {
 
 		// default RouteTableRanges val
 		return []idalloc.IndexRange{
-			{Min: 1, Max: 250},
+			{Min: clientv3.DefaultFelixRouteTableRangeMin, Max: clientv3.DefaultFelixRouteTableRangeMax},
 		}
 	} else if config.RouteTableRange != (idalloc.IndexRange{}) {
 		log.Warn("Both `RouteTableRanges` and deprecated `RouteTableRange` options are set. `RouteTableRanges` value will be given precedence.")
