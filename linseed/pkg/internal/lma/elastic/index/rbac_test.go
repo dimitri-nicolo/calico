@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	. "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 
 	"github.com/olivere/elastic/v7"
 

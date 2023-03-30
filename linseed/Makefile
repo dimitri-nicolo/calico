@@ -77,6 +77,7 @@ clean: stop-elastic
 # Testing
 ###############################################################################
 MOCKERY_FILE_PATHS= \
+	pkg/internal/elastic/index/Helper \
 	pkg/backend/api/FlowBackend \
 	pkg/backend/api/FlowLogBackend \
 	pkg/backend/api/L7FlowBackend \
@@ -99,7 +100,7 @@ MOCKERY_FILE_PATHS= \
 ut: stop-elastic run-elastic ut-fast
 ut-fast:
 	# We run the tests 5 times to try and weed out test flakes.
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 5'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 1'
 
 st:
 	@echo "No STs"

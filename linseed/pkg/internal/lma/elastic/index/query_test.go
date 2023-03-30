@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	. "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 )
 
 var _ = Describe("Query Converter", func() {
