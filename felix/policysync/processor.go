@@ -384,13 +384,7 @@ func (p *Processor) catchUpPerHostSyncTo(perHostAgent chan<- proto.ToDataplane) 
 		}
 	}
 	// ipsets
-	for _, upd := range p.ipSetsByID {
-		perHostAgent <- proto.ToDataplane{
-			Payload: &proto.ToDataplane_IpsetUpdate{
-				IpsetUpdate: upd.getIPSetUpdate(),
-			},
-		}
-	}
+	p.flushIPSetUpdatesAll()
 	// endpoints
 	for _, ei := range p.endpointsByID {
 		sendMsg(
@@ -631,35 +625,56 @@ func (p *Processor) handleIPSetUpdate(update *proto.IPSetUpdate) {
 	id := update.Id
 	logCxt := log.WithField("ID", id)
 	logCxt.Debug("Processing IPSetUpdate")
+
+	var skipPerPodFlush bool
 	s, ok := p.ipSetsByID[id]
 	if !ok {
 		logCxt.Info("Adding new IP Set")
 		s = newIPSet(update)
 		p.ipSetsByID[id] = s
+
+		// Since the calc graph will always send IPSets before any policies/profiles
+		// that reference them, we don't know which endpoints will need this IPSet yet.
+		// we need to flag ipset updates flush to de
+		skipPerPodFlush = true
 	}
 	logCxt.Info("Updating existing IPSet")
 	s.replaceMembers(update)
 
-	p.flushIPSetUpdates()
+	p.flushIPSetUpdate(update, skipPerPodFlush)
 }
 
-func (p Processor) flushIPSetUpdates() {
-	for id, update := range p.ipSetsByID {
-		updateMsg, deltaUpdateMsgs := splitIPSetUpdate(update.getIPSetUpdate())
-		p.sendToAllPerHostAgents(updateMsg)
-		for _, updMsg := range deltaUpdateMsgs {
-			p.sendToAllPerHostAgents(updMsg)
-		}
+func (p Processor) flushIPSetUpdate(update *proto.IPSetUpdate, skipPerPodFlush bool) {
+	id := update.Id
 
-		for _, ei := range p.updateableEndpoints() {
-			if p.referencesIPSet(ei, id) {
-				ei.syncedIPSets[id] = true
-				ei.sendMsg(updateMsg)
-				for _, u := range deltaUpdateMsgs {
-					ei.sendMsg(u)
-				}
+	// gRPC has limits on message size, so break up large update if necessary.
+	updateMsg, deltaUpdateMsgs := splitIPSetUpdate(update)
+
+	// distribute update to per-host-policy agents first
+	p.sendToAllPerHostAgents(updateMsg)
+	for _, updMsg := range deltaUpdateMsgs {
+		p.sendToAllPerHostAgents(updMsg)
+	}
+
+	// conditionally distribute update to per-pod-policy agents
+	if skipPerPodFlush {
+		return
+	}
+	for _, ei := range p.updateableEndpoints() {
+		if p.referencesIPSet(ei, id) {
+			ei.syncedIPSets[id] = true
+			ei.sendMsg(updateMsg)
+			for _, u := range deltaUpdateMsgs {
+				ei.sendMsg(u)
 			}
 		}
+	}
+}
+
+func (p Processor) flushIPSetUpdatesAll() {
+	for _, ipset := range p.ipSetsByID {
+		// flush to per-host agents only
+		p.flushIPSetUpdate(ipset.getIPSetUpdate(), true)
 	}
 }
 
