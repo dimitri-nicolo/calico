@@ -43,11 +43,11 @@ type Config struct {
 	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
 
-	// Cluster name, for components that serve a single cluster.
-	Cluster string `envconfig:"CLUSTER"`
+	// ClusterName name, for components that serve a single cluster.
+	ClusterName string `envconfig:"CLUSTER_NAME"`
 
 	// Tenant configuration for Calico Cloud.
-	Tenant string `envconfig:"TENANT"`
+	TenantID string `envconfig:"TENANT_ID"`
 
 	// Controller specific data.
 	Namespace                  string        `envconfig:"TIGERA_COMPLIANCE_JOB_NAMESPACE" default:"calico-monitoring"`

@@ -9,7 +9,8 @@ import (
 	"os"
 	"time"
 
-	lma "github.com/projectcalico/calico/lma/pkg/elastic"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/dpisyncer"
@@ -18,11 +19,11 @@ import (
 	"github.com/projectcalico/calico/typha/pkg/syncclientutils"
 	"github.com/projectcalico/calico/typha/pkg/syncproto"
 
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/alert"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/calicoclient"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/config"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dispatcher"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
-	"github.com/projectcalico/calico/deep-packet-inspection/pkg/elastic"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/eventgenerator"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/file"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/processor"
@@ -33,14 +34,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var (
-	versionFlag = flag.Bool("version", false, "Print version information")
-)
+var versionFlag = flag.Bool("version", false, "Print version information")
 
 const (
-	healthReporterName       = "DeepPacketInspection"
-	elasticRetrySendInterval = 30 * time.Second
-	fileMaintenanceInterval  = 5 * time.Minute
+	healthReporterName      = "DeepPacketInspection"
+	retrySendInterval       = 30 * time.Second
+	fileMaintenanceInterval = 5 * time.Minute
 )
 
 func main() {
@@ -80,12 +79,20 @@ func main() {
 		log.Fatal("NODENAME environment is not set")
 	}
 
-	lmaESClient, err := lma.NewFromConfig(lma.MustLoadConfig())
+	// Create linseed Client.
+	config := lsrest.Config{
+		URL:             cfg.LinseedURL,
+		CACertPath:      cfg.LinseedCA,
+		ClientKeyPath:   cfg.LinseedClientKey,
+		ClientCertPath:  cfg.LinseedClientCert,
+		FIPSModeEnabled: cfg.FIPSModeEnabled,
+	}
+	linseed, err := lsclient.NewClient(cfg.TenantID, config)
 	if err != nil {
-		log.WithError(err).Fatal("Could not connect to Elasticsearch")
+		log.WithError(err).Fatalf("failed to create linseed client")
 	}
 
-	esForwarder, err := elastic.NewESForwarder(lmaESClient, elasticRetrySendInterval)
+	alertForwarder, err := alert.NewForwarder(linseed, retrySendInterval, "cluster")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -114,12 +121,12 @@ func main() {
 	dispatcher := dispatcher.NewDispatcher(cfg,
 		processor.NewProcessor,
 		eventgenerator.NewEventGenerator,
-		esForwarder,
+		alertForwarder,
 		dpiStatusUpdater,
 		alertFileMaintainer)
 	defer dispatcher.Close()
 
-	esForwarder.Run(ctx)
+	alertForwarder.Run(ctx)
 	alertFileMaintainer.Run(ctx)
 
 	// Run the syncer to receive resource updates from either typha or local syncerClient and pass it to dispatcher.

@@ -98,3 +98,9 @@ type Snort struct {
 	Occurrence  string `json:"occurrence,omitempty"`
 	Other       string `json:"other,omitempty"`
 }
+
+type DPIRecord struct {
+	SnortSignatureID       string `json:"snort_signature_id"`
+	SnortSignatureRevision string `json:"snort_signature_revision"`
+	SnortAlert             string `json:"snort_alert"`
+}
