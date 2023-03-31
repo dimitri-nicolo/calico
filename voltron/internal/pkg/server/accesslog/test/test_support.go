@@ -44,13 +44,14 @@ type AccessLogResponse struct {
 }
 
 type AccessLogAuth struct {
-	Iss      string `json:"iss"`
-	Sub      string `json:"sub"`
-	Aud      string `json:"aud"`
-	Sid      string `json:"sid"`
-	Nonce    string `json:"nonce"`
-	Username string `json:"username"`
-	TenantID string `json:"ccTenantID"`
+	Iss      string   `json:"iss"`
+	Sub      string   `json:"sub"`
+	Aud      string   `json:"aud"`
+	Sid      string   `json:"sid"`
+	Nonce    string   `json:"nonce"`
+	Username string   `json:"username"`
+	Groups   []string `json:"groups"`
+	TenantID string   `json:"ccTenantID"`
 }
 
 func ReadAccessLogs(outputFile io.Reader) ([]AccessLogMessage, error) {

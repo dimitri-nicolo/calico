@@ -3,7 +3,6 @@
 package accesslog_test
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -31,6 +30,7 @@ var _ = Describe("Access Logs", func() {
 		Sid:      "SmPBRMsOk9HLjbcj8fIkH30vkJQiQp6L",
 		Nonce:    "70cfe1b3741140d1a4044f1971f01679",
 		Username: "gordon+mar14@tigera.io",
+		Groups:   []string{"tigera-auth-axnc3km5-admin"},
 		TenantID: "axnc3km5",
 	}
 
@@ -39,7 +39,7 @@ var _ = Describe("Access Logs", func() {
 		Sub: "system:serviceaccount:tigera-compliance:tigera-compliance-server",
 	}
 
-	logFile, err := ioutil.TempFile("", "voltron-access-log")
+	logFile, err := os.CreateTemp("", "voltron-access-log")
 	Expect(err).ToNot(HaveOccurred())
 	defer os.Remove(logFile.Name())
 
@@ -51,6 +51,7 @@ var _ = Describe("Access Logs", func() {
 		accesslog.WithRequestHeader("UserAgent", "userAgent"),
 		accesslog.WithStandardJWTClaims(),
 		accesslog.WithStringJWTClaim("email", "username"),
+		accesslog.WithStringArrayJWTClaim("https://calicocloud.io/groups", "groups"),
 		accesslog.WithStringJWTClaim("https://calicocloud.io/tenantID", "ccTenantID"),
 	)
 

@@ -150,6 +150,9 @@ func main() {
 			if cfg.OIDCAuthEnabled {
 				logOpts = append(logOpts, accesslog.WithStandardJWTClaims())
 				logOpts = append(logOpts, accesslog.WithStringJWTClaim(cfg.OIDCAuthUsernameClaim, "username"))
+				if cfg.HTTPAccessLoggingIncludeAuthGroups {
+					logOpts = append(logOpts, accesslog.WithStringArrayJWTClaim(cfg.OIDCAuthGroupsClaim, "groups"))
+				}
 				if cfg.CalicoCloudRequireTenantClaim {
 					logOpts = append(logOpts, accesslog.WithStringJWTClaim("https://calicocloud.io/tenantID", "ccTenantID"))
 				}

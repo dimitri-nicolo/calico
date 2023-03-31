@@ -18,9 +18,10 @@ type Logger struct {
 }
 
 type config struct {
-	zapConfig      *zap.Config
-	requestHeaders []fieldMapping
-	stringClaims   []fieldMapping
+	zapConfig         *zap.Config
+	requestHeaders    []fieldMapping
+	stringClaims      []fieldMapping
+	stringArrayClaims []fieldMapping
 }
 
 type fieldMapping struct {
@@ -56,7 +57,9 @@ func New(options ...Option) (*Logger, error) {
 		}
 	}
 
-	logger, err := cfg.zapConfig.Build()
+	logger, err := cfg.zapConfig.Build(
+		zap.WithClock(utcSystemClock{}), // always write times in UTC
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +76,7 @@ func (l *Logger) WrapHandler(delegate http.HandlerFunc) http.HandlerFunc {
 
 		// we need to capture these values now, before downstream handlers have a chance to alter them
 		tlsField := tlsLogField(r)
-		requestField := requestLogField(r, l.cfg, time.Now())
+		requestField := requestLogField(r, l.cfg, time.Now().UTC())
 
 		var responseSnippet string
 
@@ -190,8 +193,30 @@ func requestLogField(r *http.Request, cfg *config, requestTime time.Time) zap.Fi
 						enc.AddString(fieldName, value)
 					}
 				}
+				encClaimStringArrayField := func(claimName, fieldName string) {
+					var strArr []string
+					if a, ok := authToken.Claims().Get(claimName).([]any); ok {
+						for i := range a {
+							if s, ok := a[i].(string); ok {
+								strArr = append(strArr, s)
+							}
+						}
+					}
+					if len(strArr) > 0 {
+						_ = enc.AddArray(fieldName, zapcore.ArrayMarshalerFunc(func(enc zapcore.ArrayEncoder) error {
+							for i := range strArr {
+								enc.AppendString(strArr[i])
+							}
+
+							return nil
+						}))
+					}
+				}
 				for _, c := range cfg.stringClaims {
 					encClaimStringField(c.inputName, c.logFieldName)
+				}
+				for _, c := range cfg.stringArrayClaims {
+					encClaimStringArrayField(c.inputName, c.logFieldName)
 				}
 				return nil
 			}))
@@ -199,4 +224,14 @@ func requestLogField(r *http.Request, cfg *config, requestTime time.Time) zap.Fi
 
 		return nil
 	}))
+}
+
+type utcSystemClock struct{}
+
+func (utcSystemClock) Now() time.Time {
+	return time.Now().UTC()
+}
+
+func (utcSystemClock) NewTicker(duration time.Duration) *time.Ticker {
+	return time.NewTicker(duration)
 }

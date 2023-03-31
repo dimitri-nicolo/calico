@@ -10,7 +10,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -584,7 +583,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 			// capture stderr
 
-			accessLogFile, err = ioutil.TempFile("", "voltron-access-log")
+			accessLogFile, err = os.CreateTemp("", "voltron-access-log")
 			Expect(err).ToNot(HaveOccurred())
 
 			mockAuthenticator = new(auth.MockJWTAuth)
@@ -625,6 +624,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					accesslog.WithRequestHeader(server.ClusterHeaderField, "xClusterID"),
 					accesslog.WithStandardJWTClaims(),
 					accesslog.WithStringJWTClaim("email", "username"),
+					accesslog.WithStringArrayJWTClaim("groups", "groups"),
 				),
 			)
 		})
@@ -673,6 +673,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			Expect(logMessage.Request.Auth.Iss).To(Equal(k8sIssuer))
 			Expect(logMessage.Request.Auth.Sub).To(Equal("jane@example.io"))
 			Expect(logMessage.Request.Auth.Username).To(Equal("jane@example.io"))
+			Expect(logMessage.Request.Auth.Groups).To(Equal([]string{"system:authenticated"}))
 			Expect(logMessage.TLS.ServerName).To(Equal("localhost"))
 			Expect(logMessage.TLS.CipherSuite).To(Equal("TLS_AES_128_GCM_SHA256"))
 		})

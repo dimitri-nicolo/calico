@@ -27,6 +27,18 @@ func WithStringJWTClaim(claimName, logFieldName string) Option {
 	}
 }
 
+// WithStringArrayJWTClaim if both claimName & logFieldName are not empty, the claim with that name will be logged
+func WithStringArrayJWTClaim(claimName, logFieldName string) Option {
+	return func(c *config) error {
+		claimName = strings.TrimSpace(claimName)
+		logFieldName = strings.TrimSpace(logFieldName)
+		if claimName != "" && logFieldName != "" {
+			c.stringArrayClaims = append(c.stringArrayClaims, fieldMapping{inputName: claimName, logFieldName: logFieldName})
+		}
+		return nil
+	}
+}
+
 // WithStandardJWTClaims log standard claims, "iss", "sub", "aud", "sid", "nonce"
 func WithStandardJWTClaims() Option {
 	return func(c *config) error {

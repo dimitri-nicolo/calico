@@ -111,6 +111,9 @@ type Config struct {
 
 	// enable logging of all http requests to the clusterMuxer
 	HTTPAccessLoggingEnabled bool `default:"false" split_words:"true"`
+
+	// include the authentication tokens groups claim value in the http access logs, optional and disabled by default as this can be a very large value
+	HTTPAccessLoggingIncludeAuthGroups bool `default:"false" split_words:"true"`
 }
 
 func (cfg Config) String() string {
