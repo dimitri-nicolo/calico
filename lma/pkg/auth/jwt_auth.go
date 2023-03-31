@@ -222,15 +222,15 @@ func toExtra(extra map[string]authnv1.ExtraValue) map[string][]string {
 // See https://kubernetes.io/docs/reference/access-authn-authz/authentication/ for more information on how authn
 // and authz come into play when authenticating.
 func extractUserFromImpersonationHeaders(req *http.Request) (user.Info, error) {
-	var userName = req.Header.Get(authnv1.ImpersonateUserHeader)
-	var groups = req.Header[authnv1.ImpersonateGroupHeader]
-	var extras = make(map[string][]string)
+	userName := req.Header.Get(authnv1.ImpersonateUserHeader)
+	groups := req.Header[authnv1.ImpersonateGroupHeader]
+	extras := make(map[string][]string)
 	for headerName, value := range req.Header {
 		if strings.HasPrefix(headerName, authnv1.ImpersonateUserExtraHeaderPrefix) {
 			encodedKey := strings.ToLower(headerName[len(authnv1.ImpersonateUserExtraHeaderPrefix):])
 			extraKey, err := url.PathUnescape(encodedKey)
 			if err != nil {
-				var err = fmt.Errorf("malformed extra key for impersonation request")
+				err := fmt.Errorf("malformed extra key for impersonation request")
 				log.WithError(err).Errorf("Could not decode extra key %s", encodedKey)
 			}
 			extras[extraKey] = value

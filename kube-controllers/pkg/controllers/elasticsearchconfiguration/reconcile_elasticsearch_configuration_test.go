@@ -98,14 +98,13 @@ kdjulhPG079HRWabxrqxv49z9Hb1w71iD6Yd/oDVzeXyvj/pfBaAit6qq9yEAyTT
 var _ = Describe("Reconcile", func() {
 	var managementK8sCli *k8sfake.Clientset
 	var esK8sCli *relasticsearchfake.RESTClient
-	var esCertSecret, gatewayCertSecret *corev1.Secret
+	var esCertSecret, gatewayCertSecret, voltronLinseedCertSecret *corev1.Secret
 	var managementESConfigMap *corev1.ConfigMap
 	var managementClientObjects []runtime.Object
 	var restartChan chan string
 	fipsModeEnabled := true
 
 	BeforeEach(func() {
-
 		// Make chan size >1 so we don't need to wait for a listener to insert
 		restartChan = make(chan string, 5)
 		esCertSecret = &corev1.Secret{
@@ -122,6 +121,17 @@ var _ = Describe("Reconcile", func() {
 		gatewayCertSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      resource.ESGatewayCertSecret,
+				Namespace: resource.OperatorNamespace,
+			},
+			Data: map[string][]byte{
+				"tls.crt": []byte(cert),
+				"tls.key": []byte(key),
+			},
+		}
+
+		voltronLinseedCertSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resource.VoltronLinseedPublicCert,
 				Namespace: resource.OperatorNamespace,
 			},
 			Data: map[string][]byte{
@@ -154,6 +164,7 @@ var _ = Describe("Reconcile", func() {
 		managementClientObjects = []runtime.Object{
 			esCertSecret,
 			gatewayCertSecret,
+			voltronLinseedCertSecret,
 			managementESConfigMap,
 			activeOperatorConfigMap,
 		}
@@ -886,7 +897,7 @@ func assertManagedConfiguration(managedk8sCli, managementK8sCli kubernetes.Inter
 		verificationSecretsMap[username] = verificationSecret
 	}
 
-	//Test user secrets are created
+	// Test user secrets are created
 	privateUserMap, publicUserMap := esusers.ElasticsearchUsers("managed-1", false)
 	for _, user := range publicUserMap {
 		publicUserSecret, exists := publicUserSecretsMap[user.Username]
