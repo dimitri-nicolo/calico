@@ -209,6 +209,121 @@ func TestFV_RuntimeReports(t *testing.T) {
 			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp))
 	})
 
+	t.Run("should create and list runtime reports using legacy and generated start_time", func(t *testing.T) {
+		defer runtimeReportsSetupAndTeardown(t)()
+
+		legacyRuntimeReport := v1.Report{
+			// Simulate aggregation period of 15 minutes, no generated_time, like in RS 1.4
+			StartTime:  time.Now().Add(-20 * time.Minute).UTC(),
+			EndTime:    time.Now().Add(-5 * time.Minute).UTC(),
+			Host:       "any-host",
+			Count:      1,
+			Type:       "ProcessStart",
+			ConfigName: "malware-protection",
+			Pod: v1.PodInfo{
+				Name:          "app",
+				NameAggr:      "app-*",
+				Namespace:     "default",
+				ContainerName: "app",
+			},
+			File: v1.File{
+				Path:     "/usr/sbin/runc",
+				HostPath: "/run/docker/runtime-runc/moby/48f10a5eb9a245e6890433205053ba4e72c8e3bab5c13c2920dc32fadd7290cd/runc.rB3K51",
+			},
+			ProcessStart: v1.ProcessStart{
+				Invocation: "runc --root /var/run/docker/runtime-runc/moby",
+				Hashes: v1.ProcessHashes{
+					MD5:    "MD5",
+					SHA1:   "SHA1",
+					SHA256: "SHA256",
+				},
+			},
+			FileAccess: v1.FileAccess{},
+		}
+
+		// In this test we want to make sure we can construct a query that can
+		// read reports using legacy and generated times.
+		// With this query, we typically read legacy reports for a long duration
+		// and a shorter one for reports using generate_time.
+
+		params := v1.RuntimeReportParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-2 * time.Minute).UTC(),
+					To:   time.Now().UTC(),
+				},
+			},
+			LegacyTimeRange: &lmav1.TimeRange{
+				From: time.Now().Add(-25 * time.Minute).UTC(),
+				To:   time.Now().UTC(),
+			},
+		}
+
+		bulk, err := cli.RuntimeReports(cluster).Create(ctx, []v1.Report{legacyRuntimeReport})
+		require.NoError(t, err)
+		require.Equal(t, bulk.Succeeded, 1, "create legacy runtime reports did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_runtime*")
+
+		// Read it back.
+		resp, err := cli.RuntimeReports("").List(ctx, &params)
+		require.NoError(t, err)
+
+		require.Len(t, resp.Items, 1)
+		require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: cluster, Report: legacyRuntimeReport}},
+			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp))
+
+		generatedTime := time.Now().Add(-30 * time.Second).UTC()
+		modernRuntimeReport := v1.Report{
+			// Simulate aggregation period of 30 seconds, uses generated_time like in RS 1.5
+			StartTime:     time.Now().Add(-1 * time.Minute).UTC(),
+			EndTime:       time.Now().Add(-30 * time.Second).UTC(),
+			GeneratedTime: &generatedTime,
+			Host:          "any-host",
+			Count:         1,
+			Type:          "ProcessStart",
+			ConfigName:    "malware-protection",
+			Pod: v1.PodInfo{
+				Name:          "app",
+				NameAggr:      "app-*",
+				Namespace:     "default",
+				ContainerName: "app",
+			},
+			File: v1.File{
+				Path:     "/usr/sbin/runc",
+				HostPath: "/run/docker/runtime-runc/moby/48f10a5eb9a245e6890433205053ba4e72c8e3bab5c13c2920dc32fadd7290cd/runc.rB3K51",
+			},
+			ProcessStart: v1.ProcessStart{
+				Invocation: "runc --root /var/run/docker/runtime-runc/moby",
+				Hashes: v1.ProcessHashes{
+					MD5:    "MD5",
+					SHA1:   "SHA1",
+					SHA256: "SHA256",
+				},
+			},
+			FileAccess: v1.FileAccess{},
+		}
+
+		bulk, err = cli.RuntimeReports(cluster).Create(ctx, []v1.Report{modernRuntimeReport})
+		require.NoError(t, err)
+		require.Equal(t, bulk.Succeeded, 1, "create modern runtime reports did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_runtime*")
+
+		// Read the reports back using the same query.
+		resp, err = cli.RuntimeReports("").List(ctx, &params)
+		require.NoError(t, err)
+
+		require.Len(t, resp.Items, 2)
+		require.Equal(t, []v1.RuntimeReport{
+			{Tenant: "", Cluster: cluster, Report: legacyRuntimeReport},
+			{Tenant: "", Cluster: cluster, Report: modernRuntimeReport},
+		},
+			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp))
+	})
+
 	t.Run("should support pagination", func(t *testing.T) {
 		defer runtimeReportsSetupAndTeardown(t)()
 
