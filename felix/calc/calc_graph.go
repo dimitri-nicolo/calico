@@ -60,7 +60,7 @@ type endpointCallbacks interface {
 	OnEndpointTierUpdate(endpointKey model.Key,
 		endpoint interface{},
 		egressData EndpointEgressData,
-		filteredTiers []tierInfo)
+		filteredTiers []TierInfo)
 }
 
 type configCallbacks interface {

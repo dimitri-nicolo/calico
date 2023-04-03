@@ -15,11 +15,8 @@
 package calc
 
 import (
-	"sort"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
+	"reflect"
+	"testing"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 
@@ -30,224 +27,470 @@ var (
 	tenPointFive = 10.5
 )
 
-var _ = DescribeTable("PolKV should stringify correctly",
-	func(kv PolKV, expected string) {
-		Expect(kv.String()).To(Equal(expected))
-	},
-	Entry("zero", PolKV{}, "(nil policy)"),
-	Entry("nil policy", PolKV{Key: model.PolicyKey{Name: "name"}}, "name(nil policy)"),
-	Entry("nil order",
-		PolKV{Key: model.PolicyKey{Name: "name"}, Value: &model.Policy{}}, "name(default)"),
-	Entry("order set",
-		PolKV{Key: model.PolicyKey{Name: "name"}, Value: &model.Policy{Order: &tenPointFive}},
-		"name(10.5)"),
-)
-
-var _ = Describe("PolicySorter", func() {
-	It("should clean up when a policy is removed from non-existent tier", func() {
-		ps := NewPolicySorter()
-		key := model.PolicyKey{Tier: "default", Name: "foo"}
-		pol := &model.Policy{}
-		ps.OnUpdate(api.Update{
-			KVPair: model.KVPair{
-				Key:   key,
-				Value: pol,
-			},
-		})
-		Expect(ps.tiers["default"].Valid).To(BeFalse())
-		Expect(ps.tiers["default"].Policies).To(Equal(map[model.PolicyKey]*model.Policy{
-			key: pol,
-		}))
-
-		ps.OnUpdate(api.Update{
-			KVPair: model.KVPair{
-				Key:   key,
-				Value: nil, // deletion
-			},
-		})
-		Expect(ps.tiers).NotTo(HaveKey("default"))
-	})
-	It("should clean up when a tier is removed", func() {
-		ps := NewPolicySorter()
-		key := model.TierKey{Name: "default"}
-		tier := &model.Tier{}
-		ps.OnUpdate(api.Update{
-			KVPair: model.KVPair{
-				Key:   key,
-				Value: tier,
-			},
-		})
-		Expect(ps.tiers["default"].Valid).To(BeTrue())
-		Expect(ps.tiers["default"].Policies).To(BeEmpty())
-
-		ps.OnUpdate(api.Update{
-			KVPair: model.KVPair{
-				Key:   key,
-				Value: nil, // deletion
-			},
-		})
-		Expect(ps.tiers).NotTo(HaveKey("default"))
-	})
-})
-
-var _ = DescribeTable("Tiers should sort correctly",
-	func(input, expected []*tierInfo) {
-		var reversedInput []*tierInfo
-		if input != nil {
-			reversedInput = make([]*tierInfo, len(input))
-			for i, v := range input {
-				reversedInput[len(input)-1-i] = v
-			}
-		}
-		sort.Sort(TierByOrder(input))
-		Expect(input).To(Equal(expected))
-		sort.Sort(TierByOrder(input))
-		Expect(input).To(Equal(expected), "sort should be stable")
-		sort.Sort(TierByOrder(reversedInput))
-		Expect(reversedInput).To(Equal(expected), "sort work after reversing input")
-	},
-	Entry("nil", []*tierInfo(nil), []*tierInfo(nil)),
-	Entry("empty", []*tierInfo{}, []*tierInfo{}),
-	Entry("valid sorts ahead of invalid", []*tierInfo{
-		{
-			Name:  "bar",
-			Valid: false,
-			Order: floatPtr(1),
-		},
-		{
-			Name:  "foo",
-			Valid: true,
-			Order: floatPtr(10),
-		},
-	}, []*tierInfo{
-		{
-			Name:  "foo",
-			Valid: true,
-			Order: floatPtr(10),
-		},
-		{
-			Name:  "bar",
-			Valid: false,
-			Order: floatPtr(1),
-		},
-	}),
-	Entry("both invalid, both nil order rely on name", []*tierInfo{
-		{
-			Name:  "foo",
-			Valid: false,
-		},
-		{
-			Name:  "bar",
-			Valid: false,
-		},
-	}, []*tierInfo{
-		{
-			Name:  "bar",
-			Valid: false,
-		},
-		{
-			Name:  "foo",
-			Valid: false,
-		},
-	}),
-	Entry("both valid, both nil order rely on name", []*tierInfo{
-		{
-			Name:  "foo",
-			Valid: true,
-		},
-		{
-			Name:  "bar",
-			Valid: true,
-		},
-	}, []*tierInfo{
-		{
-			Name:  "bar",
-			Valid: true,
-		},
-		{
-			Name:  "foo",
-			Valid: true,
-		},
-	}),
-	Entry("both valid, rely on order", []*tierInfo{
-		{
-			Name:  "bar",
-			Order: floatPtr(10),
-			Valid: true,
-		},
-		{
-			Name:  "foo",
-			Order: floatPtr(1),
-			Valid: true,
-		},
-	}, []*tierInfo{
-		{
-			Name:  "foo",
-			Order: floatPtr(1),
-			Valid: true,
-		},
-		{
-			Name:  "bar",
-			Order: floatPtr(10),
-			Valid: true,
-		},
-	}),
-	Entry("all valid, non-nil orders sort ahead of nil", []*tierInfo{
-		{
-			Name:  "bar",
-			Valid: true,
-		},
-		{
-			Name:  "baz",
-			Order: floatPtr(10),
-			Valid: true,
-		},
-		{
-			Name:  "foo",
-			Order: floatPtr(1),
-			Valid: true,
-		},
-	}, []*tierInfo{
-		{
-			Name:  "foo",
-			Order: floatPtr(1),
-			Valid: true,
-		},
-		{
-			Name:  "baz",
-			Order: floatPtr(10),
-			Valid: true,
-		},
-		{
-			Name:  "bar",
-			Valid: true,
-		},
-	}),
-	Entry("all valid, equal order relies on name", []*tierInfo{
-		{
-			Name:  "baz",
-			Order: floatPtr(10),
-			Valid: true,
-		},
-		{
-			Name:  "foo",
-			Order: floatPtr(10),
-			Valid: true,
-		},
-	}, []*tierInfo{
-		{
-			Name:  "baz",
-			Order: floatPtr(10),
-			Valid: true,
-		},
-		{
-			Name:  "foo",
-			Order: floatPtr(10),
-			Valid: true,
-		},
-	}),
-)
-
 func floatPtr(f float64) *float64 {
 	return &f
+}
+
+func TestPolKV_String(t *testing.T) {
+	type kvTestType struct {
+		name     string
+		kv       PolKV
+		expected string
+	}
+
+	tests := []kvTestType{
+		{
+			name:     "zero",
+			kv:       PolKV{},
+			expected: "(nil policy)",
+		},
+		{
+			name:     "nil policy",
+			kv:       PolKV{Key: model.PolicyKey{Name: "name"}},
+			expected: "name(nil policy)"},
+		{
+			name:     "nil order",
+			kv:       PolKV{Key: model.PolicyKey{Name: "name"}, Value: &model.Policy{}},
+			expected: "name(default)",
+		},
+		{
+			name:     "order set",
+			kv:       PolKV{Key: model.PolicyKey{Name: "name"}, Value: &model.Policy{Order: &tenPointFive}},
+			expected: "name(10.5)",
+		},
+	}
+
+	for _, tc := range tests {
+		got := tc.kv.String()
+		if got != tc.expected {
+			t.Errorf("%v - expected: %v, got: %v", tc.name, tc.expected, got)
+		}
+	}
+}
+
+func TestPolicySorter_HasPolicy(t *testing.T) {
+	poc := NewPolicySorter()
+	polKey := model.PolicyKey{
+		Name: "test-policy",
+		Tier: "test-tier",
+	}
+	found := poc.HasPolicy(polKey)
+	if found {
+		t.Error("Unexpectedly found policy when it should not be present")
+	}
+
+	pol := model.Policy{}
+	_ = poc.UpdatePolicy(polKey, &pol)
+
+	found = poc.HasPolicy(polKey)
+	if !found {
+		t.Error("Policy that should be present was not found")
+	}
+}
+
+func TestPolicySorter_UpdatePolicy(t *testing.T) {
+	poc := NewPolicySorter()
+
+	polKey := model.PolicyKey{
+		Name: "test-policy",
+		Tier: "default",
+	}
+
+	pol := model.Policy{}
+
+	dirty := poc.UpdatePolicy(polKey, &pol)
+	if tierInfo, found := poc.tiers[polKey.Tier]; !found {
+		t.Error("Adding new policy to tier that does not yet exist - expected tier to be created but it is not found")
+	} else {
+		if !dirty {
+			t.Error("Adding new policy - expected dirty to be true but it was false")
+		}
+		if _, found = tierInfo.Policies[polKey]; !found {
+			t.Error("Adding new policy - expected policy to be in Policies but it is not")
+		}
+	}
+
+	newPol := model.Policy{
+		Order: floatPtr(7),
+	}
+
+	dirty = poc.UpdatePolicy(polKey, &newPol)
+	if !dirty {
+		t.Error("Updating existing policy Order field - expected dirty to be true but it was false")
+	}
+
+	pol.DoNotTrack = true
+
+	dirty = poc.UpdatePolicy(polKey, &pol)
+	if !dirty {
+		t.Error("Updating existing policy DoNotTrack field - expected dirty to be true but it was false")
+	}
+
+	newPol.PreDNAT = true
+
+	dirty = poc.UpdatePolicy(polKey, &newPol)
+	if !dirty {
+		t.Error("Updating existing policy PreDNAT field - expected dirty to be true but it was false")
+	}
+
+	pol.ApplyOnForward = true
+
+	dirty = poc.UpdatePolicy(polKey, &pol)
+	if !dirty {
+		t.Error("Updating existing policy ApplyOnForward field - expected dirty to be true but it was false")
+	}
+
+	newPol.Types = []string{"don't care"}
+
+	dirty = poc.UpdatePolicy(polKey, &newPol)
+	if !dirty {
+		t.Error("Updating existing policy Types field - expected dirty to be true but it was false")
+	}
+
+	dirty = poc.UpdatePolicy(polKey, &newPol)
+	if dirty {
+		t.Error("Updating existing policy with identical policy - expected dirty to be false but it was true")
+	}
+
+	dirty = poc.UpdatePolicy(polKey, nil)
+	if !dirty {
+		t.Error("Deleting existing policy - expected dirty to be true but it was false")
+	}
+
+	if tierInfo, found := poc.tiers[polKey.Tier]; found {
+		if _, found = tierInfo.Policies[polKey]; found {
+			t.Error("Deleting existing policy - expected policy not to be in Policies but it is")
+		}
+	}
+
+	dirty = poc.UpdatePolicy(polKey, nil)
+	if dirty {
+		t.Error("Deleting non-existent policy - expected dirty to be false but it was true")
+	}
+}
+
+func TestPolicySorter_OnUpdate_Basic(t *testing.T) {
+	poc := NewPolicySorter()
+
+	policy := model.Policy{}
+	kvp := model.KVPair{
+		Key: model.PolicyKey{
+			Name: "test-policy",
+			Tier: "default",
+		},
+		Value: &policy,
+	}
+	update := api.Update{}
+	update.Key = kvp.Key
+	update.Value = kvp.Value
+
+	dirty := poc.OnUpdate(update)
+	if !dirty {
+		t.Error("Update containing new policy - expected dirty to be true but it was false")
+	}
+
+	update.Value = nil
+
+	dirty = poc.OnUpdate(update)
+	if !dirty {
+		t.Error("Update containing empty value for existing policy - expected dirty to be true but it was false")
+	}
+
+	update.Value = kvp.Value
+	update.Key = model.HostEndpointKey{}
+
+	dirty = poc.OnUpdate(update)
+	if dirty {
+		t.Error("Update containing key type other than PolicyKey - expected dirty to be false but it was true")
+	}
+}
+
+func TestPolicySorter_OnUpdate_RemoveFromNonExistent(t *testing.T) {
+	ps := NewPolicySorter()
+	key := model.PolicyKey{Tier: "default", Name: "foo"}
+	pol := &model.Policy{}
+	ps.OnUpdate(api.Update{
+		KVPair: model.KVPair{
+			Key:   key,
+			Value: pol,
+		},
+	})
+
+	if ps.tiers["default"].Valid {
+		t.Error("Expected default tier not to be valid but it is")
+	}
+
+	expectedPolicies := map[model.PolicyKey]*model.Policy{
+		key: pol,
+	}
+
+	if !reflect.DeepEqual(ps.tiers["default"].Policies, expectedPolicies) {
+		t.Errorf("Expected %v \n to equal \n %v", ps.tiers["default"].Policies, expectedPolicies)
+	}
+
+	ps.OnUpdate(api.Update{
+		KVPair: model.KVPair{
+			Key:   key,
+			Value: nil, // deletion
+		},
+	})
+
+	if _, found := ps.tiers["default"]; found {
+		t.Error("Expected default tier not to exist but it does")
+	}
+}
+
+func TestPolicySorter_OnUpdate_Remove(t *testing.T) {
+	ps := NewPolicySorter()
+	key := model.TierKey{Name: "default"}
+	tier := &model.Tier{}
+	ps.OnUpdate(api.Update{
+		KVPair: model.KVPair{
+			Key:   key,
+			Value: tier,
+		},
+	})
+
+	if !ps.tiers["default"].Valid {
+		t.Error("Expected default tier to be valid but it is not")
+	}
+
+	if len(ps.tiers["default"].Policies) > 0 {
+		t.Error("Expected default tier to be empty but it is not")
+	}
+
+	ps.OnUpdate(api.Update{
+		KVPair: model.KVPair{
+			Key:   key,
+			Value: nil, // deletion
+		},
+	})
+
+	if _, found := ps.tiers["default"]; found {
+		t.Error("Expected default tier not to exist but it does")
+	}
+}
+
+func TestPolicySorter_Sorting(t *testing.T) {
+	type sortingTestType struct {
+		name     string
+		input    []*TierInfo
+		expected []*TierInfo
+	}
+
+	tests := []sortingTestType{
+		{
+			name:     "nil",
+			input:    []*TierInfo(nil),
+			expected: []*TierInfo(nil),
+		},
+		{
+			name:     "empty",
+			input:    []*TierInfo{},
+			expected: []*TierInfo(nil),
+		},
+		{
+			name: "valid sorts ahead of invalid",
+			input: []*TierInfo{
+				{
+					Name:  "bar",
+					Valid: false,
+					Order: floatPtr(1),
+				},
+				{
+					Name:  "foo",
+					Valid: true,
+					Order: floatPtr(10),
+				},
+			},
+			expected: []*TierInfo{
+				{
+					Name:  "foo",
+					Valid: true,
+					Order: floatPtr(10),
+				},
+				{
+					Name:  "bar",
+					Valid: false,
+					Order: floatPtr(1),
+				},
+			},
+		},
+		{
+			name: "both invalid, both nil order rely on name",
+			input: []*TierInfo{
+				{
+					Name:  "foo",
+					Valid: false,
+				},
+				{
+					Name:  "bar",
+					Valid: false,
+				},
+			},
+			expected: []*TierInfo{
+				{
+					Name:  "bar",
+					Valid: false,
+				},
+				{
+					Name:  "foo",
+					Valid: false,
+				},
+			},
+		},
+		{
+			name: "both valid, both nil order rely on name",
+			input: []*TierInfo{
+				{
+					Name:  "foo",
+					Valid: true,
+				},
+				{
+					Name:  "bar",
+					Valid: true,
+				},
+			},
+			expected: []*TierInfo{
+				{
+					Name:  "bar",
+					Valid: true,
+				},
+				{
+					Name:  "foo",
+					Valid: true,
+				},
+			},
+		},
+		{
+			name: "both valid, rely on order",
+			input: []*TierInfo{
+				{
+					Name:  "bar",
+					Order: floatPtr(10),
+					Valid: true,
+				},
+				{
+					Name:  "foo",
+					Order: floatPtr(1),
+					Valid: true,
+				},
+			},
+			expected: []*TierInfo{
+				{
+					Name:  "foo",
+					Order: floatPtr(1),
+					Valid: true,
+				},
+				{
+					Name:  "bar",
+					Order: floatPtr(10),
+					Valid: true,
+				},
+			},
+		},
+		{
+			name: "all valid, non-nil orders sort ahead of nil",
+			input: []*TierInfo{
+				{
+					Name:  "bar",
+					Valid: true,
+				},
+				{
+					Name:  "baz",
+					Order: floatPtr(10),
+					Valid: true,
+				},
+				{
+					Name:  "foo",
+					Order: floatPtr(1),
+					Valid: true,
+				},
+			},
+			expected: []*TierInfo{
+				{
+					Name:  "foo",
+					Order: floatPtr(1),
+					Valid: true,
+				},
+				{
+					Name:  "baz",
+					Order: floatPtr(10),
+					Valid: true,
+				},
+				{
+					Name:  "bar",
+					Valid: true,
+				},
+			},
+		},
+		{
+			name: "all valid, equal order relies on name",
+			input: []*TierInfo{
+				{
+					Name:  "baz",
+					Order: floatPtr(10),
+					Valid: true,
+				},
+				{
+					Name:  "foo",
+					Order: floatPtr(10),
+					Valid: true,
+				},
+			},
+			expected: []*TierInfo{
+				{
+					Name:  "baz",
+					Order: floatPtr(10),
+					Valid: true,
+				},
+				{
+					Name:  "foo",
+					Order: floatPtr(10),
+					Valid: true,
+				},
+			},
+		},
+	}
+
+	insertTierInfos := func(ps *PolicySorter, ti []*TierInfo) {
+		for _, tierInfo := range ti {
+			if tierInfo != nil {
+				tiKey := tierInfoKey{
+					Name:  tierInfo.Name,
+					Order: tierInfo.Order,
+					Valid: tierInfo.Valid,
+				}
+				ps.tiers[tierInfo.Name] = tierInfo
+				ps.sortedTiers.ReplaceOrInsert(tiKey)
+			}
+		}
+	}
+
+	for _, tc := range tests {
+		ps := NewPolicySorter()
+
+		insertTierInfos(ps, tc.input)
+		got := ps.Sorted()
+
+		if !reflect.DeepEqual(got, tc.expected) {
+			t.Errorf("%v: Inserting in input order expected \n %v \n but got \n %v", tc.name, tc.expected, got)
+		}
+
+		ps = NewPolicySorter()
+		var reversedInput []*TierInfo
+		if tc.input != nil {
+			reversedInput = make([]*TierInfo, len(tc.input))
+			for i, v := range tc.input {
+				reversedInput[len(tc.input)-1-i] = v
+			}
+		}
+		insertTierInfos(ps, reversedInput)
+
+		got = ps.Sorted()
+
+		if !reflect.DeepEqual(got, tc.expected) {
+			t.Errorf("%v: Inserting in reverse order expected \n %v \n but got \n %v", tc.name, tc.expected, got)
+		}
+	}
 }

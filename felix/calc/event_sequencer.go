@@ -77,7 +77,7 @@ type EventSequencer struct {
 	pendingEncapUpdate            *config.Encapsulation
 	pendingEndpointUpdates        map[model.Key]interface{}
 	pendingEndpointEgressUpdates  map[model.Key]EndpointEgressData
-	pendingEndpointTierUpdates    map[model.Key][]tierInfo
+	pendingEndpointTierUpdates    map[model.Key][]TierInfo
 	pendingEndpointDeletes        set.Set[model.Key]
 	pendingHostIPUpdates          map[string]*net.IP
 	pendingHostIPDeletes          set.Set[string]
@@ -174,7 +174,7 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		pendingProfileDeletes:         set.New[model.ProfileRulesKey](),
 		pendingEndpointUpdates:        map[model.Key]interface{}{},
 		pendingEndpointEgressUpdates:  map[model.Key]EndpointEgressData{},
-		pendingEndpointTierUpdates:    map[model.Key][]tierInfo{},
+		pendingEndpointTierUpdates:    map[model.Key][]TierInfo{},
 		pendingEndpointDeletes:        set.NewBoxed[model.Key](),
 		pendingHostIPUpdates:          map[string]*net.IP{},
 		pendingHostIPDeletes:          set.New[string](),
@@ -475,7 +475,7 @@ func ModelHostEndpointToProto(ep *model.HostEndpoint, tiers, untrackedTiers, pre
 func (buf *EventSequencer) OnEndpointTierUpdate(key model.Key,
 	endpoint interface{},
 	egressData EndpointEgressData,
-	filteredTiers []tierInfo,
+	filteredTiers []TierInfo,
 ) {
 	if endpoint == nil {
 		// Deletion. Squash any queued updates.
@@ -1492,7 +1492,7 @@ func addPolicyToTierInfo(pol *PolKV, tierInfo *proto.TierInfo, egressAllowed boo
 	}
 }
 
-func tierInfoToProtoTierInfo(filteredTiers []tierInfo) (normalTiers, untrackedTiers, preDNATTiers, forwardTiers []*proto.TierInfo) {
+func tierInfoToProtoTierInfo(filteredTiers []TierInfo) (normalTiers, untrackedTiers, preDNATTiers, forwardTiers []*proto.TierInfo) {
 	if len(filteredTiers) > 0 {
 		for _, ti := range filteredTiers {
 			untrackedTierInfo := &proto.TierInfo{Name: ti.Name}
