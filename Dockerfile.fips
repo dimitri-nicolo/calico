@@ -114,6 +114,7 @@ RUN yum install -y --setopt=tsflags=nodocs \
        /var/lib/ruby/lib/ruby/gems/2.7.0/specifications/default/bundler-2.1.4.gemspec \
        /var/lib/ruby/lib/ruby/2.7.0/bundler \
        /var/lib/ruby/lib/ruby/gems/2.7.0/specifications/default/cgi-0.1.0.1.gemspec \
+       var/lib/ruby/lib/ruby/gems/2.7.0/specifications/default/uri-0.10.0.gemspec \
        /ruby-2.7.5.tar.gz \
        /ruby-2.7.5 \
  && yum remove -y make wget gcc gcc-c++ git patch vim-minimal zlib-devel libcom_err-devel python3-libxml python3-libxml2 \
