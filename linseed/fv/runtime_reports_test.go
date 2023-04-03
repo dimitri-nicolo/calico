@@ -269,15 +269,17 @@ func TestFV_RuntimeReports(t *testing.T) {
 
 		oldLegacyTime := time.Now().Add(-40 * time.Minute).UTC()
 		validLegacyTime := time.Now().Add(-20 * time.Minute).UTC()
+		oldGeneratedTime := time.Now().Add(-5 * time.Minute).UTC()
 		validGeneratedTime := time.Now().Add(-30 * time.Second).UTC()
 
 		oldLegacyRuntimeReport := newLegacyRuntimeReport(oldLegacyTime)
 		legacyRuntimeReport := newLegacyRuntimeReport(validLegacyTime)
+		oldRuntimeReport := newRuntimeReport(oldGeneratedTime, &oldGeneratedTime)
 		runtimeReport := newRuntimeReport(validGeneratedTime, &validGeneratedTime)
 
-		bulk, err := cli.RuntimeReports(cluster).Create(ctx, []v1.Report{oldLegacyRuntimeReport, legacyRuntimeReport, runtimeReport})
+		bulk, err := cli.RuntimeReports(cluster).Create(ctx, []v1.Report{oldLegacyRuntimeReport, legacyRuntimeReport, oldRuntimeReport, runtimeReport})
 		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 3, "create runtime reports did not succeed")
+		require.Equal(t, bulk.Succeeded, 4, "create runtime reports did not succeed")
 
 		// Refresh elasticsearch so that results appear.
 		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_runtime*")
