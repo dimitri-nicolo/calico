@@ -877,11 +877,38 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			renderer := NewRenderer(rrConfigReject)
 			denyRule := in
 			denyRule.Action = "deny"
-			rules := renderer.ProtoRuleToIptablesRules(&denyRule, uint8(ipVer))
+			rules := renderer.ProtoRuleToIptablesRules(&denyRule, uint8(ipVer),
+				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			// For deny, should be one match rule that just does the REJECT.
-			Expect(len(rules)).To(Equal(1))
+			expectedLen := 4
+			if len(in.DstDomainIpSetIds) > 0 {
+				expectedLen = 5
+			}
+
+			Expect(len(rules)).To(Equal(expectedLen))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
-			Expect(rules[0].Action).To(Equal(iptables.RejectAction{}))
+			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
+			Expect(rules[1]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkSingleBitSet(0x800),
+				Action: iptables.NfqueueAction{QueueNum: 100},
+			}))
+			Expect(rules[2]).To(Equal(iptables.Rule{
+				Match: iptables.Match().MarkSingleBitSet(0x800),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "DPI0|default.foo",
+				},
+			}))
+			Expect(rules[3]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSingleBitSet(0x800),
+				Action: iptables.RejectAction{},
+			}))
+
+			if len(in.DstDomainIpSetIds) > 0 {
+				Expect(rules[4]).To(Equal(iptables.Rule{
+					Action: iptables.SetMarkAction{Mark: 0x00001},
+				}))
+			}
 		},
 		ruleTestData...,
 	)

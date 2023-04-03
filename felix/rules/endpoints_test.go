@@ -943,7 +943,7 @@ var _ = Describe("Endpoints", func() {
 								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionAll)}},
+								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)}},
 
 							{Action: JumpAction{Target: "cali-pro-prof1"}},
 							{Match: Match().MarkSingleBitSet(0x8),

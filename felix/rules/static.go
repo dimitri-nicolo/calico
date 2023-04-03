@@ -322,7 +322,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 			},
 		)
 		inputRules = append(inputRules,
-			r.DropRules(Match().ProtocolNum(ProtoIPIP), "Drop IPIP packets from non-Calico hosts")...,
+			r.DropRules(Match().ProtocolNum(ProtoIPIP), fmt.Sprintf("%s IPIP packets from non-Calico hosts", r.IptablesFilterDenyAction))...,
 		)
 	}
 
@@ -351,11 +351,11 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 			},
 		)
 		inputRules = append(inputRules,
-			r.DropRules(Match().ProtocolNum(ProtoESP), "Drop IPSec ESP packets from non-Calico hosts")...,
+			r.DropRules(Match().ProtocolNum(ProtoESP), fmt.Sprintf("%s IPSec ESP packets from non-Calico hosts", r.IptablesFilterDenyAction))...,
 		)
 		inputRules = append(inputRules,
 			r.DropRules(Match().ProtocolNum(ProtoUDP).DestPorts(PortIKE),
-				"Drop IPSec IKE packets from non-Calico hosts")...,
+				fmt.Sprintf("%s IPSec IKE packets from non-Calico hosts", r.IptablesFilterDenyAction))...,
 		)
 	}
 
@@ -375,8 +375,8 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 				Match: Match().ProtocolNum(ProtoUDP).
 					DestPorts(uint16(r.Config.VXLANPort)).
 					DestAddrType(AddrTypeLocal),
-				Action:  DropAction{},
-				Comment: []string{"Drop IPv4 VXLAN packets from non-allowed hosts"},
+				Action:  r.IptablesFilterDenyAction,
+				Comment: []string{fmt.Sprintf("%s IPv4 VXLAN packets from non-allowed hosts", r.IptablesFilterDenyAction)},
 			},
 		)
 	}
