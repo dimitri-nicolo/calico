@@ -20,34 +20,40 @@ spec:
       hostNetwork: false
       hostIPC: false
       hostPID: false
-      securityContext:
-        runAsUser: 999
-        runAsGroup: 999
       imagePullSecrets:
-      - name: tigera-pull-secret
+        - name: tigera-pull-secret
       containers:
-      - name: tigera-internal-dashboard
-        image: gcr.io/unique-caldron-775/cnx/tigera/honeypod-exp-service:master
-        ports:
-        - containerPort: 8888
-        - containerPort: 443
-        resources:
-          limits:
-            cpu: 100m
-            memory: 200Mi
-          requests:
-            cpu: 100m
-            memory: 200Mi
-        securityContext:
-          privileged: false
-          allowPrivilegeEscalation: false
+        - name: tigera-internal-dashboard
+          image: gcr.io/unique-caldron-775/cnx/tigera/honeypod-exp-service:master
+          ports:
+            - containerPort: 8888
+            - containerPort: 443
+          resources:
+            limits:
+              cpu: 100m
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 200Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsGroup: 10001
+            runAsNonRoot: true
+            runAsUser: 10001
+            seccompProfile:
+              type: RuntimeDefault
+      serviceAccountName: tigera-honeypod
 ---
 # Create two service, one unreachable, one debug
 kind: Service
 apiVersion: v1
 metadata:
   name: tigera-dashboard-internal-debug
-  namespace: tigera-internal 
+  namespace: tigera-internal
   labels:
     app: tigera-dashboard-internal-debug
 spec:
@@ -62,12 +68,12 @@ kind: Service
 apiVersion: v1
 metadata:
   name: tigera-dashboard-internal-service
-  namespace: tigera-internal 
+  namespace: tigera-internal
   labels:
     app: tigera-dashboard-internal-service
 spec:
   ports:
-    - port: 443 
+    - port: 443
       protocol: TCP
   selector:
     app: tigera-internal-dashboard
@@ -83,7 +89,14 @@ spec:
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-dashboard" AND dest_port="8080" AND reporter="dst"'
-  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+  aggregateBy:
+    [
+      source_namespace,
+      source_name_aggr,
+      dest_namespace,
+      dest_name_aggr,
+      host.keyword,
+    ]
 ---
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
@@ -94,5 +107,11 @@ spec:
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-dashboard" AND dest_port="8080" AND reporter="dst"'
-  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
----
+  aggregateBy:
+    [
+      source_namespace,
+      source_name_aggr,
+      dest_namespace,
+      dest_name_aggr,
+      host.keyword,
+    ]

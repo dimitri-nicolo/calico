@@ -19,24 +19,30 @@ spec:
       hostNetwork: false
       hostIPC: false
       hostPID: false
-      securityContext:
-        runAsUser: 999
-        runAsGroup: 999
       imagePullSecrets:
-      - name: tigera-pull-secret
+        - name: tigera-pull-secret
       containers:
-      - name: tigera-internal-app
-        image: gcr.io/unique-caldron-775/cnx/tigera/honeypod:master
-        resources:
-          limits:
-            cpu: 100m
-            memory: 200Mi
-          requests:
-            cpu: 100m
-            memory: 200Mi
-        securityContext:
-            privileged: false
+        - name: tigera-internal-app
+          image: gcr.io/unique-caldron-775/cnx/tigera/honeypod:master
+          resources:
+            limits:
+              cpu: 100m
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 200Mi
+          securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsGroup: 10001
+            runAsNonRoot: true
+            runAsUser: 10001
+            seccompProfile:
+              type: RuntimeDefault
+      serviceAccountName: tigera-honeypod
 ---
 # Global Alert Template and Global Alert for IP Enumeration
 apiVersion: projectcalico.org/v3
@@ -49,7 +55,14 @@ spec:
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
-  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+  aggregateBy:
+    [
+      source_namespace,
+      source_name_aggr,
+      dest_namespace,
+      dest_name_aggr,
+      host.keyword,
+    ]
 ---
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
@@ -60,7 +73,14 @@ spec:
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
-  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+  aggregateBy:
+    [
+      source_namespace,
+      source_name_aggr,
+      dest_namespace,
+      dest_name_aggr,
+      host.keyword,
+    ]
 ---
 # Global Alert Template and Global Alert for IP Enumeration
 apiVersion: projectcalico.org/v3
@@ -73,7 +93,14 @@ spec:
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
-  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+  aggregateBy:
+    [
+      source_namespace,
+      source_name_aggr,
+      dest_namespace,
+      dest_name_aggr,
+      host.keyword,
+    ]
   metric: count
   condition: gte
   threshold: 4
@@ -87,8 +114,14 @@ spec:
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
-  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+  aggregateBy:
+    [
+      source_namespace,
+      source_name_aggr,
+      dest_namespace,
+      dest_name_aggr,
+      host.keyword,
+    ]
   metric: count
   condition: gte
   threshold: 4
----
