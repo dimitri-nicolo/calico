@@ -291,6 +291,7 @@ type Config struct {
 	DropActionOverride          string `config:"oneof(DROP,ACCEPT,LOGandDROP,LOGandACCEPT);DROP;non-zero,die-on-fail"`
 	IptablesFilterAllowAction   string `config:"oneof(ACCEPT,RETURN);ACCEPT;non-zero,die-on-fail"`
 	IptablesMangleAllowAction   string `config:"oneof(ACCEPT,RETURN);ACCEPT;non-zero,die-on-fail"`
+	IptablesFilterDenyAction    string `config:"oneof(DROP,REJECT);DROP;non-zero,die-on-fail"`
 	LogPrefix                   string `config:"string;calico-packet"`
 	LogDropActionOverride       bool   `config:"bool;false"`
 

@@ -397,8 +397,8 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 				Match: Match().ProtocolNum(ProtoUDP).
 					DestPorts(uint16(r.Config.VXLANPort)).
 					DestAddrType(AddrTypeLocal),
-				Action:  DropAction{},
-				Comment: []string{"Drop IPv6 VXLAN packets from non-allowed hosts"},
+				Action:  r.IptablesFilterDenyAction,
+				Comment: []string{fmt.Sprintf("%s IPv6 VXLAN packets from non-allowed hosts", r.IptablesFilterDenyAction)},
 			},
 		)
 	}

@@ -80,6 +80,14 @@ var _ = Describe("Static", func() {
 	}
 
 	for _, trueOrFalse := range []bool{true, false} {
+		var denyAction Action
+		denyAction = DropAction{}
+		denyActionString := "DROP"
+		if trueOrFalse {
+			denyAction = RejectAction{}
+			denyActionString = "REJECT"
+		}
+
 		kubeIPVSEnabled := trueOrFalse
 		Describe(fmt.Sprintf("with default config and IPVS=%v", kubeIPVSEnabled), func() {
 			BeforeEach(func() {
@@ -110,6 +118,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 					KubeIPVSSupportEnabled:           kubeIPVSEnabled,
 					KubeNodePortRanges:               []numorstring.Port{{MinPort: 30030, MaxPort: 30040, PortName: ""}},
+					IptablesFilterDenyAction:         denyActionString,
 					DNSTrustedServers:                []config.ServerPort{{IP: "1.2.3.4", Port: 53}, {IP: "fd5f:83a5::34:2", Port: 53}},
 				}
 			})
@@ -146,7 +155,7 @@ var _ = Describe("Static", func() {
 							{Match: Match().MarkMatchesWithMask(0x40, 0x40),
 								Action: JumpAction{Target: ChainRpfSkip}},
 							{Match: Match().MarkSingleBitSet(0x40).RPFCheckFailed(false),
-								Action: DropAction{}},
+								Action: denyAction},
 							{Match: Match().MarkClear(0x40),
 								Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 							{Match: Match().MarkSingleBitSet(0x10),
@@ -603,7 +612,7 @@ var _ = Describe("Static", func() {
 						{Match: Match().MarkMatchesWithMask(0x40, 0x40),
 							Action: JumpAction{Target: ChainRpfSkip}},
 						{Match: Match().MarkSingleBitSet(0x40).RPFCheckFailed(false),
-							Action: DropAction{}},
+							Action: denyAction},
 						{Match: Match().MarkClear(0x40),
 							Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 						{Match: Match().MarkSingleBitSet(0x10),
@@ -725,6 +734,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 					IptablesMarkDrop:                 0x200,
 					KubeIPVSSupportEnabled:           kubeIPVSEnabled,
+					IptablesFilterDenyAction:         denyActionString,
 				}
 			})
 
@@ -742,8 +752,8 @@ var _ = Describe("Static", func() {
 						Action:  AcceptAction{},
 						Comment: []string{"Allow IPIP packets from Calico hosts"}},
 					{Match: Match().ProtocolNum(4),
-						Action:  DropAction{},
-						Comment: []string{"Drop IPIP packets from non-Calico hosts"}},
+						Action:  RejectAction{},
+						Comment: []string{"Reject IPIP packets from non-Calico hosts"}},
 
 					// Forward check chain.
 					{Action: ClearMarkAction{Mark: epMark}},
