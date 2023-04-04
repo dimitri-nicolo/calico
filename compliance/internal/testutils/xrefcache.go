@@ -844,7 +844,6 @@ func (t *XrefCacheTester) DeleteEndpoints(nameIdx Name, namespaceIdx Namespace) 
 		Type:       syncer.UpdateTypeDeleted,
 		ResourceID: r,
 	})
-	metav1.Now()
 }
 
 //
