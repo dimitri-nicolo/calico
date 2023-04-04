@@ -17,9 +17,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
 	log "github.com/sirupsen/logrus"
-
 	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/rest"
@@ -30,6 +28,7 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
@@ -40,6 +39,9 @@ const (
 	// requests with this value in the ClusterHeaderField.
 	DefaultClusterID   = "cluster"
 	DefaultReadTimeout = 45 * time.Second
+
+	// CalicoCloudTenantIDClaimName is the name of the tenantID claim in Calico Cloud issued bearer tokens
+	CalicoCloudTenantIDClaimName = "https://calicocloud.io/tenantID"
 )
 
 // ClusterHeaderFieldCanon represents the request header key used to determine which
@@ -91,6 +93,8 @@ type Server struct {
 
 	// checkManagedClusterAuthorizationBeforeProxy
 	checkManagedClusterAuthorizationBeforeProxy bool
+
+	accessLogger *accesslog.Logger
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
@@ -125,8 +129,13 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, vcfg config.Config, authe
 	srv.clusters.sniServiceMap = srv.sniServiceMap
 
 	// Create an HTTP server to handle incoming requests.
+	var rootHandler = srv.clusterMuxer
+	if srv.accessLogger != nil {
+		rootHandler = srv.accessLogger.WrapHandler(rootHandler)
+	}
+
 	srv.proxyMux = http.NewServeMux()
-	srv.proxyMux.HandleFunc("/", srv.clusterMuxer)
+	srv.proxyMux.HandleFunc("/", rootHandler)
 	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
 
 	cfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
@@ -467,4 +476,11 @@ func (s *Server) WatchK8sWithSync(syncC chan<- error) error {
 	}
 
 	return s.clusters.watchK8s(s.ctx, syncC)
+}
+
+// FlushAccessLogs exposed for testing
+func (s *Server) FlushAccessLogs() {
+	if s.accessLogger != nil {
+		s.accessLogger.Flush()
+	}
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 )
 
@@ -160,6 +161,27 @@ func main() {
 		innerProxy, err := proxy.New(targets)
 		if err != nil {
 			log.WithError(err).Fatalf("failed to create proxier for tunneled connections from a managed cluster")
+		}
+
+		if cfg.HTTPAccessLoggingEnabled {
+			logOpts := []accesslog.Option{
+				accesslog.WithRequestHeader(server.ClusterHeaderFieldCanon, "xClusterID"),
+				accesslog.WithRequestHeader("User-Agent", "userAgent"),
+				accesslog.WithErrorResponseBodyCaptureSize(250),
+			}
+
+			if cfg.OIDCAuthEnabled {
+				logOpts = append(logOpts, accesslog.WithStandardJWTClaims())
+				logOpts = append(logOpts, accesslog.WithStringJWTClaim(cfg.OIDCAuthUsernameClaim, "username"))
+				if cfg.HTTPAccessLoggingIncludeAuthGroups {
+					logOpts = append(logOpts, accesslog.WithStringArrayJWTClaim(cfg.OIDCAuthGroupsClaim, "groups"))
+				}
+				if cfg.CalicoCloudRequireTenantClaim {
+					logOpts = append(logOpts, accesslog.WithStringJWTClaim(server.CalicoCloudTenantIDClaimName, "ccTenantID"))
+				}
+			}
+
+			server.WithHTTPAccessLogging(logOpts...)
 		}
 
 		opts = append(opts,
