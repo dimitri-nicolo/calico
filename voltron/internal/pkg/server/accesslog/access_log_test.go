@@ -54,6 +54,7 @@ var _ = Describe("Access Logs", func() {
 		accesslog.WithStringJWTClaim("email", "username"),
 		accesslog.WithStringArrayJWTClaim("https://calicocloud.io/groups", "groups"),
 		accesslog.WithStringJWTClaim("https://calicocloud.io/tenantID", "ccTenantID"),
+		accesslog.WithErrorResponseBodyCaptureSize(10),
 	)
 
 	const successPath = "/foo/bar"
@@ -69,7 +70,11 @@ var _ = Describe("Access Logs", func() {
 	})
 	mux.HandleFunc(errorPath, func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(3 * time.Millisecond)
-		http.Error(w, "an error occurred", http.StatusBadRequest)
+		errMsg := "an error occurred"
+		if customMsg := r.Header.Get("errMsg"); customMsg != "" {
+			errMsg = customMsg
+		}
+		http.Error(w, errMsg, http.StatusBadRequest)
 	})
 
 	accessLoggingHandler := accessLogger.WrapHandler(mux.ServeHTTP)
@@ -174,35 +179,67 @@ var _ = Describe("Access Logs", func() {
 			}, accessLog)
 		})
 
-		It("a failing request", func() {
+		errorResponseTests := []struct {
+			name                string
+			fullError           string
+			expectedLoggedError string
+		}{
+			// ErrorResponseBodyCaptureSize is set to 10 above
+			{
+				name:                "error response capture length is larger than the actual response",
+				fullError:           "error",
+				expectedLoggedError: "error\n",
+			},
+			{
+				name:                "error response capture length is smaller than the actual response",
+				fullError:           "error error error",
+				expectedLoggedError: "error erro",
+			},
+			{
+				name:                "error response includes non-ascii chars",
+				fullError:           "error😀",
+				expectedLoggedError: "error😀\n",
+			},
+			{
+				name:                "error response truncates a non-ascii char",
+				fullError:           "error  😀",
+				expectedLoggedError: "error  ���",
+			},
+		}
 
-			request, err := http.NewRequest(http.MethodDelete, httpServer.URL+errorPath, nil)
-			Expect(err).ToNot(HaveOccurred())
+		for _, t := range errorResponseTests {
+			var t = t // capture the loop variable
+			It(t.name, func() {
 
-			request.Header.Set("authorization", userToken)
+				request, err := http.NewRequest(http.MethodDelete, httpServer.URL+errorPath, nil)
+				Expect(err).ToNot(HaveOccurred())
 
-			response, err := httpClient.Do(request)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(response.StatusCode).To(Equal(http.StatusBadRequest))
+				request.Header.Set("authorization", userToken)
+				request.Header.Set("errMsg", t.fullError)
 
-			accessLog := flushAndReadLastAccessLog(accessLogger, logFile)
-			requireMessageMatches(test.AccessLogMessage{
-				Request: test.AccessLogRequest{
-					RemoteAddr: "127.0.0.1:",
-					Proto:      "HTTP/2.0",
-					Method:     http.MethodDelete,
-					Host:       httpServer.Listener.Addr().String(),
-					Path:       errorPath,
-					UserAgent:  "Go-http-client/2.0",
-					Auth:       expectedUserTokenAuth,
-				},
-				Response: test.AccessLogResponse{
-					Status:       400,
-					BytesWritten: 18,
-					Body:         "an error occurred\n",
-				},
-			}, accessLog)
-		})
+				response, err := httpClient.Do(request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(response.StatusCode).To(Equal(http.StatusBadRequest))
+
+				accessLog := flushAndReadLastAccessLog(accessLogger, logFile)
+				requireMessageMatches(test.AccessLogMessage{
+					Request: test.AccessLogRequest{
+						RemoteAddr: "127.0.0.1:",
+						Proto:      "HTTP/2.0",
+						Method:     http.MethodDelete,
+						Host:       httpServer.Listener.Addr().String(),
+						Path:       errorPath,
+						UserAgent:  "Go-http-client/2.0",
+						Auth:       expectedUserTokenAuth,
+					},
+					Response: test.AccessLogResponse{
+						Status:       400,
+						BytesWritten: len([]byte(t.fullError)) + 1, // +1 for the newline
+						Body:         t.expectedLoggedError,
+					},
+				}, accessLog)
+			})
+		}
 
 	})
 })

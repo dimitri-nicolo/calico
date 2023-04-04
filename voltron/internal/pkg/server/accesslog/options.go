@@ -66,3 +66,12 @@ func WithRequestHeader(headerName, logFieldName string) Option {
 		return nil
 	}
 }
+
+// WithErrorResponseBodyCaptureSize capture and log the first n bytes of error (status >= 400) responses.
+// Error response body capturing is disabled until this function is called with a >0 value
+func WithErrorResponseBodyCaptureSize(size int) Option {
+	return func(c *config) error {
+		c.errorResponseCaptureSize = size
+		return nil
+	}
+}

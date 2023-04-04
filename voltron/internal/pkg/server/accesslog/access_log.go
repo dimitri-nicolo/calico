@@ -18,10 +18,11 @@ type Logger struct {
 }
 
 type config struct {
-	zapConfig         *zap.Config
-	requestHeaders    []fieldMapping
-	stringClaims      []fieldMapping
-	stringArrayClaims []fieldMapping
+	zapConfig                *zap.Config
+	requestHeaders           []fieldMapping
+	stringClaims             []fieldMapping
+	stringArrayClaims        []fieldMapping
+	errorResponseCaptureSize int
 }
 
 type fieldMapping struct {
@@ -78,19 +79,19 @@ func (l *Logger) WrapHandler(delegate http.HandlerFunc) http.HandlerFunc {
 		tlsField := tlsLogField(r)
 		requestField := requestLogField(r, l.cfg, time.Now().UTC())
 
-		var responseSnippet string
+		var capturedResponseBody string
 
 		metrics := httpsnoop.CaptureMetricsFn(w, func(w http.ResponseWriter) {
 			// capture the first part of the response which we will log on status >= 400
 			w = httpsnoop.Wrap(w, httpsnoop.Hooks{
 				Write: func(writeFunc httpsnoop.WriteFunc) httpsnoop.WriteFunc {
 					return func(b []byte) (int, error) {
-						if responseSnippet == "" && b != nil {
-							snippetSize := 250 // the maximum we will take is 250 bytes
-							if snippetSize > len(b) {
-								snippetSize = len(b)
+						errorResponseCaptureSize := l.cfg.errorResponseCaptureSize
+						if errorResponseCaptureSize > 0 && capturedResponseBody == "" && b != nil {
+							if errorResponseCaptureSize > len(b) {
+								errorResponseCaptureSize = len(b)
 							}
-							responseSnippet = string(b[:snippetSize])
+							capturedResponseBody = string(b[:errorResponseCaptureSize])
 						}
 						return writeFunc(b)
 					}
@@ -102,7 +103,7 @@ func (l *Logger) WrapHandler(delegate http.HandlerFunc) http.HandlerFunc {
 		l.logger.Info("",
 			tlsField,
 			requestField,
-			responseLogField(metrics, responseSnippet),
+			responseLogField(metrics, capturedResponseBody),
 		)
 	}
 }

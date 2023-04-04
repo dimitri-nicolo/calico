@@ -625,6 +625,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					accesslog.WithStandardJWTClaims(),
 					accesslog.WithStringJWTClaim("email", "username"),
 					accesslog.WithStringArrayJWTClaim("groups", "groups"),
+					accesslog.WithErrorResponseBodyCaptureSize(250),
 				),
 			)
 		})

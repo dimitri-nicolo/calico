@@ -145,6 +145,7 @@ func main() {
 			logOpts := []accesslog.Option{
 				accesslog.WithRequestHeader(server.ClusterHeaderField, "xClusterID"),
 				accesslog.WithRequestHeader("User-Agent", "userAgent"),
+				accesslog.WithErrorResponseBodyCaptureSize(250),
 			}
 
 			if cfg.OIDCAuthEnabled {
