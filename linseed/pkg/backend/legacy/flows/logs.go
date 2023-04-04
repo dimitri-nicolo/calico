@@ -17,8 +17,8 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 )
 
 type flowLogBackend struct {
@@ -174,8 +174,8 @@ func (b *flowLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts 
 		Query(q)
 
 	// Configure sorting.
-	if len(opts.Sort) != 0 {
-		for _, s := range opts.Sort {
+	if len(opts.GetSortBy()) != 0 {
+		for _, s := range opts.GetSortBy() {
 			query.Sort(s.Field, !s.Descending)
 		}
 	} else {
@@ -187,7 +187,8 @@ func (b *flowLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts 
 // buildQuery builds an elastic query using the given parameters.
 func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.FlowLogParams) (elastic.Query, error) {
 	// Start with the base flow log query using common fields.
-	query, err := logtools.BuildQuery(b.helper, i, opts)
+	start, end := logtools.ExtractTimeRange(opts.QueryParams.TimeRange)
+	query, err := logtools.BuildQuery(b.helper, i, opts.LogSelectionParams, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -232,5 +233,9 @@ func (b *flowLogBackend) index(i bapi.ClusterInfo) string {
 }
 
 func (b *flowLogBackend) writeAlias(i bapi.ClusterInfo) string {
+	if i.Tenant != "" {
+		return fmt.Sprintf("tigera_secure_ee_flows.%s.%s.", i.Tenant, i.Cluster)
+	}
+
 	return fmt.Sprintf("tigera_secure_ee_flows.%s.", i.Cluster)
 }

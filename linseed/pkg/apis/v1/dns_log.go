@@ -25,6 +25,7 @@ import (
 // DNSLogParams define querying parameters to retrieve DNS logs
 type DNSLogParams struct {
 	QueryParams        `json:",inline" validate:"required"`
+	QuerySortParams    `json:",inline"`
 	LogSelectionParams `json:",inline"`
 	DomainMatches      []DomainMatch `json:"domain_matches"`
 }

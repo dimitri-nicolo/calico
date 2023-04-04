@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/client"
+	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
@@ -110,7 +111,7 @@ func (c *testClient) doHTTPRequest(clusterID string) (string, error) {
 func (c *testClient) request(clusterID string, schema string, address string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", schema+"://"+address+"/some/path", strings.NewReader("HELLO"))
 	Expect(err).NotTo(HaveOccurred())
-	req.Header[server.ClusterHeaderField] = []string{clusterID}
+	req.Header[utils.ClusterHeaderField] = []string{clusterID}
 	req.Header.Set(authentication.AuthorizationHeader, "Bearer jane")
 	Expect(err).NotTo(HaveOccurred())
 	return req, err
@@ -210,6 +211,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		voltron, err = server.New(
 			k8sAPI,
 			&rest.Config{BearerToken: "manager-token"},
+			vcfg.Config{},
 			authenticator,
 			server.WithTunnelSigningCreds(tunnelCert),
 			server.WithTunnelCert(tunnelTLS),

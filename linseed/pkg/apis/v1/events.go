@@ -6,6 +6,7 @@ import "github.com/projectcalico/calico/libcalico-go/lib/json"
 // EventParams define querying parameters to retrieve events
 type EventParams struct {
 	QueryParams        `json:",inline" validate:"required"`
+	QuerySortParams    `json:",inline"`
 	LogSelectionParams `json:",inline"`
 }
 
@@ -96,4 +97,10 @@ type Snort struct {
 	Flags       string `json:"flags,omitempty"`
 	Occurrence  string `json:"occurrence,omitempty"`
 	Other       string `json:"other,omitempty"`
+}
+
+type DPIRecord struct {
+	SnortSignatureID       string `json:"snort_signature_id"`
+	SnortSignatureRevision string `json:"snort_signature_revision"`
+	SnortAlert             string `json:"snort_alert"`
 }

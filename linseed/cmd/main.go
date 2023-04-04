@@ -21,6 +21,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
 	"github.com/projectcalico/calico/linseed/pkg/handler/l7"
 	"github.com/projectcalico/calico/linseed/pkg/handler/processes"
+	"github.com/projectcalico/calico/linseed/pkg/handler/runtime"
 	"github.com/projectcalico/calico/linseed/pkg/handler/waf"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend"
@@ -33,6 +34,7 @@ import (
 	flowbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
 	l7backend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
 	procbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/processes"
+	runtimebackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/runtime"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	wafbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/waf"
 
@@ -108,10 +110,10 @@ func run() {
 	bgpBackend := bgpbackend.NewBackend(esClient, bgpCache)
 	procBackend := procbackend.NewBackend(esClient)
 	wafBackend := wafbackend.NewBackend(esClient, defaultCache)
-
 	reportsBackend := compliancebackend.NewReportsBackend(esClient, defaultCache)
 	snapshotsBackend := compliancebackend.NewSnapshotBackend(esClient, defaultCache)
 	benchmarksBackend := compliancebackend.NewBenchmarksBackend(esClient, defaultCache)
+	runtimeBackend := runtimebackend.NewBackend(esClient, defaultCache)
 
 	// Configure options used to launch the server.
 	opts := []server.Option{
@@ -126,6 +128,7 @@ func run() {
 			processes.New(procBackend),
 			waf.New(wafBackend),
 			compliance.New(benchmarksBackend, snapshotsBackend, reportsBackend),
+			runtime.New(runtimeBackend),
 		)...),
 		server.WithRoutes(server.UtilityRoutes()...),
 	}

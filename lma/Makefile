@@ -18,7 +18,6 @@ MOCKERY_FILE_PATHS= \
 	pkg/elastic/Client \
 	pkg/elastic/ClusterContextClientFactory \
 	pkg/elastic/FlowFilter \
-	pkg/elastic/index/Helper \
 	pkg/k8s/ClientSet \
 	pkg/k8s/ClientSetFactory \
 	pkg/rbac/FlowHelper

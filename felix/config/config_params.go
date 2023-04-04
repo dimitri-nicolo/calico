@@ -28,6 +28,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 
 	"github.com/projectcalico/calico/felix/idalloc"
@@ -188,7 +189,7 @@ type Config struct {
 	BPFEnabled                         bool             `config:"bool;false"`
 	BPFDisableUnprivileged             bool             `config:"bool;true"`
 	BPFLogLevel                        string           `config:"oneof(off,info,debug);off;non-zero"`
-	BPFDataIfacePattern                *regexp.Regexp   `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*|tunl0$|vxlan.calico$|egress.calico$|wireguard.cali$|wg-v6.cali$)"`
+	BPFDataIfacePattern                *regexp.Regexp   `config:"regexp;^((en|wl|ww|sl|ib)[Popsx].*|(eth|wlan|wwan).*|tunl0$|vxlan.calico$|egress.calico$|wireguard.cali$|wg-v6.cali$)"`
 	BPFL3IfacePattern                  *regexp.Regexp   `config:"regexp;"`
 	BPFConnectTimeLoadBalancingEnabled bool             `config:"bool;true"`
 	BPFExternalServiceMode             string           `config:"oneof(tunnel,dsr);tunnel;non-zero"`
@@ -205,7 +206,7 @@ type Config struct {
 	BPFMapSizeIPSets                   int              `config:"int;1048576;non-zero"`
 	BPFMapSizeIfState                  int              `config:"int;1000;non-zero"`
 	BPFHostConntrackBypass             bool             `config:"bool;true"`
-	BPFEnforceRPF                      string           `config:"oneof(Disabled,Strict);Strict;non-zero"`
+	BPFEnforceRPF                      string           `config:"oneof(Disabled,Strict,Loose);Strict;non-zero"`
 	BPFPolicyDebugEnabled              bool             `config:"bool;true"`
 
 	FlowLogsCollectProcessInfo  bool `config:"bool;false"`
@@ -1336,7 +1337,7 @@ func (config *Config) RouteTableIndices() []idalloc.IndexRange {
 
 		// default RouteTableRanges val
 		return []idalloc.IndexRange{
-			{Min: 1, Max: 250},
+			{Min: clientv3.DefaultFelixRouteTableRangeMin, Max: clientv3.DefaultFelixRouteTableRangeMax},
 		}
 	} else if config.RouteTableRange != (idalloc.IndexRange{}) {
 		log.Warn("Both `RouteTableRanges` and deprecated `RouteTableRange` options are set. `RouteTableRanges` value will be given precedence.")

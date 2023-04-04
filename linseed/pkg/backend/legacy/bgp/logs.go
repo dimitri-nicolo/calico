@@ -56,7 +56,6 @@ func (b *bgpLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 
 	for _, f := range logs {
 		// Add this log to the bulk request.
-		// f.IngestApp = "linseed"
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(f)
 		bulk.Add(req)
 	}
@@ -154,5 +153,9 @@ func (b *bgpLogBackend) index(i bapi.ClusterInfo) string {
 }
 
 func (b *bgpLogBackend) writeAlias(i bapi.ClusterInfo) string {
+	if i.Tenant != "" {
+		return fmt.Sprintf("tigera_secure_ee_bgp.%s.%s.", i.Tenant, i.Cluster)
+	}
+
 	return fmt.Sprintf("tigera_secure_ee_bgp.%s.", i.Cluster)
 }

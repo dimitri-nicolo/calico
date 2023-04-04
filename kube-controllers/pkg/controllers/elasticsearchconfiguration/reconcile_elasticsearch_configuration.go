@@ -111,8 +111,13 @@ func (c *reconciler) reconcileRoles() error {
 	return esCLI.CreateRoles(roles...)
 }
 
-// reconcileCASecrets copies tigera-secure-es-gateway-http-certs-public from the management cluster to the managed cluster.
+// reconcileCASecrets copies certs from the management cluster to the managed cluster as needed for managed cluster clients to verify the certificates
+// presented by servers in the management cluster. The following secrets are copied:
+//
+// - tigera-secure-es-gateway-http-certs-public: for clients verifying the authenticity of es-gateway
+// - tigera-secure-voltron-linseed-http-certs-public: for clients verifying the authenticity of Voltron when talking to Linseed.
 func (c *reconciler) reconcileCASecrets() error {
+	// Handle the es-gateway secret.
 	secret, err := c.managementK8sCLI.CoreV1().Secrets(c.managementOperatorNamespace).Get(context.Background(), resource.ESGatewayCertSecret, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -133,6 +138,17 @@ func (c *reconciler) reconcileCASecrets() error {
 	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
 		return err
 	}
+
+	// Copy the Voltron secret through as well.
+	secret, err = c.managementK8sCLI.CoreV1().Secrets(c.managementOperatorNamespace).Get(context.Background(), resource.VoltronLinseedPublicCert, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	secret.ObjectMeta.Namespace = c.managedOperatorNamespace
+	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
+		return err
+	}
+
 	return nil
 }
 

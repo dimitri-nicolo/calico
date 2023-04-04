@@ -6,11 +6,11 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/alert"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/cache"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/config"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dispatcher"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
-	"github.com/projectcalico/calico/deep-packet-inspection/pkg/elastic"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/eventgenerator"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/exec"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/file"
@@ -69,7 +69,7 @@ var _ = Describe("Resource Dispatcher", func() {
 
 		mockGenerator := &eventgenerator.MockEventGenerator{}
 		mockEventGenerator := func(cfg *config.Config,
-			esForwarder elastic.ESForwarder,
+			esForwarder alert.Forwarder,
 			dpiUpdater dpiupdater.DPIStatusUpdater,
 			dpiKey model.ResourceKey,
 			wepCache cache.WEPCache) eventgenerator.EventGenerator {
@@ -121,7 +121,7 @@ var _ = Describe("Resource Dispatcher", func() {
 		mockFileMaintainer := &file.MockFileMaintainer{}
 		mockGenerator := &eventgenerator.MockEventGenerator{}
 		mockEventGenerator := func(cfg *config.Config,
-			esForwarder elastic.ESForwarder,
+			esForwarder alert.Forwarder,
 			dpiUpdater dpiupdater.DPIStatusUpdater,
 			dpiKey model.ResourceKey,
 			wepCache cache.WEPCache) eventgenerator.EventGenerator {
@@ -149,7 +149,7 @@ var _ = Describe("Resource Dispatcher", func() {
 		mockFileMaintainer := &file.MockFileMaintainer{}
 		mockGenerator := &eventgenerator.MockEventGenerator{}
 		mockEventGenerator := func(cfg *config.Config,
-			esForwarder elastic.ESForwarder,
+			esForwarder alert.Forwarder,
 			dpiUpdater dpiupdater.DPIStatusUpdater,
 			dpiKey model.ResourceKey,
 			wepCache cache.WEPCache) eventgenerator.EventGenerator {
@@ -185,7 +185,7 @@ var _ = Describe("Resource Dispatcher", func() {
 		mockFileMaintainer := &file.MockFileMaintainer{}
 		mockGenerator := &eventgenerator.MockEventGenerator{}
 		mockEventGenerator := func(cfg *config.Config,
-			esForwarder elastic.ESForwarder,
+			esForwarder alert.Forwarder,
 			dpiUpdater dpiupdater.DPIStatusUpdater,
 			dpiKey model.ResourceKey,
 			wepCache cache.WEPCache) eventgenerator.EventGenerator {
@@ -211,7 +211,7 @@ var _ = Describe("Resource Dispatcher", func() {
 		mockFileMaintainer := &file.MockFileMaintainer{}
 		mockGenerator := &eventgenerator.MockEventGenerator{}
 		mockEventGenerator := func(cfg *config.Config,
-			esForwarder elastic.ESForwarder,
+			esForwarder alert.Forwarder,
 			dpiUpdater dpiupdater.DPIStatusUpdater,
 			dpiKey model.ResourceKey,
 			wepCache cache.WEPCache) eventgenerator.EventGenerator {
@@ -257,7 +257,7 @@ var _ = Describe("Resource Dispatcher", func() {
 		mockFileMaintainer := &file.MockFileMaintainer{}
 		mockGenerator := &eventgenerator.MockEventGenerator{}
 		mockEventGenerator := func(cfg *config.Config,
-			esForwarder elastic.ESForwarder,
+			esForwarder alert.Forwarder,
 			dpiUpdater dpiupdater.DPIStatusUpdater,
 			dpiKey model.ResourceKey,
 			wepCache cache.WEPCache) eventgenerator.EventGenerator {

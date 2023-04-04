@@ -45,7 +45,7 @@ func (s *dikastesTestSuite) SetupTest() {
 	s.policySync = policySync
 
 	dikastes := server.NewDikastesServer(
-		server.WithDialAddress(policySync.Addr()),
+		server.WithDialAddress("unix", policySync.Addr()),
 		server.WithListenArguments("unix", dikastesListenPath),
 		server.WithSubscriptionType("per-host-policies"),
 	)

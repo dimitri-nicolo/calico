@@ -171,7 +171,7 @@ func (ec *EndpointLookupsCache) RegisterWith(allUpdateDisp *dispatcher.Dispatche
 // and corresponding IP address relationship. The difference between this handler and the OnUpdate
 // handler (below) is this method records tier information for local endpoints while this information
 // is ignored for remote endpoints.
-func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface{}, egressData EndpointEgressData, filteredTiers []tierInfo) {
+func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface{}, egressData EndpointEgressData, filteredTiers []TierInfo) {
 	switch k := key.(type) {
 	case model.WorkloadEndpointKey:
 		if ep == nil {
@@ -194,7 +194,7 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 }
 
 // CreateEndpointData creates the endpoint data based on tier
-func (ec *EndpointLookupsCache) CreateEndpointData(key model.Key, ep interface{}, filteredTiers []tierInfo) *EndpointData {
+func (ec *EndpointLookupsCache) CreateEndpointData(key model.Key, ep interface{}, filteredTiers []TierInfo) *EndpointData {
 	ed := &EndpointData{
 		Key:      key,
 		Endpoint: ep,

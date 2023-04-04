@@ -14,8 +14,8 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 )
 
 type dnsLogBackend struct {
@@ -171,8 +171,8 @@ func (b *dnsLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *
 		Query(q)
 
 	// Configure sorting.
-	if len(opts.Sort) != 0 {
-		for _, s := range opts.Sort {
+	if len(opts.GetSortBy()) != 0 {
+		for _, s := range opts.GetSortBy() {
 			query.Sort(s.Field, !s.Descending)
 		}
 	} else {
@@ -184,7 +184,8 @@ func (b *dnsLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *
 // buildQuery builds an elastic query using the given parameters.
 func (b *dnsLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.DNSLogParams) (elastic.Query, error) {
 	// Start with the base dns log query using common fields.
-	query, err := logtools.BuildQuery(b.helper, i, opts)
+	start, end := logtools.ExtractTimeRange(opts.QueryParams.TimeRange)
+	query, err := logtools.BuildQuery(b.helper, i, opts.LogSelectionParams, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -228,6 +229,9 @@ func (b *dnsLogBackend) index(i bapi.ClusterInfo) string {
 }
 
 func (b *dnsLogBackend) writeAlias(i bapi.ClusterInfo) string {
-	// TODO: Not multi-tenant
+	if i.Tenant != "" {
+		return fmt.Sprintf("tigera_secure_ee_dns.%s.%s.", i.Tenant, i.Cluster)
+	}
+
 	return fmt.Sprintf("tigera_secure_ee_dns.%s.", i.Cluster)
 }

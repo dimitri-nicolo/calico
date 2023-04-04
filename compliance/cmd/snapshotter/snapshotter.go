@@ -73,11 +73,11 @@ func main() {
 		ClientCertPath:  cfg.LinseedClientCert,
 		FIPSModeEnabled: cfg.FIPSModeEnabled,
 	}
-	linseed, err := client.NewClient(cfg.Tenant, config)
+	linseed, err := client.NewClient(cfg.TenantID, config)
 	if err != nil {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}
-	store := api.NewComplianceStore(linseed, cfg.Cluster)
+	store := api.NewComplianceStore(linseed, cfg.ClusterName)
 
 	// Create clientset.
 	datastoreClient := datastore.MustGetClientSet()

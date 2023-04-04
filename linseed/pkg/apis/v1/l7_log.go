@@ -9,6 +9,7 @@ import (
 // L7LogParams define querying parameters to retrieve L7 logs
 type L7LogParams struct {
 	QueryParams        `json:",inline" validate:"required"`
+	QuerySortParams    `json:",inline"`
 	LogSelectionParams `json:",inline"`
 }
 

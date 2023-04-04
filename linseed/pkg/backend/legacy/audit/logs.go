@@ -42,7 +42,7 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 		return nil, fmt.Errorf("no cluster ID on request")
 	}
 
-	var logType bapi.LogsType
+	var logType bapi.DataType
 	switch kind {
 	case v1.AuditLogTypeEE:
 		logType = bapi.AuditEELogs
@@ -285,7 +285,8 @@ func (b *auditLogBackend) index(kind v1.AuditLogType, i bapi.ClusterInfo) string
 
 func (b *auditLogBackend) writeAlias(kind v1.AuditLogType, i bapi.ClusterInfo) string {
 	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_audit.%s.%s.", i.Tenant, i.Cluster)
+		return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.%s.", kind, i.Tenant, i.Cluster)
 	}
+
 	return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.", kind, i.Cluster)
 }

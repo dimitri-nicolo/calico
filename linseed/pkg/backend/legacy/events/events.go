@@ -14,8 +14,8 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 )
 
 type eventsBackend struct {
@@ -88,7 +88,8 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 		return nil, err
 	}
 
-	q, err := logtools.BuildQuery(b.helper, i, opts)
+	start, end := logtools.ExtractTimeRange(opts.QueryParams.TimeRange)
+	q, err := logtools.BuildQuery(b.helper, i, opts.LogSelectionParams, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -101,8 +102,8 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 		Query(q)
 
 	// Configure sorting.
-	if len(opts.Sort) != 0 {
-		for _, s := range opts.Sort {
+	if len(opts.GetSortBy()) != 0 {
+		for _, s := range opts.GetSortBy() {
 			query.Sort(s.Field, !s.Descending)
 		}
 	} else {
@@ -228,5 +229,9 @@ func (b *eventsBackend) index(i bapi.ClusterInfo) string {
 }
 
 func (b *eventsBackend) writeAlias(i bapi.ClusterInfo) string {
+	if i.Tenant != "" {
+		return fmt.Sprintf("tigera_secure_ee_events.%s.%s.", i.Tenant, i.Cluster)
+	}
+
 	return fmt.Sprintf("tigera_secure_ee_events.%s.", i.Cluster)
 }

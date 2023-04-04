@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/alert"
 	cache2 "github.com/projectcalico/calico/deep-packet-inspection/pkg/cache"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/config"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
-	"github.com/projectcalico/calico/deep-packet-inspection/pkg/elastic"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/eventgenerator"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/exec"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/file"
@@ -62,7 +62,7 @@ type dispatcher struct {
 	cfg                 *config.Config
 	dpiUpdater          dpiupdater.DPIStatusUpdater
 	wepCache            cache2.WEPCache
-	esForwarder         elastic.ESForwarder
+	alertForwarder      alert.Forwarder
 	alertFileMaintainer file.FileMaintainer
 }
 
@@ -87,7 +87,7 @@ type newProcessor func(ctx context.Context,
 	dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor
 
 type newEventGenerator func(cfg *config.Config,
-	esForwarder elastic.ESForwarder,
+	esForwarder alert.Forwarder,
 	dpiUpdater dpiupdater.DPIStatusUpdater,
 	dpiKey model.ResourceKey,
 	wepCache cache2.WEPCache) eventgenerator.EventGenerator
@@ -111,9 +111,10 @@ type dirtyItem struct {
 func NewDispatcher(cfg *config.Config,
 	snortProcessor newProcessor,
 	eventGenerator newEventGenerator,
-	esForwarder elastic.ESForwarder,
+	esForwarder alert.Forwarder,
 	dpiUpdater dpiupdater.DPIStatusUpdater,
-	alertFileMaintainer file.FileMaintainer) Dispatcher {
+	alertFileMaintainer file.FileMaintainer,
+) Dispatcher {
 	dispatch := &dispatcher{
 		wepKeyToIface:       make(map[interface{}]string),
 		dpiKeyToDPI:         make(map[interface{}]DPI),
@@ -122,7 +123,7 @@ func NewDispatcher(cfg *config.Config,
 		eventGenerator:      eventGenerator,
 		cfg:                 cfg,
 		dpiUpdater:          dpiUpdater,
-		esForwarder:         esForwarder,
+		alertForwarder:      esForwarder,
 		wepCache:            cache2.NewWEPCache(),
 		alertFileMaintainer: alertFileMaintainer,
 	}
@@ -169,7 +170,7 @@ func (h *dispatcher) Dispatch(ctx context.Context, cacheRequests []CacheRequest)
 			case bapi.UpdateTypeKVNew, bapi.UpdateTypeKVUpdated:
 				if dpi, ok := c.KVPair.Value.(*v3.DeepPacketInspection); ok {
 					// Include namespace selector to the input selector
-					var updatedSelector = fmt.Sprintf("(%s) && (%s == '%s')", dpi.Spec.Selector, v3.LabelNamespace, dpi.Namespace)
+					updatedSelector := fmt.Sprintf("(%s) && (%s == '%s')", dpi.Spec.Selector, v3.LabelNamespace, dpi.Namespace)
 					sel, err := selector.Parse(updatedSelector)
 					if err != nil {
 						// This panic is only triggered due to programming error, the original selector in DPI resource
@@ -298,7 +299,7 @@ func (h *dispatcher) processDirtyItems(ctx context.Context) {
 func (h *dispatcher) initializeDPI(ctx context.Context, dpiKey model.ResourceKey) DPI {
 	log.Debugf("Initializing deep packet inspection for %v", dpiKey)
 	processor := h.snortProcessor(ctx, dpiKey, h.cfg.NodeName, exec.NewExec, h.cfg.SnortAlertFileBasePath, h.cfg.SnortAlertFileSize, h.cfg.SnortCommunityRulesFile, h.dpiUpdater)
-	generator := h.eventGenerator(h.cfg, h.esForwarder, h.dpiUpdater, dpiKey, h.wepCache)
+	generator := h.eventGenerator(h.cfg, h.alertForwarder, h.dpiUpdater, dpiKey, h.wepCache)
 	return DPI{
 		snortProcessor: processor,
 		eventGenerator: generator,

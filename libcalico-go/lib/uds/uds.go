@@ -17,7 +17,11 @@ func getDialer(proto string) func(context.Context, string) (net.Conn, error) {
 }
 
 func GetDialOptions() []grpc.DialOption {
+	return GetDialOptionsWithNetwork("unix")
+}
+
+func GetDialOptionsWithNetwork(network string) []grpc.DialOption {
 	return []grpc.DialOption{
 		grpc.WithInsecure(),
-		grpc.WithContextDialer(getDialer("unix"))}
+		grpc.WithContextDialer(getDialer(network))}
 }

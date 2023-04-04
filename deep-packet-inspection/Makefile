@@ -22,7 +22,7 @@ include ../lib.Makefile
 SRC_FILES = $(shell find pkg cmd -name '*.go') \
 		$(shell find ../api/pkg -name '*.go') \
 		$(shell find ../libcalico-go/lib -name '*.go') \
-		$(shell find ../lma/pkg -name '*.go') \
+		$(shell find ../linseed/pkg -name '*.go') \
 		$(shell find ../typha/pkg -name '*.go')
 
 # We use -X to insert the version information into the placeholder variables
@@ -83,8 +83,7 @@ MOCKERY_FILE_PATHS= \
 	pkg/exec/Exec \
 	pkg/dispatcher/Dispatcher \
 	pkg/eventgenerator/EventGenerator \
-	pkg/elastic/Client \
-	pkg/elastic/ESForwarder \
+	pkg/alert/Forwarder \
 	pkg/dpiupdater/DPIStatusUpdater \
 	pkg/file/FileMaintainer
 

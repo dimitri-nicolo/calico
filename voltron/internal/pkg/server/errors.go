@@ -48,6 +48,28 @@ func clusterNotFoundError(clusterID string) *httpError {
 	}
 }
 
+// Returns an error for an unexpected cluster ID.
+func unexpectedClusterIDError(clusterID string) *httpError {
+	msg := fmt.Sprintf("Unexpected cluster ID: %s", clusterID)
+	return &httpError{
+		Err:      errors.New(msg),
+		ErrMsg:   msg,
+		ErrCode:  "error-unexpected-cluster",
+		HTTPCode: 403,
+	}
+}
+
+// Returns an error for an unexpected tenant ID.
+func unexpectedTenantIDError(tenantID string) *httpError {
+	msg := fmt.Sprintf("Unexpected tenant ID: %s", tenantID)
+	return &httpError{
+		Err:      errors.New(msg),
+		ErrMsg:   msg,
+		ErrCode:  "error-unexpected-tenant",
+		HTTPCode: 403,
+	}
+}
+
 // writeHTTPError replies to the request with the specified HTTP error and its corresponding
 // HTTP code. It does not otherwise end the request; the caller should ensure no further
 // writes are done to w. The HTTP error will be encoded as JSON in the response body.

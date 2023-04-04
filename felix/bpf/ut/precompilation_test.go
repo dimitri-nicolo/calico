@@ -66,6 +66,8 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 		bpfutils.BTFEnabled = bpfutils.SupportsBTF()
 	}()
 
+	defer bpf.CleanUpMaps()
+
 	for _, logLevel := range []string{"OFF", "INFO", "DEBUG"} {
 		logLevel := logLevel
 		// Compile the TC endpoint programs.

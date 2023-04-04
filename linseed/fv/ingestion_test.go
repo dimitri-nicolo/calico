@@ -442,3 +442,61 @@ func TestFV_WAFIngestion(t *testing.T) {
 		assert.Equal(t, wafLogs, strings.Join(esLogs, "\n"))
 	})
 }
+
+func TestFV_RuntimeIngestion(t *testing.T) {
+	addr := "https://localhost:8444/api/v1/runtime/reports/bulk"
+	tenant := ""
+	expectedResponse := `{"failed":0, "succeeded":29, "total":29}`
+	indexPrefix := "tigera_secure_ee_runtime."
+
+	t.Run("ingest runtime reports via bulk API with production data", func(t *testing.T) {
+		defer ingestionSetupAndTeardown(t, indexPrefix)()
+
+		// setup HTTP httpClient and HTTP request
+		httpClient := secureHTTPClient(t)
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(runtimeReports))
+
+		// make the request to ingest runtime reports
+		res, resBody := doRequest(t, httpClient, spec)
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
+
+		// Force a refresh in order to read the newly ingested data
+		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
+		_, err := esClient.Refresh(index).Do(ctx)
+		require.NoError(t, err)
+
+		endTime, err := time.Parse(time.RFC3339Nano, "2023-03-14T01:40:59.401474246Z")
+		require.NoError(t, err)
+		startTime, err := time.Parse(time.RFC3339Nano, "2023-03-14T01:39:41.654053441Z")
+		require.NoError(t, err)
+
+		params := v1.RuntimeReportParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: startTime,
+					To:   endTime,
+				},
+			},
+			LegacyTimeRange: &lmav1.TimeRange{
+				From: startTime,
+				To:   endTime,
+			},
+		}
+
+		resultList, err := cli.RuntimeReports("").List(ctx, &params)
+		require.NoError(t, err)
+		require.NotNil(t, resultList)
+
+		require.Equal(t, int64(29), resultList.TotalHits)
+
+		var esLogs []string
+		for _, log := range resultList.Items {
+			logStr, err := json.Marshal(log.Report)
+			require.NoError(t, err)
+			esLogs = append(esLogs, string(logStr))
+		}
+
+		assert.Equal(t, runtimeReports, strings.Join(esLogs, "\n"))
+	})
+}

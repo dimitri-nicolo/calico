@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"os"
 	"regexp"
@@ -28,6 +29,11 @@ type Target struct {
 	PathReplace strAsByteSlice `json:"pathReplace,omitempty"`
 	// AllowInsecureTLS allows https with insecure tls settings
 	AllowInsecureTLS bool `json:"allowInsecureTLS,omitempty"`
+
+	// ClientCert and ClientKey can be set for mTLS on the connection
+	// from Voltron to the destination.
+	ClientCert string `json:"clientCert"`
+	ClientKey  string `json:"clientKey"`
 }
 
 // Targets allows unmarshal the json array
@@ -68,6 +74,13 @@ func ProxyTargets(tgts Targets, fipsModeEnabled bool) ([]proxy.Target, error) {
 		pt := proxy.Target{
 			Path:             t.Path,
 			AllowInsecureTLS: t.AllowInsecureTLS,
+		}
+
+		if t.ClientKey != "" && t.ClientCert != "" {
+			pt.ClientKey = t.ClientKey
+			pt.ClientCert = t.ClientCert
+		} else if t.ClientKey != "" || t.ClientCert != "" {
+			return nil, fmt.Errorf("must specify both ClientKey and ClientCert")
 		}
 
 		var err error

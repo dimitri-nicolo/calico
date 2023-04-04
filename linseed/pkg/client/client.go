@@ -22,6 +22,7 @@ type Client interface {
 	Processes(string) ProcessesInterface
 	WAFLogs(string) WAFLogsInterface
 	Compliance(string) ComplianceInterface
+	RuntimeReports(string) RuntimeReportsInterface
 }
 
 type client struct {
@@ -91,6 +92,11 @@ func (c *client) Processes(cluster string) ProcessesInterface {
 // Compliance returns an interface for managing compliance resources.
 func (c *client) Compliance(cluster string) ComplianceInterface {
 	return newCompliance(c, cluster)
+}
+
+// RuntimeReports returns an interface for managing v1.RuntimeReport resources.
+func (c *client) RuntimeReports(cluster string) RuntimeReportsInterface {
+	return newRuntimeReports(c, cluster)
 }
 
 func NewClient(tenantID string, cfg rest.Config) (Client, error) {

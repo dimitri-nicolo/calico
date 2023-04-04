@@ -17,6 +17,8 @@ package policysync
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -62,6 +64,15 @@ func (s *Server) RegisterGrpc(g *grpc.Server) {
 	proto.RegisterPolicySyncServer(g, s)
 }
 
+func workloadIdFromCallerContext(ctx context.Context) (string, error) {
+	// Extract the workload ID from the request.
+	creds, ok := binder.CallerFromContext(ctx)
+	if !ok {
+		return "", errors.New("unable to authenticate client")
+	}
+	return creds.Namespace + "/" + creds.Workload, nil
+}
+
 func (s *Server) Sync(syncRequest *proto.SyncRequest, stream proto.PolicySync_SyncServer) error {
 	log.Info("New sync connection with subscription type ", syncRequest.SubscriptionType)
 
@@ -71,13 +82,16 @@ func (s *Server) Sync(syncRequest *proto.SyncRequest, stream proto.PolicySync_Sy
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	// Extract the workload ID from the request.
-	cxt := stream.Context()
-	creds, ok := binder.CallerFromContext(cxt)
-	if !ok {
-		return errors.New("unable to authenticate client")
+	var workloadID string
+	_, tolerateUnsafe := os.LookupEnv("FELIX_POLICYSYNC_UNSAFE_CALLER")
+	workloadID, err = workloadIdFromCallerContext(stream.Context())
+	if err != nil {
+		if !tolerateUnsafe {
+			return status.Error(codes.PermissionDenied, err.Error())
+		}
+		hn, _ := os.Hostname()
+		workloadID = fmt.Sprintf("calico-system/%s", hn)
 	}
-	workloadID := creds.Namespace + "/" + creds.Workload
 
 	// Allocate a new unique join ID, this allows the processor to disambiguate if there are multiple connections
 	// for the same workload, which can happen transiently over client restart.  In particular, if our "leave"
