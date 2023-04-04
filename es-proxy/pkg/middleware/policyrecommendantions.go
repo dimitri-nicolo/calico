@@ -24,16 +24,6 @@ import (
 
 const recommendationsTier = "namespace-segmentation"
 
-var (
-	// Set the resource attribute for stagednetworkpolicies to patch
-	pagedRecommendationsResourceAttributes = &v1.ResourceAttributes{
-		Verb:     "list",
-		Group:    "projectcalico.org",
-		Version:  "v3",
-		Resource: "stagednetworkpolicies",
-	}
-)
-
 type PagedRecommendationParams struct {
 	StagedAction string `json:"stagedAction"`
 	Page         int    `json:"page"`
@@ -45,11 +35,14 @@ type Recommendations struct {
 	StagedNetworkPolicies []v3.StagedNetworkPolicy `json:"stagedNetworkPolicies"`
 }
 
-// PagedRecommendationsHandler returns a handler that updates the stagedActions a list of staged
-// network policy recommendations.
+// PagedRecommendationsHandler returns a handler that updates the gets the list of policy
+// recommendations as a paged response.
 func PagedRecommendationsHandler(auth lmaauth.JWTAuth, clientSetk8sClientFactory lmak8s.ClientSetFactory, k8sClientFactory datastore.ClusterCtxK8sClientFactory) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Check that the request has the appropriate method.
+		// TODO(dimitri): Update to allow only GET. The UI currently uses a POST call to retrieve the
+		// paged recommendations response. This method should only allow for a GET, once the UI has
+		// been updated.
 		if req.Method != http.MethodGet && req.Method != http.MethodPost {
 			msg := fmt.Sprintf("unsupported method type %s, only %s is supported", req.Method, http.MethodPost)
 			createAndReturnError(fmt.Errorf("method: %s is not supported", req.Method), msg, http.StatusMethodNotAllowed, api.PolicyRec, w)
@@ -90,6 +83,13 @@ func PagedRecommendationsHandler(auth lmaauth.JWTAuth, clientSetk8sClientFactory
 		}
 
 		// Authorize user
+		// Set the resource attribute for stagednetworkpolicies to patch
+		pagedRecommendationsResourceAttributes := &v1.ResourceAttributes{
+			Verb:     "list",
+			Group:    "projectcalico.org",
+			Version:  "v3",
+			Resource: "stagednetworkpolicies",
+		}
 		log.Debugf("authorizing resource %+v with user %s ,%+v, %+v", pagedRecommendationsResourceAttributes, usr.GetName(), usr.GetGroups(), usr.GetExtra())
 		allowed, err := auth.Authorize(usr, pagedRecommendationsResourceAttributes, nil)
 		if err != nil {
@@ -172,10 +172,8 @@ func getStageNetworkPoliciesPage(
 		return nil, 0, err
 	}
 
-	ownerKind := "PolicyRecommendationScope"
-
 	tierLabelSelector := fmt.Sprintf("projectcalico.org/tier=%s", recommendationsTier)
-	ownerReferenceKindLabelSelector := fmt.Sprintf("projectcalico.org/ownerReference.kind=%s", ownerKind)
+	ownerReferenceKindLabelSelector := "projectcalico.org/ownerReference.kind=PolicyRecommendationScope"
 	stagedActionLabelSelector := fmt.Sprintf("projectcalico.org/spec.stagedAction=%s", stagedAction)
 	labelSelector := strings.Join([]string{tierLabelSelector, ownerReferenceKindLabelSelector, stagedActionLabelSelector}, ",")
 
