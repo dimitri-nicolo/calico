@@ -144,7 +144,7 @@ func main() {
 		if cfg.HTTPAccessLoggingEnabled {
 			logOpts := []accesslog.Option{
 				accesslog.WithRequestHeader(server.ClusterHeaderField, "xClusterID"),
-				accesslog.WithRequestHeader("UserAgent", "userAgent"),
+				accesslog.WithRequestHeader("User-Agent", "userAgent"),
 			}
 
 			if cfg.OIDCAuthEnabled {

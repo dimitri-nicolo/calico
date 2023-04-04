@@ -157,8 +157,17 @@ func requestLogField(r *http.Request, cfg *config, requestTime time.Time) zap.Fi
 	host := r.Host
 	path := r.URL.Path
 	query := r.URL.RawQuery
-	xClusterID := r.Header.Get("x-cluster-id")
-	userAgent := r.UserAgent()
+
+	type nv struct {
+		name  string
+		value string
+	}
+	var headers []nv // using a slice rather than a map to keep a consistent field order in the output
+	for _, h := range cfg.requestHeaders {
+		if v := r.Header.Get(h.inputName); v != "" {
+			headers = append(headers, nv{name: h.logFieldName, value: v})
+		}
+	}
 
 	var rawAuthToken string
 	if len(cfg.stringClaims) > 0 {
@@ -175,11 +184,8 @@ func requestLogField(r *http.Request, cfg *config, requestTime time.Time) zap.Fi
 		if query != "" {
 			enc.AddString("query", query)
 		}
-		if xClusterID != "" {
-			enc.AddString("xClusterID", xClusterID)
-		}
-		if userAgent != "" {
-			enc.AddString("userAgent", userAgent)
+		for _, h := range headers {
+			enc.AddString(h.name, h.value)
 		}
 
 		if rawAuthToken != "" {

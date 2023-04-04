@@ -33,6 +33,7 @@ type AccessLogRequest struct {
 	Query      string        `json:"query"`
 	ClusterID  string        `json:"xClusterID"`
 	UserAgent  string        `json:"userAgent"`
+	Accept     string        `json:"accept"`
 	Auth       AccessLogAuth `json:"auth"`
 }
 
