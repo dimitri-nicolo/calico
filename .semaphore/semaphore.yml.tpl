@@ -557,15 +557,6 @@ blocks:
       commands:
       - cd node
     jobs:
-# Non-AMD64 images not supported in Enterprise.
-#
-#    - name: "Build image"
-#      matrix:
-#      # TODO: s390x builds of calico/node are not working.
-#      - env_var: ARCH
-#        values: [ "arm64", "ppc64le" ]
-#      commands:
-#      - ../.semaphore/run-and-monitor image-$ARCH.log make image ARCH=$ARCH
     - name: "Build Windows archive"
       commands:
       - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
