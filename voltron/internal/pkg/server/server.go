@@ -41,6 +41,9 @@ const (
 	// requests with this value in the ClusterHeaderField.
 	DefaultClusterID   = "cluster"
 	DefaultReadTimeout = 45 * time.Second
+
+	// CalicoCloudTenantIDClaimName is the name of the tenantID claim in Calico Cloud issued bearer tokens
+	CalicoCloudTenantIDClaimName = "https://calicocloud.io/tenantID"
 )
 
 // ClusterHeaderFieldCanon represents the request header key used to determine which

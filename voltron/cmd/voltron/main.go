@@ -154,7 +154,7 @@ func main() {
 					logOpts = append(logOpts, accesslog.WithStringArrayJWTClaim(cfg.OIDCAuthGroupsClaim, "groups"))
 				}
 				if cfg.CalicoCloudRequireTenantClaim {
-					logOpts = append(logOpts, accesslog.WithStringJWTClaim("https://calicocloud.io/tenantID", "ccTenantID"))
+					logOpts = append(logOpts, accesslog.WithStringJWTClaim(server.CalicoCloudTenantIDClaimName, "ccTenantID"))
 				}
 			}
 
