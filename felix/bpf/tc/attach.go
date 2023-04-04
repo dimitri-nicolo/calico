@@ -38,33 +38,35 @@ import (
 )
 
 type AttachPoint struct {
-	Type                    EndpointType
-	ToOrFrom                ToOrFromEp
-	Hook                    bpf.Hook
-	Iface                   string
-	LogLevel                string
-	HostIP                  net.IP
-	HostTunnelIP            net.IP
-	IntfIP                  net.IP
-	FIB                     bool
-	ToHostDrop              bool
-	DSR                     bool
-	TunnelMTU               uint16
-	VXLANPort               uint16
-	WgPort                  uint16
-	ExtToServiceConnmark    uint32
+	Type                 EndpointType
+	ToOrFrom             ToOrFromEp
+	Hook                 bpf.Hook
+	Iface                string
+	LogLevel             string
+	HostIP               net.IP
+	HostTunnelIP         net.IP
+	IntfIP               net.IP
+	FIB                  bool
+	ToHostDrop           bool
+	DSR                  bool
+	TunnelMTU            uint16
+	VXLANPort            uint16
+	WgPort               uint16
+	ExtToServiceConnmark uint32
+	PSNATStart           uint16
+	PSNATEnd             uint16
+	IPv6Enabled          bool
+	MapSizes             map[string]uint32
+	RPFEnforceOption     uint8
+	NATin                uint32
+	NATout               uint32
+
+	// EE only
 	VethNS                  uint16
 	EnableTCPStats          bool
 	IsEgressGateway         bool
 	IsEgressClient          bool
 	ForceReattach           bool
-	PSNATStart              uint16
-	PSNATEnd                uint16
-	IPv6Enabled             bool
-	MapSizes                map[string]uint32
-	RPFStrictEnabled        bool
-	NATin                   uint32
-	NATout                  uint32
 	EGWVxlanPort            uint16
 	EgressIPEnabled         bool
 	EgressGatewayHealthPort uint16
@@ -534,13 +536,24 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		return err
 	}
 
+	if ap.IPv6Enabled {
+		globalData.Flags |= libbpf.GlobalsIPv6Enabled
+	}
+
+	switch ap.RPFEnforceOption {
+	case tcdefs.RPFEnforceOptionStrict:
+		globalData.Flags |= libbpf.GlobalsRPFOptionEnabled
+		globalData.Flags |= libbpf.GlobalsRPFOptionStrict
+	case tcdefs.RPFEnforceOptionLoose:
+		globalData.Flags |= libbpf.GlobalsRPFOptionEnabled
+	}
+
+	// EE only
+
 	if ap.EgressIPEnabled {
 		globalData.Flags |= libbpf.GlobalsEgressIPEnabled
 	}
 
-	if ap.IPv6Enabled {
-		globalData.Flags |= libbpf.GlobalsIPv6Enabled
-	}
 	if ap.EnableTCPStats {
 		globalData.Flags |= libbpf.GlobalsTCPStatsEnabled
 	}
@@ -549,9 +562,6 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	}
 	if ap.IsEgressClient {
 		globalData.Flags |= libbpf.GlobalsIsEgressClient
-	}
-	if ap.RPFStrictEnabled {
-		globalData.Flags |= libbpf.GlobalsRPFStrictEnabled
 	}
 
 	globalData.HostTunnelIP = globalData.HostIP
@@ -562,8 +572,13 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 			return err
 		}
 	}
+
+	return ConfigureProgram(m, ap.Iface, &globalData)
+}
+
+func ConfigureProgram(m *libbpf.Map, iface string, globalData *libbpf.TcGlobalData) error {
 	in := []byte("---------------")
-	copy(in, ap.Iface)
+	copy(in, iface)
 	globalData.IfaceName = string(in)
 
 	return libbpf.TcSetGlobals(m, globalData)
@@ -600,18 +615,23 @@ func (ap *AttachPoint) updateJumpMap(ipVer int, obj *libbpf.Obj) error {
 		ipVersion = "IPv6"
 	}
 
+	return UpdateJumpMap(obj, tcdefs.JumpMapIndexes[ipVersion], ap.hasPolicyProg(), ap.hasHostConflictProg())
+}
+
+func UpdateJumpMap(obj *libbpf.Obj, progs []int, hasPolicyProg, hasHostConflictProg bool) error {
 	mapName := bpf.JumpMapName()
 
-	for _, idx := range tcdefs.JumpMapIndexes[ipVersion] {
-		if (idx == tcdefs.ProgIndexPolicy || idx == tcdefs.ProgIndexV6Policy) && !ap.hasPolicyProg() {
+	for _, idx := range progs {
+		if (idx == tcdefs.ProgIndexPolicy || idx == tcdefs.ProgIndexV6Policy) && !hasPolicyProg {
 			continue
 		}
-		if idx == tcdefs.ProgIndexHostCtConflict && !ap.hasHostConflictProg() {
+		if idx == tcdefs.ProgIndexHostCtConflict && !hasHostConflictProg {
 			continue
 		}
+		log.WithField("prog", tcdefs.ProgramNames[idx]).Debug("UpdateJumpMap")
 		err := obj.UpdateJumpMap(mapName, tcdefs.ProgramNames[idx], idx)
 		if err != nil {
-			return fmt.Errorf("error updating %v %s program: %w", ipVersion, tcdefs.ProgramNames[idx], err)
+			return fmt.Errorf("error updating %s program: %w", tcdefs.ProgramNames[idx], err)
 		}
 	}
 

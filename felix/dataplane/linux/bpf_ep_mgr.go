@@ -244,7 +244,7 @@ type bpfEndpointManager struct {
 	Features *environment.Features
 
 	// RPF mode
-	rpfStrictModeEnabled string
+	rpfEnforceOption string
 
 	// Service routes
 	ctlbWorkaroundMode ctlbWorkaroundMode
@@ -354,7 +354,7 @@ func newBPFEndpointManager(
 		// to set it to BPFIpv6Enabled which is a dedicated flag for development of IPv6.
 		// TODO: set ipv6Enabled to config.Ipv6Enabled when IPv6 support is complete
 		ipv6Enabled:           config.BPFIpv6Enabled,
-		rpfStrictModeEnabled:  config.BPFEnforceRPF,
+		rpfEnforceOption:      config.BPFEnforceRPF,
 		bpfPolicyDebugEnabled: config.BPFPolicyDebugEnabled,
 		egwVxlanPort:          uint16(config.EgressIPVXLANPort),
 		egIPEnabled:           config.EgressIPEnabled,
@@ -477,7 +477,7 @@ func (m *bpfEndpointManager) OnUpdate(msg interface{}) {
 	// Updates from the dataplane:
 
 	// Interface updates.
-	case *ifaceUpdate:
+	case *ifaceStateUpdate:
 		m.onInterfaceUpdate(msg)
 	case *ifaceAddrsUpdate:
 		m.onInterfaceAddrsUpdate(msg)
@@ -621,7 +621,7 @@ func (m *bpfEndpointManager) cleanupOldAttach(iface string, ai bpf.EPAttachInfo)
 	return nil
 }
 
-func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceUpdate) {
+func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceStateUpdate) {
 	log.Debugf("Interface update for %v, state %v", update.Name, update.State)
 	// Should be safe without the lock since there shouldn't be any active background threads
 	// but taking it now makes us robust to refactoring.
@@ -1445,9 +1445,14 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(policyDirection PolDirection
 	ap.PSNATEnd = m.psnatPorts.MaxPort
 	ap.IPv6Enabled = m.ipv6Enabled
 	ap.MapSizes = m.bpfMapContext.MapSizes
-	ap.RPFStrictEnabled = false
-	if m.rpfStrictModeEnabled == "Strict" {
-		ap.RPFStrictEnabled = true
+
+	switch m.rpfEnforceOption {
+	case "Strict":
+		ap.RPFEnforceOption = tcdefs.RPFEnforceOptionStrict
+	case "Loose":
+		ap.RPFEnforceOption = tcdefs.RPFEnforceOptionLoose
+	default:
+		ap.RPFEnforceOption = tcdefs.RPFEnforceOptionDisabled
 	}
 
 	return ap

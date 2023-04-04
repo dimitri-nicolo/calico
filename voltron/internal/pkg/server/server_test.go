@@ -38,6 +38,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
+	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
@@ -130,6 +131,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		_, err := server.New(
 			k8sAPI,
 			config,
+			vcfg.Config{},
 			mockAuthenticator,
 			server.WithExternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
 			server.WithInternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
@@ -283,7 +285,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			It("Should reject requests to clusters that don't exist", func() {
 				req, err := http.NewRequest("GET", "http://"+httpsAddr+"/", nil)
 				Expect(err).NotTo(HaveOccurred())
-				req.Header.Add(server.ClusterHeaderField, "zzzzzzz")
+				req.Header.Add(utils.ClusterHeaderField, "zzzzzzz")
 				resp, err := http.DefaultClient.Do(req)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(400))
@@ -299,8 +301,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				client := &http.Client{Transport: tr}
 				req, err := http.NewRequest("GET", "https://"+httpsAddr+"/", nil)
 				Expect(err).NotTo(HaveOccurred())
-				req.Header.Add(server.ClusterHeaderField, clusterA)
-				req.Header.Add(server.ClusterHeaderField, "helloworld")
+				req.Header.Add(utils.ClusterHeaderField, clusterA)
+				req.Header.Add(utils.ClusterHeaderField, "helloworld")
 				resp, err := client.Do(req)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(400))
@@ -314,7 +316,6 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: clusterA,
-						//Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(leafCert)},
 					},
 				}, metav1.CreateOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
@@ -334,10 +335,10 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					strings.NewReader("HELLO"),
 				)
 				Expect(err).NotTo(HaveOccurred())
-				req.Header.Add(server.ClusterHeaderField, clusterA)
+				req.Header.Add(utils.ClusterHeaderField, clusterA)
 				req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
 
-				var httpClient = &http.Client{
+				httpClient := &http.Client{
 					Transport: &http.Transport{
 						TLSClientConfig: &tls.Config{
 							InsecureSkipVerify: true,
@@ -361,9 +362,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			})
 
 			Context("A single cluster is registered", func() {
-				var (
-					clusterATLSCert tls.Certificate
-				)
+				var clusterATLSCert tls.Certificate
 
 				BeforeEach(func() {
 					clusterACertTemplate := test.CreateClientCertificateTemplate(clusterA, "localhost")
@@ -404,7 +403,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					req, err := http.NewRequest("GET", "https://"+httpsAddr+"/some/path", strings.NewReader("HELLO"))
 					Expect(err).NotTo(HaveOccurred())
 
-					req.Header[server.ClusterHeaderField] = []string{clusterA}
+					req.Header[utils.ClusterHeaderField] = []string{clusterA}
 					req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
 
 					var wg sync.WaitGroup
@@ -460,9 +459,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				})
 
 				Context("A second cluster is registered", func() {
-					var (
-						clusterBTLSCert tls.Certificate
-					)
+					var clusterBTLSCert tls.Certificate
 					BeforeEach(func() {
 						clusterBCertTemplate := test.CreateClientCertificateTemplate(clusterB, "localhost")
 						clusterBPrivKey, clusterBCert, err := test.CreateCertPair(clusterBCertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
@@ -502,7 +499,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						req, err := http.NewRequest("GET", "https://"+httpsAddr+"/some/path", strings.NewReader("HELLO"))
 						Expect(err).NotTo(HaveOccurred())
 
-						req.Header[server.ClusterHeaderField] = []string{clusterB}
+						req.Header[utils.ClusterHeaderField] = []string{clusterB}
 						req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
 
 						var wg sync.WaitGroup
@@ -621,7 +618,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 				server.WithHTTPAccessLogging(
 					accesslog.WithPath(accessLogFile.Name()),
-					accesslog.WithRequestHeader(server.ClusterHeaderField, "xClusterID"),
+					accesslog.WithRequestHeader(server.ClusterHeaderFieldCanon, "xClusterID"),
 					accesslog.WithStandardJWTClaims(),
 					accesslog.WithStringJWTClaim("email", "username"),
 					accesslog.WithStringArrayJWTClaim("groups", "groups"),
@@ -647,7 +644,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			req, err := http.NewRequest("GET", "https://"+httpsAddr+"/?foo=bar", nil)
 			Expect(err).NotTo(HaveOccurred())
 			req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
-			req.Header.Set(server.ClusterHeaderField, "tigera-labs")
+			req.Header.Set(server.ClusterHeaderFieldCanon, "tigera-labs")
 			resp, err := client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusBadGateway))
@@ -996,7 +993,7 @@ func clientHelloReq(addr string, target string, expectStatus int) (resp *http.Re
 		req, err := http.NewRequest("GET", "https://"+addr+"/some/path", strings.NewReader("HELLO"))
 		Expect(err).NotTo(HaveOccurred())
 
-		req.Header[server.ClusterHeaderField] = []string{target}
+		req.Header[utils.ClusterHeaderField] = []string{target}
 		req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{
@@ -1015,9 +1012,9 @@ func clientHelloReq(addr string, target string, expectStatus int) (resp *http.Re
 }
 
 func createAndStartServer(k8sAPI bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAuth,
-	options ...server.Option) (*server.Server, string, string, *sync.WaitGroup) {
-
-	srv, err := server.New(k8sAPI, config, authenticator, options...)
+	options ...server.Option,
+) (*server.Server, string, string, *sync.WaitGroup) {
+	srv, err := server.New(k8sAPI, config, vcfg.Config{}, authenticator, options...)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	lisHTTPS, err := net.Listen("tcp", "localhost:0")

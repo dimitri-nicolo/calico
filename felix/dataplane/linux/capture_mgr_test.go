@@ -101,7 +101,7 @@ var _ = Describe("PacketCapture Manager", func() {
 		Entry("1 capture after endpoints and interfaces are up", [][]interface{}{
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
@@ -159,7 +159,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
@@ -216,7 +216,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
@@ -270,7 +270,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
@@ -289,7 +289,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali456",
 					State: ifacemonitor.StateUp,
 				},
@@ -357,7 +357,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
@@ -411,7 +411,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
@@ -473,15 +473,15 @@ var _ = Describe("PacketCapture Manager", func() {
 					},
 					Specification: emptySpecification,
 				},
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "eth0",
 					State: ifacemonitor.StateUp,
 				},
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "lo",
 					State: ifacemonitor.StateUp,
 				},
@@ -531,7 +531,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
@@ -550,7 +550,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateDown,
 				},
@@ -592,7 +592,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
@@ -611,7 +611,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateNotPresent,
 				},
@@ -653,7 +653,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
@@ -672,14 +672,14 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateDown,
 				},
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
@@ -726,7 +726,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					},
 					Specification: emptySpecification,
 				},
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
@@ -763,7 +763,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					},
 					Specification: emptySpecification,
 				},
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},
@@ -776,7 +776,7 @@ var _ = Describe("PacketCapture Manager", func() {
 						Name:  "cali123",
 					},
 				},
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateDown,
 				},
@@ -798,7 +798,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			},
 			{
 				// interface update will be processed in a single batch
-				&ifaceUpdate{
+				&ifaceStateUpdate{
 					Name:  "cali123",
 					State: ifacemonitor.StateUp,
 				},

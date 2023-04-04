@@ -21,6 +21,6 @@ struct calico_socket_stats_value {
 CALI_MAP(cali_sstats, 2,
                 BPF_MAP_TYPE_LRU_HASH,
                 struct calico_socket_stats_key, struct calico_socket_stats_value,
-                511000, 0, MAP_PIN_GLOBAL)
+                511000, 0)
 
 #endif

@@ -67,3 +67,22 @@ func AssertLogIDAndCopyEventsWithoutID(t *testing.T, r *v1.List[v1.Event]) []v1.
 	}
 	return copyOfEvents
 }
+
+func AssertRuntimeReportIDAndReset(t *testing.T, item v1.RuntimeReport) v1.RuntimeReport {
+	require.NotEmpty(t, item.ID)
+	item.ID = ""
+
+	return item
+}
+
+func AssertLogIDAndCopyRuntimeReportsWithoutThem(t *testing.T, r *v1.List[v1.RuntimeReport]) []v1.RuntimeReport {
+	require.NotNil(t, r)
+
+	// Asert that we have an ID assigned from Elastic
+	var copyOfReports []v1.RuntimeReport
+	for _, item := range r.Items {
+		item = AssertRuntimeReportIDAndReset(t, item)
+		copyOfReports = append(copyOfReports, item)
+	}
+	return copyOfReports
+}

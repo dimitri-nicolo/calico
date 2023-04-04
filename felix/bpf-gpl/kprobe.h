@@ -32,7 +32,7 @@ struct calico_kprobe_stats_value {
 CALI_MAP(cali_kpstats, 2,
                 BPF_MAP_TYPE_LRU_HASH,
                 struct calico_kprobe_stats_key, struct calico_kprobe_stats_value,
-                511000, 0, MAP_PIN_GLOBAL)
+                511000, 0)
 
 struct __attribute__((__packed__)) calico_exec_value {
 	struct perf_event_header hdr;
@@ -44,12 +44,12 @@ struct __attribute__((__packed__)) calico_exec_value {
 CALI_MAP(cali_epath, 2,
                 BPF_MAP_TYPE_LRU_HASH,
                 __u32, struct calico_exec_value,
-                64000, 0, MAP_PIN_GLOBAL)
+                64000, 0)
 
 CALI_MAP(cali_exec, 2,
                 BPF_MAP_TYPE_PERCPU_ARRAY,
                 __u32, struct calico_exec_value,
-                1, 0, MAP_PIN_GLOBAL)
+                1, 0)
 
 static int CALI_BPF_INLINE ip_addr_is_localhost(__u8 *addr) {
 	return (addr[12] == 0x7f);

@@ -16,8 +16,8 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 )
 
 type l7LogBackend struct {
@@ -160,7 +160,8 @@ func (b *l7LogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v
 		return nil, 0, err
 	}
 
-	q, err := logtools.BuildQuery(b.helper, i, opts)
+	start, end := logtools.ExtractTimeRange(opts.QueryParams.TimeRange)
+	q, err := logtools.BuildQuery(b.helper, i, opts.LogSelectionParams, start, end)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -173,8 +174,8 @@ func (b *l7LogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v
 		Query(q)
 
 	// Configure sorting.
-	if len(opts.Sort) != 0 {
-		for _, s := range opts.Sort {
+	if len(opts.GetSortBy()) != 0 {
+		for _, s := range opts.GetSortBy() {
 			query.Sort(s.Field, !s.Descending)
 		}
 	} else {
@@ -194,6 +195,9 @@ func (b *l7LogBackend) index(i bapi.ClusterInfo) string {
 }
 
 func (b *l7LogBackend) writeAlias(i bapi.ClusterInfo) string {
-	// TODO: Not multi-tenant
+	if i.Tenant != "" {
+		return fmt.Sprintf("tigera_secure_ee_l7.%s.%s.", i.Tenant, i.Cluster)
+	}
+
 	return fmt.Sprintf("tigera_secure_ee_l7.%s.", i.Cluster)
 }

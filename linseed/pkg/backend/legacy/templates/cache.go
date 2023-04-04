@@ -41,7 +41,7 @@ func NewTemplateCache(c lmaelastic.Client, shards, replicas int) bapi.Cache {
 	}
 }
 
-func (b *templateCache) InitializeIfNeeded(ctx context.Context, logsType bapi.LogsType, info bapi.ClusterInfo) error {
+func (b *templateCache) InitializeIfNeeded(ctx context.Context, logsType bapi.DataType, info bapi.ClusterInfo) error {
 	ok := b.getEntry(logsType, info)
 	if !ok {
 		return b.loadEntry(ctx, logsType, info)
@@ -50,7 +50,7 @@ func (b *templateCache) InitializeIfNeeded(ctx context.Context, logsType bapi.Lo
 	return nil
 }
 
-func (b *templateCache) getEntry(logsType bapi.LogsType, info bapi.ClusterInfo) bool {
+func (b *templateCache) getEntry(logsType bapi.DataType, info bapi.ClusterInfo) bool {
 	b.RLock()
 	defer b.RUnlock()
 
@@ -60,7 +60,7 @@ func (b *templateCache) getEntry(logsType bapi.LogsType, info bapi.ClusterInfo) 
 	return ok
 }
 
-func (b *templateCache) loadEntry(ctx context.Context, logsType bapi.LogsType, info bapi.ClusterInfo) error {
+func (b *templateCache) loadEntry(ctx context.Context, logsType bapi.DataType, info bapi.ClusterInfo) error {
 	b.Lock()
 	defer b.Unlock()
 
@@ -80,7 +80,7 @@ func (b *templateCache) loadEntry(ctx context.Context, logsType bapi.LogsType, i
 	return nil
 }
 
-func (b *templateCache) buildKey(logsType bapi.LogsType, info bapi.ClusterInfo) string {
+func (b *templateCache) buildKey(logsType bapi.DataType, info bapi.ClusterInfo) string {
 	if info.Tenant == "" {
 		return fmt.Sprintf("%s-%s", strings.ToLower(string(logsType)), info.Cluster)
 	}

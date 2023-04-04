@@ -34,18 +34,49 @@ type Config struct {
 	ExpectedTenantID string `default:"" split_words:"true"`
 
 	// Elastic configuration
-	ElasticEndpoint        string `default:"https://tigera-secure-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
-	ElasticUsername        string `default:"" split_words:"true"`
-	ElasticPassword        string `default:"" split_words:"true" json:",omitempty"`
-	ElasticCABundlePath    string `default:"/certs/elasticsearch/tls.crt" split_words:"true"`
-	ElasticClientKeyPath   string `default:"/certs/elasticsearch/client.key" split_words:"true"`
-	ElasticClientCertPath  string `default:"/certs/elasticsearch/client.crt" split_words:"true"`
-	ElasticGZIPEnabled     bool   `default:"false" split_words:"true"`
-	ElasticMTLSEnabled     bool   `default:"false" split_words:"true"`
-	ElasticScheme          string `default:"https" split_words:"true"`
-	ElasticSniffingEnabled bool   `default:"false" split_words:"true"`
-	ElasticReplicas        int    `envconfig:"ELASTIC_REPLICAS" default:"0"`
-	ElasticShards          int    `envconfig:"ELASTIC_SHARDS" default:"1"`
+	ElasticScheme          string `envconfig:"ELASTIC_SCHEME" default:"https"`
+	ElasticHost            string `envconfig:"ELASTIC_HOST" default:"tigera-secure-es-http.tigera-elasticsearch.svc"`
+	ElasticPort            string `envconfig:"ELASTIC_POST" default:"9200"`
+	ElasticUsername        string `envconfig:"ELASTIC_USERNAME" default:""`
+	ElasticPassword        string `envconfig:"ELASTIC_PASSWORD" default:"" json:",omitempty"`
+	ElasticCA              string `envconfig:"ELASTIC_CA" default:"/certs/elasticsearch/tls.crt"`
+	ElasticClientKey       string `envconfig:"ELASTIC_CLIENT_KEY" default:"/certs/elasticsearch/client.key"`
+	ElasticClientCert      string `envconfig:"ELASTIC_CLIENT_CERT" default:"/certs/elasticsearch/client.crt"`
+	ElasticGZIPEnabled     bool   `envconfig:"ELASTIC_GZIP_ENABLED" default:"false"`
+	ElasticMTLSEnabled     bool   `envconfig:"ELASTIC_MTLS_ENABLED" default:"false"`
+	ElasticSniffingEnabled bool   `envconfig:"ELASTIC_SNIFFING_ENABLED" default:"false"`
+
+	// Default value for replicas and shards
+	ElasticReplicas int `envconfig:"ELASTIC_REPLICAS" default:"0"`
+	ElasticShards   int `envconfig:"ELASTIC_SHARDS" default:"1"`
+
+	// Replicas and flows for flows
+	ElasticFlowReplicas int `envconfig:"ELASTIC_FLOWS_INDEX_REPLICAS" default:"0"`
+	ElasticFlowShards   int `envconfig:"ELASTIC_FLOWS_INDEX_SHARDS" default:"1"`
+
+	// Replicas and flows for DNS
+	ElasticDNSReplicas int `envconfig:"ELASTIC_DNS_INDEX_REPLICAS" default:"0"`
+	ElasticDNSShards   int `envconfig:"ELASTIC_DNS_INDEX_SHARDS" default:"1"`
+
+	// Replicas and flows for Audit
+	ElasticAuditReplicas int `envconfig:"ELASTIC_AUDIT_INDEX_REPLICAS" default:"0"`
+	ElasticAuditShards   int `envconfig:"ELASTIC_AUDIT_INDEX_SHARDS" default:"1"`
+
+	// Replicas and flows for BGP
+	ElasticBGPReplicas int `envconfig:"ELASTIC_BGP_INDEX_REPLICAS" default:"0"`
+	ElasticBGPShards   int `envconfig:"ELASTIC_BGP_INDEX_SHARDS" default:"1"`
+
+	// Replicas and flows for WAF
+	ElasticWAFReplicas int `envconfig:"ELASTIC_WAF_INDEX_REPLICAS" default:"0"`
+	ElasticWAFShards   int `envconfig:"ELASTIC_WAF_INDEX_SHARDS" default:"1"`
+
+	// Replicas and flows for L7
+	ElasticL7Replicas int `envconfig:"ELASTIC_L7_INDEX_REPLICAS" default:"0"`
+	ElasticL7Shards   int `envconfig:"ELASTIC_L7_INDEX_SHARDS" default:"1"`
+
+	// Replicas and flows for Runtime
+	ElasticRuntimeReplicas int `envconfig:"ELASTIC_RUNTIME_INDEX_REPLICAS" default:"0"`
+	ElasticRuntimeShards   int `envconfig:"ELASTIC_RUNTIME_INDEX_SHARDS" default:"1"`
 }
 
 // Return a string representation on the Config instance.

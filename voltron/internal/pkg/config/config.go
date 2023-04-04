@@ -16,9 +16,7 @@ const (
 	EnvConfigPrefix = "VOLTRON"
 )
 
-var (
-	versionFlag = flag.Bool("version", false, "Print version information")
-)
+var versionFlag = flag.Bool("version", false, "Print version information")
 
 // Config is a configuration used for Voltron
 type Config struct {
@@ -30,6 +28,14 @@ type Config struct {
 	TunnelKey  string `default:"/certs/tunnel/key" split_words:"true" json:"-"`
 	LogLevel   string `default:"INFO"`
 
+	// The tenant that this Voltron is serving.
+	Tenant string `default:""`
+
+	// Certificate and Key to use on inner connections received over the mTLS
+	// tunnel for Linseed from managed clusters.
+	LinseedServerCert string `default:"" split_words:"true"`
+	LinseedServerKey  string `default:"" split_words:"true"`
+
 	// HTTPSCert, HTTPSKey - path to an x509 certificate and its private key used
 	// for external communication (Tigera UI <-> Voltron)
 	HTTPSCert string `default:"/certs/https/cert" split_words:"true" json:"-"`
@@ -38,7 +44,7 @@ type Config struct {
 	UseHTTPSCertOnTunnel bool `split_words:"true"`
 
 	// InternalHTTPSCert, InternalHTTPSKey - path to an x509 certificate and its private key used
-	//for internal communication within the K8S cluster
+	// for internal communication within the K8S cluster
 	InternalHTTPSCert string `default:"/certs/internal/cert" split_words:"true" json:"-"`
 	InternalHTTPSKey  string `default:"/certs/internal/key" split_words:"true" json:"-"`
 
@@ -68,6 +74,9 @@ type Config struct {
 	QueryserverPath              string `default:"/api/v1/namespaces/tigera-system/services/https:tigera-api:8080/proxy/" split_words:"true"`
 	QueryserverEndpoint          string `default:"https://tigera-api.tigera-system.svc:8080" split_words:"true"`
 	QueryserverCABundlePath      string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
+
+	LinseedEndpoint     string `default:"https://tigera-linseed.tigera-elasticsearch.svc.cluster.local" split_words:"true"`
+	LinseedCABundlePath string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
 
 	EnableCalicoCloudRbacApi       bool   `split_words:"true"`
 	CalicoCloudRbacApiCABundlePath string `split_words:"true"`

@@ -193,7 +193,7 @@ func (m *tproxyManager) OnUpdate(protoBufMsg interface{}) {
 			// We get EP updates only for the endpoints local to the node.
 			m.iptablesEqualIPsChecker.OnWorkloadEndpointRemove(msg)
 		}
-	case *ifaceUpdate:
+	case *ifaceStateUpdate:
 		if m.k8sProvider == config.ProviderGKE && msg.State == ifacemonitor.StateUp {
 			// We need to set loose RPF check in GKE because of the complicated routing as
 			// we run in the intra-node visibility mode. This mode make all packets from

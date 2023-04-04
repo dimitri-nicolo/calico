@@ -21,28 +21,34 @@ spec:
       hostIPC: false
       hostPID: false
       imagePullSecrets:
-      - name: tigera-pull-secret
-      securityContext:
-        runAsUser: 999
-        runAsGroup: 999
+        - name: tigera-pull-secret
       containers:
-      - name: tigera-internal-db
-        image: mysql:8.0.22
-        ports:
-        - containerPort: 3306
-        env:
-        - name: MYSQL_ALLOW_EMPTY_PASSWORD 
-          value: 'yes'
-        resources:
-          limits:
-            cpu: 100m
-            memory: 400Mi
-          requests:
-            cpu: 100m
-            memory: 400Mi
-        securityContext:
-            privileged: false
+        - name: tigera-internal-db
+          image: mysql:8
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ALLOW_EMPTY_PASSWORD
+              value: "yes"
+          resources:
+            limits:
+              cpu: 100m
+              memory: 400Mi
+            requests:
+              cpu: 100m
+              memory: 400Mi
+          securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsGroup: 999
+            runAsNonRoot: true
+            runAsUser: 999
+            seccompProfile:
+              type: RuntimeDefault
+      serviceAccountName: tigera-honeypod
 ---
 # Create Mysql service
 kind: Service
@@ -71,7 +77,14 @@ spec:
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-db" AND reporter="dst"'
-  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+  aggregateBy:
+    [
+      source_namespace,
+      source_name_aggr,
+      dest_namespace,
+      dest_name_aggr,
+      host.keyword,
+    ]
 ---
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
@@ -82,5 +95,11 @@ spec:
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-db" AND reporter="dst"'
-  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
----
+  aggregateBy:
+    [
+      source_namespace,
+      source_name_aggr,
+      dest_namespace,
+      dest_name_aggr,
+      host.keyword,
+    ]

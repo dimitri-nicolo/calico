@@ -15,6 +15,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
 
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -23,13 +24,14 @@ import (
 var _ = Describe("Clusters", func() {
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
 	clusters := &clusters{
-		clusters: make(map[string]*cluster),
-		k8sCLI:   k8sAPI,
+		clusters:   make(map[string]*cluster),
+		k8sCLI:     k8sAPI,
+		voltronCfg: &vcfg.Config{},
 	}
 
 	var wg sync.WaitGroup
-	var clusterID = "resource-name"
-	var clusterName = "resource-name"
+	clusterID := "resource-name"
+	clusterName := "resource-name"
 
 	Describe("basic functionality", func() {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -157,5 +159,4 @@ var _ = Describe("Clusters", func() {
 			wg.Wait()
 		})
 	})
-
 })

@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -28,41 +29,18 @@ import (
 	"syscall"
 	"time"
 
-	k8sresources "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
+	log "github.com/sirupsen/logrus"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	lclient "github.com/projectcalico/calico/licensing/client"
-	"github.com/projectcalico/calico/licensing/client/features"
-	"github.com/projectcalico/calico/licensing/monitor"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend"
-	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/felixsyncer"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
-	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	lclogutils "github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/libcalico-go/lib/options"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-	"github.com/projectcalico/calico/pod2daemon/binder"
-	"github.com/projectcalico/calico/typha/pkg/discovery"
-	"github.com/projectcalico/calico/typha/pkg/syncclient"
 
 	"github.com/projectcalico/calico/felix/buildinfo"
 	"github.com/projectcalico/calico/felix/calc"
@@ -76,6 +54,29 @@ import (
 	"github.com/projectcalico/calico/felix/policysync"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/statusrep"
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
+	k8sresources "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/felixsyncer"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	lclogutils "github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	lclient "github.com/projectcalico/calico/licensing/client"
+	"github.com/projectcalico/calico/licensing/client/features"
+	"github.com/projectcalico/calico/licensing/monitor"
+	"github.com/projectcalico/calico/pod2daemon/binder"
+	"github.com/projectcalico/calico/typha/pkg/discovery"
+	"github.com/projectcalico/calico/typha/pkg/syncclient"
 )
 
 const (
@@ -548,6 +549,20 @@ configRetry:
 		)
 		policySyncAPIBinder = binder.NewBinder(configParams.PolicySyncPathPrefix)
 		policySyncServer.RegisterGrpc(policySyncAPIBinder.Server())
+		// let's setup a separate grpc server with a normal port listener, so we can kubefwd to it
+		if auxListenPort, ok := os.LookupEnv("FELIX_ADDITIONAL_GRPC_LISTEN_PORT"); ok && auxListenPort != "" {
+			gs, lis, err := setupAuxiliaryServer(ctx, auxListenPort, policySyncServer.RegisterGrpc)
+			if err != nil {
+				log.Warn("was not able to setup auxiliary grpc server: ", err)
+			} else {
+				defer func() {
+					gs.GracefulStop()
+					if err := lis.Close(); err != nil {
+						log.Error(err)
+					}
+				}()
+			}
+		}
 		calcGraphClientChannels = append(calcGraphClientChannels, toPolicySync)
 	}
 
@@ -1640,4 +1655,27 @@ func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMoni
 		return true
 	}
 	return false
+}
+
+// setupAuxiliaryServer - a hidden server only activated by setting FELIX_ADDITIONAL_GRPC_LISTEN_PORT.
+// *** meant to be used for development-only ***
+//
+// can also use FELIX_ENABLE_GRPC_REFLECTION during development to interact with felix policysync using grpcurl or similar reflection client
+func setupAuxiliaryServer(ctx context.Context, auxListenPort string, registerWithCb func(*grpc.Server)) (*grpc.Server, net.Listener, error) {
+	log.WithField("auxListenPort", "auxListenPort").Info("PolicySync Auxiliary Server also enabled")
+	lis, err := net.Listen("tcp", auxListenPort)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not listen to port '%s'. error: %w", auxListenPort, err)
+	}
+	gs := grpc.NewServer()
+	if _, ok := os.LookupEnv("FELIX_ENABLE_GRPC_REFLECTION"); ok {
+		reflection.Register(gs)
+	}
+	registerWithCb(gs)
+	go func() {
+		if err := gs.Serve(lis); err != nil {
+			log.Warnf("failed to serve auxiliary server: %v", err)
+		}
+	}()
+	return gs, lis, nil
 }

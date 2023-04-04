@@ -13,8 +13,11 @@ import (
 
 	"github.com/pkg/errors"
 
+	gotls "crypto/tls"
+
 	"github.com/projectcalico/calico/crypto/pkg/tls"
 
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -36,6 +39,10 @@ type Target struct {
 
 	// Enables FIPS 140-2 verified mode.
 	FIPSModeEnabled bool
+
+	// Configures client key and certificate for mTLS from Voltron with the target.
+	ClientKey  string
+	ClientCert string
 }
 
 // Proxy proxies HTTP based on the provided list of targets
@@ -99,6 +106,16 @@ func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), err
 
 			ca.AppendCertsFromPEM(file)
 			tlsCfg.RootCAs = ca
+		}
+
+		// If specified, load and include the provided client certificate for mTLS with the destination.
+		if tgt.ClientKey != "" && tgt.ClientCert != "" {
+			clientCert, err := gotls.LoadX509KeyPair(tgt.ClientCert, tgt.ClientKey)
+			if err != nil {
+				return nil, fmt.Errorf("error load cert key pair for linseed client: %s", err)
+			}
+			tlsCfg.Certificates = append(tlsCfg.Certificates, clientCert)
+			logrus.Info("Using provided client certificates for mTLS")
 		}
 
 		p.Transport = &http.Transport{

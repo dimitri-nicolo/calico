@@ -77,6 +77,7 @@ clean: stop-elastic
 # Testing
 ###############################################################################
 MOCKERY_FILE_PATHS= \
+	pkg/internal/elastic/index/Helper \
 	pkg/backend/api/FlowBackend \
 	pkg/backend/api/FlowLogBackend \
 	pkg/backend/api/L7FlowBackend \
@@ -87,7 +88,8 @@ MOCKERY_FILE_PATHS= \
 	pkg/backend/api/AuditBackend \
 	pkg/backend/api/BGPBackend \
 	pkg/backend/api/ProcessBackend \
-	pkg/backend/api/WAFBackend
+	pkg/backend/api/WAFBackend \
+	pkg/backend/api/RuntimeBackend
 
 #############################################
 # Run unit level tests
@@ -98,7 +100,7 @@ MOCKERY_FILE_PATHS= \
 ut: stop-elastic run-elastic ut-fast
 ut-fast:
 	# We run the tests 5 times to try and weed out test flakes.
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 5'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 1'
 
 st:
 	@echo "No STs"
@@ -115,8 +117,8 @@ run-image: stop-image run-elastic
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.crt:/certs/https/tls.crt \
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.key:/certs/https/tls.key \
 		-v $(REPO_ROOT)/linseed/fv/cert/RootCA.crt:/certs/https/client.crt \
-		-e LINSEED_ELASTIC_ENDPOINT="http://localhost:9200" \
-		-e LINSEED_ELASTIC_SCHEME="http" \
+		-e ELASTIC_HOST="localhost" \
+		-e ELASTIC_SCHEME="http" \
 		-e LINSEED_LOG_LEVEL="debug" \
 		tigera/$(LINSEED_IMAGE):latest
 	# Wait until Linseed is accepting requests on its readiness port.

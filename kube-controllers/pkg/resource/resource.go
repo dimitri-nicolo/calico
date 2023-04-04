@@ -12,6 +12,7 @@ const (
 	ElasticsearchCertSecret                           = "tigera-secure-es-http-certs-public"
 	KibanaCertSecret                                  = "tigera-secure-kb-http-certs-public"
 	ESGatewayCertSecret                               = "tigera-secure-es-gateway-http-certs-public"
+	VoltronLinseedPublicCert                          = "tigera-voltron-linseed-certs-public"
 	OperatorNamespace                                 = "tigera-operator"
 	TigeraElasticsearchNamespace                      = "tigera-elasticsearch"
 	DefaultTSEEInstanceName                           = "tigera-secure"

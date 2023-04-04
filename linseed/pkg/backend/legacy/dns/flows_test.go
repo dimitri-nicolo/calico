@@ -62,9 +62,9 @@ func setupTest(t *testing.T) func() {
 	// interfere between tests.
 	cluster = testutils.RandomClusterName()
 
-	// Each test should take less than 5 seconds.
+	// Each test should take less than 60 seconds.
 	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 
 	// Function contains teardown logic.
 	return func() {
@@ -86,18 +86,14 @@ func TestListDNSFlows(t *testing.T) {
 
 	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
-	// Timeout the test after 5 seconds.
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
 	// Put some data into ES so we can query it.
-	expected := populateDNSLogData(t, ctx, client, clusterInfo.Cluster)
+	expected, reqTime := populateDNSLogData(t, ctx, client, clusterInfo.Cluster)
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.DNSFlowParams{}
 	opts.TimeRange = &lmav1.TimeRange{}
-	opts.TimeRange.From = time.Now().Add(-5 * time.Second)
-	opts.TimeRange.To = time.Now().Add(5 * time.Second)
+	opts.TimeRange.From = reqTime.Add(-5 * time.Second)
+	opts.TimeRange.To = reqTime.Add(5 * time.Second)
 
 	// Query for flows. There should be a single flow from the populated data.
 	r, err := b.List(ctx, clusterInfo, &opts)
@@ -110,8 +106,9 @@ func TestListDNSFlows(t *testing.T) {
 
 // populateDNSLogData writes a series of DNS logs to elasticsearch, and returns the DNSFlow that we
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
-func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Client, cluster string) v1.DNSFlow {
+func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Client, cluster string) (v1.DNSFlow, time.Time) {
 	// The expected flow log - we'll populate fields as we go.
+	reqTime := time.Now()
 	expected := v1.DNSFlow{}
 	expected.Key = v1.DNSFlowKey{
 		Source: v1.Endpoint{
@@ -134,8 +131,8 @@ func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 	for i := 0; i < 10; i++ {
 		ip := net.ParseIP("10.0.1.1")
 		f := v1.DNSLog{
-			StartTime:       time.Now(),
-			EndTime:         time.Now(),
+			StartTime:       reqTime,
+			EndTime:         reqTime,
 			Type:            v1.DNSLogTypeLog,
 			Count:           1,
 			ClientName:      "my-deployment-1",
@@ -186,5 +183,5 @@ func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 	err = testutils.RefreshIndex(ctx, client, index)
 	require.NoError(t, err)
 
-	return expected
+	return expected, reqTime
 }

@@ -78,6 +78,16 @@ func WithInternalCredFiles(certFile, keyFile string) Option {
 	}
 }
 
+// WithTunnelInnerProxy adds an inner proxier to use for all connections received from managed clusters
+// that are targeting Voltron itself, rather than using SNI routing. For example,
+// managed cluster connections to Linseed.
+func WithTunnelInnerProxy(p *proxy.Proxy) Option {
+	return func(s *Server) error {
+		s.clusters.innerProxy = p
+		return nil
+	}
+}
+
 // WithInternalCreds creates the default cert and key from the given pem bytes to be used for the TLS connections within
 // the management cluster.
 func WithInternalCreds(certBytes []byte, keyBytes []byte) Option {

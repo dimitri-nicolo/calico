@@ -22,9 +22,9 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/math"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
@@ -169,14 +169,49 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	return &params, nil
 }
 
+func validateSelector(selector string, t SearchType) error {
+	q, err := query.ParseQuery(selector)
+	if err != nil {
+		return &httputils.HttpStatusError{
+			Status: http.StatusBadRequest,
+			Err:    err,
+			Msg:    fmt.Sprintf("Invalid selector (%s) in request: %v", selector, err),
+		}
+	}
+
+	// Validate the atoms in the selector.
+	var validator query.Validator
+	switch t {
+	case SearchTypeL7:
+		validator = query.IsValidL7LogsAtom
+	case SearchTypeDNS:
+		validator = query.IsValidDNSAtom
+	case SearchTypeEvents:
+		validator = query.IsValidEventsKeysAtom
+	case SearchTypeFlows:
+		validator = query.IsValidFlowsAtom
+	default:
+		return fmt.Errorf("Invalid search type: %v", t)
+	}
+
+	if err := query.Validate(q, validator); err != nil {
+		return &httputils.HttpStatusError{
+			Status: http.StatusBadRequest,
+			Err:    err,
+			Msg:    fmt.Sprintf("Invalid selector (%s) in request: %v", selector, err),
+		}
+	}
+
+	return nil
+}
+
 // intoLogParams converts a request into the given Linseed API parameters.
-func intoLogParams(ctx context.Context, h lmaindex.Helper, request *v1.SearchRequest, params lapi.LogParams, authReview middleware.AuthorizationReview) error {
+func intoLogParams(ctx context.Context, t SearchType, request *v1.SearchRequest, params lapi.LogParams, authReview middleware.AuthorizationReview) error {
 	// Add in the selector.
 	if len(request.Selector) > 0 {
 		// Validate the selector. Linseed performs the same check, but
 		// better to short-circuit the request if we can avoid it.
-		_, err := h.NewSelectorQuery(request.Selector)
-		if err != nil {
+		if err := validateSelector(request.Selector, t); err != nil {
 			return err
 		}
 		params.SetSelector(request.Selector)
@@ -195,18 +230,12 @@ func intoLogParams(ctx context.Context, h lmaindex.Helper, request *v1.SearchReq
 	}
 	params.SetPermissions(verbs)
 
-	// Validate the RBAC of the user, and return an Unauthorized error if the verbs don't allow any resources.
-	// Linseed performs this same check, but better to short-circuit the request if we can avoid it.
-	if _, err := h.NewRBACQuery(verbs); err != nil {
-		return err
-	}
-
 	// Configure sorting, if set.
 	for _, s := range request.SortBy {
 		if s.Field == "" {
 			continue
 		}
-		params.SetSort([]lapi.SearchRequestSortBy{
+		params.SetSortBy([]lapi.SearchRequestSortBy{
 			{
 				Field:      s.Field,
 				Descending: s.Descending,
@@ -244,7 +273,7 @@ func searchFlowLogs(
 	k8sClient datastore.ClientSet,
 ) (*v1.SearchResponse, error) {
 	params := &lapi.FlowLogParams{}
-	err := intoLogParams(ctx, lmaindex.FlowLogs(), request, params, authReview)
+	err := intoLogParams(ctx, SearchTypeFlows, request, params, authReview)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +290,7 @@ func searchDNSLogs(
 	k8sClient datastore.ClientSet,
 ) (*v1.SearchResponse, error) {
 	params := &lapi.DNSLogParams{}
-	err := intoLogParams(ctx, lmaindex.DnsLogs(), request, params, authReview)
+	err := intoLogParams(ctx, SearchTypeDNS, request, params, authReview)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +307,7 @@ func searchL7Logs(
 	k8sClient datastore.ClientSet,
 ) (*v1.SearchResponse, error) {
 	params := &lapi.L7LogParams{}
-	err := intoLogParams(ctx, lmaindex.L7Logs(), request, params, authReview)
+	err := intoLogParams(ctx, SearchTypeL7, request, params, authReview)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +324,7 @@ func searchEvents(
 	k8sClient datastore.ClientSet,
 ) (*v1.SearchResponse, error) {
 	params := &lapi.L7LogParams{}
-	err := intoLogParams(ctx, lmaindex.Alerts(), request, params, authReview)
+	err := intoLogParams(ctx, SearchTypeEvents, request, params, authReview)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +352,7 @@ func searchEvents(
 			}
 
 			// Validate the selector first.
-			_, err := lmaindex.Alerts().NewSelectorQuery(alertException.Spec.Selector)
+			err := validateSelector(alertException.Spec.Selector, SearchTypeEvents)
 			if err != nil {
 				logrus.WithError(err).Warnf(`ignoring alert exception="%s", failed to parse selector="%s"`,
 					alertException.GetName(), alertException.Spec.Selector)

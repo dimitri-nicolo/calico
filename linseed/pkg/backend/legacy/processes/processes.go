@@ -13,8 +13,8 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 )
 
 const (
@@ -162,7 +162,8 @@ func (b *processBackend) convertBucket(log *logrus.Entry, bucket *elastic.Aggreg
 // buildQuery builds an elastic query using the given parameters.
 func (b *processBackend) buildQuery(i bapi.ClusterInfo, opts *v1.ProcessParams) (elastic.Query, error) {
 	// Start with the base flow log query using common fields.
-	query, err := logtools.BuildQuery(lmaindex.FlowLogs(), i, opts)
+	start, end := logtools.ExtractTimeRange(opts.QueryParams.TimeRange)
+	query, err := logtools.BuildQuery(lmaindex.FlowLogs(), i, opts.LogSelectionParams, start, end)
 	if err != nil {
 		return nil, err
 	}

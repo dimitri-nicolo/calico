@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: attacker-app
-
 spec:
   replicas: 1
   selector:
@@ -18,4 +17,3 @@ spec:
       containers:
         - name: attacker-app
           image: gcr.io/tigera-demo/attacker-pod:1.0.1
----

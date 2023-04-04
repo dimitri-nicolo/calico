@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/projectcalico/calico/app-policy/checker"
 	"github.com/projectcalico/calico/app-policy/policystore"
@@ -32,7 +33,7 @@ var (
 
 type Dikastes struct {
 	subscriptionType             string
-	dialAddress                  string
+	dialNetwork, dialAddress     string
 	listenNetwork, listenAddress string
 	grpcServerOptions            []grpc.ServerOption
 
@@ -41,8 +42,9 @@ type Dikastes struct {
 
 type DikastesServerOptions func(*Dikastes)
 
-func WithDialAddress(addr string) DikastesServerOptions {
+func WithDialAddress(network, addr string) DikastesServerOptions {
 	return func(ds *Dikastes) {
+		ds.dialNetwork = network
 		ds.dialAddress = addr
 	}
 }
@@ -57,6 +59,12 @@ func WithListenArguments(network, address string) DikastesServerOptions {
 func WithSubscriptionType(s string) DikastesServerOptions {
 	return func(ds *Dikastes) {
 		ds.subscriptionType = s
+	}
+}
+
+func WithGRPCServerOpts(opts ...grpc.ServerOption) DikastesServerOptions {
+	return func(ds *Dikastes) {
+		ds.grpcServerOptions = append(ds.grpcServerOptions, opts...)
 	}
 }
 
@@ -114,7 +122,7 @@ func (s *Dikastes) Serve(ctx context.Context) {
 	checkServer.RegisterGRPCServices(gs)
 
 	// syncClient provides synchronization with the policy store and start reporting stats.
-	opts := uds.GetDialOptions()
+	opts := uds.GetDialOptionsWithNetwork(s.dialNetwork)
 	syncClient := syncher.NewClient(
 		s.dialAddress,
 		policyStoreManager,
@@ -127,6 +135,9 @@ func (s *Dikastes) Serve(ctx context.Context) {
 	syncClient.RegisterGRPCServices(gs)
 	go syncClient.Start(ctx, dpStats)
 
+	if _, ok := os.LookupEnv("DIKASTES_ENABLE_CHECKER_REFLECTION"); ok {
+		reflection.Register(gs)
+	}
 	// Run gRPC server on separate goroutine so we catch any signals and clean up.
 	go func() {
 		if err := gs.Serve(lis); err != nil {

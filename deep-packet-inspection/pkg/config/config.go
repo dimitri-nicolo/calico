@@ -14,28 +14,25 @@ const (
 
 // Config is a configuration used for PacketCapture API
 type Config struct {
-	LogLevel                       string        `split_words:"true" default:"INFO"`
-	HealthEnabled                  bool          `split_words:"true" default:"true"`
-	HealthPort                     int           `split_words:"true" default:"9097"`
-	HealthHost                     string        `split_words:"true" default:"0.0.0.0"`
-	HealthTimeout                  time.Duration `split_words:"true" default:"30s"`
-	SnortAlertFileBasePath         string        `split_words:"true" default:"/var/log/calico/snort-alerts"`
-	SnortAlertFileSize             int           `split_words:"true" default:"5"`
-	SnortCommunityRulesFile        string        `split_words:"true" default:"/usr/local/etc/rules/snort3-community-rules/snort3-community.rules"`
-	ElasticIndexSuffix             string        `split_words:"true" default:"cluster"`
-	ElasticScheme                  string        `split_words:"true" default:"https"`
-	ElasticHost                    string        `split_words:"true" default:"tigera-secure-es-gateway-http.tigera-elasticsearch.svc"`
-	ElasticPort                    string        `split_words:"true" default:"9200"`
-	ElasticCA                      string        `split_words:"true"`
-	ElasticUsername                string        `split_words:"true"`
-	ElasticPassword                string        `split_words:"true"`
-	ElasticEnableTrace             bool          `split_words:"true" default:"false"`
-	ElasticConnectionRetries       int           `split_words:"true" default:"30"`
-	ElasticConnectionRetryInterval time.Duration `split_words:"true" default:"500ms"`
+	LogLevel                string        `split_words:"true" default:"INFO"`
+	HealthEnabled           bool          `split_words:"true" default:"true"`
+	HealthPort              int           `split_words:"true" default:"9097"`
+	HealthHost              string        `split_words:"true" default:"0.0.0.0"`
+	HealthTimeout           time.Duration `split_words:"true" default:"30s"`
+	SnortAlertFileBasePath  string        `split_words:"true" default:"/var/log/calico/snort-alerts"`
+	SnortAlertFileSize      int           `split_words:"true" default:"5"`
+	SnortCommunityRulesFile string        `split_words:"true" default:"/usr/local/etc/rules/snort3-community-rules/snort3-community.rules"`
 
-	// For Debugging
-	ElasticInsecureSkipVerify bool `split_words:"true" default:"false"`
-	ElasticDebug              bool `split_words:"true" default:"false"`
+	// Multi-cluster configuration
+	TenantID    string `split_words:"true" default:""`
+	ClusterName string `split_words:"true" default:""`
+
+	// Linseed configuration
+	LinseedURL        string `envconfig:"LINSEED_URL" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
+	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
+	FIPSModeEnabled   bool   `envconfig:"FIPS_MODE_ENABLED" default:"false"`
 
 	// All the below config variables are used by typha to establish connection and they should not use split_words
 	NodeName            string

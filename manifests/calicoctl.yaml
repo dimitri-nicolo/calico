@@ -10,7 +10,6 @@ metadata:
   namespace: kube-system
 
 ---
-
 apiVersion: v1
 kind: Pod
 metadata:
@@ -35,9 +34,19 @@ spec:
       env:
         - name: DATASTORE_TYPE
           value: kubernetes
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+        privileged: false
+        runAsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
 
 ---
-
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -104,7 +113,6 @@ rules:
       - list
 
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:

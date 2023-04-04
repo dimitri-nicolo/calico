@@ -71,11 +71,11 @@ func main() {
 		ClientCertPath:  cfg.LinseedClientCert,
 		FIPSModeEnabled: cfg.FIPSModeEnabled,
 	}
-	linseed, err := client.NewClient(cfg.Tenant, config)
+	linseed, err := client.NewClient(cfg.TenantID, config)
 	if err != nil {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}
-	store := capi.NewComplianceStore(linseed, cfg.Cluster)
+	store := capi.NewComplianceStore(linseed, cfg.ClusterName)
 
 	// Setup signals.
 	sigs := make(chan os.Signal, 1)

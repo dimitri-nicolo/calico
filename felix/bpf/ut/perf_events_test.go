@@ -45,7 +45,7 @@ func TestPerfBasic(t *testing.T) {
 		Expect(err).NotTo(HaveOccurred())
 		// no buffers allocated yet
 		Expect(res.Retval).To(Equal(resTC_ACT_SHOT))
-	}, withExtraMap(perfMap))
+	})
 
 	perfEvents, err := perf.New(perfMap, ringSize)
 	Expect(err).NotTo(HaveOccurred())
@@ -55,7 +55,7 @@ func TestPerfBasic(t *testing.T) {
 		res, err := bpfrun(pktBytes)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
-	}, withExtraMap(perfMap))
+	})
 
 	eventRaw, err := perfEvents.Next()
 	Expect(err).NotTo(HaveOccurred())
@@ -80,7 +80,7 @@ func TestPerfBasic(t *testing.T) {
 		res, err := bpfrun(icmpUNreachable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
-	}, withExtraMap(perfMap))
+	})
 
 	eventRaw, err = perfEvents.Next()
 	Expect(err).NotTo(HaveOccurred())
@@ -107,7 +107,7 @@ func TestPerfCrash(t *testing.T) {
 		res, err := bpfrun(pktBytes)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
-	}, withExtraMap(perfMap))
+	})
 
 	eventRaw, err := perfEvents.Next()
 	Expect(err).NotTo(HaveOccurred())
@@ -123,7 +123,7 @@ func TestPerfCrash(t *testing.T) {
 		res, err := bpfrun(pktBytes)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
-	}, withExtraMap(perfMap))
+	})
 
 	eventRaw, err = perfEvents2.Next()
 	Expect(err).NotTo(HaveOccurred())
@@ -153,7 +153,7 @@ func TestPerfFillup(t *testing.T) {
 				Expect(err).NotTo(HaveOccurred())
 				retval = res.Retval
 			},
-			withSubtests(false), withLogLevel(log.WarnLevel), withExtraMap(perfMap),
+			withSubtests(false), withLogLevel(log.WarnLevel),
 		)
 		if retval == resTC_ACT_SHOT {
 			break

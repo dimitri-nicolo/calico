@@ -20,7 +20,8 @@ import (
 )
 
 type wafLogBackend struct {
-	client    *elastic.Client
+	client *elastic.Client
+
 	lmaclient lmaelastic.Client
 	templates bapi.Cache
 }
