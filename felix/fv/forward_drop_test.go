@@ -67,7 +67,6 @@ var _ = infrastructure.DatastoreDescribe("Base FORWARD behaviour", []apiconfig.D
 	})
 
 	AfterEach(func() {
-		felix.Stop()
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
 			felix.Exec("iptables-save", "-c")
@@ -75,6 +74,7 @@ var _ = infrastructure.DatastoreDescribe("Base FORWARD behaviour", []apiconfig.D
 			felix.Exec("ip", "r")
 			felix.Exec("ip", "a")
 		}
+		felix.Stop()
 		infra.Stop()
 	})
 

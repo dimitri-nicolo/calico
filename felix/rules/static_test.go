@@ -328,12 +328,6 @@ var _ = Describe("Static", func() {
 								// Outgoing host endpoint chains.
 								{Action: JumpAction{Target: ChainDispatchToHostEndpointForward}},
 								{Action: JumpAction{Target: ChainCIDRBlock}},
-								{
-									Match:   Match().MarkSingleBitSet(0x10),
-									Action:  AcceptAction{},
-									Comment: []string{"Policy explicitly accepted packet."},
-								},
-								{Action: SetMarkAction{Mark: 0x10}},
 							},
 						}))
 					})
@@ -564,12 +558,6 @@ var _ = Describe("Static", func() {
 									// Outgoing host endpoint chains.
 									{Action: JumpAction{Target: ChainDispatchToHostEndpointForward}},
 									{Action: JumpAction{Target: ChainCIDRBlock}},
-									{
-										Match:   Match().MarkSingleBitSet(0x10),
-										Action:  AcceptAction{},
-										Comment: []string{"Policy explicitly accepted packet."},
-									},
-									{Action: SetMarkAction{Mark: 0x10}},
 								},
 							}))
 						})
@@ -1611,12 +1599,6 @@ var _ = Describe("Static", func() {
 						// Outgoing host endpoint chains.
 						{Action: JumpAction{Target: ChainDispatchToHostEndpointForward}},
 						{Action: JumpAction{Target: ChainCIDRBlock}},
-						{
-							Match:   Match().MarkSingleBitSet(0x10),
-							Action:  ReturnAction{},
-							Comment: []string{"Policy explicitly accepted packet."},
-						},
-						{Action: SetMarkAction{Mark: 0x10}},
 					},
 				}))
 			})
@@ -1964,12 +1946,6 @@ var _ = Describe("Static", func() {
 				// Outgoing host endpoint chains.
 				{Action: JumpAction{Target: ChainDispatchToHostEndpointForward}},
 				{Action: JumpAction{Target: ChainCIDRBlock}},
-				{
-					Match:   Match().MarkSingleBitSet(0x10),
-					Action:  AcceptAction{},
-					Comment: []string{"Policy explicitly accepted packet."},
-				},
-				{Action: SetMarkAction{Mark: 0x10}},
 			},
 		}
 

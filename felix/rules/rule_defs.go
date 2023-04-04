@@ -270,6 +270,7 @@ type RuleRenderer interface {
 	StaticMangleTableChains(ipVersion uint8) []*iptables.Chain
 	StaticRawOutputChain(tcBypassMark uint32, nodelocaldnsBroadcastedIPs []config.ServerPort) *iptables.Chain
 	StaticRawPreroutingChain(ipVersion uint8, nodelocaldnsBroadcastedIPs []config.ServerPort) *iptables.Chain
+	StaticFilterForwardAppendRules() []iptables.Rule
 
 	WorkloadDispatchChains(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain
 	WorkloadRPFDispatchChains(ipVersion uint8, gatewayInterfaceNames []string) []*iptables.Chain
