@@ -223,26 +223,6 @@ blocks:
       commands:
       - ../.semaphore/run-and-monitor make-ci.log make ci
 
-- name: "apiserver: build all architectures"
-  run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/apiserver/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Prerequisites"]
-  task:
-    agent:
-      machine:
-        type: e1-standard-4
-        os_image: ubuntu2004
-    prologue:
-      commands:
-      - cd apiserver
-    jobs:
-    - name: "Build image"
-      matrix:
-      - env_var: ARCH
-        values: [ "arm64", "ppc64le" ]
-      commands:
-      - ../.semaphore/run-and-monitor image-$ARCH.log make image ARCH=$ARCH
-
 - name: "libcalico-go"
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -577,15 +557,6 @@ blocks:
       commands:
       - cd node
     jobs:
-# Non-AMD64 images not supported in Enterprise.
-#
-#    - name: "Build image"
-#      matrix:
-#      # TODO: s390x builds of calico/node are not working.
-#      - env_var: ARCH
-#        values: [ "arm64", "ppc64le" ]
-#      commands:
-#      - ../.semaphore/run-and-monitor image-$ARCH.log make image ARCH=$ARCH
     - name: "Build Windows archive"
       commands:
       - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
@@ -618,7 +589,7 @@ blocks:
     agent:
       machine:
         type: e1-standard-4
-        os_image: ubuntu1804
+        os_image: ubuntu2004
     prologue:
       commands:
       - cd kube-controllers
