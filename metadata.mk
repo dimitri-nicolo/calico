@@ -34,7 +34,7 @@ endif
 GIT_USE_SSH = true
 
 # Configure private repos
-EXTRA_DOCKER_ARGS += --init -e GOPRIVATE=github.com/tigera/*
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 # The version of BIRD to use for calico/node builds and confd tests.
 BIRD_VERSION=v0.3.3-200-g245602b0
