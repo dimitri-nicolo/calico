@@ -345,6 +345,10 @@ func (aggregator *HealthAggregator) Summary() *HealthReport {
 		aggregator.everReady = true
 	}
 
+	if summary.Ready {
+		aggregator.everReady = true
+	}
+
 	return summary
 }
 
