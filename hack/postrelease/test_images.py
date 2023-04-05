@@ -8,7 +8,7 @@ from versions import RELEASE_VERSION, OPERATOR_VERSION, VPP_VERSION
 OPERATOR_IMAGE = "quay.io/tigera/operator:%s" % OPERATOR_VERSION
 
 # Architectures we expect to be present in multi-arch image manifests.
-EXPECTED_ARCHS = ["amd64", "arm64", "arm", "ppc64le"]
+EXPECTED_ARCHS = ["amd64", "arm64"]
 
 # Images we expect to exist as part of a Calico release, without 
 # a registry assigned.

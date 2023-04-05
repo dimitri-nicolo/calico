@@ -172,14 +172,6 @@ function do_bld_images {
     docker build -f ubuntu-focal-build.Dockerfile.${ARCH} -t calico-build/focal .
     docker build --build-arg=UID=`id -u` --build-arg=GID=`id -g` -f centos7-build.Dockerfile.${ARCH} -t calico-build/centos7 .
     popd
-    if [ $ARCH = ppc64le ]; then
-	# Some commands that would typically be run at container build
-	# time must be run in a privileged container.
-	docker rm -f centos7Tmp
-	docker run --privileged --name=centos7Tmp calico-build/centos7 \
-	       /bin/bash -c "/setup-user; /install-centos-build-deps"
-	docker commit centos7Tmp calico-build/centos7:latest
-    fi
 }
 
 function do_net_cal {
