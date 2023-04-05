@@ -14,8 +14,8 @@ DEV_TAG_SUFFIX        ?=calient-0.dev
 API_SERVER_IMAGE      ?=cnx-apiserver
 BUILD_IMAGES          ?=$(API_SERVER_IMAGE)
 
-EXTRA_DOCKER_ARGS += -e GOLANGCI_LINT_CACHE=/lint-cache -v $(CURDIR)/.lint-cache:/lint-cache:rw \
-				 -v $(CURDIR)/../hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/.lint-cache:/lint-cache:rw \
+	-v $(CURDIR)/../hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw
 
 ###############################################################################
 BINDIR ?= bin
@@ -146,7 +146,7 @@ st:
 check-copyright:
 	@../hack/check-copyright.sh
 
-GITHUB_TEST_INTEGRATION_URI := https://raw.githubusercontent.com/kubernetes/kubernetes/v1.16.4/hack/lib
+GITHUB_TEST_INTEGRATION_URI := https://raw.githubusercontent.com/kubernetes/kubernetes/$(KUBECTL_VERSION)/hack/lib
 
 hack-lib:
 	mkdir -p hack/lib/

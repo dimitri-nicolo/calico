@@ -1,4 +1,4 @@
-// Copyright (c) 2017, 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2020-2021,2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -102,7 +102,7 @@ func NewPodController(ctx context.Context, k8sClientset *kubernetes.Clientset, c
 
 	// Bind the Calico cache to kubernetes cache with the help of an informer. This way we make sure that
 	// whenever the kubernetes cache is updated, changes get reflected in the Calico cache as well.
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(obj)
 			if err != nil {
@@ -210,7 +210,10 @@ func NewPodController(ctx context.Context, k8sClientset *kubernetes.Clientset, c
 			}
 
 		},
-	})
+	}); err != nil {
+		log.WithError(err).Error("failed to add resource event handler for pod controller")
+		return nil
+	}
 
 	return &podController{informer, resourceCache, c, &workloadEndpointCache, ctx, cfg}
 }

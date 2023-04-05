@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
 
 package cache
 
@@ -7,18 +7,15 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/client-go/tools/cache"
-
 	log "github.com/sirupsen/logrus"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 
-	"k8s.io/client-go/rest"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	informers "github.com/tigera/api/pkg/client/informers_generated/externalversions/projectcalico/v3"
 )
 
@@ -133,11 +130,14 @@ func (cc *clientCache) StartBackendSync(stop chan struct{}) error {
 		}
 	}
 
-	sharedInformers.AddEventHandler(&cache.ResourceEventHandlerFuncs{
+	if _, err := sharedInformers.AddEventHandler(&cache.ResourceEventHandlerFuncs{
 		AddFunc:    onAdd,
 		DeleteFunc: onDelete,
 		UpdateFunc: onUpdate,
-	})
+	}); err != nil {
+		log.WithError(err).Error("failed to add resource event handler for backend sync")
+		return err
+	}
 
 	sharedInformers.Run(stop)
 
