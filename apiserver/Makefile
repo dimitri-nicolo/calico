@@ -14,8 +14,7 @@ DEV_TAG_SUFFIX        ?=calient-0.dev
 API_SERVER_IMAGE      ?=cnx-apiserver
 BUILD_IMAGES          ?=$(API_SERVER_IMAGE)
 
-EXTRA_DOCKER_ARGS += -v $(CURDIR)/.lint-cache:/lint-cache:rw \
-	-v $(CURDIR)/../hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw
 
 ###############################################################################
 BINDIR ?= bin
