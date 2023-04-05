@@ -254,6 +254,11 @@ func Start(cfg *Config) error {
 						application.ApplicationTypeURL,
 					)))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
+	sm.Handle("/batchActions",
+		middleware.RequestToResource(
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					middleware.BatchStagedActionsHandler(authn, k8sClientSetFactory, k8sClientFactory)))))
 	sm.Handle("/pagedRecommendations",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
