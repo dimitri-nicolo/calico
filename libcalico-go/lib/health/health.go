@@ -138,16 +138,11 @@ func (r *reporterState) liveness() (bool, string) {
 // TimedOut checks whether the reporter is due for another report. This is the case when
 // the reports are configured to expire and the time since the last report exceeds the report timeout duration.
 func (r *reporterState) TimedOut() bool {
-	timeout := r.Timeout()
-	return timeout != 0 && time.Since(r.timestamp) > timeout
-}
-
-func (r *reporterState) Timeout() time.Duration {
-	o := GlobalOverride(r.name)
-	if o != nil {
-		return *o
+	timeout := r.timeout
+	if o := GlobalOverride(r.name); o != nil {
+		timeout = *o
 	}
-	return r.timeout
+	return timeout != 0 && time.Since(r.timestamp) > timeout
 }
 
 // A HealthAggregator receives health reports from individual reporters (which are typically
@@ -339,10 +334,6 @@ func (aggregator *HealthAggregator) Summary() *HealthReport {
 	if aggregator.lastReport == nil || *summary != *aggregator.lastReport {
 		aggregator.lastReport = summary
 		log.Infof("Overall health status changed: live=%v ready=%v\n%s", summary.Live, summary.Ready, summary.Detail)
-	}
-
-	if summary.Ready {
-		aggregator.everReady = true
 	}
 
 	if summary.Ready {
