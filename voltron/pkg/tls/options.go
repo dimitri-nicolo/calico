@@ -2,6 +2,7 @@ package tls
 
 import (
 	"errors"
+	"net/http"
 	"time"
 )
 
@@ -86,6 +87,17 @@ func WithMaxConcurrentConnections(maxConcurrency int) ProxyOption {
 func WithFipsModeEnabled(fipsModeEnabled bool) ProxyOption {
 	return func(p *proxy) error {
 		p.fipsModeEnabled = fipsModeEnabled
+		return nil
+	}
+}
+
+// WithInnerServer sets the server to handle connections received over an established tunnel
+// that should be handled by Voltron itself, rather than proxied using SNI.
+// Namely, connections from managed cluster components to Linseed. Voltron checks the headers
+// on these connections before proxying them with its own credentials.
+func WithInnerServer(srv *http.Server) ProxyOption {
+	return func(p *proxy) error {
+		p.server = srv
 		return nil
 	}
 }

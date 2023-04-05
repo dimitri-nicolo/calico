@@ -58,8 +58,6 @@ build: bin/carrotctl-$(BUILDOS)-$(ARCH)
 # The supported different binary names. For each, ensure that an BUILDOS and ARCH is set
 bin/carrotctl-%-amd64: ARCH=amd64
 bin/carrotctl-%-arm64: ARCH=arm64
-bin/carrotctl-%-ppc64le: ARCH=ppc64le
-bin/carrotctl-%-s390x: ARCH=s390x
 bin/carrotctl-darwin-amd64: BUILDOS=darwin
 bin/carrotctl-windows-amd64: BUILDOS=windows
 bin/carrotctl-linux-%: BUILDOS=linux

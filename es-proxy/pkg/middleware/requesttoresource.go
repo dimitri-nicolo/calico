@@ -47,6 +47,8 @@ func init() {
 		"flowLogs":                    "flows",
 		"flow":                        "flows",
 		"recommend":                   "flows",
+		"batchActions":                "recommendations",
+		"pagedRecommendations":        "recommendations",
 	}
 }
 

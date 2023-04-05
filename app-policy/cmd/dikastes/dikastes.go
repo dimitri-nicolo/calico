@@ -34,13 +34,15 @@ Usage:
   dikastes client <namespace> <account> [--method <method>] [options]
 
 Options:
-  <namespace>               Service account namespace.
-  <account>                 Service account name.
-  -h --help                 Show this screen.
-  -l --listen <port>        Unix domain socket path [default: /var/run/dikastes/dikastes.sock]
-  -d --dial <target>        Target to dial. [default: localhost:50051]
-  -r --rules <target>       Directory where WAF rules are stored.
-  --log-level <level>       Log at specified level e.g. [default: info].
+  <namespace>                 Service account namespace.
+  <account>                   Service account name.
+  -h --help                   Show this screen.
+  -n --listen-network <net>   Listen network e.g. tcp, unix [default: unix]
+  -l --listen <port>          Listen address [default: /var/run/dikastes/dikastes.sock]
+  -x --dial-network <net>     PolicySync network e.g. tcp, unix [default: unix]
+  -d --dial <target>          PolicySync address [default: localhost:50051]
+  -r --rules <target>         Directory where WAF rules are stored.
+  --log-level <level>         Log at specified level e.g. panic, fatal,info, debug, trace [default: info].
 `
 
 var VERSION string = "dev"
@@ -81,20 +83,14 @@ func runServer(arguments map[string]interface{}) {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	var (
-		listenNetwork    string = "unix"
+		listenNetwork    string = arguments["--listen-network"].(string)
 		listenAddr       string = arguments["--listen"].(string)
+		policySyncNet    string = arguments["--dial-network"].(string)
 		policySyncAdress string = arguments["--dial"].(string)
 		rulesetArgument         = arguments["--rules"]
 	)
 
 	subscriptionType := getEnv("DIKASTES_SUBSCRIPTION_TYPE", "per-pod-policies")
-
-	// Config: overwrite listen socket path with hostport, env only
-	listenTCP := getEnv("DIKASTES_FORCE_LISTEN_TCP_HOSTPORT", "")
-	if listenTCP != "" {
-		listenNetwork = "tcp"
-		listenAddr = listenTCP
-	}
 
 	log.WithFields(log.Fields{
 		"listenNetwork":    listenNetwork,
@@ -110,7 +106,7 @@ func runServer(arguments map[string]interface{}) {
 	// Dikastes main: Setup and serve
 	dikastesServer := server.NewDikastesServer(
 		server.WithListenArguments(listenNetwork, listenAddr),
-		server.WithDialAddress(policySyncAdress),
+		server.WithDialAddress(policySyncNet, policySyncAdress),
 		server.WithSubscriptionType(subscriptionType),
 	)
 	go dikastesServer.Serve(ctx)

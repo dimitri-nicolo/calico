@@ -1,9 +1,17 @@
 ---
-# Create Namespace:
 apiVersion: v1
 kind: Namespace
 metadata:
   name: tigera-internal
+  labels:
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tigera-honeypod
+  namespace: tigera-internal
 ---
 # Global Alert for network ssh
 apiVersion: projectcalico.org/v3
@@ -16,7 +24,14 @@ spec:
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_port"="22" AND reporter="dst"'
-  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+  aggregateBy:
+    [
+      source_namespace,
+      source_name_aggr,
+      dest_namespace,
+      dest_name_aggr,
+      host.keyword,
+    ]
 ---
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
@@ -27,5 +42,11 @@ spec:
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_port"="22" AND reporter="dst"'
-  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
----
+  aggregateBy:
+    [
+      source_namespace,
+      source_name_aggr,
+      dest_namespace,
+      dest_name_aggr,
+      host.keyword,
+    ]

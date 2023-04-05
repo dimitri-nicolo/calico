@@ -36,7 +36,7 @@ func NewDikastesTestHarness(tmpDir string) (*dikastesHarness, error) {
 	}
 
 	dikastes := server.NewDikastesServer(
-		server.WithDialAddress(policySync.Addr()),
+		server.WithDialAddress("unix", policySync.Addr()),
 		server.WithListenArguments("unix", dikastesListenPath),
 		server.WithSubscriptionType("per-host-policies"),
 	)

@@ -9,7 +9,6 @@ calicoctl_binaries = [
     "calicoctl-darwin-amd64",
     "calicoctl-linux-amd64",
     "calicoctl-linux-arm64",
-    "calicoctl-linux-ppc64le",
     "calicoctl-windows-amd64.exe",
 ]
 

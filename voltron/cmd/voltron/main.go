@@ -17,6 +17,7 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 )
 
@@ -115,7 +116,6 @@ func main() {
 			`^/apis/?`,
 			`^/packet-capture/?`,
 		})
-
 		if err != nil {
 			log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
 		}
@@ -140,6 +140,50 @@ func main() {
 
 		log.WithField("map", sniServiceMap).Info("SNI map")
 
+		// Create a proxy to use as the "inner proxy" - handling connections _from_ managed clusters to
+		// servies in the management cluster handled directly by Voltron.
+		targetList := []bootstrap.Target{
+			{
+				// All Linseed APIs start with this prefix. In practice, only Linseed connections should ever
+				// hit this handler anyway because we use the server field in the TLS header to direct connections
+				// to this handler.
+				Path:         "/api/v1/",
+				Dest:         cfg.LinseedEndpoint,
+				CABundlePath: cfg.LinseedCABundlePath,
+				ClientKey:    cfg.InternalHTTPSKey,
+				ClientCert:   cfg.InternalHTTPSCert,
+			},
+		}
+		targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
+		if err != nil {
+			log.WithError(err).Fatal("failed to parse Linseed proxy targets")
+		}
+		innerProxy, err := proxy.New(targets)
+		if err != nil {
+			log.WithError(err).Fatalf("failed to create proxier for tunneled connections from a managed cluster")
+		}
+
+		if cfg.HTTPAccessLoggingEnabled {
+			logOpts := []accesslog.Option{
+				accesslog.WithRequestHeader(server.ClusterHeaderFieldCanon, "xClusterID"),
+				accesslog.WithRequestHeader("User-Agent", "userAgent"),
+				accesslog.WithErrorResponseBodyCaptureSize(250),
+			}
+
+			if cfg.OIDCAuthEnabled {
+				logOpts = append(logOpts, accesslog.WithStandardJWTClaims())
+				logOpts = append(logOpts, accesslog.WithStringJWTClaim(cfg.OIDCAuthUsernameClaim, "username"))
+				if cfg.HTTPAccessLoggingIncludeAuthGroups {
+					logOpts = append(logOpts, accesslog.WithStringArrayJWTClaim(cfg.OIDCAuthGroupsClaim, "groups"))
+				}
+				if cfg.CalicoCloudRequireTenantClaim {
+					logOpts = append(logOpts, accesslog.WithStringJWTClaim(server.CalicoCloudTenantIDClaimName, "ccTenantID"))
+				}
+			}
+
+			server.WithHTTPAccessLogging(logOpts...)
+		}
+
 		opts = append(opts,
 			server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),
 			server.WithTunnelSigningCreds(tunnelSigningX509Cert),
@@ -149,6 +193,7 @@ func main() {
 			server.WithSNIServiceMap(sniServiceMap),
 			server.WithFIPSModeEnabled(cfg.FIPSModeEnabled),
 			server.WithCheckManagedClusterAuthorizationBeforeProxy(cfg.CheckManagedClusterAuthorizationBeforeProxy),
+			server.WithTunnelInnerProxy(innerProxy),
 		)
 	}
 
@@ -285,7 +330,6 @@ func main() {
 	}
 
 	targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
-
 	if err != nil {
 		log.WithError(err).Fatal("Failed to parse default proxy targets.")
 	}
@@ -299,10 +343,10 @@ func main() {
 	srv, err := server.New(
 		k8s,
 		config,
+		cfg,
 		authn,
 		opts...,
 	)
-
 	if err != nil {
 		log.WithError(err).Fatal("Failed to create server.")
 	}

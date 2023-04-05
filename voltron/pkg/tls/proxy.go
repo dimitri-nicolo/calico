@@ -1,14 +1,21 @@
 package tls
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"net"
+	"net/http"
 	"sync"
 	"time"
 
 	"github.com/projectcalico/calico/voltron/pkg/conn"
 
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	linseedService = "tigera-linseed.tigera-elasticsearch.svc"
 )
 
 // Proxy allows you to proxy https connections with redirection based on the SNI in the client hello
@@ -27,6 +34,10 @@ type proxy struct {
 	connectTimeout           time.Duration
 	maxConcurrentConnections int
 	fipsModeEnabled          bool
+
+	// Server used by the proxy for connections directly to Voltron.
+	server        *http.Server
+	innerListener MultiListener
 }
 
 const (
@@ -43,6 +54,7 @@ func NewProxy(options ...ProxyOption) (Proxy, error) {
 		retryInterval:            defaultRetryInterval,
 		connectTimeout:           defaultConnectTimeout,
 		maxConcurrentConnections: defaultMaxConcurrentConnections,
+		innerListener:            NewMultiListener(),
 	}
 
 	for _, option := range options {
@@ -93,6 +105,24 @@ func (p *proxy) acceptConnections(listener net.Listener, tokenPool chan struct{}
 	// outstanding connections)
 	defer close(shutDown)
 
+	if p.server != nil {
+		// Start a goroutine which serves TLS for inner connections received over the tunnel for Voltron.
+		// This routine will handle connections from managed cluster clients to Linseed. Connections received
+		// over the mTLS tunnel will be passed to this server via the proxies inner listener.
+		go func() {
+			for {
+				// We don't need to pass a key / cert, since the server TLS configuration already
+				// includes them.
+				err := p.server.ServeTLS(p.innerListener, "", "")
+				if err != nil {
+					log.WithError(err).Errorf("Error handling a local connection")
+				}
+				<-time.After(10 * time.Second)
+			}
+		}()
+	}
+
+	// Listen for tunnel connections from guardian.
 	for {
 		token := <-tokenPool
 		srcConn, err := listener.Accept()
@@ -134,13 +164,19 @@ func (p *proxy) proxyConnectionWithConfirmedShutdown(srcConn net.Conn, shutDown 
 	return p.proxyConnection(srcConn)
 }
 
+// proxyLocal proxies the given connection using this particular cluster's HTTPS server.
+func (p *proxy) proxyLocal(srcConn net.Conn) error {
+	p.innerListener.Send(srcConn)
+	return nil
+}
+
 // proxyConnection proxies the data from the given connection to the downstream (downstream is determined by the SNI settings
 // / the default URL). If this connection is not a tls connection then it will return an error.
 func (p *proxy) proxyConnection(srcConn net.Conn) error {
 	url := p.defaultURL
 	var bytesRead []byte
 
-	// we try to extract the SNI so that we can verify this is a tls connection
+	// We try to extract the SNI so that we can verify this is a tls connection
 	serverName, bytesRead, err := extractSNI(srcConn, p.fipsModeEnabled)
 	if err != nil {
 		return err
@@ -150,10 +186,16 @@ func (p *proxy) proxyConnection(srcConn net.Conn) error {
 		if serverName != "" {
 			if serverNameURL, ok := p.sniServiceMap[serverName]; ok {
 				log.Debugf("Extracted SNI '%s' from client hello", serverName)
-
 				url = serverNameURL
 			}
 		}
+	}
+
+	if serverName == linseedService {
+		// This connection is destined to Linseed from over the mTLS tunnel with Guardian.
+		// Rather than forward the connection, we should handle it ourselves. Terminate TLS and proxy onwards.
+		c := NewLocalConnection(srcConn, bytesRead)
+		return p.proxyLocal(c)
 	}
 
 	if url == "" {
@@ -214,4 +256,52 @@ func (p *proxy) dial(url string) (net.Conn, error) {
 	}
 
 	return nil, err
+}
+
+func NewLocalConnection(src net.Conn, alreadyRead []byte) net.Conn {
+	ar := bytes.NewBuffer(alreadyRead)
+	return &localConnection{
+		reader: io.MultiReader(ar, src),
+		src:    src,
+	}
+}
+
+// localConnection is a wrapper around a connection that has already had some bytes read from it,
+// to allow for reading the entire stream of bytes from the connection. Calls to Read() will return
+// the already read bytes first, until there are none, and then will read directly from the connection.
+type localConnection struct {
+	reader io.Reader
+	src    net.Conn
+}
+
+func (l *localConnection) Read(b []byte) (int, error) {
+	return l.reader.Read(b)
+}
+
+func (l *localConnection) Write(b []byte) (n int, err error) {
+	return l.src.Write(b)
+}
+
+func (l *localConnection) Close() error {
+	return l.src.Close()
+}
+
+func (l *localConnection) LocalAddr() net.Addr {
+	return l.src.LocalAddr()
+}
+
+func (l *localConnection) RemoteAddr() net.Addr {
+	return l.src.RemoteAddr()
+}
+
+func (l *localConnection) SetDeadline(t time.Time) error {
+	return l.src.SetDeadline(t)
+}
+
+func (l *localConnection) SetReadDeadline(t time.Time) error {
+	return l.src.SetReadDeadline(t)
+}
+
+func (l *localConnection) SetWriteDeadline(t time.Time) error {
+	return l.src.SetWriteDeadline(t)
 }

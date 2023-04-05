@@ -17,9 +17,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
 	log "github.com/sirupsen/logrus"
-
 	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/rest"
@@ -28,25 +26,27 @@ import (
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
+	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
 const (
-	// ClusterHeaderField represents the request header key used to determine
-	// which cluster to proxy for
-	ClusterHeaderField = "x-cluster-id"
 	// DefaultClusterID is the name of the management cluster. No tunnel is necessary for
 	// requests with this value in the ClusterHeaderField.
 	DefaultClusterID   = "cluster"
 	DefaultReadTimeout = 45 * time.Second
+
+	// CalicoCloudTenantIDClaimName is the name of the tenantID claim in Calico Cloud issued bearer tokens
+	CalicoCloudTenantIDClaimName = "https://calicocloud.io/tenantID"
 )
 
 // ClusterHeaderFieldCanon represents the request header key used to determine which
 // cluster to proxy for (Canonical)
-var ClusterHeaderFieldCanon = textproto.CanonicalMIMEHeaderKey(ClusterHeaderField)
+var ClusterHeaderFieldCanon = textproto.CanonicalMIMEHeaderKey(utils.ClusterHeaderField)
 
 // Server is the voltron server that accepts tunnels from the app clusters. It
 // serves HTTP requests and proxies them to the tunnels.
@@ -93,22 +93,27 @@ type Server struct {
 
 	// checkManagedClusterAuthorizationBeforeProxy
 	checkManagedClusterAuthorizationBeforeProxy bool
+
+	accessLogger *accesslog.Logger
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
 // or not if they set its user and return an error if it is nil
-func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAuth, opts ...Option) (*Server, error) {
+func New(k8s bootstrap.K8sClient, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, opts ...Option) (*Server, error) {
 	srv := &Server{
 		k8s:           k8s,
 		config:        config,
 		authenticator: authenticator,
 		clusters: &clusters{
-			clusters: make(map[string]*cluster),
+			clusters:   make(map[string]*cluster),
+			voltronCfg: &vcfg,
+			k8sCLI:     k8s,
 		},
 		tunnelEnableKeepAlive:   true,
 		tunnelKeepAliveInterval: 100 * time.Millisecond,
 	}
 
+	// Apply options to the server first.
 	srv.ctx, srv.cancel = context.WithCancel(context.Background())
 	for _, o := range opts {
 		if err := o(srv); err != nil {
@@ -116,17 +121,28 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 		}
 	}
 
-	srv.clusters.k8sCLI = srv.k8s
+	// Generate TLS configuration for the per-cluster HTTPS server that
+	// handles incoming requests from connected managed clusters.
+	if err := srv.clusters.makeInnerTLSConfig(); err != nil {
+		return nil, err
+	}
 	srv.clusters.sniServiceMap = srv.sniServiceMap
+
+	// Create an HTTP server to handle incoming requests.
+	var rootHandler = srv.clusterMuxer
+	if srv.accessLogger != nil {
+		rootHandler = srv.accessLogger.WrapHandler(rootHandler)
+	}
+
 	srv.proxyMux = http.NewServeMux()
+	srv.proxyMux.HandleFunc("/", rootHandler)
+	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
 
 	cfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
 	cfg.Certificates = append(cfg.Certificates, srv.externalCert)
-
 	if len(srv.internalCert.Certificate) > 0 {
 		cfg.Certificates = append(cfg.Certificates, srv.internalCert)
 	}
-
 	srv.http = &http.Server{
 		Addr:        srv.addr,
 		Handler:     srv.proxyMux,
@@ -134,12 +150,8 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 		ReadTimeout: DefaultReadTimeout,
 	}
 
-	srv.proxyMux.HandleFunc("/", srv.clusterMuxer)
-	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
-
-	var tunOpts []tunnel.ServerOption
-
 	if srv.tunnelSigningCert != nil {
+		var tunOpts []tunnel.ServerOption
 		tunOpts = append(tunOpts,
 			tunnel.WithClientCert(srv.tunnelSigningCert),
 			tunnel.WithServerCert(srv.tunnelCert),
@@ -286,7 +298,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 }
 
 func closeTunnel(t *tunnel.Tunnel) {
-	var err = t.Close()
+	err := t.Close()
 	if err != nil {
 		log.WithError(err).Error("Could not close tunnel")
 	}
@@ -332,7 +344,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// For everything else we authenticate before forwarding on a request
 
 	if len(chdr) > 1 {
-		msg := fmt.Sprintf("multiple %q headers", ClusterHeaderField)
+		msg := fmt.Sprintf("multiple %q headers", utils.ClusterHeaderField)
 		log.Errorf("clusterMuxer: %s", msg)
 		http.Error(w, msg, 400)
 		return
@@ -359,7 +371,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 
 	// Note, we expect the value passed in the request header field to be the resource
 	// name for a ManagedCluster resource (which will be human-friendly and unique)
-	clusterID := r.Header.Get(ClusterHeaderField)
+	clusterID := r.Header.Get(utils.ClusterHeaderField)
 
 	if isK8sRequest && (!hasClusterHeader || clusterID == DefaultClusterID) {
 		r.Header.Set(authentication.AuthorizationHeader, fmt.Sprintf("Bearer %s", s.config.BearerToken))
@@ -405,7 +417,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// N.B. Host is only set to make the ReverseProxy happy, DialContext ignores
 	// this as the destinatination has been decided by choosing the tunnel.
 	r.URL.Host = "voltron-tunnel"
-	r.Header.Del(ClusterHeaderField)
+	r.Header.Del(utils.ClusterHeaderField)
 	c.ServeHTTP(w, r)
 }
 
@@ -464,4 +476,11 @@ func (s *Server) WatchK8sWithSync(syncC chan<- error) error {
 	}
 
 	return s.clusters.watchK8s(s.ctx, syncC)
+}
+
+// FlushAccessLogs exposed for testing
+func (s *Server) FlushAccessLogs() {
+	if s.accessLogger != nil {
+		s.accessLogger.Flush()
+	}
 }

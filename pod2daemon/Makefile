@@ -56,14 +56,10 @@ build: bin/node-driver-registrar-$(ARCH) bin/flexvol-$(ARCH) bin/csi-driver-$(AR
 # so we can disable it across the board.
 bin/flexvol-amd64: ARCH=amd64
 bin/flexvol-arm64: ARCH=arm64
-bin/flexvol-ppc64le: ARCH=ppc64le
-bin/flexvol-s390x: ARCH=s390x
 bin/flexvol-%: $(SRC_FILES)
 	$(DOCKER_RUN) -e CGO_ENABLED=0 $(CALICO_BUILD) go build -buildvcs=false -v -o bin/flexvol-$(ARCH) flexvol/flexvoldriver.go
 
 bin/csi-driver-arm64: ARCH=arm64
-bin/csi-driver-ppc64le: ARCH=ppc64le
-bin/csi-driver-s390x: ARCH=s390x
 bin/csi-driver-%: $(SRC_FILES)
 	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) go build -buildvcs=false -v -o bin/csi-driver-$(ARCH) csidriver/main.go
 
@@ -87,12 +83,6 @@ REGISTRAR_BUILD_CMD=$(REGISTRAR_TIGERA_BUILD_CMD)
 else ifeq ($(ARCH), $(filter $(ARCH),arm64))
 CGO_ENABLED=0
 REGISTRAR_BUILD_CMD=$(REGISTRAR_TIGERA_BUILD_CMD)
-else ifeq ($(ARCH), $(filter $(ARCH),ppc64le))
-BUILD_PLATFORMS="linux ppc64le -ppc64le"
-REGISTRAR_BUILD_CMD=$(REGISTRAR_UPSTREAM_BUILD_CMD)
-else ifeq ($(ARCH), $(filter $(ARCH),s390x))
-BUILD_PLATFORMS="linux s390x -s390x"
-REGISTRAR_BUILD_CMD=$(REGISTRAR_UPSTREAM_BUILD_CMD)
 else ifeq ($(ARCH), $(filter $(ARCH),win64))
 BUILD_PLATFORMS="windows amd64 .exe"
 REGISTRAR_BUILD_CMD=$(REGISTRAR_UPSTREAM_BUILD_CMD)

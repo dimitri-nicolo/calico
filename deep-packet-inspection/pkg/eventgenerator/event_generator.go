@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/lma/pkg/api"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/alert"
 	cache3 "github.com/projectcalico/calico/deep-packet-inspection/pkg/cache"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/config"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
-	"github.com/projectcalico/calico/deep-packet-inspection/pkg/elastic"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/fileutils"
 
 	"github.com/hpcloud/tail"
@@ -50,7 +50,7 @@ type EventGenerator interface {
 
 type eventGenerator struct {
 	cfg            *config.Config
-	esForwarder    elastic.ESForwarder
+	alertForwarder alert.Forwarder
 	wepCache       cache3.WEPCache
 	dpiUpdater     dpiupdater.DPIStatusUpdater
 	dpiKey         model.ResourceKey
@@ -59,14 +59,14 @@ type eventGenerator struct {
 
 func NewEventGenerator(
 	cfg *config.Config,
-	esForwarder elastic.ESForwarder,
+	esForwarder alert.Forwarder,
 	dpiUpdater dpiupdater.DPIStatusUpdater,
 	dpiKey model.ResourceKey,
 	wepCache cache3.WEPCache,
 ) EventGenerator {
 	r := &eventGenerator{
 		cfg:            cfg,
-		esForwarder:    esForwarder,
+		alertForwarder: esForwarder,
 		filePathToTail: make(map[string]*tail.Tail),
 		dpiUpdater:     dpiUpdater,
 		dpiKey:         dpiKey,
@@ -137,14 +137,14 @@ func (r *eventGenerator) readRotatedFiles(wepKey model.WorkloadEndpointKey) {
 			}
 			lineStr := string(line[:])
 			if lineStr != "" {
-				r.esForwarder.Forward(r.convertAlertToSecurityEvent(lineStr))
+				r.alertForwarder.Forward(r.convertAlertToSecurityEvent(lineStr))
 			}
 		}
 	}
 }
 
 // tailFile tails the file to which snort process is actively writing to, generate events when snort writes a new line
-// into the alert file and sends it to ESForwarder.
+// into the alert file and sends it to Forwarder.
 func (r *eventGenerator) tailFile(wepKey model.WorkloadEndpointKey) {
 	fileRelativePath := fileutils.AlertFileRelativePath(r.dpiKey, wepKey)
 	fileAbsolutePath := fileutils.AlertFileAbsolutePath(r.dpiKey, wepKey, r.cfg.SnortAlertFileBasePath)
@@ -168,7 +168,7 @@ func (r *eventGenerator) tailFile(wepKey model.WorkloadEndpointKey) {
 		log.Infof("Started tailing files for %s and %s.", r.dpiKey, wepKey)
 		r.filePathToTail[fileRelativePath] = t
 		for line := range t.Lines {
-			r.esForwarder.Forward(r.convertAlertToSecurityEvent(line.Text))
+			r.alertForwarder.Forward(r.convertAlertToSecurityEvent(line.Text))
 		}
 
 		err = t.Wait()
@@ -210,15 +210,13 @@ func (r *eventGenerator) deleteFile(fileRelativePath, fileAbsolutePath string) {
 // Sample Alert:
 // 21/08/30-17:19:37.337831 [**] [1:1000005:1] "msg:1_alert_fast" [**] [Priority: 0] {ICMP} 74.125.124.100 -> 10.28.0.13
 // Details about alert format is available in https://github.com/snort3/snort3/blob/35b6804f4506993029221450769a76e6281ae4ec/src/loggers/alert_fast.cc
-func (r *eventGenerator) convertAlertToSecurityEvent(alertText string) elastic.SecurityEvent {
-	event := elastic.SecurityEvent{
-		EventsData: api.EventsData{
-			Host:        r.cfg.NodeName,
-			Type:        eventType,
-			Origin:      fmt.Sprintf("dpi.%s/%s", r.dpiKey.Namespace, r.dpiKey.Name),
-			Severity:    100,
-			Description: description,
-		},
+func (r *eventGenerator) convertAlertToSecurityEvent(alertText string) v1.Event {
+	event := v1.Event{
+		Host:        r.cfg.NodeName,
+		Type:        eventType,
+		Origin:      fmt.Sprintf("dpi.%s/%s", r.dpiKey.Namespace, r.dpiKey.Name),
+		Severity:    100,
+		Description: description,
 	}
 
 	s := strings.Split(alertText, " ")
@@ -233,7 +231,7 @@ func (r *eventGenerator) convertAlertToSecurityEvent(alertText string) elastic.S
 		event.Time = tm.Unix()
 	}
 
-	//skip through all optional fields till we get to signature information
+	// skip through all optional fields till we get to signature information
 	for i, k := range s {
 		if k == "[**]" {
 			index = i + 1
@@ -243,14 +241,14 @@ func (r *eventGenerator) convertAlertToSecurityEvent(alertText string) elastic.S
 	// Extract snort signature information
 	sigInfo := strings.Split(s[index], ":")
 	if len(sigInfo) == 3 {
-		event.Record = elastic.Record{
+		event.Record = v1.DPIRecord{
 			SnortSignatureID:       sigInfo[1],
 			SnortSignatureRevision: strings.TrimSuffix(sigInfo[2], "]"),
 			SnortAlert:             alertText,
 		}
 	} else {
 		log.Errorf("Missing snort signature information in alert")
-		event.Record = elastic.Record{
+		event.Record = v1.DPIRecord{
 			SnortAlert: alertText,
 		}
 	}
@@ -298,7 +296,7 @@ func (r *eventGenerator) convertAlertToSecurityEvent(alertText string) elastic.S
 
 	// Construct a unique document ID for the ElasticSearch document built.
 	// Use _ as a separator as it's allowed in URLs, but not in any of the components of this ID
-	event.DocID = fmt.Sprintf("%s_%s_%d_%s_%s_%s_%s_%s", r.dpiKey.Namespace, r.dpiKey.Name, tm.UnixNano(),
+	event.ID = fmt.Sprintf("%s_%s_%d_%s_%s_%s_%s_%s", r.dpiKey.Namespace, r.dpiKey.Name, tm.UnixNano(),
 		srcIP, srcPort, destIP, destPort, event.Host)
 
 	return event

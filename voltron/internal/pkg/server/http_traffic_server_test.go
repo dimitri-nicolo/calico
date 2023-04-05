@@ -28,6 +28,7 @@ import (
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
+	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
 
@@ -93,7 +94,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Creating and starting server that only serves HTTPS traffic")
-		var opts = []server.Option{
+		opts := []server.Option{
 			server.WithDefaultAddr(address.String()),
 			server.WithDefaultProxy(defaultProxy),
 			server.WithExternalCreds(externalCert, externalKey),
@@ -102,9 +103,12 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 			server.WithUnauthenticatedTargets([]string{"/"}),
 		}
 
+		voltronConfig := vcfg.Config{}
+
 		srv, err = server.New(
 			k8sAPI,
 			config,
+			voltronConfig,
 			mockAuthenticator,
 			opts...,
 		)
@@ -117,7 +121,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 
 	assertHTTPSServerBehaviour := func() {
 		It("Does not initiate a tunnel server when the tunnel destination doesn't have tls certificates", func() {
-			var err = srv.ServeTunnelsTLS(listener)
+			err := srv.ServeTunnelsTLS(listener)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("No tunnel server was initiated"))
 		})
@@ -125,7 +129,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 		It("Receives 200 OK when reaching the proxy server using HTTPS using the external server name", func() {
 			var err error
 
-			var rootCAs = x509.NewCertPool()
+			rootCAs := x509.NewCertPool()
 			rootCAs.AppendCertsFromPEM(externalCACert)
 
 			tr := &http.Transport{
@@ -150,7 +154,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 		It("Receives 200 OK when reaching the proxy server using HTTPS using the internal server name", func() {
 			var err error
 
-			var rootCAs = x509.NewCertPool()
+			rootCAs := x509.NewCertPool()
 			rootCAs.AppendCertsFromPEM(internalCACert)
 
 			tr := &http.Transport{
@@ -175,7 +179,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 		It("Receives 200 OK when reaching the proxy server using HTTP 2", func() {
 			var err error
 
-			var rootCAs = x509.NewCertPool()
+			rootCAs := x509.NewCertPool()
 			rootCAs.AppendCertsFromPEM(externalCACert)
 
 			tr := &http2.Transport{

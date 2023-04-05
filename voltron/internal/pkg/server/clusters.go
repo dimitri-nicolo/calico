@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"os"
 	"sort"
 	"sync"
 	"time"
@@ -23,6 +24,8 @@ import (
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
+	"github.com/projectcalico/calico/voltron/internal/pkg/config"
+	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
@@ -40,11 +43,21 @@ type cluster struct {
 	sync.RWMutex
 
 	tunnelManager tunnelmgr.Manager
-	proxy         *httputil.ReverseProxy
 
+	// proxy is a reverse proxy for handling connections to Voltron from the management cluster
+	// that should be directed down the tunnel to the managed cluster.
+	proxy *httputil.ReverseProxy
+
+	// Kubernetes client used for querying and watching ManagedCluster resources.
 	k8sCLI bootstrap.K8sClient
 
+	// tlsProxy is the proxy that handles incoming TLS connections from the managed cluster.
+	// These connections are routed via the server field in the TLS header. Connections via this proxy that
+	// target Voltron itself will be handled by the proxy's inner TLS server.
 	tlsProxy vtls.Proxy
+
+	// Pointer to general Voltron configuration.
+	voltronCfg *config.Config
 }
 
 // updateActiveFingerprint updates the active fingerprint annotation for a ManagedCluster resource
@@ -77,6 +90,36 @@ type clusters struct {
 	defaultForwardServerName        string
 	defaultForwardDialRetryAttempts int
 	defaultForwardDialRetryInterval time.Duration
+
+	// Pointer to general Voltron config.
+	voltronCfg *config.Config
+
+	// TLS configuration to use for inner tunnel HTTPS servers.
+	tlsConfig *tls.Config
+
+	// Proxier to use for connections from managed clusters.
+	innerProxy *proxy.Proxy
+}
+
+func (cs *clusters) makeInnerTLSConfig() error {
+	cfg := calicotls.NewTLSConfig(cs.voltronCfg.FIPSModeEnabled)
+	if cs.voltronCfg.LinseedServerKey != "" && cs.voltronCfg.LinseedServerCert != "" {
+		certBytes, err := os.ReadFile(cs.voltronCfg.LinseedServerCert)
+		if err != nil {
+			return err
+		}
+		keyBytes, err := os.ReadFile(cs.voltronCfg.LinseedServerKey)
+		if err != nil {
+			return err
+		}
+		cert, err := tls.X509KeyPair(certBytes, keyBytes)
+		if err != nil {
+			return err
+		}
+		cfg.Certificates = append(cfg.Certificates, cert)
+	}
+	cs.tlsConfig = cfg
+	return nil
 }
 
 func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
@@ -88,6 +131,20 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 		ManagedCluster: *mc,
 		tunnelManager:  tunnelmgr.NewManager(),
 		k8sCLI:         cs.k8sCLI,
+		voltronCfg:     cs.voltronCfg,
+	}
+
+	// Create a proxy to use for connections received over the tunnel that aren't
+	// directed via SNI. This is just used for Linseed connections from managed clusters.
+	// We use the same TLS configuration as the main tunnel. We will proxy the connection
+	// presenting Voltron's internal management cluster certificate, as Linseed requires mTLS.
+	//
+	// This handler will only be used for requests from managed clusters over the mTLS tunnel
+	// with a server name of "tigera-linseed.tigera-elasticsearch".
+	innerServer := &http.Server{
+		Handler:     NewInnerHandler(cs.voltronCfg.Tenant, mc, cs.innerProxy).Handler(),
+		TLSConfig:   cs.tlsConfig,
+		ReadTimeout: DefaultReadTimeout,
 	}
 
 	if cs.forwardingEnabled {
@@ -98,6 +155,7 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 			vtls.WithConnectionRetryAttempts(cs.defaultForwardDialRetryAttempts),
 			vtls.WithConnectionRetryInterval(cs.defaultForwardDialRetryInterval),
 			vtls.WithFipsModeEnabled(cs.fipsModeEnabled),
+			vtls.WithInnerServer(innerServer),
 		)
 		if err != nil {
 			return nil, err
@@ -384,7 +442,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 	}
 
 	tlsConfig := calicotls.NewTLSConfig(c.FIPSModeEnabled)
-	tlsConfig.InsecureSkipVerify = true //todo: not sure where this comes from, but this should be dealt with.
+	tlsConfig.InsecureSkipVerify = true // todo: not sure where this comes from, but this should be dealt with.
 	c.proxy = &httputil.ReverseProxy{
 		Director:      proxyVoidDirector,
 		FlushInterval: -1,

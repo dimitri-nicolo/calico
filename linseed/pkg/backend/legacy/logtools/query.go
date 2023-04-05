@@ -14,7 +14,7 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 )
 
 // BuildQuery builds an elastic log query using the given parameters.

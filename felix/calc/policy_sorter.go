@@ -16,10 +16,11 @@ package calc
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/google/btree"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -27,12 +28,14 @@ import (
 )
 
 type PolicySorter struct {
-	tiers map[string]*tierInfo
+	tiers       map[string]*TierInfo
+	sortedTiers *btree.BTreeG[tierInfoKey]
 }
 
 func NewPolicySorter() *PolicySorter {
 	return &PolicySorter{
-		tiers: make(map[string]*tierInfo),
+		tiers:       make(map[string]*TierInfo),
+		sortedTiers: btree.NewG(2, TierLess),
 	}
 }
 
@@ -48,6 +51,31 @@ func policyTypesEqual(pol1, pol2 *model.Policy) bool {
 	return types1.Equals(types2)
 }
 
+func (poc *PolicySorter) Sorted() []*TierInfo {
+	var tiers []*TierInfo
+	if poc.sortedTiers.Len() > 0 {
+		tiers = make([]*TierInfo, 0, len(poc.tiers))
+		poc.sortedTiers.Ascend(func(t tierInfoKey) bool {
+			if ti := poc.tiers[t.Name]; ti != nil {
+				if ti.SortedPolicies != nil {
+					ti.OrderedPolicies = make([]PolKV, 0, len(ti.Policies))
+					ti.SortedPolicies.Ascend(func(kv PolKV) bool {
+						ti.OrderedPolicies = append(ti.OrderedPolicies, kv)
+						return true
+					})
+				}
+				tiers = append(tiers, ti)
+				return true
+			} else {
+				// A key for a tier that isn't found in the map is highly unexpected so panic
+				log.WithField("name", t.Name).Panic("Bug: tier present in map but not the sorted tree.")
+				return false
+			}
+		})
+	}
+	return tiers
+}
+
 func (poc *PolicySorter) OnUpdate(update api.Update) (dirty bool) {
 	switch key := update.Key.(type) {
 	case model.TierKey:
@@ -61,114 +89,140 @@ func (poc *PolicySorter) OnUpdate(update api.Update) (dirty bool) {
 				tierInfo = NewTierInfo(key.Name)
 				poc.tiers[tierName] = tierInfo
 				dirty = true
+			} else {
+				oldKey := tierInfoKey{
+					Name:  tierInfo.Name,
+					Order: tierInfo.Order,
+					Valid: tierInfo.Valid,
+				}
+				poc.sortedTiers.Delete(oldKey)
 			}
 			if tierInfo.Order != newTier.Order {
 				tierInfo.Order = newTier.Order
 				dirty = true
 			}
 			tierInfo.Valid = true
+			newKey := tierInfoKey{
+				Name:  tierInfo.Name,
+				Order: tierInfo.Order,
+				Valid: tierInfo.Valid,
+			}
+			poc.sortedTiers.ReplaceOrInsert(newKey)
 		} else {
 			// Deletion.
 			if tierInfo != nil {
+				oldKey := tierInfoKey{
+					Name:  tierInfo.Name,
+					Order: tierInfo.Order,
+					Valid: tierInfo.Valid,
+				}
+				poc.sortedTiers.Delete(oldKey)
 				tierInfo.Valid = false
 				tierInfo.Order = nil
 				if len(tierInfo.Policies) == 0 {
 					delete(poc.tiers, tierName)
+				} else {
+					// Add back so that sort order is maintained correctly after manipulating Valid and
+					// Order fields above
+					newKey := tierInfoKey{
+						Name:  tierInfo.Name,
+						Order: tierInfo.Order,
+						Valid: tierInfo.Valid,
+					}
+					poc.sortedTiers.ReplaceOrInsert(newKey)
 				}
 				dirty = true
 			}
 		}
 	case model.PolicyKey:
-		tierInfo := poc.tiers[key.Tier]
-		var oldPolicy *model.Policy
-		if tierInfo != nil {
-			oldPolicy = tierInfo.Policies[key]
-		}
+		var newPolicy *model.Policy
 		if update.Value != nil {
-			newPolicy := update.Value.(*model.Policy)
-			if tierInfo == nil {
-				tierInfo = NewTierInfo(key.Tier)
-				poc.tiers[key.Tier] = tierInfo
-			}
-			if oldPolicy == nil ||
-				oldPolicy.Order != newPolicy.Order ||
-				oldPolicy.DoNotTrack != newPolicy.DoNotTrack ||
-				oldPolicy.PreDNAT != newPolicy.PreDNAT ||
-				oldPolicy.ApplyOnForward != newPolicy.ApplyOnForward ||
-				!policyTypesEqual(oldPolicy, newPolicy) {
-				dirty = true
-			}
-			tierInfo.Policies[key] = newPolicy
+			newPolicy = update.Value.(*model.Policy)
 		} else {
-			if tierInfo != nil && oldPolicy != nil {
-				delete(tierInfo.Policies, key)
-				if len(tierInfo.Policies) == 0 && !tierInfo.Valid {
-					delete(poc.tiers, key.Tier)
-				}
-				dirty = true
+			newPolicy = nil
+		}
+		dirty = poc.UpdatePolicy(key, newPolicy)
+	}
+	return
+}
+
+func TierLess(i, j tierInfoKey) bool {
+	if !i.Valid && j.Valid {
+		return false
+	} else if i.Valid && !j.Valid {
+		return true
+	}
+	if i.Order == nil && j.Order != nil {
+		return false
+	} else if i.Order != nil && j.Order == nil {
+		return true
+	}
+	if i.Order == j.Order || *i.Order == *j.Order {
+		return i.Name < j.Name
+	}
+	return *i.Order < *j.Order
+}
+
+func (poc *PolicySorter) HasPolicy(key model.PolicyKey) bool {
+	var tierInfo *TierInfo
+	var found bool
+	if tierInfo, found = poc.tiers[key.Tier]; found {
+		_, found = tierInfo.Policies[key]
+	}
+	return found
+}
+
+func (poc *PolicySorter) UpdatePolicy(key model.PolicyKey, newPolicy *model.Policy) (dirty bool) {
+	tierInfo := poc.tiers[key.Tier]
+	var tiKey tierInfoKey
+	var oldPolicy *model.Policy
+	if tierInfo != nil {
+		oldPolicy = tierInfo.Policies[key]
+		tiKey.Name = tierInfo.Name
+		tiKey.Order = tierInfo.Order
+		tiKey.Valid = tierInfo.Valid
+	}
+	if newPolicy != nil {
+		if tierInfo == nil {
+			tierInfo = NewTierInfo(key.Tier)
+			tiKey.Name = tierInfo.Name
+			tiKey.Valid = tierInfo.Valid
+			tiKey.Order = tierInfo.Order
+			poc.tiers[key.Tier] = tierInfo
+			poc.sortedTiers.ReplaceOrInsert(tiKey)
+		}
+		if oldPolicy == nil ||
+			oldPolicy.Order != newPolicy.Order ||
+			oldPolicy.DoNotTrack != newPolicy.DoNotTrack ||
+			oldPolicy.PreDNAT != newPolicy.PreDNAT ||
+			oldPolicy.ApplyOnForward != newPolicy.ApplyOnForward ||
+			!policyTypesEqual(oldPolicy, newPolicy) {
+			dirty = true
+		}
+		if oldPolicy != nil {
+			// Need to do delete prior to ReplaceOrInsert because we don't insert strictly based on key but rather a
+			// combination of key + value so if for instance we add PolKV{k1, v1} then add PolKV{k1, v2} we'll simply have
+			// both KVs in the tree instead of only {k1, v2} like we want. By deleting first we guarantee that only the
+			// newest value remains in the tree.
+			tierInfo.SortedPolicies.Delete(PolKV{Key: key, Value: oldPolicy})
+		}
+		tierInfo.SortedPolicies.ReplaceOrInsert(PolKV{Key: key, Value: newPolicy})
+		tierInfo.Policies[key] = newPolicy
+	} else {
+		if tierInfo != nil && oldPolicy != nil {
+			tierInfo.SortedPolicies.Delete(PolKV{Key: key, Value: oldPolicy})
+			delete(tierInfo.Policies, key)
+			if len(tierInfo.Policies) == 0 && !tierInfo.Valid {
+				poc.sortedTiers.Delete(tiKey)
+				delete(poc.tiers, key.Tier)
 			}
+			dirty = true
 		}
 	}
 	return
 }
 
-func (poc *PolicySorter) Sorted() []*tierInfo {
-	tiers := make([]*tierInfo, 0, len(poc.tiers))
-	for _, tier := range poc.tiers {
-		tiers = append(tiers, tier)
-	}
-	tiersByOrder := TierByOrder(tiers)
-	log.Debugf("Order before sorting tiers: %v", tiersByOrder)
-	sort.Sort(tiersByOrder)
-	log.Debugf("Order after sorting tiers: %v", tiersByOrder)
-	for _, tierInfo := range poc.tiers {
-		tierInfo.OrderedPolicies = make([]PolKV, 0, len(tierInfo.Policies))
-		for k, v := range tierInfo.Policies {
-			tierInfo.OrderedPolicies = append(tierInfo.OrderedPolicies,
-				PolKV{Key: k, Value: v})
-		}
-		// Note: using explicit Debugf() here rather than WithFields(); we want the []PolKV slice
-		// to be stringified with %v rather than %#v (as used by WithField()).
-		log.Debugf("Order before sorting: %v", tierInfo.OrderedPolicies)
-		sort.Sort(PolicyByOrder(tierInfo.OrderedPolicies))
-		log.Debugf("Order after sorting: %v", tierInfo.OrderedPolicies)
-	}
-	return tiers
-}
-
-type TierByOrder []*tierInfo
-
-func (a TierByOrder) Len() int      { return len(a) }
-func (a TierByOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a TierByOrder) Less(i, j int) bool {
-	if !a[i].Valid && a[j].Valid {
-		return false
-	} else if a[i].Valid && !a[j].Valid {
-		return true
-	}
-	if a[i].Order == nil && a[j].Order != nil {
-		return false
-	} else if a[i].Order != nil && a[j].Order == nil {
-		return true
-	}
-	if a[i].Order == a[j].Order || *a[i].Order == *a[j].Order {
-		return a[i].Name < a[j].Name
-	}
-	return *a[i].Order < *a[j].Order
-}
-func (a TierByOrder) String() string {
-	parts := make([]string, len(a))
-	for i, ti := range a {
-		order := "default"
-		if ti.Order != nil {
-			order = fmt.Sprintf("%f", *ti.Order)
-		}
-		parts[i] = fmt.Sprintf("%s(%s)", ti.Name, order)
-	}
-	return strings.Join(parts, ", ")
-}
-
-// Note: PolKV is really internal to the calc package.  It is named with an initial capital so that
+// PolKV is really internal to the calc package.  It is named with an initial capital so that
 // the test package calc_test can also use it.
 type PolKV struct {
 	Key   model.PolicyKey
@@ -179,7 +233,7 @@ type PolKV struct {
 	egress  *bool
 }
 
-func (p PolKV) String() string {
+func (p *PolKV) String() string {
 	orderStr := "nil policy"
 	if p.Value != nil {
 		if p.Value.Order != nil {
@@ -220,50 +274,54 @@ func (p *PolKV) GovernsEgress() bool {
 	return *p.egress
 }
 
-type PolicyByOrder []PolKV
-
-func (a PolicyByOrder) Len() int      { return len(a) }
-func (a PolicyByOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a PolicyByOrder) Less(i, j int) bool {
-	bothNil := a[i].Value.Order == nil && a[j].Value.Order == nil
-	bothSet := a[i].Value.Order != nil && a[j].Value.Order != nil
-	ordersEqual := bothNil || bothSet && (*a[i].Value.Order == *a[j].Value.Order)
+func PolKVLess(i, j PolKV) bool {
+	bothNil := i.Value.Order == nil && j.Value.Order == nil
+	bothSet := i.Value.Order != nil && j.Value.Order != nil
+	ordersEqual := bothNil || bothSet && (*i.Value.Order == *j.Value.Order)
 
 	if ordersEqual {
-		return model.PolicyNameLessThan(a[i].Key.Name, a[j].Key.Name)
+		return model.PolicyNameLessThan(i.Key.Name, j.Key.Name)
 	}
 
 	// nil order maps to "infinity"
-	if a[i].Value.Order == nil {
+	if i.Value.Order == nil {
 		return false
-	} else if a[j].Value.Order == nil {
+	} else if j.Value.Order == nil {
 		return true
 	}
 
 	// Otherwise, use numeric comparison.
-	return *a[i].Value.Order < *a[j].Value.Order
+	return *i.Value.Order < *j.Value.Order
 }
 
-type tierInfo struct {
+type TierInfo struct {
 	Name            string
 	Valid           bool
 	Order           *float64
 	Policies        map[model.PolicyKey]*model.Policy
+	SortedPolicies  *btree.BTreeG[PolKV]
 	OrderedPolicies []PolKV
 }
 
-func NewTierInfo(name string) *tierInfo {
-	return &tierInfo{
-		Name:     name,
-		Policies: make(map[model.PolicyKey]*model.Policy),
+type tierInfoKey struct {
+	Name  string
+	Valid bool
+	Order *float64
+}
+
+func NewTierInfo(name string) *TierInfo {
+	return &TierInfo{
+		Name:           name,
+		Policies:       make(map[model.PolicyKey]*model.Policy),
+		SortedPolicies: btree.NewG[PolKV](2, PolKVLess),
 	}
 }
 
-func NewTierInfoSlice() []tierInfo {
+func NewTierInfoSlice() []TierInfo {
 	return nil
 }
 
-func (t tierInfo) String() string {
+func (t TierInfo) String() string {
 	policies := make([]string, len(t.OrderedPolicies))
 	for ii, pol := range t.OrderedPolicies {
 		polType := "t"

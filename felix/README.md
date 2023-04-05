@@ -1,6 +1,7 @@
 ![Build Status](https://tigera.semaphoreci.com/badges/felix.svg?style=shields&key=48267e65-4acc-4f27-a88f-c3df0e8e2c3b)
 [![Slack Status](https://slack.projectcalico.org/badge.svg)](https://slack.projectcalico.org)
 [![Go Report Card](https://goreportcard.com/badge/github.com/projectcalico/felix)](https://goreportcard.com/report/github.com/projectcalico/felix)
+
 # Project Calico
 
 <blockquote>
@@ -14,8 +15,8 @@ daemon, Felix.
 ## Licensing
 
 Felix itself, along with most of Calico, is licensed under the Apache v2.0 license.  The BPF programs
-in the bpf-gpl directory are licensed under the GPL v2.0 for compatibility with Linux kernel helper 
-functions. 
+in the bpf-gpl directory are licensed under the GPL v2.0 for compatibility with Linux kernel helper
+functions.
 
 ## How can I get support for contributing to Project Calico?
 
@@ -54,38 +55,43 @@ To build Felix, you will need:
   full-OS containers in order to build debs and RPMs).
 
 Then, as a one-off, run
-```
+
+```bash
 make update-tools
 ```
+
 which will install a couple more go tools that we haven't yet containerised.
 
 Then, to build the calico-felix binary:
-```
+
+```bash
 make build
 ```
+
 or, the `tigera/felix` docker image:
-```
+
+```bash
 make image
 ```
 
 ### Other architectures
+
 When you run `make build` or `make image`, it creates the felix binary or docker image for linux on your architecture. The outputs are as follows:
 
-* Binary: `bin/calico-felix-${ARCH}`, e.g. `bin/calico-felix-amd64` or `bin/calico-felix-arm64`
-* Image: `tigera/felix:${TAG}-${ARCH}`, e.g. `tigera/felix:3.0.0-amd64` or `tigera/felix:latest-ppc64le`
+- Binary: `bin/calico-felix-${ARCH}`, e.g. `bin/calico-felix-amd64` or `bin/calico-felix-arm64`
+- Image: `tigera/felix:${TAG}-${ARCH}`, e.g. `tigera/felix:3.0.0-amd64` or `tigera/felix:latest-arm64`
 
 When you are running on `amd64`, you can build the binaries and images for other platforms by setting the `ARCH` variable. For example:
 
-```
-$ make build ARCH=arm64 # OR
-$ make image ARCH=ppc64le
+```bash
+make build ARCH=arm64
 ```
 
 If you wish to make **all** of the binaries or images, use the standard calico project targets `build-all` and `image-all`:
 
-```
-$ make build-all # OR
-$ make image-all
+```bash
+make build-all # OR
+make image-all
 ```
 
 Note that the `image` and `image-all` targets have the `build` targets as a dependency.
@@ -93,21 +99,26 @@ Note that the `image` and `image-all` targets have the `build` targets as a depe
 ## How can I run Felix's unit tests?
 
 To run all the UTs:
-```
+
+```bash
 make ut
 ```
 
 To start a `ginkgo watch`, which will re-run the relevant UTs as you update files:
-```
+
+```bash
 make ut-watch
 ```
 
 To get coverage stats:
-```
+
+```bash
 make cover-report
 ```
+
 or
-```
+
+```bash
 make cover-browser
 ```
 
@@ -125,23 +136,28 @@ run Felix's unit tests.
 There are several ways to run ginkgo.  One option is to change directory to the
 package you want to test, then run `ginkgo`.  Another is to use ginkgo's
 watch feature to monitor files for changes:
-```
+
+```bash
 cd go
 ginkgo watch -r
 ```
+
 Ginkgo will re-run tests as files are modified and saved.
 
 ## How can I debug the Felix FV tests using goland?
+
 First, set up the necessary environment variables in goland:
-- FV_CWLOGDIR <path-to-felix-project>/fv/cwlogs
-- PRIVATE_KEY: <path-to-felix-project>/fv/private.key
+
+- FV_CWLOGDIR: `<path-to-felix-project>/fv/cwlogs`
+- PRIVATE_KEY: `<path-to-felix-project>/fv/private.key`
 - FV_FELIXIMAGE: tigera/felix-test:latest-amd64
 
 Next, build the `felix-test` image to compile and bundle up the current code on your branch into an image that will be
 run by the fv tests:
-````
+
+```bash
 make image-test
-````
+```
 
 Lastly, set your break points and focuses in the tests you want to debug in the `fv` directory and run the
 `fv/fv_suite_test.go` file.
@@ -153,7 +169,7 @@ Lastly, set your break points and focuses in the tests you want to debug in the 
 After building the docker image (see above), you can run Felix and log to screen
 with, for example:
 
-```
+```bash
 docker run --privileged \
            --net=host \
            -v /run:/run \
@@ -175,8 +191,10 @@ Notes:
 
 The `Makefile` has targets for building debs and RPMs for different platforms.
 By using docker, the build does not need to be run on the target platform.
-```
+
+```bash
 make deb
 make rpm
 ```
+
 The packages (and source packages) are output to the dist directory.
