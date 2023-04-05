@@ -82,15 +82,11 @@ build: bin/dikastes-$(ARCH) bin/healthz-$(ARCH)
 
 bin/dikastes-amd64: ARCH=amd64
 bin/dikastes-arm64: ARCH=arm64
-bin/dikastes-ppc64le: ARCH=ppc64le
-bin/dikastes-s390x: ARCH=s390x
 bin/dikastes-%: protobuf $(SRC_FILES)
 	$(call build_cgo_boring_binary, ./cmd/dikastes, $@)
 
 bin/healthz-amd64: ARCH=amd64
 bin/healthz-arm64: ARCH=arm64
-bin/healthz-ppc64le: ARCH=ppc64le
-bin/healthz-s390x: ARCH=s390x
 bin/healthz-%: protobuf $(SRC_FILES)
 	$(call build_static_cgo_boring_binary, ./cmd/healthz, $@)
 

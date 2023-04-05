@@ -87,7 +87,7 @@ $(BINDIR)/apiserver $(BINDIR)/apiserver-amd64: $(K8SAPISERVER_GO_FILES)
 	mkdir -p $(BINDIR)
 	$(call build_static_cgo_boring_binary, $(PACKAGE_NAME)/cmd/apiserver, $@)
 
-$(BINDIR)/apiserver-ppc64le $(BINDIR)/apiserver-arm64: $(K8SAPISERVER_GO_FILES)
+$(BINDIR)/apiserver-arm64: $(K8SAPISERVER_GO_FILES)
 	mkdir -p $(BINDIR)
 	$(call build_binary, $(PACKAGE_NAME)/cmd/apiserver, $@)
 

@@ -301,9 +301,6 @@ CERTS_PATH := $(REPO_ROOT)/hack/test/certs
 ifeq ($(ARCH),arm64)
 TARGET_PLATFORM=--platform=linux/arm64/v8
 endif
-ifeq ($(ARCH),ppc64le)
-TARGET_PLATFORM=--platform=linux/ppc64le
-endif
 
 # DOCKER_BUILD is the base build command used for building all images.
 DOCKER_BUILD=docker buildx build --pull \
