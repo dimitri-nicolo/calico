@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/linseed/pkg/handler/audit"
 	"github.com/projectcalico/calico/linseed/pkg/handler/bgp"
@@ -144,7 +146,7 @@ func run() {
 	go func() {
 		logrus.Infof("Listening for HTTPS requests at %s", addr)
 		if err := server.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey); err != nil && err != http.ErrServerClosed {
-			logrus.Fatal(err)
+			logrus.WithError(err).Fatal("Failed to listen for new requests for Linseed APIs")
 		}
 	}()
 
@@ -153,6 +155,17 @@ func run() {
 		// Kubelet will use an exec probe to get status.
 		healthAggregator.ServeHTTP(true, "localhost", 8080)
 	}()
+
+	if cfg.EnableMetrics {
+		go func() {
+			metricsAddr := fmt.Sprintf("%v:%v", cfg.Host, cfg.MetricsPort)
+			http.Handle("/metrics", promhttp.Handler())
+			err := http.ListenAndServeTLS(metricsAddr, cfg.MetricsCert, cfg.MetricsKey, nil)
+			if err != nil {
+				logrus.WithError(err).Fatal("Failed to listen for new requests to query metrics")
+			}
+		}()
+	}
 
 	// Indicate that we're ready to serve requests.
 	healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})

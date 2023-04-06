@@ -120,6 +120,7 @@ run-image: stop-image run-elastic
 		-e ELASTIC_HOST="localhost" \
 		-e ELASTIC_SCHEME="http" \
 		-e LINSEED_LOG_LEVEL="debug" \
+		-e LINSEED_ENABLE_METRICS="true" \
 		tigera/$(LINSEED_IMAGE):latest
 	# Wait until Linseed is accepting requests on its readiness port.
 	while ! curl -k http://localhost:8080/readiness; do echo "Waiting for linseed to come up..."; sleep 2; done

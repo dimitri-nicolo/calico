@@ -24,6 +24,7 @@ const (
 	ElasticsearchUserNameADJob                 ElasticsearchUserName = "tigera-ee-ad-job"
 	ElasticsearchUserNameSasha                 ElasticsearchUserName = "tigera-ee-sasha"
 	ElasticsearchUserNamePerformanceHotspots   ElasticsearchUserName = "tigera-ee-performance-hotspots"
+	ElasticsearchUserNamePolicyRecommendation  ElasticsearchUserName = "tigera-ee-policy-recommendation"
 	ElasticsearchUserNameInstaller             ElasticsearchUserName = "tigera-ee-installer"
 	ElasticsearchUserNameManager               ElasticsearchUserName = "tigera-ee-manager"
 	ElasticsearchUserNameCurator               ElasticsearchUserName = "tigera-ee-curator"
@@ -197,6 +198,23 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 				},
 			},
 		},
+		ElasticsearchUserNamePolicyRecommendation: {
+			Username: formatName(ElasticsearchUserNamePolicyRecommendation, clusterName, management, true),
+			Roles: []elasticsearch.Role{
+				{
+					Name: formatName(ElasticsearchUserNamePolicyRecommendation, clusterName, management, true),
+					Definition: &elasticsearch.RoleDefinition{
+						Cluster: []string{"monitor", "manage_index_templates"},
+						Indices: []elasticsearch.RoleIndex{
+							{
+								Names:      []string{indexPattern("tigera_secure_ee_flows", clusterName, ".*")},
+								Privileges: []string{"read"},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	publicUsers := map[ElasticsearchUserName]elasticsearch.User{
 		ElasticsearchUserNameFluentd: {
@@ -225,6 +243,9 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 		},
 		ElasticsearchUserNamePerformanceHotspots: {
 			Username: formatName(ElasticsearchUserNamePerformanceHotspots, clusterName, management, false),
+		},
+		ElasticsearchUserNamePolicyRecommendation: {
+			Username: formatName(ElasticsearchUserNamePolicyRecommendation, clusterName, management, false),
 		},
 	}
 

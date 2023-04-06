@@ -76,10 +76,18 @@ clean:
 GINKGO_ARGS += -cover -timeout 20m
 GINKGO = ginkgo $(GINKGO_ARGS)
 
+
+#############################################
+# Run fv tests
+#############################################
+.PHONY: fv
+fv:
+	echo "running FVs"
+	$(DOCKER_GO_BUILD) ./run-fvs
+
 #############################################
 # Run unit level tests
 #############################################
-
 .PHONY: ut
 ## Run only Unit Tests.
 ut:
@@ -93,7 +101,10 @@ ut:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks ut
+ci: clean static-checks test
 
 ## Deploys images to registry
 cd: image-all cd-common
+
+st:
+	@echo "No STs available"

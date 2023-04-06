@@ -15,8 +15,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-
 	"github.com/projectcalico/calico/linseed/pkg/handler"
 	"github.com/projectcalico/calico/linseed/pkg/middleware"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
@@ -46,20 +44,24 @@ func UnpackRoutes(handlers ...handler.Handler) []Route {
 func UtilityRoutes() []Route {
 	return []Route{
 		{"GET", "/version", handler.VersionCheck()},
-		{"GET", "/metrics", promhttp.Handler()},
 	}
 }
 
 // Middlewares defines all available intermediary handlers
 func Middlewares(cfg config.Config) []func(http.Handler) http.Handler {
 	clusterInfo := middleware.NewClusterInfo(cfg.ExpectedTenantID)
+	metrics := middleware.Metrics{}
 	return []func(http.Handler) http.Handler{
 		// LogRequestHeaders needs to be placed before any middlewares that mutate the request
 		httputils.LogRequestHeaders,
+		// Recoverer recovers from panics, logs the panic and returns 500
+		chimiddleware.Recoverer,
 		// AllowContentType allows only specific content types for the requests
 		chimiddleware.AllowContentType("application/json", "application/x-ndjson"),
-		// ClusterInfoOld will extract cluster and tenant information from the request to identify the caller
+		// ClusterInfo will extract cluster and tenant information from the request to identify the caller
 		clusterInfo.Extract(),
+		// Metrics will track all relevant information for requests
+		metrics.Track(),
 	}
 }
 

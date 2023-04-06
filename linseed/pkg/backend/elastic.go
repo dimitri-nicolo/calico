@@ -8,7 +8,13 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/projectcalico/calico/linseed/pkg/metrics"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/projectcalico/calico/linseed/pkg/config"
 
@@ -59,7 +65,7 @@ func MustGetElasticClient(cfg config.Config) lmaelastic.Client {
 func mustGetHTTPClient(config config.Config) *http.Client {
 	if config.ElasticScheme == "http" {
 		logrus.Warn("SSL verification is disabled for Elastic communication. Will use a default HTTP client")
-		return http.DefaultClient
+		return &http.Client{Transport: &metricsRoundTripper{defaultTransport: http.DefaultTransport}}
 	}
 
 	// Configure TLS
@@ -75,7 +81,9 @@ func mustGetHTTPClient(config config.Config) *http.Client {
 		tlsConfig.Certificates = []tls.Certificate{clientCert}
 	}
 
-	return &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+
+	return &http.Client{Transport: &metricsRoundTripper{defaultTransport: transport}}
 }
 
 func mustGetClientCert(config config.Config) tls.Certificate {
@@ -101,4 +109,64 @@ func mustGetCACertPool(config config.Config) *x509.CertPool {
 		logrus.Fatal("Failed to parse root certificate")
 	}
 	return caCertPool
+}
+
+type metricsRoundTripper struct {
+	defaultTransport http.RoundTripper
+}
+
+func (t *metricsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	start := time.Now().UTC()
+	resp, err := t.defaultTransport.RoundTrip(req)
+
+	if resp != nil {
+		metrics.ElasticResponseDuration.With(t.methodPathLabels(req)).Observe(time.Since(start).Seconds())
+
+		metrics.ElasticResponseStatus.With(t.methodCodePathLabels(req, resp)).Inc()
+	}
+
+	if err != nil {
+		metrics.ElasticConnectionErrors.With(t.methodCodePathLabels(req, resp)).Inc()
+	}
+
+	return resp, err
+}
+
+func (t *metricsRoundTripper) methodPathLabels(req *http.Request) prometheus.Labels {
+	return prometheus.Labels{
+		metrics.LabelPath:   t.minifiedPath(req),
+		metrics.LabelMethod: req.Method,
+	}
+}
+
+func (t *metricsRoundTripper) methodCodePathLabels(req *http.Request, resp *http.Response) prometheus.Labels {
+	return prometheus.Labels{
+		metrics.LabelMethod: req.Method,
+		metrics.LabelCode:   strconv.Itoa(resp.StatusCode),
+		metrics.LabelPath:   t.minifiedPath(req),
+	}
+}
+
+func (t *metricsRoundTripper) minifiedPath(req *http.Request) string {
+	if strings.HasPrefix(req.URL.Path, "/_cat/aliases") {
+		return "/_cat/aliases"
+	}
+
+	if strings.HasPrefix(req.URL.Path, "/_template") {
+		return "/_template"
+	}
+
+	if strings.HasPrefix(req.URL.Path, "/_bulk") {
+		return "/_bulk"
+	}
+
+	if strings.HasSuffix(req.URL.Path, "/_search") {
+		return "/_search"
+	}
+
+	if strings.HasPrefix(req.URL.Path, "/<tigera_secure_ee_") {
+		return "/<tigera_secure_ee_*>"
+	}
+
+	return req.URL.Path
 }

@@ -2,11 +2,11 @@
 package cache
 
 import (
-	log "github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -17,7 +17,7 @@ import (
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/dispatcherv1v3"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/labelhandler"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	log "github.com/sirupsen/logrus"
 )
 
 var (

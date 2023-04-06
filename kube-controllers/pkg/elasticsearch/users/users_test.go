@@ -201,6 +201,23 @@ var _ = Describe("ElasticseachUsers", func() {
 							},
 						}},
 					},
+					"tigera-ee-policy-recommendation": {
+						Username: "tigera-ee-policy-recommendation-managed-cluster-secure",
+						Roles: []elasticsearch.Role{
+							{
+								Name: "tigera-ee-policy-recommendation-managed-cluster-secure",
+								Definition: &elasticsearch.RoleDefinition{
+									Cluster: []string{"monitor", "manage_index_templates"},
+									Indices: []elasticsearch.RoleIndex{
+										{
+											Names:      []string{"tigera_secure_ee_flows.managed-cluster.*"},
+											Privileges: []string{"read"},
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 				map[users.ElasticsearchUserName]elasticsearch.User{
 					"tigera-fluentd": {
@@ -229,6 +246,9 @@ var _ = Describe("ElasticseachUsers", func() {
 					},
 					"tigera-ee-performance-hotspots": {
 						Username: "tigera-ee-performance-hotspots-managed-cluster",
+					},
+					"tigera-ee-policy-recommendation": {
+						Username: "tigera-ee-policy-recommendation-managed-cluster",
 					},
 				},
 			)
@@ -477,6 +497,21 @@ var _ = Describe("ElasticseachUsers", func() {
 							},
 						}},
 					},
+					"tigera-ee-policy-recommendation": {
+						Username: "tigera-ee-policy-recommendation-secure",
+						Roles: []elasticsearch.Role{{
+							Name: "tigera-ee-policy-recommendation-secure",
+							Definition: &elasticsearch.RoleDefinition{
+								Cluster: []string{"monitor", "manage_index_templates"},
+								Indices: []elasticsearch.RoleIndex{
+									{
+										Names:      []string{"tigera_secure_ee_flows.cluster.*"},
+										Privileges: []string{"read"},
+									},
+								},
+							},
+						}},
+					},
 					"tigera-ee-compliance-server": {
 						Username: "tigera-ee-compliance-server-secure",
 						Roles: []elasticsearch.Role{{
@@ -583,6 +618,9 @@ var _ = Describe("ElasticseachUsers", func() {
 					},
 					"tigera-ee-performance-hotspots": {
 						Username: "tigera-ee-performance-hotspots",
+					},
+					"tigera-ee-policy-recommendation": {
+						Username: "tigera-ee-policy-recommendation",
 					},
 					"tigera-ee-compliance-server": {
 						Username: "tigera-ee-compliance-server",

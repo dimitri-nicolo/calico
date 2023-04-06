@@ -47,6 +47,24 @@ type Interface interface {
 	StagedNetworkPolicies() StagedNetworkPolicyInterface
 	// StagedKubernetesNetworkPolicies returns an interface for managing staged kubernetes network policy resources.
 	StagedKubernetesNetworkPolicies() StagedKubernetesNetworkPolicyInterface
+	// PolicyRecommendationScope returns an interface for managing policy recommendation scope resources.
+	PolicyRecommendationScopes() PolicyRecommendationScopeInterface
+	// IPPools returns an interface for managing IP pool resources.
+	IPPools() IPPoolInterface
+	// IPReservations returns an interface for managing IP reservation resources.
+	IPReservations() IPReservationInterface
+	// Profiles returns an interface for managing profile resources.
+	Profiles() ProfileInterface
+	// GlobalNetworkSets returns an interface for managing global network sets resources.
+	GlobalNetworkSets() GlobalNetworkSetInterface
+	// NetworkSets returns an interface for managing network sets resources.
+	NetworkSets() NetworkSetInterface
+	// HostEndpoints returns an interface for managing host endpoint resources.
+	HostEndpoints() HostEndpointInterface
+	// WorkloadEndpoints returns an interface for managing workload endpoint resources.
+	WorkloadEndpoints() WorkloadEndpointInterface
+	// BGPPeers returns an interface for managing BGP peer resources.
+	BGPPeers() BGPPeerInterface
 	// Tiers returns an interface for managing tier resources.
 	Tiers() TierInterface
 	// UISettingsGroups returns an interface for managing uisettingsgroup resources.

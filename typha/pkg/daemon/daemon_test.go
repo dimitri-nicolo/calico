@@ -473,6 +473,10 @@ func (b *mockDatastore) GlobalAlerts() clientv3.GlobalAlertInterface {
 	return nil
 }
 
+func (b *mockDatastore) PolicyRecommendationScopes() clientv3.PolicyRecommendationScopeInterface {
+	return nil
+}
+
 func (b *mockDatastore) KubeControllersConfiguration() clientv3.KubeControllersConfigurationInterface {
 	panic("not implemented")
 }
