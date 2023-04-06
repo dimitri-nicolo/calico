@@ -945,21 +945,6 @@ func schema_pkg_apis_projectcalico_v3_AuthenticationReviewStatus(ref common.Refe
 							},
 						},
 					},
-					"filters": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ordered set of BGPFilters applied on this BGP peer.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
-						},
-					},
 				},
 			},
 		},
