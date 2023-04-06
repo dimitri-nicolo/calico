@@ -21,6 +21,13 @@ type Config struct {
 	HTTPSCert string `default:"/certs/https/tls.crt" split_words:"true"`
 	HTTPSKey  string `default:"/certs/https/tls.key" split_words:"true"`
 
+	// Metrics endpoint configurations.
+	EnableMetrics bool `default:"false" split_words:"true"`
+	MetricsPort   int  `default:"9095" split_words:"true"`
+	// Certificates used to secure metrics endpoint via TLS
+	MetricsCert string `default:"/certs/https/tls.crt" split_words:"true"`
+	MetricsKey  string `default:"/certs/https/tls.key" split_words:"true"`
+
 	// Used to verify client certificates for mTLS.
 	CACert string `default:"/certs/https/client.crt" split_words:"true"`
 
