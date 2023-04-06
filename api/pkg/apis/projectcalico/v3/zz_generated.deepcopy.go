@@ -250,6 +250,11 @@ func (in *AuthenticationReviewStatus) DeepCopyInto(out *AuthenticationReviewStat
 			(*out)[key] = outVal
 		}
 	}
+	if in.Filters != nil {
+		in, out := &in.Filters, &out.Filters
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

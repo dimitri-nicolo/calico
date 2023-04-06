@@ -586,6 +586,28 @@ func (p RESTStorageProvider) NewV3Storage(
 		[]string{},
 	)
 
+	bgpFilterRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("bgpfilters"))
+	if err != nil {
+		return nil, err
+	}
+	bgpFilterOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   bgpFilterRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicobgpfilter.EmptyObject(),
+			ScopeStrategy: calicobgpfilter.NewStrategy(scheme),
+			NewListFunc:   calicobgpfilter.NewList,
+			GetAttrsFunc:  calicobgpfilter.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions: bgpFilterRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{},
+	)
+
 	profileRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("profiles"))
 	if err != nil {
 		return nil, err
