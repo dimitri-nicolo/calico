@@ -1638,3 +1638,7 @@ func (c shimClient) UISettingsGroups() client.UISettingsGroupInterface {
 func (c shimClient) AlertExceptions() client.AlertExceptionInterface {
 	panic("not implemented")
 }
+
+func (c shimClient) PolicyRecommendationScopes() client.PolicyRecommendationScopeInterface {
+	panic("not implemented")
+}

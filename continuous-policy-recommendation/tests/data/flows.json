@@ -1,0 +1,19 @@
+[
+  {
+    "reporter":    "src",
+    "actionflag":  1,
+    "proto": 2,
+    "source":
+    {
+      "name": "ns1",
+      "namespace": "ns1",
+      "type": "wep"
+    },
+    "destination":
+    {
+      "name": "ns2",
+      "namespace": "ns2",
+      "type": "wep"
+    }
+  }
+]

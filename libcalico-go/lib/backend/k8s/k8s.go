@@ -154,6 +154,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindPolicyRecommendationScope,
+		resources.NewPolicyRecommendationScopeClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
 		model.KindKubernetesEndpointSlice,
 		resources.NewKubernetesEndpointSliceClient(cs),
 	)
@@ -601,6 +607,11 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindCalicoNodeStatus,
 		apiv3.KindGlobalNetworkPolicy,
 		apiv3.KindNetworkPolicy,
+		apiv3.KindStagedNetworkPolicy,
+		apiv3.KindStagedKubernetesNetworkPolicy,
+		apiv3.KindTier,
+		apiv3.KindUISettings,
+		apiv3.KindUISettingsGroup,
 		apiv3.KindGlobalNetworkSet,
 		apiv3.KindNetworkSet,
 		apiv3.KindIPPool,
@@ -616,6 +627,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindStagedGlobalNetworkPolicy,
 		apiv3.KindStagedNetworkPolicy,
 		apiv3.KindStagedKubernetesNetworkPolicy,
+		apiv3.KindPolicyRecommendationScope,
 		apiv3.KindTier,
 		apiv3.KindUISettings,
 		apiv3.KindUISettingsGroup,
@@ -746,6 +758,8 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 					&apiv3.StagedNetworkPolicyList{},
 					&apiv3.StagedKubernetesNetworkPolicy{},
 					&apiv3.StagedKubernetesNetworkPolicyList{},
+					&apiv3.PolicyRecommendationScope{},
+					&apiv3.PolicyRecommendationScopeList{},
 					&apiv3.Tier{},
 					&apiv3.TierList{},
 					&apiv3.HostEndpoint{},

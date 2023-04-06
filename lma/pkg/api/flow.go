@@ -186,6 +186,9 @@ type FlowEndpointData struct {
 	// IP, or nil if unknown.
 	IP *net.IP
 
+	// Domains.
+	Domains string
+
 	// Port, or nil if unknown.
 	Port *uint16
 
@@ -194,6 +197,9 @@ type FlowEndpointData struct {
 
 	// NamedPorts is the set of named ports for this endpoint.
 	NamedPorts []EndpointNamedPort
+
+	// ServiceName.
+	ServiceName string
 }
 
 // IsCalicoManagedEndpoint returns if the endpoint is managed by Calico.

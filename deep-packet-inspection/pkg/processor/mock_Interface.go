@@ -144,6 +144,10 @@ func (_m *MockClientInterface) PacketCaptures() clientv3.PacketCaptureInterface 
 	return nil
 }
 
+func (_m *MockClientInterface) PolicyRecommendationScopes() clientv3.PolicyRecommendationScopeInterface {
+	return nil
+}
+
 func (_m *MockClientInterface) Profiles() clientv3.ProfileInterface {
 	return nil
 }

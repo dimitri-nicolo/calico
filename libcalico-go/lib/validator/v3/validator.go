@@ -186,6 +186,8 @@ var (
 	L7ResponseCodeAggregationRegex   = regexp.MustCompile("^(IncludeL7ResponseCode|ExcludeL7ResponseCode)$")
 	L7URLAggregationRegex            = regexp.MustCompile("^(IncludeL7FullURL|TrimURLQuery|TrimURLQueryAndPath|ExcludeL7URL)$")
 
+	enabledDisabledRegex = regexp.MustCompile("^(Enabled|Disabled)$")
+
 	ipv4LinkLocalNet = net.IPNet{
 		IP:   net.ParseIP("169.254.0.0"),
 		Mask: net.CIDRMask(16, 32),
@@ -279,6 +281,7 @@ func init() {
 	registerFieldValidator("keyValueList", validateKeyValueList)
 	registerFieldValidator("prometheusHost", validatePrometheusHost)
 	registerFieldValidator("ipType", validateIPType)
+	registerFieldValidator("policyrecstatus", RegexValidator("RecStatus", enabledDisabledRegex))
 
 	registerFieldValidator("sourceAddress", RegexValidator("SourceAddress", SourceAddressRegex))
 	registerFieldValidator("failureDetectionMode", RegexValidator("FailureDetectionMode", FailureDetectionModeRegex))

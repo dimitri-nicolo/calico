@@ -25,6 +25,10 @@ func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc)
 		return NewGlobalNetworkPolicyStorage(opts)
 	case "projectcalico.org/stagedglobalnetworkpolicies":
 		return NewStagedGlobalNetworkPolicyStorage(opts)
+	case "projectcalico.org/policyrecommendationscopes":
+		return NewPolicyRecommendationScopeStorage(opts)
+	case "projectcalico.org/policyrecommendationscopes/status":
+		return NewPolicyRecommendationScopeStatusStorage(opts)
 	case "projectcalico.org/globalnetworksets":
 		return NewGlobalNetworkSetStorage(opts)
 	case "projectcalico.org/networksets":
