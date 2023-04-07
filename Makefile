@@ -11,6 +11,10 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
+ELASTIC_VERSION=7.17.9
+GRADLE_VERSION=7.5.1
+TINI_VERSION=0.19.0
+
 # Add --squash argument for CICD pipeline runs only to avoid setting "experimental",
 # for Docker processes on personal machine.
 # set `DOCKER_BUILD=--squash make image` to squash images locally.
@@ -59,13 +63,23 @@ image: $(ELASTICSEARCH_IMAGE)
 $(ELASTICSEARCH_IMAGE): $(ELASTICSEARCH_CONTAINER_MARKER) $(ELASTICSEARCH_CONTAINER_FIPS_MARKER)
 
 $(ELASTICSEARCH_CONTAINER_MARKER): Dockerfile.$(ARCH) build
-	docker buildx build --pull -t $(ELASTICSEARCH_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+	docker buildx build --pull --load \
+		--build-arg ELASTIC_VERSION=$(ELASTIC_VERSION) \
+		--build-arg GRADLE_VERSION=$(GRADLE_VERSION) \
+		--build-arg TINI_VERSION=$(TINI_VERSION) \
+		-t $(ELASTICSEARCH_IMAGE):latest-$(ARCH) \
+		-f Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 # build fips image
 $(ELASTICSEARCH_CONTAINER_FIPS_MARKER): Dockerfile-fips.$(ARCH) build
-	docker buildx build --pull -t $(ELASTICSEARCH_IMAGE):latest-fips-$(ARCH) -f Dockerfile-fips.$(ARCH) . --load
+	docker buildx build --pull --load \
+		--build-arg ELASTIC_VERSION=$(ELASTIC_VERSION) \
+		--build-arg GRADLE_VERSION=$(GRADLE_VERSION) \
+		--build-arg TINI_VERSION=$(TINI_VERSION) \
+		-t $(ELASTICSEARCH_IMAGE):latest-fips-$(ARCH) \
+		-f Dockerfile-fips.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
 

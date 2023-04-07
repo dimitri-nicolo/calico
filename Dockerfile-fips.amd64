@@ -1,11 +1,12 @@
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest as builder
 
+ARG ELASTIC_VERSION
+ARG GRADLE_VERSION
+ARG TINI_VERSION
+
 ################################################################################
 # Build and patch elasticsearch from source
 ################################################################################
-ENV ELASTIC_VERSION=7.17.9
-ENV GRADLE_VERSION=7.5.1
-
 RUN microdnf upgrade
 
 RUN microdnf install -y \
@@ -44,8 +45,6 @@ RUN JAVA_HOME=/usr/lib/jvm/java-17-openjdk JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF
 # We need to review and update them when upgrading to a newer version of
 # elasticsearch.
 ################################################################################
-ENV TINI_VERSION=0.19.0
-
 ENV OPENJDK_VERSION=11.0.18
 ENV OPENJDK_PATCH=10
 
@@ -87,10 +86,11 @@ RUN trust extract \
 # as of Aug 2022, bctls-fips version 1.0.12 and 1.0.13 will cause null pointer
 # exceptions in org.bouncycastle.tls.TlsProtocol.getPeer(). DO NOT upgrade to
 # newer versions unless the issue is resolved.
-COPY patches/fips-jdk11-Patch-java-security-policy-to-support-Bouncy-Castle.patch /tmp/jvm-bc-fips.patch
 RUN mkdir /usr/share/bc-fips && \
-    curl -sfL https://downloads.bouncycastle.org/fips-java/bc-fips-${BC_FIPS_VERSION}.jar -o /usr/share/bc-fips/bc-fips.jar && \
-    curl -sfL https://downloads.bouncycastle.org/fips-java/bctls-fips-${BCTLS_FIPS_VERSION}.jar -o /usr/share/bc-fips/bctls-fips.jar
+    curl -sfL https://repo1.maven.org/maven2/org/bouncycastle/bc-fips/${BC_FIPS_VERSION}/bc-fips-${BC_FIPS_VERSION}.jar -o /usr/share/bc-fips/bc-fips.jar && \
+    curl -sfL https://repo1.maven.org/maven2/org/bouncycastle/bctls-fips/${BCTLS_FIPS_VERSION}/bctls-fips-${BCTLS_FIPS_VERSION}.jar -o /usr/share/bc-fips/bctls-fips.jar
+
+COPY patches/fips-jdk11-Patch-java-security-policy-to-support-Bouncy-Castle.patch /tmp/jvm-bc-fips.patch
 RUN patch -d /usr/share/elasticsearch/jdk -p1 < /tmp/jvm-bc-fips.patch
 
 # Patch elasticsearch script
