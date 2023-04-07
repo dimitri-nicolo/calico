@@ -87,8 +87,8 @@ RUN trust extract \
 # exceptions in org.bouncycastle.tls.TlsProtocol.getPeer(). DO NOT upgrade to
 # newer versions unless the issue is resolved.
 RUN mkdir /usr/share/bc-fips && \
-    curl -sfL https://downloads.bouncycastle.org/fips-java/bc-fips-${BC_FIPS_VERSION}.jar -o /usr/share/bc-fips/bc-fips.jar && \
-    curl -sfL https://downloads.bouncycastle.org/fips-java/bctls-fips-${BCTLS_FIPS_VERSION}.jar -o /usr/share/bc-fips/bctls-fips.jar
+    curl -sfL https://repo1.maven.org/maven2/org/bouncycastle/bc-fips/${BC_FIPS_VERSION}/bc-fips-${BC_FIPS_VERSION}.jar -o /usr/share/bc-fips/bc-fips.jar && \
+    curl -sfL https://repo1.maven.org/maven2/org/bouncycastle/bctls-fips/${BCTLS_FIPS_VERSION}/bctls-fips-${BCTLS_FIPS_VERSION}.jar -o /usr/share/bc-fips/bctls-fips.jar
 
 COPY patches/fips-jdk11-Patch-java-security-policy-to-support-Bouncy-Castle.patch /tmp/jvm-bc-fips.patch
 RUN patch -d /usr/share/elasticsearch/jdk -p1 < /tmp/jvm-bc-fips.patch
