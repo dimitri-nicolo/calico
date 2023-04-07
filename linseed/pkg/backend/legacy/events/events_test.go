@@ -176,6 +176,11 @@ func TestEventSelector(t *testing.T) {
 		if shouldSucceed {
 			require.NoError(t, e)
 			require.Equal(t, numResults, len(r.Items))
+			if numResults > 0 {
+				// We expect the ID to be present, but it's a random value so we
+				// can't assert on the exact value.
+				require.Equal(t, event, backendutils.AssertEventIDAndReset(t, r.Items[0]))
+			}
 		} else {
 			require.Error(t, e)
 		}
