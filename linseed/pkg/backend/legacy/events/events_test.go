@@ -181,46 +181,59 @@ func TestEventSelector(t *testing.T) {
 		}
 	}
 
-	// These ones match events as expected
-	testSelector("host=\"midnight-train\"", 1, true)
-	testSelector("source_name=\"south-detroit-1234\"", 1, true)
-	testSelector("origin=\"South Detroit\"", 1, true)
-	testSelector("dest_port=53", 1, true)
-	testSelector("source_port=48127", 1, true)
-	testSelector("source_port > 1024", 1, true)
+	tests := []struct {
+		selector      string
+		numResults    int
+		shouldSucceed bool
+	}{
+		// These ones match events as expected
+		{"host=\"midnight-train\"", 1, true},
+		{"source_name=\"south-detroit-1234\"", 1, true},
+		{"origin=\"South Detroit\"", 1, true},
+		{"dest_port=53", 1, true},
+		{"source_port=48127", 1, true},
+		{"source_port > 1024", 1, true},
 
-	// Valid but do not match any event
-	testSelector("host=\"some-other-host\"", 0, true)
+		// Valid but do not match any event
+		{"host=\"some-other-host\"", 0, true},
 
-	// Those fail for invalid keys.
-	// Valid keys are defined in libcalico-go/lib/validator/v3/query/validate_events.go.
-	// The validation is performed in linseed/pkg/internal/lma/elastic/index/alerts.go.
-	// If we comment out the call to `query.Validate()` in alerts.go, the "invalid key"
-	// error won't occur and the resulting ES query will be executed.
-	testSelector("Host=\"midnight-train\"", 0, false)
-	testSelector("description=\"Just a city event\"", 0, false)
-	testSelector("type=\"TODO\"", 0, false)
-	testSelector("severity=1", 0, false)
-	testSelector("time>0", 0, false)
+		// Those fail for invalid keys.
+		// Valid keys are defined in libcalico-go/lib/validator/v3/query/validate_events.go.
+		// The validation is performed in linseed/pkg/internal/lma/elastic/index/alerts.go.
+		// If we comment out the call to `query.Validate()` in alerts.go, the "invalid key"
+		// error won't occur and the resulting ES query will be executed.
+		{"Host=\"midnight-train\"", 0, false},
+		{"description=\"Just a city event\"", 0, false},
+		{"type=\"TODO\"", 0, false},
+		{"severity=1", 0, false},
+		{"time>0", 0, false},
 
-	// The dismissed key is a bit odd (probably like all boolean values).
-	// There is validation for the value, but it does not return
-	// the event with a seemingly valid selector (dismissed=false).
-	// Instead we need to use something like "dismissed != true".
-	// The UI uses "NOT dismissed = true"
-	testSelector("dismissed=f", 0, false)
-	testSelector("dismissed=t", 0, false)
-	testSelector("dismissed=False", 0, false)
-	testSelector("dismissed=True", 0, false)
-	testSelector("dismissed=0", 0, false)
-	testSelector("dismissed=1", 0, false)
-	testSelector("dismissed=false", 0, true)
-	testSelector("dismissed=true", 0, true)
-	testSelector("dismissed=\"false\"", 0, true)
-	testSelector("dismissed=\"true\"", 0, true)
-	testSelector("dismissed!=\"true\"", 1, true)
-	testSelector("dismissed!=true", 1, true)
-	testSelector("dismissed != true", 1, true)
-	testSelector("NOT dismissed = true", 1, true)
-	testSelector("NOT dismissed", 0, false)
+		// The dismissed key is a bit odd (probably like all boolean values).
+		// There is validation for the value, but it does not return
+		// the event with a seemingly valid selector (dismissed=false).
+		// Instead we need to use something like "dismissed != true".
+		// The UI uses "NOT dismissed = true"
+		{"dismissed=f", 0, false},
+		{"dismissed=t", 0, false},
+		{"dismissed=False", 0, false},
+		{"dismissed=True", 0, false},
+		{"dismissed=0", 0, false},
+		{"dismissed=1", 0, false},
+		{"dismissed=false", 0, true},
+		{"dismissed=true", 0, true},
+		{"dismissed=\"false\"", 0, true},
+		{"dismissed=\"true\"", 0, true},
+		{"dismissed!=\"true\"", 1, true},
+		{"dismissed!=true", 1, true},
+		{"dismissed != true", 1, true},
+		{"NOT dismissed = true", 1, true},
+		{"NOT dismissed", 0, false},
+	}
+
+	for _, tt := range tests {
+		name := fmt.Sprintf("TestEventSelector: %s", tt.selector)
+		t.Run(name, func(t *testing.T) {
+			testSelector(tt.selector, tt.numResults, tt.shouldSucceed)
+		})
+	}
 }
