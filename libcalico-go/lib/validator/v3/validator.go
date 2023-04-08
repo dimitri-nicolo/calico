@@ -187,8 +187,6 @@ var (
 	L7ResponseCodeAggregationRegex   = regexp.MustCompile("^(IncludeL7ResponseCode|ExcludeL7ResponseCode)$")
 	L7URLAggregationRegex            = regexp.MustCompile("^(IncludeL7FullURL|TrimURLQuery|TrimURLQueryAndPath|ExcludeL7URL)$")
 
-	filterActionRegex    = regexp.MustCompile("^(Accept|Reject)$")
-	matchOperatorRegex   = regexp.MustCompile("^(Equal|In|NotEqual|NotIn)$")
 	enabledDisabledRegex = regexp.MustCompile("^(Enabled|Disabled)$")
 
 	ipv4LinkLocalNet = net.IPNet{
