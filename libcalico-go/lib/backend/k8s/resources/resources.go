@@ -15,10 +15,13 @@
 package resources
 
 import (
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
@@ -238,4 +241,27 @@ func ConvertK8sResourceToCalicoResource(res Resource) error {
 	meta.DeepCopyInto(rom.(*metav1.ObjectMeta))
 
 	return nil
+}
+
+// ReverseUID reverses the segments of a UID to create another UID.
+//
+// We use this to map between the CRD and v3 resource types. It is not possible to use the same UID as this breaks
+// garbage collection of the v3 resource types. We need to be able to deterministically map between the v3 and CRD
+// UID and this seems like a reasonable approach. We could potentially store in the annotation (so both CRD and v3
+// have this annotation and we switch annotation w/ the metadata UID) - however that doesn't work for deletes where
+// the metadata is unavailable, but a UID may have been supplied to handle atomicity.
+func ReverseUID(uid types.UID) types.UID {
+	parts := strings.Split(string(uid), "-")
+	for ii := range parts {
+		parts[ii] = ReverseString(parts[ii])
+	}
+	return types.UID(strings.Join(parts, "-"))
+}
+
+func ReverseString(s string) string {
+	r := []rune(s)
+	for ii, jj := 0, len(r)-1; ii < len(r)/2; ii, jj = ii+1, jj-1 {
+		r[ii], r[jj] = r[jj], r[ii]
+	}
+	return string(r)
 }
