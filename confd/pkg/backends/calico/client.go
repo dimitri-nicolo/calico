@@ -820,8 +820,6 @@ func (c *client) nodeAsBGPPeers(nodeName string, v4 bool, v6 bool, v3peer *apiv3
 			peer.ReachableBy = v3peer.Spec.ReachableBy
 		}
 
-		peer.Filters = v3Peer.Spec.Filters
-
 		// If peer node has listenPort set in BGPConfiguration, use that.
 		if port, ok := c.nodeListenPorts[nodeName]; ok {
 			peer.Port = port
