@@ -151,33 +151,53 @@ type UIGraphNodeView struct {
 
 // UIDashboard contains the data for a UI dashboard.
 type UIDashboard struct {
+	// Array of dashboard data
 	DashboardData []DashboardData `json:"dashboardData,omitempty" validate:"omitempty"`
 }
 
 type DashboardData struct {
+	// Namespace user selected for the dashboard
 	SelectedNamespace string `json:"selectedNamespace,omitempty" validate:"omitempty"`
 
-	DashboardType string `json:"dashboardType,omitempty" validate:"omitempty"`
+	// Type of the dashboard
+	Type string `json:"type,omitempty" validate:"omitempty"`
 
+	// Layout information of the dashboard card
 	Layout DashboardLayout `json:"layout,omitempty" validate:"omitempty"`
 }
 
 type DashboardLayout struct {
-	Index  string `json:"index,omitempty" validate:"omitempty"`
-	XPos   uint32 `json:"xPos,omitempty" validate:"omitempty"`
-	YPos   uint32 `json:"yPos,omitempty" validate:"omitempty"`
-	Width  uint32 `json:"width,omitempty" validate:"omitempty"`
+	// Index of the dashboard
+	Index string `json:"index,omitempty" validate:"omitempty"`
+
+	// X coordinate of the top-left corner of the dashboard card
+	XPos uint32 `json:"xPos,omitempty" validate:"omitempty"`
+	// Y coordinate of the top-left corner of the dashboard card
+	YPos uint32 `json:"yPos,omitempty" validate:"omitempty"`
+
+	// Width of the dashboard card
+	Width uint32 `json:"width,omitempty" validate:"omitempty"`
+	// Height of the dashboard card
 	Height uint32 `json:"height,omitempty" validate:"omitempty"`
 
+	// Minimum limit set for the size of the dashboard card width
 	MinWidth uint32 `json:"minWidth,omitempty" validate:"omitempty"`
+	// Maximum limit set for the size of the dashboard card width
 	MaxWidth uint32 `json:"maxWidth,omitempty" validate:"omitempty"`
 
+	// Minimum limit set for the size of the dashboard card height
 	MinHeight uint32 `json:"minHeight,omitempty" validate:"omitempty"`
+	// Maximum limit set for the size of the dashboard card height
 	MaxHeight uint32 `json:"maxHeight,omitempty" validate:"omitempty"`
 
-	IsResizable       bool `json:"isResizable,omitempty" validate:"omitempty"`
-	IsVisible         bool `json:"isVisible,omitempty" validate:"omitempty"`
-	IsInNamesapceView bool `json:"isInNamespaceView,omitempty" validate:"omitempty"`
+	// Whether this dashboard card should be re-sizeable or not
+	IsResizable bool `json:"isResizable,omitempty" validate:"omitempty"`
+
+	// Whether this dashboard card should be visible or not
+	IsVisible bool `json:"isVisible,omitempty" validate:"omitempty"`
+
+	// Whether this dashboard is in namespace view or not
+	IsInNamespaceView bool `json:"isInNamespaceView,omitempty" validate:"omitempty"`
 }
 
 // +genclient:nonNamespaced
