@@ -332,6 +332,37 @@ var _ = Describe("Aggregation tests", func() {
 			"bad request",
 		),
 
+		Entry("Linseed responds with empty request",
+			v1.AggregationRequest{
+				Cluster:           "",
+				TimeRange:         &lmaapi.TimeRange{From: timeFrom, To: timeTo60Mins},
+				Selector:          "dest_namespace = 'abc'",
+				IncludeTimeSeries: true,
+				Aggregations:      map[string]json.RawMessage{"agg1": json.RawMessage("[]")},
+				Timeout:           1000,
+			},
+			&MockAuthorizer{
+				AuthorizationReviewResp: []v3.AuthorizedResourceVerbs{{
+					APIGroup: "projectcalico.org",
+					Resource: "networksets",
+					Verbs: []v3.AuthorizedResourceVerb{{
+						Verb: "list",
+						ResourceGroups: []v3.AuthorizedResourceGroup{{
+							Namespace: "ns1",
+						}},
+					}},
+				}},
+				AuthorizationReviewRespErr: nil,
+			},
+			&MockLinseedResponse{
+				LinseedResp: nil,
+				LinseedErr:  nil,
+			},
+			http.StatusOK,
+			nil,
+			`{"buckets":[{"start_time":"2021-05-30T21:23:10Z","aggregations":null}]}`,
+		),
+
 		Entry("Forbidden response from authorization review",
 			v1.AggregationRequest{
 				Cluster:           "",

@@ -6,6 +6,7 @@ package fv_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -111,4 +112,29 @@ func TestL7_FlowLogs(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, logs, resp.Items)
 	})
+
+	t.Run("should return an empty aggregations if there are no l7 logs", func(t *testing.T) {
+		defer l7logSetupAndTeardown(t)()
+
+		params := v1.L7AggregationParams{
+			L7LogParams: v1.L7LogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Second),
+						To:   time.Now(),
+					},
+				},
+			},
+			Aggregations: map[string]json.RawMessage{
+				"response_code": []byte(`{"filters":{"other_bucket_key":"other","filters":{"1xx":{"prefix":{"response_code":"1"}},"2xx":{"prefix":{"response_code":"2"}},"3xx":{"prefix":{"response_code":"3"}},"4xx":{"prefix":{"response_code":"4"}},"5xx":{"prefix":{"response_code":"5"}}}},"aggs":{"myDurationMeanHistogram":{"date_histogram":{"field":"start_time","fixed_interval":"60s"},"aggs":{"myDurationMeanAvg":{"avg":{"field":"duration_mean"}}}}}}`),
+			},
+			NumBuckets: 3,
+		}
+
+		// Perform a query.
+		aggregations, err := cli.L7Logs(cluster).Aggregations(ctx, &params)
+		require.NoError(t, err)
+		require.Nil(t, aggregations)
+	})
+
 }

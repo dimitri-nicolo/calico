@@ -241,13 +241,7 @@ func (s *genericHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func extractAggregationResults(aggs elastic.Aggregations, rd *RequestData) (*v1.AggregationResponse, error) {
 	res := v1.AggregationResponse{}
-	if !rd.IsTimeSeries {
-		// There is no time series, therefore the data is all in the main bucket.
-		res.Buckets = append(res.Buckets, v1.AggregationTimeBucket{
-			StartTime:    metav1.Time{Time: rd.AggregationRequest.TimeRange.From},
-			Aggregations: aggs,
-		})
-	} else {
+	if aggs != nil && rd.IsTimeSeries {
 		// There is a time series. The time aggregation is in the main bucket and then the data for each time
 		// bucket is in the sub aggregation.
 		timebuckets, ok := aggs.AutoDateHistogram(lapi.TimeSeriesBucketName)
@@ -267,7 +261,16 @@ func extractAggregationResults(aggs elastic.Aggregations, rd *RequestData) (*v1.
 				Aggregations: results,
 			})
 		}
+
+		return &res, nil
 	}
+
+	// There is no time series, therefore the data is all in the main bucket.
+	res.Buckets = append(res.Buckets, v1.AggregationTimeBucket{
+		StartTime:    metav1.Time{Time: rd.AggregationRequest.TimeRange.From},
+		Aggregations: aggs,
+	})
+
 	return &res, nil
 }
 
