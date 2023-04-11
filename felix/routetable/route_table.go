@@ -369,7 +369,6 @@ func NewWithShims(
 
 	rt := &RouteTable{
 		logCxt:                         logCxt,
-		featureDetector:                featureDetector,
 		ipVersion:                      ipVersion,
 		netlinkFamily:                  family,
 		ifacePrefixRegexp:              ifacePrefixRegexp,
