@@ -26,9 +26,6 @@ ifeq ($(TESLA),true)
 	IMAGETAG_PREFIX       ?= tesla
 endif
 
-# Add in local static-checks
-LOCAL_CHECKS=check-boring-ssl
-
 ###############################################################################
 # Include ../lib.Makefile
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -114,11 +111,6 @@ image.created-$(ARCH): bin/kube-controllers-linux-$(ARCH) bin/check-status-linux
 # Make sure that a copyright statement exists on all go files.
 check-copyright:
 	./check-copyrights.sh
-
-check-boring-ssl: bin/kube-controllers-linux-amd64
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
-		go tool nm bin/kube-controllers-linux-amd64 > bin/tags.txt && grep '_Cfunc__goboringcrypto_' bin/tags.txt 1> /dev/null
-	-rm -f bin/tags.txt
 
 ###############################################################################
 # Tests

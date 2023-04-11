@@ -1,7 +1,7 @@
 include ../metadata.mk
 
 PACKAGE_NAME = github.com/projectcalico/calico/apiserver
-LOCAL_CHECKS     = lint-cache-dir goimports check-boring-ssl
+LOCAL_CHECKS     = lint-cache-dir goimports
 
 # Used so semaphore commits generated files when pins are updated
 EXTRA_FILES_TO_COMMIT=*_generated.go *_generated.*.go
@@ -56,18 +56,6 @@ LDFLAGS = -X $(PACKAGE_NAME)/cmd/apiserver/server.VERSION=$(APISERVER_VERSION) \
 ##############################################################################
 
 include ../lib.Makefile
-
-# TODO Add s390x back to VALIDARCHES. Excluding it should be temporary since
-# there are currently issues in our pipeline with building s390x images. Remove
-# this command once the s390x build pipeline has been fixed.
-VALIDARCHES=amd64
-
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
 
 # Use ARCH specific build image.
 CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
@@ -125,11 +113,6 @@ $(CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) $(BINDIR)/apiserver-$(ARCH
 .PHONY: lint-cache-dir
 lint-cache-dir:
 	mkdir -p $(CURDIR)/.lint-cache
-
-check-boring-ssl: $(BINDIR)/apiserver-$(ARCH)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
-		go tool nm $(BINDIR)/apiserver-$(ARCH) > $(BINDIR)/tags.txt && grep '_Cfunc__goboringcrypto_' $(BINDIR)/tags.txt 1> /dev/null
-	-rm -f $(BINDIR)/tags.txt
 
 .PHONY: ut
 ut: lint-cache-dir run-etcd
