@@ -1,3 +1,4 @@
+{{- if .Values.global.prometheusOperatorEnabled }}
 {{- if .Values.prometheusOperator }}
 apiVersion: apps/v1
 kind: Deployment
@@ -54,4 +55,4 @@ spec:
           seccompProfile:
             type: RuntimeDefault
 {{- end }}
-
+{{- end }}

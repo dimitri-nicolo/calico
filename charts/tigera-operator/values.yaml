@@ -8,6 +8,12 @@ installation:
 apiServer:
   enabled: true
 
+# When enabled a subchart called tigera-prometheus-operator will be installed.
+# Set this to false if you want to bring your own Prometheus operator to your
+# cluster.
+global:
+  prometheusOperatorEnabled: true
+
 intrusionDetection:
   enabled: true
 

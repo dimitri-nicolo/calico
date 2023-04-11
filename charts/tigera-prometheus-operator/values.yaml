@@ -1,5 +1,9 @@
 imagePullSecrets: {}
 
+# Set this to false if you bring your own Prometheus operator to your cluster.
+global:
+  prometheusOperatorEnabled: true
+
 installation:
   kubernetesProvider: ""
 

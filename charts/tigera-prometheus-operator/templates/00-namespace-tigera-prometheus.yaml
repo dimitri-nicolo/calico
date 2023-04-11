@@ -1,3 +1,4 @@
+{{- if .Values.global.prometheusOperatorEnabled }}
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -10,4 +11,5 @@ metadata:
     name: tigera-prometheus
 {{- if eq .Values.installation.kubernetesProvider "openshift" }}
     openshift.io/run-level: "0"
+{{- end }}
 {{- end }}
