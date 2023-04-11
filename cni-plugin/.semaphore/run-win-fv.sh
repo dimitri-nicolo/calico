@@ -3,7 +3,7 @@
 set -e
 set -x
 
-FV_DIR="/home/semaphore/calico/process/testing/winfv"
+FV_DIR="/home/semaphore/calico-private/process/testing/winfv"
 CONTAINER_RUNTIME="${CONTAINER_RUNTIME:=docker}"
 
 pushd ${FV_DIR}
