@@ -24,7 +24,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 )
 
-// NewNetworkPolicyStorage creates a new libcalico-based storage.Interface implementation for Policy
+// NewNetworkPolicyStorage creates a new libcalico-based k8sStorage.Interface implementation for Policy
 func NewNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc) {
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
