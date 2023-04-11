@@ -22,6 +22,7 @@ import (
 
 const (
 	LogPath     = "/waf/logs"
+	AggsPath    = "/waf/logs/aggregation"
 	LogPathBulk = "/waf/logs/bulk"
 )
 
@@ -46,6 +47,11 @@ func (h waf) APIS() []handler.API {
 			Method:  "POST",
 			URL:     LogPath,
 			Handler: h.GetLogs(),
+		},
+		{
+			Method:  "POST",
+			URL:     AggsPath,
+			Handler: h.Aggregation(),
 		},
 	}
 }
@@ -128,6 +134,50 @@ func (h waf) Bulk() http.HandlerFunc {
 			return
 		}
 		logrus.Debugf("%s response is: %+v", LogPathBulk, response)
+		httputils.Encode(w, response)
+	}
+}
+
+// Aggregation handles retrieval of time-series DNS aggregated statistics.
+func (h waf) Aggregation() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		reqParams, err := handler.DecodeAndValidateReqParams[v1.WAFLogAggregationParams](w, req)
+		if err != nil {
+			logrus.WithError(err).Error("Failed to decode/validate request parameters")
+			var httpErr *v1.HTTPError
+			if errors.As(err, &httpErr) {
+				httputils.JSONError(w, httpErr, httpErr.Status)
+			} else {
+				httputils.JSONError(w, &v1.HTTPError{
+					Msg:    err.Error(),
+					Status: http.StatusBadRequest,
+				}, http.StatusBadRequest)
+			}
+			return
+		}
+
+		if reqParams.Timeout == nil {
+			reqParams.Timeout = &metav1.Duration{Duration: v1.DefaultTimeOut}
+		}
+
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: middleware.ClusterIDFromContext(req.Context()),
+			Tenant:  middleware.TenantIDFromContext(req.Context()),
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
+		defer cancel()
+		response, err := h.logs.Aggregations(ctx, clusterInfo, reqParams)
+		if err != nil {
+			logrus.WithError(err).Error("Failed to list WAF aggregations")
+			httputils.JSONError(w, &v1.HTTPError{
+				Status: http.StatusInternalServerError,
+				Msg:    err.Error(),
+			}, http.StatusInternalServerError)
+			return
+		}
+
+		logrus.Debugf("%s response is: %+v", AggsPath, response)
 		httputils.Encode(w, response)
 	}
 }

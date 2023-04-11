@@ -1,6 +1,12 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 package v1
 
+// Listable represents a response on the API that can be listed
+// and used for the pagination API
+type Listable interface {
+	GetAfterKey() map[string]interface{}
+}
+
 // List represents a List response on the API. It contains
 // the items returned from the request, as well as additional metadata.
 type List[T any] struct {
@@ -17,4 +23,8 @@ type List[T any] struct {
 	// This is useful if the number of hits is greater than the number of results
 	// requested by the client.
 	TotalHits int64 `json:"total_hits,omitempty"`
+}
+
+func (l *List[T]) GetAfterKey() map[string]interface{} {
+	return l.AfterKey
 }

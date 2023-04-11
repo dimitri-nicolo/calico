@@ -5,6 +5,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/olivere/elastic/v7"
 
@@ -15,6 +16,7 @@ import (
 // L7LogsInterface has methods related to L7 logs.
 type L7LogsInterface interface {
 	List(context.Context, v1.Params) (*v1.List[v1.L7Log], error)
+	ListInto(context.Context, v1.Params, v1.Listable) error
 	Create(context.Context, []v1.L7Log) (*v1.BulkResponse, error)
 	Aggregations(context.Context, v1.Params) (elastic.Aggregations, error)
 }
@@ -33,16 +35,27 @@ func newL7Logs(c Client, cluster string) L7LogsInterface {
 // List gets the l7Logs for the given input params.
 func (f *l7Logs) List(ctx context.Context, params v1.Params) (*v1.List[v1.L7Log], error) {
 	l7Logs := v1.List[v1.L7Log]{}
+	err := f.ListInto(ctx, params, &l7Logs)
+	return &l7Logs, err
+}
+
+// ListInto gets the L7 Logs for the given input params.
+func (f *l7Logs) ListInto(ctx context.Context, params v1.Params, l v1.Listable) error {
+	if l == nil {
+		return fmt.Errorf("list cannot be nil")
+	}
+
 	err := f.restClient.Post().
 		Path("/l7/logs").
 		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).
-		Into(&l7Logs)
+		Into(l)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &l7Logs, nil
+
+	return nil
 }
 
 func (f *l7Logs) Aggregations(ctx context.Context, params v1.Params) (elastic.Aggregations, error) {

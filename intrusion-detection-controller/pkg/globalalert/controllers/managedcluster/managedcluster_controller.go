@@ -5,25 +5,24 @@ package managedcluster
 import (
 	"context"
 
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/worker"
-	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
-	lma "github.com/projectcalico/calico/lma/pkg/elastic"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/worker"
 )
 
 // managedClusterController is responsible for watching ManagedCluster resource.
 type managedClusterController struct {
-	lmaESClient            lma.Client
-	indexSettings          es.IndexSettings
+	lsClient               client.Client
 	calicoCLI              calicoclient.Interface
 	createManagedCalicoCLI func(string) (calicoclient.Interface, error)
 	cancel                 context.CancelFunc
@@ -32,14 +31,9 @@ type managedClusterController struct {
 
 // NewManagedClusterController returns a managedClusterController and returns health.Pinger for resources it watches and also
 // returns another health.Pinger that monitors health of GlobalAlertController in each of the managed cluster.
-func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
-	enableAnomalyDetection bool, anomalyTrainingController controller.AnomalyDetectionController,
-	anomalyDetectionController controller.AnomalyDetectionController, indexSettings es.IndexSettings, namespace string,
-	createManagedCalicoCLI func(string) (calicoclient.Interface, error), fipsModeEnabled bool,
-) controller.Controller {
+func NewManagedClusterController(calicoCLI calicoclient.Interface, lsClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, anomalyTrainingController controller.AnomalyDetectionController, anomalyDetectionController controller.AnomalyDetectionController, namespace string, createManagedCalicoCLI func(string) (calicoclient.Interface, error), fipsModeEnabled bool) controller.Controller {
 	m := &managedClusterController{
-		lmaESClient:            lmaESClient,
-		indexSettings:          indexSettings,
+		lsClient:               lsClient,
 		calicoCLI:              calicoCLI,
 		createManagedCalicoCLI: createManagedCalicoCLI,
 	}
@@ -48,8 +42,7 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient l
 	m.worker = worker.New(&managedClusterReconciler{
 		createManagedCalicoCLI:          m.createManagedCalicoCLI,
 		namespace:                       namespace,
-		indexSettings:                   m.indexSettings,
-		lmaESClient:                     m.lmaESClient,
+		lsClient:                        lsClient,
 		managementCalicoCLI:             m.calicoCLI,
 		k8sClient:                       k8sClient,
 		adTrainingController:            anomalyTrainingController,

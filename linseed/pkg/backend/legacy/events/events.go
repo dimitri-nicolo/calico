@@ -88,8 +88,8 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 		return nil, err
 	}
 
-	start, end := logtools.ExtractTimeRange(opts.QueryParams.TimeRange)
-	q, err := logtools.BuildQuery(b.helper, i, opts.LogSelectionParams, start, end)
+	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
+	q, err := logtools.BuildQuery(b.helper, i, opts, start, end)
 	if err != nil {
 		return nil, err
 	}

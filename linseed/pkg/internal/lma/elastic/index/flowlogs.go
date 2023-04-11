@@ -27,7 +27,7 @@ func FlowLogs() Helper {
 // flowLogsIndexHelper implements the Helper interface for flow logs.
 type flowLogsIndexHelper struct{}
 
-// NewFlowLogsConverter returns a converter instance defined for flow logs.
+// NewFlowLogsConverter returns a Converter instance defined for flow logs.
 func NewFlowLogsConverter() converter {
 	return converter{flowLogsAtomToElastic}
 }

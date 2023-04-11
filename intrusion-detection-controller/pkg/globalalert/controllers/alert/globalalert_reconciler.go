@@ -5,6 +5,8 @@ package alert
 import (
 	"context"
 
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -15,7 +17,6 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/alert"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
-	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
@@ -24,7 +25,7 @@ import (
 // processes, transforms the Elasticsearch result and updates the Elasticsearch events index and GlobalAlert status.
 // If GlobalAlert resource is deleted or updated, cancel the current goroutine, and create a new one if resource is updated.
 type globalAlertReconciler struct {
-	lmaESClient            lma.Client
+	linseedClient          client.Client
 	k8sClient              kubernetes.Interface
 	calicoCLI              calicoclient.Interface
 	podTemplateQuery       podtemplate.ADPodTemplateQuery
@@ -67,8 +68,7 @@ func (r *globalAlertReconciler) Reconcile(namespacedName types.NamespacedName) e
 		return nil
 	}
 
-	alert, err := alert.NewAlert(obj, r.calicoCLI, r.lmaESClient, r.k8sClient, r.enableAnomalyDetection, r.podTemplateQuery,
-		r.adDetectionController, r.adTrainingController, r.clusterName, r.namespace, r.fipsModeEnabled)
+	alert, err := alert.NewAlert(obj, r.calicoCLI, r.linseedClient, r.k8sClient, r.enableAnomalyDetection, r.podTemplateQuery, r.adDetectionController, r.adTrainingController, r.clusterName, r.namespace, r.fipsModeEnabled)
 	if err != nil {
 		return err
 	}

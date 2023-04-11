@@ -47,7 +47,6 @@ var _ = Describe("Elasticsearch UT", func() {
 		if err != nil {
 			panic("could not create unit under test: " + err.Error())
 		}
-		// elasticClient = lmaESCli.Backend()
 		err = lmaESCli.CreateEventsIndex(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 		if err != nil {

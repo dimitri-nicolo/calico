@@ -1,0 +1,27 @@
+{
+  "composite_aggs": {
+    "composite": {
+      "after": {
+        "source_name_aggr": "tigera-manager-6b665bb867-*",
+        "source_namespace": "tigera-manager"
+      },
+      "size": 500,
+      "sources": [
+        {
+          "source_name_aggr": {
+            "terms": {
+              "field": "source_name_aggr"
+            }
+          }
+        },
+        {
+          "source_namespace": {
+            "terms": {
+              "field": "source_namespace"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "composite_aggs": {
+    "buckets": [
+      {
+        "key": {
+          "source_name_aggr": "tigera-manager-6999478494-*",
+          "source_namespace": "tigera-manager"
+        },
+        "doc_count": 6
+      }
+    ]
+  }
+}

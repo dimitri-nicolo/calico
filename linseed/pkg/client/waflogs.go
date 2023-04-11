@@ -4,6 +4,9 @@ package client
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/olivere/elastic/v7"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
@@ -14,7 +17,9 @@ import (
 // WAFLogsInterface has methods related to waf logs.
 type WAFLogsInterface interface {
 	List(context.Context, v1.Params) (*v1.List[v1.WAFLog], error)
+	ListInto(context.Context, v1.Params, v1.Listable) error
 	Create(context.Context, []v1.WAFLog) (*v1.BulkResponse, error)
+	Aggregations(context.Context, v1.Params) (elastic.Aggregations, error)
 }
 
 // WAFLogs implements WAFLogsInterface.
@@ -31,16 +36,27 @@ func newWAFLogs(c Client, cluster string) WAFLogsInterface {
 // List gets the waf for the given input params.
 func (f *waf) List(ctx context.Context, params v1.Params) (*v1.List[v1.WAFLog], error) {
 	logs := v1.List[v1.WAFLog]{}
+	err := f.ListInto(ctx, params, &logs)
+	return &logs, err
+}
+
+// ListInto gets the WAF Logs for the given input params.
+func (f *waf) ListInto(ctx context.Context, params v1.Params, l v1.Listable) error {
+	if l == nil {
+		return fmt.Errorf("list cannot be nil")
+	}
+
 	err := f.restClient.Post().
 		Path("/waf/logs").
 		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).
-		Into(&logs)
+		Into(l)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &logs, nil
+
+	return nil
 }
 
 func (f *waf) Create(ctx context.Context, wafl []v1.WAFLog) (*v1.BulkResponse, error) {
@@ -70,4 +86,18 @@ func (f *waf) Create(ctx context.Context, wafl []v1.WAFLog) (*v1.BulkResponse, e
 		Do(ctx).
 		Into(&resp)
 	return &resp, err
+}
+
+func (f *waf) Aggregations(ctx context.Context, params v1.Params) (elastic.Aggregations, error) {
+	aggs := elastic.Aggregations{}
+	err := f.restClient.Post().
+		Path("/waf/logs/aggregation").
+		Params(params).
+		Cluster(f.clusterID).
+		Do(ctx).
+		Into(&aggs)
+	if err != nil {
+		return nil, err
+	}
+	return aggs, nil
 }

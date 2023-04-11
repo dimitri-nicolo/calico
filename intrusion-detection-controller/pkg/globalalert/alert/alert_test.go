@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/query"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -13,11 +15,10 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	adj "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/anomalydetection"
-	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/elastic"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+
+	adj "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/anomalydetection"
 )
 
 const (
@@ -55,12 +56,12 @@ var _ = Describe("GlobalAlert", func() {
 			}
 
 			fakeClient := fake.NewSimpleClientset(globalAlert)
-			mockElasticSvc := &es.MockService{}
+			mockSvc := &query.MockService{}
 			mockADJSvc := &adj.MockService{}
 			a := &Alert{
 				alert:       globalAlert,
 				clusterName: "test-cluster",
-				es:          mockElasticSvc,
+				service:     mockSvc,
 				adj:         mockADJSvc,
 				calicoCLI:   fakeClient,
 			}
@@ -69,9 +70,8 @@ var _ = Describe("GlobalAlert", func() {
 			var wg sync.WaitGroup
 			wg.Add(3)
 
-			mockElasticSvc.On("DeleteElasticWatchers", mock.Anything).Return()
-			mockElasticSvc.On("ExecuteAlert", mock.Anything).Run(func(args mock.Arguments) {
-				for _, c := range mockElasticSvc.ExpectedCalls {
+			mockSvc.On("ExecuteAlert", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				for _, c := range mockSvc.ExpectedCalls {
 					if c.Method == "ExecuteAlert" {
 						wg.Done()
 						c.ReturnArguments = mock.Arguments{v3.GlobalAlertStatus{
@@ -126,23 +126,22 @@ var _ = Describe("GlobalAlert", func() {
 			}
 
 			fakeClient := fake.NewSimpleClientset(globalAlert)
-			mockElasticSvc := &es.MockService{}
+			mockSvc := &query.MockService{}
 			mockADJSvc := &adj.MockService{}
 
 			a := &Alert{
 				alert:       globalAlert,
 				clusterName: "test-cluster",
 				calicoCLI:   fakeClient,
-				es:          mockElasticSvc,
+				service:     mockSvc,
 				adj:         mockADJSvc,
 			}
 
 			var wg sync.WaitGroup
 			wg.Add(2)
 			firstOnIntervalCall := true
-			mockElasticSvc.On("DeleteElasticWatchers", mock.Anything).Return()
-			mockElasticSvc.On("ExecuteAlert", mock.Anything).Run(func(args mock.Arguments) {
-				for _, c := range mockElasticSvc.ExpectedCalls {
+			mockSvc.On("ExecuteAlert", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				for _, c := range mockSvc.ExpectedCalls {
 					if c.Method == "ExecuteAlert" {
 						wg.Done()
 						diff := time.Since(now)
@@ -203,12 +202,12 @@ var _ = Describe("GlobalAlert", func() {
 			}
 
 			fakeClient := fake.NewSimpleClientset(globalAlert)
-			mockElasticSvc := &es.MockService{}
+			mockSvc := &query.MockService{}
 			mockADJSvc := &adj.MockService{}
 			a := &Alert{
 				alert:                  globalAlert,
 				clusterName:            "test-cluster",
-				es:                     mockElasticSvc,
+				service:                mockSvc,
 				adj:                    mockADJSvc,
 				calicoCLI:              fakeClient,
 				enableAnomalyDetection: true,

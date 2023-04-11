@@ -5,6 +5,8 @@ package managedcluster
 import (
 	"context"
 
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+
 	log "github.com/sirupsen/logrus"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,8 +17,6 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/alert"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
-	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
-	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -28,9 +28,8 @@ import (
 // If managed cluster is updated or deleted close the corresponding GlobalAlertController this in turn cancels all the goroutines.
 type managedClusterReconciler struct {
 	namespace                       string
-	lmaESClient                     lma.Client
+	lsClient                        lsclient.Client
 	k8sClient                       kubernetes.Interface
-	indexSettings                   es.IndexSettings
 	managementCalicoCLI             calicoclient.Interface
 	podTemplateQuery                podtemplate.ADPodTemplateQuery
 	createManagedCalicoCLI          func(string) (calicoclient.Interface, error)
@@ -104,25 +103,9 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 
 	clusterName := getVariantSpecificClusterName(name)
 
-	// Create a managedCluster specific lma client
-	envCfg := lma.MustLoadConfig()
-	envCfg.ElasticIndexSuffix = clusterName
-	lmaESClient, err := lma.NewFromConfig(envCfg)
-	if err != nil {
-		log.WithError(err).Errorf("failed to create Elastic client for managed cluster %s", clusterName)
-		cancel()
-		return err
-	}
-	if err := lmaESClient.CreateEventsIndex(ctx); err != nil {
-		log.WithError(err).Errorf("failed to create events index for managed cluster %s", clusterName)
-		cancel()
-		return err
-	}
-
 	// create the GlobalAlertController for the managed cluster - this controller will monitor all GlobalAlert operations
 	// of the assigned managedcluster
-	alertController, _ := alert.NewGlobalAlertController(managedCLI, lmaESClient, r.k8sClient,
-		r.enableAnomalyDetection, r.podTemplateQuery, r.adDetectionController, r.adTrainingController, clusterName, r.namespace, r.fipsModeEnabled)
+	alertController, _ := alert.NewGlobalAlertController(managedCLI, r.lsClient, r.k8sClient, r.enableAnomalyDetection, r.podTemplateQuery, r.adDetectionController, r.adTrainingController, clusterName, r.namespace, r.fipsModeEnabled)
 
 	r.alertNameToAlertControllerState[clusterName] = alertControllerState{
 		alertController: alertController,

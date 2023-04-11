@@ -219,7 +219,7 @@ func (h l7) Aggregation() http.HandlerFunc {
 		defer cancel()
 		response, err := h.logs.Aggregations(ctx, clusterInfo, reqParams)
 		if err != nil {
-			log.WithError(err).Error("Failed to list L7 stats")
+			log.WithError(err).Error("Failed to list L7 aggregations")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),

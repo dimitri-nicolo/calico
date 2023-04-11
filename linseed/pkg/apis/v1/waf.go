@@ -2,11 +2,41 @@
 
 package v1
 
-import "time"
+import (
+	gojson "encoding/json"
+	"time"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+)
 
 // WAFLogParams define querying parameters to retrieve BGP logs
 type WAFLogParams struct {
-	QueryParams `json:",inline" validate:"required"`
+	QueryParams     `json:",inline" validate:"required"`
+	QuerySortParams `json:",inline"`
+	Selector        string `json:"selector"`
+}
+
+func (w *WAFLogParams) SetSelector(s string) {
+	w.Selector = s
+}
+
+func (w *WAFLogParams) GetSelector() string {
+	return w.Selector
+}
+
+func (w *WAFLogParams) SetPermissions(verbs []v3.AuthorizedResourceVerbs) {
+	panic("implement me")
+}
+
+func (w *WAFLogParams) GetPermissions() []v3.AuthorizedResourceVerbs {
+	return nil
+}
+
+type WAFLogAggregationParams struct {
+	// Inherit all the normal DNS log selection parameters.
+	WAFLogParams `json:",inline"`
+	Aggregations map[string]gojson.RawMessage `json:"aggregations"`
+	NumBuckets   int                          `json:"num_buckets"`
 }
 
 type WAFLog struct {

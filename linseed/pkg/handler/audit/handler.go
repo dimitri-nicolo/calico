@@ -22,6 +22,7 @@ import (
 
 const (
 	LogPath            = "/audit/logs"
+	AggsPath           = "/audit/logs/aggregation"
 	LogPathBulkPattern = "/audit/logs/%s/bulk"
 )
 
@@ -51,6 +52,11 @@ func (h audit) APIS() []handler.API {
 			Method:  "POST",
 			URL:     fmt.Sprintf(LogPathBulkPattern, v1.AuditLogTypeKube),
 			Handler: h.BulkAuditKube(),
+		},
+		{
+			Method:  "POST",
+			URL:     AggsPath,
+			Handler: h.Aggregation(),
 		},
 	}
 }
@@ -172,6 +178,50 @@ func (h audit) GetLogs() http.HandlerFunc {
 		}
 
 		log.Debugf("%s response is: %+v", LogPath, response)
+		httputils.Encode(w, response)
+	}
+}
+
+// Aggregation handles retrieval of time-series DNS aggregated statistics.
+func (h audit) Aggregation() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		reqParams, err := handler.DecodeAndValidateReqParams[v1.AuditLogAggregationParams](w, req)
+		if err != nil {
+			log.WithError(err).Error("Failed to decode/validate request parameters")
+			var httpErr *v1.HTTPError
+			if errors.As(err, &httpErr) {
+				httputils.JSONError(w, httpErr, httpErr.Status)
+			} else {
+				httputils.JSONError(w, &v1.HTTPError{
+					Msg:    err.Error(),
+					Status: http.StatusBadRequest,
+				}, http.StatusBadRequest)
+			}
+			return
+		}
+
+		if reqParams.Timeout == nil {
+			reqParams.Timeout = &metav1.Duration{Duration: v1.DefaultTimeOut}
+		}
+
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: middleware.ClusterIDFromContext(req.Context()),
+			Tenant:  middleware.TenantIDFromContext(req.Context()),
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
+		defer cancel()
+		response, err := h.logs.Aggregations(ctx, clusterInfo, reqParams)
+		if err != nil {
+			log.WithError(err).Error("Failed to list audit aggregations")
+			httputils.JSONError(w, &v1.HTTPError{
+				Status: http.StatusInternalServerError,
+				Msg:    err.Error(),
+			}, http.StatusInternalServerError)
+			return
+		}
+
+		log.Debugf("%s response is: %+v", AggsPath, response)
 		httputils.Encode(w, response)
 	}
 }

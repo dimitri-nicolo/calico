@@ -1,9 +1,0 @@
-{
-  "hits" : {
-    "total" : {
-      "value" : 645,
-      "relation" : "eq"
-    },
-    "hits" : [ ]
-  }
-}

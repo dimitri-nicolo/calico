@@ -5,7 +5,8 @@ package waf
 import (
 	"context"
 	"fmt"
-	"time"
+
+	"github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
@@ -20,8 +21,8 @@ import (
 )
 
 type wafLogBackend struct {
-	client *elastic.Client
-
+	client    *elastic.Client
+	helper    index.Helper
 	lmaclient lmaelastic.Client
 	templates bapi.Cache
 }
@@ -29,6 +30,7 @@ type wafLogBackend struct {
 func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.WAFBackend {
 	return &wafLogBackend{
 		client:    c.Backend(),
+		helper:    index.WAFLogs(),
 		lmaclient: c,
 		templates: cache,
 	}
@@ -95,11 +97,15 @@ func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WA
 	}
 
 	// Build the query.
+	q, err := b.buildQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
 	query := b.client.Search().
 		Index(b.index(i)).
 		From(startFrom).
 		Size(opts.QueryParams.GetMaxPageSize()).
-		Query(b.buildQuery(i, opts))
+		Query(q)
 
 	results, err := query.Do(ctx)
 	if err != nil {
@@ -124,20 +130,83 @@ func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WA
 	}, nil
 }
 
-// buildQuery builds an elastic query using the given parameters.
-func (b *wafLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.WAFLogParams) elastic.Query {
-	// Parse times from the request. We default to a time-range query
-	// if no other search parameters are given.
-	var start, end time.Time
-	if opts != nil && opts.QueryParams.TimeRange != nil {
-		start = opts.QueryParams.TimeRange.From
-		end = opts.QueryParams.TimeRange.To
-	} else {
-		// Default to the latest 5 minute window.
-		start = time.Now().Add(-5 * time.Minute)
-		end = time.Now()
+func (b *wafLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogAggregationParams) (*elastic.Aggregations, error) {
+	// Get the base query.
+	search, _, err := b.getSearch(ctx, i, &opts.WAFLogParams)
+	if err != nil {
+		return nil, err
 	}
-	return elastic.NewRangeQuery("@timestamp").Gt(start).Lte(end)
+
+	// Add in any aggregations provided by the client. We need to handle two cases - one where this is a
+	// time-series request, and another when it's just an aggregation request.
+	if opts.NumBuckets > 0 {
+		// Time-series.
+		hist := elastic.NewAutoDateHistogramAggregation().
+			Field("@timestamp").
+			Buckets(opts.NumBuckets)
+		for name, agg := range opts.Aggregations {
+			hist = hist.SubAggregation(name, logtools.RawAggregation{RawMessage: agg})
+		}
+		search.Aggregation(v1.TimeSeriesBucketName, hist)
+	} else {
+		// Not time-series. Just add the aggs as they are.
+		for name, agg := range opts.Aggregations {
+			search = search.Aggregation(name, logtools.RawAggregation{RawMessage: agg})
+		}
+	}
+
+	// Do the search.
+	results, err := search.Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &results.Aggregations, nil
+}
+
+func (b *wafLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogParams) (*elastic.SearchService, int, error) {
+	if i.Cluster == "" {
+		return nil, 0, fmt.Errorf("no cluster ID on request")
+	}
+
+	// Get the startFrom param, if any.
+	startFrom, err := logtools.StartFrom(opts)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Build the query.
+	q, err := b.buildQuery(i, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	query := b.client.Search().
+		Index(b.index(i)).
+		Size(opts.GetMaxPageSize()).
+		From(startFrom).
+		Query(q)
+
+	// Configure sorting.
+	if len(opts.Sort) != 0 {
+		for _, s := range opts.Sort {
+			query.Sort(s.Field, !s.Descending)
+		}
+	} else {
+		query.Sort(b.helper.GetTimeField(), true)
+	}
+	return query, startFrom, nil
+}
+
+// buildQuery builds an elastic query using the given parameters.
+func (b *wafLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.WAFLogParams) (elastic.Query, error) {
+	// Start with the base flow log query using common fields.
+	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
+	query, err := logtools.BuildQuery(b.helper, i, opts, start, end)
+	if err != nil {
+		return nil, err
+	}
+
+	return query, nil
 }
 
 func (b *wafLogBackend) index(i bapi.ClusterInfo) string {

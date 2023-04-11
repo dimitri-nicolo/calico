@@ -92,6 +92,9 @@ type AuditBackend interface {
 
 	// List lists logs that match the given parameters.
 	List(context.Context, ClusterInfo, *v1.AuditLogParams) (*v1.List[v1.AuditLog], error)
+
+	// Gets Audit log aggregations
+	Aggregations(context.Context, ClusterInfo, *v1.AuditLogAggregationParams) (*elastic.Aggregations, error)
 }
 
 // BGPBackend defines the interface for interacting with bgp logs.
@@ -110,6 +113,9 @@ type WAFBackend interface {
 
 	// List lists logs that match the given parameters.
 	List(context.Context, ClusterInfo, *v1.WAFLogParams) (*v1.List[v1.WAFLog], error)
+
+	// Gets WAF log aggregations
+	Aggregations(context.Context, ClusterInfo, *v1.WAFLogAggregationParams) (*elastic.Aggregations, error)
 }
 
 // EventsBackend defines the interface for interacting with events.

@@ -220,7 +220,7 @@ func (h Flows) Aggregation() http.HandlerFunc {
 		defer cancel()
 		response, err := h.logs.Aggregations(ctx, clusterInfo, reqParams)
 		if err != nil {
-			logrus.WithError(err).Error("Failed to list DNS stats")
+			logrus.WithError(err).Error("Failed to list L3 aggregations")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),

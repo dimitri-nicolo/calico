@@ -50,10 +50,8 @@ import (
 const (
 	TigeraIntrusionDetectionNamespace = "tigera-intrusion-detection"
 
-	DefaultConfigMapNamespace             = TigeraIntrusionDetectionNamespace
-	DefaultSecretsNamespace               = TigeraIntrusionDetectionNamespace
-	DefaultMultiClusterForwardingEndpoint = "https://tigera-manager.tigera-manager.svc:9443"
-	DefaultMultiClusterForwardingCA       = "/manager-tls/cert"
+	DefaultConfigMapNamespace = TigeraIntrusionDetectionNamespace
+	DefaultSecretsNamespace   = TigeraIntrusionDetectionNamespace
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -200,8 +198,6 @@ func main() {
 		healthPingers = append(healthPingers, s)
 	}
 
-	clusterName := getStrEnvOrDefault("CLUSTER_NAME", "cluster")
-
 	var managementAlertController, managedClusterController controller.Controller
 	var alertHealthPinger health.Pingers
 
@@ -218,25 +214,17 @@ func main() {
 			podtemplateQuery = podtemplate.NewPodTemplateQuery(k8sClient)
 
 			anomalyTrainingController = anomalydetection.NewADJobTrainingController(k8sClient,
-				calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, clusterName)
+				calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, cfg.ClusterName)
 
 			// detection controller depends on GlobalAlert such removing the pinger as one might not be present at start
 			anomalyDetectionController = anomalydetection.NewADJobDetectionController(ctx, k8sClient,
-				calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, clusterName)
+				calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, cfg.ClusterName)
 		}
 
-		fipsModeEnabled := getStrEnvOrDefault("FIPS_MODE_ENABLED", "") == "true"
-		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, lmaESClient, k8sClient,
-			enableAnomalyDetection, podtemplateQuery, anomalyDetectionController, anomalyTrainingController, clusterName,
-			TigeraIntrusionDetectionNamespace, fipsModeEnabled)
+		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, linseed, k8sClient, enableAnomalyDetection, podtemplateQuery, anomalyDetectionController, anomalyTrainingController, cfg.ClusterName, TigeraIntrusionDetectionNamespace, cfg.FIPSMode)
 		healthPingers = append(healthPingers, &alertHealthPinger)
 
-		multiClusterForwardingEndpoint := getStrEnvOrDefault("MULTI_CLUSTER_FORWARDING_ENDPOINT", DefaultMultiClusterForwardingEndpoint)
-		multiClusterForwardingCA := getStrEnvOrDefault("MULTI_CLUSTER_FORWARDING_CA", DefaultMultiClusterForwardingCA)
-
-		managedClusterController = managedcluster.NewManagedClusterController(calicoClient, lmaESClient, k8sClient,
-			enableAnomalyDetection, anomalyTrainingController, anomalyDetectionController, indexSettings, TigeraIntrusionDetectionNamespace,
-			util.ManagedClusterClient(k8sConfig, multiClusterForwardingEndpoint, multiClusterForwardingCA), fipsModeEnabled)
+		managedClusterController = managedcluster.NewManagedClusterController(calicoClient, linseed, k8sClient, enableAnomalyDetection, anomalyTrainingController, anomalyDetectionController, TigeraIntrusionDetectionNamespace, util.ManagedClusterClient(k8sConfig, cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA), cfg.FIPSMode)
 	}
 
 	f := forwarder.NewEventForwarder("eventforwarder-1", e)
