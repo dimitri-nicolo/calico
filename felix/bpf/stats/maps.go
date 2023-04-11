@@ -17,15 +17,12 @@
 
 package stats
 
-import (
-	"github.com/projectcalico/calico/felix/bpf"
-)
+import "github.com/projectcalico/calico/felix/bpf/maps"
 
 const keySize = 36
 const keyValueSize = 8
 
-var SocketStatsMapParameters = bpf.MapParameters{
-	Filename:   "/sys/fs/bpf/tc/globals/cali_sstats",
+var SocketStatsMapParameters = maps.MapParameters{
 	Type:       "lru_hash",
 	KeySize:    keySize,
 	ValueSize:  keyValueSize,
@@ -34,6 +31,6 @@ var SocketStatsMapParameters = bpf.MapParameters{
 	Version:    2,
 }
 
-func SocketStatsMap(mc *bpf.MapContext) bpf.Map {
-	return mc.NewPinnedMap(SocketStatsMapParameters)
+func SocketStatsMap() maps.Map {
+	return maps.NewPinnedMap(SocketStatsMapParameters)
 }

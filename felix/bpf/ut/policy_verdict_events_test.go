@@ -22,7 +22,6 @@ import (
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/polprog"
 	"github.com/projectcalico/calico/felix/bpf/state"
@@ -121,7 +120,7 @@ func TestPolicyVerdictEvents(t *testing.T) {
 		},
 	}
 
-	evnts, err := events.New(&bpf.MapContext{}, events.SourcePerfEvents)
+	evnts, err := events.New(events.SourcePerfEvents)
 	Expect(err).NotTo(HaveOccurred())
 	defer evnts.Close()
 

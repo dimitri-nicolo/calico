@@ -25,6 +25,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 )
 
@@ -57,7 +58,7 @@ func (ap *AttachPoint) Config() string {
 }
 
 func (ap *AttachPoint) JumpMapFDMapKey() string {
-	return string(bpf.HookXDP)
+	return bpf.HookXDP.String()
 }
 
 func (ap *AttachPoint) FileName() string {
@@ -145,8 +146,8 @@ func (ap *AttachPoint) AttachProgram() (int, error) {
 			continue
 		}
 		// TODO: We need to set map size here like tc.
-		pinPath := bpf.MapPinPath(m.Type(), m.Name(), ap.Iface, bpf.HookXDP)
-		if err := m.SetPinPath(pinPath); err != nil {
+		pinDir := bpf.MapPinDir(m.Type(), m.Name(), ap.Iface, bpf.HookXDP)
+		if err := m.SetPinPath(path.Join(pinDir, m.Name())); err != nil {
 			return -1, fmt.Errorf("error pinning map %s: %w", m.Name(), err)
 		}
 	}
@@ -247,7 +248,7 @@ func (ap *AttachPoint) DetachProgram() error {
 	ap.Log().Infof("XDP program detached. program ID: %v", progID)
 
 	// Program is detached, now remove the json file we saved for it
-	if err = bpf.ForgetAttachedProg(ap.IfaceName(), "xdp"); err != nil {
+	if err = bpf.ForgetAttachedProg(ap.IfaceName(), bpf.HookXDP); err != nil {
 		return fmt.Errorf("failed to delete hash of BPF program from disk: %w", err)
 	}
 	return nil
@@ -279,7 +280,7 @@ func updateJumpMap(obj *libbpf.Obj) error {
 }
 
 func UpdateJumpMap(obj *libbpf.Obj, progs map[int]string) error {
-	mapName := bpf.JumpMapName()
+	mapName := maps.JumpMapName()
 
 	for idx, name := range progs {
 		err := obj.UpdateJumpMap(mapName, name, idx)

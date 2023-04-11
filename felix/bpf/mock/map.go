@@ -18,14 +18,16 @@
 package mock
 
 import (
+	"fmt"
+
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
-	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 )
 
 type Map struct {
-	bpf.MapParameters
+	maps.MapParameters
 	logCxt *logrus.Entry
 
 	Contents map[string]string
@@ -40,7 +42,7 @@ type Map struct {
 	DeleteErr error
 }
 
-func (m *Map) MapFD() bpf.MapFD {
+func (m *Map) MapFD() maps.FD {
 	panic("implement me")
 }
 
@@ -64,10 +66,10 @@ func (m *Map) GetName() string {
 }
 
 func (m *Map) Path() string {
-	return m.Filename
+	return m.VersionedFilename()
 }
 
-func (m *Map) Iter(f bpf.IterCallback) error {
+func (m *Map) Iter(f maps.IterCallback) error {
 	m.IterCount++
 
 	if m.IterErr != nil {
@@ -76,7 +78,7 @@ func (m *Map) Iter(f bpf.IterCallback) error {
 
 	for kstr, vstr := range m.Contents {
 		action := f([]byte(kstr), []byte(vstr))
-		if action == bpf.IterDelete {
+		if action == maps.IterDelete {
 			delete(m.Contents, kstr)
 		}
 	}
@@ -102,6 +104,16 @@ func (m *Map) Update(k, v []byte) error {
 	m.Contents[string(k)] = string(v)
 
 	return nil
+}
+
+func (m *Map) UpdateWithFlags(k, v []byte, flags int) error {
+	if (flags & unix.BPF_EXIST) != 0 {
+		if _, ok := m.Contents[string(k)]; ok {
+			return fmt.Errorf("key exists")
+		}
+	}
+
+	return m.Update(k, v)
 }
 
 func (m *Map) Get(k []byte) ([]byte, error) {
@@ -155,10 +167,10 @@ func (m *Map) IsEmpty() bool {
 }
 
 func (*Map) ErrIsNotExists(err error) bool {
-	return bpf.IsNotExists(err)
+	return maps.IsNotExists(err)
 }
 
-func NewMockMap(params bpf.MapParameters) *Map {
+func NewMockMap(params maps.MapParameters) *Map {
 	if params.KeySize <= 0 {
 		logrus.WithField("params", params).Panic("KeySize should be >0")
 	}
@@ -178,7 +190,7 @@ func NewMockMap(params bpf.MapParameters) *Map {
 	return m
 }
 
-var _ bpf.Map = (*Map)(nil)
+var _ maps.Map = (*Map)(nil)
 
 type DummyMap struct{}
 
@@ -198,7 +210,7 @@ func (*DummyMap) EnsureExists() error {
 	return nil
 }
 
-func (*DummyMap) MapFD() bpf.MapFD {
+func (*DummyMap) MapFD() maps.FD {
 	return 0
 }
 
@@ -206,7 +218,7 @@ func (*DummyMap) Path() string {
 	return "DummyMap"
 }
 
-func (*DummyMap) Iter(_ bpf.IterCallback) error {
+func (*DummyMap) Iter(_ maps.IterCallback) error {
 	return nil
 }
 
@@ -231,5 +243,5 @@ func (*DummyMap) CopyDeltaFromOldMap() error {
 }
 
 func (*DummyMap) ErrIsNotExists(err error) bool {
-	return bpf.IsNotExists(err)
+	return maps.IsNotExists(err)
 }

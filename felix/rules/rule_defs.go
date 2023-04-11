@@ -345,6 +345,7 @@ type DefaultRuleRenderer struct {
 	filterAllowAction            iptables.Action
 	mangleAllowAction            iptables.Action
 	blockCIDRAction              iptables.Action
+	IptablesFilterDenyAction     iptables.Action
 	nfqueueRuleDelayDeniedPacket *iptables.Rule
 }
 
@@ -432,6 +433,7 @@ type Config struct {
 	ActionOnDrop              string
 	IptablesFilterAllowAction string
 	IptablesMangleAllowAction string
+	IptablesFilterDenyAction  string
 
 	FailsafeInboundHostPorts  []config.ProtoPort
 	FailsafeOutboundHostPorts []config.ProtoPort
@@ -523,6 +525,18 @@ func (c *Config) validate() {
 func NewRenderer(config Config) RuleRenderer {
 	log.WithField("config", config).Info("Creating rule renderer.")
 	config.validate()
+
+	// First, what should we do when packets are not accepted.
+	var IptablesFilterDenyAction iptables.Action
+	switch config.IptablesFilterDenyAction {
+	case "REJECT":
+		log.Info("packets that are not passed by any policy or profile will be rejected.")
+		IptablesFilterDenyAction = iptables.RejectAction{}
+	default:
+		log.Info("packets that are not passed by any policy or profile will be dropped.")
+		IptablesFilterDenyAction = iptables.DropAction{}
+	}
+
 	// Convert configured actions to rule slices.
 	// First, what should we actually do when we'd normally drop a packet?  For
 	// sandbox mode, we support allowing the packet instead, or logging it.
@@ -560,7 +574,7 @@ func NewRenderer(config Config) RuleRenderer {
 		}
 		dropRules = append(dropRules, iptables.Rule{
 			Match:  iptables.Match(),
-			Action: iptables.DropAction{},
+			Action: IptablesFilterDenyAction,
 		})
 	}
 
@@ -572,6 +586,9 @@ func NewRenderer(config Config) RuleRenderer {
 		for _, rule := range dropRules {
 			inputAcceptActions = append(inputAcceptActions, rule.Action)
 		}
+	case "REJECT":
+		log.Info("Workload to host packets will be rejected.")
+		inputAcceptActions = []iptables.Action{iptables.RejectAction{}}
 	case "ACCEPT":
 		log.Info("Workload to host packets will be accepted.")
 		inputAcceptActions = []iptables.Action{iptables.AcceptAction{}}
@@ -620,6 +637,7 @@ func NewRenderer(config Config) RuleRenderer {
 		filterAllowAction:            filterAllowAction,
 		mangleAllowAction:            mangleAllowAction,
 		blockCIDRAction:              blockCIDRAction,
+		IptablesFilterDenyAction:     IptablesFilterDenyAction,
 	}
 }
 

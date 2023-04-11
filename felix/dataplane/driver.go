@@ -333,6 +333,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				EndpointToHostAction:      configParams.DefaultEndpointToHostAction,
 				IptablesFilterAllowAction: configParams.IptablesFilterAllowAction,
 				IptablesMangleAllowAction: configParams.IptablesMangleAllowAction,
+				IptablesFilterDenyAction:  configParams.IptablesFilterDenyAction,
 
 				FailsafeInboundHostPorts:  configParams.FailsafeInboundHostPorts,
 				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
@@ -516,11 +517,12 @@ func StartDataplaneDriver(configParams *config.Config,
 
 		if configParams.BPFExternalServiceMode == "dsr" {
 			dpConfig.BPFNodePortDSREnabled = true
+			dpConfig.BPFDSROptoutCIDRs = configParams.BPFDSROptoutCIDRs
 		}
 
 		stopChan := make(chan *sync.WaitGroup, 1)
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig, stopChan)
-		intDP.Start(configParams)
+		intDP.Start()
 
 		// Set source-destination-check on AWS EC2 instance.
 		if configParams.AWSSrcDstCheck != string(apiv3.AWSSrcDstCheckOptionDoNothing) {

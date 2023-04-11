@@ -22,17 +22,15 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/kprobe"
 )
 
 func TestKprobe(t *testing.T) {
 	RegisterTestingT(t)
-	mc := &bpf.MapContext{}
-	bpfEvnt, err := events.New(mc, events.SourcePerfEvents)
+	bpfEvnt, err := events.New(events.SourcePerfEvents)
 	Expect(err).NotTo(HaveOccurred())
-	kp := kprobe.New("debug", bpfEvnt, mc)
+	kp := kprobe.New("debug", bpfEvnt)
 	Expect(kp).NotTo(BeNil())
 	Expect(err).NotTo(HaveOccurred())
 	err = kp.AttachTCPv4()

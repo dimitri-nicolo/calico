@@ -23,6 +23,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 )
 
 const (
@@ -40,28 +41,28 @@ type kprobeFDs struct {
 
 type bpfKprobe struct {
 	logLevel   string
-	kpStatsMap bpf.Map
+	kpStatsMap maps.Map
 	evnt       events.Events
 	objMap     map[string]*libbpf.Obj
 	linkMap    map[string]*libbpf.Link
 }
 
-func New(logLevel string, evnt events.Events, mc *bpf.MapContext) *bpfKprobe {
-	kpStatsMap := MapKpStats(mc)
+func New(logLevel string, evnt events.Events) *bpfKprobe {
+	kpStatsMap := MapKpStats()
 	err := kpStatsMap.EnsureExists()
 	if err != nil {
 		log.WithError(err).Errorf("kprobe: failed to create cali_kpstats map")
 		return nil
 	}
 
-	ePathMap := MapEpath(mc)
+	ePathMap := MapEpath()
 	err = ePathMap.EnsureExists()
 	if err != nil {
 		log.WithError(err).Error("kprobe: failed to create cali_epath map")
 		return nil
 	}
 
-	execMap := MapExec(mc)
+	execMap := MapExec()
 	err = execMap.EnsureExists()
 	if err != nil {
 		log.WithError(err).Error("kprobe: failed to create cali_exec map")

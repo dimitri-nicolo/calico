@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020,2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -142,7 +142,6 @@ func ConvertCalicoResourceToK8sResource(resIn Resource) (Resource, error) {
 	romCopy.ResourceVersion = ""
 	romCopy.Labels = nil
 	romCopy.Annotations = nil
-	romCopy.UID = ""
 
 	// Marshal the data and store the json representation in the annotations.
 	metadataBytes, err := json.Marshal(romCopy)

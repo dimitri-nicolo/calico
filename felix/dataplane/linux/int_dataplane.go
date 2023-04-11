@@ -41,18 +41,27 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/felix/aws"
-	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfmap"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/failsafes"
-	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/bpf/kprobe"
+	bpfmaps "github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/bpf/nat"
-	bpfproxy "github.com/projectcalico/calico/felix/bpf/proxy"
 	"github.com/projectcalico/calico/felix/bpf/stats"
-	"github.com/projectcalico/calico/felix/bpf/tc"
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
+	"github.com/projectcalico/calico/felix/environment"
+	"github.com/projectcalico/calico/felix/iptables/cmdshim"
+
+	"github.com/projectcalico/calico/felix/bpf"
+	bpfconntrack "github.com/projectcalico/calico/felix/bpf/conntrack"
+	bpfifstate "github.com/projectcalico/calico/felix/bpf/ifstate"
+	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
+	bpfnat "github.com/projectcalico/calico/felix/bpf/nat"
+	bpfproxy "github.com/projectcalico/calico/felix/bpf/proxy"
+	bpfroutes "github.com/projectcalico/calico/felix/bpf/routes"
+
+	"github.com/projectcalico/calico/felix/bpf/tc"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/collector"
@@ -60,13 +69,11 @@ import (
 	felixconfig "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dataplane/common"
 	"github.com/projectcalico/calico/felix/dataplane/linux/debugconsole"
-	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/ipsec"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/iptables"
-	"github.com/projectcalico/calico/felix/iptables/cmdshim"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/k8sutils"
 	"github.com/projectcalico/calico/felix/labelindex"
@@ -223,11 +230,12 @@ type Config struct {
 	BPFL3IfacePattern                  *regexp.Regexp
 	XDPEnabled                         bool
 	XDPAllowGeneric                    bool
-	BPFConntrackTimeouts               conntrack.Timeouts
+	BPFConntrackTimeouts               bpfconntrack.Timeouts
 	BPFCgroupV2                        string
 	BPFConnTimeLBEnabled               bool
 	BPFMapRepin                        bool
 	BPFNodePortDSREnabled              bool
+	BPFDSROptoutCIDRs                  []string
 	BPFPSNATPorts                      numorstring.Port
 	BPFMapSizeRoute                    int
 	BPFMapSizeConntrack                int
@@ -388,6 +396,7 @@ type InternalDataplane struct {
 	managersWithRouteTables []ManagerWithRouteTables
 	managersWithRouteRules  []ManagerWithRouteRules
 	ruleRenderer            rules.RuleRenderer
+	defaultRuleRenderer     rules.DefaultRuleRenderer
 
 	lookupCache *calc.LookupsCache
 
@@ -808,7 +817,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(newPolicyManager(rawTableV4, mangleTableV4, filterTableV4, ruleRenderer, 4))
 
 		// Clean up any leftover BPF state.
-		err := nat.RemoveConnectTimeLoadBalancer("")
+		err := bpfnat.RemoveConnectTimeLoadBalancer("")
 		if err != nil {
 			log.WithError(err).Info("Failed to remove BPF connect-time load balancer, ignoring.")
 		}
@@ -832,21 +841,24 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		defaultRPFilter = []byte{'1'}
 	}
 
-	bpfMapContext := bpfmap.CreateBPFMapContext(
-		config.BPFMapSizeIPSets,
-		config.BPFMapSizeNATFrontend,
-		config.BPFMapSizeNATBackend,
-		config.BPFMapSizeNATAffinity,
-		config.BPFMapSizeRoute,
-		config.BPFMapSizeConntrack,
-		config.BPFMapSizeIfState,
-		config.BPFMapRepin,
-	)
+	if config.BPFMapRepin {
+		bpfmaps.EnableRepin()
+	} else {
+		bpfmaps.DisableRepin()
+	}
+
+	bpfipsets.SetMapSize(config.BPFMapSizeIPSets)
+	bpfnat.SetMapSizes(config.BPFMapSizeNATFrontend, config.BPFMapSizeNATBackend, config.BPFMapSizeNATAffinity)
+	bpfroutes.SetMapSize(config.BPFMapSizeRoute)
+	bpfconntrack.SetMapSize(config.BPFMapSizeConntrack)
+	bpfifstate.SetMapSize(config.BPFMapSizeIfState)
 
 	var (
+		bpfEndpointManager *bpfEndpointManager
+		bpfMaps            *bpfmap.Maps
+
 		bpfEvnt              events.Events
 		bpfEventPoller       *bpfEventPoller
-		bpfEndpointManager   *bpfEndpointManager
 		eventProtoStatsSink  *events.EventProtoStatsSink
 		eventTcpStatsSink    *events.EventTcpStatsSink
 		eventProcessPathSink *events.EventProcessPathSink
@@ -856,9 +868,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		processInfoCache             collector.ProcessInfoCache
 		processPathInfoCache         *events.BPFProcessPathCache
 	)
+
 	if config.BPFEnabled || config.FlowLogsCollectProcessInfo || config.FlowLogsCollectTcpStats {
 		var err error
-		bpfEvnt, err = events.New(bpfMapContext, events.SourcePerfEvents)
+		bpfEvnt, err = events.New(events.SourcePerfEvents)
 		if err != nil {
 			log.WithError(err).Error("Failed to create perf event")
 			config.FlowLogsCollectProcessInfo = false
@@ -888,7 +901,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 	if config.FlowLogsCollectProcessInfo {
 		installKprobes := func() error {
-			kp := kprobe.New(config.BPFLogLevel, bpfEvnt, bpfMapContext)
+			kp := kprobe.New(config.BPFLogLevel, bpfEvnt)
 			if kp != nil {
 				if config.FlowLogsCollectProcessPath {
 					err = kp.AttachSyscall()
@@ -928,7 +941,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.FlowLogsCollectTcpStats {
 		eventTcpStatsSink = events.NewEventTcpStatsSink()
 		bpfEventPoller.Register(events.TypeTcpStats, eventTcpStatsSink.HandleEvent)
-		socketStatsMap := stats.SocketStatsMap(bpfMapContext)
+		socketStatsMap := stats.SocketStatsMap()
 		err := socketStatsMap.EnsureExists()
 		if err != nil {
 			log.WithError(err).Error("Failed to create socket stats BPF map. Disabling socket stats collection")
@@ -956,7 +969,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	var bpfIPSets egressIPSets
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
-		err := bpfmap.CreateBPFMaps(bpfMapContext)
+		var err error
+		bpfMaps, err = bpfmap.CreateBPFMaps()
 		if err != nil {
 			log.WithError(err).Panic("error creating bpf maps")
 		}
@@ -969,13 +983,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		ipSetsV4 := bpfipsets.NewBPFIPSets(
 			ipSetsConfigV4,
 			ipSetIDAllocator,
-			bpfMapContext.IpsetsMap,
+			bpfMaps.IpsetsMap,
 			dp.loopSummarizer,
 		)
 		dp.ipSets = append(dp.ipSets, ipSetsV4)
 		ipsetsManager.AddDataplane(ipSetsV4)
 		bpfIPSets = ipSetsV4
-		bpfRTMgr := newBPFRouteManager(&config, bpfMapContext, dp.loopSummarizer)
+		bpfRTMgr := newBPFRouteManager(&config, bpfMaps, dp.loopSummarizer)
 		dp.RegisterManager(bpfRTMgr)
 
 		// Create an 'ipset' to represent trusted DNS servers.
@@ -997,7 +1011,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// The failsafe manager sets up the failsafe port map.  It's important that it is registered before the
 		// endpoint managers so that the map is brought up to date before they run for the first time.
 		failsafeMgr := failsafes.NewManager(
-			bpfMapContext.FailsafesMap,
+			bpfMaps.FailsafesMap,
 			config.RulesConfig.FailsafeInboundHostPorts,
 			config.RulesConfig.FailsafeOutboundHostPorts,
 			dp.loopSummarizer,
@@ -1008,7 +1022,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		bpfEndpointManager, err = newBPFEndpointManager(
 			nil,
 			&config,
-			bpfMapContext,
+			bpfMaps,
 			fibLookupEnabled,
 			workloadIfaceRegex,
 			ipSetIDAllocator,
@@ -1030,8 +1044,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		bpfEndpointManager.Features = dataplaneFeatures
 
-		conntrackScanner := conntrack.NewScanner(bpfMapContext.CtMap,
-			conntrack.NewLivenessScanner(config.BPFConntrackTimeouts, config.BPFNodePortDSREnabled))
+		conntrackScanner := bpfconntrack.NewScanner(bpfMaps.CtMap,
+			bpfconntrack.NewLivenessScanner(config.BPFConntrackTimeouts, config.BPFNodePortDSREnabled))
 
 		// Before we start, scan for all finished / timed out connections to
 		// free up the conntrack table asap as it may take time to sync up the
@@ -1051,7 +1065,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			kp, err := bpfproxy.StartKubeProxy(
 				config.KubeClientSet,
 				config.Hostname,
-				bpfMapContext,
+				bpfMaps,
 				bpfproxyOpts...,
 			)
 			if err != nil {
@@ -1059,7 +1073,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			}
 			bpfRTMgr.setHostIPUpdatesCallBack(kp.OnHostIPsUpdate)
 			bpfRTMgr.setRoutesCallBacks(kp.OnRouteUpdate, kp.OnRouteDelete)
-			conntrackScanner.AddUnlocked(conntrack.NewStaleNATScanner(kp))
+			conntrackScanner.AddUnlocked(bpfconntrack.NewStaleNATScanner(kp))
 		} else {
 			log.Info("BPF enabled but no Kubernetes client available, unable to run kube-proxy module.")
 		}
@@ -1073,8 +1087,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				}
 			}
 			// Activate the connect-time load balancer.
-			err = nat.InstallConnectTimeLoadBalancer(
-				config.BPFCgroupV2, config.BPFLogLevel, config.BPFConntrackTimeouts.UDPLastSeen, bpfMapContext, excludeUDP)
+			err = bpfnat.InstallConnectTimeLoadBalancer(
+				config.BPFCgroupV2, config.BPFLogLevel, config.BPFConntrackTimeouts.UDPLastSeen, excludeUDP)
 			if err != nil {
 				log.WithError(err).Panic("BPFConnTimeLBEnabled but failed to attach connect-time load balancer, bailing out.")
 			}
@@ -1579,7 +1593,7 @@ func writeMTUFile(mtu int) error {
 	// Write the smallest MTU to disk so other components can rely on this calculation consistently.
 	filename := "/var/lib/calico/mtu"
 	log.Debugf("Writing %d to "+filename, mtu)
-	if err := os.WriteFile(filename, []byte(fmt.Sprintf("%d", mtu)), 0o644); err != nil {
+	if err := os.WriteFile(filename, []byte(fmt.Sprintf("%d", mtu)), 0644); err != nil {
 		log.WithError(err).Error("Unable to write to " + filename)
 		return err
 	}
@@ -1821,7 +1835,7 @@ func (d *InternalDataplane) RegisterManager(mgr Manager) {
 	d.allManagers = append(d.allManagers, mgr)
 }
 
-func (d *InternalDataplane) Start(configParams *config.Config) {
+func (d *InternalDataplane) Start() {
 	// Do our start-of-day configuration.
 	d.doStaticDataplaneConfig()
 
@@ -1839,7 +1853,7 @@ func (d *InternalDataplane) Start(configParams *config.Config) {
 		}
 		go d.egressIPManager.KeepVXLANDeviceInSync(mtu, 10*time.Second)
 	}
-	go d.loopUpdatingDataplane(configParams)
+	go d.loopUpdatingDataplane()
 	go d.loopReportingStatus()
 	go d.ifaceMonitor.MonitorInterfaces()
 	go d.monitorHostMTU()
@@ -2016,8 +2030,8 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 			},
 			iptables.Rule{
 				Match:   iptables.Match().MarkMatchesWithMask(tcdefs.MarkSeenFallThrough, tcdefs.MarkSeenFallThroughMask),
-				Comment: []string{"Drop packets from unknown flows."},
-				Action:  iptables.DropAction{},
+				Comment: []string{fmt.Sprintf("%s packets from unknown flows.", d.defaultRuleRenderer.IptablesFilterDenyAction)},
+				Action:  d.defaultRuleRenderer.IptablesFilterDenyAction,
 			},
 		)
 
@@ -2036,10 +2050,10 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 
 		for _, prefix := range rulesConfig.WorkloadIfacePrefixes {
 			fwdRules = append(fwdRules,
-				// Drop packets that have come from a workload but have not been through our BPF program.
+				// Drop/reject packets that have come from a workload but have not been through our BPF program.
 				iptables.Rule{
 					Match:   iptables.Match().InInterface(prefix+"+").NotMarkMatchesWithMask(tcdefs.MarkSeen, tcdefs.MarkSeenMask),
-					Action:  iptables.DropAction{},
+					Action:  d.defaultRuleRenderer.IptablesFilterDenyAction,
 					Comment: []string{"From workload without BPF seen mark"},
 				},
 			)
@@ -2056,7 +2070,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 			// Catch any workload to host packets that haven't been through the BPF program.
 			inputRules = append(inputRules, iptables.Rule{
 				Match:  iptables.Match().InInterface(prefix+"+").NotMarkMatchesWithMask(tcdefs.MarkSeen, tcdefs.MarkSeenMask),
-				Action: iptables.DropAction{},
+				Action: d.defaultRuleRenderer.IptablesFilterDenyAction,
 			})
 		}
 
@@ -2075,7 +2089,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 				// In BPF mode, we don't support IPv6 yet.  Drop it.
 				fwdRules = append(fwdRules, iptables.Rule{
 					Match:   iptables.Match().OutInterface(prefix + "+"),
-					Action:  iptables.DropAction{},
+					Action:  d.defaultRuleRenderer.IptablesFilterDenyAction,
 					Comment: []string{"To workload, drop IPv6."},
 				})
 			}
@@ -2322,7 +2336,7 @@ func (d *InternalDataplane) shutdownXDPCompletely() error {
 	return fmt.Errorf("Failed to wipe the XDP state after %v tries over %v seconds: Error %v", maxTries, waitInterval, err)
 }
 
-func (d *InternalDataplane) loopUpdatingDataplane(configParams *config.Config) {
+func (d *InternalDataplane) loopUpdatingDataplane() {
 	log.Info("Started internal iptables dataplane driver loop")
 	healthTicks := time.NewTicker(healthInterval).C
 	d.reportHealth()

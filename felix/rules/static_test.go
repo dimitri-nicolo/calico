@@ -80,6 +80,16 @@ var _ = Describe("Static", func() {
 	}
 
 	for _, trueOrFalse := range []bool{true, false} {
+		var denyAction Action
+		denyAction = DropAction{}
+		denyActionCommand := "DROP"
+		denyActionString := "Drop"
+		if trueOrFalse {
+			denyAction = RejectAction{}
+			denyActionCommand = "REJECT"
+			denyActionString = "Reject"
+		}
+
 		kubeIPVSEnabled := trueOrFalse
 		Describe(fmt.Sprintf("with default config and IPVS=%v", kubeIPVSEnabled), func() {
 			BeforeEach(func() {
@@ -110,6 +120,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 					KubeIPVSSupportEnabled:           kubeIPVSEnabled,
 					KubeNodePortRanges:               []numorstring.Port{{MinPort: 30030, MaxPort: 30040, PortName: ""}},
+					IptablesFilterDenyAction:         denyActionCommand,
 					DNSTrustedServers:                []config.ServerPort{{IP: "1.2.3.4", Port: 53}, {IP: "fd5f:83a5::34:2", Port: 53}},
 				}
 			})
@@ -146,7 +157,7 @@ var _ = Describe("Static", func() {
 							{Match: Match().MarkMatchesWithMask(0x40, 0x40),
 								Action: JumpAction{Target: ChainRpfSkip}},
 							{Match: Match().MarkSingleBitSet(0x40).RPFCheckFailed(false),
-								Action: DropAction{}},
+								Action: denyAction},
 							{Match: Match().MarkClear(0x40),
 								Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 							{Match: Match().MarkSingleBitSet(0x10),
@@ -591,7 +602,7 @@ var _ = Describe("Static", func() {
 						{Match: Match().MarkMatchesWithMask(0x40, 0x40),
 							Action: JumpAction{Target: ChainRpfSkip}},
 						{Match: Match().MarkSingleBitSet(0x40).RPFCheckFailed(false),
-							Action: DropAction{}},
+							Action: denyAction},
 						{Match: Match().MarkClear(0x40),
 							Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 						{Match: Match().MarkSingleBitSet(0x10),
@@ -713,6 +724,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 					IptablesMarkDrop:                 0x200,
 					KubeIPVSSupportEnabled:           kubeIPVSEnabled,
+					IptablesFilterDenyAction:         denyActionCommand,
 				}
 			})
 
@@ -730,8 +742,8 @@ var _ = Describe("Static", func() {
 						Action:  AcceptAction{},
 						Comment: []string{"Allow IPIP packets from Calico hosts"}},
 					{Match: Match().ProtocolNum(4),
-						Action:  DropAction{},
-						Comment: []string{"Drop IPIP packets from non-Calico hosts"}},
+						Action:  RejectAction{},
+						Comment: []string{"Reject IPIP packets from non-Calico hosts"}},
 
 					// Forward check chain.
 					{Action: ClearMarkAction{Mark: epMark}},
@@ -772,8 +784,8 @@ var _ = Describe("Static", func() {
 						Action:  AcceptAction{},
 						Comment: []string{"Allow IPIP packets from Calico hosts"}},
 					{Match: Match().ProtocolNum(4),
-						Action:  DropAction{},
-						Comment: []string{"Drop IPIP packets from non-Calico hosts"}},
+						Action:  denyAction,
+						Comment: []string{fmt.Sprintf("%s IPIP packets from non-Calico hosts", denyActionString)}},
 
 					// Per-prefix workload jump rules.  Note use of goto so that we
 					// don't return here.
@@ -2058,47 +2070,58 @@ var _ = Describe("DropRules", func() {
 		rr = NewRenderer(conf).(*DefaultRuleRenderer)
 	})
 
-	Describe("with LOGandDROP override", func() {
-		BeforeEach(func() {
-			conf = Config{
-				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-				DNSPolicyNfqueueID:               100,
-				DNSPacketsNfqueueID:              101,
-				WorkloadIfacePrefixes:            []string{"cali", "tap"},
-				ActionOnDrop:                     "LOGandDROP",
-				IptablesMarkAccept:               0x10,
-				IptablesMarkPass:                 0x20,
-				IptablesMarkScratch0:             0x40,
-				IptablesMarkScratch1:             0x80,
-				IptablesMarkDrop:                 0x200,
-				IptablesMarkEgress:               0x400,
-				IptablesMarkEndpoint:             0xff000,
-				IptablesMarkNonCaliEndpoint:      0x1000,
-				IptablesMarkDNSPolicy:            0x00001,
-				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-			}
-		})
+	for _, trueOrFalse := range []bool{true, false} {
+		var denyAction Action
+		denyAction = DropAction{}
+		denyActionCommand := "DROP"
+		if trueOrFalse {
+			denyAction = RejectAction{}
+			denyActionCommand = "REJECT"
+		}
 
-		It("should render a log and a drop", func() {
-			Expect(rr.DropRules(Match().Protocol("tcp"))).To(Equal([]Rule{
-				{Match: Match().Protocol("tcp"), Action: LogAction{Prefix: "calico-drop"}},
-				{Match: Match().Protocol("tcp"), Action: DropAction{}},
-			}))
-		})
-
-		Describe("with a custom prefix", func() {
+		Describe("with LOGandDROP override", func() {
 			BeforeEach(func() {
-				conf.IptablesLogPrefix = "my-prefix"
+				conf = Config{
+					DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
+					DNSPolicyNfqueueID:               100,
+					DNSPacketsNfqueueID:              101,
+					WorkloadIfacePrefixes:            []string{"cali", "tap"},
+					ActionOnDrop:                     "LOGandDROP",
+					IptablesMarkAccept:               0x10,
+					IptablesMarkPass:                 0x20,
+					IptablesMarkScratch0:             0x40,
+					IptablesMarkScratch1:             0x80,
+					IptablesMarkDrop:                 0x200,
+					IptablesMarkEgress:               0x400,
+					IptablesMarkEndpoint:             0xff000,
+					IptablesMarkNonCaliEndpoint:      0x1000,
+					IptablesMarkDNSPolicy:            0x00001,
+					IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+					IptablesFilterDenyAction:         denyActionCommand,
+				}
 			})
 
 			It("should render a log and a drop", func() {
 				Expect(rr.DropRules(Match().Protocol("tcp"))).To(Equal([]Rule{
-					{Match: Match().Protocol("tcp"), Action: LogAction{Prefix: "my-prefix"}},
-					{Match: Match().Protocol("tcp"), Action: DropAction{}},
+					{Match: Match().Protocol("tcp"), Action: LogAction{Prefix: "calico-drop"}},
+					{Match: Match().Protocol("tcp"), Action: denyAction},
 				}))
 			})
+
+			Describe("with a custom prefix", func() {
+				BeforeEach(func() {
+					conf.IptablesLogPrefix = "my-prefix"
+				})
+
+				It("should render a log and a drop", func() {
+					Expect(rr.DropRules(Match().Protocol("tcp"))).To(Equal([]Rule{
+						{Match: Match().Protocol("tcp"), Action: LogAction{Prefix: "my-prefix"}},
+						{Match: Match().Protocol("tcp"), Action: denyAction},
+					}))
+				})
+			})
 		})
-	})
+	}
 })
 
 func findChain(chains []*Chain, name string) *Chain {

@@ -121,6 +121,7 @@ var _ = Describe("Constructor test", func() {
 				EndpointToHostAction:      configParams.DefaultEndpointToHostAction,
 				IptablesFilterAllowAction: configParams.IptablesFilterAllowAction,
 				IptablesMangleAllowAction: configParams.IptablesMangleAllowAction,
+				IptablesFilterDenyAction:  configParams.IptablesFilterDenyAction,
 			},
 			DisableDNSPolicyPacketProcessor: true,
 			IPIPMTU:                         configParams.IpInIpMtu,

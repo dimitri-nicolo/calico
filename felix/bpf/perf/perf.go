@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 
-	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 )
 
 const (
@@ -39,9 +39,8 @@ const (
 )
 
 // Map returns a bpf map suitable for perf events
-func Map(mc *bpf.MapContext, name string, maxCPUs int) bpf.Map {
-	return mc.NewPinnedMap(bpf.MapParameters{
-		Filename:   "/sys/fs/bpf/tc/globals/cali_" + name,
+func Map(name string, maxCPUs int) maps.Map {
+	return maps.NewPinnedMap(maps.MapParameters{
 		Type:       "perf_event_array",
 		KeySize:    4, // must be 4
 		ValueSize:  4, // must be 4
@@ -84,7 +83,7 @@ type Perf interface {
 }
 
 type perf struct {
-	bpfMap       bpf.Map
+	bpfMap       maps.Map
 	rings        []*perfRing
 	ready        []*perfRing
 	readyCnt     int
@@ -97,7 +96,7 @@ type perf struct {
 }
 
 // New creates a new Perf that interfaces through the provided bpf map.
-func New(m bpf.Map, ringSize int, opts ...Option) (Perf, error) {
+func New(m maps.Map, ringSize int, opts ...Option) (Perf, error) {
 	var err error
 
 	cpus := numCPUs()

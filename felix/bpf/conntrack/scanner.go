@@ -21,7 +21,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/jitter"
 )
 
@@ -94,7 +94,7 @@ type EntryScannerSynced interface {
 // It provides a delete-save iteration over the conntrack table for multiple
 // evaluation functions, to keep their implementation simpler.
 type Scanner struct {
-	ctMap    bpf.Map
+	ctMap    maps.Map
 	scanners []EntryScanner
 
 	wg       sync.WaitGroup
@@ -104,7 +104,7 @@ type Scanner struct {
 
 // NewScanner returns a scanner for the given conntrack map and the set of
 // EntryScanner. They are executed in the provided order on each entry.
-func NewScanner(ctMap bpf.Map, scanners ...EntryScanner) *Scanner {
+func NewScanner(ctMap maps.Map, scanners ...EntryScanner) *Scanner {
 	return &Scanner{
 		ctMap:    ctMap,
 		scanners: scanners,
@@ -127,7 +127,7 @@ func (s *Scanner) Scan() {
 	used := 0
 	cleaned := 0
 
-	err := s.ctMap.Iter(func(k, v []byte) bpf.IteratorAction {
+	err := s.ctMap.Iter(func(k, v []byte) maps.IteratorAction {
 		copy(ctKey[:], k[:])
 		copy(ctVal[:], v[:])
 
@@ -147,10 +147,10 @@ func (s *Scanner) Scan() {
 					log.Debug("Deleting conntrack entry.")
 				}
 				cleaned++
-				return bpf.IterDelete
+				return maps.IterDelete
 			}
 		}
-		return bpf.IterNone
+		return maps.IterNone
 	})
 
 	conntrackCounterSweeps.Inc()

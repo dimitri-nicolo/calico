@@ -12,7 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/bpf/perf"
 	"github.com/projectcalico/calico/felix/bpf/state"
 )
@@ -75,15 +75,15 @@ type eventRaw interface {
 // Events is an interface for consuming events
 type Events interface {
 	Next() (Event, error)
-	Map() bpf.Map
+	Map() maps.Map
 	Close() error
 }
 
 // New creates a new Events object to consume events.
-func New(mc *bpf.MapContext, src Source) (Events, error) {
+func New(src Source) (Events, error) {
 	switch src {
 	case SourcePerfEvents:
-		return newPerfEvents(mc)
+		return newPerfEvents()
 	}
 
 	return nil, errors.Errorf("unknown events source: %s", src)
@@ -91,17 +91,17 @@ func New(mc *bpf.MapContext, src Source) (Events, error) {
 
 type perfEventsReader struct {
 	events perf.Perf
-	bpfMap bpf.Map
+	bpfMap maps.Map
 
 	next func() (Event, error)
 }
 
-func newPerfEvents(mc *bpf.MapContext) (Events, error) {
+func newPerfEvents() (Events, error) {
 	if runtime.NumCPU() > MaxCPUs {
 		return nil, errors.Errorf("more cpus (%d) than the max supported (%d)", runtime.NumCPU(), 128)
 	}
 
-	perfMap := perf.Map(mc, "perf_evnt", MaxCPUs)
+	perfMap := perf.Map("perf_evnt", MaxCPUs)
 	if err := perfMap.EnsureExists(); err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (e *perfEventsReader) Next() (Event, error) {
 	return e.next()
 }
 
-func (e *perfEventsReader) Map() bpf.Map {
+func (e *perfEventsReader) Map() maps.Map {
 	return e.bpfMap
 }
 

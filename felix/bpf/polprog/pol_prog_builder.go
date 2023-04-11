@@ -21,8 +21,7 @@ import (
 	"strings"
 
 	"github.com/projectcalico/calico/felix/bpf/ipsets"
-
-	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 
 	log "github.com/sirupsen/logrus"
 
@@ -42,9 +41,9 @@ type Builder struct {
 	rulePartID      int
 	ipSetIDProvider ipSetIDProvider
 
-	ipSetMapFD         bpf.MapFD
-	stateMapFD         bpf.MapFD
-	jumpMapFD          bpf.MapFD
+	ipSetMapFD         maps.FD
+	stateMapFD         maps.FD
+	jumpMapFD          maps.FD
 	policyDebugEnabled bool
 	forIPv6            bool
 
@@ -60,7 +59,7 @@ type ipSetIDProvider interface {
 // Option is an additional option that can change default behaviour
 type Option func(b *Builder)
 
-func NewBuilder(ipSetIDProvider ipSetIDProvider, ipsetMapFD, stateMapFD, jumpMapFD bpf.MapFD, opts ...Option) *Builder {
+func NewBuilder(ipSetIDProvider ipSetIDProvider, ipsetMapFD, stateMapFD, jumpMapFD maps.FD, opts ...Option) *Builder {
 	b := &Builder{
 		ipSetIDProvider: ipSetIDProvider,
 		ipSetMapFD:      ipsetMapFD,

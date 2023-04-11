@@ -80,7 +80,7 @@ func (m *Map) MaxEntries() int {
 	return int(C.bpf_map__max_entries(m.bpfMap))
 }
 
-func (m *Map) SetMapSize(size uint32) error {
+func (m *Map) SetSize(size int) error {
 	_, err := C.bpf_map_set_max_entries(m.bpfMap, C.uint(size))
 	if err != nil {
 		return fmt.Errorf("setting %s map size failed %w", m.Name(), err)
@@ -138,8 +138,7 @@ func (m *Map) NextMap() (*Map, error) {
 	return &Map{bpfMap: bpfMap, bpfObj: m.bpfObj}, nil
 }
 
-func (o *Obj) AttachClassifier(secName, ifName, hook string) (int, error) {
-	isIngress := 0
+func (o *Obj) AttachClassifier(secName, ifName string, ingress bool) (int, error) {
 	cSecName := C.CString(secName)
 	cIfName := C.CString(ifName)
 	defer C.free(unsafe.Pointer(cSecName))
@@ -149,11 +148,7 @@ func (o *Obj) AttachClassifier(secName, ifName, hook string) (int, error) {
 		return -1, err
 	}
 
-	if hook == string(QdiskIngress) {
-		isIngress = 1
-	}
-
-	ret, err := C.bpf_tc_program_attach(o.obj, cSecName, C.int(ifIndex), C.int(isIngress))
+	ret, err := C.bpf_tc_program_attach(o.obj, cSecName, C.int(ifIndex), C.bool(ingress))
 	if err != nil {
 		return -1, fmt.Errorf("error attaching tc program %w", err)
 	}
@@ -371,6 +366,7 @@ const (
 	GlobalsRPFOptionEnabled uint32 = C.CALI_GLOBALS_RPF_OPTION_ENABLED
 	GlobalsRPFOptionStrict  uint32 = C.CALI_GLOBALS_RPF_OPTION_STRICT
 	GlobalsEgressIPEnabled  uint32 = C.CALI_GLOBALS_IS_EGRESS_IP_ENABLED
+	GlobalsNoDSRCidrs       uint32 = C.CALI_GLOBALS_NO_DSR_CIDRS
 )
 
 func TcSetGlobals(

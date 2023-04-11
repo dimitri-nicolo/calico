@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/ipsets"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -54,16 +54,14 @@ var ipsetsCmd = &cobra.Command{
 }
 
 func dumpIPSets() error {
-	ipsetMap := ipsets.Map(&bpf.MapContext{})
+	ipsetMap := ipsets.Map()
 
 	if err := ipsetMap.Open(); err != nil {
 		return errors.WithMessage(err, "failed to open map")
 	}
 
 	membersBySet := map[uint64][]string{}
-	err := ipsetMap.Iter(func(k, v []byte) bpf.IteratorAction {
-		log.Debugf("K: %v", k)
-		log.Debugf("V: %v", v)
+	err := ipsetMap.Iter(func(k, v []byte) maps.IteratorAction {
 		var entry ipsets.IPSetEntry
 		copy(entry[:], k[:])
 		var member string
@@ -73,7 +71,7 @@ func dumpIPSets() error {
 			member = fmt.Sprintf("%s:%d (proto %d)", entry.Addr(), entry.Port(), entry.Protocol())
 		}
 		membersBySet[entry.SetID()] = append(membersBySet[entry.SetID()], member)
-		return bpf.IterNone
+		return maps.IterNone
 	})
 	if err != nil {
 		return err

@@ -35,7 +35,6 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-	"github.com/projectcalico/calico/typha/pkg/discovery"
 )
 
 var (
@@ -193,6 +192,7 @@ type Config struct {
 	BPFL3IfacePattern                  *regexp.Regexp   `config:"regexp;"`
 	BPFConnectTimeLoadBalancingEnabled bool             `config:"bool;true"`
 	BPFExternalServiceMode             string           `config:"oneof(tunnel,dsr);tunnel;non-zero"`
+	BPFDSROptoutCIDRs                  []string         `config:"cidr-list;;"`
 	BPFKubeProxyIptablesCleanupEnabled bool             `config:"bool;true"`
 	BPFKubeProxyMinSyncPeriod          time.Duration    `config:"seconds;1"`
 	BPFKubeProxyEndpointSlicesEnabled  bool             `config:"bool;true"`
@@ -291,6 +291,7 @@ type Config struct {
 	DropActionOverride          string `config:"oneof(DROP,ACCEPT,LOGandDROP,LOGandACCEPT);DROP;non-zero,die-on-fail"`
 	IptablesFilterAllowAction   string `config:"oneof(ACCEPT,RETURN);ACCEPT;non-zero,die-on-fail"`
 	IptablesMangleAllowAction   string `config:"oneof(ACCEPT,RETURN);ACCEPT;non-zero,die-on-fail"`
+	IptablesFilterDenyAction    string `config:"oneof(DROP,REJECT);DROP;non-zero,die-on-fail"`
 	LogPrefix                   string `config:"string;calico-packet"`
 	LogDropActionOverride       bool   `config:"bool;false"`
 
@@ -543,7 +544,7 @@ type Config struct {
 	Variant string `config:"string;CalicoEnterprise"`
 
 	// Configures MTU auto-detection.
-	MTUIfacePattern *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[copsx].*|(eth|wlan|wwan).*)"`
+	MTUIfacePattern *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[Pcopsx].*|(eth|wlan|wwan).*)"`
 
 	// Configures Transparent proxying modes
 	TPROXYMode             string `config:"oneof(Disabled,Enabled,EnabledAllServices);Disabled"`
@@ -1315,13 +1316,6 @@ func (config *Config) SetLoadClientConfigFromEnvironmentFunction(fnc func() (*ap
 func (config *Config) OverrideParam(name, value string) (bool, error) {
 	config.internalOverrides[name] = value
 	return config.UpdateFrom(config.internalOverrides, InternalOverride)
-}
-
-func (config *Config) TyphaDiscoveryOpts() []discovery.Option {
-	return []discovery.Option{
-		discovery.WithAddrOverride(config.TyphaAddr),
-		discovery.WithKubeService(config.TyphaK8sNamespace, config.TyphaK8sServiceName),
-	}
 }
 
 // RouteTableIndices compares provided args for the deprecated RoutTableRange arg
