@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/google/btree"
 
 	"github.com/google/btree"
 
@@ -245,7 +245,7 @@ func (p *PolKV) String() string {
 	return fmt.Sprintf("%s(%s)", p.Key.Name, orderStr)
 }
 
-func (p *PolKV) governsType(wanted string) bool {
+func (p PolKV) governsType(wanted string) bool {
 	// Back-compatibility: no Types means Ingress and Egress.
 	if len(p.Value.Types) == 0 {
 		return true
@@ -258,7 +258,7 @@ func (p *PolKV) governsType(wanted string) bool {
 	return false
 }
 
-func (p *PolKV) GovernsIngress() bool {
+func (p PolKV) GovernsIngress() bool {
 	if p.ingress == nil {
 		governsIngress := p.governsType("ingress")
 		p.ingress = &governsIngress
@@ -266,7 +266,7 @@ func (p *PolKV) GovernsIngress() bool {
 	return *p.ingress
 }
 
-func (p *PolKV) GovernsEgress() bool {
+func (p PolKV) GovernsEgress() bool {
 	if p.egress == nil {
 		governsEgress := p.governsType("egress")
 		p.egress = &governsEgress
