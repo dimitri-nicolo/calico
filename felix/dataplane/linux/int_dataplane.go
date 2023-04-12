@@ -532,7 +532,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.WithError(err).Error("Failed to write MTU file, pod MTU may not be properly set")
 	}
 
-	featureDetector := environment.NewFeatureDetector(config.FeatureDetectOverrides)
 	dp := &InternalDataplane{
 		toDataplane:    make(chan interface{}, msgPeekLimit),
 		fromDataplane:  make(chan interface{}, 100),
