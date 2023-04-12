@@ -82,6 +82,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DPIActive":                                schema_pkg_apis_projectcalico_v3_DPIActive(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DPIErrorCondition":                        schema_pkg_apis_projectcalico_v3_DPIErrorCondition(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DPINode":                                  schema_pkg_apis_projectcalico_v3_DPINode(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.DashboardData":                            schema_pkg_apis_projectcalico_v3_DashboardData(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.DashboardLayout":                          schema_pkg_apis_projectcalico_v3_DashboardLayout(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DeepPacketInspection":                     schema_pkg_apis_projectcalico_v3_DeepPacketInspection(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DeepPacketInspectionList":                 schema_pkg_apis_projectcalico_v3_DeepPacketInspectionList(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DeepPacketInspectionSpec":                 schema_pkg_apis_projectcalico_v3_DeepPacketInspectionSpec(ref),
@@ -3455,6 +3457,137 @@ func schema_pkg_apis_projectcalico_v3_DPINode(ref common.ReferenceCallback) comm
 		},
 		Dependencies: []string{
 			"github.com/tigera/api/pkg/apis/projectcalico/v3.DPIActive", "github.com/tigera/api/pkg/apis/projectcalico/v3.DPIErrorCondition"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_DashboardData(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"selectedNamespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Namespace user selected for the dashboard",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type of the dashboard",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"layout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Layout information of the dashboard card",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.DashboardLayout"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.DashboardLayout"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_DashboardLayout(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"index": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Index of the dashboard",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"xPos": {
+						SchemaProps: spec.SchemaProps{
+							Description: "X coordinate of the top-left corner of the dashboard card",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"yPos": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Y coordinate of the top-left corner of the dashboard card",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"width": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Width of the dashboard card",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"height": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Height of the dashboard card",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"minWidth": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Minimum limit set for the size of the dashboard card width",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"maxWidth": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Maximum limit set for the size of the dashboard card width",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"minHeight": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Minimum limit set for the size of the dashboard card height",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"maxHeight": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Maximum limit set for the size of the dashboard card height",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"isResizable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Whether this dashboard card should be re-sizeable or not",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"isVisible": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Whether this dashboard card should be visible or not",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"isInNamespaceView": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Whether this dashboard is in namespace view or not",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -11865,8 +11998,26 @@ func schema_pkg_apis_projectcalico_v3_UIDashboard(ref common.ReferenceCallback) 
 			SchemaProps: spec.SchemaProps{
 				Description: "UIDashboard contains the data for a UI dashboard.",
 				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"dashboardData": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Array of dashboard data",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.DashboardData"),
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.DashboardData"},
 	}
 }
 
