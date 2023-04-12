@@ -2581,7 +2581,6 @@ func drainChan[T any](c <-chan T, f func(T)) {
 			return
 		}
 	}
-	return
 }
 
 func (d *InternalDataplane) configureKernel() {
