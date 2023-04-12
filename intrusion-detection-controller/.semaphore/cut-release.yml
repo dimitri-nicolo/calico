@@ -17,7 +17,7 @@ global_job_config:
       # Add the key to the ssh agent:
       - ssh-add ~/.keys/*
       - checkout
-      - retry git fetch --unshallow || true
+      - retry git fetch --unshallow
       - cd intrusion-detection-controller
 
 blocks:
