@@ -19,7 +19,7 @@ global_job_config:
       # Add the key to the ssh agent:
       - ssh-add ~/.keys/*
       - checkout
-      - git fetch --unshallow || true
+      - retry git fetch --unshallow
 
 blocks:
   - name: 'Test Cut Release'

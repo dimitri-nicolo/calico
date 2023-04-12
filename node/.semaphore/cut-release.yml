@@ -13,7 +13,7 @@ global_job_config:
   prologue:
     commands:
       - checkout
-      - git fetch --unshallow || true
+      - retry git fetch --unshallow
       - cd node
 
 blocks:
