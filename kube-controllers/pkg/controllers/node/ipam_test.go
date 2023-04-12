@@ -91,8 +91,9 @@ var _ = Describe("IPAM controller UTs", func() {
 	var c *ipamController
 	var cli client.Interface
 	var cs kubernetes.Interface
-	var ni cache.Indexer
 	var stopChan chan struct{}
+	var pods chan *v1.Pod
+	var nodes chan *v1.Node
 
 	BeforeEach(func() {
 		// Create a fake clientset with nothing in it.
@@ -103,7 +104,8 @@ var _ = Describe("IPAM controller UTs", func() {
 
 		// Create a node indexer with the fake clientset
 		factory := informers.NewSharedInformerFactory(cs, 0)
-		ni = factory.Core().V1().Nodes().Informer().GetIndexer()
+		podInformer := factory.Core().V1().Pods().Informer()
+		nodeInformer := factory.Core().V1().Nodes().Informer()
 
 		// Config for the test.
 		cfg := config.NodeControllerConfig{
@@ -113,9 +115,28 @@ var _ = Describe("IPAM controller UTs", func() {
 		// stopChan is used in AfterEach to stop the controller in each test.
 		stopChan = make(chan struct{})
 
+		pods = make(chan *v1.Pod, 1)
+		podInformer.AddEventHandler(&cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				pod := obj.(*v1.Pod)
+				pods <- pod
+			},
+		})
+		nodes = make(chan *v1.Node, 1)
+		nodeInformer.AddEventHandler(&cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				node := obj.(*v1.Node)
+				nodes <- node
+			},
+		})
+
+		factory.Start(stopChan)
+		cache.WaitForCacheSync(stopChan, podInformer.HasSynced)
+		cache.WaitForCacheSync(stopChan, nodeInformer.HasSynced)
+
 		// Create a new controller. We don't register with a data feed,
 		// as the tests themselves will drive the controller.
-		c = NewIPAMController(cfg, cli, cs, ni)
+		c = NewIPAMController(cfg, cli, cs, podInformer.GetIndexer(), nodeInformer.GetIndexer())
 	})
 
 	AfterEach(func() {
@@ -805,6 +826,8 @@ var _ = Describe("IPAM controller UTs", func() {
 
 		// Start the controller.
 		c.Start(stopChan)
+		var node *v1.Node
+		Eventually(nodes).WithTimeout(time.Second).Should(Receive(&node))
 
 		idx := 0
 		handle := "test-handle"
@@ -870,6 +893,8 @@ var _ = Describe("IPAM controller UTs", func() {
 		kn.Name = "kname"
 		_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		var node *v1.Node
+		Eventually(nodes).WithTimeout(time.Second).Should(Receive(&node))
 
 		// Create a pod for the allocation so that it doesn't get GC'd.
 		pod := v1.Pod{}
@@ -878,6 +903,8 @@ var _ = Describe("IPAM controller UTs", func() {
 		pod.Spec.NodeName = "kname"
 		_, err = cs.CoreV1().Pods(pod.Namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		var gotPod *v1.Pod
+		Eventually(pods).WithTimeout(time.Second).Should(Receive(&gotPod))
 
 		// Start the controller.
 		c.Start(stopChan)
@@ -1030,6 +1057,8 @@ var _ = Describe("IPAM controller UTs", func() {
 		kn.Name = "kname"
 		_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		var node *v1.Node
+		Eventually(nodes).WithTimeout(time.Second).Should(Receive(&node))
 
 		// Create a pod for the allocation - the pod will have a single IP in its status, but there will be
 		// two IPs allocated which belong to the pod's handle - one "leaked" and one valid. This simulates
@@ -1043,6 +1072,8 @@ var _ = Describe("IPAM controller UTs", func() {
 		pod.Status.PodIPs = []v1.PodIP{{IP: "10.0.0.0"}}
 		_, err = cs.CoreV1().Pods(pod.Namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		var gotPod *v1.Pod
+		Eventually(pods).WithTimeout(time.Second).Should(Receive(&gotPod))
 
 		// Add a new block with the IPv4 address.
 		idx := 0
@@ -1169,7 +1200,6 @@ var _ = Describe("IPAM controller UTs", func() {
 			// Deleting the pod should invalidate the IPv4 address, and result in both IPs being GC'd.
 			err = cs.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			c.OnKubernetesPodDeleted(fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 		})
 
 		By("Verifying final state", func() {
@@ -1204,6 +1234,8 @@ var _ = Describe("IPAM controller UTs", func() {
 		kn.Name = "kname"
 		_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		var node *v1.Node
+		Eventually(nodes).WithTimeout(time.Second).Should(Receive(&node))
 
 		// Start the controller.
 		c.Start(stopChan)
@@ -1272,6 +1304,8 @@ var _ = Describe("IPAM controller UTs", func() {
 		kn.Name = "kname"
 		_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		var node *v1.Node
+		Eventually(nodes).WithTimeout(time.Second).Should(Receive(&node))
 
 		// Create a pod for the allocation so that it doesn't get GC'd.
 		pod := v1.Pod{}
@@ -1280,6 +1314,8 @@ var _ = Describe("IPAM controller UTs", func() {
 		pod.Spec.NodeName = "kname"
 		_, err = cs.CoreV1().Pods(pod.Namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		var gotPod *v1.Pod
+		Eventually(pods).WithTimeout(time.Second).Should(Receive(&gotPod))
 
 		// Start the controller.
 		c.Start(stopChan)
@@ -1377,6 +1413,8 @@ var _ = Describe("IPAM controller UTs", func() {
 		kn.Name = "kname"
 		_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		var node *v1.Node
+		Eventually(nodes).WithTimeout(time.Second).Should(Receive(&node))
 
 		// Create a pod for the allocation so that it doesn't get GC'd.
 		pod := v1.Pod{}
@@ -1385,6 +1423,8 @@ var _ = Describe("IPAM controller UTs", func() {
 		pod.Spec.NodeName = "kname"
 		_, err = cs.CoreV1().Pods(pod.Namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		var gotPod *v1.Pod
+		Eventually(pods).WithTimeout(time.Second).Should(Receive(&gotPod))
 
 		// Start the controller.
 		c.Start(stopChan)
@@ -1482,6 +1522,8 @@ var _ = Describe("IPAM controller UTs", func() {
 		kn.Name = "kname"
 		_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		var node *v1.Node
+		Eventually(nodes).WithTimeout(time.Second).Should(Receive(&node))
 
 		// Create a pod for the allocation so that it doesn't get GC'd.
 		pod := v1.Pod{}
@@ -1490,6 +1532,8 @@ var _ = Describe("IPAM controller UTs", func() {
 		pod.Spec.NodeName = "kname"
 		_, err = cs.CoreV1().Pods(pod.Namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		var gotPod *v1.Pod
+		Eventually(pods).WithTimeout(time.Second).Should(Receive(&gotPod))
 
 		// Start the controller.
 		c.Start(stopChan)
