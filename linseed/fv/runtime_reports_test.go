@@ -59,8 +59,8 @@ func runtimeReportsSetupAndTeardown(t *testing.T) func() {
 
 	return func() {
 		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_runtime.%s", cluster))
-		testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_runtime.%s", anotherCluster))
+		testutils.CleanupIndices(context.Background(), esClient, cluster)
+		testutils.CleanupIndices(context.Background(), esClient, anotherCluster)
 		logCancel()
 		cancel()
 	}

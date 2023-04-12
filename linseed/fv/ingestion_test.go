@@ -65,7 +65,7 @@ func ingestionSetupAndTeardown(t *testing.T, index string) func() {
 
 	return func() {
 		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("%s%s", index, cluster))
+		testutils.CleanupIndices(context.Background(), esClient, cluster)
 		logCancel()
 		cancel()
 	}

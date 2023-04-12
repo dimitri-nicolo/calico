@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -83,12 +83,16 @@ func (c *TemplateConfig) TemplateName() string {
 }
 
 func (c *TemplateConfig) indexPatterns() string {
-	pattern, ok := IndexPatternsLookup[c.logsType]
+	prefix, ok := IndexPatternsPrefixLookup[c.logsType]
 	if !ok {
-		panic("index pattern for log type not implemented")
+		panic("index prefix for log type not implemented")
 	}
 
-	return pattern
+	if c.info.Tenant == "" {
+		return fmt.Sprintf("%s.%s.*", prefix, c.info.Cluster)
+	}
+
+	return fmt.Sprintf("%s.%s.%s.*", prefix, c.info.Tenant, c.info.Cluster)
 }
 
 func (c *TemplateConfig) mappings() string {
@@ -172,7 +176,7 @@ func (c *TemplateConfig) initIndexSettings() map[string]interface{} {
 
 	indexSettings, err := unmarshal(settingsName)
 	if err != nil {
-		log.WithError(err).Fatal("failed to parse dns settings from embedded file")
+		logrus.WithError(err).Fatal("failed to parse dns settings from embedded file")
 	}
 
 	return indexSettings

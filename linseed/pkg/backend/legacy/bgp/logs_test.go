@@ -61,7 +61,7 @@ func setupTest(t *testing.T) func() {
 
 	// Function contains teardown logic.
 	return func() {
-		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_bgp.%s", cluster))
+		err = testutils.CleanupIndices(context.Background(), esClient, cluster)
 		require.NoError(t, err)
 
 		// Cancel the context

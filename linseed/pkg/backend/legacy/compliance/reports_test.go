@@ -4,7 +4,6 @@ package compliance_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -70,11 +69,7 @@ func setupTest(t *testing.T) func() {
 		cancel()
 
 		// Cleanup any data that might left over from a previous failed run.
-		err = backendutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_compliance_reports.%s", cluster))
-		require.NoError(t, err)
-		err = backendutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_benchmark_results.%s", cluster))
-		require.NoError(t, err)
-		err = backendutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_snapshots.%s", cluster))
+		err = backendutils.CleanupIndices(context.Background(), esClient, cluster)
 		require.NoError(t, err)
 
 		// Cancel logging

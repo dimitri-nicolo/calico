@@ -4,7 +4,6 @@ package events_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -62,7 +61,7 @@ func setupTest(t *testing.T) func() {
 
 	// Function contains teardown logic.
 	return func() {
-		err = backendutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_events.%s", cluster))
+		err = backendutils.CleanupIndices(context.Background(), esClient, cluster)
 		require.NoError(t, err)
 
 		cancel()

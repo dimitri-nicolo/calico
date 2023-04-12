@@ -6,7 +6,6 @@ package fv_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -56,7 +55,7 @@ func wafSetupAndTeardown(t *testing.T) func() {
 
 	return func() {
 		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_waf.%s", cluster))
+		testutils.CleanupIndices(context.Background(), esClient, cluster)
 		logCancel()
 		cancel()
 	}

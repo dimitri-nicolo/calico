@@ -6,7 +6,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"fmt"
 	"sort"
 	"testing"
 	"time"
@@ -70,7 +69,7 @@ func setupTest(t *testing.T) func() {
 		cancel()
 
 		// Cleanup any data that might left over from a previous failed run.
-		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_flows.%s", cluster))
+		err = testutils.CleanupIndices(context.Background(), esClient, cluster)
 		require.NoError(t, err)
 
 		// Cancel logging

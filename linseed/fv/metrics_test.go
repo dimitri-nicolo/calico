@@ -61,7 +61,7 @@ func metricsSetupAndTeardown(t *testing.T) func() {
 
 	return func() {
 		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_dns.%s", cluster))
+		testutils.CleanupIndices(context.Background(), esClient, cluster)
 		logCancel()
 		cancel()
 	}
@@ -119,7 +119,9 @@ func TestMetrics(t *testing.T) {
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 
 		// Check application metrics used for billing
-		require.Contains(t, string(body), fmt.Sprintf(`tigera_linseed_bytes_read{cluster_id="%s",tenant_id=""} 191`, cluster))
-		require.Contains(t, string(body), fmt.Sprintf(`tigera_linseed_bytes_written{cluster_id="%s",tenant_id=""} 423`, cluster))
+		bytes_read_metric := fmt.Sprintf(`tigera_linseed_bytes_read{cluster_id="%s",tenant_id=""} 191`, cluster)
+		bytes_written_metric := fmt.Sprintf(`tigera_linseed_bytes_written{cluster_id="%s",tenant_id=""} 423`, cluster)
+		require.Contains(t, string(body), bytes_read_metric, fmt.Sprintf("missing %s  from %s", bytes_read_metric, string(body)))
+		require.Contains(t, string(body), bytes_written_metric, fmt.Sprintf("missing %s  from %s", bytes_written_metric, string(body)))
 	})
 }
