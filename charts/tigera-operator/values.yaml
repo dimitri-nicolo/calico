@@ -12,8 +12,8 @@ apiServer:
 # Set the tags and subchart to false if you want to bring your own Prometheus
 # operator to your cluster.
 # Alternatively, you can pass the following flags to your installation command:
-# "--set tags.tigera-prometheus-operator=false
-# "--set tigera-prometheus-operator.enabled=false"
+#   --set tags.tigera-prometheus-operator=false
+#   --set tigera-prometheus-operator.enabled=false
 tigera-prometheus-operator:
   enabled: true
 tags:
