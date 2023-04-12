@@ -88,7 +88,7 @@ NODE_CONTAINER_BIN_DIR=./dist/bin/
 NODE_CONTAINER_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node-$(ARCH)
 WINDOWS_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node.exe
 TOOLS_MOUNTNS_BINARY = $(NODE_CONTAINER_BIN_DIR)/mountns-$(ARCH)
-NODE_GIT_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
+NODE_GIT_VERSION?=$(call git-dev-tag)
 NODE_RELEASE_VERSION?=$(call git-release-tag-from-dev-tag)
 
 WINDOWS_INSTALL_SCRIPT := dist/install-calico-windows.ps1
