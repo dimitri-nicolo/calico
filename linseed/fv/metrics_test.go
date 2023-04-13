@@ -73,7 +73,7 @@ func TestMetrics(t *testing.T) {
 	t.Run("should provide a metrics endpoint", func(t *testing.T) {
 		defer metricsSetupAndTeardown(t)()
 
-		client := secureHTTPClient(t)
+		client := mTLSClient(t)
 		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("https://%s/metrics", metricsAddr), "", "")
 		res, _ := doRequest(t, client, httpReqSpec)
 		assert.Equal(t, http.StatusOK, res.StatusCode)
@@ -113,7 +113,7 @@ func TestMetrics(t *testing.T) {
 		actualLogs := testutils.AssertLogIDAndCopyDNSLogsWithoutID(t, resp)
 		require.Equal(t, logs, actualLogs)
 
-		client := secureHTTPClient(t)
+		client := mTLSClient(t)
 		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("https://%s/metrics", metricsAddr), "", "")
 		res, body := doRequest(t, client, httpReqSpec)
 		assert.Equal(t, http.StatusOK, res.StatusCode)

@@ -81,7 +81,7 @@ func TestFV_FlowIngestion(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
-		httpClient := secureHTTPClient(t)
+		httpClient := mTLSClient(t)
 		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(flowLogs))
 
 		// make the request to ingest flows
@@ -131,7 +131,7 @@ func TestFV_DNSIngestion(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
-		httpClient := secureHTTPClient(t)
+		httpClient := mTLSClient(t)
 		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(dnsLogs))
 
 		// make the request to ingest flows
@@ -186,7 +186,7 @@ func TestFV_L7Ingestion(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
-		httpClient := secureHTTPClient(t)
+		httpClient := mTLSClient(t)
 		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(l7Logs))
 
 		// make the request to ingest flows
@@ -235,7 +235,7 @@ func TestFV_KubeAuditIngestion(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
-		httpClient := secureHTTPClient(t)
+		httpClient := mTLSClient(t)
 		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(kubeAuditLogs))
 
 		// make the request to ingest flows
@@ -289,7 +289,7 @@ func TestFV_EEAuditIngestion(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
-		httpClient := secureHTTPClient(t)
+		httpClient := mTLSClient(t)
 		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(eeAuditLogs))
 
 		// make the request to ingest flows
@@ -343,7 +343,7 @@ func TestFV_BGPIngestion(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
-		httpClient := secureHTTPClient(t)
+		httpClient := mTLSClient(t)
 		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(bgpLogs))
 
 		// make the request to ingest flows
@@ -399,7 +399,7 @@ func TestFV_WAFIngestion(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
-		httpClient := secureHTTPClient(t)
+		httpClient := mTLSClient(t)
 		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(wafLogs))
 
 		// make the request to ingest flows
@@ -453,7 +453,7 @@ func TestFV_RuntimeIngestion(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
-		httpClient := secureHTTPClient(t)
+		httpClient := mTLSClient(t)
 		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, []byte(runtimeReports))
 
 		// make the request to ingest runtime reports
