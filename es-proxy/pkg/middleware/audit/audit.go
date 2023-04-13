@@ -74,7 +74,7 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, s
 		}
 	}
 
-	if params.Page != 0 {
+	if params.Page > 0 {
 		// Ideally, clients don't know the syntax of the after key, but
 		// for paged lists we currently need this.
 		params.SetAfterKey(map[string]interface{}{
