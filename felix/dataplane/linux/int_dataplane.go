@@ -396,7 +396,6 @@ type InternalDataplane struct {
 	managersWithRouteTables []ManagerWithRouteTables
 	managersWithRouteRules  []ManagerWithRouteRules
 	ruleRenderer            rules.RuleRenderer
-	defaultRuleRenderer     rules.DefaultRuleRenderer
 
 	lookupCache *calc.LookupsCache
 
@@ -2034,8 +2033,8 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 			},
 			iptables.Rule{
 				Match:   iptables.Match().MarkMatchesWithMask(tcdefs.MarkSeenFallThrough, tcdefs.MarkSeenFallThroughMask),
-				Comment: []string{fmt.Sprintf("%s packets from unknown flows.", d.defaultRuleRenderer.IptablesFilterDenyAction)},
-				Action:  d.defaultRuleRenderer.IptablesFilterDenyAction,
+				Comment: []string{fmt.Sprintf("%s packets from unknown flows.", d.ruleRenderer.IptablesFilterDenyAction())},
+				Action:  d.ruleRenderer.IptablesFilterDenyAction(),
 			},
 		)
 
@@ -2057,7 +2056,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 				// Drop/reject packets that have come from a workload but have not been through our BPF program.
 				iptables.Rule{
 					Match:   iptables.Match().InInterface(prefix+"+").NotMarkMatchesWithMask(tcdefs.MarkSeen, tcdefs.MarkSeenMask),
-					Action:  d.defaultRuleRenderer.IptablesFilterDenyAction,
+					Action:  d.ruleRenderer.IptablesFilterDenyAction(),
 					Comment: []string{"From workload without BPF seen mark"},
 				},
 			)
@@ -2074,7 +2073,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 			// Catch any workload to host packets that haven't been through the BPF program.
 			inputRules = append(inputRules, iptables.Rule{
 				Match:  iptables.Match().InInterface(prefix+"+").NotMarkMatchesWithMask(tcdefs.MarkSeen, tcdefs.MarkSeenMask),
-				Action: d.defaultRuleRenderer.IptablesFilterDenyAction,
+				Action: d.ruleRenderer.IptablesFilterDenyAction(),
 			})
 		}
 
@@ -2093,7 +2092,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 				// In BPF mode, we don't support IPv6 yet.  Drop it.
 				fwdRules = append(fwdRules, iptables.Rule{
 					Match:   iptables.Match().OutInterface(prefix + "+"),
-					Action:  d.defaultRuleRenderer.IptablesFilterDenyAction,
+					Action:  d.ruleRenderer.IptablesFilterDenyAction(),
 					Comment: []string{"To workload, drop IPv6."},
 				})
 			}

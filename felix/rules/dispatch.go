@@ -70,7 +70,7 @@ func (r *DefaultRuleRenderer) WorkloadInterfaceAllowChains(
 	endRules := []Rule{
 		{
 			Match:   Match(),
-			Action:  r.IptablesFilterDenyAction,
+			Action:  r.IptablesFilterDenyAction(),
 			Comment: []string{"Unknown interface"},
 		},
 	}
@@ -416,7 +416,7 @@ func (r *DefaultRuleRenderer) endpointMarkDispatchChains(
 		ifaceMatch := prefix + "+"
 		rootSetMarkRules = append(rootSetMarkRules, Rule{
 			Match:   Match().InInterface(ifaceMatch),
-			Action:  r.IptablesFilterDenyAction,
+			Action:  r.IptablesFilterDenyAction(),
 			Comment: []string{"Unknown endpoint"},
 		})
 	}
@@ -460,10 +460,10 @@ func (r *DefaultRuleRenderer) endpointMarkDispatchChains(
 	}
 
 	// Finalizing with a drop/reject rule.
-	log.Debugf("Adding %s rules at end of root from mark chains.", r.IptablesFilterDenyAction)
+	log.Debugf("Adding %s rules at end of root from mark chains.", r.IptablesFilterDenyAction())
 	rootFromMarkRules = append(rootFromMarkRules, Rule{
 		Match:   Match(),
-		Action:  r.IptablesFilterDenyAction,
+		Action:  r.IptablesFilterDenyAction(),
 		Comment: []string{"Unknown interface"},
 	})
 
