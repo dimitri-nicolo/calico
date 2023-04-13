@@ -35,8 +35,6 @@ import (
 )
 
 const (
-	expectedGnsDataFolder = "../data/expected/gns/"
-
 	pollingInterval = time.Millisecond * 100
 )
 
@@ -116,20 +114,14 @@ var _ = Describe("Tests address groups controller", func() {
 				cfg.FwPanoramaTags = tag
 				cfg.FwPollInterval = pollingInterval
 
-				By("loading the address data")
-				var addrs []addr.Entry
-				addrFileName := fmt.Sprintf("%s/%s", InputDataFolder, "addresses1.json")
-				panutils.LoadData(addrFileName, &addrs)
-
-				By("loading the address group data")
-				var addrgrps []addrgrp.Entry
-				addrgrpsFileName := fmt.Sprintf("%s/%s", InputDataFolder, "addressGroups1.json")
-				panutils.LoadData(addrgrpsFileName, &addrgrps)
+				By("loading the Panorama data")
+				panClData, err := getMockPanoramaClientData()
+				Expect(err).To(BeNil())
 
 				By("defining the mock Panorama client")
 				mockPanCl := &panutilmocks.MockPanoramaClient{}
-				mockPanCl.On("GetAddressEntries", deviceGroup).Return(addrs, nil)
-				mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(addrgrps, nil)
+				mockPanCl.On("GetAddressEntries", deviceGroup).Return(panClData.Addresses, nil)
+				mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(panClData.AddressGroups, nil)
 				mockPanCl.On("GetClient").Return(&panw.Panorama{})
 				mockPanCl.On("GetDeviceGroupEntry", deviceGroup).Return(dvgrp.Entry{Name: deviceGroup}, nil)
 				// Add the expected device group along with a couple of dummy device groups returned by GetDeviceGroups.
@@ -160,9 +152,8 @@ var _ = Describe("Tests address groups controller", func() {
 				time.Sleep(3 * pollingInterval)
 
 				By("loading expected data")
-				var expectedGnsMap map[string]v3.GlobalNetworkSet
-				file := fmt.Sprintf("%s/%s.json", expectedGnsDataFolder, expectedFileName)
-				panutils.LoadData(file, &expectedGnsMap)
+				expectedGnsMap, err := getExpectedGnsMap(expectedFileName)
+				Expect(err).To(BeNil())
 
 				By("validating the list of global networks sets present in the datastore, and that the device group is shared")
 				gnsList, err := fccl.List(ctx, metav1.ListOptions{})
@@ -197,12 +188,14 @@ var _ = Describe("Tests address groups controller", func() {
 			By("loading the address data")
 			var addrs []addr.Entry
 			addrFileName := fmt.Sprintf("%s/%s", InputDataFolder, "addresses1.json")
-			panutils.LoadData(addrFileName, &addrs)
+			err = panutils.LoadData(addrFileName, &addrs)
+			Expect(err).To(BeNil())
 
 			By("loading the address group data")
 			var addrgrps []addrgrp.Entry
 			addrgrpsFileName := fmt.Sprintf("%s/%s", InputDataFolder, "addressGroups1.json")
-			panutils.LoadData(addrgrpsFileName, &addrgrps)
+			err = panutils.LoadData(addrgrpsFileName, &addrgrps)
+			Expect(err).To(BeNil())
 
 			By("defining the mock Panorama client")
 			mockPanCl := &panutilmocks.MockPanoramaClient{}
@@ -246,20 +239,14 @@ var _ = Describe("Tests address groups controller", func() {
 				cfg.FwDeviceGroup = deviceGroup
 				cfg.FwPollInterval = pollingInterval
 
-				By("loading the address data")
-				var addrs []addr.Entry
-				file := fmt.Sprintf("%s/%s", InputDataFolder, "addresses1.json")
-				panutils.LoadData(file, &addrs)
-
-				By("loading the address group data")
-				var addrgrps []addrgrp.Entry
-				file = fmt.Sprintf("%s/%s", InputDataFolder, "addressGroups1.json")
-				panutils.LoadData(file, &addrgrps)
+				By("loading the Panorama data")
+				panClData, err := getMockPanoramaClientData()
+				Expect(err).To(BeNil())
 
 				By("defining the mock Panorama client")
 				mockPanCl := &panutilmocks.MockPanoramaClient{}
-				mockPanCl.On("GetAddressEntries", deviceGroup).Return(addrs, nil)
-				mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(addrgrps, nil)
+				mockPanCl.On("GetAddressEntries", deviceGroup).Return(panClData.Addresses, nil)
+				mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(panClData.AddressGroups, nil)
 				mockPanCl.On("GetClient").Return(&panw.Panorama{})
 				mockPanCl.On("GetDeviceGroupEntry", deviceGroup).Return(dvgrp.Entry{Name: deviceGroup}, nil)
 				// Add the expected device group along with a couple of dummy dgs returned by GetDeviceGroups.
@@ -290,9 +277,10 @@ var _ = Describe("Tests address groups controller", func() {
 				time.Sleep(3 * pollingInterval)
 
 				By("loading expected data")
-				expectedGNSMap := map[string]v3.GlobalNetworkSet{}
-				file = fmt.Sprintf("%s/%s.json", expectedGnsDataFolder, expectedFileName)
-				panutils.LoadData(file, &expectedGNSMap)
+				expectedGNSMap, err := getExpectedGnsMap(expectedFileName)
+				if expectedFileName != "" {
+					Expect(err).To(BeNil())
+				}
 
 				By("validating the list of global networks sets present in the datastore, and that the device group is shared")
 				gnsList, err := fccl.List(ctx, metav1.ListOptions{})

@@ -333,7 +333,7 @@ func (c *firewallPolicyIntegrationController) processNextItem() bool {
 // datastore.
 func (c *firewallPolicyIntegrationController) syncToDatastore(key string) error {
 	clog := log.WithField("key", key)
-	clog.Debug("Synching to datastore")
+	clog.Debug("Syncing to datastore")
 
 	// Create the tier if it doesn't exist.
 	datastoreTier, err := c.calicoClient.Tiers().Get(c.ctx, c.tier, metav1.GetOptions{})
