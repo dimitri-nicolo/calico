@@ -45,7 +45,7 @@ spec:
         image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-operator:master
         args:
           - --prometheus-config-reloader=gcr.io/unique-caldron-775/cnx/tigera/prometheus-config-reloader:master
-          - --config-reloader-memory-request=25Mi
+          - --config-reloader-memory-request=50Mi
           - --namespaces=tigera-prometheus
           - --cluster-domain=cluster.local
         resources:
