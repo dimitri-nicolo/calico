@@ -341,6 +341,7 @@ rules:
       - uisettingsgroups
       - uisettingsgroups/data
       - networkpolicies
+      - policyrecommendationscopes
     verbs:
       - '*'
   # For tiered network policy actions, tigera-apiserver requires that we authorize the operator for the tier.networkpolicies pseudo-kind.
