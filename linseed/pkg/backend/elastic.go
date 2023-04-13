@@ -119,11 +119,8 @@ func (t *metricsRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 	start := time.Now().UTC()
 	resp, err := t.defaultTransport.RoundTrip(req)
 
-	if resp != nil {
-		metrics.ElasticResponseDuration.With(t.methodPathLabels(req)).Observe(time.Since(start).Seconds())
-
-		metrics.ElasticResponseStatus.With(t.methodCodePathLabels(req, resp)).Inc()
-	}
+	metrics.ElasticResponseDuration.With(t.methodPathLabels(req)).Observe(time.Since(start).Seconds())
+	metrics.ElasticResponseStatus.With(t.methodCodePathLabels(req, resp)).Inc()
 
 	if err != nil {
 		metrics.ElasticConnectionErrors.With(t.methodCodePathLabels(req, resp)).Inc()
@@ -142,9 +139,16 @@ func (t *metricsRoundTripper) methodPathLabels(req *http.Request) prometheus.Lab
 func (t *metricsRoundTripper) methodCodePathLabels(req *http.Request, resp *http.Response) prometheus.Labels {
 	return prometheus.Labels{
 		metrics.LabelMethod: req.Method,
-		metrics.LabelCode:   strconv.Itoa(resp.StatusCode),
+		metrics.LabelCode:   t.responseCode(resp),
 		metrics.LabelPath:   t.minifiedPath(req),
 	}
+}
+
+func (t *metricsRoundTripper) responseCode(resp *http.Response) string {
+	if resp == nil {
+		return ""
+	}
+	return strconv.Itoa(resp.StatusCode)
 }
 
 func (t *metricsRoundTripper) minifiedPath(req *http.Request) string {
