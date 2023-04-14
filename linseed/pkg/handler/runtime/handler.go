@@ -15,17 +15,12 @@ const (
 )
 
 type runtime struct {
-	reports *handler.GenericHandler[v1.RuntimeReport, v1.RuntimeReportParams, v1.Report]
+	reports handler.RWHandler[v1.RuntimeReport, v1.RuntimeReportParams, v1.Report]
 }
 
 func New(b bapi.RuntimeBackend) *runtime {
-	reports := handler.GenericHandler[v1.RuntimeReport, v1.RuntimeReportParams, v1.Report]{
-		CreateFn: b.Create,
-		ListFn:   b.List,
-	}
-
 	return &runtime{
-		reports: &reports,
+		reports: handler.NewRWHandler[v1.RuntimeReport, v1.RuntimeReportParams, v1.Report](b.Create, b.List),
 	}
 }
 

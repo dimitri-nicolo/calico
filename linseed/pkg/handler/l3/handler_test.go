@@ -1,6 +1,6 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-package l3_test
+package l3
 
 import (
 	"bytes"
@@ -21,7 +21,6 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
 )
 
 var withinTimeRange = `{
@@ -74,7 +73,7 @@ func TestFlows_Post(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 
-			n.Flows().ServeHTTP(rec, req)
+			n.flows.List().ServeHTTP(rec, req)
 
 			bodyBytes, err := io.ReadAll(rec.Body)
 			require.NoError(t, err)
@@ -158,7 +157,7 @@ func TestFlowLogs_Bulk(t *testing.T) {
 			req.Header.Set("Content-Type", "application/x-ndjson")
 			require.NoError(t, err)
 
-			b.Bulk().ServeHTTP(rec, req)
+			b.logs.Create().ServeHTTP(rec, req)
 
 			bodyBytes, err := io.ReadAll(rec.Body)
 			require.NoError(t, err)
@@ -175,10 +174,10 @@ func TestFlowLogs_Bulk(t *testing.T) {
 	}
 }
 
-func mockFlows(flows []v1.L3Flow) *l3.Flows {
+func mockFlows(flows []v1.L3Flow) *Flows {
 	mockFlowBackend := &api.MockFlowBackend{}
 	mockLogBackend := &api.MockFlowLogBackend{}
-	n := l3.New(mockFlowBackend, mockLogBackend)
+	n := New(mockFlowBackend, mockLogBackend)
 
 	res := v1.List[v1.L3Flow]{
 		Items:    flows,
@@ -189,19 +188,19 @@ func mockFlows(flows []v1.L3Flow) *l3.Flows {
 	mockFlowBackend.On("List", mock.Anything,
 		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("*v1.L3FlowParams")).Return(&res, nil)
 
-	return n.(*l3.Flows)
+	return n
 }
 
-func mockBulk(response *v1.BulkResponse, err error) *l3.Flows {
+func mockBulk(response *v1.BulkResponse, err error) *Flows {
 	mockFlowBackend := &api.MockFlowBackend{}
 	mockLogBackend := &api.MockFlowLogBackend{}
-	b := l3.New(mockFlowBackend, mockLogBackend)
+	b := New(mockFlowBackend, mockLogBackend)
 
 	// mock backend to return the required backendFlowLogs
 	mockLogBackend.On("Create", mock.Anything,
 		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("[]v1.FlowLog")).Return(response, err)
 
-	return b.(*l3.Flows)
+	return b
 }
 
 func marshalResponse(t *testing.T, flows []v1.L3Flow) string {

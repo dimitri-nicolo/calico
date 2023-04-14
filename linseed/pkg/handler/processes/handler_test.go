@@ -90,7 +90,7 @@ func TestProcessesList(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 
-			b.List().ServeHTTP(rec, req)
+			b.processes.List().ServeHTTP(rec, req)
 
 			bodyBytes, err := io.ReadAll(rec.Body)
 			require.NoError(t, err)

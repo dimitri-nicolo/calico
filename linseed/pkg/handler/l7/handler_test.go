@@ -82,7 +82,7 @@ func TestL7FlowsHandler(t *testing.T) {
 			require.NoError(t, err)
 
 			// Serve the request and read the response.
-			n.Flows().ServeHTTP(rec, req)
+			n.flows.List().ServeHTTP(rec, req)
 			bodyBytes, err := io.ReadAll(rec.Body)
 			require.NoError(t, err)
 
@@ -190,7 +190,7 @@ func TestL7BulkIngestion(t *testing.T) {
 			req.Header.Set("Content-Type", "application/x-ndjson")
 			require.NoError(t, err)
 
-			b.Bulk().ServeHTTP(rec, req)
+			b.logs.Create().ServeHTTP(rec, req)
 
 			bodyBytes, err := io.ReadAll(rec.Body)
 			require.NoError(t, err)
