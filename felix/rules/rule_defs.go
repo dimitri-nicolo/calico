@@ -580,7 +580,7 @@ func NewRenderer(config Config) RuleRenderer {
 		}
 		dropRules = append(dropRules, iptables.Rule{
 			Match:  iptables.Match(),
-			Action: IptablesFilterDenyAction,
+			Action: iptablesFilterDenyAction,
 		})
 	}
 
