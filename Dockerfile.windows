@@ -124,6 +124,7 @@ ENV LINSEED_CA_PATH=/etc/flu/ca.pem
 ENV LINSEED_CERT_PATH=/etc/flu/crt.pem
 ENV LINSEED_KEY_PATH=/etc/flu/key.pem
 ENV LINSEED_FLUSH_INTERVAL=5s
+ENV LINSEED_TOKEN=/var/run/secrets/kubernetes.io/serviceaccount/token
 
 
 COPY readiness.sh /bin/
