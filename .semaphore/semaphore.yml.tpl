@@ -63,8 +63,8 @@ promotions:
   pipeline_file: push-images/compliance.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
-- name: Push continuous-policy-recommendation images
-  pipeline_file: push-images/continuous-policy-recommendation.yml
+- name: Push policy-recommendation images
+  pipeline_file: push-images/policy-recommendation.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
 - name: Push deep-packet-inspection images
@@ -766,18 +766,18 @@ blocks:
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
-- name: 'continuous-policy-recommendation'
+- name: 'policy-recommendation'
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/continuous-policy-recommendation/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/policy-recommendation/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:
     - name: test-customer-license
     prologue:
       commands:
-      - cd continuous-policy-recommendation
+      - cd policy-recommendation
     jobs:
-    - name: "continuous-policy-recommendation tests"
+    - name: "policy-recommendation tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
