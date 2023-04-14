@@ -111,7 +111,7 @@ promotions:
     auto_promote:
       when: "result = 'passed'"
   - name: Test Cut Policy Recommendation Release
-    pipeline_file: ../continuous-policy-recommendation/.semaphore/test-cut-release.yml
+    pipeline_file: ../policy-recommendation/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Test Cut Queryserver Release
