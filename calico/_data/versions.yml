@@ -137,6 +137,9 @@
     packetcapture:
       image: tigera/packetcapture
       version: master
+    policy-recommendation:
+      image: tigera/policy-recommendation
+      version: master
     prometheus:
       image: tigera/prometheus
       version: master
