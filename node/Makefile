@@ -594,11 +594,6 @@ ci: static-checks ut image-all build-windows-upgrade-archive image-tar-windows-a
 ## Deploys images to registry
 cd: cd-common cd-windows-all
 
-# Override the lib.Makefile golangci-lint target to use CGO, since some packages we pull in
-# require it. Without this, we get undefined value errors.
-golangci-lint: $(GENERATED_FILES)
-	$(DOCKER_GO_BUILD_CGO) golangci-lint run $(LINT_ARGS)
-
 .PHONY: node-test-at
 # Run docker-image acceptance tests
 node-test-at: release-prereqs
