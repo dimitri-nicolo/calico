@@ -30,15 +30,6 @@ LDFLAGS = -X main.VERSION=$(GIT_VERSION)
 ##############################################################################
 include ../lib.Makefile
 
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-CGO_CFLAGS=""
-CGO_LDFLAGS=""
-endif
-
 # Shortcut targets
 default: build
 
@@ -154,11 +145,6 @@ ut-exec:
 
 .PHONY: ci
 ci: mod-download build-all check-generated-files static-checks ut
-
-check-boring-ssl: bin/dikastes-amd64
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
-		go tool nm bin/dikastes-amd64 > bin/tags.txt && grep '_Cfunc__goboringcrypto_' bin/tags.txt 1> /dev/null
-	-rm -f bin/tags.txt
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files

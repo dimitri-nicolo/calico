@@ -8,7 +8,7 @@ GO_BUILD_VER = v0.82
 # Version of Kubernetes and kindest/node to use for tests.
 K8S_VERSION     = v1.24.7
 # This is used for bitnami/kubectl and kubectl binary release in compliance benchmarker, confd, and kube-controllers.
-KUBECTL_VERSION = v1.25.8
+KUBECTL_VERSION = v1.26.3
 
 # Version of various tools used in the build and tests.
 COREDNS_VERSION=1.5.2
@@ -34,7 +34,7 @@ endif
 GIT_USE_SSH = true
 
 # Configure private repos
-EXTRA_DOCKER_ARGS += --init -e GOPRIVATE=github.com/tigera/*
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 # The version of BIRD to use for calico/node builds and confd tests.
 BIRD_VERSION=v0.3.3-200-g245602b0

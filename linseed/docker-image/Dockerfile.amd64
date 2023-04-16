@@ -23,7 +23,7 @@ COPY --from=ubi /etc/hosts /etc/hosts
 COPY --from=ubi /etc/host.conf /etc/host.conf
 COPY --from=ubi /etc/nsswitch.conf /etc/nsswitch.conf
 
-ADD bin/linseed-amd64 /linseed
+COPY bin/linseed-amd64 /linseed
 
 USER 1001
 

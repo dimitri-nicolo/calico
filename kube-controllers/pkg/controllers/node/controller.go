@@ -168,8 +168,14 @@ func NewNodeController(ctx context.Context,
 	}
 
 	// Set the handlers on the informers.
-	nc.nodeInformer.AddEventHandler(nodeHandlers)
-	nc.podInformer.AddEventHandler(podHandlers)
+	if _, err := nc.nodeInformer.AddEventHandler(nodeHandlers); err != nil {
+		log.WithError(err).Error("failed to add event handler for node")
+		return nil
+	}
+	if _, err := nc.podInformer.AddEventHandler(podHandlers); err != nil {
+		log.WithError(err).Error("failed to add event handler for pod")
+		return nil
+	}
 
 	// Start the Calico data feed.
 	nc.dataFeed.Start()

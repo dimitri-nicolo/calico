@@ -24,7 +24,7 @@ RUN chmod +x /sbin/tini
 
 # Add in top-level license file
 RUN mkdir /licenses
-ADD licenses /licenses
+COPY licenses /licenses
 COPY LICENSE /licenses
 
 FROM scratch
@@ -55,7 +55,7 @@ COPY --from=ubi /lib64/libnss_files.so.2 /lib64/libnss_files.so.2
 # Copy hostname configuration files so glibc hostname lookups work.
 COPY --from=ubi /etc/host.conf /etc/host.conf
 # But we skip 'myhostname' because it depends on too many libraries.
-ADD nsswitch.conf /etc/nsswitch.conf
+COPY nsswitch.conf /etc/nsswitch.conf
 
 # Put our binary in /code rather than directly in /usr/bin.  This allows the downstream builds
 # to more easily extract the build artefacts from the container.

@@ -10,6 +10,8 @@ import (
 
 	authenticationv1 "k8s.io/client-go/kubernetes/typed/authentication/v1"
 
+	authenticationv1alpha1 "k8s.io/client-go/kubernetes/typed/authentication/v1alpha1"
+
 	authenticationv1beta1 "k8s.io/client-go/kubernetes/typed/authentication/v1beta1"
 
 	authorizationv1 "k8s.io/client-go/kubernetes/typed/authorization/v1"
@@ -44,6 +46,8 @@ import (
 
 	extensionsv1beta1 "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 
+	flowcontrolv1alpha1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1alpha1"
+
 	flowcontrolv1beta1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta1"
 
 	flowcontrolv1beta2 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta2"
@@ -72,6 +76,8 @@ import (
 
 	rbacv1beta1 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 
+	resourcev1alpha1 "k8s.io/client-go/kubernetes/typed/resource/v1alpha1"
+
 	schedulingv1 "k8s.io/client-go/kubernetes/typed/scheduling/v1"
 
 	schedulingv1alpha1 "k8s.io/client-go/kubernetes/typed/scheduling/v1alpha1"
@@ -86,11 +92,13 @@ import (
 
 	v1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1"
 
-	v1alpha1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1alpha1"
+	v1alpha1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1alpha1"
 
 	v1beta1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1beta1"
 
 	v1beta2 "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
+
+	v1beta3 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta3"
 
 	v2 "k8s.io/client-go/kubernetes/typed/autoscaling/v2"
 
@@ -116,6 +124,22 @@ func (_m *MockClientSet) AdmissionregistrationV1() v1.AdmissionregistrationV1Int
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(v1.AdmissionregistrationV1Interface)
+		}
+	}
+
+	return r0
+}
+
+// AdmissionregistrationV1alpha1 provides a mock function with given fields:
+func (_m *MockClientSet) AdmissionregistrationV1alpha1() v1alpha1.AdmissionregistrationV1alpha1Interface {
+	ret := _m.Called()
+
+	var r0 v1alpha1.AdmissionregistrationV1alpha1Interface
+	if rf, ok := ret.Get(0).(func() v1alpha1.AdmissionregistrationV1alpha1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(v1alpha1.AdmissionregistrationV1alpha1Interface)
 		}
 	}
 
@@ -196,6 +220,22 @@ func (_m *MockClientSet) AuthenticationV1() authenticationv1.AuthenticationV1Int
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(authenticationv1.AuthenticationV1Interface)
+		}
+	}
+
+	return r0
+}
+
+// AuthenticationV1alpha1 provides a mock function with given fields:
+func (_m *MockClientSet) AuthenticationV1alpha1() authenticationv1alpha1.AuthenticationV1alpha1Interface {
+	ret := _m.Called()
+
+	var r0 authenticationv1alpha1.AuthenticationV1alpha1Interface
+	if rf, ok := ret.Get(0).(func() authenticationv1alpha1.AuthenticationV1alpha1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(authenticationv1alpha1.AuthenticationV1alpha1Interface)
 		}
 	}
 
@@ -523,15 +563,15 @@ func (_m *MockClientSet) ExtensionsV1beta1() extensionsv1beta1.ExtensionsV1beta1
 }
 
 // FlowcontrolV1alpha1 provides a mock function with given fields:
-func (_m *MockClientSet) FlowcontrolV1alpha1() v1alpha1.FlowcontrolV1alpha1Interface {
+func (_m *MockClientSet) FlowcontrolV1alpha1() flowcontrolv1alpha1.FlowcontrolV1alpha1Interface {
 	ret := _m.Called()
 
-	var r0 v1alpha1.FlowcontrolV1alpha1Interface
-	if rf, ok := ret.Get(0).(func() v1alpha1.FlowcontrolV1alpha1Interface); ok {
+	var r0 flowcontrolv1alpha1.FlowcontrolV1alpha1Interface
+	if rf, ok := ret.Get(0).(func() flowcontrolv1alpha1.FlowcontrolV1alpha1Interface); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(v1alpha1.FlowcontrolV1alpha1Interface)
+			r0 = ret.Get(0).(flowcontrolv1alpha1.FlowcontrolV1alpha1Interface)
 		}
 	}
 
@@ -564,6 +604,22 @@ func (_m *MockClientSet) FlowcontrolV1beta2() flowcontrolv1beta2.FlowcontrolV1be
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(flowcontrolv1beta2.FlowcontrolV1beta2Interface)
+		}
+	}
+
+	return r0
+}
+
+// FlowcontrolV1beta3 provides a mock function with given fields:
+func (_m *MockClientSet) FlowcontrolV1beta3() v1beta3.FlowcontrolV1beta3Interface {
+	ret := _m.Called()
+
+	var r0 v1beta3.FlowcontrolV1beta3Interface
+	if rf, ok := ret.Get(0).(func() v1beta3.FlowcontrolV1beta3Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(v1beta3.FlowcontrolV1beta3Interface)
 		}
 	}
 
@@ -772,6 +828,22 @@ func (_m *MockClientSet) RbacV1beta1() rbacv1beta1.RbacV1beta1Interface {
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(rbacv1beta1.RbacV1beta1Interface)
+		}
+	}
+
+	return r0
+}
+
+// ResourceV1alpha1 provides a mock function with given fields:
+func (_m *MockClientSet) ResourceV1alpha1() resourcev1alpha1.ResourceV1alpha1Interface {
+	ret := _m.Called()
+
+	var r0 resourcev1alpha1.ResourceV1alpha1Interface
+	if rf, ok := ret.Get(0).(func() resourcev1alpha1.ResourceV1alpha1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(resourcev1alpha1.ResourceV1alpha1Interface)
 		}
 	}
 
