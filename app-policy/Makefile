@@ -172,6 +172,7 @@ check-generated-files:
 	$(MAKE) protobuf
 	if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
 	  echo "Generated files are out of date."; \
+	  git diff; \
 	  false; \
 	else \
 	  echo "Generated files are up to date."; \
