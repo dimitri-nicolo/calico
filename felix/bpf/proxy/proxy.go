@@ -49,7 +49,7 @@ type Proxy interface {
 
 // DPSyncerState groups the information passed to the DPSyncer's Apply
 type DPSyncerState struct {
-	SvcMap k8sp.ServicePortMap
+	SvcMap   k8sp.ServicePortMap
 	EpsMap   k8sp.EndpointsMap
 	NodeZone string
 }
