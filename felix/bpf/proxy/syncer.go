@@ -533,6 +533,7 @@ func (s *Syncer) apply(state DPSyncerState) error {
 	// here and now.
 	s.newSvcMap = make(map[svcKey]svcInfo, len(state.SvcMap))
 	s.newEpsMap = make(k8sp.EndpointsMap, len(state.EpsMap))
+	nodeZone := state.NodeZone
 
 	var expNPMisses []*expandMiss
 
@@ -543,13 +544,24 @@ func (s *Syncer) apply(state DPSyncerState) error {
 
 	// insert or update existing services
 	for sname, sinfo := range state.SvcMap {
+		hintsAnnotation := sinfo.HintsAnnotation()
+
 		log.WithField("service", sname).Debug("Applying service")
 		skey := getSvcKey(sname, "")
 
 		eps := make([]k8sp.Endpoint, 0, len(state.EpsMap[sname]))
 		for _, ep := range state.EpsMap[sname] {
-			if ep.IsReady() {
-				eps = append(eps, ep)
+			zoneHints := ep.GetZoneHints()
+			if ep.IsReady() || ep.IsTerminating() {
+				if ShouldAppendTopologyAwareEndpoint(nodeZone, hintsAnnotation, zoneHints) {
+					eps = append(eps, ep)
+				} else {
+					log.Debugf("Topology Aware Hints: '%s' for Endpoint: '%s' however Zone: '%s' does not match Zone Hints: '%v'\n",
+						hintsAnnotation,
+						ep.IP(),
+						nodeZone,
+						zoneHints)
+				}
 			}
 		}
 
@@ -695,8 +707,12 @@ func (s *Syncer) updateService(skey svcKey, sinfo k8sp.ServicePort, id uint32, e
 		if !ep.GetIsLocal() {
 			continue
 		}
-		if err := s.writeSvcBackend(id, uint32(cnt), ep); err != nil {
-			return 0, 0, err
+
+		// eps could contain Ready and Terminating pods but only write Ready pods to backend.
+		if ep.IsReady() {
+			if err := s.writeSvcBackend(id, uint32(cnt), ep); err != nil {
+				return 0, 0, err
+			}
 		}
 
 		cpEps = append(cpEps, ep)
@@ -708,8 +724,12 @@ func (s *Syncer) updateService(skey svcKey, sinfo k8sp.ServicePort, id uint32, e
 		if ep.GetIsLocal() {
 			continue
 		}
-		if err := s.writeSvcBackend(id, uint32(cnt), ep); err != nil {
-			return 0, 0, err
+
+		// eps could contain Ready and Terminating pods but only write Ready pods to backend.
+		if ep.IsReady() {
+			if err := s.writeSvcBackend(id, uint32(cnt), ep); err != nil {
+				return 0, 0, err
+			}
 		}
 
 		cpEps = append(cpEps, ep)
@@ -1440,5 +1460,12 @@ func K8sSvcWithStickyClientIP(seconds int) K8sServicePortOption {
 	return func(s interface{}) {
 		s.(*serviceInfo).stickyMaxAgeSeconds = seconds
 		s.(*serviceInfo).sessionAffinityType = v1.ServiceAffinityClientIP
+	}
+}
+
+// K8sSvcWithHintsAnnotation sets hints annotation to service info object
+func K8sSvcWithHintsAnnotation(hintsAnnotation string) K8sServicePortOption {
+	return func(s interface{}) {
+		s.(*serviceInfo).hintsAnnotation = hintsAnnotation
 	}
 }

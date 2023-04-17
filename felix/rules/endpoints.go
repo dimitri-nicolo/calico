@@ -440,7 +440,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	})
 
 	// Accept the UDP VXLAN traffic for egress gateways
-	endOfChainDropComment := fmt.Sprintf("%s if no profiles matched", r.IptablesFilterDenyAction)
+	endOfChainDropComment := fmt.Sprintf("%s if no profiles matched", r.IptablesFilterDenyAction())
 	if !r.BPFEnabled && ipVersion == 4 && isEgressGateway {
 		programEgwRule := func(ipset string) {
 			baseMatch := func(proto uint8) MatchCriteria {
@@ -488,7 +488,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 			// just render an end-of-chain drop.
 			tiers = nil
 			profileIds = nil
-			endOfChainDropComment = fmt.Sprintf("%s all other ingress traffic to egress gateway.", r.IptablesFilterDenyAction)
+			endOfChainDropComment = fmt.Sprintf("%s all other ingress traffic to egress gateway.", r.IptablesFilterDenyAction())
 		}
 	}
 
@@ -498,8 +498,8 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		rules = append(rules, Rule{
 			Match: Match().ProtocolNum(ProtoUDP).
 				DestPorts(uint16(r.Config.VXLANPort)),
-			Action:  r.IptablesFilterDenyAction,
-			Comment: []string{fmt.Sprintf("%s VXLAN encapped packets originating in workloads", r.IptablesFilterDenyAction)},
+			Action:  r.IptablesFilterDenyAction(),
+			Comment: []string{fmt.Sprintf("%s VXLAN encapped packets originating in workloads", r.IptablesFilterDenyAction())},
 		})
 	}
 	if !allowIPIPEncap {
@@ -507,8 +507,8 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		// bypass restrictive egress policies.
 		rules = append(rules, Rule{
 			Match:   Match().ProtocolNum(ProtoIPIP),
-			Action:  r.IptablesFilterDenyAction,
-			Comment: []string{fmt.Sprintf("%s IPinIP encapped packets originating in workloads", r.IptablesFilterDenyAction)},
+			Action:  r.IptablesFilterDenyAction(),
+			Comment: []string{fmt.Sprintf("%s IPinIP encapped packets originating in workloads", r.IptablesFilterDenyAction())},
 		})
 	}
 
@@ -578,7 +578,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 				if endOfTierDrop {
 					nfqueueRule := r.NfqueueRuleDelayDeniedPacket(
 						Match().MarkClear(r.IptablesMarkPass),
-						fmt.Sprintf("%s if no policies passed packet", r.IptablesFilterDenyAction),
+						fmt.Sprintf("%s if no policies passed packet", r.IptablesFilterDenyAction()),
 					)
 					if nfqueueRule != nil {
 						rules = append(rules, *nfqueueRule)
@@ -597,7 +597,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 						},
 					})
 
-					rules = append(rules, r.DropRules(Match().MarkClear(r.IptablesMarkPass), fmt.Sprintf("%s if no policies passed packet", r.IptablesFilterDenyAction))...)
+					rules = append(rules, r.DropRules(Match().MarkClear(r.IptablesMarkPass), fmt.Sprintf("%s if no policies passed packet", r.IptablesFilterDenyAction()))...)
 				} else {
 					// If we do not require an end of tier drop (i.e. because all of the policies in the tier are
 					// staged), then add an end of tier pass nflog action so that we can at least track that we
@@ -699,7 +699,7 @@ func (r *DefaultRuleRenderer) appendConntrackRules(rules []Rule, allowAction Act
 		// connection.
 		rules = append(rules, Rule{
 			Match:  Match().ConntrackState("INVALID"),
-			Action: r.IptablesFilterDenyAction,
+			Action: r.IptablesFilterDenyAction(),
 		})
 	}
 	return rules

@@ -81,7 +81,7 @@ func DefaultTopologyOptions() TopologyOptions {
 	}
 	return TopologyOptions{
 		FelixLogSeverity:  felixLogLevel,
-		EnableIPv6:        true,
+		EnableIPv6:        os.Getenv("FELIX_FV_ENABLE_BPF") != "true",
 		BPFEnableIPv6:     false,
 		ExtraEnvVars:      map[string]string{},
 		ExtraVolumes:      map[string]string{},
@@ -299,6 +299,9 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 		felix := felixes[i]
 		felix.TyphaIP = typhaIP
 
+		if opts.EnableIPv6 {
+			Expect(felix.IPv6).ToNot(BeEmpty(), "IPv6 enabled but Felix didn't get an IPv6 address, is docker configured for IPv6?")
+		}
 		expectedIPs := []string{felix.IP}
 
 		if kdd, ok := infra.(*K8sDatastoreInfra); ok && opts.ExternalIPs {
