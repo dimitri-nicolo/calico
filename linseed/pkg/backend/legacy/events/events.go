@@ -141,8 +141,9 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 	}
 
 	return &v1.List[v1.Event]{
-		Items:    events,
-		AfterKey: ak,
+		Items:     events,
+		AfterKey:  ak,
+		TotalHits: results.TotalHits(),
 	}, nil
 }
 

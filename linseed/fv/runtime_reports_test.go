@@ -291,8 +291,8 @@ func TestFV_RuntimeReports(t *testing.T) {
 		require.Len(t, resp.Items, 2)
 
 		require.Equal(t, []v1.RuntimeReport{
-			v1.RuntimeReport{Tenant: "", Cluster: cluster, Report: legacyRuntimeReport},
-			v1.RuntimeReport{Tenant: "", Cluster: cluster, Report: runtimeReport},
+			{Tenant: "", Cluster: cluster, Report: legacyRuntimeReport},
+			{Tenant: "", Cluster: cluster, Report: runtimeReport},
 		},
 			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp))
 	})

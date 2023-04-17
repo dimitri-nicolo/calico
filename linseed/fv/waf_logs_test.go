@@ -6,6 +6,7 @@ package fv_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -117,4 +118,72 @@ func TestFV_WAF(t *testing.T) {
 
 		require.Equal(t, wafLogs, resp.Items)
 	})
+
+	t.Run("should support pagination", func(t *testing.T) {
+		defer wafSetupAndTeardown(t)()
+
+		// Create 5 waf logs.
+		logTime := time.Unix(0, 0).UTC()
+		for i := 0; i < 5; i++ {
+			logs := []v1.WAFLog{
+				{
+					Timestamp: logTime.Add(time.Duration(i) * time.Second), // Make sure logs are ordered.
+					Host:      fmt.Sprintf("%d", i),
+				},
+			}
+			bulk, err := cli.WAFLogs(cluster).Create(ctx, logs)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create WAF log did not succeed")
+		}
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_waf*")
+
+		// Read them back one at a time.
+		var afterKey map[string]interface{}
+		for i := 0; i < 5; i++ {
+			params := v1.WAFLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Unix(0, 0).UTC().Add(-5 * time.Second),
+						To:   time.Unix(0, 0).UTC().Add(5 * time.Second),
+					},
+					MaxPageSize: 1,
+					AfterKey:    afterKey,
+				},
+			}
+			resp, err := cli.WAFLogs(cluster).List(ctx, &params)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(resp.Items))
+			require.Equal(t, []v1.WAFLog{
+				{
+					Timestamp: logTime.Add(time.Duration(i) * time.Second),
+					Host:      fmt.Sprintf("%d", i),
+				},
+			}, resp.Items, fmt.Sprintf("WAF #%d did not match", i))
+			require.NotNil(t, resp.AfterKey)
+			require.Equal(t, resp.TotalHits, int64(5))
+
+			// Use the afterKey for the next query.
+			afterKey = resp.AfterKey
+		}
+
+		// If we query once more, we should get no results, and no afterkey, since
+		// we have paged through all the items.
+		params := v1.WAFLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Unix(0, 0).UTC().Add(-5 * time.Second),
+					To:   time.Unix(0, 0).UTC().Add(5 * time.Second),
+				},
+				MaxPageSize: 1,
+				AfterKey:    afterKey,
+			},
+		}
+		resp, err := cli.WAFLogs(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Items))
+		require.Nil(t, resp.AfterKey)
+	})
+
 }

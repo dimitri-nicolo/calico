@@ -122,7 +122,7 @@ func TestFV_FlowLogs(t *testing.T) {
 		defer flowlogSetupAndTeardown(t)()
 
 		// Create 5 flow logs.
-		logTime := time.Now().Unix()
+		logTime := time.Now().UTC().Unix()
 		for i := 0; i < 5; i++ {
 			logs := []v1.FlowLog{
 				{
@@ -163,13 +163,14 @@ func TestFV_FlowLogs(t *testing.T) {
 				},
 			}, testutils.AssertLogIDAndCopyFlowLogsWithoutID(t, resp), fmt.Sprintf("Flow #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
+			require.Equal(t, resp.TotalHits, int64(5))
 
 			// Use the afterKey for the next query.
 			afterKey = resp.AfterKey
 		}
 
 		// If we query once more, we should get no results, and no afterkey, since
-		// we have paged through all of the items.
+		// we have paged through all the items.
 		params := v1.FlowLogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{

@@ -6,8 +6,11 @@ package fv_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -177,4 +180,158 @@ func TestFV_AuditEE(t *testing.T) {
 
 		require.Equal(t, audits, resp.Items)
 	})
+
+	t.Run("should support pagination for EE Audit", func(t *testing.T) {
+		defer auditSetupAndTeardown(t)()
+
+		// Create 5 audit logs.
+		logTime := time.Unix(100, 0).UTC()
+		for i := 0; i < 5; i++ {
+			logs := []v1.AuditLog{
+				{
+					Event: audit.Event{
+						RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(i) * time.Second)),
+						AuditID:                  types.UID(fmt.Sprintf("some-uuid-%d", i)),
+					},
+				},
+			}
+			bulk, err := cli.AuditLogs(cluster).Create(ctx, v1.AuditLogTypeEE, logs)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create EE audit log did not succeed")
+		}
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_ee*")
+
+		// Read them back one at a time.
+		var afterKey map[string]interface{}
+		for i := 0; i < 5; i++ {
+			params := v1.AuditLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: logTime.Add(-5 * time.Second),
+						To:   logTime.Add(5 * time.Second),
+					},
+					MaxPageSize: 1,
+					AfterKey:    afterKey,
+				},
+				Type: v1.AuditLogTypeEE,
+			}
+			resp, err := cli.AuditLogs(cluster).List(ctx, &params)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(resp.Items))
+			require.Equal(t, []v1.AuditLog{
+				{
+					Event: audit.Event{
+						RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(i) * time.Second)),
+						AuditID:                  types.UID(fmt.Sprintf("some-uuid-%d", i)),
+					},
+				},
+			}, auditLogsWithUTCTime(resp), fmt.Sprintf("Audit Log EE #%d did not match", i))
+			require.NotNil(t, resp.AfterKey)
+			require.Equal(t, resp.TotalHits, int64(5))
+
+			// Use the afterKey for the next query.
+			afterKey = resp.AfterKey
+		}
+
+		// If we query once more, we should get no results, and no afterkey, since
+		// we have paged through all the items.
+		params := v1.AuditLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: logTime.UTC().Add(-5 * time.Second),
+					To:   logTime.UTC().Add(5 * time.Second),
+				},
+				MaxPageSize: 1,
+				AfterKey:    afterKey,
+			},
+			Type: v1.AuditLogTypeEE,
+		}
+		resp, err := cli.AuditLogs(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Items))
+		require.Nil(t, resp.AfterKey)
+	})
+
+	t.Run("should support pagination for Kube Audit", func(t *testing.T) {
+		defer auditSetupAndTeardown(t)()
+
+		// Create 5 audit logs.
+		logTime := time.Unix(100, 0).UTC()
+		for i := 0; i < 5; i++ {
+			logs := []v1.AuditLog{
+				{
+					Event: audit.Event{
+						RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(i) * time.Second)),
+						AuditID:                  types.UID(fmt.Sprintf("some-uuid-%d", i)),
+					},
+				},
+			}
+			bulk, err := cli.AuditLogs(cluster).Create(ctx, v1.AuditLogTypeKube, logs)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create KUBE audit log did not succeed")
+		}
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_kube*")
+
+		// Read them back one at a time.
+		var afterKey map[string]interface{}
+		for i := 0; i < 5; i++ {
+			params := v1.AuditLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: logTime.Add(-5 * time.Second),
+						To:   logTime.Add(5 * time.Second),
+					},
+					MaxPageSize: 1,
+					AfterKey:    afterKey,
+				},
+				Type: v1.AuditLogTypeKube,
+			}
+			resp, err := cli.AuditLogs(cluster).List(ctx, &params)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(resp.Items))
+			require.Equal(t, []v1.AuditLog{
+				{
+					Event: audit.Event{
+						RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(i) * time.Second)),
+						AuditID:                  types.UID(fmt.Sprintf("some-uuid-%d", i)),
+					},
+				},
+			}, auditLogsWithUTCTime(resp), fmt.Sprintf("Audit Log Kube #%d did not match", i))
+			require.NotNil(t, resp.AfterKey)
+			require.Equal(t, resp.TotalHits, int64(5))
+
+			// Use the afterKey for the next query.
+			afterKey = resp.AfterKey
+		}
+
+		// If we query once more, we should get no results, and no afterkey, since
+		// we have paged through all the items.
+		params := v1.AuditLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: logTime.UTC().Add(-5 * time.Second),
+					To:   logTime.UTC().Add(5 * time.Second),
+				},
+				MaxPageSize: 1,
+				AfterKey:    afterKey,
+			},
+			Type: v1.AuditLogTypeKube,
+		}
+		resp, err := cli.AuditLogs(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Items))
+		require.Nil(t, resp.AfterKey)
+	})
+}
+
+func auditLogsWithUTCTime(resp *v1.List[v1.AuditLog]) []v1.AuditLog {
+	for idx, audit := range resp.Items {
+		utcTime := audit.RequestReceivedTimestamp.UTC()
+		resp.Items[idx].RequestReceivedTimestamp = metav1.NewMicroTime(utcTime)
+	}
+	return resp.Items
 }

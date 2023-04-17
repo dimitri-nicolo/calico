@@ -185,7 +185,6 @@ func (auditLog *AuditLog) MarshalJSON() ([]byte, error) {
 	}
 	val.SourceIPs = auditLog.SourceIPs
 	val.UserAgent = auditLog.UserAgent
-	val.RequestReceivedTimestamp = auditLog.RequestReceivedTimestamp
 	if auditLog.ResponseStatus != nil {
 		val.ResponseStatus = auditLog.ResponseStatus.DeepCopy()
 	}
@@ -257,7 +256,6 @@ func (auditLog *AuditLog) UnmarshalJSON(data []byte) error {
 	}
 	k8sEvent.SourceIPs = internalEvent.SourceIPs
 	k8sEvent.UserAgent = internalEvent.UserAgent
-	k8sEvent.RequestReceivedTimestamp = internalEvent.RequestReceivedTimestamp
 	k8sEvent.RequestReceivedTimestamp = internalEvent.RequestReceivedTimestamp
 	k8sEvent.StageTimestamp = internalEvent.StageTimestamp
 	k8sEvent.Annotations = internalEvent.Annotations

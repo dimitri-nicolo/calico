@@ -6,6 +6,7 @@ package fv_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -116,5 +117,76 @@ func TestDNS_FlowLogs(t *testing.T) {
 		require.NoError(t, err)
 		actualLogs := testutils.AssertLogIDAndCopyDNSLogsWithoutID(t, resp)
 		require.Equal(t, logs, actualLogs)
+	})
+
+	t.Run("should support pagination", func(t *testing.T) {
+		defer dnslogSetupAndTeardown(t)()
+
+		// Create 5 dns logs.
+		logTime := time.Unix(0, 0).UTC()
+		for i := 0; i < 5; i++ {
+			logs := []v1.DNSLog{
+				{
+					StartTime: logTime,
+					EndTime:   logTime.Add(time.Duration(i) * time.Second), // Make sure logs are ordered.
+					Host:      fmt.Sprintf("%d", i),
+				},
+			}
+			bulk, err := cli.DNSLogs(cluster).Create(ctx, logs)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create dns log did not succeed")
+		}
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_dns*")
+
+		// Read them back one at a time.
+		var afterKey map[string]interface{}
+		for i := 0; i < 5; i++ {
+			params := v1.DNSLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: logTime.Add(-5 * time.Second),
+						To:   logTime.Add(5 * time.Second),
+					},
+					MaxPageSize: 1,
+					AfterKey:    afterKey,
+				},
+			}
+			resp, err := cli.DNSLogs(cluster).List(ctx, &params)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(resp.Items))
+			require.Equal(t, []v1.DNSLog{
+				{
+					StartTime: logTime,
+					EndTime:   logTime.Add(time.Duration(i) * time.Second),
+					Host:      fmt.Sprintf("%d", i),
+					RCode:     v1.DNSResponseCode(0),
+					RRSets:    v1.DNSRRSets{},
+				},
+			}, testutils.AssertLogIDAndCopyDNSLogsWithoutID(t, resp), fmt.Sprintf("DNS #%d did not match", i))
+			require.NotNil(t, resp.AfterKey)
+			require.Equal(t, resp.TotalHits, int64(5))
+
+			// Use the afterKey for the next query.
+			afterKey = resp.AfterKey
+		}
+
+		// If we query once more, we should get no results, and no afterkey, since
+		// we have paged through all the items.
+		params := v1.DNSLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: logTime.UTC().Add(-5 * time.Second),
+					To:   logTime.UTC().Add(5 * time.Second),
+				},
+				MaxPageSize: 1,
+				AfterKey:    afterKey,
+			},
+		}
+		resp, err := cli.DNSLogs(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Items))
+		require.Nil(t, resp.AfterKey)
 	})
 }

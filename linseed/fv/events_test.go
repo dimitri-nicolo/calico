@@ -6,6 +6,7 @@ package fv_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -173,5 +174,72 @@ func TestFV_Events(t *testing.T) {
 		resp, err = cli.Events(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 0)
+	})
+
+	t.Run("should support pagination", func(t *testing.T) {
+		defer eventsSetupAndTeardown(t)()
+
+		// Create 5 events.
+		logTime := time.Now().UTC().Unix()
+		for i := 0; i < 5; i++ {
+			events := []v1.Event{
+				{
+					Time: logTime + int64(i), // Make sure events are ordered.
+					Host: fmt.Sprintf("%d", i),
+				},
+			}
+			bulk, err := cli.Events(cluster).Create(ctx, events)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create events did not succeed")
+		}
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_event*")
+
+		// Read them back one at a time.
+		var afterKey map[string]interface{}
+		for i := 0; i < 5; i++ {
+			params := v1.EventParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Second),
+						To:   time.Now().Add(5 * time.Second),
+					},
+					MaxPageSize: 1,
+					AfterKey:    afterKey,
+				},
+			}
+			resp, err := cli.Events(cluster).List(ctx, &params)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(resp.Items))
+			require.Equal(t, []v1.Event{
+				{
+					Time: logTime + int64(i),
+					Host: fmt.Sprintf("%d", i),
+				},
+			}, testutils.AssertLogIDAndCopyEventsWithoutID(t, resp), fmt.Sprintf("Event #%d did not match", i))
+			require.NotNil(t, resp.AfterKey)
+			require.Equal(t, resp.TotalHits, int64(5))
+
+			// Use the afterKey for the next query.
+			afterKey = resp.AfterKey
+		}
+
+		// If we query once more, we should get no results, and no afterkey, since
+		// we have paged through all the items.
+		params := v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Second),
+					To:   time.Now().Add(5 * time.Second),
+				},
+				MaxPageSize: 1,
+				AfterKey:    afterKey,
+			},
+		}
+		resp, err := cli.Events(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Items))
+		require.Nil(t, resp.AfterKey)
 	})
 }
