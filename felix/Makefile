@@ -63,7 +63,6 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_FELIX_DIRS) fv,-path ./$(dir) -pru
 # Add Felix cgo files
 SRC_FILES += $(shell find bpf/ -name '*.[ch]')
 FV_SRC_FILES:=$(shell find fv -type f -name '*.go' -print)
-EXTRA_DOCKER_ARGS += --init
 
 ###############################################################################
 # Include ../lib.Makefile
@@ -81,7 +80,7 @@ endif
 
 FV_ETCDIMAGE?=$(ETCD_IMAGE)
 FV_TYPHAIMAGE?=felix-test/typha:latest-$(BUILDARCH)
-FV_K8SIMAGE=calico/go-build:$(GO_BUILD_VER)
+FV_K8SIMAGE=$(CALICO_BUILD)
 FV_FELIXIMAGE?=$(FELIX_IMAGE):latest-$(ARCH)
 
 # Total number of batches to split the tests into.  In CI we set this to say 5 batches,
@@ -325,10 +324,6 @@ $(FELIX_CONTAINER_CREATED): docker-image/calico-felix-wrapper \
 ###############################################################################
 # FIXME re-enable linting once we figure out why the linter barfs on this repo.
 LINT_ARGS = --disable gosimple,unused,staticcheck,govet,errcheck,structcheck,varcheck,deadcode,ineffassign --max-issues-per-linter 0 --max-same-issues 0 --timeout 8m
-
-.PHONY: golangci-lint
-golangci-lint: $(LIBBPF_A) $(GENERATED_FILES)
-	$(DOCKER_GO_BUILD_CGO) golangci-lint run $(LINT_ARGS)
 
 ###############################################################################
 # Unit Tests

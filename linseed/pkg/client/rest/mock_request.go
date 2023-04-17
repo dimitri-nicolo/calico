@@ -27,6 +27,10 @@ func (m *MockRequest) GetParams() interface{} {
 	return m.realRequest.params
 }
 
+func (m *MockRequest) GetBody() interface{} {
+	return m.realRequest.body
+}
+
 func (m *MockRequest) Verb(v string) Request {
 	m.realRequest.Verb(v)
 	return m

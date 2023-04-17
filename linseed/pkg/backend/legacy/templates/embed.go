@@ -49,18 +49,18 @@ var SettingsLookup = map[bapi.DataType]string{
 	bapi.DNSLogs: DNSLogSettings,
 }
 
-// IndexPatternsLookup will keep track of the index patterns created
-var IndexPatternsLookup = map[bapi.DataType]string{
-	bapi.AuditEELogs:    "tigera_secure_ee_audit_*",
-	bapi.AuditKubeLogs:  "tigera_secure_ee_audit_*",
-	bapi.BGPLogs:        "tigera_secure_ee_bgp*",
-	bapi.FlowLogs:       "tigera_secure_ee_flows*",
-	bapi.L7Logs:         "tigera_secure_ee_l7*",
-	bapi.DNSLogs:        "tigera_secure_ee_dns*",
-	bapi.Events:         "tigera_secure_ee_events*",
-	bapi.WAFLogs:        "tigera_secure_ee_waf*",
-	bapi.RuntimeReports: "tigera_secure_ee_runtime*",
-	bapi.ReportData:     "tigera_secure_ee_compliance_reports*",
-	bapi.Benchmarks:     "tigera_secure_ee_benchmark_results*",
-	bapi.Snapshots:      "tigera_secure_ee_snapshots*",
+// IndexPatternsPrefixLookup will keep track of the index patterns created
+var IndexPatternsPrefixLookup = map[bapi.DataType]string{
+	bapi.AuditEELogs:    "tigera_secure_ee_audit_ee",
+	bapi.AuditKubeLogs:  "tigera_secure_ee_audit_kube",
+	bapi.BGPLogs:        "tigera_secure_ee_bgp",
+	bapi.FlowLogs:       "tigera_secure_ee_flows",
+	bapi.L7Logs:         "tigera_secure_ee_l7",
+	bapi.DNSLogs:        "tigera_secure_ee_dns",
+	bapi.Events:         "tigera_secure_ee_events",
+	bapi.WAFLogs:        "tigera_secure_ee_waf",
+	bapi.RuntimeReports: "tigera_secure_ee_runtime",
+	bapi.ReportData:     "tigera_secure_ee_compliance_reports",
+	bapi.Benchmarks:     "tigera_secure_ee_benchmark_results",
+	bapi.Snapshots:      "tigera_secure_ee_snapshots",
 }

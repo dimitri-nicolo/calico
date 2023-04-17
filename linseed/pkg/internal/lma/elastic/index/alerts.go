@@ -24,7 +24,7 @@ func Alerts() Helper {
 	return alertsIndexHelper{}
 }
 
-// NewAlertsConverter returns a converter instance defined for alerts.
+// NewAlertsConverter returns a Converter instance defined for alerts.
 func NewAlertsConverter() converter {
 	return converter{basicAtomToElastic}
 }

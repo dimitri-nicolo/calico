@@ -19,29 +19,17 @@ const (
 )
 
 type compliance struct {
-	benchmarks *handler.GenericHandler[v1.Benchmarks, v1.BenchmarksParams, v1.Benchmarks]
-	snapshots  *handler.GenericHandler[v1.Snapshot, v1.SnapshotParams, v1.Snapshot]
-	reports    *handler.GenericHandler[v1.ReportData, v1.ReportDataParams, v1.ReportData]
+	benchmarks handler.RWHandler[v1.Benchmarks, v1.BenchmarksParams, v1.Benchmarks]
+	snapshots  handler.RWHandler[v1.Snapshot, v1.SnapshotParams, v1.Snapshot]
+	reports    handler.RWHandler[v1.ReportData, v1.ReportDataParams, v1.ReportData]
 }
 
 func New(b bapi.BenchmarksBackend, s bapi.SnapshotsBackend, r bapi.ReportsBackend) *compliance {
-	benchmarks := &handler.GenericHandler[v1.Benchmarks, v1.BenchmarksParams, v1.Benchmarks]{
-		CreateFn: b.Create,
-		ListFn:   b.List,
-	}
-	snapshots := &handler.GenericHandler[v1.Snapshot, v1.SnapshotParams, v1.Snapshot]{
-		CreateFn: s.Create,
-		ListFn:   s.List,
-	}
-	reports := &handler.GenericHandler[v1.ReportData, v1.ReportDataParams, v1.ReportData]{
-		CreateFn: r.Create,
-		ListFn:   r.List,
-	}
 
 	return &compliance{
-		benchmarks: benchmarks,
-		snapshots:  snapshots,
-		reports:    reports,
+		benchmarks: handler.NewRWHandler[v1.Benchmarks, v1.BenchmarksParams, v1.Benchmarks](b.Create, b.List),
+		snapshots:  handler.NewRWHandler[v1.Snapshot, v1.SnapshotParams, v1.Snapshot](s.Create, s.List),
+		reports:    handler.NewRWHandler[v1.ReportData, v1.ReportDataParams, v1.ReportData](r.Create, r.List),
 	}
 }
 

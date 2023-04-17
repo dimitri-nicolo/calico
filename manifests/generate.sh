@@ -49,6 +49,11 @@ metadata:
     name: tigera-operator
 EOF
 
+# Make sure the subchart exists by creating a dummy, such that helm can build the tigera-operator chart. This is because
+# it has a dependency on the subchart in its Chart.yaml.
+mkdir -p ../charts/tigera-operator/charts/tigera-prometheus-operator
+cp ../charts/tigera-prometheus-operator/Chart.yaml ../charts/tigera-operator/charts/tigera-prometheus-operator/
+
 ${HELM} -n tigera-operator template \
 	--include-crds \
 	--set installation.enabled=false \
@@ -185,3 +190,6 @@ if [[ $CALICO_VERSION != master ]]; then
     find . -type f -exec sed -i "s;\(quay.io\|gcr.io/unique-caldron-775/cnx\)/$img:[A-Za-z0-9_.-]*;$REGISTRY/$img:$ver;g" {} \;
   done
 fi
+
+# Remove the dummy sub chart again.
+rm -rf ../charts/tigera-operator/charts

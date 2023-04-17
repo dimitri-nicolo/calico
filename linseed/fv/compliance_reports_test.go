@@ -6,7 +6,6 @@ package fv_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -58,11 +57,7 @@ func complianceSetupAndTeardown(t *testing.T) func() {
 
 	return func() {
 		// Cleanup indices created by the test.
-		err := testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_compliance_reports.%s", cluster))
-		require.NoError(t, err)
-		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_benchmark_results.%s", cluster))
-		require.NoError(t, err)
-		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_snapshots.%s", cluster))
+		err := testutils.CleanupIndices(context.Background(), esClient, cluster)
 		require.NoError(t, err)
 		logCancel()
 		cancel()

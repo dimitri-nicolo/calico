@@ -26,7 +26,7 @@ func L7Logs() Helper {
 	return l7LogsIndexHelper{}
 }
 
-// NewL7LogsConverter returns a converter instance defined for l7 logs.
+// NewL7LogsConverter returns a Converter instance defined for l7 logs.
 func NewL7LogsConverter() converter {
 	return converter{basicAtomToElastic}
 }

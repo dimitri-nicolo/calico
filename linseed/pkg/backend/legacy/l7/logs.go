@@ -160,8 +160,8 @@ func (b *l7LogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v
 		return nil, 0, err
 	}
 
-	start, end := logtools.ExtractTimeRange(opts.QueryParams.TimeRange)
-	q, err := logtools.BuildQuery(b.helper, i, opts.LogSelectionParams, start, end)
+	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
+	q, err := logtools.BuildQuery(b.helper, i, opts, start, end)
 	if err != nil {
 		return nil, 0, err
 	}

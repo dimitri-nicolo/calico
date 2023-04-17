@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/equality"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/calc"
@@ -333,7 +335,7 @@ func (c *firewallPolicyIntegrationController) processNextItem() bool {
 // datastore.
 func (c *firewallPolicyIntegrationController) syncToDatastore(key string) error {
 	clog := log.WithField("key", key)
-	clog.Debug("Synching to datastore")
+	clog.Debug("Syncing to datastore")
 
 	// Create the tier if it doesn't exist.
 	datastoreTier, err := c.calicoClient.Tiers().Get(c.ctx, c.tier, metav1.GetOptions{})
@@ -397,12 +399,15 @@ func (c *firewallPolicyIntegrationController) syncToDatastore(key string) error 
 	} else {
 		// Copies all necessary fields, only if any of them differ.
 		clog.Info("Updating GlobalNetworkPolicy in Calico datastore")
-		copyGlobalNetworkPolicy(currentGnp, requiredGnp)
-		if _, err = c.calicoClient.GlobalNetworkPolicies().Update(c.ctx, currentGnp, metav1.UpdateOptions{}); err != nil {
-			clog.WithError(err).Infof("Error updating GlobalNetworkPolicy in Calico datastore: %#v", currentGnp)
-			go postEvent(c.eventRecorder, c.ctx, c.k8sClient, c.policyControllerNamespace,
-				fmt.Sprintf("failed to update GlobalNetworkPolicy %s: %s", key, err.Error()))
-			return err
+		mergedGnp := currentGnp.DeepCopy()
+		copyGlobalNetworkPolicy(mergedGnp, requiredGnp)
+		if !equality.Semantic.DeepEqual(mergedGnp.Annotations, currentGnp.Annotations) || !equality.Semantic.DeepEqual(mergedGnp.Spec, currentGnp.Spec) {
+			if _, err = c.calicoClient.GlobalNetworkPolicies().Update(c.ctx, mergedGnp, metav1.UpdateOptions{}); err != nil {
+				clog.WithError(err).Infof("Error updating GlobalNetworkPolicy in Calico datastore: %#v", mergedGnp)
+				go postEvent(c.eventRecorder, c.ctx, c.k8sClient, c.policyControllerNamespace,
+					fmt.Sprintf("failed to update GlobalNetworkPolicy %s: %s", key, err.Error()))
+				return err
+			}
 		}
 	}
 

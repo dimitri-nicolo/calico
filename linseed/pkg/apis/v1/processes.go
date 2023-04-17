@@ -6,6 +6,14 @@ type ProcessParams struct {
 	LogSelectionParams `json:",inline"`
 }
 
+func (p ProcessParams) SetSortBy(sort []SearchRequestSortBy) {
+	panic("implement me")
+}
+
+func (p ProcessParams) GetSortBy() []SearchRequestSortBy {
+	return nil
+}
+
 type ProcessInfo struct {
 	// Name of the process.
 	Name string `json:"name" validate:"required"`

@@ -16,15 +16,14 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nmrshll/go-cp"
-	"github.com/prometheus/common/log"
 	"github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/client/pkg/v3/fileutil"
-	"k8s.io/client-go/rest"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
+	"k8s.io/client-go/rest"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 	"github.com/projectcalico/calico/node/pkg/cni"
 )
 
@@ -131,7 +130,7 @@ func Install() error {
 	c.ServiceAccountToken = make([]byte, 0)
 	var err error
 	if fileExists(serviceAccountTokenFile) {
-		log.Info("Running as a Kubernetes pod")
+		logrus.Info("Running as a Kubernetes pod")
 		kubecfg, err = rest.InClusterConfig()
 		if err != nil {
 			return err
@@ -336,11 +335,11 @@ func writeCNIConfig(c config) {
 	// Pick the config template to use. This can either be through an env var,
 	// or a file mounted into the container.
 	if c.CNINetworkConfig != "" {
-		log.Info("Using CNI config template from CNI_NETWORK_CONFIG environment variable.")
+		logrus.Info("Using CNI config template from CNI_NETWORK_CONFIG environment variable.")
 		netconf = c.CNINetworkConfig
 	}
 	if c.CNINetworkConfigFile != "" {
-		log.Info("Using CNI config template from CNI_NETWORK_CONFIG_FILE")
+		logrus.Info("Using CNI config template from CNI_NETWORK_CONFIG_FILE")
 		var err error
 		netconfBytes, err := os.ReadFile(c.CNINetworkConfigFile)
 		if err != nil {
@@ -398,7 +397,7 @@ func writeCNIConfig(c config) {
 
 	err = isValidJSON(netconf)
 	if err != nil {
-		log.Fatalf("%s is not a valid json object\nerror: %s", netconf, err)
+		logrus.Fatalf("%s is not a valid json object\nerror: %s", netconf, err)
 	}
 
 	// Write out the file.
@@ -560,13 +559,13 @@ func destinationUptoDate(src, dst string) (bool, error) {
 	// Files have the same exact size and mode, check the actual contents.
 	f1, err := os.Open(src)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 	defer f1.Close()
 
 	f2, err := os.Open(dst)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 	defer f2.Close()
 

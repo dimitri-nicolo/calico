@@ -162,8 +162,8 @@ func (b *processBackend) convertBucket(log *logrus.Entry, bucket *elastic.Aggreg
 // buildQuery builds an elastic query using the given parameters.
 func (b *processBackend) buildQuery(i bapi.ClusterInfo, opts *v1.ProcessParams) (elastic.Query, error) {
 	// Start with the base flow log query using common fields.
-	start, end := logtools.ExtractTimeRange(opts.QueryParams.TimeRange)
-	query, err := logtools.BuildQuery(lmaindex.FlowLogs(), i, opts.LogSelectionParams, start, end)
+	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
+	query, err := logtools.BuildQuery(lmaindex.FlowLogs(), i, opts, start, end)
 	if err != nil {
 		return nil, err
 	}

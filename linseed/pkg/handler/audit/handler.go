@@ -22,16 +22,19 @@ import (
 
 const (
 	LogPath            = "/audit/logs"
+	AggsPath           = "/audit/logs/aggregation"
 	LogPathBulkPattern = "/audit/logs/%s/bulk"
 )
 
 type audit struct {
-	logs bapi.AuditBackend
+	logs         bapi.AuditBackend
+	aggregations handler.AggregationHandler[v1.AuditLogAggregationParams]
 }
 
 func New(logs bapi.AuditBackend) *audit {
 	return &audit{
-		logs: logs,
+		logs:         logs,
+		aggregations: handler.NewAggregationHandler[v1.AuditLogAggregationParams](logs.Aggregations),
 	}
 }
 
@@ -51,6 +54,11 @@ func (h audit) APIS() []handler.API {
 			Method:  "POST",
 			URL:     fmt.Sprintf(LogPathBulkPattern, v1.AuditLogTypeKube),
 			Handler: h.BulkAuditKube(),
+		},
+		{
+			Method:  "POST",
+			URL:     AggsPath,
+			Handler: h.aggregations.Aggregate(),
 		},
 	}
 }

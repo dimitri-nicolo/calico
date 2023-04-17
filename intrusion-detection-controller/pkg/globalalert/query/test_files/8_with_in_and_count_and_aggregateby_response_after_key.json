@@ -1,0 +1,13 @@
+{
+  "composite_aggs": {
+    "buckets": [
+      {
+        "key": {
+          "source_name_aggr": "prometheus-calico-node-prometheus-*",
+          "source_namespace": "tigera-prometheus"
+        },
+        "doc_count": 832
+      }
+    ]
+  }
+}

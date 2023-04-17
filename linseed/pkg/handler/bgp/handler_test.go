@@ -99,7 +99,7 @@ func TestBGPBulkIngestion(t *testing.T) {
 			req.Header.Set("Content-Type", "application/x-ndjson")
 			require.NoError(t, err)
 
-			b.Bulk().ServeHTTP(rec, req)
+			b.logs.Create().ServeHTTP(rec, req)
 
 			bodyBytes, err := io.ReadAll(rec.Body)
 			require.NoError(t, err)
@@ -200,7 +200,7 @@ func TestBGPGetLogs(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 
-			b.GetLogs().ServeHTTP(rec, req)
+			b.logs.List().ServeHTTP(rec, req)
 
 			bodyBytes, err := io.ReadAll(rec.Body)
 			require.NoError(t, err)

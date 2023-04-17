@@ -4,6 +4,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/olivere/elastic/v7"
 
@@ -15,6 +16,7 @@ import (
 // FlowLogsInterface has methods related to flowLogs.
 type FlowLogsInterface interface {
 	List(context.Context, v1.Params) (*v1.List[v1.FlowLog], error)
+	ListInto(context.Context, v1.Params, v1.Listable) error
 	Create(context.Context, []v1.FlowLog) (*v1.BulkResponse, error)
 	Aggregations(context.Context, v1.Params) (elastic.Aggregations, error)
 }
@@ -33,16 +35,27 @@ func newFlowLogs(c Client, cluster string) FlowLogsInterface {
 // List gets the flowLogs for the given input params.
 func (f *flowLogs) List(ctx context.Context, params v1.Params) (*v1.List[v1.FlowLog], error) {
 	flowLogs := v1.List[v1.FlowLog]{}
+	err := f.ListInto(ctx, params, &flowLogs)
+	return &flowLogs, err
+}
+
+// ListInto gets the flowLogs for the given input params.
+func (f *flowLogs) ListInto(ctx context.Context, params v1.Params, l v1.Listable) error {
+	if l == nil {
+		return fmt.Errorf("list cannot be nil")
+	}
+
 	err := f.restClient.Post().
 		Path("/flows/logs").
 		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).
-		Into(&flowLogs)
+		Into(l)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &flowLogs, nil
+
+	return nil
 }
 
 func (f *flowLogs) Create(ctx context.Context, flowLogs []v1.FlowLog) (*v1.BulkResponse, error) {

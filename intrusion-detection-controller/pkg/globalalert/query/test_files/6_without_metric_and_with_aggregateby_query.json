@@ -1,0 +1,16 @@
+{
+  "composite_aggs": {
+    "composite": {
+      "size": 500,
+      "sources": [
+        {
+          "source_name_aggr": {
+            "terms": {
+              "field": "source_name_aggr"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

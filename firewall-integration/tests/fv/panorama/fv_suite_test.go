@@ -12,8 +12,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
 
-const InputDataFolder = "../data/input/"
-
 func init() {
 	testutils.HookLogrusForGinkgo()
 	logrus.SetLevel(logrus.InfoLevel)

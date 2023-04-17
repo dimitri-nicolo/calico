@@ -3,35 +3,26 @@
 package waf
 
 import (
-	"context"
-	"errors"
-	"net/http"
-
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/calico/linseed/pkg/handler"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/middleware"
-	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 const (
 	LogPath     = "/waf/logs"
+	AggsPath    = "/waf/logs/aggregation"
 	LogPathBulk = "/waf/logs/bulk"
 )
 
 type waf struct {
-	logs bapi.WAFBackend
+	logs handler.GenericHandler[v1.WAFLog, v1.WAFLogParams, v1.WAFLog, v1.WAFLogAggregationParams]
 }
 
-func New(logs bapi.WAFBackend) *waf {
+func New(b bapi.WAFBackend) *waf {
 	return &waf{
-		logs: logs,
+		logs: handler.NewCompositeHandler[v1.WAFLog, v1.WAFLogParams, v1.WAFLog, v1.WAFLogAggregationParams](
+			b.Create, b.List, b.Aggregations),
 	}
 }
 
@@ -40,94 +31,17 @@ func (h waf) APIS() []handler.API {
 		{
 			Method:  "POST",
 			URL:     LogPathBulk,
-			Handler: h.Bulk(),
+			Handler: h.logs.Create(),
 		},
 		{
 			Method:  "POST",
 			URL:     LogPath,
-			Handler: h.GetLogs(),
+			Handler: h.logs.List(),
 		},
-	}
-}
-
-func (h waf) GetLogs() http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		reqParams, err := handler.DecodeAndValidateReqParams[v1.WAFLogParams](w, req)
-		if err != nil {
-			log.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *v1.HTTPError
-			if errors.As(err, &httpErr) {
-				httputils.JSONError(w, httpErr, httpErr.Status)
-			} else {
-				httputils.JSONError(w, &v1.HTTPError{
-					Msg:    err.Error(),
-					Status: http.StatusBadRequest,
-				}, http.StatusBadRequest)
-			}
-			return
-		}
-
-		if reqParams != nil && reqParams.Timeout == nil {
-			reqParams.Timeout = &metav1.Duration{Duration: v1.DefaultTimeOut}
-		}
-
-		clusterInfo := bapi.ClusterInfo{
-			Cluster: middleware.ClusterIDFromContext(req.Context()),
-			Tenant:  middleware.TenantIDFromContext(req.Context()),
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
-		defer cancel()
-		response, err := h.logs.List(ctx, clusterInfo, reqParams)
-		if err != nil {
-			log.WithError(err).Error("Failed to list WAF logs")
-			httputils.JSONError(w, &v1.HTTPError{
-				Status: http.StatusInternalServerError,
-				Msg:    err.Error(),
-			}, http.StatusInternalServerError)
-			return
-		}
-
-		logrus.Debugf("%s response is: %+v", LogPath, response)
-		httputils.Encode(w, response)
-	}
-}
-
-// Bulk handles bulk ingestion requests to add logs, typically from fluentd.
-func (h waf) Bulk() http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		logs, err := handler.DecodeAndValidateBulkParams[v1.WAFLog](w, req)
-		if err != nil {
-			log.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *v1.HTTPError
-			if errors.As(err, &httpErr) {
-				httputils.JSONError(w, httpErr, httpErr.Status)
-			} else {
-				httputils.JSONError(w, &v1.HTTPError{
-					Msg:    err.Error(),
-					Status: http.StatusBadRequest,
-				}, http.StatusBadRequest)
-			}
-			return
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), v1.DefaultTimeOut)
-		defer cancel()
-		clusterInfo := bapi.ClusterInfo{
-			Cluster: middleware.ClusterIDFromContext(req.Context()),
-			Tenant:  middleware.TenantIDFromContext(req.Context()),
-		}
-
-		response, err := h.logs.Create(ctx, clusterInfo, logs)
-		if err != nil {
-			log.WithError(err).Error("Failed to ingest WAF logs")
-			httputils.JSONError(w, &v1.HTTPError{
-				Status: http.StatusInternalServerError,
-				Msg:    err.Error(),
-			}, http.StatusInternalServerError)
-			return
-		}
-		logrus.Debugf("%s response is: %+v", LogPathBulk, response)
-		httputils.Encode(w, response)
+		{
+			Method:  "POST",
+			URL:     AggsPath,
+			Handler: h.logs.Aggregate(),
+		},
 	}
 }

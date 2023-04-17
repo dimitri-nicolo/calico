@@ -26,7 +26,7 @@ func TestBoostrapFlowsTemplate(t *testing.T) {
 }`, cluster)
 
 	expectedTemplate := &Template{
-		IndexPatterns: []string{"tigera_secure_ee_flows*"},
+		IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_flows.%s.*", cluster)},
 		Mappings:      testutils.MustUnmarshalToMap(t, FlowLogMappings),
 		Settings:      testutils.MustUnmarshalToMap(t, settings),
 	}
@@ -35,6 +35,34 @@ func TestBoostrapFlowsTemplate(t *testing.T) {
 	expectedTemplate.Settings["number_of_replicas"] = 0
 
 	config := NewTemplateConfig(bapi.FlowLogs, bapi.ClusterInfo{Cluster: cluster}, WithApplication("test-app"))
+	require.Equal(t, fmt.Sprintf("tigera_secure_ee_flows.%s.", cluster), config.TemplateName())
+	template, err := config.Build()
+	require.NoError(t, err)
+	assertTemplate(t, expectedTemplate, template)
+}
+
+func TestBoostrapFlowsMultiTenantTemplate(t *testing.T) {
+	cluster := backendutils.RandomClusterName()
+	tenant := backendutils.RandomTenantName()
+
+	settings := fmt.Sprintf(`{
+"lifecycle": {
+"name": "tigera_secure_ee_flows_policy",
+"rollover_alias": "tigera_secure_ee_flows.%s.%s."
+}
+}`, tenant, cluster)
+
+	expectedTemplate := &Template{
+		IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_flows.%s.%s.*", tenant, cluster)},
+		Mappings:      testutils.MustUnmarshalToMap(t, FlowLogMappings),
+		Settings:      testutils.MustUnmarshalToMap(t, settings),
+	}
+
+	expectedTemplate.Settings["number_of_shards"] = 1
+	expectedTemplate.Settings["number_of_replicas"] = 0
+
+	config := NewTemplateConfig(bapi.FlowLogs, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}, WithApplication("test-app"))
+	require.Equal(t, fmt.Sprintf("tigera_secure_ee_flows.%s.%s.", tenant, cluster), config.TemplateName())
 	template, err := config.Build()
 	require.NoError(t, err)
 	assertTemplate(t, expectedTemplate, template)
@@ -44,7 +72,7 @@ func TestBoostrapDNSTemplate(t *testing.T) {
 	cluster := backendutils.RandomClusterName()
 
 	expectedTemplate := &Template{
-		IndexPatterns: []string{"tigera_secure_ee_dns*"},
+		IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_dns.%s.*", cluster)},
 		Mappings:      testutils.MustUnmarshalToMap(t, DNSLogMappings),
 		Settings:      map[string]interface{}{},
 	}
@@ -59,6 +87,7 @@ func TestBoostrapDNSTemplate(t *testing.T) {
 	expectedTemplate.Settings["number_of_replicas"] = 0
 
 	config := NewTemplateConfig(bapi.DNSLogs, bapi.ClusterInfo{Cluster: cluster}, WithApplication("test-app"))
+	require.Equal(t, fmt.Sprintf("tigera_secure_ee_dns.%s.", cluster), config.TemplateName())
 	template, err := config.Build()
 	require.NoError(t, err)
 	assertTemplate(t, expectedTemplate, template)
@@ -75,7 +104,7 @@ func TestBoostrapEEAuditTemplate(t *testing.T) {
 }`, cluster)
 
 	expectedTemplate := &Template{
-		IndexPatterns: []string{"tigera_secure_ee_audit_*"},
+		IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_audit_ee.%s.*", cluster)},
 		Mappings:      testutils.MustUnmarshalToMap(t, AuditMappings),
 		Settings:      testutils.MustUnmarshalToMap(t, settings),
 	}
@@ -84,6 +113,7 @@ func TestBoostrapEEAuditTemplate(t *testing.T) {
 	expectedTemplate.Settings["number_of_replicas"] = 0
 
 	config := NewTemplateConfig(bapi.AuditEELogs, bapi.ClusterInfo{Cluster: cluster}, WithApplication("test-app"))
+	require.Equal(t, fmt.Sprintf("tigera_secure_ee_audit_ee.%s.", cluster), config.TemplateName())
 	template, err := config.Build()
 	require.NoError(t, err)
 	assertTemplate(t, expectedTemplate, template)
@@ -100,7 +130,7 @@ func TestBoostrapKUBEAuditTemplate(t *testing.T) {
 }`, cluster)
 
 	expectedTemplate := &Template{
-		IndexPatterns: []string{"tigera_secure_ee_audit_*"},
+		IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_audit_kube.%s.*", cluster)},
 		Mappings:      testutils.MustUnmarshalToMap(t, AuditMappings),
 		Settings:      testutils.MustUnmarshalToMap(t, settings),
 	}
@@ -109,6 +139,7 @@ func TestBoostrapKUBEAuditTemplate(t *testing.T) {
 	expectedTemplate.Settings["number_of_replicas"] = 0
 
 	config := NewTemplateConfig(bapi.AuditKubeLogs, bapi.ClusterInfo{Cluster: cluster}, WithApplication("test-app"))
+	require.Equal(t, fmt.Sprintf("tigera_secure_ee_audit_kube.%s.", cluster), config.TemplateName())
 	template, err := config.Build()
 	require.NoError(t, err)
 	assertTemplate(t, expectedTemplate, template)
@@ -125,7 +156,7 @@ func TestBoostrapBGPTemplate(t *testing.T) {
 }`, cluster)
 
 	expectedTemplate := &Template{
-		IndexPatterns: []string{"tigera_secure_ee_bgp*"},
+		IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_bgp.%s.*", cluster)},
 		Mappings:      testutils.MustUnmarshalToMap(t, BGPMappings),
 		Settings:      testutils.MustUnmarshalToMap(t, settings),
 	}
@@ -134,6 +165,33 @@ func TestBoostrapBGPTemplate(t *testing.T) {
 	expectedTemplate.Settings["number_of_replicas"] = 0
 
 	config := NewTemplateConfig(bapi.BGPLogs, bapi.ClusterInfo{Cluster: cluster}, WithApplication("test-app"))
+	require.Equal(t, fmt.Sprintf("tigera_secure_ee_bgp.%s.", cluster), config.TemplateName())
+	template, err := config.Build()
+	require.NoError(t, err)
+	assertTemplate(t, expectedTemplate, template)
+}
+
+func TestBoostrapL7Template(t *testing.T) {
+	cluster := backendutils.RandomClusterName()
+
+	settings := fmt.Sprintf(`{
+"lifecycle": {
+"name": "tigera_secure_ee_l7_policy",
+"rollover_alias": "tigera_secure_ee_l7.%s."
+}
+}`, cluster)
+
+	expectedTemplate := &Template{
+		IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_l7.%s.*", cluster)},
+		Mappings:      testutils.MustUnmarshalToMap(t, L7LogMappings),
+		Settings:      testutils.MustUnmarshalToMap(t, settings),
+	}
+
+	expectedTemplate.Settings["number_of_shards"] = 1
+	expectedTemplate.Settings["number_of_replicas"] = 0
+
+	config := NewTemplateConfig(bapi.L7Logs, bapi.ClusterInfo{Cluster: cluster}, WithApplication("test-app"))
+	require.Equal(t, fmt.Sprintf("tigera_secure_ee_l7.%s.", cluster), config.TemplateName())
 	template, err := config.Build()
 	require.NoError(t, err)
 	assertTemplate(t, expectedTemplate, template)
@@ -150,7 +208,7 @@ func TestBoostrapWAFTemplate(t *testing.T) {
 }`, cluster)
 
 	expectedTemplate := &Template{
-		IndexPatterns: []string{"tigera_secure_ee_waf*"},
+		IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_waf.%s.*", cluster)},
 		Mappings:      testutils.MustUnmarshalToMap(t, WAFMappings),
 		Settings:      testutils.MustUnmarshalToMap(t, settings),
 	}
@@ -159,6 +217,7 @@ func TestBoostrapWAFTemplate(t *testing.T) {
 	expectedTemplate.Settings["number_of_replicas"] = 0
 
 	config := NewTemplateConfig(bapi.WAFLogs, bapi.ClusterInfo{Cluster: cluster}, WithApplication("test-app"))
+	require.Equal(t, fmt.Sprintf("tigera_secure_ee_waf.%s.", cluster), config.TemplateName())
 	template, err := config.Build()
 	require.NoError(t, err)
 	assertTemplate(t, expectedTemplate, template)
@@ -175,7 +234,7 @@ func TestBoostrapRuntimeReportsTemplate(t *testing.T) {
 }`, cluster)
 
 	expectedTemplate := &Template{
-		IndexPatterns: []string{"tigera_secure_ee_runtime*"},
+		IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_runtime.%s.*", cluster)},
 		Mappings:      testutils.MustUnmarshalToMap(t, RuntimeReportsMappings),
 		Settings:      testutils.MustUnmarshalToMap(t, settings),
 	}
@@ -184,6 +243,7 @@ func TestBoostrapRuntimeReportsTemplate(t *testing.T) {
 	expectedTemplate.Settings["number_of_replicas"] = 0
 
 	config := NewTemplateConfig(bapi.RuntimeReports, bapi.ClusterInfo{Cluster: cluster}, WithApplication("test-app"))
+	require.Equal(t, fmt.Sprintf("tigera_secure_ee_runtime.%s.", cluster), config.TemplateName())
 	template, err := config.Build()
 	require.NoError(t, err)
 	assertTemplate(t, expectedTemplate, template)

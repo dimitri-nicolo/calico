@@ -7,20 +7,22 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/query"
+
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	ad "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/anomalydetection"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
-	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/elastic"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/reporting"
-	lma "github.com/projectcalico/calico/lma/pkg/elastic"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+
+	ad "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/anomalydetection"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/reporting"
 )
 
 const (
@@ -33,16 +35,14 @@ const (
 type Alert struct {
 	alert                  *v3.GlobalAlert
 	calicoCLI              calicoclient.Interface
-	es                     es.Service
+	service                query.Service
 	adj                    ad.ADService
 	clusterName            string
 	enableAnomalyDetection bool
 }
 
 // NewAlert sets and returns an Alert, builds Elasticsearch query that will be used periodically to query Elasticsearch data.
-func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
-	enableAnomalyDetection bool, podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController,
-	adTrainingController controller.AnomalyDetectionController, clusterName string, namespace string, fipsModeEnabled bool) (*Alert, error) {
+func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, namespace string, fipsModeEnabled bool) (*Alert, error) {
 	globalAlert.Status.Active = true
 	globalAlert.Status.LastUpdate = &metav1.Time{Time: time.Now()}
 
@@ -59,12 +59,12 @@ func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lma
 	}
 
 	if !ok || globalAlertType != v3.GlobalAlertTypeAnomalyDetection {
-		elastic, err := es.NewService(lmaESClient, clusterName, globalAlert, fipsModeEnabled)
+		elastic, err := query.NewService(linseedClient, clusterName, globalAlert, fipsModeEnabled)
 		if err != nil {
 			return nil, err
 		}
 
-		alert.es = elastic
+		alert.service = elastic
 
 	} else {
 		adj, err := ad.NewService(calicoCLI, k8sClient, podTemplateQuery, adDetectionController, adTrainingController, clusterName, namespace, globalAlert)
@@ -87,7 +87,7 @@ func (a *Alert) Execute(ctx context.Context) {
 	globalAlertType, ok := globalAlertSpec.FieldByName(GlobalAlertSpecTypeFieldName).Interface().(v3.GlobalAlertType)
 
 	if !ok || globalAlertType != v3.GlobalAlertTypeAnomalyDetection {
-		a.ExecuteElasticQuery(ctx)
+		a.ExecuteQuery(ctx)
 	} else {
 		a.ExecuteAnomalyDetection(ctx)
 	}
@@ -118,12 +118,11 @@ func (a *Alert) stopAnomalyDetectionService(ctx context.Context) {
 	a.alert.Status = a.adj.Stop()
 }
 
-// ExecuteElasticQuery periodically queries the Elasticsearch, updates GlobalAlert status
+// ExecuteQuery periodically queries Linseed, updates GlobalAlert status
 // and adds alerts to events index if alert conditions are met.
 // If parent context is cancelled, updates the GlobalAlert status and returns.
 // It also deletes any existing elastic watchers for the cluster.
-func (a *Alert) ExecuteElasticQuery(ctx context.Context) {
-	a.es.DeleteElasticWatchers(ctx)
+func (a *Alert) ExecuteQuery(ctx context.Context) {
 	if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx); err != nil {
 		log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing elastic query`, a.alert.Name)
 	}
@@ -132,7 +131,7 @@ func (a *Alert) ExecuteElasticQuery(ctx context.Context) {
 		timer := time.NewTimer(a.getDurationUntilNextAlert())
 		select {
 		case <-timer.C:
-			a.alert.Status = a.es.ExecuteAlert(a.alert)
+			a.alert.Status = a.service.ExecuteAlert(ctx, a.alert)
 			if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx); err != nil {
 				log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing elastic query`, a.alert.Name)
 			}

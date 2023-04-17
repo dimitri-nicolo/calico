@@ -7,3 +7,9 @@ sources:
   - https://github.com/tigera/operator
 # version will be overridden at chart compilation time via args, but still must exist in chart.yaml
 version: v0.0
+
+dependencies:
+  - name: tigera-prometheus-operator
+    condition: tigera-prometheus-operator.enabled, global.tigera-prometheus-operator.enabled
+    tags:
+      - tigera-prometheus-operator

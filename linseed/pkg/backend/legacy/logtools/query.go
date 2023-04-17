@@ -18,7 +18,7 @@ import (
 )
 
 // BuildQuery builds an elastic log query using the given parameters.
-func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogSelectionParams, start time.Time, end time.Time) (*elastic.BoolQuery, error) {
+func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams, start time.Time, end time.Time) (*elastic.BoolQuery, error) {
 	query := elastic.NewBoolQuery()
 
 	// Parse times from the request. We default to a time-range query
@@ -46,6 +46,7 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogSelectionParam
 			query.Must(selQuery)
 		}
 	}
+
 	return query, nil
 }
 

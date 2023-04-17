@@ -66,13 +66,13 @@ func LogIndicies(ctx context.Context, client *elastic.Client) error {
 	return nil
 }
 
-func CleanupIndices(ctx context.Context, client *elastic.Client, prefix string) error {
+func CleanupIndices(ctx context.Context, client *elastic.Client, cluster string) error {
 	indices, err := client.CatIndices().Do(ctx)
 	if err != nil {
 		return err
 	}
 	for _, idx := range indices {
-		if !strings.HasPrefix(idx.Index, prefix) {
+		if !strings.Contains(idx.Index, cluster) {
 			// Skip indicies that don't match.
 			continue
 		}
@@ -89,7 +89,7 @@ func CleanupIndices(ctx context.Context, client *elastic.Client, prefix string) 
 		return err
 	}
 	for _, a := range aliases {
-		if !strings.HasPrefix(a.Alias, prefix) {
+		if !strings.Contains(a.Alias, cluster) {
 			// Skip aliases that don't match.
 			continue
 		}
@@ -102,15 +102,17 @@ func CleanupIndices(ctx context.Context, client *elastic.Client, prefix string) 
 		}
 	}
 
-	templateName := fmt.Sprintf("%s.", prefix)
-	exists, err := client.IndexTemplateExists(templateName).Do(ctx)
+	templates, err := client.IndexGetTemplate().Do(ctx)
 	if err != nil {
 		return err
 	}
-	if exists {
-		_, err = client.IndexDeleteTemplate(templateName).Do(ctx)
-		if err != nil {
-			return err
+
+	for name := range templates {
+		if strings.Contains(name, cluster) {
+			_, err = client.IndexDeleteTemplate(name).Do(ctx)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

@@ -7,7 +7,6 @@ package fv_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
@@ -57,7 +56,7 @@ func l7logSetupAndTeardown(t *testing.T) func() {
 
 	return func() {
 		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_l7.%s", cluster))
+		testutils.CleanupIndices(context.Background(), esClient, cluster)
 		logCancel()
 		cancel()
 	}

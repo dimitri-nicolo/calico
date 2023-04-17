@@ -5,7 +5,8 @@ package audit
 import (
 	"context"
 	"fmt"
-	"time"
+
+	"github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
@@ -22,13 +23,14 @@ import (
 type auditLogBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
-
+	helper    index.Helper
 	templates bapi.Cache
 }
 
 func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.AuditBackend {
 	return &auditLogBackend{
 		client:    c.Backend(),
+		helper:    index.AuditLogs(),
 		lmaclient: c,
 		templates: cache,
 	}
@@ -101,40 +103,9 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.AuditLogParams) (*v1.List[v1.AuditLog], error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("no cluster ID on request")
-	}
-
-	switch opts.Type {
-	case v1.AuditLogTypeEE:
-	case v1.AuditLogTypeKube:
-	case v1.AuditLogTypeAny:
-	case "":
-		return nil, fmt.Errorf("no audit log type provided on List request")
-	default:
-		return nil, fmt.Errorf("invalid audit log type: %s", opts.Type)
-	}
-
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(opts)
+	query, startFrom, err := b.getSearch(ctx, i, opts)
 	if err != nil {
 		return nil, err
-	}
-
-	q, err := b.buildQuery(i, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build the query.
-	query := b.client.Search().
-		Index(b.index(opts.Type, i)).
-		Size(opts.GetMaxPageSize()).
-		From(startFrom).
-		Query(q)
-
-	for _, sort := range opts.Sort {
-		query.Sort(sort.Field, !sort.Descending)
 	}
 
 	results, err := query.Do(ctx)
@@ -160,16 +131,91 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 	}, nil
 }
 
+func (b *auditLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.AuditLogAggregationParams) (*elastic.Aggregations, error) {
+	// Get the base query.
+	search, _, err := b.getSearch(ctx, i, &opts.AuditLogParams)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add in any aggregations provided by the client. We need to handle two cases - one where this is a
+	// time-series request, and another when it's just an aggregation request.
+	if opts.NumBuckets > 0 {
+		// Time-series.
+		hist := elastic.NewAutoDateHistogramAggregation().
+			Field("requestReceivedTimestamp").
+			Buckets(opts.NumBuckets)
+		for name, agg := range opts.Aggregations {
+			hist = hist.SubAggregation(name, logtools.RawAggregation{RawMessage: agg})
+		}
+		search.Aggregation(v1.TimeSeriesBucketName, hist)
+	} else {
+		// Not time-series. Just add the aggs as they are.
+		for name, agg := range opts.Aggregations {
+			search = search.Aggregation(name, logtools.RawAggregation{RawMessage: agg})
+		}
+	}
+
+	// Do the search.
+	results, err := search.Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &results.Aggregations, nil
+}
+
+func (b *auditLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v1.AuditLogParams) (*elastic.SearchService, int, error) {
+	if i.Cluster == "" {
+		return nil, 0, fmt.Errorf("no cluster ID on request")
+	}
+
+	switch opts.Type {
+	case v1.AuditLogTypeEE:
+	case v1.AuditLogTypeKube:
+	case v1.AuditLogTypeAny:
+	case "":
+		return nil, 0, fmt.Errorf("no audit log type provided on List request")
+	default:
+		return nil, 0, fmt.Errorf("invalid audit log type: %s", opts.Type)
+	}
+
+	// Get the startFrom param, if any.
+	startFrom, err := logtools.StartFrom(opts)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	q, err := b.buildQuery(i, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Build the query.
+	query := b.client.Search().
+		Index(b.index(opts.Type, i)).
+		Size(opts.GetMaxPageSize()).
+		From(startFrom).
+		Query(q)
+
+	// Configure sorting.
+	if len(opts.Sort) != 0 {
+		for _, s := range opts.Sort {
+			query.Sort(s.Field, !s.Descending)
+		}
+	} else {
+		query.Sort("requestReceivedTimestamp", true)
+	}
+	return query, startFrom, nil
+}
+
 // buildQuery builds an elastic query using the given parameters.
 func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams) (elastic.Query, error) {
-	query := elastic.NewBoolQuery()
-
-	// Time-range based query.
-	var start, end time.Time
-	if opts.TimeRange != nil {
-		start = opts.TimeRange.From
-		end = opts.TimeRange.To
-		query.Filter(elastic.NewRangeQuery("requestReceivedTimestamp").Gt(start).Lte(end))
+	// Start with the base flow log query using common fields.
+	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
+	query, err := logtools.BuildQuery(b.helper, i, opts, start, end)
+	if err != nil {
+		return nil, err
 	}
 
 	// Check if any resource kinds were specified.

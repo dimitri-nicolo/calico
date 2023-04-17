@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/client-go/testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -16,7 +18,6 @@ import (
 
 	panw "github.com/PaloAltoNetworks/pango"
 	"github.com/PaloAltoNetworks/pango/objs/addr"
-	"github.com/PaloAltoNetworks/pango/objs/addrgrp"
 	"github.com/PaloAltoNetworks/pango/objs/srvc"
 	dvgrp "github.com/PaloAltoNetworks/pango/pnrm/dg"
 	"github.com/PaloAltoNetworks/pango/poli/security"
@@ -26,7 +27,6 @@ import (
 
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	pan "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama"
-	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
 	"github.com/projectcalico/calico/firewall-integration/pkg/util"
 	panutilmocks "github.com/projectcalico/calico/firewall-integration/tests/mocks"
 
@@ -39,8 +39,6 @@ import (
 )
 
 const (
-	expectedGnpDataFolder = "../data/expected/gnp/"
-
 	defaultSecurityRulesValue1 = "/config/devices/entry[@name='localhost.localdomain']/device-group/entry[@name='device_group1']/post-rulebase/default-security-rules"
 	defaultSecurityRulesValue2 = "/config/shared/post-rulebase/default-security-rules"
 	defaultSecurityRulesValue3 = "/config/devices/entry[@name='localhost.localdomain']/device-group/entry[@name='shared']/post-rulebase/default-security-rules"
@@ -51,7 +49,8 @@ var _ = Describe("Tests policy integration controller", func() {
 	var (
 		apiserver *containers.Container
 
-		ctx context.Context
+		ctx    context.Context
+		cancel context.CancelFunc
 
 		hl  *health.HealthAggregator
 		cfg *config.Config
@@ -83,7 +82,7 @@ var _ = Describe("Tests policy integration controller", func() {
 			err = lkubeconfig.Chmod(os.ModePerm)
 			Expect(err).NotTo(HaveOccurred())
 
-			ctx = context.Background()
+			ctx, cancel = context.WithCancel(context.Background())
 
 			kubeconfig = lkubeconfig.Name()
 
@@ -122,50 +121,29 @@ var _ = Describe("Tests policy integration controller", func() {
 				cfg.FwPolicyTierOrder = 101
 				cfg.FwPollInterval = time.Millisecond * 1000
 
-				By("loading the Panorama address data")
-				var addrs []addr.Entry
-				addrFileName := fmt.Sprintf("%s/%s", InputDataFolder, "addresses1.json")
-				panutils.LoadData(addrFileName, &addrs)
-
-				By("loading the Panorama address group data")
-				var addrgrps []addrgrp.Entry
-				addrgrpsFileName := fmt.Sprintf("%s/%s", InputDataFolder, "addressGroups1.json")
-				panutils.LoadData(addrgrpsFileName, &addrgrps)
-
-				By("loading the Panorama services data")
-				var services []srvc.Entry
-				servicesFileName := fmt.Sprintf("%s/%s", InputDataFolder, "services1.json")
-				panutils.LoadData(servicesFileName, &services)
-
-				By("loading the Panorama pre-rules data")
-				var prerules []security.Entry
-				preRulesFileName := fmt.Sprintf("%s/%s", InputDataFolder, "pre-rules1.json")
-				panutils.LoadData(preRulesFileName, &prerules)
-
-				By("loading the Panorama post-rules data")
-				var postrules []security.Entry
-				postRulesFileName := fmt.Sprintf("%s/%s", InputDataFolder, "post-rules1.json")
-				panutils.LoadData(postRulesFileName, &postrules)
+				By("loading the Panorama data")
+				panClData, err := getMockPanoramaClientData()
+				Expect(err).To(BeNil())
 
 				By("defining the mock Panorama client")
 				mockPanCl := &panutilmocks.MockPanoramaClient{}
 				if deviceGroup != "shared" {
 					mockPanCl.On("GetAddressEntries", "shared").Return([]addr.Entry{}, nil)
 				}
-				mockPanCl.On("GetAddressEntries", deviceGroup).Return(addrs, nil)
-				mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(addrgrps, nil)
+				mockPanCl.On("GetAddressEntries", deviceGroup).Return(panClData.Addresses, nil)
+				mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(panClData.AddressGroups, nil)
 				mockPanCl.On("GetClient").Return(&panw.Panorama{})
 				mockPanCl.On("GetDeviceGroupEntry", deviceGroup).Return(dvgrp.Entry{Name: deviceGroup}, nil)
 				// Add the expected device group along with a couple of dummy device groups returned by GetDeviceGroups.
 				deviceGroups := []string{deviceGroup, "device_group2", "device_group3"}
 				mockPanCl.On("GetDeviceGroups").Return(deviceGroups, nil)
-				mockPanCl.On("GetPostRulePolicies", deviceGroup).Return(postrules, nil)
-				mockPanCl.On("GetPreRulePolicies", deviceGroup).Return(prerules, nil)
+				mockPanCl.On("GetPostRulePolicies", deviceGroup).Return(panClData.Postrules, nil)
+				mockPanCl.On("GetPreRulePolicies", deviceGroup).Return(panClData.Prerules, nil)
 				mockPanCl.On("GetPreRulePolicies", "").Return([]security.Entry{}, nil)
 				if deviceGroup != "shared" {
 					mockPanCl.On("GetServiceEntries", "shared").Return([]srvc.Entry{}, nil)
 				}
-				mockPanCl.On("GetServiceEntries", deviceGroup).Return(services, nil)
+				mockPanCl.On("GetServiceEntries", deviceGroup).Return(panClData.Services, nil)
 				mockPanCl.On("Get", defaultSecurityRulesValue1, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
 				mockPanCl.On("Get", defaultSecurityRulesValue2, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
 				mockPanCl.On("Get", defaultSecurityRulesValue3, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
@@ -195,11 +173,12 @@ var _ = Describe("Tests policy integration controller", func() {
 
 				By("letting the controller run until syncing policies has finished")
 				time.Sleep(time.Millisecond * 5000)
+				cancel()
+				wg.Wait()
 
 				By("loading expected data")
-				var expectedGnpMap map[string]v3.GlobalNetworkPolicy
-				file := fmt.Sprintf("%s/%s.json", expectedGnpDataFolder, expectedFileName)
-				panutils.LoadData(file, &expectedGnpMap)
+				expectedGnpMap, err := getExpectedGnpMap(expectedFileName)
+				Expect(err).To(BeNil())
 
 				By("validating the list of global networks sets present in the datastore")
 
@@ -217,8 +196,6 @@ var _ = Describe("Tests policy integration controller", func() {
 					Expect(gns.Spec.Ingress).To(Equal(expectedGnpMap[key].Spec.Ingress))
 					Expect(gns.Spec.Tier).To(Equal(cfg.FwPolicyTier))
 				}
-				// Release wait group resources for the running go function.
-				wg.Done()
 			},
 			table.Entry("should handle an empty value for a device group input", "", "shared", "tag2", "expectedGlobalNetworkPolicyMapTag2SharedRules1"),
 			table.Entry("should handle the \"shared\" value for a device group input", "shared", "shared", "tag2", "expectedGlobalNetworkPolicyMapTag2SharedRules1"),
@@ -238,50 +215,23 @@ var _ = Describe("Tests policy integration controller", func() {
 			cfg.FwPolicyTierOrder = 101
 			cfg.FwPollInterval = time.Millisecond * 1000
 
-			By("loading the Panorama address data")
-			var addrs []addr.Entry
-			addrFileName := fmt.Sprintf("%s/%s", InputDataFolder, "addresses1.json")
-			panutils.LoadData(addrFileName, &addrs)
-
-			By("loading the Panorama address group data")
-			var addrgrps []addrgrp.Entry
-			addrgrpsFileName := fmt.Sprintf("%s/%s", InputDataFolder, "addressGroups1.json")
-			panutils.LoadData(addrgrpsFileName, &addrgrps)
-
-			By("loading the Panorama services data")
-			var services []srvc.Entry
-			servicesFileName := fmt.Sprintf("%s/%s", InputDataFolder, "services1.json")
-			panutils.LoadData(servicesFileName, &services)
-
-			By("loading the Panorama rules data")
-			var prerules []security.Entry
-			preRulesFileName := fmt.Sprintf("%s/%s", InputDataFolder, "pre-rules1.json")
-			panutils.LoadData(preRulesFileName, &prerules)
-
-			By("loading the Panorama rules data")
-			var postrules []security.Entry
-			postRulesFileName := fmt.Sprintf("%s/%s", InputDataFolder, "post-rules1.json")
-			panutils.LoadData(postRulesFileName, &postrules)
+			By("loading the Panorama data")
+			panClData, err := getMockPanoramaClientData()
+			Expect(err).To(BeNil())
 
 			By("defining the mock Panorama client")
 			mockPanCl := &panutilmocks.MockPanoramaClient{}
-			if deviceGroup != "shared" {
-				mockPanCl.On("GetAddressEntries", "shared").Return([]addr.Entry{}, nil)
-			}
-			mockPanCl.On("GetAddressEntries", deviceGroup).Return(addrs, nil)
-			mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(addrgrps, nil)
+			mockPanCl.On("GetAddressEntries", deviceGroup).Return(panClData.Addresses, nil)
+			mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(panClData.AddressGroups, nil)
 			mockPanCl.On("GetClient").Return(&panw.Panorama{})
 			mockPanCl.On("GetDeviceGroupEntry", deviceGroup).Return(dvgrp.Entry{Name: deviceGroup}, nil)
 			// Add the expected device group along with a couple of dummy device groups returned by GetDeviceGroups.
 			deviceGroups := []string{"device_group1", "device_group2", "device_group3"}
 			mockPanCl.On("GetDeviceGroups").Return(deviceGroups, nil)
-			mockPanCl.On("GetPostRulePolicies", deviceGroup).Return(postrules, nil)
-			mockPanCl.On("GetPreRulePolicies", deviceGroup).Return(prerules, nil)
+			mockPanCl.On("GetPostRulePolicies", deviceGroup).Return(panClData.Postrules, nil)
+			mockPanCl.On("GetPreRulePolicies", deviceGroup).Return(panClData.Prerules, nil)
 			mockPanCl.On("GetPreRulePolicies", "").Return([]security.Entry{}, nil)
-			if deviceGroup != "shared" {
-				mockPanCl.On("GetServiceEntries", "shared").Return([]srvc.Entry{}, nil)
-			}
-			mockPanCl.On("GetServiceEntries", deviceGroup).Return(services, nil)
+			mockPanCl.On("GetServiceEntries", deviceGroup).Return(panClData.Services, nil)
 			mockPanCl.On("Get", defaultSecurityRulesValue1, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
 			mockPanCl.On("Get", defaultSecurityRulesValue2, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
 			mockPanCl.On("Get", defaultSecurityRulesValue3, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
@@ -302,7 +252,7 @@ var _ = Describe("Tests policy integration controller", func() {
 			fccl := fakeclientset.NewSimpleClientset(mockTier, mockGnpList).ProjectcalicoV3()
 
 			By("defining the address groups controller")
-			_, err := pan.NewFirewallPolicyIntegrationController(ctx, k8sClient, fccl, mockPanCl, cfg, hl, &wg)
+			_, err = pan.NewFirewallPolicyIntegrationController(ctx, k8sClient, fccl, mockPanCl, cfg, hl, &wg)
 
 			By("verifying the firewall policy controller factory returns an error when it does not find a valid device group")
 			Expect(err).ToNot(BeNil())
@@ -320,50 +270,29 @@ var _ = Describe("Tests policy integration controller", func() {
 				cfg.FwPolicyTierOrder = 101
 				cfg.FwPollInterval = time.Millisecond * 1000
 
-				By("loading the Panorama address data")
-				var addrs []addr.Entry
-				addrFileName := fmt.Sprintf("%s/%s", InputDataFolder, "addresses1.json")
-				panutils.LoadData(addrFileName, &addrs)
-
-				By("loading the Panorama address group data")
-				var addrgrps []addrgrp.Entry
-				addrgrpsFileName := fmt.Sprintf("%s/%s", InputDataFolder, "addressGroups1.json")
-				panutils.LoadData(addrgrpsFileName, &addrgrps)
-
-				By("loading the Panorama services data")
-				var services []srvc.Entry
-				servicesFileName := fmt.Sprintf("%s/%s", InputDataFolder, "services1.json")
-				panutils.LoadData(servicesFileName, &services)
-
-				By("loading the Panorama pre-rules data")
-				var prerules []security.Entry
-				preRulesFileName := fmt.Sprintf("%s/%s", InputDataFolder, "pre-rules1.json")
-				panutils.LoadData(preRulesFileName, &prerules)
-
-				By("loading the Panorama post-rules data")
-				var postrules []security.Entry
-				postRulesFileName := fmt.Sprintf("%s/%s", InputDataFolder, "post-rules1.json")
-				panutils.LoadData(postRulesFileName, &postrules)
+				By("loading the Panorama data")
+				panClData, err := getMockPanoramaClientData()
+				Expect(err).To(BeNil())
 
 				By("defining the mock Panorama client")
 				mockPanCl := &panutilmocks.MockPanoramaClient{}
 				if deviceGroup != "shared" {
 					mockPanCl.On("GetAddressEntries", "shared").Return([]addr.Entry{}, nil)
 				}
-				mockPanCl.On("GetAddressEntries", deviceGroup).Return(addrs, nil)
-				mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(addrgrps, nil)
+				mockPanCl.On("GetAddressEntries", deviceGroup).Return(panClData.Addresses, nil)
+				mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(panClData.AddressGroups, nil)
 				mockPanCl.On("GetClient").Return(&panw.Panorama{})
 				mockPanCl.On("GetDeviceGroupEntry", deviceGroup).Return(dvgrp.Entry{Name: deviceGroup}, nil)
 				// Add the expected device group along with a couple of dummy device groups returned by GetDeviceGroups.
 				deviceGroups := []string{deviceGroup, "device_group2", "device_group3"}
 				mockPanCl.On("GetDeviceGroups").Return(deviceGroups, nil)
-				mockPanCl.On("GetPostRulePolicies", deviceGroup).Return(postrules, nil)
-				mockPanCl.On("GetPreRulePolicies", deviceGroup).Return(prerules, nil)
+				mockPanCl.On("GetPostRulePolicies", deviceGroup).Return(panClData.Postrules, nil)
+				mockPanCl.On("GetPreRulePolicies", deviceGroup).Return(panClData.Prerules, nil)
 				mockPanCl.On("GetPreRulePolicies", "").Return([]security.Entry{}, nil)
 				if deviceGroup != "shared" {
 					mockPanCl.On("GetServiceEntries", "shared").Return([]srvc.Entry{}, nil)
 				}
-				mockPanCl.On("GetServiceEntries", deviceGroup).Return(services, nil)
+				mockPanCl.On("GetServiceEntries", deviceGroup).Return(panClData.Services, nil)
 				mockPanCl.On("Get", defaultSecurityRulesValue1, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
 				mockPanCl.On("Get", defaultSecurityRulesValue2, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
 				mockPanCl.On("Get", defaultSecurityRulesValue3, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
@@ -393,11 +322,12 @@ var _ = Describe("Tests policy integration controller", func() {
 
 				By("letting the controller run until syncing policies has finished")
 				time.Sleep(time.Millisecond * 5000)
+				cancel()
+				wg.Wait()
 
 				By("loading expected data")
-				var expectedGnpMap map[string]v3.GlobalNetworkPolicy
-				file := fmt.Sprintf("%s/%s.json", expectedGnpDataFolder, expectedFileName)
-				panutils.LoadData(file, &expectedGnpMap)
+				expectedGnpMap, err := getExpectedGnpMap(expectedFileName)
+				Expect(err).To(BeNil())
 
 				By("validating the list of global networks sets present in the datastore")
 				gnpList, err := fccl.GlobalNetworkPolicies().List(ctx, metav1.ListOptions{})
@@ -413,8 +343,6 @@ var _ = Describe("Tests policy integration controller", func() {
 					Expect(gns.Spec.Egress).To(Equal(expectedGnpMap[key].Spec.Egress))
 					Expect(gns.Spec.Ingress).To(Equal(expectedGnpMap[key].Spec.Ingress))
 				}
-				// Release wait group resources for the running go function.
-				wg.Done()
 			},
 			table.Entry("should handle an empty filter", "", "shared", "expectedGlobalNetworkPolicyMapEmptyFilterSharedRules1"),
 			table.Entry("should handle simple filter", "tag2", "shared", "expectedGlobalNetworkPolicyMapTag2SharedRules1"),
@@ -435,50 +363,23 @@ var _ = Describe("Tests policy integration controller", func() {
 				cfg.FwPanoramaFilterTags = "tag2"
 				cfg.FwPollInterval = time.Millisecond * 1000
 
-				By("loading the Panorama address data")
-				var addrs []addr.Entry
-				addrFileName := fmt.Sprintf("%s/%s", InputDataFolder, "addresses1.json")
-				panutils.LoadData(addrFileName, &addrs)
-
-				By("loading the Panorama address group data")
-				var addrgrps []addrgrp.Entry
-				addrgrpsFileName := fmt.Sprintf("%s/%s", InputDataFolder, "addressGroups1.json")
-				panutils.LoadData(addrgrpsFileName, &addrgrps)
-
-				By("loading the Panorama services data")
-				var services []srvc.Entry
-				servicesFileName := fmt.Sprintf("%s/%s", InputDataFolder, "services1.json")
-				panutils.LoadData(servicesFileName, &services)
-
-				By("loading the Panorama pre-rules data")
-				var prerules []security.Entry
-				preRulesFileName := fmt.Sprintf("%s/%s", InputDataFolder, "pre-rules1.json")
-				panutils.LoadData(preRulesFileName, &prerules)
-
-				By("loading the Panorama post-rules data")
-				var postrules []security.Entry
-				postRulesFileName := fmt.Sprintf("%s/%s", InputDataFolder, "post-rules1.json")
-				panutils.LoadData(postRulesFileName, &postrules)
+				By("loading the Panorama data")
+				panClData, err := getMockPanoramaClientData()
+				Expect(err).To(BeNil())
 
 				By("defining the mock Panorama client")
 				mockPanCl := &panutilmocks.MockPanoramaClient{}
-				if deviceGroup != "shared" {
-					mockPanCl.On("GetAddressEntries", "shared").Return([]addr.Entry{}, nil)
-				}
-				mockPanCl.On("GetAddressEntries", deviceGroup).Return(addrs, nil)
-				mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(addrgrps, nil)
+				mockPanCl.On("GetAddressEntries", deviceGroup).Return(panClData.Addresses, nil)
+				mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(panClData.AddressGroups, nil)
 				mockPanCl.On("GetClient").Return(&panw.Panorama{})
 				mockPanCl.On("GetDeviceGroupEntry", deviceGroup).Return(dvgrp.Entry{Name: deviceGroup}, nil)
 				// Add the expected device group along with a couple of dummy device groups returned by GetDeviceGroups.
 				deviceGroups := []string{deviceGroup, "device_group2", "device_group3"}
 				mockPanCl.On("GetDeviceGroups").Return(deviceGroups, nil)
-				mockPanCl.On("GetPostRulePolicies", deviceGroup).Return(postrules, nil)
-				mockPanCl.On("GetPreRulePolicies", deviceGroup).Return(prerules, nil)
+				mockPanCl.On("GetPostRulePolicies", deviceGroup).Return(panClData.Postrules, nil)
+				mockPanCl.On("GetPreRulePolicies", deviceGroup).Return(panClData.Prerules, nil)
 				mockPanCl.On("GetPreRulePolicies", "").Return([]security.Entry{}, nil)
-				if deviceGroup != "shared" {
-					mockPanCl.On("GetServiceEntries", "shared").Return([]srvc.Entry{}, nil)
-				}
-				mockPanCl.On("GetServiceEntries", deviceGroup).Return(services, nil)
+				mockPanCl.On("GetServiceEntries", deviceGroup).Return(panClData.Services, nil)
 				mockPanCl.On("Get", defaultSecurityRulesValue1, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
 				mockPanCl.On("Get", defaultSecurityRulesValue2, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
 				mockPanCl.On("Get", defaultSecurityRulesValue3, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
@@ -508,11 +409,12 @@ var _ = Describe("Tests policy integration controller", func() {
 
 				By("letting the controller run until syncing policies has finished")
 				time.Sleep(time.Millisecond * 5000)
+				cancel()
+				wg.Wait()
 
 				By("loading expected data")
-				var expectedGnpMap map[string]v3.GlobalNetworkPolicy
-				file := fmt.Sprintf("%s/%s.json", expectedGnpDataFolder, expectedFileName)
-				panutils.LoadData(file, &expectedGnpMap)
+				expectedGnpMap, err := getExpectedGnpMap(expectedFileName)
+				Expect(err).To(BeNil())
 
 				By("validating the list of global networks sets present in the datastore")
 				gnpList, err := fccl.GlobalNetworkPolicies().List(ctx, metav1.ListOptions{})
@@ -528,10 +430,83 @@ var _ = Describe("Tests policy integration controller", func() {
 					Expect(gns.Spec.Egress).To(Equal(expectedGnpMap[key].Spec.Egress))
 					Expect(gns.Spec.Ingress).To(Equal(expectedGnpMap[key].Spec.Ingress))
 				}
-				// Release wait group resources for the running go function.
-				wg.Done()
 			},
 			table.Entry("should handle defining a custom tier name and order value", "tier13", float64(13), "expectedGlobalNetworkPolicyMapTier13Tag2SharedRules1"),
 		)
+
+		It("should not issue updates when GNPs have not changed", func() {
+			userInput := "device_group1"
+			deviceGroup := "device_group1"
+			tag := "tag2"
+
+			By("setting the user defined device group")
+			cfg.FwDeviceGroup = userInput
+
+			By("defining the remaining controller configurations")
+			cfg.FwPanoramaFilterTags = tag
+			cfg.FwPolicyTier = "firewallpolicy"
+			cfg.FwPolicyTierOrder = 101
+			cfg.FwPollInterval = time.Millisecond * 250 // Decreased interval to ensure multiple cache reconciles.
+
+			By("loading the Panorama data")
+			panClData, err := getMockPanoramaClientData()
+			Expect(err).To(BeNil())
+
+			By("defining the mock Panorama client")
+			mockPanCl := &panutilmocks.MockPanoramaClient{}
+			mockPanCl.On("GetAddressEntries", "shared").Return([]addr.Entry{}, nil)
+			mockPanCl.On("GetAddressEntries", deviceGroup).Return(panClData.Addresses, nil)
+			mockPanCl.On("GetAddressGroupEntries", deviceGroup).Return(panClData.AddressGroups, nil)
+			mockPanCl.On("GetClient").Return(&panw.Panorama{})
+			mockPanCl.On("GetDeviceGroupEntry", deviceGroup).Return(dvgrp.Entry{Name: deviceGroup}, nil)
+			// Add the expected device group along with a couple of dummy device groups returned by GetDeviceGroups.
+			deviceGroups := []string{deviceGroup, "device_group2", "device_group3"}
+			mockPanCl.On("GetDeviceGroups").Return(deviceGroups, nil)
+			mockPanCl.On("GetPostRulePolicies", deviceGroup).Return(panClData.Postrules, nil)
+			mockPanCl.On("GetPreRulePolicies", deviceGroup).Return(panClData.Prerules, nil)
+			mockPanCl.On("GetPreRulePolicies", "").Return([]security.Entry{}, nil)
+			mockPanCl.On("GetServiceEntries", "shared").Return([]srvc.Entry{}, nil)
+			mockPanCl.On("GetServiceEntries", deviceGroup).Return(panClData.Services, nil)
+			mockPanCl.On("Get", defaultSecurityRulesValue1, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
+			mockPanCl.On("Get", defaultSecurityRulesValue2, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
+			mockPanCl.On("Get", defaultSecurityRulesValue3, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
+			mockPanCl.On("Get", defaultSecurityRulesValue4, &util.PredefinedSecurityRulesResponse{Rules: nil}).Return([]byte{}, nil)
+			mockPanCl.On("GetAddressGroups", "shared").Return([]string{"addressgroup1"}, nil)
+			mockPanCl.On("GetAddressGroups", deviceGroup).Return([]string{""}, nil)
+
+			By("defining the Calico client, with an empty datastore")
+			mockTier := &v3.Tier{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   cfg.FwPolicyTier,
+					Labels: tierLabels,
+				},
+				Spec: v3.TierSpec{
+					Order: &cfg.FwPolicyTierOrder,
+				},
+			}
+			baseClientSet := fakeclientset.NewSimpleClientset(mockTier, mockGnpList)
+			fccl := baseClientSet.ProjectcalicoV3()
+
+			By("defining the address groups controller")
+			controller, err := pan.NewFirewallPolicyIntegrationController(ctx, k8sClient, fccl, mockPanCl, cfg, hl, &wg)
+			Expect(err).To(BeNil())
+
+			By("running the controller")
+			wg.Add(1)
+			go controller.Run()
+
+			By("letting the controller run until syncing policies has finished")
+			time.Sleep(time.Millisecond * 5000)
+			cancel()
+			wg.Wait()
+
+			By("validating that globalnetworkpolicy update was never called")
+			for _, action := range baseClientSet.Actions() {
+				updateAction, ok := action.(testing.UpdateActionImpl)
+				if ok {
+					Expect(updateAction.GetResource().Resource).ToNot(Equal("globalnetworkpolicies"))
+				}
+			}
+		})
 	})
 })

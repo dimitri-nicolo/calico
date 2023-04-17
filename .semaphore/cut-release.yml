@@ -19,7 +19,7 @@ global_job_config:
       # Add the key to the ssh agent:
       - ssh-add ~/.keys/*
       - checkout
-      - git fetch --unshallow || true
+      - retry git fetch --unshallow
 
 blocks:
   - name: 'Cut Release'
@@ -119,7 +119,7 @@ promotions:
     auto_promote:
       when: "result = 'passed'"
   - name: Cut Policy Recommendation Release
-    pipeline_file: ../continuous-policy-recommendation/.semaphore/cut-release.yml
+    pipeline_file: ../policy-recommendation/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Cut Queryserver Release

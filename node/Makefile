@@ -44,9 +44,6 @@ EXCLUDEARCH?=armv7 arm64 ppc64le s390x
 # release is merged into node-private.
 CALICO_VERSION=v3.24.5
 
-# Add in local static-checks
-LOCAL_CHECKS=check-boring-ssl
-
 # Complete list of files from other directories that we need to build calico/node.
 REMOTE_DEPS = $(LIBBPF_A) \
 	      filesystem/usr/lib/calico/bpf \
@@ -88,7 +85,7 @@ NODE_CONTAINER_BIN_DIR=./dist/bin/
 NODE_CONTAINER_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node-$(ARCH)
 WINDOWS_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node.exe
 TOOLS_MOUNTNS_BINARY = $(NODE_CONTAINER_BIN_DIR)/mountns-$(ARCH)
-NODE_GIT_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
+NODE_GIT_VERSION?=$(call git-dev-tag)
 NODE_RELEASE_VERSION?=$(call git-release-tag-from-dev-tag)
 
 WINDOWS_INSTALL_SCRIPT := dist/install-calico-windows.ps1
@@ -596,16 +593,6 @@ ci: static-checks ut image-all build-windows-upgrade-archive image-tar-windows-a
 
 ## Deploys images to registry
 cd: cd-common cd-windows-all
-
-check-boring-ssl: $(NODE_CONTAINER_BIN_DIR)/calico-node-amd64
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
-		go tool nm $(NODE_CONTAINER_BIN_DIR)/calico-node-amd64 > $(NODE_CONTAINER_BIN_DIR)/tags.txt && grep '_Cfunc__goboringcrypto_' $(NODE_CONTAINER_BIN_DIR)/tags.txt 1> /dev/null
-	-rm -f $(NODE_CONTAINER_BIN_DIR)/tags.txt
-
-# Override the lib.Makefile golangci-lint target to use CGO, since some packages we pull in
-# require it. Without this, we get undefined value errors.
-golangci-lint: $(GENERATED_FILES)
-	$(DOCKER_GO_BUILD_CGO) golangci-lint run $(LINT_ARGS)
 
 .PHONY: node-test-at
 # Run docker-image acceptance tests

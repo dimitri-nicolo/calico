@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/olivere/elastic/v7"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -15,7 +17,9 @@ import (
 // AuditLogsInterface has methods related to audit logs.
 type AuditLogsInterface interface {
 	List(context.Context, v1.Params) (*v1.List[v1.AuditLog], error)
+	ListInto(context.Context, v1.Params, v1.Listable) error
 	Create(context.Context, v1.AuditLogType, []v1.AuditLog) (*v1.BulkResponse, error)
+	Aggregations(context.Context, v1.Params) (elastic.Aggregations, error)
 }
 
 // AuditLogs implements AuditLogsInterface.
@@ -32,16 +36,27 @@ func newAuditLogs(c Client, cluster string) AuditLogsInterface {
 // List gets the audit for the given input params.
 func (f *audit) List(ctx context.Context, params v1.Params) (*v1.List[v1.AuditLog], error) {
 	logs := v1.List[v1.AuditLog]{}
+	err := f.ListInto(ctx, params, &logs)
+	return &logs, err
+}
+
+// ListInto gets the audit for the given input params.
+func (f *audit) ListInto(ctx context.Context, params v1.Params, l v1.Listable) error {
+	if l == nil {
+		return fmt.Errorf("list cannot be nil")
+	}
+
 	err := f.restClient.Post().
 		Path("/audit/logs").
 		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).
-		Into(&logs)
+		Into(l)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &logs, nil
+
+	return nil
 }
 
 func (f *audit) Create(ctx context.Context, logType v1.AuditLogType, auditl []v1.AuditLog) (*v1.BulkResponse, error) {
@@ -71,4 +86,18 @@ func (f *audit) Create(ctx context.Context, logType v1.AuditLogType, auditl []v1
 		Do(ctx).
 		Into(&resp)
 	return &resp, err
+}
+
+func (f *audit) Aggregations(ctx context.Context, params v1.Params) (elastic.Aggregations, error) {
+	aggs := elastic.Aggregations{}
+	err := f.restClient.Post().
+		Path("/audit/logs/aggregation").
+		Params(params).
+		Cluster(f.clusterID).
+		Do(ctx).
+		Into(&aggs)
+	if err != nil {
+		return nil, err
+	}
+	return aggs, nil
 }

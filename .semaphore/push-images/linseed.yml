@@ -29,7 +29,7 @@ blocks:
           - sudo rm -rf ~/{.kerl,.kiex,.npm,.nvm,.phpbrew,.rbenv,.sbt} /opt/{apache-maven*,firefox*,scala} /usr/lib/jvm /usr/local/{aws2,golang,phantomjs*}
           # Semaphore is doing shallow clone on a commit without tags.
           # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
-          - git fetch --unshallow
+          - retry git fetch --unshallow
           - echo $DOCKER_TOKEN | docker login --username "$DOCKER_USER" --password-stdin
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH

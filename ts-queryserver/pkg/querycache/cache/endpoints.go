@@ -181,9 +181,12 @@ func (c *endpointsCache) RegisterWithLabelHandler(handler labelhandler.Interface
 
 func (c *endpointsCache) RegisterWithSharedInformer(factory informers.SharedInformerFactory, stopCh <-chan struct{}) {
 	informer := factory.Core().V1().Pods().Informer()
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		DeleteFunc: c.onPodDelete,
-	})
+	}); err != nil {
+		log.WithError(err).Error("failed to add resource event handler for endpoints")
+		return
+	}
 	go informer.Run(stopCh)
 }
 

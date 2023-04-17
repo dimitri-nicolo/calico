@@ -10,6 +10,7 @@ import (
 
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 
@@ -78,7 +79,7 @@ func (d *dikastesTestCaseStep) runAssertions(s *dikastesTestSuite) {
 	s.policySync.SendUpdates(d.updates...)
 
 	// we create a grpc client from scratch..
-	cc, err := grpc.DialContext(ctx, s.dikastes.Addr(), grpc.WithInsecure())
+	cc, err := grpc.DialContext(ctx, s.dikastes.Addr(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		s.FailNowf("failed to init grpc client", "dialing to %s errors with %v", s.dikastes.Addr(), err)
 		return

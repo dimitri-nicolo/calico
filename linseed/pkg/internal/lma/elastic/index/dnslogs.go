@@ -27,7 +27,7 @@ func DnsLogs() Helper {
 	return dnsLogsIndexHelper{}
 }
 
-// NewDnsLogsConverter returns a converter instance defined for dns logs.
+// NewDnsLogsConverter returns a Converter instance defined for dns logs.
 func NewDnsLogsConverter() converter {
 	return converter{dnsAtomToElastic}
 }

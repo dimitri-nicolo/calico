@@ -1,7 +1,7 @@
 include ../metadata.mk
 
 PACKAGE_NAME = github.com/projectcalico/calico/apiserver
-LOCAL_CHECKS     = lint-cache-dir goimports check-boring-ssl
+LOCAL_CHECKS     = lint-cache-dir goimports
 
 # Used so semaphore commits generated files when pins are updated
 EXTRA_FILES_TO_COMMIT=*_generated.go *_generated.*.go
@@ -14,8 +14,7 @@ DEV_TAG_SUFFIX        ?=calient-0.dev
 API_SERVER_IMAGE      ?=cnx-apiserver
 BUILD_IMAGES          ?=$(API_SERVER_IMAGE)
 
-EXTRA_DOCKER_ARGS += -e GOLANGCI_LINT_CACHE=/lint-cache -v $(CURDIR)/.lint-cache:/lint-cache:rw \
-				 -v $(CURDIR)/../hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw
 
 ###############################################################################
 BINDIR ?= bin
@@ -58,18 +57,6 @@ LDFLAGS = -X $(PACKAGE_NAME)/cmd/apiserver/server.VERSION=$(APISERVER_VERSION) \
 
 include ../lib.Makefile
 
-# TODO Add s390x back to VALIDARCHES. Excluding it should be temporary since
-# there are currently issues in our pipeline with building s390x images. Remove
-# this command once the s390x build pipeline has been fixed.
-VALIDARCHES=amd64
-
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
-
 # Use ARCH specific build image.
 CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
 
@@ -85,7 +72,7 @@ LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,inef
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean static-checks image fv ut
+ci: clean static-checks image ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common
@@ -127,11 +114,6 @@ $(CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) $(BINDIR)/apiserver-$(ARCH
 lint-cache-dir:
 	mkdir -p $(CURDIR)/.lint-cache
 
-check-boring-ssl: $(BINDIR)/apiserver-$(ARCH)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
-		go tool nm $(BINDIR)/apiserver-$(ARCH) > $(BINDIR)/tags.txt && grep '_Cfunc__goboringcrypto_' $(BINDIR)/tags.txt 1> /dev/null
-	-rm -f $(BINDIR)/tags.txt
-
 .PHONY: ut
 ut: lint-cache-dir run-etcd
 	$(DOCKER_RUN) $(CALICO_BUILD) \
@@ -146,7 +128,7 @@ st:
 check-copyright:
 	@../hack/check-copyright.sh
 
-GITHUB_TEST_INTEGRATION_URI := https://raw.githubusercontent.com/kubernetes/kubernetes/v1.16.4/hack/lib
+GITHUB_TEST_INTEGRATION_URI := https://raw.githubusercontent.com/kubernetes/kubernetes/$(KUBECTL_VERSION)/hack/lib
 
 hack-lib:
 	mkdir -p hack/lib/

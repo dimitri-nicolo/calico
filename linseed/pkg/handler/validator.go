@@ -43,9 +43,9 @@ type RequestParams interface {
 	v1.L3FlowParams | v1.FlowLogParams | v1.FlowLogAggregationParams |
 		v1.L7FlowParams | v1.L7LogParams | v1.L7AggregationParams |
 		v1.DNSFlowParams | v1.DNSLogParams | v1.DNSAggregationParams |
-		v1.EventParams | v1.AuditLogParams |
+		v1.EventParams | v1.AuditLogParams | v1.AuditLogAggregationParams |
 		v1.BGPLogParams | v1.ProcessParams |
-		v1.WAFLogParams |
+		v1.WAFLogParams | v1.WAFLogAggregationParams |
 		v1.ReportDataParams | v1.SnapshotParams | v1.BenchmarksParams |
 		v1.RuntimeReportParams
 }

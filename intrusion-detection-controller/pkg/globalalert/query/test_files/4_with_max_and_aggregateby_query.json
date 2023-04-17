@@ -1,0 +1,30 @@
+{
+    "composite_aggs": {
+      "aggregations": {
+        "num_flows": {
+          "max": {
+            "field": "num_flows"
+          }
+        }
+      },
+      "composite": {
+        "size": 500,
+        "sources": [
+          {
+            "source_name_aggr": {
+              "terms": {
+                "field": "source_name_aggr"
+              }
+            }
+          },
+          {
+            "source_namespace": {
+              "terms": {
+                "field": "source_namespace"
+              }
+            }
+          }
+        ]
+      }
+    }
+}

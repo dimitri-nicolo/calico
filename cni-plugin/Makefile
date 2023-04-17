@@ -2,9 +2,6 @@ include ../metadata.mk
 
 PACKAGE_NAME = github.com/projectcalico/calico/cni-plugin
 
-# Add in local static-checks
-LOCAL_CHECKS=check-boring-ssl
-
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
@@ -150,10 +147,6 @@ $(BIN)/flannel:
 ut: run-k8s-controller-manager $(BIN)/install $(BIN)/host-local $(BIN)/calico-ipam $(BIN)/calico
 	$(MAKE) ut-datastore DATASTORE_TYPE=etcdv3
 	$(MAKE) ut-datastore DATASTORE_TYPE=kubernetes
-
-check-boring-ssl: $(BIN)/install
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) $(CHECK_BORINGSSL)
-	-rm -f $(BIN)/tags.txt
 
 $(BIN)/calico-ipam $(BIN)/calico: $(BIN)/install
 	cp "$<" "$@"

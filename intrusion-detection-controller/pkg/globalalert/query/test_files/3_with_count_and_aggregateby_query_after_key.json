@@ -1,0 +1,19 @@
+{
+  "composite_aggs": {
+    "composite": {
+      "after": {
+        "source_namespace": "calico-system"
+      },
+      "size": 500,
+      "sources": [
+        {
+          "source_namespace": {
+            "terms": {
+              "field": "source_namespace"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

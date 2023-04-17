@@ -8,8 +8,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strconv"
 	"testing"
 	"time"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/stretchr/testify/assert"
 
@@ -61,7 +65,7 @@ func metricsSetupAndTeardown(t *testing.T) func() {
 
 	return func() {
 		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_dns.%s", cluster))
+		testutils.CleanupIndices(context.Background(), esClient, cluster)
 		logCancel()
 		cancel()
 	}
@@ -73,7 +77,7 @@ func TestMetrics(t *testing.T) {
 	t.Run("should provide a metrics endpoint", func(t *testing.T) {
 		defer metricsSetupAndTeardown(t)()
 
-		client := secureHTTPClient(t)
+		client := mTLSClient(t)
 		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("https://%s/metrics", metricsAddr), "", "")
 		res, _ := doRequest(t, client, httpReqSpec)
 		assert.Equal(t, http.StatusOK, res.StatusCode)
@@ -113,13 +117,25 @@ func TestMetrics(t *testing.T) {
 		actualLogs := testutils.AssertLogIDAndCopyDNSLogsWithoutID(t, resp)
 		require.Equal(t, logs, actualLogs)
 
-		client := secureHTTPClient(t)
+		client := mTLSClient(t)
 		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("https://%s/metrics", metricsAddr), "", "")
 		res, body := doRequest(t, client, httpReqSpec)
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 
 		// Check application metrics used for billing
-		require.Contains(t, string(body), fmt.Sprintf(`tigera_linseed_bytes_read{cluster_id="%s",tenant_id=""} 191`, cluster))
-		require.Contains(t, string(body), fmt.Sprintf(`tigera_linseed_bytes_written{cluster_id="%s",tenant_id=""} 423`, cluster))
+		bytesWritten, err := json.Marshal(logs)
+		require.NoError(t, err)
+		bytesRead, err := json.Marshal(params)
+		require.NoError(t, err)
+		bytesReadMetric := fmt.Sprintf(`tigera_linseed_bytes_read{cluster_id="%s",tenant_id=""} %d`, cluster, len(bytesRead))
+		bytesWrittenMetric := fmt.Sprintf(`tigera_linseed_bytes_written{cluster_id="%s",tenant_id=""}`, cluster)
+		require.Contains(t, string(body), bytesReadMetric, fmt.Sprintf("missing %s from %s", bytesReadMetric, string(body)))
+		require.Contains(t, string(body), bytesWrittenMetric, fmt.Sprintf("missing %s from %s", bytesWrittenMetric, string(body)))
+
+		metric := regexp.MustCompile(fmt.Sprintf("%s [\\d]+", bytesWrittenMetric)).Find(body)
+		value, err := strconv.Atoi(string(regexp.MustCompile("[1-9][0-9]*").Find(metric)))
+		require.NoError(t, err)
+
+		require.InDeltaf(t, len(bytesWritten), value, 3, fmt.Sprintf("expecting %d to be in range of %d", len(bytesWritten), value))
 	})
 }

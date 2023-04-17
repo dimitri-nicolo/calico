@@ -8,8 +8,6 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-
 ###############################################################################
 # Include ../lib.Makefile before anything else
 ###############################################################################

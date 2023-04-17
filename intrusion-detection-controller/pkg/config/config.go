@@ -28,8 +28,9 @@ type Config struct {
 	Tenant string `envconfig:"ELASTIC_INDEX_MIDFIX"`
 
 	// MCM configuration
-	ClusterName              string `envconfig:"CLUSTER_NAME" default:"cluster"`
-	MultiClusterForwardingCA string `envconfig:"MULTI_CLUSTER_FORWARDING_CA" default:"/manager-tls/cert"`
+	ClusterName                    string `envconfig:"CLUSTER_NAME" default:"cluster"`
+	MultiClusterForwardingCA       string `envconfig:"MULTI_CLUSTER_FORWARDING_CA" default:"/manager-tls/cert"`
+	MultiClusterForwardingEndpoint string `envconfig:"MULTI_CLUSTER_FORWARDING_ENDPOINT" default:"https://tigera-manager.tigera-manager.svc:9443"`
 }
 
 func GetConfig() (*Config, error) {

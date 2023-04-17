@@ -1,9 +1,10 @@
-// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
 
 package capture
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 
@@ -76,7 +77,7 @@ func (f *fileCommands) command(clusterID string, entryPoint EntryPoint, command 
 
 	go func() {
 		defer writer.Close()
-		err = exec.Stream(remotecommand.StreamOptions{
+		err = exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
 			Stdin:  nil,
 			Stdout: writer,
 			Stderr: &stderr,

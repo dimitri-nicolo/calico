@@ -1,6 +1,6 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-package l3_test
+package l3
 
 import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"

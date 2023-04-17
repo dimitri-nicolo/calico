@@ -6,12 +6,18 @@ package fv_test
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"embed"
+	"encoding/pem"
 	"io"
+	"math/big"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -81,25 +87,130 @@ func doRequest(t *testing.T, client *http.Client, spec httpReqSpec) (*http.Respo
 	return res, resBody
 }
 
-func secureHTTPClient(t *testing.T) *http.Client {
-	// Get root CA for TLS verification of the server cert.
-	certPool, _ := x509.SystemCertPool()
-	if certPool == nil {
-		certPool = x509.NewCertPool()
-	}
+func mTLSClient(t *testing.T) *http.Client {
+	// Read the CA from the embedded files
 	caCert, err := certs.ReadFile("cert/RootCA.crt")
 	require.NoError(t, err)
-	certPool.AppendCertsFromPEM(caCert)
 
-	// Get client certificate for mTLS.
-	cert, err := tls.LoadX509KeyPair("cert/localhost.crt", "cert/localhost.key")
-	require.NoError(t, err)
+	// Get client  for mTLS.
+	cert := mustReadTLSKeyPair(t, "cert/localhost.crt", "cert/localhost.key")
 
 	tlsConfig := &tls.Config{
-		RootCAs:      certPool,
+		RootCAs:      certPool(caCert),
 		Certificates: []tls.Certificate{cert},
 	}
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
 	client := &http.Client{Transport: transport}
 	return client
+}
+
+func mTLSClientWithCerts(certPool *x509.CertPool, certificate tls.Certificate) *http.Client {
+	tlsConfig := &tls.Config{
+		RootCAs:      certPool,
+		Certificates: []tls.Certificate{certificate},
+	}
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	client := &http.Client{Transport: transport}
+	return client
+}
+
+func mustReadTLSKeyPair(t *testing.T, certPath, keyPath string) tls.Certificate {
+	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	require.NoError(t, err)
+	return cert
+}
+
+func mustGetTLSKeyPair(t *testing.T, certPEM, keyPEM []byte) tls.Certificate {
+	cert, err := tls.X509KeyPair(certPEM, keyPEM)
+	require.NoError(t, err)
+	return cert
+}
+
+func tlsClient(t *testing.T) *http.Client {
+	caCert, err := certs.ReadFile("cert/RootCA.crt")
+	require.NoError(t, err)
+
+	tlsConfig := &tls.Config{
+		RootCAs: certPool(caCert),
+	}
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	client := &http.Client{Transport: transport}
+	return client
+}
+
+func certPool(caCert []byte) *x509.CertPool {
+	// Get root CA for TLS verification of the server cert.
+	certPool, _ := x509.SystemCertPool()
+	if certPool == nil {
+		certPool = x509.NewCertPool()
+	}
+	certPool.AppendCertsFromPEM(caCert)
+
+	return certPool
+}
+
+func mustCreateCAKeyPair(t *testing.T) (*x509.Certificate, *rsa.PrivateKey) {
+	// Create a x509 template for the mustCreateCAKeyPair
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1658),
+		Subject: pkix.Name{
+			Organization: []string{"Tigera"},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().AddDate(10, 0, 0),
+		IsCA:                  true,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		BasicConstraintsValid: true}
+
+	// Generate a private key
+	key, err := rsa.GenerateKey(rand.Reader, 4096)
+	require.NoError(t, err)
+
+	return template, key
+}
+
+func mustCreateClientKeyPair(t *testing.T) (*x509.Certificate, *rsa.PrivateKey) {
+	// Create a x509 template for the mustCreateCAKeyPair
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1658),
+		Subject: pkix.Name{
+			Organization: []string{"Tigera"},
+		},
+		DNSNames:     []string{"localhost"},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().AddDate(10, 0, 0),
+		SubjectKeyId: []byte{1, 2, 3, 4, 6},
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+	}
+
+	// Generate a private key
+	key, err := rsa.GenerateKey(rand.Reader, 4096)
+	require.NoError(t, err)
+
+	return template, key
+}
+
+func signAndEncodeCert(t *testing.T, ca *x509.Certificate, caPrivateKey *rsa.PrivateKey,
+	cert *x509.Certificate, key *rsa.PrivateKey) []byte {
+	// Sign the certificate with the provided CA
+	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, &key.PublicKey, caPrivateKey)
+	require.NoError(t, err)
+
+	// Encode the certificate
+	certPEM := bytes.Buffer{}
+	pem.Encode(&certPEM, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+
+	return certPEM.Bytes()
+}
+
+func encodeKey(t *testing.T, key *rsa.PrivateKey) []byte {
+	// Encode the private key
+	keyPEM := bytes.Buffer{}
+	privateBytes, err := x509.MarshalPKCS8PrivateKey(key)
+	require.NoError(t, err)
+	pem.Encode(&keyPEM, &pem.Block{Type: "PRIVATE KEY", Bytes: privateBytes})
+
+	return keyPEM.Bytes()
 }

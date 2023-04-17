@@ -65,11 +65,7 @@ func setupTest(t *testing.T) func() {
 
 	// Function contains teardown logic.
 	return func() {
-		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_runtime.%s", cluster))
-		require.NoError(t, err)
-		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_runtime.%s", tenant))
-		require.NoError(t, err)
-		err = testutils.CleanupIndices(context.Background(), esClient, fmt.Sprintf("tigera_secure_ee_runtime.%s", anotherTenant))
+		err = testutils.CleanupIndices(context.Background(), esClient, cluster)
 		require.NoError(t, err)
 
 		// Cancel the context

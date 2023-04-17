@@ -3,6 +3,7 @@
 package v1
 
 import (
+	gojson "encoding/json"
 	"fmt"
 
 	authnv1 "k8s.io/api/authentication/v1"
@@ -11,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/apis/audit"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
@@ -36,6 +39,7 @@ const (
 // AuditLogParams provide query options for listing audit logs.
 type AuditLogParams struct {
 	QueryParams `json:",inline" validate:"required"`
+	Selector    string       `json:"selector"`
 	Type        AuditLogType `json:"type"`
 
 	// Sort configures the sorting of results.
@@ -62,6 +66,37 @@ type AuditLogParams struct {
 
 	// Match on level.
 	Levels []auditv1.Level `json:"levels"`
+}
+
+func (a *AuditLogParams) SetSelector(s string) {
+	a.Selector = s
+}
+
+func (a *AuditLogParams) GetSelector() string {
+	return a.Selector
+}
+
+func (a *AuditLogParams) SetPermissions(verbs []v3.AuthorizedResourceVerbs) {
+	panic("implement me")
+}
+
+func (a *AuditLogParams) GetPermissions() []v3.AuthorizedResourceVerbs {
+	return nil
+}
+
+func (a *AuditLogParams) SetSortBy(sort []SearchRequestSortBy) {
+	panic("implement me")
+}
+
+func (a *AuditLogParams) GetSortBy() []SearchRequestSortBy {
+	return nil
+}
+
+type AuditLogAggregationParams struct {
+	// Inherit all the normal audit log selection parameters.
+	AuditLogParams `json:",inline"`
+	Aggregations   map[string]gojson.RawMessage `json:"aggregations"`
+	NumBuckets     int                          `json:"num_buckets"`
 }
 
 // ObjectReference is the set of fields we support in query requests

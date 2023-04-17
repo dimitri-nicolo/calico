@@ -50,7 +50,8 @@ var _ = Describe("Test syncToDatastore", func() {
 	// Load the input data.
 	var globalNetworkSetStartingState []v3.GlobalNetworkSet
 	file := fmt.Sprintf("%s/%s", inputDataFolder, "globalNetworkSetStartingState.json")
-	panutils.LoadData(file, &globalNetworkSetStartingState)
+	err := panutils.LoadData(file, &globalNetworkSetStartingState)
+	Expect(err).To(BeNil())
 
 	BeforeEach(func() {
 		// Setup tags input for the dynamic address groups controller.
@@ -285,7 +286,8 @@ var _ = Describe("Test syncToDatastore", func() {
 		By("loading the expected data")
 		var expectedGnsList []v3.GlobalNetworkSet
 		file = fmt.Sprintf("%s/%s", expectedDataFolder, "expectedGnsList.json")
-		panutils.LoadData(file, &expectedGnsList)
+		err = panutils.LoadData(file, &expectedGnsList)
+		Expect(err).To(BeNil())
 
 		By("validating the datastore contains the expected values")
 		gnsListAfterUpdate, _ := mccl.GlobalNetworkSets().List(dagc.ctx, metav1.ListOptions{})
@@ -368,7 +370,8 @@ var _ = Describe("Test syncToDatastore", func() {
 		By("loading the expected data")
 		var expectedGnsList []v3.GlobalNetworkSet
 		file = fmt.Sprintf("%s/%s", expectedDataFolder, "expectedGnsList.json")
-		panutils.LoadData(file, &expectedGnsList)
+		err = panutils.LoadData(file, &expectedGnsList)
+		Expect(err).To(BeNil())
 
 		By("Verifying the datastore against the expected result list.")
 		gnsListAfterSync, _ := mccl.GlobalNetworkSets().List(dagc.ctx, metav1.ListOptions{})
@@ -449,7 +452,8 @@ var _ = Describe("Test syncToDatastore", func() {
 		By("Loading the expected gns cached with added key data")
 		var expectedGnsCacheWithAddedKey []v3.GlobalNetworkSet
 		file = fmt.Sprintf("%s/%s", expectedDataFolder, "expectedGnsCacheWithAddedKey.json")
-		panutils.LoadData(file, &expectedGnsCacheWithAddedKey)
+		err = panutils.LoadData(file, &expectedGnsCacheWithAddedKey)
+		Expect(err).To(BeNil())
 
 		By("Validating the cache contains the expected values")
 		keys := dagc.cache.ListKeys()
@@ -554,7 +558,8 @@ var _ = Describe("Test syncToDatastore", func() {
 		By("Loading the expected gns cached with added key data")
 		var expectedGnsListWithUpdatedKey []v3.GlobalNetworkSet
 		file = fmt.Sprintf("%s/%s", expectedDataFolder, "expectedGnsListWithUpdatedKey.json")
-		panutils.LoadData(file, &expectedGnsListWithUpdatedKey)
+		err = panutils.LoadData(file, &expectedGnsListWithUpdatedKey)
+		Expect(err).To(BeNil())
 
 		By("Validating the cache contains the expected values")
 		keys := dagc.cache.ListKeys()
@@ -639,7 +644,8 @@ var _ = Describe("Tests controller updateCache functionality", func() {
 		By("Load the input data")
 		var addressGroupsDeviceGroup1Test []addrgrp.Entry
 		file := fmt.Sprintf("%s/%s", inputDataFolder, "addressGroupsDeviceGroup1Test.json")
-		panutils.LoadData(file, &addressGroupsDeviceGroup1Test)
+		err := panutils.LoadData(file, &addressGroupsDeviceGroup1Test)
+		Expect(err).To(BeNil())
 
 		By("Defining the dynamic address groups controller with the mock Panorama client")
 		// Define a mock Panorama client.

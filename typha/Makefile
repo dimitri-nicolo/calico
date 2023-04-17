@@ -10,9 +10,6 @@ DEV_TAG_SUFFIX        ?= calient-0.dev
 TYPHA_IMAGE    ?=typha
 BUILD_IMAGES   ?=$(TYPHA_IMAGE)
 
-# Add in local static-checks
-LOCAL_CHECKS=check-boring-ssl
-
 ###############################################################################
 # Download and include ../lib.Makefile
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -140,11 +137,6 @@ $(TYPHA_IMAGE): $(TYPHA_CONTAINER_CREATED)
 ut combined.coverprofile: $(SRC_FILES)
 	@echo Running Go UTs.
 	$(DOCKER_RUN) $(CALICO_BUILD) ./utils/run-coverage
-
-check-boring-ssl: bin/calico-typha-amd64
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
-		go tool nm bin/calico-typha-amd64 > bin/tags.txt && grep '_Cfunc__goboringcrypto_' bin/tags.txt 1> /dev/null
-	-rm -f bin/tags.txt
 
 ###############################################################################
 # CI/CD
