@@ -1,6 +1,6 @@
 module github.com/tigera/elasticsearch-docker
 
-go 1.18
+go 1.20
 
 require (
 	// ECK version 2.6.1
