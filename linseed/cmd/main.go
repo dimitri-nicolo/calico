@@ -1,9 +1,12 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
 package main
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"net/http"
@@ -13,8 +16,13 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/linseed/pkg/controller/token"
+	"github.com/projectcalico/calico/linseed/pkg/handler"
 	"github.com/projectcalico/calico/linseed/pkg/handler/audit"
 	"github.com/projectcalico/calico/linseed/pkg/handler/bgp"
 	"github.com/projectcalico/calico/linseed/pkg/handler/compliance"
@@ -25,8 +33,12 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/handler/processes"
 	"github.com/projectcalico/calico/linseed/pkg/handler/runtime"
 	"github.com/projectcalico/calico/linseed/pkg/handler/waf"
+	"github.com/projectcalico/calico/linseed/pkg/middleware"
+	"github.com/projectcalico/calico/lma/pkg/auth"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend"
+
+	rest "k8s.io/client-go/rest"
 
 	auditbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/audit"
 	bgpbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/bgp"
@@ -92,6 +104,7 @@ func run() {
 	healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true}, 0)
 
 	esClient := backend.MustGetElasticClient(cfg)
+
 	// Create template caches for indices with special shards / replicas configuration
 	defaultCache := templates.NewTemplateCache(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
 	flowCache := templates.NewTemplateCache(esClient, cfg.ElasticFlowShards, cfg.ElasticFlowReplicas)
@@ -117,29 +130,126 @@ func run() {
 	benchmarksBackend := compliancebackend.NewBenchmarksBackend(esClient, defaultCache)
 	runtimeBackend := runtimebackend.NewBackend(esClient, defaultCache)
 
-	// Configure options used to launch the server.
-	opts := []server.Option{
-		server.WithMiddlewares(server.Middlewares(cfg)),
-		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(
-			l3.New(flowBackend, flowLogBackend),
-			l7.New(l7FlowBackend, l7LogBackend),
-			dns.New(dnsFlowBackend, dnsLogBackend),
-			events.New(eventBackend),
-			audit.New(auditBackend),
-			bgp.New(bgpBackend),
-			processes.New(procBackend),
-			waf.New(wafBackend),
-			compliance.New(benchmarksBackend, snapshotsBackend, reportsBackend),
-			runtime.New(runtimeBackend),
-		)...),
-		server.WithRoutes(server.UtilityRoutes()...),
+	// Create a Kuberentes client to use for authorization.
+	var kc *rest.Config
+	var err error
+	if cfg.Kubeconfig == "" {
+		// creates the in-cluster k8sConfig
+		kc, err = rest.InClusterConfig()
+	} else {
+		// creates a k8sConfig from supplied kubeconfig
+		kc, err = clientcmd.BuildConfigFromFlags("", cfg.Kubeconfig)
+	}
+	if err != nil {
+		logrus.WithError(err).Fatal("Unable to load Kubernetes config")
 	}
 
+	// We can only perform authentication / authorization if our Kubernetes configuration
+	// has a bearer token present.
+	k, err := kubernetes.NewForConfig(kc)
+	if err != nil {
+		logrus.WithError(err).Fatal("Unable to create Kubernetes client")
+	}
+	pc, err := clientset.NewForConfig(kc)
+	if err != nil {
+		logrus.WithError(err).Fatal("Unable to create Calico client")
+	}
+
+	authOpts := []auth.JWTAuthOption{}
+	if cfg.TokenControllerEnabled {
+		// Get our token signing key.
+		key, err := tokenCredentials(cfg)
+		if err != nil {
+			logrus.WithError(err).Fatal("Unable to acquire token signing key")
+		}
+
+		// Build a token controller to generate tokens for Linseed clients
+		// in managed clusters. We'll create tokens in each managed cluster for the following
+		// service account users.
+		//
+		// Each client that connects from a managed cluster will provide these tokens, which will map
+		// back to the permissions assigned to its serviceaccount in the management cluster.
+		users := []token.UserInfo{
+			{Namespace: "tigera-fluentd", Name: "fluentd-node"},
+			{Namespace: "tigera-compliance", Name: "tigera-compliance-benchmarker"},
+			{Namespace: "tigera-compliance", Name: "tigera-compliance-controller"},
+			{Namespace: "tigera-compliance", Name: "tigera-compliance-reporter"},
+			{Namespace: "tigera-compliance", Name: "tigera-compliance-snapshotter"},
+			{Namespace: "tigera-dpi", Name: "tigera-dpi"},
+			{Namespace: "tigera-intrusion-detection", Name: "intrusion-detection-controller"},
+		}
+		opts := []token.ControllerOption{
+			token.WithIssuer(token.LinseedIssuer),
+			token.WithUserInfos(users),
+			token.WithExpiry(24 * time.Hour),
+			token.WithClient(pc),
+			token.WithPrivateKey(key),
+			token.WithMultiClusterEndpoint(cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA),
+			token.WithTenant(cfg.ExpectedTenantID),
+		}
+		tokenController, err := token.NewController(opts...)
+		if err != nil {
+			logrus.WithError(err).Fatal("Failed to start token controller")
+		}
+
+		// Start the token controller.
+		stop := make(chan struct{})
+		defer close(stop)
+		go tokenController.Run(stop)
+
+		// Add an authenticator for JWTs issued by this tenant's Linseed.
+		lsa := auth.NewLocalAuthenticator(token.LinseedIssuer, key.Public(), token.ParseClaims)
+		authOpts = append(authOpts, auth.WithAuthenticator(token.LinseedIssuer, lsa))
+	}
+
+	// Create a JWT authenticator for Linseed to use.
+	authn, err := auth.NewJWTAuth(kc, k, authOpts...)
+	if err != nil {
+		logrus.WithError(err).Fatal("Unable to create authenticator")
+	}
+
+	// Create an RBAC authorizer to use for authorizing requests.
+	authz := auth.NewRBACAuthorizer(k)
+	authzHelper := middleware.NewKubernetesAuthzTracker(authz)
+
+	// Create the full list of handlers, and register them
+	// for authorization.
+	handlers := []handler.Handler{
+		l3.New(flowBackend, flowLogBackend),
+		l7.New(l7FlowBackend, l7LogBackend),
+		dns.New(dnsFlowBackend, dnsLogBackend),
+		events.New(eventBackend),
+		audit.New(auditBackend),
+		bgp.New(bgpBackend),
+		processes.New(procBackend),
+		waf.New(wafBackend),
+		compliance.New(benchmarksBackend, snapshotsBackend, reportsBackend),
+		runtime.New(runtimeBackend),
+	}
+
+	// Configure options used to launch the server.
+	opts := []server.Option{
+		server.WithMiddlewares(server.Middlewares(cfg, authn, authzHelper)),
+		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(handlers...)...),
+		server.WithRoutes(server.UtilityRoutes()...),
+	}
 	if cfg.CACert != "" {
 		opts = append(opts, server.WithClientCACerts(cfg.CACert))
 	}
 
-	// Start server, adding in handlers for the various API endpoints.
+	// Make sure we register our APIs for authorization.
+	for _, h := range handlers {
+		for _, api := range h.APIS() {
+			if api.AuthzAttributes != nil {
+				authzHelper.Register(api.Method, api.URL, api.AuthzAttributes)
+			}
+		}
+	}
+
+	// Register the /version endpoint without authorization.
+	authzHelper.Disable("GET", "/version")
+
+	// Start the server.
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 	server := server.NewServer(addr, cfg.FIPSModeEnabled, opts...)
 
@@ -205,4 +315,17 @@ func doHealthCheck(path string) {
 		fmt.Printf("bad status code (%d) from %s endpoint\n", resp.StatusCode, path)
 		os.Exit(1)
 	}
+}
+
+func tokenCredentials(cfg config.Config) (*rsa.PrivateKey, error) {
+	// Load the signing key.
+	bs, err := os.ReadFile(cfg.TokenKey)
+	if err != nil {
+		return nil, err
+	}
+	p, _ := pem.Decode(bs)
+	if p == nil {
+		return nil, fmt.Errorf("failed to decode token signing key")
+	}
+	return x509.ParsePKCS1PrivateKey(p.Bytes)
 }

@@ -110,13 +110,17 @@ st:
 ###############################################################################
 
 # Run Linseed as a local Docker container
-run-image: stop-image run-elastic
+run-image: stop-image run-elastic k8s-setup
 	docker run --detach \
 		--net=host \
 		--name=tigera-$(LINSEED_IMAGE) \
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.crt:/certs/https/tls.crt \
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.key:/certs/https/tls.key \
 		-v $(REPO_ROOT)/linseed/fv/cert/RootCA.crt:/certs/https/client.crt \
+		-v $(CERTS_PATH)/ca.pem:/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+		-v $(REPO_ROOT)/linseed/fv/linseed-token:/var/run/secrets/kubernetes.io/serviceaccount/token \
+		-e KUBERNETES_SERVICE_HOST=127.0.0.1 \
+		-e KUBERNETES_SERVICE_PORT=6443 \
 		-e ELASTIC_HOST="localhost" \
 		-e ELASTIC_SCHEME="http" \
 		-e LINSEED_LOG_LEVEL="debug" \
@@ -129,10 +133,33 @@ stop-image:
 	-docker rm -f $(shell docker ps -aq --filter "name=tigera-$(LINSEED_IMAGE)")
 
 ## Run the FVs
-fv: clean image build-tests run-image
-	 $(DOCKER_RUN) \
-	 	-e KUBECONFIG=/home/user/certs/kubeconfig \
-	 	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd fv && ./fv.test'
+WHAT=.
+fv: clean image run-image fv-fast
+fv-fast: build-tests
+	 $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd fv && ./fv.test -test.run $(WHAT)'
+
+## Perform all the necessary setup for a local Kubernetes API server used in the Linseed FVs.
+k8s-setup: linseed-token-file fv-token-file auth
+
+## Create auth resources in Kubernetes.
+auth:
+	$(DOCKER_RUN) \
+		-v $(CERTS_PATH):/home/user/certs \
+		-e KUBECONFIG=/home/user/certs/kubeconfig \
+	       	$(CALICO_BUILD) sh -c 'kubectl create -f /go/src/$(PACKAGE_NAME)/fv/kube/auth.yaml'
+
+
+## Create a token file for use in the FV tests. This simulates the serviceaccount token provided to linseed by k8s.
+linseed-token-file: run-k8s-apiserver
+	rm -f fv/linseed-token
+	docker exec $(APISERVER_NAME) kubectl create sa tigera-linseed
+	docker exec $(APISERVER_NAME) kubectl create token tigera-linseed --duration=24h > fv/linseed-token
+
+## Create a token file for the FV clients to use which is authenticated by Linseed.
+fv-token-file:  run-k8s-apiserver
+	rm -f fv/client-token
+	docker exec $(APISERVER_NAME) kubectl create sa tigera-linseed-fv
+	docker exec $(APISERVER_NAME) kubectl create token tigera-linseed-fv --duration=24h > fv/client-token
 
 # We pre-build the test binary so that we can run it outside a container and allow it
 # to interact with docker.

@@ -42,6 +42,7 @@ type Config struct {
 	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
 	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
+	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 
 	// ClusterName name, for components that serve a single cluster.
 	ClusterName string `envconfig:"CLUSTER_NAME"`

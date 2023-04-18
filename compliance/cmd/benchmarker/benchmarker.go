@@ -57,7 +57,7 @@ func main() {
 		ClientCertPath:  cfg.LinseedClientCert,
 		FIPSModeEnabled: cfg.FIPSModeEnabled,
 	}
-	linseed, err := client.NewClient(cfg.TenantID, config)
+	linseed, err := client.NewClient(cfg.TenantID, config, rest.WithTokenPath(cfg.LinseedToken))
 	if err != nil {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}

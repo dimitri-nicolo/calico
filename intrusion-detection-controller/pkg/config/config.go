@@ -21,6 +21,7 @@ type Config struct {
 	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
 	LinseedClientCert string `envconfig:"LINSEED_CLIENT_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
+	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 
 	// Tenant configuration for Calico Cloud.
 	// Note the environment variable doesn't match the field name. This is for backwards compat

@@ -33,7 +33,7 @@ func NewFakeJWT(issuer, name string) *FakeJWT {
 			auth.ClaimNameIss:           issuer,
 			auth.ClaimNameSub:           name,
 			auth.ClaimNameEmail:         name,
-			auth.ClaimNameExp:           9600964803, //Very far in the future
+			auth.ClaimNameExp:           9600964803, // Very far in the future
 			"iat":                       1600878403,
 			"nonce":                     "35e32c66028243f592cc3103c7c2dfb2",
 			auth.ClaimNameEmailVerified: true,

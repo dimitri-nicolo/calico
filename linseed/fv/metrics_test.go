@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"testing"
@@ -29,8 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -46,13 +45,11 @@ func metricsSetupAndTeardown(t *testing.T) func() {
 	lmaClient = lmaelastic.NewWithClient(esClient)
 
 	// Instantiate a client.
-	cfg := rest.Config{
-		CACertPath:     "cert/RootCA.crt",
-		URL:            "https://localhost:8444/",
-		ClientCertPath: "cert/localhost.crt",
-		ClientKeyPath:  "cert/localhost.key",
-	}
-	cli, err = client.NewClient("", cfg)
+	cli, err = NewLinseedClient()
+	require.NoError(t, err)
+
+	// Get the token to use in HTTP authorization header.
+	token, err = os.ReadFile(TokenPath)
 	require.NoError(t, err)
 
 	// Create a random cluster name for each test to make sure we don't
@@ -78,7 +75,7 @@ func TestMetrics(t *testing.T) {
 		defer metricsSetupAndTeardown(t)()
 
 		client := mTLSClient(t)
-		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("https://%s/metrics", metricsAddr), "", "")
+		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("https://%s/metrics", metricsAddr), "", "", token)
 		res, _ := doRequest(t, client, httpReqSpec)
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 	})
@@ -118,7 +115,7 @@ func TestMetrics(t *testing.T) {
 		require.Equal(t, logs, actualLogs)
 
 		client := mTLSClient(t)
-		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("https://%s/metrics", metricsAddr), "", "")
+		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("https://%s/metrics", metricsAddr), "", "", token)
 		res, body := doRequest(t, client, httpReqSpec)
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 
