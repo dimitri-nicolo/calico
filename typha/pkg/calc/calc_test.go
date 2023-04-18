@@ -24,6 +24,7 @@ import (
 	. "github.com/projectcalico/calico/typha/pkg/calc"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -95,16 +96,31 @@ var _ = Describe("ValidationFilter", func() {
 		Expect(s.values[0]).NotTo(BeNil())
 	})
 
-	It("it should filter out RemoteClusterStatus types", func() {
+	DescribeTable("it should filter out some RemoteClusterStatus types", func(statusType model.RemoteClusterStatusType, shouldFilter bool) {
 		v.OnUpdates([]api.Update{{
 			KVPair: model.KVPair{
 				Key: model.RemoteClusterStatusKey{Name: "rccs1"},
 				Value: &model.RemoteClusterStatus{
-					Status: model.RemoteClusterConnecting,
+					Status: statusType,
 				},
 			},
 			UpdateType: api.UpdateTypeKVNew,
 		}})
-		Expect(s.countUpdates).To(Equal(0))
-	})
+		expectedCount := 0
+		if !shouldFilter {
+			expectedCount = 1
+		}
+		Expect(s.countUpdates).To(Equal(expectedCount))
+	}, []TableEntry{
+		remoteClusterStatusCase(model.RemoteClusterConnecting, true),
+		remoteClusterStatusCase(model.RemoteClusterConnectionFailed, true),
+		remoteClusterStatusCase(model.RemoteClusterResyncInProgress, true),
+		remoteClusterStatusCase(model.RemoteClusterInSync, true),
+		remoteClusterStatusCase(model.RemoteClusterConfigIncomplete, true),
+		remoteClusterStatusCase(model.RemoteClusterConfigChangeRestartRequired, false),
+	}...)
 })
+
+func remoteClusterStatusCase(statusType model.RemoteClusterStatusType, shouldFilter bool) TableEntry {
+	return TableEntry{Description: statusType.String(), Parameters: []interface{}{statusType, shouldFilter}}
+}
