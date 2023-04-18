@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
 //go:build tesla
 // +build tesla
@@ -88,6 +88,11 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 	_, _, err := c.createServiceAccountWithToken(resource.ImageAssuranceScannerCLIServiceAccountName, c.scannerCLITokenSecretName, resource.ManagerNameSpaceName)
 	if err != nil {
 		reqLogger.Errorf("error reconciling cli service account token for image assurance %+v", err)
+		return err
+	}
+
+	if err := c.createNonExpiringTokenSecretForServiceAccount(c.scannerCLITokenSecretName+nonExpiryingTokenSuffix, resource.ImageAssuranceScannerCLIServiceAccountName, resource.ManagerNameSpaceName); err != nil {
+		reqLogger.Errorf("error reconciling cli service account non expiring token for image assurance %+v", err)
 		return err
 	}
 
@@ -337,6 +342,27 @@ func (c *reconciler) createServiceAccountWithToken(saName, tokenSecretName, name
 	}
 
 	return sa, secret, nil
+}
+
+func (c *reconciler) createNonExpiringTokenSecretForServiceAccount(secretName, serviceAccountName, namespace string) error {
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+			Annotations: map[string]string{
+				"kubernetes.io/service-account.name": serviceAccountName,
+			},
+		},
+		Type: "kubernetes.io/service-account-token",
+		Data: map[string][]byte{},
+	}
+
+	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // isTokenValid checks that the token is valid, specifically:
