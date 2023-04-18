@@ -65,6 +65,7 @@ ${HELM} -n tigera-operator template \
 	--set manager.enabled=false \
 	--set monitor.enabled=false \
 	--set compliance.enabled=false \
+	--set policyRecommendation.enabled=false \
 	--set tigeraOperator.version=$OPERATOR_VERSION \
 	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
 	--set calicoctl.tag=$CALICO_VERSION \
@@ -106,6 +107,7 @@ for FILE in $VALUES_FILES; do
 	ns=$(cat ../charts/values/$FILE | grep -Po '# NS: \K(.*)')
 	${HELM} -n ${ns:-"tigera-operator"} template \
 		../charts/tigera-operator \
+	        --set policyRecommendation.enabled=false \
 	        --set tigeraOperator.version=$OPERATOR_VERSION \
 	        --set tigeraOperator.registry=$OPERATOR_REGISTRY \
 	        --set calicoctl.tag=$CALICO_VERSION \
@@ -164,6 +166,7 @@ ${HELM} template --include-crds \
 	--set manager.enabled=false \
 	--set monitor.enabled=false \
 	--set compliance.enabled=false \
+	--set policyRecommendation.enabled=false \
 	--set tigeraOperator.version=$OPERATOR_VERSION \
 	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
 	--set imagePullSecrets.tigera-pull-secret=SECRET \

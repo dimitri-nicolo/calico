@@ -39,6 +39,9 @@ monitor:
 compliance:
   enabled: true
 
+policyRecommendation:
+  enabled: true
+
 # Optional configuration for setting custom BGP templates where
 # key is the filename of the template and value is the contents of the template.
 bgp: {}
