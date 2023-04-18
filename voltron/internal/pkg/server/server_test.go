@@ -972,7 +972,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				RootCAs:      voltronTunnelCAs,
 				ServerName:   "voltron",
 			}, 5*time.Second)
-			Expect(err).Should(MatchError("tcp.tls.Dial failed: x509: certificate specifies an incompatible key usage"))
+			Expect(err).Should(MatchError("tcp.tls.Dial failed: tls: failed to verify certificate: x509: certificate specifies an incompatible key usage"))
 		})
 	})
 })
