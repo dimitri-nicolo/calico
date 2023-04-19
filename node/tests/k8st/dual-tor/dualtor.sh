@@ -22,15 +22,10 @@ export KUBECONFIG=~/.kube/kind-config-kind
 # Set up second plane.
 : ${DUAL:=true}
 
-# URL for an operator install.
+# URL for an operator install. We will build the local code and load the images so
+# that the operator will use thoso images with local changes instead of pulling
+# images.
 : ${OPERATOR_URL:=https://docs.tigera.io/master/manifests/tigera-operator.yaml}
-
-# Full name and tag of the cnx-node image that the preceding URL uses.
-# We need this because we will build the local node code into an image
-# and then retag it - inside the test cluster - with exactly this
-# name.  Then when the operator install proceeds it will pick up that
-# image instead of pulling from gcr.io.
-: ${CNX_NODE_IMAGE:=gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master}
 
 tmpd=$(mktemp -d -t calico.XXXXXX)
 
@@ -152,15 +147,8 @@ EOF
 
 function install_tsee() {
 
-    # Load the locally built cnx-node image into the KIND cluster.
-    ${KIND} load docker-image tigera/cnx-node:latest-amd64
-
-    # Inside the cluster, retag so that it appears to be the image that the operator will
-    # look for.
-    for node in kind-control-plane kind-worker kind-worker2 kind-worker3; do
-	docker exec $node ctr --namespace=k8s.io images tag docker.io/tigera/cnx-node:latest-amd64 ${CNX_NODE_IMAGE}
-	docker exec $node crictl images
-    done
+    # Load the locally built images into the KIND cluster nodes.
+    . ${TEST_DIR}/load_images_on_kind_cluster.sh
 
     # Prepare for an operator install.
     ${kubectl} create -f ${OPERATOR_URL}
