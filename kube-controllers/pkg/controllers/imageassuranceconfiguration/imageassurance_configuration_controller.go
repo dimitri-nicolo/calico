@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
 //go:build tesla
 // +build tesla
@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	workerResyncPeriod = 1 * time.Hour
+	workerResyncPeriod      = 1 * time.Hour
+	nonExpiryingTokenSuffix = "-non-expirying"
 )
 
 type imageAssuranceConfigController struct {
@@ -220,6 +221,13 @@ func New(
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.ManagerNameSpaceName,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", r.scannerCLITokenSecretName))),
+			&corev1.Secret{},
+			worker.ResourceWatchDelete, worker.ResourceWatchUpdate,
+		)
+
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.ManagerNameSpaceName,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", r.scannerCLITokenSecretName+nonExpiryingTokenSuffix))),
 			&corev1.Secret{},
 			worker.ResourceWatchDelete, worker.ResourceWatchUpdate,
 		)
