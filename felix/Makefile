@@ -537,7 +537,7 @@ test-scapy-container: $(SCAPY_CONTAINER_CREATED)
 $(SCAPY_CONTAINER_CREATED): fv/scapy/Dockerfile \
                             $(shell test "$(SCAPY_IMAGE_ID)" || echo force-rebuild)
 	@echo Building scapy container...
-	docker build -t tigera-test/scapy fv/scapy
+	$(DOCKER_BUILD) --load -t tigera-test/scapy fv/scapy
 	touch $(SCAPY_CONTAINER_CREATED)
 
 TEST_DNS_SERVER_IMAGE_WITH_TAG=tigera-test/dns-server:latest
@@ -552,7 +552,7 @@ $(TEST_DNS_SERVER_CONTAINER_CREATED): ../go.mod \
 	@echo Building test-dns-server-container...
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o fv/dns/server/dns-server -v -buildvcs=false $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/dns/server"'
-	docker build -t $(TEST_DNS_SERVER_IMAGE_WITH_TAG) fv/dns/server
+	$(DOCKER_BUILD) --load -t $(TEST_DNS_SERVER_IMAGE_WITH_TAG) fv/dns/server
 	touch $(TEST_DNS_SERVER_CONTAINER_CREATED)
 
 bin/run-debug-console-command:
