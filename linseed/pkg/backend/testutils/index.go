@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -16,10 +15,6 @@ import (
 
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 func RefreshIndex(ctx context.Context, c lmaelastic.Client, index string) error {
 	logrus.WithField("index", index).Info("[TEST] Refreshing index")

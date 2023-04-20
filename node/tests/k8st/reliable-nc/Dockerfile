@@ -1,4 +1,3 @@
-FROM busybox:1.32
+FROM busybox:latest
 
 COPY bin/reliable-nc /reliable-nc
-RUN chmod +x /reliable-nc

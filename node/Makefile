@@ -471,7 +471,7 @@ dual-tor-cleanup:
 tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 	mkdir -p dist
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -buildvcs=false -v -i -o $@ -v $(BUILD_FLAGS) -ldflags "$(LDFLAGS)" "$(PACKAGE_NAME)/tests/k8st/reliable-nc"'
+	    sh -c 'go build -buildvcs=false -v -o $@ -v $(BUILD_FLAGS) -ldflags "$(LDFLAGS)" "$(PACKAGE_NAME)/tests/k8st/reliable-nc"'
 
 ## k8st: STs in a real Kubernetes cluster provisioned by KIND
 ##
