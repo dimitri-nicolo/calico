@@ -9,7 +9,7 @@ eks-log-forwarder-startup:
 
 else
 
-GO_BUILD_VER    ?= v0.78
+GO_BUILD_VER    ?= v0.84
 CALICO_BUILD     = calico/go-build:$(GO_BUILD_VER)
 BINDIR          ?= bin
 SRC_DIR          = $(pwd)
@@ -28,8 +28,6 @@ VERSION_FLAGS=-X main.VERSION=$(VERSION) \
 			-X main.BUILD_DATE=$(BUILD_DATE) \
 			-X main.GIT_TAG=$(GIT_TAG) \
 			-X main.GIT_COMMIT=$(GIT_COMMIT)
-BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
-RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
 # Figure out the users UID/GID.  These are needed to run docker containers
 # as the current user and ensure that files built inside containers are
@@ -63,31 +61,20 @@ DOCKER_GO_BUILD = mkdir -p .go-pkg-cache && \
 # Target definitions.
 eks-log-forwarder-startup: bin/eks-log-forwarder-startup bin/eks-log-forwarder-startup.exe
 bin/eks-log-forwarder-startup: $(SRC_FILES)
-ifndef RELEASE_BUILD
-	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
-else
-	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
-endif
 	@echo "Building eks init-container executable"
 	mkdir -p $(BINDIR)
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
-	        go build -o $@ -v $(LDFLAGS) $(SRC_DIR) && \
+	        CGO_ENABLED=0 go build -o $@ -v -ldflags "$(VERSION_FLAGS) -s -w" $(SRC_DIR) && \
 	            ( ldd $@ 2>&1 | grep -q "Not a valid dynamic program\|not a dynamic executable" || \
 	                ( echo "Error: $(BINDIR)/$@ was not statically linked"; false ) )'
 
 bin/eks-log-forwarder-startup.exe: $(SRC_FILES)
-ifndef RELEASE_BUILD
-	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
-else
-	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
-endif
-	$(eval EXTRA_DOCKER_ARGS += -e GOOS=windows)
 	@echo "Building eks init-container executable for windows"
 	mkdir -p $(BINDIR)
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
-	        go build -o $@ -v $(LDFLAGS) $(SRC_DIR) && \
+	        GOOS=windows go build -o $@ -v -ldflags "$(VERSION_FLAGS) -s -w" $(SRC_DIR) && \
 	            ( ldd $@ 2>&1 | grep -q "Not a valid dynamic program\|not a dynamic executable" || \
 	                ( echo "Error: $(BINDIR)/$@ was not statically linked"; false ) )'
 
