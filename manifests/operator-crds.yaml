@@ -30336,6 +30336,9 @@ spec:
                                 the dashboard card
                               format: int32
                               type: integer
+                          required:
+                          - xPos
+                          - yPos
                           type: object
                         selectedNamespace:
                           description: Namespace user selected for the dashboard

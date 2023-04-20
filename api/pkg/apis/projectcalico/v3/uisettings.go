@@ -171,9 +171,9 @@ type DashboardLayout struct {
 	Index string `json:"index,omitempty" validate:"omitempty"`
 
 	// X coordinate of the top-left corner of the dashboard card
-	XPos uint32 `json:"xPos,omitempty" validate:"omitempty"`
+	XPos uint32 `json:"xPos"`
 	// Y coordinate of the top-left corner of the dashboard card
-	YPos uint32 `json:"yPos,omitempty" validate:"omitempty"`
+	YPos uint32 `json:"yPos"`
 
 	// Width of the dashboard card
 	Width uint32 `json:"width,omitempty" validate:"omitempty"`
