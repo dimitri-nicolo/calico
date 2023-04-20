@@ -17,7 +17,9 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
@@ -77,49 +79,173 @@ func TestCreateSnapshots(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testcases {
-		t.Run(fmt.Sprintf("should write and read %s snapshots", tc.Name), func(t *testing.T) {
-			defer setupTest(t)()
+	// Run each test with a tenant specified, and also without a tenant.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		for _, tc := range testcases {
+			name := fmt.Sprintf("should write and read %s snapshots (tenant=%s)", tc.Name, tenant)
+			t.Run(name, func(t *testing.T) {
+				defer setupTest(t)()
+				clusterInfo.Tenant = tenant
 
-			trl := list.TimestampedResourceList{
-				ResourceList:              tc.ResourceList,
-				RequestStartedTimestamp:   metav1.Time{Time: time.Unix(1, 0)},
-				RequestCompletedTimestamp: metav1.Time{Time: time.Unix(2, 0)},
-			}
-			f := v1.Snapshot{
-				ResourceList: trl,
-			}
+				trl := list.TimestampedResourceList{
+					ResourceList:              tc.ResourceList,
+					RequestStartedTimestamp:   metav1.Time{Time: time.Unix(1, 0)},
+					RequestCompletedTimestamp: metav1.Time{Time: time.Unix(2, 0)},
+				}
+				f := v1.Snapshot{
+					ResourceList: trl,
+				}
 
-			response, err := sb.Create(ctx, clusterInfo, []v1.Snapshot{f})
-			require.NoError(t, err)
-			require.Equal(t, []v1.BulkError(nil), response.Errors)
-			require.Equal(t, 0, response.Failed)
+				response, err := sb.Create(ctx, clusterInfo, []v1.Snapshot{f})
+				require.NoError(t, err)
+				require.Equal(t, []v1.BulkError(nil), response.Errors)
+				require.Equal(t, 0, response.Failed)
 
-			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_snapshots.*")
-			require.NoError(t, err)
+				err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_snapshots.*")
+				require.NoError(t, err)
 
-			// Read it back and check it matches.
-			gvk := tc.ResourceList.GetObjectKind().GroupVersionKind()
-			apiVersion := gvk.Version
-			if gvk.Group != "" && gvk.Version != "" {
-				apiVersion = strings.Join([]string{gvk.Group, gvk.Version}, "/")
-			}
-			p := v1.SnapshotParams{
-				TypeMatch: &metav1.TypeMeta{
-					APIVersion: apiVersion,
-					Kind:       gvk.Kind,
-				},
-				Sort: []v1.SearchRequestSortBy{
-					{
-						Field:      "requestCompletedTimestamp",
-						Descending: true,
+				// Read it back and check it matches.
+				gvk := tc.ResourceList.GetObjectKind().GroupVersionKind()
+				apiVersion := gvk.Version
+				if gvk.Group != "" && gvk.Version != "" {
+					apiVersion = strings.Join([]string{gvk.Group, gvk.Version}, "/")
+				}
+				p := v1.SnapshotParams{
+					TypeMatch: &metav1.TypeMeta{
+						APIVersion: apiVersion,
+						Kind:       gvk.Kind,
+					},
+					Sort: []v1.SearchRequestSortBy{
+						{
+							Field:      "requestCompletedTimestamp",
+							Descending: true,
+						},
+					},
+				}
+				resp, err := sb.List(ctx, clusterInfo, &p)
+				require.NoError(t, err)
+				require.Len(t, resp.Items, 1)
+				require.Equal(t, trl, resp.Items[0].ResourceList)
+			})
+		}
+	}
+
+	t.Run("invalid ClusterInfo", func(t *testing.T) {
+		defer setupTest(t)()
+
+		f := v1.Snapshot{}
+		p := v1.SnapshotParams{}
+
+		// Empty cluster info.
+		empty := bapi.ClusterInfo{}
+		_, err := sb.Create(ctx, empty, []v1.Snapshot{f})
+		require.Error(t, err)
+		_, err = sb.List(ctx, empty, &p)
+		require.Error(t, err)
+
+		// Invalid tenant ID in cluster info.
+		badTenant := bapi.ClusterInfo{Cluster: cluster, Tenant: "one,two"}
+		_, err = sb.Create(ctx, badTenant, []v1.Snapshot{f})
+		require.Error(t, err)
+		_, err = sb.List(ctx, badTenant, &p)
+		require.Error(t, err)
+	})
+}
+
+func TestSnapshotsFiltering(t *testing.T) {
+	type testcase struct {
+		Name    string
+		Params  *v1.SnapshotParams
+		Expect1 bool
+		Expect2 bool
+	}
+
+	testcases := []testcase{
+		{
+			Name: "should filter snapshots based timestamp",
+			Params: &v1.SnapshotParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Unix(1000, 0),
+						To:   time.Unix(3000, 0),
 					},
 				},
-			}
-			resp, err := sb.List(ctx, clusterInfo, &p)
-			require.NoError(t, err)
-			require.Len(t, resp.Items, 1)
-			require.Equal(t, trl, resp.Items[0].ResourceList)
-		})
+			},
+			Expect1: false,
+			Expect2: true,
+		},
+	}
+
+	for _, tc := range testcases {
+		// Run each test with a tenant specified, and also without a tenant.
+		for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
+			t.Run(name, func(t *testing.T) {
+				defer setupTest(t)()
+				clusterInfo.Tenant = tenant
+
+				s1 := v1.Snapshot{
+					ResourceList: list.TimestampedResourceList{
+						ResourceList: &apiv3.GlobalNetworkPolicyList{
+							TypeMeta: metav1.TypeMeta{Kind: "GlobalNetworkPolicy", APIVersion: "projectcalico.org/v3"},
+							ListMeta: metav1.ListMeta{},
+							Items: []apiv3.GlobalNetworkPolicy{
+								{
+									TypeMeta: metav1.TypeMeta{Kind: "GlobalNetworkPolicy", APIVersion: "projectcalico.org/v3"},
+									ObjectMeta: metav1.ObjectMeta{
+										Name: "np1",
+									},
+								},
+							},
+						},
+						RequestStartedTimestamp:   metav1.Time{Time: time.Unix(1, 0)},
+						RequestCompletedTimestamp: metav1.Time{Time: time.Unix(2, 0)},
+					},
+				}
+				s1.ID = s1.ResourceList.String()
+				s2 := v1.Snapshot{
+					ResourceList: list.TimestampedResourceList{
+						ResourceList: &apiv3.NetworkPolicyList{
+							TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
+							ListMeta: metav1.ListMeta{},
+							Items: []apiv3.NetworkPolicy{
+								{
+									TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "np1",
+										Namespace: "default",
+									},
+								},
+							},
+						},
+						RequestStartedTimestamp:   metav1.Time{Time: time.Unix(1000, 0)},
+						RequestCompletedTimestamp: metav1.Time{Time: time.Unix(2000, 0)},
+					},
+				}
+				s2.ID = s2.ResourceList.String()
+
+				response, err := sb.Create(ctx, clusterInfo, []v1.Snapshot{s1, s2})
+				require.NoError(t, err)
+				require.Equal(t, []v1.BulkError(nil), response.Errors)
+				require.Equal(t, 0, response.Failed)
+
+				err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_snapshots.*")
+				require.NoError(t, err)
+
+				resp, err := sb.List(ctx, clusterInfo, tc.Params)
+				require.NoError(t, err)
+
+				if tc.Expect1 {
+					require.Contains(t, resp.Items, s1)
+				} else {
+					require.NotContains(t, resp.Items, s1)
+				}
+				if tc.Expect2 {
+					require.Contains(t, resp.Items, s2)
+				} else {
+					require.NotContains(t, resp.Items, s2)
+				}
+			})
+		}
 	}
 }

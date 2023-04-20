@@ -4,6 +4,7 @@ package compliance_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -77,33 +79,285 @@ func setupTest(t *testing.T) func() {
 	}
 }
 
-func TestCreateReport(t *testing.T) {
-	defer setupTest(t)()
+func TestReportDataBasic(t *testing.T) {
+	t.Run("invalid ClusterInfo", func(t *testing.T) {
+		defer setupTest(t)()
 
-	// Create a dummy report.
-	report := apiv3.ReportData{
-		ReportName:     "test-report",
-		ReportTypeName: "my-report-type",
-		StartTime:      metav1.Time{Time: time.Unix(1, 0)},
-		EndTime:        metav1.Time{Time: time.Unix(2, 0)},
-		GenerationTime: metav1.Time{Time: time.Unix(3, 0)},
+		f := v1.ReportData{}
+		p := v1.ReportDataParams{}
+
+		// Empty cluster info.
+		empty := bapi.ClusterInfo{}
+		_, err := rb.Create(ctx, empty, []v1.ReportData{f})
+		require.Error(t, err)
+		_, err = rb.List(ctx, empty, &p)
+		require.Error(t, err)
+
+		// Invalid tenant ID in cluster info.
+		badTenant := bapi.ClusterInfo{Cluster: cluster, Tenant: "one,two"}
+		_, err = rb.Create(ctx, badTenant, []v1.ReportData{f})
+		require.Error(t, err)
+		_, err = rb.List(ctx, badTenant, &p)
+		require.Error(t, err)
+	})
+
+	// Run each test with a tenant specified, and also without a tenant.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("create and retrieve reports (tenant=%s)", tenant)
+		t.Run(name, func(t *testing.T) {
+			defer setupTest(t)()
+			clusterInfo.Tenant = tenant
+
+			// Create a dummy report.
+			report := apiv3.ReportData{
+				ReportName:     "test-report",
+				ReportTypeName: "my-report-type",
+				StartTime:      metav1.Time{Time: time.Unix(1, 0)},
+				EndTime:        metav1.Time{Time: time.Unix(2, 0)},
+				GenerationTime: metav1.Time{Time: time.Unix(3, 0)},
+			}
+			f := v1.ReportData{ReportData: &report}
+
+			response, err := rb.Create(ctx, clusterInfo, []v1.ReportData{f})
+			require.NoError(t, err)
+			require.Equal(t, []v1.BulkError(nil), response.Errors)
+			require.Equal(t, 0, response.Failed)
+
+			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_compliance_reports.*")
+			require.NoError(t, err)
+
+			// Read it back and check it matches.
+			p := v1.ReportDataParams{}
+			resp, err := rb.List(ctx, clusterInfo, &p)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 1)
+			require.NotEqual(t, "", resp.Items[0].ID)
+			resp.Items[0].ID = ""
+			require.Equal(t, f, resp.Items[0])
+		})
 	}
-	f := v1.ReportData{ReportData: &report}
+}
 
-	response, err := rb.Create(ctx, clusterInfo, []v1.ReportData{f})
-	require.NoError(t, err)
-	require.Equal(t, []v1.BulkError(nil), response.Errors)
-	require.Equal(t, 0, response.Failed)
+func TestReportDataFiltering(t *testing.T) {
+	type testcase struct {
+		Name    string
+		Params  *v1.ReportDataParams
+		Expect1 bool
+		Expect2 bool
+	}
 
-	err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_compliance_reports.*")
-	require.NoError(t, err)
+	testcases := []testcase{
+		{
+			Name: "should filter reports based on ID",
+			Params: &v1.ReportDataParams{
+				ID: "report-id-1",
+			},
+			Expect1: true,
+			Expect2: false,
+		},
+		{
+			Name: "should filter reports based on name",
+			Params: &v1.ReportDataParams{
+				ReportMatches: []v1.ReportMatch{
+					{
+						ReportName: "report-name-1",
+					},
+				},
+			},
+			Expect1: true,
+			Expect2: false,
+		},
+		{
+			Name: "should filter reports based on type name",
+			Params: &v1.ReportDataParams{
+				ReportMatches: []v1.ReportMatch{
+					{
+						ReportTypeName: "report-type-2",
+					},
+				},
+			},
+			Expect1: false,
+			Expect2: true,
+		},
+		{
+			Name: "should filter reports based on report type and name",
+			Params: &v1.ReportDataParams{
+				ReportMatches: []v1.ReportMatch{
+					{
+						ReportName:     "report-name-2",
+						ReportTypeName: "report-type-2",
+					},
+				},
+			},
+			Expect1: false,
+			Expect2: true,
+		},
+		{
+			Name: "should filter reports based on report type and name (no match)",
+			Params: &v1.ReportDataParams{
+				ReportMatches: []v1.ReportMatch{
+					{
+						// Should match neither.
+						ReportName:     "report-name-1",
+						ReportTypeName: "report-type-2",
+					},
+				},
+			},
+			Expect1: false,
+			Expect2: false,
+		},
+		{
+			Name: "should filter reports based on timestamp range",
+			Params: &v1.ReportDataParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Unix(1000, 0),
+						To:   time.Unix(3000, 0),
+					},
+				},
+			},
+			Expect1: false,
+			Expect2: true,
+		},
+		{
+			Name: "should filter reports based on end time",
+			Params: &v1.ReportDataParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						To: time.Unix(1000, 0),
+					},
+				},
+			},
+			Expect1: true,
+			Expect2: false,
+		},
+		{
+			Name: "should filter reports based on start time",
+			Params: &v1.ReportDataParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Unix(1000, 0),
+					},
+				},
+			},
+			Expect1: false,
+			Expect2: true,
+		},
+	}
 
-	// Read it back and check it matches.
-	p := v1.ReportDataParams{}
-	resp, err := rb.List(ctx, clusterInfo, &p)
-	require.NoError(t, err)
-	require.Len(t, resp.Items, 1)
-	require.NotEqual(t, "", resp.Items[0].ID)
-	resp.Items[0].ID = ""
-	require.Equal(t, f, resp.Items[0])
+	for _, tc := range testcases {
+		// Run each test with a tenant specified, and also without a tenant.
+		for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
+			t.Run(name, func(t *testing.T) {
+				defer setupTest(t)()
+				clusterInfo.Tenant = tenant
+
+				r1 := v1.ReportData{
+					ID: "report-id-1",
+					ReportData: &apiv3.ReportData{
+						ReportName:     "report-name-1",
+						ReportTypeName: "report-type-1",
+						StartTime:      metav1.Time{Time: time.Unix(100, 0)},
+						EndTime:        metav1.Time{Time: time.Unix(100, 0)},
+						GenerationTime: metav1.Time{Time: time.Unix(100, 0)},
+					},
+				}
+				r2 := v1.ReportData{
+					ID: "report-id-2",
+					ReportData: &apiv3.ReportData{
+						ReportName:     "report-name-2",
+						ReportTypeName: "report-type-2",
+						StartTime:      metav1.Time{Time: time.Unix(2000, 0)},
+						EndTime:        metav1.Time{Time: time.Unix(2000, 0)},
+						GenerationTime: metav1.Time{Time: time.Unix(2000, 0)},
+					},
+				}
+
+				response, err := rb.Create(ctx, clusterInfo, []v1.ReportData{r1, r2})
+				require.NoError(t, err)
+				require.Equal(t, []v1.BulkError(nil), response.Errors)
+				require.Equal(t, 0, response.Failed)
+
+				err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_compliance_reports.*")
+				require.NoError(t, err)
+
+				resp, err := rb.List(ctx, clusterInfo, tc.Params)
+				require.NoError(t, err)
+
+				if tc.Expect1 {
+					require.Contains(t, resp.Items, r1)
+				} else {
+					require.NotContains(t, resp.Items, r1)
+				}
+				if tc.Expect2 {
+					require.Contains(t, resp.Items, r2)
+				} else {
+					require.NotContains(t, resp.Items, r2)
+				}
+			})
+		}
+	}
+}
+
+func TestReportDataSorting(t *testing.T) {
+	t.Run("should respect sorting", func(t *testing.T) {
+		defer setupTest(t)()
+
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		t1 := time.Unix(100, 0)
+		t2 := time.Unix(500, 0)
+
+		r1 := v1.ReportData{
+			ID: "report-id-1",
+			ReportData: &apiv3.ReportData{
+				ReportName:     "report-name-1",
+				ReportTypeName: "report-type-1",
+				StartTime:      metav1.Time{Time: t1},
+				EndTime:        metav1.Time{Time: t1},
+				GenerationTime: metav1.Time{Time: t1},
+			},
+		}
+		r2 := v1.ReportData{
+			ID: "report-id-2",
+			ReportData: &apiv3.ReportData{
+				ReportName:     "report-name-2",
+				ReportTypeName: "report-type-2",
+				StartTime:      metav1.Time{Time: t2},
+				EndTime:        metav1.Time{Time: t2},
+				GenerationTime: metav1.Time{Time: t2},
+			},
+		}
+
+		_, err := rb.Create(ctx, clusterInfo, []v1.ReportData{r1, r2})
+		require.NoError(t, err)
+
+		err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_compliance_reports.*")
+		require.NoError(t, err)
+
+		// Query for flow logs without sorting.
+		params := v1.ReportDataParams{}
+		r, err := rb.List(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 2)
+		require.Nil(t, r.AfterKey)
+
+		// Assert that the logs are returned in the correct order.
+		require.Equal(t, r1, r.Items[0])
+		require.Equal(t, r2, r.Items[1])
+
+		// Query again, this time sorting in order to get the logs in reverse order.
+		params.Sort = []v1.SearchRequestSortBy{
+			{
+				Field:      "endTime",
+				Descending: true,
+			},
+		}
+		r, err = rb.List(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 2)
+		require.Equal(t, r2, r.Items[0])
+		require.Equal(t, r1, r.Items[1])
+	})
 }

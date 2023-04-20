@@ -35,10 +35,6 @@ type benchmarksBackend struct {
 func (b *benchmarksBackend) List(ctx context.Context, i bapi.ClusterInfo, p *v1.BenchmarksParams) (*v1.List[v1.Benchmarks], error) {
 	log := bapi.ContextLogger(i)
 
-	if err := i.Valid(); err != nil {
-		return nil, err
-	}
-
 	query, startFrom, err := b.getSearch(ctx, i, p)
 	if err != nil {
 		return nil, err
