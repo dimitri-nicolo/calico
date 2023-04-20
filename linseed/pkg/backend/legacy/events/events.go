@@ -38,8 +38,8 @@ func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.EventsBackend {
 func (b *eventsBackend) Create(ctx context.Context, i bapi.ClusterInfo, events []v1.Event) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("no cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, err
 	}
 
 	err := b.templates.InitializeIfNeeded(ctx, bapi.Events, i)

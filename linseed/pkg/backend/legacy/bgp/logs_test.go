@@ -14,6 +14,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 
 	"github.com/olivere/elastic/v7"
@@ -72,45 +73,85 @@ func setupTest(t *testing.T) func() {
 
 // TestCreateBGPLog tests running a real elasticsearch query to create a kube bgp log.
 func TestCreateBGPLog(t *testing.T) {
-	defer setupTest(t)()
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestCreateBGPLog (tenant=%s)", tenant)
+		t.Run(name, func(t *testing.T) {
+			defer setupTest(t)()
 
-	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
-	f := v1.BGPLog{
-		// yyyy-MM-dd'T'HH:mm:ss
-		LogTime:   "1990-09-15T06:12:32",
-		Message:   "BGP is wonderful",
-		IPVersion: v1.IPv6BGPLog,
-		Host:      "lenox",
+			f := v1.BGPLog{
+				LogTime:   "1990-09-15T06:12:32",
+				Message:   "BGP is wonderful",
+				IPVersion: v1.IPv6BGPLog,
+				Host:      "lenox",
+			}
+
+			// Create the event in ES.
+			resp, err := b.Create(ctx, clusterInfo, []v1.BGPLog{f})
+			require.NoError(t, err)
+			require.Equal(t, []v1.BulkError(nil), resp.Errors)
+			require.Equal(t, 1, resp.Total)
+			require.Equal(t, 0, resp.Failed)
+			require.Equal(t, 1, resp.Succeeded)
+
+			// Refresh the index.
+			index := fmt.Sprintf("tigera_secure_ee_bgp.%s.*", cluster)
+			if tenant != "" {
+				index = fmt.Sprintf("tigera_secure_ee_bgp.%s.%s.*", tenant, cluster)
+			}
+			err = testutils.RefreshIndex(ctx, client, index)
+			require.NoError(t, err)
+
+			// List the log, assert that it matches the one we just wrote.
+			start, err := time.Parse(v1.BGPLogTimeFormat, "1990-09-15T06:12:00")
+			require.NoError(t, err)
+			params := &v1.BGPLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: start,
+						To:   time.Now(),
+					},
+				},
+			}
+
+			results, err := b.List(ctx, clusterInfo, params)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(results.Items))
+			require.Equal(t, f, results.Items[0])
+
+			// List again with a bogus tenant ID.
+			results, err = b.List(ctx, bapi.ClusterInfo{Cluster: cluster, Tenant: "bogus-tenant"}, params)
+			require.NoError(t, err)
+			require.Equal(t, 0, len(results.Items))
+		})
 	}
 
-	// Create the event in ES.
-	resp, err := b.Create(ctx, clusterInfo, []v1.BGPLog{f})
-	require.NoError(t, err)
-	require.Equal(t, []v1.BulkError(nil), resp.Errors)
-	require.Equal(t, 1, resp.Total)
-	require.Equal(t, 0, resp.Failed)
-	require.Equal(t, 1, resp.Succeeded)
+	t.Run("no cluster name given", func(t *testing.T) {
+		// It should reject requests with no cluster name given.
+		clusterInfo := bapi.ClusterInfo{}
+		f := v1.BGPLog{
+			LogTime:   "1990-09-15T06:12:32",
+			Message:   "BGP is wonderful",
+			IPVersion: v1.IPv6BGPLog,
+			Host:      "lenox",
+		}
+		_, err := b.Create(ctx, clusterInfo, []v1.BGPLog{f})
+		require.Error(t, err)
 
-	// Refresh the index.
-	err = testutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_bgp.%s.*", cluster))
-	require.NoError(t, err)
-
-	// List the log, assert that it matches the one we just wrote.
-	start, err := time.Parse(v1.BGPLogTimeFormat, "1990-09-15T06:12:00")
-	require.NoError(t, err)
-
-	results, err := b.List(ctx, clusterInfo, &v1.BGPLogParams{
-		QueryParams: v1.QueryParams{
-			// 1990-09-15'T'06:12:32
-			TimeRange: &lmav1.TimeRange{
-				From: start,
-				To:   time.Now(),
+		start, err := time.Parse(v1.BGPLogTimeFormat, "1990-09-15T06:12:00")
+		require.NoError(t, err)
+		params := &v1.BGPLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: start,
+					To:   time.Now(),
+				},
 			},
-		},
+		}
+		results, err := b.List(ctx, clusterInfo, params)
+		require.Error(t, err)
+		require.Nil(t, results)
 	})
-	require.NoError(t, err)
-	require.Equal(t, 1, len(results.Items))
-
-	require.Equal(t, f, results.Items[0])
 }

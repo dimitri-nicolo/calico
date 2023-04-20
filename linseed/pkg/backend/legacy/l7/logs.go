@@ -41,8 +41,8 @@ func NewL7LogBackend(c lmaelastic.Client, cache bapi.Cache) bapi.L7LogBackend {
 func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1.L7Log) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("no cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, err
 	}
 
 	err := b.templates.InitializeIfNeeded(ctx, bapi.L7Logs, i)
@@ -150,8 +150,8 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.L7L
 }
 
 func (b *l7LogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v1.L7LogParams) (*elastic.SearchService, int, error) {
-	if i.Cluster == "" {
-		return nil, 0, fmt.Errorf("no cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, 0, err
 	}
 
 	// Get the startFrom param, if any.

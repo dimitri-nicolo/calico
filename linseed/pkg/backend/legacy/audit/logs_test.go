@@ -425,215 +425,224 @@ func TestAuditLogFiltering(t *testing.T) {
 		},
 	}
 
-	for _, testcase := range testcases {
-		// Each testcase creates multiple audit logs, and then uses
-		// different filtering parameters provided in the params
-		// to query one or more audit logs.
-		t.Run(testcase.Name, func(t *testing.T) {
-			defer setupTest(t)()
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		for _, testcase := range testcases {
+			// Each testcase creates multiple audit logs, and then uses
+			// different filtering parameters provided in the params
+			// to query one or more audit logs.
+			name := fmt.Sprintf("%s (tenant=%s)", testcase.Name, tenant)
+			t.Run(name, func(t *testing.T) {
+				defer setupTest(t)()
 
-			clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
-			// Time that the logs occur.
-			logTime := time.Unix(1, 0)
+				// Time that the logs occur.
+				logTime := time.Unix(1, 0)
 
-			// Set the time range for the test. We set this per-test
-			// so that the time range captures the windows that the logs
-			// are created in.
-			tr := &lmav1.TimeRange{}
-			tr.From = logTime.Add(-1 * time.Millisecond)
-			tr.To = logTime.Add(1 * time.Millisecond)
-			testcase.Params.QueryParams.TimeRange = tr
+				// Set the time range for the test. We set this per-test
+				// so that the time range captures the windows that the logs
+				// are created in.
+				tr := &lmav1.TimeRange{}
+				tr.From = logTime.Add(-1 * time.Millisecond)
+				tr.To = logTime.Add(1 * time.Millisecond)
+				testcase.Params.QueryParams.TimeRange = tr
 
-			// The object that audit log is for.
-			obj := v3.NetworkPolicy{
-				TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
-			}
-			objRaw, err := json.Marshal(obj)
-			require.NoError(t, err)
+				// The object that audit log is for.
+				obj := v3.NetworkPolicy{
+					TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
+				}
+				objRaw, err := json.Marshal(obj)
+				require.NoError(t, err)
 
-			// Create log #1.
-			a1 := v1.AuditLog{
-				Event: kaudit.Event{
-					TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
-					AuditID:    types.UID("audit-log-one"),
-					Stage:      kaudit.StageResponseComplete,
-					Level:      kaudit.LevelRequestResponse,
-					RequestURI: "/apis/v3/projectcalico.org",
-					Verb:       "PUT",
-					User: authnv1.UserInfo{
-						Username: "garfunkel",
-						UID:      "1234",
-						Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+				// Create log #1.
+				a1 := v1.AuditLog{
+					Event: kaudit.Event{
+						TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+						AuditID:    types.UID("audit-log-one"),
+						Stage:      kaudit.StageResponseComplete,
+						Level:      kaudit.LevelRequestResponse,
+						RequestURI: "/apis/v3/projectcalico.org",
+						Verb:       "PUT",
+						User: authnv1.UserInfo{
+							Username: "garfunkel",
+							UID:      "1234",
+							Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+						},
+						ImpersonatedUser: &authnv1.UserInfo{
+							Username: "impuser",
+							UID:      "impuid",
+							Groups:   []string{"g1"},
+						},
+						SourceIPs: []string{"1.2.3.4"},
+						UserAgent: "user-agent",
+						ObjectRef: &kaudit.ObjectReference{
+							Resource:   "networkpolicies",
+							Name:       "np-1",
+							Namespace:  "default",
+							APIGroup:   "projectcalico.org",
+							APIVersion: "v3",
+						},
+						ResponseStatus: &metav1.Status{
+							Code: 200,
+						},
+						RequestObject: &runtime.Unknown{
+							Raw:         objRaw,
+							ContentType: runtime.ContentTypeJSON,
+						},
+						ResponseObject: &runtime.Unknown{
+							Raw:         objRaw,
+							ContentType: runtime.ContentTypeJSON,
+						},
+						RequestReceivedTimestamp: metav1.NewMicroTime(logTime),
+						StageTimestamp:           metav1.NewMicroTime(logTime),
+						Annotations:              map[string]string{"brick": "red"},
 					},
-					ImpersonatedUser: &authnv1.UserInfo{
-						Username: "impuser",
-						UID:      "impuid",
-						Groups:   []string{"g1"},
-					},
-					SourceIPs: []string{"1.2.3.4"},
-					UserAgent: "user-agent",
-					ObjectRef: &kaudit.ObjectReference{
-						Resource:   "networkpolicies",
-						Name:       "np-1",
-						Namespace:  "default",
-						APIGroup:   "projectcalico.org",
-						APIVersion: "v3",
-					},
-					ResponseStatus: &metav1.Status{
-						Code: 200,
-					},
-					RequestObject: &runtime.Unknown{
-						Raw:         objRaw,
-						ContentType: runtime.ContentTypeJSON,
-					},
-					ResponseObject: &runtime.Unknown{
-						Raw:         objRaw,
-						ContentType: runtime.ContentTypeJSON,
-					},
-					RequestReceivedTimestamp: metav1.NewMicroTime(logTime),
-					StageTimestamp:           metav1.NewMicroTime(logTime),
-					Annotations:              map[string]string{"brick": "red"},
-				},
-				Name: testutils.StringPtr("ee-any"),
-			}
+					Name: testutils.StringPtr("ee-any"),
+				}
 
-			// The object that audit log is for.
-			obj = v3.NetworkPolicy{
-				TypeMeta: metav1.TypeMeta{Kind: "GlobalNetworkPolicy", APIVersion: "projectcalico.org/v4"},
-			}
-			objRaw2, err := json.Marshal(obj)
-			require.NoError(t, err)
+				// The object that audit log is for.
+				obj = v3.NetworkPolicy{
+					TypeMeta: metav1.TypeMeta{Kind: "GlobalNetworkPolicy", APIVersion: "projectcalico.org/v4"},
+				}
+				objRaw2, err := json.Marshal(obj)
+				require.NoError(t, err)
 
-			// Create log #2.
-			a2 := v1.AuditLog{
-				Event: kaudit.Event{
-					TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
-					AuditID:    types.UID("audit-log-two"),
-					Stage:      kaudit.StageRequestReceived,
-					Level:      kaudit.LevelRequest,
-					RequestURI: "/apis/v3/projectcalico.org",
-					Verb:       "PUT",
-					User: authnv1.UserInfo{
-						Username: "oates",
-						UID:      "0987",
-						Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+				// Create log #2.
+				a2 := v1.AuditLog{
+					Event: kaudit.Event{
+						TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+						AuditID:    types.UID("audit-log-two"),
+						Stage:      kaudit.StageRequestReceived,
+						Level:      kaudit.LevelRequest,
+						RequestURI: "/apis/v3/projectcalico.org",
+						Verb:       "PUT",
+						User: authnv1.UserInfo{
+							Username: "oates",
+							UID:      "0987",
+							Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+						},
+						ImpersonatedUser: &authnv1.UserInfo{
+							Username: "impuser",
+							UID:      "impuid",
+							Groups:   []string{"g1"},
+						},
+						SourceIPs: []string{"1.2.3.4"},
+						UserAgent: "user-agent",
+						ObjectRef: &kaudit.ObjectReference{
+							Resource:   "globalnetworkpolicies",
+							Name:       "gnp-1",
+							Namespace:  "",
+							APIGroup:   "projectcalico.org",
+							APIVersion: "v4",
+						},
+						ResponseStatus: &metav1.Status{
+							Code: 201,
+						},
+						RequestObject: &runtime.Unknown{
+							Raw:         objRaw2,
+							ContentType: runtime.ContentTypeJSON,
+						},
+						ResponseObject: &runtime.Unknown{
+							Raw:         objRaw2,
+							ContentType: runtime.ContentTypeJSON,
+						},
+						RequestReceivedTimestamp: metav1.NewMicroTime(logTime),
+						StageTimestamp:           metav1.NewMicroTime(logTime),
+						Annotations:              map[string]string{"brick": "red"},
 					},
-					ImpersonatedUser: &authnv1.UserInfo{
-						Username: "impuser",
-						UID:      "impuid",
-						Groups:   []string{"g1"},
-					},
-					SourceIPs: []string{"1.2.3.4"},
-					UserAgent: "user-agent",
-					ObjectRef: &kaudit.ObjectReference{
-						Resource:   "globalnetworkpolicies",
-						Name:       "gnp-1",
-						Namespace:  "",
-						APIGroup:   "projectcalico.org",
-						APIVersion: "v4",
-					},
-					ResponseStatus: &metav1.Status{
-						Code: 201,
-					},
-					RequestObject: &runtime.Unknown{
-						Raw:         objRaw2,
-						ContentType: runtime.ContentTypeJSON,
-					},
-					ResponseObject: &runtime.Unknown{
-						Raw:         objRaw2,
-						ContentType: runtime.ContentTypeJSON,
-					},
-					RequestReceivedTimestamp: metav1.NewMicroTime(logTime),
-					StageTimestamp:           metav1.NewMicroTime(logTime),
-					Annotations:              map[string]string{"brick": "red"},
-				},
-				Name: testutils.StringPtr("ee-any"),
-			}
+					Name: testutils.StringPtr("ee-any"),
+				}
 
-			response, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []v1.AuditLog{a1, a2})
-			require.NoError(t, err)
-			require.Equal(t, []v1.BulkError(nil), response.Errors)
-			require.Equal(t, 0, response.Failed)
+				response, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []v1.AuditLog{a1, a2})
+				require.NoError(t, err)
+				require.Equal(t, []v1.BulkError(nil), response.Errors)
+				require.Equal(t, 0, response.Failed)
 
-			// Also create a Kube audit log.
-			ds := apps.DaemonSet{
-				TypeMeta: metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
-			}
-			dsRaw, err := json.Marshal(ds)
-			require.NoError(t, err)
+				// Also create a Kube audit log.
+				ds := apps.DaemonSet{
+					TypeMeta: metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
+				}
+				dsRaw, err := json.Marshal(ds)
+				require.NoError(t, err)
 
-			a3 := v1.AuditLog{
-				Event: kaudit.Event{
-					TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
-					AuditID:    types.UID("some-uuid-most-likely"),
-					Stage:      kaudit.StageResponseComplete,
-					Level:      kaudit.LevelRequestResponse,
-					RequestURI: "/apis/v1/namespaces",
-					Verb:       "GET",
-					User: authnv1.UserInfo{
-						Username: "prince",
-						UID:      "uid",
-						Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+				a3 := v1.AuditLog{
+					Event: kaudit.Event{
+						TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+						AuditID:    types.UID("some-uuid-most-likely"),
+						Stage:      kaudit.StageResponseComplete,
+						Level:      kaudit.LevelRequestResponse,
+						RequestURI: "/apis/v1/namespaces",
+						Verb:       "GET",
+						User: authnv1.UserInfo{
+							Username: "prince",
+							UID:      "uid",
+							Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+						},
+						ImpersonatedUser: &authnv1.UserInfo{
+							Username: "impuser",
+							UID:      "impuid",
+							Groups:   []string{"g1"},
+						},
+						SourceIPs: []string{"1.2.3.4"},
+						UserAgent: "user-agent",
+						ObjectRef: &kaudit.ObjectReference{
+							Resource:   "daemonsets",
+							Name:       "calico-node",
+							Namespace:  "calico-system",
+							APIGroup:   "apps",
+							APIVersion: "v1",
+						},
+						ResponseStatus: &metav1.Status{},
+						RequestObject: &runtime.Unknown{
+							Raw:         dsRaw,
+							ContentType: runtime.ContentTypeJSON,
+						},
+						ResponseObject: &runtime.Unknown{
+							Raw:         dsRaw,
+							ContentType: runtime.ContentTypeJSON,
+						},
+						RequestReceivedTimestamp: metav1.NewMicroTime(logTime),
+						StageTimestamp:           metav1.NewMicroTime(logTime),
+						Annotations:              map[string]string{"brick": "red"},
 					},
-					ImpersonatedUser: &authnv1.UserInfo{
-						Username: "impuser",
-						UID:      "impuid",
-						Groups:   []string{"g1"},
-					},
-					SourceIPs: []string{"1.2.3.4"},
-					UserAgent: "user-agent",
-					ObjectRef: &kaudit.ObjectReference{
-						Resource:   "daemonsets",
-						Name:       "calico-node",
-						Namespace:  "calico-system",
-						APIGroup:   "apps",
-						APIVersion: "v1",
-					},
-					ResponseStatus: &metav1.Status{},
-					RequestObject: &runtime.Unknown{
-						Raw:         dsRaw,
-						ContentType: runtime.ContentTypeJSON,
-					},
-					ResponseObject: &runtime.Unknown{
-						Raw:         dsRaw,
-						ContentType: runtime.ContentTypeJSON,
-					},
-					RequestReceivedTimestamp: metav1.NewMicroTime(logTime),
-					StageTimestamp:           metav1.NewMicroTime(logTime),
-					Annotations:              map[string]string{"brick": "red"},
-				},
-				Name: testutils.StringPtr("any"),
-			}
+					Name: testutils.StringPtr("any"),
+				}
 
-			resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []v1.AuditLog{a3})
-			require.NoError(t, err)
-			require.Equal(t, 0, len(resp.Errors))
+				resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []v1.AuditLog{a3})
+				require.NoError(t, err)
+				require.Equal(t, 0, len(resp.Errors))
 
-			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_audit_*")
-			require.NoError(t, err)
+				err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_audit_*")
+				require.NoError(t, err)
 
-			// Query for audit logs.
-			r, err := b.List(ctx, clusterInfo, &testcase.Params)
-			require.NoError(t, err)
-			require.Len(t, r.Items, numExpected(testcase))
-			require.Nil(t, r.AfterKey)
-			require.Empty(t, err)
+				// Query for audit logs.
+				r, err := b.List(ctx, clusterInfo, &testcase.Params)
+				require.NoError(t, err)
+				require.Len(t, r.Items, numExpected(testcase))
+				require.Nil(t, r.AfterKey)
+				require.Empty(t, err)
 
-			if testcase.SkipComparison {
-				return
-			}
+				// Querying with another tenant ID should result in zero results.
+				r2, err := b.List(ctx, bapi.ClusterInfo{Cluster: cluster, Tenant: "bad-actor"}, &testcase.Params)
+				require.NoError(t, err)
+				require.Len(t, r2.Items, 0)
 
-			// Assert that the correct logs are returned.
-			if testcase.ExpectLog1 {
-				require.Contains(t, r.Items, a1)
-			}
-			if testcase.ExpectLog2 {
-				require.Contains(t, r.Items, a2)
-			}
-			if testcase.ExpectKube {
-				require.Contains(t, r.Items, a3)
-			}
-		})
+				if testcase.SkipComparison {
+					return
+				}
+
+				// Assert that the correct logs are returned.
+				if testcase.ExpectLog1 {
+					require.Contains(t, r.Items, a1)
+				}
+				if testcase.ExpectLog2 {
+					require.Contains(t, r.Items, a2)
+				}
+				if testcase.ExpectKube {
+					require.Contains(t, r.Items, a3)
+				}
+			})
+		}
 	}
 }

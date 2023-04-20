@@ -35,6 +35,10 @@ type benchmarksBackend struct {
 func (b *benchmarksBackend) List(ctx context.Context, i bapi.ClusterInfo, p *v1.BenchmarksParams) (*v1.List[v1.Benchmarks], error) {
 	log := bapi.ContextLogger(i)
 
+	if err := i.Valid(); err != nil {
+		return nil, err
+	}
+
 	query, startFrom, err := b.getSearch(ctx, i, p)
 	if err != nil {
 		return nil, err
@@ -67,8 +71,8 @@ func (b *benchmarksBackend) List(ctx context.Context, i bapi.ClusterInfo, p *v1.
 func (b *benchmarksBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v1.Benchmarks) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("No cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, err
 	}
 
 	err := b.templates.InitializeIfNeeded(ctx, bapi.Benchmarks, i)
@@ -113,8 +117,8 @@ func (b *benchmarksBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []
 }
 
 func (b *benchmarksBackend) getSearch(ctx context.Context, i api.ClusterInfo, p *v1.BenchmarksParams) (*elastic.SearchService, int, error) {
-	if i.Cluster == "" {
-		return nil, 0, fmt.Errorf("no cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, 0, err
 	}
 
 	// Get the startFrom param, if any.

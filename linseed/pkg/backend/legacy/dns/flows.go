@@ -83,8 +83,8 @@ func NewDNSFlowBackend(c lmaelastic.Client) bapi.DNSFlowBackend {
 func (b *dnsFlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.DNSFlowParams) (*v1.List[v1.DNSFlow], error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("no cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, err
 	}
 
 	// Build the aggregation request.

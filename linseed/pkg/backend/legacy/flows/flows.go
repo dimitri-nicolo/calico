@@ -192,8 +192,8 @@ func (b *flowBackend) BaseQuery() *lmaelastic.CompositeAggregationQuery {
 func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.L3FlowParams) (*v1.List[v1.L3Flow], error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("no cluster ID provided on request")
+	if err := i.Valid(); err != nil {
+		return nil, err
 	}
 
 	// Build the aggregation request.

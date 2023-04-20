@@ -40,8 +40,8 @@ func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.AuditBackend {
 func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i bapi.ClusterInfo, logs []v1.AuditLog) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("no cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, err
 	}
 
 	var logType bapi.DataType

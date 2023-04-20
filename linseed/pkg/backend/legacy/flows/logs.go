@@ -41,8 +41,8 @@ func NewFlowLogBackend(c lmaelastic.Client, cache bapi.Cache) bapi.FlowLogBacken
 func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1.FlowLog) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("No cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, err
 	}
 
 	err := b.templates.InitializeIfNeeded(ctx, bapi.FlowLogs, i)
@@ -86,6 +86,10 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 // List lists logs that match the given parameters.
 func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.FlowLogParams) (*v1.List[v1.FlowLog], error) {
 	log := bapi.ContextLogger(i)
+
+	if err := i.Valid(); err != nil {
+		return nil, err
+	}
 
 	query, startFrom, err := b.getSearch(ctx, i, opts)
 	if err != nil {

@@ -47,8 +47,8 @@ type BucketConverter interface {
 func (b *processBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.ProcessParams) (*v1.List[v1.ProcessInfo], error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("no cluster ID provided on request")
+	if err := i.Valid(); err != nil {
+		return nil, err
 	}
 
 	// Build the query.

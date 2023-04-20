@@ -40,8 +40,8 @@ func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.WAFBackend {
 func (b *wafLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1.WAFLog) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("no cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, err
 	}
 
 	err := b.templates.InitializeIfNeeded(ctx, bapi.WAFLogs, i)
@@ -86,8 +86,8 @@ func (b *wafLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogParams) (*v1.List[v1.WAFLog], error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("no cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, err
 	}
 
 	// Get the startFrom param, if any.
@@ -165,8 +165,8 @@ func (b *wafLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opt
 }
 
 func (b *wafLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogParams) (*elastic.SearchService, int, error) {
-	if i.Cluster == "" {
-		return nil, 0, fmt.Errorf("no cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, 0, err
 	}
 
 	// Get the startFrom param, if any.

@@ -110,8 +110,29 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 		},
 	}
 
+	if b.activeLog.ProcessName != "" {
+		f.Process = &v1.Process{Name: b.activeLog.ProcessName}
+		f.ProcessStats = &v1.ProcessStats{}
+	}
+
 	slt := flows.NewLabelTracker()
 	dlt := flows.NewLabelTracker()
+
+	if f.Key.Protocol == "tcp" {
+		f.TCPStats = &v1.TCPStats{
+			TotalRetransmissions:     0,
+			LostPackets:              0,
+			UnrecoveredTo:            0,
+			MinSendCongestionWindow:  0,
+			MinMSS:                   0,
+			MaxSmoothRTT:             0,
+			MaxMinRTT:                0,
+			MeanSendCongestionWindow: 0,
+			MeanSmoothRTT:            0,
+			MeanMinRTT:               0,
+			MeanMSS:                  0,
+		}
+	}
 
 	// Now populate the expected non-identifying information based on the logs we
 	// have created, simulating aggregation done by ES.
@@ -141,6 +162,19 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 			dlt.Add(key, value, log.NumFlows)
 		}
 
+		if f.TCPStats != nil {
+			f.TCPStats.TotalRetransmissions += log.TCPTotalRetransmissions
+			f.TCPStats.LostPackets += log.TCPLostPackets
+			f.TCPStats.UnrecoveredTo += log.TCPUnrecoveredTo
+			f.TCPStats.MinSendCongestionWindow += float64(log.TCPMinSendCongestionWindow)
+			f.TCPStats.MinMSS += float64(log.TCPMinMSS)
+			f.TCPStats.MaxSmoothRTT += float64(log.TCPMaxSmoothRTT)
+			f.TCPStats.MaxMinRTT += float64(log.TCPMaxMinRTT)
+			f.TCPStats.MeanSendCongestionWindow += float64(log.TCPMeanSendCongestionWindow)
+			f.TCPStats.MeanSmoothRTT += float64(log.TCPMeanSmoothRTT)
+			f.TCPStats.MeanMinRTT += float64(log.TCPMeanMinRTT)
+			f.TCPStats.MeanMSS += float64(log.TCPMeanMSS)
+		}
 	}
 
 	// Set labels.
@@ -177,6 +211,23 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 		}
 	}
 
+	// Add in TCP stats.
+	if f.Key.Protocol == "tcp" {
+		f.TCPStats = &v1.TCPStats{
+			TotalRetransmissions:     0,
+			LostPackets:              0,
+			UnrecoveredTo:            0,
+			MinSendCongestionWindow:  0,
+			MinMSS:                   0,
+			MaxSmoothRTT:             0,
+			MaxMinRTT:                0,
+			MeanSendCongestionWindow: 0,
+			MeanSmoothRTT:            0,
+			MeanMinRTT:               0,
+			MeanMSS:                  0,
+		}
+	}
+
 	return f
 }
 
@@ -191,6 +242,9 @@ func (b *FlowLogBuilder) WithDestIP(ip string) *FlowLogBuilder {
 }
 
 func (b *FlowLogBuilder) WithProcessName(n string) *FlowLogBuilder {
+	if b.activeLog.ProcessName != "" {
+		panic("Cannot set process name - it is already set")
+	}
 	b.activeLog.ProcessName = n
 	return b
 }
@@ -211,7 +265,7 @@ func (b *FlowLogBuilder) WithStartTime(t time.Time) *FlowLogBuilder {
 }
 
 func (b *FlowLogBuilder) WithEndTime(t time.Time) *FlowLogBuilder {
-	b.activeLog.EndTime = time.Now().Unix()
+	b.activeLog.EndTime = t.Unix()
 	return b
 }
 

@@ -70,8 +70,8 @@ func (b *snapshotsBackend) List(ctx context.Context, i bapi.ClusterInfo, p *v1.S
 func (b *snapshotsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v1.Snapshot) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("No cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, err
 	}
 
 	err := b.templates.InitializeIfNeeded(ctx, bapi.Snapshots, i)
@@ -113,8 +113,8 @@ func (b *snapshotsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v
 }
 
 func (b *snapshotsBackend) getSearch(ctx context.Context, i api.ClusterInfo, p *v1.SnapshotParams) (*elastic.SearchService, int, error) {
-	if i.Cluster == "" {
-		return nil, 0, fmt.Errorf("no cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, 0, err
 	}
 
 	// Get the startFrom param, if any.

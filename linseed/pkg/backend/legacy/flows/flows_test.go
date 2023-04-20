@@ -104,8 +104,9 @@ func TestListFlows(t *testing.T) {
 		WithRandomFlowStats().WithRandomPacketStats().
 		WithReporter("src").WithAction("allowed").
 		WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
-		WithPolicies("0|allow-tigera|tigera-system/allow-tigera.cnx-apiserver-access|allow|1")
-	expected := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
+		WithPolicies("0|allow-tigera|tigera-system/allow-tigera.cnx-apiserver-access|allow|1").
+		WithProcessName("/usr/bin/curl")
+	expected := populateFlowData(t, ctx, bld, client, clusterInfo)
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
@@ -118,7 +119,6 @@ func TestListFlows(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)
 	require.Nil(t, r.AfterKey)
-	require.Empty(t, err)
 
 	// Assert that the flow data is populated correctly.
 	require.Equal(t, expected, r.Items[0])
@@ -146,7 +146,7 @@ func TestMultipleFlows(t *testing.T) {
 		WithRandomFlowStats().WithRandomPacketStats().
 		WithReporter("src").WithAction("allowed").
 		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
-	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
+	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo)
 
 	// Template for flow #2.
 	bld2 := backendutils.NewFlowLogBuilder()
@@ -163,7 +163,7 @@ func TestMultipleFlows(t *testing.T) {
 		WithRandomFlowStats().WithRandomPacketStats().
 		WithReporter("src").WithAction("allowed").
 		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
-	exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo.Cluster)
+	exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo)
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
@@ -176,7 +176,6 @@ func TestMultipleFlows(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, r.Items, 2)
 	require.Nil(t, r.AfterKey)
-	require.Empty(t, err)
 
 	// Assert that the flow data is populated correctly.
 	require.Equal(t, exp1, r.Items[1])
@@ -199,7 +198,7 @@ func TestFlowMultiplePolicies(t *testing.T) {
 		WithDestIP("10.0.0.10").
 		WithDestService("kube-dns", 53).
 		WithDestPort(53).
-		WithProtocol("udp").
+		WithProtocol("tcp").
 		WithSourceName("my-deployment").
 		WithSourceIP("192.168.1.1").
 		WithRandomFlowStats().WithRandomPacketStats().
@@ -209,7 +208,7 @@ func TestFlowMultiplePolicies(t *testing.T) {
 		WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
 		WithPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0")
 
-	expected := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
+	expected := populateFlowData(t, ctx, bld, client, clusterInfo)
 
 	// Add in the expected policies.
 	expected.Policies = []v1.Policy{
@@ -243,7 +242,6 @@ func TestFlowMultiplePolicies(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)
 	require.Nil(t, r.AfterKey)
-	require.Empty(t, err)
 
 	// Assert that the flow data is populated correctly.
 	require.Equal(t, expected, r.Items[0])
@@ -532,8 +530,23 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				NameAggrMatches: []v1.NameMatch{
 					{
-						Type:  v1.MatchTypeSource,
-						Names: []string{"my-deployment-*"},
+						Type:  v1.MatchTypeDest,
+						Names: []string{"kube-dns-*"},
+					},
+				},
+			},
+
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query a flow based on any name aggr",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				NameAggrMatches: []v1.NameMatch{
+					{
+						Type:  v1.MatchTypeAny,
+						Names: []string{"kube-dns-*"},
 					},
 				},
 			},
@@ -742,7 +755,7 @@ func TestFlowFiltering(t *testing.T) {
 				// Pass followed by a profile allow.
 				WithPolicy("0|allow-tigera|openshift-dns/allow-tigera.cluster-dns|pass|1").
 				WithPolicy("1|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0")
-			exp1 := populateFlowDataN(t, ctx, bld, client, clusterInfo.Cluster, numLogs)
+			exp1 := populateFlowDataN(t, ctx, bld, client, clusterInfo, numLogs)
 
 			// Template for flow #2.
 			bld2 := backendutils.NewFlowLogBuilder()
@@ -763,14 +776,13 @@ func TestFlowFiltering(t *testing.T) {
 				// Explicit allow.
 				WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|allow|1")
 
-			exp2 := populateFlowDataN(t, ctx, bld2, client, clusterInfo.Cluster, numLogs)
+			exp2 := populateFlowDataN(t, ctx, bld2, client, clusterInfo, numLogs)
 
 			// Query for flows.
 			r, err := fb.List(ctx, clusterInfo, &testcase.Params)
 			require.NoError(t, err)
 			require.Len(t, r.Items, numExpected(testcase))
 			require.Nil(t, r.AfterKey)
-			require.Empty(t, err)
 
 			if testcase.SkipComparison {
 				return
@@ -809,7 +821,7 @@ func TestPagination(t *testing.T) {
 		WithRandomFlowStats().WithRandomPacketStats().
 		WithReporter("src").WithAction("allowed").
 		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
-	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
+	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo)
 
 	// Template for flow #2.
 	bld2 := backendutils.NewFlowLogBuilder()
@@ -826,7 +838,7 @@ func TestPagination(t *testing.T) {
 		WithRandomFlowStats().WithRandomPacketStats().
 		WithReporter("src").WithAction("allowed").
 		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
-	exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo.Cluster)
+	exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo)
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
@@ -842,7 +854,6 @@ func TestPagination(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)
 	require.NotNil(t, r.AfterKey)
-	require.Empty(t, err)
 	require.Equal(t, exp2, r.Items[0])
 
 	// Now, send another request. This time, passing in the pagination key
@@ -852,7 +863,6 @@ func TestPagination(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)
 	require.NotNil(t, r.AfterKey)
-	require.Empty(t, err)
 	require.Equal(t, exp1, r.Items[0])
 }
 
@@ -966,13 +976,140 @@ func TestElasticResponses(t *testing.T) {
 	}
 }
 
-// populateFlowData writes a series of flow logs to elasticsearch, and returns the FlowLog that we
-// should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
-func populateFlowData(t *testing.T, ctx context.Context, b *backendutils.FlowLogBuilder, client lmaelastic.Client, cluster string) v1.L3Flow {
-	return populateFlowDataN(t, ctx, b, client, cluster, 10)
+// TestMultiTenancy creates data for multiple tenants and asserts that it is handled properly.
+func TestMultiTenancy(t *testing.T) {
+	t.Run("multiple tenants basic", func(t *testing.T) {
+		defer setupTest(t)()
+
+		// For this test, we will use two tenants with the same cluster ID, to be
+		// extra sneaky.
+		tenantA := "tenant-a"
+		tenantB := "tenant-b"
+		tenantAInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenantA}
+		tenantBInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenantB}
+
+		// Template for flow.
+		bld := backendutils.NewFlowLogBuilder()
+		bld.WithType("wep").
+			WithSourceNamespace("tigera-operator").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("tigera-operator").
+			WithSourceIP("34.15.66.3").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+
+		// Create the flow for tenant A.
+		exp1 := populateFlowData(t, ctx, bld, client, tenantAInfo)
+
+		// Set time range so that we capture all of the populated flow logs.
+		opts := v1.L3FlowParams{}
+		opts.TimeRange = &lmav1.TimeRange{}
+		opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+		opts.TimeRange.To = time.Now().Add(5 * time.Minute)
+
+		// Query for flows using tenant A - there should be one flow from the populated data.
+		r, err := fb.List(ctx, tenantAInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 1)
+		require.Nil(t, r.AfterKey)
+		require.Equal(t, exp1, r.Items[0])
+
+		// Query for the flow using tenant B - we should get no results.
+		r, err = fb.List(ctx, tenantBInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 0)
+		require.Nil(t, r.AfterKey)
+
+		// Query for the flow without specifying a tenant - we should get no results.
+		noTenantInfo := bapi.ClusterInfo{Cluster: cluster}
+		r, err = fb.List(ctx, noTenantInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 0)
+		require.Nil(t, r.AfterKey)
+	})
+
+	t.Run("multiple tenants with similar names", func(t *testing.T) {
+		defer setupTest(t)()
+
+		// For this test, we use tenant IDs that are prefixes of each other.
+		tenantA := "shaz"
+		tenantB := "shazam"
+		tenantAInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenantA}
+		tenantBInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenantB}
+
+		// Template for flow.
+		bld := backendutils.NewFlowLogBuilder()
+		bld.WithType("wep").
+			WithSourceNamespace("tigera-operator").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("tigera-operator").
+			WithSourceIP("34.15.66.3").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+
+		// Modify the builder for tenant B so that we can distinguish the two flows.
+		bld2 := bld.Copy()
+		bld2.WithReporter("dst")
+
+		// Create the flow for both tenants
+		exp1 := populateFlowData(t, ctx, bld, client, tenantAInfo)
+		exp2 := populateFlowData(t, ctx, bld2, client, tenantBInfo)
+
+		// Set time range so that we capture all of the populated flow logs.
+		opts := v1.L3FlowParams{}
+		opts.TimeRange = &lmav1.TimeRange{}
+		opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+		opts.TimeRange.To = time.Now().Add(5 * time.Minute)
+
+		// Query for flows using tenant A - there should be one flow from the populated data.
+		r, err := fb.List(ctx, tenantAInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 1)
+		require.Nil(t, r.AfterKey)
+		require.Equal(t, exp1, r.Items[0])
+
+		// Query for flows using tenant B - there should be one flow from the populated data.
+		r, err = fb.List(ctx, tenantBInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 1)
+		require.Nil(t, r.AfterKey)
+		require.Equal(t, exp2, r.Items[0])
+
+		// Query for the flow without specifying a tenant - we should get no results.
+		noTenantInfo := bapi.ClusterInfo{Cluster: cluster}
+		r, err = fb.List(ctx, noTenantInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 0)
+		require.Nil(t, r.AfterKey)
+
+		// Query for the flow specifying a tenant with a wildcard in it - should get no results.
+		// It isn't actually possible for this codepath to be hit in a real system, since Linseed enforces
+		// an expected tenant ID on all requests. We test it here nonetheless.
+		wildcardTenant := bapi.ClusterInfo{Cluster: cluster, Tenant: "shaz*"}
+		_, err = fb.List(ctx, wildcardTenant, &opts)
+		require.Error(t, err)
+	})
 }
 
-func populateFlowDataN(t *testing.T, ctx context.Context, b *backendutils.FlowLogBuilder, client lmaelastic.Client, cluster string, n int) v1.L3Flow {
+// populateFlowData writes a series of flow logs to elasticsearch, and returns the FlowLog that we
+// should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
+func populateFlowData(t *testing.T, ctx context.Context, b *backendutils.FlowLogBuilder, client lmaelastic.Client, info bapi.ClusterInfo) v1.L3Flow {
+	return populateFlowDataN(t, ctx, b, client, info, 10)
+}
+
+func populateFlowDataN(t *testing.T, ctx context.Context, b *backendutils.FlowLogBuilder, client lmaelastic.Client, info bapi.ClusterInfo, n int) v1.L3Flow {
 	batch := []v1.FlowLog{}
 
 	for i := 0; i < n; i++ {
@@ -991,7 +1128,7 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *backendutils.FlowLo
 	}
 
 	// Create the batch.
-	response, err := flb.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
+	response, err := flb.Create(ctx, info, batch)
 	require.NoError(t, err)
 	require.Equal(t, []v1.BulkError(nil), response.Errors)
 	require.Equal(t, 0, response.Failed)
@@ -1001,7 +1138,10 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *backendutils.FlowLo
 	// perform the refresh.
 	indices, err := client.Backend().CatIndices().Do(ctx)
 	require.NoError(t, err)
-	prefix := fmt.Sprintf("tigera_secure_ee_flows.%s.", cluster)
+	prefix := fmt.Sprintf("tigera_secure_ee_flows.%s.", info.Cluster)
+	if info.Tenant != "" {
+		prefix = fmt.Sprintf("tigera_secure_ee_flows.%s.%s.", info.Tenant, info.Cluster)
+	}
 	var index string
 	for _, idx := range indices {
 		if strings.HasPrefix(idx.Index, prefix) {

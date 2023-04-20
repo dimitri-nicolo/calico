@@ -67,8 +67,8 @@ func (b *reportsBackend) List(ctx context.Context, i bapi.ClusterInfo, p *v1.Rep
 func (b *reportsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v1.ReportData) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
-	if i.Cluster == "" {
-		return nil, fmt.Errorf("No cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, err
 	}
 
 	err := b.templates.InitializeIfNeeded(ctx, bapi.ReportData, i)
@@ -113,8 +113,8 @@ func (b *reportsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v1.
 }
 
 func (b *reportsBackend) getSearch(ctx context.Context, i api.ClusterInfo, p *v1.ReportDataParams) (*elastic.SearchService, int, error) {
-	if i.Cluster == "" {
-		return nil, 0, fmt.Errorf("no cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, 0, err
 	}
 
 	// Get the startFrom param, if any.
