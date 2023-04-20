@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ const (
 	AnnotationEgressGatewayMaintenanceStarted   = "egress.projectcalico.org/gatewayMaintenanceStartedTimestamp"
 	AnnotationEgressGatewayMaintenanceFinished  = "egress.projectcalico.org/gatewayMaintenanceFinishedTimestamp"
 	AnnotationEgressExternalNetworkNames        = "egress.projectcalico.org/externalNetworkNames"
+	AnnotationEgressGatewayPolicy               = "egress.projectcalico.org/egressGatewayPolicy"
 	SecurityGroupLabelPrefix                    = "sg.aws.tigera.io"
 
 	// AnnotationContainerID stores the container ID of the pod.  This allows us to disambiguate different pods

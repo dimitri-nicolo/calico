@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -361,6 +361,11 @@ func (c *MockIPAMClient) PolicyRecommendationScopes() client.PolicyRecommendatio
 }
 
 func (c *MockIPAMClient) ExternalNetworks() client.ExternalNetworkInterface {
+	// DO NOTHING
+	return nil
+}
+
+func (c *MockIPAMClient) EgressGatewayPolicy() client.EgressGatewayPolicyInterface {
 	// DO NOTHING
 	return nil
 }

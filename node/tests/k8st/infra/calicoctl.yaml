@@ -91,6 +91,7 @@ rules:
       - tiers
       - licensekeys
       - externalnetworks
+      - egressgatewaypolicies
     verbs:
       - create
       - get

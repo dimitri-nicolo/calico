@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,18 +45,25 @@ type configInterface interface {
 // taken directly from model.WorkloadEndpoint.  Currently this is all related to egress IP function.
 // (It could be generalised in future, and so perhaps renamed EndpointComputedData.)
 type EndpointEgressData struct {
-	// The egress IP set for this endpoint.  This is non-empty when an active local endpoint is
+	// The egress IP set for this endpoint. This is non-empty when an active local endpoint is
 	// configured to use egress gateways.
-	EgressIPSetID string
+	EgressGatewayRules []EpEgressData
 
 	// Whether this endpoint _is_ an egress gateway.
 	IsEgressGateway bool
 
-	// The number of egress gateway pods this workload should use.
-	MaxNextHops int
-
 	// Health port of the EGW or 0 if EGW has none.
 	HealthPort uint16
+}
+
+func (e EndpointEgressData) IsEmpty() bool {
+	if e.IsEgressGateway || e.HealthPort != 0 {
+		return false
+	}
+	if len(e.EgressGatewayRules) != 0 {
+		return false
+	}
+	return true
 }
 
 // EventSequencer buffers and coalesces updates from the calculation graph then flushes them
@@ -454,7 +461,6 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, tiers []*proto.Tie
 		AllowSpoofedSourcePrefixes: netsToStrings(ep.AllowSpoofedSourcePrefixes),
 		Annotations:                ep.Annotations,
 		AwsElasticIps:              ep.AWSElasticIPs,
-		EgressMaxNextHops:          int32(ep.EgressMaxNextHops),
 		ExternalNetworkNames:       ep.ExternalNetworkNames,
 	}
 }
@@ -502,15 +508,19 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 		case model.WorkloadEndpointKey:
 			wlep := endpoint.(*model.WorkloadEndpoint)
 			protoEp := ModelWorkloadEndpointToProto(wlep, tiers)
-			protoEp.EgressIpSetId = buf.pendingEndpointEgressUpdates[key].EgressIPSetID
-			protoEp.IsEgressGateway = buf.pendingEndpointEgressUpdates[key].IsEgressGateway
 			protoEp.EgressGatewayHealthPort = int32(buf.pendingEndpointEgressUpdates[key].HealthPort)
-			protoEp.EgressMaxNextHops = int32(buf.pendingEndpointEgressUpdates[key].MaxNextHops)
-			if protoEp.IsEgressGateway {
-				// To break gatewaying loops, we do not allow a workload to route
-				// via egress gateways if it is _itself_ an egress gateway.
-				protoEp.EgressIpSetId = ""
-				protoEp.EgressMaxNextHops = 0
+			protoEp.IsEgressGateway = buf.pendingEndpointEgressUpdates[key].IsEgressGateway
+			// To break gatewaying loops, we do not allow a workload to route
+			// via egress gateways if it is _itself_ an egress gateway.
+			if !protoEp.IsEgressGateway {
+				for _, r := range buf.pendingEndpointEgressUpdates[key].EgressGatewayRules {
+					egressRule := proto.EgressGatewayRule{
+						IpSetId:     r.IpSetID,
+						MaxNextHops: int32(r.MaxNextHops),
+						Destination: r.CIDR,
+					}
+					protoEp.EgressGatewayRules = append(protoEp.EgressGatewayRules, &egressRule)
+				}
 			}
 			buf.Callback(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{

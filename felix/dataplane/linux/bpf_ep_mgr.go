@@ -1280,7 +1280,7 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	ap.EgressIPEnabled = m.egIPEnabled
 	if endpoint != nil {
 		ap.IsEgressGateway = endpoint.IsEgressGateway
-		ap.IsEgressClient = (endpoint.EgressIpSetId != "")
+		ap.IsEgressClient = len(endpoint.EgressGatewayRules) > 0
 		ap.EgressGatewayHealthPort = uint16(endpoint.EgressGatewayHealthPort)
 	}
 	if !m.isEgressProgrammingCorrect(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient) {

@@ -273,6 +273,7 @@ rules:
       - blockaffinities
       - caliconodestatuses
       - externalnetworks
+      - egressgatewaypolicies
     verbs:
       - get
       - list

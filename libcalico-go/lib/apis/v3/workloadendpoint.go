@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -88,7 +88,7 @@ type WorkloadEndpointSpec struct {
 	// bypassing the RPF check.
 	AllowSpoofedSourcePrefixes []string `json:"allowSpoofedSourcePrefixes,omitempty" validate:"omitempty,dive,cidr"`
 	// Egress control.
-	EgressGateway *apiv3.EgressSpec `json:"egressGateway,omitempty" validate:"omitempty"`
+	EgressGateway *apiv3.EgressGatewaySpec `json:"egressGateway,omitempty" validate:"omitempty"`
 	// A list of names of the external networks who are associated with the endpoint for egress traffic.
 	ExternalNetworkNames []string `json:"externalNetworkNames,omitempty" validate:"omitempty,dive,name"`
 }

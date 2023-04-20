@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -227,8 +227,7 @@ func (d *MockDataplane) EndpointEgressData() map[string]calc.EndpointEgressData 
 
 	localCopy := map[string]calc.EndpointEgressData{}
 	for k, v := range d.endpointEgressData {
-		zeroData := calc.EndpointEgressData{}
-		if v != zeroData {
+		if !v.IsEmpty() {
 			localCopy[k] = v
 		}
 	}
@@ -446,12 +445,18 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		d.endpointToPolicyOrder[id.String()] = tierInfos
 		d.endpointToUntrackedPolicyOrder[id.String()] = []TierInfo{}
 		d.endpointToPreDNATPolicyOrder[id.String()] = []TierInfo{}
-		d.endpointEgressData[id.String()] = calc.EndpointEgressData{
-			EgressIPSetID:   event.Endpoint.EgressIpSetId,
+		endpointEgressData := calc.EndpointEgressData{
 			IsEgressGateway: event.Endpoint.IsEgressGateway,
-			MaxNextHops:     int(event.Endpoint.EgressMaxNextHops),
 			HealthPort:      uint16(event.Endpoint.EgressGatewayHealthPort),
 		}
+		for _, r := range event.Endpoint.EgressGatewayRules {
+			endpointEgressData.EgressGatewayRules = append(endpointEgressData.EgressGatewayRules, calc.EpEgressData{
+				IpSetID:     r.IpSetId,
+				MaxNextHops: int(r.MaxNextHops),
+				CIDR:        r.Destination,
+			})
+		}
+		d.endpointEgressData[id.String()] = endpointEgressData
 		d.endpointToAllPolicyIDs[id.String()] = allPolsIDs
 
 		// Check that all the profiles referenced by the endpoint are already present, which

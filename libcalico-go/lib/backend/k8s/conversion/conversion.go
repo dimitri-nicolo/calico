@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -87,7 +87,14 @@ func (c converter) ParseWorkloadEndpointName(workloadName string) (names.Workloa
 	return names.ParseWorkloadEndpointName(workloadName)
 }
 
-func egressAnnotationsToV3Spec(annotations map[string]string) *apiv3.EgressSpec {
+func egressAnnotationsToV3Spec(annotations map[string]string) *apiv3.EgressGatewaySpec {
+	// Egress gateway policy annotation has priority over other egress annotations
+	egressPolicyName := annotations[AnnotationEgressGatewayPolicy]
+	if egressPolicyName != "" {
+		log.Debug("Egress gateway policy annotation is set, skipping the rest of egress gateway annotations")
+		return &apiv3.EgressGatewaySpec{Policy: egressPolicyName}
+	}
+
 	egressSelector := annotations[AnnotationEgressSelector]
 	if egressSelector != "" {
 		if parsed, err := selector.Parse(egressSelector); err != nil {
@@ -129,7 +136,9 @@ func egressAnnotationsToV3Spec(annotations map[string]string) *apiv3.EgressSpec 
 		// No egress annotations specified, so no egress spec.
 		return nil
 	}
-	return &apiv3.EgressSpec{Selector: egressSelector, NamespaceSelector: egressNamespaceSelector, MaxNextHops: egressMaxNextHops}
+	return &apiv3.EgressGatewaySpec{
+		Gateway: &apiv3.EgressSpec{Selector: egressSelector, NamespaceSelector: egressNamespaceSelector, MaxNextHops: egressMaxNextHops},
+	}
 }
 
 // NamespaceToProfile converts a Namespace to a Calico Profile.  The Profile stores

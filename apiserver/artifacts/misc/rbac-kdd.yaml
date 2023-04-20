@@ -51,6 +51,7 @@ rules:
       - clusterinformations
       - tiers
       - externalnetworks
+      - egressgatewaypolicies
     verbs:
       - create
       - get

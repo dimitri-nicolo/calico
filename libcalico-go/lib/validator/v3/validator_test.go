@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -4291,6 +4291,166 @@ func init() {
 			CIDR:    "10.0.0.0/24",
 			Node:    "node-1",
 		}, false),
+
+		// Egress Gateway Policy validations.
+		Entry("should not accept egress gateway policy with nil rule", api.EgressGatewayPolicySpec{
+			Rules: nil,
+		}, false),
+		Entry("should not accept egress gateway policy with empty rule", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{},
+		}, false),
+		Entry("should not accept egress gateway policy with no meaningful rule", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{{}},
+		}, false),
+		Entry("should not accept egress gateway policy with a rule with gateway setting only MaxNextHops", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Gateway: &api.EgressSpec{
+						Selector:          "something",
+						NamespaceSelector: "ns1",
+					},
+				},
+				{
+					Gateway: &api.EgressSpec{
+						MaxNextHops: 2,
+					},
+				},
+			},
+		}, false),
+		Entry("should not accept egress gateway policy with a rule with gateway set but no namespaceSelector specified", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Gateway: &api.EgressSpec{
+						Selector:          "something",
+						NamespaceSelector: "ns1",
+					},
+				},
+				{
+					Gateway: &api.EgressSpec{
+						Selector: "something",
+					},
+				},
+			},
+		}, false),
+		Entry("should not accept egress gateway policy with a rule with gateway set but no Selector specified", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Gateway: &api.EgressSpec{
+						Selector:          "something",
+						NamespaceSelector: "ns1",
+					},
+				},
+				{
+					Gateway: &api.EgressSpec{
+						NamespaceSelector: "something",
+					},
+				},
+			},
+		}, false),
+		Entry("should accept egress gateway policy with rules with gateway set with both Selector and namespaceSelector", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Gateway: &api.EgressSpec{
+						Selector:          "one thing",
+						NamespaceSelector: "ns1",
+					},
+				},
+				{
+					Gateway: &api.EgressSpec{
+						Selector:          "another thing",
+						NamespaceSelector: "ns2",
+					},
+				},
+			},
+		}, true),
+		Entry("should not accept egress gateway policy with invalid destination cidr #1", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "whatiscidr",
+					},
+				},
+			},
+		}, false),
+		Entry("should not accept egress gateway policy with invalid destination cidr #2", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "10.0.0.0/8",
+					},
+				},
+				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "whatiscidr",
+					},
+				},
+			},
+		}, false),
+		Entry("should not accept egress gateway policy with duplicate destination cidr", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "10.0.0.0/8",
+					},
+				},
+				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "10.0.0.0/8",
+					},
+					Gateway: &api.EgressSpec{
+						Selector:          "another thing",
+						NamespaceSelector: "ns2",
+					},
+				},
+			},
+		}, false),
+		Entry("should not accept egress gateway policy with negative MaxNextHops", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Gateway: &api.EgressSpec{
+						Selector:          "one thing",
+						NamespaceSelector: "ns1",
+						MaxNextHops:       -1,
+					},
+				},
+			},
+		}, false),
+		Entry("should not accept egress gateway policy with MaxNextHops larger than int32", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Gateway: &api.EgressSpec{
+						Selector:          "one thing",
+						NamespaceSelector: "ns1",
+						MaxNextHops:       1000000000000000000,
+					},
+				},
+			},
+		}, false),
+		Entry("should accept egress gateway policy with both destination and gateway", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "10.0.0.0/8",
+					},
+				},
+				{
+					Gateway: &api.EgressSpec{
+						Selector:          "one thing",
+						NamespaceSelector: "ns1",
+					},
+				},
+				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "172.16.0.0/16",
+					},
+					Gateway: &api.EgressSpec{
+						Selector:          "another thing",
+						NamespaceSelector: "ns2",
+						MaxNextHops:       2,
+					},
+				},
+			},
+		}, true),
 	)
 
 	Describe("particular error string checking", func() {

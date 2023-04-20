@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -262,6 +262,11 @@ func init() {
 		apiv3.KindExternalNetwork,
 		"ExternalNetworks",
 		reflect.TypeOf(apiv3.ExternalNetwork{}),
+	)
+	registerResourceInfo(
+		apiv3.KindEgressGatewayPolicy,
+		"EgressGatewayPolicies",
+		reflect.TypeOf(apiv3.EgressGatewayPolicy{}),
 	)
 }
 

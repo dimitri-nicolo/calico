@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
 
 package processor
 
@@ -186,5 +186,9 @@ func (_m *MockClientInterface) WorkloadEndpoints() clientv3.WorkloadEndpointInte
 }
 
 func (_m *MockClientInterface) ExternalNetworks() clientv3.ExternalNetworkInterface {
+	return nil
+}
+
+func (_m *MockClientInterface) EgressGatewayPolicy() clientv3.EgressGatewayPolicyInterface {
 	return nil
 }

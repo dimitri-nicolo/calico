@@ -1,10 +1,9 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package calc
 
 import (
 	"reflect"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -12,15 +11,13 @@ import (
 
 	"github.com/projectcalico/calico/felix/dispatcher"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 )
 
-// EgressSelectorPool tracks and reference counts the egress selectors that are used by profiles and
-// endpoints anywhere in the cluster.  We need this to identify active local endpoints that match
-// egress selectors, and hence should be privileged in the ways that are needed for endpoints acting
-// as egress gateways.
+// EgressSelectorPool tracks and reference counts the egress selectors that are used by profiles,
+// endpoints and egress gateway policies anywhere in the cluster. We need this to identify active
+// local endpoints that match egress selectors, and hence should be privileged in the ways
+// that are needed for endpoints acting as egress gateways.
 type EgressSelectorPool struct {
 	// "EnabledPerNamespaceOrPerPod" or "EnabledPerNamespace".
 	supportLevel string
@@ -28,7 +25,9 @@ type EgressSelectorPool struct {
 	// Known egress selectors and their ref counts.
 	endpointSelectors map[model.WorkloadEndpointKey]string
 	profileSelectors  map[model.ResourceKey]string
-	selectorRefCount  map[string]int
+	policySelectors   map[model.ResourceKey][]string
+
+	selectorRefCount map[string]int
 
 	// Callbacks.
 	OnEgressSelectorAdded   func(selector string)
@@ -40,6 +39,7 @@ func NewEgressSelectorPool(supportLevel string) *EgressSelectorPool {
 		supportLevel:      supportLevel,
 		endpointSelectors: map[model.WorkloadEndpointKey]string{},
 		profileSelectors:  map[model.ResourceKey]string{},
+		policySelectors:   map[model.ResourceKey][]string{},
 		selectorRefCount:  map[string]int{},
 	}
 	return esp
@@ -75,6 +75,15 @@ func (esp *EgressSelectorPool) OnUpdate(update api.Update) (_ bool) {
 				log.Debugf("Deleting profile %v from ESP", key)
 				esp.updateProfile(key, nil)
 			}
+		case v3.KindEgressGatewayPolicy:
+			if update.Value != nil {
+				log.Debugf("Updating ESP with egress policy %v", key)
+				egressPolicy := update.Value.(*v3.EgressGatewayPolicy)
+				esp.updateEgressPolicy(key, egressPolicy.Spec.Rules)
+			} else {
+				log.Debugf("Deleting egress policy %v from ESP", key)
+				esp.updateEgressPolicy(key, nil)
+			}
 		default:
 			// Ignore other kinds of v3 resource.
 		}
@@ -101,19 +110,14 @@ func (esp *EgressSelectorPool) updateEndpoint(key model.WorkloadEndpointKey, new
 	esp.incRefSelector(newSelector)
 }
 
-func (esp *EgressSelectorPool) updateProfile(key model.ResourceKey, egress *v3.EgressSpec) {
+func (esp *EgressSelectorPool) updateProfile(key model.ResourceKey, egress *v3.EgressGatewaySpec) {
 	// Find the existing selector for this profile.
 	oldSelector := esp.profileSelectors[key]
 
 	// Calculate the new selector
 	newSelector := ""
-	if egress != nil {
-		// Convert egress Selector and NamespaceSelector fields to a single selector
-		// expression in the same way we do for namespaced policy EntityRule selectors.
-		newSelector = updateprocessors.GetEgressGatewaySelector(
-			egress,
-			strings.TrimPrefix(key.Name, conversion.NamespaceProfileNamePrefix),
-		)
+	if egress != nil && egress.Gateway != nil {
+		newSelector = preprocessEgressSelector(egress.Gateway, key.Name)
 	}
 
 	if newSelector == oldSelector {
@@ -127,6 +131,53 @@ func (esp *EgressSelectorPool) updateProfile(key model.ResourceKey, egress *v3.E
 	}
 	esp.decRefSelector(oldSelector)
 	esp.incRefSelector(newSelector)
+}
+
+func (esp *EgressSelectorPool) updateEgressPolicy(key model.ResourceKey, rules []v3.EgressGatewayRule) {
+	// Find the existing selector for this profile.
+	oldSelectors := esp.policySelectors[key]
+	newSelectors := transformEGWRulesToSelectors(rules)
+
+	if equalsSelectors(oldSelectors, newSelectors) {
+		return
+	}
+
+	if len(newSelectors) > 0 {
+		esp.policySelectors[key] = newSelectors
+	} else {
+		delete(esp.policySelectors, key)
+	}
+
+	for _, s := range newSelectors {
+		esp.incRefSelector(s)
+	}
+	for _, s := range oldSelectors {
+		esp.decRefSelector(s)
+	}
+}
+
+func transformEGWRulesToSelectors(rules []v3.EgressGatewayRule) []string {
+	var newSelectors []string
+	for _, r := range rules {
+		newSelector := ""
+		if r.Gateway != nil {
+			newSelector = preprocessEgressSelector(r.Gateway, "")
+		}
+		newSelectors = append(newSelectors, newSelector)
+	}
+	return newSelectors
+}
+
+func equalsSelectors(s1, s2 []string) bool {
+	if len(s1) != len(s2) {
+		return false
+	}
+	for i, s := range s1 {
+		if s != s2[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func (esp *EgressSelectorPool) incRefSelector(selector string) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -30,12 +30,12 @@ func TestPolicyResolver_OnUpdate_HandleEgressIPSetID(t *testing.T) {
 	uut.OnDatamodelStatus(api.InSync)
 
 	// Expect OnEndpointTierUpdate with no egress ID.
-	cbs.ExpectEndpointTierUpdate(t, we1Key, "")
+	cbs.ExpectEndpointTierUpdate(t, we1Key, nil)
 
-	uut.OnEndpointEgressDataUpdate(we1Key, epEgressData{ipSetID: "e:abcdef"})
+	uut.OnEndpointEgressDataUpdate(we1Key, []EpEgressData{{IpSetID: "e:abcdef"}})
 
 	// Expect OnEndpointTierUpdate with that egress IP set ID.
-	cbs.ExpectEndpointTierUpdate(t, we1Key, "e:abcdef")
+	cbs.ExpectEndpointTierUpdate(t, we1Key, []string{"e:abcdef"})
 
 	uut.OnUpdate(api.Update{
 		KVPair: model.KVPair{
@@ -46,13 +46,13 @@ func TestPolicyResolver_OnUpdate_HandleEgressIPSetID(t *testing.T) {
 		},
 		UpdateType: api.UpdateTypeKVUpdated,
 	})
-	cbs.ExpectEndpointTierUpdate(t, we1Key, "e:abcdef")
+	cbs.ExpectEndpointTierUpdate(t, we1Key, []string{"e:abcdef"})
 
-	uut.OnEndpointEgressDataUpdate(we1Key, epEgressData{})
-	cbs.ExpectEndpointTierUpdate(t, we1Key, "")
+	uut.OnEndpointEgressDataUpdate(we1Key, nil)
+	cbs.ExpectEndpointTierUpdate(t, we1Key, nil)
 }
 
-func (tc *prCallbacks) ExpectEndpointTierUpdate(t *testing.T, key model.WorkloadEndpointKey, egressIPSetID string) {
+func (tc *prCallbacks) ExpectEndpointTierUpdate(t *testing.T, key model.WorkloadEndpointKey, egressIPSetIDs []string) {
 	if len(tc.keys) < 1 {
 		t.Error("Expected at least 1 key")
 	}
@@ -65,8 +65,8 @@ func (tc *prCallbacks) ExpectEndpointTierUpdate(t *testing.T, key model.Workload
 		t.Errorf("Keys - Expected %v \n but got \n %v", key, tc.keys[0].(model.WorkloadEndpointKey))
 	}
 
-	if !reflect.DeepEqual(tc.egressIPSetIDs[0], egressIPSetID) {
-		t.Errorf("EgressIPSetIDs - Expected %v \n but got \n %v", egressIPSetID, tc.egressIPSetIDs[0])
+	if !reflect.DeepEqual(tc.egressIPSetIDs[0], egressIPSetIDs) {
+		t.Errorf("EgressIPSetIDs - Expected %v \n but got \n %v", egressIPSetIDs, tc.egressIPSetIDs[0])
 	}
 
 	tc.keys = tc.keys[1:]
@@ -85,12 +85,16 @@ func (tc *prCallbacks) ExpectNoMoreCallbacks(t *testing.T) {
 
 type prCallbacks struct {
 	keys           []model.Key
-	egressIPSetIDs []string
+	egressIPSetIDs [][]string
 }
 
 func (tc *prCallbacks) OnEndpointTierUpdate(endpointKey model.Key, _ interface{}, egressData EndpointEgressData, _ []TierInfo) {
 	tc.keys = append(tc.keys, endpointKey)
-	tc.egressIPSetIDs = append(tc.egressIPSetIDs, egressData.EgressIPSetID)
+	var ipsetIDs []string
+	for _, r := range egressData.EgressGatewayRules {
+		ipsetIDs = append(ipsetIDs, r.IpSetID)
+	}
+	tc.egressIPSetIDs = append(tc.egressIPSetIDs, ipsetIDs)
 }
 
 func TestPolicyResolver_OnPolicyMatch(t *testing.T) {

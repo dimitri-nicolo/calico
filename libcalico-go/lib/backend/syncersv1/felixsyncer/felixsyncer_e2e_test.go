@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -796,6 +796,35 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			Expect(err).NotTo(HaveOccurred())
 			expectedCacheSize += 1
 			syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/externalnetworks/my-network")
+			syncTester.ExpectCacheSize(expectedCacheSize)
+
+			By("Creating an EgressGatewayPolicy")
+			egressGatewayPolicyName := "my-egressgatewaypolicy"
+			egressGatewayPolicyRule := apiv3.EgressGatewayRule{
+				Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+					CIDR: "0.0.0.0/0",
+				},
+				Gateway: &apiv3.EgressSpec{
+					Selector:          "egress-code == 'red'",
+					NamespaceSelector: "default",
+					MaxNextHops:       4,
+				},
+			}
+			_, err = c.EgressGatewayPolicy().Create(
+				ctx,
+				&apiv3.EgressGatewayPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: egressGatewayPolicyName,
+					},
+					Spec: apiv3.EgressGatewayPolicySpec{
+						Rules: []apiv3.EgressGatewayRule{egressGatewayPolicyRule},
+					},
+				},
+				options.SetOptions{},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			expectedCacheSize += 1
+			syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/egressgatewaypolicies/my-egressgatewaypolicy")
 			syncTester.ExpectCacheSize(expectedCacheSize)
 
 			By("Starting a new syncer and verifying that all current entries are returned before sync status")

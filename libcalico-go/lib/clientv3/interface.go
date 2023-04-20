@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -97,6 +97,8 @@ type Interface interface {
 	BGPFilter() BGPFilterInterface
 	// ExternalNetworks returns an interface for managing ExternalNetwork resources.
 	ExternalNetworks() ExternalNetworkInterface
+	// EgressGatewayPolicy returns an interface for managing EgressGatewayPolicy resources.
+	EgressGatewayPolicy() EgressGatewayPolicyInterface
 
 	// EnsureInitialized is used to ensure the backend datastore is correctly
 	// initialized for use by Calico.  This method may be called multiple times, and

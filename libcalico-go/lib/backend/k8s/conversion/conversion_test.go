@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -311,10 +311,157 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(wep.Revision).To(Equal("1234"))
 
 		// Check egress.
-		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway.Gateway).To(Equal(&apiv3.EgressSpec{
 			NamespaceSelector: "wblack == \"white\"",
 			Selector:          "wred == \"green\"",
 		}))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.AWSElasticIPs).To(ConsistOf("44.55.66.77", "88.55.66.77"))
+
+		// Check external networks
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.ExternalNetworkNames).To(ConsistOf("net0", "net1"))
+	})
+
+	It("should parse a pod with an IP and egress gateway policy to a WorkloadEndpoint", func() {
+		pod := kapiv1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podA",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"arbitrary": "annotation",
+					"egress.projectcalico.org/egressGatewayPolicy":  "egw-policy1",
+					"egress.projectcalico.org/namespaceSelector":    "wblack == 'white'",
+					"egress.projectcalico.org/selector":             "wred == 'green'",
+					"cni.projectcalico.org/awsElasticIPs":           "[\"44.55.66.77\",\"88.55.66.77\"]",
+					"egress.projectcalico.org/externalNetworkNames": "[\"net0\",\"net1\"]",
+				},
+				Labels: map[string]string{
+					"labelA": "valueA",
+					"labelB": "valueB",
+				},
+				ResourceVersion: "1234",
+			},
+			Spec: kapiv1.PodSpec{
+				NodeName: "nodeA",
+				Containers: []kapiv1.Container{
+					{
+						Ports: []kapiv1.ContainerPort{
+							{
+								ContainerPort: 5678,
+							},
+							{
+								Name:          "no-proto",
+								ContainerPort: 1234,
+							},
+						},
+					},
+					{
+						Ports: []kapiv1.ContainerPort{
+							{
+								Name:          "tcp-proto",
+								Protocol:      kapiv1.ProtocolTCP,
+								ContainerPort: 1024,
+							},
+							{
+								Name:          "tcp-proto-with-host-port",
+								Protocol:      kapiv1.ProtocolTCP,
+								ContainerPort: 8080,
+								HostPort:      5678,
+							},
+							{
+								Name:          "tcp-proto-with-host-port-and-ip",
+								Protocol:      kapiv1.ProtocolTCP,
+								ContainerPort: 8081,
+								HostPort:      6789,
+								HostIP:        "1.2.3.4",
+							},
+							{
+								Protocol:      kapiv1.ProtocolTCP,
+								ContainerPort: 500,
+								HostPort:      5000,
+							},
+							{
+								Name:          "udp-proto",
+								Protocol:      kapiv1.ProtocolUDP,
+								ContainerPort: 432,
+							},
+							{
+								Name:          "sctp-proto",
+								Protocol:      kapiv1.ProtocolSCTP,
+								ContainerPort: 891,
+							},
+							{
+								Name:          "unkn-proto",
+								Protocol:      kapiv1.Protocol("unknown"),
+								ContainerPort: 567,
+							},
+						},
+					},
+				},
+			},
+			Status: kapiv1.PodStatus{
+				PodIP: "192.168.0.1",
+			},
+		}
+
+		wep, err := podToWorkloadEndpoint(c, &pod)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Make sure the type information is correct.
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Kind).To(Equal(libapiv3.KindWorkloadEndpoint))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).APIVersion).To(Equal(apiv3.GroupVersionCurrent))
+
+		// Assert key fields.
+		Expect(wep.Key.(model.ResourceKey).Name).To(Equal("nodeA-k8s-podA-eth0"))
+		Expect(wep.Key.(model.ResourceKey).Namespace).To(Equal("default"))
+		Expect(wep.Key.(model.ResourceKey).Kind).To(Equal(libapiv3.KindWorkloadEndpoint))
+
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Pod).To(Equal("podA"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Node).To(Equal("nodeA"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Endpoint).To(Equal("eth0"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Orchestrator).To(Equal("k8s"))
+		Expect(len(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks)).To(Equal(1))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks[0]).To(Equal("192.168.0.1/32"))
+		Expect(len(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Profiles)).To(Equal(1))
+		expectedLabels := map[string]string{
+			"labelA":                         "valueA",
+			"labelB":                         "valueB",
+			"projectcalico.org/namespace":    "default",
+			"projectcalico.org/orchestrator": "k8s",
+		}
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).ObjectMeta.Labels).To(Equal(expectedLabels))
+
+		nsProtoTCP := numorstring.ProtocolFromString("tcp")
+		nsProtoUDP := numorstring.ProtocolFromString("udp")
+		nsProtoSCTP := numorstring.ProtocolFromString("sctp")
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Ports).To(ConsistOf(
+			// No proto defaults to TCP (as defined in k8s API spec)
+			libapiv3.WorkloadEndpointPort{Name: "no-proto", Port: 1234, Protocol: nsProtoTCP},
+			// Explicit TCP proto is OK too.
+			libapiv3.WorkloadEndpointPort{Name: "tcp-proto", Port: 1024, Protocol: nsProtoTCP},
+			// Host port should be parsed
+			libapiv3.WorkloadEndpointPort{Name: "tcp-proto-with-host-port", Port: 8080, Protocol: nsProtoTCP, HostPort: 5678},
+			// Host IP should be passed through
+			libapiv3.WorkloadEndpointPort{Name: "tcp-proto-with-host-port-and-ip", Port: 8081, Protocol: nsProtoTCP, HostPort: 6789, HostIP: "1.2.3.4"},
+			// Host port but no name
+			libapiv3.WorkloadEndpointPort{Port: 500, Protocol: nsProtoTCP, HostPort: 5000},
+			// UDP is also an option.
+			libapiv3.WorkloadEndpointPort{Name: "udp-proto", Port: 432, Protocol: nsProtoUDP},
+			// SCTP.
+			libapiv3.WorkloadEndpointPort{Name: "sctp-proto", Port: 891, Protocol: nsProtoSCTP},
+			// Unknown protocol port is ignored.
+		))
+
+		// Assert the interface name is fixed.  The calculation of this name should be consistent
+		// between releases otherwise there will be issues upgrading a node with networked Pods.
+		// If this fails, fix the code not this expect!
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.InterfaceName).To(Equal("cali7f94ce7c295"))
+
+		// Assert ResourceVersion is present.
+		Expect(wep.Revision).To(Equal("1234"))
+
+		// Check egress.
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway.Policy).To(Equal("egw-policy1"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway.Gateway).To(BeNil())
 		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.AWSElasticIPs).To(ConsistOf("44.55.66.77", "88.55.66.77"))
 
 		// Check external networks
@@ -3231,7 +3378,7 @@ var _ = Describe("Test Namespace conversion egress gateway", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Expect the parsed selectors to match the expected values.
-			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway.Gateway).To(Equal(&apiv3.EgressSpec{
 				NamespaceSelector: expectedNamespaceSelector,
 				Selector:          expectedSelector,
 			}))
@@ -3282,10 +3429,54 @@ var _ = Describe("Test Namespace conversion", func() {
 		Expect(labels["pcns.roger"]).To(Equal("rabbit"))
 
 		// Check egress.
-		Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+		Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway.Gateway).To(Equal(&apiv3.EgressSpec{
 			NamespaceSelector: "black == \"white\"",
 			Selector:          "red == \"green\"",
 		}))
+	})
+
+	It("should parse a Namespace with egress gateway policy annotation to a Profile", func() {
+		ns := kapiv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+				Labels: map[string]string{
+					"foo":   "bar",
+					"roger": "rabbit",
+				},
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector":   "black == 'white'",
+					"egress.projectcalico.org/selector":            "red == 'green'",
+					"egress.projectcalico.org/egressGatewayPolicy": "egw-policy-red",
+				},
+			},
+			Spec: kapiv1.NamespaceSpec{},
+		}
+
+		p, err := c.NamespaceToProfile(&ns)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(p.Key.(model.ResourceKey).Name).To(Equal("kns.default"))
+		Expect(p.Key.(model.ResourceKey).Kind).To(Equal(apiv3.KindProfile))
+
+		// Ensure rules are correct for profile.
+		Ingress := p.Value.(*apiv3.Profile).Spec.Ingress
+		Egress := p.Value.(*apiv3.Profile).Spec.Egress
+		Expect(len(Ingress)).To(Equal(1))
+		Expect(len(Egress)).To(Equal(1))
+
+		// Ensure both inbound and outbound rules are set to allow.
+		Expect(Ingress[0]).To(Equal(apiv3.Rule{Action: apiv3.Allow}))
+		Expect(Egress[0]).To(Equal(apiv3.Rule{Action: apiv3.Allow}))
+
+		// Check labels.
+		labels := p.Value.(*apiv3.Profile).Spec.LabelsToApply
+		Expect(labels["pcns.projectcalico.org/name"]).To(Equal("default"))
+		Expect(labels["pcns.foo"]).To(Equal("bar"))
+		Expect(labels["pcns.roger"]).To(Equal("rabbit"))
+
+		// Check egress.
+		Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway.Policy).To(Equal("egw-policy-red"))
+		Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway.Gateway).To(BeNil())
 	})
 
 	It("should parse a Namespace to a Profile with no labels", func() {
@@ -3399,7 +3590,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway.Gateway).To(Equal(&apiv3.EgressSpec{
 			NamespaceSelector: "black == \"white\"",
 			Selector:          "red == \"green\"",
 			MaxNextHops:       3,
@@ -3428,7 +3619,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway.Gateway).To(Equal(&apiv3.EgressSpec{
 			NamespaceSelector: "black == \"white\"",
 			Selector:          "red == \"green\"",
 			MaxNextHops:       0,
@@ -3457,7 +3648,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway.Gateway).To(Equal(&apiv3.EgressSpec{
 			NamespaceSelector: "black == \"white\"",
 			Selector:          "red == \"green\"",
 			MaxNextHops:       0,
@@ -3486,7 +3677,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway.Gateway).To(Equal(&apiv3.EgressSpec{
 			NamespaceSelector: "black == \"white\"",
 			Selector:          "red == \"green\"",
 			MaxNextHops:       0,
@@ -3509,7 +3700,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		By("converting to a Profile", func() {
 			p, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway.Gateway).To(Equal(&apiv3.EgressSpec{
 				NamespaceSelector: "black == \"white\"",
 				Selector:          "red == \"green\"",
 				MaxNextHops:       3,
@@ -3533,7 +3724,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		By("converting to a Profile", func() {
 			p, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway.Gateway).To(Equal(&apiv3.EgressSpec{
 				NamespaceSelector: "black == \"white\"",
 				Selector:          "red == \"green\"",
 				MaxNextHops:       0,
@@ -3557,7 +3748,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		By("converting to a Profile", func() {
 			p, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway.Gateway).To(Equal(&apiv3.EgressSpec{
 				NamespaceSelector: "black == \"white\"",
 				Selector:          "red == \"green\"",
 				MaxNextHops:       0,
@@ -3581,7 +3772,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		By("converting to a Profile", func() {
 			p, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway.Gateway).To(Equal(&apiv3.EgressSpec{
 				NamespaceSelector: "black == \"white\"",
 				Selector:          "red == \"green\"",
 				MaxNextHops:       0,

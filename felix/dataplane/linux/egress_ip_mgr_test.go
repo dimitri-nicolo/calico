@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -145,7 +145,7 @@ var _ = Describe("EgressIPManager", func() {
 		rtFactory.Table(table).checkRoutes("egress.calico", nil)
 	}
 
-	expectRulesAndTable := func(srcIPs []string, table int, hopIPs []string) {
+	expectRulesAndTable := func(srcIPs []string, table int, iface string, targets []routetable.Target) {
 		var activeRules []netlink.Rule
 		for _, r := range rr.GetAllActiveRules() {
 			activeRules = append(activeRules, *r.NetLinkRule())
@@ -154,28 +154,18 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(rr.hasRule(100, srcIP, 0x200, table)).To(BeTrue(), "Expect rule with srcIP: %s, and table: %d, to exist. Active rules = %v", srcIP, table, activeRules)
 		}
 
-		var targets []routetable.Target
-		if len(hopIPs) == 0 {
-			targets = []routetable.Target{{
-				Type: routetable.TargetTypeUnreachable,
-				CIDR: defaultCidr,
-			}}
-			rtFactory.Table(table).checkRoutes(routetable.InterfaceNone, targets)
-		} else if len(hopIPs) == 1 {
-			targets = []routetable.Target{{
-				Type: routetable.TargetTypeVXLAN,
-				CIDR: defaultCidr,
-				GW:   ip.FromString(hopIPs[0]),
-			}}
-			rtFactory.Table(table).checkRoutes("egress.calico", targets)
-		} else {
-			targets = []routetable.Target{{
-				Type:      routetable.TargetTypeVXLAN,
-				CIDR:      defaultCidr,
-				MultiPath: multiPath(hopIPs, manager.vxlanDeviceLinkIndex),
-			}}
-			rtFactory.Table(table).checkRoutes(routetable.InterfaceNone, targets)
+		rtFactory.Table(table).checkRoutes(iface, targets)
+	}
+
+	multiPath := func(ips []string) []routetable.NextHop {
+		var multipath []routetable.NextHop
+		for _, e := range ips {
+			multipath = append(multipath, routetable.NextHop{
+				Gw:        ip.FromString(e),
+				LinkIndex: manager.vxlanDeviceLinkIndex,
+			})
 		}
+		return multipath
 	}
 
 	Describe("with multiple ipsets and endpoints update", func() {
@@ -257,12 +247,15 @@ var _ = Describe("EgressIPManager", func() {
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
 
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 0))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, "set0", []string{"10.0.241.0/32"}, 0))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, "set0", []string{"10.0.242.0/32"}, 0))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, "set1", []string{"10.0.243.0/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, "set1", []string{"10.0.244.0/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, "set1", []string{"10.0.245.0/32"}, 2))
+			egwRules0 := egwPolicyWithSingleRule("set0", 0)
+			egwRules1 := egwPolicyWithSingleRule("set1", 2)
+
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, []string{"10.0.240.0/32"}, egwRules0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, []string{"10.0.241.0/32"}, egwRules0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, []string{"10.0.242.0/32"}, egwRules0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, []string{"10.0.243.0/32"}, egwRules1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, []string{"10.0.244.0/32"}, egwRules1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, []string{"10.0.245.0/32"}, egwRules1))
 
 			err = manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -271,32 +264,192 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(manager.routeRules).NotTo(BeNil())
 			rr = rrFactory.Rules()
 
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
 			rtFactory.Table(1).checkL2Routes(routetable.InterfaceNone, nil)
 			rtFactory.Table(1).checkL2Routes("egress.calico", nil)
 
-			expectRulesAndTable([]string{"10.0.241.0/32"}, 2, []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"})
+			expectRulesAndTable([]string{"10.0.241.0/32"}, 2, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
 			rtFactory.Table(1).checkL2Routes(routetable.InterfaceNone, nil)
 			rtFactory.Table(1).checkL2Routes("egress.calico", nil)
 
-			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"})
+			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
 			rtFactory.Table(1).checkL2Routes(routetable.InterfaceNone, nil)
 			rtFactory.Table(1).checkL2Routes("egress.calico", nil)
 
-			expectRulesAndTable([]string{"10.0.243.0/32"}, 4, []string{"10.0.1.2", "10.0.1.3"})
+			expectRulesAndTable([]string{"10.0.243.0/32"}, 4, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.2", "10.0.1.3"}),
+				},
+			})
 			rtFactory.Table(2).checkL2Routes(routetable.InterfaceNone, nil)
 			rtFactory.Table(2).checkL2Routes("egress.calico", nil)
 
-			expectRulesAndTable([]string{"10.0.244.0/32"}, 5, []string{"10.0.1.1", "10.0.1.3"})
+			expectRulesAndTable([]string{"10.0.244.0/32"}, 5, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.3"}),
+				},
+			})
 			rtFactory.Table(2).checkL2Routes(routetable.InterfaceNone, nil)
 			rtFactory.Table(2).checkL2Routes("egress.calico", nil)
 
-			expectRulesAndTable([]string{"10.0.245.0/32"}, 6, []string{"10.0.1.1", "10.0.1.2"})
+			expectRulesAndTable([]string{"10.0.245.0/32"}, 6, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2"}),
+				},
+			})
 			rtFactory.Table(2).checkL2Routes(routetable.InterfaceNone, nil)
 			rtFactory.Table(2).checkL2Routes("egress.calico", nil)
 
 			mainTable.checkRoutes(routetable.InterfaceNone, nil)
 			mainTable.checkRoutes("egress.calico", nil)
+			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
+				{
+					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					GW:      ip.FromString("10.0.0.1"),
+					IP:      ip.FromString("10.0.0.1"),
+				},
+				{
+					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					GW:      ip.FromString("10.0.0.2"),
+					IP:      ip.FromString("10.0.0.2"),
+				},
+				{
+					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					GW:      ip.FromString("10.0.0.3"),
+					IP:      ip.FromString("10.0.0.3"),
+				},
+				{
+					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
+					GW:      ip.FromString("10.0.1.1"),
+					IP:      ip.FromString("10.0.1.1"),
+				},
+				{
+					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
+					GW:      ip.FromString("10.0.1.2"),
+					IP:      ip.FromString("10.0.1.2"),
+				},
+				{
+					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
+					GW:      ip.FromString("10.0.1.3"),
+					IP:      ip.FromString("10.0.1.3"),
+				},
+			})
+		})
+
+		It("should be possible to use two egress gateway for different destinations", func() {
+
+			egwRules := []*proto.EgressGatewayRule{
+				&proto.EgressGatewayRule{
+					IpSetId:     "set0",
+					Destination: "10.0.0.0/8",
+				},
+				&proto.EgressGatewayRule{
+					IpSetId:     "set1",
+					Destination: defaultDestv4,
+				},
+			}
+
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(6, []string{"10.0.246.0/32", "10.1.246.0/32"}, egwRules))
+			err := manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+
+			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      ip.MustParseCIDROrIP("10.0.0.0/8"),
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
+				},
+			})
+			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
+				{
+					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					GW:      ip.FromString("10.0.0.1"),
+					IP:      ip.FromString("10.0.0.1"),
+				},
+				{
+					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					GW:      ip.FromString("10.0.0.2"),
+					IP:      ip.FromString("10.0.0.2"),
+				},
+				{
+					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					GW:      ip.FromString("10.0.0.3"),
+					IP:      ip.FromString("10.0.0.3"),
+				},
+				{
+					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
+					GW:      ip.FromString("10.0.1.1"),
+					IP:      ip.FromString("10.0.1.1"),
+				},
+				{
+					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
+					GW:      ip.FromString("10.0.1.2"),
+					IP:      ip.FromString("10.0.1.2"),
+				},
+				{
+					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
+					GW:      ip.FromString("10.0.1.3"),
+					IP:      ip.FromString("10.0.1.3"),
+				},
+			})
+		})
+
+		It("should be possible to use skip egress gateway for a destination", func() {
+
+			egwRules := []*proto.EgressGatewayRule{
+				&proto.EgressGatewayRule{
+					IpSetId:     "",
+					Destination: "10.0.0.0/8",
+				},
+				&proto.EgressGatewayRule{
+					IpSetId: "set1",
+				},
+			}
+
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(6, []string{"10.0.246.0/32", "10.1.246.0/32"}, egwRules))
+			err := manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+
+			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR: ip.MustParseCIDROrIP("10.0.0.0/8"),
+					Type: routetable.TargetTypeThrow,
+				},
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
+				},
+			})
 			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
 				{
 					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
@@ -342,9 +495,27 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Changes to an IPSet should have no impact on existing workload tables, only on new workloads.
-			expectRulesAndTable([]string{"10.0.243.0/32"}, 4, []string{"10.0.1.2", "10.0.1.3"})
-			expectRulesAndTable([]string{"10.0.244.0/32"}, 5, []string{"10.0.1.4", "10.0.1.5"})
-			expectRulesAndTable([]string{"10.0.245.0/32"}, 6, []string{"10.0.1.3", "10.0.1.4"})
+			expectRulesAndTable([]string{"10.0.243.0/32"}, 4, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.2", "10.0.1.3"}),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.244.0/32"}, 5, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.4", "10.0.1.5"}),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.245.0/32"}, 6, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.3", "10.0.1.4"}),
+				},
+			})
 			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
 				{
 					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
@@ -451,14 +622,14 @@ var _ = Describe("EgressIPManager", func() {
 
 		It("should report unhealthy if run out of table index", func() {
 			for i := 2; i < 10; i++ {
-				manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(i, "set0", []string{fmt.Sprintf("10.0.24%d.0/32", i)}, 0))
+				manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(i, []string{fmt.Sprintf("10.0.24%d.0/32", i)}, egwPolicyWithSingleRule("set0", 0)))
 			}
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(manager.tableIndexStack.Len()).To(Equal(0))
 
-			breakingWorkloadUpdate := dummyWorkloadEndpointUpdateEgressIP(11, "set0", []string{"10.0.250.0/32"}, 0)
+			breakingWorkloadUpdate := dummyWorkloadEndpointUpdateEgressIP(11, []string{"10.0.250.0/32"}, egwPolicyWithSingleRule("set0", 0))
 			manager.OnUpdate(breakingWorkloadUpdate)
 
 			err = manager.CompleteDeferredWork()
@@ -482,11 +653,18 @@ var _ = Describe("EgressIPManager", func() {
 		})
 
 		It("should use same table if endpoint has second ip address", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(6, "set0", []string{"10.0.246.0/32", "10.1.246.0/32"}, 0))
+
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(6, []string{"10.0.246.0/32", "10.1.246.0/32"}, egwPolicyWithSingleRule("set0", 0)))
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
 
-			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"})
+			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
 			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
 				{
 					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
@@ -531,11 +709,17 @@ var _ = Describe("EgressIPManager", func() {
 					formatActiveEgressMemberStr("10.0.1.3"),
 				},
 			})
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, "set1", []string{"10.0.242.0/32"}, 0))
+
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, []string{"10.0.242.0/32"}, egwPolicyWithSingleRule("Set1", 0)))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, []string{})
+			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeUnreachable,
+				},
+			})
 			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
 				{
 					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
@@ -572,18 +756,30 @@ var _ = Describe("EgressIPManager", func() {
 
 		It("should set recreate rule and table for workload if egress ipset changed", func() {
 			// pod-0 use table 1 at start.
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
 			Expect(rr.hasRule(100, "10.0.240.0/32", 0x200, 1)).To(BeTrue())
 			Expect(rr.hasRule(100, "10.0.240.0/32", 0x200, 2)).To(BeFalse())
 
 			// Update pod-0 to use ipset set1.
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set1", []string{"10.0.240.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, []string{"10.0.240.0/32"}, egwPolicyWithSingleRule("set1", 0)))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
 
 			// pod-0 use table 2 as the result.
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.1.1", "10.0.1.2", "10.0.1.3"})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
+				},
+			})
 		})
 
 		It("should wait for ipset update", func() {
@@ -594,14 +790,18 @@ var _ = Describe("EgressIPManager", func() {
 			}
 
 			endpoint0 := &proto.WorkloadEndpoint{
-				State:         "active",
-				Mac:           "01:02:03:04:05:06",
-				Name:          "cali12345-0",
-				ProfileIds:    []string{},
-				Tiers:         []*proto.TierInfo{},
-				Ipv4Nets:      []string{"10.0.240.0/32"},
-				Ipv6Nets:      []string{"2001:db8:2::2/128"},
-				EgressIpSetId: "setx",
+				State:      "active",
+				Mac:        "01:02:03:04:05:06",
+				Name:       "cali12345-0",
+				ProfileIds: []string{},
+				Tiers:      []*proto.TierInfo{},
+				Ipv4Nets:   []string{"10.0.240.0/32"},
+				Ipv6Nets:   []string{"2001:db8:2::2/128"},
+				EgressGatewayRules: []*proto.EgressGatewayRule{
+					&proto.EgressGatewayRule{
+						IpSetId: "setx",
+					},
+				},
 			}
 			// Update pod-0 to use ipset setx.
 			manager.OnUpdate(&proto.WorkloadEndpointUpdate{
@@ -611,7 +811,12 @@ var _ = Describe("EgressIPManager", func() {
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeUnreachable,
+				},
+			})
 
 			manager.OnUpdate(&proto.IPSetUpdate{
 				Id: "setx",
@@ -626,7 +831,13 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// pod-0 use table 1 as the result.
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.10.1", "10.0.10.2", "10.0.10.3"})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.10.1", "10.0.10.2", "10.0.10.3"}),
+				},
+			})
 			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
 				{
 					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
@@ -685,9 +896,27 @@ var _ = Describe("EgressIPManager", func() {
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"})
-			expectRulesAndTable([]string{"10.0.241.0/32"}, 2, []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"})
-			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.241.0/32"}, 2, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
 			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
 				{
 					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
@@ -746,14 +975,26 @@ var _ = Describe("EgressIPManager", func() {
 			})
 
 			// Create new endpoint6. It has specified 3 next hops, but only 2 are currently available.
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(6, "set0", []string{"10.0.246.0/32"}, 3))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(6, []string{"10.0.246.0/32"}, egwPolicyWithSingleRule("set0", 3)))
 			// Create new endpoint7. It has specified 0 next hops, and so will be allocated all available hops.
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(7, "set0", []string{"10.0.247.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(7, []string{"10.0.247.0/32"}, egwPolicyWithSingleRule("set0", 0)))
 
 			err = manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.246.0/32"}, 7, []string{"10.0.0.2", "10.0.0.3"})
-			expectRulesAndTable([]string{"10.0.247.0/32"}, 8, []string{"10.0.0.2", "10.0.0.3"})
+			expectRulesAndTable([]string{"10.0.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3"}),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.247.0/32"}, 8, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3"}),
+				},
+			})
 
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set0",
@@ -762,14 +1003,26 @@ var _ = Describe("EgressIPManager", func() {
 			})
 
 			// Create new endpoint8. It has specified 3 next hops, which are currently available.
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(8, "set0", []string{"10.0.248.0/32"}, 3))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(8, []string{"10.0.248.0/32"}, egwPolicyWithSingleRule("set0", 3)))
 			// Create new endpoint9. It has specified 0 next hops, and so will be allocated all available hops.
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(9, "set0", []string{"10.0.249.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(9, []string{"10.0.249.0/32"}, egwPolicyWithSingleRule("set0", 0)))
 
 			err = manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.248.0/32"}, 9, []string{"10.0.0.2", "10.0.0.3", "10.0.0.4"})
-			expectRulesAndTable([]string{"10.0.249.0/32"}, 10, []string{"10.0.0.2", "10.0.0.3", "10.0.0.4"})
+			expectRulesAndTable([]string{"10.0.248.0/32"}, 9, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3", "10.0.0.4"}),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.249.0/32"}, 10, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3", "10.0.0.4"}),
+				},
+			})
 		})
 
 		It("should not notify when maintenance window is unchanged", func() {
@@ -986,11 +1239,17 @@ var _ = Describe("EgressIPManager", func() {
 				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.3.0", nowTime, inSixtySecsTime), "10.0.3.1"},
 				RemovedMembers: []string{"10.0.1.1"},
 			})
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, "set1", []string{"10.0.242.0"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, []string{"10.0.242.0"}, egwPolicyWithSingleRule("set1", 0)))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, []string{"10.0.1.2", "10.0.1.3", "10.0.3.1"})
+			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.2", "10.0.1.3", "10.0.3.1"}),
+				},
+			})
 			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
 				{
 					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
@@ -1100,71 +1359,169 @@ var _ = Describe("EgressIPManager", func() {
 		})
 
 		It("should allocate a new rule and table with three hops when maxNextHops is zero", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, []string{"10.0.240.0/32"}, egwPolicyWithSingleRule("set0", 0)))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
 		})
 
 		It("should allocate a new rule and table with one hop when maxNextHops is one", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, []string{"10.0.240.0/32"}, egwPolicyWithSingleRule("set0", 1)))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.0.1"})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
+				},
+			})
 		})
 
 		It("should allocate a new rule and table with two hops when maxNextHops is two", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 2))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, []string{"10.0.240.0/32"}, egwPolicyWithSingleRule("set0", 2)))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.0.1", "10.0.0.3"})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.3"}),
+				},
+			})
 		})
 
 		It("should allocate a new rule and table with three hops when maxNextHops is three", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 3))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, []string{"10.0.240.0/32"}, egwPolicyWithSingleRule("set0", 3)))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
 		})
 
 		It("should allocate rules and tables with an even distribution of one hop starting at random index when maxNextHops is one", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, "set0", []string{"10.0.240.1/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, "set0", []string{"10.0.240.2/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, "set0", []string{"10.0.240.3/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, "set0", []string{"10.0.240.4/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, "set0", []string{"10.0.240.5/32"}, 1))
+			egwRules := egwPolicyWithSingleRule("set0", 1)
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, []string{"10.0.240.0/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, []string{"10.0.240.1/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, []string{"10.0.240.2/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, []string{"10.0.240.3/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, []string{"10.0.240.4/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, []string{"10.0.240.5/32"}, egwRules))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.0.1"})
-			expectRulesAndTable([]string{"10.0.240.1/32"}, 2, []string{"10.0.0.2"})
-			expectRulesAndTable([]string{"10.0.240.2/32"}, 3, []string{"10.0.0.3"})
-			expectRulesAndTable([]string{"10.0.240.3/32"}, 4, []string{"10.0.0.1"})
-			expectRulesAndTable([]string{"10.0.240.4/32"}, 5, []string{"10.0.0.3"})
-			expectRulesAndTable([]string{"10.0.240.5/32"}, 6, []string{"10.0.0.2"})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.1/32"}, 2, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.2").Addr(),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.2/32"}, 3, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.3").Addr(),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.3/32"}, 4, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.4/32"}, 5, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.3").Addr(),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.5/32"}, 6, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.2").Addr(),
+				},
+			})
 		})
 
 		It("should allocate rules and tables with an even distribution of two hops starting at random index when maxNextHops is two", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, "set0", []string{"10.0.240.1/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, "set0", []string{"10.0.240.2/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, "set0", []string{"10.0.240.3/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, "set0", []string{"10.0.240.4/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, "set0", []string{"10.0.240.5/32"}, 2))
+			egwRules := egwPolicyWithSingleRule("set0", 2)
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, []string{"10.0.240.0/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, []string{"10.0.240.1/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, []string{"10.0.240.2/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, []string{"10.0.240.3/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, []string{"10.0.240.4/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, []string{"10.0.240.5/32"}, egwRules))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.0.1", "10.0.0.3"})
-			expectRulesAndTable([]string{"10.0.240.1/32"}, 2, []string{"10.0.0.1", "10.0.0.2"})
-			expectRulesAndTable([]string{"10.0.240.2/32"}, 3, []string{"10.0.0.2", "10.0.0.3"})
-			expectRulesAndTable([]string{"10.0.240.3/32"}, 4, []string{"10.0.0.1", "10.0.0.3"})
-			expectRulesAndTable([]string{"10.0.240.4/32"}, 5, []string{"10.0.0.2", "10.0.0.3"})
-			expectRulesAndTable([]string{"10.0.240.5/32"}, 6, []string{"10.0.0.1", "10.0.0.2"})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.3"}),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.1/32"}, 2, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2"}),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.2/32"}, 3, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3"}),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.3/32"}, 4, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.3"}),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.4/32"}, 5, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3"}),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.5/32"}, 6, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2"}),
+				},
+			})
 		})
 
 		It("should allocate per-deployment route tables excluding any terminating gateway hops", func() {
@@ -1179,36 +1536,62 @@ var _ = Describe("EgressIPManager", func() {
 				Members: ips0,
 				Type:    proto.IPSetUpdate_EGRESS_IP,
 			})
+			egwRules := egwPolicyWithSingleRule("set0", 1)
 
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, "set0", []string{"10.0.240.1/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, "set0", []string{"10.0.240.2/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, "set0", []string{"10.0.240.3/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, "set0", []string{"10.0.240.4/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, "set0", []string{"10.0.240.5/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, []string{"10.0.240.0/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, []string{"10.0.240.1/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, []string{"10.0.240.2/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, []string{"10.0.240.3/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, []string{"10.0.240.4/32"}, egwRules))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, []string{"10.0.240.5/32"}, egwRules))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.0.1"})
-			expectRulesAndTable([]string{"10.0.240.1/32"}, 2, []string{"10.0.0.3"})
-			expectRulesAndTable([]string{"10.0.240.2/32"}, 3, []string{"10.0.0.1"})
-			expectRulesAndTable([]string{"10.0.240.3/32"}, 4, []string{"10.0.0.3"})
-			expectRulesAndTable([]string{"10.0.240.4/32"}, 5, []string{"10.0.0.1"})
-			expectRulesAndTable([]string{"10.0.240.5/32"}, 6, []string{"10.0.0.3"})
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.1/32"}, 2, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.3").Addr(),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.2/32"}, 3, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.3/32"}, 4, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.3").Addr(),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.4/32"}, 5, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.240.5/32"}, 6, "egress.calico", []routetable.Target{
+				{
+					CIDR: defaultCidr,
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.3").Addr(),
+				},
+			})
 		})
 	})
 })
-
-func multiPath(ips []string, vxlanDeviceIdx int) []routetable.NextHop {
-	var multipath []routetable.NextHop
-	for _, e := range ips {
-		multipath = append(multipath, routetable.NextHop{
-			Gw:        ip.FromString(e),
-			LinkIndex: vxlanDeviceIdx,
-		})
-	}
-	return multipath
-}
 
 func dummyWorkloadEndpointID(podNum int) proto.WorkloadEndpointID {
 	return proto.WorkloadEndpointID{
@@ -1218,7 +1601,7 @@ func dummyWorkloadEndpointID(podNum int) proto.WorkloadEndpointID {
 	}
 }
 
-func dummyWorkloadEndpointUpdate(podNum int, ipSetId string, cidrs []string, nextHops int, externalNetworkNames []string) *proto.WorkloadEndpointUpdate {
+func dummyWorkloadEndpointUpdate(podNum int, cidrs []string, externalNetworkNames []string, egressGatewayRules []*proto.EgressGatewayRule) *proto.WorkloadEndpointUpdate {
 	return &proto.WorkloadEndpointUpdate{
 		Id: &proto.WorkloadEndpointID{
 			OrchestratorId: "k8s",
@@ -1233,19 +1616,18 @@ func dummyWorkloadEndpointUpdate(podNum int, ipSetId string, cidrs []string, nex
 			Tiers:                []*proto.TierInfo{},
 			Ipv4Nets:             cidrs,
 			Ipv6Nets:             []string{"2001:db8:2::2/128"},
-			EgressIpSetId:        ipSetId,
-			EgressMaxNextHops:    int32(nextHops),
+			EgressGatewayRules:   egressGatewayRules,
 			ExternalNetworkNames: externalNetworkNames,
 		},
 	}
 }
 
-func dummyWorkloadEndpointUpdateEgressIP(podNum int, ipSetId string, cidrs []string, nextHops int) *proto.WorkloadEndpointUpdate {
-	return dummyWorkloadEndpointUpdate(podNum, ipSetId, cidrs, nextHops, []string{})
+func dummyWorkloadEndpointUpdateEgressIP(podNum int, cidrs []string, egwRules []*proto.EgressGatewayRule) *proto.WorkloadEndpointUpdate {
+	return dummyWorkloadEndpointUpdate(podNum, cidrs, []string{}, egwRules)
 }
 
 func dummyWorkloadEndpointUpdateExternalNetwork(podNum int, cidrs []string, externalNetworkNames []string) *proto.WorkloadEndpointUpdate {
-	return dummyWorkloadEndpointUpdate(podNum, "", cidrs, 0, externalNetworkNames)
+	return dummyWorkloadEndpointUpdate(podNum, cidrs, externalNetworkNames, nil)
 }
 
 type mockRouteRules struct {
@@ -1533,4 +1915,15 @@ func expectUsageMapsEqual(actual, expected map[int][]string) {
 	for k, v := range expected {
 		Expect(actual).To(HaveKeyWithValue(k, v))
 	}
+}
+
+func egressGatewayRule(ipSetId string, maxNextHops int) *proto.EgressGatewayRule {
+	return &proto.EgressGatewayRule{
+		IpSetId:     ipSetId,
+		MaxNextHops: int32(maxNextHops),
+	}
+}
+
+func egwPolicyWithSingleRule(ipSetId string, maxNextHops int) []*proto.EgressGatewayRule {
+	return []*proto.EgressGatewayRule{egressGatewayRule(ipSetId, maxNextHops)}
 }

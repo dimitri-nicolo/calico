@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -736,8 +736,11 @@ func (kds *K8sDatastoreInfra) AddWorkload(wep *libapi.WorkloadEndpoint) (*libapi
 	}
 	if wep.Spec.EgressGateway != nil {
 		podIn.ObjectMeta.Annotations = map[string]string{
-			"egress.projectcalico.org/selector":          wep.Spec.EgressGateway.Selector,
-			"egress.projectcalico.org/namespaceSelector": wep.Spec.EgressGateway.NamespaceSelector,
+			"egress.projectcalico.org/egressGatewayPolicy": wep.Spec.EgressGateway.Policy,
+		}
+		if wep.Spec.EgressGateway.Gateway != nil {
+			podIn.ObjectMeta.Annotations["egress.projectcalico.org/selector"] = wep.Spec.EgressGateway.Gateway.Selector
+			podIn.ObjectMeta.Annotations["egress.projectcalico.org/namespaceSelector"] = wep.Spec.EgressGateway.Gateway.NamespaceSelector
 		}
 	}
 	log.WithField("podIn", podIn).Debug("Creating Pod for workload")

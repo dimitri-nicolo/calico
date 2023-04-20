@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package calico
 
@@ -91,6 +91,8 @@ func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc)
 		return NewBlockAffinityStorage(opts)
 	case "projectcalico.org/externalnetworks":
 		return NewExternalNetworkStorage(opts)
+	case "projectcalico.org/egressgatewaypolicies":
+		return NewEgressGatewayPolicyStorage(opts)
 	default:
 		klog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
 		return registry.DryRunnableStorage{}, nil

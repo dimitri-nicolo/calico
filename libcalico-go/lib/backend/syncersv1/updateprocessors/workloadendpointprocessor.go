@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -232,10 +232,13 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 	}
 
 	if v3res.Spec.EgressGateway != nil {
-		// Convert egress Selector and NamespaceSelector fields to a single selector
-		// expression in the same way we do for namespaced policy EntityRule selectors.
-		v1value.EgressSelector = GetEgressGatewaySelector(v3res.Spec.EgressGateway, v3res.Namespace)
-		v1value.EgressMaxNextHops = v3res.Spec.EgressGateway.MaxNextHops
+		v1value.EgressGatewayPolicy = v3res.Spec.EgressGateway.Policy
+		if v1value.EgressGatewayPolicy == "" && v3res.Spec.EgressGateway.Gateway != nil {
+			// Convert egress Selector and NamespaceSelector fields to a single selector
+			// expression in the same way we do for namespaced policy EntityRule selectors.
+			v1value.EgressSelector = GetEgressGatewaySelector(v3res.Spec.EgressGateway.Gateway, v3res.Namespace)
+			v1value.EgressMaxNextHops = v3res.Spec.EgressGateway.Gateway.MaxNextHops
+		}
 	}
 
 	return v1value, nil

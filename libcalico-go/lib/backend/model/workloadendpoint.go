@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -168,6 +168,7 @@ type WorkloadEndpoint struct {
 	// EE properties below
 	EgressSelector             string    `json:"egress_selector,omitempty"`
 	EgressMaxNextHops          int       `json:"egress_max_next_hops,omitempty" validate:"omitempty"`
+	EgressGatewayPolicy        string    `json:"egress_gateway_policy,omitempty"`
 	DeletionTimestamp          time.Time `json:"deletion_timestamp,omitempty"`
 	DeletionGracePeriodSeconds int64     `json:"deletion_grace_period_seconds,omitempty"`
 	AWSElasticIPs              []string  `json:"aws_elastic_ips,omitempty"`

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -385,7 +385,13 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 		uut.OnEndpointTierUpdate(
 			model.WorkloadEndpointKey{WorkloadID: "we1"},
 			&model.WorkloadEndpoint{Name: "we1"},
-			calc.EndpointEgressData{EgressIPSetID: "e:abcdef", MaxNextHops: 3},
+			calc.EndpointEgressData{
+				EgressGatewayRules: []calc.EpEgressData{
+					{
+						IpSetID: "e:abcdef", MaxNextHops: 3,
+					},
+				},
+			},
 			nil,
 		)
 		uut.Flush()
@@ -395,13 +401,16 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 			},
 			Endpoint: &proto.WorkloadEndpoint{
 				Name:                       "we1",
-				EgressIpSetId:              "e:abcdef",
-				EgressMaxNextHops:          3,
 				Ipv4Nets:                   []string{},
 				Ipv6Nets:                   []string{},
 				Ipv4Nat:                    []*proto.NatInfo{},
 				Ipv6Nat:                    []*proto.NatInfo{},
 				AllowSpoofedSourcePrefixes: []string{},
+				EgressGatewayRules: []*proto.EgressGatewayRule{
+					{
+						IpSetId: "e:abcdef", MaxNextHops: 3,
+					},
+				},
 			},
 		}}))
 
@@ -420,12 +429,12 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 			},
 			Endpoint: &proto.WorkloadEndpoint{
 				Name:                       "we1",
-				EgressIpSetId:              "",
 				Ipv4Nets:                   []string{},
 				Ipv6Nets:                   []string{},
 				Ipv4Nat:                    []*proto.NatInfo{},
 				Ipv6Nat:                    []*proto.NatInfo{},
 				AllowSpoofedSourcePrefixes: []string{},
+				EgressGatewayRules:         nil,
 			},
 		}}))
 	})

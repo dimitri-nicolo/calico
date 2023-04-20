@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -145,6 +145,10 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 			},
 			{
 				ListInterface: model.ResourceListOptions{Kind: apiv3.KindExternalNetwork},
+				ClientID:      calicoClientID,
+			},
+			{
+				ListInterface: model.ResourceListOptions{Kind: apiv3.KindEgressGatewayPolicy},
 				ClientID:      calicoClientID,
 			},
 		}

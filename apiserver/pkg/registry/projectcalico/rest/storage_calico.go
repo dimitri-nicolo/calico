@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/caliconodestatus"
 	calicoclusterinformation "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/clusterinformation"
 	calicodeeppacketinspection "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/deeppacketinspection"
+	calicoegressgatewaypolicy "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/egressgatewaypolicy"
 	calicoexternalnetwork "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/externalnetwork"
 	calicofelixconfig "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/felixconfig"
 	calicogalert "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/globalalert"
@@ -967,6 +968,27 @@ func (p RESTStorageProvider) NewV3Storage(
 		[]string{"externalnetwork"},
 	)
 
+	egressGatewayPolicyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("egressgatewaypolicies"))
+	if err != nil {
+		return nil, err
+	}
+	egressGatewayPolicyOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   egressGatewayPolicyRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicoegressgatewaypolicy.EmptyObject(),
+			ScopeStrategy: calicoegressgatewaypolicy.NewStrategy(scheme),
+			NewListFunc:   calicoegressgatewaypolicy.NewList,
+			GetAttrsFunc:  calicoegressgatewaypolicy.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions: egressGatewayPolicyRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{"egresspolicy"},
+	)
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts))
 	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts))
@@ -1050,6 +1072,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["ipamconfigurations"] = rESTInPeace(calicoipamconfig.NewREST(scheme, *ipamconfigOpts))
 	storage["blockaffinities"] = rESTInPeace(calicoblockaffinity.NewREST(scheme, *blockAffinityOpts))
 	storage["externalnetworks"] = rESTInPeace(calicoexternalnetwork.NewREST(scheme, *externalnetworkOpts))
+	storage["egressgatewaypolicies"] = rESTInPeace(calicoegressgatewaypolicy.NewREST(scheme, *egressGatewayPolicyOpts))
 
 	kubeControllersConfigsStorage, kubeControllersConfigsStatusStorage, err := calicokubecontrollersconfig.NewREST(scheme, *kubeControllersConfigsOpts)
 	if err != nil {

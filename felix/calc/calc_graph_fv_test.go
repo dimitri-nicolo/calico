@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -191,6 +191,7 @@ var baseTests = []StateList{
 		hostEp1WithPolicy,
 		localEpsWithUpdatedProfile,
 		withProfileTagInherit,
+		endpointWithProfileWithEgressGatewayPolicy,
 		localEp1WithIngressPolicy,
 		localEpsWithNonMatchingProfile,
 		localEpsWithUpdatedProfileNegatedTags,
@@ -198,6 +199,7 @@ var baseTests = []StateList{
 		localEpsWithTagInheritProfile,
 		localEp1WithPolicy,
 		localEpsWithProfile,
+		endpointWithNoneExistingEgressGatewayPolicy,
 	},
 
 	// And another one.
@@ -215,6 +217,7 @@ var baseTests = []StateList{
 		localEpsAndNamedPortPolicyMatchingInheritedLabelBothEPs,
 		localEp1WithIngressPolicy,
 		localEpsWithNonMatchingProfile,
+		twoRemoteEpsSameEgressGatewayPolicyLocalGateway,
 		localEpsWithUpdatedProfileNegatedTags,
 		localEpsWithPolicy,
 		localEp1WithNamedPortPolicyNoSelector,
@@ -244,6 +247,7 @@ var baseTests = []StateList{
 		hostEp1WithPolicy,
 		localEpsWithUpdatedProfile,
 		withProfileTagInherit,
+		endpointWithProfileLocalEgressGatewayWithEGWPolicy,
 		hostEp1WithPolicyAndTwoNetworkSets,
 		localEp1WithIngressPolicy,
 		twoRemoteEpsSimilarEgressSelectorTwoLocalGateways, // private-only
@@ -252,6 +256,7 @@ var baseTests = []StateList{
 		localEpsWithUpdatedProfileNegatedTags,
 		hostEp1WithUntrackedPolicy,
 		localEpsWithTagInheritProfile,
+		endpointWithNoneExistingEgressGatewayPolicy,
 		localEp1WithPolicy,
 		localEpsWithProfile,
 		hostEp1WithPolicyAndANetworkSet,
@@ -446,16 +451,28 @@ var baseTests = []StateList{
 	// Egress IP states.  (All private-only.)
 	{
 		endpointWithOwnEgressGateway,
+		endpointWithNoneExistingEgressGatewayPolicy,
+		endpointWithDefinedEgressGatewayPolicy,
+		endpointWithDifferentGatewayPolicy,
 		endpointWithProfileEgressGateway,
+		endpointWithProfileWithNoneExistingEgressGatewayPolicy,
+		endpointWithProfileWithEgressGatewayPolicy,
 		endpointWithoutOwnEgressGateway,
 		endpointWithOwnLocalEgressGateway,
+		endpointWithOwnLocalEgressGatewayWithEGWPolicy,
 		endpointWithoutProfileEgressGateway,
 		endpointWithProfileLocalEgressGateway,
+		endpointWithProfileLocalEgressGatewayWithEGWPolicy,
 		twoRemoteEpsSameEgressSelectorLocalGateway,
+		twoRemoteEpsSameEgressGatewayPolicyLocalGateway,
 		twoRemoteEpsSimilarEgressSelectorLocalGateway,
 		twoRemoteEpsSimilarEgressSelectorTwoLocalGateways,
 	},
-
+	{
+		endpointWithDefinedEgressGatewayPolicy,
+		endpointWithDifferentGatewayPolicy,     // Change EGW policy.
+		endpointWithDefinedEgressGatewayPolicy, // Then change it back.
+	},
 	{
 		withOutL7Annotation,
 		clusterIPWithL7Annotation,

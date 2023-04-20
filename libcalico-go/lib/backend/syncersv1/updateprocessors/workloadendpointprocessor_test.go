@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -163,10 +163,12 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 			},
 		}
 		res.Spec.AllowSpoofedSourcePrefixes = []string{"8.8.8.8/32"}
-		res.Spec.EgressGateway = &apiv3.EgressSpec{
-			NamespaceSelector: "black == 'white'",
-			Selector:          "red == 'green'",
-			MaxNextHops:       1,
+		res.Spec.EgressGateway = &apiv3.EgressGatewaySpec{
+			Gateway: &apiv3.EgressSpec{
+				NamespaceSelector: "black == 'white'",
+				Selector:          "red == 'green'",
+				MaxNextHops:       1,
+			},
 		}
 
 		kvps, err = up.Process(&model.KVPair{
@@ -202,6 +204,54 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 					AllowSpoofedSourcePrefixes: []cnet.IPNet{cnet.MustParseCIDR("8.8.8.8/32")},
 					EgressSelector:             "(pcns.black == \"white\") && (red == 'green')",
 					EgressMaxNextHops:          1,
+					DeletionTimestamp:          inSixtySeconds.Time,
+					DeletionGracePeriodSeconds: sixty,
+				},
+				Revision: "1234",
+			},
+		}))
+
+		By("updating the 2nd WorkloadEndpoint with egress gateway policy")
+		res.Spec.EgressGateway = &apiv3.EgressGatewaySpec{
+			Policy: "egw-policy1",
+			Gateway: &apiv3.EgressSpec{
+				Selector:    "red == 'green'",
+				MaxNextHops: 1,
+			},
+		}
+
+		kvps, err = up.Process(&model.KVPair{
+			Key:      v3WorkloadEndpointKey2,
+			Value:    res,
+			Revision: "1234",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(kvps).To(Equal([]*model.KVPair{
+			{
+				Key: v1WorkloadEndpointKey2,
+				Value: &model.WorkloadEndpoint{
+					State:      "active",
+					Name:       iface2,
+					Mac:        &mac2,
+					ProfileIDs: []string{"testProfile"},
+					IPv4Nets:   []cnet.IPNet{expectedIPv4Net},
+					IPv4NAT:    []model.IPNAT{expectedIPv4NAT},
+					Labels: map[string]string{
+						"testLabel":                      "label",
+						"projectcalico.org/namespace":    ns2,
+						"projectcalico.org/orchestrator": oid2,
+					},
+					IPv4Gateway: expectedIPv4Gateway,
+					IPv6Gateway: expectedIPv6Gateway,
+					Ports: []model.EndpointPort{
+						{
+							Name:     "portname",
+							Protocol: numorstring.ProtocolFromInt(uint8(30)),
+							Port:     uint16(8080),
+						},
+					},
+					AllowSpoofedSourcePrefixes: []cnet.IPNet{cnet.MustParseCIDR("8.8.8.8/32")},
+					EgressGatewayPolicy:        "egw-policy1",
 					DeletionTimestamp:          inSixtySeconds.Time,
 					DeletionGracePeriodSeconds: sixty,
 				},

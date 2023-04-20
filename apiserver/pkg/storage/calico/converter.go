@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package calico
 
@@ -215,6 +215,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		lcg := libcalicoObject.(*v3.ExternalNetwork)
 		aapi := &v3.ExternalNetwork{}
 		ExternalNetworkConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
+	case *v3.EgressGatewayPolicy:
+		lcg := libcalicoObject.(*v3.EgressGatewayPolicy)
+		aapi := &v3.EgressGatewayPolicy{}
+		EgressPolicyConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
 	default:
 		klog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))

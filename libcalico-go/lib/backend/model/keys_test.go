@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -566,6 +566,36 @@ var _ = DescribeTable(
 						Action:        apiv3.Reject,
 						CIDR:          "7000:4::0/64",
 						MatchOperator: apiv3.NotIn,
+					},
+				},
+			},
+		},
+	),
+	Entry(
+		"EgressGatewayPolicy",
+		ResourceKey{
+			Kind: apiv3.KindEgressGatewayPolicy,
+			Name: "my-egress-gateway-policy",
+		},
+		`{"spec":{"rules": [{"destination": {"cidr": "10.0.0.0/8"}}, {"destination": {"cidr": "0.0.0.0/0"}, "description": "to internet", "gateway": {"selector": "egress-code=='red'", "namespaceSelector": "default", "maxNextHops": 2}}]}}`,
+		&apiv3.EgressGatewayPolicy{
+			Spec: apiv3.EgressGatewayPolicySpec{
+				Rules: []apiv3.EgressGatewayRule{
+					{
+						Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+							CIDR: "10.0.0.0/8",
+						},
+					},
+					{
+						Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+							CIDR: "0.0.0.0/0",
+						},
+						Description: "to internet",
+						Gateway: &apiv3.EgressSpec{
+							Selector:          "egress-code=='red'",
+							NamespaceSelector: "default",
+							MaxNextHops:       2,
+						},
 					},
 				},
 			},

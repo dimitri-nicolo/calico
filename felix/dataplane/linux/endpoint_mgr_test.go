@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -799,6 +799,10 @@ func chainsForIfaces(ipVersion uint8,
 	return chains
 }
 
+const (
+	defaultDestv4 = "0.0.0.0/0"
+)
+
 type mockRouteTable struct {
 	index           int
 	kernelRoutes    map[string][]routetable.Target
@@ -856,7 +860,7 @@ func (t *mockRouteTable) Apply() error {
 }
 
 func (t *mockRouteTable) checkRoutes(ifaceName string, expected []routetable.Target) {
-	Expect(t.currentRoutes[ifaceName]).To(Equal(expected), "Expect route to exist in table %d. Current routes = %v", t.index, t.currentRoutes)
+	Expect(t.currentRoutes[ifaceName]).To(ConsistOf(expected), "Expect route to exist in table %d. Current routes = %v", t.index, t.currentRoutes)
 }
 
 func (t *mockRouteTable) checkL2Routes(ifaceName string, expected []routetable.L2Target) {

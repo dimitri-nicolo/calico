@@ -367,6 +367,170 @@ EOF
             # client_red all should send egress packets via gw, gw3, gw3_1
             self.check_ecmp_routes(client_red_all, servers, [gw.ip, gw3.ip, gw3_1.ip], allowed_untaken_count=1)
 
+    def test_dest_based_routing(self):
+
+        with DiagsCollector():
+
+            gw_red = self.create_egress_gateway_pod("kind-worker", "gw-red", self.egress_cidr)
+            gw_blue = self.create_egress_gateway_pod("kind-worker2", "gw-blue", self.egress_cidr, color="blue")
+            for g in [gw_blue, gw_red]:
+                g.wait_ready()
+            server1 = NetcatServerTCP(8089)
+            self.add_cleanup(server1.kill)
+            server1.wait_running()
+            server2 = NetcatServerTCP(8089)
+            self.add_cleanup(server2.kill)
+            server2.wait_running()
+            self.server_add_route(server1, gw_red)
+            self.server_add_route(server1, gw_blue)
+            self.server_add_route(server2, gw_red)
+            self.server_add_route(server2, gw_blue)
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: EgressGatewayPolicy
+metadata:
+  name: egw-policy
+spec:
+  rules:
+    - description: "Gateway blue"
+      destination:
+        cidr: %s/32
+      gateway:
+        namespaceSelector: "projectcalico.org/name == 'default'"
+        selector: "color == 'blue'"
+    - description: "Gateway red"
+      destination:
+        cidr: %s/32
+      gateway:
+        namespaceSelector: "projectcalico.org/name == 'default'"
+        selector: "color == 'red'"
+EOF
+""" % (server2.ip, server1.ip))
+            self.add_cleanup(lambda: calicoctl("delete egressgatewaypolicy egw-policy"))
+            
+            client = NetcatClientTCP("default", "test-blue", node="kind-worker3", annotations={
+                "egress.projectcalico.org/egressGatewayPolicy": "egw-policy",
+            })
+            self.add_cleanup(client.delete)
+            client.wait_ready()
+            self.validate_egress_ip(client, server1, gw_red.ip)
+            self.validate_egress_ip(client, server2, gw_blue.ip)
+
+            # change the egress gateway policy
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: EgressGatewayPolicy
+metadata:
+  name: egw-policy
+spec:
+  rules:
+    - description: "Gateway blue"
+      destination:
+        cidr: %s/32
+      gateway:
+        namespaceSelector: "projectcalico.org/name == 'default'"
+        selector: "color == 'blue'"
+    - description: "Gateway red"
+      destination:
+        cidr: %s/32
+      gateway:
+        namespaceSelector: "projectcalico.org/name == 'default'"
+        selector: "color == 'red'"
+EOF
+""" % (server1.ip, server2.ip))
+
+            self.validate_egress_ip(client, server2, gw_red.ip)
+            self.validate_egress_ip(client, server1, gw_blue.ip)
+
+
+    def test_dest_based_routing_without_gw(self):
+        with DiagsCollector():
+
+            gw_red = self.create_egress_gateway_pod("kind-worker", "gw-red", self.egress_cidr)
+            gw_red.wait_ready()
+            server1 = NetcatServerTCP(8089)
+            server2 = NetcatServerTCP(8089)
+            for s in [server1, server2]:
+                s.wait_running()
+                self.add_cleanup(s.kill)
+            client_node = "kind-worker3"
+            client = NetcatClientTCP("default", "test-blue", node=client_node, annotations={
+                "egress.projectcalico.org/egressGatewayPolicy": "egw-policy",
+            })
+            self.add_cleanup(client.delete)
+            client.wait_ready()
+            self.server_add_route(server1, gw_red)
+            self.server_add_route(server2, gw_red)
+            self.server_add_route(server2, client)
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: EgressGatewayPolicy
+metadata:
+  name: egw-policy
+spec:
+  rules:
+    - description: "No gateway"
+      destination:
+        cidr: %s/32
+    - description: "Gateway red"
+      destination:
+        cidr: %s/32
+      gateway:
+        namespaceSelector: "projectcalico.org/name == 'default'"
+        selector: "color == 'red'"
+EOF
+""" % (server2.ip, server1.ip))
+
+            self.add_cleanup(lambda: calicoctl("delete egressgatewaypolicy egw-policy"))
+            self.validate_node_name(client, server2, client_node)
+            self.validate_egress_ip(client, server1, gw_red.ip)
+
+
+    def test_egw_policy_override(self):
+        with DiagsCollector():
+
+            gw_red = self.create_egress_gateway_pod("kind-worker", "gw-red", self.egress_cidr)
+            gw_blue = self.create_egress_gateway_pod("kind-worker2", "gw-blue", self.egress_cidr, color="blue")
+            for g in [gw_blue, gw_red]:
+                g.wait_ready()
+            server = NetcatServerTCP(8089)
+            self.add_cleanup(server.kill)
+            server.wait_running()
+            self.server_add_route(server, gw_red)
+            self.server_add_route(server, gw_blue)
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: EgressGatewayPolicy
+metadata:
+  name: egw-policy
+spec:
+  rules:
+    - description: "Gateway blue"
+      destination:
+        cidr: %s/32
+      gateway:
+        namespaceSelector: "projectcalico.org/name == 'default'"
+        selector: "color == 'blue'"
+EOF
+""" % (server.ip))
+
+            client = NetcatClientTCP("default", "test-blue", node="kind-worker", annotations={
+                "egress.projectcalico.org/selector": "color == 'red'",
+                "egress.projectcalico.org/namespaceSelector": "all()",
+                "egress.projectcalico.org/egressGatewayPolicy": "egw-policy",
+            })
+            self.add_cleanup(client.delete)
+            client.wait_ready()
+            self.validate_egress_ip(client, server, gw_blue.ip)
+            calicoctl("delete egressgatewaypolicy egw-policy")
+            node_rules_and_tables = self.read_client_hops_for_node("kind-worker")
+            if client.ip in node_rules_and_tables:
+                rule_and_table = node_rules_and_tables[client.ip]
+                hops = rule_and_table['hops']
+                assert len(hops) == 0
+            else:
+                assert len(node_rules_and_tables) == 0
+
     def test_support_mode(self):
 
         with DiagsCollector():
@@ -1060,6 +1224,18 @@ EOF
 
         _log.info("--- Checking ecmp routes %s from client %s %s Done ---", gw_ips, client.name, client.ip)
         return expected_ips
+
+    def validate_node_name(self, client, server, expected_node_name):
+        """
+        validate server seen node name as source
+        """
+        _log.info("Client IP: %s Server IP: %s Port: %d", client.ip, server.ip, server.port)
+        retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+
+        # Check the node name accessing external server.
+        node_name = server.get_recent_node()
+        _log.info("Node name: %r", node_name)
+        self.assertIn(node_name, [expected_node_name])
 
     def validate_egress_ip(self, client, server, expected_egress_ip):
         """

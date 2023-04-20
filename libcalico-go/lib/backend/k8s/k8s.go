@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -345,6 +345,13 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		resources.NewExternalNetworkClient(cs, crdClientV1),
 	)
 
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindEgressGatewayPolicy,
+		resources.NewEgressPolicyClient(cs, crdClientV1),
+	)
+
 	if !ca.K8sUsePodCIDR {
 		// Using Calico IPAM - use CRDs to back IPAM resources.
 		log.Debug("Calico is configured to use calico-ipam")
@@ -643,6 +650,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindDeepPacketInspection,
 		apiv3.KindBGPFilter,
 		apiv3.KindExternalNetwork,
+		apiv3.KindEgressGatewayPolicy,
 	}
 	ctx := context.Background()
 	for _, k := range kinds {
@@ -804,6 +812,8 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 					&apiv3.BGPFilterList{},
 					&apiv3.ExternalNetwork{},
 					&apiv3.ExternalNetworkList{},
+					&apiv3.EgressGatewayPolicy{},
+					&apiv3.EgressGatewayPolicyList{},
 				)
 				return nil
 			})

@@ -755,8 +755,8 @@ func (in *WorkloadEndpointSpec) DeepCopyInto(out *WorkloadEndpointSpec) {
 	}
 	if in.EgressGateway != nil {
 		in, out := &in.EgressGateway, &out.EgressGateway
-		*out = new(projectcalicov3.EgressSpec)
-		**out = **in
+		*out = new(projectcalicov3.EgressGatewaySpec)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.ExternalNetworkNames != nil {
 		in, out := &in.ExternalNetworkNames, &out.ExternalNetworkNames

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 
 package calc_test
 
@@ -1135,6 +1135,7 @@ var (
 	nowTime               = time.Now()
 	inSixtySecsTime       = nowTime.Add(time.Second * 60)
 	egressSelector        = "egress-provider == 'true'"
+	egressSelector1       = "egress-provider == 'not-sure'"
 	egressSelectorSim     = "egress-provider in {'true', 'not-sure'}"
 	egressProfileSelector = "(projectcalico.org/namespace == 'egress') && (egress-provider == 'true')"
 	gatewayKey            = WorkloadEndpointKey{
@@ -1155,6 +1156,12 @@ var (
 		EndpointID:     "ep1",
 		OrchestratorID: "orch",
 	}
+	gatewayKey3 = WorkloadEndpointKey{
+		Hostname:       remoteHostname,
+		WorkloadID:     "gw3",
+		EndpointID:     "ep1",
+		OrchestratorID: "orch",
+	}
 	gatewayEndpoint = &WorkloadEndpoint{
 		Name:     "gw1",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.1/32")},
@@ -1169,6 +1176,88 @@ var (
 		Labels: map[string]string{
 			"egress-provider":             "true",
 			"projectcalico.org/namespace": "egress",
+		},
+	}
+	gatewayEndpoint3 = &WorkloadEndpoint{
+		Name:     "gw3",
+		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.10/32")},
+		Labels: map[string]string{
+			"egress-provider":             "not-sure",
+			"projectcalico.org/namespace": "egress",
+		},
+	}
+	egressGatewayPolicy1    = "egw-policy1"
+	egressGatewayPolicyKey1 = ResourceKey{Name: "egw-policy1", Kind: apiv3.KindEgressGatewayPolicy}
+	egressGatewayPolicyVal1 = &apiv3.EgressGatewayPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "egw-policy1",
+		},
+		Spec: apiv3.EgressGatewayPolicySpec{
+			Rules: []apiv3.EgressGatewayRule{
+				{
+					Gateway: &apiv3.EgressSpec{
+						Selector:          egressSelector,
+						NamespaceSelector: "egress",
+					},
+				},
+				{
+					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+						CIDR: "10.0.0.0/8",
+					},
+					Gateway: &apiv3.EgressSpec{
+						Selector:          egressSelector1,
+						NamespaceSelector: "egress",
+					},
+				},
+				{
+					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+						CIDR: "11.0.0.0/8",
+					},
+				},
+			},
+		},
+	}
+	egressGatewayPolicyVal2 = &apiv3.EgressGatewayPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "egw-policy1",
+		},
+		Spec: apiv3.EgressGatewayPolicySpec{
+			Rules: []apiv3.EgressGatewayRule{
+				{
+					Gateway: &apiv3.EgressSpec{
+						Selector:          egressSelector1,
+						NamespaceSelector: "egress",
+					},
+				},
+				{
+					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+						CIDR: "10.0.0.0/8",
+					},
+					Gateway: &apiv3.EgressSpec{
+						Selector:          egressSelector,
+						NamespaceSelector: "egress",
+					},
+				},
+				{
+					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+						CIDR: "13.0.0.0/8",
+					},
+					Gateway: &apiv3.EgressSpec{
+						Selector:          egressSelectorSim,
+						NamespaceSelector: "egress",
+					},
+				},
+				{
+					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+						CIDR: "11.0.0.0/8",
+					},
+				},
+				{
+					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
+						CIDR: "12.0.0.0/8",
+					},
+				},
+			},
 		},
 	}
 
@@ -1201,12 +1290,173 @@ var (
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
 		calc.EndpointEgressData{
-			EgressIPSetID: egressSelectorID(egressSelector),
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelector),
+				},
+			},
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
 		egressActiveMemberStr("137.0.0.1/32"),
 	},
 	).withName("endpointWithOwnEgressGateway")
+
+	endpointWithNoneExistingEgressGatewayPolicy = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: endpointWithOwnEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:                "wep1o",
+				EgressSelector:      egressSelector,
+				EgressGatewayPolicy: egressGatewayPolicy1,
+			},
+		},
+		KVPair{
+			Key:   gatewayKey,
+			Value: gatewayEndpoint,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey,
+			Endpoint: gatewayEndpoint,
+		},
+	).withEndpoint(
+		"orch/wep1o/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/wep1o/ep1",
+		calc.EndpointEgressData{
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID("!all()"),
+				},
+			},
+		},
+	).withIPSet(egressSelectorID("!all()"), []string{}).withName("endpointWithNoneExistingEgressGatewayPolicy")
+
+	endpointWithDefinedEgressGatewayPolicy = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: endpointWithOwnEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:                "wep1o",
+				EgressGatewayPolicy: egressGatewayPolicy1,
+			},
+		},
+		KVPair{
+			Key:   gatewayKey,
+			Value: gatewayEndpoint,
+		},
+		KVPair{
+			Key:   gatewayKey3,
+			Value: gatewayEndpoint3,
+		},
+		KVPair{
+			Key:   egressGatewayPolicyKey1,
+			Value: egressGatewayPolicyVal1,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey,
+			Endpoint: gatewayEndpoint,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey3,
+			Endpoint: gatewayEndpoint3,
+		},
+	).withEndpoint(
+		"orch/wep1o/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/wep1o/ep1",
+		calc.EndpointEgressData{
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelector),
+				},
+				{
+					CIDR:    "10.0.0.0/8",
+					IpSetID: egressSelectorID(egressSelector1),
+				},
+				{
+					CIDR: "11.0.0.0/8",
+				},
+			},
+		},
+	).withIPSet(egressSelectorID(egressSelector), []string{
+		egressActiveMemberStr("137.0.0.1/32"),
+	},
+	).withIPSet(egressSelectorID(egressSelector1), []string{
+		egressActiveMemberStr("137.0.0.10/32"),
+	},
+	).withName("endpointWithDefinedEgressGatewayPolicy")
+
+	endpointWithDifferentGatewayPolicy = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: endpointWithOwnEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:                "wep1o",
+				EgressGatewayPolicy: egressGatewayPolicy1,
+			},
+		},
+		KVPair{
+			Key:   gatewayKey,
+			Value: gatewayEndpoint,
+		},
+		KVPair{
+			Key:   gatewayKey3,
+			Value: gatewayEndpoint3,
+		},
+		KVPair{
+			Key:   egressGatewayPolicyKey1,
+			Value: egressGatewayPolicyVal2,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey,
+			Endpoint: gatewayEndpoint,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey3,
+			Endpoint: gatewayEndpoint3,
+		},
+	).withEndpoint(
+		"orch/wep1o/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/wep1o/ep1",
+		calc.EndpointEgressData{
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelector1),
+				},
+				{
+					CIDR:    "10.0.0.0/8",
+					IpSetID: egressSelectorID(egressSelector),
+				},
+				{
+					CIDR:    "13.0.0.0/8",
+					IpSetID: egressSelectorID(egressSelectorSim),
+				},
+				{
+					CIDR: "11.0.0.0/8",
+				},
+				{
+					CIDR: "12.0.0.0/8",
+				},
+			},
+		},
+	).withIPSet(egressSelectorID(egressSelector), []string{
+		egressActiveMemberStr("137.0.0.1/32"),
+	},
+	).withIPSet(egressSelectorID(egressSelector1), []string{
+		egressActiveMemberStr("137.0.0.10/32"),
+	},
+	).withIPSet(egressSelectorID(egressSelectorSim), []string{
+		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.10/32"),
+	},
+	).withName("endpointWithDifferentEgressGatewayPolicy")
 
 	endpointWithOwnLocalEgressGateway = initialisedStore.withKVUpdates(
 		KVPair{
@@ -1234,7 +1484,11 @@ var (
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
 		calc.EndpointEgressData{
-			EgressIPSetID: egressSelectorID(egressSelector),
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelector),
+				},
+			},
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
 		egressActiveMemberStr("137.0.0.1/32"),
@@ -1247,6 +1501,73 @@ var (
 			LocalWorkload: true,
 		},
 	).withName("endpointWithOwnLocalEgressGateway")
+
+	endpointWithOwnLocalEgressGatewayWithEGWPolicy = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: endpointWithOwnEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:                "wep1o",
+				EgressGatewayPolicy: egressGatewayPolicy1,
+			},
+		},
+		KVPair{
+			Key:   gatewayKeyLocal,
+			Value: gatewayEndpoint,
+		},
+		KVPair{
+			Key:   gatewayKey3,
+			Value: gatewayEndpoint3,
+		},
+		KVPair{
+			Key:   egressGatewayPolicyKey1,
+			Value: egressGatewayPolicyVal1,
+		},
+	).withEndpoint(
+		"orch/gw1/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/gw1/ep1",
+		calc.EndpointEgressData{
+			IsEgressGateway: true,
+		},
+	).withEndpoint(
+		"orch/wep1o/ep1",
+		[]mock.TierInfo{},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey3,
+			Endpoint: gatewayEndpoint3,
+		},
+	).withEndpointEgressData(
+		"orch/wep1o/ep1",
+		calc.EndpointEgressData{
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelector),
+				},
+				{
+					CIDR:    "10.0.0.0/8",
+					IpSetID: egressSelectorID(egressSelector1),
+				},
+				{
+					CIDR: "11.0.0.0/8",
+				},
+			},
+		},
+	).withIPSet(egressSelectorID(egressSelector), []string{
+		egressActiveMemberStr("137.0.0.1/32"),
+	},
+	).withIPSet(egressSelectorID(egressSelector1), []string{
+		egressActiveMemberStr("137.0.0.10/32"),
+	},
+	).withRoutes(
+		proto.RouteUpdate{
+			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "137.0.0.1/32",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+	).withName("endpointWithOwnLocalEgressGatewayWithEGWPolicy")
 
 	endpointWithProfileEgressGatewayID = WorkloadEndpointKey{
 		Hostname:       localHostname,
@@ -1262,8 +1583,10 @@ var (
 					Name: "egress",
 				},
 				Spec: apiv3.ProfileSpec{
-					EgressGateway: &apiv3.EgressSpec{
-						Selector: "egress-provider == 'true'",
+					EgressGateway: &apiv3.EgressGatewaySpec{
+						Gateway: &apiv3.EgressSpec{
+							Selector: "egress-provider == 'true'",
+						},
 					},
 				},
 			},
@@ -1290,7 +1613,11 @@ var (
 	).withEndpointEgressData(
 		"orch/wep1p/ep1",
 		calc.EndpointEgressData{
-			EgressIPSetID: egressSelectorID(egressProfileSelector),
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressProfileSelector),
+				},
+			},
 		},
 	).withIPSet(egressSelectorID(egressProfileSelector), []string{
 		egressActiveMemberStr("137.0.0.1/32"),
@@ -1298,6 +1625,130 @@ var (
 	).withActiveProfiles(
 		proto.ProfileID{Name: "egress"},
 	).withName("endpointWithProfileEgressGateway")
+
+	endpointWithProfileWithNoneExistingEgressGatewayPolicy = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: &apiv3.Profile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "egress",
+				},
+				Spec: apiv3.ProfileSpec{
+					EgressGateway: &apiv3.EgressGatewaySpec{
+						Policy: egressGatewayPolicy1,
+						Gateway: &apiv3.EgressSpec{
+							Selector: "egress-provider == 'true'",
+						},
+					},
+				},
+			},
+		},
+		KVPair{
+			Key: endpointWithProfileEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:       "wep1p",
+				ProfileIDs: []string{"egress"},
+			},
+		},
+		KVPair{
+			Key:   gatewayKey,
+			Value: gatewayEndpoint,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey,
+			Endpoint: gatewayEndpoint,
+		},
+	).withEndpoint(
+		"orch/wep1p/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/wep1p/ep1",
+		calc.EndpointEgressData{
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID("!all()"),
+				},
+			},
+		},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "egress"},
+	).withIPSet(egressSelectorID("!all()"), []string{}).withName("endpointWithProfileWithNoneExistingEgressGatewayPolicy")
+
+	endpointWithProfileWithEgressGatewayPolicy = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: &apiv3.Profile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "egress",
+				},
+				Spec: apiv3.ProfileSpec{
+					EgressGateway: &apiv3.EgressGatewaySpec{
+						Policy: egressGatewayPolicy1,
+						Gateway: &apiv3.EgressSpec{
+							Selector: "egress-provider == 'true'",
+						},
+					},
+				},
+			},
+		},
+		KVPair{
+			Key: endpointWithProfileEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:       "wep1p",
+				ProfileIDs: []string{"egress"},
+			},
+		},
+		KVPair{
+			Key:   egressGatewayPolicyKey1,
+			Value: egressGatewayPolicyVal1,
+		},
+		KVPair{
+			Key:   gatewayKey3,
+			Value: gatewayEndpoint3,
+		},
+		KVPair{
+			Key:   gatewayKey,
+			Value: gatewayEndpoint,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey3,
+			Endpoint: gatewayEndpoint3,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey,
+			Endpoint: gatewayEndpoint,
+		},
+	).withEndpoint(
+		"orch/wep1p/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/wep1p/ep1",
+		calc.EndpointEgressData{
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelector),
+				},
+				{
+					CIDR:    "10.0.0.0/8",
+					IpSetID: egressSelectorID(egressSelector1),
+				},
+				{
+					CIDR: "11.0.0.0/8",
+				},
+			},
+		},
+	).withIPSet(egressSelectorID(egressSelector1), []string{
+		egressActiveMemberStr("137.0.0.10/32"),
+	},
+	).withIPSet(egressSelectorID(egressSelector), []string{
+		egressActiveMemberStr("137.0.0.1/32"),
+	},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "egress"},
+	).withName("endpointWithProfileWithEgressGatewayPolicy")
 
 	endpointWithProfileLocalEgressGateway = initialisedStore.withKVUpdates(
 		KVPair{
@@ -1307,8 +1758,10 @@ var (
 					Name: "egress",
 				},
 				Spec: apiv3.ProfileSpec{
-					EgressGateway: &apiv3.EgressSpec{
-						Selector: "egress-provider == 'true'",
+					EgressGateway: &apiv3.EgressGatewaySpec{
+						Gateway: &apiv3.EgressSpec{
+							Selector: "egress-provider == 'true'",
+						},
 					},
 				},
 			},
@@ -1338,7 +1791,11 @@ var (
 	).withEndpointEgressData(
 		"orch/wep1p/ep1",
 		calc.EndpointEgressData{
-			EgressIPSetID: egressSelectorID(egressProfileSelector),
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressProfileSelector),
+				},
+			},
 		},
 	).withIPSet(egressSelectorID(egressProfileSelector), []string{
 		egressActiveMemberStr("137.0.0.1/32"),
@@ -1353,6 +1810,88 @@ var (
 			LocalWorkload: true,
 		},
 	).withName("endpointWithProfileLocalEgressGateway")
+
+	endpointWithProfileLocalEgressGatewayWithEGWPolicy = initialisedStore.withKVUpdates(
+		KVPair{
+			Key:   egressGatewayPolicyKey1,
+			Value: egressGatewayPolicyVal1,
+		},
+		KVPair{
+			Key: ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: &apiv3.Profile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "egress",
+				},
+				Spec: apiv3.ProfileSpec{
+					EgressGateway: &apiv3.EgressGatewaySpec{
+						Policy: egressGatewayPolicy1,
+					},
+				},
+			},
+		},
+		KVPair{
+			Key: endpointWithProfileEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:       "wep1p",
+				ProfileIDs: []string{"egress"},
+			},
+		},
+		KVPair{
+			Key:   gatewayKeyLocal,
+			Value: gatewayEndpoint,
+		},
+		KVPair{
+			Key:   gatewayKey3,
+			Value: gatewayEndpoint3,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey3,
+			Endpoint: gatewayEndpoint3,
+		},
+	).withEndpoint(
+		"orch/gw1/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/gw1/ep1",
+		calc.EndpointEgressData{
+			IsEgressGateway: true,
+		},
+	).withEndpoint(
+		"orch/wep1p/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/wep1p/ep1",
+		calc.EndpointEgressData{
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelector),
+				},
+				{
+					CIDR:    "10.0.0.0/8",
+					IpSetID: egressSelectorID(egressSelector1),
+				},
+				{
+					CIDR: "11.0.0.0/8",
+				},
+			},
+		},
+	).withIPSet(egressSelectorID(egressSelector), []string{
+		egressActiveMemberStr("137.0.0.1/32"),
+	},
+	).withIPSet(egressSelectorID(egressSelector1), []string{
+		egressActiveMemberStr("137.0.0.10/32"),
+	},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "egress"},
+	).withRoutes(
+		proto.RouteUpdate{
+			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "137.0.0.1/32",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+	).withName("endpointWithProfileLocalEgressGatewayWithEGWPolicy")
 
 	endpointWithoutOwnEgressGateway = initialisedStore.withKVUpdates(
 		KVPair{
@@ -1438,7 +1977,11 @@ var (
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
 		calc.EndpointEgressData{
-			EgressIPSetID: egressSelectorID(egressSelector),
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelector),
+				},
+			},
 		},
 	).withEndpoint(
 		"orch/wep1o2/ep1",
@@ -1446,7 +1989,11 @@ var (
 	).withEndpointEgressData(
 		"orch/wep1o2/ep1",
 		calc.EndpointEgressData{
-			EgressIPSetID: egressSelectorID(egressSelector),
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelector),
+				},
+			},
 		},
 	).withEndpoint(
 		"orch/gw1/ep1",
@@ -1467,6 +2014,104 @@ var (
 			LocalWorkload: true,
 		},
 	).withName("twoRemoteEpsSameEgressSelectorLocalGateway")
+
+	twoRemoteEpsSameEgressGatewayPolicyLocalGateway = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: endpointWithOwnEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:                "wep1o",
+				EgressGatewayPolicy: egressGatewayPolicy1,
+			},
+		},
+		KVPair{
+			Key: WorkloadEndpointKey{
+				Hostname:       localHostname,
+				WorkloadID:     "wep1o2",
+				EndpointID:     "ep1",
+				OrchestratorID: "orch",
+			},
+			Value: &WorkloadEndpoint{
+				Name:                "wep1o2",
+				EgressGatewayPolicy: egressGatewayPolicy1,
+			},
+		},
+		KVPair{
+			Key:   gatewayKey3,
+			Value: gatewayEndpoint3,
+		},
+		KVPair{
+			Key:   egressGatewayPolicyKey1,
+			Value: egressGatewayPolicyVal1,
+		},
+		KVPair{
+			Key:   gatewayKeyLocal,
+			Value: gatewayEndpoint,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey3,
+			Endpoint: gatewayEndpoint3,
+		},
+	).withEndpoint(
+		"orch/wep1o/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/wep1o/ep1",
+		calc.EndpointEgressData{
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelector),
+				},
+				{
+					CIDR:    "10.0.0.0/8",
+					IpSetID: egressSelectorID(egressSelector1),
+				},
+				{
+					CIDR: "11.0.0.0/8",
+				},
+			},
+		},
+	).withEndpoint(
+		"orch/wep1o2/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/wep1o2/ep1",
+		calc.EndpointEgressData{
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelector),
+				},
+				{
+					CIDR:    "10.0.0.0/8",
+					IpSetID: egressSelectorID(egressSelector1),
+				},
+				{
+					CIDR: "11.0.0.0/8",
+				},
+			},
+		},
+	).withEndpoint(
+		"orch/gw1/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/gw1/ep1",
+		calc.EndpointEgressData{
+			IsEgressGateway: true,
+		},
+	).withIPSet(egressSelectorID(egressSelector), []string{
+		egressActiveMemberStr("137.0.0.1/32"),
+	},
+	).withIPSet(egressSelectorID(egressSelector1), []string{
+		egressActiveMemberStr("137.0.0.10/32"),
+	},
+	).withRoutes(
+		proto.RouteUpdate{
+			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "137.0.0.1/32",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+	).withName("twoRemoteEpsSameEgressGatewayPolicyLocalGateway")
 
 	twoRemoteEpsSimilarEgressSelectorLocalGateway = initialisedStore.withKVUpdates(
 		KVPair{
@@ -1498,7 +2143,11 @@ var (
 	).withEndpointEgressData(
 		"orch/wep1o/ep1",
 		calc.EndpointEgressData{
-			EgressIPSetID: egressSelectorID(egressSelectorSim),
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelectorSim),
+				},
+			},
 		},
 	).withEndpoint(
 		"orch/wep1o2/ep1",
@@ -1506,7 +2155,11 @@ var (
 	).withEndpointEgressData(
 		"orch/wep1o2/ep1",
 		calc.EndpointEgressData{
-			EgressIPSetID: egressSelectorID(egressSelector),
+			EgressGatewayRules: []calc.EpEgressData{
+				{
+					IpSetID: egressSelectorID(egressSelector),
+				},
+			},
 		},
 	).withEndpoint(
 		"orch/gw1/ep1",
@@ -1624,7 +2277,11 @@ var (
 		).withEndpointEgressData(
 			"orch/wep1o/ep1",
 			calc.EndpointEgressData{
-				EgressIPSetID: egressSelectorID(egressSelector),
+				EgressGatewayRules: []calc.EpEgressData{
+					{
+						IpSetID: egressSelectorID(egressSelector),
+					},
+				},
 			},
 		).withIPSet(egressSelectorID(egressSelector), []string{
 			ipSetMemberStr,
@@ -1664,7 +2321,11 @@ var (
 		).withEndpointEgressData(
 			"orch/wep1o/ep1",
 			calc.EndpointEgressData{
-				EgressIPSetID: egressSelectorID(egressSelector),
+				EgressGatewayRules: []calc.EpEgressData{
+					{
+						IpSetID: egressSelectorID(egressSelector),
+					},
+				},
 			},
 		).withIPSet(egressSelectorID(egressSelector), []string{
 			ipSetMemberStr,
@@ -1737,8 +2398,12 @@ var (
 		).withEndpointEgressData(
 			"orch/wep1o/ep1",
 			calc.EndpointEgressData{
-				EgressIPSetID: egressSelectorID(egressSelector),
-				MaxNextHops:   maxNextHops,
+				EgressGatewayRules: []calc.EpEgressData{
+					{
+						IpSetID:     egressSelectorID(egressSelector),
+						MaxNextHops: maxNextHops,
+					},
+				},
 			},
 		).withIPSet(egressSelectorID(egressSelector), []string{
 			egressActiveMemberStr("137.0.0.1/32"),
@@ -1762,9 +2427,11 @@ var (
 						Name: "egress",
 					},
 					Spec: apiv3.ProfileSpec{
-						EgressGateway: &apiv3.EgressSpec{
-							Selector:    "egress-provider == 'true'",
-							MaxNextHops: maxNextHops,
+						EgressGateway: &apiv3.EgressGatewaySpec{
+							Gateway: &apiv3.EgressSpec{
+								Selector:    "egress-provider == 'true'",
+								MaxNextHops: maxNextHops,
+							},
 						},
 					},
 				},
@@ -1794,8 +2461,12 @@ var (
 		).withEndpointEgressData(
 			"orch/wep1p/ep1",
 			calc.EndpointEgressData{
-				EgressIPSetID: egressSelectorID(egressProfileSelector),
-				MaxNextHops:   maxNextHops,
+				EgressGatewayRules: []calc.EpEgressData{
+					{
+						IpSetID:     egressSelectorID(egressProfileSelector),
+						MaxNextHops: maxNextHops,
+					},
+				},
 			},
 		).withIPSet(egressSelectorID(egressProfileSelector), []string{
 			egressActiveMemberStr("137.0.0.1/32"),

@@ -3498,7 +3498,7 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 					"egressGateway": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Egress control.",
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec"),
+							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewaySpec"),
 						},
 					},
 					"externalNetworkNames": {
@@ -3520,7 +3520,7 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.IPNAT", "github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointPort", "github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec"},
+			"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.IPNAT", "github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointPort", "github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewaySpec"},
 	}
 }
 

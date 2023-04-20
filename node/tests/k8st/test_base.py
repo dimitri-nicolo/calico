@@ -664,6 +664,19 @@ class NetcatServerTCP(Container):
         super(NetcatServerTCP, self).__init__("subfuzion/netcat", "-v -l -k -p %d" % port, "--privileged")
         self.port = port
 
+    def get_recent_node(self):
+        node = None
+        for attempt in range(3):
+            for line in self.logs().split('\n'):
+                m = re.match(r"Connection from ([a-z]+\-[a-z0-9]+)\.kind [0-9]+ received", line)
+                if m:
+                    node = m.group(1)
+            if node is not None:
+                return node
+            else:
+                time.sleep(1)
+        assert False, "Couldn't find a recent node name in the logs."
+
     def get_recent_client_ip(self):
         ip = None
         for attempt in range(3):

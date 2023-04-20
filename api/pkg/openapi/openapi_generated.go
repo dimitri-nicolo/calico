@@ -89,6 +89,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DeepPacketInspectionSpec":                 schema_pkg_apis_projectcalico_v3_DeepPacketInspectionSpec(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DeepPacketInspectionStatus":               schema_pkg_apis_projectcalico_v3_DeepPacketInspectionStatus(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DetectorParams":                           schema_pkg_apis_projectcalico_v3_DetectorParams(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayPolicy":                      schema_pkg_apis_projectcalico_v3_EgressGatewayPolicy(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayPolicyDestinationSpec":       schema_pkg_apis_projectcalico_v3_EgressGatewayPolicyDestinationSpec(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayPolicyList":                  schema_pkg_apis_projectcalico_v3_EgressGatewayPolicyList(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayPolicySpec":                  schema_pkg_apis_projectcalico_v3_EgressGatewayPolicySpec(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayRule":                        schema_pkg_apis_projectcalico_v3_EgressGatewayRule(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewaySpec":                        schema_pkg_apis_projectcalico_v3_EgressGatewaySpec(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec":                               schema_pkg_apis_projectcalico_v3_EgressSpec(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.EndpointPort":                             schema_pkg_apis_projectcalico_v3_EndpointPort(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.EndpointsReportEndpoint":                  schema_pkg_apis_projectcalico_v3_EndpointsReportEndpoint(ref),
@@ -3766,29 +3772,234 @@ func schema_pkg_apis_projectcalico_v3_DetectorParams(ref common.ReferenceCallbac
 	}
 }
 
-func schema_pkg_apis_projectcalico_v3_EgressSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_pkg_apis_projectcalico_v3_EgressGatewayPolicy(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayPolicySpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayPolicySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_EgressGatewayPolicyDestinationSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "DestinationSpec define a destination network that can be reached via an egress gateway",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"cidr": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The destination network CIDR.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"cidr"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_EgressGatewayPolicyList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "EgressGatewayPolicyList is a list of EgressGatewayPolicy resources.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayPolicy"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_EgressGatewayPolicySpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "EgressGatewayPolicySpec contains the egress policy rules for each destination network",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"rules": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The ordered set of Egress Gateway Policies to define how traffic exit a cluster",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayRule"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"rules"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayRule"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_EgressGatewayRule(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "EgressGatewayRule defines an Egress Gateway to reach a destination network",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"destination": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The destination network that can be reached via egress gateway. If no destination is set, the default route, 0.0.0.0/0, is used instead.",
+							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayPolicyDestinationSpec"),
+						},
+					},
+					"description": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The description of the EgressGatewayPolicy rule.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"gateway": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Gateway specifies the egress gateway that should be used for the specified destination. If no gateway is set then the destination is routed normally rather than via an egress gateway.",
+							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewayPolicyDestinationSpec", "github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_EgressGatewaySpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "EgressGatewaySpec allows to define an egress gateway directly, or to refer to an egress gateway policy resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"policy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Only one of these may be set. Reference to an EgressGatewayPolicy to use.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"gateway": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Reference to a specific EgressGateway to use.",
+							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_EgressSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "EgressSpec defines which egress gateway should be used.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
 					"namespaceSelector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "NamespaceSelector",
+							Description: "NamespaceSelector selects one or more namespaces containing an egress gateway deployment.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"selector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Selector",
+							Description: "Selector is an expression used to pick out the egress gateway that the destination can be reached via.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"maxNextHops": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxNextHops",
+							Description: "MaxNextHops specifies the maximum number of egress gateway replicas from the selected deployment that a pod should depend on.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -10124,14 +10335,14 @@ func schema_pkg_apis_projectcalico_v3_ProfileSpec(ref common.ReferenceCallback) 
 					"egressGateway": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Egress control.",
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec"),
+							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewaySpec"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec", "github.com/tigera/api/pkg/apis/projectcalico/v3.Rule"},
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewaySpec", "github.com/tigera/api/pkg/apis/projectcalico/v3.Rule"},
 	}
 }
 

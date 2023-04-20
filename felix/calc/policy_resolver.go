@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ type PolicyResolver struct {
 	allPolicies           map[model.PolicyKey]*model.Policy
 	sortedTierData        []*TierInfo
 	endpoints             map[model.Key]interface{}
-	endpointEgressData    map[model.WorkloadEndpointKey]epEgressData
+	endpointEgressData    map[model.WorkloadEndpointKey][]EpEgressData
 	endpointGatewayUsage  map[model.WorkloadEndpointKey]int
 	dirtyEndpoints        set.Set[any] /* FIXME model.WorkloadEndpointKey or model.HostEndpointKey */
 	policySorter          *PolicySorter
@@ -73,7 +73,7 @@ func NewPolicyResolver() *PolicyResolver {
 		endpointIDToPolicyIDs: multidict.NewIfaceToIface(),
 		allPolicies:           map[model.PolicyKey]*model.Policy{},
 		endpoints:             make(map[model.Key]interface{}),
-		endpointEgressData:    make(map[model.WorkloadEndpointKey]epEgressData),
+		endpointEgressData:    make(map[model.WorkloadEndpointKey][]EpEgressData),
 		endpointGatewayUsage:  make(map[model.WorkloadEndpointKey]int),
 		dirtyEndpoints:        set.NewBoxed[any](),
 		policySorter:          NewPolicySorter(),
@@ -249,10 +249,9 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 		}
 	}
 
-	egressData := EndpointEgressData{}
+	var egressData EndpointEgressData
 	if key, ok := endpointID.(model.WorkloadEndpointKey); ok {
-		egressData.EgressIPSetID = pr.endpointEgressData[key].ipSetID
-		egressData.MaxNextHops = pr.endpointEgressData[key].maxNextHops
+		egressData.EgressGatewayRules = pr.endpointEgressData[key]
 		egressData.IsEgressGateway = pr.endpointGatewayUsage[key] > 0
 		egressData.HealthPort = findHealthPort(endpoint.(*model.WorkloadEndpoint))
 	}
@@ -274,8 +273,8 @@ func findHealthPort(endpoint *model.WorkloadEndpoint) uint16 {
 	return 0
 }
 
-func (pr *PolicyResolver) OnEndpointEgressDataUpdate(key model.WorkloadEndpointKey, egressData epEgressData) {
-	if egressData.ipSetID != "" {
+func (pr *PolicyResolver) OnEndpointEgressDataUpdate(key model.WorkloadEndpointKey, egressData []EpEgressData) {
+	if len(egressData) != 0 {
 		pr.endpointEgressData[key] = egressData
 	} else {
 		delete(pr.endpointEgressData, key)

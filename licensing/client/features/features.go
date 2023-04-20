@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 
 package features
 
@@ -101,6 +101,7 @@ var OpenSourceAPIs = set{
 	api.NewStagedGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String():    true,
 	api.NewExternalNetwork().GetObjectKind().GroupVersionKind().String():              true,
 	api.NewBGPFilter().GetObjectKind().GroupVersionKind().String():                    true,
+	api.NewEgressGatewayPolicy().GetObjectKind().GroupVersionKind().String():          true,
 }
 
 // EnterpriseAPIsToFeatureName maps calico enterprise APIs to feature names

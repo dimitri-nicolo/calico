@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package v3
 
 import (
 	"fmt"
+	"math"
 	"math/bits"
 	"net"
 	"reflect"
@@ -385,6 +386,7 @@ func init() {
 	registerStructValidator(validate, validateDeepPacketInspection, api.DeepPacketInspection{})
 	registerStructValidator(validate, validateBlockAffinitySpec, libapi.BlockAffinitySpec{})
 	registerStructValidator(validate, validateHealthTimeoutOverride, api.HealthTimeoutOverride{})
+	registerStructValidator(validate, validateEgressGatewayPolicy, api.EgressGatewayPolicySpec{})
 }
 
 // reason returns the provided error reason prefixed with an identifier that
@@ -1823,6 +1825,61 @@ func validateReachableByField(fl validator.FieldLevel) bool {
 		}
 	}
 	return true
+}
+
+// validateEgressGatewayPolicy validates an egress gateway policy.
+func validateEgressGatewayPolicy(structLevel validator.StructLevel) {
+	egwp := structLevel.Current().Interface().(api.EgressGatewayPolicySpec)
+
+	if len(egwp.Rules) == 0 {
+		structLevel.ReportError(reflect.ValueOf(egwp.Rules), "Rules", "",
+			reason("No egress gateway rule is specified."), "")
+	}
+
+	noOp := true
+	destinations := set.New[string]()
+	for _, r := range egwp.Rules {
+		if r.Destination != nil && r.Destination.CIDR != "" {
+			_, cidr, err := cnet.ParseCIDROrIP(r.Destination.CIDR)
+			if err != nil {
+				structLevel.ReportError(reflect.ValueOf(r.Destination.CIDR), "Destination", "",
+					reason("Invalid destination cidr specified."), "")
+			}
+			if cidr != nil {
+				exists := destinations.Contains(cidr.String())
+				if exists {
+					structLevel.ReportError(reflect.ValueOf(r.Destination.CIDR), "Destination", "",
+						reason("Duplicate destination cidr specified."), "")
+				}
+				destinations.Add(cidr.String())
+			}
+			noOp = false
+		}
+		if r.Gateway != nil {
+			if r.Gateway.NamespaceSelector == "" {
+				structLevel.ReportError(reflect.ValueOf(r.Gateway.NamespaceSelector), "NamespaceSelector", "",
+					reason("NamespaceSelector in a gateway in egress gateway policy cannot be empty."), "")
+			}
+			if r.Gateway.Selector == "" {
+				structLevel.ReportError(reflect.ValueOf(r.Gateway.Selector), "Selector", "",
+					reason("Selector in a gateway in egress gateway policy cannot be empty."), "")
+			}
+			if r.Gateway.MaxNextHops < 0 {
+				structLevel.ReportError(reflect.ValueOf(r.Gateway.MaxNextHops), "MaxNextHops", "",
+					reason("MaxNextHops in a gateway in egress gateway policy must be positive."), "")
+			}
+			if r.Gateway.MaxNextHops > math.MaxInt32 {
+				// egressMaxNextHops will be converted to an int32 in protobuf, so limit the range here to be a valid int32.
+				structLevel.ReportError(reflect.ValueOf(r.Gateway.MaxNextHops), "MaxNextHops", "",
+					reason("MaxNextHops in a gateway in egress gateway policy must be an int32 number."), "")
+			}
+			noOp = false
+		}
+	}
+	if noOp {
+		structLevel.ReportError(reflect.ValueOf(egwp.Rules), "Rules", "",
+			reason("No destination or gateway is set in any rule of the egress gateway policy."), "")
+	}
 }
 
 func validateEndpointPort(structLevel validator.StructLevel) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package node
 
@@ -246,6 +246,10 @@ func (f *FakeCalicoClient) CalicoNodeStatus() clientv3.CalicoNodeStatusInterface
 }
 
 func (f *FakeCalicoClient) ExternalNetworks() clientv3.ExternalNetworkInterface {
+	panic("not implemented")
+}
+
+func (f *FakeCalicoClient) EgressGatewayPolicy() clientv3.EgressGatewayPolicyInterface {
 	panic("not implemented")
 }
 

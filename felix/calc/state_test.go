@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -224,8 +224,7 @@ func (s State) withEndpointUntracked(id string, tiers, untrackedTiers, preDNATTi
 
 func (s State) withEndpointEgressData(id string, egressData calc.EndpointEgressData) State {
 	newState := s.Copy()
-	zeroData := calc.EndpointEgressData{}
-	if egressData != zeroData {
+	if !egressData.IsEmpty() {
 		newState.ExpectedEndpointEgressData[id] = egressData
 	} else {
 		delete(newState.ExpectedEndpointEgressData, id)

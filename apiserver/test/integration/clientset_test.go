@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -4471,6 +4471,117 @@ func testExternalNetworkClient(client calicoclient.Interface, name string) error
 	err = externalNetworkClient.Delete(ctx, externalNetwork.Name, metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("object should be deleted (%s)", err)
+	}
+
+	return nil
+}
+
+// TestEgressGatewayPolicyClient exercises the EgressGatewayPolicy client.
+func TestEgressGatewayPolicyClient(t *testing.T) {
+	const name = "test-egressgatewaypolicy"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &v3.EgressGatewayPolicy{}
+			}, false)
+			defer shutdownServer()
+			if err := testEgressGatewayPolicyClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-egressgatewaypolicy test failed")
+	}
+}
+
+func testEgressGatewayPolicyClient(client calicoclient.Interface, name string) error {
+	egressGWPolicyClient := client.ProjectcalicoV3().EgressGatewayPolicies()
+	egressRuleOnPrem := v3.EgressGatewayRule{
+		Destination: &v3.EgressGatewayPolicyDestinationSpec{
+			CIDR: "10.10.10.0/24",
+		},
+		Description: "A sample network",
+		Gateway: &v3.EgressSpec{
+			NamespaceSelector: "default",
+			Selector:          "egress-code == 'red'",
+			MaxNextHops:       2,
+		},
+	}
+	egressGWPolicy := &v3.EgressGatewayPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+
+		Spec: v3.EgressGatewayPolicySpec{
+			Rules: []v3.EgressGatewayRule{egressRuleOnPrem},
+		},
+	}
+	ctx := context.Background()
+
+	_, err := egressGWPolicyClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing EgressGatewayPolicies: %s", err)
+	}
+
+	egressGWPolicyNew, err := egressGWPolicyClient.Create(ctx, egressGWPolicy, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating the object '%v' (%v)", egressGWPolicy, err)
+	}
+
+	if egressGWPolicyNew.Name != egressGWPolicy.Name {
+		return fmt.Errorf("didn't get the same object back from the server \n%+v\n%+v", egressGWPolicy, egressGWPolicyNew)
+	}
+
+	if len(egressGWPolicyNew.Spec.Rules) != 1 || egressGWPolicyNew.Spec.Rules[0].Description != egressGWPolicy.Spec.Rules[0].Description {
+		return fmt.Errorf("didn't get the correct object back from the server \n%+v\n%+v", egressGWPolicy, egressGWPolicyNew)
+	}
+
+	egressGWPolicyNew, err = egressGWPolicyClient.Get(ctx, egressGWPolicy.Name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting object %s (%s)", egressGWPolicy.Name, err)
+	}
+
+	egressRuleInternet := v3.EgressGatewayRule{
+		Destination: &v3.EgressGatewayPolicyDestinationSpec{
+			CIDR: "0.0.0.0/0",
+		},
+		Description: "Internet access",
+		Gateway: &v3.EgressSpec{
+			NamespaceSelector: "default",
+			Selector:          "egress-code == 'blue'",
+		},
+	}
+	egressGWPolicyNew.Spec.Rules = []v3.EgressGatewayRule{egressRuleOnPrem, egressRuleInternet}
+
+	_, err = egressGWPolicyClient.Update(ctx, egressGWPolicyNew, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("error updating object %s (%s)", name, err)
+	}
+
+	egressGWPolicyUpdated, err := egressGWPolicyClient.Get(ctx, egressGWPolicy.Name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting object %s (%s)", egressGWPolicy.Name, err)
+	}
+
+	if len(egressGWPolicyUpdated.Spec.Rules) != 2 ||
+		egressGWPolicyUpdated.Spec.Rules[0].Description != egressGWPolicyNew.Spec.Rules[0].Description ||
+		egressGWPolicyUpdated.Spec.Rules[1].Description != egressGWPolicyNew.Spec.Rules[1].Description {
+		return fmt.Errorf("didn't get the correct object back from the server \n%+v\n%+v", egressGWPolicyUpdated, egressGWPolicyNew)
+	}
+
+	egressPolicyList, err := egressGWPolicyClient.List(ctx, metav1.ListOptions{})
+	if err != nil || len(egressPolicyList.Items) != 1 {
+		return fmt.Errorf("error listing EgressGatwayPolicies: %s\n%+v", err, egressPolicyList.Items)
+	}
+
+	err = egressGWPolicyClient.Delete(ctx, egressGWPolicy.Name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("object should be deleted (%s)", err)
+	}
+
+	egressPolicyList, err = egressGWPolicyClient.List(ctx, metav1.ListOptions{})
+	if err != nil || len(egressPolicyList.Items) != 0 {
+		return fmt.Errorf("error listing EgressGatwayPolicies: %s\n%+v", err, egressPolicyList.Items)
 	}
 
 	return nil

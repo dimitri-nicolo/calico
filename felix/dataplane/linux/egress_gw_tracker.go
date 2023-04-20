@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -153,6 +154,12 @@ func (m *EgressGWTracker) UpdatePollersGetAndClearDirtySetIDs() []string {
 	m.updatePollers(s)
 	m.dirtyEgressIPSet.Clear()
 	return s
+}
+
+func sortStringSet(s set.Set[string]) []string {
+	slice := s.Slice()
+	sort.Strings(slice)
+	return slice
 }
 
 func (m *EgressGWTracker) GatewaysByID(id string) (gatewaysByIP, bool) {
@@ -473,11 +480,10 @@ func (g gatewaysByIP) failedGateways() gatewaysByIP {
 	return failed
 }
 
-func (g gatewaysByIP) filteredByHopIPs(hopIPs []ip.Addr) gatewaysByIP {
+func (g gatewaysByIP) filteredByHopIPs(hopIPs set.Set[ip.Addr]) gatewaysByIP {
 	gws := make(gatewaysByIP)
-	hopIPsSet := set.FromArrayBoxed(hopIPs)
 	for _, m := range g {
-		if hopIPsSet.Contains(m.addr) {
+		if hopIPs.Contains(m.addr) {
 			gws[m.addr] = m
 		}
 	}
@@ -496,4 +502,11 @@ func (g gatewaysByIP) latestTerminatingGateway() *gateway {
 		}
 	}
 	return member
+}
+
+func (g gatewaysByIP) mergeWithAnother(gwsByIP gatewaysByIP) gatewaysByIP {
+	for ip, gw := range gwsByIP {
+		g[ip] = gw
+	}
+	return g
 }
