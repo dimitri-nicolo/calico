@@ -9388,6 +9388,8 @@ spec:
                               format: int32
                               type: integer
                           required:
+                          - height
+                          - width
                           - xPos
                           - yPos
                           type: object
