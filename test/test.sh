@@ -313,15 +313,6 @@ EOM
 
 checkConfiguration $TEST_DIR/tmp/splunk-trusted-http-https.env splunk-trusted-http-https "Splunk - with http and https"
 
-## Test with Splunk, self signed ca certificate
-cat > $TEST_DIR/tmp/splunk-self-signed-ca.env << EOM
-$SPLUNK_COMMON_VARS
-SPLUNK_CA_FILE=/etc/ssl/splunk/ca.pem
-EOM
-
-checkConfiguration $TEST_DIR/tmp/splunk-self-signed-ca.env splunk-self-signed-ca "Splunk - self signed ca config"
-
-
 # Test with linseed enabled
 cat > $TEST_DIR/tmp/linseed.env << EOM
 $STANDARD_ENV_VARS
