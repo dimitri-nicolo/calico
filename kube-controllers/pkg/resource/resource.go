@@ -35,6 +35,9 @@ const (
 	ManagedIACRAdaptorResourceName          = "tigera-image-assurance-cr-adaptor-api-access"
 	ManagementIACRAdaptorResourceNameFormat = "tigera-image-assurance-%s-cr-adaptor-api-access"
 
+	ManagedClusterScannerResourceName          = "tigera-image-assurance-cluster-scanner-api-access"
+	ManagementClusterScannerResourceNameFormat = "tigera-image-assurance-%s-cluster-scanner-api-access"
+
 	ImageAssuranceIDSControllerClusterRoleName         = "tigera-image-assurance-intrusion-detection-controller"
 	ImageAssuranceIDSControllerServiceAccountName      = "tigera-image-assurance-intrusion-detection-controller-api-access"
 	ImageAssuranceIDSControllerClusterRoleBindingName  = "tigera-image-assurance-intrusion-detection-controller-api-access"
