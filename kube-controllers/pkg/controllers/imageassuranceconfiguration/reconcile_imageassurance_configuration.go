@@ -358,8 +358,16 @@ func (c *reconciler) createNonExpiringTokenSecretForServiceAccount(secretName, s
 		Data: map[string][]byte{},
 	}
 
-	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
-		return err
+	// Check that the secret exists before updating as it seems like there's a resource version battle with k8s.
+	_, err := c.managementK8sCLI.CoreV1().Secrets(namespace).Get(context.Background(), secretName, metav1.GetOptions{})
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+
+		if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
+			return err
+		}
 	}
 
 	return nil
