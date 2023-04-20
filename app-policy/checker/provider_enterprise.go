@@ -80,7 +80,7 @@ func defaultWAFCheck(req *authz.CheckRequest) (*authz.CheckResponse, error) {
 	reqBody := req.GetAttributes().GetRequest().GetHttp().GetBody()
 
 	// WAF ModSecurity Process Http Request.
-	err := wafProcessHttpRequest(
+	err := WafProcessHttpRequest(
 		reqPath, reqMethod, reqProtocol, reqSourceHost,
 		reqSourcePort, reqDestinationHost, reqDestinationPort,
 		reqHost, reqHeaders, reqBody,
@@ -94,7 +94,7 @@ func defaultWAFCheck(req *authz.CheckRequest) (*authz.CheckResponse, error) {
 	return resp, nil
 }
 
-func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, clientPort uint32, serverHost string, serverPort uint32, destinationHost string, reqHeaders map[string]string, reqBody string) error {
+func WafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, clientPort uint32, serverHost string, serverPort uint32, destinationHost string, reqHeaders map[string]string, reqBody string) error {
 
 	// Use this as the correlationID.
 	id := waf.GenerateModSecurityID()
@@ -105,32 +105,36 @@ func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 	// Collect OWASP log information:
 	owaspLogInfo := waf.GetAndClearOwaspLogs(id)
 
-	// Log to Elasticsearch => Kibana.
-	if err != nil {
+	ruleInfo := strings.Join(owaspLogInfo, ", ")
+	wafLogger := waf.Logger.WithFields(log.Fields{
+		"path":     uri,
+		"method":   httpMethod,
+		"protocol": inputProtocol,
+		"source": log.Fields{
+			"ip":       clientHost,
+			"port_num": clientPort,
+			"hostname": "-",
+		},
+		"destination": log.Fields{
+			"ip":       serverHost,
+			"port_num": serverPort,
+			"hostname": destinationHost,
+		},
+		"rule_info": ruleInfo,
+	})
 
-		// Flatten out potential multiple OWASP log entries into comma-separated string.
-		ruleInfo := strings.Join(owaspLogInfo, ", ")
-		waf.Logger.WithFields(log.Fields{
-			"path":     uri,
-			"method":   httpMethod,
-			"protocol": inputProtocol,
-			"source": log.Fields{
-				"ip":       clientHost,
-				"port_num": clientPort,
-				"hostname": "-",
-			},
-			"destination": log.Fields{
-				"ip":       serverHost,
-				"port_num": serverPort,
-				"hostname": destinationHost,
-			},
-			"rule_info": ruleInfo,
-		}).Error("WAF check FAILED!")
-	} else {
-		prefix := waf.GetProcessHttpRequestPrefix(id)
-		for _, owaspLog := range owaspLogInfo {
-			log.Warnf("%s URL '%s' OWASP Warning'%s'", prefix, uri, owaspLog)
-		}
+	// Log to Elasticsearch => Kibana.
+	if err != nil { // request has been blocked
+		wafLogger.Error("WAF blocked the HTTP request")
+	} else if ruleInfo != "" { // pass-through with OWASP information
+		wafLogger.Error("WAF passed-through the HTTP request")
+	}
+
+	for _, owaspLog := range owaspLogInfo {
+		log.WithFields(log.Fields{
+			"id":  id,
+			"url": uri,
+		}).Warn(owaspLog)
 	}
 
 	return err

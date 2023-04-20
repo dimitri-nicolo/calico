@@ -42,7 +42,7 @@ func ensureLogfile() ([]io.Writer, error) {
 	return res, nil
 }
 
-func InitializeLogging() {
+func InitializeLogging(writers ...io.Writer) {
 	logrus.Info("WAF logging initialization beginning.")
 	defer logrus.Info("WAF logging initialization completed.")
 
@@ -51,11 +51,11 @@ func InitializeLogging() {
 		return
 	}
 
-	writers := []io.Writer{os.Stderr}
-	if extraWriters, err := ensureLogfile(); err != nil {
-		logrus.WithError(err).Error("failure with logging setup occurred. Stdout log only. Elasticsearch logs for WAF may be unavailable.")
+	writers = append(writers, os.Stderr)
+	if logFileWriter, err := ensureLogfile(); err != nil {
+		logrus.WithError(err).Warn("failure with logging setup occurred. Stdout log only. Elasticsearch logs for WAF may be unavailable.")
 	} else {
-		writers = append(writers, extraWriters...)
+		writers = append(writers, logFileWriter...)
 	}
 
 	Logger = logutils.NewRateLimitedLogger(logutils.OptLogger(

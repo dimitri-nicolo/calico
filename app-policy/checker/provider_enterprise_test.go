@@ -1,7 +1,9 @@
 package checker_test
 
 import (
+	"bytes"
 	"context"
+	"strings"
 	"testing"
 
 	"google.golang.org/genproto/googleapis/rpc/code"
@@ -12,6 +14,7 @@ import (
 	"github.com/projectcalico/calico/app-policy/checker"
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/statscache"
+	"github.com/projectcalico/calico/app-policy/waf"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/tproxydefs"
 )
@@ -126,4 +129,62 @@ T:
 		}
 	}
 
+}
+
+func TestWafProcessHttpRequestWithDenyModSecAction(t *testing.T) {
+	waf.Logger = nil // this is required to reconfigure the waf package logger :/
+	memoryLog := bytes.Buffer{}
+	waf.InitializeLogging(&memoryLog)
+	waf.Initialize("../test/waf_test_files/core-rules-deny")
+	defer waf.CleanupModSecurity()
+
+	err := checker.WafProcessHttpRequest(
+		"http://host//test/artists.php?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user",
+		"GET",
+		"HTTP",
+		"192.168.0.123",
+		12345,
+		"host",
+		80,
+		"host",
+		map[string]string{},
+		"",
+	)
+
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	if !strings.Contains(memoryLog.String(), `"msg":"WAF blocked the HTTP request"`) {
+		t.Error("Expected message in WAF Elasticsearch log not found!")
+	}
+}
+
+func TestWafProcessHttpRequestWithPassThroughModSecAction(t *testing.T) {
+	waf.Logger = nil // this is required to reconfigure the waf package logger :/
+	memoryLog := bytes.Buffer{}
+	waf.InitializeLogging(&memoryLog)
+	waf.Initialize("../test/waf_test_files/core-rules")
+	defer waf.CleanupModSecurity()
+
+	err := checker.WafProcessHttpRequest(
+		"http://host//test/artists.php?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user",
+		"GET",
+		"HTTP",
+		"192.168.0.123",
+		12345,
+		"host",
+		80,
+		"host",
+		map[string]string{},
+		"",
+	)
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if !strings.Contains(memoryLog.String(), `"msg":"WAF passed-through the HTTP request"`) {
+		t.Error("Expected message in WAF Elasticsearch log not found!")
+	}
 }
