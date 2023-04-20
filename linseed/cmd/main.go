@@ -180,6 +180,7 @@ func run() {
 		}
 		opts := []token.ControllerOption{
 			token.WithIssuer(token.LinseedIssuer),
+			token.WithIssuerName("tigera-linseed"),
 			token.WithUserInfos(users),
 			token.WithExpiry(24 * time.Hour),
 			token.WithClient(pc),
