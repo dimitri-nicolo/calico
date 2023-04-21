@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/SermoDigital/jose/jws"
-	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -367,7 +366,7 @@ func (c *controller) needsUpdate(log *logrus.Entry, cs kubernetes.Interface, nam
 	} else {
 		// Validate the token to make sure it was signed by us.
 		tokenBytes := []byte(cm.Data["token"])
-		_, err = jwtgo.ParseWithClaims(string(tokenBytes), &jwt.RegisteredClaims{}, func(token *jwtgo.Token) (interface{}, error) {
+		_, err = jwt.ParseWithClaims(string(tokenBytes), &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
 			return c.privateKey.Public(), nil
 		})
 		if err != nil {
@@ -428,7 +427,7 @@ func (c *controller) createToken(tenant, cluster string, user UserInfo) ([]byte,
 	return []byte(tokenString), err
 }
 
-func ParseClaims(claims jwtgo.Claims) *user.DefaultInfo {
+func ParseClaims(claims jwt.Claims) *user.DefaultInfo {
 	reg, ok := claims.(*jwt.RegisteredClaims)
 	if !ok {
 		logrus.WithField("claims", claims).Warn("given claims were not a RegisteredClaims")

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/SermoDigital/jose/jws"
-	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/golang-jwt/jwt/v4"
 	"gopkg.in/square/go-jose.v2"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -25,7 +24,7 @@ func NewLocalAuthenticator(iss string, key crypto.PublicKey, cp ClaimParser) Aut
 	}
 }
 
-type ClaimParser func(jwtgo.Claims) *user.DefaultInfo
+type ClaimParser func(jwt.Claims) *user.DefaultInfo
 
 type localAuthenticator struct {
 	issuer      string
@@ -59,7 +58,7 @@ func (a *localAuthenticator) Authenticate(r *http.Request) (user.Info, int, erro
 		return nil, 401, fmt.Errorf("token has an invalid signature")
 	}
 
-	parsedToken, err := jwtgo.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwtgo.Token) (interface{}, error) {
+	parsedToken, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return a.key, nil
 	})
 	if err != nil {
