@@ -149,11 +149,13 @@ func TestWAFLogBasic(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{}
 		_, err := b.Create(ctx, clusterInfo, []v1.WAFLog{})
 		require.Error(t, err)
+		require.ErrorContains(t, err, "no cluster ID")
 
 		params := &v1.WAFLogParams{}
 		results, err := b.List(ctx, clusterInfo, params)
 		require.Error(t, err)
 		require.Nil(t, results)
+		require.ErrorContains(t, err, "no cluster ID")
 	})
 
 	t.Run("bad startFrom on request", func(t *testing.T) {
@@ -346,8 +348,8 @@ func TestSorting(t *testing.T) {
 
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
-		t1 := time.Unix(100, 0)
-		t2 := time.Unix(500, 0)
+		t1 := time.Unix(100, 0).UTC()
+		t2 := time.Unix(500, 0).UTC()
 
 		log1 := v1.WAFLog{
 			Timestamp:   t1,
@@ -381,6 +383,12 @@ func TestSorting(t *testing.T) {
 
 		// Query for logs without sorting.
 		params := v1.WAFLogParams{}
+		params.Sort = []v1.SearchRequestSortBy{
+			{
+				Field:      "@timestamp",
+				Descending: false,
+			},
+		}
 		r, err := b.List(ctx, clusterInfo, &params)
 		require.NoError(t, err)
 		require.Len(t, r.Items, 2)
