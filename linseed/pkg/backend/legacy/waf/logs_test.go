@@ -258,7 +258,7 @@ func TestAggregations(t *testing.T) {
 				ips, ok := b.ValueCount("ips")
 				require.True(t, ok, "Bucket missing ips agg")
 				buckets := string(ips.Aggregations["buckets"])
-				require.Equal(t, "[{\"key\":\"1.2.3.4\",\"doc_count\":1}]", buckets)
+				require.Equal(t, `[{"key":"1.2.3.4","doc_count":1}]`, buckets)
 			}
 		})
 
@@ -335,7 +335,7 @@ func TestAggregations(t *testing.T) {
 			ips, ok := result.ValueCount("ips")
 			require.True(t, ok)
 			buckets := string(ips.Aggregations["buckets"])
-			require.Equal(t, "[{\"key\":\"1.2.3.4\",\"doc_count\":4}]", buckets)
+			require.Equal(t, `[{"key":"1.2.3.4","doc_count":4}]`, buckets)
 		})
 	}
 }
