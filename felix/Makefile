@@ -104,12 +104,10 @@ FV_SLOW_SPEC_THRESH=90
 #
 # We use -B to insert a build ID note into the executable, without which, the
 # RPM build tools complain.
-LDFLAGS=-ldflags "\
-	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
+LDFLAGS= -X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
 	-X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT) \
-	-B 0x$(BUILD_ID) \
-	-s -w"
+	-B 0x$(BUILD_ID)
 
 .PHONY: clean
 clean:
@@ -185,7 +183,7 @@ bin/calico-felix-$(ARCH): $(LIBBPF_A) $(SRC_FILES) ../go.mod
 	mkdir -p bin
 	if [ "$(SEMAPHORE)" != "true" -o ! -e $@ ] ; then \
 	  $(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	     go build -v -o $@ -v -buildvcs=false $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix"'; \
+	     go build -v -o $@ -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/cmd/calico-felix'; \
 	fi
 
 # Cross-compile Felix for Windows
@@ -193,7 +191,7 @@ bin/calico-felix.exe: $(SRC_FILES) ../go.mod
 	@echo Building felix for Windows...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD_CGO_WINDOWS) sh -c '$(GIT_CONFIG_SSH) \
-	   	GOOS=windows CC=x86_64-w64-mingw32-gcc go build --buildmode=exe -v -buildvcs=false -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
+		GOOS=windows CC=x86_64-w64-mingw32-gcc go build --buildmode=exe -v -buildvcs=false -o $@ -v -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/cmd/calico-felix && \
 		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program\|not a dynamic executable" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
 
@@ -231,7 +229,7 @@ bin/calico-felix-race-$(ARCH): $(LIBBPF_A) $(SRC_FILES) ../go.mod
 	mkdir -p bin
 	if [ "$(SEMAPHORE)" != "true" -o ! -e $@ ] ; then \
 	  $(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	     go build -v -race -o $@ -v -buildvcs=false $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix"'; \
+	     go build -v -race -o $@ -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/cmd/calico-felix'; \
 	fi
 
 # Generate the protobuf bindings for go. The proto/felixbackend.pb.go file is included in SRC_FILES
@@ -508,29 +506,29 @@ bin/calico-bpf: $(SRC_FILES)
 	@echo Building calico-bpf...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-bpf"'
+	    GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/cmd/calico-bpf'
 
 bin/pktgen: $(SRC_FILES) $(FV_SRC_FILES)
 	@echo Building pktgen...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/pktgen"'
+		GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/fv/pktgen'
 
 bin/tproxy: $(SRC_FILES) $(FV_SRC_FILES)
 	@echo Building tproxy...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/tproxy/cmd"'
+		GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/fv/tproxy/cmd'
 
 bin/iptables-locker: ../go.mod $(shell find iptables -type f -name '*.go' -print)
 	@echo Building iptables-locker...
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/iptables-locker"'
+	    GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/fv/iptables-locker'
 
 bin/test-workload: ../go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivity/*.go fv/test-workload/*.go
 	@echo Building test-workload...
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-workload"'
+	    GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/fv/test-workload'
 
 SCAPY_IMAGE_WITH_TAG=tigera-test/scapy:latest
 SCAPY_IMAGE_ID=$(shell docker images -q $(SCAPY_IMAGE_WITH_TAG))
@@ -552,7 +550,7 @@ $(TEST_DNS_SERVER_CONTAINER_CREATED): ../go.mod \
                                       $(shell test "$(TEST_DNS_SERVER_IMAGE_ID)" || echo force-rebuild)
 	@echo Building test-dns-server-container...
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o fv/dns/server/dns-server -v -buildvcs=false $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/dns/server"'
+	    CGO_ENABLED=0 go build -v -o fv/dns/server/dns-server -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/fv/dns/server'
 	$(DOCKER_BUILD) --load -t $(TEST_DNS_SERVER_IMAGE_WITH_TAG) fv/dns/server
 	touch $(TEST_DNS_SERVER_CONTAINER_CREATED)
 
@@ -565,13 +563,13 @@ bin/test-connection: ../go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connecti
 	@echo Building test-connection...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-connection"'
+	    GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/fv/test-connection'
 
 bin/test-dns: ../go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivity/*.go fv/test-dns/*.go
 	@echo Building test-dns...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-dns"'
+	    GOEXPERIMENT=$(GOEXPERIMENT) go build -v -o $@ -tags $(TAGS) -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/fv/test-dns'
 
 st:
 	@echo "No STs available"

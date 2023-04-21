@@ -1,6 +1,4 @@
-ARG UBI_IMAGE
-
-FROM ${UBI_IMAGE}
+FROM alpine:3
 
 COPY dns-server /dns-server
 COPY entrypoint.sh /entrypoint.sh
