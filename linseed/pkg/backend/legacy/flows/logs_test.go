@@ -92,6 +92,20 @@ func TestFlowLogBasic(t *testing.T) {
 		require.Error(t, err)
 		require.Nil(t, results)
 	})
+
+	t.Run("bad startFrom on request", func(t *testing.T) {
+		defer setupTest(t)()
+
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		params := &v1.FlowLogParams{
+			QueryParams: v1.QueryParams{
+				AfterKey: map[string]interface{}{"startFrom": "badvalue"},
+			},
+		}
+		results, err := flb.List(ctx, clusterInfo, params)
+		require.Error(t, err)
+		require.Nil(t, results)
+	})
 }
 
 func TestFlowSorting(t *testing.T) {

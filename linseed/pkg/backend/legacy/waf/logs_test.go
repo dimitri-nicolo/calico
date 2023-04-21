@@ -73,8 +73,8 @@ func setupTest(t *testing.T) func() {
 	}
 }
 
-// TestCreateWAFLog tests running a real elasticsearch query to create a kube waf log.
-func TestCreateWAFLog(t *testing.T) {
+// TestWAFLogBasic tests running a real elasticsearch query to create a kube waf log.
+func TestWAFLogBasic(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateWAFLog (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
@@ -141,6 +141,34 @@ func TestCreateWAFLog(t *testing.T) {
 			require.Equal(t, 0, len(results.Items))
 		})
 	}
+
+	t.Run("no cluster name given on request", func(t *testing.T) {
+		defer setupTest(t)()
+
+		// It should reject requests with no cluster name given.
+		clusterInfo := bapi.ClusterInfo{}
+		_, err := b.Create(ctx, clusterInfo, []v1.WAFLog{})
+		require.Error(t, err)
+
+		params := &v1.WAFLogParams{}
+		results, err := b.List(ctx, clusterInfo, params)
+		require.Error(t, err)
+		require.Nil(t, results)
+	})
+
+	t.Run("bad startFrom on request", func(t *testing.T) {
+		defer setupTest(t)()
+
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		params := &v1.WAFLogParams{
+			QueryParams: v1.QueryParams{
+				AfterKey: map[string]interface{}{"startFrom": "badvalue"},
+			},
+		}
+		results, err := b.List(ctx, clusterInfo, params)
+		require.Error(t, err)
+		require.Nil(t, results)
+	})
 }
 
 // TestAggregations tests running a real elasticsearch query to get aggregations.

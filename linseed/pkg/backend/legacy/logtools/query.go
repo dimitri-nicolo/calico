@@ -71,7 +71,7 @@ func StartFrom(opts v1.Params) (int, error) {
 		if val, ok := ak["startFrom"]; ok {
 			switch v := val.(type) {
 			case string:
-				if sf, err := strconv.Atoi(v); err != nil {
+				if sf, err := strconv.Atoi(v); err == nil {
 					return sf, nil
 				} else {
 					return 0, fmt.Errorf("Could not parse startFrom (%s) as an integer", v)
