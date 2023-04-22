@@ -10,6 +10,8 @@ import (
 
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
+	gojson "encoding/json"
+
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
@@ -78,6 +80,28 @@ func setupTest(t *testing.T) func() {
 		cancel()
 		logCancel()
 	}
+}
+
+func TestInvalidRequests(t *testing.T) {
+	t.Run("no log type specified", func(t *testing.T) {
+		defer setupTest(t)()
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		_, err := b.Create(ctx, "", clusterInfo, []v1.AuditLog{})
+		require.Error(t, err)
+
+		_, err = b.List(ctx, clusterInfo, &v1.AuditLogParams{})
+		require.Error(t, err)
+	})
+
+	t.Run("unsupported log type specified", func(t *testing.T) {
+		defer setupTest(t)()
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		_, err := b.Create(ctx, "NotARealType", clusterInfo, []v1.AuditLog{})
+		require.Error(t, err)
+
+		_, err = b.List(ctx, clusterInfo, &v1.AuditLogParams{Type: "invalid"})
+		require.Error(t, err)
+	})
 }
 
 // TestCreateKubeAuditLog tests running a real elasticsearch query to create a kube audit log.
@@ -240,6 +264,9 @@ func TestAuditLogFiltering(t *testing.T) {
 
 		// Whether or not to filter based on time range.
 		AllTime bool
+
+		// Whether to expect an error.
+		ExpectError bool
 	}
 
 	numExpected := func(tc testCase) int {
@@ -376,6 +403,19 @@ func TestAuditLogFiltering(t *testing.T) {
 			ExpectLog2: true,
 		},
 		{
+			Name: "should filter based on resource",
+			Params: v1.AuditLogParams{
+				Type: v1.AuditLogTypeEE,
+				ObjectRefs: []v1.ObjectReference{
+					{
+						Resource: "globalnetworkpolicies",
+					},
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: true,
+		},
+		{
 			Name: "should filter based on response code",
 			Params: v1.AuditLogParams{
 				Type:          v1.AuditLogTypeEE,
@@ -423,6 +463,28 @@ func TestAuditLogFiltering(t *testing.T) {
 			ExpectLog1: true,
 			ExpectLog2: false,
 		},
+		{
+			Name: "should reject multiple stages",
+			Params: v1.AuditLogParams{
+				Type:   v1.AuditLogTypeEE,
+				Stages: []kaudit.Stage{kaudit.StageResponseComplete, kaudit.StageRequestReceived},
+			},
+			AllTime:     true,
+			ExpectLog1:  false,
+			ExpectLog2:  false,
+			ExpectError: true,
+		},
+
+		{
+			Name: "should support matching on Verbs",
+			Params: v1.AuditLogParams{
+				Type:  v1.AuditLogTypeEE,
+				Verbs: []v1.Verb{v1.Get},
+			},
+			AllTime:    true,
+			ExpectLog1: false,
+			ExpectLog2: true,
+		},
 	}
 
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
@@ -463,7 +525,7 @@ func TestAuditLogFiltering(t *testing.T) {
 						Stage:      kaudit.StageResponseComplete,
 						Level:      kaudit.LevelRequestResponse,
 						RequestURI: "/apis/v3/projectcalico.org",
-						Verb:       "PUT",
+						Verb:       string(v1.Update),
 						User: authnv1.UserInfo{
 							Username: "garfunkel",
 							UID:      "1234",
@@ -516,7 +578,7 @@ func TestAuditLogFiltering(t *testing.T) {
 						Stage:      kaudit.StageRequestReceived,
 						Level:      kaudit.LevelRequest,
 						RequestURI: "/apis/v3/projectcalico.org",
-						Verb:       "PUT",
+						Verb:       string(v1.Get),
 						User: authnv1.UserInfo{
 							Username: "oates",
 							UID:      "0987",
@@ -618,7 +680,12 @@ func TestAuditLogFiltering(t *testing.T) {
 
 				// Query for audit logs.
 				r, err := b.List(ctx, clusterInfo, &testcase.Params)
-				require.NoError(t, err)
+				if testcase.ExpectError {
+					require.Error(t, err)
+					return
+				} else {
+					require.NoError(t, err)
+				}
 				require.Len(t, r.Items, numExpected(testcase))
 				require.Nil(t, r.AfterKey)
 				require.Empty(t, err)
@@ -645,4 +712,297 @@ func TestAuditLogFiltering(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestAggregations(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		t.Run(fmt.Sprintf("should return time-series audit log aggregation results (tenant=%s)", tenant), func(t *testing.T) {
+			defer setupTest(t)()
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+
+			// Start the test numLogs minutes in the past.
+			numLogs := 5
+			timeBetweenLogs := 10 * time.Second
+			testStart := time.Unix(0, 0)
+			now := testStart.Add(time.Duration(numLogs) * time.Minute)
+
+			// Several dummy logs.
+			logs := []v1.AuditLog{}
+			start := testStart.Add(1 * time.Second)
+			for i := 1; i < numLogs; i++ {
+				log := v1.AuditLog{
+					Event: kaudit.Event{
+						TypeMeta: metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+						Stage:    kaudit.StageResponseComplete,
+						Level:    kaudit.LevelRequestResponse,
+						User: authnv1.UserInfo{
+							Username: "prince",
+							UID:      "uid",
+							Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+						},
+						ImpersonatedUser: &authnv1.UserInfo{
+							Username: "impuser",
+							UID:      "impuid",
+							Groups:   []string{"g1"},
+						},
+						SourceIPs: []string{"1.2.3.4"},
+						ObjectRef: &kaudit.ObjectReference{
+							Resource:   "daemonsets",
+							Name:       "calico-node",
+							Namespace:  "calico-system",
+							APIGroup:   "apps",
+							APIVersion: "v1",
+						},
+						RequestReceivedTimestamp: metav1.NewMicroTime(start),
+						StageTimestamp:           metav1.NewMicroTime(start),
+						Annotations:              map[string]string{"brick": "red"},
+					},
+					Name: testutils.StringPtr("any"),
+				}
+				start = start.Add(timeBetweenLogs)
+				logs = append(logs, log)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			resp, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, logs)
+			require.NoError(t, err)
+			require.Empty(t, resp.Errors)
+
+			// Refresh.
+			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_audit_*")
+			require.NoError(t, err)
+
+			params := v1.AuditLogAggregationParams{}
+			params.Type = v1.AuditLogTypeEE
+			params.TimeRange = &lmav1.TimeRange{}
+			params.TimeRange.From = testStart
+			params.TimeRange.To = now
+			params.NumBuckets = 4
+
+			// Add a simple aggregation to add up the total bytes_in from the logs.
+			userAgg := elastic.NewTermsAggregation().Field("user.username")
+			src, err := userAgg.Source()
+			require.NoError(t, err)
+			bytes, err := json.Marshal(src)
+			require.NoError(t, err)
+			params.Aggregations = map[string]gojson.RawMessage{"user": bytes}
+
+			// Use the backend to perform a query.
+			aggs, err := b.Aggregations(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.NotNil(t, aggs)
+
+			ts, ok := aggs.AutoDateHistogram("tb")
+			require.True(t, ok)
+
+			// We asked for 4 buckets.
+			require.Len(t, ts.Buckets, 4)
+
+			for i, b := range ts.Buckets {
+				require.Equal(t, int64(1), b.DocCount, fmt.Sprintf("Bucket %d", i))
+
+				// We asked for a user agg, which should include a single log
+				// in each bucket.
+				users, ok := b.ValueCount("user")
+				require.True(t, ok, "Bucket missing user agg")
+				require.NotNil(t, users.Aggregations)
+				buckets := string(users.Aggregations["buckets"])
+				require.Equal(t, `[{"key":"prince","doc_count":1}]`, buckets)
+
+			}
+		})
+
+		t.Run(fmt.Sprintf("should return aggregate stats (tenant=%s)", tenant), func(t *testing.T) {
+			defer setupTest(t)()
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+
+			// Start the test numLogs minutes in the past.
+			numLogs := 5
+			timeBetweenLogs := 10 * time.Second
+			testStart := time.Unix(0, 0)
+			now := testStart.Add(time.Duration(numLogs) * time.Minute)
+
+			// Several dummy logs.
+			logs := []v1.AuditLog{}
+			start := testStart.Add(1 * time.Second)
+			for i := 1; i < numLogs; i++ {
+				log := v1.AuditLog{
+					Event: kaudit.Event{
+						TypeMeta: metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+						Stage:    kaudit.StageResponseComplete,
+						Level:    kaudit.LevelRequestResponse,
+						User: authnv1.UserInfo{
+							Username: "prince",
+							UID:      "uid",
+							Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+						},
+						ImpersonatedUser: &authnv1.UserInfo{
+							Username: "impuser",
+							UID:      "impuid",
+							Groups:   []string{"g1"},
+						},
+						SourceIPs: []string{"1.2.3.4"},
+						ObjectRef: &kaudit.ObjectReference{
+							Resource:   "daemonsets",
+							Name:       "calico-node",
+							Namespace:  "calico-system",
+							APIGroup:   "apps",
+							APIVersion: "v1",
+						},
+						RequestReceivedTimestamp: metav1.NewMicroTime(start),
+						StageTimestamp:           metav1.NewMicroTime(start),
+						Annotations:              map[string]string{"brick": "red"},
+					},
+					Name: testutils.StringPtr("any"),
+				}
+				start = start.Add(timeBetweenLogs)
+				logs = append(logs, log)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			resp, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, logs)
+			require.NoError(t, err)
+			require.Empty(t, resp.Errors)
+
+			// Refresh.
+			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_audit_*")
+			require.NoError(t, err)
+
+			params := v1.AuditLogAggregationParams{}
+			params.Type = v1.AuditLogTypeEE
+			params.TimeRange = &lmav1.TimeRange{}
+			params.TimeRange.From = testStart
+			params.TimeRange.To = now
+			params.NumBuckets = 0 // Return aggregated stats over the whole time range.
+
+			// Add a simple aggregation to add up the total bytes_in from the logs.
+			userAgg := elastic.NewTermsAggregation().Field("user.username")
+			src, err := userAgg.Source()
+			require.NoError(t, err)
+			bytes, err := json.Marshal(src)
+			require.NoError(t, err)
+			params.Aggregations = map[string]gojson.RawMessage{"user": bytes}
+
+			// Use the backend to perform a stats query.
+			result, err := b.Aggregations(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+
+			// We should get a sum aggregation with all 4 logs.
+			users, ok := result.ValueCount("user")
+			require.True(t, ok)
+			require.NotNil(t, users.Aggregations)
+			buckets := string(users.Aggregations["buckets"])
+			require.Equal(t, `[{"key":"prince","doc_count":4}]`, buckets)
+		})
+	}
+}
+
+func TestSorting(t *testing.T) {
+	t.Run("should respect sorting", func(t *testing.T) {
+		defer setupTest(t)()
+
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		t1 := time.Unix(100, 0)
+		t2 := time.Unix(500, 0)
+
+		log1 := v1.AuditLog{
+			Event: kaudit.Event{
+				TypeMeta: metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+				Stage:    kaudit.StageResponseComplete,
+				Level:    kaudit.LevelRequestResponse,
+				User: authnv1.UserInfo{
+					Username: "prince",
+					UID:      "uid",
+					Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+				},
+				ImpersonatedUser: &authnv1.UserInfo{
+					Username: "impuser",
+					UID:      "impuid",
+					Groups:   []string{"g1"},
+				},
+				SourceIPs: []string{"1.2.3.4"},
+				ObjectRef: &kaudit.ObjectReference{
+					Resource:   "daemonsets",
+					Name:       "calico-node",
+					Namespace:  "calico-system",
+					APIGroup:   "apps",
+					APIVersion: "v1",
+				},
+				RequestReceivedTimestamp: metav1.NewMicroTime(t1),
+				StageTimestamp:           metav1.NewMicroTime(t1),
+				Annotations:              map[string]string{"brick": "red"},
+			},
+			Name: testutils.StringPtr("any"),
+		}
+		log2 := v1.AuditLog{
+			Event: kaudit.Event{
+				TypeMeta: metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+				Stage:    kaudit.StageResponseComplete,
+				Level:    kaudit.LevelRequestResponse,
+				User: authnv1.UserInfo{
+					Username: "aladdin",
+					UID:      "uid",
+					Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"strong"})},
+				},
+				ImpersonatedUser: &authnv1.UserInfo{
+					Username: "impuser",
+					UID:      "impuid",
+					Groups:   []string{"g1"},
+				},
+				SourceIPs: []string{"1.2.3.4"},
+				ObjectRef: &kaudit.ObjectReference{
+					Resource:   "daemonsets",
+					Name:       "calico-node",
+					Namespace:  "calico-system",
+					APIGroup:   "apps",
+					APIVersion: "v1",
+				},
+				RequestReceivedTimestamp: metav1.NewMicroTime(t2),
+				StageTimestamp:           metav1.NewMicroTime(t2),
+				Annotations:              map[string]string{"brick": "red"},
+			},
+			Name: testutils.StringPtr("any"),
+		}
+
+		response, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []v1.AuditLog{log1, log2})
+		require.NoError(t, err)
+		require.Equal(t, []v1.BulkError(nil), response.Errors)
+		require.Equal(t, 0, response.Failed)
+
+		index := "tigera_secure_ee_audit_*"
+		err = backendutils.RefreshIndex(ctx, client, index)
+		require.NoError(t, err)
+
+		// Query for logs without sorting.
+		params := v1.AuditLogParams{}
+		params.Type = v1.AuditLogTypeEE
+		r, err := b.List(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 2)
+		require.Nil(t, r.AfterKey)
+
+		// Assert that the logs are returned in the correct order.
+		require.Equal(t, log1, r.Items[0])
+		require.Equal(t, log2, r.Items[1])
+
+		// Query again, this time sorting in order to get the logs in reverse order.
+		params.Sort = []v1.SearchRequestSortBy{
+			{
+				Field:      "requestReceivedTimestamp",
+				Descending: true,
+			},
+		}
+		r, err = b.List(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 2)
+		require.Nil(t, r.AfterKey)
+		require.Equal(t, log2, r.Items[0])
+		require.Equal(t, log1, r.Items[1])
+	})
 }

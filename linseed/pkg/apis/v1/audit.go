@@ -34,6 +34,7 @@ const (
 	Delete Verb = "delete"
 	Patch  Verb = "patch"
 	Update Verb = "update"
+	Get    Verb = "get"
 )
 
 // AuditLogParams provide query options for listing audit logs.

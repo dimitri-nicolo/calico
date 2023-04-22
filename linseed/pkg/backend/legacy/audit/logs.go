@@ -166,8 +166,8 @@ func (b *auditLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, o
 }
 
 func (b *auditLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v1.AuditLogParams) (*elastic.SearchService, int, error) {
-	if i.Cluster == "" {
-		return nil, 0, fmt.Errorf("no cluster ID on request")
+	if err := i.Valid(); err != nil {
+		return nil, 0, err
 	}
 
 	switch opts.Type {

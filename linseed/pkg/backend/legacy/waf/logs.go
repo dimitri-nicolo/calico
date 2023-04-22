@@ -86,28 +86,13 @@ func (b *wafLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogParams) (*v1.List[v1.WAFLog], error) {
 	log := bapi.ContextLogger(i)
 
-	if err := i.Valid(); err != nil {
-		return nil, err
-	}
-
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(opts)
+	// Get the base query.
+	search, startFrom, err := b.getSearch(ctx, i, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	// Build the query.
-	q, err := b.buildQuery(i, opts)
-	if err != nil {
-		return nil, err
-	}
-	query := b.client.Search().
-		Index(b.index(i)).
-		From(startFrom).
-		Size(opts.QueryParams.GetMaxPageSize()).
-		Query(q)
-
-	results, err := query.Do(ctx)
+	results, err := search.Do(ctx)
 	if err != nil {
 		return nil, err
 	}
