@@ -200,7 +200,7 @@ func (b *eventsBackend) Delete(ctx context.Context, i api.ClusterInfo, events []
 	// so that subsequent reads show consistent data.
 	resp, err := bulk.Refresh("wait_for").Do(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to dismiss events: %s", err)
+		return nil, fmt.Errorf("failed to delete events: %s", err)
 	}
 
 	// Convert individual success / failure responses.
