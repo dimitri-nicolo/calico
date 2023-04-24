@@ -72,9 +72,6 @@ func setupTest(t *testing.T) func() {
 
 // TestCreateEvent tests running a real elasticsearch query to create an event.
 func TestCreateEvent(t *testing.T) {
-	defer setupTest(t)()
-
-	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 	// The event to create
 	event := v1.Event{
@@ -96,34 +93,133 @@ func TestCreateEvent(t *testing.T) {
 		SourcePort:      testutils.Int64Ptr(48127),
 	}
 
-	// Create the event in ES.
-	resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
-	require.NoError(t, err)
-	require.Equal(t, 0, len(resp.Errors))
-	require.Equal(t, 1, resp.Total)
-	require.Equal(t, 0, resp.Failed)
-	require.Equal(t, 1, resp.Succeeded)
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		t.Run("Create Event with all valid params", func(t *testing.T) {
+			defer setupTest(t)()
 
-	// Refresh the index.
-	err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_events.*")
-	require.NoError(t, err)
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+			// Create the event in ES.
+			resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
+			require.NoError(t, err)
+			require.Equal(t, 0, len(resp.Errors))
+			require.Equal(t, 1, resp.Total)
+			require.Equal(t, 0, resp.Failed)
+			require.Equal(t, 1, resp.Succeeded)
 
-	// List the events and make sure the one we created is present.
-	results, err := b.List(ctx, clusterInfo, &v1.EventParams{
-		QueryParams: v1.QueryParams{
-			TimeRange: &lmav1.TimeRange{
-				From: time.Now().Add(-1 * time.Minute),
-				To:   time.Now().Add(1 * time.Minute),
+			// Refresh the index.
+			index := fmt.Sprintf("tigera_secure_ee_events.%s.*", cluster)
+			if tenant != "" {
+				index = fmt.Sprintf("tigera_secure_ee_events.%s.%s.*", tenant, cluster)
+			}
+
+			// Refresh the index.
+			err = backendutils.RefreshIndex(ctx, client, index)
+			require.NoError(t, err)
+
+			// List the events and make sure the one we created is present.
+			results, err := b.List(ctx, clusterInfo, &v1.EventParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-1 * time.Minute),
+						To:   time.Now().Add(1 * time.Minute),
+					},
+				},
+			})
+			require.NoError(t, err)
+			require.NotNil(t, 1, results)
+			require.Equal(t, 1, len(results.Items))
+
+			// We expect the ID to be present, but it's a random value so we
+			// can't assert on the exact value.
+			require.Equal(t, event, backendutils.AssertEventIDAndReset(t, results.Items[0]))
+		})
+	}
+
+	t.Run("Create Event with given event id", func(t *testing.T) {
+		defer setupTest(t)()
+
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		event.ID = "SOMERANDOMID"
+		// Create the event in ES.
+		resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
+		require.Equal(t, 1, resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, 1, resp.Succeeded)
+
+		// Refresh the index.
+		index := fmt.Sprintf("tigera_secure_ee_events.%s.*", cluster)
+
+		// Refresh the index.
+		err = backendutils.RefreshIndex(ctx, client, index)
+		require.NoError(t, err)
+
+		// List the events and make sure the one we created is present.
+		results, err := b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
 			},
-		},
-	})
-	require.NoError(t, err)
-	require.NotNil(t, 1, results)
-	require.Equal(t, 1, len(results.Items))
+		})
+		require.NoError(t, err)
+		require.NotNil(t, 1, results)
+		require.Equal(t, 1, len(results.Items))
 
-	// We expect the ID to be present, but it's a random value so we
-	// can't assert on the exact value.
-	require.Equal(t, event, backendutils.AssertEventIDAndReset(t, results.Items[0]))
+		// We expect the ID to be same as the passed event id.
+		require.Equal(t, event, results.Items[0])
+	})
+
+	t.Run("Invalid Cluster Info", func(t *testing.T) {
+		defer setupTest(t)()
+		clusterInfo := bapi.ClusterInfo{}
+		resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
+		require.Error(t, err)
+		require.Equal(t, "no cluster ID provided on request", err.Error())
+		require.Nil(t, resp)
+
+		results, err := b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
+			},
+		})
+		require.Error(t, err)
+		require.Equal(t, "no cluster ID on request", err.Error())
+		require.Nil(t, results)
+
+	})
+
+	t.Run("Invalid start from", func(t *testing.T) {
+		defer setupTest(t)()
+
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		results, err := b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
+				AfterKey: map[string]interface{}{"startFrom": "badvalue"},
+			},
+		})
+		require.Error(t, err)
+		require.Equal(t, "Could not parse startFrom (badvalue) as an integer", err.Error())
+		require.Nil(t, results)
+	})
+
+	t.Run("Create failure", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{}
+		resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
+		require.Equal(t, "1", "1")
+		require.Error(t, err)
+		require.Nil(t, resp)
+	})
 }
 
 func TestEventSelector(t *testing.T) {
@@ -241,4 +337,411 @@ func TestEventSelector(t *testing.T) {
 			testSelector(tt.selector, tt.numResults, tt.shouldSucceed)
 		})
 	}
+}
+
+func TestPagination(t *testing.T) {
+	defer setupTest(t)()
+
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+	listSize := 21
+	// The event to create
+	event := v1.Event{
+		Time:            time.Now().Unix(),
+		Description:     "Just a city event",
+		Origin:          "South Detroit",
+		Severity:        1,
+		Type:            "TODO",
+		DestIP:          testutils.StringPtr("192.168.1.1"),
+		DestName:        "anywhere-1234",
+		DestNameAggr:    "anywhere",
+		DestPort:        testutils.Int64Ptr(53),
+		Dismissed:       false,
+		Host:            "midnight-train",
+		SourceIP:        testutils.StringPtr("192.168.2.2"),
+		SourceName:      "south-detroit-1234",
+		SourceNameAggr:  "south-detroit",
+		SourceNamespace: "michigan",
+		SourcePort:      testutils.Int64Ptr(48127),
+	}
+
+	events := make([]v1.Event, 0, listSize)
+	for i := 0; i < listSize; i++ {
+		events = append(events, event)
+	}
+
+	// Create the events in ES.
+	resp, err := b.Create(ctx, clusterInfo, events)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(resp.Errors))
+	require.Equal(t, listSize, resp.Total)
+	require.Equal(t, 0, resp.Failed)
+	require.Equal(t, listSize, resp.Succeeded)
+
+	// Refresh the index.
+	err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_events.*")
+	require.NoError(t, err)
+
+	testSelector := func(maxPageSize int, numResults int, afterkey map[string]interface{}, shouldSucceed bool, errmsg string) {
+		r, e := b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				MaxPageSize: maxPageSize,
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
+				AfterKey: afterkey,
+			},
+		})
+		if shouldSucceed {
+			require.NoError(t, e)
+			require.NotNil(t, 1, r)
+			require.Equal(t, numResults, len(r.Items))
+			if numResults > 0 {
+				// We expect the ID to be present, but it's a random value so we
+				// can't assert on the exact value.
+				require.Equal(t, event, backendutils.AssertEventIDAndReset(t, r.Items[0]))
+			}
+		} else {
+			require.Error(t, e)
+			require.Contains(t, e.Error(), errmsg)
+		}
+	}
+
+	t.Run("check results size is same as max page size", func(t *testing.T) {
+		testSelector(10, 10, nil, true, "")
+	})
+
+	t.Run("check afterkey is used to load the rest of the items", func(t *testing.T) {
+		testSelector(0, 11, map[string]interface{}{"startFrom": 10}, true, "")
+	})
+
+	t.Run("check negative max page size returns error", func(t *testing.T) {
+		testSelector(-10, 10, nil, false, "parameter cannot be negative")
+	})
+
+	t.Run("check afterkey is used to load the rest of the items", func(t *testing.T) {
+		testSelector(3, 3, map[string]interface{}{"startFrom": 10}, true, "")
+	})
+
+}
+
+func TestSorting(t *testing.T) {
+	defer setupTest(t)()
+
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+	listSize := 2
+	createTime := []time.Time{time.Unix(100, 0), time.Unix(500, 0)}
+
+	// Create array of events.
+	events := make([]v1.Event, 0, listSize)
+	for i := 0; i < listSize; i++ {
+		event := v1.Event{
+			Time:         createTime[i].Unix(),
+			Description:  "Just a city event",
+			Origin:       "South Detroit",
+			Severity:     1,
+			Type:         "TODO",
+			DestIP:       testutils.StringPtr("192.168.1.1"),
+			DestName:     "anywhere-1234",
+			DestNameAggr: "anywhere",
+			DestPort:     testutils.Int64Ptr(53),
+			Dismissed:    false,
+			//Host:            "midnight-train",
+			SourceIP:        testutils.StringPtr("192.168.2.2"),
+			SourceName:      "south-detroit-1234",
+			SourceNameAggr:  "south-detroit",
+			SourceNamespace: "michigan",
+			SourcePort:      testutils.Int64Ptr(48127),
+		}
+		event.Host = fmt.Sprintf("midnight-train-%v", i)
+		events = append(events, event)
+	}
+
+	// Create the event in ES.
+	resp, err := b.Create(ctx, clusterInfo, events)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(resp.Errors))
+	require.Equal(t, 2, resp.Total)
+	require.Equal(t, 0, resp.Failed)
+	require.Equal(t, 2, resp.Succeeded)
+
+	// Refresh the index.
+	err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_events.*")
+	require.NoError(t, err)
+
+	params := v1.EventParams{
+		QueryParams: v1.QueryParams{
+			TimeRange: &lmav1.TimeRange{
+				From: time.Unix(50, 0),
+				To:   time.Unix(600, 0),
+			},
+		},
+	}
+
+	// List the events and make sure the events we created are present.
+	results, err := b.List(ctx, clusterInfo, &params)
+	require.NoError(t, err)
+	require.NotNil(t, 1, results)
+	require.Equal(t, 2, len(results.Items))
+
+	require.Equal(t, events[0], backendutils.AssertEventIDAndReset(t, results.Items[0]))
+	require.Equal(t, events[1], backendutils.AssertEventIDAndReset(t, results.Items[1]))
+
+	t.Run("Sort using the time in descending order", func(t *testing.T) {
+		// Query again, this time sorting in order to get the logs in reverse order.
+		params.Sort = []v1.SearchRequestSortBy{
+			{
+				Field:      "time",
+				Descending: true,
+			},
+		}
+
+		// List again to check the decending sort works.
+		results, err = b.List(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+		require.NotNil(t, 1, results)
+		require.Equal(t, 2, len(results.Items))
+
+		require.Equal(t, events[0], backendutils.AssertEventIDAndReset(t, results.Items[1]))
+		require.Equal(t, events[1], backendutils.AssertEventIDAndReset(t, results.Items[0]))
+
+	})
+
+	t.Run("Sort using the host in descending order", func(t *testing.T) {
+		// Query again, this time sorting in order to get the logs in reverse order.
+		params.Sort = []v1.SearchRequestSortBy{
+			{
+				Field:      "host",
+				Descending: true,
+			},
+		}
+		// List again to check the decending sort works.
+		results, err = b.List(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+		require.NotNil(t, 1, results)
+		require.Equal(t, 2, len(results.Items))
+
+		require.Equal(t, events[0].Host, results.Items[1].Host)
+		require.Equal(t, events[1].Host, results.Items[0].Host)
+
+	})
+
+}
+
+func TestDismissEvent(t *testing.T) {
+	defer setupTest(t)()
+	// The event to create
+	event := v1.Event{
+		Time:            time.Now().Unix(),
+		Description:     "Just a city event",
+		Origin:          "South Detroit",
+		Severity:        1,
+		Type:            "TODO",
+		DestIP:          testutils.StringPtr("192.168.1.1"),
+		DestName:        "anywhere-1234",
+		DestNameAggr:    "anywhere",
+		DestPort:        testutils.Int64Ptr(53),
+		Dismissed:       false,
+		Host:            "midnight-train",
+		SourceIP:        testutils.StringPtr("192.168.2.2"),
+		SourceName:      "south-detroit-1234",
+		SourceNameAggr:  "south-detroit",
+		SourceNamespace: "michigan",
+		SourcePort:      testutils.Int64Ptr(48127),
+	}
+
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+	// Create the event in ES.
+	resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
+	require.NoError(t, err)
+	require.Equal(t, 0, len(resp.Errors))
+	require.Equal(t, 1, resp.Total)
+	require.Equal(t, 0, resp.Failed)
+	require.Equal(t, 1, resp.Succeeded)
+
+	// Refresh the index.
+	err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_events.*")
+	require.NoError(t, err)
+
+	// List the events and make sure the one we created is present.
+	results, err := b.List(ctx, clusterInfo, &v1.EventParams{
+		QueryParams: v1.QueryParams{
+			TimeRange: &lmav1.TimeRange{
+				From: time.Now().Add(-1 * time.Minute),
+				To:   time.Now().Add(1 * time.Minute),
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, 1, results)
+	require.Equal(t, 1, len(results.Items))
+
+	// We expect the ID to be present, but it's a random value so we
+	// can't assert on the exact value.
+	require.Equal(t, event, backendutils.AssertEventIDAndReset(t, results.Items[0]))
+
+	t.Run("Dismiss an Event", func(t *testing.T) {
+
+		//Dismiss Event
+		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{results.Items[0]})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
+		require.Equal(t, 1, resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, 1, resp.Succeeded)
+
+		results, err = b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
+			},
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, 1, results)
+		require.Equal(t, 1, len(results.Items))
+		//Check event for the dismiss flag true.
+		require.Equal(t, true, results.Items[0].Dismissed)
+	})
+
+	t.Run("Try to Dismiss an event that does not exist in Elastic", func(t *testing.T) {
+		defer setupTest(t)()
+		//Dismiss Event
+		invalidEvent := v1.Event{
+			ID: "INVALID",
+		}
+		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{invalidEvent})
+		require.Nil(t, err)
+		require.NotNil(t, resp)
+		require.Equal(t, 1, resp.Total)
+		require.Equal(t, 0, resp.Succeeded)
+		require.Equal(t, 1, resp.Failed)
+
+		require.NotNil(t, resp.Errors)
+		require.Equal(t, "document_missing_exception", resp.Errors[0].Type)
+
+	})
+
+	t.Run("Invalid Cluster Info", func(t *testing.T) {
+		defer setupTest(t)()
+		clusterInfo := bapi.ClusterInfo{}
+		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{results.Items[0]})
+		require.Error(t, err)
+		require.Equal(t, "no cluster ID on request", err.Error())
+		require.Nil(t, resp)
+	})
+}
+
+func TestDeleteEvent(t *testing.T) {
+	defer setupTest(t)()
+	// The event to create
+	event := v1.Event{
+		Time:            time.Now().Unix(),
+		Description:     "Just a city event",
+		Origin:          "South Detroit",
+		Severity:        1,
+		Type:            "TODO",
+		DestIP:          testutils.StringPtr("192.168.1.1"),
+		DestName:        "anywhere-1234",
+		DestNameAggr:    "anywhere",
+		DestPort:        testutils.Int64Ptr(53),
+		Dismissed:       false,
+		Host:            "midnight-train",
+		SourceIP:        testutils.StringPtr("192.168.2.2"),
+		SourceName:      "south-detroit-1234",
+		SourceNameAggr:  "south-detroit",
+		SourceNamespace: "michigan",
+		SourcePort:      testutils.Int64Ptr(48127),
+	}
+
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+	// Create the event in ES.
+	resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
+	require.NoError(t, err)
+	require.Equal(t, 0, len(resp.Errors))
+	require.Equal(t, 1, resp.Total)
+	require.Equal(t, 0, resp.Failed)
+	require.Equal(t, 1, resp.Succeeded)
+
+	// Refresh the index.
+	err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_events.*")
+	require.NoError(t, err)
+
+	// List the events and make sure the one we created is present.
+	results, err := b.List(ctx, clusterInfo, &v1.EventParams{
+		QueryParams: v1.QueryParams{
+			TimeRange: &lmav1.TimeRange{
+				From: time.Now().Add(-1 * time.Minute),
+				To:   time.Now().Add(1 * time.Minute),
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, 1, results)
+	require.Equal(t, 1, len(results.Items))
+
+	// Save the event ID to assert with deleted event.
+	eventID := results.Items[0].ID
+
+	// We expect the ID to be present, but it's a random value so we
+	// can't assert on the exact value.
+	require.Equal(t, event, backendutils.AssertEventIDAndReset(t, results.Items[0]))
+
+	t.Run("Delete an Event", func(t *testing.T) {
+
+		//Dismiss Event
+		resp, err = b.Delete(ctx, clusterInfo, []v1.Event{results.Items[0]})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
+		require.Equal(t, 1, resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, 1, resp.Succeeded)
+
+		require.NoError(t, err)
+		require.NotNil(t, results)
+		require.Equal(t, 1, resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, 1, resp.Succeeded)
+		require.Equal(t, eventID, resp.Deleted[0].ID)
+
+		result, err := b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
+			},
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, 1, result)
+		require.Equal(t, 0, len(result.Items))
+	})
+
+	t.Run("Invalid Cluster Info", func(t *testing.T) {
+
+		clusterInfo := bapi.ClusterInfo{}
+		resp, err = b.Delete(ctx, clusterInfo, []v1.Event{results.Items[0]})
+		require.Error(t, err)
+		require.Equal(t, "no cluster ID on request", err.Error())
+		require.Nil(t, resp)
+	})
+
+	t.Run("Try to Delete an event that does not exist in Elastic", func(t *testing.T) {
+
+		//Delete Event
+		invalidEvent := v1.Event{
+			ID: "INVALIDEVENT",
+		}
+		resp, err = b.Delete(ctx, clusterInfo, []v1.Event{invalidEvent})
+		require.Nil(t, err)
+		require.NotNil(t, resp)
+		require.Equal(t, 1, resp.Total)
+		require.Equal(t, 0, resp.Succeeded)
+		require.Equal(t, 1, resp.Failed)
+		require.Equal(t, 404, resp.Deleted[0].Status)
+
+	})
 }
