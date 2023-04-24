@@ -69,7 +69,7 @@ var _ = Describe("processFlow", func() {
 
 	It("Test valid engine rule generation", func() {
 		for _, data := range flowData {
-			_ = recEngine.processFlow(&data)
+			_ = recEngine.processFlow(data)
 		}
 
 		Expect(len(recEngine.egress.namespaceRules)).To(Equal(2))
@@ -92,7 +92,7 @@ var _ = Describe("processFlow", func() {
 			"%+v isn't an allowed flow. Only 'Allow' flows generate recommended policy",
 			flow)
 
-		err := recEngine.processFlow(&flow)
+		err := recEngine.processFlow(flow)
 		Expect(err).NotTo(BeNil())
 		Expect(err).To(Equal(expectedError))
 	})
@@ -106,7 +106,7 @@ var _ = Describe("processFlow", func() {
 			"%+v isn't an allowed flow. Only 'Allow' flows generate recommended policy",
 			flow)
 
-		err := recEngine.processFlow(&flow)
+		err := recEngine.processFlow(flow)
 		Expect(err).NotTo(BeNil())
 		Expect(err).To(Equal(expectedError))
 	})
@@ -122,7 +122,7 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		err := recEngine.processFlow(&flow)
+		err := recEngine.processFlow(flow)
 		Expect(err).To(BeNil())
 	})
 
@@ -141,7 +141,7 @@ var _ = Describe("processFlow", func() {
 			"the flow's namespace, %+v, does not match the request or the endpoint isn't a Workload Endpoint",
 			flow)
 
-		err := recEngine.processFlow(&flow)
+		err := recEngine.processFlow(flow)
 		Expect(err).NotTo(BeNil())
 		Expect(err).To(Equal(expectedError))
 	})
@@ -161,7 +161,7 @@ var _ = Describe("processFlow", func() {
 			"the flow's namespace, %+v, does not match the request or the endpoint isn't a Workload Endpoint",
 			flow)
 
-		err := recEngine.processFlow(&flow)
+		err := recEngine.processFlow(flow)
 		Expect(err).NotTo(BeNil())
 		Expect(err).To(Equal(expectedError))
 	})
@@ -177,7 +177,7 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		err := recEngine.processFlow(&flow)
+		err := recEngine.processFlow(flow)
 		Expect(err).To(BeNil())
 	})
 
@@ -196,7 +196,7 @@ var _ = Describe("processFlow", func() {
 			"the flow's namespace, %+v, does not match the request or the endpoint isn't a Workload Endpoint",
 			flow)
 
-		err := recEngine.processFlow(&flow)
+		err := recEngine.processFlow(flow)
 		Expect(err).NotTo(BeNil())
 		Expect(err).To(Equal(expectedError))
 	})
@@ -216,7 +216,7 @@ var _ = Describe("processFlow", func() {
 			"the flow's namespace, %+v, does not match the request or the endpoint isn't a Workload Endpoint",
 			flow)
 
-		err := recEngine.processFlow(&flow)
+		err := recEngine.processFlow(flow)
 		Expect(err).NotTo(BeNil())
 		Expect(err).To(Equal(expectedError))
 	})
@@ -250,7 +250,7 @@ var _ = Describe("ProcessRecommendation", func() {
 	// TODO(dimitrin): Add back UTs - [EV-2415] UTs
 	It("Test valid engine rule generation", func() {
 		for _, data := range flowData {
-			_ = recEngine.processFlow(&data)
+			_ = recEngine.processFlow(data)
 		}
 
 		Expect(len(recEngine.egress.namespaceRules)).To(Equal(2))
@@ -425,8 +425,9 @@ var (
 		},
 	}
 
-	protocolTCP = numorstring.ProtocolFromString("TCP")
-	protocolUDP = numorstring.ProtocolFromString("UDP")
+	protocolTCP  = numorstring.ProtocolFromString("TCP")
+	protocolUDP  = numorstring.ProtocolFromString("UDP")
+	protocolICMP = numorstring.ProtocolFromString("ICMP")
 
 	//TODO(dimitrin): Add back data for remaining UT tests.
 	// EgressToDomain

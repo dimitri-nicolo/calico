@@ -151,26 +151,12 @@ func newRecommendationEngine(
 	stabilization time.Duration,
 ) *recommendationEngine {
 	return &recommendationEngine{
-		name:      name,
-		namespace: namespace,
-		tier:      tier,
-		order:     order,
-		egress: &engineRules{
-			egressToDomainRules:  map[egressToDomainRuleKey]*egressToDomainRule{},
-			egressToServiceRules: map[egressToServiceRuleKey]*egressToServiceRule{},
-			namespaceRules:       map[namespaceRuleKey]*namespaceRule{},
-			networkSetRules:      map[networkSetRuleKey]*networkSetRule{},
-			privateNetworkRules:  map[privateNetworkRuleKey]*privateNetworkRule{},
-			publicNetworkRules:   map[publicNetworkRuleKey]*publicNetworkRule{},
-		},
-		ingress: &engineRules{
-			egressToDomainRules:  map[egressToDomainRuleKey]*egressToDomainRule{},
-			egressToServiceRules: map[egressToServiceRuleKey]*egressToServiceRule{},
-			namespaceRules:       map[namespaceRuleKey]*namespaceRule{},
-			networkSetRules:      map[networkSetRuleKey]*networkSetRule{},
-			privateNetworkRules:  map[privateNetworkRuleKey]*privateNetworkRule{},
-			publicNetworkRules:   map[publicNetworkRuleKey]*publicNetworkRule{},
-		},
+		name:          name,
+		namespace:     namespace,
+		tier:          tier,
+		order:         order,
+		egress:        NewEngineRules(),
+		ingress:       NewEngineRules(),
 		nets:          set.New[NetworkSet](),
 		clock:         clock,
 		interval:      interval,
@@ -204,19 +190,19 @@ func (ere *recommendationEngine) buildRules(dir calicores.DirectionType, rules [
 }
 
 // ProcessFlow takes a flow log and updates the recommendation engine rules.
-func (ere *recommendationEngine) processFlow(flow *api.Flow) error {
+func (ere *recommendationEngine) processFlow(flow api.Flow) error {
 	// Only allowed flows are used to recommend policy.
 	if flow.ActionFlag&api.ActionFlagAllow == 0 {
 		return fmt.Errorf(
 			"%+v isn't an allowed flow. Only 'Allow' flows generate recommended policy",
-			*flow)
+			flow)
 	}
 	// Make sure we only process flows that have either source or destination in the expected
 	// namespace.
 	if !ere.matchesSourceNamespace(flow) && !ere.matchesDestinationNamespace(flow) {
 		return fmt.Errorf(
 			"the flow's namespace, %+v, does not match the request or the endpoint isn't a Workload Endpoint",
-			*flow)
+			flow)
 	}
 	// Construct rule.
 	ere.processEngineRuleFromFlow(flow)
@@ -508,8 +494,10 @@ func (ere *recommendationEngine) processRecommendation(flows []*api.Flow, snp *v
 	// Process flows into egress/ingress rules, and the policy selector.
 	for _, flow := range flows {
 		log.WithField("flow: %+v", flow).Debug("Calling recommendation engine with flow")
-		if err := ere.processFlow(flow); err != nil {
-			log.WithError(err).WithField("flow", flow).Debug("Error processing flow")
+		if flow != nil {
+			if err := ere.processFlow(*flow); err != nil {
+				log.WithError(err).WithField("flow", flow).Debug("Error processing flow")
+			}
 		}
 	}
 
@@ -528,14 +516,14 @@ func (ere *recommendationEngine) processRecommendation(flows []*api.Flow, snp *v
 }
 
 // Check if the flow matches the destination namespace.
-func (ere *recommendationEngine) matchesDestinationNamespace(flow *api.Flow) bool {
+func (ere *recommendationEngine) matchesDestinationNamespace(flow api.Flow) bool {
 	return flow.Reporter == api.ReporterTypeDestination &&
 		flow.Destination.Namespace == ere.namespace &&
 		flow.Destination.Type == api.FlowLogEndpointTypeWEP
 }
 
 // Check if the flow matches the source namespace.
-func (ere *recommendationEngine) matchesSourceNamespace(flow *api.Flow) bool {
+func (ere *recommendationEngine) matchesSourceNamespace(flow api.Flow) bool {
 	return flow.Reporter == api.ReporterTypeSource &&
 		flow.Source.Namespace == ere.namespace &&
 		flow.Source.Type == api.FlowLogEndpointTypeWEP
@@ -553,7 +541,7 @@ func (ere *recommendationEngine) matchesSourceNamespace(flow *api.Flow) bool {
 // 5. NetworkSets or GlobalNetworkSet
 // 6. Private network
 // 7. Public network
-func (ere *recommendationEngine) processEngineRuleFromFlow(apiFlow *api.Flow) {
+func (ere *recommendationEngine) processEngineRuleFromFlow(apiFlow api.Flow) {
 	// Get the flow's type and direction.
 	var flowType flowType
 	var direction calicores.DirectionType
@@ -575,6 +563,7 @@ func (ere *recommendationEngine) processEngineRuleFromFlow(apiFlow *api.Flow) {
 		return
 	}
 
+	// Add flow to Ingress or Egress rules
 	var engRules *engineRules
 	if direction == calicores.EgressTraffic {
 		engRules = ere.egress
@@ -582,7 +571,7 @@ func (ere *recommendationEngine) processEngineRuleFromFlow(apiFlow *api.Flow) {
 		engRules = ere.ingress
 	}
 
-	// Add the flow to the existing set of engine rules, or log a warning if unsupported.
+	// Add the flow to the existing set of engine rules, or log a warning if unsupported
 	switch flowType {
 	case egressToDomainFlowType:
 		engRules.addFlowToEgressToDomainRules(direction, apiFlow, ere.clock)

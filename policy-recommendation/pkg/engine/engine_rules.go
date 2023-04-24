@@ -2,7 +2,6 @@
 package engine
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -37,8 +36,6 @@ type EngineRules interface {
 	addFlowToNetworkSetRules(direction calico.DirectionType, flow api.Flow)
 	addFlowToPrivateNetworkRules(direction calico.DirectionType, flow api.Flow)
 	addFlowToPublicNetworkRules(direction calico.DirectionType, flow api.Flow)
-
-	updateEngineRules(key, value any)
 }
 
 // engineRules implements the EngineRules interface. It defines the policy recommendation engine
@@ -58,6 +55,17 @@ type engineRules struct {
 	publicNetworkRules   map[publicNetworkRuleKey]*publicNetworkRule
 
 	size int
+}
+
+func NewEngineRules() *engineRules {
+	return &engineRules{
+		egressToDomainRules:  map[egressToDomainRuleKey]*egressToDomainRule{},
+		egressToServiceRules: map[egressToServiceRuleKey]*egressToServiceRule{},
+		namespaceRules:       map[namespaceRuleKey]*namespaceRule{},
+		networkSetRules:      map[networkSetRuleKey]*networkSetRule{},
+		privateNetworkRules:  map[privateNetworkRuleKey]*privateNetworkRule{},
+		publicNetworkRules:   map[publicNetworkRuleKey]*publicNetworkRule{},
+	}
 }
 
 type egressToDomainRuleKey struct {
@@ -155,24 +163,22 @@ type publicNetworkRule struct {
 // Policy rules will be added as follows for each protocol that we need to support:
 // Note: The lastUpdated timestamp will be updated if the corresponding NetworkSet is updated to
 // include an additional domain, even if the rule itself is unchanged.
-func (er *engineRules) addFlowToEgressToDomainRules(direction calico.DirectionType, flow *api.Flow, clock Clock) {
+func (er *engineRules) addFlowToEgressToDomainRules(direction calico.DirectionType, flow api.Flow, clock Clock) {
 	if direction != calico.EgressTraffic {
 		log.WithField("flow", flow).Warn("flow cannot be processed, unsupported traffic direction")
 		return
 	}
 
-	endpoint := &flow.Destination
-
-	port, err := numorstring.PortFromRange(*endpoint.Port, *endpoint.Port)
-	if err != nil {
-		log.WithError(err).WithField("flow", flow).Warn("flow cannot be processed, port could not be converted")
+	port, protocol := getPortAndProtocol(flow.Destination.Port, flow.Proto)
+	if protocol == nil {
+		// No need to add an empty protocol
+		log.WithField("flow", flow).Warn("flow cannot be processed, protocol is empty")
 		return
 	}
-	domains := parseDomains(endpoint.Domains)
-	protocol := api.GetProtocol(*flow.Proto)
+	domains := parseDomains(flow.Destination.Domains)
 
 	key := egressToDomainRuleKey{
-		protocol: protocol,
+		protocol: *protocol,
 		port:     port,
 	}
 
@@ -192,7 +198,7 @@ func (er *engineRules) addFlowToEgressToDomainRules(direction calico.DirectionTy
 
 	// The key does not exist, define a new value and add the key-value to the egressToDomain rules
 	val := egressToDomainRule{
-		protocol:  protocol,
+		protocol:  *protocol,
 		port:      port,
 		timestamp: clock.NowRFC3339(),
 	}
@@ -205,27 +211,26 @@ func (er *engineRules) addFlowToEgressToDomainRules(direction calico.DirectionTy
 
 // addFlowToEgressToServiceRules updates the ports if a rule already exists, otherwise defines a
 // new egressToDomainRule for egress flows, where the remote is to a domain.
-func (er *engineRules) addFlowToEgressToServiceRules(direction calico.DirectionType, flow *api.Flow, clock Clock) {
+func (er *engineRules) addFlowToEgressToServiceRules(direction calico.DirectionType, flow api.Flow, clock Clock) {
 	if direction != calico.EgressTraffic {
 		log.WithField("flow", flow).Warn("flow cannot be processed, unsupported traffic direction")
 		return
 	}
 
-	endpoint := &flow.Destination
-
-	port, err := numorstring.PortFromRange(*endpoint.Port, *endpoint.Port)
-	if err != nil {
-		log.WithError(err).WithField("flow", flow).Warn("flow cannot be processed, port could not be converted")
+	port, protocol := getPortAndProtocol(flow.Destination.Port, flow.Proto)
+	if protocol == nil {
+		// No need to add an empty protocol
+		log.WithField("flow", flow).Warn("flow cannot be processed, protocol is empty")
 		return
 	}
-	name := endpoint.ServiceName
-	namespace := endpoint.Namespace
-	protocol := api.GetProtocol(*flow.Proto)
+
+	name := flow.Destination.ServiceName
+	namespace := flow.Destination.Namespace
 
 	key := egressToServiceRuleKey{
 		name:      name,
 		namespace: namespace,
-		protocol:  protocol,
+		protocol:  *protocol,
 	}
 
 	// Update the ports and return if the value already exists.
@@ -245,7 +250,7 @@ func (er *engineRules) addFlowToEgressToServiceRules(direction calico.DirectionT
 	val := egressToServiceRule{
 		name:      name,
 		namespace: namespace,
-		protocol:  protocol,
+		protocol:  *protocol,
 		timestamp: clock.NowRFC3339(),
 	}
 	val.ports = []numorstring.Port{port}
@@ -258,7 +263,7 @@ func (er *engineRules) addFlowToEgressToServiceRules(direction calico.DirectionT
 // addFlowToNamespaceRules updates the ports if a rule already exists, otherwise defines a
 // new namespaceRule for flows where the remote is a pod. The rule simply selects the pod's
 // namespace.
-func (er *engineRules) addFlowToNamespaceRules(direction calico.DirectionType, flow *api.Flow, clock Clock) {
+func (er *engineRules) addFlowToNamespaceRules(direction calico.DirectionType, flow api.Flow, clock Clock) {
 	var endpoint *api.FlowEndpointData
 	if direction == calico.EgressTraffic {
 		endpoint = &flow.Destination
@@ -269,17 +274,18 @@ func (er *engineRules) addFlowToNamespaceRules(direction calico.DirectionType, f
 		return
 	}
 
-	port, err := numorstring.PortFromRange(*flow.Destination.Port, *flow.Destination.Port)
-	if err != nil {
-		log.WithError(err).WithField("flow", flow).Warn("flow cannot be processed, port could not be converted")
+	port, protocol := getPortAndProtocol(flow.Destination.Port, flow.Proto)
+	if protocol == nil {
+		// No need to add an empty protocol
+		log.WithField("flow", flow).Warn("flow cannot be processed, protocol is empty")
 		return
 	}
+
 	namespace := endpoint.Namespace
-	protocol := api.GetProtocol(*flow.Proto)
 
 	key := namespaceRuleKey{
 		namespace: namespace,
-		protocol:  protocol,
+		protocol:  *protocol,
 	}
 
 	// Update the ports and return if the value already exists.
@@ -298,11 +304,10 @@ func (er *engineRules) addFlowToNamespaceRules(direction calico.DirectionType, f
 
 	val := namespaceRule{
 		namespace: namespace,
-		protocol:  protocol,
+		protocol:  *protocol,
 		timestamp: clock.NowRFC3339(),
 	}
-	val.ports = []numorstring.Port{}
-	val.ports = append(val.ports, port)
+	val.ports = []numorstring.Port{port}
 
 	// Add the value to the map of egress to service rules and increment the total engine rules count.
 	er.namespaceRules[key] = &val
@@ -313,7 +318,7 @@ func (er *engineRules) addFlowToNamespaceRules(direction calico.DirectionType, f
 // new networkSetRule for flows where the remote is an existing NetworkSet or GlobalNetworkSet.
 // A rule will be added to select the NetworkSet by name - this ensures we don’t require label
 // schema knowledge.
-func (er *engineRules) addFlowToNetworkSetRules(direction calico.DirectionType, flow *api.Flow, clock Clock) {
+func (er *engineRules) addFlowToNetworkSetRules(direction calico.DirectionType, flow api.Flow, clock Clock) {
 	var endpoint *api.FlowEndpointData
 	if direction == calico.EgressTraffic {
 		endpoint = &flow.Destination
@@ -324,14 +329,15 @@ func (er *engineRules) addFlowToNetworkSetRules(direction calico.DirectionType, 
 		return
 	}
 
-	port, err := numorstring.PortFromRange(*endpoint.Port, *endpoint.Port)
-	if err != nil {
-		log.WithError(err).WithField("flow", flow).Warn("flow cannot be processed, port could not be converted")
+	port, protocol := getPortAndProtocol(flow.Destination.Port, flow.Proto)
+	if protocol == nil {
+		// No need to add an empty protocol
+		log.WithField("flow", flow).Warn("flow cannot be processed, protocol is empty")
 		return
 	}
+
 	name := endpoint.Name
 	namespace := endpoint.Namespace
-	protocol := api.GetProtocol(*flow.Proto)
 
 	gl := false
 	if namespace == "-" || namespace == "" {
@@ -342,7 +348,7 @@ func (er *engineRules) addFlowToNetworkSetRules(direction calico.DirectionType, 
 		global:    gl,
 		name:      name,
 		namespace: namespace,
-		protocol:  protocol,
+		protocol:  *protocol,
 	}
 
 	// Update the ports
@@ -363,7 +369,7 @@ func (er *engineRules) addFlowToNetworkSetRules(direction calico.DirectionType, 
 		global:    gl,
 		name:      name,
 		namespace: namespace,
-		protocol:  protocol,
+		protocol:  *protocol,
 		timestamp: clock.NowRFC3339(),
 	}
 	val.ports = []numorstring.Port{port}
@@ -389,16 +395,16 @@ func (er *engineRules) addFlowToNetworkSetRules(direction calico.DirectionType, 
 // The set of private CIDRs may/should be updated by the customer to only contain private CIDRs
 // specific to the customer network, and should exclude the CIDR ranges used by the cluster for
 // nodes and pods (**). The PRE will not update the CIDRs once the network set is created.
-func (er *engineRules) addFlowToPrivateNetworkRules(direction calico.DirectionType, flow *api.Flow, clock Clock) {
-	port, err := numorstring.PortFromRange(*flow.Destination.Port, *flow.Destination.Port)
-	if err != nil {
-		log.WithError(err).WithField("flow", flow).Warn("flow cannot be processed, port could not be converted")
+func (er *engineRules) addFlowToPrivateNetworkRules(direction calico.DirectionType, flow api.Flow, clock Clock) {
+	port, protocol := getPortAndProtocol(flow.Destination.Port, flow.Proto)
+	if protocol == nil {
+		// No need to add an empty protocol
+		log.WithField("flow", flow).Warn("flow cannot be processed, protocol is empty")
 		return
 	}
-	protocol := api.GetProtocol(*flow.Proto)
 
 	key := privateNetworkRuleKey{
-		protocol: protocol,
+		protocol: *protocol,
 	}
 
 	// Update the nets, if the value already exists
@@ -417,7 +423,7 @@ func (er *engineRules) addFlowToPrivateNetworkRules(direction calico.DirectionTy
 
 	val := &privateNetworkRule{
 		name:      calicores.PrivateNetworkSetName,
-		protocol:  protocol,
+		protocol:  *protocol,
 		timestamp: clock.NowRFC3339(),
 	}
 	val.ports = []numorstring.Port{port}
@@ -431,23 +437,16 @@ func (er *engineRules) addFlowToPrivateNetworkRules(direction calico.DirectionTy
 // new publicNetworkRule covering all ingress and egress flows from/to other CIDRs that are not all
 // other categories. It is a mop-up rule that is broad in scope. It covers all remaining flow
 // endpoints limited only by port and protocol.
-func (er *engineRules) addFlowToPublicNetworkRules(direction calico.DirectionType, flow *api.Flow, clock Clock) {
-	if flow == nil {
-		err := fmt.Errorf("empty flow")
-		log.WithError(err).Debug("Failed to process public network flow")
+func (er *engineRules) addFlowToPublicNetworkRules(direction calico.DirectionType, flow api.Flow, clock Clock) {
+	port, protocol := getPortAndProtocol(flow.Destination.Port, flow.Proto)
+	if protocol == nil {
+		// No need to add an empty protocol
+		log.WithField("flow", flow).Warn("flow cannot be processed, protocol is empty")
 		return
 	}
-
-	endpoint := flow.Destination
-	port, err := numorstring.PortFromRange(*endpoint.Port, *endpoint.Port)
-	if err != nil {
-		log.WithError(err).WithField("flow", flow).Warn("flow cannot be processed, port could not be converted")
-		return
-	}
-	protocol := api.GetProtocol(*flow.Proto)
 
 	key := publicNetworkRuleKey{
-		protocol: protocol,
+		protocol: *protocol,
 	}
 
 	// Update the ports and return if the value already exists
@@ -463,7 +462,7 @@ func (er *engineRules) addFlowToPublicNetworkRules(direction calico.DirectionTyp
 
 	// The key does not exist, define a new value and add the key-value to the egress to service rules
 	val := publicNetworkRule{
-		protocol:  protocol,
+		protocol:  *protocol,
 		timestamp: clock.NowRFC3339(),
 	}
 	val.ports = []numorstring.Port{port}
@@ -497,7 +496,7 @@ func containsPort(arr []numorstring.Port, val numorstring.Port) bool {
 }
 
 // getFlowType returns the engine flow type, or an error if the flow defines unsupported traffic.
-func getFlowType(direction calico.DirectionType, flow *api.Flow) flowType {
+func getFlowType(direction calico.DirectionType, flow api.Flow) flowType {
 	var endpoint *api.FlowEndpointData
 	dest := false
 	if direction == calicores.EgressTraffic {
@@ -547,6 +546,22 @@ func getFlowType(direction calico.DirectionType, flow *api.Flow) flowType {
 
 	log.Warnf("Unsupported flow type: %s", endpoint.Type)
 	return unsupportedFlowType
+}
+
+// getPortAndProtocol returns the port and protocol as numborstring types. The port is
+// empty, if the protocol does not support ports (ex. ICMP).
+func getPortAndProtocol(iport *uint16, iprotocol *uint8) (numorstring.Port, *numorstring.Protocol) {
+	if iprotocol == nil {
+		return numorstring.Port{}, nil
+	}
+
+	protocol := api.GetProtocol(*iprotocol)
+	if !protocol.SupportsPorts() || iport == nil {
+		return numorstring.Port{}, &protocol
+	}
+	port := numorstring.SinglePort(*iport)
+
+	return port, &protocol
 }
 
 // parseDomains separates a comma delimited string into a slice of strings and returns the slice.

@@ -117,7 +117,8 @@ func PolicyRecommendationHandler(
 			params.EndpointName,
 			params.Namespace,
 			defaultTierName,
-			&recommendedPolicyOrder)
+			&recommendedPolicyOrder,
+		)
 		for _, flow := range flows {
 			log.WithField("flow", flow).Debug("Calling recommendation engine with flow")
 			err := recEngine.ProcessFlow(*flow)

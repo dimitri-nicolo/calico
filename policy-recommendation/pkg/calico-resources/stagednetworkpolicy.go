@@ -152,7 +152,10 @@ func GetEgressToDomainV3Rule(
 		Protocol: protocol,
 	}
 
-	rule.Destination.Ports = []numorstring.Port{port}
+	if protocol.SupportsPorts() {
+		rule.Destination.Ports = []numorstring.Port{port}
+	}
+
 	// Domains are stored in alphabetical order
 	rule.Destination.Domains = sortDomains(domains)
 
@@ -192,9 +195,9 @@ func GetEgressToDomainSetV3Rule(
 		Protocol: protocol,
 	}
 
-	// Define rule for egress traffic only.
-
-	rule.Destination.Ports = sortPorts(ports)
+	if protocol.SupportsPorts() {
+		rule.Destination.Ports = sortPorts(ports)
+	}
 	rule.Destination.Selector = fmt.Sprintf("%s/scope == '%s'", PolicyRecKeyName, string(EgressToDomainScope))
 
 	return rule
@@ -237,8 +240,9 @@ func GetEgressToServiceV3Rule(
 		Protocol: protocol,
 	}
 
-	// Define rule for egress traffic only
-	rule.Destination.Ports = sortPorts(ports)
+	if protocol.SupportsPorts() {
+		rule.Destination.Ports = sortPorts(ports)
+	}
 	rule.Destination.Services = &v3.ServiceMatch{
 		Name:      name,
 		Namespace: namespace,
@@ -286,8 +290,9 @@ func GetNamespaceV3Rule(
 	entityRule := getEntityRuleReference(direction, rule)
 	entityRule.Selector = fmt.Sprintf("%s/orchestrator == 'k8s'", projectCalicoKeyName)
 	entityRule.NamespaceSelector = fmt.Sprintf("%s/name == '%s'", projectCalicoKeyName, namespace)
-	// Ports are always destination
-	rule.Destination.Ports = sortPorts(ports)
+	if protocol.SupportsPorts() {
+		rule.Destination.Ports = sortPorts(ports)
+	}
 
 	return rule
 }
@@ -338,7 +343,9 @@ func GetNetworkSetV3Rule(
 		entityRule.NamespaceSelector = fmt.Sprintf("%s/name == '%s'", projectCalicoKeyName, namespace)
 	}
 
-	rule.Destination.Ports = sortPorts(ports)
+	if protocol.SupportsPorts() {
+		rule.Destination.Ports = sortPorts(ports)
+	}
 
 	return rule
 }
@@ -379,7 +386,9 @@ func GetPrivateNetworkSetV3Rule(
 	}
 
 	entityRule := getEntityRuleReference(direction, rule)
-	entityRule.Ports = sortPorts(ports)
+	if protocol.SupportsPorts() {
+		rule.Destination.Ports = sortPorts(ports)
+	}
 	entityRule.Selector = fmt.Sprintf("%s/name == '%s' && %s/kind == '%s'",
 		projectCalicoKeyName, PrivateNetworkSetName, projectCalicoKeyName, string(PrivateNetworkScope))
 	entityRule.NamespaceSelector = "global()"
@@ -398,9 +407,7 @@ func GetPrivateNetworkSetV3Rule(
 // EntityRule.Ports:
 //
 //	set of ports from flows (always destination rule)
-func GetPublicV3Rule(
-	ports []numorstring.Port, protocol *numorstring.Protocol, rfc3339Time string,
-) *v3.Rule {
+func GetPublicV3Rule(ports []numorstring.Port, protocol *numorstring.Protocol, rfc3339Time string) *v3.Rule {
 	rule := &v3.Rule{
 		Metadata: &v3.RuleMetadata{
 			Annotations: map[string]string{
@@ -412,7 +419,9 @@ func GetPublicV3Rule(
 		Protocol: protocol,
 	}
 
-	rule.Destination.Ports = sortPorts(ports)
+	if protocol.SupportsPorts() {
+		rule.Destination.Ports = sortPorts(ports)
+	}
 
 	return rule
 }

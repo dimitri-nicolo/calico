@@ -28,8 +28,9 @@ const (
 )
 
 var (
-	protocolTCP = numorstring.ProtocolFromString("TCP")
-	protocolUDP = numorstring.ProtocolFromString("UDP")
+	protocolTCP  = numorstring.ProtocolFromString("TCP")
+	protocolUDP  = numorstring.ProtocolFromString("UDP")
+	protocolICMP = numorstring.ProtocolFromString("ICMP")
 
 	egress = v3.Rule{
 		Action:   v3.Allow,
@@ -585,6 +586,28 @@ var _ = Describe("Policy Recommendation Rules", func() {
 		testRuleEquality(rule, expectedRule)
 	})
 
+	It("returns a valid GetEgressToDomainSetV3Rule with ICMP protocol", func() {
+		expectedProtocol := &protocolICMP
+		expectedRule := &v3.Rule{
+			Metadata: &v3.RuleMetadata{
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
+					"policyrecommendation.tigera.io/name":        "test_domainset_namespace-egress-domains",
+					"policyrecommendation.tigera.io/namespace":   "test_domainset_namespace",
+					"policyrecommendation.tigera.io/scope":       "DomainSet",
+				},
+			},
+			Action:   v3.Allow,
+			Protocol: expectedProtocol,
+			Destination: v3.EntityRule{
+				Selector: "policyrecommendation.tigera.io/scope == 'Domains'",
+			},
+		}
+
+		rule := GetEgressToDomainSetV3Rule(domainNamespace, []numorstring.Port{}, &protocolICMP, rfc3339Time)
+		testRuleEquality(rule, expectedRule)
+	})
+
 	It("returns a valid GetEgressToDomainV3Rule", func() {
 		expectedProtocol := &protocolTCP
 		expectedRule := &v3.Rule{
@@ -603,6 +626,26 @@ var _ = Describe("Policy Recommendation Rules", func() {
 		}
 
 		rule := GetEgressToDomainV3Rule(domains, ports[0], protocol, rfc3339Time)
+		testRuleEquality(rule, expectedRule)
+	})
+
+	It("returns a valid GetEgressToDomainV3Rule with ICMP protocol", func() {
+		expectedProtocol := &protocolICMP
+		expectedRule := &v3.Rule{
+			Metadata: &v3.RuleMetadata{
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
+					"policyrecommendation.tigera.io/scope":       "Domains",
+				},
+			},
+			Action:   v3.Allow,
+			Protocol: expectedProtocol,
+			Destination: v3.EntityRule{
+				Domains: []string{"calico.org", "kubernetes.io", "tigera.io"},
+			},
+		}
+
+		rule := GetEgressToDomainV3Rule(domains, numorstring.Port{}, &protocolICMP, rfc3339Time)
 		testRuleEquality(rule, expectedRule)
 	})
 
@@ -633,6 +676,31 @@ var _ = Describe("Policy Recommendation Rules", func() {
 		testRuleEquality(rule, expectedRule)
 	})
 
+	It("returns a valid GetEgressToServiceSetV3Rule with ICMP protocol", func() {
+		expectedProtocol := &protocolICMP
+		expectedRule := &v3.Rule{
+			Metadata: &v3.RuleMetadata{
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
+					"policyrecommendation.tigera.io/name":        "test_service_name",
+					"policyrecommendation.tigera.io/namespace":   "test_service_namespace",
+					"policyrecommendation.tigera.io/scope":       "Service",
+				},
+			},
+			Action:   v3.Allow,
+			Protocol: expectedProtocol,
+			Destination: v3.EntityRule{
+				Services: &v3.ServiceMatch{
+					Name:      "test_service_name",
+					Namespace: "test_service_namespace",
+				},
+			},
+		}
+
+		rule := GetEgressToServiceV3Rule(service, serviceNamespace, []numorstring.Port{}, &protocolICMP, rfc3339Time)
+		testRuleEquality(rule, expectedRule)
+	})
+
 	It("returns a valid GetNamespaceV3Rule", func() {
 		expectedPorts := orderedPorts
 		expectedProtocol := &protocolTCP
@@ -647,7 +715,6 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Action:   v3.Allow,
 			Protocol: expectedProtocol,
 			Source: v3.EntityRule{
-				Ports:             expectedPorts,
 				Selector:          "projectcalico.org/orchestrator == 'k8s'",
 				NamespaceSelector: "projectcalico.org/name == 'test_namespace'",
 			},
@@ -657,6 +724,29 @@ var _ = Describe("Policy Recommendation Rules", func() {
 		}
 
 		rule := GetNamespaceV3Rule(IngressTraffic, namespace, ports, protocol, rfc3339Time)
+		testRuleEquality(rule, expectedRule)
+	})
+
+	It("returns a valid GetNamespaceV3Rule with ICMP protocol", func() {
+		expectedProtocol := &protocolICMP
+		expectedRule := &v3.Rule{
+			Metadata: &v3.RuleMetadata{
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
+					"policyrecommendation.tigera.io/namespace":   "test_namespace",
+					"policyrecommendation.tigera.io/scope":       "Namespace",
+				},
+			},
+			Action:   v3.Allow,
+			Protocol: expectedProtocol,
+			Source: v3.EntityRule{
+				Selector:          "projectcalico.org/orchestrator == 'k8s'",
+				NamespaceSelector: "projectcalico.org/name == 'test_namespace'",
+			},
+			Destination: v3.EntityRule{},
+		}
+
+		rule := GetNamespaceV3Rule(IngressTraffic, namespace, []numorstring.Port{}, &protocolICMP, rfc3339Time)
 		testRuleEquality(rule, expectedRule)
 	})
 
@@ -687,6 +777,31 @@ var _ = Describe("Policy Recommendation Rules", func() {
 		rule := GetNetworkSetV3Rule(IngressTraffic, name, namespace, isGlobal, ports, protocol, rfc3339Time)
 		fmt.Print(rule.Destination.Ports)
 		fmt.Print(expectedRule.Destination.Ports)
+		testRuleEquality(rule, expectedRule)
+	})
+
+	It("returns a valid GetNetworkSetV3Rule with ICMP protocol", func() {
+		expectedProtocol := &protocolICMP
+		expectedRule := &v3.Rule{
+			Metadata: &v3.RuleMetadata{
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
+					"policyrecommendation.tigera.io/name":        "test_name",
+					"policyrecommendation.tigera.io/namespace":   "test_namespace",
+					"policyrecommendation.tigera.io/scope":       "NetworkSet",
+				},
+			},
+			Action:   v3.Allow,
+			Protocol: expectedProtocol,
+			Source: v3.EntityRule{
+				Selector:          "projectcalico.org/name == 'test_name' && projectcalico.org/kind == 'NetworkSet'",
+				NamespaceSelector: "global()",
+			},
+			Destination: v3.EntityRule{},
+		}
+
+		isGlobal := true
+		rule := GetNetworkSetV3Rule(IngressTraffic, name, namespace, isGlobal, []numorstring.Port{}, &protocolICMP, rfc3339Time)
 		testRuleEquality(rule, expectedRule)
 	})
 })
