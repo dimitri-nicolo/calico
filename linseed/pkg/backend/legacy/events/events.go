@@ -55,7 +55,9 @@ func (b *eventsBackend) Create(ctx context.Context, i bapi.ClusterInfo, events [
 	bulk := b.client.Bulk()
 
 	for _, event := range events {
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(event)
+		id := event.ID
+		event.ID = ""
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(event).Id(id)
 		bulk.Add(req)
 	}
 

@@ -135,6 +135,43 @@ func TestCreateEvent(t *testing.T) {
 		})
 	}
 
+	t.Run("Create Event with given event id", func(t *testing.T) {
+		defer setupTest(t)()
+
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		event.ID = "SOMERANDOMID"
+		// Create the event in ES.
+		resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
+		require.Equal(t, 1, resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, 1, resp.Succeeded)
+
+		// Refresh the index.
+		index := fmt.Sprintf("tigera_secure_ee_events.%s.*", cluster)
+
+		// Refresh the index.
+		err = backendutils.RefreshIndex(ctx, client, index)
+		require.NoError(t, err)
+
+		// List the events and make sure the one we created is present.
+		results, err := b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, 1, results)
+		require.Equal(t, 1, len(results.Items))
+
+		// We expect the ID to be same as the passed event id.
+		require.Equal(t, event, results.Items[0])
+	})
+
 	t.Run("Invalid Cluster Info", func(t *testing.T) {
 		defer setupTest(t)()
 		clusterInfo := bapi.ClusterInfo{}
@@ -309,7 +346,6 @@ func TestPagination(t *testing.T) {
 	listSize := 21
 	// The event to create
 	event := v1.Event{
-		ID:              "BL17oYcBQZnKQs2K2mY1",
 		Time:            time.Now().Unix(),
 		Description:     "Just a city event",
 		Origin:          "South Detroit",
@@ -361,9 +397,6 @@ func TestPagination(t *testing.T) {
 			require.NotNil(t, 1, r)
 			require.Equal(t, numResults, len(r.Items))
 			if numResults > 0 {
-				require.NotEqualf(t, "BL17oYcBQZnKQs2K2mY1", r.Items[0].ID, "Event ID should not be preserved")
-				//Reset the ID value to nil to Assert event in the results.
-				event.ID = ""
 				// We expect the ID to be present, but it's a random value so we
 				// can't assert on the exact value.
 				require.Equal(t, event, backendutils.AssertEventIDAndReset(t, r.Items[0]))
