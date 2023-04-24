@@ -144,7 +144,7 @@ var _ = Describe("extractPagedRecommendationParamsFromRequest", func() {
 var _ = Describe("PagedRecommendationsHandler", func() {
 	const (
 		clusterID = "cluster"
-		tier      = "namespace-segmentation"
+		tier      = "namespace-isolation"
 
 		recommendationsURLPath = "/pagedRecommendations"
 	)
@@ -363,377 +363,377 @@ var (
 	snpCreateList = []v3.StagedNetworkPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns11-recommendation",
+				Name:      "namespace-isolation.ns11-recommendation",
 				Namespace: "ns11",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns1-recommendation",
+				Name:      "namespace-isolation.ns1-recommendation",
 				Namespace: "ns1",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns3-recommendation",
+				Name:      "namespace-isolation.ns3-recommendation",
 				Namespace: "ns3",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns17-recommendation",
+				Name:      "namespace-isolation.ns17-recommendation",
 				Namespace: "ns17",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Ignore",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionIgnore,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns5-recommendation",
+				Name:      "namespace-isolation.ns5-recommendation",
 				Namespace: "ns5",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Ignore",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionIgnore,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns2-recommendation",
+				Name:      "namespace-isolation.ns2-recommendation",
 				Namespace: "ns2",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Ignore",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionIgnore,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns21-recommendation",
+				Name:      "namespace-isolation.ns21-recommendation",
 				Namespace: "ns21",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns6-recommendation",
+				Name:      "namespace-isolation.ns6-recommendation",
 				Namespace: "ns6",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns7-recommendation",
+				Name:      "namespace-isolation.ns7-recommendation",
 				Namespace: "ns7",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns8-recommendation",
+				Name:      "namespace-isolation.ns8-recommendation",
 				Namespace: "ns8",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns9-recommendation",
+				Name:      "namespace-isolation.ns9-recommendation",
 				Namespace: "ns9",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Ignore",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionIgnore,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns25-recommendation",
+				Name:      "namespace-isolation.ns25-recommendation",
 				Namespace: "ns25",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns10-recommendation",
+				Name:      "namespace-isolation.ns10-recommendation",
 				Namespace: "ns10",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns4-recommendation",
+				Name:      "namespace-isolation.ns4-recommendation",
 				Namespace: "ns4",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Ignore",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionIgnore,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns13-recommendation",
+				Name:      "namespace-isolation.ns13-recommendation",
 				Namespace: "ns13",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns14-recommendation",
+				Name:      "namespace-isolation.ns14-recommendation",
 				Namespace: "ns14",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Ignore",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionIgnore,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns23-recommendation",
+				Name:      "namespace-isolation.ns23-recommendation",
 				Namespace: "ns23",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns15-recommendation",
+				Name:      "namespace-isolation.ns15-recommendation",
 				Namespace: "ns15",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns16-recommendation",
+				Name:      "namespace-isolation.ns16-recommendation",
 				Namespace: "ns16",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns18-recommendation",
+				Name:      "namespace-isolation.ns18-recommendation",
 				Namespace: "ns18",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns19-recommendation",
+				Name:      "namespace-isolation.ns19-recommendation",
 				Namespace: "ns19",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns20-recommendation",
+				Name:      "namespace-isolation.ns20-recommendation",
 				Namespace: "ns20",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns12-recommendation",
+				Name:      "namespace-isolation.ns12-recommendation",
 				Namespace: "ns12",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns22-recommendation",
+				Name:      "namespace-isolation.ns22-recommendation",
 				Namespace: "ns22",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns24-recommendation",
+				Name:      "namespace-isolation.ns24-recommendation",
 				Namespace: "ns24",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 	}
@@ -741,77 +741,77 @@ var (
 	expectedLearnMaxItems5Page0 = []v3.StagedNetworkPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns11-recommendation",
+				Name:      "namespace-isolation.ns11-recommendation",
 				Namespace: "ns11",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns16-recommendation",
+				Name:      "namespace-isolation.ns16-recommendation",
 				Namespace: "ns16",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns20-recommendation",
+				Name:      "namespace-isolation.ns20-recommendation",
 				Namespace: "ns20",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns21-recommendation",
+				Name:      "namespace-isolation.ns21-recommendation",
 				Namespace: "ns21",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns23-recommendation",
+				Name:      "namespace-isolation.ns23-recommendation",
 				Namespace: "ns23",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 	}
@@ -819,47 +819,47 @@ var (
 	expectedLearnMaxItems5Page1 = []v3.StagedNetworkPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns25-recommendation",
+				Name:      "namespace-isolation.ns25-recommendation",
 				Namespace: "ns25",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns3-recommendation",
+				Name:      "namespace-isolation.ns3-recommendation",
 				Namespace: "ns3",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns8-recommendation",
+				Name:      "namespace-isolation.ns8-recommendation",
 				Namespace: "ns8",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 	}
@@ -867,77 +867,77 @@ var (
 	expectedIgnoreMaxItems5Page0 = []v3.StagedNetworkPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns14-recommendation",
+				Name:      "namespace-isolation.ns14-recommendation",
 				Namespace: "ns14",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Ignore",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionIgnore,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns17-recommendation",
+				Name:      "namespace-isolation.ns17-recommendation",
 				Namespace: "ns17",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Ignore",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionIgnore,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns2-recommendation",
+				Name:      "namespace-isolation.ns2-recommendation",
 				Namespace: "ns2",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Ignore",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionIgnore,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns4-recommendation",
+				Name:      "namespace-isolation.ns4-recommendation",
 				Namespace: "ns4",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Ignore",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionIgnore,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns5-recommendation",
+				Name:      "namespace-isolation.ns5-recommendation",
 				Namespace: "ns5",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Ignore",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionIgnore,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 	}
@@ -945,17 +945,17 @@ var (
 	expectedIgnoreMaxItems5Page1 = []v3.StagedNetworkPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns9-recommendation",
+				Name:      "namespace-isolation.ns9-recommendation",
 				Namespace: "ns9",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Ignore",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionIgnore,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 	}
@@ -963,77 +963,77 @@ var (
 	expectedSetMaxItems5Page0 = []v3.StagedNetworkPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns1-recommendation",
+				Name:      "namespace-isolation.ns1-recommendation",
 				Namespace: "ns1",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns10-recommendation",
+				Name:      "namespace-isolation.ns10-recommendation",
 				Namespace: "ns10",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns12-recommendation",
+				Name:      "namespace-isolation.ns12-recommendation",
 				Namespace: "ns12",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns13-recommendation",
+				Name:      "namespace-isolation.ns13-recommendation",
 				Namespace: "ns13",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns15-recommendation",
+				Name:      "namespace-isolation.ns15-recommendation",
 				Namespace: "ns15",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 	}
@@ -1041,77 +1041,77 @@ var (
 	expectedSetMaxItems5Page1 = []v3.StagedNetworkPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns18-recommendation",
+				Name:      "namespace-isolation.ns18-recommendation",
 				Namespace: "ns18",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns19-recommendation",
+				Name:      "namespace-isolation.ns19-recommendation",
 				Namespace: "ns19",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns22-recommendation",
+				Name:      "namespace-isolation.ns22-recommendation",
 				Namespace: "ns22",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns24-recommendation",
+				Name:      "namespace-isolation.ns24-recommendation",
 				Namespace: "ns24",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns6-recommendation",
+				Name:      "namespace-isolation.ns6-recommendation",
 				Namespace: "ns6",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 	}
@@ -1119,17 +1119,17 @@ var (
 	expectedSetMaxItems5Page2 = []v3.StagedNetworkPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.ns7-recommendation",
+				Name:      "namespace-isolation.ns7-recommendation",
 				Namespace: "ns7",
 				Labels: map[string]string{
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                "namespace-isolation",
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Set",
 				},
 			},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionSet,
-				Tier:         "namespace-segmentation",
+				Tier:         "namespace-isolation",
 			},
 		},
 	}

@@ -40,7 +40,7 @@ const (
 var _ = Describe("Policy Recommendation Batch", func() {
 	const (
 		clusterID = "cluster"
-		tier      = "namespace-segmentation"
+		tier      = "namespace-isolation"
 	)
 
 	var (
@@ -175,7 +175,7 @@ var _ = Describe("Policy Recommendation Batch Authen/Authz", func() {
 
 	const (
 		clusterID = "cluster"
-		tier      = "namespace-segmentation"
+		tier      = "namespace-isolation"
 	)
 
 	var (
@@ -310,7 +310,7 @@ var _ = Describe("Policy Recommendation Batch Authen/Authz", func() {
 var _ = Describe("Policy Recommendation Batch Patch", func() {
 	const (
 		clusterID = "cluster"
-		tier      = "namespace-segmentation"
+		tier      = "namespace-isolation"
 	)
 
 	var (
@@ -362,7 +362,7 @@ var _ = Describe("Policy Recommendation Batch Patch", func() {
 			string(v3.StagedActionSet),
 			&v3.StagedNetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      getPolicyName("namespace-segmentation", ns1.Name),
+					Name:      getPolicyName("namespace-isolation", ns1.Name),
 					Namespace: ns1.Name,
 					Labels: map[string]string{
 						"projectcalico.org/spec.stagedAction": "Learn",
@@ -381,7 +381,7 @@ var _ = Describe("Policy Recommendation Batch Patch", func() {
 			make(chan error, 1),
 			&v3.StagedNetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      getPolicyName("namespace-segmentation", ns1.Name),
+					Name:      getPolicyName("namespace-isolation", ns1.Name),
 					Namespace: ns1.Namespace,
 					Labels: map[string]string{
 						"projectcalico.org/spec.stagedAction": "Set",
@@ -398,7 +398,7 @@ var _ = Describe("Policy Recommendation Batch Patch", func() {
 			string(v3.StagedActionIgnore),
 			&v3.StagedNetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      getPolicyName("namespace-segmentation", ns1.Name),
+					Name:      getPolicyName("namespace-isolation", ns1.Name),
 					Namespace: ns1.Name,
 					Labels: map[string]string{
 						"projectcalico.org/spec.stagedAction": "Learn",
@@ -417,7 +417,7 @@ var _ = Describe("Policy Recommendation Batch Patch", func() {
 			make(chan error, 1),
 			&v3.StagedNetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      getPolicyName("namespace-segmentation", ns1.Name),
+					Name:      getPolicyName("namespace-isolation", ns1.Name),
 					Namespace: ns1.Namespace,
 					Labels: map[string]string{
 						"projectcalico.org/spec.stagedAction": "Ignore",
@@ -439,7 +439,7 @@ var _ = Describe("Policy Recommendation Batch Patch", func() {
 			string(v3.StagedActionLearn),
 			&v3.StagedNetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      getPolicyName("namespace-segmentation", ns1.Name),
+					Name:      getPolicyName("namespace-isolation", ns1.Name),
 					Namespace: ns1.Name,
 					Labels: map[string]string{
 						"projectcalico.org/spec.stagedAction": "Ignore",
@@ -458,7 +458,7 @@ var _ = Describe("Policy Recommendation Batch Patch", func() {
 			make(chan error, 1),
 			&v3.StagedNetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      getPolicyName("namespace-segmentation", ns1.Name),
+					Name:      getPolicyName("namespace-isolation", ns1.Name),
 					Namespace: ns1.Namespace,
 					Labels: map[string]string{
 						"projectcalico.org/spec.stagedAction": "Learn",
@@ -537,27 +537,27 @@ var (
 	activateQuery = &BatchStagedActionParams{
 		StagedNetworkPolicies: []StagedNetworkPolicy{
 			{
-				Name:      getPolicyName("namespace-segmentation", ns1.Name),
+				Name:      getPolicyName("namespace-isolation", ns1.Name),
 				Namespace: ns1.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns2.Name),
+				Name:      getPolicyName("namespace-isolation", ns2.Name),
 				Namespace: ns2.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns3.Name),
+				Name:      getPolicyName("namespace-isolation", ns3.Name),
 				Namespace: ns3.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns4.Name),
+				Name:      getPolicyName("namespace-isolation", ns4.Name),
 				Namespace: ns4.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns5.Name),
+				Name:      getPolicyName("namespace-isolation", ns5.Name),
 				Namespace: ns5.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns6.Name),
+				Name:      getPolicyName("namespace-isolation", ns6.Name),
 				Namespace: ns6.Namespace,
 			},
 		},
@@ -567,27 +567,27 @@ var (
 	ignoreQuery = &BatchStagedActionParams{
 		StagedNetworkPolicies: []StagedNetworkPolicy{
 			{
-				Name:      getPolicyName("namespace-segmentation", ns1.Name),
+				Name:      getPolicyName("namespace-isolation", ns1.Name),
 				Namespace: ns1.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns2.Name),
+				Name:      getPolicyName("namespace-isolation", ns2.Name),
 				Namespace: ns2.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns3.Name),
+				Name:      getPolicyName("namespace-isolation", ns3.Name),
 				Namespace: ns3.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns4.Name),
+				Name:      getPolicyName("namespace-isolation", ns4.Name),
 				Namespace: ns4.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns5.Name),
+				Name:      getPolicyName("namespace-isolation", ns5.Name),
 				Namespace: ns5.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns6.Name),
+				Name:      getPolicyName("namespace-isolation", ns6.Name),
 				Namespace: ns6.Namespace,
 			},
 		},
@@ -597,27 +597,27 @@ var (
 	learnQuery = &BatchStagedActionParams{
 		StagedNetworkPolicies: []StagedNetworkPolicy{
 			{
-				Name:      getPolicyName("namespace-segmentation", ns1.Name),
+				Name:      getPolicyName("namespace-isolation", ns1.Name),
 				Namespace: ns1.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns2.Name),
+				Name:      getPolicyName("namespace-isolation", ns2.Name),
 				Namespace: ns2.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns3.Name),
+				Name:      getPolicyName("namespace-isolation", ns3.Name),
 				Namespace: ns3.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns4.Name),
+				Name:      getPolicyName("namespace-isolation", ns4.Name),
 				Namespace: ns4.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns5.Name),
+				Name:      getPolicyName("namespace-isolation", ns5.Name),
 				Namespace: ns5.Namespace,
 			},
 			{
-				Name:      getPolicyName("namespace-segmentation", ns6.Name),
+				Name:      getPolicyName("namespace-isolation", ns6.Name),
 				Namespace: ns6.Namespace,
 			},
 		},
@@ -627,7 +627,7 @@ var (
 	testSnps = []*v3.StagedNetworkPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns1.Name),
+				Name:      getPolicyName("namespace-isolation", ns1.Name),
 				Namespace: ns1.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -639,7 +639,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns2.Name),
+				Name:      getPolicyName("namespace-isolation", ns2.Name),
 				Namespace: ns2.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -651,7 +651,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns3.Name),
+				Name:      getPolicyName("namespace-isolation", ns3.Name),
 				Namespace: ns3.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -663,7 +663,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns4.Name),
+				Name:      getPolicyName("namespace-isolation", ns4.Name),
 				Namespace: ns4.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -675,7 +675,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns5.Name),
+				Name:      getPolicyName("namespace-isolation", ns5.Name),
 				Namespace: ns5.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -687,7 +687,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns6.Name),
+				Name:      getPolicyName("namespace-isolation", ns6.Name),
 				Namespace: ns6.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -702,7 +702,7 @@ var (
 	expectedActivatedSnps = []*v3.StagedNetworkPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            getPolicyName("namespace-segmentation", ns1.Name),
+				Name:            getPolicyName("namespace-isolation", ns1.Name),
 				Namespace:       ns1.Namespace,
 				OwnerReferences: nil,
 			},
@@ -712,7 +712,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            getPolicyName("namespace-segmentation", ns2.Name),
+				Name:            getPolicyName("namespace-isolation", ns2.Name),
 				Namespace:       ns2.Namespace,
 				OwnerReferences: nil,
 			},
@@ -722,7 +722,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            getPolicyName("namespace-segmentation", ns3.Name),
+				Name:            getPolicyName("namespace-isolation", ns3.Name),
 				Namespace:       ns3.Namespace,
 				OwnerReferences: nil,
 			},
@@ -732,7 +732,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            getPolicyName("namespace-segmentation", ns4.Name),
+				Name:            getPolicyName("namespace-isolation", ns4.Name),
 				Namespace:       ns4.Namespace,
 				OwnerReferences: nil,
 			},
@@ -742,7 +742,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            getPolicyName("namespace-segmentation", ns5.Name),
+				Name:            getPolicyName("namespace-isolation", ns5.Name),
 				Namespace:       ns5.Namespace,
 				OwnerReferences: nil,
 			},
@@ -752,7 +752,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            getPolicyName("namespace-segmentation", ns6.Name),
+				Name:            getPolicyName("namespace-isolation", ns6.Name),
 				Namespace:       ns6.Namespace,
 				OwnerReferences: nil,
 			},
@@ -765,7 +765,7 @@ var (
 	expectedRecommendedSnps = []*v3.StagedNetworkPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns1.Name),
+				Name:      getPolicyName("namespace-isolation", ns1.Name),
 				Namespace: ns1.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -780,7 +780,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns2.Name),
+				Name:      getPolicyName("namespace-isolation", ns2.Name),
 				Namespace: ns2.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -795,7 +795,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns3.Name),
+				Name:      getPolicyName("namespace-isolation", ns3.Name),
 				Namespace: ns3.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -810,7 +810,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns4.Name),
+				Name:      getPolicyName("namespace-isolation", ns4.Name),
 				Namespace: ns4.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -825,7 +825,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns5.Name),
+				Name:      getPolicyName("namespace-isolation", ns5.Name),
 				Namespace: ns5.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -840,7 +840,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns6.Name),
+				Name:      getPolicyName("namespace-isolation", ns6.Name),
 				Namespace: ns6.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -858,7 +858,7 @@ var (
 	expectedIgnoredSnps = []*v3.StagedNetworkPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns1.Name),
+				Name:      getPolicyName("namespace-isolation", ns1.Name),
 				Namespace: ns1.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -873,7 +873,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns2.Name),
+				Name:      getPolicyName("namespace-isolation", ns2.Name),
 				Namespace: ns2.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -888,7 +888,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns3.Name),
+				Name:      getPolicyName("namespace-isolation", ns3.Name),
 				Namespace: ns3.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -903,7 +903,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns4.Name),
+				Name:      getPolicyName("namespace-isolation", ns4.Name),
 				Namespace: ns4.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -918,7 +918,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns5.Name),
+				Name:      getPolicyName("namespace-isolation", ns5.Name),
 				Namespace: ns5.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -933,7 +933,7 @@ var (
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      getPolicyName("namespace-segmentation", ns6.Name),
+				Name:      getPolicyName("namespace-isolation", ns6.Name),
 				Namespace: ns6.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					{
