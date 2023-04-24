@@ -381,7 +381,7 @@ func TestPagination(t *testing.T) {
 	err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_events.*")
 	require.NoError(t, err)
 
-	testSelector := func(maxPageSize int, numResults int, afterkey map[string]interface{}, shouldSucceed bool) {
+	testSelector := func(maxPageSize int, numResults int, afterkey map[string]interface{}, shouldSucceed bool, errmsg string) {
 		r, e := b.List(ctx, clusterInfo, &v1.EventParams{
 			QueryParams: v1.QueryParams{
 				MaxPageSize: maxPageSize,
@@ -403,15 +403,24 @@ func TestPagination(t *testing.T) {
 			}
 		} else {
 			require.Error(t, e)
+			require.Contains(t, e.Error(), errmsg)
 		}
 	}
 
 	t.Run("check results size is same as max page size", func(t *testing.T) {
-		testSelector(10, 10, nil, true)
+		testSelector(10, 10, nil, true, "")
 	})
 
 	t.Run("check afterkey is used to load the rest of the items", func(t *testing.T) {
-		testSelector(0, 11, map[string]interface{}{"startFrom": 10}, true)
+		testSelector(0, 11, map[string]interface{}{"startFrom": 10}, true, "")
+	})
+
+	t.Run("check negative max page size returns error", func(t *testing.T) {
+		testSelector(-10, 10, nil, false, "parameter cannot be negative")
+	})
+
+	t.Run("check afterkey is used to load the rest of the items", func(t *testing.T) {
+		testSelector(3, 3, map[string]interface{}{"startFrom": 10}, true, "")
 	})
 
 }
@@ -427,23 +436,24 @@ func TestSorting(t *testing.T) {
 	events := make([]v1.Event, 0, listSize)
 	for i := 0; i < listSize; i++ {
 		event := v1.Event{
-			Time:            createTime[i].Unix(),
-			Description:     "Just a city event",
-			Origin:          "South Detroit",
-			Severity:        1,
-			Type:            "TODO",
-			DestIP:          testutils.StringPtr("192.168.1.1"),
-			DestName:        "anywhere-1234",
-			DestNameAggr:    "anywhere",
-			DestPort:        testutils.Int64Ptr(53),
-			Dismissed:       false,
-			Host:            "midnight-train",
+			Time:         createTime[i].Unix(),
+			Description:  "Just a city event",
+			Origin:       "South Detroit",
+			Severity:     1,
+			Type:         "TODO",
+			DestIP:       testutils.StringPtr("192.168.1.1"),
+			DestName:     "anywhere-1234",
+			DestNameAggr: "anywhere",
+			DestPort:     testutils.Int64Ptr(53),
+			Dismissed:    false,
+			//Host:            "midnight-train",
 			SourceIP:        testutils.StringPtr("192.168.2.2"),
 			SourceName:      "south-detroit-1234",
 			SourceNameAggr:  "south-detroit",
 			SourceNamespace: "michigan",
 			SourcePort:      testutils.Int64Ptr(48127),
 		}
+		event.Host = fmt.Sprintf("midnight-train-%v", i)
 		events = append(events, event)
 	}
 
@@ -477,22 +487,44 @@ func TestSorting(t *testing.T) {
 	require.Equal(t, events[0], backendutils.AssertEventIDAndReset(t, results.Items[0]))
 	require.Equal(t, events[1], backendutils.AssertEventIDAndReset(t, results.Items[1]))
 
-	// Query again, this time sorting in order to get the logs in reverse order.
-	params.Sort = []v1.SearchRequestSortBy{
-		{
-			Field:      "time",
-			Descending: true,
-		},
-	}
+	t.Run("Sort using the time in descending order", func(t *testing.T) {
+		// Query again, this time sorting in order to get the logs in reverse order.
+		params.Sort = []v1.SearchRequestSortBy{
+			{
+				Field:      "time",
+				Descending: true,
+			},
+		}
 
-	// List again to check the decending sort works.
-	results, err = b.List(ctx, clusterInfo, &params)
-	require.NoError(t, err)
-	require.NotNil(t, 1, results)
-	require.Equal(t, 2, len(results.Items))
+		// List again to check the decending sort works.
+		results, err = b.List(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+		require.NotNil(t, 1, results)
+		require.Equal(t, 2, len(results.Items))
 
-	require.Equal(t, events[0], backendutils.AssertEventIDAndReset(t, results.Items[1]))
-	require.Equal(t, events[1], backendutils.AssertEventIDAndReset(t, results.Items[0]))
+		require.Equal(t, events[0], backendutils.AssertEventIDAndReset(t, results.Items[1]))
+		require.Equal(t, events[1], backendutils.AssertEventIDAndReset(t, results.Items[0]))
+
+	})
+
+	t.Run("Sort using the host in descending order", func(t *testing.T) {
+		// Query again, this time sorting in order to get the logs in reverse order.
+		params.Sort = []v1.SearchRequestSortBy{
+			{
+				Field:      "host",
+				Descending: true,
+			},
+		}
+		// List again to check the decending sort works.
+		results, err = b.List(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+		require.NotNil(t, 1, results)
+		require.Equal(t, 2, len(results.Items))
+
+		require.Equal(t, events[0].Host, results.Items[1].Host)
+		require.Equal(t, events[1].Host, results.Items[0].Host)
+
+	})
 
 }
 
@@ -574,7 +606,7 @@ func TestDismissEvent(t *testing.T) {
 		require.Equal(t, true, results.Items[0].Dismissed)
 	})
 
-	t.Run("Dismiss an invalid Event ID", func(t *testing.T) {
+	t.Run("Try to Dismiss an event that does not exist in Elastic", func(t *testing.T) {
 		defer setupTest(t)()
 		//Dismiss Event
 		invalidEvent := v1.Event{
@@ -695,5 +727,21 @@ func TestDeleteEvent(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, "no cluster ID on request", err.Error())
 		require.Nil(t, resp)
+	})
+
+	t.Run("Try to Delete an event that does not exist in Elastic", func(t *testing.T) {
+
+		//Delete Event
+		invalidEvent := v1.Event{
+			ID: "INVALIDEVENT",
+		}
+		resp, err = b.Delete(ctx, clusterInfo, []v1.Event{invalidEvent})
+		require.Nil(t, err)
+		require.NotNil(t, resp)
+		require.Equal(t, 1, resp.Total)
+		require.Equal(t, 0, resp.Succeeded)
+		require.Equal(t, 1, resp.Failed)
+		require.Equal(t, 404, resp.Deleted[0].Status)
+
 	})
 }
