@@ -11,7 +11,6 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/felix/tproxydefs"
 )
 
 type CheckProvider interface {
@@ -68,22 +67,10 @@ func (c *ALPCheckProvider) Check(ps *policystore.PolicyStore, req *authz.CheckRe
 func defaultPerHostPolicyCheck(ps *policystore.PolicyStore) checkFn {
 	return func(req *authz.CheckRequest) (*authz.CheckResponse, error) {
 		resp := &authz.CheckResponse{Status: &status.Status{Code: UNKNOWN}}
-		if alpIPSet, ok := ps.IPSetByID[tproxydefs.ApplicationLayerPolicyIPSet]; ok &&
-			// ipset exists.. check if src or dest is in ALP ipset
-			(alpIPSet.ContainsAddress(req.Attributes.Source.Address) ||
-				alpIPSet.ContainsAddress(req.Attributes.Destination.Address)) {
-			// traffic described in request needs to go through an ALP check.
-			st := checkRequest(ps, req)
-			resp.Status = &st
-			return resp, nil
-		}
-
-		// traffic described in request doesn't need to go through ALP check; or
-		// traffic described in request needs to continue to WAF; or
-		// traffic described in request is plaintext;
-		// or sent here by mistake.
-		//
-		// in any case, let it continue to next check
+		// let checkRequest decide if it's a known source to let it proceed to dest checker; or
+		// if it's a known dest to actually run policy
+		st := checkRequest(ps, req)
+		resp.Status = &st
 		return resp, nil
 	}
 }

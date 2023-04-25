@@ -1,36 +1,51 @@
 package types
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
 )
 
 type IPToEndpointsIndex interface {
-	Get(k ip.CIDR) []*proto.WorkloadEndpoint
-	Update(k ip.CIDR, v *proto.WorkloadEndpointUpdate)
-	Delete(k ip.CIDR, v *proto.WorkloadEndpointRemove)
+	Get(k ip.Addr) []*proto.WorkloadEndpoint
+	Update(k ip.Addr, v *proto.WorkloadEndpointUpdate)
+	Delete(k ip.Addr, v *proto.WorkloadEndpointRemove)
 }
 
 type wlMap map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
 
 func NewIPToEndpointsIndex() IPToEndpointsIndex {
 	return &IPToEndpointsIndexer{
-		make(map[ip.CIDR]wlMap),
+		make(map[ip.Addr]wlMap),
 	}
 }
 
 type IPToEndpointsIndexer struct {
-	store map[ip.CIDR]wlMap
+	store map[ip.Addr]wlMap
 }
 
-func (index *IPToEndpointsIndexer) Get(k ip.CIDR) (res []*proto.WorkloadEndpoint) {
+func (index *IPToEndpointsIndexer) Get(k ip.Addr) (res []*proto.WorkloadEndpoint) {
+	log.Trace("before get: ", index.printKeys())
 	for _, item := range index.store[k] {
 		res = append(res, item)
 	}
 	return
 }
 
-func (index *IPToEndpointsIndexer) Update(k ip.CIDR, v *proto.WorkloadEndpointUpdate) {
+func (index *IPToEndpointsIndexer) printKeys() []string {
+	res := []string{}
+	for entry := range index.store {
+		res = append(res, entry.String())
+	}
+	return res
+}
+
+func (index *IPToEndpointsIndexer) Update(k ip.Addr, v *proto.WorkloadEndpointUpdate) {
+	if log.IsLevelEnabled(log.TraceLevel) {
+		log.Trace("before update: ", index.printKeys())
+		defer log.Trace("after update: ", index.printKeys())
+	}
 	if _, ok := index.store[k]; !ok {
 		index.store[k] = make(wlMap)
 		index.Update(k, v)
@@ -40,7 +55,11 @@ func (index *IPToEndpointsIndexer) Update(k ip.CIDR, v *proto.WorkloadEndpointUp
 	index.store[k][*v.Id] = v.Endpoint
 }
 
-func (index *IPToEndpointsIndexer) Delete(k ip.CIDR, v *proto.WorkloadEndpointRemove) {
+func (index *IPToEndpointsIndexer) Delete(k ip.Addr, v *proto.WorkloadEndpointRemove) {
+	if log.IsLevelEnabled(log.TraceLevel) {
+		log.Trace("before delete: ", index.printKeys())
+		defer log.Trace("after delete: ", index.printKeys())
+	}
 	if _, ok := index.store[k]; !ok {
 		return
 	}

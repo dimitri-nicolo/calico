@@ -22,6 +22,7 @@ import (
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
@@ -70,7 +71,7 @@ func lookupEndpointsFromRequest(store *policystore.PolicyStore, req *authz.Check
 			rlog.Warnf("cannot process addr %v: %v", addr, err)
 		} else {
 			log.Debug("trying to match destination: ", destinationIp)
-			destination = ipToEndpoints(store, destinationIp)
+			destination = ipToEndpoints(store, destinationIp.Addr())
 		}
 	}
 
@@ -82,7 +83,7 @@ func lookupEndpointsFromRequest(store *policystore.PolicyStore, req *authz.Check
 			rlog.Warnf("cannot process addr %v: %v", addr, err)
 		} else {
 			log.Debug("trying to match source: ", sourceIp)
-			source = ipToEndpoints(store, sourceIp)
+			source = ipToEndpoints(store, sourceIp.Addr())
 		}
 	}
 
@@ -100,7 +101,7 @@ func addrPortFromPeer(peer *authz.AttributeContext_Peer) (addr string, port uint
 	return addr, port, true
 }
 
-func ipToEndpoints(store *policystore.PolicyStore, addr ip.CIDR) []*proto.WorkloadEndpoint {
+func ipToEndpoints(store *policystore.PolicyStore, addr ip.Addr) []*proto.WorkloadEndpoint {
 	return store.IPToIndexes.Get(addr)
 }
 
@@ -112,6 +113,15 @@ func checkRequest(store *policystore.PolicyStore, req *authz.CheckRequest) statu
 	log.Debugf("Found endpoints from request [src: %v, dst: %v]", src, dst)
 
 	if len(dst) > 0 {
+		alpIPset, ok := store.IPSetByID[tproxydefs.ApplicationLayerPolicyIPSet]
+		if !ok {
+			return status.Status{Code: UNKNOWN, Message: "cannot process ALP yet"}
+		}
+
+		reqAddr := req.Attributes.Destination.Address
+		if !alpIPset.ContainsAddress(reqAddr) {
+			return status.Status{Code: UNKNOWN, Message: "ALP not enabled for this request destination"}
+		}
 		// Destination is local workload, apply its ingress policy.
 		// possible there's multiple weps for an ip.
 		// let's run through all of them and apply its ingress policy
@@ -151,7 +161,7 @@ func checkRequest(store *policystore.PolicyStore, req *authz.CheckRequest) statu
 	// Don't know source or dest.  Why was this packet sent to us?
 	// Assume that we're out of sync and reject it.
 	log.Debug("encountered invalid ext_authz request case")
-	return status.Status{Code: PERMISSION_DENIED}
+	return status.Status{Code: UNKNOWN} // return unknown so that next check provider can continue processing
 }
 
 // checkStore applies the tiered policy plus any config based corrections and returns OK if the check passes or

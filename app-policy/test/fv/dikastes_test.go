@@ -89,7 +89,7 @@ func (s *dikastesTestSuite) TestBasicExtAuthz() {
 						newPeer("10.0.0.1", "default", "default"),
 						newPeer("10.0.1.1", "default", "default"),
 					),
-					expectedResp: newResponseWithStatus(int32(code.Code_PERMISSION_DENIED)),
+					expectedResp: newResponseWithStatus(int32(code.Code_UNKNOWN)),
 					expectedErr:  nil,
 				},
 				{
@@ -98,7 +98,7 @@ func (s *dikastesTestSuite) TestBasicExtAuthz() {
 						newPeer("10.0.0.1", "default", "default"),
 						newPeer("10.0.1.1", "default", "default"),
 					),
-					expectedResp: newResponseWithStatus(int32(code.Code_PERMISSION_DENIED)),
+					expectedResp: newResponseWithStatus(int32(code.Code_UNKNOWN)),
 					expectedErr:  nil,
 				},
 			},

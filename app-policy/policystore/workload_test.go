@@ -16,15 +16,15 @@ type mockWorkloadCallbacks struct {
 	callStack []string
 }
 
-func (m *mockWorkloadCallbacks) Update(cidr ip.CIDR, v *proto.WorkloadEndpointUpdate) {
-	m.callStack = append(m.callStack, fmt.Sprint("Update ", cidr, v))
+func (m *mockWorkloadCallbacks) Update(k ip.Addr, v *proto.WorkloadEndpointUpdate) {
+	m.callStack = append(m.callStack, fmt.Sprint("Update ", k, v))
 }
 
-func (m *mockWorkloadCallbacks) Delete(cidr ip.CIDR, v *proto.WorkloadEndpointRemove) {
-	m.callStack = append(m.callStack, fmt.Sprint("Delete ", cidr))
+func (m *mockWorkloadCallbacks) Delete(k ip.Addr, v *proto.WorkloadEndpointRemove) {
+	m.callStack = append(m.callStack, fmt.Sprint("Delete ", k))
 }
 
-func (m *mockWorkloadCallbacks) Get(k ip.CIDR) []*proto.WorkloadEndpoint {
+func (m *mockWorkloadCallbacks) Get(k ip.Addr) []*proto.WorkloadEndpoint {
 	return nil
 }
 
@@ -76,12 +76,12 @@ func TestWorkloads(t *testing.T) {
 	runTestCase(t,
 		"single workload endpoint update and remove",
 		[]interface{}{
-			wepUpdate("some-pod-1", "10.0.0.1/32"),
+			wepUpdate("some-pod-1", "10.0.0.1"),
 			wepRemove("some-pod-1"),
 		},
 		[]string{
-			fmt.Sprintf("Update 10.0.0.1/32 %v", wepUpdate("some-pod-1", "10.0.0.1/32")),
-			"Delete 10.0.0.1/32",
+			fmt.Sprintf("Update 10.0.0.1 %v", wepUpdate("some-pod-1", "10.0.0.1")),
+			"Delete 10.0.0.1",
 		},
 	)
 
@@ -92,10 +92,10 @@ func TestWorkloads(t *testing.T) {
 			wepRemove("some-pod-1"),
 		},
 		[]string{
-			fmt.Sprintf("Update 10.0.0.1/32 %v", wepUpdate("some-pod-1", "10.0.0.1/32", "10.0.0.2/32")),
-			fmt.Sprintf("Update 10.0.0.2/32 %v", wepUpdate("some-pod-1", "10.0.0.1/32", "10.0.0.2/32")),
-			"Delete 10.0.0.1/32",
-			"Delete 10.0.0.2/32",
+			fmt.Sprintf("Update 10.0.0.1 %v", wepUpdate("some-pod-1", "10.0.0.1/32", "10.0.0.2/32")),
+			fmt.Sprintf("Update 10.0.0.2 %v", wepUpdate("some-pod-1", "10.0.0.1/32", "10.0.0.2/32")),
+			"Delete 10.0.0.1",
+			"Delete 10.0.0.2",
 		},
 	)
 
@@ -104,33 +104,34 @@ func TestWorkloads(t *testing.T) {
 		[]interface{}{
 			wepUpdate("some-pod-1", "10.0.0.1/32"),
 			wepUpdate("some-pod-2", "10.0.0.2/32"),
-			wepUpdate("some-pod-2", "10.0.2.1/32"),
+			wepUpdate("some-pod-2", "10.0.2.1"), // mixed update: doesn't have suffix!
 			wepRemove("some-pod-1"),
 			wepRemove("some-pod-2"),
 		},
 		[]string{
-			fmt.Sprintf("Update 10.0.0.1/32 %v", wepUpdate("some-pod-1", "10.0.0.1/32")),
-			fmt.Sprintf("Update 10.0.0.2/32 %v", wepUpdate("some-pod-2", "10.0.0.2/32")),
-			"Delete 10.0.0.2/32",
-			fmt.Sprintf("Update 10.0.2.1/32 %v", wepUpdate("some-pod-2", "10.0.2.1/32")),
-			"Delete 10.0.0.1/32",
-			"Delete 10.0.2.1/32",
+			fmt.Sprintf("Update 10.0.0.1 %v", wepUpdate("some-pod-1", "10.0.0.1/32")),
+			fmt.Sprintf("Update 10.0.0.2 %v", wepUpdate("some-pod-2", "10.0.0.2/32")),
+			"Delete 10.0.0.2",
+			// update without suffix still handled
+			fmt.Sprintf("Update 10.0.2.1 %v", wepUpdate("some-pod-2", "10.0.2.1")),
+			"Delete 10.0.0.1",
+			"Delete 10.0.2.1",
 		},
 	)
 
 	runTestCase(t,
 		"single workload endpoint changing ips",
 		[]interface{}{
-			wepUpdate("some-pod-1", "10.0.0.1/32", "10.0.0.2/32"),
-			wepUpdate("some-pod-1", "10.0.0.1/32"),
+			wepUpdate("some-pod-1", "10.0.0.1", "10.0.0.2"),
+			wepUpdate("some-pod-1", "10.0.0.1"),
 			wepRemove("some-pod-1"),
 		},
 		[]string{
-			fmt.Sprintf("Update 10.0.0.1/32 %s", wepUpdate("some-pod-1", "10.0.0.1/32", "10.0.0.2/32")),
-			fmt.Sprintf("Update 10.0.0.2/32 %v", wepUpdate("some-pod-1", "10.0.0.1/32", "10.0.0.2/32")),
-			"Delete 10.0.0.2/32",
-			fmt.Sprintf("Update 10.0.0.1/32 %s", wepUpdate("some-pod-1", "10.0.0.1/32")),
-			"Delete 10.0.0.1/32",
+			fmt.Sprintf("Update 10.0.0.1 %s", wepUpdate("some-pod-1", "10.0.0.1", "10.0.0.2")),
+			fmt.Sprintf("Update 10.0.0.2 %v", wepUpdate("some-pod-1", "10.0.0.1", "10.0.0.2")),
+			"Delete 10.0.0.2",
+			fmt.Sprintf("Update 10.0.0.1 %s", wepUpdate("some-pod-1", "10.0.0.1")),
+			"Delete 10.0.0.1",
 		},
 	)
 }

@@ -88,7 +88,9 @@ func (store *PolicyStore) processConfigUpdate(update *proto.ConfigUpdate) {
 func (store *PolicyStore) processIPSetUpdate(update *proto.IPSetUpdate) {
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithFields(log.Fields{
-			"id": update.Id,
+			"id":      update.Id,
+			"type":    update.Type.String(),
+			"members": update.Members,
 		}).Debug("Processing IPSetUpdate")
 	}
 
@@ -103,12 +105,15 @@ func (store *PolicyStore) processIPSetUpdate(update *proto.IPSetUpdate) {
 func (store *PolicyStore) processIPSetDeltaUpdate(update *proto.IPSetDeltaUpdate) {
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithFields(log.Fields{
-			"id": update.Id,
+			"id":      update.Id,
+			"added":   update.AddedMembers,
+			"removed": update.RemovedMembers,
 		}).Debug("Processing IPSetDeltaUpdate")
 	}
-	s := store.IPSetByID[update.Id]
-	if s == nil {
-		log.Errorf("Unknown IPSet id: %v", update.Id)
+	s, ok := store.IPSetByID[update.Id]
+	if !ok {
+		log.Errorf("Unknown IPSet id: %v, skipping update", update.Id)
+		return // we shouldn't be getting a delta update before we've seen the IPSet
 	}
 	for _, addr := range update.AddedMembers {
 		s.AddString(addr)

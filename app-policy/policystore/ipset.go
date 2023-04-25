@@ -45,6 +45,9 @@ type IPSet interface {
 
 	// Test if the address is contained in the set.
 	ContainsAddress(addr *envoyapi.Address) bool
+
+	// Members
+	Members() []string
 }
 
 // We'll use golang's map type under the covers here because it is simple to implement.
@@ -86,6 +89,14 @@ func (m ipMapSet) ContainsAddress(addr *envoyapi.Address) bool {
 	return m[key]
 }
 
+func (m ipMapSet) Members() []string {
+	members := make([]string, 0, len(m))
+	for k := range m {
+		members = append(members, k)
+	}
+	return members
+}
+
 func (m ipPortMapSet) AddString(ip string) {
 	m[ip] = true
 }
@@ -105,6 +116,14 @@ func (m ipPortMapSet) ContainsAddress(addr *envoyapi.Address) bool {
 	return m[key]
 }
 
+func (m ipPortMapSet) Members() []string {
+	members := make([]string, 0, len(m))
+	for k := range m {
+		members = append(members, k)
+	}
+	return members
+}
+
 func (m portMapSet) AddString(port string) {
 	m[port] = struct{}{}
 }
@@ -118,6 +137,14 @@ func (m portMapSet) ContainsAddress(addr *envoyapi.Address) bool {
 	key := fmt.Sprintf("%d", sck.GetPortValue())
 	_, ok := m[key]
 	return ok
+}
+
+func (m portMapSet) Members() []string {
+	members := make([]string, 0, len(m))
+	for k := range m {
+		members = append(members, k)
+	}
+	return members
 }
 
 // ipNetSet implements an IPSet of type NET, where the members are CIDRs.  These sets are a combination of endpoint IPs
@@ -312,4 +339,8 @@ func parseCIDR(network string) (net.IP, uint64) {
 		log.WithField("network", network).Panic("bad CIDR IP")
 	}
 	return ip, mask
+}
+
+func (m ipNetSet) Members() []string {
+	return []string{"ipNetSet{}"}
 }

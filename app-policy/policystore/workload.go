@@ -81,7 +81,7 @@ func (wuh *workloadUpdateHandler) onWorkloadEndpointUpdate(upd *proto.WorkloadEn
 			log.Debug("error parsing cidr or ip", net4)
 			continue
 		}
-		cb.Delete(ipNet4, &proto.WorkloadEndpointRemove{
+		cb.Delete(ipNet4.Addr(), &proto.WorkloadEndpointRemove{
 			Id: upd.Id,
 		})
 	}
@@ -95,7 +95,7 @@ func (wuh *workloadUpdateHandler) onWorkloadEndpointUpdate(upd *proto.WorkloadEn
 
 			}
 			log.Debug("upsert occurred for ", ipNet4)
-			cb.Update(ipNet4, upd)
+			cb.Update(ipNet4.Addr(), upd)
 		}
 	}
 }
@@ -109,7 +109,7 @@ func (wuh *workloadUpdateHandler) onWorkloadEndpointRemove(upd *proto.WorkloadEn
 				log.Debug("error parsing cidr or ip", net4)
 				continue
 			}
-			cb.Delete(ipNet4, upd)
+			cb.Delete(ipNet4.Addr(), upd)
 		}
 	}
 	// finally, forget about this workload
