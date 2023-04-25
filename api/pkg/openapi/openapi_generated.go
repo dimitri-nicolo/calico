@@ -3525,6 +3525,7 @@ func schema_pkg_apis_projectcalico_v3_DashboardLayout(ref common.ReferenceCallba
 					"xPos": {
 						SchemaProps: spec.SchemaProps{
 							Description: "X coordinate of the top-left corner of the dashboard card",
+							Default:     0,
 							Type:        []string{"integer"},
 							Format:      "int64",
 						},
@@ -3532,6 +3533,7 @@ func schema_pkg_apis_projectcalico_v3_DashboardLayout(ref common.ReferenceCallba
 					"yPos": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Y coordinate of the top-left corner of the dashboard card",
+							Default:     0,
 							Type:        []string{"integer"},
 							Format:      "int64",
 						},
@@ -3539,6 +3541,7 @@ func schema_pkg_apis_projectcalico_v3_DashboardLayout(ref common.ReferenceCallba
 					"width": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Width of the dashboard card",
+							Default:     0,
 							Type:        []string{"integer"},
 							Format:      "int64",
 						},
@@ -3546,6 +3549,7 @@ func schema_pkg_apis_projectcalico_v3_DashboardLayout(ref common.ReferenceCallba
 					"height": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Height of the dashboard card",
+							Default:     0,
 							Type:        []string{"integer"},
 							Format:      "int64",
 						},
@@ -3600,6 +3604,7 @@ func schema_pkg_apis_projectcalico_v3_DashboardLayout(ref common.ReferenceCallba
 						},
 					},
 				},
+				Required: []string{"xPos", "yPos", "width", "height"},
 			},
 		},
 	}

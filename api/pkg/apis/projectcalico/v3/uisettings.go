@@ -168,36 +168,36 @@ type DashboardData struct {
 
 type DashboardLayout struct {
 	// Index of the dashboard
-	Index string `json:"index,omitempty" validate:"omitempty"`
+	Index *string `json:"index,omitempty" validate:"omitempty"`
 
 	// X coordinate of the top-left corner of the dashboard card
-	XPos uint32 `json:"xPos,omitempty" validate:"omitempty"`
+	XPos uint32 `json:"xPos"`
 	// Y coordinate of the top-left corner of the dashboard card
-	YPos uint32 `json:"yPos,omitempty" validate:"omitempty"`
+	YPos uint32 `json:"yPos"`
 
 	// Width of the dashboard card
-	Width uint32 `json:"width,omitempty" validate:"omitempty"`
+	Width uint32 `json:"width" validate:"gt=0"`
 	// Height of the dashboard card
-	Height uint32 `json:"height,omitempty" validate:"omitempty"`
+	Height uint32 `json:"height" validate:"gt=0"`
 
 	// Minimum limit set for the size of the dashboard card width
-	MinWidth uint32 `json:"minWidth,omitempty" validate:"omitempty"`
+	MinWidth *uint32 `json:"minWidth,omitempty" validate:"omitempty,gt=0"`
 	// Maximum limit set for the size of the dashboard card width
-	MaxWidth uint32 `json:"maxWidth,omitempty" validate:"omitempty"`
+	MaxWidth *uint32 `json:"maxWidth,omitempty" validate:"omitempty,gt=0"`
 
 	// Minimum limit set for the size of the dashboard card height
-	MinHeight uint32 `json:"minHeight,omitempty" validate:"omitempty"`
+	MinHeight *uint32 `json:"minHeight,omitempty" validate:"omitempty,gt=0"`
 	// Maximum limit set for the size of the dashboard card height
-	MaxHeight uint32 `json:"maxHeight,omitempty" validate:"omitempty"`
+	MaxHeight *uint32 `json:"maxHeight,omitempty" validate:"omitempty,gt=0"`
 
 	// Whether this dashboard card should be re-sizeable or not
-	IsResizable bool `json:"isResizable,omitempty" validate:"omitempty"`
+	IsResizable *bool `json:"isResizable,omitempty" validate:"omitempty"`
 
 	// Whether this dashboard card should be visible or not
-	IsVisible bool `json:"isVisible,omitempty" validate:"omitempty"`
+	IsVisible *bool `json:"isVisible,omitempty" validate:"omitempty"`
 
 	// Whether this dashboard is in namespace view or not
-	IsInNamespaceView bool `json:"isInNamespaceView,omitempty" validate:"omitempty"`
+	IsInNamespaceView *bool `json:"isInNamespaceView,omitempty" validate:"omitempty"`
 }
 
 // +genclient:nonNamespaced
