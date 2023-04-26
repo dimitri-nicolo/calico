@@ -139,22 +139,28 @@ func main() {
 func startTyphaClient(st syncproto.SyncerType, hostname string) {
 	logrus.Infof("Starting sycher of type: %v", st)
 	cbs := newSyncerCallbacks(st)
-	addrs, err := discovery.DiscoverTyphaAddrs(
+	typhaDiscoverer := discovery.New(
 		discovery.WithInClusterKubeClient(),
 		discovery.WithKubeService(typhaNamespace, typhaK8sServiceName),
 	)
+	_, err := typhaDiscoverer.LoadTyphaAddrs()
 	if err != nil {
 		logrus.WithError(err).Panic("Failed to discover Typha.")
 	}
-	client := syncclient.New(addrs, VERSION, hostname, "", cbs, &syncclient.Options{
-		KeyFile:               typhaKeyFile,
-		CertFile:              typhaCertFile,
-		CAFile:                typhaCAFile,
-		ServerCN:              typhaCN,
-		ServerURISAN:          typhaURISAN,
-		SyncerType:            st,
-		DebugDiscardKVUpdates: false,
-	})
+	client := syncclient.New(typhaDiscoverer,
+		VERSION,
+		hostname,
+		"",
+		cbs,
+		&syncclient.Options{
+			KeyFile:               typhaKeyFile,
+			CertFile:              typhaCertFile,
+			CAFile:                typhaCAFile,
+			ServerCN:              typhaCN,
+			ServerURISAN:          typhaURISAN,
+			SyncerType:            st,
+			DebugDiscardKVUpdates: false,
+		})
 	err = client.Start(context.Background())
 	if err != nil {
 		logrus.WithError(err).Panic("Failed to start typha client.")
@@ -163,7 +169,7 @@ func startTyphaClient(st syncproto.SyncerType, hostname string) {
 	go func(st syncproto.SyncerType) {
 		defer close(done)
 		client.Finished.Wait()
-		logrus.WithField("syncer", st).Warning("Disconnected from Typha; restarting...")
+		logrus.WithField("syncer", st).Warning("Disconnected from Typha. (Will reconnect.)")
 		time.Sleep(2 * time.Second)
 		go startTyphaClient(st, hostname)
 	}(st)
