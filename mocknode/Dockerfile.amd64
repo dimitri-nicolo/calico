@@ -15,7 +15,6 @@
 ARG UBI_IMAGE
 ARG ARCH=x86_64
 ARG GIT_VERSION=unknown
-ARG IPTABLES_VER=1.8.2-16
 
 FROM ${UBI_IMAGE} as ubi
 ARG ARCH
@@ -34,5 +33,7 @@ LABEL name="Calico mock node" \
       maintainer="shaun@tigera.io"
 
 # Copy in the filesystem - this contains licenses, etc...
+COPY filesystem/licenses/ /licenses
+# And the mock-node itself...
 COPY bin/mocknode-amd64 /usr/bin/mocknode
 CMD /usr/bin/mocknode
