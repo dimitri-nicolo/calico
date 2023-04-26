@@ -66,8 +66,7 @@ func (b *templateCache) loadEntry(ctx context.Context, logsType bapi.DataType, i
 
 	templateConfig := NewTemplateConfig(logsType, info,
 		WithShards(b.shards),
-		WithReplicas(b.replicas),
-		WithApplication("fluentd"))
+		WithReplicas(b.replicas))
 
 	template, err := b.load(ctx, b.client, templateConfig)
 	if err != nil {

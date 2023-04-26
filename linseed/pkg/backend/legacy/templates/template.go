@@ -5,7 +5,6 @@ package templates
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -24,17 +23,16 @@ type Template struct {
 // in Elastic. A template has associated an ILM policy, index patterns
 // mappings, settings and a bootstrap index to perform rollover
 type TemplateConfig struct {
-	logsType    bapi.DataType
-	info        bapi.ClusterInfo
-	application string
-	shards      int
-	replicas    int
+	dataType bapi.DataType
+	info     bapi.ClusterInfo
+	shards   int
+	replicas int
 }
 
 // NewTemplateConfig will build a TemplateConfig based on the logs type, cluster information
 // and provided Option(s)
 func NewTemplateConfig(logsType bapi.DataType, info bapi.ClusterInfo, opts ...Option) *TemplateConfig {
-	defaultConfig := &TemplateConfig{logsType: logsType, info: info, shards: 1, replicas: 0, application: "fluentd"}
+	defaultConfig := &TemplateConfig{dataType: logsType, info: info, shards: 1, replicas: 0}
 
 	for _, opt := range opts {
 		defaultConfig = opt(defaultConfig)
@@ -64,26 +62,21 @@ func WithShards(shards int) Option {
 	}
 }
 
-// WithApplication will set the application name to be
-// used when constructing a boostrap index or index alias
-func WithApplication(application string) Option {
-	return func(config *TemplateConfig) *TemplateConfig {
-		config.application = application
-		return config
-	}
-}
-
 // TemplateName will provide the name of the template
 func (c *TemplateConfig) TemplateName() string {
+	template, ok := TemplateNamePatternLookup[c.dataType]
+	if !ok {
+		panic("template name for log type not implemented")
+	}
 	if c.info.Tenant == "" {
-		return fmt.Sprintf("tigera_secure_ee_%s.%s.", strings.ToLower(string(c.logsType)), c.info.Cluster)
+		return fmt.Sprintf(template, c.info.Cluster)
 	}
 
-	return fmt.Sprintf("tigera_secure_ee_%s.%s.%s.", strings.ToLower(string(c.logsType)), c.info.Tenant, c.info.Cluster)
+	return fmt.Sprintf(template, fmt.Sprintf("%s.%s", c.info.Tenant, c.info.Cluster))
 }
 
 func (c *TemplateConfig) indexPatterns() string {
-	prefix, ok := IndexPatternsPrefixLookup[c.logsType]
+	prefix, ok := IndexPatternsPrefixLookup[c.dataType]
 	if !ok {
 		panic("index prefix for log type not implemented")
 	}
@@ -96,7 +89,7 @@ func (c *TemplateConfig) indexPatterns() string {
 }
 
 func (c *TemplateConfig) mappings() string {
-	switch c.logsType {
+	switch c.dataType {
 	case bapi.FlowLogs:
 		return FlowLogMappings
 	case bapi.DNSLogs:
@@ -127,25 +120,27 @@ func (c *TemplateConfig) mappings() string {
 // Alias will provide the alias used to write data
 func (c *TemplateConfig) Alias() string {
 	if c.info.Tenant == "" {
-		return fmt.Sprintf("tigera_secure_ee_%s.%s.", c.logsType, c.info.Cluster)
+		return fmt.Sprintf("tigera_secure_ee_%s.%s.", c.dataType, c.info.Cluster)
 	}
-	return fmt.Sprintf("tigera_secure_ee_%s.%s.%s.", c.logsType, c.info.Tenant, c.info.Cluster)
+	return fmt.Sprintf("tigera_secure_ee_%s.%s.%s.", c.dataType, c.info.Tenant, c.info.Cluster)
 }
 
 func (c *TemplateConfig) ilmPolicyName() string {
-	return fmt.Sprintf("tigera_secure_ee_%s_policy", c.logsType)
+	return fmt.Sprintf("tigera_secure_ee_%s_policy", c.dataType)
 }
 
 // BootstrapIndexName will construct the boostrap index name
 // to be used for rollover
 func (c *TemplateConfig) BootstrapIndexName() string {
+	template, ok := BootstrapIndexPatternLookup[c.dataType]
+	if !ok {
+		panic("bootstrap index name for log type not implemented")
+	}
 	if c.info.Tenant == "" {
-		return fmt.Sprintf("<tigera_secure_ee_%s.%s.%s-{now/s{yyyyMMdd}}-000001>",
-			c.logsType, c.info.Cluster, c.application)
+		return fmt.Sprintf(template, c.info.Cluster)
 	}
 
-	return fmt.Sprintf("<tigera_secure_ee_%s.%s.%s.%s-{now/s{yyyyMMdd}}-000001>",
-		c.logsType, c.info.Tenant, c.info.Cluster, c.application)
+	return fmt.Sprintf(template, fmt.Sprintf("%s.%s", c.info.Tenant, c.info.Cluster))
 }
 
 func (c *TemplateConfig) settings() map[string]interface{} {
@@ -169,7 +164,7 @@ func (c *TemplateConfig) settings() map[string]interface{} {
 // (that do not cover number of shards and replicas) if they have been
 // defined in SettingsLookup or an empty map otherwise
 func (c *TemplateConfig) initIndexSettings() map[string]interface{} {
-	settingsName, ok := SettingsLookup[c.logsType]
+	settingsName, ok := SettingsLookup[c.dataType]
 	if !ok {
 		return make(map[string]interface{})
 	}
@@ -182,9 +177,9 @@ func (c *TemplateConfig) initIndexSettings() map[string]interface{} {
 	return indexSettings
 }
 
-// Build will create an internal representation of the
+// Template will create an internal representation of the
 // template to be created in Elastic
-func (c *TemplateConfig) Build() (*Template, error) {
+func (c *TemplateConfig) Template() (*Template, error) {
 	mappings := c.mappings()
 	settings := c.settings()
 	indexPatterns := c.indexPatterns()

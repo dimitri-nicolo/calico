@@ -61,16 +61,14 @@ func TestBootstrapTemplate(t *testing.T) {
 
 	// Check that the template returned has the correct
 	// index_patterns, ILM policy, mappings and shards and replicas
-	application := "app-test"
-	templateConfig := templates.NewTemplateConfig(bapi.FlowLogs, bapi.ClusterInfo{Cluster: cluster},
-		templates.WithApplication(application))
+	templateConfig := templates.NewTemplateConfig(bapi.FlowLogs, bapi.ClusterInfo{Cluster: cluster})
 
 	templ, err := templates.IndexBootstrapper(ctx, client, templateConfig)
 	require.NoError(t, err)
 	require.NotNil(t, templ)
 	require.Len(t, templ.IndexPatterns, 1)
 
-	checkTemplateBootstrapping(t, "tigera_secure_ee_flows", application, cluster)
+	checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster)
 }
 
 func checkTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster string) {
@@ -126,11 +124,8 @@ func checkTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster 
 func TestBootstrapAuditTemplates(t *testing.T) {
 	defer setupTest(t, []string{"tigera_secure_ee_audit_ee", "tigera_secure_ee_audit_kube"})()
 
-	application := "app-test"
-	auditKubeTemplateConfig := templates.NewTemplateConfig(bapi.AuditKubeLogs, bapi.ClusterInfo{Cluster: cluster},
-		templates.WithApplication(application))
-	auditEETemplateConfig := templates.NewTemplateConfig(bapi.AuditEELogs, bapi.ClusterInfo{Cluster: cluster},
-		templates.WithApplication(application))
+	auditKubeTemplateConfig := templates.NewTemplateConfig(bapi.AuditKubeLogs, bapi.ClusterInfo{Cluster: cluster})
+	auditEETemplateConfig := templates.NewTemplateConfig(bapi.AuditEELogs, bapi.ClusterInfo{Cluster: cluster})
 
 	templKubeAudit, err := templates.IndexBootstrapper(ctx, client, auditKubeTemplateConfig)
 	require.NoError(t, err)
@@ -144,8 +139,8 @@ func TestBootstrapAuditTemplates(t *testing.T) {
 
 	// Check that the template returned has the correct
 	// index_patterns, ILM policy, mappings and shards and replicas
-	checkTemplateBootstrapping(t, "tigera_secure_ee_audit_kube", application, cluster)
-	checkTemplateBootstrapping(t, "tigera_secure_ee_audit_ee", application, cluster)
+	checkTemplateBootstrapping(t, "tigera_secure_ee_audit_kube", "fluentd", cluster)
+	checkTemplateBootstrapping(t, "tigera_secure_ee_audit_ee", "fluentd", cluster)
 }
 
 func TestBootstrapTemplateMultipleTimes(t *testing.T) {

@@ -15,7 +15,7 @@ import (
 // pairing and create a bootstrap index that uses that template
 var IndexBootstrapper Load = func(ctx context.Context, client *elastic.Client, config *TemplateConfig) (*Template, error) {
 	templateName := config.TemplateName()
-	template, err := config.Build()
+	template, err := config.Template()
 	if err != nil {
 		return nil, err
 	}
