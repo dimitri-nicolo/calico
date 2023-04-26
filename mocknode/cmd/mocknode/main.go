@@ -116,45 +116,13 @@ func main() {
 		"version": VERSION,
 	}).Info("Mock Calico Node starting up")
 
-	name, err := names.Hostname()
+	hostname, err := names.Hostname()
 	if err != nil {
 		logrus.WithError(err).Panic("Failed to get hostname")
 	}
 
 	for _, st := range syncproto.AllSyncerTypes {
-		logrus.Infof("Starting sycher of type: %v", st)
-		cbs := newSyncerCallbacks(st)
-		addrs, err := discovery.DiscoverTyphaAddrs(
-			discovery.WithInClusterKubeClient(),
-			discovery.WithKubeService(typhaNamespace, typhaK8sServiceName),
-		)
-		if err != nil {
-			logrus.WithError(err).Panic("Failed to discover Typha.")
-		}
-		client := syncclient.New(addrs, VERSION, name, "", cbs, &syncclient.Options{
-			KeyFile:               typhaKeyFile,
-			CertFile:              typhaCertFile,
-			CAFile:                typhaCAFile,
-			ServerCN:              typhaCN,
-			ServerURISAN:          typhaURISAN,
-			SyncerType:            st,
-			DebugDiscardKVUpdates: false,
-		})
-		err = client.Start(context.Background())
-		if err != nil {
-			logrus.WithError(err).Panic("Failed to start typha client.")
-		}
-
-		go func() {
-			for {
-				time.Sleep(10 * time.Second)
-				cbs.LogStats()
-			}
-		}()
-		go func(st syncproto.SyncerType) {
-			client.Finished.Wait()
-			logrus.WithField("syncer", st).Fatal("Disconnected from Typha")
-		}(st)
+		startTyphaClient(st, hostname)
 	}
 	logrus.Info("Started all clients.")
 	var cpuTimeUsed time.Duration
@@ -166,6 +134,49 @@ func main() {
 		logrus.Infof("My CPU usage: %.2f%%", percent*100)
 		cpuTimeUsed = newTimeUsed
 	}
+}
+
+func startTyphaClient(st syncproto.SyncerType, hostname string) {
+	logrus.Infof("Starting sycher of type: %v", st)
+	cbs := newSyncerCallbacks(st)
+	addrs, err := discovery.DiscoverTyphaAddrs(
+		discovery.WithInClusterKubeClient(),
+		discovery.WithKubeService(typhaNamespace, typhaK8sServiceName),
+	)
+	if err != nil {
+		logrus.WithError(err).Panic("Failed to discover Typha.")
+	}
+	client := syncclient.New(addrs, VERSION, hostname, "", cbs, &syncclient.Options{
+		KeyFile:               typhaKeyFile,
+		CertFile:              typhaCertFile,
+		CAFile:                typhaCAFile,
+		ServerCN:              typhaCN,
+		ServerURISAN:          typhaURISAN,
+		SyncerType:            st,
+		DebugDiscardKVUpdates: false,
+	})
+	err = client.Start(context.Background())
+	if err != nil {
+		logrus.WithError(err).Panic("Failed to start typha client.")
+	}
+	done := make(chan struct{})
+	go func(st syncproto.SyncerType) {
+		defer close(done)
+		client.Finished.Wait()
+		logrus.WithField("syncer", st).Warning("Disconnected from Typha; restarting...")
+		time.Sleep(2 * time.Second)
+		go startTyphaClient(st, hostname)
+	}(st)
+	go func() {
+		for {
+			select {
+			case <-time.After(10 * time.Second):
+				cbs.LogStats()
+			case <-done:
+				return
+			}
+		}
+	}()
 }
 
 func getMyCPUTime() time.Duration {
