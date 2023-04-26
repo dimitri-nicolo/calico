@@ -717,7 +717,11 @@ func (m *egressIPManager) processGatewayUpdates() error {
 			for _, r := range workload.EgressGatewayRules {
 				route, exists := table.routes[normaliseDestination(r.Destination)]
 				if !exists {
-					lastErr = fmt.Errorf("Next hop not found for destination %s", r.Destination)
+					lastErr = fmt.Errorf("Route not found for destination %s", r.Destination)
+					continue
+				}
+				if route.throwToMain {
+					// Throw routes do not use any gateway
 					continue
 				}
 				// Check if this workload uses the current gateways
@@ -973,7 +977,12 @@ func (m *egressIPManager) notifyWorkloadsOfEgressGatewayMaintenanceWindows() err
 			}
 			route, exists := table.routes[normaliseDestination(rule.Destination)]
 			if !exists {
-				log.Debugf("Cannot find next hops for table with index %d and destination %s - Skipping.", index, rule.Destination)
+				log.Debugf("Cannot find route for destination %v in table with index %d - Skipping.", rule.Destination, index)
+				continue
+			}
+			if route.throwToMain {
+				// Throw routes do not use any gateway
+				log.Debugf("Throw route for destination %s - Skipping.", rule.Destination)
 				continue
 			}
 			terminatingGatewayHops := gateways.terminatingGateways().filteredByHopIPs(route.nextHops)
@@ -1613,6 +1622,10 @@ func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoi
 
 	for _, r := range workload.EgressGatewayRules {
 		// Check for unused matching table.
+		kernelRoutes, exists := table.routes[normaliseDestination(r.Destination)]
+		if !exists {
+			return nil, false
+		}
 		if r.IpSetId != "" {
 			gateways, exists := m.egwTracker.GatewaysByID(r.IpSetId)
 			if !exists {
@@ -1621,8 +1634,7 @@ func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoi
 			activeGatewayIPs := gateways.activeGateways().allIPs()
 			numHops := workloadNumHops(int(r.MaxNextHops), activeGatewayIPs.Len())
 
-			kernelRoutes, exists := table.routes[normaliseDestination(r.Destination)]
-			if !exists {
+			if kernelRoutes.nextHops == nil {
 				return nil, false
 			}
 			if kernelRoutes.nextHops.Len() != numHops {
@@ -1632,10 +1644,6 @@ func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoi
 				return nil, false
 			}
 		} else {
-			kernelRoutes, exists := table.routes[normaliseDestination(r.Destination)]
-			if !exists {
-				return nil, false
-			}
 			if kernelRoutes.throwToMain != true {
 				return nil, false
 			}
@@ -1717,8 +1725,12 @@ func usageMap(workloadID proto.WorkloadEndpointID, gatewayIPs set.Set[ip.Addr], 
 	})
 
 	for _, t := range tableMap {
-		for _, wlHops := range t.routes {
-			wlHops.nextHops.Iter(func(hop ip.Addr) error {
+		for _, r := range t.routes {
+			if r.throwToMain {
+				// Throw routes do not use any gateway
+				continue
+			}
+			r.nextHops.Iter(func(hop ip.Addr) error {
 				_, exists := gwPodRefs[hop]
 				if exists {
 					gwPodRefs[hop]++

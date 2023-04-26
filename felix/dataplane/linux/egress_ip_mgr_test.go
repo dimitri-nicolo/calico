@@ -248,7 +248,16 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			egwRules0 := egwPolicyWithSingleRule("set0", 0)
-			egwRules1 := egwPolicyWithSingleRule("set1", 2)
+			egwRules1 := []*proto.EgressGatewayRule{
+				&proto.EgressGatewayRule{
+					Destination: "10.0.0.0/16",
+				},
+				&proto.EgressGatewayRule{
+					IpSetId:     "set1",
+					Destination: defaultDestv4,
+					MaxNextHops: 2,
+				},
+			}
 
 			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, []string{"10.0.240.0/32"}, egwRules0))
 			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, []string{"10.0.241.0/32"}, egwRules0))
@@ -300,6 +309,10 @@ var _ = Describe("EgressIPManager", func() {
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.2", "10.0.1.3"}),
 				},
+				{
+					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					Type: routetable.TargetTypeThrow,
+				},
 			})
 			rtFactory.Table(2).checkL2Routes(routetable.InterfaceNone, nil)
 			rtFactory.Table(2).checkL2Routes("egress.calico", nil)
@@ -310,6 +323,10 @@ var _ = Describe("EgressIPManager", func() {
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.3"}),
 				},
+				{
+					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					Type: routetable.TargetTypeThrow,
+				},
 			})
 			rtFactory.Table(2).checkL2Routes(routetable.InterfaceNone, nil)
 			rtFactory.Table(2).checkL2Routes("egress.calico", nil)
@@ -319,6 +336,10 @@ var _ = Describe("EgressIPManager", func() {
 					CIDR:      defaultCidr,
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2"}),
+				},
+				{
+					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					Type: routetable.TargetTypeThrow,
 				},
 			})
 			rtFactory.Table(2).checkL2Routes(routetable.InterfaceNone, nil)
@@ -423,12 +444,11 @@ var _ = Describe("EgressIPManager", func() {
 			})
 		})
 
-		It("should be possible to use skip egress gateway for a destination", func() {
+		It("should be possible to skip egress gateway for a destination", func() {
 
 			egwRules := []*proto.EgressGatewayRule{
 				&proto.EgressGatewayRule{
-					IpSetId:     "",
-					Destination: "10.0.0.0/8",
+					Destination: "11.0.0.0/8",
 				},
 				&proto.EgressGatewayRule{
 					IpSetId: "set1",
@@ -441,7 +461,7 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR: ip.MustParseCIDROrIP("10.0.0.0/8"),
+					CIDR: ip.MustParseCIDROrIP("11.0.0.0/8"),
 					Type: routetable.TargetTypeThrow,
 				},
 				{
@@ -501,6 +521,10 @@ var _ = Describe("EgressIPManager", func() {
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.2", "10.0.1.3"}),
 				},
+				{
+					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					Type: routetable.TargetTypeThrow,
+				},
 			})
 			expectRulesAndTable([]string{"10.0.244.0/32"}, 5, routetable.InterfaceNone, []routetable.Target{
 				{
@@ -508,12 +532,20 @@ var _ = Describe("EgressIPManager", func() {
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.4", "10.0.1.5"}),
 				},
+				{
+					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					Type: routetable.TargetTypeThrow,
+				},
 			})
 			expectRulesAndTable([]string{"10.0.245.0/32"}, 6, routetable.InterfaceNone, []routetable.Target{
 				{
 					CIDR:      defaultCidr,
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.3", "10.0.1.4"}),
+				},
+				{
+					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					Type: routetable.TargetTypeThrow,
 				},
 			})
 			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
@@ -1909,12 +1941,6 @@ func (m *statusCallbackEntryMatcher) FailureMessage(actual interface{}) string {
 
 func (m *statusCallbackEntryMatcher) NegatedFailureMessage(actual interface{}) string {
 	return fmt.Sprintf("Expected %v to not match statusCallbackEntry: %v", actual.(statusCallbackEntry), m.expected)
-}
-
-func expectUsageMapsEqual(actual, expected map[int][]string) {
-	for k, v := range expected {
-		Expect(actual).To(HaveKeyWithValue(k, v))
-	}
 }
 
 func egressGatewayRule(ipSetId string, maxNextHops int) *proto.EgressGatewayRule {
