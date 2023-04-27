@@ -1839,21 +1839,27 @@ func validateEgressGatewayPolicy(structLevel validator.StructLevel) {
 	noOp := true
 	destinations := set.New[string]()
 	for _, r := range egwp.Rules {
+		destCIDR := "0.0.0.0/0"
 		if r.Destination != nil && r.Destination.CIDR != "" {
-			_, cidr, err := cnet.ParseCIDROrIP(r.Destination.CIDR)
-			if err != nil {
-				structLevel.ReportError(reflect.ValueOf(r.Destination.CIDR), "Destination", "",
-					reason("Invalid destination cidr specified."), "")
-			}
-			if cidr != nil {
-				exists := destinations.Contains(cidr.String())
-				if exists {
-					structLevel.ReportError(reflect.ValueOf(r.Destination.CIDR), "Destination", "",
-						reason("Duplicate destination cidr specified."), "")
-				}
-				destinations.Add(cidr.String())
-			}
+			destCIDR = r.Destination.CIDR
 			noOp = false
+		}
+		_, cidr, err := cnet.ParseCIDROrIP(destCIDR)
+		if err != nil {
+			structLevel.ReportError(reflect.ValueOf(destCIDR), "Destination", "",
+				reason("Invalid destination cidr specified."), "")
+		}
+		if cidr != nil {
+			if cidr.Version() != 4 {
+				structLevel.ReportError(reflect.ValueOf(destCIDR), "Destination", "",
+					reason("Only IPv4 destination cidr is supported."), "")
+			}
+			exists := destinations.Contains(cidr.String())
+			if exists {
+				structLevel.ReportError(reflect.ValueOf(destCIDR), "Destination", "",
+					reason("Duplicate destination cidr specified."), "")
+			}
+			destinations.Add(cidr.String())
 		}
 		if r.Gateway != nil {
 			if r.Gateway.NamespaceSelector == "" {

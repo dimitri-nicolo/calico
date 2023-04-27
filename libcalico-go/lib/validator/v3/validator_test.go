@@ -4356,6 +4356,9 @@ func init() {
 					},
 				},
 				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "10.0.0.0/8",
+					},
 					Gateway: &api.EgressSpec{
 						Selector:          "another thing",
 						NamespaceSelector: "ns2",
@@ -4386,7 +4389,25 @@ func init() {
 				},
 			},
 		}, false),
-		Entry("should not accept egress gateway policy with duplicate destination cidr", api.EgressGatewayPolicySpec{
+		Entry("should not accept egress gateway policy with IPv6 address", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "10.0.0.0/8",
+					},
+					Gateway: &api.EgressSpec{
+						Selector:          "another thing",
+						NamespaceSelector: "ns2",
+					},
+				},
+				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "ffee::1/64",
+					},
+				},
+			},
+		}, false),
+		Entry("should not accept egress gateway policy with duplicate destination cidr #1", api.EgressGatewayPolicySpec{
 			Rules: []api.EgressGatewayRule{
 				{
 					Destination: &api.EgressGatewayPolicyDestinationSpec{
@@ -4397,6 +4418,17 @@ func init() {
 					Destination: &api.EgressGatewayPolicyDestinationSpec{
 						CIDR: "10.0.0.0/8",
 					},
+					Gateway: &api.EgressSpec{
+						Selector:          "another thing",
+						NamespaceSelector: "ns2",
+					},
+				},
+			},
+		}, false),
+		Entry("should not accept egress gateway policy with duplicate destination cidr #2", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{},
+				{
 					Gateway: &api.EgressSpec{
 						Selector:          "another thing",
 						NamespaceSelector: "ns2",
