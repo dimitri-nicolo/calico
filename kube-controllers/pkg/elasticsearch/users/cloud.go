@@ -56,10 +56,7 @@ func GetGlobalAuthorizationRoles() []elasticsearch.Role {
 		return []elasticsearch.Role{{
 			Name: fmt.Sprintf("%s_%s", ElasticsearchRoleNameKibanaViewer, tenantID),
 			Definition: &elasticsearch.RoleDefinition{
-				Indices: []elasticsearch.RoleIndex{{
-					Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*")},
-					Privileges: []string{"all"},
-				}},
+				Indices: []elasticsearch.RoleIndex{},
 				Applications: []elasticsearch.Application{{
 					Application: "kibana-.kibana",
 					Privileges: []string{
