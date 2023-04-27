@@ -772,8 +772,11 @@ func validateL7URLAggregation(fl validator.FieldLevel) bool {
 
 func validateSelector(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
-	log.Debugf("Validate selector: %s", s)
+	return selectorIsValid(s)
+}
 
+func selectorIsValid(s string) bool {
+	log.Debugf("Validate selector: %s", s)
 	// We use the selector parser to validate a selector string.
 	_, err := selector.Parse(s)
 	if err != nil {
@@ -1863,6 +1866,11 @@ func validateEgressGatewayPolicy(structLevel validator.StructLevel) {
 			if r.Gateway.Selector == "" {
 				structLevel.ReportError(reflect.ValueOf(r.Gateway.Selector), "Selector", "",
 					reason("Selector in a gateway in egress gateway policy cannot be empty."), "")
+			} else {
+				if !selectorIsValid(r.Gateway.Selector) {
+					structLevel.ReportError(reflect.ValueOf(r.Gateway.Selector), "Selector", "",
+						reason("Invalid selector in a gateway in egress gateway policy."), "")
+				}
 			}
 			if r.Gateway.MaxNextHops < 0 {
 				structLevel.ReportError(reflect.ValueOf(r.Gateway.MaxNextHops), "MaxNextHops", "",

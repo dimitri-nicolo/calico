@@ -48,7 +48,7 @@ type EgressGatewayPolicy struct {
 // EgressGatewayPolicySpec contains the egress policy rules for each destination network
 type EgressGatewayPolicySpec struct {
 	// The ordered set of Egress Gateway Policies to define how traffic exit a cluster
-	Rules []EgressGatewayRule `json:"rules" validate:"required"`
+	Rules []EgressGatewayRule `json:"rules,omitempty" validate:"required"`
 }
 
 // EgressGatewayRule defines an Egress Gateway to reach a destination network
@@ -56,22 +56,22 @@ type EgressGatewayRule struct {
 	// The destination network that can be reached via egress gateway.
 	// If no destination is set, the default route, 0.0.0.0/0, is used instead.
 	// +optional
-	Destination *EgressGatewayPolicyDestinationSpec `json:"destination" validate:"omitempty"`
+	Destination *EgressGatewayPolicyDestinationSpec `json:"destination,omitempty" validate:"omitempty"`
 
 	// The description of the EgressGatewayPolicy rule.
 	// +optional
-	Description string `json:"description" validate:"omitempty,uiDescription"`
+	Description string `json:"description,omitempty" validate:"omitempty,uiDescription"`
 
 	// Gateway specifies the egress gateway that should be used for the specified destination.
 	// If no gateway is set then the destination is routed normally rather than via an egress gateway.
 	// +optional
-	Gateway *EgressSpec `json:"gateway" validate:"omitempty"`
+	Gateway *EgressSpec `json:"gateway,omitempty" validate:"omitempty"`
 }
 
 // DestinationSpec define a destination network that can be reached via an egress gateway
 type EgressGatewayPolicyDestinationSpec struct {
 	// The destination network CIDR.
-	CIDR string `json:"cidr" validate:"required,net"`
+	CIDR string `json:"cidr,omitempty" validate:"omitempty,net"`
 }
 
 // New EgressGatewayPolicy creates a new (zeroed) EgressGatewayPolicy struct with the TypeMetadata

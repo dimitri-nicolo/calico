@@ -1133,8 +1133,6 @@ spec:
                         cidr:
                           description: The destination network CIDR.
                           type: string
-                      required:
-                      - cidr
                       type: object
                     gateway:
                       description: Gateway specifies the egress gateway that should
@@ -1159,8 +1157,6 @@ spec:
                       type: object
                   type: object
                 type: array
-            required:
-            - rules
             type: object
         type: object
     served: true
