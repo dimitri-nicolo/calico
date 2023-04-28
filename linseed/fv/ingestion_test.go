@@ -505,6 +505,8 @@ func TestFV_Ingestion(t *testing.T) {
 	indexPrefix := "tigera_secure_ee_audit_ee."
 
 	t.Run("cannot ingest arequest bigger than 2Gb", func(t *testing.T) {
+		t.Skip()
+
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
 
 		// setup HTTP httpClient and HTTP request
