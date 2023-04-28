@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"strings"
@@ -494,5 +495,30 @@ func TestFV_RuntimeIngestion(t *testing.T) {
 		}
 
 		assert.Equal(t, runtimeReports, strings.Join(esLogs, "\n"))
+	})
+}
+
+func TestFV_Ingestion(t *testing.T) {
+	addr := "https://localhost:8444/api/v1/audit/logs/ee/bulk"
+	tenant := ""
+	expectedResponse := `{"Msg":"http: request body too large", "Status":400}`
+	indexPrefix := "tigera_secure_ee_audit_ee."
+
+	t.Run("cannot ingest arequest bigger than 2Gb", func(t *testing.T) {
+		defer ingestionSetupAndTeardown(t, indexPrefix)()
+
+		// setup HTTP httpClient and HTTP request
+		httpClient := mTLSClient(t)
+		var largeBody []byte
+		for float64(len(largeBody)) < 2*math.Pow(1024, 3)+10 {
+			largeBody = append(largeBody, []byte(eeAuditLogs)...)
+		}
+
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, largeBody)
+
+		// make the request to ingest flows
+		res, resBody := doRequest(t, httpClient, spec)
+		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
 	})
 }

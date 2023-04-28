@@ -24,7 +24,7 @@ import (
 
 // maxBytes represents the maximum bytes
 // an HTTP request body can have
-const maxBytes = 2000000
+const maxBytes = 2147483648
 
 // newlineJsonContent is the supported content type
 // for bulk APIs
