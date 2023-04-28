@@ -3827,13 +3827,11 @@ func schema_pkg_apis_projectcalico_v3_EgressGatewayPolicyDestinationSpec(ref com
 					"cidr": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The destination network CIDR.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
-				Required: []string{"cidr"},
 			},
 		},
 	}
@@ -3910,7 +3908,6 @@ func schema_pkg_apis_projectcalico_v3_EgressGatewayPolicySpec(ref common.Referen
 						},
 					},
 				},
-				Required: []string{"rules"},
 			},
 		},
 		Dependencies: []string{
@@ -3934,7 +3931,6 @@ func schema_pkg_apis_projectcalico_v3_EgressGatewayRule(ref common.ReferenceCall
 					"description": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The description of the EgressGatewayPolicy rule.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},

@@ -4306,7 +4306,7 @@ func init() {
 			Rules: []api.EgressGatewayRule{
 				{
 					Gateway: &api.EgressSpec{
-						Selector:          "something",
+						Selector:          "egress-code == 'red'",
 						NamespaceSelector: "ns1",
 					},
 				},
@@ -4321,13 +4321,13 @@ func init() {
 			Rules: []api.EgressGatewayRule{
 				{
 					Gateway: &api.EgressSpec{
-						Selector:          "something",
+						Selector:          "egress-code == 'red'",
 						NamespaceSelector: "ns1",
 					},
 				},
 				{
 					Gateway: &api.EgressSpec{
-						Selector: "something",
+						Selector: "egress-code == 'blue'",
 					},
 				},
 			},
@@ -4336,13 +4336,33 @@ func init() {
 			Rules: []api.EgressGatewayRule{
 				{
 					Gateway: &api.EgressSpec{
-						Selector:          "something",
+						Selector:          "egress-code == 'red'",
 						NamespaceSelector: "ns1",
 					},
 				},
 				{
 					Gateway: &api.EgressSpec{
-						NamespaceSelector: "something",
+						NamespaceSelector: "default",
+					},
+				},
+			},
+		}, false),
+		Entry("should not accept egress gateway policy with an invalid Selector specified #1", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Gateway: &api.EgressSpec{
+						NamespaceSelector: "default",
+						Selector:          "egress.projectcalico.org/selector: egress-code == 'red'",
+					},
+				},
+			},
+		}, false),
+		Entry("should not accept egress gateway policy with an invalid Selector specified #2", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Gateway: &api.EgressSpec{
+						NamespaceSelector: "default",
+						Selector:          "something",
 					},
 				},
 			},
@@ -4351,7 +4371,7 @@ func init() {
 			Rules: []api.EgressGatewayRule{
 				{
 					Gateway: &api.EgressSpec{
-						Selector:          "one thing",
+						Selector:          "egress-code == 'red'",
 						NamespaceSelector: "ns1",
 					},
 				},
@@ -4360,7 +4380,7 @@ func init() {
 						CIDR: "10.0.0.0/8",
 					},
 					Gateway: &api.EgressSpec{
-						Selector:          "another thing",
+						Selector:          "egress-code == 'blue'",
 						NamespaceSelector: "ns2",
 					},
 				},
@@ -4419,7 +4439,7 @@ func init() {
 						CIDR: "10.0.0.0/8",
 					},
 					Gateway: &api.EgressSpec{
-						Selector:          "another thing",
+						Selector:          "egress-code == 'blue'",
 						NamespaceSelector: "ns2",
 					},
 				},
@@ -4440,7 +4460,7 @@ func init() {
 			Rules: []api.EgressGatewayRule{
 				{
 					Gateway: &api.EgressSpec{
-						Selector:          "one thing",
+						Selector:          "egress-code == 'blue'",
 						NamespaceSelector: "ns1",
 						MaxNextHops:       -1,
 					},
@@ -4451,7 +4471,7 @@ func init() {
 			Rules: []api.EgressGatewayRule{
 				{
 					Gateway: &api.EgressSpec{
-						Selector:          "one thing",
+						Selector:          "egress-code == 'blue'",
 						NamespaceSelector: "ns1",
 						MaxNextHops:       1000000000000000000,
 					},
@@ -4467,7 +4487,7 @@ func init() {
 				},
 				{
 					Gateway: &api.EgressSpec{
-						Selector:          "one thing",
+						Selector:          "egress-code == 'red'",
 						NamespaceSelector: "ns1",
 					},
 				},
@@ -4476,7 +4496,7 @@ func init() {
 						CIDR: "172.16.0.0/16",
 					},
 					Gateway: &api.EgressSpec{
-						Selector:          "another thing",
+						Selector:          "egress-code == 'red'",
 						NamespaceSelector: "ns2",
 						MaxNextHops:       2,
 					},
