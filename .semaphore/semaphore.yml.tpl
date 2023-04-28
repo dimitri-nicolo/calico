@@ -1045,7 +1045,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-8
+        type: e1-standard-4
         os_image: ubuntu2004
     secrets:
     - name: test-customer-license
