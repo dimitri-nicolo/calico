@@ -453,7 +453,7 @@ var baseTests = []StateList{
 		endpointWithOwnEgressGateway,
 		endpointWithNoneExistingEgressGatewayPolicy,
 		endpointWithDefinedEgressGatewayPolicy,
-		endpointWithDifferentGatewayPolicy,
+		endpointWithDifferentEgressGatewayPolicy,
 		endpointWithProfileEgressGateway,
 		endpointWithProfileWithNoneExistingEgressGatewayPolicy,
 		endpointWithProfileWithEgressGatewayPolicy,
@@ -470,8 +470,8 @@ var baseTests = []StateList{
 	},
 	{
 		endpointWithDefinedEgressGatewayPolicy,
-		endpointWithDifferentGatewayPolicy,     // Change EGW policy.
-		endpointWithDefinedEgressGatewayPolicy, // Then change it back.
+		endpointWithDifferentEgressGatewayPolicy, // Change EGW policy.
+		endpointWithDefinedEgressGatewayPolicy,   // Then change it back.
 	},
 	{
 		withOutL7Annotation,

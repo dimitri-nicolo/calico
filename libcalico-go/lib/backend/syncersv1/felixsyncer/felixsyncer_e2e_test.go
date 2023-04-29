@@ -806,7 +806,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				},
 				Gateway: &apiv3.EgressSpec{
 					Selector:          "egress-code == 'red'",
-					NamespaceSelector: "default",
+					NamespaceSelector: "projectcalico.org/name == 'default'",
 					MaxNextHops:       4,
 				},
 			}
