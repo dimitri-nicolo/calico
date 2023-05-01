@@ -35,6 +35,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/handler/waf"
 	"github.com/projectcalico/calico/linseed/pkg/middleware"
 	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 
@@ -178,6 +179,8 @@ func run() {
 			{Namespace: "tigera-dpi", Name: "tigera-dpi"},
 			{Namespace: "tigera-intrusion-detection", Name: "intrusion-detection-controller"},
 		}
+
+		factory := k8s.NewClientSetFactory(cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA)
 		opts := []token.ControllerOption{
 			token.WithIssuer(token.LinseedIssuer),
 			token.WithIssuerName("tigera-linseed"),
@@ -185,7 +188,7 @@ func run() {
 			token.WithExpiry(24 * time.Hour),
 			token.WithClient(pc),
 			token.WithPrivateKey(key),
-			token.WithMultiClusterEndpoint(cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA),
+			token.WithFactory(factory),
 			token.WithTenant(cfg.ExpectedTenantID),
 		}
 		tokenController, err := token.NewController(opts...)
