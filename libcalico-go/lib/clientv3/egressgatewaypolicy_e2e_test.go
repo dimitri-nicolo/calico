@@ -40,7 +40,7 @@ var _ = testutils.E2eDatastoreDescribe("EgressGatewayPolicy tests", testutils.Da
 		Description: "to external datacenter",
 		Gateway: &apiv3.EgressSpec{
 			Selector:          "egress-code == 'red'",
-			NamespaceSelector: "calico-egress",
+			NamespaceSelector: "projectcalico.org/name == 'calico-egress'",
 			MaxNextHops:       3,
 		},
 	}
@@ -51,7 +51,7 @@ var _ = testutils.E2eDatastoreDescribe("EgressGatewayPolicy tests", testutils.Da
 		Description: "Internet access",
 		Gateway: &apiv3.EgressSpec{
 			Selector:          "egress-code == 'blue'",
-			NamespaceSelector: "calico-egress",
+			NamespaceSelector: "projectcalico.org/name == 'calico-egress'",
 		},
 	}
 	spec1 := apiv3.EgressGatewayPolicySpec{}
