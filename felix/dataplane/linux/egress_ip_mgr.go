@@ -221,7 +221,7 @@ func newEgressTable(index int) *egressTable {
 }
 
 type initialKernelState struct {
-	// rules is a map from src IP to egressRule
+	// rules is a slice of egressRule
 	rules []*egressRule
 	// tables is a map from table index to egressTable
 	tables map[int]*egressTable
