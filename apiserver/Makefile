@@ -61,26 +61,13 @@ include ../lib.Makefile
 CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
 
 ###############################################################################
-# Static checks
-###############################################################################
-## Perform static checks on the code.
-# TODO: re-enable these linters !
-LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck --timeout 5m
-
-###############################################################################
-# CI/CD
-###############################################################################
-.PHONY: ci
-## Run what CI runs
-ci: clean static-checks image ut fv
-
-## Deploys images to registry
-cd: image-all cd-common
-
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
 # "apiserver" instead of "$(BINDIR)/apiserver".
 #########################################################################
+.PHONY: build
+build: $(BINDIR)/apiserver-$(ARCH) $(BINDIR)/filecheck-$(ARCH)
+
 $(BINDIR)/apiserver $(BINDIR)/apiserver-amd64: $(K8SAPISERVER_GO_FILES)
 	mkdir -p $(BINDIR)
 	$(call build_static_cgo_boring_binary, $(PACKAGE_NAME)/cmd/apiserver, $@)
@@ -95,9 +82,8 @@ $(BINDIR)/filecheck-$(ARCH): $(K8SAPISERVER_GO_FILES)
 ###############################################################################
 # Building the image
 ###############################################################################
-build: image
-
 CONTAINER_CREATED=.apiserver.created-$(ARCH)
+
 .PHONY: image $(API_SERVER_IMAGE)
 image: $(API_SERVER_IMAGE)
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
@@ -203,6 +189,23 @@ clean-bin:
 
 clean-hack-lib:
 	rm -rf hack/lib/
+
+###############################################################################
+# Static checks
+###############################################################################
+## Perform static checks on the code.
+# TODO: re-enable these linters !
+LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck --timeout 5m
+
+###############################################################################
+# CI/CD
+###############################################################################
+.PHONY: ci
+## Run what CI runs
+ci: clean static-checks image ut fv
+
+## Deploys images to registry
+cd: image-all cd-common
 
 ###############################################################################
 # Release

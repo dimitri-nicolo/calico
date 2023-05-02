@@ -8,9 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"k8s.io/klog"
-
 	log "github.com/sirupsen/logrus"
+
+	"k8s.io/klog/v2"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/linseed/pkg/client"

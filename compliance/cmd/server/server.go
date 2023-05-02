@@ -14,7 +14,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	krest "k8s.io/client-go/rest"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
