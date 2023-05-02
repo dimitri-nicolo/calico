@@ -1323,37 +1323,34 @@ func (m *egressIPManager) getTableFromKernel(index int) (*egressTable, error) {
 		return nil, err
 	}
 	eTable := newEgressTable(index)
-	for _, vxlanTarget := range vxlanTargets {
-		if vxlanTarget.GW != nil {
-			eTable.routes[vxlanTarget.CIDR] = egressRoute{
-				nextHops: set.FromArrayBoxed([]ip.Addr{vxlanTarget.GW}),
-			}
-		} else {
-			hopIPs := []ip.Addr{}
-			for _, hop := range vxlanTarget.MultiPath {
-				hopIPs = append(hopIPs, hop.Gw)
-			}
-			eTable.routes[vxlanTarget.CIDR] = egressRoute{
-				nextHops: set.FromArrayBoxed(hopIPs),
-			}
-		}
-	}
-	for _, noneTarget := range noneTargets {
-		if noneTarget.GW != nil {
-			eTable.routes[noneTarget.CIDR] = egressRoute{
-				nextHops: set.FromArrayBoxed([]ip.Addr{noneTarget.GW}),
-			}
-		} else {
-			hopIPs := []ip.Addr{}
-			for _, hop := range noneTarget.MultiPath {
-				hopIPs = append(hopIPs, hop.Gw)
-			}
-			eTable.routes[noneTarget.CIDR] = egressRoute{
-				nextHops: set.FromArrayBoxed(hopIPs),
-			}
-		}
-	}
+	updateEgressTableRoutes(eTable, vxlanTargets)
+	updateEgressTableRoutes(eTable, noneTargets)
 	return eTable, nil
+}
+
+func updateEgressTableRoutes(eTable *egressTable, targets []routetable.Target) {
+	for _, t := range targets {
+		switch t.Type {
+		case routetable.TargetTypeThrow:
+			eTable.routes[t.CIDR] = egressRoute{
+				throwToMain: true,
+			}
+		case routetable.TargetTypeVXLAN:
+			if t.GW != nil {
+				eTable.routes[t.CIDR] = egressRoute{
+					nextHops: set.FromArrayBoxed([]ip.Addr{t.GW}),
+				}
+			} else {
+				hopIPs := []ip.Addr{}
+				for _, hop := range t.MultiPath {
+					hopIPs = append(hopIPs, hop.Gw)
+				}
+				eTable.routes[t.CIDR] = egressRoute{
+					nextHops: set.FromArrayBoxed(hopIPs),
+				}
+			}
+		}
+	}
 }
 
 func (m *egressIPManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
@@ -1644,7 +1641,7 @@ func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoi
 				return nil, false
 			}
 		} else {
-			if kernelRoutes.throwToMain != true {
+			if !kernelRoutes.throwToMain {
 				return nil, false
 			}
 		}

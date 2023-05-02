@@ -550,30 +550,36 @@ func (r *RouteTable) ReadRoutesFromKernel(ifaceName string) ([]Target, error) {
 
 	var allTargets []Target
 	for _, route := range routes {
-		var targets []Target
-		if route.Gw != nil {
-			targets = append(targets, Target{
-				Type: TargetTypeVXLAN,
-				CIDR: defaultCidr,
-				GW:   ip.FromNetIP(route.Gw),
-			})
-		} else {
-			var nextHops []NextHop
-			for _, h := range route.MultiPath {
-				nextHops = append(nextHops, NextHop{
-					Gw:        ip.FromNetIP(h.Gw),
-					LinkIndex: h.LinkIndex,
-				})
-			}
-			targets = append(targets, Target{
-				Type:      TargetTypeVXLAN,
-				CIDR:      defaultCidr,
-				MultiPath: nextHops,
-			})
+		target := Target{
+			CIDR: normaliseDestination(route.Dst),
 		}
-		allTargets = append(allTargets, targets...)
+		if route.Type == syscall.RTN_THROW {
+			target.Type = TargetTypeThrow
+		} else {
+			target.Type = TargetTypeVXLAN
+			if route.Gw != nil {
+				target.GW = ip.FromNetIP(route.Gw)
+			} else {
+				var nextHops []NextHop
+				for _, h := range route.MultiPath {
+					nextHops = append(nextHops, NextHop{
+						Gw:        ip.FromNetIP(h.Gw),
+						LinkIndex: h.LinkIndex,
+					})
+				}
+				target.MultiPath = nextHops
+			}
+		}
+		allTargets = append(allTargets, target)
 	}
 	return allTargets, nil
+}
+
+func normaliseDestination(d *net.IPNet) ip.CIDR {
+	if d != nil {
+		return ip.CIDRFromIPNet(d)
+	}
+	return defaultCidr
 }
 
 func (r *RouteTable) Apply() error {
