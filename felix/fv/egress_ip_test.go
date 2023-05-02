@@ -663,13 +663,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									return (strings.Contains(out, "default.egw-deny-ingress"))
 								}
 
-								// Add route rule and table for client0, to check if egress ip manager picks table 220 for this client
-								felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.2", "fwmark", "0x80000/0x80000", "priority", "100", "lookup", "220")
-								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[0].IP, "table", "220")
-								felixes[0].Exec("ip", "route", "add", extWorkloads[1].IP, "via", "10.10.10.1", "dev", "egress.calico", "onlink", "table", "220")
-								felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "220")
-								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[3].IP, "table", "220")
-
 								for i, l := range []string{"blue", "red"} {
 									gwName := fmt.Sprintf("gw-%v", l)
 									gwAddr := fmt.Sprintf("10.10.1%v.1", i)
@@ -709,6 +702,17 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									extWorkloads[i].C.Exec("ip", "route", "add", "10.65.0.10", "via", felixes[0].IP)
 								}
 
+								// Add route rule and table for client0, to check if egress ip manager picks table 220 for this client
+								fwmark := "0x80000/0x80000"
+								if BPFMode() {
+									fwmark = "0x10000000/0x10000000"
+								}
+								felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.2", "fwmark", fwmark, "priority", "100", "lookup", "220")
+								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[0].IP, "table", "220")
+								felixes[0].Exec("ip", "route", "add", extWorkloads[1].IP, "via", "10.10.10.1", "dev", "egress.calico", "onlink", "table", "220")
+								felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "220")
+								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[3].IP, "table", "220")
+								felixes[0].Restart()
 								// Need to create client PODs after EGW deployment to make sure IPSets are not empty.
 								// This is just to test re-using existing route rule and table works fine.
 								egwClient0 = makeClientWithEGWPolicy(felixes[0], "10.65.0.2", "client0", "egw-policy1")
@@ -743,9 +747,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								Eventually(getIPRules, "10s", "1s").Should(HaveKey("10.65.0.2"))
 								Eventually(getIPRules, "10s", "1s").Should(HaveKey("10.65.0.10"))
 								table1 := getIPRules()["10.65.0.2"]
-								Expect(table1).To(Equal("220"))
+								Expect(table1).To(Equal("220"), "Felix didn't re-use the 220 routing table for egwClient0")
 								table2 := getIPRules()["10.65.0.10"]
 								Expect(table2).To(Equal("250"))
+								Expect(table2).To(Equal("250"), "Felix didn't create the expected routing table 250 for egwClient1")
 							})
 						})
 					}

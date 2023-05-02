@@ -222,22 +222,22 @@ func newEgressTable(index int) *egressTable {
 
 type initialKernelState struct {
 	// rules is a map from src IP to egressRule
-	rules map[ip.Addr]*egressRule
+	rules []egressRule
 	// tables is a map from table index to egressTable
 	tables map[int]*egressTable
 }
 
 func newInitialKernelState() *initialKernelState {
 	return &initialKernelState{
-		rules:  make(map[ip.Addr]*egressRule),
+		rules:  nil,
 		tables: make(map[int]*egressTable),
 	}
 }
 
 func (s *initialKernelState) String() string {
 	var rules []string
-	for srcIP, r := range s.rules {
-		rules = append(rules, fmt.Sprintf("%s: [%#v]", srcIP, *r))
+	for _, r := range s.rules {
+		rules = append(rules, fmt.Sprintf("%s: [%v]", r.srcIP, r))
 	}
 	rulesOutput := fmt.Sprintf("rules: {%s}", strings.Join(rules, ","))
 
@@ -620,7 +620,7 @@ func (m *egressIPManager) readInitialKernelState() error {
 	m.routeRules.InitFromKernel()
 	rules := m.routeRules.GetAllActiveRules()
 	ruleTableIndices := set.New[int]()
-	for _, rule := range rules {
+	for k, rule := range rules {
 		nlRule := rule.NetLinkRule()
 		r, err := newEgressRule(nlRule)
 		if err != nil {
@@ -628,7 +628,7 @@ func (m *egressIPManager) readInitialKernelState() error {
 			m.routeRules.RemoveRule(rule)
 			continue
 		}
-		m.initialKernelState.rules[r.srcIP] = r
+		m.initialKernelState.rules = append(m.initialKernelState.rules, *r)
 		ruleTableIndices.Add(r.tableIndex)
 	}
 
@@ -666,7 +666,7 @@ func (m *egressIPManager) cleanupInitialKernelState() error {
 	// Remove unused rules.
 	for _, r := range m.initialKernelState.rules {
 		if !r.used {
-			log.WithField("rule", *r).Info("Deleting unused route rule")
+			log.WithField("rule", r).Info("Deleting unused route rule")
 			m.deleteRouteRule(r.srcIP, r.tableIndex)
 		}
 	}
@@ -835,12 +835,12 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 			}
 			existingTable, exists := m.reserveFromInitialState(workload, id)
 			if exists {
+				existingTables[id] = existingTable
+				workloadsToUseExistingTable = append(workloadsToUseExistingTable, id)
 				log.WithFields(log.Fields{
 					"workloadID": id,
 					"table":      existingTables,
 				}).Info("Pre-processing workload - reserving table")
-				existingTables[id] = existingTable
-				workloadsToUseExistingTable = append(workloadsToUseExistingTable, id)
 			} else {
 				workloadsToUseNewTable = append(workloadsToUseNewTable, id)
 			}
@@ -1264,6 +1264,7 @@ func (m *egressIPManager) deleteRouteTable(index int) {
 		log.WithField("tableIndex", index).Debug("Cannot delete routing table, it does not exist.")
 		return
 	}
+
 	for dst, _ := range m.tableIndexToEgressTable[index].routes {
 		log.WithFields(log.Fields{
 			"index":       index,
@@ -1586,29 +1587,30 @@ func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoi
 	}).Info("Looking for matching rule and table to reuse.")
 
 	// Check for unused matching rules.
-	var rules []*egressRule
-	var index int
+	var rulesIndex []int
+	var tableIndex int
 	for i, srcIP := range workload.Ipv4Nets {
 		ipAddr := ip.MustParseCIDROrIP(srcIP).Addr()
-		rule, exists := state.rules[ipAddr]
-		if !exists || rule.used {
+		rIndex, exists := m.initialKernelRuleExists(ipAddr)
+		if !exists || state.rules[rIndex].used {
 			return nil, false
 		}
+		rule := state.rules[rIndex]
 		if rule.priority != priority || rule.family != family || rule.mark != mark {
 			return nil, false
 		}
 		if i == 0 {
-			index = rule.tableIndex
+			tableIndex = rule.tableIndex
 		} else {
-			if index != rule.tableIndex {
+			if tableIndex != rule.tableIndex {
 				// Multiple rules for the workload point to different tables.
 				return nil, false
 			}
 		}
-		rules = append(rules, rule)
+		rulesIndex = append(rulesIndex, rIndex)
 	}
 
-	table, exists := state.tables[index]
+	table, exists := state.tables[tableIndex]
 	if !exists || table.used {
 		return nil, false
 	}
@@ -1649,11 +1651,20 @@ func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoi
 
 	// Mark them as used.
 	table.used = true
-	for _, r := range rules {
-		r.used = true
+	for _, i := range rulesIndex {
+		state.rules[i].used = true
 	}
 
 	return table, true
+}
+
+func (m *egressIPManager) initialKernelRuleExists(srcIP ip.Addr) (int, bool) {
+	for i, r := range m.initialKernelState.rules {
+		if r.srcIP == srcIP {
+			return i, true
+		}
+	}
+	return -1, false
 }
 
 func (m *egressIPManager) removeIndicesFromTableStack(indices set.Set[int]) {
