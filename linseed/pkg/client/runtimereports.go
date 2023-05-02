@@ -68,5 +68,8 @@ func (f *runtime) Create(ctx context.Context, items []v1.Report) (*v1.BulkRespon
 		ContentType(rest.ContentTypeMultilineJSON).
 		Do(ctx).
 		Into(&resp)
-	return &resp, err
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }

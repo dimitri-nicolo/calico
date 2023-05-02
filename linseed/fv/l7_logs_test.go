@@ -197,5 +197,39 @@ func TestL7_FlowLogs(t *testing.T) {
 		require.Equal(t, 0, len(resp.Items))
 		require.Nil(t, resp.AfterKey)
 	})
+}
 
+func TestFV_L7LogsTenancy(t *testing.T) {
+	t.Run("should support tenancy restriction", func(t *testing.T) {
+		defer l7logSetupAndTeardown(t)()
+
+		// Instantiate a client for an unexpected tenant.
+		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		require.NoError(t, err)
+
+		// Create a basic log. We expect this to fail, since we're using
+		// an unexpected tenant ID on the request.
+		logs := []v1.L7Log{
+			{
+				EndTime:      time.Now().Unix(), // TODO: Add more fields
+				ResponseCode: "200",
+			},
+		}
+		bulk, err := tenantCLI.L7Logs(cluster).Create(ctx, logs)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, bulk)
+
+		// Try a read as well.
+		params := v1.L7LogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Second),
+					To:   time.Now().Add(5 * time.Second),
+				},
+			},
+		}
+		resp, err := tenantCLI.L7Logs(cluster).List(ctx, &params)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, resp)
+	})
 }

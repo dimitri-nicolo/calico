@@ -52,8 +52,8 @@ func noBodyHTTPReqSpec(method, url, tenant, cluster string, token []byte) httpRe
 		method: method,
 		url:    url,
 		headers: map[string]string{
-			"x-cluster-id": tenant,
-			"x-tenant-id":  cluster,
+			"x-cluster-id": cluster,
+			"x-tenant-id":  tenant,
 		},
 	}
 	if len(token) > 0 {

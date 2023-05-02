@@ -36,7 +36,10 @@ func newDNSLogs(c Client, cluster string) DNSLogsInterface {
 func (f *dnsLogs) List(ctx context.Context, params v1.Params) (*v1.List[v1.DNSLog], error) {
 	dnsLogs := v1.List[v1.DNSLog]{}
 	err := f.ListInto(ctx, params, &dnsLogs)
-	return &dnsLogs, err
+	if err != nil {
+		return nil, err
+	}
+	return &dnsLogs, nil
 }
 
 // ListInto gets the DNS Logs for the given input params.
@@ -54,7 +57,6 @@ func (f *dnsLogs) ListInto(ctx context.Context, params v1.Params, l v1.Listable)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -97,5 +99,8 @@ func (f *dnsLogs) Create(ctx context.Context, dnsLogs []v1.DNSLog) (*v1.BulkResp
 		ContentType(rest.ContentTypeMultilineJSON).
 		Do(ctx).
 		Into(&resp)
+	if err != nil {
+		return nil, err
+	}
 	return &resp, err
 }

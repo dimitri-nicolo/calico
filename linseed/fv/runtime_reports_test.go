@@ -133,7 +133,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 
 		require.Len(t, resp.Items, 1)
 
-		require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: cluster, Report: report}},
+		require.Equal(t, []v1.RuntimeReport{{Tenant: "tenant-a", Cluster: cluster, Report: report}},
 			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp))
 	})
 
@@ -197,7 +197,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, resp.Items, 1)
-		require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: cluster, Report: runtimeReport}},
+		require.Equal(t, []v1.RuntimeReport{{Tenant: "tenant-a", Cluster: cluster, Report: runtimeReport}},
 			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp))
 	})
 
@@ -283,8 +283,8 @@ func TestFV_RuntimeReports(t *testing.T) {
 		require.Len(t, resp.Items, 2)
 
 		require.Equal(t, []v1.RuntimeReport{
-			{Tenant: "", Cluster: cluster, Report: legacyRuntimeReport},
-			{Tenant: "", Cluster: cluster, Report: runtimeReport},
+			{Tenant: "tenant-a", Cluster: cluster, Report: legacyRuntimeReport},
+			{Tenant: "tenant-a", Cluster: cluster, Report: runtimeReport},
 		},
 			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp))
 	})
@@ -331,6 +331,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 			require.EqualValues(t, []v1.RuntimeReport{
 				{
 					Cluster: cluster,
+					Tenant:  "tenant-a",
 					Report: v1.Report{
 						GeneratedTime: &logTime,
 						Host:          fmt.Sprintf("%d", i),
@@ -436,5 +437,66 @@ func TestFV_RuntimeReports(t *testing.T) {
 
 		require.Contains(t, clusters, cluster)
 		require.Contains(t, clusters, anotherCluster)
+	})
+}
+
+func TestFV_RuntimeReportTenancy(t *testing.T) {
+	t.Run("should support tenancy restriction", func(t *testing.T) {
+		defer runtimeReportsSetupAndTeardown(t)()
+
+		// Instantiate a client for an unexpected tenant.
+		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		require.NoError(t, err)
+
+		// Create a basic entry. We expect this to fail, since we're using
+		// an unexpected tenant ID on the request.
+		startTime := time.Unix(1, 0).UTC()
+		endTime := time.Unix(1, 0).UTC()
+		generatedTime := time.Unix(2, 2).UTC()
+		// Create a basic runtime report
+		report := v1.Report{
+			GeneratedTime: &generatedTime,
+			StartTime:     startTime,
+			EndTime:       endTime,
+			Host:          "any-host",
+			Count:         1,
+			Type:          "ProcessStart",
+			ConfigName:    "malware-protection",
+			Pod: v1.PodInfo{
+				Name:          "app",
+				NameAggr:      "app-*",
+				Namespace:     "default",
+				ContainerName: "app",
+			},
+			File: v1.File{
+				Path:     "/usr/sbin/runc",
+				HostPath: "/run/docker/runtime-runc/moby/48f10a5eb9a245e6890433205053ba4e72c8e3bab5c13c2920dc32fadd7290cd/runc.rB3K51",
+			},
+			ProcessStart: v1.ProcessStart{
+				Invocation: "runc --root /var/run/docker/runtime-runc/moby",
+				Hashes: v1.ProcessHashes{
+					MD5:    "MD5",
+					SHA1:   "SHA1",
+					SHA256: "SHA256",
+				},
+			},
+			FileAccess: v1.FileAccess{},
+		}
+		bulk, err := tenantCLI.RuntimeReports(cluster).Create(ctx, []v1.Report{report})
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, bulk)
+
+		// Try a read as well.
+		params := v1.RuntimeReportParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: generatedTime,
+					To:   time.Now(),
+				},
+			},
+		}
+		resp, err := tenantCLI.RuntimeReports("").List(ctx, &params)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, resp)
 	})
 }

@@ -37,7 +37,10 @@ func newAuditLogs(c Client, cluster string) AuditLogsInterface {
 func (f *audit) List(ctx context.Context, params v1.Params) (*v1.List[v1.AuditLog], error) {
 	logs := v1.List[v1.AuditLog]{}
 	err := f.ListInto(ctx, params, &logs)
-	return &logs, err
+	if err != nil {
+		return nil, err
+	}
+	return &logs, nil
 }
 
 // ListInto gets the audit for the given input params.
@@ -85,7 +88,10 @@ func (f *audit) Create(ctx context.Context, logType v1.AuditLogType, auditl []v1
 		ContentType(rest.ContentTypeMultilineJSON).
 		Do(ctx).
 		Into(&resp)
-	return &resp, err
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
 
 func (f *audit) Aggregations(ctx context.Context, params v1.Params) (elastic.Aggregations, error) {

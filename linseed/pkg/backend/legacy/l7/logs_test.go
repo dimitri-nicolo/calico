@@ -23,32 +23,81 @@ import (
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
-// TestCreateL7Log tests running a real elasticsearch query to create an L7 log.
-func TestCreateL7Log(t *testing.T) {
-	defer setupTest(t)()
+func TestL7Logs(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestCreateL7Log (tenant=%s)", tenant)
+		t.Run(name, func(t *testing.T) {
+			defer setupTest(t)()
 
-	clusterInfo := bapi.ClusterInfo{
-		Cluster: cluster,
+			clusterInfo := bapi.ClusterInfo{
+				Cluster: cluster,
+				Tenant:  tenant,
+			}
+
+			f := v1.L7Log{
+				StartTime:            time.Now().Unix(),
+				EndTime:              time.Now().Unix(),
+				DestType:             "wep",
+				DestNamespace:        "kube-system",
+				DestNameAggr:         "kube-dns-*",
+				DestServiceNamespace: "default",
+				DestServiceName:      "kube-dns",
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			response, err := lb.Create(ctx, clusterInfo, []v1.L7Log{f})
+			require.NoError(t, err)
+			require.Equal(t, response.Failed, 0)
+			require.Equal(t, response.Succeeded, 1)
+			require.Len(t, response.Errors, 0)
+
+			// Read it back and make sure it matches.
+			// Refresh.
+			index := fmt.Sprintf("tigera_secure_ee_l7.%s.", cluster)
+			if tenant != "" {
+				index = fmt.Sprintf("tigera_secure_ee_l7.%s.%s.", tenant, cluster)
+			}
+			err = backendutils.RefreshIndex(ctx, client, index)
+			require.NoError(t, err)
+
+			params := &v1.L7LogParams{}
+			results, err := lb.List(ctx, clusterInfo, params)
+			require.NoError(t, err)
+			require.Len(t, results.Items, 1)
+			require.Equal(t, f, results.Items[0])
+		})
 	}
 
-	f := v1.L7Log{
-		StartTime:            time.Now().Unix(),
-		EndTime:              time.Now().Unix(),
-		DestType:             "wep",
-		DestNamespace:        "kube-system",
-		DestNameAggr:         "kube-dns-*",
-		DestServiceNamespace: "default",
-		DestServiceName:      "kube-dns",
-	}
+	t.Run("no cluster name given on request", func(t *testing.T) {
+		defer setupTest(t)()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+		// It should reject requests with no cluster name given.
+		clusterInfo := bapi.ClusterInfo{}
+		_, err := lb.Create(ctx, clusterInfo, []v1.L7Log{})
+		require.Error(t, err)
 
-	response, err := lb.Create(ctx, clusterInfo, []v1.L7Log{f})
-	require.NoError(t, err)
-	require.Equal(t, response.Failed, 0)
-	require.Equal(t, response.Succeeded, 1)
-	require.Len(t, response.Errors, 0)
+		params := &v1.L7LogParams{}
+		results, err := lb.List(ctx, clusterInfo, params)
+		require.Error(t, err)
+		require.Nil(t, results)
+	})
+
+	t.Run("bad startFrom on request", func(t *testing.T) {
+		defer setupTest(t)()
+
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		params := &v1.L7LogParams{
+			QueryParams: v1.QueryParams{
+				AfterKey: map[string]interface{}{"startFrom": "badvalue"},
+			},
+		}
+		results, err := lb.List(ctx, clusterInfo, params)
+		require.Error(t, err)
+		require.Nil(t, results)
+	})
 }
 
 // TestAggregations tests running a real elasticsearch query to get aggregations.

@@ -193,6 +193,44 @@ func TestFV_ComplianceReports(t *testing.T) {
 	})
 }
 
+func TestFV_ComplianceReportsTenancy(t *testing.T) {
+	t.Run("should support tenancy restriction", func(t *testing.T) {
+		defer complianceSetupAndTeardown(t)()
+
+		// Instantiate a client for an unexpected tenant.
+		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		require.NoError(t, err)
+
+		// Create a basic log. We expect this to fail, since we're using
+		// an unexpected tenant ID on the request.
+		v3r := apiv3.ReportData{
+			ReportName:     "test-report",
+			ReportTypeName: "my-report-type",
+			StartTime:      metav1.Time{Time: time.Unix(1, 0)},
+			EndTime:        metav1.Time{Time: time.Unix(2, 0)},
+			GenerationTime: metav1.Time{Time: time.Unix(3, 0)},
+		}
+		report := v1.ReportData{ReportData: &v3r}
+		reports := []v1.ReportData{report}
+		bulk, err := tenantCLI.Compliance(cluster).ReportData().Create(ctx, reports)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, bulk)
+
+		// Try a read as well.
+		params := v1.ReportDataParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Unix(0, 0),
+					To:   time.Unix(4, 0),
+				},
+			},
+		}
+		resp, err := tenantCLI.Compliance(cluster).ReportData().List(ctx, &params)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, resp)
+	})
+}
+
 func reportsWithUTCTime(resp *v1.List[v1.ReportData]) []v1.ReportData {
 	for idx, report := range resp.Items {
 		utcStartTime := report.StartTime.UTC()

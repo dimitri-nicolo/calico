@@ -124,19 +124,29 @@ func TestCreateRuntimeReport(t *testing.T) {
 	err = testutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_runtime.%s.*", cluster))
 	require.NoError(t, err)
 
-	results, err := b.List(ctx, clusterInfo, &v1.RuntimeReportParams{
+	// Query using normal time range.
+	opts := &v1.RuntimeReportParams{
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: generatedTime,
 				To:   time.Now(),
 			},
 		},
-	})
+	}
+	results, err := b.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(results.Items))
+	sanitized := testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, results)
+	require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: cluster, Report: f}}, sanitized)
 
-	require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: cluster, Report: f}},
-		testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, results))
+	// Query using the legacy time range.
+	opts.LegacyTimeRange = opts.TimeRange
+	opts.TimeRange = nil
+	results, err = b.List(ctx, clusterInfo, opts)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(results.Items))
+	sanitized = testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, results)
+	require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: cluster, Report: f}}, sanitized)
 }
 
 // TestCreateRuntimeReport tests running a real elasticsearch query to create a runtime report.

@@ -69,5 +69,8 @@ func (f *bgp) Create(ctx context.Context, bgpl []v1.BGPLog) (*v1.BulkResponse, e
 		ContentType(rest.ContentTypeMultilineJSON).
 		Do(ctx).
 		Into(&resp)
-	return &resp, err
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
