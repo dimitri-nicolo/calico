@@ -237,7 +237,7 @@ func newInitialKernelState() *initialKernelState {
 func (s *initialKernelState) String() string {
 	var rules []string
 	for _, r := range s.rules {
-		rules = append(rules, fmt.Sprintf("%s: [%#v]", r.srcIP, r))
+		rules = append(rules, fmt.Sprintf("%s: [%#v]", r.srcIP, *r))
 	}
 	rulesOutput := fmt.Sprintf("rules: {%s}", strings.Join(rules, ","))
 
