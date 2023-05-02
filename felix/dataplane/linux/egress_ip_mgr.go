@@ -222,7 +222,7 @@ func newEgressTable(index int) *egressTable {
 
 type initialKernelState struct {
 	// rules is a map from src IP to egressRule
-	rules []egressRule
+	rules []*egressRule
 	// tables is a map from table index to egressTable
 	tables map[int]*egressTable
 }
@@ -237,7 +237,7 @@ func newInitialKernelState() *initialKernelState {
 func (s *initialKernelState) String() string {
 	var rules []string
 	for _, r := range s.rules {
-		rules = append(rules, fmt.Sprintf("%s: [%v]", r.srcIP, r))
+		rules = append(rules, fmt.Sprintf("%s: [%#v]", r.srcIP, r))
 	}
 	rulesOutput := fmt.Sprintf("rules: {%s}", strings.Join(rules, ","))
 
@@ -620,7 +620,7 @@ func (m *egressIPManager) readInitialKernelState() error {
 	m.routeRules.InitFromKernel()
 	rules := m.routeRules.GetAllActiveRules()
 	ruleTableIndices := set.New[int]()
-	for k, rule := range rules {
+	for _, rule := range rules {
 		nlRule := rule.NetLinkRule()
 		r, err := newEgressRule(nlRule)
 		if err != nil {
@@ -628,7 +628,7 @@ func (m *egressIPManager) readInitialKernelState() error {
 			m.routeRules.RemoveRule(rule)
 			continue
 		}
-		m.initialKernelState.rules = append(m.initialKernelState.rules, *r)
+		m.initialKernelState.rules = append(m.initialKernelState.rules, r)
 		ruleTableIndices.Add(r.tableIndex)
 	}
 
@@ -666,7 +666,7 @@ func (m *egressIPManager) cleanupInitialKernelState() error {
 	// Remove unused rules.
 	for _, r := range m.initialKernelState.rules {
 		if !r.used {
-			log.WithField("rule", r).Info("Deleting unused route rule")
+			log.WithField("rule", *r).Info("Deleting unused route rule")
 			m.deleteRouteRule(r.srcIP, r.tableIndex)
 		}
 	}
@@ -1264,7 +1264,6 @@ func (m *egressIPManager) deleteRouteTable(index int) {
 		log.WithField("tableIndex", index).Debug("Cannot delete routing table, it does not exist.")
 		return
 	}
-
 	for dst, _ := range m.tableIndexToEgressTable[index].routes {
 		log.WithFields(log.Fields{
 			"index":       index,
