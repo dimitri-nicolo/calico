@@ -316,7 +316,7 @@ func (c *controller) reconcileTokens(cluster string, managedClient kubernetes.In
 		tokenName := c.tokenNameForService(user.Name)
 		if update, err := c.needsUpdate(log, managedClient, tokenName, user.Namespace); err != nil {
 			log.WithError(err).Error("error checking token")
-			continue
+			return err
 		} else if !update {
 			log.Debug("Token does not need to be updated")
 			continue
@@ -399,7 +399,7 @@ func (c *controller) needsUpdate(log *logrus.Entry, cs kubernetes.Interface, nam
 		}
 
 	}
-	return true, nil
+	return false, nil
 }
 
 func (c *controller) createToken(tenant, cluster string, user UserInfo) ([]byte, error) {
