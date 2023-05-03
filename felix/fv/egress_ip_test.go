@@ -659,7 +659,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 										gwRoute := fmt.Sprintf("10.10.1%v.1/32", j)
 										extWorkloads[i].C.Exec("ip", "route", "add", gwRoute, "via", gws[j].C.IP)
 									}
-									// Route back to client
 									extWorkloads[i].C.Exec("ip", "route", "add", "10.65.0.2", "via", felixes[0].IP)
 								}
 							})
@@ -671,7 +670,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								gws = nil
 							})
 
-							It("server should see gateway IP when client connects to it", func() {
+							It("server should see correct IPs when client connects to it", func() {
 								egwClient = makeClientWithEGWPolicy(felixes[0], "10.65.0.2", "client", "egw-policy1")
 								defer egwClient.Stop()
 
