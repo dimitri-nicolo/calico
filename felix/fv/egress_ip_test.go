@@ -688,6 +688,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							})
 
 							It("should reuse existing route rule and table", func() {
+
+								triggerStartup := felixes[0].RestartWithDelayedStartup()
+
 								// Add route rule and table for client, to check if egress ip manager picks table 220 for this client
 								fwmark := "0x80000/0x80000"
 								if BPFMode() {
@@ -698,12 +701,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								felixes[0].Exec("ip", "route", "add", extWorkloads[1].IP, "via", "10.10.10.1", "dev", "egress.calico", "onlink", "table", "220")
 								felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "220")
 								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[3].IP, "table", "220")
-								felixes[0].Restart()
 
 								// Need to create client PODs after EGW deployment to make sure IPSets are not empty.
 								// This is just to test re-using existing route rule and table works fine.
 								egwClient = makeClientWithEGWPolicy(felixes[0], "10.65.0.2", "client", "egw-policy1")
 								defer egwClient.Stop()
+
+								triggerStartup()
 
 								cc.ExpectSNAT(egwClient, egwClient.IP, extWorkloads[0], 4321)
 								cc.ExpectSNAT(egwClient, gws[0].IP, extWorkloads[1], 4321)

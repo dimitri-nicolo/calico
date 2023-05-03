@@ -835,12 +835,12 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 			}
 			existingTable, exists := m.reserveFromInitialState(workload, id)
 			if exists {
-				existingTables[id] = existingTable
-				workloadsToUseExistingTable = append(workloadsToUseExistingTable, id)
 				log.WithFields(log.Fields{
 					"workloadID": id,
 					"table":      existingTables,
 				}).Info("Pre-processing workload - reserving table")
+				existingTables[id] = existingTable
+				workloadsToUseExistingTable = append(workloadsToUseExistingTable, id)
 			} else {
 				workloadsToUseNewTable = append(workloadsToUseNewTable, id)
 			}
