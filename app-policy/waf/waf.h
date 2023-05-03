@@ -2,9 +2,11 @@
 
 // Important: <stdlib.h> header file required for Golang statements e.g. defer C.free(unsafe.Pointer(API))
 #include <stdlib.h>
+#include "modsecurity/intervention.h"
 
 void InitializeModSecurity();
 const char* LoadModSecurityCoreRuleSet( char *file );
+ModSecurityIntervention* NewModSecurityIntervention();
 int ProcessHttpRequest(
     char *id,
     char *uri,
@@ -19,8 +21,9 @@ int ProcessHttpRequest(
     char **reqHeaderVals,
     int reqHeaderSize,
     char *reqBodyText,
-    int reqBodySize
-    );
+    int reqBodySize,
+    ModSecurityIntervention *intervention
+);
 void CleanupModSecurity();
 
 // Helper functions to store all core rule set file names in memory.

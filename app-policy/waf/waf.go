@@ -7,6 +7,7 @@ package waf
 // #cgo CFLAGS: -I/usr/local/modsecurity/include
 // #cgo LDFLAGS: -L/usr/local/modsecurity/lib/ -Wl,-rpath -Wl,/usr/local/modsecurity/lib/ -lmodsecurity
 // #include "waf.h"
+// #include "modsecurity/intervention.h"
 import "C"
 import (
 	"errors"
@@ -223,6 +224,12 @@ func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHo
 	CreqBodyText := C.CString(reqBody)
 	defer C.free(unsafe.Pointer(CreqBodyText))
 
+	intervention := C.NewModSecurityIntervention()
+	if intervention == nil {
+		return errors.New("unable to allocate memory for modsec intervention struct")
+	}
+	defer C.free(unsafe.Pointer(intervention))
+
 	start := time.Now()
 	retVal, err := C.ProcessHttpRequest(
 		Cid,
@@ -238,7 +245,9 @@ func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHo
 		CreqHeaderVals,
 		CreqHeaderSize,
 		CreqBodyText,
-		CreqBodySize)
+		CreqBodySize,
+		intervention,
+	)
 
 	elapsed := time.Since(start)
 	if err != nil {

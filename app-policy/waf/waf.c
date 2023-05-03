@@ -66,6 +66,11 @@ const char* LoadModSecurityCoreRuleSet( char *file )
     return error_message;
 }
 
+ModSecurityIntervention* NewModSecurityIntervention() {
+    ModSecurityIntervention *intervention = malloc(sizeof(ModSecurityIntervention));
+    return intervention;
+}
+
 int ProcessHttpRequest(
     char *id,
     char *uri,
@@ -80,7 +85,8 @@ int ProcessHttpRequest(
     char **reqHeaderVals,
     int reqHeaderSize,
     char *reqBodyText,
-    int reqBodySize
+    int reqBodySize,
+    ModSecurityIntervention *intervention
     )
 {
     int retVal = 0;
@@ -155,13 +161,11 @@ int ProcessHttpRequest(
     }
 
     // Detects Mod Security intervention.
-    ModSecurityIntervention intervention;
-    intervention.status = 200;
-    intervention.url = NULL;
-    intervention.log = NULL;
-    intervention.disruptive = 0;
-
-    retVal = msc_intervention( transaction, &intervention );
+    intervention->status = 200;
+    intervention->url = NULL;
+    intervention->log = NULL;
+    intervention->disruptive = 0;
+    retVal = msc_intervention( transaction, intervention );
 
 out:
     if ( transaction != NULL )
