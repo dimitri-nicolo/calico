@@ -3,6 +3,7 @@
 package checker
 
 import (
+	"fmt"
 	"strings"
 
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
@@ -105,36 +106,37 @@ func WafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 	// Collect OWASP log information:
 	owaspLogInfo := waf.GetAndClearOwaspLogs(id)
 
-	ruleInfo := strings.Join(owaspLogInfo, ", ")
-	wafLogger := waf.Logger.WithFields(log.Fields{
-		"path":     uri,
-		"method":   httpMethod,
-		"protocol": inputProtocol,
-		"source": log.Fields{
-			"ip":       clientHost,
-			"port_num": clientPort,
-			"hostname": "-",
-		},
-		"destination": log.Fields{
-			"ip":       serverHost,
-			"port_num": serverPort,
-			"hostname": destinationHost,
-		},
-		"rule_info": ruleInfo,
-	})
-
-	// Log to Elasticsearch => Kibana.
-	if err != nil { // request has been blocked
-		wafLogger.Error("WAF blocked the HTTP request")
-	} else if ruleInfo != "" { // pass-through with OWASP information
-		wafLogger.Error("WAF passed-through the HTTP request")
+	action := "pass-through"
+	if err != nil {
+		action = "blocked"
 	}
+	for _, owaspInfo := range owaspLogInfo {
+		// Log to Elasticsearch => Kibana.
+		waf.Logger.WithFields(log.Fields{
+			"path":     uri,
+			"method":   httpMethod,
+			"protocol": inputProtocol,
+			"source": log.Fields{
+				"ip":       clientHost,
+				"port_num": clientPort,
+				"hostname": "-",
+			},
+			"destination": log.Fields{
+				"ip":       serverHost,
+				"port_num": serverPort,
+				"hostname": destinationHost,
+			},
+			"rule_info": owaspInfo.String(),
+		}).Error(
+			fmt.Sprintf("[%s] %s", action, owaspInfo.Message),
+		)
 
-	for _, owaspLog := range owaspLogInfo {
+		// Log to Dikastes logs.
 		log.WithFields(log.Fields{
-			"id":  id,
-			"url": uri,
-		}).Warn(owaspLog)
+			"id":      id,
+			"url":     uri,
+			"message": owaspInfo.Message,
+		}).Warn(owaspInfo.String())
 	}
 
 	return err

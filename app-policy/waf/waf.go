@@ -325,20 +325,16 @@ func GoModSecurityLoggingCallback(Cpayload *C.char) {
 	owaspLogInfo[uniqueId] = append(owaspLogInfo[uniqueId], dictionary)
 }
 
-func GetAndClearOwaspLogs(uniqueId string) []string {
+func GetAndClearOwaspLogs(uniqueId string) []*OwaspInfo {
 
 	owaspLogMutex.Lock()
 	owaspInfos := owaspLogInfo[uniqueId]
 	delete(owaspLogInfo, uniqueId)
 	owaspLogMutex.Unlock()
 
-	index := 1
-	var owaspLogEntries []string
+	var owaspLogEntries []*OwaspInfo
 	for _, owaspDictionary := range owaspInfos {
-
-		owaspFlattenLog := FormatMap(owaspDictionary)
-		owaspLogEntries = append(owaspLogEntries, fmt.Sprintf("[%d] %s", index, owaspFlattenLog))
-		index++
+		owaspLogEntries = append(owaspLogEntries, NewOwaspInfo(owaspDictionary))
 	}
 
 	return owaspLogEntries

@@ -155,7 +155,7 @@ func TestWafProcessHttpRequestWithDenyModSecAction(t *testing.T) {
 		t.Fatal("Expected error, got nil")
 	}
 
-	if !strings.Contains(memoryLog.String(), `"msg":"WAF blocked the HTTP request"`) {
+	if !strings.Contains(memoryLog.String(), `"msg":"[blocked] SQL Injection Attack Detected via libinjection"`) {
 		t.Error("Expected message in WAF Elasticsearch log not found!")
 	}
 }
@@ -184,7 +184,7 @@ func TestWafProcessHttpRequestWithPassThroughModSecAction(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	if !strings.Contains(memoryLog.String(), `"msg":"WAF passed-through the HTTP request"`) {
+	if !strings.Contains(memoryLog.String(), `"msg":"[pass-through] SQL Injection Attack Detected via libinjection"`) {
 		t.Error("Expected message in WAF Elasticsearch log not found!")
 	}
 }
