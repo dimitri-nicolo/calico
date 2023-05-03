@@ -28,8 +28,9 @@ type KubernetesAuthzTracker struct {
 }
 
 func (t *KubernetesAuthzTracker) Register(v, u string, a *authzv1.ResourceAttributes) {
-	logrus.Infof("Registering %s %s to authorize via %#v", v, u, a)
-	r := reqdata{Verb: v, BaseURL: fmt.Sprintf("/api/v1%s", u)}
+	url := fmt.Sprintf("/api/v1%s", u)
+	logrus.Infof("Registering %s %s to authorize via %#v", v, url, a)
+	r := reqdata{Verb: v, BaseURL: url}
 	t.authMap[r] = a
 }
 

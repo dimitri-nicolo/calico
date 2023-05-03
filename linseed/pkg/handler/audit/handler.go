@@ -36,7 +36,7 @@ type audit struct {
 func New(logs bapi.AuditBackend) *audit {
 	return &audit{
 		logs:         logs,
-		aggregations: handler.NewAggregationHandler[v1.AuditLogAggregationParams](logs.Aggregations),
+		aggregations: handler.NewAggregationHandler(logs.Aggregations),
 	}
 }
 
