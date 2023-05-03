@@ -210,7 +210,7 @@ type Config struct {
 	BPFPolicyDebugEnabled              bool             `config:"bool;true"`
 
 	FlowLogsCollectProcessInfo  bool `config:"bool;false"`
-	FlowLogsCollectTcpStats     bool `config:"bool;true"`
+	FlowLogsCollectTcpStats     bool `config:"bool;false"`
 	FlowLogsCollectProcessPath  bool `config:"bool;false"`
 	FlowLogsCollectorDebugTrace bool `config:"bool;false"`
 
