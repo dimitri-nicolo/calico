@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	. "github.com/onsi/gomega"
+	authzv1 "k8s.io/api/authorization/v1"
 
 	authnv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -133,7 +134,7 @@ func SetTokenReviewsReactor(fakeK8sCli *fake.Clientset, tokens ...*FakeJWT) {
 	for _, tkn := range tokens {
 		tokenMap[tkn.ToString()] = tkn
 	}
-	fakeK8sCli.AddReactor("create", "tokenreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+	fakeK8sCli.PrependReactor("create", "tokenreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		createAction, ok := action.(k8stesting.CreateAction)
 		Expect(ok).To(BeTrue())
 		review, ok := createAction.GetObject().(*authnv1.TokenReview)
@@ -146,5 +147,41 @@ func SetTokenReviewsReactor(fakeK8sCli *fake.Clientset, tokens ...*FakeJWT) {
 			Token: token.ToString(),
 		}))
 		return true, &authnv1.TokenReview{Status: authnv1.TokenReviewStatus{User: authnv1.UserInfo{Username: fmt.Sprintf("%v", token.UserName())}, Authenticated: true}}, nil
+	})
+}
+
+type UserPermissions struct {
+	Username string
+	Attrs    []authzv1.ResourceAttributes
+}
+
+func SetSubjectAccessReviewsReactor(fakeK8sCli *fake.Clientset, userPermissions ...UserPermissions) {
+	userMap := map[string][]authzv1.ResourceAttributes{}
+	for _, up := range userPermissions {
+		userMap[up.Username] = up.Attrs
+	}
+	fakeK8sCli.PrependReactor("create", "subjectaccessreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		createAction, ok := action.(k8stesting.CreateAction)
+		Expect(ok).To(BeTrue())
+		review, ok := createAction.GetObject().(*authzv1.SubjectAccessReview)
+		Expect(ok).To(BeTrue())
+		Expect(review.Spec.ResourceAttributes).ToNot(BeNil(), "only ResourceAttributes supported currently")
+
+		permittedAttrs, ok := userMap[review.Spec.User]
+		Expect(ok).To(BeTrue(), "user unknown to subject access reviews reactor.", review.Spec.User)
+
+		allowed := false
+		specAttrs := *review.Spec.ResourceAttributes
+		for _, permittedAttr := range permittedAttrs {
+			if permittedAttr == specAttrs {
+				allowed = true
+				break
+			}
+		}
+
+		return true, &authzv1.SubjectAccessReview{Status: authzv1.SubjectAccessReviewStatus{
+			Allowed: allowed,
+			Denied:  !allowed,
+		}}, nil
 	})
 }

@@ -6,8 +6,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/SermoDigital/jose/jws"
+	"github.com/SermoDigital/jose/jwt"
+	"github.com/felixge/httpsnoop"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
@@ -41,7 +45,9 @@ var _ = Describe("Access Logs", func() {
 
 	logFile, err := os.CreateTemp("", "voltron-access-log")
 	Expect(err).ToNot(HaveOccurred())
-	defer os.Remove(logFile.Name())
+	defer func() {
+		Expect(os.Remove(logFile.Name())).ToNot(HaveOccurred())
+	}()
 
 	log.Info("output file: ", logFile.Name())
 
@@ -77,7 +83,24 @@ var _ = Describe("Access Logs", func() {
 		http.Error(w, errMsg, http.StatusBadRequest)
 	})
 
-	accessLoggingHandler := accessLogger.WrapHandler(mux.ServeHTTP)
+	accessLoggingHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var httpSnoopMetrics httpsnoop.Metrics
+
+		var authToken jwt.JWT
+		var authTokenErr error
+		if rawAuthToken := authorizationHeaderBearerToken(r); rawAuthToken != "" {
+			authToken, authTokenErr = jws.ParseJWT([]byte(rawAuthToken))
+		}
+
+		wrappedWriter, loggerEnd := accessLogger.OnRequest(w, r, authToken, authTokenErr)
+		defer loggerEnd(&httpSnoopMetrics)
+
+		w = wrappedWriter
+
+		httpSnoopMetrics = httpsnoop.CaptureMetricsFn(w, func(w http.ResponseWriter) {
+			mux.ServeHTTP(w, r)
+		})
+	})
 	Expect(err).ToNot(HaveOccurred())
 
 	httpServer := httptest.NewUnstartedServer(accessLoggingHandler)
@@ -284,4 +307,11 @@ func flushAndReadLastAccessLog(logger *accesslog.Logger, outputFile *os.File) te
 	logMessage, err := test.ReadLastAccessLog(outputFile)
 	Expect(err).ToNot(HaveOccurred())
 	return logMessage
+}
+
+func authorizationHeaderBearerToken(r *http.Request) string {
+	if value := r.Header.Get("Authorization"); len(value) > 7 && strings.EqualFold(value[0:7], "bearer ") {
+		return value[7:]
+	}
+	return ""
 }

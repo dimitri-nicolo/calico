@@ -14,8 +14,12 @@ import (
 	"net/http"
 	"net/textproto"
 	"regexp"
+	"strings"
 	"time"
 
+	"github.com/SermoDigital/jose/jws"
+	"github.com/SermoDigital/jose/jwt"
+	"github.com/felixge/httpsnoop"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	authorizationv1 "k8s.io/api/authorization/v1"
@@ -29,6 +33,7 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server/metrics"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
@@ -42,11 +47,20 @@ const (
 
 	// CalicoCloudTenantIDClaimName is the name of the tenantID claim in Calico Cloud issued bearer tokens
 	CalicoCloudTenantIDClaimName = "https://calicocloud.io/tenantID"
+
+	// ImpersonateUserHeader kubernetes user impersonation header name
+	ImpersonateUserHeader = "Impersonate-User"
+	// ImpersonateGroupHeader kubernetes group impersonation header name
+	ImpersonateGroupHeader = "Impersonate-Group"
+
+	AuthzCacheMaxTTL = 20 * time.Second
 )
 
 // ClusterHeaderFieldCanon represents the request header key used to determine which
 // cluster to proxy for (Canonical)
 var ClusterHeaderFieldCanon = textproto.CanonicalMIMEHeaderKey(utils.ClusterHeaderField)
+
+var authorizationHeaderKey = http.CanonicalHeaderKey("Authorization")
 
 // Server is the voltron server that accepts tunnels from the app clusters. It
 // serves HTTP requests and proxies them to the tunnels.
@@ -55,6 +69,16 @@ type Server struct {
 	cancel   context.CancelFunc
 	http     *http.Server
 	proxyMux *http.ServeMux
+
+	// a http mux for endpoints that should not be exposed to the outside, e.g. `/metrics`
+	//
+	// lazily initialized, any handler registration function must create it if it is nil
+	internalMux *http.ServeMux
+
+	internalAddr string
+
+	// internalHTTP only created & started if the lazily initialized internalMux is not nil
+	internalHTTP *http.Server
 
 	k8s bootstrap.K8sClient
 	// When impersonating a user we use the tigera-manager sa bearer token from this config.
@@ -94,6 +118,9 @@ type Server struct {
 	// checkManagedClusterAuthorizationBeforeProxy
 	checkManagedClusterAuthorizationBeforeProxy bool
 
+	// specific `auth.RBACAuthorizer` for `checkManagedClusterAuthorizationBeforeProxy` which may have caching enabled
+	checkManagedClusterAuthorizer auth.RBACAuthorizer
+
 	accessLogger *accesslog.Logger
 }
 
@@ -129,13 +156,8 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, vcfg config.Config, authe
 	srv.clusters.sniServiceMap = srv.sniServiceMap
 
 	// Create an HTTP server to handle incoming requests.
-	var rootHandler = srv.clusterMuxer
-	if srv.accessLogger != nil {
-		rootHandler = srv.accessLogger.WrapHandler(rootHandler)
-	}
-
 	srv.proxyMux = http.NewServeMux()
-	srv.proxyMux.HandleFunc("/", rootHandler)
+	srv.proxyMux.HandleFunc("/", wrapInMetricsAndLoggingAwareHandler(vcfg.MetricsEnabled, srv.accessLogger, srv.clusterMuxer))
 	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
 
 	cfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
@@ -148,6 +170,21 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, vcfg config.Config, authe
 		Handler:     srv.proxyMux,
 		TLSConfig:   cfg,
 		ReadTimeout: DefaultReadTimeout,
+	}
+
+	if srv.internalMux != nil {
+		if len(srv.internalCert.Certificate) == 0 {
+			return nil, fmt.Errorf("no internal certificates configured")
+		}
+		internalTlsCfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
+		internalTlsCfg.Certificates = append(internalTlsCfg.Certificates, srv.internalCert)
+
+		srv.internalHTTP = &http.Server{
+			Addr:        srv.internalAddr,
+			Handler:     srv.internalMux,
+			TLSConfig:   internalTlsCfg,
+			ReadTimeout: DefaultReadTimeout,
+		}
 	}
 
 	if srv.tunnelSigningCert != nil {
@@ -179,9 +216,25 @@ func (s *Server) ServeHTTPS(lis net.Listener, certFile, keyFile string) error {
 	return s.http.ServeTLS(lis, certFile, keyFile)
 }
 
+func (s *Server) ServeInternalHTTPS(lis net.Listener, certFile, keyFile string) error {
+	if s.internalHTTP != nil {
+		return s.internalHTTP.ServeTLS(lis, certFile, keyFile)
+	}
+	return nil
+}
+
 // ListenAndServeHTTPS starts listening and serving HTTPS requests
 func (s *Server) ListenAndServeHTTPS() error {
 	return s.http.ListenAndServeTLS("", "")
+}
+
+// ListenAndServeInternalHTTPS starts listening and serving the internalHTTP server
+func (s *Server) ListenAndServeInternalHTTPS() error {
+	if s.internalHTTP != nil {
+		log.Infof("Voltron listens for Internal HTTP requests at %s", s.internalAddr)
+		return s.internalHTTP.ListenAndServeTLS("", "")
+	}
+	return nil
 }
 
 // Close stop the server
@@ -190,7 +243,17 @@ func (s *Server) Close() error {
 	if s.tunSrv != nil {
 		s.tunSrv.Stop()
 	}
-	return s.http.Close()
+
+	var internalCloseErr error
+	if s.internalHTTP != nil {
+		internalCloseErr = s.internalHTTP.Close()
+	}
+
+	if publicCloseErr := s.http.Close(); publicCloseErr != nil {
+		return publicCloseErr
+	}
+
+	return internalCloseErr
 }
 
 // ServeTunnelsTLS start serving TLS secured tunnels using the provided listener and
@@ -330,13 +393,48 @@ func (s *Server) extractMD5Identity(t *tunnel.Tunnel) (fingerprint string) {
 	return
 }
 
+func wrapInMetricsAndLoggingAwareHandler(metricsEnabled bool, logger *accesslog.Logger, delegate http.HandlerFunc) http.HandlerFunc {
+	loggingEnabled := logger != nil
+	if !metricsEnabled && !loggingEnabled {
+		// neither enabled so no need to wrap
+		return delegate
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		var httpSnoopMetrics httpsnoop.Metrics
+
+		var authToken jwt.JWT
+		var authTokenErr error
+		if rawAuthToken := authorizationHeaderBearerToken(r); rawAuthToken != "" {
+			authToken, authTokenErr = jws.ParseJWT([]byte(rawAuthToken))
+		}
+
+		if metricsEnabled {
+			metricsEnd := metrics.OnRequestStart(r, authToken)
+			defer metricsEnd(&httpSnoopMetrics)
+		}
+
+		if loggingEnabled {
+			wrappedWriter, loggerEnd := logger.OnRequest(w, r, authToken, authTokenErr)
+			defer loggerEnd(&httpSnoopMetrics)
+
+			w = wrappedWriter
+		}
+
+		httpSnoopMetrics = httpsnoop.CaptureMetricsFn(w, func(w http.ResponseWriter) {
+			delegate(w, r)
+		})
+	}
+
+}
+
 func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	chdr, hasClusterHeader := r.Header[ClusterHeaderFieldCanon]
 	isK8sRequest := requestPathMatches(r, s.kubernetesAPITargets)
 	shouldUseTunnel := requestPathMatches(r, s.tunnelTargetWhitelist) && hasClusterHeader
 
 	if requestTargetPathMatches(r, s.defaultProxy, s.unauthenticatedTargetPaths) {
-		// This request is to a target that can be unauthenticated
+		// This reque	st is to a target that can be unauthenticated
 		s.defaultProxy.ServeHTTP(w, r)
 		return
 	}
@@ -390,7 +488,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 
 	// perform an authorization to make sure this user can get this cluster
 	if s.checkManagedClusterAuthorizationBeforeProxy {
-		ok, err := s.authenticator.Authorize(usr, &authorizationv1.ResourceAttributes{
+		ok, err := s.checkManagedClusterAuthorizer.Authorize(usr, &authorizationv1.ResourceAttributes{
 			Verb:     "get",
 			Group:    "projectcalico.org",
 			Version:  "v3",
@@ -456,9 +554,9 @@ func removeAuthHeaders(r *http.Request) {
 }
 
 func addImpersonationHeaders(r *http.Request, user user.Info) {
-	r.Header.Add("Impersonate-User", user.GetName())
+	r.Header.Add(ImpersonateUserHeader, user.GetName())
 	for _, group := range user.GetGroups() {
-		r.Header.Add("Impersonate-Group", group)
+		r.Header.Add(ImpersonateGroupHeader, group)
 	}
 	log.Debugf("Adding impersonation headers")
 }
@@ -483,4 +581,11 @@ func (s *Server) FlushAccessLogs() {
 	if s.accessLogger != nil {
 		s.accessLogger.Flush()
 	}
+}
+
+func authorizationHeaderBearerToken(r *http.Request) string {
+	if value := r.Header.Get(authorizationHeaderKey); len(value) > 7 && strings.EqualFold(value[0:7], "bearer ") {
+		return value[7:]
+	}
+	return ""
 }

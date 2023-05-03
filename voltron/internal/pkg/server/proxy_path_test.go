@@ -109,7 +109,7 @@ var _ = Describe("Server supports unauthenticated targets", func() {
 			k8sTargets, err := regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			srv, httpsAddr, _, srvWg = createAndStartServer(k8sAPI,
+			srv, httpsAddr, _, _, srvWg = createAndStartServer(k8sAPI,
 				config,
 				mockAuthenticator,
 				server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),

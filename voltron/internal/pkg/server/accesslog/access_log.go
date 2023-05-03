@@ -3,10 +3,9 @@ package accesslog
 import (
 	"crypto/tls"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/SermoDigital/jose/jws"
+	"github.com/SermoDigital/jose/jwt"
 	"github.com/felixge/httpsnoop"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -71,40 +70,36 @@ func New(options ...Option) (*Logger, error) {
 	}, nil
 }
 
-func (l *Logger) WrapHandler(delegate http.HandlerFunc) http.HandlerFunc {
+func (l *Logger) OnRequest(w http.ResponseWriter, r *http.Request, authToken jwt.JWT, authTokenError error) (http.ResponseWriter, func(metrics *httpsnoop.Metrics)) {
 
-	return func(w http.ResponseWriter, r *http.Request) {
+	// we need to capture these values now, before downstream handlers have a chance to alter them
+	tlsField := tlsLogField(r)
+	requestField := requestLogField(r, l.cfg, time.Now().UTC(), authToken, authTokenError)
 
-		// we need to capture these values now, before downstream handlers have a chance to alter them
-		tlsField := tlsLogField(r)
-		requestField := requestLogField(r, l.cfg, time.Now().UTC())
+	var capturedResponseBody string
 
-		var capturedResponseBody string
-
-		metrics := httpsnoop.CaptureMetricsFn(w, func(w http.ResponseWriter) {
-			// capture the first part of the response which we will log on status >= 400
-			w = httpsnoop.Wrap(w, httpsnoop.Hooks{
-				Write: func(writeFunc httpsnoop.WriteFunc) httpsnoop.WriteFunc {
-					return func(b []byte) (int, error) {
-						errorResponseCaptureSize := l.cfg.errorResponseCaptureSize
-						if errorResponseCaptureSize > 0 && capturedResponseBody == "" && b != nil {
-							if errorResponseCaptureSize > len(b) {
-								errorResponseCaptureSize = len(b)
-							}
-							capturedResponseBody = string(b[:errorResponseCaptureSize])
-						}
-						return writeFunc(b)
+	w = httpsnoop.Wrap(w, httpsnoop.Hooks{
+		Write: func(writeFunc httpsnoop.WriteFunc) httpsnoop.WriteFunc {
+			return func(b []byte) (int, error) {
+				errorResponseCaptureSize := l.cfg.errorResponseCaptureSize
+				if errorResponseCaptureSize > 0 && capturedResponseBody == "" && b != nil {
+					if errorResponseCaptureSize > len(b) {
+						errorResponseCaptureSize = len(b)
 					}
-				},
-			})
-			delegate.ServeHTTP(w, r)
-		})
+					capturedResponseBody = string(b[:errorResponseCaptureSize])
+				}
+				return writeFunc(b)
+			}
+		},
+	})
 
+	return w, func(m *httpsnoop.Metrics) {
 		l.logger.Info("",
 			tlsField,
 			requestField,
-			responseLogField(metrics, capturedResponseBody),
+			responseLogField(*m, capturedResponseBody),
 		)
+
 	}
 }
 
@@ -113,13 +108,6 @@ func (l *Logger) Flush() {
 	if l.logger != nil {
 		_ = l.logger.Sync() // ignore errors as this will always fail on stderr, but needed for tests which also log to files
 	}
-}
-
-func authorizationHeaderBearerToken(r *http.Request) string {
-	if value := r.Header.Get(authorizationHeaderName); len(value) > 7 && strings.EqualFold(value[0:7], "bearer ") {
-		return value[7:]
-	}
-	return ""
 }
 
 func tlsLogField(r *http.Request) zap.Field {
@@ -150,7 +138,7 @@ func responseLogField(metrics httpsnoop.Metrics, body string) zap.Field {
 	}))
 }
 
-func requestLogField(r *http.Request, cfg *config, requestTime time.Time) zap.Field {
+func requestLogField(r *http.Request, cfg *config, requestTime time.Time, authToken jwt.JWT, authTokenErr error) zap.Field {
 	// capture values immediately rather than at the time `ObjectMarshalerFunc` is invoked
 	remoteAddr := r.RemoteAddr
 	proto := r.Proto
@@ -170,11 +158,6 @@ func requestLogField(r *http.Request, cfg *config, requestTime time.Time) zap.Fi
 		}
 	}
 
-	var rawAuthToken string
-	if len(cfg.stringClaims) > 0 {
-		rawAuthToken = authorizationHeaderBearerToken(r)
-	}
-
 	return zap.Object("req", zapcore.ObjectMarshalerFunc(func(enc zapcore.ObjectEncoder) error {
 		enc.AddTime("time", requestTime)
 		enc.AddString("remoteAddr", remoteAddr)
@@ -189,11 +172,9 @@ func requestLogField(r *http.Request, cfg *config, requestTime time.Time) zap.Fi
 			enc.AddString(h.name, h.value)
 		}
 
-		if rawAuthToken != "" {
-			authToken, err := jws.ParseJWT([]byte(rawAuthToken))
-			if err != nil {
-				enc.AddString("authParseFailed", err.Error())
-			}
+		if authTokenErr != nil {
+			enc.AddString("authParseFailed", authTokenErr.Error())
+		} else if authToken != nil {
 			_ = enc.AddObject("auth", zapcore.ObjectMarshalerFunc(func(enc zapcore.ObjectEncoder) error {
 				encClaimStringField := func(claimName, fieldName string) {
 					if value, ok := authToken.Claims().Get(claimName).(string); ok {

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/SermoDigital/jose/jws"
 
@@ -15,12 +16,12 @@ import (
 
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
-	authenticationv1 "k8s.io/client-go/kubernetes/typed/authentication/v1"
 	"k8s.io/client-go/rest"
+
+	"github.com/projectcalico/calico/lma/pkg/cache"
 )
 
 // Common claim names
@@ -66,10 +67,10 @@ type Authenticator interface {
 }
 
 // JWTAuthOption can be provided to NewJWTAuth to configure the authenticator.
-type JWTAuthOption func(*jwtAuth) error
+type JWTAuthOption func(config *jwtAuthConfig) error
 
 type k8sAuthn struct {
-	authnCli authenticationv1.AuthenticationV1Interface
+	tokenReviewer tokenReviewer
 }
 
 // Authenticate expects an authorization header containing a bearer token and returns the authenticated user.
@@ -86,30 +87,49 @@ func (k *k8sAuthn) Authenticate(r *http.Request) (userInfo user.Info, httpStatus
 
 	// Strip the "Bearer " part of the token.
 	token := authHeader[7:]
-	tknReview, err := k.authnCli.TokenReviews().Create(
+	tknReviewStatus, err := k.tokenReviewer.Review(
 		context.Background(),
-		&authnv1.TokenReview{
-			Spec: authnv1.TokenReviewSpec{Token: token},
-		},
-		metav1.CreateOptions{})
+		authnv1.TokenReviewSpec{Token: token},
+	)
 	if err != nil {
 		return nil, 500, err
 	}
-	if !tknReview.Status.Authenticated {
+	if !tknReviewStatus.Authenticated {
 		return nil, 401, fmt.Errorf("user is not authenticated")
 	}
 
 	return &user.DefaultInfo{
-		Name:   tknReview.Status.User.Username,
-		Groups: tknReview.Status.User.Groups,
-		Extra:  toExtra(tknReview.Status.User.Extra),
+		Name:   tknReviewStatus.User.Username,
+		Groups: tknReviewStatus.User.Groups,
+		Extra:  toExtra(tknReviewStatus.User.Extra),
 	}, 200, nil
 }
 
 // WithAuthenticator adds an authenticator for a specific token issuer.
 func WithAuthenticator(issuer string, authenticator Authenticator) JWTAuthOption {
-	return func(a *jwtAuth) error {
+	return func(a *jwtAuthConfig) error {
 		a.authenticators[issuer] = authenticator
+		return nil
+	}
+}
+
+// WithTokenReviewCacheTTL adds caching to TokenReview requests that are used for authenticating Service Accounts
+func WithTokenReviewCacheTTL(ctx context.Context, ttl time.Duration) JWTAuthOption {
+	return func(c *jwtAuthConfig) error {
+		if ttl > 0 {
+			if ttl > TokenReviewCacheMaxTTL {
+				return fmt.Errorf("configured cacheTTL of %v exceeds maximum permitted of %v", ttl, TokenReviewCacheMaxTTL)
+			}
+			expiringCache, err := cache.NewExpiring[string, authnv1.TokenReviewStatus](cache.ExpiringConfig{
+				Context: ctx,
+				Name:    "lma-token-reviewer",
+				TTL:     ttl,
+			})
+			if err != nil {
+				return err
+			}
+			c.tokenReviewer = newCachingTokenReviewer(expiringCache, c.tokenReviewer)
+		}
 		return nil
 	}
 }
@@ -132,7 +152,19 @@ func NewJWTAuth(restConfig *rest.Config, k8sCli kubernetes.Interface, options ..
 		return nil, fmt.Errorf("cannot derive issuer from in-cluster configuration: %v", jws.ErrIsNotJWT)
 	}
 
-	authn := &k8sAuthn{k8sCli.AuthenticationV1()}
+	cfg := &jwtAuthConfig{
+		authenticators: map[string]Authenticator{},
+		tokenReviewer:  newK8sTokenReviewer(k8sCli),
+	}
+	for _, opt := range options {
+		err := opt(cfg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	authn := &k8sAuthn{cfg.tokenReviewer}
+
 	jAuth := &jwtAuth{
 		authenticators: map[string]Authenticator{
 			// This issuer is used for tokens from service account secrets.
@@ -142,12 +174,8 @@ func NewJWTAuth(restConfig *rest.Config, k8sCli kubernetes.Interface, options ..
 		},
 		RBACAuthorizer: NewRBACAuthorizer(k8sCli),
 	}
-
-	for _, opt := range options {
-		err := opt(jAuth)
-		if err != nil {
-			return nil, err
-		}
+	for k, v := range cfg.authenticators {
+		jAuth.authenticators[k] = v
 	}
 
 	return jAuth, nil
@@ -156,6 +184,11 @@ func NewJWTAuth(restConfig *rest.Config, k8sCli kubernetes.Interface, options ..
 type jwtAuth struct {
 	authenticators map[string]Authenticator
 	RBACAuthorizer
+}
+
+type jwtAuthConfig struct {
+	authenticators map[string]Authenticator
+	tokenReviewer  tokenReviewer
 }
 
 // Authenticate checks if a request is authenticated. It accepts only JWT bearer tokens.

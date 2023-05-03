@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -22,6 +23,8 @@ import (
 )
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	cfg := config.Config{}
 	if err := envconfig.Process(config.EnvConfigPrefix, &cfg); err != nil {
 		log.Fatal(err)
@@ -65,14 +68,23 @@ func main() {
 
 	opts := []server.Option{
 		server.WithDefaultAddr(addr),
+		server.WithInternalAddr(fmt.Sprintf("%v:%v", cfg.Host, cfg.InternalPort)),
 		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		server.WithExternalCredFiles(cfg.HTTPSCert, cfg.HTTPSKey),
 		server.WithKubernetesAPITargets(kubernetesAPITargets),
 		server.WithUnauthenticatedTargets(unauthenticatedTargets),
+		server.WithInternalMetricsEndpointEnabled(cfg.MetricsEnabled),
 	}
 
-	config := bootstrap.NewRestConfig(cfg.K8sConfigPath)
-	k8s := bootstrap.NewK8sClientWithConfig(config)
+	k8sConfig := bootstrap.NewRestConfig(cfg.K8sConfigPath)
+	if cfg.K8sClientQPS > 0 {
+		k8sConfig.QPS = cfg.K8sClientQPS
+	}
+	if cfg.K8sClientBurst > 0 {
+		k8sConfig.Burst = cfg.K8sClientBurst
+	}
+
+	k8s := bootstrap.NewK8sClientWithConfig(k8sConfig)
 
 	if cfg.EnableMultiClusterManagement {
 		// the cert used to sign guardian certs is required no matter what to verify inbound connections
@@ -163,27 +175,6 @@ func main() {
 			log.WithError(err).Fatalf("failed to create proxier for tunneled connections from a managed cluster")
 		}
 
-		if cfg.HTTPAccessLoggingEnabled {
-			logOpts := []accesslog.Option{
-				accesslog.WithRequestHeader(server.ClusterHeaderFieldCanon, "xClusterID"),
-				accesslog.WithRequestHeader("User-Agent", "userAgent"),
-				accesslog.WithErrorResponseBodyCaptureSize(250),
-			}
-
-			if cfg.OIDCAuthEnabled {
-				logOpts = append(logOpts, accesslog.WithStandardJWTClaims())
-				logOpts = append(logOpts, accesslog.WithStringJWTClaim(cfg.OIDCAuthUsernameClaim, "username"))
-				if cfg.HTTPAccessLoggingIncludeAuthGroups {
-					logOpts = append(logOpts, accesslog.WithStringArrayJWTClaim(cfg.OIDCAuthGroupsClaim, "groups"))
-				}
-				if cfg.CalicoCloudRequireTenantClaim {
-					logOpts = append(logOpts, accesslog.WithStringJWTClaim(server.CalicoCloudTenantIDClaimName, "ccTenantID"))
-				}
-			}
-
-			server.WithHTTPAccessLogging(logOpts...)
-		}
-
 		opts = append(opts,
 			server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),
 			server.WithTunnelSigningCreds(tunnelSigningX509Cert),
@@ -192,9 +183,30 @@ func main() {
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithSNIServiceMap(sniServiceMap),
 			server.WithFIPSModeEnabled(cfg.FIPSModeEnabled),
-			server.WithCheckManagedClusterAuthorizationBeforeProxy(cfg.CheckManagedClusterAuthorizationBeforeProxy),
+			server.WithCheckManagedClusterAuthorizationBeforeProxy(cfg.CheckManagedClusterAuthorizationBeforeProxy, cfg.CheckManagedClusterAuthorizationCacheTTL),
 			server.WithTunnelInnerProxy(innerProxy),
 		)
+	}
+
+	if cfg.HTTPAccessLoggingEnabled {
+		logOpts := []accesslog.Option{
+			accesslog.WithRequestHeader(server.ClusterHeaderFieldCanon, "xClusterID"),
+			accesslog.WithRequestHeader("User-Agent", "userAgent"),
+			accesslog.WithErrorResponseBodyCaptureSize(250),
+		}
+
+		if cfg.OIDCAuthEnabled {
+			logOpts = append(logOpts, accesslog.WithStandardJWTClaims())
+			logOpts = append(logOpts, accesslog.WithStringJWTClaim(cfg.OIDCAuthUsernameClaim, "username"))
+			if cfg.HTTPAccessLoggingIncludeAuthGroups {
+				logOpts = append(logOpts, accesslog.WithStringArrayJWTClaim(cfg.OIDCAuthGroupsClaim, "groups"))
+			}
+			if cfg.CalicoCloudRequireTenantClaim {
+				logOpts = append(logOpts, accesslog.WithStringJWTClaim(server.CalicoCloudTenantIDClaimName, "ccTenantID"))
+			}
+		}
+
+		opts = append(opts, server.WithHTTPAccessLogging(logOpts...))
 	}
 
 	targetList := []bootstrap.Target{
@@ -288,7 +300,7 @@ func main() {
 		})
 	}
 
-	var options []auth.JWTAuthOption
+	var jwtAuthOpts []auth.JWTAuthOption
 	if cfg.OIDCAuthEnabled {
 		// If dex is enabled we need to add the CA Bundle, otherwise the default trusted certs from the image will
 		// suffice.
@@ -322,9 +334,12 @@ func main() {
 			log.WithError(err).Panic("Unable to create dex authenticator")
 		}
 
-		options = append(options, auth.WithAuthenticator(cfg.OIDCAuthIssuer, oidcAuth))
+		jwtAuthOpts = append(jwtAuthOpts, auth.WithAuthenticator(cfg.OIDCAuthIssuer, oidcAuth))
 	}
-	authn, err := auth.NewJWTAuth(config, k8s, options...)
+
+	jwtAuthOpts = append(jwtAuthOpts, auth.WithTokenReviewCacheTTL(ctx, cfg.OIDCTokenReviewCacheTTL))
+
+	authn, err := auth.NewJWTAuth(k8sConfig, k8s, jwtAuthOpts...)
 	if err != nil {
 		log.Fatal("Unable to create authenticator", err)
 	}
@@ -342,7 +357,7 @@ func main() {
 
 	srv, err := server.New(
 		k8s,
-		config,
+		k8sConfig,
 		cfg,
 		authn,
 		opts...,
@@ -370,8 +385,15 @@ func main() {
 		log.Infof("Voltron listens for tunnels at %s", lisTun.Addr().String())
 	}
 
+	go func() {
+		if err := srv.ListenAndServeInternalHTTPS(); err != nil {
+			log.WithError(err).Fatal("internal http server exited.")
+		}
+	}()
+
 	log.Infof("Voltron listens for HTTP request at %s", addr)
 	if err := srv.ListenAndServeHTTPS(); err != nil {
+		cancel()
 		log.Fatal(err)
 	}
 }

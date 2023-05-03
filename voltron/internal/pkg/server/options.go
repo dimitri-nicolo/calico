@@ -5,12 +5,17 @@ package server
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
+	"net/http"
 	"os"
 	"regexp"
 	"time"
 
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/cache"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server/metrics"
 )
 
 // Option is a common format for New() options
@@ -21,6 +26,15 @@ type Option func(*Server) error
 func WithDefaultAddr(addr string) Option {
 	return func(s *Server) error {
 		s.addr = addr
+		return nil
+	}
+}
+
+// WithInternalAddr changes the internal address where the server accepts
+// connections. This address is used for internal-only endpoints such as /metrics
+func WithInternalAddr(addr string) Option {
+	return func(s *Server) error {
+		s.internalAddr = addr
 		return nil
 	}
 }
@@ -195,9 +209,25 @@ func WithFIPSModeEnabled(fipsModeEnabled bool) Option {
 	}
 }
 
-func WithCheckManagedClusterAuthorizationBeforeProxy(checkManagedClusterAuthorizationBeforeProxy bool) Option {
+func WithCheckManagedClusterAuthorizationBeforeProxy(enabled bool, cacheTTL time.Duration) Option {
 	return func(s *Server) error {
-		s.checkManagedClusterAuthorizationBeforeProxy = checkManagedClusterAuthorizationBeforeProxy
+		var authorizer auth.RBACAuthorizer = s.authenticator
+		if enabled && cacheTTL > 0 {
+			if cacheTTL > AuthzCacheMaxTTL {
+				return fmt.Errorf("configured cacheTTL of %v exceeds maximum permitted of %v", cacheTTL, AuthzCacheMaxTTL)
+			}
+			authCache, err := cache.NewExpiring[string, bool](cache.ExpiringConfig{
+				Context: s.ctx,
+				Name:    "managedcluster-access-authorizer",
+				TTL:     cacheTTL,
+			})
+			if err != nil {
+				return err
+			}
+			authorizer = auth.NewCachingAuthorizer(authCache, authorizer)
+		}
+		s.checkManagedClusterAuthorizationBeforeProxy = enabled
+		s.checkManagedClusterAuthorizer = authorizer
 		return nil
 	}
 }
@@ -211,6 +241,21 @@ func WithHTTPAccessLogging(options ...accesslog.Option) Option {
 		}
 
 		s.accessLogger = logger
+		return nil
+	}
+}
+
+// WithInternalMetricsEndpointEnabled enables the `/metrics` endpoint in the internal mux
+func WithInternalMetricsEndpointEnabled(enabled bool) Option {
+	return func(s *Server) error {
+		if enabled {
+			if s.internalMux == nil {
+				s.internalMux = http.NewServeMux()
+			}
+
+			s.internalMux.Handle("/metrics", metrics.NewHandler())
+		}
+
 		return nil
 	}
 }

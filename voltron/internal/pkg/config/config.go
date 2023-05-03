@@ -28,6 +28,8 @@ type Config struct {
 	TunnelKey  string `default:"/certs/tunnel/key" split_words:"true" json:"-"`
 	LogLevel   string `default:"INFO"`
 
+	InternalPort int `default:"5557" split_words:"true"`
+
 	// The tenant that this Voltron is serving.
 	Tenant string `default:""`
 
@@ -48,7 +50,13 @@ type Config struct {
 	InternalHTTPSCert string `default:"/certs/internal/cert" split_words:"true" json:"-"`
 	InternalHTTPSKey  string `default:"/certs/internal/key" split_words:"true" json:"-"`
 
-	K8sConfigPath                string `split_words:"true"`
+	K8sConfigPath string `split_words:"true"`
+
+	// K8sClientQPS => rest.Config.QPS
+	K8sClientQPS float32 `default:"0.0" split_words:"true"`
+	// K8sClientBurst => rest.Config.Burst
+	K8sClientBurst int `default:"0" split_words:"true"`
+
 	KeepAliveEnable              bool   `default:"true" split_words:"true"`
 	KeepAliveInterval            int    `default:"100" split_words:"true"`
 	K8sEndpoint                  string `default:"https://kubernetes.default" split_words:"true"`
@@ -91,14 +99,15 @@ type Config struct {
 	DexCABundlePath string `default:"/etc/ssl/certs/tls-dex.crt" split_words:"true"`
 
 	// OIDC Authentication settings.
-	OIDCAuthEnabled        bool   `default:"false" split_words:"true"`
-	OIDCAuthJWKSURL        string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys" split_words:"true"`
-	OIDCAuthIssuer         string `default:"https://127.0.0.1:5556/dex" split_words:"true"`
-	OIDCAuthClientID       string `default:"tigera-manager" split_words:"true"`
-	OIDCAuthUsernameClaim  string `default:"email" split_words:"true"`
-	OIDCAuthUsernamePrefix string `split_words:"true"`
-	OIDCAuthGroupsClaim    string `default:"groups" split_words:"true"`
-	OIDCAuthGroupsPrefix   string `split_words:"true"`
+	OIDCAuthEnabled         bool          `default:"false" split_words:"true"`
+	OIDCAuthJWKSURL         string        `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys" split_words:"true"`
+	OIDCAuthIssuer          string        `default:"https://127.0.0.1:5556/dex" split_words:"true"`
+	OIDCAuthClientID        string        `default:"tigera-manager" split_words:"true"`
+	OIDCAuthUsernameClaim   string        `default:"email" split_words:"true"`
+	OIDCAuthUsernamePrefix  string        `split_words:"true"`
+	OIDCAuthGroupsClaim     string        `default:"groups" split_words:"true"`
+	OIDCAuthGroupsPrefix    string        `split_words:"true"`
+	OIDCTokenReviewCacheTTL time.Duration `default:"0" split_words:"true"`
 
 	// The DefaultForward parameters configure where connections from guardian should be forwarded to by default
 	ForwardingEnabled               bool          `default:"true" split_words:"true"`
@@ -118,11 +127,16 @@ type Config struct {
 	// of allow / deny based on the ManagedCluster RBAC.
 	CheckManagedClusterAuthorizationBeforeProxy bool `default:"false" split_words:"true"`
 
+	// CheckManagedClusterAuthorizationCacheTTL when >0 this will cache the authorization results for CheckManagedClusterAuthorizationBeforeProxy
+	CheckManagedClusterAuthorizationCacheTTL time.Duration `default:"0" split_words:"true"`
+
 	// enable logging of all http requests to the clusterMuxer
 	HTTPAccessLoggingEnabled bool `default:"false" split_words:"true"`
 
 	// include the authentication tokens groups claim value in the http access logs, optional and disabled by default as this can be a very large value
 	HTTPAccessLoggingIncludeAuthGroups bool `default:"false" split_words:"true"`
+
+	MetricsEnabled bool `default:"false" split_words:"true"`
 }
 
 func (cfg Config) String() string {
