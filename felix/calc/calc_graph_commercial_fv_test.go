@@ -1135,9 +1135,16 @@ var (
 	nowTime               = time.Now()
 	inSixtySecsTime       = nowTime.Add(time.Second * 60)
 	egressSelector        = "egress-provider == 'true'"
-	egressSelector1       = "egress-provider == 'not-sure'"
 	egressSelectorSim     = "egress-provider in {'true', 'not-sure'}"
 	egressProfileSelector = "(projectcalico.org/namespace == 'egress') && (egress-provider == 'true')"
+
+	egwpSelector1         = "egress-provider == 'true'"
+	egwpSelector2         = "egress-provider == 'not-sure'"
+	egwpSelector3         = "egress-provider in {'true', 'not-sure'}"
+	namespaceSelector     = "projectcalico.org/namespace == 'egress'"
+	egwpCombinedSelector1 = "(pcns.projectcalico.org/namespace == 'egress') && (egress-provider == 'true')"
+	egwpCombinedSelector2 = "(pcns.projectcalico.org/namespace == 'egress') && (egress-provider == 'not-sure')"
+	egwpCombinedSelector3 = "(pcns.projectcalico.org/namespace == 'egress') && (egress-provider in {'true', 'not-sure'})"
 	gatewayKey            = WorkloadEndpointKey{
 		Hostname:       remoteHostname,
 		WorkloadID:     "gw1",
@@ -1166,24 +1173,27 @@ var (
 		Name:     "gw1",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.1/32")},
 		Labels: map[string]string{
-			"egress-provider":             "true",
-			"projectcalico.org/namespace": "egress",
+			"egress-provider":                  "true",
+			"projectcalico.org/namespace":      "egress",
+			"pcns.projectcalico.org/namespace": "egress",
 		},
 	}
 	gatewayEndpoint2 = &WorkloadEndpoint{
 		Name:     "gw2",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.2/32")},
 		Labels: map[string]string{
-			"egress-provider":             "true",
-			"projectcalico.org/namespace": "egress",
+			"egress-provider":                  "true",
+			"projectcalico.org/namespace":      "egress",
+			"pcns.projectcalico.org/namespace": "egress",
 		},
 	}
 	gatewayEndpoint3 = &WorkloadEndpoint{
 		Name:     "gw3",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.10/32")},
 		Labels: map[string]string{
-			"egress-provider":             "not-sure",
-			"projectcalico.org/namespace": "egress",
+			"egress-provider":                  "not-sure",
+			"projectcalico.org/namespace":      "egress",
+			"pcns.projectcalico.org/namespace": "egress",
 		},
 	}
 	egressGatewayPolicy1    = "egw-policy1"
@@ -1196,8 +1206,8 @@ var (
 			Rules: []apiv3.EgressGatewayRule{
 				{
 					Gateway: &apiv3.EgressSpec{
-						Selector:          egressSelector,
-						NamespaceSelector: "egress",
+						Selector:          egwpSelector1,
+						NamespaceSelector: namespaceSelector,
 					},
 				},
 				{
@@ -1205,8 +1215,8 @@ var (
 						CIDR: "10.0.0.0/8",
 					},
 					Gateway: &apiv3.EgressSpec{
-						Selector:          egressSelector1,
-						NamespaceSelector: "egress",
+						Selector:          egwpSelector2,
+						NamespaceSelector: namespaceSelector,
 					},
 				},
 				{
@@ -1225,8 +1235,8 @@ var (
 			Rules: []apiv3.EgressGatewayRule{
 				{
 					Gateway: &apiv3.EgressSpec{
-						Selector:          egressSelector1,
-						NamespaceSelector: "egress",
+						Selector:          egwpSelector2,
+						NamespaceSelector: namespaceSelector,
 					},
 				},
 				{
@@ -1234,8 +1244,8 @@ var (
 						CIDR: "10.0.0.0/8",
 					},
 					Gateway: &apiv3.EgressSpec{
-						Selector:          egressSelector,
-						NamespaceSelector: "egress",
+						Selector:          egwpSelector1,
+						NamespaceSelector: namespaceSelector,
 					},
 				},
 				{
@@ -1243,8 +1253,8 @@ var (
 						CIDR: "13.0.0.0/8",
 					},
 					Gateway: &apiv3.EgressSpec{
-						Selector:          egressSelectorSim,
-						NamespaceSelector: "egress",
+						Selector:          egwpSelector3,
+						NamespaceSelector: namespaceSelector,
 					},
 				},
 				{
@@ -1371,26 +1381,26 @@ var (
 		calc.EndpointEgressData{
 			EgressGatewayRules: []calc.EpEgressData{
 				{
-					IpSetID: egressSelectorID(egressSelector),
+					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
 				{
 					CIDR:    "10.0.0.0/8",
-					IpSetID: egressSelectorID(egressSelector1),
+					IpSetID: egressSelectorID(egwpCombinedSelector2),
 				},
 				{
 					CIDR: "11.0.0.0/8",
 				},
 			},
 		},
-	).withIPSet(egressSelectorID(egressSelector), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
 		egressActiveMemberStr("137.0.0.1/32"),
 	},
-	).withIPSet(egressSelectorID(egressSelector1), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
 		egressActiveMemberStr("137.0.0.10/32"),
 	},
 	).withName("endpointWithDefinedEgressGatewayPolicy")
 
-	endpointWithDifferentGatewayPolicy = initialisedStore.withKVUpdates(
+	endpointWithDifferentEgressGatewayPolicy = initialisedStore.withKVUpdates(
 		KVPair{
 			Key: endpointWithOwnEgressGatewayID,
 			Value: &WorkloadEndpoint{
@@ -1428,15 +1438,15 @@ var (
 		calc.EndpointEgressData{
 			EgressGatewayRules: []calc.EpEgressData{
 				{
-					IpSetID: egressSelectorID(egressSelector1),
+					IpSetID: egressSelectorID(egwpCombinedSelector2),
 				},
 				{
 					CIDR:    "10.0.0.0/8",
-					IpSetID: egressSelectorID(egressSelector),
+					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
 				{
 					CIDR:    "13.0.0.0/8",
-					IpSetID: egressSelectorID(egressSelectorSim),
+					IpSetID: egressSelectorID(egwpCombinedSelector3),
 				},
 				{
 					CIDR: "11.0.0.0/8",
@@ -1446,13 +1456,13 @@ var (
 				},
 			},
 		},
-	).withIPSet(egressSelectorID(egressSelector), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
 		egressActiveMemberStr("137.0.0.1/32"),
 	},
-	).withIPSet(egressSelectorID(egressSelector1), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
 		egressActiveMemberStr("137.0.0.10/32"),
 	},
-	).withIPSet(egressSelectorID(egressSelectorSim), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector3), []string{
 		egressActiveMemberStr("137.0.0.1/32"),
 		egressActiveMemberStr("137.0.0.10/32"),
 	},
@@ -1543,21 +1553,21 @@ var (
 		calc.EndpointEgressData{
 			EgressGatewayRules: []calc.EpEgressData{
 				{
-					IpSetID: egressSelectorID(egressSelector),
+					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
 				{
 					CIDR:    "10.0.0.0/8",
-					IpSetID: egressSelectorID(egressSelector1),
+					IpSetID: egressSelectorID(egwpCombinedSelector2),
 				},
 				{
 					CIDR: "11.0.0.0/8",
 				},
 			},
 		},
-	).withIPSet(egressSelectorID(egressSelector), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
 		egressActiveMemberStr("137.0.0.1/32"),
 	},
-	).withIPSet(egressSelectorID(egressSelector1), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
 		egressActiveMemberStr("137.0.0.10/32"),
 	},
 	).withRoutes(
@@ -1729,21 +1739,21 @@ var (
 		calc.EndpointEgressData{
 			EgressGatewayRules: []calc.EpEgressData{
 				{
-					IpSetID: egressSelectorID(egressSelector),
+					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
 				{
 					CIDR:    "10.0.0.0/8",
-					IpSetID: egressSelectorID(egressSelector1),
+					IpSetID: egressSelectorID(egwpCombinedSelector2),
 				},
 				{
 					CIDR: "11.0.0.0/8",
 				},
 			},
 		},
-	).withIPSet(egressSelectorID(egressSelector1), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
 		egressActiveMemberStr("137.0.0.10/32"),
 	},
-	).withIPSet(egressSelectorID(egressSelector), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
 		egressActiveMemberStr("137.0.0.1/32"),
 	},
 	).withActiveProfiles(
@@ -1865,21 +1875,21 @@ var (
 		calc.EndpointEgressData{
 			EgressGatewayRules: []calc.EpEgressData{
 				{
-					IpSetID: egressSelectorID(egressSelector),
+					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
 				{
 					CIDR:    "10.0.0.0/8",
-					IpSetID: egressSelectorID(egressSelector1),
+					IpSetID: egressSelectorID(egwpCombinedSelector2),
 				},
 				{
 					CIDR: "11.0.0.0/8",
 				},
 			},
 		},
-	).withIPSet(egressSelectorID(egressSelector), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
 		egressActiveMemberStr("137.0.0.1/32"),
 	},
-	).withIPSet(egressSelectorID(egressSelector1), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
 		egressActiveMemberStr("137.0.0.10/32"),
 	},
 	).withActiveProfiles(
@@ -2060,11 +2070,11 @@ var (
 		calc.EndpointEgressData{
 			EgressGatewayRules: []calc.EpEgressData{
 				{
-					IpSetID: egressSelectorID(egressSelector),
+					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
 				{
 					CIDR:    "10.0.0.0/8",
-					IpSetID: egressSelectorID(egressSelector1),
+					IpSetID: egressSelectorID(egwpCombinedSelector2),
 				},
 				{
 					CIDR: "11.0.0.0/8",
@@ -2079,11 +2089,11 @@ var (
 		calc.EndpointEgressData{
 			EgressGatewayRules: []calc.EpEgressData{
 				{
-					IpSetID: egressSelectorID(egressSelector),
+					IpSetID: egressSelectorID(egwpCombinedSelector1),
 				},
 				{
 					CIDR:    "10.0.0.0/8",
-					IpSetID: egressSelectorID(egressSelector1),
+					IpSetID: egressSelectorID(egwpCombinedSelector2),
 				},
 				{
 					CIDR: "11.0.0.0/8",
@@ -2098,10 +2108,10 @@ var (
 		calc.EndpointEgressData{
 			IsEgressGateway: true,
 		},
-	).withIPSet(egressSelectorID(egressSelector), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
 		egressActiveMemberStr("137.0.0.1/32"),
 	},
-	).withIPSet(egressSelectorID(egressSelector1), []string{
+	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
 		egressActiveMemberStr("137.0.0.10/32"),
 	},
 	).withRoutes(

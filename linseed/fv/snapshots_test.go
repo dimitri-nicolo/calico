@@ -204,6 +204,47 @@ func TestFV_Snapshots(t *testing.T) {
 	})
 }
 
+func TestFV_SnapshotsTenancy(t *testing.T) {
+	t.Run("should support tenancy restriction", func(t *testing.T) {
+		defer complianceSetupAndTeardown(t)()
+
+		// Instantiate a client for an unexpected tenant.
+		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		require.NoError(t, err)
+
+		// Create a basic entry. We expect this to fail, since we're using
+		// an unexpected tenant ID on the request.
+		snapshots := v1.Snapshot{
+			ResourceList: list.TimestampedResourceList{
+				ResourceList: &apiv3.NetworkPolicyList{
+					TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
+					ListMeta: metav1.ListMeta{},
+					Items: []apiv3.NetworkPolicy{
+						{
+							TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "np1",
+								Namespace: "default",
+							},
+						},
+					},
+				},
+				RequestStartedTimestamp:   metav1.Time{Time: time.Unix(1, 0)},
+				RequestCompletedTimestamp: metav1.Time{Time: time.Unix(2, 0)},
+			},
+		}
+		bulk, err := tenantCLI.Compliance(cluster).Snapshots().Create(ctx, []v1.Snapshot{snapshots})
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, bulk)
+
+		// Try a read as well.
+		params := v1.SnapshotParams{}
+		resp, err := tenantCLI.Compliance(cluster).Snapshots().List(ctx, &params)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, resp)
+	})
+}
+
 func snapshotsWithUTCTime(resp *v1.List[v1.Snapshot]) []v1.Snapshot {
 	for idx, snapshot := range resp.Items {
 		utcStartTime := snapshot.ResourceList.RequestStartedTimestamp.UTC()

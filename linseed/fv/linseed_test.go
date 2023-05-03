@@ -63,7 +63,7 @@ func TestFV_Linseed(t *testing.T) {
 	addr := "localhost:8444"
 	healthAddr := "localhost:8080"
 	cluster := "cluster"
-	tenant := ""
+	tenant := "tenant-a"
 
 	tests := []struct {
 		name           string

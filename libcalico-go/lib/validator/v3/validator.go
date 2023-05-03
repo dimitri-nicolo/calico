@@ -1868,6 +1868,11 @@ func validateEgressGatewayPolicy(structLevel validator.StructLevel) {
 			if r.Gateway.NamespaceSelector == "" {
 				structLevel.ReportError(reflect.ValueOf(r.Gateway.NamespaceSelector), "NamespaceSelector", "",
 					reason("NamespaceSelector in a gateway in egress gateway policy cannot be empty."), "")
+			} else {
+				if !selectorIsValid(r.Gateway.NamespaceSelector) {
+					structLevel.ReportError(reflect.ValueOf(r.Gateway.NamespaceSelector), "NamespaceSelector", "",
+						reason("Invalid NamespaceSelector in a gateway in egress gateway policy."), "")
+				}
 			}
 			if r.Gateway.Selector == "" {
 				structLevel.ReportError(reflect.ValueOf(r.Gateway.Selector), "Selector", "",
@@ -1875,7 +1880,7 @@ func validateEgressGatewayPolicy(structLevel validator.StructLevel) {
 			} else {
 				if !selectorIsValid(r.Gateway.Selector) {
 					structLevel.ReportError(reflect.ValueOf(r.Gateway.Selector), "Selector", "",
-						reason("Invalid selector in a gateway in egress gateway policy."), "")
+						reason("Invalid Selector in a gateway in egress gateway policy."), "")
 				}
 			}
 			if r.Gateway.MaxNextHops < 0 {

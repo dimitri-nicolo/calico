@@ -33,6 +33,9 @@ func restSetupAndTeardown(t *testing.T) func() {
 	// interfere between tests.
 	cluster = testutils.RandomClusterName()
 
+	// Set tenant to the value expected in the FVs.
+	tenant = "tenant-a"
+
 	// Build a basic RESTClient.
 	var err error
 	cfg := rest.Config{

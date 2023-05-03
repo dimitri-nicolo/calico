@@ -320,6 +320,44 @@ func TestFV_AuditEE(t *testing.T) {
 	})
 }
 
+func TestFV_AuditLogsTenancy(t *testing.T) {
+	t.Run("should support tenancy restriction", func(t *testing.T) {
+		defer auditSetupAndTeardown(t)()
+
+		// Instantiate a client for an unexpected tenant.
+		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		require.NoError(t, err)
+
+		// Create a basic log. We expect this to fail, since we're using
+		// an unexpected tenant ID on the request.
+		reqTime := time.Now()
+		audits := []v1.AuditLog{{Event: audit.Event{
+			AuditID:                  "any-kube-id",
+			RequestReceivedTimestamp: metav1.NewMicroTime(reqTime),
+		}}}
+		bulk, err := tenantCLI.AuditLogs(cluster).Create(ctx, v1.AuditLogTypeKube, audits)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, bulk)
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_kube*")
+
+		// Read it back.
+		params := v1.AuditLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: reqTime.Add(-5 * time.Second),
+					To:   reqTime.Add(5 * time.Second),
+				},
+			},
+			Type: v1.AuditLogTypeKube,
+		}
+		resp, err := tenantCLI.AuditLogs(cluster).List(ctx, &params)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, resp)
+	})
+}
+
 func auditLogsWithUTCTime(resp *v1.List[v1.AuditLog]) []v1.AuditLog {
 	for idx, audit := range resp.Items {
 		utcTime := audit.RequestReceivedTimestamp.UTC()

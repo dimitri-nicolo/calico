@@ -235,3 +235,41 @@ func TestFV_Events(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 }
+
+func TestFV_EventsTenancy(t *testing.T) {
+	t.Run("should support tenancy restriction", func(t *testing.T) {
+		defer eventsSetupAndTeardown(t)()
+
+		// Instantiate a client for an unexpected tenant.
+		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		require.NoError(t, err)
+
+		// Create a basic log. We expect this to fail, since we're using
+		// an unexpected tenant ID on the request.
+		events := []v1.Event{
+			{
+				Time:        time.Now().Unix(),
+				Description: "A rather uneventful evening",
+				Origin:      "TODO",
+				Severity:    1,
+				Type:        "TODO",
+			},
+		}
+		bulk, err := tenantCLI.Events(cluster).Create(ctx, events)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, bulk)
+
+		// Try a read as well.
+		params := v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Second),
+					To:   time.Now().Add(5 * time.Second),
+				},
+			},
+		}
+		resp, err := tenantCLI.Events(cluster).List(ctx, &params)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, resp)
+	})
+}

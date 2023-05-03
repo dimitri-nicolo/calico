@@ -170,6 +170,47 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 	})
 }
 
+func TestFV_BenchmarksTenancy(t *testing.T) {
+	t.Run("should support tenancy restriction", func(t *testing.T) {
+		defer complianceSetupAndTeardown(t)()
+
+		// Instantiate a client for an unexpected tenant.
+		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		require.NoError(t, err)
+
+		// Create a basic flow log. We expect this to fail, since we're using
+		// an unexpected tenant ID on the request.
+		benchmarks := v1.Benchmarks{
+			Version:           "v1",
+			KubernetesVersion: "v1.0",
+			Type:              v1.TypeKubernetes,
+			NodeName:          "lodestone",
+			Timestamp:         metav1.Time{Time: time.Unix(1, 0)},
+			Error:             "",
+			Tests: []v1.BenchmarkTest{
+				{
+					Section:     "a.1",
+					SectionDesc: "testing the test",
+					TestNumber:  "1",
+					TestDesc:    "making sure that we're right",
+					TestInfo:    "information is fluid",
+					Status:      "Just swell",
+					Scored:      true,
+				},
+			},
+		}
+		bulk, err := tenantCLI.Compliance(cluster).Benchmarks().Create(ctx, []v1.Benchmarks{benchmarks})
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, bulk)
+
+		// Try a read as well.
+		params := v1.BenchmarksParams{ID: benchmarks.UID()}
+		resp, err := tenantCLI.Compliance(cluster).Benchmarks().List(ctx, &params)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, resp)
+	})
+}
+
 func benchmarksWithUTCTime(resp *v1.List[v1.Benchmarks]) []v1.Benchmarks {
 	for idx, benchmark := range resp.Items {
 		utcTime := benchmark.Timestamp.UTC()

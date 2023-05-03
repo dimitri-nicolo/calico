@@ -114,7 +114,7 @@ func (m TokenChecker) Do() func(next http.Handler) http.Handler {
 				return
 			}
 
-			// Authentiate the token. This makes sure the token was signed by a trusted authority -
+			// Authenticate the token. This makes sure the token was signed by a trusted authority -
 			// either Linseed itself, or this cluster's API server - and extracts the user information
 			// from the claims within the token.
 			userInfo, status, err := m.authn.Authenticate(req)

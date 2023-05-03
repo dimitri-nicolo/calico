@@ -4,7 +4,6 @@ package l7
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	kapiv1 "k8s.io/apimachinery/pkg/types"
@@ -14,6 +13,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -173,16 +173,7 @@ func (b *l7FlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Comp
 
 // buildQuery builds an elastic query using the given parameters.
 func (b *l7FlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L7FlowParams) elastic.Query {
-	// Parse times from the request.
-	var start, end time.Time
-	if opts.TimeRange != nil {
-		start = opts.TimeRange.From
-		end = opts.TimeRange.To
-	} else {
-		// Default to the latest 5 minute window.
-		start = time.Now().Add(-5 * time.Minute)
-		end = time.Now()
-	}
+	start, end := logtools.ExtractTimeRange(opts.TimeRange)
 	return lmaindex.L7Logs().NewTimeRangeQuery(start, end)
 }
 

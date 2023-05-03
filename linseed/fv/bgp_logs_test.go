@@ -173,3 +173,38 @@ func TestFV_BGP(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 }
+
+func TestFV_BGPTenancy(t *testing.T) {
+	t.Run("should support tenancy restriction", func(t *testing.T) {
+		defer bgpSetupAndTeardown(t)()
+
+		// Instantiate a client for an unexpected tenant.
+		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		require.NoError(t, err)
+
+		// Create a basic log. We expect this to fail, since we're using
+		// an unexpected tenant ID on the request.
+		reqTime := time.Unix(10, 0).UTC()
+		bgpLogs := []v1.BGPLog{
+			{
+				LogTime: reqTime.Format(v1.BGPLogTimeFormat),
+			},
+		}
+		bulk, err := tenantCLI.BGPLogs(cluster).Create(ctx, bgpLogs)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, bulk)
+
+		// Try a read as well.
+		params := v1.BGPLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: reqTime.Add(-5 * time.Second),
+					To:   reqTime.Add(5 * time.Second),
+				},
+			},
+		}
+		resp, err := tenantCLI.BGPLogs(cluster).List(ctx, &params)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, resp)
+	})
+}

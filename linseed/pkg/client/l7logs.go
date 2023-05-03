@@ -36,6 +36,9 @@ func newL7Logs(c Client, cluster string) L7LogsInterface {
 func (f *l7Logs) List(ctx context.Context, params v1.Params) (*v1.List[v1.L7Log], error) {
 	l7Logs := v1.List[v1.L7Log]{}
 	err := f.ListInto(ctx, params, &l7Logs)
+	if err != nil {
+		return nil, err
+	}
 	return &l7Logs, err
 }
 
@@ -97,5 +100,8 @@ func (f *l7Logs) Create(ctx context.Context, l7Logs []v1.L7Log) (*v1.BulkRespons
 		ContentType(rest.ContentTypeMultilineJSON).
 		Do(ctx).
 		Into(&resp)
-	return &resp, err
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }

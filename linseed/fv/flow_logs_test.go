@@ -181,6 +181,40 @@ func TestFV_FlowLogs(t *testing.T) {
 	})
 }
 
+func TestFV_FlowLogsTenancy(t *testing.T) {
+	t.Run("should support tenancy restriction", func(t *testing.T) {
+		defer flowlogSetupAndTeardown(t)()
+
+		// Instantiate a client for an unexpected tenant.
+		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		require.NoError(t, err)
+
+		// Create a basic flow log. We expect this to fail, since we're using
+		// an unexpected tenant ID on the request.
+		logs := []v1.FlowLog{
+			{
+				EndTime: time.Now().Unix(),
+			},
+		}
+		bulk, err := tenantCLI.FlowLogs(cluster).Create(ctx, logs)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, bulk)
+
+		// Try a read as well.
+		params := v1.FlowLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Second),
+					To:   time.Now().Add(5 * time.Second),
+				},
+			},
+		}
+		resp, err := tenantCLI.FlowLogs(cluster).List(ctx, &params)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, resp)
+	})
+}
+
 func TestFV_FlowLogsRBAC(t *testing.T) {
 	type filterTestCase struct {
 		name        string

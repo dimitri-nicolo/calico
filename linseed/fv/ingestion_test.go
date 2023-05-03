@@ -70,9 +70,9 @@ func ingestionSetupAndTeardown(t *testing.T, index string) func() {
 
 func TestFV_FlowIngestion(t *testing.T) {
 	addr := "https://localhost:8444/api/v1/flows/logs/bulk"
-	tenant := ""
+	tenant := "tenant-a"
 	expectedResponse := `{"failed":0, "succeeded":25, "total":25}`
-	indexPrefix := "tigera_secure_ee_flows."
+	indexPrefix := "tigera_secure_ee_flows.tenant-a."
 
 	t.Run("ingest flow logs via bulk API with production data", func(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
@@ -120,9 +120,9 @@ func TestFV_FlowIngestion(t *testing.T) {
 
 func TestFV_DNSIngestion(t *testing.T) {
 	addr := "https://localhost:8444/api/v1/dns/logs/bulk"
-	tenant := ""
+	tenant := "tenant-a"
 	expectedResponse := `{"failed":0, "succeeded":11, "total":11}`
-	indexPrefix := "tigera_secure_ee_dns."
+	indexPrefix := "tigera_secure_ee_dns.tenant-a."
 
 	t.Run("ingest dns logs via bulk API with production data", func(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
@@ -175,9 +175,9 @@ func TestFV_DNSIngestion(t *testing.T) {
 
 func TestFV_L7Ingestion(t *testing.T) {
 	addr := "https://localhost:8444/api/v1/l7/logs/bulk"
-	tenant := ""
+	tenant := "tenant-a"
 	expectedResponse := `{"failed":0, "succeeded":15, "total":15}`
-	indexPrefix := "tigera_secure_ee_l7."
+	indexPrefix := "tigera_secure_ee_l7.tenant-a."
 
 	t.Run("ingest l7 logs via bulk API with production data", func(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
@@ -224,9 +224,9 @@ func TestFV_L7Ingestion(t *testing.T) {
 
 func TestFV_KubeAuditIngestion(t *testing.T) {
 	addr := "https://localhost:8444/api/v1/audit/logs/kube/bulk"
-	tenant := ""
+	tenant := "tenant-a"
 	expectedResponse := `{"failed":0, "succeeded":32, "total":32}`
-	indexPrefix := "tigera_secure_ee_audit_kube."
+	indexPrefix := "tigera_secure_ee_audit_kube.tenant-a."
 
 	t.Run("ingest kube audit logs via bulk API with production data", func(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
@@ -278,9 +278,9 @@ func TestFV_KubeAuditIngestion(t *testing.T) {
 
 func TestFV_EEAuditIngestion(t *testing.T) {
 	addr := "https://localhost:8444/api/v1/audit/logs/ee/bulk"
-	tenant := ""
+	tenant := "tenant-a"
 	expectedResponse := `{"failed":0, "succeeded":35, "total":35}`
-	indexPrefix := "tigera_secure_ee_audit_ee."
+	indexPrefix := "tigera_secure_ee_audit_ee.tenant-a."
 
 	t.Run("ingest ee audit logs via bulk API with production data", func(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
@@ -332,9 +332,9 @@ func TestFV_EEAuditIngestion(t *testing.T) {
 
 func TestFV_BGPIngestion(t *testing.T) {
 	addr := "https://localhost:8444/api/v1/bgp/logs/bulk"
-	tenant := ""
+	tenant := "tenant-a"
 	expectedResponse := `{"failed":0, "succeeded":4, "total":4}`
-	indexPrefix := "tigera_secure_ee_bgp."
+	indexPrefix := "tigera_secure_ee_bgp.tenant-a."
 
 	t.Run("ingest bgp logs via bulk API with production data", func(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
@@ -388,9 +388,9 @@ func TestFV_BGPIngestion(t *testing.T) {
 
 func TestFV_WAFIngestion(t *testing.T) {
 	addr := "https://localhost:8444/api/v1/waf/logs/bulk"
-	tenant := ""
+	tenant := "tenant-a"
 	expectedResponse := `{"failed":0, "succeeded":1, "total":1}`
-	indexPrefix := "tigera_secure_ee_waf."
+	indexPrefix := "tigera_secure_ee_waf.tenant-a."
 
 	t.Run("ingest waf logs via bulk API with production data", func(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
@@ -442,9 +442,9 @@ func TestFV_WAFIngestion(t *testing.T) {
 
 func TestFV_RuntimeIngestion(t *testing.T) {
 	addr := "https://localhost:8444/api/v1/runtime/reports/bulk"
-	tenant := ""
+	tenant := "tenant-a"
 	expectedResponse := `{"failed":0, "succeeded":29, "total":29}`
-	indexPrefix := "tigera_secure_ee_runtime."
+	indexPrefix := "tigera_secure_ee_runtime.tenant-a."
 
 	t.Run("ingest runtime reports via bulk API with production data", func(t *testing.T) {
 		defer ingestionSetupAndTeardown(t, indexPrefix)()
@@ -500,9 +500,9 @@ func TestFV_RuntimeIngestion(t *testing.T) {
 
 func TestFV_Ingestion(t *testing.T) {
 	addr := "https://localhost:8444/api/v1/audit/logs/ee/bulk"
-	tenant := ""
+	tenant := "tenant-a"
 	expectedResponse := `{"Msg":"http: request body too large", "Status":400}`
-	indexPrefix := "tigera_secure_ee_audit_ee."
+	indexPrefix := "tigera_secure_ee_audit_ee.tenant-a."
 
 	t.Run("cannot ingest arequest bigger than 2Gb", func(t *testing.T) {
 		t.Skip()

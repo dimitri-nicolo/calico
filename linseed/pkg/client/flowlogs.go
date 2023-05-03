@@ -36,6 +36,9 @@ func newFlowLogs(c Client, cluster string) FlowLogsInterface {
 func (f *flowLogs) List(ctx context.Context, params v1.Params) (*v1.List[v1.FlowLog], error) {
 	flowLogs := v1.List[v1.FlowLog]{}
 	err := f.ListInto(ctx, params, &flowLogs)
+	if err != nil {
+		return nil, err
+	}
 	return &flowLogs, err
 }
 
@@ -83,7 +86,10 @@ func (f *flowLogs) Create(ctx context.Context, flowLogs []v1.FlowLog) (*v1.BulkR
 		ContentType(rest.ContentTypeMultilineJSON).
 		Do(ctx).
 		Into(&resp)
-	return &resp, err
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
 
 func (f *flowLogs) Aggregations(ctx context.Context, params v1.Params) (elastic.Aggregations, error) {

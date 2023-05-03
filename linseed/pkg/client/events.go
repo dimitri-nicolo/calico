@@ -71,7 +71,10 @@ func (f *events) Create(ctx context.Context, events []v1.Event) (*v1.BulkRespons
 		ContentType(rest.ContentTypeMultilineJSON).
 		Do(ctx).
 		Into(&resp)
-	return &resp, err
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
 
 func (f *events) Dismiss(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
@@ -100,7 +103,10 @@ func (f *events) Dismiss(ctx context.Context, events []v1.Event) (*v1.BulkRespon
 		ContentType(rest.ContentTypeMultilineJSON).
 		Do(ctx).
 		Into(&resp)
-	return &resp, err
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
 
 func (f *events) Delete(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
@@ -129,5 +135,8 @@ func (f *events) Delete(ctx context.Context, events []v1.Event) (*v1.BulkRespons
 		ContentType(rest.ContentTypeMultilineJSON).
 		Do(ctx).
 		Into(&resp)
-	return &resp, err
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }

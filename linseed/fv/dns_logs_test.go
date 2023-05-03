@@ -182,3 +182,42 @@ func TestDNS_FlowLogs(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 }
+
+func TestFV_DNSLogTenancy(t *testing.T) {
+	t.Run("should support tenancy restriction", func(t *testing.T) {
+		defer dnslogSetupAndTeardown(t)()
+
+		// Instantiate a client for an unexpected tenant.
+		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		require.NoError(t, err)
+
+		// Create a basic log. We expect this to fail, since we're using
+		// an unexpected tenant ID on the request.
+		logs := []v1.DNSLog{
+			{
+				EndTime: time.Now().UTC(),
+				QName:   "service.namespace.svc.cluster.local",
+				QClass:  v1.DNSClass(layers.DNSClassIN),
+				QType:   v1.DNSType(layers.DNSTypeAAAA),
+				RCode:   v1.DNSResponseCode(layers.DNSResponseCodeNXDomain),
+				RRSets:  v1.DNSRRSets{},
+			},
+		}
+		bulk, err := tenantCLI.DNSLogs(cluster).Create(ctx, logs)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, bulk)
+
+		// Try a read as well.
+		params := v1.DNSLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Second),
+					To:   time.Now().Add(5 * time.Second),
+				},
+			},
+		}
+		resp, err := tenantCLI.DNSLogs(cluster).List(ctx, &params)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, resp)
+	})
+}

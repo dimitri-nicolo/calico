@@ -22,6 +22,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -75,33 +76,50 @@ func setupTest(t *testing.T) func() {
 	}
 }
 
-// TestListL7Flows tests running a real elasticsearch query to list L7 flows.
-func TestListL7Flows(t *testing.T) {
-	defer setupTest(t)()
+// TestL7FlowsMainline tests running a real elasticsearch query to list L7 flows.
+func TestL7FlowsMainline(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestListL7Flows (tenant=%s)", tenant)
+		t.Run(name, func(t *testing.T) {
+			defer setupTest(t)()
 
-	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
-	// Put some data into ES so we can query it.
-	expected := populateL7FlowData(t, ctx, client, cache, clusterInfo.Cluster)
+			// Put some data into ES so we can query it.
+			expected := populateL7FlowData(t, ctx, client, cache, clusterInfo)
 
-	// Set time range so that we capture all of the populated flow logs.
-	opts := v1.L7FlowParams{}
-	opts.TimeRange = &lmav1.TimeRange{}
-	opts.TimeRange.From = time.Now().Add(-5 * time.Second)
-	opts.TimeRange.To = time.Now().Add(5 * time.Second)
+			// Set time range so that we capture all of the populated flow logs.
+			opts := v1.L7FlowParams{}
+			opts.TimeRange = &lmav1.TimeRange{}
+			opts.TimeRange.From = time.Now().Add(-5 * time.Second)
+			opts.TimeRange.To = time.Now().Add(5 * time.Second)
 
-	// Query for flows. There should be a single flow from the populated data.
-	r, err := b.List(ctx, clusterInfo, &opts)
-	require.NoError(t, err)
-	require.Len(t, r.Items, 1)
+			// Query for flows. There should be a single flow from the populated data.
+			r, err := b.List(ctx, clusterInfo, &opts)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
 
-	// Assert that the flow data is populated correctly.
-	require.Equal(t, expected, r.Items[0])
+			// Assert that the flow data is populated correctly.
+			require.Equal(t, expected, r.Items[0])
+		})
+	}
+
+	t.Run("no cluster name given on request", func(t *testing.T) {
+		defer setupTest(t)()
+
+		// It should reject requests with no cluster name given.
+		clusterInfo := bapi.ClusterInfo{}
+		params := &v1.L7FlowParams{}
+		results, err := b.List(ctx, clusterInfo, params)
+		require.Error(t, err)
+		require.Nil(t, results)
+	})
 }
 
-// populateFlowData writes a series of flow logs to elasticsearch, and returns the FlowLog that we
+// populateFlowData writes a series of flow logs to elasticsearch, and returns the L7 flow that we
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
-func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Client, cache bapi.Cache, cluster string) v1.L7Flow {
+func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Client, cache bapi.Cache, clusterInfo bapi.ClusterInfo) v1.L7Flow {
 	// The expected flow log - we'll populate fields as we go.
 	expected := v1.L7Flow{}
 	expected.Key = v1.L7FlowKey{
@@ -193,13 +211,16 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 	expected.Stats.MeanDuration = durationMeanTotal / int64(numFlows)
 
 	// Create the batch all at once.
-	response, err := lb.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
+	response, err := lb.Create(ctx, clusterInfo, batch)
 	require.NoError(t, err)
 	require.Equal(t, response.Failed, 0)
 
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
 	// for the refresh interval to occur.
-	index := fmt.Sprintf("tigera_secure_ee_l7.%s.*", cluster)
+	index := fmt.Sprintf("tigera_secure_ee_l7.%s.*", clusterInfo.Cluster)
+	if clusterInfo.Tenant != "" {
+		index = fmt.Sprintf("tigera_secure_ee_l7.%s.%s.*", clusterInfo.Tenant, clusterInfo.Cluster)
+	}
 	err = testutils.RefreshIndex(ctx, client, index)
 	require.NoError(t, err)
 

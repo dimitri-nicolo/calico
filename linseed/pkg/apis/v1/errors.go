@@ -24,7 +24,7 @@ func (e BulkError) Error() string {
 	return fmt.Sprintf(fmtString, e.Resource, e.Type, e.Reason)
 }
 
-// GetBulkErrors returns a slie of bulk errors from an Elastic BulkResponse,
+// GetBulkErrors returns a slice of bulk errors from an Elastic BulkResponse,
 // if there were any errors.
 func GetBulkErrors(resp *elastic.BulkResponse) []BulkError {
 	var allErrors []BulkError

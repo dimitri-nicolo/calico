@@ -124,8 +124,8 @@ func TestMetrics(t *testing.T) {
 		require.NoError(t, err)
 		bytesRead, err := json.Marshal(params)
 		require.NoError(t, err)
-		bytesReadMetric := fmt.Sprintf(`tigera_linseed_bytes_read{cluster_id="%s",tenant_id=""} %d`, cluster, len(bytesRead))
-		bytesWrittenMetric := fmt.Sprintf(`tigera_linseed_bytes_written{cluster_id="%s",tenant_id=""}`, cluster)
+		bytesReadMetric := fmt.Sprintf(`tigera_linseed_bytes_read{cluster_id="%s",tenant_id="tenant-a"} %d`, cluster, len(bytesRead))
+		bytesWrittenMetric := fmt.Sprintf(`tigera_linseed_bytes_written{cluster_id="%s",tenant_id="tenant-a"}`, cluster)
 		require.Contains(t, string(body), bytesReadMetric, fmt.Sprintf("missing %s from %s", bytesReadMetric, string(body)))
 		require.Contains(t, string(body), bytesWrittenMetric, fmt.Sprintf("missing %s from %s", bytesWrittenMetric, string(body)))
 

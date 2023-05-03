@@ -13,6 +13,13 @@ import (
 const TokenPath = "./client-token"
 
 func NewLinseedClient() (client.Client, error) {
+	// By default, all tests use "tenant-a" - this is because we launch Linseed
+	// with EXPECTED_TENANT_ID=tenant-a for the FVs.
+	// For tests that want to act as another tenant, use NewLinseedClientForTenant.
+	return NewLinseedClientForTenant("tenant-a")
+}
+
+func NewLinseedClientForTenant(t string) (client.Client, error) {
 	cfg := rest.Config{
 		CACertPath:     "cert/RootCA.crt",
 		URL:            "https://localhost:8444/",
@@ -22,5 +29,5 @@ func NewLinseedClient() (client.Client, error) {
 
 	// The token is created as part of FV setup in the Makefile, and mounted into the container that
 	// runs the FV binaries.
-	return client.NewClient("", cfg, rest.WithTokenPath(TokenPath))
+	return client.NewClient(t, cfg, rest.WithTokenPath(TokenPath))
 }

@@ -4504,7 +4504,7 @@ func testEgressGatewayPolicyClient(client calicoclient.Interface, name string) e
 		},
 		Description: "A sample network",
 		Gateway: &v3.EgressSpec{
-			NamespaceSelector: "default",
+			NamespaceSelector: "projectcalico.org/name == 'default'",
 			Selector:          "egress-code == 'red'",
 			MaxNextHops:       2,
 		},
@@ -4547,7 +4547,7 @@ func testEgressGatewayPolicyClient(client calicoclient.Interface, name string) e
 		},
 		Description: "Internet access",
 		Gateway: &v3.EgressSpec{
-			NamespaceSelector: "default",
+			NamespaceSelector: "projectcalico.org/name == 'default'",
 			Selector:          "egress-code == 'blue'",
 		},
 	}
