@@ -375,7 +375,7 @@ func (c *controller) needsUpdate(log *logrus.Entry, cs kubernetes.Interface, nam
 			// - We're using a new cert to sign tokens, invalidating any and all tokens that we
 			//   had previously distributed to clients.
 			log.WithError(err).Warn("Could not authenticate token")
-			return true, err
+			return true, nil
 		}
 
 		// Parse the token to get its expiry.
