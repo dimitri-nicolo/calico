@@ -1,5 +1,5 @@
 version: v1.0
-name: Publish node images
+name: Publish mock-node images
 agent:
   machine:
     type: e1-standard-2
@@ -50,4 +50,4 @@ blocks:
         - name: DEV_REGISTRIES
           value: gcr.io/unique-caldron-775/cnx/tigera
         commands:
-        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make VALIDARCHES=amd64 -C mock-node image-all cd-common CONFIRM=true; fi
+        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make VALIDARCHES=amd64 -C mocknode image-all cd-common CONFIRM=true; fi
