@@ -24,7 +24,7 @@ func NewLocalAuthenticator(iss string, key crypto.PublicKey, cp ClaimParser) Aut
 	}
 }
 
-type ClaimParser func(jwt.Claims) *user.DefaultInfo
+type ClaimParser func(jwt.Claims) (*user.DefaultInfo, error)
 
 type localAuthenticator struct {
 	issuer      string
@@ -75,6 +75,10 @@ func (a *localAuthenticator) Authenticate(r *http.Request) (user.Info, int, erro
 	if a.claimParser == nil {
 		return nil, 500, fmt.Errorf("no claim parser provided")
 	}
-	userInfo := a.claimParser(parsedToken.Claims)
+	userInfo, err := a.claimParser(parsedToken.Claims)
+	if err != nil {
+		return nil, 500, err
+	}
+
 	return userInfo, 200, nil
 }

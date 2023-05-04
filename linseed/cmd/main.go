@@ -199,7 +199,7 @@ func run() {
 		go tokenController.Run(stop)
 
 		// Add an authenticator for JWTs issued by this tenant's Linseed.
-		lsa := auth.NewLocalAuthenticator(token.LinseedIssuer, key.Public(), token.ParseClaims)
+		lsa := auth.NewLocalAuthenticator(token.LinseedIssuer, key.Public(), token.ParseClaimsLinseed)
 		authOpts = append(authOpts, auth.WithAuthenticator(token.LinseedIssuer, lsa))
 	}
 

@@ -7,6 +7,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/SermoDigital/jose/jws"
+
+	controller "github.com/projectcalico/calico/linseed/pkg/controller/token"
+
 	"github.com/sirupsen/logrus"
 	authzv1 "k8s.io/api/authorization/v1"
 
@@ -126,6 +130,65 @@ func (m TokenChecker) Do() func(next http.Handler) http.Handler {
 					Msg:    err.Error(),
 				}, status)
 				return
+			}
+
+			jwtToken, err := jws.ParseJWT([]byte(token))
+			if err != nil {
+				log.WithError(err).Warn("Could not parse token from request")
+				httputils.JSONError(w, &v1.HTTPError{
+					Status: http.StatusUnauthorized,
+					Msg:    err.Error(),
+				}, http.StatusUnauthorized)
+				return
+			}
+
+			iss, ok := jwtToken.Claims().Issuer()
+			if !ok {
+				log.Warn("Missing issuer in token")
+				httputils.JSONError(w, &v1.HTTPError{
+					Status: http.StatusBadRequest,
+					Msg:    "no issuer found in token",
+				}, http.StatusBadRequest)
+				return
+			}
+
+			// If the token was issued by Linseed, it means this is a request from a managed cluster component.
+			// Verify that the cluster and tenant headers within the request match the cluster and tenant embedded
+			// within the token. This ensures that a token from one managed cluster can't be used for requests from
+			// another managed cluster of the same tenant.
+			//
+			// Note that tokens for different tenants will have been signed by a different authority, and so will
+			// be rejected at the authentication stage. Also note that other forms of invalid tokens - for example,
+			// expired tokens or tokens issued by an unknown issuer will also be rejected at the authentication stage
+			if iss == controller.LinseedIssuer {
+				subject, ok := jwtToken.Claims().Subject()
+				if !ok {
+					log.Warn("Missing subject in token")
+					httputils.JSONError(w, &v1.HTTPError{
+						Status: http.StatusUnauthorized,
+						Msg:    "no subject found in token",
+					}, http.StatusUnauthorized)
+					return
+				}
+
+				expectedTenant, expectedCluster, _, _, err := controller.ParseSubjectLinseed(subject)
+				if err != nil {
+					log.WithError(err).Warn("bad subject received on the token")
+					httputils.JSONError(w, &v1.HTTPError{
+						Status: http.StatusUnauthorized,
+						Msg:    err.Error(),
+					}, http.StatusUnauthorized)
+					return
+				}
+
+				if expectedTenant != tenantID || expectedCluster != clusterID {
+					log.Warnf("Tenant %s or Cluster %s does not match value from token", tenantID, clusterID)
+					httputils.JSONError(w, &v1.HTTPError{
+						Status: http.StatusUnauthorized,
+						Msg:    "tenant id or cluster id do not match token",
+					}, http.StatusUnauthorized)
+					return
+				}
 			}
 
 			// Find the required RBAC call for this URL.

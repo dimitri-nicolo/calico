@@ -3,12 +3,17 @@
 package middleware_test
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -94,7 +99,7 @@ func TestTokenMiddleware(t *testing.T) {
 			Name:          "Valid bearer token, but no matching authz configuration",
 			Resp:          `{"Status":404,"Msg":"No matching authz options for POST /api/v1/flows"}`,
 			Status:        404,
-			Headers:       map[string]string{"Authorization": "Bearer foobar"},
+			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
 			AuthnMocks:    []interface{}{&userInfo, 200, nil},
 			ClusterHeader: "cluster-id",
 			TenantHeader:  "tenant-id",
@@ -111,7 +116,7 @@ func TestTokenMiddleware(t *testing.T) {
 		{
 			Name:          "Valid bearer token, authorized",
 			Resp:          okResp,
-			Headers:       map[string]string{"Authorization": "Bearer foobar"},
+			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
 			ClusterHeader: "cluster-id",
 			TenantHeader:  "tenant-id",
 			AuthnMocks:    []interface{}{&userInfo, 200, nil},
@@ -128,7 +133,7 @@ func TestTokenMiddleware(t *testing.T) {
 			Name:          "Valid bearer token, not authorized",
 			Resp:          `{"Status":401,"Msg":"Unauthorized"}`,
 			Status:        401,
-			Headers:       map[string]string{"Authorization": "Bearer foobar"},
+			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
 			ClusterHeader: "cluster-id",
 			TenantHeader:  "tenant-id",
 			AuthnMocks:    []interface{}{&userInfo, 200, nil},
@@ -145,7 +150,7 @@ func TestTokenMiddleware(t *testing.T) {
 			Name:          "Valid bearer token, error performing authorization",
 			Resp:          `{"Status":401,"Msg":"Error performing authz"}`,
 			Status:        401,
-			Headers:       map[string]string{"Authorization": "Bearer foobar"},
+			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
 			ClusterHeader: "cluster-id",
 			TenantHeader:  "tenant-id",
 			AuthnMocks:    []interface{}{&userInfo, 200, nil},
@@ -161,7 +166,7 @@ func TestTokenMiddleware(t *testing.T) {
 		{
 			Name:          "Skip authorization for APIs that have it disabled",
 			Resp:          okResp,
-			Headers:       map[string]string{"Authorization": "Bearer foobar"},
+			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
 			ClusterHeader: "cluster-id",
 			TenantHeader:  "tenant-id",
 			AuthnMocks:    []interface{}{&userInfo, 200, nil},
@@ -170,6 +175,50 @@ func TestTokenMiddleware(t *testing.T) {
 					Verb:    "POST",
 					URL:     "/flows",
 					Disable: true,
+				},
+			},
+		},
+		{
+			Name:          "Linseed service account bearer tokens - authorization successful",
+			Resp:          okResp,
+			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", LinseedToken(t, "tenant-id", "cluster-id"))},
+			ClusterHeader: "cluster-id",
+			TenantHeader:  "tenant-id",
+			AuthnMocks:    []interface{}{&userInfo, 200, nil},
+			Attributes: []testAttributes{
+				{
+					Verb: "POST",
+					URL:  "/flows",
+				},
+			},
+		},
+		{
+			Name:          "Linseed service account bearer tokens - different tenant",
+			Status:        401,
+			Resp:          `{"Status":401,"Msg":"tenant id or cluster id do not match token"}`,
+			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", LinseedToken(t, "tenant-id", "cluster-id"))},
+			ClusterHeader: "cluster-id",
+			TenantHeader:  "SpongeBob",
+			AuthnMocks:    []interface{}{&userInfo, 200, nil},
+			Attributes: []testAttributes{
+				{
+					Verb: "POST",
+					URL:  "/flows",
+				},
+			},
+		},
+		{
+			Name:          "Linseed service account bearer tokens - different cluster",
+			Status:        401,
+			Resp:          `{"Status":401,"Msg":"tenant id or cluster id do not match token"}`,
+			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", LinseedToken(t, "tenant-id", "cluster-id"))},
+			ClusterHeader: "SquarePants",
+			TenantHeader:  "tenant-id",
+			AuthnMocks:    []interface{}{&userInfo, 200, nil},
+			Attributes: []testAttributes{
+				{
+					Verb: "POST",
+					URL:  "/flows",
 				},
 			},
 		},
@@ -239,4 +288,24 @@ func TestTokenMiddleware(t *testing.T) {
 			require.Equal(t, tt.Resp, resp)
 		})
 	}
+}
+
+func K8SToken(t *testing.T) string {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	require.NoError(t, err)
+
+	token, err := testutils.K8sToken("any-namspace", "any-service-account", 24*time.Hour, privateKey)
+	require.NoError(t, err)
+
+	return string(token)
+}
+
+func LinseedToken(t *testing.T, tenant, cluster string) string {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	require.NoError(t, err)
+
+	token, err := testutils.LinseedToken(tenant, cluster, "any-namspace", "any-service-account", 24*time.Hour, privateKey)
+	require.NoError(t, err)
+
+	return string(token)
 }

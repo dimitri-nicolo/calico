@@ -40,7 +40,7 @@ var _ = Describe("Test local authenticator", func() {
 
 	BeforeEach(func() {
 		var err error
-		parser := token.ParseClaims
+		parser := token.ParseClaimsLinseed
 
 		// Create a private key to use for the issuer.
 		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
