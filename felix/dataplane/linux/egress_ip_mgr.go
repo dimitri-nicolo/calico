@@ -221,23 +221,23 @@ func newEgressTable(index int) *egressTable {
 }
 
 type initialKernelState struct {
-	// rules is a map from src IP to egressRule
-	rules map[ip.Addr]*egressRule
+	// rules is a slice of egressRule
+	rules []*egressRule
 	// tables is a map from table index to egressTable
 	tables map[int]*egressTable
 }
 
 func newInitialKernelState() *initialKernelState {
 	return &initialKernelState{
-		rules:  make(map[ip.Addr]*egressRule),
+		rules:  nil,
 		tables: make(map[int]*egressTable),
 	}
 }
 
 func (s *initialKernelState) String() string {
 	var rules []string
-	for srcIP, r := range s.rules {
-		rules = append(rules, fmt.Sprintf("%s: [%#v]", srcIP, *r))
+	for _, r := range s.rules {
+		rules = append(rules, fmt.Sprintf("%s: [%#v]", r.srcIP, *r))
 	}
 	rulesOutput := fmt.Sprintf("rules: {%s}", strings.Join(rules, ","))
 
@@ -628,7 +628,7 @@ func (m *egressIPManager) readInitialKernelState() error {
 			m.routeRules.RemoveRule(rule)
 			continue
 		}
-		m.initialKernelState.rules[r.srcIP] = r
+		m.initialKernelState.rules = append(m.initialKernelState.rules, r)
 		ruleTableIndices.Add(r.tableIndex)
 	}
 
@@ -1323,37 +1323,34 @@ func (m *egressIPManager) getTableFromKernel(index int) (*egressTable, error) {
 		return nil, err
 	}
 	eTable := newEgressTable(index)
-	for _, vxlanTarget := range vxlanTargets {
-		if vxlanTarget.GW != nil {
-			eTable.routes[vxlanTarget.CIDR] = egressRoute{
-				nextHops: set.FromArrayBoxed([]ip.Addr{vxlanTarget.GW}),
-			}
-		} else {
-			hopIPs := []ip.Addr{}
-			for _, hop := range vxlanTarget.MultiPath {
-				hopIPs = append(hopIPs, hop.Gw)
-			}
-			eTable.routes[vxlanTarget.CIDR] = egressRoute{
-				nextHops: set.FromArrayBoxed(hopIPs),
-			}
-		}
-	}
-	for _, noneTarget := range noneTargets {
-		if noneTarget.GW != nil {
-			eTable.routes[noneTarget.CIDR] = egressRoute{
-				nextHops: set.FromArrayBoxed([]ip.Addr{noneTarget.GW}),
-			}
-		} else {
-			hopIPs := []ip.Addr{}
-			for _, hop := range noneTarget.MultiPath {
-				hopIPs = append(hopIPs, hop.Gw)
-			}
-			eTable.routes[noneTarget.CIDR] = egressRoute{
-				nextHops: set.FromArrayBoxed(hopIPs),
-			}
-		}
-	}
+	updateEgressTableRoutes(eTable, vxlanTargets)
+	updateEgressTableRoutes(eTable, noneTargets)
 	return eTable, nil
+}
+
+func updateEgressTableRoutes(eTable *egressTable, targets []routetable.Target) {
+	for _, t := range targets {
+		switch t.Type {
+		case routetable.TargetTypeThrow:
+			eTable.routes[t.CIDR] = egressRoute{
+				throwToMain: true,
+			}
+		case routetable.TargetTypeVXLAN:
+			if t.GW != nil {
+				eTable.routes[t.CIDR] = egressRoute{
+					nextHops: set.FromArrayBoxed([]ip.Addr{t.GW}),
+				}
+			} else {
+				hopIPs := []ip.Addr{}
+				for _, hop := range t.MultiPath {
+					hopIPs = append(hopIPs, hop.Gw)
+				}
+				eTable.routes[t.CIDR] = egressRoute{
+					nextHops: set.FromArrayBoxed(hopIPs),
+				}
+			}
+		}
+	}
 }
 
 func (m *egressIPManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
@@ -1589,29 +1586,30 @@ func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoi
 	}).Info("Looking for matching rule and table to reuse.")
 
 	// Check for unused matching rules.
-	var rules []*egressRule
-	var index int
+	var rulesIndex []int
+	var tableIndex int
 	for i, srcIP := range workload.Ipv4Nets {
 		ipAddr := ip.MustParseCIDROrIP(srcIP).Addr()
-		rule, exists := state.rules[ipAddr]
-		if !exists || rule.used {
+		rIndex, exists := m.initialKernelRuleExists(ipAddr)
+		if !exists || state.rules[rIndex].used {
 			return nil, false
 		}
+		rule := state.rules[rIndex]
 		if rule.priority != priority || rule.family != family || rule.mark != mark {
 			return nil, false
 		}
 		if i == 0 {
-			index = rule.tableIndex
+			tableIndex = rule.tableIndex
 		} else {
-			if index != rule.tableIndex {
+			if tableIndex != rule.tableIndex {
 				// Multiple rules for the workload point to different tables.
 				return nil, false
 			}
 		}
-		rules = append(rules, rule)
+		rulesIndex = append(rulesIndex, rIndex)
 	}
 
-	table, exists := state.tables[index]
+	table, exists := state.tables[tableIndex]
 	if !exists || table.used {
 		return nil, false
 	}
@@ -1644,7 +1642,7 @@ func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoi
 				return nil, false
 			}
 		} else {
-			if kernelRoutes.throwToMain != true {
+			if !kernelRoutes.throwToMain {
 				return nil, false
 			}
 		}
@@ -1652,11 +1650,20 @@ func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoi
 
 	// Mark them as used.
 	table.used = true
-	for _, r := range rules {
-		r.used = true
+	for _, i := range rulesIndex {
+		state.rules[i].used = true
 	}
 
 	return table, true
+}
+
+func (m *egressIPManager) initialKernelRuleExists(srcIP ip.Addr) (int, bool) {
+	for i, r := range m.initialKernelState.rules {
+		if r.srcIP == srcIP {
+			return i, true
+		}
+	}
+	return -1, false
 }
 
 func (m *egressIPManager) removeIndicesFromTableStack(indices set.Set[int]) {

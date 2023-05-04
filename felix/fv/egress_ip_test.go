@@ -214,7 +214,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		return app
 	}
 
-	makeClientWithEGWPolicy := func(felix *infrastructure.Felix, wIP, wName string) *workload.Workload {
+	makeClientWithEGWPolicy := func(felix *infrastructure.Felix, wIP, wName, policy string) *workload.Workload {
 		err := client.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
 			IP:       net.MustParseIP(wIP),
 			HandleID: &wName,
@@ -226,7 +226,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		Expect(err).NotTo(HaveOccurred())
 		app := workload.Run(felix, wName, "default", wIP, "8055", "tcp")
 		app.WorkloadEndpoint.Spec.EgressGateway = &api.EgressGatewaySpec{
-			Policy: "egw-policy1",
+			Policy: policy,
 			Gateway: &api.EgressSpec{
 				Selector: "egress-code == 'red'",
 			},
@@ -555,7 +555,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 						},
 					},
 					{
-						Description: "to reach to other workloadsm, like workload 2, via the default egw",
+						Description: "to reach to other Workloads, like workload 2, via the default egw",
 						Gateway: &api.EgressSpec{
 							Selector:          "egress-code == 'red'",
 							NamespaceSelector: "projectcalico.org/name == 'default'",
@@ -625,7 +625,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									Expect(err).NotTo(HaveOccurred())
 									return (strings.Contains(out, "default.egw-deny-ingress"))
 								}
-								egwClient = makeClientWithEGWPolicy(felixes[0], "10.65.0.2", "client")
 
 								for i, l := range []string{"blue", "red"} {
 									gwName := fmt.Sprintf("gw-%v", l)
@@ -665,7 +664,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							})
 
 							AfterEach(func() {
-								egwClient.Stop()
 								for i := 0; i < 2; i++ {
 									gws[i].Stop()
 								}
@@ -673,11 +671,55 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							})
 
 							It("server should see correct IPs when client connects to it", func() {
+								egwClient = makeClientWithEGWPolicy(felixes[0], "10.65.0.2", "client", "egw-policy1")
+								defer egwClient.Stop()
+
+								cc.ExpectSNAT(egwClient, egwClient.IP, extWorkloads[0], 4321)
 								cc.ExpectSNAT(egwClient, gws[0].IP, extWorkloads[1], 4321)
 								cc.ExpectSNAT(egwClient, gws[1].IP, extWorkloads[2], 4321)
-								cc.ExpectSNAT(egwClient, egwClient.IP, extWorkloads[0], 4321)
 								cc.ExpectSNAT(egwClient, egwClient.IP, extWorkloads[3], 4321)
 								cc.CheckConnectivity()
+
+								// Check route rules and tables
+								Eventually(getIPRules, "10s", "1s").Should(HaveLen(1))
+								Eventually(getIPRules, "10s", "1s").Should(HaveKey("10.65.0.2"))
+								table := getIPRules()["10.65.0.2"]
+								Expect(table).To(Equal("250"))
+							})
+
+							It("should reuse existing route rule and table", func() {
+
+								triggerStartup := felixes[0].RestartWithDelayedStartup()
+
+								// Add route rule and table for client, to check if egress ip manager picks table 220 for this client
+								fwmark := "0x80000/0x80000"
+								if BPFMode() {
+									fwmark = "0x10000000/0x10000000"
+								}
+								felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.2", "fwmark", fwmark, "priority", "100", "lookup", "220")
+								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[0].IP, "table", "220")
+								felixes[0].Exec("ip", "route", "add", extWorkloads[1].IP, "via", "10.10.10.1", "dev", "egress.calico", "onlink", "table", "220")
+								felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "220")
+								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[3].IP, "table", "220")
+
+								// Need to create client PODs after EGW deployment to make sure IPSets are not empty.
+								// This is just to test re-using existing route rule and table works fine.
+								egwClient = makeClientWithEGWPolicy(felixes[0], "10.65.0.2", "client", "egw-policy1")
+								defer egwClient.Stop()
+
+								triggerStartup()
+
+								cc.ExpectSNAT(egwClient, egwClient.IP, extWorkloads[0], 4321)
+								cc.ExpectSNAT(egwClient, gws[0].IP, extWorkloads[1], 4321)
+								cc.ExpectSNAT(egwClient, gws[1].IP, extWorkloads[2], 4321)
+								cc.ExpectSNAT(egwClient, egwClient.IP, extWorkloads[3], 4321)
+								cc.CheckConnectivity()
+
+								// Check route rules and tables
+								Eventually(getIPRules, "10s", "1s").Should(HaveLen(1))
+								Eventually(getIPRules, "10s", "1s").Should(HaveKey("10.65.0.2"))
+								table := getIPRules()["10.65.0.2"]
+								Expect(table).To(Equal("220"))
 							})
 						})
 					}
