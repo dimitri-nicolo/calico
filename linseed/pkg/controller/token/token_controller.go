@@ -79,18 +79,18 @@ func WithIssuerName(name string) ControllerOption {
 	}
 }
 
-func WithMultiClusterEndpoint(url, ca string) ControllerOption {
-	return func(c *controller) error {
-		c.voltronURL = url
-		c.voltronCA = ca
-		return nil
-	}
-}
-
 // WithExpiry sets the duration that generated tokens should be valid for.
 func WithExpiry(d time.Duration) ControllerOption {
 	return func(c *controller) error {
 		c.expiry = d
+		return nil
+	}
+}
+
+// WithFactory sets the factory to use for generating per-cluster clients.
+func WithFactory(f k8s.ClientSetFactory) ControllerOption {
+	return func(c *controller) error {
+		c.factory = f
 		return nil
 	}
 }
@@ -146,9 +146,6 @@ func NewController(opts ...ControllerOption) (Controller, error) {
 	if c.privateKey == nil {
 		return nil, fmt.Errorf("must provide a private key")
 	}
-	if c.voltronCA == "" || c.voltronURL == "" {
-		return nil, fmt.Errorf("must provide voltron CA path and URL")
-	}
 	if c.issuer == "" {
 		return nil, fmt.Errorf("must provide an issuer")
 	}
@@ -158,9 +155,9 @@ func NewController(opts ...ControllerOption) (Controller, error) {
 	if len(c.userInfos) == 0 {
 		return nil, fmt.Errorf("must provide at least one user info")
 	}
-
-	c.factory = k8s.NewClientSetFactory(c.voltronCA, c.voltronURL)
-
+	if c.factory == nil {
+		return nil, fmt.Errorf("must provide a clientset factory")
+	}
 	return c, nil
 }
 
@@ -171,16 +168,12 @@ type controller struct {
 	issuer           string
 	issuerName       string
 	managementClient calico.Interface
-	voltronURL       string
-	voltronCA        string
 	expiry           time.Duration
 	reconcilePeriod  *time.Duration
+	factory          k8s.ClientSetFactory
 
 	// userInfos in the managed cluster that we should provision tokens for.
 	userInfos []UserInfo
-
-	// Internal state.
-	factory k8s.ClientSetFactory
 }
 
 func (c *controller) Run(stopCh <-chan struct{}) {
@@ -342,7 +335,7 @@ func (c *controller) reconcileTokens(cluster string, managedClient kubernetes.In
 		if err := resource.WriteSecretToK8s(managedClient, resource.CopySecret(&secret)); err != nil {
 			return err
 		}
-		log.Info("Created/updated token")
+		log.WithField("name", secret.Name).Info("Created/updated token secret")
 	}
 	return nil
 }
