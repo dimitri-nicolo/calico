@@ -10,9 +10,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/config"
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
@@ -28,6 +30,12 @@ const (
 	jsonContentType        = "application/json"
 	jsonNewlineContentType = "application/x-ndjson"
 )
+
+func setupTest(t *testing.T) func() {
+	config.ConfigureLogging("DEBUG")
+	logCancel := logutils.RedirectLogrusToTestingT(t)
+	return logCancel
+}
 
 func TestDecodeAndValidateReqParams(t *testing.T) {
 	type testCase[T handler.RequestParams] struct {
@@ -98,6 +106,8 @@ func TestDecodeAndValidateReqParams(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer setupTest(t)()
+
 			got, err := handler.DecodeAndValidateReqParams[v1.L3FlowParams](httptest.NewRecorder(), tt.req)
 
 			if tt.wantErr {
@@ -224,32 +234,29 @@ func TestValidateFlowLogBulkParams(t *testing.T) {
 		},
 
 		{
-			"bulk insert -  Linux", req(encode[v1.FlowLog](params, "\n"), jsonNewlineContentType),
+			"bulk insert -  Linux", req(encode(params, "\n"), jsonNewlineContentType),
 			params, false, "",
 			200,
 		},
 
 		{
-			"bulk insert - Windows", req(encode[v1.FlowLog](params, "\r\n"), jsonNewlineContentType),
+			"bulk insert - Windows", req(encode(params, "\r\n"), jsonNewlineContentType),
 			params, false, "",
 			200,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer setupTest(t)()
+
 			got, err := handler.DecodeAndValidateBulkParams[v1.FlowLog](httptest.NewRecorder(), tt.req)
 			if tt.wantErr {
-				require.Error(t, err)
-
-				var httpErr *v1.HTTPError
+				require.NotNil(t, err)
 				assert.Equal(t, err.Error(), tt.errorMsg)
-				if errors.As(err, &httpErr) {
-					assert.Equal(t, httpErr.Status, tt.statusCode)
-					assert.Equal(t, httpErr.Msg, tt.errorMsg)
-				}
-
+				assert.Equal(t, err.Status, tt.statusCode)
+				assert.Equal(t, err.Msg, tt.errorMsg)
 			} else {
-				require.NoError(t, err)
+				require.Nil(t, err)
 				if !cmp.Equal(tt.want, got) {
 					t.Errorf("want=%#v got %#v", tt.want, got)
 				}

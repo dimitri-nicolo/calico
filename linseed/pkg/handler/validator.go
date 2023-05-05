@@ -22,9 +22,9 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
-// maxBytes represents the maximum bytes
-// an HTTP request body can have
-const maxBytes = 2147483648
+// maxBulkBytes represents the maximum bytes an HTTP request body on a bulk request can have.
+// We cap this out at 10MB - the largest chunk size that fluentd will send is 8MB.
+const maxBulkBytes = 10 * 1000000
 
 // newlineJsonContent is the supported content type
 // for bulk APIs
@@ -64,7 +64,7 @@ type BulkRequestParams interface {
 // DecodeAndValidateBulkParams will decode and validate input parameters
 // passed on the HTTP body of a bulk request. In case the input parameters
 // are invalid or cannot be decoded, an HTTPStatusError will be returned
-func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req *http.Request) ([]T, error) {
+func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req *http.Request) ([]T, *v1.HTTPError) {
 	var bulkParams []T
 
 	// Check content-type
@@ -85,7 +85,7 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 	}
 
 	// Read only max bytes
-	req.Body = http.MaxBytesReader(w, req.Body, maxBytes)
+	req.Body = http.MaxBytesReader(w, req.Body, maxBulkBytes)
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		return bulkParams, &v1.HTTPError{
@@ -93,6 +93,7 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 			Msg:    err.Error(),
 		}
 	}
+	req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	trimBody := bytes.Trim(body, "\r\n")
 	d := json.NewDecoder(bytes.NewReader(trimBody))
@@ -139,7 +140,7 @@ func Timeout(w http.ResponseWriter, req *http.Request) (metav1.Duration, error) 
 // DecodeAndValidateReqParams will decode and validate input parameters
 // passed on the HTTP body of a request. In case the input parameters
 // are invalid or cannot be decoded, an HTTPStatusError will be returned
-func DecodeAndValidateReqParams[T RequestParams](w http.ResponseWriter, req *http.Request) (*T, error) {
+func DecodeAndValidateReqParams[T RequestParams](w http.ResponseWriter, req *http.Request) (*T, *v1.HTTPError) {
 	reqParams := new(T)
 
 	content := strings.ToLower(strings.TrimSpace(req.Header.Get(contentType)))
@@ -152,7 +153,10 @@ func DecodeAndValidateReqParams[T RequestParams](w http.ResponseWriter, req *htt
 
 	// Decode the http request body into the struct.
 	if err := httputils.Decode(w, req, &reqParams); err != nil {
-		return reqParams, err
+		return reqParams, &v1.HTTPError{
+			Msg:    err.Error(),
+			Status: http.StatusBadRequest,
+		}
 	}
 
 	// Validate parameters.
