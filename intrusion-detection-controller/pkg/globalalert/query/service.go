@@ -377,7 +377,7 @@ func (e *service) executeCompositeQuery(ctx context.Context) {
 }
 
 func (e *service) storeEvents(ctx context.Context, events []lsv1.Event) bool {
-	if events == nil {
+	if len(events) == 0 {
 		return true
 	}
 
