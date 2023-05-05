@@ -4,13 +4,12 @@ package audit
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/linseed/pkg/handler"
 
@@ -71,18 +70,24 @@ func (h audit) APIS() []handler.API {
 // BulkAuditEE handles bulk ingestion requests to add EE Audit logs, typically from fluentd.
 func (h audit) BulkAuditEE() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		logs, err := handler.DecodeAndValidateBulkParams[v1.AuditLog](w, req)
-		if err != nil {
-			log.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *v1.HTTPError
-			if errors.As(err, &httpErr) {
-				httputils.JSONError(w, httpErr, httpErr.Status)
-			} else {
-				httputils.JSONError(w, &v1.HTTPError{
-					Msg:    err.Error(),
-					Status: http.StatusBadRequest,
-				}, http.StatusBadRequest)
+		f := logrus.Fields{
+			"path":   req.URL.Path,
+			"method": req.Method,
+		}
+		logCtx := logrus.WithFields(f)
+
+		logs, httpErr := handler.DecodeAndValidateBulkParams[v1.AuditLog](w, req)
+		if httpErr != nil {
+			if logrus.IsLevelEnabled(logrus.DebugLevel) {
+				// Include the request body in our logs.
+				body, err := handler.ReadBody(w, req)
+				if err != nil {
+					logrus.WithError(err).Warn("Failed to read request body")
+				}
+				logCtx = logCtx.WithField("body", body)
 			}
+			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
+			httputils.JSONError(w, httpErr, httpErr.Status)
 			return
 		}
 
@@ -95,14 +100,14 @@ func (h audit) BulkAuditEE() http.HandlerFunc {
 
 		response, err := h.logs.Create(ctx, v1.AuditLogTypeEE, clusterInfo, logs)
 		if err != nil {
-			log.WithError(err).Error("Failed to ingest EE audit logs")
+			logCtx.WithError(err).Error("Failed to ingest EE audit logs")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
 			}, http.StatusInternalServerError)
 			return
 		}
-		log.Debugf("Bulk response is: %+v", response)
+		logCtx.Debugf("Bulk response is: %+v", response)
 		httputils.Encode(w, response)
 	}
 }
@@ -110,18 +115,24 @@ func (h audit) BulkAuditEE() http.HandlerFunc {
 // BulkAuditKube handles bulk ingestion requests to add Kube Audit logs, typically from fluentd.
 func (h audit) BulkAuditKube() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		logs, err := handler.DecodeAndValidateBulkParams[v1.AuditLog](w, req)
-		if err != nil {
-			log.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *v1.HTTPError
-			if errors.As(err, &httpErr) {
-				httputils.JSONError(w, httpErr, httpErr.Status)
-			} else {
-				httputils.JSONError(w, &v1.HTTPError{
-					Msg:    err.Error(),
-					Status: http.StatusBadRequest,
-				}, http.StatusBadRequest)
+		f := logrus.Fields{
+			"path":   req.URL.Path,
+			"method": req.Method,
+		}
+		logCtx := logrus.WithFields(f)
+
+		logs, httpErr := handler.DecodeAndValidateBulkParams[v1.AuditLog](w, req)
+		if httpErr != nil {
+			if logrus.IsLevelEnabled(logrus.DebugLevel) {
+				// Include the request body in our logs.
+				body, err := handler.ReadBody(w, req)
+				if err != nil {
+					logrus.WithError(err).Warn("Failed to read request body")
+				}
+				logCtx = logCtx.WithField("body", body)
 			}
+			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
+			httputils.JSONError(w, httpErr, httpErr.Status)
 			return
 		}
 
@@ -134,32 +145,38 @@ func (h audit) BulkAuditKube() http.HandlerFunc {
 
 		response, err := h.logs.Create(ctx, v1.AuditLogTypeKube, clusterInfo, logs)
 		if err != nil {
-			log.WithError(err).Error("Failed to ingest Kube audit logs")
+			logCtx.WithError(err).Error("Failed to ingest Kube audit logs")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
 			}, http.StatusInternalServerError)
 			return
 		}
-		log.Debugf("Bulk response is: %+v", response)
+		logCtx.Debugf("Bulk response is: %+v", response)
 		httputils.Encode(w, response)
 	}
 }
 
 func (h audit) GetLogs() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		reqParams, err := handler.DecodeAndValidateReqParams[v1.AuditLogParams](w, req)
-		if err != nil {
-			log.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *v1.HTTPError
-			if errors.As(err, &httpErr) {
-				httputils.JSONError(w, httpErr, httpErr.Status)
-			} else {
-				httputils.JSONError(w, &v1.HTTPError{
-					Msg:    err.Error(),
-					Status: http.StatusBadRequest,
-				}, http.StatusBadRequest)
+		f := logrus.Fields{
+			"path":   req.URL.Path,
+			"method": req.Method,
+		}
+		logCtx := logrus.WithFields(f)
+
+		reqParams, httpErr := handler.DecodeAndValidateReqParams[v1.AuditLogParams](w, req)
+		if httpErr != nil {
+			if logrus.IsLevelEnabled(logrus.DebugLevel) {
+				// Include the request body in our logs.
+				body, err := handler.ReadBody(w, req)
+				if err != nil {
+					logrus.WithError(err).Warn("Failed to read request body")
+				}
+				logCtx = logCtx.WithField("body", body)
 			}
+			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
+			httputils.JSONError(w, httpErr, httpErr.Status)
 			return
 		}
 
@@ -176,7 +193,7 @@ func (h audit) GetLogs() http.HandlerFunc {
 		defer cancel()
 		response, err := h.logs.List(ctx, clusterInfo, reqParams)
 		if err != nil {
-			log.WithError(err).Error("Failed to list Audit logs")
+			logCtx.WithError(err).Error("Failed to list Audit logs")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
@@ -184,7 +201,7 @@ func (h audit) GetLogs() http.HandlerFunc {
 			return
 		}
 
-		log.Debugf("%s response is: %+v", LogPath, response)
+		logCtx.Debugf("%s response is: %+v", LogPath, response)
 		httputils.Encode(w, response)
 	}
 }

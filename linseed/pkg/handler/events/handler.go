@@ -4,7 +4,6 @@ package events
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
@@ -69,18 +68,24 @@ func (h events) APIS() []handler.API {
 
 func (h events) List() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		reqParams, err := handler.DecodeAndValidateReqParams[v1.EventParams](w, req)
-		if err != nil {
-			logrus.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *v1.HTTPError
-			if errors.As(err, &httpErr) {
-				httputils.JSONError(w, httpErr, httpErr.Status)
-			} else {
-				httputils.JSONError(w, &v1.HTTPError{
-					Msg:    err.Error(),
-					Status: http.StatusBadRequest,
-				}, http.StatusBadRequest)
+		f := logrus.Fields{
+			"path":   req.URL.Path,
+			"method": req.Method,
+		}
+		logCtx := logrus.WithFields(f)
+
+		reqParams, httpErr := handler.DecodeAndValidateReqParams[v1.EventParams](w, req)
+		if httpErr != nil {
+			if logrus.IsLevelEnabled(logrus.DebugLevel) {
+				// Include the request body in our logs.
+				body, err := handler.ReadBody(w, req)
+				if err != nil {
+					logrus.WithError(err).Warn("Failed to read request body")
+				}
+				logCtx = logCtx.WithField("body", body)
 			}
+			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
+			httputils.JSONError(w, httpErr, httpErr.Status)
 			return
 		}
 
@@ -97,7 +102,7 @@ func (h events) List() http.HandlerFunc {
 		defer cancel()
 		response, err := h.backend.List(ctx, clusterInfo, reqParams)
 		if err != nil {
-			logrus.WithError(err).Error("Failed to list events")
+			logCtx.WithError(err).Error("Failed to list events")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
@@ -105,25 +110,31 @@ func (h events) List() http.HandlerFunc {
 			return
 		}
 
-		logrus.Debugf("%s response is: %+v", EventsPath, response)
+		logCtx.Debugf("%s response is: %+v", EventsPath, response)
 		httputils.Encode(w, response)
 	}
 }
 
 func (h events) Bulk() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		events, err := handler.DecodeAndValidateBulkParams[v1.Event](w, req)
-		if err != nil {
-			logrus.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *v1.HTTPError
-			if errors.As(err, &httpErr) {
-				httputils.JSONError(w, httpErr, httpErr.Status)
-			} else {
-				httputils.JSONError(w, &v1.HTTPError{
-					Msg:    err.Error(),
-					Status: http.StatusBadRequest,
-				}, http.StatusBadRequest)
+		f := logrus.Fields{
+			"path":   req.URL.Path,
+			"method": req.Method,
+		}
+		logCtx := logrus.WithFields(f)
+
+		events, httpErr := handler.DecodeAndValidateBulkParams[v1.Event](w, req)
+		if httpErr != nil {
+			if logrus.IsLevelEnabled(logrus.DebugLevel) {
+				// Include the request body in our logs.
+				body, err := handler.ReadBody(w, req)
+				if err != nil {
+					logrus.WithError(err).Warn("Failed to read request body")
+				}
+				logCtx = logCtx.WithField("body", body)
 			}
+			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
+			httputils.JSONError(w, httpErr, httpErr.Status)
 			return
 		}
 
@@ -160,14 +171,14 @@ func (h events) Bulk() http.HandlerFunc {
 		// Call the chosen handler.
 		response, err := handler(ctx, clusterInfo, events)
 		if err != nil {
-			logrus.WithError(err).Error("Failed to perform bulk action on events")
+			logCtx.WithError(err).Error("Failed to perform bulk action on events")
 			httputils.JSONError(w, &v1.HTTPError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
 			}, http.StatusInternalServerError)
 			return
 		}
-		logrus.Debugf("%s %s response is: %+v", req.Method, EventsPathBulk, response)
+		logCtx.Debugf("%s %s response is: %+v", req.Method, EventsPathBulk, response)
 		httputils.Encode(w, response)
 	}
 }

@@ -1,8 +1,9 @@
 package handler
 
 import (
+	"bytes"
 	"context"
-	"errors"
+	"io"
 	"net/http"
 
 	"github.com/olivere/elastic/v7"
@@ -100,19 +101,19 @@ func (h listHandler[T, P]) List() http.HandlerFunc {
 		}
 		logCtx := logrus.WithFields(f)
 
-		// Decode the request body, which contains parameters for the request.
-		params, err := DecodeAndValidateReqParams[P](w, req)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *v1.HTTPError
-			if errors.As(err, &httpErr) {
-				httputils.JSONError(w, httpErr, httpErr.Status)
-			} else {
-				httputils.JSONError(w, &v1.HTTPError{
-					Msg:    err.Error(),
-					Status: http.StatusBadRequest,
-				}, http.StatusBadRequest)
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			// Include the request body in our logs.
+			body, err := ReadBody(w, req)
+			if err != nil {
+				logrus.WithError(err).Warn("Failed to read request body")
 			}
+			logCtx = logCtx.WithField("body", body)
+		}
+
+		params, httpErr := DecodeAndValidateReqParams[P](w, req)
+		if httpErr != nil {
+			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
+			httputils.JSONError(w, httpErr, httpErr.Status)
 			return
 		}
 
@@ -143,7 +144,7 @@ func (h listHandler[T, P]) List() http.HandlerFunc {
 			}, http.StatusInternalServerError)
 			return
 		}
-		logCtx.Debugf("Response is: %+v", response)
+		logCtx.WithField("response", response).Debugf("Completed request")
 		httputils.Encode(w, response)
 	}
 }
@@ -160,18 +161,19 @@ func (h createHandler[B]) Create() http.HandlerFunc {
 		}
 		logCtx := logrus.WithFields(f)
 
-		data, err := DecodeAndValidateBulkParams[B](w, req)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *v1.HTTPError
-			if errors.As(err, &httpErr) {
-				httputils.JSONError(w, httpErr, httpErr.Status)
-			} else {
-				httputils.JSONError(w, &v1.HTTPError{
-					Msg:    err.Error(),
-					Status: http.StatusBadRequest,
-				}, http.StatusBadRequest)
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			// Include the request body in our logs.
+			body, err := ReadBody(w, req)
+			if err != nil {
+				logrus.WithError(err).Warn("Failed to read request body")
 			}
+			logCtx = logCtx.WithField("body", body)
+		}
+
+		data, httpErr := DecodeAndValidateBulkParams[B](w, req)
+		if httpErr != nil {
+			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
+			httputils.JSONError(w, httpErr, httpErr.Status)
 			return
 		}
 
@@ -193,7 +195,7 @@ func (h createHandler[B]) Create() http.HandlerFunc {
 			}, http.StatusInternalServerError)
 			return
 		}
-		logCtx.Debugf("Response is: %+v", response)
+		logCtx.WithField("response", response).Debugf("Completed request")
 		httputils.Encode(w, response)
 	}
 }
@@ -254,18 +256,19 @@ func (h aggregationHandler[A]) Aggregate() http.HandlerFunc {
 		}
 		logCtx := logrus.WithFields(f)
 
-		reqParams, err := DecodeAndValidateReqParams[A](w, req)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to decode/validate request parameters")
-			var httpErr *v1.HTTPError
-			if errors.As(err, &httpErr) {
-				httputils.JSONError(w, httpErr, httpErr.Status)
-			} else {
-				httputils.JSONError(w, &v1.HTTPError{
-					Msg:    err.Error(),
-					Status: http.StatusBadRequest,
-				}, http.StatusBadRequest)
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			// Include the request body in our logs.
+			body, err := ReadBody(w, req)
+			if err != nil {
+				logrus.WithError(err).Warn("Failed to read request body")
 			}
+			logCtx = logCtx.WithField("body", body)
+		}
+
+		reqParams, httpErr := DecodeAndValidateReqParams[A](w, req)
+		if httpErr != nil {
+			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
+			httputils.JSONError(w, httpErr, httpErr.Status)
 			return
 		}
 
@@ -295,7 +298,17 @@ func (h aggregationHandler[A]) Aggregate() http.HandlerFunc {
 			return
 		}
 
-		logCtx.Debugf("response is: %+v", response)
+		logCtx.WithField("response", response).Debugf("Completed request")
 		httputils.Encode(w, response)
 	}
+}
+
+func ReadBody(w http.ResponseWriter, req *http.Request) (string, error) {
+	req.Body = http.MaxBytesReader(w, req.Body, maxBulkBytes)
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return "", err
+	}
+	req.Body = io.NopCloser(bytes.NewBuffer(body))
+	return string(body), nil
 }
