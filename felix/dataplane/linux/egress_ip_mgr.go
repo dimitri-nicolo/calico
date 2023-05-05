@@ -667,7 +667,7 @@ func (m *egressIPManager) cleanupInitialKernelState() error {
 	for _, r := range m.initialKernelState.rules {
 		if !r.used {
 			log.WithField("rule", *r).Info("Deleting unused route rule")
-			m.deleteRouteRule(r.srcIP, r.tableIndex)
+			m.deleteRouteRule(r)
 		}
 	}
 
@@ -835,12 +835,12 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 			}
 			existingTable, exists := m.reserveFromInitialState(workload, id)
 			if exists {
+				existingTables[id] = existingTable
+				workloadsToUseExistingTable = append(workloadsToUseExistingTable, id)
 				log.WithFields(log.Fields{
 					"workloadID": id,
 					"table":      existingTables,
 				}).Info("Pre-processing workload - reserving table")
-				existingTables[id] = existingTable
-				workloadsToUseExistingTable = append(workloadsToUseExistingTable, id)
 			} else {
 				workloadsToUseNewTable = append(workloadsToUseNewTable, id)
 			}
@@ -1214,7 +1214,12 @@ func (m *egressIPManager) deleteWorkloadRuleAndTable(id proto.WorkloadEndpointID
 		return
 	}
 	for _, ipAddr := range workload.Ipv4Nets {
-		m.deleteRouteRule(ip.FromIPOrCIDRString(ipAddr), index)
+		m.deleteRouteRule(&egressRule{
+			priority:   m.dpConfig.EgressIPRoutingRulePriority,
+			mark:       int(m.dpConfig.RulesConfig.IptablesMarkEgress),
+			srcIP:      ip.FromIPOrCIDRString(ipAddr),
+			tableIndex: index,
+		})
 	}
 	m.deleteRouteTable(index)
 	delete(m.workloadToTableIndex, id)
@@ -1300,15 +1305,13 @@ func (m *egressIPManager) createRouteRule(srcIP ip.Addr, tableIndex int) {
 	m.routeRules.SetRule(rule)
 }
 
-func (m *egressIPManager) deleteRouteRule(srcIP ip.Addr, tableIndex int) {
+func (m *egressIPManager) deleteRouteRule(rule *egressRule) {
 	log.WithFields(log.Fields{
-		"srcIP":      srcIP,
-		"tableIndex": tableIndex,
+		"srcIP":      rule.srcIP,
+		"tableIndex": rule.tableIndex,
 	}).Debug("Deleting route rule.")
-	rule := newRouteRule(m.dpConfig.EgressIPRoutingRulePriority,
-		m.dpConfig.RulesConfig.IptablesMarkEgress,
-		srcIP, tableIndex)
-	m.routeRules.RemoveRule(rule)
+	m.routeRules.RemoveRule(
+		newRouteRule(rule.priority, uint32(rule.mark), rule.srcIP, rule.tableIndex))
 }
 
 func (m *egressIPManager) getTableFromKernel(index int) (*egressTable, error) {

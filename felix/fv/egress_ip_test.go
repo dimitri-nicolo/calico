@@ -702,6 +702,18 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "220")
 								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[3].IP, "table", "220")
 
+								// Add route rules and tables to check if egress ip manager cleans it
+								felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.3", "fwmark", "0x21000000/0x21000000", "priority", "100", "lookup", "230")
+								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[0].IP, "table", "230")
+								felixes[0].Exec("ip", "route", "add", extWorkloads[1].IP, "via", "10.10.10.1", "dev", "egress.calico", "onlink", "table", "230")
+								felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "230")
+								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[3].IP, "table", "230")
+
+								felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.4", "fwmark", "0x80000/0x80000", "priority", "100", "lookup", "231")
+								felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "231")
+
+								felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.4", "fwmark", "0x10000000/0x10000000", "priority", "100", "lookup", "232")
+
 								// Need to create client PODs after EGW deployment to make sure IPSets are not empty.
 								// This is just to test re-using existing route rule and table works fine.
 								egwClient = makeClientWithEGWPolicy(felixes[0], "10.65.0.2", "client", "egw-policy1")
