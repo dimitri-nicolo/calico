@@ -60,9 +60,10 @@ func (h audit) APIS() []handler.API {
 			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Create, Group: handler.APIGroup, Resource: "kube_auditlogs"},
 		},
 		{
-			Method:  "POST",
-			URL:     AggsPath,
-			Handler: h.aggregations.Aggregate(),
+			Method:          "POST",
+			URL:             AggsPath,
+			Handler:         h.aggregations.Aggregate(),
+			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Get, Group: handler.APIGroup, Resource: "auditlogs"},
 		},
 	}
 }
