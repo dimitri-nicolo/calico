@@ -87,7 +87,7 @@ Error from server (Forbidden): User "someone@gmail.com" cannot list nodes at the
 2. Grant Permissions: (Make the user part of the admin group)
 ```
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: admin-role
 rules:
@@ -96,7 +96,7 @@ rules:
     verbs: ["*"]
 ---
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: admin-binding
 subjects:
