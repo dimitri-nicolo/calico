@@ -460,7 +460,9 @@ func (e *Service) deleteSet(ctx context.Context, m Meta, idx string) error {
 func (e *Service) PutSecurityEventWithID(ctx context.Context, f []lsv1.Event) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-
+	if len(f) == 0 {
+		return nil
+	}
 	_, err := e.lsClient.Events(e.clusterName).Create(ctx, f)
 	return err
 }
