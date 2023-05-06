@@ -109,7 +109,7 @@ func (r *fakeReportStorer) StoreArchivedReport(d *v1.ReportData) error {
 // Fake flow reporter
 type fakeFlowReporter struct{}
 
-func (f *fakeFlowReporter) SearchFlowLogs(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *lma.FlowLogResult {
+func (f *fakeFlowReporter) SearchFlows(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *lma.FlowLogResult {
 	return nil
 }
 

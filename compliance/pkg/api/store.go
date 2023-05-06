@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -163,23 +162,22 @@ func (r *complianceStore) SearchAuditEvents(ctx context.Context, filter *apiv3.A
 // start and end time range. We do not filter flow logs using endpoint based
 // queries due to potentially large number of in-scope endpoints that may
 // have to be specified in the query.
-func (r *complianceStore) SearchFlowLogs(ctx context.Context, namespaces []string, start *time.Time, end *time.Time) <-chan *lma.FlowLogResult {
+func (r *complianceStore) SearchFlows(ctx context.Context, namespaces []string, start *time.Time, end *time.Time) <-chan *lma.FlowLogResult {
 	logrus.Debugf("Searching across namespaces %+v", namespaces)
 	ch := make(chan *lma.FlowLogResult, DefaultPageSize)
 
 	go func() {
-		defer func() {
-			logrus.Infof("completed flow logs query")
-			close(ch)
-		}()
-		params := buildFlowLogQuery(start, end, namespaces, namespaces)
-		lp := client.NewListPager[v1.L3Flow](params)
-		pages, errors := lp.Stream(ctx, r.flows.List)
-
 		// Linseed doesn't aggregate across reporter and action, but for the purposes of Compliance we don't care about
 		// those distinctions. So, keep track of which flows we have sent and skip any that are duplicates.
 		sent := map[apiv3.EndpointsReportFlow]struct{}{}
+		defer func() {
+			logrus.WithField("namespaces", namespaces).WithField("found", len(sent)).Infof("completed flow query")
+			close(ch)
+		}()
 
+		params := buildFlowQuery(start, end, namespaces)
+		lp := client.NewListPager[v1.L3Flow](params)
+		pages, errors := lp.Stream(ctx, r.flows.List)
 		for page := range pages {
 			for _, item := range page.Items {
 				sname, sIsAggregated := getFlowEndpointName(item.Key.Source.Name, item.Key.Source.AggregatedName)
@@ -495,10 +493,12 @@ func constructAuditEventsQuery(filter *v3.AuditEventsSelection, start, end *time
 	return &params
 }
 
-func buildFlowLogQuery(start, end *time.Time, sourceNamespaces, destNamespaces []string) *v1.FlowLogParams {
-	params := v1.FlowLogParams{}
+// buildFlowQuery returns the flow queries to perform, given the input. This may return more than one
+// query if needed in order to satisfy the request.
+func buildFlowQuery(start, end *time.Time, namespaces []string) *v1.L3FlowParams {
+	// Build base params for each type of query.
+	params := v1.L3FlowParams{}
 	params.MaxPageSize = DefaultPageSize
-
 	if start != nil || end != nil {
 		params.TimeRange = &lmav1.TimeRange{}
 		if start != nil {
@@ -509,19 +509,11 @@ func buildFlowLogQuery(start, end *time.Time, sourceNamespaces, destNamespaces [
 		}
 	}
 
-	// Add the namespace queries. Ideally we'd enhance Linseed to have a structured query API for this,
-	// but for now we'll use it's unstructured selector format.
-	var selectors []string
-	if len(sourceNamespaces) != 0 {
-		selectors = append(selectors, fmt.Sprintf("source_namespace IN { %s }", strings.Join(sourceNamespaces, ", ")))
-	}
-	if len(destNamespaces) != 0 {
-		selectors = append(selectors, fmt.Sprintf("source_namespace IN { %s }", strings.Join(sourceNamespaces, ", ")))
-	}
-	if len(selectors) == 1 {
-		params.Selector = selectors[0]
-	} else if len(selectors) == 2 {
-		params.Selector = strings.Join(selectors, " OR ")
+	if len(namespaces) != 0 {
+		params.NamespaceMatches = append(params.NamespaceMatches, v1.NamespaceMatch{
+			Type:       v1.MatchTypeAny,
+			Namespaces: namespaces,
+		})
 	}
 
 	return &params

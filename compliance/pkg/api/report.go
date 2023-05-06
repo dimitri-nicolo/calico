@@ -26,7 +26,7 @@ type AuditLogReportHandler interface {
 }
 
 type FlowLogReportHandler interface {
-	SearchFlowLogs(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *lma.FlowLogResult
+	SearchFlows(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *lma.FlowLogResult
 }
 
 type ReportQueryParams struct {

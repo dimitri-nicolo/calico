@@ -188,8 +188,8 @@ func (_m *MockComplianceStore) SearchAuditEvents(ctx context.Context, filter *v3
 	return r0
 }
 
-// SearchFlowLogs provides a mock function with given fields: ctx, namespaces, start, end
-func (_m *MockComplianceStore) SearchFlowLogs(ctx context.Context, namespaces []string, start *time.Time, end *time.Time) <-chan *pkgapi.FlowLogResult {
+// SearchFlows provides a mock function with given fields: ctx, namespaces, start, end
+func (_m *MockComplianceStore) SearchFlows(ctx context.Context, namespaces []string, start *time.Time, end *time.Time) <-chan *pkgapi.FlowLogResult {
 	ret := _m.Called(ctx, namespaces, start, end)
 
 	var r0 <-chan *pkgapi.FlowLogResult

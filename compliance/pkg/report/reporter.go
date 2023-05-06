@@ -337,8 +337,8 @@ func (r *reporter) addFlowLogEntries() {
 		namespaces = append(namespaces, ns)
 	}
 
-	r.clog.Debug("Processing flow log results")
-	for epFlow := range r.flowlogger.SearchFlowLogs(r.ctx, namespaces, &r.cfg.ParsedReportStart, &r.cfg.ParsedReportEnd) {
+	r.clog.Debug("Processing flow results")
+	for epFlow := range r.flowlogger.SearchFlows(r.ctx, namespaces, &r.cfg.ParsedReportStart, &r.cfg.ParsedReportEnd) {
 		// On error, skip processing this flow and continue processing the next one.
 		if epFlow.Err != nil {
 			r.clog.WithError(epFlow.Err).Error("Error processing flow log entry")
