@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
 const LogPath string = "/var/log/calico/waf"
@@ -20,7 +18,7 @@ const LogFile string = "waf.log"
 const MaxLogCount = 5
 const MaxLogCountDuration = 1 * time.Second
 
-var Logger *logutils.RateLimitedLogger
+var Logger *logrus.Logger
 
 func ensureLogfile() ([]io.Writer, error) {
 	var res []io.Writer
@@ -58,16 +56,52 @@ func InitializeLogging(writers ...io.Writer) {
 		writers = append(writers, logFileWriter...)
 	}
 
-	Logger = logutils.NewRateLimitedLogger(logutils.OptLogger(
-		&logrus.Logger{
-			Level: logrus.WarnLevel,
-			Formatter: &logrus.JSONFormatter{
-				TimestampFormat: time.RFC3339Nano,
-				FieldMap: logrus.FieldMap{
-					logrus.FieldKeyTime: "@timestamp",
-				},
-			},
-			Out: io.MultiWriter(writers...),
+	formatter := &logrus.JSONFormatter{
+		TimestampFormat: time.RFC3339Nano,
+		FieldMap: logrus.FieldMap{
+			logrus.FieldKeyTime: "@timestamp",
 		},
-	))
+	}
+
+	Logger = &logrus.Logger{
+		Level:     logrus.WarnLevel,
+		Formatter: NewRateLimitedFormatter(formatter, MaxLogCount, MaxLogCountDuration),
+		Out:       io.MultiWriter(writers...),
+	}
+}
+
+func NewRateLimitedFormatter(formatter logrus.Formatter, logCount uint, timeUnit time.Duration) logrus.Formatter {
+	limiter := new(rateLimitedFormatter)
+	limiter.queue = make(chan bool, logCount)
+	limiter.queueSize = logCount
+	limiter.queueTime = timeUnit
+	limiter.formatter = formatter
+	return limiter
+}
+
+type rateLimitedFormatter struct {
+	queue     chan bool
+	queueSize uint
+	queueTime time.Duration
+	formatter logrus.Formatter
+	activated bool
+}
+
+func (r *rateLimitedFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	select {
+	case r.queue <- true:
+		r.activated = false
+		go func() {
+			<-time.NewTimer(r.queueTime).C
+			<-r.queue
+		}()
+		return r.formatter.Format(entry)
+	default:
+		// exceeding set limits (# log entries / duration) will drop log entries
+		if r.activated {
+			return nil, nil
+		}
+		r.activated = true
+		return nil, fmt.Errorf("reached log output limiting rate of %d per %s", r.queueSize, r.queueTime)
+	}
 }
