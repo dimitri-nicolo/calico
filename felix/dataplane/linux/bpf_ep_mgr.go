@@ -323,6 +323,7 @@ type ManagerWithHEPUpdate interface {
 func NewTestEpMgr(config *Config, bpfmaps *bpfmap.Maps, workloadIfaceRegex *regexp.Regexp) (ManagerWithHEPUpdate, error) {
 	return newBPFEndpointManager(nil, config, bpfmaps, true, workloadIfaceRegex, idalloc.New(),
 		rules.NewRenderer(rules.Config{
+			BPFEnabled:                  true,
 			IPIPEnabled:                 true,
 			IPIPTunnelAddress:           nil,
 			IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
@@ -337,6 +338,8 @@ func NewTestEpMgr(config *Config, bpfmaps *bpfmap.Maps, workloadIfaceRegex *rege
 			WorkloadIfacePrefixes:       []string{"cali", "tap"},
 			VXLANPort:                   4789,
 			VXLANVNI:                    4096,
+
+			IptablesMarkDrop: 0x80,
 		}),
 		iptables.NewNoopTable(),
 		nil,
