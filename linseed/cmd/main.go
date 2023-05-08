@@ -180,7 +180,7 @@ func run() {
 			{Namespace: "tigera-intrusion-detection", Name: "intrusion-detection-controller"},
 		}
 
-		factory := k8s.NewClientSetFactory(cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA)
+		factory := k8s.NewClientSetFactory(cfg.MultiClusterForwardingCA, cfg.MultiClusterForwardingEndpoint)
 		opts := []token.ControllerOption{
 			token.WithIssuer(token.LinseedIssuer),
 			token.WithIssuerName("tigera-linseed"),
