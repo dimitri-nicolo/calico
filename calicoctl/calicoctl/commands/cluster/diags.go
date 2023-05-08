@@ -280,6 +280,7 @@ func collectCalicoResource(dir string) {
 		"networkpolicies",
 		"networksets",
 		"tiers",
+		"egressgatewaypolicies",
 	} {
 		commands = append(commands, common.Cmd{
 			Info:     fmt.Sprintf("Collect Calico %v (yaml)", resource),
