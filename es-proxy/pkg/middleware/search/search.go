@@ -323,7 +323,7 @@ func searchEvents(
 	authReview middleware.AuthorizationReview,
 	k8sClient datastore.ClientSet,
 ) (*v1.SearchResponse, error) {
-	params := &lapi.L7LogParams{}
+	params := &lapi.EventParams{}
 	err := intoLogParams(ctx, SearchTypeEvents, request, params, authReview)
 	if err != nil {
 		return nil, err

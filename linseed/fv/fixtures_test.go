@@ -45,3 +45,8 @@ var wafLogs string
 //
 //go:embed testdata/backend/runtime_reports_legacy.txt
 var runtimeReports string
+
+// anomalyDetectionEvent is a sample alert produced by anomaly detection to be ingested for testing purposes
+//
+//go:embed testdata/backend/anomaly_detection_event.json
+var anomalyDetectionEvent string

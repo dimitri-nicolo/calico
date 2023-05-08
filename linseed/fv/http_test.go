@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -90,7 +89,6 @@ func doRequest(t *testing.T, client *http.Client, spec httpReqSpec) (*http.Respo
 	res, err = client.Do(req)
 	require.NoError(t, err)
 	defer res.Body.Close()
-	logrus.Info(res.Body)
 
 	var resBody []byte
 	resBody, err = io.ReadAll(res.Body)

@@ -42,7 +42,7 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 
 	return v1.Event{
 		ID:              generateSuspicousIPSetID(flowLog.StartTime, flowLog.SourceIP, flowLog.SourcePort, flowLog.DestIP, flowLog.DestPort, record),
-		Time:            flowLog.StartTime,
+		Time:            v1.NewEventTimestamp(flowLog.StartTime),
 		Type:            SuspiciousFlow,
 		Description:     description,
 		Severity:        Severity,
@@ -157,7 +157,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 	startTime := l.StartTime.Unix()
 	return v1.Event{
 		ID:              generateSuspiciousDNSDomainID(startTime, util.StrPtr(l.ClientIP), record),
-		Time:            startTime,
+		Time:            v1.NewEventTimestamp(startTime),
 		Type:            SuspiciousDNSQuery,
 		Description:     desc,
 		Severity:        Severity,

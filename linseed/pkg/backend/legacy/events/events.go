@@ -57,7 +57,13 @@ func (b *eventsBackend) Create(ctx context.Context, i bapi.ClusterInfo, events [
 	for _, event := range events {
 		id := event.ID
 		event.ID = ""
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(event).Id(id)
+		eventJson, err := json.Marshal(event)
+		if err != nil {
+			log.WithError(err).Warningf("Failed to marshal event and add it to the request %+v", event)
+			continue
+		}
+
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(string(eventJson)).Id(id)
 		bulk.Add(req)
 	}
 

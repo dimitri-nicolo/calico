@@ -84,7 +84,7 @@ An example to make a paginated query to read flow logs from the last 5 minutes i
 		ClientCertPath:  "<replace with Linseed Client Certificate Key>",
 		FIPSModeEnabled: true,
 	}
-	linseed, err := client.NewClient("<replace with Tenant ID or leave blank>", config)
+	linseed, err := client.NewClient("<replace with Tenant ID or leave blank>", config, rest.WithTokenPath("<replace with Token path>"))
 	if err != nil {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}

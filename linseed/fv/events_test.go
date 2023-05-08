@@ -78,7 +78,7 @@ func TestFV_Events(t *testing.T) {
 		// Create a basic event.
 		events := []v1.Event{
 			{
-				Time:        time.Now().Unix(),
+				Time:        v1.NewEventTimestamp(time.Now().Unix()),
 				Description: "A rather uneventful evening",
 				Origin:      "TODO",
 				Severity:    1,
@@ -114,7 +114,7 @@ func TestFV_Events(t *testing.T) {
 		// Create a basic event.
 		events := []v1.Event{
 			{
-				Time:        time.Now().Unix(),
+				Time:        v1.NewEventTimestamp(time.Now().Unix()),
 				Description: "A rather uneventful evening",
 				Origin:      "TODO",
 				Severity:    1,
@@ -176,7 +176,7 @@ func TestFV_Events(t *testing.T) {
 		for i := 0; i < 5; i++ {
 			events := []v1.Event{
 				{
-					Time: logTime + int64(i), // Make sure events are ordered.
+					Time: v1.NewEventTimestamp(logTime + int64(i)), // Make sure events are ordered.
 					Host: fmt.Sprintf("%d", i),
 				},
 			}
@@ -206,7 +206,7 @@ func TestFV_Events(t *testing.T) {
 			require.Equal(t, 1, len(resp.Items))
 			require.Equal(t, []v1.Event{
 				{
-					Time: logTime + int64(i),
+					Time: v1.NewEventTimestamp(logTime + int64(i)),
 					Host: fmt.Sprintf("%d", i),
 				},
 			}, testutils.AssertLogIDAndCopyEventsWithoutID(t, resp), fmt.Sprintf("Event #%d did not match", i))
@@ -248,7 +248,7 @@ func TestFV_EventsTenancy(t *testing.T) {
 		// an unexpected tenant ID on the request.
 		events := []v1.Event{
 			{
-				Time:        time.Now().Unix(),
+				Time:        v1.NewEventTimestamp(time.Now().Unix()),
 				Description: "A rather uneventful evening",
 				Origin:      "TODO",
 				Severity:    1,
