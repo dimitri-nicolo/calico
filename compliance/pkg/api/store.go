@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -334,6 +335,8 @@ func (c *complianceStore) RetrieveArchivedReportSummaries(ctx context.Context, q
 				panic(err)
 			}
 			params.TimeRange.To = t
+		} else {
+			params.TimeRange.To = time.Now()
 		}
 	}
 	for _, r := range q.Reports {
@@ -343,9 +346,28 @@ func (c *complianceStore) RetrieveArchivedReportSummaries(ctx context.Context, q
 		})
 	}
 
+	// Set the default page size
+	params.SetMaxPageSize(DefaultPageSize)
+
+	if q.Page > 0 {
+		actualPageSize := params.GetMaxPageSize()
+		if q.MaxItems != nil && *q.MaxItems != 0 {
+			actualPageSize = int(math.Min(float64(params.GetMaxPageSize()), float64(*q.MaxItems)))
+		}
+		params.SetAfterKey(map[string]interface{}{
+			"startFrom": q.Page * actualPageSize,
+		})
+	}
+
 	opts := []client.ListPagerOption[v1.ReportData]{}
 	if q.MaxItems != nil {
 		opts = append(opts, client.WithMaxResults[v1.ReportData](*q.MaxItems))
+
+		// If the maximum items we've been request to return is less than a single page,
+		// we should reduce the page size to match.
+		if *q.MaxItems < params.GetMaxPageSize() {
+			params.MaxPageSize = *q.MaxItems
+		}
 	}
 
 	lp := client.NewListPager(&params, opts...)
@@ -353,7 +375,8 @@ func (c *complianceStore) RetrieveArchivedReportSummaries(ctx context.Context, q
 
 	summary := ArchivedReportSummaries{}
 	for page := range pages {
-		summary.Count += int(page.TotalHits)
+		// TotalHits is actually the total items returned from Elastic and not the page size.
+		summary.Count = int(page.TotalHits)
 		for _, report := range page.Items {
 			summary.Reports = append(summary.Reports, reportToSummary(&report))
 		}
