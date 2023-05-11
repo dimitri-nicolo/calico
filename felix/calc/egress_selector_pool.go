@@ -117,7 +117,7 @@ func (esp *EgressSelectorPool) updateProfile(key model.ResourceKey, egress *v3.E
 	// Calculate the new selector
 	newSelector := ""
 	if egress != nil && egress.Gateway != nil {
-		newSelector = preprocessEgressSelector(egress.Gateway, key.Name)
+		newSelector = PreprocessEgressSelector(egress.Gateway, key.Name)
 	}
 
 	if newSelector == oldSelector {
@@ -161,7 +161,7 @@ func transformEGWRulesToSelectors(rules []v3.EgressGatewayRule) []string {
 	for _, r := range rules {
 		newSelector := ""
 		if r.Gateway != nil {
-			newSelector = preprocessEgressSelector(r.Gateway, "")
+			newSelector = PreprocessEgressSelector(r.Gateway, "")
 		}
 		newSelectors = append(newSelectors, newSelector)
 	}
