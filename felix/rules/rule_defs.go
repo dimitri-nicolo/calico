@@ -549,14 +549,12 @@ func NewRenderer(config Config) RuleRenderer {
 	var dropRules []iptables.Rule
 	var nfqueueRuleDelayDeniedPacket *iptables.Rule
 	if strings.HasPrefix(config.ActionOnDrop, "LOG") {
-		log.Warn("Action on drop includes LOG.  All dropped packets will be logged.")
+		log.Warnf("Action on drop includes LOG.  All dropped packets will be logged. %s", config.IptablesLogPrefix)
 		logPrefix := "calico-drop"
-		if config.IptablesLogPrefix != "" {
-			logPrefix = config.IptablesLogPrefix
-			if config.IncludeDropActionInPrefix {
-				logPrefix = config.IptablesLogPrefix + " " + config.ActionOnDrop
-			}
+		if config.IncludeDropActionInPrefix {
+			logPrefix = logPrefix + " " + config.ActionOnDrop
 		}
+
 		dropRules = append(dropRules, iptables.Rule{
 			Match:  iptables.Match(),
 			Action: iptables.LogAction{Prefix: logPrefix},

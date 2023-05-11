@@ -2113,9 +2113,9 @@ var _ = Describe("DropRules", func() {
 					conf.IptablesLogPrefix = "my-prefix"
 				})
 
-				It("should render a log and a drop", func() {
+				It("should render a log and a drop with calico-drop as prefix", func() {
 					Expect(rr.DropRules(Match().Protocol("tcp"))).To(Equal([]Rule{
-						{Match: Match().Protocol("tcp"), Action: LogAction{Prefix: "my-prefix"}},
+						{Match: Match().Protocol("tcp"), Action: LogAction{Prefix: "calico-drop"}},
 						{Match: Match().Protocol("tcp"), Action: denyAction},
 					}))
 				})
