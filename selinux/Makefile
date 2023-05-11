@@ -60,6 +60,7 @@ calico-selinux.el9.rpm: $(SRC_FILES) selinux-build.el9
 ###############################################################################
 # Clean
 ###############################################################################
+.PHONY: clean
 clean:
 	rm -f $(SELINUX_BUILD_CONTAINER_CREATED_EL8) $(SELINUX_BUILD_CONTAINER_CREATED_EL9)
 	rm -f *.pp
@@ -67,3 +68,20 @@ clean:
 	rm -fr tmp/
 	-docker image rm -f $$(docker images $(SELINUX_BUILD_IMAGE_EL8) -a -q)
 	-docker image rm -f $$(docker images $(SELINUX_BUILD_IMAGE_EL9) -a -q)
+
+###############################################################################
+# Tests
+###############################################################################
+ZONE ?= us-central1-a
+VM_PREFIX ?= $(USER)-selinux
+
+.PHONY: fv
+fv: build
+	fv/create-vm-and-install.sh $(ZONE) $(VM_PREFIX)
+	fv/run-tests.sh $(ZONE) $(VM_PREFIX)
+
+###############################################################################
+# CI
+###############################################################################
+.PHONY: ci
+ci: clean fv
