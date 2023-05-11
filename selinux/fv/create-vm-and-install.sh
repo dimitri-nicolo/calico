@@ -35,7 +35,7 @@ create_vm() {
 
 delete_vm() {
     echo "deleting $vm_name ..."
-    gcloud --quiet compute instances delete "$vm_name" --zone=$zone
+    gcloud --quiet compute instances delete "$vm_name" --zone="$zone"
 }
 
 copy_and_install() {
@@ -60,13 +60,12 @@ for attempt in $(seq 1 3); do
             exit 0
         fi
 
-        echo "failed to copy and install calico selinux package. tearing it down ..."
-        delete_vm
-        exit 1
+        echo "failed to copy and install calico selinux package."
     else
-        echo "failed to create or ssh into $vm_name. tearing it down ..."
-        delete_vm
+        echo "failed to create or ssh into $vm_name."
     fi
+
+    delete_vm
 done
 
 echo "out of retries."
