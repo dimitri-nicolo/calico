@@ -23,8 +23,8 @@ import (
 )
 
 // maxBulkBytes represents the maximum bytes an HTTP request body on a bulk request can have.
-// We cap this out at 10MB - the largest chunk size that fluentd will send is 8MB.
-const maxBulkBytes = 10 * 1000000
+// We cap this out at 100MB - the default value set by Elastic for an HTTP request.
+const maxBulkBytes = 100 * 1000000
 
 // newlineJsonContent is the supported content type
 // for bulk APIs
