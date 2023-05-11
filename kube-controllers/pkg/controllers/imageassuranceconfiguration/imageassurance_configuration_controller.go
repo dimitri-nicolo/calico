@@ -61,6 +61,7 @@ func New(
 		scannerCLITokenSecretName:          cfg.ScannerCLITokenSecretName,
 		operatorClusterRoleName:            cfg.OperatorCloudClusterRoleName,
 		runtimeCleanerClusterRoleName:      cfg.RuntimeCleanerClusterRoleName,
+		clusterScannerClusterRoleName:      cfg.ClusterScannerClusterRoleName,
 	}
 
 	// The high requeue attempts is because it's unlikely we would receive an event after failure to re trigger a
@@ -110,6 +111,12 @@ func New(
 		w.AddWatch(
 			cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", r.imageAssuranceNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ManagedIACRAdaptorResourceName))),
+			&corev1.Secret{}, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		)
+
+		w.AddWatch(
+			cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", r.imageAssuranceNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ManagedClusterScannerResourceName))),
 			&corev1.Secret{}, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 
@@ -164,6 +171,22 @@ func New(
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat,
+					r.clusterName)))),
+			&corev1.Secret{},
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		)
+
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", fmt.Sprintf(resource.ManagementClusterScannerResourceNameFormat,
+					r.clusterName)))),
+			&corev1.ServiceAccount{},
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		)
+
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", fmt.Sprintf(resource.ManagementClusterScannerResourceNameFormat,
 					r.clusterName)))),
 			&corev1.Secret{},
 			worker.ResourceWatchUpdate, worker.ResourceWatchDelete,

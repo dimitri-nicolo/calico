@@ -45,6 +45,7 @@ type reconciler struct {
 
 	admissionControllerClusterRoleName string
 	crAdaptorClusterRoleName           string
+	clusterScannerClusterRoleName      string
 	intrusionDetectionClusterRoleName  string
 	scannerClusterRoleName             string
 	scannerCLIClusterRoleName          string
@@ -110,6 +111,11 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 
 		if err := c.reconcileCRAdaptorToken(); err != nil {
 			reqLogger.Errorf("error reconciling cr adaptor secrets %+v", err)
+			return err
+		}
+
+		if err := c.reconcileClusterScannerToken(); err != nil {
+			reqLogger.Errorf("error reconciling cluster scanner secrets %+v", err)
 			return err
 		}
 	}
@@ -206,6 +212,20 @@ func (c *reconciler) reconcileClusterRoleBindings() error {
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, crb); err != nil {
 			return err
 		}
+
+		// Check that the cluster role name has been set before attempting to create the role binding, so we don't generate
+		// an error. This makes it so that we can commit this change without requiring that operator-cloud is updated simultaneously
+		// to fill in the cluster role name.
+		//
+		// Note that this probably should have been done for all creating any cluster role bindings, but since this code
+		// is moving do to operator cloud refactoring it doesn't seem prudent at this point.
+		if c.clusterScannerClusterRoleName != "" {
+			mgmtResourceName = fmt.Sprintf(resource.ManagementClusterScannerResourceNameFormat, c.clusterName)
+			crb = getClusterRoleBindingDefinition(mgmtResourceName, c.clusterScannerClusterRoleName, mgmtResourceName, c.managementOperatorNamespace)
+			if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, crb); err != nil {
+				return err
+			}
+		}
 	}
 
 	// Intrusion detection controller, scanner, pod watcher only runs in the management cluster
@@ -289,6 +309,26 @@ func (c *reconciler) reconcileCRAdaptorToken() error {
 
 	// Copy the same secret to managed cluster with well known name and token data.
 	mngdSecret := c.getSecretDefinition(resource.ManagedIACRAdaptorResourceName, c.imageAssuranceNamespace, secret.Data)
+	if err := resource.WriteSecretToK8s(c.managedK8sCLI, mngdSecret); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// reconcileClusterScannerToken creates a service account and secret for the cluster scanner in the management cluster
+// using token request API, and then copies the secret to the managed cluster with a well-known name
+// (tigera-image-assurance-cluster-scanner-api-access) to be used by the CR adaptor.
+func (c *reconciler) reconcileClusterScannerToken() error {
+	mgmtClusterResourceName := fmt.Sprintf(resource.ManagementClusterScannerResourceNameFormat, c.clusterName)
+
+	_, secret, err := c.createServiceAccountWithToken(mgmtClusterResourceName, mgmtClusterResourceName, c.managementOperatorNamespace)
+	if err != nil {
+		return err
+	}
+
+	// Copy the same secret to managed cluster with well known name and token data.
+	mngdSecret := c.getSecretDefinition(resource.ManagedClusterScannerResourceName, c.imageAssuranceNamespace, secret.Data)
 	if err := resource.WriteSecretToK8s(c.managedK8sCLI, mngdSecret); err != nil {
 		return err
 	}
