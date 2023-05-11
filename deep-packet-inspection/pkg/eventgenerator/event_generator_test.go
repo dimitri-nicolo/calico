@@ -96,7 +96,7 @@ var _ = Describe("File Parser", func() {
 		destIP := "10.28.0.13"
 		destPort := ""
 		event := lsv1.Event{
-			Time:          1630343977,
+			Time:          lsv1.NewEventTimestamp(1630343977),
 			Type:          "deep_packet_inspection",
 			Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
 			Severity:      100,
@@ -184,7 +184,7 @@ var _ = Describe("File Parser", func() {
 		destIP := "10.28.0.13"
 		destPort := ""
 		event := lsv1.Event{
-			Time:          1630343977,
+			Time:          lsv1.NewEventTimestamp(1630343977),
 			Type:          "deep_packet_inspection",
 			Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
 			Severity:      100,
@@ -236,7 +236,7 @@ var _ = Describe("File Parser", func() {
 		destIP := "10.28.0.13"
 		destPort := ""
 		event1 := lsv1.Event{
-			Time:          1630343977,
+			Time:          lsv1.NewEventTimestamp(1630343977),
 			Type:          "deep_packet_inspection",
 			Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
 			Severity:      100,
@@ -252,7 +252,7 @@ var _ = Describe("File Parser", func() {
 		event1.ID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event1.SourceIP, srcPort, *event1.DestIP, destPort, event1.Host)
 
 		event2 := lsv1.Event{
-			Time:          1630343977,
+			Time:          lsv1.NewEventTimestamp(1630343977),
 			Type:          "deep_packet_inspection",
 			Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
 			Severity:      100,

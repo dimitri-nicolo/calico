@@ -388,17 +388,17 @@ func (e *Service) QueryDomainNameSet(ctx context.Context, domainNameSet DomainNa
 		queries = append(queries, queryEntry[lsv1.DNSLog, lsv1.DNSLogParams]{
 			key:         QueryKeyDNSLogQName,
 			queryParams: matchQname,
-			listPager:   client.NewListPager[lsv1.DNSLog](&matchQname), listFn: e.lsClient.DNSLogs("cluster").List,
+			listPager:   client.NewListPager[lsv1.DNSLog](&matchQname), listFn: e.lsClient.DNSLogs(e.clusterName).List,
 		})
 		matchRRSet := dnsLogParams(tr, lsv1.DomainMatchRRSet, t)
 		queries = append(queries, queryEntry[lsv1.DNSLog, lsv1.DNSLogParams]{
 			key:       QueryKeyDNSLogRRSetsName,
-			listPager: client.NewListPager[lsv1.DNSLog](&matchRRSet), listFn: e.lsClient.DNSLogs("cluster").List,
+			listPager: client.NewListPager[lsv1.DNSLog](&matchRRSet), listFn: e.lsClient.DNSLogs(e.clusterName).List,
 		})
 		matchRRData := dnsLogParams(tr, lsv1.DomainMatchRRData, t)
 		queries = append(queries, queryEntry[lsv1.DNSLog, lsv1.DNSLogParams]{
 			key:       QueryKeyDNSLogRRSetsRData,
-			listPager: client.NewListPager[lsv1.DNSLog](&matchRRData), listFn: e.lsClient.DNSLogs("cluster").List,
+			listPager: client.NewListPager[lsv1.DNSLog](&matchRRData), listFn: e.lsClient.DNSLogs(e.clusterName).List,
 		})
 	}
 

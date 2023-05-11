@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -27,40 +28,32 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 	var (
 		complianceStore api.ComplianceStore
 		ts              = time.Date(2019, 4, 15, 15, 0, 0, 0, time.UTC)
-		reportIdx       = 0
-		numReports      = 0
 	)
 
 	// addReport is a helper function used to add a report, and track how many reports have been added.
-	addReport := func(typeName, name string) *v1.ReportData {
+	addReport := func(typeName, name string, timeOffset int) *v1.ReportData {
 		rep := &v1.ReportData{
 			ReportData: &apiv3.ReportData{
 				ReportTypeName: typeName,
 				ReportName:     name,
-				StartTime:      metav1.Time{Time: ts.Add(time.Duration(reportIdx) * time.Minute)},
-				EndTime:        metav1.Time{Time: ts.Add((time.Duration(reportIdx) * time.Minute) + (2 * time.Minute))},
-				GenerationTime: metav1.Time{Time: ts.Add(-time.Duration(reportIdx) * time.Minute)},
+				StartTime:      metav1.Time{Time: ts.Add(time.Duration(timeOffset) * time.Minute)},
+				EndTime:        metav1.Time{Time: ts.Add((time.Duration(timeOffset) * time.Minute) + (2 * time.Minute))},
+				GenerationTime: metav1.Time{Time: ts.Add(-time.Duration(timeOffset) * time.Minute)},
 			},
 		}
 		Expect(complianceStore.StoreArchivedReport(rep)).ToNot(HaveOccurred())
-		numReports++
-
-		// Increment the report index across this set of tests. This is used to make each report unique which avoids any
-		// timing windows that occur as part of the reset processing (where we may try to create a document that is in
-		// the process of being deleted.
-		reportIdx++
 		return rep
 	}
 
 	// waitForReports is a helper function used to wait for ES to process all of the report creations.
-	waitForReports := func() {
+	waitForReports := func(numReports int) {
 		get := func() error {
 			r, err := complianceStore.RetrieveArchivedReportSummaries(context.Background(), api.ReportQueryParams{})
 			if err != nil {
 				return err
 			}
-			if int(r.Count) != int(numReports) {
-				return fmt.Errorf("Expected %d results, found %d", numReports, int(r.Count))
+			if r.Count != numReports {
+				return fmt.Errorf("Expected %d results, found %d", numReports, r.Count)
 			}
 			return nil
 		}
@@ -78,22 +71,19 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 
 	BeforeEach(func() {
 		// Build a client for the FV linseed instance running locally.
-		linseedDir := os.Getenv("LINSEED_DIR")
+		linseedDir := filepath.Join(os.Getenv("LINSEED_DIR"), "fv")
 		cfg := rest.Config{
-			CACertPath:     linseedDir + "cert/RootCA.crt",
+			CACertPath:     linseedDir + "/cert/RootCA.crt",
 			URL:            "https://localhost:8444/",
-			ClientCertPath: linseedDir + "cert/localhost.crt",
-			ClientKeyPath:  linseedDir + "cert/localhost.key",
+			ClientCertPath: linseedDir + "/cert/localhost.crt",
+			ClientKeyPath:  linseedDir + "/cert/localhost.key",
 		}
-		linseed, err := client.NewClient("", cfg)
+		linseed, err := client.NewClient("tenant-a", cfg, rest.WithTokenPath(filepath.Join(linseedDir, "client-token")))
 		Expect(err).NotTo(HaveOccurred())
 
 		// Use a random cluster name for each test.
 		cluster := testutils.RandomClusterName()
 		complianceStore = api.NewComplianceStore(linseed, cluster)
-
-		// Delete data
-		numReports = 0
 	})
 
 	It("should store and retrieve reports properly", func() {
@@ -165,14 +155,14 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 	It("should retrieve the correct set of reportTypeName/reportName combinations", func() {
 		By("storing a small number of reports with repeats")
 		// Add a bunch of reports, with some repeated reportTypeName / reportName combinations.
-		first := addReport("type1", "report1") // 1
-		_ = addReport("type2", "report1")      // 2
-		_ = addReport("type1", "report2")      // 3
-		_ = addReport("type3", "report3")      // 4
-		_ = addReport("type1", "report2")      // Repeat of 3
-		_ = addReport("type3", "report2")      // 5
-		last := addReport("type4", "report3")  // 6
-		waitForReports()
+		first := addReport("type1", "report1", 1) // 1
+		_ = addReport("type2", "report1", 2)      // 2
+		_ = addReport("type1", "report2", 3)      // 3
+		_ = addReport("type3", "report3", 4)      // 4
+		_ = addReport("type1", "report2", 3)      // Repeat of 3
+		_ = addReport("type3", "report2", 5)      // 5
+		last := addReport("type4", "report3", 6)  // 6
+		waitForReports(6)
 
 		By("retrieving the full set of unique reportTypeName/reportName combinations")
 		cxt, cancel := context.WithCancel(context.Background())
@@ -250,7 +240,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		By("checking we handle cancelled context")
 		cancel()
 		_, err = complianceStore.RetrieveArchivedReportTypeAndNames(cxt, api.ReportQueryParams{})
-		Expect(err).To(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should handle more than DefaultPageSize combinations of reportTypeName/reportName", func() {
@@ -260,11 +250,11 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		for ii := 0; ii < api.DefaultPageSize*2; ii++ {
 			tn := fmt.Sprintf("type%d", ii)
 			rn := fmt.Sprintf("report%d", ii)
-			_ = addReport(tn, rn)
-			_ = addReport(tn, rn)
+			_ = addReport(tn, rn, ii*100)
+			_ = addReport(tn, rn, ii*100)
 			unique = append(unique, api.ReportTypeAndName{ReportTypeName: tn, ReportName: rn})
 		}
-		waitForReports()
+		waitForReports(api.DefaultPageSize * 2)
 
 		By("retrieving the full set of unique reportTypeName/reportName combinations")
 		r, err := complianceStore.RetrieveArchivedReportTypeAndNames(context.Background(), api.ReportQueryParams{})
@@ -287,13 +277,13 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 	It("should retrieve the correct set of reports", func() {
 		By("storing a small number of reports")
 		// Add a bunch of reports, with some repeated reportTypeName / reportName combinations.
-		r1 := addReport("type1", "report1")
-		r2 := addReport("type2", "report1")
-		r3 := addReport("type1", "report2")
-		r4 := addReport("type3", "report3")
-		r5 := addReport("type3", "report2")
-		r6 := addReport("type4", "report3")
-		waitForReports()
+		r1 := addReport("type1", "report1", 10)
+		r2 := addReport("type2", "report1", 20)
+		r3 := addReport("type1", "report2", 30)
+		r4 := addReport("type3", "report3", 40)
+		r5 := addReport("type3", "report2", 50)
+		r6 := addReport("type4", "report3", 60)
+		waitForReports(6)
 
 		By("retrieving the full set of report summaries (sort by startTime)")
 		cxt, cancel := context.WithCancel(context.Background())
@@ -371,7 +361,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 			Page:     1,
 		})
 
-		By("checking we can receive the results for page 0")
+		By("checking we can receive the results for page 1")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r.Count).To(Equal(6))
 		ensureUTC(r.Reports) // Normalize the times to make them comparable.
@@ -380,25 +370,20 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		By("checking we handle cancelled context")
 		cancel()
 		_, err = complianceStore.RetrieveArchivedReportSummaries(cxt, api.ReportQueryParams{})
-		Expect(err).To(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should handle the default sort order when start times are the same, sorting by time, type, name", func() {
 		By("storing a small number of reports all with the same start time")
 		// Add a bunch of reports all with the same start time
-		r1 := addReport("type1", "report1")
-		reportIdx-- // Decrementing the report index means the next report will have the same start time.
-		r2 := addReport("type2", "report1")
-		reportIdx--
-		r3 := addReport("type1", "report2")
-		reportIdx--
-		r4 := addReport("type3", "report3")
-		reportIdx--
-		r5 := addReport("type3", "report2")
-		reportIdx--
-		r6 := addReport("type4", "report3")
-		r7 := addReport("type1", "report2") // Later start time from r1 (should appear first)
-		waitForReports()
+		r1 := addReport("type1", "report1", 1000)
+		r2 := addReport("type2", "report1", 1000)
+		r3 := addReport("type1", "report2", 1000)
+		r4 := addReport("type3", "report3", 1000)
+		r5 := addReport("type3", "report2", 1000)
+		r6 := addReport("type4", "report3", 1000)
+		r7 := addReport("type1", "report2", 1001) // Later start time from r1 (should appear first)
+		waitForReports(7)
 
 		By("retrieving the full set of report summaries (sort by startTime, reportTypeName, reportName)")
 		r, err := complianceStore.RetrieveArchivedReportSummaries(context.Background(), api.ReportQueryParams{

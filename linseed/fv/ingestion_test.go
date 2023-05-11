@@ -524,3 +524,51 @@ func TestFV_Ingestion(t *testing.T) {
 		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
 	})
 }
+
+func TestFV_AnomalyDetectionEventsIngestion(t *testing.T) {
+	addr := "https://localhost:8444/api/v1/events/bulk"
+	tenant := "tenant-a"
+	expectedResponse := `{"failed":0, "succeeded":1, "total":1}`
+	indexPrefix := "tigera_secure_ee_events.tenant-a."
+
+	t.Run("ingest anomaly detection events via bulk API with production data", func(t *testing.T) {
+		defer ingestionSetupAndTeardown(t, indexPrefix)()
+
+		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(anomalyDetectionEvent))
+		httpClient := mTLSClient(t)
+
+		// make the request to ingest anomaly detection alerts
+		res, resBody := doRequest(t, httpClient, spec)
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		require.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
+
+		// Force a refresh in order to read the newly ingested data
+		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
+		_, err := esClient.Refresh(index).Do(ctx)
+		require.NoError(t, err)
+
+		endTime, err := time.Parse(time.RFC3339, "2023-04-28T19:38:14+00:00")
+		require.NoError(t, err)
+		startTime, err := time.Parse(time.RFC3339, "2023-04-28T19:37:14+00:00")
+		require.NoError(t, err)
+
+		params := v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: startTime,
+					To:   endTime,
+				},
+			},
+		}
+
+		resultList, err := cli.Events(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.NotNil(t, resultList)
+
+		require.Equal(t, int64(1), resultList.TotalHits)
+		expectedEvent := v1.Event{}
+		err = json.Unmarshal([]byte(anomalyDetectionEvent), &expectedEvent)
+		require.NoError(t, err)
+		assert.Equal(t, []v1.Event{expectedEvent}, testutils.AssertLogIDAndCopyEventsWithoutID(t, resultList))
+	})
+}

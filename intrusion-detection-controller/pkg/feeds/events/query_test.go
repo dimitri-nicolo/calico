@@ -55,6 +55,7 @@ func TestSuspiciousIP_Success(t *testing.T) {
 	expected := []v1.Event{
 		{
 			ID:            "test_0__1.2.3.4_333_2.3.4.5_333",
+			Time:          v1.NewEventTimestamp(0),
 			Description:   "suspicious IP 1.2.3.4 from list test connected to wep default/dest",
 			Type:          SuspiciousFlow,
 			Severity:      Severity,
@@ -72,6 +73,7 @@ func TestSuspiciousIP_Success(t *testing.T) {
 		},
 		{
 			ID:              "test_0__5.6.7.8_333_2.3.4.5_333",
+			Time:            v1.NewEventTimestamp(0),
 			Description:     "wep default/source connected to suspicious IP 2.3.4.5 from list test",
 			Type:            SuspiciousFlow,
 			Severity:        Severity,

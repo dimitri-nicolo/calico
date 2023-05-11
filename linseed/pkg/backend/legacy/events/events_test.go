@@ -75,7 +75,7 @@ func TestCreateEvent(t *testing.T) {
 
 	// The event to create
 	event := v1.Event{
-		Time:            time.Now().Unix(),
+		Time:            v1.NewEventTimestamp(time.Now().Unix()),
 		Description:     "Just a city event",
 		Origin:          "South Detroit",
 		Severity:        1,
@@ -229,7 +229,7 @@ func TestEventSelector(t *testing.T) {
 
 	// The event to create
 	event := v1.Event{
-		Time:            time.Now().Unix(),
+		Time:            v1.NewEventTimestamp(time.Now().Unix()),
 		Description:     "Just a city event",
 		Origin:          "South Detroit",
 		Severity:        1,
@@ -346,7 +346,7 @@ func TestPagination(t *testing.T) {
 	listSize := 21
 	// The event to create
 	event := v1.Event{
-		Time:            time.Now().Unix(),
+		Time:            v1.NewEventTimestamp(time.Now().Unix()),
 		Description:     "Just a city event",
 		Origin:          "South Detroit",
 		Severity:        1,
@@ -436,7 +436,7 @@ func TestSorting(t *testing.T) {
 	events := make([]v1.Event, 0, listSize)
 	for i := 0; i < listSize; i++ {
 		event := v1.Event{
-			Time:         createTime[i].Unix(),
+			Time:         v1.NewEventTimestamp(createTime[i].Unix()),
 			Description:  "Just a city event",
 			Origin:       "South Detroit",
 			Severity:     1,
@@ -532,7 +532,7 @@ func TestDismissEvent(t *testing.T) {
 	defer setupTest(t)()
 	// The event to create
 	event := v1.Event{
-		Time:            time.Now().Unix(),
+		Time:            v1.NewEventTimestamp(time.Now().Unix()),
 		Description:     "Just a city event",
 		Origin:          "South Detroit",
 		Severity:        1,
@@ -638,7 +638,7 @@ func TestDeleteEvent(t *testing.T) {
 	defer setupTest(t)()
 	// The event to create
 	event := v1.Event{
-		Time:            time.Now().Unix(),
+		Time:            v1.NewEventTimestamp(time.Now().Unix()),
 		Description:     "Just a city event",
 		Origin:          "South Detroit",
 		Severity:        1,

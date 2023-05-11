@@ -66,7 +66,7 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 	}
 	expected := v1.Event{
 		ID:              "testfeed_123_tcp_1.2.3.4_443_2.3.4.5_80",
-		Time:            123,
+		Time:            v1.NewEventTimestamp(123),
 		Type:            SuspiciousFlow,
 		Description:     "suspicious IP 1.2.3.4 from list testfeed connected to net internet/dest-foo",
 		Severity:        Severity,
@@ -139,7 +139,7 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 	}
 	expected := v1.Event{
 		ID:              "testfeed_123_tcp_1.2.3.4_443_2.3.4.5_80",
-		Time:            123,
+		Time:            v1.NewEventTimestamp(123),
 		Type:            SuspiciousFlow,
 		Description:     "wep mock/source-foo connected to suspicious IP 2.3.4.5 from list testfeed",
 		Severity:        Severity,
@@ -212,7 +212,7 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 	}
 	expected := v1.Event{
 		ID:              "testfeed_123_tcp_1.2.3.4_443_2.3.4.5_80",
-		Time:            123,
+		Time:            v1.NewEventTimestamp(123),
 		Type:            SuspiciousFlow,
 		Description:     "hep 1.2.3.4 connected to ns 2.3.4.5",
 		Severity:        Severity,
@@ -274,7 +274,7 @@ func TestConvertDNSLog_QName(t *testing.T) {
 	}
 	expected := v1.Event{
 		ID:              "test-feed_1_20.21.22.23_www.badguys.co.uk",
-		Time:            1,
+		Time:            v1.NewEventTimestamp(1),
 		Type:            SuspiciousDNSQuery,
 		Description:     "default/client-8888-34 queried the domain name www.badguys.co.uk from global threat feed(s) test-feed",
 		Severity:        Severity,
@@ -346,7 +346,7 @@ func TestConvertDNSLog_RRSetName(t *testing.T) {
 	}
 	expected := v1.Event{
 		ID:              "test-feed~my-feed_1_20.21.22.23_www1.badguys-backend.co.uk",
-		Time:            1,
+		Time:            v1.NewEventTimestamp(1),
 		Type:            SuspiciousDNSQuery,
 		Description:     "default/client-8888-* got DNS query results including suspicious domain(s) www1.badguys-backend.co.uk from global threat feed(s) test-feed, my-feed",
 		Severity:        Severity,
@@ -434,7 +434,7 @@ func TestConvertDNSLog_RRSetRData(t *testing.T) {
 	}
 	expected := v1.Event{
 		ID:              "test-feed_1_20.21.22.23_uef0.malh0st.io",
-		Time:            1,
+		Time:            v1.NewEventTimestamp(1),
 		Type:            SuspiciousDNSQuery,
 		Description:     "default/client-8888-* got DNS query results including suspicious domain(s) uef0.malh0st.io from global threat feed(s) test-feed",
 		Severity:        Severity,

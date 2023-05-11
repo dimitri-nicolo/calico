@@ -225,7 +225,7 @@ clean:
 .PHONY: ut
 ut combined.coverprofile: run-elastic run-linseed
 	@echo Running Go UTs.
-	$(DOCKER_RUN) -e LINSEED_DIR=$(PWD)/../linseed $(CALICO_BUILD) utils/run-coverage sh -c '$(GIT_CONFIG_SSH)'
+	$(DOCKER_RUN) -e LINSEED_DIR=/go/src/github.com/projectcalico/calico/linseed $(CALICO_BUILD) utils/run-coverage sh -c '$(GIT_CONFIG_SSH)'
 
 run-linseed:
 	$(MAKE) -C ../linseed image run-image

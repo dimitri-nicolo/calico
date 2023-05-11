@@ -586,7 +586,7 @@ func (e *service) convert(record JsonObject) lsv1.Event {
 	description := e.substituteDescriptionContents(record)
 	eventData := extractEventData(record)
 
-	eventData.Time = time.Now().Unix()
+	eventData.Time = lsv1.NewEventTimestamp(time.Now().Unix())
 	eventData.Type = AlertEventType
 	eventData.Description = description
 	eventData.Severity = e.globalAlert.Spec.Severity

@@ -6,7 +6,6 @@ import (
 	"context"
 	"regexp"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -232,7 +231,7 @@ func parseTigeraEvent(item lapi.Event) *Event {
 		Details: v1.GraphEventDetails{
 			Severity:    &sev,
 			Description: item.Description,
-			Timestamp:   &metav1.Time{Time: time.Unix(0, item.Time)},
+			Timestamp:   &metav1.Time{Time: item.Time.GetTime()},
 		},
 	}
 

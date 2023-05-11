@@ -59,6 +59,9 @@ type listPager[T any] struct {
 
 func (p *listPager[T]) PageFunc(f ListFunc[T]) PageFunc[T] {
 	var afterKey map[string]interface{}
+	if p.params.GetAfterKey() != nil {
+		afterKey = p.params.GetAfterKey()
+	}
 	var done bool
 
 	return func() (*v1.List[T], bool, error) {
@@ -129,7 +132,7 @@ func (p *listPager[T]) Stream(ctx context.Context, f ListFunc[T]) (<-chan v1.Lis
 					// Result limiting enabled.
 					if sent+p.params.GetMaxPageSize() > p.maxResults {
 						// Another full page would put us over the limit, so return now.
-						logrus.Debugf("stream sent max results, terminating")
+						logrus.Debug("Max number of results on Linseed query reached, returning")
 						return
 					}
 				}

@@ -1025,6 +1025,31 @@ blocks:
       commands:
       - make ci
 
+- name: selinux
+  run:
+    when: "false or change_in(['/selinux/'])"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: google-service-account-for-gce
+    prologue:
+      commands:
+      - cd selinux
+      - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
+      - export REPO_NAME=$(basename $(pwd))
+      - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+      - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-selinux
+      - export ZONE=europe-west3-c
+      - echo VM_PREFIX=${VM_PREFIX}
+    jobs:
+    - name: "SELinux FV tests"
+      commands:
+      - make ci
+    epilogue:
+      always:
+        commands:
+        - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
+
 - name: 'ts-queryserver'
   run:
     when: "false or change_in(['/*', '/ts-queryserver/', '/api/', '/calicoctl/', '/felix/', '/lma/', '/libcalico-go/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

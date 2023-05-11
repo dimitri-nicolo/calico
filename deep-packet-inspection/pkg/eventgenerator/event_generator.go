@@ -228,7 +228,7 @@ func (r *eventGenerator) convertAlertToSecurityEvent(alertText string) v1.Event 
 	} else {
 		index++
 		// Time format in ElasticSearch events index is epoch_second
-		event.Time = tm.Unix()
+		event.Time = v1.NewEventTimestamp(tm.Unix())
 	}
 
 	// skip through all optional fields till we get to signature information

@@ -1272,7 +1272,7 @@ func verifyEventWrites(requests []rest.MockRequest, expectedEvents []lsv1.Event)
 			actualRecords = append(actualRecords, event.Record)
 			event.Record = nil
 			// Alter time in order to allow a match using the assertion framework
-			event.Time = time.Unix(0, 0).UTC().Unix()
+			event.Time = lsv1.NewEventTimestamp(time.Unix(0, 0).UTC().Unix())
 			actualEvents = append(actualEvents, event)
 		}
 	}
@@ -1380,7 +1380,7 @@ func expectedEvents(name string) []lsv1.Event {
 			break
 		}
 		Expect(err).ShouldNot(HaveOccurred())
-		event.Time = time.Unix(0, 0).Unix()
+		event.Time = lsv1.NewEventTimestamp(time.Unix(0, 0).Unix())
 		events = append(events, event)
 	}
 	return events
