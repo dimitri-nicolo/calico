@@ -60,7 +60,7 @@ func (b *reportsBackend) List(ctx context.Context, i bapi.ClusterInfo, p *v1.Rep
 	return &v1.List[v1.ReportData]{
 		Items:     logs,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextStartFromAfterKey(p, len(results.Hits.Hits), startFrom),
+		AfterKey:  logtools.NextStartFromAfterKey(p, len(results.Hits.Hits), startFrom, results.TotalHits()),
 	}, nil
 }
 

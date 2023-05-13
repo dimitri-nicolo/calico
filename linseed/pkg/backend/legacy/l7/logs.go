@@ -145,7 +145,7 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.L7L
 	return &v1.List[v1.L7Log]{
 		Items:     logs,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom),
+		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
 	}, nil
 }
 

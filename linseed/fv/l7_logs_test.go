@@ -132,9 +132,11 @@ func TestL7_FlowLogs(t *testing.T) {
 	t.Run("should support pagination", func(t *testing.T) {
 		defer l7logSetupAndTeardown(t)()
 
+		totalItems := 5
+
 		// Create 5 flow logs.
 		logTime := time.Now().UTC().Unix()
-		for i := 0; i < 5; i++ {
+		for i := 0; i < totalItems; i++ {
 			logs := []v1.L7Log{
 				{
 					StartTime: logTime,
@@ -150,9 +152,9 @@ func TestL7_FlowLogs(t *testing.T) {
 		// Refresh elasticsearch so that results appear.
 		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_l7*")
 
-		// Read them back one at a time.
+		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
-		for i := 0; i < 5; i++ {
+		for i := 0; i < totalItems-1; i++ {
 			params := v1.L7LogParams{
 				QueryParams: v1.QueryParams{
 					TimeRange: &lmav1.TimeRange{
@@ -174,14 +176,17 @@ func TestL7_FlowLogs(t *testing.T) {
 				},
 			}, resp.Items, fmt.Sprintf("L7 #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
-			require.Equal(t, resp.TotalHits, int64(5))
+			require.Contains(t, resp.AfterKey, "startFrom")
+			require.Equal(t, resp.AfterKey["startFrom"], float64(i+1))
+			require.Equal(t, resp.TotalHits, int64(totalItems))
 
 			// Use the afterKey for the next query.
 			afterKey = resp.AfterKey
 		}
 
-		// If we query once more, we should get no results, and no afterkey, since
+		// If we query once more, we should get the last page, and no afterkey, since
 		// we have paged through all the items.
+		lastItem := totalItems - 1
 		params := v1.L7LogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -194,7 +199,18 @@ func TestL7_FlowLogs(t *testing.T) {
 		}
 		resp, err := cli.L7Logs(cluster).List(ctx, &params)
 		require.NoError(t, err)
-		require.Equal(t, 0, len(resp.Items))
+		require.Equal(t, 1, len(resp.Items))
+		require.Equal(t, []v1.L7Log{
+			{
+				StartTime: logTime,
+				EndTime:   logTime + int64(lastItem),
+				Host:      fmt.Sprintf("%d", lastItem),
+			},
+		}, resp.Items, fmt.Sprintf("L7 #%d did not match", lastItem))
+		require.Equal(t, resp.TotalHits, int64(totalItems))
+
+		// Once we reach the end of the data, we should not receive
+		// an afterKey
 		require.Nil(t, resp.AfterKey)
 	})
 }

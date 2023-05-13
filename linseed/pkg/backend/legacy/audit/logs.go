@@ -127,7 +127,7 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 	return &v1.List[v1.AuditLog]{
 		TotalHits: results.TotalHits(),
 		Items:     auditLogs,
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom),
+		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
 	}, nil
 }
 

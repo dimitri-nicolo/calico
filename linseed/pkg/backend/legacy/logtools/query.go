@@ -93,16 +93,21 @@ func StartFrom(opts v1.Params) (int, error) {
 
 // NextStartFromAfterKey generates an AfterKey to use for log queries that use startFrom to pass
 // the document index from which to start the next page of results.
-func NextStartFromAfterKey(opts v1.Params, numHits, prevStartFrom int) map[string]interface{} {
+func NextStartFromAfterKey(opts v1.Params, numHits, prevStartFrom int, totalHits int64) map[string]interface{} {
 	var ak map[string]interface{}
-	if numHits < opts.GetMaxPageSize() {
+
+	// Calculate the next starting point using the value received in the request
+	// and the current hits returned on the query
+	nextStartFrom := prevStartFrom + numHits
+
+	if numHits < opts.GetMaxPageSize() || nextStartFrom >= int(totalHits) {
 		// We fully satisfied the request, no afterkey.
 		ak = nil
 	} else {
 		// There are more hits, return an afterKey the client can use for pagination.
 		// We add the number of hits to the start from provided on the request, if any.
 		ak = map[string]interface{}{
-			"startFrom": prevStartFrom + numHits,
+			"startFrom": nextStartFrom,
 		}
 	}
 	return ak

@@ -176,9 +176,10 @@ func TestFV_AuditEE(t *testing.T) {
 	t.Run("should support pagination for EE Audit", func(t *testing.T) {
 		defer auditSetupAndTeardown(t)()
 
+		totalItems := 5
 		// Create 5 audit logs.
 		logTime := time.Unix(100, 0).UTC()
-		for i := 0; i < 5; i++ {
+		for i := 0; i < totalItems; i++ {
 			logs := []v1.AuditLog{
 				{
 					Event: audit.Event{
@@ -195,9 +196,9 @@ func TestFV_AuditEE(t *testing.T) {
 		// Refresh elasticsearch so that results appear.
 		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_ee*")
 
-		// Read them back one at a time.
+		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
-		for i := 0; i < 5; i++ {
+		for i := 0; i < totalItems-1; i++ {
 			params := v1.AuditLogParams{
 				QueryParams: v1.QueryParams{
 					TimeRange: &lmav1.TimeRange{
@@ -221,19 +222,22 @@ func TestFV_AuditEE(t *testing.T) {
 				},
 			}, auditLogsWithUTCTime(resp), fmt.Sprintf("Audit Log EE #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
-			require.Equal(t, resp.TotalHits, int64(5))
+			require.Contains(t, resp.AfterKey, "startFrom")
+			require.Equal(t, resp.AfterKey["startFrom"], float64(i+1))
+			require.Equal(t, resp.TotalHits, int64(totalItems))
 
 			// Use the afterKey for the next query.
 			afterKey = resp.AfterKey
 		}
 
-		// If we query once more, we should get no results, and no afterkey, since
+		// If we query once more, we should get the last page, and no afterkey, since
 		// we have paged through all the items.
+		lastItem := totalItems - 1
 		params := v1.AuditLogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
-					From: logTime.UTC().Add(-5 * time.Second),
-					To:   logTime.UTC().Add(5 * time.Second),
+					From: logTime.Add(-5 * time.Second),
+					To:   logTime.Add(5 * time.Second),
 				},
 				MaxPageSize: 1,
 				AfterKey:    afterKey,
@@ -242,16 +246,30 @@ func TestFV_AuditEE(t *testing.T) {
 		}
 		resp, err := cli.AuditLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
-		require.Equal(t, 0, len(resp.Items))
+		require.Equal(t, 1, len(resp.Items))
+		require.Equal(t, []v1.AuditLog{
+			{
+				Event: audit.Event{
+					RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(lastItem) * time.Second)),
+					AuditID:                  types.UID(fmt.Sprintf("some-uuid-%d", lastItem)),
+				},
+			},
+		}, auditLogsWithUTCTime(resp), fmt.Sprintf("Audit Log EE #%d did not match", lastItem))
+		require.Equal(t, resp.TotalHits, int64(totalItems))
+
+		// Once we reach the end of the data, we should not receive
+		// an afterKey
 		require.Nil(t, resp.AfterKey)
 	})
 
 	t.Run("should support pagination for Kube Audit", func(t *testing.T) {
 		defer auditSetupAndTeardown(t)()
 
+		totalItems := 5
+
 		// Create 5 audit logs.
 		logTime := time.Unix(100, 0).UTC()
-		for i := 0; i < 5; i++ {
+		for i := 0; i < totalItems; i++ {
 			logs := []v1.AuditLog{
 				{
 					Event: audit.Event{
@@ -268,9 +286,9 @@ func TestFV_AuditEE(t *testing.T) {
 		// Refresh elasticsearch so that results appear.
 		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_kube*")
 
-		// Read them back one at a time.
+		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
-		for i := 0; i < 5; i++ {
+		for i := 0; i < totalItems-1; i++ {
 			params := v1.AuditLogParams{
 				QueryParams: v1.QueryParams{
 					TimeRange: &lmav1.TimeRange{
@@ -294,19 +312,22 @@ func TestFV_AuditEE(t *testing.T) {
 				},
 			}, auditLogsWithUTCTime(resp), fmt.Sprintf("Audit Log Kube #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
+			require.Contains(t, resp.AfterKey, "startFrom")
+			require.Equal(t, resp.AfterKey["startFrom"], float64(i+1))
 			require.Equal(t, resp.TotalHits, int64(5))
 
 			// Use the afterKey for the next query.
 			afterKey = resp.AfterKey
 		}
 
-		// If we query once more, we should get no results, and no afterkey, since
+		// If we query once more, we should get the last page, and no afterkey, since
 		// we have paged through all the items.
+		lastItem := totalItems - 1
 		params := v1.AuditLogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
-					From: logTime.UTC().Add(-5 * time.Second),
-					To:   logTime.UTC().Add(5 * time.Second),
+					From: logTime.Add(-5 * time.Second),
+					To:   logTime.Add(5 * time.Second),
 				},
 				MaxPageSize: 1,
 				AfterKey:    afterKey,
@@ -315,7 +336,18 @@ func TestFV_AuditEE(t *testing.T) {
 		}
 		resp, err := cli.AuditLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
-		require.Equal(t, 0, len(resp.Items))
+		require.Equal(t, 1, len(resp.Items))
+		require.Equal(t, []v1.AuditLog{
+			{
+				Event: audit.Event{
+					RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(lastItem) * time.Second)),
+					AuditID:                  types.UID(fmt.Sprintf("some-uuid-%d", lastItem)),
+				},
+			},
+		}, auditLogsWithUTCTime(resp), fmt.Sprintf("Audit Log Kube #%d did not match", lastItem))
+
+		// Once we reach the end of the data, we should not receive
+		// an afterKey
 		require.Nil(t, resp.AfterKey)
 	})
 }
