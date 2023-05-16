@@ -716,7 +716,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(rules[3]).To(Equal(iptables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.LogAction{
-					Prefix: "calico-packet",
+					Prefix: "calico-drop",
 				},
 			}))
 			Expect(rules[4]).To(Equal(iptables.Rule{
@@ -787,7 +787,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(rules[2]).To(Equal(iptables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.LogAction{
-					Prefix: "calico-packet",
+					Prefix: "calico-drop",
 				},
 			}))
 			Expect(rules[3]).To(Equal(iptables.Rule{

@@ -111,7 +111,7 @@ func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WA
 	return &v1.List[v1.WAFLog]{
 		TotalHits: results.TotalHits(),
 		Items:     logs,
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom),
+		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
 	}, nil
 }
 

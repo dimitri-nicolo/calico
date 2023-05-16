@@ -118,9 +118,11 @@ func TestFV_ComplianceReports(t *testing.T) {
 	t.Run("should support pagination", func(t *testing.T) {
 		defer complianceSetupAndTeardown(t)()
 
+		totalItems := 5
+
 		// Create 5 Snapshots.
 		logTime := time.Unix(100, 0).UTC()
-		for i := 0; i < 5; i++ {
+		for i := 0; i < totalItems; i++ {
 			reports := []v1.ReportData{
 				{
 					ReportData: &apiv3.ReportData{
@@ -140,9 +142,9 @@ func TestFV_ComplianceReports(t *testing.T) {
 		// Refresh elasticsearch so that results appear.
 		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_compliance_reports*")
 
-		// Read them back one at a time.
+		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
-		for i := 0; i < 5; i++ {
+		for i := 0; i < totalItems-1; i++ {
 			params := v1.ReportDataParams{
 				QueryParams: v1.QueryParams{
 					TimeRange: &lmav1.TimeRange{
@@ -168,14 +170,17 @@ func TestFV_ComplianceReports(t *testing.T) {
 				},
 			}, reportsWithUTCTime(resp), fmt.Sprintf("Reports #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
-			require.Equal(t, resp.TotalHits, int64(5))
+			require.Contains(t, resp.AfterKey, "startFrom")
+			require.Equal(t, resp.AfterKey["startFrom"], float64(i+1))
+			require.Equal(t, resp.TotalHits, int64(totalItems))
 
 			// Use the afterKey for the next query.
 			afterKey = resp.AfterKey
 		}
 
-		// If we query once more, we should get no results, and no afterkey, since
+		// If we query once more, we should get the last page, and no afterkey, since
 		// we have paged through all the items.
+		lastItem := totalItems - 1
 		params := v1.ReportDataParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -188,7 +193,22 @@ func TestFV_ComplianceReports(t *testing.T) {
 		}
 		resp, err := cli.Compliance(cluster).ReportData().List(ctx, &params)
 		require.NoError(t, err)
-		require.Equal(t, 0, len(resp.Items))
+		require.Equal(t, 1, len(resp.Items))
+		require.Equal(t, []v1.ReportData{
+			{
+				ReportData: &apiv3.ReportData{
+					ReportName:     fmt.Sprintf("test-report-%d", lastItem),
+					ReportTypeName: "my-report-type",
+					StartTime:      metav1.Time{Time: logTime.Add(time.Duration(lastItem) * time.Second).UTC()},
+					EndTime:        metav1.Time{Time: logTime.Add(time.Duration(lastItem+1) * time.Second).UTC()},
+					GenerationTime: metav1.Time{Time: logTime.Add(time.Duration(lastItem+2) * time.Second).UTC()},
+				},
+			},
+		}, reportsWithUTCTime(resp), fmt.Sprintf("Reports #%d did not match", lastItem))
+		require.Equal(t, resp.TotalHits, int64(totalItems))
+
+		// Once we reach the end of the data, we should not receive
+		// an afterKey
 		require.Nil(t, resp.AfterKey)
 	})
 }

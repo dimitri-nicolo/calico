@@ -120,7 +120,7 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 	return &v1.List[v1.BGPLog]{
 		TotalHits: results.TotalHits(),
 		Items:     logs,
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom),
+		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
 	}, nil
 }
 

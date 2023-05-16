@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -284,7 +284,7 @@ func forbiddenMessage(attributes k8sauth.Attributes, ownerResource, ownerName st
 
 // logAuthorizerAttributes logs out the auth attributes.
 func logAuthorizerAttributes(requestAttributes k8sauth.Attributes) {
-	if klog.V(4) {
+	if klog.V(4).Enabled() {
 		klog.Infof("Authorizer APIGroup: %s", requestAttributes.GetAPIGroup())
 		klog.Infof("Authorizer APIVersion: %s", requestAttributes.GetAPIVersion())
 		klog.Infof("Authorizer Name: %s", requestAttributes.GetName())

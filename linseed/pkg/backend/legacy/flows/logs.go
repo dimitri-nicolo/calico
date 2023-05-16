@@ -116,7 +116,7 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 	return &v1.List[v1.FlowLog]{
 		Items:     logs,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom),
+		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
 	}, nil
 }
 

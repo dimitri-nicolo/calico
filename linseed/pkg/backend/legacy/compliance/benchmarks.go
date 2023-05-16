@@ -60,7 +60,7 @@ func (b *benchmarksBackend) List(ctx context.Context, i bapi.ClusterInfo, p *v1.
 	return &v1.List[v1.Benchmarks]{
 		Items:     logs,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextStartFromAfterKey(p, len(results.Hits.Hits), startFrom),
+		AfterKey:  logtools.NextStartFromAfterKey(p, len(results.Hits.Hits), startFrom, results.TotalHits()),
 	}, nil
 }
 

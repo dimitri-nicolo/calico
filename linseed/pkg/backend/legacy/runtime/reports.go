@@ -132,7 +132,7 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 	return &v1.List[v1.RuntimeReport]{
 		TotalHits: results.TotalHits(),
 		Items:     reports,
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom),
+		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
 	}, nil
 }
 
