@@ -137,6 +137,7 @@ func (r *request) Do(ctx context.Context) *Result {
 		}
 	}
 
+	// Setting close to true to avoid sending a successive request on a connection that is already in mid-termination.
 	req.Close = true
 	req.Header.Set("x-cluster-id", r.clusterID)
 	req.Header.Set("x-tenant-id", r.client.Tenant())
