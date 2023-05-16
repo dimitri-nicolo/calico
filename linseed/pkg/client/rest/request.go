@@ -136,6 +136,8 @@ func (r *request) Do(ctx context.Context) *Result {
 			err: fmt.Errorf("error creating new request: %s", err),
 		}
 	}
+
+	req.Close = true
 	req.Header.Set("x-cluster-id", r.clusterID)
 	req.Header.Set("x-tenant-id", r.client.Tenant())
 
