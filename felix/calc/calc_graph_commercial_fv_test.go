@@ -1142,23 +1142,21 @@ var (
 	namespaceSelector = "projectcalico.org/name == 'egress'"
 	egressSelector    = "egress-provider == 'true'"
 	egressSelectorSim = "egress-provider in {'true', 'not-sure'}"
-	egwpSelector1     = egressSelector
-	egwpSelector2     = "egress-provider == 'not-sure'"
-	egwpSelector3     = egressSelectorSim
+	egressSelector1   = "egress-provider == 'not-sure'"
 
 	egressProfileSelector = calc.PreprocessEgressSelector(&v3.EgressSpec{
 		Selector: egressSelector,
 	}, "egress")
 	egwpCombinedSelector1 = calc.PreprocessEgressSelector(&v3.EgressSpec{
-		Selector:          egwpSelector1,
+		Selector:          egressSelector,
 		NamespaceSelector: namespaceSelector,
 	}, "")
 	egwpCombinedSelector2 = calc.PreprocessEgressSelector(&v3.EgressSpec{
-		Selector:          egwpSelector2,
+		Selector:          egressSelector1,
 		NamespaceSelector: namespaceSelector,
 	}, "")
 	egwpCombinedSelector3 = calc.PreprocessEgressSelector(&v3.EgressSpec{
-		Selector:          egwpSelector3,
+		Selector:          egressSelectorSim,
 		NamespaceSelector: namespaceSelector,
 	}, "")
 
@@ -1185,7 +1183,7 @@ var (
 			Annotations: map[string]string{
 				"egress.projectcalico.org/egressGatewayPolicy": "egw-policy1",
 				"egress.projectcalico.org/namespaceSelector":   namespaceSelector,
-				"egress.projectcalico.org/selector":            egwpSelector1,
+				"egress.projectcalico.org/selector":            egressSelector,
 			},
 		},
 		Spec: kapiv1.NamespaceSpec{},
@@ -1252,7 +1250,7 @@ var (
 			Rules: []apiv3.EgressGatewayRule{
 				{
 					Gateway: &apiv3.EgressSpec{
-						Selector:          egwpSelector1,
+						Selector:          egressSelector,
 						NamespaceSelector: namespaceSelector,
 					},
 				},
@@ -1261,7 +1259,7 @@ var (
 						CIDR: "10.0.0.0/8",
 					},
 					Gateway: &apiv3.EgressSpec{
-						Selector:          egwpSelector2,
+						Selector:          egressSelector1,
 						NamespaceSelector: namespaceSelector,
 					},
 				},
@@ -1281,7 +1279,7 @@ var (
 			Rules: []apiv3.EgressGatewayRule{
 				{
 					Gateway: &apiv3.EgressSpec{
-						Selector:          egwpSelector2,
+						Selector:          egressSelector1,
 						NamespaceSelector: namespaceSelector,
 					},
 				},
@@ -1290,7 +1288,7 @@ var (
 						CIDR: "10.0.0.0/8",
 					},
 					Gateway: &apiv3.EgressSpec{
-						Selector:          egwpSelector1,
+						Selector:          egressSelector,
 						NamespaceSelector: namespaceSelector,
 					},
 				},
@@ -1299,7 +1297,7 @@ var (
 						CIDR: "13.0.0.0/8",
 					},
 					Gateway: &apiv3.EgressSpec{
-						Selector:          egwpSelector3,
+						Selector:          egressSelectorSim,
 						NamespaceSelector: namespaceSelector,
 					},
 				},
