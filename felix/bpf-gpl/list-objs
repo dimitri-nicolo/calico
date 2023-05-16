@@ -27,6 +27,7 @@ for core_support in co-re legacy;do
     echo "bin/connect_time_${log_level}_v6_co-re.o"
 
     echo "bin/xdp_${log_level}.o"
+#    echo "bin/xdp_${log_level}.o"
     echo "bin/tcp_${log_level}_kprobe.o"
     echo "bin/udp_${log_level}_kprobe.o"
     echo "bin/tcp_${log_level}_stats.o"
