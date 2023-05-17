@@ -87,7 +87,7 @@ func TestL7FlowsMainline(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 			// Put some data into ES so we can query it.
-			expected := populateL7FlowData(t, ctx, client, cache, clusterInfo)
+			expected := populateL7FlowData(t, ctx, client, clusterInfo, expectedL7Flow, l7Log)
 
 			// Set time range so that we capture all of the populated flow logs.
 			opts := v1.L7FlowParams{}
@@ -115,37 +115,39 @@ func TestL7FlowsMainline(t *testing.T) {
 		require.Error(t, err)
 		require.Nil(t, results)
 	})
+
+	t.Run("empty response code stored", func(t *testing.T) {
+		defer setupTest(t)()
+
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		// Put some data into ES so we can query it.
+		expected := populateL7FlowData(t, ctx, client, clusterInfo, expectedL7FlowNoResponseCode, l7LogEmptyResponseCode)
+
+		// Set time range so that we capture all of the populated flow logs.
+		opts := v1.L7FlowParams{}
+		opts.TimeRange = &lmav1.TimeRange{}
+		opts.TimeRange.From = time.Now().Add(-5 * time.Second)
+		opts.TimeRange.To = time.Now().Add(5 * time.Second)
+
+		// Query for flows. There should be a single flow from the populated data.
+		r, err := b.List(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 1)
+
+		// Assert that the flow data is populated correctly.
+		require.Equal(t, expected, r.Items[0])
+	})
 }
+
+type l7FlowGenerator func() v1.L7Flow
+type l7LogGenerator func(i int) v1.L7Log
 
 // populateFlowData writes a series of flow logs to elasticsearch, and returns the L7 flow that we
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
-func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Client, cache bapi.Cache, clusterInfo bapi.ClusterInfo) v1.L7Flow {
+func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Client, clusterInfo bapi.ClusterInfo, flowGenerator l7FlowGenerator, generator l7LogGenerator) v1.L7Flow {
 	// The expected flow log - we'll populate fields as we go.
-	expected := v1.L7Flow{}
-	expected.Key = v1.L7FlowKey{
-		Protocol: "tcp",
-		Source: v1.Endpoint{
-			Namespace:      "default",
-			Type:           "wep",
-			AggregatedName: "my-deployment",
-		},
-		Destination: v1.Endpoint{
-			Namespace:      "kube-system",
-			Type:           "wep",
-			AggregatedName: "kube-dns-*",
-			Port:           53,
-		},
-		DestinationService: v1.ServicePort{
-			Service: kapiv1.NamespacedName{
-				Name:      "kube-dns",
-				Namespace: "kube-system",
-			},
-			PortName: "dns",
-			Port:     53,
-		},
-	}
-	expected.Stats = &v1.L7Stats{}
-	expected.Code = 200
+	expected := flowGenerator()
 
 	// Used to track the total DurationMean across all L7 logs we create.
 	var durationMeanTotal int64 = 0
@@ -154,36 +156,7 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 
 	batch := []v1.L7Log{}
 	for i := 0; i < numFlows; i++ {
-		f := v1.L7Log{
-			StartTime: time.Now().Unix(),
-			EndTime:   time.Now().Unix(),
-
-			ResponseCode: "200",
-			URL:          "http://example.com",
-			UserAgent:    "test-user",
-			Method:       "GET",
-			Latency:      5,
-
-			SourceType:      "wep",
-			SourceNamespace: "default",
-			SourceNameAggr:  "my-deployment",
-			SourcePortNum:   1234,
-
-			DestType:             "wep",
-			DestNamespace:        "kube-system",
-			DestNameAggr:         "kube-dns-*",
-			DestServiceNamespace: "kube-system",
-			DestServiceName:      "kube-dns",
-			DestServicePortName:  "dns",
-			DestPortNum:          53,
-			DestServicePort:      53,
-
-			DurationMax:  int64(2 * i),
-			DurationMean: int64(i),
-			BytesIn:      64,
-			BytesOut:     128,
-			Count:        int64(i),
-		}
+		f := generator(i)
 
 		// Increment fields on the expected flow based on the flow log that was
 		// just added.
@@ -223,6 +196,80 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 	}
 	err = testutils.RefreshIndex(ctx, client, index)
 	require.NoError(t, err)
+
+	return expected
+}
+
+func l7Log(i int) v1.L7Log {
+	f := v1.L7Log{
+		StartTime: time.Now().Unix(),
+		EndTime:   time.Now().Unix(),
+
+		ResponseCode: "200",
+		URL:          "http://example.com",
+		UserAgent:    "test-user",
+		Method:       "GET",
+		Latency:      5,
+
+		SourceType:      "wep",
+		SourceNamespace: "default",
+		SourceNameAggr:  "my-deployment",
+		SourcePortNum:   1234,
+
+		DestType:             "wep",
+		DestNamespace:        "kube-system",
+		DestNameAggr:         "kube-dns-*",
+		DestServiceNamespace: "kube-system",
+		DestServiceName:      "kube-dns",
+		DestServicePortName:  "dns",
+		DestPortNum:          53,
+		DestServicePort:      53,
+
+		DurationMax:  int64(2 * i),
+		DurationMean: int64(i),
+		BytesIn:      64,
+		BytesOut:     128,
+		Count:        int64(i),
+	}
+	return f
+}
+
+func l7LogEmptyResponseCode(i int) v1.L7Log {
+	f := l7Log(i)
+	f.ResponseCode = ""
+	return f
+}
+func expectedL7FlowNoResponseCode() v1.L7Flow {
+	expected := v1.L7Flow{}
+	expected.Key = v1.L7FlowKey{
+		Protocol: "tcp",
+		Source: v1.Endpoint{
+			Namespace:      "default",
+			Type:           "wep",
+			AggregatedName: "my-deployment",
+		},
+		Destination: v1.Endpoint{
+			Namespace:      "kube-system",
+			Type:           "wep",
+			AggregatedName: "kube-dns-*",
+			Port:           53,
+		},
+		DestinationService: v1.ServicePort{
+			Service: kapiv1.NamespacedName{
+				Name:      "kube-dns",
+				Namespace: "kube-system",
+			},
+			PortName: "dns",
+			Port:     53,
+		},
+	}
+	expected.Stats = &v1.L7Stats{}
+	return expected
+}
+
+func expectedL7Flow() v1.L7Flow {
+	expected := expectedL7FlowNoResponseCode()
+	expected.Code = 200
 
 	return expected
 }

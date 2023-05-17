@@ -38,9 +38,13 @@ func (f *FieldTracker) ValueInt64(key lmaelastic.CompositeAggregationKey, field 
 func (f *FieldTracker) ValueInt32(key lmaelastic.CompositeAggregationKey, field string) int32 {
 	switch v := key[f.Index(field)].Value.(type) {
 	case string:
+		if v == "" {
+			return 0
+		}
+
 		i, err := strconv.Atoi(v)
 		if err != nil {
-			logrus.WithField("field", field).WithError(err).Error("Error parsing field as int")
+			logrus.WithField("field", field).WithError(err).Warn("Error parsing field as int")
 			return 0
 		}
 		return int32(i)
