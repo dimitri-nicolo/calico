@@ -260,7 +260,7 @@ func (aec *ActiveEgressCalculator) calculateEgressConfig(epData *epData) epEgres
 
 // Convert egress Selector and NamespaceSelector fields to a single selector
 // expression in the same way we do for namespaced policy EntityRule selectors.
-func preprocessEgressSelector(gateway *v3.EgressSpec, ns string) string {
+func PreprocessEgressSelector(gateway *v3.EgressSpec, ns string) string {
 	return updateprocessors.GetEgressGatewaySelector(
 		gateway,
 		strings.TrimPrefix(ns, conversion.NamespaceProfileNamePrefix),
@@ -278,7 +278,7 @@ func (aec *ActiveEgressCalculator) updateProfile(profileID string, egwSpec *v3.E
 			policy: egwSpec.Policy,
 		}
 		if egwSpec.Gateway != nil {
-			newEpEgressData.selector = preprocessEgressSelector(egwSpec.Gateway, profileID)
+			newEpEgressData.selector = PreprocessEgressSelector(egwSpec.Gateway, profileID)
 			newEpEgressData.maxNextHops = egwSpec.Gateway.MaxNextHops
 		}
 	}
@@ -334,7 +334,7 @@ func (aec *ActiveEgressCalculator) v3ResourceToEgressRules(rules []v3.EgressGate
 			sourceData.cidr = r.Destination.CIDR
 		}
 		if r.Gateway != nil {
-			sourceData.selector = preprocessEgressSelector(r.Gateway, "")
+			sourceData.selector = PreprocessEgressSelector(r.Gateway, "")
 			sourceData.maxNextHops = r.Gateway.MaxNextHops
 		}
 		out = append(out, sourceData)

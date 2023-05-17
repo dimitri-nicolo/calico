@@ -8,14 +8,18 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+
 	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	kapiv1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/dataplane/mock"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	calinet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
@@ -1131,21 +1135,64 @@ type tierInfo struct {
 
 // Egress IP.
 var (
-	zeroTime              = time.Time{}
-	nowTime               = time.Now()
-	inSixtySecsTime       = nowTime.Add(time.Second * 60)
-	egressSelector        = "egress-provider == 'true'"
-	egressSelectorSim     = "egress-provider in {'true', 'not-sure'}"
-	egressProfileSelector = "(projectcalico.org/namespace == 'egress') && (egress-provider == 'true')"
+	zeroTime        = time.Time{}
+	nowTime         = time.Now()
+	inSixtySecsTime = nowTime.Add(time.Second * 60)
 
-	egwpSelector1         = "egress-provider == 'true'"
-	egwpSelector2         = "egress-provider == 'not-sure'"
-	egwpSelector3         = "egress-provider in {'true', 'not-sure'}"
-	namespaceSelector     = "projectcalico.org/namespace == 'egress'"
-	egwpCombinedSelector1 = "(pcns.projectcalico.org/namespace == 'egress') && (egress-provider == 'true')"
-	egwpCombinedSelector2 = "(pcns.projectcalico.org/namespace == 'egress') && (egress-provider == 'not-sure')"
-	egwpCombinedSelector3 = "(pcns.projectcalico.org/namespace == 'egress') && (egress-provider in {'true', 'not-sure'})"
-	gatewayKey            = WorkloadEndpointKey{
+	namespaceSelector = "projectcalico.org/name == 'egress'"
+	egressSelector    = "egress-provider == 'true'"
+	egressSelectorSim = "egress-provider in {'true', 'not-sure'}"
+
+	egwpSelector1 = "egress-provider == 'true'"
+	egwpSelector2 = "egress-provider == 'not-sure'"
+	egwpSelector3 = "egress-provider in {'true', 'not-sure'}"
+
+	egressProfileSelector = calc.PreprocessEgressSelector(&v3.EgressSpec{
+		Selector: egressSelector,
+	}, "egress")
+	egwpCombinedSelector1 = calc.PreprocessEgressSelector(&v3.EgressSpec{
+		Selector:          egwpSelector1,
+		NamespaceSelector: namespaceSelector,
+	}, "")
+	egwpCombinedSelector2 = calc.PreprocessEgressSelector(&v3.EgressSpec{
+		Selector:          egwpSelector2,
+		NamespaceSelector: namespaceSelector,
+	}, "")
+	egwpCombinedSelector3 = calc.PreprocessEgressSelector(&v3.EgressSpec{
+		Selector:          egwpSelector3,
+		NamespaceSelector: namespaceSelector,
+	}, "")
+
+	nsNoSelector = kapiv1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "egress",
+		},
+		Spec: kapiv1.NamespaceSpec{},
+	}
+
+	ns = kapiv1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "egress",
+			Annotations: map[string]string{
+				"egress.projectcalico.org/selector": egressSelector,
+			},
+		},
+		Spec: kapiv1.NamespaceSpec{},
+	}
+
+	nsWithEGWP = kapiv1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "egress",
+			Annotations: map[string]string{
+				"egress.projectcalico.org/egressGatewayPolicy": "egw-policy1",
+				"egress.projectcalico.org/namespaceSelector":   namespaceSelector,
+				"egress.projectcalico.org/selector":            egressSelector,
+			},
+		},
+		Spec: kapiv1.NamespaceSpec{},
+	}
+
+	gatewayKey = WorkloadEndpointKey{
 		Hostname:       remoteHostname,
 		WorkloadID:     "gw1",
 		EndpointID:     "ep1",
@@ -1173,28 +1220,28 @@ var (
 		Name:     "gw1",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.1/32")},
 		Labels: map[string]string{
-			"egress-provider":                  "true",
-			"projectcalico.org/namespace":      "egress",
-			"pcns.projectcalico.org/namespace": "egress",
+			"egress-provider":             "true",
+			"projectcalico.org/namespace": "egress",
 		},
+		ProfileIDs: []string{"egress"},
 	}
 	gatewayEndpoint2 = &WorkloadEndpoint{
 		Name:     "gw2",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.2/32")},
 		Labels: map[string]string{
-			"egress-provider":                  "true",
-			"projectcalico.org/namespace":      "egress",
-			"pcns.projectcalico.org/namespace": "egress",
+			"egress-provider":             "true",
+			"projectcalico.org/namespace": "egress",
 		},
+		ProfileIDs: []string{"egress"},
 	}
 	gatewayEndpoint3 = &WorkloadEndpoint{
 		Name:     "gw3",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.10/32")},
 		Labels: map[string]string{
-			"egress-provider":                  "not-sure",
-			"projectcalico.org/namespace":      "egress",
-			"pcns.projectcalico.org/namespace": "egress",
+			"egress-provider":             "not-sure",
+			"projectcalico.org/namespace": "egress",
 		},
+		ProfileIDs: []string{"egress"},
 	}
 	egressGatewayPolicy1    = "egw-policy1"
 	egressGatewayPolicyKey1 = ResourceKey{Name: "egw-policy1", Kind: apiv3.KindEgressGatewayPolicy}
@@ -1345,10 +1392,15 @@ var (
 
 	endpointWithDefinedEgressGatewayPolicy = initialisedStore.withKVUpdates(
 		KVPair{
+			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: namespaceToProfile(&ns),
+		},
+		KVPair{
 			Key: endpointWithOwnEgressGatewayID,
 			Value: &WorkloadEndpoint{
 				Name:                "wep1o",
 				EgressGatewayPolicy: egressGatewayPolicy1,
+				ProfileIDs:          []string{"egress"},
 			},
 		},
 		KVPair{
@@ -1398,14 +1450,21 @@ var (
 	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
 		egressActiveMemberStr("137.0.0.10/32"),
 	},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "egress"},
 	).withName("endpointWithDefinedEgressGatewayPolicy")
 
 	endpointWithDifferentEgressGatewayPolicy = initialisedStore.withKVUpdates(
+		KVPair{
+			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: namespaceToProfile(&ns),
+		},
 		KVPair{
 			Key: endpointWithOwnEgressGatewayID,
 			Value: &WorkloadEndpoint{
 				Name:                "wep1o",
 				EgressGatewayPolicy: egressGatewayPolicy1,
+				ProfileIDs:          []string{"egress"},
 			},
 		},
 		KVPair{
@@ -1466,6 +1525,8 @@ var (
 		egressActiveMemberStr("137.0.0.1/32"),
 		egressActiveMemberStr("137.0.0.10/32"),
 	},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "egress"},
 	).withName("endpointWithDifferentEgressGatewayPolicy")
 
 	endpointWithOwnLocalEgressGateway = initialisedStore.withKVUpdates(
@@ -1474,6 +1535,7 @@ var (
 			Value: &WorkloadEndpoint{
 				Name:           "wep1o",
 				EgressSelector: egressSelector,
+				ProfileIDs:     []string{"egress"},
 			},
 		},
 		KVPair{
@@ -1510,14 +1572,21 @@ var (
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
 		},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "egress"},
 	).withName("endpointWithOwnLocalEgressGateway")
 
 	endpointWithOwnLocalEgressGatewayWithEGWPolicy = initialisedStore.withKVUpdates(
+		KVPair{
+			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: namespaceToProfile(&nsWithEGWP),
+		},
 		KVPair{
 			Key: endpointWithOwnEgressGatewayID,
 			Value: &WorkloadEndpoint{
 				Name:                "wep1o",
 				EgressGatewayPolicy: egressGatewayPolicy1,
+				ProfileIDs:          []string{"egress"},
 			},
 		},
 		KVPair{
@@ -1577,6 +1646,8 @@ var (
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
 		},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "egress"},
 	).withName("endpointWithOwnLocalEgressGatewayWithEGWPolicy")
 
 	endpointWithProfileEgressGatewayID = WorkloadEndpointKey{
@@ -1587,19 +1658,8 @@ var (
 	}
 	endpointWithProfileEgressGateway = initialisedStore.withKVUpdates(
 		KVPair{
-			Key: ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
-			Value: &apiv3.Profile{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "egress",
-				},
-				Spec: apiv3.ProfileSpec{
-					EgressGateway: &apiv3.EgressGatewaySpec{
-						Gateway: &apiv3.EgressSpec{
-							Selector: "egress-provider == 'true'",
-						},
-					},
-				},
-			},
+			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: namespaceToProfile(&ns),
 		},
 		KVPair{
 			Key: endpointWithProfileEgressGatewayID,
@@ -1638,20 +1698,8 @@ var (
 
 	endpointWithProfileWithNoneExistingEgressGatewayPolicy = initialisedStore.withKVUpdates(
 		KVPair{
-			Key: ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
-			Value: &apiv3.Profile{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "egress",
-				},
-				Spec: apiv3.ProfileSpec{
-					EgressGateway: &apiv3.EgressGatewaySpec{
-						Policy: egressGatewayPolicy1,
-						Gateway: &apiv3.EgressSpec{
-							Selector: "egress-provider == 'true'",
-						},
-					},
-				},
-			},
+			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: namespaceToProfile(&nsWithEGWP),
 		},
 		KVPair{
 			Key: endpointWithProfileEgressGatewayID,
@@ -1687,20 +1735,8 @@ var (
 
 	endpointWithProfileWithEgressGatewayPolicy = initialisedStore.withKVUpdates(
 		KVPair{
-			Key: ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
-			Value: &apiv3.Profile{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "egress",
-				},
-				Spec: apiv3.ProfileSpec{
-					EgressGateway: &apiv3.EgressGatewaySpec{
-						Policy: egressGatewayPolicy1,
-						Gateway: &apiv3.EgressSpec{
-							Selector: "egress-provider == 'true'",
-						},
-					},
-				},
-			},
+			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: namespaceToProfile(&nsWithEGWP),
 		},
 		KVPair{
 			Key: endpointWithProfileEgressGatewayID,
@@ -1762,19 +1798,8 @@ var (
 
 	endpointWithProfileLocalEgressGateway = initialisedStore.withKVUpdates(
 		KVPair{
-			Key: ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
-			Value: &apiv3.Profile{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "egress",
-				},
-				Spec: apiv3.ProfileSpec{
-					EgressGateway: &apiv3.EgressGatewaySpec{
-						Gateway: &apiv3.EgressSpec{
-							Selector: "egress-provider == 'true'",
-						},
-					},
-				},
-			},
+			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: namespaceToProfile(&ns),
 		},
 		KVPair{
 			Key: endpointWithProfileEgressGatewayID,
@@ -1827,17 +1852,8 @@ var (
 			Value: egressGatewayPolicyVal1,
 		},
 		KVPair{
-			Key: ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
-			Value: &apiv3.Profile{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "egress",
-				},
-				Spec: apiv3.ProfileSpec{
-					EgressGateway: &apiv3.EgressGatewaySpec{
-						Policy: egressGatewayPolicy1,
-					},
-				},
-			},
+			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: namespaceToProfile(&nsWithEGWP),
 		},
 		KVPair{
 			Key: endpointWithProfileEgressGatewayID,
@@ -1926,13 +1942,8 @@ var (
 
 	endpointWithoutProfileEgressGateway = initialisedStore.withKVUpdates(
 		KVPair{
-			Key: ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
-			Value: &apiv3.Profile{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "egress",
-				},
-				Spec: apiv3.ProfileSpec{},
-			},
+			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: namespaceToProfile(&nsNoSelector),
 		},
 		KVPair{
 			Key: endpointWithProfileEgressGatewayID,
@@ -1963,6 +1974,7 @@ var (
 			Value: &WorkloadEndpoint{
 				Name:           "wep1o",
 				EgressSelector: egressSelector,
+				ProfileIDs:     []string{"egress"},
 			},
 		},
 		KVPair{
@@ -1975,6 +1987,7 @@ var (
 			Value: &WorkloadEndpoint{
 				Name:           "wep1o2",
 				EgressSelector: egressSelector,
+				ProfileIDs:     []string{"egress"},
 			},
 		},
 		KVPair{
@@ -2023,13 +2036,20 @@ var (
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
 		},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "egress"},
 	).withName("twoRemoteEpsSameEgressSelectorLocalGateway")
 
 	twoRemoteEpsSameEgressGatewayPolicyLocalGateway = initialisedStore.withKVUpdates(
 		KVPair{
+			Key:   ResourceKey{Name: "egress", Kind: apiv3.KindProfile},
+			Value: namespaceToProfile(&nsNoSelector),
+		},
+		KVPair{
 			Key: endpointWithOwnEgressGatewayID,
 			Value: &WorkloadEndpoint{
 				Name:                "wep1o",
+				ProfileIDs:          []string{"egress"},
 				EgressGatewayPolicy: egressGatewayPolicy1,
 			},
 		},
@@ -2042,6 +2062,7 @@ var (
 			},
 			Value: &WorkloadEndpoint{
 				Name:                "wep1o2",
+				ProfileIDs:          []string{"egress"},
 				EgressGatewayPolicy: egressGatewayPolicy1,
 			},
 		},
@@ -2121,6 +2142,8 @@ var (
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
 		},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "egress"},
 	).withName("twoRemoteEpsSameEgressGatewayPolicyLocalGateway")
 
 	twoRemoteEpsSimilarEgressSelectorLocalGateway = initialisedStore.withKVUpdates(
@@ -2129,6 +2152,7 @@ var (
 			Value: &WorkloadEndpoint{
 				Name:           "wep1o",
 				EgressSelector: egressSelectorSim,
+				ProfileIDs:     []string{"egress"},
 			},
 		},
 		KVPair{
@@ -2141,6 +2165,7 @@ var (
 			Value: &WorkloadEndpoint{
 				Name:           "wep1o2",
 				EgressSelector: egressSelector,
+				ProfileIDs:     []string{"egress"},
 			},
 		},
 		KVPair{
@@ -2192,6 +2217,8 @@ var (
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
 		},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "egress"},
 	).withName("twoRemoteEpsSimilarEgressSelectorLocalGateway")
 
 	twoRemoteEpsSimilarEgressSelectorTwoLocalGateways = twoRemoteEpsSimilarEgressSelectorLocalGateway.withKVUpdates(
@@ -2528,4 +2555,17 @@ func egressTerminatingMemberStr(cidr string, start, finish time.Time, port uint1
 		panic(err)
 	}
 	return fmt.Sprintf("%s,%s,%s,%d", cidr, strings.ToLower(string(startBytes)), strings.ToLower(string(finishBytes)), port)
+}
+
+func namespaceToProfile(ns *kapiv1.Namespace) *v3.Profile {
+	c := conversion.NewConverter()
+	kv, err := c.NamespaceToProfile(ns)
+	if err != nil {
+		panic(err)
+	}
+	profile, ok := kv.Value.(*v3.Profile)
+	if !ok {
+		panic(fmt.Errorf("Failed to convert namespace to profile.\nns: %v", ns))
+	}
+	return profile
 }
