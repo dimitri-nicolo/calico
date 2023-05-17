@@ -10,8 +10,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
 
-func TestStagedNetworkPolicy(t *testing.T) {
+func TestCalicoResources(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "StagedNetworkPolicy Suite")
+	RunSpecs(t, "Calico Resources Suite")
 }

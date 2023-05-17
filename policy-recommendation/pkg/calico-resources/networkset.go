@@ -23,6 +23,10 @@ func newPrivateNetworkNetworkSet(owner metav1.OwnerReference) *v3.GlobalNetworkS
 			},
 			Name:            PrivateNetworkSetName,
 			OwnerReferences: []metav1.OwnerReference{owner},
+			Labels: map[string]string{
+				fmt.Sprintf("%s/kind", projectCalicoKeyName): string(NetworkSetScope),
+				fmt.Sprintf("%s/name", projectCalicoKeyName): PrivateNetworkSetName,
+			},
 		},
 		Spec: v3.GlobalNetworkSetSpec{
 			// RFC1918 Subnets. To be filled in manually after the network set has
