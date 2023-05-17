@@ -671,6 +671,8 @@ func objLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHostC
 					globals.Jumps[i] = uint32(i)
 				}
 
+				log.WithField("globals", globals).Debugf("configure program")
+
 				if err := tc.ConfigureProgram(m, ifaceLog, &globals); err != nil {
 					return nil, fmt.Errorf("objLoad: failed to configure tc program: %w", err)
 				}
