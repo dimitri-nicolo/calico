@@ -12,21 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG GIT_VERSION=unknown
 ARG UBI_IMAGE
-ARG UBI_IMAGE_FULL
+
+FROM rockylinux:8 as build
+
 ARG MODSEC_VERSION=v3.0.8
 
+RUN dnf install -y https://www6.atomicorp.com/channels/atomic/rocky/8/x86_64/RPMS/GeoIP-1.6.12-7.el8.x86_64.rpm \
+      https://www6.atomicorp.com/channels/atomic/rocky/8/x86_64/RPMS/GeoIP-GeoLite-data-2018.06-3.el8.noarch.rpm \
+      https://www6.atomicorp.com/channels/atomic/rocky/8/x86_64/RPMS/GeoIP-GeoLite-data-extra-2018.06-3.el8.noarch.rpm \
+      https://www6.atomicorp.com/channels/atomic/rocky/8/x86_64/RPMS/GeoIP-devel-1.6.12-7.el8.x86_64.rpm
 
-FROM ${UBI_IMAGE_FULL} as build
+RUN dnf install --disableplugin=subscription-manager -y \
+      gcc \
+      gcc-c++ \
+      git \
+      libcurl-devel \
+      libtool \
+      libxml2-devel \
+      make \
+      pcre-devel
 
-RUN dnf install -y https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RPMS/GeoIP-1.6.12-5.el8.x86_64.rpm https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RPMS/GeoIP-GeoLite-data-2018.06-3.el8.noarch.rpm https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RPMS/GeoIP-GeoLite-data-extra-2018.06-3.el8.noarch.rpm https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RPMS/GeoIP-devel-1.6.12-5.el8.x86_64.rpm
-
-RUN dnf install --disableplugin=subscription-manager -y git gcc gcc-c++ make GeoIP-devel libtool libcurl-devel libxml2-devel pcre-devel && \
-      git clone https://github.com/spiderlabs/modsecurity modsecurity && \
-      cd modsecurity && git checkout ${MODSEC_VERSION} && \
-      git submodule init && git submodule update && \
-      ./build.sh && ./configure && make && make install
+RUN git clone -b ${MODSEC_VERSION} --depth 1 --recurse-submodules --shallow-submodules https://github.com/SpiderLabs/ModSecurity.git modsecurity && \
+      cd modsecurity && ./build.sh && ./configure && \
+      make && make install
 
 
 FROM ${UBI_IMAGE} as ubi
