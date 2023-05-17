@@ -56,7 +56,7 @@ type Config struct {
 	// Elastic configuration
 	ElasticScheme          string `envconfig:"ELASTIC_SCHEME" default:"https"`
 	ElasticHost            string `envconfig:"ELASTIC_HOST" default:"tigera-secure-es-http.tigera-elasticsearch.svc"`
-	ElasticPort            string `envconfig:"ELASTIC_POST" default:"9200"`
+	ElasticPort            string `envconfig:"ELASTIC_PORT" default:"9200"`
 	ElasticUsername        string `envconfig:"ELASTIC_USERNAME" default:""`
 	ElasticPassword        string `envconfig:"ELASTIC_PASSWORD" default:"" json:",omitempty"`
 	ElasticCA              string `envconfig:"ELASTIC_CA" default:"/certs/elasticsearch/tls.crt"`
