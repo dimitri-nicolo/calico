@@ -35944,6 +35944,16 @@ rules:
     - crd.projectcalico.org
     resources:
     - ippools
+    verbs:
+    - create
+    - patch
+    - list
+    - get
+    - watch
+    - update
+  - apiGroups:
+    - crd.projectcalico.org
+    resources:
     - kubecontrollersconfigurations
     - bgpconfigurations
     - externalnetworks
