@@ -49,6 +49,9 @@ type Config struct {
 	KibanaClientCertPath  string `default:"/certs/kibana/client.crt" split_words:"true"`
 	EnableKibanaMutualTLS bool   `default:"false" split_words:"true"`
 
+	// When enabled, any ILM endpoint PUTs or POSTs will be ignored and return success
+	ILMDummyRouteEnabled bool `default:"false" split_words:"true"`
+
 	// Prometheus metrics are exposed on this port.
 	MetricsEnabled bool `default:"false" split_words:"true"`
 	MetricsPort    int  `default:"9091" split_words:"true"`

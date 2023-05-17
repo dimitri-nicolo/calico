@@ -76,4 +76,15 @@ var (
 		},
 		// -------------------------------------------------------------------------------------------------
 	}
+
+	DummyRoutes = proxy.Routes{
+		proxy.Route{
+			Name:                          "es-dump-ilm",
+			Path:                          "/_ilm",
+			IsPathPrefix:                  true,
+			HTTPMethods:                   []string{"PUT", "POST"},
+			RequireAuth:                   false,
+			RejectUnacceptableContentType: false,
+		},
+	}
 )
