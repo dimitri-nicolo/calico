@@ -42,7 +42,7 @@ type Config struct {
 	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 
 	// For Calico Cloud, the tenant ID to use.
-	ElasticIndexTenantID string `envconfig:"ELASTIC_INDEX_TENANT_ID"`
+	TenantID string `envconfig:"TENANT_ID"`
 
 	// The URL that we should proxy requests to.
 	ElasticScheme             string   `envconfig:"ELASTIC_SCHEME" default:"https"`

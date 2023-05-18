@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var tenantID = os.Getenv("ELASTIC_INDEX_TENANT_ID")
+var tenantID = os.Getenv("TENANT_ID")
 
 // enableElasticsearchWatch disables watching the Elasticsearch CR in the Cloud/Tesla variant since
 // the Elasticsearch is external.

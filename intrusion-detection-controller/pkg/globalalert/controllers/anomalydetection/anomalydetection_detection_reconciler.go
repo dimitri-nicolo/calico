@@ -44,15 +44,13 @@ const (
 	detectionCronJobSuffix = "detection"
 )
 
-var (
-	// controllerKind refers to the GlobalAlert kind that the resources created / reconciled
-	// by ths controller will refer to
-	GlobalAlertGroupVersionKind = schema.GroupVersionKind{
-		Kind:    v3.KindGlobalAlert,
-		Version: v3.VersionCurrent,
-		Group:   v3.Group,
-	}
-)
+// controllerKind refers to the GlobalAlert kind that the resources created / reconciled
+// by ths controller will refer to
+var GlobalAlertGroupVersionKind = schema.GroupVersionKind{
+	Kind:    v3.KindGlobalAlert,
+	Version: v3.VersionCurrent,
+	Group:   v3.Group,
+}
 
 type adDetectionReconciler struct {
 	managementClusterCtx  context.Context
@@ -86,7 +84,6 @@ func (r *adDetectionReconciler) listDetectionCronJobs() (map[string]interface{},
 		metav1.ListOptions{
 			LabelSelector: detectionJobLabelByteStr,
 		})
-
 	if err != nil {
 		log.WithError(err).Errorf("failed to list detection cronjobs")
 		return nil, err
@@ -155,7 +152,7 @@ func (r *adDetectionReconciler) reconcile() bool {
 	if detectionJobState.ClusterName != r.managementClusterName {
 		// variant tenant id might be present in calico cloud but managed clusters resoruces would not contain this name
 		clusterNameToQuery := detectionJobState.ClusterName
-		tenantIDPrefix := os.Getenv("ELASTIC_INDEX_TENANT_ID")
+		tenantIDPrefix := os.Getenv("TENANT_ID")
 		if strings.HasPrefix(clusterNameToQuery, tenantIDPrefix) {
 			clusterNameToQuery = strings.Trim(clusterNameToQuery, tenantIDPrefix+".")
 		}
@@ -217,8 +214,7 @@ func (r *adDetectionReconciler) reconcile() bool {
 		// create / restore deleted managed cronJobs
 		createdDetectionCycle, err := r.k8sClient.BatchV1().CronJobs(detectionJobState.CronJob.Namespace).
 			Create(r.managementClusterCtx, detectionJobState.CronJob, metav1.CreateOptions{})
-
-		// update GlobalAlertStats with events for newly created CronJob
+			// update GlobalAlertStats with events for newly created CronJob
 		if err != nil {
 			r.reportErrorStatus(detectionJobState, detectionCronJobNameSpacedName, err)
 			return true
@@ -278,14 +274,13 @@ func (r *adDetectionReconciler) reconcile() bool {
 
 // getLatestJobStatusOfCronJob retrieves the status of the latest run job managed by the cronjob
 func (r *adDetectionReconciler) getLatestJobStatusOfCronJob(ctx context.Context,
-	cronjob *batchv1.CronJob) v3.GlobalAlertStatus {
-
+	cronjob *batchv1.CronJob,
+) v3.GlobalAlertStatus {
 	resultantGlobalAlertStatus := reporting.GetGlobalAlertSuccessStatus()
 
 	childJobs, err := r.k8sClient.BatchV1().Jobs(cronjob.Namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "owner=" + cronjob.Name,
 	})
-
 	if err != nil {
 
 		resultantGlobalAlertStatus = reporting.GetGlobalAlertErrorStatus(err)
@@ -329,7 +324,8 @@ func (r *adDetectionReconciler) getLatestJobStatusOfCronJob(ctx context.Context,
 
 // reportErrorStatus sets the status of alert with the error param
 func (r *adDetectionReconciler) reportErrorStatus(alertState detectionCycleState,
-	namespacedName types.NamespacedName, err error) {
+	namespacedName types.NamespacedName, err error,
+) {
 	if alertState.GlobalAlert == nil || alertState.CalicoCLI == nil {
 		return
 	}
@@ -388,7 +384,6 @@ func (r *adDetectionReconciler) addDetector(detectionResource DetectionCycleRequ
 
 // createDetectionCycle creates the CronJob from the podTemplate for the AD Job and adds it to AnomalyDetectionController
 func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate, detectionResource DetectionCycleRequest) (*batchv1.CronJob, error) {
-
 	globalAlert := detectionResource.GlobalAlert
 
 	detectionSchedule := DefaultCronJobDetectionSchedule
@@ -397,7 +392,6 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 	}
 
 	err := podtemplate.DecoratePodTemplateForDetectionCycle(podTemplate, detectionResource.ClusterName, *globalAlert)
-
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +406,6 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 	// attach this IDS controller as owner
 	intrusionDetectionDeployment, err := r.k8sClient.AppsV1().Deployments(r.namespace).Get(r.managementClusterCtx, ADJobOwnerLabelValue,
 		metav1.GetOptions{})
-
 	if err != nil {
 		log.WithError(err).Errorf("Unable to create detection cycles for cluster %s, error retriveing owner", detectionResource.ClusterName)
 		return nil, err

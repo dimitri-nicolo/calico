@@ -7,7 +7,7 @@ package elasticsearch
 
 import "os"
 
-var tenantID = os.Getenv("ELASTIC_INDEX_TENANT_ID")
+var tenantID = os.Getenv("TENANT_ID")
 
 // CalculateTigeraElasticsearchHash for the Cloud/Tesla variant simply returns a string and a nil error
 // since the cluster does not contain an Elasticsearch CR.

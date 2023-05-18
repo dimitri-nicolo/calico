@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-var tenantID = os.Getenv("ELASTIC_INDEX_TENANT_ID")
+var tenantID = os.Getenv("TENANT_ID")
 
 // This is the Cloud/Tesla variant of this function. For multi-tenancy we need to scope all indices by tenantID.
 func getVariantSpecificClusterName(name string) string {

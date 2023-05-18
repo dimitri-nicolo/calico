@@ -23,10 +23,8 @@ type Config struct {
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
 	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 
-	// Tenant configuration for Calico Cloud.
-	// Note the environment variable doesn't match the field name. This is for backwards compat
-	// with the cloud operator, and will be udpated in the future.
-	Tenant string `envconfig:"ELASTIC_INDEX_MIDFIX"`
+	// TenantID configuration for Calico Cloud.
+	TenantID string `envconfig:"TENANT_ID"`
 
 	// MCM configuration
 	ClusterName                    string `envconfig:"CLUSTER_NAME" default:"cluster"`
