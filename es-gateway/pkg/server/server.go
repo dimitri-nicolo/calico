@@ -40,6 +40,7 @@ type Server struct {
 
 	esTarget     *proxy.Target // Proxy target for Elasticsearch API
 	kibanaTarget *proxy.Target // Proxy target for Kibana API
+	dummyRoutes  proxy.Routes  // Routes specified will responded to with a StatusOK and not forwarded
 
 	esClient  elastic.Client    // Elasticsearch client for making API calls required by ES Gateway
 	kbClient  kibana.Client     // Kibana client for making API calls required by ES Gateway
@@ -111,6 +112,20 @@ func New(opts ...Option) (*Server, error) {
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	if srv.dummyRoutes != nil && len(srv.dummyRoutes) > 0 {
+		// Connect the dummy routes to the IgnoreHandler which returns success without forwarding the traffic
+		err = addRoutes(
+			router,
+			srv.dummyRoutes,
+			nil, // No catch all with the dummy route
+			nil, // No middleware needed
+			handlers.GetIgnoreHandler(),
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Route Handling #3: Handle any Elasticsearch request. We do the Elasticsearch section last because
@@ -188,7 +203,7 @@ func addRoutes(router *mux.Router, routes proxy.Routes, catchAllRoute *proxy.Rou
 func getLogRouteMatchHandler(routeName string) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			log.Debugf("Request %s as been matched with route \"%s\"", r.RequestURI, routeName)
+			log.Debugf("%s %s as been matched with route \"%s\"", r.Method, r.RequestURI, routeName)
 			h.ServeHTTP(w, r)
 		})
 	}

@@ -24,6 +24,13 @@ func WithCollector(collector metrics.Collector) Option {
 	}
 }
 
+func WithILMDummyRoutes(routes proxy.Routes) Option {
+	return func(s *Server) error {
+		s.dummyRoutes = routes
+		return nil
+	}
+}
+
 // WithAddr changes the address where the server accepts
 // connections when Listener is not provided.
 func WithAddr(addr string) Option {

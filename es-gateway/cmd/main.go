@@ -188,6 +188,11 @@ func main() {
 		opts = append(opts, server.WithCollector(collector))
 	}
 
+	if cfg.ILMDummyRouteEnabled {
+		log.Debugf("ElasticSearch ILM dummy endpoint is enabled, PUTs or POSTs to ILM will be ignored")
+		opts = append(opts, server.WithILMDummyRoutes(config.DummyRoutes))
+	}
+
 	srv, err := server.New(opts...)
 	if err != nil {
 		log.WithError(err).Fatal("failed to create ES Gateway server.")
