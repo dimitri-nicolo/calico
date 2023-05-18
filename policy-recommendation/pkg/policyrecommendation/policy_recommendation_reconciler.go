@@ -310,11 +310,55 @@ func (pr *policyRecommendationReconciler) RecommendSnp(ctx context.Context, cloc
 	}
 }
 
+// reconcileCacheMeta reconciles the staged action metadata of the cache, if the datastore values
+// have been updated. This should have been done by the StagedNetworkPolicy reconciler, making sure
+// in case that hasn't occurred.
+func (pr *policyRecommendationReconciler) reconcileCacheMeta(cache, store *v3.StagedNetworkPolicy) {
+	if cache == nil || store == nil {
+		return
+	}
+
+	sa := store.Spec.StagedAction
+	if cache.Spec.StagedAction != sa || cache.Labels[calicoresources.StagedActionKey] != string(sa) {
+		log.WithField("key", cache).Debugf("Reconciling cached staged action to: %s", sa)
+		cache.Spec.StagedAction = sa
+		cache.Labels[calicoresources.StagedActionKey] = string(sa)
+	}
+}
+
+// shouldSkipStoreUpdate returns true of the store is nil, but the cache isn't or if the store's
+// staged action metadata differs from that of the cache's
+func (pr *policyRecommendationReconciler) shouldSkipStoreUpdate(cache, store *v3.StagedNetworkPolicy) bool {
+	if cache == nil {
+		return true
+	}
+
+	owner := getRecommendationScopeOwner(&pr.state.object)
+	owners := []metav1.OwnerReference{*owner}
+	if cache.OwnerReferences == nil || !reflect.DeepEqual(cache.OwnerReferences, owners) {
+		// If the recommendation is not owned by policy recommendation, don't update
+		return true
+	}
+
+	if (store == nil && cache.Spec.StagedAction == v3.StagedActionLearn) ||
+		(store != nil && store.Spec.StagedAction == v3.StagedActionLearn) {
+		// An update should occur. The cache is in 'Learn' state, and the only source of truth, or the
+		// store is in 'Learn' state
+		return false
+	}
+
+	return true
+}
+
 // syncToDatastore syncs staged network policy item in the cache with the Calico datastore. Updates
 // the datastore only if there are rules associated with the cached policy, otherwise returns
 // without error.
 func (pr *policyRecommendationReconciler) syncToDatastore(ctx context.Context, cacheItem *v3.StagedNetworkPolicy) error {
-	//TODO(dimitrin): Add a lock for the staged network policy key
+	if cacheItem == nil {
+		log.Debug("Empty cache item, skipping sync to datastore")
+		return nil
+	}
+
 	key := cacheItem.Name
 	clog := log.WithField("key", key)
 	clog.Debug("Synching to datastore")
@@ -336,6 +380,10 @@ func (pr *policyRecommendationReconciler) syncToDatastore(ctx context.Context, c
 			return err
 		}
 
+		if pr.shouldSkipStoreUpdate(cacheItem, nil) {
+			return nil
+		}
+
 		addCreationTimestamp(pr.clock, cacheItem)
 
 		// Item does not exist in the datastore - create a new StagedNetworkPolicy
@@ -348,27 +396,10 @@ func (pr *policyRecommendationReconciler) syncToDatastore(ctx context.Context, c
 		return nil
 	}
 
-	// Update the cached staged action if the datastore value changed
-	dsStagedAction := datastoreSnp.Spec.StagedAction
-	cStagedAction := cacheItem.Spec.StagedAction
-	if dsStagedAction != cStagedAction {
-		if dsStagedAction == v3.StagedActionSet || dsStagedAction == v3.StagedActionIgnore {
-			// Skip updating any policy that isn't learning
-			cacheItem.Spec.StagedAction = dsStagedAction
-			return nil
-		}
-		if dsStagedAction == v3.StagedActionLearn {
-			cacheItem.Spec.StagedAction = v3.StagedActionLearn
-		}
-	}
-
-	if dsStagedAction != v3.StagedActionLearn {
-		log.Debugf("Skipping staged action type: %s", string(datastoreSnp.Spec.StagedAction))
-		return nil
-	}
+	pr.reconcileCacheMeta(cacheItem, datastoreSnp)
 
 	// Update the datastore to reflect the its latest state
-	if !equalSnps(datastoreSnp, cacheItem) {
+	if !pr.shouldSkipStoreUpdate(cacheItem, datastoreSnp) && !equalSnps(datastoreSnp, cacheItem) {
 		clog.WithField("stagedNetworkPolicy", key).Infof("Updating StagedNetworkPolicy in Calico datastore")
 		// Copy over relevant items. This way we make sure that we don't update any unintended parameters
 		copyStagedNetworkPolicy(datastoreSnp, *cacheItem)

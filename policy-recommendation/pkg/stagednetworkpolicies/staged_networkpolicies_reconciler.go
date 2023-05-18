@@ -48,9 +48,13 @@ func (sr *stagednetworkpoliciesReconciler) Reconcile(namespacedName types.Namesp
 
 	// Handle Restoring deleted StagedNetworkPolicy managed by policy recommendation
 	if k8serrors.IsNotFound(err) {
-		// Create an empty staged network policy. We want to relearn
-		newCacheSnp := calicoresources.NewStagedNetworkPolicy(cachedSNP.Name, cachedSNP.Namespace, cachedSNP.Spec.Tier, cachedSNP.OwnerReferences[0])
-		sr.resourceCache.Set(name, newCacheSnp)
+		if shouldRegenerate(*cachedSNP) {
+			// Create an empty staged network policy. We want to relearn.
+			newCacheSnp := calicoresources.NewStagedNetworkPolicy(
+				cachedSNP.Name, cachedSNP.Namespace, cachedSNP.Spec.Tier, cachedSNP.OwnerReferences[0],
+			)
+			sr.resourceCache.Set(name, newCacheSnp)
+		}
 	}
 
 	if snp.Spec.StagedAction != cachedSNP.Spec.StagedAction {
@@ -75,4 +79,18 @@ func (sr *stagednetworkpoliciesReconciler) Close() {
 			log.WithError(err).Warnf("Error deleting StagedNetworkPolicy: %s continuing as to not block close()", snp.Name)
 		}
 	}
+}
+
+// shouldRegenerate returns true if the policy is 'Learn', or 'Ignore', and contains the
+// PolicyRecommendationScope owner reference.
+func shouldRegenerate(snp v3.StagedNetworkPolicy) bool {
+	if snp.OwnerReferences != nil {
+		if snp.OwnerReferences[0].Kind != "PolicyRecommendationScope" || snp.OwnerReferences[0].Name != "default" {
+			return false
+		}
+
+		return (snp.Spec.StagedAction == v3.StagedActionLearn || snp.Spec.StagedAction == v3.StagedActionIgnore)
+	}
+
+	return false
 }

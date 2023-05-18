@@ -27,6 +27,7 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/cache"
+	calicoresources "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 	calres "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/namespace"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/policyrecommendation"
@@ -602,7 +603,261 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			}
 		})
 	})
+
+	Context("Enforcing a recommendation", func() {
+		BeforeEach(func() {
+			ctx = context.Background()
+
+			fakeClient = fakecalico.NewSimpleClientset()
+			fakeCoreV1 = fakeK8s.NewSimpleClientset().CoreV1()
+
+			mockClientSetFactory = &lmak8s.MockClientSetFactory{}
+			mockConstructorTesting = mockConstructorTestingTNewMockClientSet{}
+			mockClientSet = lmak8s.NewMockClientSet(mockConstructorTesting)
+
+			mockClientSet.On("ProjectcalicoV3").Return(fakeClient.ProjectcalicoV3())
+			mockClientSet.On("CoreV1").Return(fakeCoreV1)
+			mockClientSetFactory.On("NewClientSetForApplication", clusterID, mock.Anything).Return(mockClientSet, nil)
+
+			By("creating a policy recommendation scope resource")
+			policyRecommendationScopeEnabled := emptyPolicyRecScope
+			policyRecommendationScopeEnabled.Spec.NamespaceSpec.RecStatus = v3.PolicyRecommendationScopeEnabled
+			Expect(emptyPolicyRecScope.Spec.NamespaceSpec.RecStatus).To(Equal(v3.PolicyRecommendationScopeEnabled))
+
+			// Create mock policy recommendation scope resource
+			_, err = mockClientSet.ProjectcalicoV3().PolicyRecommendationScopes().
+				Create(ctx, policyRecommendationScopeEnabled, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			mockClientSetForApp, err = mockClientSetFactory.NewClientSetForApplication(clusterID)
+			Expect(err).To(BeNil())
+
+			By("defining caches and synchronizer")
+			// Setup Caches
+			// StagedNetworkPolicy cache
+			snpResourceCache := cache.NewSynchronizedObjectCache[*v3.StagedNetworkPolicy]()
+			// Namespace cache
+			namespaceCache = cache.NewSynchronizedObjectCache[*v1.Namespace]()
+			// NetworkSets Cache
+			networkSetCache := cache.NewSynchronizedObjectCache[*v3.NetworkSet]()
+			// Cache set
+			caches = &syncer.CacheSet{
+				Namespaces:            namespaceCache,
+				NetworkSets:           networkSetCache,
+				StagedNetworkPolicies: snpResourceCache,
+			}
+			// Setup cache synchronizer
+			cacheSynchronizer = syncer.NewCacheSynchronizer(mockClientSetForApp, *caches)
+
+			tier = "namespace-segmentation"
+
+			By("creating a list of namespaces")
+			// Create namespaces
+			namespaces = []*v1.Namespace{namespace1, namespace2, namespace3, namespace4, namespace5}
+			for _, ns := range namespaces {
+				_, err = fakeCoreV1.Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+				Expect(err).To(BeNil())
+			}
+		})
+
+		AfterEach(func() {
+			mockClientSetFactory.AssertExpectations(GinkgoT())
+		})
+
+		It("Delete staged network policy after enforcement", func() {
+			// Reconcile policy recommendation scope
+			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
+				mockClientSet.ProjectcalicoV3(), &mockEsClient, cacheSynchronizer, caches, mockClock)
+			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName, Namespace: ""})
+			Expect(err).To(BeNil())
+
+			// Reconcile namespaces
+			nsReconciler := namespace.NewNamespaceReconciler(mockClientSet, namespaceCache, cacheSynchronizer)
+			for _, ns := range namespaces {
+				err = nsReconciler.Reconcile(types.NamespacedName{Name: ns.Name, Namespace: ns.Namespace})
+				Expect(err).To(BeNil())
+			}
+
+			By("recommending new egress to domain flows")
+			// Update the mockClock RFC3339() return value
+			*time = timeAtStep1
+
+			step1File := "../data/es_flows_sample_egress_domain1.json"
+			// Run the engine to update the snps
+			snps := caches.StagedNetworkPolicies.GetAll()
+			for _, snp := range snps {
+				mockEsResponse := getMockEsResponse(step1File)
+				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				prsReconciler.RecommendSnp(ctx, mockClock, snp)
+			}
+			By("verifying the staged network policies for step-1")
+			for _, ns := range namespaces {
+				expectedNamespace := ns.Name
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
+					Get(ctx, expectedSnpName, metav1.GetOptions{})
+
+				if expectedSnp, ok := expectedEgressToDomainRecommendationsStep1[expectedSnpName]; ok {
+					Expect(err).To(BeNil())
+					Expect(snp.Annotations[calres.LastUpdatedKey]).To(Equal(expectedSnp.Annotations[calres.LastUpdatedKey]))
+					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
+				} else {
+					Expect(err).NotTo(BeNil())
+				}
+			}
+
+			snpName := fmt.Sprintf("%s.%s-%s", tier, namespace3.Name, calres.PolicRecSnpNameSuffix)
+			ds, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace3.Name).Get(ctx, snpName, metav1.GetOptions{})
+			defaultSnp := *ds
+			Expect(err).To(BeNil())
+			Expect(defaultSnp).NotTo(BeNil())
+			// Recommendation should have staged action 'Learn'
+			Expect(defaultSnp.Spec.StagedAction).To(Equal(v3.StagedActionLearn))
+			Expect(defaultSnp.Labels[calicoresources.StagedActionKey]).To(Equal(string(v3.StagedActionLearn)))
+			Expect(len(defaultSnp.OwnerReferences)).To(Equal(1))
+			Expect(defaultSnp.OwnerReferences[0].Kind).To(Equal("PolicyRecommendationScope"))
+			Expect(defaultSnp.OwnerReferences[0].Name).To(Equal("default"))
+
+			owner := getRecommendationScopeOwner()
+			owners := []metav1.OwnerReference{*owner}
+
+			testCases := []struct {
+				action              func(*v3.StagedNetworkPolicy)
+				dsSA                v3.StagedAction
+				csSA                v3.StagedAction
+				ownref              []metav1.OwnerReference
+				expectedCacheAction v3.StagedAction
+				expectedOwnRef      []metav1.OwnerReference
+				expectUpdate        bool
+			}{
+				// Transition learn to active
+				{
+					action:              activate,
+					dsSA:                v3.StagedActionSet,
+					csSA:                v3.StagedActionLearn,
+					ownref:              nil,
+					expectedCacheAction: v3.StagedActionSet,
+					expectedOwnRef:      nil,
+					expectUpdate:        false,
+				},
+				// Transition learn to ignore
+				{
+					action:              ignore,
+					dsSA:                v3.StagedActionIgnore,
+					csSA:                v3.StagedActionLearn,
+					ownref:              owners,
+					expectedCacheAction: v3.StagedActionIgnore,
+					expectedOwnRef:      owners,
+					expectUpdate:        false,
+				},
+				// Transition active to ignore
+				{
+					action:              ignore,
+					dsSA:                v3.StagedActionIgnore,
+					csSA:                v3.StagedActionSet,
+					ownref:              owners,
+					expectedCacheAction: v3.StagedActionIgnore,
+					expectedOwnRef:      owners,
+					expectUpdate:        false,
+				},
+				// Transition ignore to learn
+				{
+					action:              learn,
+					dsSA:                v3.StagedActionLearn,
+					csSA:                v3.StagedActionIgnore,
+					ownref:              owners,
+					expectedCacheAction: v3.StagedActionLearn,
+					expectedOwnRef:      owners,
+					expectUpdate:        true,
+				},
+			}
+
+			defaultCacheSnp := *caches.StagedNetworkPolicies.Get(snpName)
+
+			for _, test := range testCases {
+				// Re-set the datastore snp
+				snp := defaultSnp
+				startingCache := defaultCacheSnp
+				caches.StagedNetworkPolicies.Set(snpName, &startingCache)
+
+				// Set the snp cache state
+				cacheSnp := caches.StagedNetworkPolicies.Get(snpName)
+				cacheSnp.Spec.StagedAction = test.csSA
+				cacheSnp.Labels[calicoresources.StagedActionKey] = string(test.csSA)
+				Expect(cacheSnp.Spec.StagedAction).To(Equal(test.csSA))
+				Expect(cacheSnp.Labels[calicoresources.StagedActionKey]).To(Equal(string(test.csSA)))
+
+				// Transition the datastore snp
+				test.action(&snp)
+				updatedSnp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace3.Name).Update(ctx, &snp, metav1.UpdateOptions{})
+				Expect(err).To(BeNil())
+				Expect(updatedSnp.Spec.StagedAction).To(Equal(test.dsSA))
+				Expect(updatedSnp.Labels[calicoresources.StagedActionKey]).To(Equal(string(test.dsSA)))
+				Expect(len(updatedSnp.OwnerReferences)).To(Equal(len(test.ownref)))
+				if len(updatedSnp.OwnerReferences) == 1 && len(test.ownref) == 1 {
+					Expect(reflect.DeepEqual(snp.OwnerReferences, test.ownref)).To(BeTrue())
+				}
+
+				cacheSnp.Spec.Egress = append(cacheSnp.Spec.Egress, v3.Rule{Action: v3.Allow, Protocol: &protocolTCP})
+				// Call RecommendSnp, expecting to delete the snp from the
+				prsReconciler.RecommendSnp(ctx, mockClock, cacheSnp)
+
+				// The cache should be in the expected state
+				cacheSnp = caches.StagedNetworkPolicies.Get(snpName)
+				Expect(cacheSnp.Spec.StagedAction).To(Equal(test.expectedCacheAction))
+				Expect(cacheSnp.Labels[calicoresources.StagedActionKey]).To(Equal(string(test.expectedCacheAction)))
+
+				// Verify that updates occur only when the cache is transition to learn
+				ds, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace3.Name).Get(ctx, snpName, metav1.GetOptions{})
+				Expect(err).To(BeNil())
+				Expect(ds).NotTo(BeNil())
+				if test.expectUpdate {
+					Expect(reflect.DeepEqual(ds.Spec.Egress[4], cacheSnp.Spec.Egress[4])).To(BeTrue())
+				} else {
+					Expect(len(ds.Spec.Egress)).To(Equal(4))
+				}
+			}
+		})
+	})
 })
+
+// activate sets staged action and owner reference metadata of a staged network policy to an
+// active state.
+func activate(snp *v3.StagedNetworkPolicy) {
+	snp.Spec.StagedAction = v3.StagedActionSet
+	snp.Labels[calicoresources.StagedActionKey] = string(v3.StagedActionSet)
+	snp.OwnerReferences = nil
+}
+
+// ignore sets staged action and owner reference metadata of a staged network policy to an
+// ignore state.
+func ignore(snp *v3.StagedNetworkPolicy) {
+	snp.Spec.StagedAction = v3.StagedActionIgnore
+	snp.Labels[calicoresources.StagedActionKey] = string(v3.StagedActionIgnore)
+}
+
+// learn sets staged action and owner reference metadata of a staged network policy to a
+// learn state.
+func learn(snp *v3.StagedNetworkPolicy) {
+	snp.Spec.StagedAction = v3.StagedActionLearn
+	snp.Labels[calicoresources.StagedActionKey] = string(v3.StagedActionLearn)
+}
+
+// getRecommendationScopeOwner returns policy recommendation scope resource as an owner reference
+// resource.
+func getRecommendationScopeOwner() *metav1.OwnerReference {
+	ctrl := true
+	blockOwnerDelete := false
+
+	return &metav1.OwnerReference{
+		APIVersion:         "projectcalico.org/v3",
+		Kind:               "PolicyRecommendationScope",
+		Name:               "default",
+		UID:                "",
+		Controller:         &ctrl,
+		BlockOwnerDeletion: &blockOwnerDelete,
+	}
+}
 
 // compareSnps is a helper function used to determine equality between two staged network policies.
 func compareSnps(left, right *v3.StagedNetworkPolicy) bool {

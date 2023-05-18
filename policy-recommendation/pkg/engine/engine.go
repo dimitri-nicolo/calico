@@ -110,7 +110,7 @@ func RunEngine(
 
 	// Define flow log query params
 	params := getNamespacePolicyRecParams(startTime, endTime, namespace, cluster)
-	log.Infof("elastic search document index: %s", params.DocumentIndex)
+	log.Debugf("elastic search document index: %s", params.DocumentIndex)
 
 	// Query flows
 	query := flows.NewQueryFlows(ctx)
@@ -493,7 +493,7 @@ func (ere *recommendationEngine) processRecommendation(flows []*api.Flow, snp *v
 
 	// Process flows into egress/ingress rules, and the policy selector.
 	for _, flow := range flows {
-		log.WithField("flow: %+v", flow).Debug("Calling recommendation engine with flow")
+		log.WithField("flow: ", flow).Debug("Calling recommendation engine with flow")
 		if flow != nil {
 			if err := ere.processFlow(*flow); err != nil {
 				log.WithError(err).WithField("flow", flow).Debug("Error processing flow")

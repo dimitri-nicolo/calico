@@ -45,6 +45,7 @@ const (
 	NameKey              = PolicyRecKeyName + "/name"
 	NamespaceKey         = PolicyRecKeyName + "/namespace"
 	ScopeKey             = PolicyRecKeyName + "/scope"
+	StagedActionKey      = projectCalicoKeyName + "/spec.stagedAction"
 	StatusKey            = PolicyRecKeyName + "/status"
 
 	LearningStatus    = "Learning"
