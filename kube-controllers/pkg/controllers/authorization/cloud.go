@@ -14,7 +14,7 @@ import (
 	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 )
 
-var tenantID = os.Getenv("ELASTIC_INDEX_TENANT_ID")
+var tenantID = os.Getenv("TENANT_ID")
 
 var resourceNameToElasticsearchRole = map[string]string{
 	"flows":      formatRoleName(esusers.ElasticsearchRoleNameFlowsViewer),

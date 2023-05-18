@@ -31,7 +31,7 @@ type Config struct {
 	InternalPort int `default:"5557" split_words:"true"`
 
 	// The tenant that this Voltron is serving.
-	Tenant string `default:""`
+	TenantID string `default:"" split_words:"true"`
 
 	// Certificate and Key to use on inner connections received over the mTLS
 	// tunnel for Linseed from managed clusters.

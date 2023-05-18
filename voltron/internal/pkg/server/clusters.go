@@ -142,7 +142,7 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 	// This handler will only be used for requests from managed clusters over the mTLS tunnel
 	// with a server name of "tigera-linseed.tigera-elasticsearch".
 	innerServer := &http.Server{
-		Handler:     NewInnerHandler(cs.voltronCfg.Tenant, mc, cs.innerProxy).Handler(),
+		Handler:     NewInnerHandler(cs.voltronCfg.TenantID, mc, cs.innerProxy).Handler(),
 		TLSConfig:   cs.tlsConfig,
 		ReadTimeout: DefaultReadTimeout,
 	}
