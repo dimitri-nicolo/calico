@@ -16,8 +16,7 @@ func AssertStructAndMap(t *testing.T, logType interface{}, mappings map[string]i
 	require.Equal(t, "false", mappings["dynamic"])
 
 	//Fetch Properties from the json template
-	var properties map[string]interface{}
-	properties = mappings["properties"].(map[string]interface{})
+	properties := mappings["properties"].(map[string]interface{})
 
 	obj := reflect.ValueOf(logType).Type()
 
@@ -41,7 +40,7 @@ func AssertStructAndMap(t *testing.T, logType interface{}, mappings map[string]i
 
 // function to check if an expected field is present in the map
 func CheckMapForField(expected string, mappings map[string]interface{}) bool {
-	for fieldName, _ := range mappings {
+	for fieldName := range mappings {
 		if fieldName == expected {
 			return true
 		}

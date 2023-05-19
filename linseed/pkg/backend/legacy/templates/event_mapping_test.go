@@ -31,7 +31,7 @@ type fakeEvent struct {
 	SourceNameAggr  string             `json:"source_name_aggr,omitempty"`
 	SourceNamespace string             `json:"source_namespace,omitempty"`
 	SourcePort      *int64             `json:"source_port,omitempty"`
-	fakeRecord      interface{}        `json:"fake_record,omitempty"`
+	FakeRecord      interface{}        `json:"fake_record,omitempty"`
 }
 
 func TestCompareEventStructAndTemplate(t *testing.T) {
