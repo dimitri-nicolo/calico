@@ -8,8 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/stretchr/testify/require"
+
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 func AssertLogIDAndCopyFlowLogsWithoutID(t *testing.T, r *v1.List[v1.FlowLog]) []v1.FlowLog {

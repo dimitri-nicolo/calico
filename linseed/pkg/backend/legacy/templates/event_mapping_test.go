@@ -3,8 +3,9 @@
 package templates
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	utils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
@@ -25,7 +26,6 @@ func TestCompareEventStructAndTemplate(t *testing.T) {
 		}
 		require.Equal(t, false, utils.AssertStructAndMap(t, v1.Event{}, eventsMap))
 	})
-
 	t.Run("Check for event struct with same count and diff element", func(t *testing.T) {
 		type fakeEvent struct {
 			ID              string             `json:"id"`
