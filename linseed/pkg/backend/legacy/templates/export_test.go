@@ -22,7 +22,6 @@ func AssertStructAndMap(t *testing.T, logType interface{}, mappings map[string]i
 	properties := mappings["properties"].(map[string]interface{})
 
 	obj := reflect.ValueOf(logType).Type()
-
 	if obj.NumField() != len(properties) {
 		return false
 	}
@@ -42,13 +41,3 @@ func AssertStructAndMap(t *testing.T, logType interface{}, mappings map[string]i
 	}
 	return true
 }
-
-// function to check if an expected field is present in the map
-//func CheckMapForField(expected string, mappings map[string]interface{}) bool {
-//	for fieldName := range mappings {
-//		if fieldName == expected {
-//			return true
-//		}
-//	}
-//	return false
-//}
