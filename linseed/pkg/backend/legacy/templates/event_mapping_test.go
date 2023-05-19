@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	utils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
 )
 
@@ -14,7 +15,7 @@ func TestCompareEventStructAndTemplate(t *testing.T) {
 
 	t.Run("Check for event api and template matches", func(t *testing.T) {
 		eventsMap := testutils.MustUnmarshalToMap(t, EventsMappings)
-		require.Equal(t, true, AssertStructAndMap(t, v1.Event{}, eventsMap))
+		require.Equal(t, true, utils.AssertStructAndMap(t, v1.Event{}, eventsMap))
 	})
 	t.Run("Check for event api and template not matches", func(t *testing.T) {
 		eventsMap := testutils.MustUnmarshalToMap(t, EventsMappings)
@@ -22,7 +23,7 @@ func TestCompareEventStructAndTemplate(t *testing.T) {
 		properties["random"] = map[string]interface{}{
 			"unknown": "element",
 		}
-		require.Equal(t, false, AssertStructAndMap(t, v1.Event{}, eventsMap))
+		require.Equal(t, false, utils.AssertStructAndMap(t, v1.Event{}, eventsMap))
 	})
 
 	t.Run("Check for event struct with same count and diff element", func(t *testing.T) {
@@ -50,7 +51,7 @@ func TestCompareEventStructAndTemplate(t *testing.T) {
 			FakeRecord      interface{}        `json:"fake_record,omitempty"`
 		}
 		eventsMap := testutils.MustUnmarshalToMap(t, EventsMappings)
-		require.Equal(t, false, AssertStructAndMap(t, fakeEvent{}, eventsMap))
+		require.Equal(t, false, utils.AssertStructAndMap(t, fakeEvent{}, eventsMap))
 	})
 
 }
