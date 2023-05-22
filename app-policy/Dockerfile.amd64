@@ -13,15 +13,16 @@
 # limitations under the License.
 
 ARG UBI_IMAGE
+ARG UBI_IMAGE_FULL
 
-FROM rockylinux:8 as build
+FROM ${UBI_IMAGE_FULL} as build
 
 ARG MODSEC_VERSION=v3.0.8
 
-RUN dnf install -y https://www6.atomicorp.com/channels/atomic/rocky/8/x86_64/RPMS/GeoIP-1.6.12-7.el8.x86_64.rpm \
-      https://www6.atomicorp.com/channels/atomic/rocky/8/x86_64/RPMS/GeoIP-GeoLite-data-2018.06-3.el8.noarch.rpm \
-      https://www6.atomicorp.com/channels/atomic/rocky/8/x86_64/RPMS/GeoIP-GeoLite-data-extra-2018.06-3.el8.noarch.rpm \
-      https://www6.atomicorp.com/channels/atomic/rocky/8/x86_64/RPMS/GeoIP-devel-1.6.12-7.el8.x86_64.rpm
+RUN dnf install -y https://www6.atomicorp.com/channels/atomic/redhat/8/x86_64/RPMS/GeoIP-1.6.12-7.el8.x86_64.rpm \
+      https://www6.atomicorp.com/channels/atomic/redhat/8/x86_64/RPMS/GeoIP-GeoLite-data-2018.06-3.el8.noarch.rpm \
+      https://www6.atomicorp.com/channels/atomic/redhat/8/x86_64/RPMS/GeoIP-GeoLite-data-extra-2018.06-3.el8.noarch.rpm \
+      https://www6.atomicorp.com/channels/atomic/redhat/8/x86_64/RPMS/GeoIP-devel-1.6.12-7.el8.x86_64.rpm
 
 RUN dnf install --disableplugin=subscription-manager -y \
       gcc \
