@@ -9,7 +9,7 @@ eks-log-forwarder-startup:
 
 else
 
-GO_BUILD_VER    ?= v0.84
+GO_BUILD_VER    ?= v0.85
 CALICO_BUILD     = calico/go-build:$(GO_BUILD_VER)
 BINDIR          ?= bin
 SRC_DIR          = $(pwd)
