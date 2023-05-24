@@ -172,6 +172,7 @@ func run() {
 		// back to the permissions assigned to its serviceaccount in the management cluster.
 		users := []token.UserInfo{
 			{Namespace: "tigera-fluentd", Name: "fluentd-node"},
+			{Namespace: "tigera-fluentd", Name: "fluentd-node-windows"},
 			{Namespace: "tigera-compliance", Name: "tigera-compliance-benchmarker"},
 			{Namespace: "tigera-compliance", Name: "tigera-compliance-controller"},
 			{Namespace: "tigera-compliance", Name: "tigera-compliance-reporter"},
