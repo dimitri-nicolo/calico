@@ -6,6 +6,8 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
+
+	prtypes "github.com/projectcalico/calico/policy-recommendation/pkg/types"
 )
 
 var (
@@ -17,13 +19,13 @@ var (
 	timeAtStep3 = "2002-10-02T10:05:00-05:00"
 
 	expectedEgressToDomainRecommendationsStep1 = map[string]*v3.StagedNetworkPolicy{
-		"namespace-segmentation.namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -42,7 +44,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -91,13 +93,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -116,7 +118,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -208,13 +210,13 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep2 = map[string]*v3.StagedNetworkPolicy{
-		"namespace-segmentation.namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -233,7 +235,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -282,13 +284,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -307,7 +309,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -375,13 +377,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -400,7 +402,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -511,13 +513,13 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep3 = map[string]*v3.StagedNetworkPolicy{
-		"namespace-segmentation.namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -536,7 +538,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -584,13 +586,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -609,7 +611,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -677,13 +679,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -702,7 +704,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -810,13 +812,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace5-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace5-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace5-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-recommendation",
 				Namespace: "namespace5",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -835,7 +837,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -866,13 +868,13 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep4 = map[string]*v3.StagedNetworkPolicy{
-		"namespace-segmentation.namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -891,7 +893,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -939,13 +941,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -964,7 +966,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -1032,13 +1034,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -1057,7 +1059,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -1165,13 +1167,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace5-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace5-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace5-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-recommendation",
 				Namespace: "namespace5",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -1190,7 +1192,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -1221,13 +1223,13 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep5 = map[string]*v3.StagedNetworkPolicy{
-		"namespace-segmentation.namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -1246,7 +1248,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -1294,13 +1296,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -1319,7 +1321,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -1387,13 +1389,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -1412,7 +1414,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -1520,13 +1522,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace5-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace5-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace5-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-recommendation",
 				Namespace: "namespace5",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -1545,7 +1547,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -1576,13 +1578,13 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep6 = map[string]*v3.StagedNetworkPolicy{
-		"namespace-segmentation.namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -1601,7 +1603,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -1649,13 +1651,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -1674,7 +1676,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -1742,13 +1744,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -1767,7 +1769,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -1875,13 +1877,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace5-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace5-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace5-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-recommendation",
 				Namespace: "namespace5",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -1900,7 +1902,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -1931,13 +1933,13 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep7 = map[string]*v3.StagedNetworkPolicy{
-		"namespace-segmentation.namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -1956,7 +1958,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -2004,13 +2006,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -2029,7 +2031,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -2097,13 +2099,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -2122,7 +2124,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -2230,13 +2232,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace5-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace5-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace5-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-recommendation",
 				Namespace: "namespace5",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -2255,7 +2257,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -2286,13 +2288,13 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep1AfterDeletingNamespace3 = map[string]*v3.StagedNetworkPolicy{
-		"namespace-segmentation.namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -2311,7 +2313,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -2363,13 +2365,13 @@ var (
 	}
 
 	expectedEgressToServiceRecommendationsStep1 = map[string]*v3.StagedNetworkPolicy{
-		"namespace-segmentation.namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -2388,7 +2390,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -2471,13 +2473,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -2496,7 +2498,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -2586,13 +2588,13 @@ var (
 	}
 
 	expectedEgressToServiceRecommendationsStep2 = map[string]*v3.StagedNetworkPolicy{
-		"namespace-segmentation.namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -2611,7 +2613,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -2698,13 +2700,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -2723,7 +2725,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -2793,13 +2795,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -2818,7 +2820,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -2912,13 +2914,13 @@ var (
 	}
 
 	expectedNamespaceRecommendationsStep1 = map[string]*v3.StagedNetworkPolicy{
-		"namespace-segmentation.namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -2937,7 +2939,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -3014,13 +3016,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -3039,7 +3041,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{
@@ -3097,13 +3099,13 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		"namespace-segmentation.namespace5-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace5-recommendation": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "namespace-segmentation.namespace5-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-recommendation",
 				Namespace: "namespace5",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
-					"projectcalico.org/tier":                "namespace-segmentation",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
 					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 					"projectcalico.org/spec.stagedAction":   "Learn",
 				},
@@ -3122,7 +3124,7 @@ var (
 			TypeMeta: metav1.TypeMeta{},
 			Spec: v3.StagedNetworkPolicySpec{
 				StagedAction: v3.StagedActionLearn,
-				Tier:         "namespace-segmentation",
+				Tier:         prtypes.PolicyRecommendationTier,
 				Ingress:      []v3.Rule{},
 				Egress: []v3.Rule{
 					{

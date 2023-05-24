@@ -9984,7 +9984,7 @@ func schema_pkg_apis_projectcalico_v3_PolicyRecommendationScopeNamespaceSpec(ref
 					},
 					"tierName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The name of the policy recommendation tier for namespace-segmented policies. [Default: \"namespace-segmentation\"]",
+							Description: "The name of the policy recommendation tier for namespace-isolated policies. [Default: \"namespace-isolation\"]",
 							Type:        []string{"string"},
 							Format:      "",
 						},

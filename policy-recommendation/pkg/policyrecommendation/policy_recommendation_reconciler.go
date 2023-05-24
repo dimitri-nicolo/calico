@@ -25,6 +25,7 @@ import (
 	"github.com/projectcalico/calico/policy-recommendation/pkg/engine"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/resources"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
+	prtypes "github.com/projectcalico/calico/policy-recommendation/pkg/types"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 
 	log "github.com/sirupsen/logrus"
@@ -36,7 +37,6 @@ const (
 	defaultPolicyRecEngineStabilizationPeriod    = 10 * time.Minute
 	defaultPolicyRecEngineMaxRules               = 20
 	defaultPolicyRecEnginePoliciesLearningCutOff = 20
-	defaultPolicyRecEngineTierName               = "namespace-segmentation"
 
 	minimumInterval = 30 * time.Second
 	tierOrder       = math.MaxFloat64
@@ -581,8 +581,8 @@ func setPolicyRecommendationScopeDefaults(scope *v3.PolicyRecommendationScope) {
 		policiesLearningCutOff := defaultPolicyRecEnginePoliciesLearningCutOff
 		scope.Spec.PoliciesLearningCutOff = &policiesLearningCutOff
 	}
-	// TierName. Default: 'namespace-segmentation'
+	// TierName. Default: 'namespace-isolation'
 	if scope.Spec.NamespaceSpec.TierName == "" {
-		scope.Spec.NamespaceSpec.TierName = defaultPolicyRecEngineTierName
+		scope.Spec.NamespaceSpec.TierName = prtypes.PolicyRecommendationTier
 	}
 }

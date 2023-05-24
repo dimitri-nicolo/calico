@@ -220,6 +220,6 @@ package policyrecommendation
 // 		Expect(scope.Spec.PoliciesLearningCutOff).To(Equal(&expectedPoliciesLearningCutOff))
 // 		Expect(scope.Spec.NamespaceSpec.RecStatus).To(Equal(v3.PolicyRecommendationScopeEnabled))
 // 		Expect(scope.Spec.NamespaceSpec.Selector).To(Equal(""))
-// 		Expect(scope.Spec.NamespaceSpec.TierName).To(Equal("namespace-segmentation"))
+// 		Expect(scope.Spec.NamespaceSpec.TierName).To(Equal("namespace-isolation"))
 // 	})
 // })

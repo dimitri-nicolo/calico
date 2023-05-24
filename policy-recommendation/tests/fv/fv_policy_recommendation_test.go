@@ -32,17 +32,8 @@ import (
 	"github.com/projectcalico/calico/policy-recommendation/pkg/namespace"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/policyrecommendation"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
+	prtypes "github.com/projectcalico/calico/policy-recommendation/pkg/types"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
-)
-
-const (
-	clusterID                     = "ClusterID"
-	policyRecommendationScopeName = "default"
-
-	timestampStep4Stabilizing = "2002-10-02T10:05:01-05:00"
-	timestampStep5Stabilizing = "2002-10-02T10:07:31-05:00"
-	timestampStep6Stabilizing = "2002-10-02T10:10:01-05:00"
-	timestampStep7Stabilizing = "2002-10-02T10:15:01-05:00"
 )
 
 var time *string
@@ -52,6 +43,16 @@ type mockClock struct{}
 func (mockClock) NowRFC3339() string { return *time }
 
 var _ = Describe("Tests policy recommendation controller", func() {
+	const (
+		clusterID                     = "ClusterID"
+		policyRecommendationScopeName = "default"
+
+		timestampStep4Stabilizing = "2002-10-02T10:05:01-05:00"
+		timestampStep5Stabilizing = "2002-10-02T10:07:31-05:00"
+		timestampStep6Stabilizing = "2002-10-02T10:10:01-05:00"
+		timestampStep7Stabilizing = "2002-10-02T10:15:01-05:00"
+	)
+
 	var (
 		ctx context.Context
 
@@ -73,7 +74,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 		namespaces []*v1.Namespace
 
-		tier string
+		tier = prtypes.PolicyRecommendationTier
 	)
 
 	Context("State if StagedNetworkPolicies after sequential engine calls", func() {
@@ -120,8 +121,6 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			}
 			// Setup cache synchronizer
 			cacheSynchronizer = syncer.NewCacheSynchronizer(mockClientSetForApp, *caches)
-
-			tier = "namespace-segmentation"
 
 			By("creating a list of namespaces")
 			// Create namespaces
@@ -513,8 +512,6 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Setup cache synchronizer
 			cacheSynchronizer = syncer.NewCacheSynchronizer(mockClientSetForApp, *caches)
 
-			tier = "namespace-segmentation"
-
 			By("creating a list of namespaces")
 			// Create namespaces
 			namespaces = []*v1.Namespace{namespace1, namespace2, namespace3, namespace4, namespace5}
@@ -648,8 +645,6 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			}
 			// Setup cache synchronizer
 			cacheSynchronizer = syncer.NewCacheSynchronizer(mockClientSetForApp, *caches)
-
-			tier = "namespace-segmentation"
 
 			By("creating a list of namespaces")
 			// Create namespaces

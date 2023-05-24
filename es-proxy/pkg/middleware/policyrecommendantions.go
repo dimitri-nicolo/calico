@@ -22,7 +22,7 @@ import (
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
-const recommendationsTier = "namespace-segmentation"
+const recommendationsTier = "namespace-isolation"
 
 type PagedRecommendationParams struct {
 	StagedAction string `json:"stagedAction"`
