@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019, 2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
+	netsetlabels "github.com/projectcalico/calico/libcalico-go/lib/labels"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
@@ -34,10 +35,10 @@ func NewNetworkSetUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
 
 func convertNetworkSetV2ToV1Key(v3key model.ResourceKey) (model.Key, error) {
 	if v3key.Kind != apiv3.KindNetworkSet {
-		return nil, errors.New("Key is not a valid NetworkSet resource")
+		return nil, errors.New("key is not a valid NetworkSet resource")
 	}
 	if v3key.Name == "" || v3key.Namespace == "" {
-		return model.NetworkSetKey{}, errors.New("Missing Name or Namespace field to create a v1 NetworkSet Key")
+		return model.NetworkSetKey{}, errors.New("missing Name or Namespace field to create a v1 NetworkSet Key")
 	}
 	return model.NetworkSetKey{
 		Name: v3key.Namespace + "/" + v3key.Name,
@@ -47,7 +48,7 @@ func convertNetworkSetV2ToV1Key(v3key model.ResourceKey) (model.Key, error) {
 func convertNetworkSetV2ToV1Value(val interface{}) (interface{}, error) {
 	v3res, ok := val.(*apiv3.NetworkSet)
 	if !ok {
-		return nil, errors.New("Value is not a valid NetworkSet resource value")
+		return nil, errors.New("value is not a valid NetworkSet resource value")
 	}
 
 	var addrs []cnet.IPNet
@@ -62,12 +63,18 @@ func convertNetworkSetV2ToV1Value(val interface{}) (interface{}, error) {
 		addrs = append(addrs, *ipNet)
 	}
 
-	// Add in the Calico namespace label for storage purposes.
-	labelsWithCalicoNamespace := make(map[string]string, len(v3res.GetLabels())+1)
+	// Add in the Calico namespace label for storage purposes. Add in the Kind and Name label for
+	// policy recommendation purposes
+	labelsWithCalicoNamespace := make(map[string]string, len(v3res.GetLabels()))
 	for k, v := range v3res.GetLabels() {
 		labelsWithCalicoNamespace[k] = v
 	}
 	labelsWithCalicoNamespace[apiv3.LabelNamespace] = v3res.Namespace
+
+	if !netsetlabels.ValidateNetworkSetLabels(v3res.Name, labelsWithCalicoNamespace) {
+		// Add Kind and Name labels to network set for policy rule mappings.
+		netsetlabels.AddKindandNameLabels(v3res.Name, labelsWithCalicoNamespace)
+	}
 
 	// Also include the namespace profile in the profile IDs so that we get namespace label inheritance.
 	// This is a wonky compared to Pods where the profile is included in the pod->WEP conversion and is therefore
@@ -90,7 +97,7 @@ func ConvertNetworkSetV3ToV1(kvp *model.KVPair) (*model.KVPair, error) {
 	// than a user error.
 	v3key, ok := kvp.Key.(model.ResourceKey)
 	if !ok {
-		return nil, errors.New("Key is not a valid ResourceKey")
+		return nil, errors.New("key is not a valid ResourceKey")
 	}
 	v1key, err := convertNetworkSetV2ToV1Key(v3key)
 	if err != nil {

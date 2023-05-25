@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019, 2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
+	netsetlabels "github.com/projectcalico/calico/libcalico-go/lib/labels"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
@@ -38,11 +39,11 @@ func ConvertGlobalNetworkSetV3ToV1(kvp *model.KVPair) (*model.KVPair, error) {
 	// than a user error.
 	v3key, ok := kvp.Key.(model.ResourceKey)
 	if !ok || v3key.Kind != apiv3.KindGlobalNetworkSet {
-		return nil, errors.New("Key is not a valid GlobalNetworkSet resource key")
+		return nil, errors.New("key is not a valid GlobalNetworkSet resource key")
 	}
 	v3res, ok := kvp.Value.(*apiv3.GlobalNetworkSet)
 	if !ok {
-		return nil, errors.New("Value is not a valid GlobalNetworkSet resource key")
+		return nil, errors.New("value is not a valid GlobalNetworkSet resource key")
 	}
 
 	v1key := model.NetworkSetKey{
@@ -63,8 +64,18 @@ func ConvertGlobalNetworkSetV3ToV1(kvp *model.KVPair) (*model.KVPair, error) {
 		addrs = append(addrs, *ipNet)
 	}
 
+	// Add in the Kind and Name label for policy recommendation purposes
+	labelsWithCalicoNamespace := make(map[string]string, len(v3res.GetLabels()))
+	for k, v := range v3res.GetLabels() {
+		labelsWithCalicoNamespace[k] = v
+	}
+	if !netsetlabels.ValidateNetworkSetLabels(v3res.Name, labelsWithCalicoNamespace) {
+		// Add Kind and Name labels to network set for policy rule mappings.
+		netsetlabels.AddKindandNameLabels(v3res.Name, labelsWithCalicoNamespace)
+	}
+
 	v1value := &model.NetworkSet{
-		Labels:               v3res.GetLabels(),
+		Labels:               labelsWithCalicoNamespace,
 		Nets:                 addrs,
 		AllowedEgressDomains: v3res.Spec.AllowedEgressDomains,
 	}

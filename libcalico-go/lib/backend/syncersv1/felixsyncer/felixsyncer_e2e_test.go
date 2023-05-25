@@ -558,6 +558,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				gns,
 				options.SetOptions{},
 			)
+			Expect(err).To(BeNil())
 			expectedCacheSize++
 
 			_, expGNet, err := net.ParseCIDROrIP("11.0.0.0/16")
@@ -566,7 +567,9 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				Key: model.NetworkSetKey{Name: "anetworkset"},
 				Value: &model.NetworkSet{
 					Labels: map[string]string{
-						"a": "b",
+						"a":             "b",
+						apiv3.LabelKind: apiv3.KindNetworkSet,
+						apiv3.LabelName: "anetworkset",
 					},
 					Nets: []net.IPNet{
 						*expGNet,
@@ -608,6 +611,8 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				Value: &model.NetworkSet{
 					Labels: map[string]string{
 						"a":                           "b",
+						apiv3.LabelName:               "anetworkset",
+						apiv3.LabelKind:               "NetworkSet",
 						"projectcalico.org/namespace": "namespace-1",
 					},
 					Nets: []net.IPNet{

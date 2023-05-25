@@ -1,4 +1,4 @@
-// Copyright (c) 2019, 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 package updateprocessors_test
 
 import (
+	"errors"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -25,34 +27,31 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
-var _ = Describe("Test the NetworkSet update processor", func() {
-	ns1 := "namespace-1"
-	name1 := "networkset-1"
+var _ = Describe("Test the GlobalNetworkSet update processor", func() {
+	name1 := "globalnetworkset-1"
 
-	v3NetworkSetKey1 := model.ResourceKey{
-		Kind:      apiv3.KindNetworkSet,
-		Name:      name1,
-		Namespace: ns1,
+	v3GlobalNetworkSetKey1 := model.ResourceKey{
+		Kind: apiv3.KindGlobalNetworkSet,
+		Name: name1,
 	}
 
 	cidr1str := "1.2.3.0/24"
 	_, cidr1IPNet, _ := net.ParseCIDROrIP(cidr1str)
 
 	v1NetworkSetKey1 := model.NetworkSetKey{
-		Name: ns1 + "/" + name1,
+		Name: name1,
 	}
 
-	It("should handle conversion of valid NetworkSets", func() {
-		up := updateprocessors.NewNetworkSetUpdateProcessor()
+	It("should handle conversion of valid GlobalNetworkSets", func() {
+		up := updateprocessors.NewGlobalNetworkSetUpdateProcessor()
 
-		By("converting a NetworkSet with minimum configuration")
-		res := apiv3.NewNetworkSet()
-		res.Name = v3NetworkSetKey1.Name
-		res.Namespace = ns1
+		By("converting a GlobalNetworkSet with minimum configuration")
+		res := apiv3.NewGlobalNetworkSet()
+		res.Name = v3GlobalNetworkSetKey1.Name
 		res.Spec.Nets = []string{cidr1str}
 
 		kvps, err := up.Process(&model.KVPair{
-			Key:      v3NetworkSetKey1,
+			Key:      v3GlobalNetworkSetKey1,
 			Value:    res,
 			Revision: "abcde",
 		})
@@ -63,24 +62,20 @@ var _ = Describe("Test the NetworkSet update processor", func() {
 			Value: &model.NetworkSet{
 				Nets: []net.IPNet{*cidr1IPNet},
 				Labels: map[string]string{
-					apiv3.LabelNamespace: ns1,
-					apiv3.LabelName:      v3NetworkSetKey1.Name,
-					apiv3.LabelKind:      apiv3.KindNetworkSet,
-				},
-				ProfileIDs: []string{
-					"kns." + ns1,
+					apiv3.LabelName: v3GlobalNetworkSetKey1.Name,
+					apiv3.LabelKind: apiv3.KindNetworkSet,
 				},
 			},
 			Revision: "abcde",
 		}))
 
-		By("adding another CIDR to the existing NetworkSet")
+		By("adding another CIDR to the existing GlobalNetworkSet")
 		cidr2str := "1.2.3.123/32"
 		_, cidr2IPNet, _ := net.ParseCIDROrIP(cidr2str)
 		res.Spec.Nets = []string{cidr1str, cidr2str}
 
 		kvps, err = up.Process(&model.KVPair{
-			Key:      v3NetworkSetKey1,
+			Key:      v3GlobalNetworkSetKey1,
 			Value:    res,
 			Revision: "abcde",
 		})
@@ -91,20 +86,16 @@ var _ = Describe("Test the NetworkSet update processor", func() {
 			Value: &model.NetworkSet{
 				Nets: []net.IPNet{*cidr1IPNet, *cidr2IPNet},
 				Labels: map[string]string{
-					apiv3.LabelNamespace: ns1,
-					apiv3.LabelName:      v3NetworkSetKey1.Name,
-					apiv3.LabelKind:      apiv3.KindNetworkSet,
-				},
-				ProfileIDs: []string{
-					"kns." + ns1,
+					apiv3.LabelName: v3GlobalNetworkSetKey1.Name,
+					apiv3.LabelKind: apiv3.KindNetworkSet,
 				},
 			},
 			Revision: "abcde",
 		}))
 
-		By("deleting the NetworkSet")
+		By("deleting the GlobalNetworkSet")
 		kvps, err = up.Process(&model.KVPair{
-			Key: v3NetworkSetKey1,
+			Key: v3GlobalNetworkSetKey1,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(kvps).To(Equal([]*model.KVPair{
@@ -115,17 +106,16 @@ var _ = Describe("Test the NetworkSet update processor", func() {
 	})
 
 	It("should fail to convert an invalid resource", func() {
-		// Is a NewSimpleUpdateProcessor
-		up := updateprocessors.NewNetworkSetUpdateProcessor()
+		// Is a NewConflictResolvingCacheUpdateProcessor
+		up := updateprocessors.NewGlobalNetworkSetUpdateProcessor()
 
 		By("trying to convert with the wrong key type")
-		res := apiv3.NewNetworkSet()
-		res.Name = v3NetworkSetKey1.Name
-		res.Namespace = ns1
+		res := apiv3.NewGlobalNetworkSet()
+		res.Name = v3GlobalNetworkSetKey1.Name
 		res.Spec.Nets = []string{cidr1str}
 
 		kvps, err := up.Process(&model.KVPair{
-			Key:      v3NetworkSetKey1,
+			Key:      v3GlobalNetworkSetKey1,
 			Value:    res,
 			Revision: "abcde",
 		})
@@ -136,12 +126,8 @@ var _ = Describe("Test the NetworkSet update processor", func() {
 			Value: &model.NetworkSet{
 				Nets: []net.IPNet{*cidr1IPNet},
 				Labels: map[string]string{
-					apiv3.LabelNamespace: ns1,
-					apiv3.LabelName:      v3NetworkSetKey1.Name,
-					apiv3.LabelKind:      apiv3.KindNetworkSet,
-				},
-				ProfileIDs: []string{
-					"kns." + ns1,
+					apiv3.LabelName: v3GlobalNetworkSetKey1.Name,
+					apiv3.LabelKind: apiv3.KindNetworkSet,
 				},
 			},
 			Revision: "abcde",
@@ -156,12 +142,14 @@ var _ = Describe("Test the NetworkSet update processor", func() {
 		Expect(err).To(HaveOccurred())
 
 		By("trying to convert with the wrong value type")
+		expectedError := errors.New("value is not a valid GlobalNetworkSet resource key")
 		_, err = up.Process(&model.KVPair{
-			Key:      v3NetworkSetKey1,
+			Key:      v3GlobalNetworkSetKey1,
 			Value:    apiv3.NewBGPPeer,
 			Revision: "abcde",
 		})
-		// simpleUpdateProcessor returns a nil error if invalid value
-		Expect(err).NotTo(HaveOccurred())
+		// ConflictResolvingCacheUpdateProcessor returns an error if invalid value
+		Expect(err).To(HaveOccurred())
+		Expect(err).To(Equal(expectedError))
 	})
 })
