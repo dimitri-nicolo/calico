@@ -230,6 +230,7 @@ static CALI_BPF_INLINE int tc_state_fill_from_nexthdr(struct cali_tc_ctx *ctx, b
 		ctx->state->dport = bpf_ntohs(udp_hdr(ctx)->dest);
 		ctx->state->pre_nat_dport = ctx->state->dport;
 		CALI_DEBUG("UDP; ports: s=%d d=%d\n", ctx->state->sport, ctx->state->dport);
+#ifndef CALI_F_STATS
 		if (ctx->state->dport == VXLAN_PORT) {
 			/* CALI_F_FROM_HEP case is handled in vxlan_attempt_decap above since it already decoded
 			 * the header. */
@@ -245,6 +246,7 @@ static CALI_BPF_INLINE int tc_state_fill_from_nexthdr(struct cali_tc_ctx *ctx, b
 				}
 			}
 		}
+#endif
 		break;
 	case IPPROTO_ICMP:
 		ctx->state->icmp_type = icmp_hdr(ctx)->type;

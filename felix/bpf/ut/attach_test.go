@@ -47,7 +47,6 @@ import (
 )
 
 func TestAttach(t *testing.T) {
-	t.Skip("XXX")
 	RegisterTestingT(t)
 
 	bpfmaps, err := bpfmap.CreateBPFMaps()
