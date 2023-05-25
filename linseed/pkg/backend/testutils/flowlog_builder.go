@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -228,6 +229,18 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 		}
 	}
 
+	// Add in the destination domains.
+	domains := []string{}
+	for _, log := range b.logs {
+		for _, dom := range log.DestDomains {
+			if !containsValue(domains, dom) {
+				domains = append(domains, dom)
+			}
+		}
+	}
+	sort.Strings(domains)
+	f.DestDomains = domains
+
 	return f
 }
 
@@ -328,6 +341,11 @@ func (b *FlowLogBuilder) WithType(t string) *FlowLogBuilder {
 	return b
 }
 
+func (b *FlowLogBuilder) WithDestDomains(c ...string) *FlowLogBuilder {
+	b.activeLog.DestDomains = c
+	return b
+}
+
 func (b *FlowLogBuilder) WithDestType(c string) *FlowLogBuilder {
 	b.activeLog.DestType = c
 	return b
@@ -379,4 +397,15 @@ func (b *FlowLogBuilder) WithRandomFlowStats() *FlowLogBuilder {
 func (b *FlowLogBuilder) WithRandomPacketStats() *FlowLogBuilder {
 	b.randomPacketStats = true
 	return b
+}
+
+// containsValue returns true if the value already exists in the slice.
+func containsValue(slice []string, value string) bool {
+	for _, item := range slice {
+		if item == value {
+			return true
+		}
+	}
+
+	return false
 }

@@ -1,19 +1,642 @@
 [
   {
-    "reporter":    "src",
-    "actionflag":  1,
-    "proto": 2,
-    "source":
-    {
-      "name": "ns1",
-      "namespace": "ns1",
-      "type": "wep"
+   "Reporter": "src",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-1-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "color": "blue",
+     "job-name": "nagging",
+     "name": "pod-1",
+     "namespace": "namespace1"
     },
-    "destination":
-    {
-      "name": "ns2",
-      "namespace": "ns2",
-      "type": "wep"
-    }
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-2-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "name": "pod-2",
+     "namespace": "namespace1",
+     "pod-template-hash": "abcdef"
+    },
+    "IP": null,
+    "Port": 443,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "dst",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-1-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "color": "blue",
+     "job-name": "nagging",
+     "name": "pod-1",
+     "namespace": "namespace1"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-2-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "name": "pod-2",
+     "namespace": "namespace1",
+     "pod-template-hash": "abcdef"
+    },
+    "IP": null,
+    "Port": 443,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "src",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-1-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "color": "blue",
+     "job-name": "nagging",
+     "name": "pod-1",
+     "namespace": "namespace1"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "net",
+    "Name": "pvt",
+    "Namespace": "",
+    "Labels": null,
+    "IP": null,
+    "Port": 53,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 17,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+    "Reporter": "src",
+    "Source": {
+     "Type": "wep",
+     "Name": "pod-1-*",
+     "Namespace": "namespace1",
+     "Labels": {
+      "color": "blue",
+      "job-name": "nagging",
+      "name": "pod-1",
+      "namespace": "namespace1"
+     },
+     "IP": null,
+     "Port": null,
+     "ServiceAccount": null,
+     "NamedPorts": null
+    },
+    "Destination": {
+     "Type": "net",
+     "Name": "pvt",
+     "Namespace": "",
+     "Labels": null,
+     "IP": "192.168.0.1",
+     "Port": 53,
+     "ServiceAccount": null,
+     "NamedPorts": null
+    },
+    "ActionFlag": 1,
+    "Proto": 17,
+    "IPVersion": null,
+    "Policies": [
+    ]
+  },
+  {
+   "Reporter": "src",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-1-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "color": "red",
+     "job-name": "badger",
+     "name": "pod-1",
+     "namespace": "namespace1"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-2-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "name": "pod-2",
+     "namespace": "namespace1",
+     "pod-template-hash": "abcdef"
+    },
+    "IP": null,
+    "Port": 443,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "dst",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-1-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "color": "red",
+     "job-name": "badger",
+     "name": "pod-1",
+     "namespace": "namespace1"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-2-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "name": "pod-2",
+     "namespace": "namespace1",
+     "pod-template-hash": "abcdef"
+    },
+    "IP": null,
+    "Port": 443,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "src",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-1-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "color": "red",
+     "job-name": "badger",
+     "name": "pod-1",
+     "namespace": "namespace1"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-3-*",
+    "Namespace": "namespace2",
+    "Labels": {
+     "controller-revision-hash": "xyz123",
+     "pod-name": "pod-3",
+     "pod-namespace": "namespace2"
+    },
+    "IP": null,
+    "Port": 8080,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "dst",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-1-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "color": "red",
+     "job-name": "badger",
+     "name": "pod-1",
+     "namespace": "namespace1"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-3-*",
+    "Namespace": "namespace2",
+    "Labels": {
+     "controller-revision-hash": "xyz123",
+     "pod-name": "pod-3",
+     "pod-namespace": "namespace2"
+    },
+    "IP": null,
+    "Port": 8080,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "src",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-1-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "color": "blue",
+     "job-name": "nagging",
+     "name": "pod-1",
+     "namespace": "namespace1"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-3-*",
+    "Namespace": "namespace2",
+    "Labels": {
+     "controller-revision-hash": "xyz123",
+     "pod-name": "pod-3",
+     "pod-namespace": "namespace2"
+    },
+    "IP": null,
+    "Port": 5432,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "dst",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-1-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "color": "blue",
+     "job-name": "nagging",
+     "name": "pod-1",
+     "namespace": "namespace1"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-3-*",
+    "Namespace": "namespace2",
+    "Labels": {
+     "controller-revision-hash": "xyz123",
+     "pod-name": "pod-3",
+     "pod-namespace": "namespace2"
+    },
+    "IP": null,
+    "Port": 5432,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "src",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-2-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "name": "pod-2",
+     "namespace": "namespace1",
+     "pod-template-hash": "abcdef"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-3-*",
+    "Namespace": "namespace2",
+    "Labels": {
+     "controller-revision-hash": "xyz123",
+     "pod-name": "pod-3",
+     "pod-namespace": "namespace2"
+    },
+    "IP": null,
+    "Port": 5432,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "dst",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-2-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "name": "pod-2",
+     "namespace": "namespace1",
+     "pod-template-hash": "abcdef"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-3-*",
+    "Namespace": "namespace2",
+    "Labels": {
+     "controller-revision-hash": "xyz123",
+     "pod-name": "pod-3",
+     "pod-namespace": "namespace2"
+    },
+    "IP": null,
+    "Port": 5432,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "src",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-2-*",
+    "Namespace": "namespace1",
+    "Labels": {
+     "name": "pod-2",
+     "namespace": "namespace1",
+     "pod-template-hash": "abcdef"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "ns",
+    "Name": "netset-1",
+    "Namespace": "namespace1",
+    "Labels": {
+     "name": "netset-1",
+     "namespace": "namespace1"
+    },
+    "IP": null,
+    "Port": 80,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "dst",
+   "Source": {
+    "Type": "ns",
+    "Name": "gns-1",
+    "Namespace": "",
+    "Labels": {
+     "name": "gns-1"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-3-*",
+    "Namespace": "namespace2",
+    "Labels": {
+     "controller-revision-hash": "xyz123",
+     "pod-name": "pod-3",
+     "pod-namespace": "namespace2"
+    },
+    "IP": null,
+    "Port": 5432,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "dst",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-4-rs-1-*",
+    "Namespace": "namespace3",
+    "Labels": {
+     "controller-revision-hash": "rs1"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-3-*",
+    "Namespace": "namespace2",
+    "Labels": {
+     "controller-revision-hash": "xyz123",
+     "pod-name": "pod-3",
+     "pod-namespace": "namespace2"
+    },
+    "IP": null,
+    "Port": 5432,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "dst",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-4-rs-1-*",
+    "Namespace": "namespace3",
+    "Labels": {
+     "controller-revision-hash": "rs1"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-3-*",
+    "Namespace": "namespace2",
+    "Labels": {
+     "controller-revision-hash": "xyz123",
+     "pod-name": "pod-3",
+     "pod-namespace": "namespace2"
+    },
+    "IP": null,
+    "Port": 8080,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "dst",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-4-rs-2-*",
+    "Namespace": "namespace3",
+    "Labels": {
+     "controller-revision-hash": "rs2"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-3-*",
+    "Namespace": "namespace2",
+    "Labels": {
+     "controller-revision-hash": "xyz123",
+     "pod-name": "pod-3",
+     "pod-namespace": "namespace2"
+    },
+    "IP": null,
+    "Port": 5432,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
+  },
+  {
+   "Reporter": "dst",
+   "Source": {
+    "Type": "wep",
+    "Name": "pod-4-rs-2-*",
+    "Namespace": "namespace3",
+    "Labels": {
+     "controller-revision-hash": "rs2"
+    },
+    "IP": null,
+    "Port": null,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "Destination": {
+    "Type": "wep",
+    "Name": "pod-3-*",
+    "Namespace": "namespace2",
+    "Labels": {
+     "controller-revision-hash": "xyz123",
+     "pod-name": "pod-3",
+     "pod-namespace": "namespace2"
+    },
+    "IP": null,
+    "Port": 5432,
+    "ServiceAccount": null,
+    "NamedPorts": null
+   },
+   "ActionFlag": 1,
+   "Proto": 6,
+   "IPVersion": null,
+   "Policies": [
+   ]
   }
-]
+ ]
+ 

@@ -143,6 +143,9 @@ type L3Flow struct {
 	// Policies applied to this flow, in order.
 	Policies []Policy `json:"policies,omitempty"`
 
+	// DestDomains are the destination domains of this flow
+	DestDomains []string `json:"dest_domains,omitempty"`
+
 	// DestinationLabels are the labels applied to the destination during the lifetime
 	// of this flow. Note that a single label may have had multiple values throughout this flow's life.
 	DestinationLabels []FlowLabels `json:"destination_labels,omitempty"`

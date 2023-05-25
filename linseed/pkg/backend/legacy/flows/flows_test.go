@@ -754,7 +754,8 @@ func TestFlowFiltering(t *testing.T) {
 				WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none").
 				// Pass followed by a profile allow.
 				WithPolicy("0|allow-tigera|openshift-dns/allow-tigera.cluster-dns|pass|1").
-				WithPolicy("1|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0")
+				WithPolicy("1|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
+				WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 			exp1 := populateFlowDataN(t, ctx, bld, client, clusterInfo, numLogs)
 
 			// Template for flow #2.
@@ -774,7 +775,8 @@ func TestFlowFiltering(t *testing.T) {
 				WithReporter("src").WithAction("deny").
 				WithSourceLabels("cheese=brie").
 				// Explicit allow.
-				WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|allow|1")
+				WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|allow|1").
+				WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 
 			exp2 := populateFlowDataN(t, ctx, bld2, client, clusterInfo, numLogs)
 
@@ -820,7 +822,8 @@ func TestPagination(t *testing.T) {
 		WithSourceIP("34.15.66.3").
 		WithRandomFlowStats().WithRandomPacketStats().
 		WithReporter("src").WithAction("allowed").
-		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
+		WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo)
 
 	// Template for flow #2.
@@ -837,7 +840,8 @@ func TestPagination(t *testing.T) {
 		WithSourceIP("192.168.1.1").
 		WithRandomFlowStats().WithRandomPacketStats().
 		WithReporter("src").WithAction("allowed").
-		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
+		WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 	exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo)
 
 	// Set time range so that we capture all of the populated flow logs.
@@ -1002,7 +1006,8 @@ func TestMultiTenancy(t *testing.T) {
 			WithSourceIP("34.15.66.3").
 			WithRandomFlowStats().WithRandomPacketStats().
 			WithReporter("src").WithAction("allowed").
-			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
+			WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 
 		// Create the flow for tenant A.
 		exp1 := populateFlowData(t, ctx, bld, client, tenantAInfo)
@@ -1057,7 +1062,8 @@ func TestMultiTenancy(t *testing.T) {
 			WithSourceIP("34.15.66.3").
 			WithRandomFlowStats().WithRandomPacketStats().
 			WithReporter("src").WithAction("allowed").
-			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
+			WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 
 		// Modify the builder for tenant B so that we can distinguish the two flows.
 		bld2 := bld.Copy()

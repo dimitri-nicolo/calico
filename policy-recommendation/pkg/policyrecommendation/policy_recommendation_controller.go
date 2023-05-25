@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera Inc. All rights reserved.
 
 package policyrecommendation
 
@@ -14,7 +14,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	linseed "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/constants"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controller"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
@@ -38,26 +38,27 @@ func (realClock) NowRFC3339() string {
 }
 
 type policyRecommendationController struct {
-	watcher     controller.Watcher
-	calico      calicoclient.ProjectcalicoV3Interface
-	lmaESClient *lmaelastic.Client
-	cancel      context.CancelFunc
+	watcher controller.Watcher
+	calico  calicoclient.ProjectcalicoV3Interface
+	cancel  context.CancelFunc
+	clog    log.Entry
 }
 
 func NewPolicyRecommendationController(
 	calico calicoclient.ProjectcalicoV3Interface,
-	lmaESClient *lmaelastic.Client, synchronizer client.QueryInterface,
+	linseedClient linseed.Client,
+	synchronizer client.QueryInterface,
 	caches *syncer.CacheSet,
 	cluster string,
 ) controller.Controller {
 	prReconciler := &policyRecommendationReconciler{
-		calico:       calico,
-		lmaESClient:  lmaESClient,
-		synchronizer: synchronizer,
-		caches:       caches,
-		cluster:      cluster,
-		tickDuration: make(chan time.Duration),
-		clock:        &realClock{},
+		calico:        calico,
+		linseedClient: linseedClient,
+		synchronizer:  synchronizer,
+		caches:        caches,
+		cluster:       cluster,
+		tickDuration:  make(chan time.Duration),
+		clock:         &realClock{},
 	}
 
 	watcher := controller.NewWatcher(
@@ -68,14 +69,14 @@ func NewPolicyRecommendationController(
 	)
 
 	return &policyRecommendationController{
-		watcher:     watcher,
-		calico:      calico,
-		lmaESClient: lmaESClient,
+		watcher: watcher,
+		calico:  calico,
+		clog:    *log.WithField("cluster", cluster),
 	}
 }
 
 func (pr *policyRecommendationController) Run(parentCtx context.Context) {
-	log.Info("Starting Policy Recommendation Controller")
+	pr.clog.Info("Starting Policy Recommendation Controller")
 
 	ctx, cancel := context.WithCancel(parentCtx)
 	pr.cancel = cancel

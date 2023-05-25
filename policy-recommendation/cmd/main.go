@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera Inc. All rights reserved.
 
 package main
 
@@ -19,7 +19,8 @@ import (
 	lincensing_client "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/cache"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/config"
@@ -57,11 +58,22 @@ func main() {
 		panic(err.Error())
 	}
 
-	envCfg := elastic.MustLoadConfig()
-	esClientFactory := elastic.NewClusterContextClientFactory(envCfg)
-	lmaESClient, err := esClientFactory.ClientForCluster(lmak8s.DefaultCluster)
+	prConfig, err := config.LoadConfig()
 	if err != nil {
-		log.WithError(err).Fatal("Could not connect to Elasticsearch")
+		log.WithError(err).Fatal("failed to load policy recommendation configurations")
+
+	}
+	// Create linseed Client.
+	lsConfig := lsrest.Config{
+		URL:             prConfig.LinseedURL,
+		CACertPath:      prConfig.LinseedCA,
+		ClientKeyPath:   prConfig.LinseedClientKey,
+		ClientCertPath:  prConfig.LinseedClientCert,
+		FIPSModeEnabled: prConfig.FIPSModeEnabled,
+	}
+	linseed, err := lsclient.NewClient(prConfig.TenantID, lsConfig, lsrest.WithTokenPath(prConfig.LinseedToken))
+	if err != nil {
+		log.WithError(err).Fatal("failed to create linseed client")
 	}
 
 	// setup license check
@@ -125,7 +137,7 @@ func main() {
 	// create main controller
 	managementStandalonePolicyRecController := policyrecommendation.NewPolicyRecommendationController(
 		clientSet.ProjectcalicoV3(),
-		&lmaESClient,
+		linseed,
 		cacheSynchronizer,
 		caches,
 		lmak8s.DefaultCluster,
@@ -133,7 +145,7 @@ func main() {
 	managedclusterController := managedcluster.NewManagedClusterController(
 		clientSet.ProjectcalicoV3(),
 		clientFactory,
-		esClientFactory,
+		linseed,
 	)
 	stagednetworkpolicyController := stagednetworkpolicies.NewStagedNetworkPolicyController(
 		clientSet.ProjectcalicoV3(),

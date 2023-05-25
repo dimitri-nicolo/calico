@@ -2,8 +2,8 @@ package policyrecommendation
 
 //TODO(dimitrin): [EV-3439] Re-write tests and add back
 // 								- Address empty namespace and staged network policy caches
-// 								- Address empty elastic search query results
-// 								- Mock the engine reconcilation run
+// 								- Address empty search query results
+// 								- Mock the engine reconciliation run
 
 // import (
 // 	"context"

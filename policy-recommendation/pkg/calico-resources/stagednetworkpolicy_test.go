@@ -63,7 +63,7 @@ var _ = Describe("NewStagedNetowrkPolicy", func() {
 	It("valid staged network policy", func() {
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
 				Namespace: namespace,
 			},
 
@@ -99,7 +99,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 	It("no update", func() {
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
 				Namespace: namespace,
 			},
 
@@ -151,7 +151,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 	It("update egress", func() {
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
 				Namespace: namespace,
 			},
 
@@ -227,7 +227,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 	It("update egress with empty rules", func() {
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
 				Namespace: namespace,
 			},
 
@@ -278,7 +278,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 	It("update ingress", func() {
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
 				Namespace: namespace,
 			},
 
@@ -355,7 +355,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
 				Namespace: namespace,
 			},
 
@@ -407,7 +407,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 	It("update ingress and egress of policy with empty rules", func() {
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
 				Namespace: namespace,
 			},
 

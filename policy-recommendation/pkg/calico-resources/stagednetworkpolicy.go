@@ -54,7 +54,7 @@ const (
 	StabilizingStatus = "Stabilizing"
 	StaleStatus       = "Stale"
 
-	PolicRecSnpNameSuffix = "recommendation"
+	PolicyRecSnpNameSuffix = "recommendation"
 )
 
 // NewStagedNetworkPolicy returns a pointer to a staged network policy.
@@ -468,5 +468,5 @@ func sortPorts(ports []numorstring.Port) []numorstring.Port {
 // Utilities
 
 func GetPolicyName(tier, name string) string {
-	return fmt.Sprintf("%s.%s-%s", tier, name, PolicRecSnpNameSuffix)
+	return fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix)
 }

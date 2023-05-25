@@ -6,8 +6,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/stretchr/testify/mock"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	fakeK8s "k8s.io/client-go/kubernetes/fake"
@@ -16,7 +14,8 @@ import (
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	linseed "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controller"
 	controller_mocks "github.com/projectcalico/calico/policy-recommendation/pkg/controller/mocks"
@@ -117,14 +116,8 @@ var _ = Describe("ManagedCluster reconciler test", func() {
 			nil,
 		)
 
-		mockESClient := lmaelastic.MockClient{}
-		mockESClient.On("CreateEventsIndex", mock.AnythingOfType("*context.cancelCtx")).Return(nil)
-
-		mockEsClientFactory := lmaelastic.MockClusterContextClientFactory{}
-		mockEsClientFactory.On("ClientForCluster", testResourceName).Return(&mockESClient, nil)
-
 		mr.clientFactory = &mockClientFactory
-		mr.elasticClientFactory = &mockEsClientFactory
+		mr.linseed = linseed.NewMockClient("", rest.MockResult{})
 
 		_, err := calicoCLI.ManagedClusters().Create(
 			testCtx,

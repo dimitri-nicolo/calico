@@ -1,9 +1,11 @@
-// Copyright (c) 2022 Tigera Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera Inc. All rights reserved.
 
 package managedcluster
 
 import (
 	"context"
+
+	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
@@ -11,12 +13,10 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	linseed "github.com/projectcalico/calico/linseed/pkg/client"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/constants"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controller"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -34,12 +34,12 @@ type managedClusterController struct {
 func NewManagedClusterController(
 	managementStandaloneCalico calicoclient.ProjectcalicoV3Interface,
 	clientFactory lmak8s.ClientSetFactory,
-	esClientFactory lmaelastic.ClusterContextClientFactory,
+	linceed linseed.Client,
 ) controller.Controller {
 	managedClusterReconciler := &managedClusterReconciler{
 		managementStandaloneCalico: managementStandaloneCalico,
 		clientFactory:              clientFactory,
-		elasticClientFactory:       esClientFactory,
+		linseed:                    linceed,
 		cache:                      make(map[string]*managedClusterState),
 	}
 

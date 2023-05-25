@@ -188,7 +188,8 @@
           },
           "tcp_mean_mss": {
             "value": 0
-          }
+          },
+          "dest_domains": "www.tigera.io"
         }
       ]
     }

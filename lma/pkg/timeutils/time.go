@@ -39,7 +39,7 @@ func ParseTime(now time.Time, tstr *string) (*time.Time, interface{}, error) {
 			return &now, *tstr, nil
 		}
 
-		// Time string has section after the subtraction sign. We currently support minutes (m), hours (h) and days (d).
+		// Time string has section after the subtraction sign. We currently support minutes (m), hours (h), days (d) and seconds (s).
 		log.Debugf("Time string in now-x format; x=%s", parts[1])
 		dur := strings.TrimSpace(parts[1])
 		if dur == "0" {
@@ -48,13 +48,15 @@ func ParseTime(now time.Time, tstr *string) (*time.Time, interface{}, error) {
 			return &now, *tstr, nil
 		} else if len(dur) < 2 {
 			// We need at least two values for the unit and the value
-			log.Debug("Error parsing duration string, unrecognised unit of time")
+			log.Debug("Error parsing duration string, unrecognized unit of time")
 			return nil, nil, errors.New("error parsing time in query - not a supported format")
 		}
 
 		// Last letter indicates the units.
 		var mul time.Duration
 		switch dur[len(dur)-1] {
+		case 's':
+			mul = time.Second
 		case 'm':
 			mul = time.Minute
 		case 'h':
@@ -64,7 +66,7 @@ func ParseTime(now time.Time, tstr *string) (*time.Time, interface{}, error) {
 			//TODO(rlb): If we really want to support the ES date math format then this'll need more work.
 			mul = 24 * time.Hour
 		default:
-			log.Debugf("Error parsing duration string, unrecognised unit of time: %s", dur)
+			log.Debugf("Error parsing duration string, unrecognized unit of time: %s", dur)
 			return nil, nil, errors.New("error parsing time in query - not a supported format")
 		}
 

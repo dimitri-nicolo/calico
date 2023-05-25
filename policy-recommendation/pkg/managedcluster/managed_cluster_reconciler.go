@@ -1,35 +1,34 @@
-// Copyright (c) 2022 Tigera Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera Inc. All rights reserved.
 
 package managedcluster
 
 import (
 	"context"
 
+	log "github.com/sirupsen/logrus"
+
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 
+	linseed "github.com/projectcalico/calico/linseed/pkg/client"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/cache"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controller"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/namespace"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/policyrecommendation"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/stagednetworkpolicies"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type managedClusterReconciler struct {
 	managementStandaloneCalico calicoclient.ProjectcalicoV3Interface
 	clientFactory              lmak8s.ClientSetFactory
-	elasticClientFactory       lmaelastic.ClusterContextClientFactory
+	linseed                    linseed.Client
 	cache                      map[string]*managedClusterState
 }
 
@@ -71,18 +70,13 @@ func (r *managedClusterReconciler) isManagedClusterConnected(mc v3.ManagedCluste
 }
 
 func (r *managedClusterReconciler) startRecommendationPolicyControllerForManagedCluster(mc v3.ManagedCluster) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	clog := log.WithField("cluster", mc.Name)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	clog.Info("Starting policy recommendation")
 	clientSetForCluster, err := r.clientFactory.NewClientSetForApplication(mc.Name)
 	if err != nil {
-		log.WithError(err).Errorf("failed to create Calico client for managed cluster %s", mc.Name)
-		cancel()
-		return err
-	}
-
-	mcLMAElasticClient, err := r.createLMAElasticClientForManagedCluster(ctx, mc.Name)
-	if err != nil {
-		log.WithError(err).Errorf("failed to create Elastic client for managed cluster %s", mc.Name)
+		clog.WithError(err).Errorf("failed to create Calico client for managed cluster %s", mc.Name)
 		cancel()
 		return err
 	}
@@ -107,7 +101,7 @@ func (r *managedClusterReconciler) startRecommendationPolicyControllerForManaged
 
 	policyRecController := policyrecommendation.NewPolicyRecommendationController(
 		clientSetForCluster.ProjectcalicoV3(),
-		&mcLMAElasticClient,
+		r.linseed,
 		cacheSynchronizer,
 		caches,
 		mc.Name,
@@ -137,17 +131,6 @@ func (r *managedClusterReconciler) startRecommendationPolicyControllerForManaged
 	}
 
 	return nil
-}
-
-func (r *managedClusterReconciler) createLMAElasticClientForManagedCluster(ctx context.Context, clusterName string) (lmaelastic.Client, error) {
-	envCfg := lmaelastic.MustLoadConfig()
-	envCfg.ElasticIndexSuffix = clusterName
-	lmaESClient, err := r.elasticClientFactory.ClientForCluster(clusterName)
-	if err != nil {
-		return nil, err
-	}
-
-	return lmaESClient, nil
 }
 
 func (r *managedClusterReconciler) Close() {

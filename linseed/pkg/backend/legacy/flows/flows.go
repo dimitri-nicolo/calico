@@ -66,6 +66,7 @@ type flowBackend struct {
 	aggMaxs          []lmaelastic.AggMaxMinInfo
 	aggMeans         []lmaelastic.AggMeanInfo
 	aggNested        []lmaelastic.AggNestedTermInfo
+	aggTerms         []lmaelastic.AggTermInfo
 }
 
 // BucketConverter is a helper interface used as part of the cmd/converter tooling to convert
@@ -162,6 +163,10 @@ func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
 		},
 	}
 
+	terms := []lmaelastic.AggTermInfo{
+		{Name: "dest_domains"},
+	}
+
 	return &flowBackend{
 		lmaclient: c,
 		ft:        backend.NewFieldTracker(compositeSources),
@@ -173,6 +178,7 @@ func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
 		aggMaxs:          maxs,
 		aggMeans:         means,
 		aggNested:        nested,
+		aggTerms:         terms,
 	}
 }
 
@@ -185,6 +191,7 @@ func (b *flowBackend) BaseQuery() *lmaelastic.CompositeAggregationQuery {
 		AggMinInfos:             b.aggMins,
 		AggMeanInfos:            b.aggMeans,
 		AggNestedTermInfos:      b.aggNested,
+		AggTermInfos:            b.aggTerms,
 	}
 }
 
@@ -294,6 +301,9 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 
 	// Add in policies.
 	flow.Policies = getPoliciesFromAggregation(log, bucket.AggregatedTerms)
+
+	// Add in the destination domains.
+	flow.DestDomains = getDestDomainsFromAggregation(log, bucket.AggregatedTerms)
 
 	return &flow
 }
@@ -592,6 +602,27 @@ func (t *LabelTracker) Labels() []v1.FlowLabels {
 		labels = append(labels, flowLabels)
 	}
 	return labels
+}
+
+// getDestDomainsFromAggregation parses and sorts the destination domain logs out from the
+// given AggregationSingleBucket into a FlowResponse that can be sent back in the response.
+func getDestDomainsFromAggregation(log *logrus.Entry, terms map[string]*lmaelastic.AggregatedTerm) []string {
+	domains := []string{}
+	if terms, found := terms["dest_domains"]; found {
+		for k := range terms.Buckets {
+			key, ok := k.(string)
+			if !ok {
+				// This means the flow log is invalid so just skip it, otherwise a minor issue with a single flow
+				// could completely disable this endpoint.
+				logrus.WithField("key", key).Warning("skipping policy that failed to parse")
+				continue
+			}
+			domains = append(domains, strings.TrimSpace(key))
+		}
+	}
+	sort.Strings(domains)
+
+	return domains
 }
 
 // getPoliciesFromPolicyBucket parses the policy logs out from the given AggregationSingleBucket into a FlowResponsePolicy

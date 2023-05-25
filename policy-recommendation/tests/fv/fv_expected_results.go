@@ -152,7 +152,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -172,7 +172,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -323,7 +323,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -343,7 +343,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -456,7 +456,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.google.com", "www.tigera.com"},
+							Domains: []string{"www.google.com", "www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -476,7 +476,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.docker.com", "www.tigera.com", "www.website.com"},
+							Domains: []string{"www.docker.com", "www.tigera.io", "www.website.com"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -625,7 +625,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -645,7 +645,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -758,7 +758,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.google.com", "www.tigera.com"},
+							Domains: []string{"www.google.com", "www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -778,7 +778,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.docker.com", "www.tigera.com", "www.website.com"},
+							Domains: []string{"www.docker.com", "www.tigera.io", "www.website.com"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -851,7 +851,7 @@ var (
 									MaxPort: 99,
 								},
 							},
-							Domains: []string{"www.google.com", "www.tigera.com", "www.website.com"},
+							Domains: []string{"www.google.com", "www.tigera.io", "www.website.com"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -980,7 +980,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1000,7 +1000,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1113,7 +1113,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.google.com", "www.tigera.com"},
+							Domains: []string{"www.google.com", "www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1133,7 +1133,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.docker.com", "www.tigera.com", "www.website.com"},
+							Domains: []string{"www.docker.com", "www.tigera.io", "www.website.com"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1206,7 +1206,7 @@ var (
 									MaxPort: 99,
 								},
 							},
-							Domains: []string{"www.google.com", "www.tigera.com", "www.website.com"},
+							Domains: []string{"www.google.com", "www.tigera.io", "www.website.com"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1335,7 +1335,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1355,7 +1355,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1468,7 +1468,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.google.com", "www.tigera.com"},
+							Domains: []string{"www.google.com", "www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1488,7 +1488,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.docker.com", "www.tigera.com", "www.website.com"},
+							Domains: []string{"www.docker.com", "www.tigera.io", "www.website.com"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1561,7 +1561,7 @@ var (
 									MaxPort: 99,
 								},
 							},
-							Domains: []string{"www.google.com", "www.tigera.com", "www.website.com"},
+							Domains: []string{"www.google.com", "www.tigera.io", "www.website.com"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1690,7 +1690,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1710,7 +1710,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1823,7 +1823,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.google.com", "www.tigera.com"},
+							Domains: []string{"www.google.com", "www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1843,7 +1843,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.docker.com", "www.tigera.com", "www.website.com"},
+							Domains: []string{"www.docker.com", "www.tigera.io", "www.website.com"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -1916,7 +1916,7 @@ var (
 									MaxPort: 99,
 								},
 							},
-							Domains: []string{"www.google.com", "www.tigera.com", "www.website.com"},
+							Domains: []string{"www.google.com", "www.tigera.io", "www.website.com"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -2045,7 +2045,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -2065,7 +2065,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.tigera.com"},
+							Domains: []string{"www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -2178,7 +2178,7 @@ var (
 									MaxPort: 666,
 								},
 							},
-							Domains: []string{"www.google.com", "www.tigera.com"},
+							Domains: []string{"www.google.com", "www.tigera.io"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -2198,7 +2198,7 @@ var (
 									MaxPort: 667,
 								},
 							},
-							Domains: []string{"www.docker.com", "www.tigera.com", "www.website.com"},
+							Domains: []string{"www.docker.com", "www.tigera.io", "www.website.com"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -2271,7 +2271,7 @@ var (
 									MaxPort: 99,
 								},
 							},
-							Domains: []string{"www.google.com", "www.tigera.com", "www.website.com"},
+							Domains: []string{"www.google.com", "www.tigera.io", "www.website.com"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -2431,14 +2431,14 @@ var (
 							},
 							Services: &v3.ServiceMatch{
 								Name:      "glb-service1a",
-								Namespace: "",
+								Namespace: "-",
 							},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
 								"policyrecommendation.tigera.io/name":        "glb-service1a",
-								"policyrecommendation.tigera.io/namespace":   "",
+								"policyrecommendation.tigera.io/namespace":   "-",
 								"policyrecommendation.tigera.io/scope":       "Service",
 							},
 						},
@@ -2539,14 +2539,14 @@ var (
 							},
 							Services: &v3.ServiceMatch{
 								Name:      "glb-service3a",
-								Namespace: "",
+								Namespace: "-",
 							},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
 								"policyrecommendation.tigera.io/name":        "glb-service3a",
-								"policyrecommendation.tigera.io/namespace":   "",
+								"policyrecommendation.tigera.io/namespace":   "-",
 								"policyrecommendation.tigera.io/scope":       "Service",
 							},
 						},
@@ -2654,14 +2654,14 @@ var (
 							},
 							Services: &v3.ServiceMatch{
 								Name:      "glb-service1a",
-								Namespace: "",
+								Namespace: "-",
 							},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
 								"policyrecommendation.tigera.io/name":        "glb-service1a",
-								"policyrecommendation.tigera.io/namespace":   "",
+								"policyrecommendation.tigera.io/namespace":   "-",
 								"policyrecommendation.tigera.io/scope":       "Service",
 							},
 						},
@@ -2778,14 +2778,14 @@ var (
 							},
 							Services: &v3.ServiceMatch{
 								Name:      "glb-service3a",
-								Namespace: "",
+								Namespace: "-",
 							},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
 								"policyrecommendation.tigera.io/name":        "glb-service3a",
-								"policyrecommendation.tigera.io/namespace":   "",
+								"policyrecommendation.tigera.io/namespace":   "-",
 								"policyrecommendation.tigera.io/scope":       "Service",
 							},
 						},
@@ -2865,14 +2865,14 @@ var (
 							},
 							Services: &v3.ServiceMatch{
 								Name:      "glb-service3a",
-								Namespace: "",
+								Namespace: "-",
 							},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
 								"policyrecommendation.tigera.io/name":        "glb-service3a",
-								"policyrecommendation.tigera.io/namespace":   "",
+								"policyrecommendation.tigera.io/namespace":   "-",
 								"policyrecommendation.tigera.io/scope":       "Service",
 							},
 						},

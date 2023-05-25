@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
 package engine
 
 import (
@@ -9,6 +9,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	// . "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -21,7 +23,7 @@ import (
 )
 
 const (
-	testDataFile = "../../tests/data/flows_3.json"
+	testDataFile = "../../tests/data/flows.json"
 
 	// serviceName1 = "serviceName1"
 	// serviceName2 = "serviceName2"
@@ -61,7 +63,7 @@ var _ = Describe("processFlow", func() {
 
 	BeforeEach(func() {
 		recEngine = newRecommendationEngine(
-			name, namespace, tier, &order, clock, interval, stabilization)
+			name, namespace, tier, &order, clock, interval, stabilization, *log.WithField("cluster", "my-cluster"))
 
 		err := testutils.LoadData(testDataFile, &flowData)
 		Expect(err).To(BeNil())
@@ -69,7 +71,7 @@ var _ = Describe("processFlow", func() {
 
 	It("Test valid engine rule generation", func() {
 		for _, data := range flowData {
-			_ = recEngine.processFlow(data)
+			recEngine.processFlow(&data)
 		}
 
 		Expect(len(recEngine.egress.namespaceRules)).To(Equal(2))
@@ -84,36 +86,28 @@ var _ = Describe("processFlow", func() {
 	})
 
 	It("Test flow with ActionFlagDeny", func() {
-		flow := api.Flow{
+		flow := &api.Flow{
 			ActionFlag: api.ActionFlagDeny,
 		}
 
-		expectedError := fmt.Errorf(
-			"%+v isn't an allowed flow. Only 'Allow' flows generate recommended policy",
-			flow)
-
-		err := recEngine.processFlow(flow)
-		Expect(err).NotTo(BeNil())
-		Expect(err).To(Equal(expectedError))
+		recEngine.processFlow(flow)
+		Expect(recEngine.egress.size).To(Equal(0))
+		Expect(recEngine.ingress.size).To(Equal(0))
 	})
 
 	It("Test flow with ActionFlagEndOfTierDeny", func() {
-		flow := api.Flow{
+		flow := &api.Flow{
 			ActionFlag: api.ActionFlagEndOfTierDeny,
 		}
 
-		expectedError := fmt.Errorf(
-			"%+v isn't an allowed flow. Only 'Allow' flows generate recommended policy",
-			flow)
-
-		err := recEngine.processFlow(flow)
-		Expect(err).NotTo(BeNil())
-		Expect(err).To(Equal(expectedError))
+		recEngine.processFlow(flow)
+		Expect(recEngine.egress.size).To(Equal(0))
+		Expect(recEngine.ingress.size).To(Equal(0))
 	})
 
 	It("Test 'src' reported flow that matches", func() {
 		namespace := "namespace1"
-		flow := api.Flow{
+		flow := &api.Flow{
 			ActionFlag: api.ActionFlagAllow,
 			Reporter:   api.ReporterTypeSource,
 			Source: api.FlowEndpointData{
@@ -122,13 +116,14 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		err := recEngine.processFlow(flow)
-		Expect(err).To(BeNil())
+		recEngine.processFlow(flow)
+		Expect(recEngine.egress.size).To(Equal(0))
+		Expect(recEngine.ingress.size).To(Equal(0))
 	})
 
 	It("Test 'src' reported flow that is not WEP", func() {
 		namespace := "namespace1"
-		flow := api.Flow{
+		flow := &api.Flow{
 			ActionFlag: api.ActionFlagAllow,
 			Reporter:   api.ReporterTypeSource,
 			Source: api.FlowEndpointData{
@@ -137,18 +132,14 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		expectedError := fmt.Errorf(
-			"the flow's namespace, %+v, does not match the request or the endpoint isn't a Workload Endpoint",
-			flow)
-
-		err := recEngine.processFlow(flow)
-		Expect(err).NotTo(BeNil())
-		Expect(err).To(Equal(expectedError))
+		recEngine.processFlow(flow)
+		Expect(recEngine.egress.size).To(Equal(0))
+		Expect(recEngine.ingress.size).To(Equal(0))
 	})
 
 	It("Test 'src' reported flow where the source flow is not equal to the rec engine namespace", func() {
 		namespace := "not-the-engine-namespace"
-		flow := api.Flow{
+		flow := &api.Flow{
 			ActionFlag: api.ActionFlagAllow,
 			Reporter:   api.ReporterTypeSource,
 			Source: api.FlowEndpointData{
@@ -157,18 +148,14 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		expectedError := fmt.Errorf(
-			"the flow's namespace, %+v, does not match the request or the endpoint isn't a Workload Endpoint",
-			flow)
-
-		err := recEngine.processFlow(flow)
-		Expect(err).NotTo(BeNil())
-		Expect(err).To(Equal(expectedError))
+		recEngine.processFlow(flow)
+		Expect(recEngine.egress.size).To(Equal(0))
+		Expect(recEngine.ingress.size).To(Equal(0))
 	})
 
 	It("Test 'dst' reported flow that matches", func() {
 		namespace := "namespace1"
-		flow := api.Flow{
+		flow := &api.Flow{
 			ActionFlag: api.ActionFlagAllow,
 			Reporter:   api.ReporterTypeDestination,
 			Destination: api.FlowEndpointData{
@@ -177,13 +164,14 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		err := recEngine.processFlow(flow)
-		Expect(err).To(BeNil())
+		recEngine.processFlow(flow)
+		Expect(recEngine.egress.size).To(Equal(0))
+		Expect(recEngine.ingress.size).To(Equal(0))
 	})
 
 	It("Test 'dst' reported flow that is not WEP", func() {
 		namespace := "namespace1"
-		flow := api.Flow{
+		flow := &api.Flow{
 			ActionFlag: api.ActionFlagAllow,
 			Reporter:   api.ReporterTypeDestination,
 			Destination: api.FlowEndpointData{
@@ -192,18 +180,14 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		expectedError := fmt.Errorf(
-			"the flow's namespace, %+v, does not match the request or the endpoint isn't a Workload Endpoint",
-			flow)
-
-		err := recEngine.processFlow(flow)
-		Expect(err).NotTo(BeNil())
-		Expect(err).To(Equal(expectedError))
+		recEngine.processFlow(flow)
+		Expect(recEngine.egress.size).To(Equal(0))
+		Expect(recEngine.ingress.size).To(Equal(0))
 	})
 
 	It("Test 'dst' reported flow where the source flow is not equal to the rec engine namespace", func() {
 		namespace := "not-the-engine-namespace"
-		flow := api.Flow{
+		flow := &api.Flow{
 			ActionFlag: api.ActionFlagAllow,
 			Reporter:   api.ReporterTypeDestination,
 			Destination: api.FlowEndpointData{
@@ -212,13 +196,10 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		expectedError := fmt.Errorf(
-			"the flow's namespace, %+v, does not match the request or the endpoint isn't a Workload Endpoint",
-			flow)
+		recEngine.processFlow(flow)
+		Expect(recEngine.egress.size).To(Equal(0))
+		Expect(recEngine.ingress.size).To(Equal(0))
 
-		err := recEngine.processFlow(flow)
-		Expect(err).NotTo(BeNil())
-		Expect(err).To(Equal(expectedError))
 	})
 })
 
@@ -241,7 +222,7 @@ var _ = Describe("ProcessRecommendation", func() {
 
 	BeforeEach(func() {
 		recEngine = newRecommendationEngine(
-			name, namespace, tier, &order, clock, interval, stabilization)
+			name, namespace, tier, &order, clock, interval, stabilization, *log.WithField("cluster", "my-cluster"))
 
 		err := testutils.LoadData(testDataFile, &flowData)
 		Expect(err).To(BeNil())
@@ -250,7 +231,7 @@ var _ = Describe("ProcessRecommendation", func() {
 	// TODO(dimitrin): Add back UTs - [EV-2415] UTs
 	It("Test valid engine rule generation", func() {
 		for _, data := range flowData {
-			_ = recEngine.processFlow(data)
+			recEngine.processFlow(&data)
 		}
 
 		Expect(len(recEngine.egress.namespaceRules)).To(Equal(2))

@@ -18,13 +18,11 @@ import (
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	linseed "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
 	calicores "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/flows"
 )
-
-const esFlowLogsIndexPrefix = "tigera_secure_ee_flows"
 
 // Clock is an interface added for testing purposes.
 type Clock interface {
@@ -57,6 +55,9 @@ type recommendationEngine struct {
 	interval time.Duration
 	// Stabilization interval.
 	stabilization time.Duration
+
+	// log entry
+	clog log.Entry
 }
 
 type NetworkSet struct {
@@ -69,31 +70,33 @@ type NetworkSet struct {
 func RunEngine(
 	ctx context.Context,
 	calico calicoclient.ProjectcalicoV3Interface,
-	esClient elastic.Client,
-	lookbackSeconds int64,
+	linseedClient linseed.Client,
+	lookback time.Duration,
 	order *float64,
-	cluster string,
+	clusterID string,
 	clock Clock,
 	recInterval time.Duration,
 	stabilizationPeriod time.Duration,
 	owner *metav1.OwnerReference,
 	snp *v3.StagedNetworkPolicy,
 ) {
+	clog := log.WithField("cluster", clusterID)
+
 	if snp == nil {
-		log.Debugf("empty staged network policy")
+		clog.Debugf("empty staged network policy")
 		return
 	}
 
 	if snp.Spec.StagedAction != v3.StagedActionLearn {
 		// Engine only processes 'Learn' policies
-		log.Debugf("Ignoring %s policy", snp.Name)
+		clog.Debugf("Ignoring %s policy", snp.Name)
 		return
 	}
 
 	tier := snp.Spec.Tier
 	if err := calicores.MaybeCreateTier(ctx, calico, tier, order); err != nil {
 		// If a tier does not exist create it. Recommendation policy needs a recommendation tier
-		log.WithError(err).Debugf("failed to create tier: %s", tier)
+		clog.WithError(err).Debugf("failed to create tier: %s", tier)
 		return
 	}
 
@@ -103,38 +106,32 @@ func RunEngine(
 
 	namespace := snp.Namespace
 
-	// To get the start time, convert the lookback to an integer of seconds, rounded to the nearest
-	// second. The final string will have format: "now-10000s".
-	startTime := time.Now().UTC().Add(-time.Duration(lookbackSeconds) * time.Second).Unix()
-	endTime := time.Now().UTC().Unix()
-
 	// Define flow log query params
-	params := getNamespacePolicyRecParams(startTime, endTime, namespace, cluster)
-	log.Debugf("elastic search document index: %s", params.DocumentIndex)
+	params := getNamespacePolicyRecParams(lookback, namespace, clusterID)
 
 	// Query flows
-	query := flows.NewQueryFlows(ctx)
-	flows, err := query.QueryElasticsearchFlows(esClient, params)
+	query := flows.NewPolicyRecommendationQuery(ctx, linseedClient, clusterID)
+	flows, err := query.QueryFlows(params)
 	if err != nil {
-		log.WithError(err).WithField("params", params).Debug("Error querying flows")
+		clog.WithError(err).WithField("params", params).Debug("Error querying flows")
 		return
 	}
 	if len(flows) == 0 {
-		log.WithField("params", params).Debug("No matching flows found")
+		clog.WithField("params", params).Debug("No matching flows found")
 		return
 	}
 
 	// Update staged network policy
-	engine := getRecommendationEngine(*snp, clock, recInterval, stabilizationPeriod)
+	engine := getRecommendationEngine(*snp, clock, recInterval, stabilizationPeriod, *clog)
 	engine.processRecommendation(flows, snp)
 
 	// If private network flows have generated new rules, then create a 'private-network' global
 	// network set. The global network set must be updated manually by the user to include new
 	// subnets.
 	if len(engine.egress.privateNetworkRules) > 0 || len(engine.ingress.privateNetworkRules) > 0 {
-		log.Infof("Creating global network set: 'private-network'")
+		clog.Infof("Creating global network set: 'private-network'")
 		if err := calicores.MaybeCreatePrivateNetworkSet(ctx, calico, *owner); err != nil {
-			log.WithError(err).Errorf("failed to create private network set: %s", calicores.PrivateNetworkSetName)
+			clog.WithError(err).Errorf("failed to create private network set: %s", calicores.PrivateNetworkSetName)
 			return
 		}
 	}
@@ -149,6 +146,7 @@ func newRecommendationEngine(
 	clock Clock,
 	interval time.Duration,
 	stabilization time.Duration,
+	clog log.Entry,
 ) *recommendationEngine {
 	return &recommendationEngine{
 		name:          name,
@@ -161,53 +159,66 @@ func newRecommendationEngine(
 		clock:         clock,
 		interval:      interval,
 		stabilization: stabilization,
+		clog:          clog,
 	}
 }
 
 func (ere *recommendationEngine) buildRules(dir calicores.DirectionType, rules []v3.Rule) {
 	var scope string
-	for i := 0; i < len(rules); i = i + 1 {
-		scope = rules[i].Metadata.Annotations[calicores.ScopeKey]
+	var ok bool
+	for _, rule := range rules {
+		if rule.Metadata == nil {
+			ere.clog.Warn("recommended rule metadata is empty")
+			continue
+		}
+		scope, ok = rule.Metadata.Annotations[calicores.ScopeKey]
+		if !ok {
+			ere.clog.Warn("recommended rule does not contain a scope")
+			continue
+		}
 		switch scope {
 		case string(calicores.EgressToDomainScope):
-			ere.buildEgressToDomain(rules[i])
+			ere.buildEgressToDomain(rule)
 		case string(calicores.EgressToDomainSetScope):
 			// TODO(dimitrin): Create buildEgressToDomainSet
 		case string(calicores.EgressToServiceScope):
-			ere.buildEgressToService(rules[i])
+			ere.buildEgressToService(rule)
 		case string(calicores.NamespaceScope):
-			ere.buildNamespace(dir, rules[i])
+			ere.buildNamespace(dir, rule)
 		case string(calicores.NetworkSetScope):
-			ere.buildNetworkSet(dir, rules[i])
+			ere.buildNetworkSet(dir, rule)
 		case string(calicores.PrivateNetworkScope):
-			ere.buildPrivate(rules[i])
+			ere.buildPrivate(rule)
 		case string(calicores.PublicNetworkScope):
-			ere.buildPublic(dir, rules[i])
+			ere.buildPublic(dir, rule)
 		default:
-			log.Warnf("Invalid scope: %s", scope)
+			ere.clog.Warnf("Invalid scope: %s", scope)
 		}
 	}
 }
 
-// ProcessFlow takes a flow log and updates the recommendation engine rules.
-func (ere *recommendationEngine) processFlow(flow api.Flow) error {
-	// Only allowed flows are used to recommend policy.
+// ProcessFlow adds the flow the recommendation engine rules. Actions other than allow, namespace
+// mismatches and non WEP destination flows are skipped.
+func (ere *recommendationEngine) processFlow(flow *api.Flow) {
+	if flow == nil {
+		return
+	}
+	ere.clog.Debugf("Processing flow: %+v", flow)
+
+	// Only allowed flows are used to recommend policy
 	if flow.ActionFlag&api.ActionFlagAllow == 0 {
-		return fmt.Errorf(
-			"%+v isn't an allowed flow. Only 'Allow' flows generate recommended policy",
-			flow)
+		ere.clog.Debug("Skipping flow, only allow action processed")
+		return
 	}
 	// Make sure we only process flows that have either source or destination in the expected
-	// namespace.
-	if !ere.matchesSourceNamespace(flow) && !ere.matchesDestinationNamespace(flow) {
-		return fmt.Errorf(
-			"the flow's namespace, %+v, does not match the request or the endpoint isn't a Workload Endpoint",
-			flow)
+	// namespace
+	if !ere.matchesSourceNamespace(*flow) && !ere.matchesDestinationNamespace(*flow) {
+		// Skip this flow, as it doesn't match the namespace, or is not WEP
+		ere.clog.Debug("Skipping flow, namespace mismatch or destination isn't WEP")
+		return
 	}
-	// Construct rule.
-	ere.processEngineRuleFromFlow(flow)
-
-	return nil
+	// Construct rule
+	ere.processEngineRuleFromFlow(*flow)
 }
 
 // buildEgressToDomain creates a new EgressToDomain engine rule key. It is assumed that each new
@@ -215,7 +226,7 @@ func (ere *recommendationEngine) processFlow(flow api.Flow) error {
 func (ere *recommendationEngine) buildEgressToDomain(rule v3.Rule) {
 	if len(rule.Destination.Ports) == 0 {
 		err := fmt.Errorf("no ports in this rule")
-		log.WithError(err)
+		ere.clog.WithError(err)
 		return
 	}
 	// 'Domains' rules should only contain one port
@@ -337,7 +348,7 @@ func (ere *recommendationEngine) buildNetworkSet(dir calicores.DirectionType, ru
 func (ere *recommendationEngine) buildPrivate(rule v3.Rule) {
 	if len(rule.Destination.Ports) == 0 {
 		err := errors.New("no ports in private rule")
-		log.WithError(err)
+		ere.clog.WithError(err)
 		return
 	}
 
@@ -486,19 +497,15 @@ func (ere *recommendationEngine) getSortedEngineAsV3Rules(direction calicores.Di
 // only if the values of the rules have changed.
 func (ere *recommendationEngine) processRecommendation(flows []*api.Flow, snp *v3.StagedNetworkPolicy) {
 	if snp == nil {
-		log.Warn("Empty staged network policy")
+		ere.clog.Warn("Empty staged network policy")
 		return
 	}
-	log.Debugf("Processing recommendation: %s", snp.Name)
+	ere.clog.Debugf("Processing recommendation: %s", snp.Name)
 
 	// Process flows into egress/ingress rules, and the policy selector.
 	for _, flow := range flows {
-		log.WithField("flow: ", flow).Debug("Calling recommendation engine with flow")
-		if flow != nil {
-			if err := ere.processFlow(*flow); err != nil {
-				log.WithError(err).WithField("flow", flow).Debug("Error processing flow")
-			}
-		}
+		ere.clog.WithField("flow", flow).Debug("Calling recommendation engine with flow")
+		ere.processFlow(flow)
 	}
 
 	// Get sorted v3 rules
@@ -547,18 +554,18 @@ func (ere *recommendationEngine) processEngineRuleFromFlow(apiFlow api.Flow) {
 	var direction calicores.DirectionType
 	if ere.matchesSourceNamespace(apiFlow) {
 		if flowType = getFlowType(calicores.EgressTraffic, apiFlow); flowType == unsupportedFlowType {
-			log.Debug("Unsupported flow type")
+			ere.clog.Debug("Unsupported flow type")
 			return
 		}
 		direction = calicores.EgressTraffic
 	} else if ere.matchesDestinationNamespace(apiFlow) {
 		if flowType = getFlowType(calicores.IngressTraffic, apiFlow); flowType == unsupportedFlowType {
-			log.Debug("Unsupported flow type")
+			ere.clog.Debug("Unsupported flow type")
 			return
 		}
 		direction = calicores.IngressTraffic
 	} else {
-		log.Warnf("Staged network policy namespace does not match flow. Cannot process flow: %+v",
+		ere.clog.Warnf("Staged network policy namespace does not match flow. Cannot process flow: %+v",
 			apiFlow)
 		return
 	}
@@ -664,23 +671,22 @@ func getRuleMetadata(key string, rule v3.Rule) (string, bool) {
 
 // getNamespacePolicyRecParams returns the policy parameters of a namespaces based policy
 // recommendation query to flow logs
-func getNamespacePolicyRecParams(st, et int64, ns, cl string) *flows.PolicyRecommendationParams {
+func getNamespacePolicyRecParams(st time.Duration, ns, cl string) *flows.PolicyRecommendationParams {
 	return &flows.PolicyRecommendationParams{
-		StartTime:     st,
-		EndTime:       et,
-		Namespace:     ns,
-		Unprotected:   true,
-		DocumentIndex: fmt.Sprintf("%s.%s.*", esFlowLogsIndexPrefix, cl),
+		StartTime:   st,
+		EndTime:     time.Duration(0), // Now
+		Namespace:   ns,
+		Unprotected: true,
 	}
 }
 
 // getRecommendationEngine returns a recommendation engine. Instantiated a new recommendation
 // engine and uses any existing staged network policy rules for instantiation.
 func getRecommendationEngine(
-	snp v3.StagedNetworkPolicy, clock Clock, interval, stabilization time.Duration,
+	snp v3.StagedNetworkPolicy, clock Clock, interval, stabilization time.Duration, clog log.Entry,
 ) recommendationEngine {
 	eng := newRecommendationEngine(
-		snp.Name, snp.Namespace, snp.Spec.Tier, snp.Spec.Order, clock, interval, stabilization)
+		snp.Name, snp.Namespace, snp.Spec.Tier, snp.Spec.Order, clock, interval, stabilization, clog)
 	eng.buildRules(calicores.EgressTraffic, snp.Spec.Egress)
 	eng.buildRules(calicores.IngressTraffic, snp.Spec.Ingress)
 

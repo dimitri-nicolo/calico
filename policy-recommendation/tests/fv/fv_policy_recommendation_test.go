@@ -2,11 +2,8 @@
 package fv
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 	"reflect"
 
 	. "github.com/onsi/ginkgo"
@@ -24,15 +21,15 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	linseed "github.com/projectcalico/calico/linseed/pkg/client"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/cache"
-	calicoresources "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 	calres "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/namespace"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/policyrecommendation"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
 	prtypes "github.com/projectcalico/calico/policy-recommendation/pkg/types"
+	fvdata "github.com/projectcalico/calico/policy-recommendation/tests/data"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 )
 
@@ -69,8 +66,8 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		mockClientSetFactory   *lmak8s.MockClientSetFactory
 		mockClientSetForApp    lmak8s.ClientSet
 		mockConstructorTesting mockConstructorTestingTNewMockClientSet
-		mockEsClient           lmaelastic.Client
 		mockClock              mockClock
+		mockLinseedClient      linseed.MockClient
 
 		namespaces []*v1.Namespace
 
@@ -87,6 +84,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			mockClientSetFactory = &lmak8s.MockClientSetFactory{}
 			mockConstructorTesting = mockConstructorTestingTNewMockClientSet{}
 			mockClientSet = lmak8s.NewMockClientSet(mockConstructorTesting)
+			mockLinseedClient = linseed.NewMockClient("")
 
 			mockClientSet.On("ProjectcalicoV3").Return(fakeClient.ProjectcalicoV3())
 			mockClientSet.On("CoreV1").Return(fakeCoreV1)
@@ -143,7 +141,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), &mockEsClient, cacheSynchronizer, caches, mockClock)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock)
 			err := prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -159,19 +157,17 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Update the mockClock RFC3339() return value
 			*time = timeAtStep1
 
-			step1File := "../data/es_flows_sample_egress_domain1.json"
 			// Run the engine to update the snps
 			snps := caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step1File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step1Results...)
 				*time = "2002-10-02T10:00:00-05:00"
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			By("verifying the staged network policies for step-1")
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -188,18 +184,16 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Update the mockClock RFC3339() return value
 			*time = timeAtStep2
 
-			step2File := "../data/es_flows_sample_egress_domain2.json"
 			// Run the engine to update the snps
 			snps = caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step2File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step2Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			By("verifying the staged network policies for step-2")
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -216,18 +210,16 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Update the mockClock RFC3339() return value
 			*time = timeAtStep3
 
-			step3File := "../data/es_flows_sample_egress_domain3.json"
 			// Run the engine to update the snps
 			snps = caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step3File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step3Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			By("verifying the staged network policies for step-3")
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -248,14 +240,13 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Run the engine to update the snps
 			snps = caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step3File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step3Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			By("verifying the staged network policies for step-4")
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -276,14 +267,13 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Run the engine to update the snps
 			snps = caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step3File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step3Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			By("verifying the staged network policies for step-5")
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -304,14 +294,13 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Run the engine to update the snps
 			snps = caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step3File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step3Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			By("verifying the staged network policies for step-6")
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -332,14 +321,13 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Run the engine to update the snps
 			snps = caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step3File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step3Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			By("verifying the staged network policies for step-7")
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -355,7 +343,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("EgressToService 2 step updates", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), &mockEsClient, cacheSynchronizer, caches, mockClock)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -371,17 +359,15 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Update the mockClock RFC3339() return value
 			*time = timeAtStep1
 
-			step1File := "../data/es_flows_sample_egress_service1.json"
 			// Run the engine to update the snps
 			snps := caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step1File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step4Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -398,17 +384,15 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Update the mockClock RFC3339() return value
 			*time = timeAtStep2
 
-			step2File := "../data/es_flows_sample_egress_service2.json"
 			// Run the engine to update the snps
 			snps = caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step2File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step5Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -424,7 +408,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("Namespace 2 step update", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), &mockEsClient, cacheSynchronizer, caches, mockClock)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -440,17 +424,15 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Update the mockClock RFC3339() return value
 			*time = timeAtStep1
 
-			step1File := "../data/es_flows_sample_namespace1.json"
 			// Run the engine to update the snps
 			snps := caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step1File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step6Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -528,7 +510,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("Timestamp update after 2 steps", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), &mockEsClient, cacheSynchronizer, caches, mockClock)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName, Namespace: ""})
 			Expect(err).To(BeNil())
 
@@ -546,18 +528,16 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Update the mockClock RFC3339() return value
 			*time = timeAtStep1
 
-			step1File := "../data/es_flows_sample_egress_domain1.json"
 			// Run the engine to update the snps
 			snps := caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step1File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step1Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			By("verifying the staged network policies for step-1")
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -581,13 +561,12 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Run the engine to update the snps
 			snps = caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step1File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step1Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -611,6 +590,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			mockClientSetFactory = &lmak8s.MockClientSetFactory{}
 			mockConstructorTesting = mockConstructorTestingTNewMockClientSet{}
 			mockClientSet = lmak8s.NewMockClientSet(mockConstructorTesting)
+			mockLinseedClient = linseed.NewMockClient("")
 
 			mockClientSet.On("ProjectcalicoV3").Return(fakeClient.ProjectcalicoV3())
 			mockClientSet.On("CoreV1").Return(fakeCoreV1)
@@ -648,11 +628,13 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			By("creating a list of namespaces")
 			// Create namespaces
-			namespaces = []*v1.Namespace{namespace1, namespace2, namespace3, namespace4, namespace5}
+			namespaces = []*v1.Namespace{tigeraNamespace, namespace1, namespace2, namespace3, namespace4, namespace5}
 			for _, ns := range namespaces {
 				_, err = fakeCoreV1.Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 				Expect(err).To(BeNil())
 			}
+
+			time = new(string)
 		})
 
 		AfterEach(func() {
@@ -660,10 +642,13 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		})
 
 		It("Delete staged network policy after enforcement", func() {
+			// The comparator function verify the timestamp annotation updates of the snp, along with the
+			// rule updates after each subsequent call to the engine through RecommendSnp().
+
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), &mockEsClient, cacheSynchronizer, caches, mockClock)
-			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName, Namespace: ""})
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock)
+			err := prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
 			// Reconcile namespaces
@@ -673,22 +658,21 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				Expect(err).To(BeNil())
 			}
 
+			// Step-1
 			By("recommending new egress to domain flows")
 			// Update the mockClock RFC3339() return value
 			*time = timeAtStep1
 
-			step1File := "../data/es_flows_sample_egress_domain1.json"
 			// Run the engine to update the snps
 			snps := caches.StagedNetworkPolicies.GetAll()
 			for _, snp := range snps {
-				mockEsResponse := getMockEsResponse(step1File)
-				mockEsClient = lmaelastic.NewMockSearchClient([]interface{}{mockEsResponse})
+				mockLinseedClient.SetResults(fvdata.Step1Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, snp)
 			}
 			By("verifying the staged network policies for step-1")
 			for _, ns := range namespaces {
 				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicRecSnpNameSuffix)
+				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
 				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
 					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
@@ -701,14 +685,14 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				}
 			}
 
-			snpName := fmt.Sprintf("%s.%s-%s", tier, namespace3.Name, calres.PolicRecSnpNameSuffix)
+			snpName := fmt.Sprintf("%s.%s-%s", tier, namespace3.Name, calres.PolicyRecSnpNameSuffix)
 			ds, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace3.Name).Get(ctx, snpName, metav1.GetOptions{})
 			defaultSnp := *ds
 			Expect(err).To(BeNil())
 			Expect(defaultSnp).NotTo(BeNil())
 			// Recommendation should have staged action 'Learn'
 			Expect(defaultSnp.Spec.StagedAction).To(Equal(v3.StagedActionLearn))
-			Expect(defaultSnp.Labels[calicoresources.StagedActionKey]).To(Equal(string(v3.StagedActionLearn)))
+			Expect(defaultSnp.Labels[calres.StagedActionKey]).To(Equal(string(v3.StagedActionLearn)))
 			Expect(len(defaultSnp.OwnerReferences)).To(Equal(1))
 			Expect(defaultSnp.OwnerReferences[0].Kind).To(Equal("PolicyRecommendationScope"))
 			Expect(defaultSnp.OwnerReferences[0].Name).To(Equal("default"))
@@ -778,38 +762,46 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				// Set the snp cache state
 				cacheSnp := caches.StagedNetworkPolicies.Get(snpName)
 				cacheSnp.Spec.StagedAction = test.csSA
-				cacheSnp.Labels[calicoresources.StagedActionKey] = string(test.csSA)
+				cacheSnp.Labels[calres.StagedActionKey] = string(test.csSA)
 				Expect(cacheSnp.Spec.StagedAction).To(Equal(test.csSA))
-				Expect(cacheSnp.Labels[calicoresources.StagedActionKey]).To(Equal(string(test.csSA)))
+				Expect(cacheSnp.Labels[calres.StagedActionKey]).To(Equal(string(test.csSA)))
 
 				// Transition the datastore snp
 				test.action(&snp)
 				updatedSnp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace3.Name).Update(ctx, &snp, metav1.UpdateOptions{})
 				Expect(err).To(BeNil())
 				Expect(updatedSnp.Spec.StagedAction).To(Equal(test.dsSA))
-				Expect(updatedSnp.Labels[calicoresources.StagedActionKey]).To(Equal(string(test.dsSA)))
+				Expect(updatedSnp.Labels[calres.StagedActionKey]).To(Equal(string(test.dsSA)))
 				Expect(len(updatedSnp.OwnerReferences)).To(Equal(len(test.ownref)))
 				if len(updatedSnp.OwnerReferences) == 1 && len(test.ownref) == 1 {
 					Expect(reflect.DeepEqual(snp.OwnerReferences, test.ownref)).To(BeTrue())
 				}
 
+				dataStoreBefore, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace3.Name).Get(ctx, snpName, metav1.GetOptions{})
+				Expect(err).To(BeNil())
+				Expect(dataStoreBefore).NotTo(BeNil())
+
+				// Append a rule to the cache egress rules
 				cacheSnp.Spec.Egress = append(cacheSnp.Spec.Egress, v3.Rule{Action: v3.Allow, Protocol: &protocolTCP})
+
 				// Call RecommendSnp, expecting to delete the snp from the
+				mockLinseedClient.SetResults(fvdata.Step1Results...)
 				prsReconciler.RecommendSnp(ctx, mockClock, cacheSnp)
 
 				// The cache should be in the expected state
 				cacheSnp = caches.StagedNetworkPolicies.Get(snpName)
 				Expect(cacheSnp.Spec.StagedAction).To(Equal(test.expectedCacheAction))
-				Expect(cacheSnp.Labels[calicoresources.StagedActionKey]).To(Equal(string(test.expectedCacheAction)))
+				Expect(cacheSnp.Labels[calres.StagedActionKey]).To(Equal(string(test.expectedCacheAction)))
 
 				// Verify that updates occur only when the cache is transition to learn
-				ds, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace3.Name).Get(ctx, snpName, metav1.GetOptions{})
+				dataStoreAfter, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace3.Name).Get(ctx, snpName, metav1.GetOptions{})
 				Expect(err).To(BeNil())
-				Expect(ds).NotTo(BeNil())
+				Expect(dataStoreAfter).NotTo(BeNil())
+
 				if test.expectUpdate {
-					Expect(reflect.DeepEqual(ds.Spec.Egress[4], cacheSnp.Spec.Egress[4])).To(BeTrue())
+					Expect(len(dataStoreAfter.Spec.Egress) > len(dataStoreBefore.Spec.Egress)).To(BeTrue())
 				} else {
-					Expect(len(ds.Spec.Egress)).To(Equal(4))
+					Expect(dataStoreAfter).To(Equal(dataStoreBefore))
 				}
 			}
 		})
@@ -820,7 +812,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 // active state.
 func activate(snp *v3.StagedNetworkPolicy) {
 	snp.Spec.StagedAction = v3.StagedActionSet
-	snp.Labels[calicoresources.StagedActionKey] = string(v3.StagedActionSet)
+	snp.Labels[calres.StagedActionKey] = string(v3.StagedActionSet)
 	snp.OwnerReferences = nil
 }
 
@@ -828,14 +820,14 @@ func activate(snp *v3.StagedNetworkPolicy) {
 // ignore state.
 func ignore(snp *v3.StagedNetworkPolicy) {
 	snp.Spec.StagedAction = v3.StagedActionIgnore
-	snp.Labels[calicoresources.StagedActionKey] = string(v3.StagedActionIgnore)
+	snp.Labels[calres.StagedActionKey] = string(v3.StagedActionIgnore)
 }
 
 // learn sets staged action and owner reference metadata of a staged network policy to a
 // learn state.
 func learn(snp *v3.StagedNetworkPolicy) {
 	snp.Spec.StagedAction = v3.StagedActionLearn
-	snp.Labels[calicoresources.StagedActionKey] = string(v3.StagedActionLearn)
+	snp.Labels[calres.StagedActionKey] = string(v3.StagedActionLearn)
 }
 
 // getRecommendationScopeOwner returns policy recommendation scope resource as an owner reference
@@ -905,44 +897,6 @@ func compareRules(left, right *v3.Rule) bool {
 	return true
 }
 
-// readJsonFile reads in a file, given a fname and returns a json file as an array of bytes. Returns
-// an error if ReadFile returns an error.
-func readJsonFile(fname string) ([]byte, error) {
-	// Read the file
-	file, err := os.ReadFile(fname)
-	if err != nil {
-		return nil, err
-	}
-
-	return file, nil
-}
-
-// getMockEsResponse given a file path, returns a mock elastic response as a string.
-func getMockEsResponse(file string) string {
-	Expect(file).NotTo(BeEmpty())
-
-	// Read json file containing a sample es response
-	data, err := readJsonFile(file)
-	Expect(err).To(BeNil())
-	var esResponseMap map[string]interface{}
-	err = json.Unmarshal(data, &esResponseMap)
-	Expect(err).To(BeNil())
-
-	var esResponseBuckets bytes.Buffer
-	for _, val := range esResponseMap {
-		jsonVal, err := json.MarshalIndent(val, "", "  ")
-		Expect(err).To(BeNil())
-		esResponseBuckets.WriteString(fmt.Sprintf(esBucket, string(jsonVal)))
-	}
-	// The response buckets contains a trailing comma, which must be removed
-	buckets := esResponseBuckets.String()
-	buckets = buckets[:len(buckets)-2]
-
-	response := fmt.Sprintf(esResp, len(esResponseMap), buckets)
-
-	return response
-}
-
 var (
 	tigeraNamespace = &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -988,93 +942,6 @@ var (
 			},
 		},
 	}
-
-	esResp = `{
-  "took": 78,
-  "timed_out": false,
-  "_shards": {
-    "total": 40,
-    "successful": 40,
-    "skipped": 0,
-    "failed": 0
-  },
-  "hits": {
-    "total": {
-      "relation": "eq",
-      "value": %d
-    },
-    "max_score": 0,
-    "hits": []
-  },
-  "aggregations": {
-    "flog_buckets": {
-      "buckets": [
-        %s
-      ]
-    }
-  }
-}
-`
-
-	esBucket = `{
-  "key": %s,
-  "doc_count": 14,
-  "sum_bytes_out": {
-    "value": 5
-  },
-  "policies": {
-    "doc_count": 4,
-    "by_tiered_policy": {
-      "doc_count_error_upper_bound": 0,
-      "sum_other_doc_count": 0,
-      "buckets": [
-        {
-          "key": "0|allow-tigera|__/allow-tigera.cluster-dns|pass|1",
-          "doc_count": 5
-        }
-      ]
-    }
-  },
-  "source_labels": {
-    "doc_count": 60,
-    "by_kvpair": {
-      "doc_count_error_upper_bound": 0,
-      "sum_other_doc_count": 0,
-      "buckets": [
-        {
-          "key": "aaaa",
-          "doc_count": 70
-        },
-        {
-          "key": "bbbb",
-          "doc_count": 80
-        },
-        {
-          "key": 1,
-          "doc_count": 1
-        }
-      ]
-    }
-  },
-  "dest_labels": {
-    "doc_count": 21,
-    "by_kvpair": {
-      "doc_count_error_upper_bound": 0,
-      "sum_other_doc_count": 0,
-      "buckets": [
-        {
-          "key": 123,
-          "doc_count": 22
-        },
-        {
-          "key": 124,
-          "doc_count": 23
-        }
-      ]
-    }
-  }
-},
-`
 )
 
 // Mock for testing.

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020, 2023 Tigera, Inc. All rights reserved.
 package elastic
 
 import (
@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	"github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -63,6 +63,11 @@ type AggMeanInfo struct {
 	Name        string
 	Field       string
 	WeightField string
+}
+
+// Structure encapsulating info about an aggregated standard term query.
+type AggTermInfo struct {
+	Name string
 }
 
 // CompositeAggregationQuery encapsulates and provides helper functions for a composite aggregation query. This
@@ -128,6 +133,9 @@ type CompositeAggregationQuery struct {
 
 	// The nested terms aggregation info.
 	AggNestedTermInfos []AggNestedTermInfo
+
+	// The aggregated term info.
+	AggTermInfos []AggTermInfo
 
 	// The aggregated sums info.
 	AggSumInfos []AggSumInfo
@@ -198,6 +206,11 @@ func (q *CompositeAggregationQuery) getCompositeAggregation() *elastic.Composite
 			a.Name,
 			elastic.NewNestedAggregation().Path(a.Path).SubAggregation(a.Term, elastic.NewTermsAggregation().Field(a.Field)),
 		)
+	}
+
+	// Add the aggregated top-level terms.
+	for _, a := range q.AggTermInfos {
+		compiledCompositeAgg.SubAggregation(a.Name, elastic.NewTermsAggregation().Field(a.Name))
 	}
 
 	return compiledCompositeAgg
@@ -344,6 +357,24 @@ func (q *CompositeAggregationQuery) ConvertBucketHelper(item *elastic.Aggregatio
 			continue
 		}
 		t := NewAggregatedTerm(nested.DocCount)
+		for _, b := range buckets.Buckets {
+			t.Buckets[b.Key] = b.DocCount
+		}
+
+		cab.AggregatedTerms[name] = t
+	}
+
+	// Extract the aggregated top-level terms.
+	for i := range q.AggTermInfos {
+		name := q.AggTermInfos[i].Name
+
+		buckets, ok := item.Terms(name)
+		if !ok {
+			// We don't need the terms buckets, so if not present log and continue.
+			log.Errorf("Error fetching aggregated terms buckets: %s", name)
+			continue
+		}
+		t := NewAggregatedTerm(int64(len(buckets.Buckets)))
 		for _, b := range buckets.Buckets {
 			t.Buckets[b.Key] = b.DocCount
 		}
@@ -555,8 +586,8 @@ func (c *mockComplianceClient) SearchCompositeAggregations(
 func PagedSearch[T any](ctx context.Context,
 	c Client,
 	query *CompositeAggregationQuery,
-	log *logrus.Entry,
-	convert func(*logrus.Entry, *CompositeAggregationBucket) *T,
+	log *log.Entry,
+	convert func(*log.Entry, *CompositeAggregationBucket) *T,
 	resultsAfter map[string]interface{},
 ) ([]T, map[string]interface{}, error) {
 	// Query the document index. We aren't interested in the actual search results but rather only the aggregated

@@ -3,8 +3,10 @@ package api
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/sirupsen/logrus"
+
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
@@ -91,12 +93,14 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 			Labels:    GetLinseedFlowLabels(lsf.SourceLabels),
 		},
 		Destination: FlowEndpointData{
-			Type:      EndpointType(lsf.Key.Destination.Type),
-			Name:      lsf.Key.Destination.AggregatedName,
-			Namespace: lsf.Key.Destination.Namespace,
-			IP:        nil, // TODO: We don't return this from Linseed!
-			Port:      &dstPort,
-			Labels:    GetLinseedFlowLabels(lsf.DestinationLabels),
+			Type:        EndpointType(lsf.Key.Destination.Type),
+			Name:        lsf.Key.Destination.AggregatedName,
+			Namespace:   lsf.Key.Destination.Namespace,
+			IP:          nil, // TODO: We don't return this from Linseed!
+			Port:        &dstPort,
+			Labels:      GetLinseedFlowLabels(lsf.DestinationLabels),
+			Domains:     strings.Join(lsf.DestDomains, ","),
+			ServiceName: GetServiceName(lsf.Service),
 		},
 		ActionFlag: ActionFlagFromString(string(lsf.Key.Action)),
 		Proto:      proto,
@@ -143,6 +147,15 @@ func GetPolicyHits(pols []lapi.Policy) []PolicyHit {
 		hits = append(hits, hit)
 	}
 	return hits
+}
+
+// GetServiceName returns the name of a service, an empty string if the service is nil.
+func GetServiceName(service *lapi.Service) string {
+	if service != nil {
+		return service.Name
+	}
+
+	return ""
 }
 
 type Flow struct {

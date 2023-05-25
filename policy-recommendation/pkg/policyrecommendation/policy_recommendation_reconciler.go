@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,15 +22,13 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
+	linseed "github.com/projectcalico/calico/linseed/pkg/client"
 	calicoresources "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/engine"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/resources"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
 	prtypes "github.com/projectcalico/calico/policy-recommendation/pkg/types"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -43,16 +43,16 @@ const (
 )
 
 type policyRecommendationReconciler struct {
-	stateLock    sync.Mutex
-	state        *policyRecommendationScopeState
-	calico       calicoclient.ProjectcalicoV3Interface
-	lmaESClient  *elastic.Client
-	synchronizer client.QueryInterface
-	caches       *syncer.CacheSet
-	cluster      string
-	tickDuration chan time.Duration
-	clock        engine.Clock
-	ticker       *time.Ticker
+	stateLock     sync.Mutex
+	state         *policyRecommendationScopeState
+	calico        calicoclient.ProjectcalicoV3Interface
+	linseedClient linseed.Client
+	synchronizer  client.QueryInterface
+	caches        *syncer.CacheSet
+	cluster       string
+	tickDuration  chan time.Duration
+	clock         engine.Clock
+	ticker        *time.Ticker
 }
 
 type policyRecommendationScopeState struct {
@@ -62,7 +62,7 @@ type policyRecommendationScopeState struct {
 
 func NewPolicyRecommendationReconciler(
 	calico calicoclient.ProjectcalicoV3Interface,
-	lmaESClient *elastic.Client,
+	linseedClient linseed.Client,
 	synchronizer client.QueryInterface,
 	caches *syncer.CacheSet,
 	clock engine.Clock,
@@ -70,13 +70,13 @@ func NewPolicyRecommendationReconciler(
 	td := new(chan time.Duration)
 
 	return &policyRecommendationReconciler{
-		state:        nil,
-		calico:       calico,
-		lmaESClient:  lmaESClient,
-		synchronizer: synchronizer,
-		caches:       caches,
-		tickDuration: *td,
-		clock:        clock,
+		state:         nil,
+		calico:        calico,
+		linseedClient: linseedClient,
+		synchronizer:  synchronizer,
+		caches:        caches,
+		tickDuration:  *td,
+		clock:         clock,
 	}
 }
 
@@ -270,28 +270,26 @@ func (pr *policyRecommendationReconciler) GetNetworkSets() set.Set[engine.Networ
 	return set.FromArray(netSetNames)
 }
 
-// getSnpLookbackSeconds returns the InitialLookback period if the policy is new and has not previously
-// been updated, otherwise use twice the engine-run interval (Default: 2.5min). The lookback is
-// set to an integer of seconds, rounded to the nearest second.
-func (pr *policyRecommendationReconciler) getSnpLookbackSeconds(snp v3.StagedNetworkPolicy) int64 {
+// getLookback returns the InitialLookback period if the policy is new and has not previously
+// been updated, otherwise use twice the engine-run interval (Default: 2.5min).
+func (pr *policyRecommendationReconciler) getLookback(snp v3.StagedNetworkPolicy) time.Duration {
 	_, ok := snp.Annotations["policyrecommendation.tigera.io/lastUpdated"]
 	if !ok {
 		// First time run will use the initial lookback
-		return int64(math.Round(pr.state.object.Spec.InitialLookback.Duration.Seconds()))
+		return pr.state.object.Spec.InitialLookback.Duration
 	}
-
 	// Twice the engine-run interval
 	lookback := pr.state.object.Spec.Interval.Duration * 2
-	return int64(math.Round(lookback.Seconds()))
 
+	return lookback
 }
 
 // RecommendSnp consolidates an snp rules into the engine's for a new run, and updates the datastore
 // if a change occurs.
 func (pr *policyRecommendationReconciler) RecommendSnp(ctx context.Context, clock engine.Clock, snp *v3.StagedNetworkPolicy) {
 
-	// time to look back while querying elastic
-	lookbackSeconds := pr.getSnpLookbackSeconds(*snp)
+	// time to look back while querying flows
+	lookback := pr.getLookback(*snp)
 
 	order := float64(tierOrder)
 	interval := pr.state.object.Spec.Interval.Duration
@@ -301,7 +299,7 @@ func (pr *policyRecommendationReconciler) RecommendSnp(ctx context.Context, cloc
 
 	// Run the engine to update the snp's rules from new flows
 	engine.RunEngine(
-		ctx, pr.calico, *pr.lmaESClient, lookbackSeconds, &order, pr.cluster, clock, interval, stbl, owner, snp,
+		ctx, pr.calico, pr.linseedClient, lookback, &order, pr.cluster, clock, interval, stbl, owner, snp,
 	)
 
 	// Update the snp on the datastore
