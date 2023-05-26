@@ -3156,4 +3156,677 @@ var (
 			},
 		},
 	}
+
+	expectedPrivateNetworkRecommendationsStep1 = map[string]*v3.StagedNetworkPolicy{
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Namespace: "namespace1",
+				Labels: map[string]string{
+					"policyrecommendation.tigera.io/scope":  "namespace",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
+					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					"projectcalico.org/spec.stagedAction":   "Learn",
+				},
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+					"policyrecommendation.tigera.io/status":      "Learning",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "projectcalico.org/v3",
+						Kind:       "PolicyRecommendationScope",
+						Name:       "default",
+					},
+				},
+			},
+			TypeMeta: metav1.TypeMeta{},
+			Spec: v3.StagedNetworkPolicySpec{
+				StagedAction: v3.StagedActionLearn,
+				Tier:         prtypes.PolicyRecommendationTier,
+				Ingress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source: v3.EntityRule{
+							NamespaceSelector: "global()",
+							Selector:          "projectcalico.org/name == 'private-network' && projectcalico.org/kind == 'Private'",
+						},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 5,
+									MaxPort: 5,
+								},
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+							},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "private-network",
+								"policyrecommendation.tigera.io/scope":       "Private",
+							},
+						},
+					},
+				},
+				Egress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 33,
+									MaxPort: 33,
+								},
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+								{
+									MinPort: 90,
+									MaxPort: 90,
+								},
+								{
+									MinPort: 8080,
+									MaxPort: 8080,
+								},
+								{
+									MinPort: 8081,
+									MaxPort: 8081,
+								},
+							},
+							NamespaceSelector: "global()",
+							Selector:          "projectcalico.org/name == 'private-network' && projectcalico.org/kind == 'Private'",
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "private-network",
+								"policyrecommendation.tigera.io/scope":       "Private",
+							},
+						},
+					},
+				},
+				Selector: "projectcalico.org/namespace == 'namespace1'",
+				Types:    []v3.PolicyType{"Egress", "Ingress"},
+			},
+		},
+	}
+
+	expectedPrivateNetworkRecommendationsStep2 = map[string]*v3.StagedNetworkPolicy{
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Namespace: "namespace1",
+				Labels: map[string]string{
+					"policyrecommendation.tigera.io/scope":  "namespace",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
+					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					"projectcalico.org/spec.stagedAction":   "Learn",
+				},
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+					"policyrecommendation.tigera.io/status":      "Stabilizing",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "projectcalico.org/v3",
+						Kind:       "PolicyRecommendationScope",
+						Name:       "default",
+					},
+				},
+			},
+			TypeMeta: metav1.TypeMeta{},
+			Spec: v3.StagedNetworkPolicySpec{
+				StagedAction: v3.StagedActionLearn,
+				Tier:         prtypes.PolicyRecommendationTier,
+				Ingress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source: v3.EntityRule{
+							NamespaceSelector: "global()",
+							Selector:          "projectcalico.org/name == 'private-network' && projectcalico.org/kind == 'Private'",
+						},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 5,
+									MaxPort: 5,
+								},
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+							},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "private-network",
+								"policyrecommendation.tigera.io/scope":       "Private",
+							},
+						},
+					},
+				},
+				Egress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 33,
+									MaxPort: 33,
+								},
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+								{
+									MinPort: 90,
+									MaxPort: 90,
+								},
+								{
+									MinPort: 8080,
+									MaxPort: 8080,
+								},
+								{
+									MinPort: 8081,
+									MaxPort: 8081,
+								},
+							},
+							NamespaceSelector: "global()",
+							Selector:          "projectcalico.org/name == 'private-network' && projectcalico.org/kind == 'Private'",
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "private-network",
+								"policyrecommendation.tigera.io/scope":       "Private",
+							},
+						},
+					},
+				},
+				Selector: "projectcalico.org/namespace == 'namespace1'",
+				Types:    []v3.PolicyType{"Egress", "Ingress"},
+			},
+		},
+	}
+
+	expectedPrivateNetworkRecommendationsStep3 = map[string]*v3.StagedNetworkPolicy{
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Namespace: "namespace1",
+				Labels: map[string]string{
+					"policyrecommendation.tigera.io/scope":  "namespace",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
+					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					"projectcalico.org/spec.stagedAction":   "Learn",
+				},
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+					"policyrecommendation.tigera.io/status":      "Stable",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "projectcalico.org/v3",
+						Kind:       "PolicyRecommendationScope",
+						Name:       "default",
+					},
+				},
+			},
+			TypeMeta: metav1.TypeMeta{},
+			Spec: v3.StagedNetworkPolicySpec{
+				StagedAction: v3.StagedActionLearn,
+				Tier:         prtypes.PolicyRecommendationTier,
+				Ingress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source: v3.EntityRule{
+							NamespaceSelector: "global()",
+							Selector:          "projectcalico.org/name == 'private-network' && projectcalico.org/kind == 'Private'",
+						},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 5,
+									MaxPort: 5,
+								},
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+							},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "private-network",
+								"policyrecommendation.tigera.io/scope":       "Private",
+							},
+						},
+					},
+				},
+				Egress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 33,
+									MaxPort: 33,
+								},
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+								{
+									MinPort: 90,
+									MaxPort: 90,
+								},
+								{
+									MinPort: 8080,
+									MaxPort: 8080,
+								},
+								{
+									MinPort: 8081,
+									MaxPort: 8081,
+								},
+							},
+							NamespaceSelector: "global()",
+							Selector:          "projectcalico.org/name == 'private-network' && projectcalico.org/kind == 'Private'",
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "private-network",
+								"policyrecommendation.tigera.io/scope":       "Private",
+							},
+						},
+					},
+				},
+				Selector: "projectcalico.org/namespace == 'namespace1'",
+				Types:    []v3.PolicyType{"Egress", "Ingress"},
+			},
+		},
+	}
+
+	expectedNetworkSetRecommendationsStep1 = map[string]*v3.StagedNetworkPolicy{
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Namespace: "namespace1",
+				Labels: map[string]string{
+					"policyrecommendation.tigera.io/scope":  "namespace",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
+					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					"projectcalico.org/spec.stagedAction":   "Learn",
+				},
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+					"policyrecommendation.tigera.io/status":      "Learning",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "projectcalico.org/v3",
+						Kind:       "PolicyRecommendationScope",
+						Name:       "default",
+					},
+				},
+			},
+			TypeMeta: metav1.TypeMeta{},
+			Spec: v3.StagedNetworkPolicySpec{
+				StagedAction: v3.StagedActionLearn,
+				Tier:         prtypes.PolicyRecommendationTier,
+				Ingress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source: v3.EntityRule{
+							NamespaceSelector: "projectcalico.org/name == 'my-netset-namespace'",
+							Selector:          "projectcalico.org/name == 'my-netset' && projectcalico.org/kind == 'NetworkSet'",
+						},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 5,
+									MaxPort: 5,
+								},
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+							},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "my-netset",
+								"policyrecommendation.tigera.io/namespace":   "my-netset-namespace",
+								"policyrecommendation.tigera.io/scope":       "NetworkSet",
+							},
+						},
+					},
+				},
+				Egress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 33,
+									MaxPort: 33,
+								},
+								{
+									MinPort: 90,
+									MaxPort: 90,
+								},
+								{
+									MinPort: 8080,
+									MaxPort: 8080,
+								},
+							},
+							NamespaceSelector: "projectcalico.org/name == 'my-netset-namespace'",
+							Selector:          "projectcalico.org/name == 'my-netset' && projectcalico.org/kind == 'NetworkSet'",
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "my-netset",
+								"policyrecommendation.tigera.io/namespace":   "my-netset-namespace",
+								"policyrecommendation.tigera.io/scope":       "NetworkSet",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+								{
+									MinPort: 8081,
+									MaxPort: 8081,
+								},
+							},
+							NamespaceSelector: "projectcalico.org/name == 'global()'",
+							Selector:          "projectcalico.org/name == 'my-globalnetset' && projectcalico.org/kind == 'NetworkSet'",
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "my-globalnetset",
+								"policyrecommendation.tigera.io/namespace":   "global()",
+								"policyrecommendation.tigera.io/scope":       "NetworkSet",
+							},
+						},
+					},
+				},
+				Selector: "projectcalico.org/namespace == 'namespace1'",
+				Types:    []v3.PolicyType{"Egress", "Ingress"},
+			},
+		},
+	}
+
+	expectedNetworkSetRecommendationsStep2 = map[string]*v3.StagedNetworkPolicy{
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Namespace: "namespace1",
+				Labels: map[string]string{
+					"policyrecommendation.tigera.io/scope":  "namespace",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
+					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					"projectcalico.org/spec.stagedAction":   "Learn",
+				},
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+					"policyrecommendation.tigera.io/status":      "Stabilizing",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "projectcalico.org/v3",
+						Kind:       "PolicyRecommendationScope",
+						Name:       "default",
+					},
+				},
+			},
+			TypeMeta: metav1.TypeMeta{},
+			Spec: v3.StagedNetworkPolicySpec{
+				StagedAction: v3.StagedActionLearn,
+				Tier:         prtypes.PolicyRecommendationTier,
+				Ingress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source: v3.EntityRule{
+							NamespaceSelector: "projectcalico.org/name == 'my-netset-namespace'",
+							Selector:          "projectcalico.org/name == 'my-netset' && projectcalico.org/kind == 'NetworkSet'",
+						},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 5,
+									MaxPort: 5,
+								},
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+							},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "my-netset",
+								"policyrecommendation.tigera.io/namespace":   "my-netset-namespace",
+								"policyrecommendation.tigera.io/scope":       "NetworkSet",
+							},
+						},
+					},
+				},
+				Egress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 33,
+									MaxPort: 33,
+								},
+								{
+									MinPort: 90,
+									MaxPort: 90,
+								},
+								{
+									MinPort: 8080,
+									MaxPort: 8080,
+								},
+							},
+							NamespaceSelector: "projectcalico.org/name == 'my-netset-namespace'",
+							Selector:          "projectcalico.org/name == 'my-netset' && projectcalico.org/kind == 'NetworkSet'",
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "my-netset",
+								"policyrecommendation.tigera.io/namespace":   "my-netset-namespace",
+								"policyrecommendation.tigera.io/scope":       "NetworkSet",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+								{
+									MinPort: 8081,
+									MaxPort: 8081,
+								},
+							},
+							NamespaceSelector: "projectcalico.org/name == 'global()'",
+							Selector:          "projectcalico.org/name == 'my-globalnetset' && projectcalico.org/kind == 'NetworkSet'",
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "my-globalnetset",
+								"policyrecommendation.tigera.io/namespace":   "global()",
+								"policyrecommendation.tigera.io/scope":       "NetworkSet",
+							},
+						},
+					},
+				}, Selector: "projectcalico.org/namespace == 'namespace1'",
+				Types: []v3.PolicyType{"Egress", "Ingress"},
+			},
+		},
+	}
+
+	expectedNetworkSetRecommendationsStep3 = map[string]*v3.StagedNetworkPolicy{
+		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Namespace: "namespace1",
+				Labels: map[string]string{
+					"policyrecommendation.tigera.io/scope":  "namespace",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
+					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					"projectcalico.org/spec.stagedAction":   "Learn",
+				},
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+					"policyrecommendation.tigera.io/status":      "Stable",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "projectcalico.org/v3",
+						Kind:       "PolicyRecommendationScope",
+						Name:       "default",
+					},
+				},
+			},
+			TypeMeta: metav1.TypeMeta{},
+			Spec: v3.StagedNetworkPolicySpec{
+				StagedAction: v3.StagedActionLearn,
+				Tier:         prtypes.PolicyRecommendationTier,
+				Ingress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source: v3.EntityRule{
+							NamespaceSelector: "projectcalico.org/name == 'my-netset-namespace'",
+							Selector:          "projectcalico.org/name == 'my-netset' && projectcalico.org/kind == 'NetworkSet'",
+						},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 5,
+									MaxPort: 5,
+								},
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+							},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "my-netset",
+								"policyrecommendation.tigera.io/namespace":   "my-netset-namespace",
+								"policyrecommendation.tigera.io/scope":       "NetworkSet",
+							},
+						},
+					},
+				},
+				Egress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 33,
+									MaxPort: 33,
+								},
+								{
+									MinPort: 90,
+									MaxPort: 90,
+								},
+								{
+									MinPort: 8080,
+									MaxPort: 8080,
+								},
+							},
+							NamespaceSelector: "projectcalico.org/name == 'my-netset-namespace'",
+							Selector:          "projectcalico.org/name == 'my-netset' && projectcalico.org/kind == 'NetworkSet'",
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "my-netset",
+								"policyrecommendation.tigera.io/namespace":   "my-netset-namespace",
+								"policyrecommendation.tigera.io/scope":       "NetworkSet",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+								{
+									MinPort: 8081,
+									MaxPort: 8081,
+								},
+							},
+							NamespaceSelector: "projectcalico.org/name == 'global()'",
+							Selector:          "projectcalico.org/name == 'my-globalnetset' && projectcalico.org/kind == 'NetworkSet'",
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "my-globalnetset",
+								"policyrecommendation.tigera.io/namespace":   "global()",
+								"policyrecommendation.tigera.io/scope":       "NetworkSet",
+							},
+						},
+					},
+				}, Selector: "projectcalico.org/namespace == 'namespace1'",
+				Types: []v3.PolicyType{"Egress", "Ingress"},
+			},
+		},
+	}
 )

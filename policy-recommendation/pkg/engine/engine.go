@@ -188,7 +188,7 @@ func (ere *recommendationEngine) buildRules(dir calicores.DirectionType, rules [
 		case string(calicores.NetworkSetScope):
 			ere.buildNetworkSet(dir, rule)
 		case string(calicores.PrivateNetworkScope):
-			ere.buildPrivate(rule)
+			ere.buildPrivate(dir, rule)
 		case string(calicores.PublicNetworkScope):
 			ere.buildPublic(dir, rule)
 		default:
@@ -339,13 +339,20 @@ func (ere *recommendationEngine) buildNetworkSet(dir calicores.DirectionType, ru
 		protocol:  *rule.Protocol,
 		timestamp: ts,
 	}
-	ere.egress.networkSetRules[key] = val
-	ere.egress.size++
+
+	var erules *engineRules
+	if dir == calicores.EgressTraffic {
+		erules = ere.egress
+	} else {
+		erules = ere.ingress
+	}
+	erules.networkSetRules[key] = val
+	erules.size++
 }
 
 // buildPrivate creates a new PrivateNetwork engine rule key. It is assumed that each new
 // rule will generate a new key.
-func (ere *recommendationEngine) buildPrivate(rule v3.Rule) {
+func (ere *recommendationEngine) buildPrivate(dir calicores.DirectionType, rule v3.Rule) {
 	if len(rule.Destination.Ports) == 0 {
 		err := errors.New("no ports in private rule")
 		ere.clog.WithError(err)
@@ -371,8 +378,15 @@ func (ere *recommendationEngine) buildPrivate(rule v3.Rule) {
 		ports:     rule.Destination.Ports, // Always destination
 		timestamp: ts,
 	}
-	ere.egress.privateNetworkRules[key] = val
-	ere.egress.size++
+
+	var erules *engineRules
+	if dir == calicores.EgressTraffic {
+		erules = ere.egress
+	} else {
+		erules = ere.ingress
+	}
+	erules.privateNetworkRules[key] = val
+	erules.size++
 }
 
 // buildPublic creates a new PublicNetwork engine rule key. It is assumed that each new
@@ -505,6 +519,7 @@ func (ere *recommendationEngine) processRecommendation(flows []*api.Flow, snp *v
 	// Process flows into egress/ingress rules, and the policy selector.
 	for _, flow := range flows {
 		ere.clog.WithField("flow", flow).Debug("Calling recommendation engine with flow")
+
 		ere.processFlow(flow)
 	}
 
