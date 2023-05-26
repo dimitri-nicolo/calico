@@ -52,11 +52,12 @@ endif
 
 build: bin/readiness-probe-$(ARCH)
 
+DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) $(CALICO_BUILD)
+
 .PHONY: bin/readiness-probe-$(ARCH)
 bin/readiness-probe-$(ARCH): readiness-probe/main.go
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 		go build -v -ldflags="-s -w" -o $@ readiness-probe/main.go'
-
 
 image: $(ELASTICSEARCH_IMAGE)
 
