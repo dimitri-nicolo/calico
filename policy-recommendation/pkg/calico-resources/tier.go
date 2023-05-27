@@ -56,7 +56,7 @@ func MaybeCreateTier(ctx context.Context, calico calicoclient.ProjectcalicoV3Int
 				log.WithError(err).Errorf("failed to create tier: %s.", name)
 				return err
 			}
-			log.Infof("New tier '%s' created, with order: %f", name, *order)
+			log.Infof("New tier '%s' created", name)
 		} else {
 			log.WithError(err).Debug("Failed to get tier")
 			return err

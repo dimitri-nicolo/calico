@@ -215,18 +215,32 @@ func (pr *policyRecommendationReconciler) continuousRecommend(ctx context.Contex
 	duration := getDurationUntilNextIteration(pr.state.object.Spec.Interval.Duration)
 	pr.ticker = time.NewTicker(duration)
 
+	currEnabled := pr.state.object.Spec.NamespaceSpec.RecStatus == v3.Enabled
+	prevEnabled := !currEnabled
 	go func() {
 		for {
 			pr.stateLock.Lock()
 			select {
 			case <-pr.ticker.C:
 				{
-					// Generate new recommendations, and sync with datastore
+					if currEnabled != prevEnabled {
+						// Print the status once, after the state changes
+						logRecommendationStatus(currEnabled)
+						prevEnabled = currEnabled
+					}
 
-					// Get the list of synched-up policies
-					snps := pr.caches.StagedNetworkPolicies.GetAll()
-					for _, snp := range snps {
-						pr.RecommendSnp(ctx, pr.clock, snp)
+					if pr.state != nil {
+						currEnabled = pr.state.object.Spec.NamespaceSpec.RecStatus == v3.Enabled
+
+						if currEnabled {
+							// Generate new recommendations, and sync with datastore
+
+							// Get the list of synched-up policies
+							snps := pr.caches.StagedNetworkPolicies.GetAll()
+							for _, snp := range snps {
+								pr.RecommendSnp(ctx, pr.clock, snp)
+							}
+						}
 					}
 				}
 			case <-ctx.Done():
@@ -250,7 +264,7 @@ func getDurationUntilNextIteration(interval time.Duration) time.Duration {
 		retInterval = minimumInterval
 	}
 
-	log.Infof("time until next engine reconciliation run: %s (min 30s)", retInterval.String())
+	log.Infof("Polling interval set to: %s (min 30s)", retInterval.String())
 	return retInterval
 }
 
@@ -287,7 +301,6 @@ func (pr *policyRecommendationReconciler) getLookback(snp v3.StagedNetworkPolicy
 // RecommendSnp consolidates an snp rules into the engine's for a new run, and updates the datastore
 // if a change occurs.
 func (pr *policyRecommendationReconciler) RecommendSnp(ctx context.Context, clock engine.Clock, snp *v3.StagedNetworkPolicy) {
-
 	// time to look back while querying flows
 	lookback := pr.getLookback(*snp)
 
@@ -301,6 +314,13 @@ func (pr *policyRecommendationReconciler) RecommendSnp(ctx context.Context, cloc
 	engine.RunEngine(
 		ctx, pr.calico, pr.linseedClient, lookback, &order, pr.cluster, clock, interval, stbl, owner, snp,
 	)
+
+	// Create the Policy Recommendation tier, if it doesn't already exist
+	tier := snp.Spec.Tier
+	if err := calicoresources.MaybeCreateTier(ctx, pr.calico, tier, &order); err != nil {
+		log.WithError(err).Errorf("failed to create tier: %s", tier)
+		return
+	}
 
 	// Update the snp on the datastore
 	if err := pr.syncToDatastore(ctx, snp); err != nil {
@@ -420,6 +440,35 @@ func addCreationTimestamp(clock engine.Clock, snp *v3.StagedNetworkPolicy) {
 	snp.Annotations[calicoresources.CreationTimestampKey] = clock.NowRFC3339()
 }
 
+// copyStagedNetworkPolicy copies the StagedNetworkPolicy context that may be altered by the engine,
+// from a source to a destination.
+// Copy:
+// - egress, ingress rules, and policy types
+// - Name, and namespace
+// - Labels, and annotations
+func copyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkPolicy) {
+	// Copy egress, ingres and policy type over to the destination
+	dest.Spec.Egress = make([]v3.Rule, len(src.Spec.Egress))
+	copy(dest.Spec.Egress, src.Spec.Egress)
+	dest.Spec.Ingress = make([]v3.Rule, len(src.Spec.Ingress))
+	copy(dest.Spec.Ingress, src.Spec.Ingress)
+	dest.Spec.Types = make([]v3.PolicyType, len(src.Spec.Types))
+	copy(dest.Spec.Types, src.Spec.Types)
+
+	// Copy ObjectMeta context. Context relevant to this controller is name, labels and annotation
+	dest.ObjectMeta.Name = src.GetObjectMeta().GetName()
+	dest.ObjectMeta.Namespace = src.GetObjectMeta().GetNamespace()
+
+	dest.ObjectMeta.Labels = make(map[string]string)
+	for key, label := range src.GetObjectMeta().GetLabels() {
+		dest.ObjectMeta.Labels[key] = label
+	}
+	dest.ObjectMeta.Annotations = make(map[string]string)
+	for key, annotation := range src.GetObjectMeta().GetAnnotations() {
+		dest.ObjectMeta.Annotations[key] = annotation
+	}
+}
+
 // equalSnps returns true if two compared staged network policies are equal by name, namespace,
 // spec.selector, owner references, annotations, labels and rules to determine their equality.
 func equalSnps(left, right *v3.StagedNetworkPolicy) bool {
@@ -463,32 +512,12 @@ func equalSnps(left, right *v3.StagedNetworkPolicy) bool {
 	return true
 }
 
-// copyStagedNetworkPolicy copies the StagedNetworkPolicy context that may be altered by the engine,
-// from a source to a destination.
-// Copy:
-// - egress, ingress rules, and policy types
-// - Name, and namespace
-// - Labels, and annotations
-func copyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkPolicy) {
-	// Copy egress, ingres and policy type over to the destination
-	dest.Spec.Egress = make([]v3.Rule, len(src.Spec.Egress))
-	copy(dest.Spec.Egress, src.Spec.Egress)
-	dest.Spec.Ingress = make([]v3.Rule, len(src.Spec.Ingress))
-	copy(dest.Spec.Ingress, src.Spec.Ingress)
-	dest.Spec.Types = make([]v3.PolicyType, len(src.Spec.Types))
-	copy(dest.Spec.Types, src.Spec.Types)
-
-	// Copy ObjectMeta context. Context relevant to this controller is name, labels and annotation
-	dest.ObjectMeta.Name = src.GetObjectMeta().GetName()
-	dest.ObjectMeta.Namespace = src.GetObjectMeta().GetNamespace()
-
-	dest.ObjectMeta.Labels = make(map[string]string)
-	for key, label := range src.GetObjectMeta().GetLabels() {
-		dest.ObjectMeta.Labels[key] = label
-	}
-	dest.ObjectMeta.Annotations = make(map[string]string)
-	for key, annotation := range src.GetObjectMeta().GetAnnotations() {
-		dest.ObjectMeta.Annotations[key] = annotation
+// logRecommendationStatus logs the Policy Recommendation enabled status change.
+func logRecommendationStatus(enabled bool) {
+	if enabled {
+		log.Info("Policy Recommendation enabled, start polling...")
+	} else {
+		log.Info("Policy Recommendation disabled...")
 	}
 }
 

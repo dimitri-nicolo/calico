@@ -240,6 +240,7 @@ func (s *synchronizer) createEmptySNPForNamespace(ctx context.Context, namespace
 	ns := namespace.GetName()
 	owner := getRecommendationScopeOwner(s.policyRecScope)
 
+	log.WithField("key", name).Debugf("Creating new recommendation")
 	snp := calicoresources.NewStagedNetworkPolicy(name, ns, tier, *owner)
 
 	s.cacheSet.StagedNetworkPolicies.Set(snp.Name, snp)

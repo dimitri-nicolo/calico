@@ -93,13 +93,6 @@ func RunEngine(
 		return
 	}
 
-	tier := snp.Spec.Tier
-	if err := calicores.MaybeCreateTier(ctx, calico, tier, order); err != nil {
-		// If a tier does not exist create it. Recommendation policy needs a recommendation tier
-		clog.WithError(err).Debugf("failed to create tier: %s", tier)
-		return
-	}
-
 	// Update the status annotation, if necessary
 	emptyRules := len(snp.Spec.Egress) == 0 && len(snp.Spec.Ingress) == 0
 	updateStatusAnnotation(snp, emptyRules, clock.NowRFC3339(), recInterval, stabilizationPeriod)
