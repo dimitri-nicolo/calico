@@ -6,7 +6,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
-// networkset linseed results for most tests. Consists of two returned flows.
+// Networkset linseed results for most tests.
 var NetworkSetLinseedResults = []rest.MockResult{
 	{
 		Body: lapi.List[lapi.L3Flow]{

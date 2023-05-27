@@ -6,7 +6,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
-// Private network linseed results for most tests. Consists of two returned flows.
+// Private network linseed results for most tests.
 var PrivateNetworkLinseedResults = []rest.MockResult{
 	{
 		Body: lapi.List[lapi.L3Flow]{
