@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
-//
 
 package templates
 
@@ -112,8 +111,13 @@ func (c *TemplateConfig) mappings() string {
 		return SnapshotMappings
 	case bapi.RuntimeReports:
 		return RuntimeReportsMappings
+	case bapi.IPSet:
+		return IPSetMappings
+	case bapi.DomainNameSet:
+		return DomainSetMappings
+
 	default:
-		panic("log type not implemented")
+		panic("data type not implemented")
 	}
 }
 
@@ -150,12 +154,15 @@ func (c *TemplateConfig) settings() map[string]interface{} {
 	indexSettings["number_of_shards"] = c.shards
 	indexSettings["number_of_replicas"] = c.replicas
 
-	lifeCycle := make(map[string]interface{})
-	// ILM policy is created by the operator and only
-	// referenced by the template
-	lifeCycle["name"] = c.ilmPolicyName()
-	lifeCycle["rollover_alias"] = c.Alias()
-	indexSettings["lifecycle"] = lifeCycle
+	lifeCycleEnabled := c.hasLifecycleEnabled()
+	if lifeCycleEnabled {
+		lifeCycle := make(map[string]interface{})
+		// ILM policy is created by the operator and only
+		// referenced by the template
+		lifeCycle["name"] = c.ilmPolicyName()
+		lifeCycle["rollover_alias"] = c.Alias()
+		indexSettings["lifecycle"] = lifeCycle
+	}
 
 	return indexSettings
 }
@@ -195,6 +202,16 @@ func (c *TemplateConfig) Template() (*Template, error) {
 		Settings:      settings,
 		Mappings:      indexMappings,
 	}, nil
+}
+
+func (c *TemplateConfig) hasLifecycleEnabled() bool {
+	enabled, ok := LifeCycleEnabledLookup[c.dataType]
+	if !ok {
+		panic(fmt.Sprintf("ILM policies need to be defined for %s", c.dataType))
+	}
+
+	return enabled
+
 }
 
 func unmarshal(source string) (map[string]interface{}, error) {

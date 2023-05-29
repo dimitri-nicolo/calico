@@ -1,6 +1,7 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+//
 
-package elastic
+package sync
 
 import (
 	"context"
@@ -290,7 +291,7 @@ func TestController_Add_FailToPut(t *testing.T) {
 			// Potential race condition between call to Put and recording the error, so we just
 			// need the error to eventually be recorded.
 			g.Eventually(func() int { return len(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions) }).Should(Equal(1))
-			g.Expect(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions[0].Type).To(Equal(cacher.ElasticSyncFailed))
+			g.Expect(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions[0].Type).To(Equal(cacher.LinseedSyncFailed))
 
 			// Potential race condition on calling of the fail function, so we just need it to eventually
 			// have been called.

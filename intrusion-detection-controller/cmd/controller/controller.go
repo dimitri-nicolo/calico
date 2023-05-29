@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync"
+
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/config"
 
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
@@ -24,7 +26,6 @@ import (
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/rbac"
-	syncElastic "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/elastic"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
 	feedsWatcher "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/watcher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/forwarder"
@@ -172,8 +173,8 @@ func main() {
 	}()
 
 	gns := globalnetworksets.NewController(calicoClient.ProjectcalicoV3().GlobalNetworkSets())
-	eip := syncElastic.NewIPSetController(e)
-	edn := syncElastic.NewDomainNameSetController(e)
+	eip := sync.NewIPSetController(e)
+	edn := sync.NewDomainNameSetController(e)
 	sIP := events.NewSuspiciousIP(e)
 	sDN := events.NewSuspiciousDomainNameSet(e)
 

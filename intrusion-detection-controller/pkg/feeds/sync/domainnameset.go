@@ -1,6 +1,7 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+//
 
-package elastic
+package sync
 
 import (
 	"context"
@@ -15,7 +16,7 @@ type dnSetData struct {
 }
 
 func NewDomainNameSetController(sets storage.DomainNameSet) controller.Controller {
-	return controller.NewController(dnSetData{sets}, cacher.ElasticSyncFailed)
+	return controller.NewController(dnSetData{sets}, cacher.LinseedSyncFailed)
 }
 
 func (d dnSetData) Put(ctx context.Context, name string, value interface{}) error {

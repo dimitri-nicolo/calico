@@ -142,6 +142,30 @@ type RuntimeBackend interface {
 	List(context.Context, ClusterInfo, *v1.RuntimeReportParams) (*v1.List[v1.RuntimeReport], error)
 }
 
+// IPSetBackend defines the interface for interacting with ip set threat feeds.
+type IPSetBackend interface {
+	// Create creates the given threat feed.
+	Create(context.Context, ClusterInfo, []v1.IPSetThreatFeed) (*v1.BulkResponse, error)
+
+	// List lists threat feeds that match the given parameters.
+	List(context.Context, ClusterInfo, *v1.IPSetThreatFeedParams) (*v1.List[v1.IPSetThreatFeed], error)
+
+	// Delete the given threat feeds.
+	Delete(context.Context, ClusterInfo, []v1.IPSetThreatFeed) (*v1.BulkResponse, error)
+}
+
+// DomainNameSetBackend defines the interface for interacting with domain name threat feeds.
+type DomainNameSetBackend interface {
+	// Create creates the given threat feed.
+	Create(context.Context, ClusterInfo, []v1.DomainNameSetThreatFeed) (*v1.BulkResponse, error)
+
+	// List lists threat feeds that match the given parameters.
+	List(context.Context, ClusterInfo, *v1.DomainNameSetThreatFeedParams) (*v1.List[v1.DomainNameSetThreatFeed], error)
+
+	// Delete the given threat feeds.
+	Delete(context.Context, ClusterInfo, []v1.DomainNameSetThreatFeed) (*v1.BulkResponse, error)
+}
+
 // DataType determines the type of logs supported
 // to be ingested via bulk APIs
 type DataType string
@@ -159,6 +183,8 @@ const (
 	Snapshots      DataType = "snapshots"
 	Benchmarks     DataType = "benchmark_results"
 	RuntimeReports DataType = "runtime"
+	IPSet          DataType = "threatfeeds_ipset"
+	DomainNameSet  DataType = "threatfeeds_domainnameset"
 )
 
 // Cache is a cache for the templates in order

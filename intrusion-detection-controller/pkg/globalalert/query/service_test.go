@@ -105,7 +105,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -174,7 +174,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", a)
+			e, err := getTestService(lsc, httpServer, "test-cluster", a)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -248,7 +248,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -333,7 +333,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -406,7 +406,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -488,7 +488,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -569,7 +569,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -643,7 +643,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -711,7 +711,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -792,7 +792,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -878,7 +878,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -943,7 +943,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -1004,7 +1004,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -1061,7 +1061,7 @@ var _ = Describe("Service Test", func() {
 				},
 			})
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Validate the test setup
@@ -1113,7 +1113,7 @@ var _ = Describe("Service Test", func() {
 				},
 			})
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -1155,7 +1155,7 @@ var _ = Describe("Service Test", func() {
 				},
 			})
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -1185,7 +1185,7 @@ var _ = Describe("Service Test", func() {
 	})
 
 	Context("WAF without metric and without aggregateBy", func() {
-		It("WAF should query elasticsearch", func() {
+		It("WAF should query linseed", func() {
 			// Uses file with prefix 11_waf_with_metric_but_no_aggregation* for testing this scenario
 			ga := &v3.GlobalAlert{
 				ObjectMeta: v1.ObjectMeta{
@@ -1220,7 +1220,7 @@ var _ = Describe("Service Test", func() {
 				},
 			}...)
 
-			e, err := getTestElasticService(lsc, httpServer, "test-cluster", ga)
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Execute the alert
@@ -1326,7 +1326,7 @@ func modifyTime(params interface{}, lookBack time.Duration) interface{} {
 	return params
 }
 
-func getTestElasticService(linseedClient client.Client, httpServer *httptest.Server, clusterName string, alert *v3.GlobalAlert) (*service, error) {
+func getTestService(linseedClient client.Client, httpServer *httptest.Server, clusterName string, alert *v3.GlobalAlert) (*service, error) {
 	e := &service{
 		clusterName:   clusterName,
 		linseedClient: linseedClient,

@@ -10,10 +10,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync"
+
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/elastic"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 
@@ -57,7 +58,7 @@ func TestQueryDomainNameSet(t *testing.T) {
 		Response: resp,
 	}
 	feedCacher := &cacher.MockGlobalThreatFeedCache{}
-	edn := elastic.NewMockDomainNameSetsController()
+	edn := sync.NewMockDomainNameSetsController()
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -104,7 +105,7 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 		Response: resp,
 	}
 	feedCacher := &cacher.MockGlobalThreatFeedCache{}
-	edn := elastic.NewMockDomainNameSetsController()
+	edn := sync.NewMockDomainNameSetsController()
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -140,7 +141,7 @@ func TestGetStartupDelayDomainNameSet(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	edn := elastic.NewMockDomainNameSetsController()
+	edn := sync.NewMockDomainNameSetsController()
 	puller := NewDomainNameSetHTTPPuller(&testGTFDomainNameSet, &storage.MockSets{
 		Time: time.Now().Add(-time.Hour),
 	}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, edn).(*httpPuller)

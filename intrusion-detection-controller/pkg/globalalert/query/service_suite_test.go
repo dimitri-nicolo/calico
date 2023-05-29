@@ -14,5 +14,5 @@ import (
 func TestGlobalAlert(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "GlobalAlert Elastic Test Suite")
+	RunSpecs(t, "GlobalAlert Test Suite")
 }

@@ -107,7 +107,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		}
 		if len(sDomains) == 0 {
 			// This shouldn't happen, and means that none of the rrset names was in our feed list. This indicates
-			// an upstream problem with our query, or elasticsearch itself.
+			// an upstream problem with our query, or linseed itself.
 			log.WithFields(log.Fields{
 				"feeds":  feeds,
 				"rrsets": l.RRSets,
@@ -133,7 +133,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		}
 		if len(sDomains) == 0 {
 			// This shouldn't happen, and means that none of the rdatas was in our feed list. This indicates
-			// an upstream problem with our query, or elasticsearch itself.
+			// an upstream problem with our query, or linseed itself.
 			log.WithFields(log.Fields{
 				"feeds":  feeds,
 				"rrsets": l.RRSets,

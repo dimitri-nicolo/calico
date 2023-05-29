@@ -1,9 +1,11 @@
 {
-  "_index": ".tigera.ipset.cluster",
-  "_id": "test",
-  "_version": 2,
-  "found": true,
-  "_source": {
-    "created_at": "2019-03-18T12:29:18.590008-03:00"
-  }
+  "total_hits": 1,
+  "items": [
+    {
+      "id": "test",
+      "data" : {
+        "created_at": "2019-03-18T12:29:18.590008-03:00"
+      }
+    }
+  ]
 }

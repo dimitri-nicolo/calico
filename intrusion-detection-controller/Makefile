@@ -108,7 +108,7 @@ clean:
 
 # Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
 MOCKERY_FILE_PATHS= \
-    pkg/globalalert/elastic/Service \
+    pkg/globalalert/query/Service \
     pkg/forwarder/LogDispatcher \
 
 ###############################################################################

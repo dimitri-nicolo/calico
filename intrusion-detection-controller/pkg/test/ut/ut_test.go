@@ -1,10 +1,16 @@
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+//
+
 package ut
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
 
@@ -21,15 +27,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	oElastic "github.com/olivere/elastic/v7"
-
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
-var _ = Describe("Elasticsearch UT", func() {
+var _ = Describe("DomainName Thread Feeds UT", func() {
 	var uut *storage.Service
 	var lsc lsclient.MockClient
 	var ctx context.Context
@@ -47,8 +50,6 @@ var _ = Describe("Elasticsearch UT", func() {
 		if err != nil {
 			panic("could not create unit under test: " + err.Error())
 		}
-		err = lmaESCli.CreateEventsIndex(ctx)
-		Expect(err).ShouldNot(HaveOccurred())
 		if err != nil {
 			log.WithError(err).Fatal("failed to create linseed client")
 		}
@@ -68,19 +69,47 @@ var _ = Describe("Elasticsearch UT", func() {
 			defer cancel()
 
 			input := storage.DomainNameSetSpec{"xx.yy.zzz"}
+			lsc.SetResults(rest.MockResult{
+				Body: v1.BulkResponse{
+					Total:     1,
+					Succeeded: 1,
+				},
+			})
 			err := uut.PutDomainNameSet(ctx, "test", input)
-
 			Expect(err).ToNot(HaveOccurred())
 
-			defer func() {
-				err := uut.DeleteDomainNameSet(ctx, storage.Meta{Name: "test"})
-				Expect(err).ToNot(HaveOccurred())
-			}()
-
+			lsc.SetResults(rest.MockResult{
+				Body: v1.List[v1.DomainNameSetThreatFeed]{
+					TotalHits: 1,
+					Items: []v1.DomainNameSetThreatFeed{
+						{
+							ID: "test",
+							Data: &v1.DomainNameSetThreatFeedData{
+								CreatedAt: time.Now().UTC(),
+								Domains:   []string{"xx.yy.zzz"},
+							},
+						},
+					},
+				},
+			})
 			actual, err := uut.GetDomainNameSet(ctx, "test")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(actual).To(Equal(input))
 
+			lsc.SetResults(rest.MockResult{
+				Body: v1.List[v1.DomainNameSetThreatFeed]{
+					TotalHits: 1,
+					Items: []v1.DomainNameSetThreatFeed{
+						{
+							ID: "test",
+							Data: &v1.DomainNameSetThreatFeedData{
+								CreatedAt: time.Now().UTC(),
+								Domains:   []string{"xx.yy.zzz"},
+							},
+						},
+					},
+				},
+			})
 			m, err := uut.GetDomainNameSetModified(ctx, "test")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(m).To(BeTemporally("<", time.Now()))
@@ -91,8 +120,13 @@ var _ = Describe("Elasticsearch UT", func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			var linseedError = fmt.Errorf("linseed error")
+			lsc.SetResults(rest.MockResult{
+				Err: linseedError,
+			},
+			)
 			_, err := uut.GetDomainNameSet(ctx, "test")
-			Expect(err).To(Equal(&oElastic.Error{Status: 404}))
+			Expect(err).To(Equal(linseedError))
 		})
 
 		It("Query domain name set", func() {

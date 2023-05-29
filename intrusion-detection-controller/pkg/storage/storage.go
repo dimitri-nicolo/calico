@@ -5,9 +5,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"sync"
@@ -19,7 +17,6 @@ import (
 
 	"github.com/projectcalico/calico/linseed/pkg/client"
 
-	"github.com/araddon/dateparse"
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
@@ -31,10 +28,7 @@ import (
 )
 
 const (
-	IPSetIndexPattern           = ".tigera.ipset.%s"
-	DomainNameSetIndexPattern   = ".tigera.domainnameset.%s"
 	ForwarderConfigIndexPattern = ".tigera.forwarderconfig.%s"
-	WatchNamePrefixPattern      = "tigera_secure_ee_watch.%s."
 	QuerySize                   = 1000
 	MaxClauseCount              = 1024
 	CreateIndexFailureDelay     = time.Second * 15
@@ -44,9 +38,6 @@ const (
 )
 
 var (
-	IPSetIndex           string
-	DomainNameSetIndex   string
-	WatchNamePrefix      string
 	ForwarderConfigIndex string // ForwarderConfigIndex is an index for maintaining internal state for the event forwarder
 )
 
@@ -55,20 +46,7 @@ func init() {
 	if clusterName == "" {
 		clusterName = "cluster"
 	}
-	IPSetIndex = fmt.Sprintf(IPSetIndexPattern, clusterName)
-	DomainNameSetIndex = fmt.Sprintf(DomainNameSetIndexPattern, clusterName)
-	WatchNamePrefix = fmt.Sprintf(WatchNamePrefixPattern, clusterName)
 	ForwarderConfigIndex = fmt.Sprintf(ForwarderConfigIndexPattern, clusterName)
-}
-
-type ipSetDoc struct {
-	CreatedAt time.Time `json:"created_at"`
-	IPs       IPSetSpec `json:"ips"`
-}
-
-type domainNameSetDoc struct {
-	CreatedAt time.Time         `json:"created_at"`
-	Domains   DomainNameSetSpec `json:"domains"`
 }
 
 type Service struct {
@@ -76,9 +54,6 @@ type Service struct {
 	c                             *elastic.Client
 	lsClient                      client.Client
 	clusterName                   string
-	ipSetMappingCreated           chan struct{}
-	domainNameSetMappingCreated   chan struct{}
-	eventMappingCreated           chan struct{}
 	forwarderConfigMappingCreated chan struct{}
 	cancel                        context.CancelFunc
 	once                          sync.Once
@@ -91,9 +66,6 @@ func NewService(lmaCLI lma.Client, lsClient client.Client, clusterName string, i
 		c:                             lmaCLI.Backend(),
 		lsClient:                      lsClient,
 		clusterName:                   clusterName,
-		ipSetMappingCreated:           make(chan struct{}),
-		domainNameSetMappingCreated:   make(chan struct{}),
-		eventMappingCreated:           make(chan struct{}),
 		forwarderConfigMappingCreated: make(chan struct{}),
 		indexSettings:                 indexSettings,
 	}
@@ -101,23 +73,6 @@ func NewService(lmaCLI lma.Client, lsClient client.Client, clusterName string, i
 
 func (e *Service) Run(ctx context.Context) {
 	e.once.Do(func() {
-		ctx, e.cancel = context.WithCancel(ctx)
-		go func() {
-			if err := CreateOrUpdateIndex(ctx, e.c, e.indexSettings, IPSetIndex, ipSetMapping, e.ipSetMappingCreated); err != nil {
-				log.WithError(err).WithFields(log.Fields{
-					"index": IPSetIndex,
-				}).Error("Could not create index")
-			}
-		}()
-
-		go func() {
-			if err := CreateOrUpdateIndex(ctx, e.c, e.indexSettings, DomainNameSetIndex, domainNameSetMapping, e.domainNameSetMappingCreated); err != nil {
-				log.WithError(err).WithFields(log.Fields{
-					"index": DomainNameSetIndex,
-				}).Error("Could not create index")
-			}
-		}()
-
 		// We create the index ForwarderConfigIndex regardless of whether the event forwarder is enabled or not (so that it's
 		// available when needed).
 		go func() {
@@ -131,167 +86,221 @@ func (e *Service) Run(ctx context.Context) {
 }
 
 func (e *Service) Close() {
-	e.cancel()
+	if e.cancel != nil {
+		e.cancel()
+	}
 }
 
 func (e *Service) ListIPSets(ctx context.Context) ([]Meta, error) {
-	return e.listSets(ctx, IPSetIndex)
-}
-
-func (e *Service) ListDomainNameSets(ctx context.Context) ([]Meta, error) {
-	return e.listSets(ctx, DomainNameSetIndex)
-}
-
-func (e *Service) listSets(ctx context.Context, idx string) ([]Meta, error) {
-	q := elastic.NewMatchAllQuery()
-	scroller := e.c.Scroll(idx).FetchSource(false).Query(q)
-	defer scroller.Clear(ctx) // nolint: errcheck
+	pager := client.NewListPager[lsv1.IPSetThreatFeed](&lsv1.IPSetThreatFeedParams{})
+	pages, errors := pager.Stream(ctx, e.lsClient.ThreatFeeds(e.clusterName).IPSet().List)
 
 	var ids []Meta
-	for {
-		res, err := scroller.Do(ctx)
-		if err == io.EOF {
-			return ids, nil
-		}
-		if elastic.IsNotFound(err) {
-			// If we 404, just return an empty slice.
-			return nil, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		for _, hit := range res.Hits.Hits {
+	for page := range pages {
+		for _, item := range page.Items {
 			ids = append(ids, Meta{
-				Name:        hit.Id,
-				SeqNo:       hit.SeqNo,
-				PrimaryTerm: hit.PrimaryTerm,
+				Name:        item.ID,
+				SeqNo:       item.SeqNumber,
+				PrimaryTerm: item.PrimaryTerm,
 			})
 		}
 	}
+
+	if err, ok := <-errors; ok {
+		log.WithError(err).Error("failed to read thread feeds")
+		return nil, err
+	}
+
+	return ids, nil
+}
+
+func (e *Service) ListDomainNameSets(ctx context.Context) ([]Meta, error) {
+	pager := client.NewListPager[lsv1.DomainNameSetThreatFeed](&lsv1.DomainNameSetThreatFeedParams{})
+	pages, errors := pager.Stream(ctx, e.lsClient.ThreatFeeds(e.clusterName).DomainNameSet().List)
+
+	var ids []Meta
+	for page := range pages {
+		for _, item := range page.Items {
+			ids = append(ids, Meta{
+				Name:        item.ID,
+				SeqNo:       item.SeqNumber,
+				PrimaryTerm: item.PrimaryTerm,
+			})
+		}
+	}
+
+	if err, ok := <-errors; ok {
+		log.WithError(err).Error("failed to read thread feeds")
+		return nil, err
+	}
+
+	return ids, nil
 }
 
 func (e *Service) PutIPSet(ctx context.Context, name string, set IPSetSpec) error {
-	body := ipSetDoc{CreatedAt: time.Now(), IPs: set}
-	return e.putSet(ctx, name, IPSetIndex, e.ipSetMappingCreated, body)
+	feed := lsv1.IPSetThreatFeed{
+		ID: name,
+		Data: &lsv1.IPSetThreatFeedData{
+			CreatedAt: time.Now().UTC(),
+			IPs:       set,
+		},
+	}
+
+	response, err := e.lsClient.ThreatFeeds(e.clusterName).IPSet().Create(ctx, []lsv1.IPSetThreatFeed{feed})
+	bulkErr := e.checkBulkError(err, response)
+	if bulkErr != nil {
+		return bulkErr
+	}
+
+	return nil
+}
+
+func (e *Service) checkBulkError(err error, response *lsv1.BulkResponse) error {
+	if err != nil {
+		return err
+	}
+	if response.Failed != 0 {
+		var errorMsg []string
+		for _, msg := range response.Errors {
+			errorMsg = append(errorMsg, msg.Error())
+		}
+
+		return fmt.Errorf(strings.Join(errorMsg, " and "))
+	}
+	return nil
 }
 
 func (e *Service) PutDomainNameSet(ctx context.Context, name string, set DomainNameSetSpec) error {
-	body := domainNameSetDoc{CreatedAt: time.Now(), Domains: set}
-	return e.putSet(ctx, name, DomainNameSetIndex, e.domainNameSetMappingCreated, body)
-}
-
-func (e *Service) putSet(ctx context.Context, name string, idx string, c <-chan struct{}, body interface{}) error {
-	// Wait for the Sets Mapping to be created
-	if err := util.WaitForChannel(ctx, c, CreateIndexWaitTimeout); err != nil {
-		return err
+	feed := lsv1.DomainNameSetThreatFeed{
+		ID: name,
+		Data: &lsv1.DomainNameSetThreatFeedData{
+			CreatedAt: time.Now(),
+			Domains:   set,
+		},
 	}
 
-	// Put document
-	_, err := e.c.Index().Index(idx).Id(name).BodyJson(body).Do(ctx)
-	log.WithField("name", name).Info("set stored")
+	response, err := e.lsClient.ThreatFeeds(e.clusterName).DomainNameSet().Create(ctx, []lsv1.DomainNameSetThreatFeed{feed})
+	bulkErr := e.checkBulkError(err, response)
+	if bulkErr != nil {
+		return bulkErr
+	}
 
-	return err
+	return nil
 }
 
 func (e *Service) GetIPSet(ctx context.Context, name string) (IPSetSpec, error) {
-	doc, err := e.get(ctx, IPSetIndex, name)
+	params := lsv1.IPSetThreatFeedParams{
+		ID: name,
+	}
+
+	response, err := e.lsClient.ThreatFeeds(e.clusterName).IPSet().List(ctx, &params)
 	if err != nil {
 		return nil, err
 	}
-	i, ok := doc["ips"]
-	if !ok {
-		return nil, errors.New("document missing ips section")
-	}
 
-	ia, ok := i.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("unknown type for %#v", i)
-	}
-	ips := IPSetSpec{}
-	for _, v := range ia {
-		s, ok := v.(string)
-		if !ok {
-			return nil, fmt.Errorf("unknown type for %#v", s)
+	var data []string
+	for _, item := range response.Items {
+		if item.Data != nil {
+			data = append(data, item.Data.IPs...)
 		}
-		ips = append(ips, s)
 	}
 
-	return ips, nil
+	return data, nil
 }
 
 func (e *Service) GetDomainNameSet(ctx context.Context, name string) (DomainNameSetSpec, error) {
-	doc, err := e.get(ctx, DomainNameSetIndex, name)
+	params := lsv1.DomainNameSetThreatFeedParams{
+		ID: name,
+	}
+
+	response, err := e.lsClient.ThreatFeeds(e.clusterName).DomainNameSet().List(ctx, &params)
 	if err != nil {
 		return nil, err
 	}
-	domains, ok := doc["domains"]
-	if !ok {
-		return nil, errors.New("document missing domains section")
-	}
 
-	idomains, ok := domains.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("unknown type for %#v", domains)
-	}
-	result := DomainNameSetSpec{}
-	for _, d := range idomains {
-		s, ok := d.(string)
-		if !ok {
-			return nil, fmt.Errorf("unknown type for %#v", d)
+	var data []string
+	for _, item := range response.Items {
+		if item.Data != nil {
+			data = append(data, item.Data.Domains...)
 		}
-		result = append(result, s)
 	}
 
-	return result, nil
-}
-
-func (e *Service) get(ctx context.Context, idx, name string) (map[string]interface{}, error) {
-	res, err := e.c.Get().Index(idx).Id(name).Do(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.Source == nil {
-		return nil, errors.New("Elastic document has nil Source")
-	}
-
-	var doc map[string]interface{}
-	err = json.Unmarshal(res.Source, &doc)
-	return doc, err
+	return data, nil
 }
 
 func (e *Service) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
-	return e.getSetModified(ctx, name, IPSetIndex)
+	params := lsv1.IPSetThreatFeedParams{
+		ID: name,
+	}
+	response, err := e.lsClient.ThreatFeeds(e.clusterName).IPSet().List(ctx, &params)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	if response.TotalHits != 1 {
+		return time.Time{}, fmt.Errorf("multiple feeds returned for name")
+	}
+
+	if response.Items[0].Data != nil {
+		createdAt := response.Items[0].Data.CreatedAt
+		return createdAt, nil
+	}
+
+	return time.Time{}, fmt.Errorf("missing created time field")
 }
 
 func (e *Service) GetDomainNameSetModified(ctx context.Context, name string) (time.Time, error) {
-	return e.getSetModified(ctx, name, DomainNameSetIndex)
+	params := lsv1.DomainNameSetThreatFeedParams{
+		ID: name,
+	}
+
+	response, err := e.lsClient.ThreatFeeds(e.clusterName).DomainNameSet().List(ctx, &params)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	if response.TotalHits != 1 {
+		return time.Time{}, fmt.Errorf("multiple feeds returned for name")
+	}
+
+	if response.Items[0].Data != nil {
+		createdAt := response.Items[0].Data.CreatedAt
+		return createdAt, nil
+	}
+
+	return time.Time{}, fmt.Errorf("missing created time field")
 }
 
-func (e *Service) getSetModified(ctx context.Context, name, idx string) (time.Time, error) {
-	res, err := e.c.Get().Index(idx).Id(name).FetchSourceContext(elastic.NewFetchSourceContext(true).Include("created_at")).Do(ctx)
-	if err != nil {
-		return time.Time{}, err
+func (e *Service) DeleteIPSet(ctx context.Context, m Meta) error {
+	feed := lsv1.IPSetThreatFeed{
+		ID:          m.Name,
+		SeqNumber:   m.SeqNo,
+		PrimaryTerm: m.PrimaryTerm,
 	}
-	if res.Source == nil {
-		return time.Time{}, err
+
+	response, err := e.lsClient.ThreatFeeds(e.clusterName).IPSet().Delete(ctx, []lsv1.IPSetThreatFeed{feed})
+	bulkErr := e.checkBulkError(err, response)
+	if bulkErr != nil {
+		return bulkErr
 	}
-	var doc map[string]interface{}
-	err = json.Unmarshal(res.Source, &doc)
-	if err != nil {
-		return time.Time{}, err
+
+	return nil
+}
+
+func (e *Service) DeleteDomainNameSet(ctx context.Context, m Meta) error {
+	feed := lsv1.DomainNameSetThreatFeed{
+		ID:          m.Name,
+		SeqNumber:   m.SeqNo,
+		PrimaryTerm: m.PrimaryTerm,
 	}
-	createdAt, ok := doc["created_at"]
-	if !ok {
-		// missing created_at field
-		return time.Time{}, nil
+
+	response, err := e.lsClient.ThreatFeeds(e.clusterName).DomainNameSet().Delete(ctx, []lsv1.DomainNameSetThreatFeed{feed})
+	bulkErr := e.checkBulkError(err, response)
+	if bulkErr != nil {
+		return bulkErr
 	}
-	switch createdAt := createdAt.(type) {
-	case string:
-		return dateparse.ParseIn(createdAt, time.UTC)
-	default:
-		return time.Time{}, fmt.Errorf("unexpected type for %#v", createdAt)
-	}
+
+	return nil
 }
 
 type SetQuerier interface {
@@ -435,26 +444,6 @@ func splitStringSlice(set []string) [][]string {
 		}
 	}
 	return terms
-}
-
-func (e *Service) DeleteIPSet(ctx context.Context, m Meta) error {
-	return e.deleteSet(ctx, m, IPSetIndex)
-}
-
-func (e *Service) DeleteDomainNameSet(ctx context.Context, m Meta) error {
-	return e.deleteSet(ctx, m, DomainNameSetIndex)
-}
-
-func (e *Service) deleteSet(ctx context.Context, m Meta, idx string) error {
-	ds := e.c.Delete().Index(idx).Id(m.Name)
-	if m.SeqNo != nil {
-		ds = ds.IfSeqNo(*m.SeqNo)
-	}
-	if m.PrimaryTerm != nil {
-		ds = ds.IfPrimaryTerm(*m.PrimaryTerm)
-	}
-	_, err := ds.Do(ctx)
-	return err
 }
 
 func (e *Service) PutSecurityEventWithID(ctx context.Context, f []lsv1.Event) error {

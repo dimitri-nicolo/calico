@@ -67,7 +67,7 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 		return
 	}
 
-	// Ensure Global Threat Feed is Enabled before querying Elasticsearch and sending event.
+	// Ensure Global Threat Feed is Enabled before querying Linseed and sending event.
 	mode := getCachedFeedResponse.GlobalThreatFeed.Spec.Mode
 	if mode != nil && *mode == v3.ThreatFeedModeEnabled {
 		log.Debug("Check if any flow logs have been generated with a suspicious IP")

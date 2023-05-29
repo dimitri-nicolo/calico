@@ -28,7 +28,7 @@ const (
 )
 
 const (
-	ElasticSyncFailed          = "ElasticSyncFailed"
+	LinseedSyncFailed          = "LinseedSyncFailed"
 	GlobalNetworkSetSyncFailed = "GlobalNetworkSetSyncFailed"
 	GarbageCollectionFailed    = "GarbageCollectionFailed"
 	PullFailed                 = "PullFailed"

@@ -71,6 +71,10 @@ func (c *mockClient) RuntimeReports(cluster string) RuntimeReportsInterface {
 	return newRuntimeReports(c, cluster)
 }
 
+func (c *mockClient) ThreatFeeds(cluster string) ThreatFeedsInterface {
+	return newThreatFeeds(c, cluster)
+}
+
 func (c *mockClient) Token() []byte {
 	return nil
 }

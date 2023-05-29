@@ -77,7 +77,7 @@ clean: stop-elastic
 # Testing
 ###############################################################################
 MOCKERY_FILE_PATHS= \
-	pkg/internal/elastic/index/Helper \
+	pkg/internal/lma/elastic/index/Helper \
 	pkg/backend/api/FlowBackend \
 	pkg/backend/api/FlowLogBackend \
 	pkg/backend/api/L7FlowBackend \

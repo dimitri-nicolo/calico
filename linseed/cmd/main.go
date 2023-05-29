@@ -9,6 +9,9 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
+
+	"github.com/projectcalico/calico/linseed/pkg/handler/threatfeeds"
+
 	"net/http"
 	"os"
 	"os/signal"
@@ -51,6 +54,7 @@ import (
 	procbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/processes"
 	runtimebackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/runtime"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	threatfeedsbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/threatfeeds"
 	wafbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/waf"
 
 	"github.com/kelseyhightower/envconfig"
@@ -130,6 +134,8 @@ func run() {
 	snapshotsBackend := compliancebackend.NewSnapshotBackend(esClient, defaultCache)
 	benchmarksBackend := compliancebackend.NewBenchmarksBackend(esClient, defaultCache)
 	runtimeBackend := runtimebackend.NewBackend(esClient, defaultCache)
+	ipSetBackend := threatfeedsbackend.NewIPSetBackend(esClient, defaultCache)
+	domainNameSetBackend := threatfeedsbackend.NewDomainNameSetBackend(esClient, defaultCache)
 
 	// Create a Kuberentes client to use for authorization.
 	var kc *rest.Config
@@ -230,6 +236,7 @@ func run() {
 		waf.New(wafBackend),
 		compliance.New(benchmarksBackend, snapshotsBackend, reportsBackend),
 		runtime.New(runtimeBackend),
+		threatfeeds.New(ipSetBackend, domainNameSetBackend),
 	}
 
 	// Configure options used to launch the server.

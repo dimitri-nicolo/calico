@@ -44,6 +44,12 @@ var SnapshotMappings string
 //go:embed runtime_mappings.json
 var RuntimeReportsMappings string
 
+//go:embed ipset_mappings.json
+var IPSetMappings string
+
+//go:embed domainset_mappings.json
+var DomainSetMappings string
+
 // SettingsLookup will keep track if an index requires special settings, add its settings template to the map.
 var SettingsLookup = map[bapi.DataType]string{
 	bapi.DNSLogs: DNSLogSettings,
@@ -63,6 +69,8 @@ var IndexPatternsPrefixLookup = map[bapi.DataType]string{
 	bapi.ReportData:     "tigera_secure_ee_compliance_reports",
 	bapi.Benchmarks:     "tigera_secure_ee_benchmark_results",
 	bapi.Snapshots:      "tigera_secure_ee_snapshots",
+	bapi.IPSet:          "tigera_secure_ee_threatfeeds_ipset",
+	bapi.DomainNameSet:  "tigera_secure_ee_threatfeeds_domainnameset",
 }
 
 // TemplateNamePatternLookup will keep track of the template names created
@@ -79,6 +87,8 @@ var TemplateNamePatternLookup = map[bapi.DataType]string{
 	bapi.ReportData:     "tigera_secure_ee_compliance_reports.%s",
 	bapi.Benchmarks:     "tigera_secure_ee_benchmark_results.%s",
 	bapi.Snapshots:      "tigera_secure_ee_snapshots.%s",
+	bapi.IPSet:          "tigera_secure_ee_threatfeeds_ipset.%s",
+	bapi.DomainNameSet:  "tigera_secure_ee_threatfeeds_domainnameset.%s",
 }
 
 // BootstrapIndexPatternLookup will keep track of the boostrap indices that will be created
@@ -95,4 +105,24 @@ var BootstrapIndexPatternLookup = map[bapi.DataType]string{
 	bapi.ReportData:     "<tigera_secure_ee_compliance_reports.%s.lma-{now/s{yyyyMMdd}}-000000>",
 	bapi.Benchmarks:     "<tigera_secure_ee_benchmark_results.%s.lma-{now/s{yyyyMMdd}}-000000>",
 	bapi.Snapshots:      "<tigera_secure_ee_snapshots.%s.lma-{now/s{yyyyMMdd}}-000000>",
+	bapi.IPSet:          "<tigera_secure_ee_threatfeeds_ipset.%s.linseed-{now/s{yyyyMMdd}}-000001>",
+	bapi.DomainNameSet:  "<tigera_secure_ee_threatfeeds_domainnameset.%s.linseed-{now/s{yyyyMMdd}}-000001>",
+}
+
+// LifeCycleEnabledLookup will keep track if ILM policy needs to be enabled or not
+var LifeCycleEnabledLookup = map[bapi.DataType]bool{
+	bapi.AuditEELogs:    true,
+	bapi.AuditKubeLogs:  true,
+	bapi.BGPLogs:        true,
+	bapi.FlowLogs:       true,
+	bapi.L7Logs:         true,
+	bapi.DNSLogs:        true,
+	bapi.Events:         true,
+	bapi.WAFLogs:        true,
+	bapi.RuntimeReports: true,
+	bapi.ReportData:     true,
+	bapi.Benchmarks:     true,
+	bapi.Snapshots:      true,
+	bapi.IPSet:          false,
+	bapi.DomainNameSet:  false,
 }

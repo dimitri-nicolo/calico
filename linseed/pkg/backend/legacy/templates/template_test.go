@@ -464,6 +464,66 @@ func TestBoostrapEventsTemplate(t *testing.T) {
 	}
 }
 
+func TestBoostrapIPSetTemplate(t *testing.T) {
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestCreateIPSetTemplate (tenant=%s)", tenant)
+		t.Run(name, func(t *testing.T) {
+
+			cluster := backendutils.RandomClusterName()
+
+			expectedTemplate := &Template{
+				IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_threatfeeds_ipset.%s.*", print(tenant, cluster))},
+				Mappings:      testutils.MustUnmarshalToMap(t, IPSetMappings),
+				Settings:      map[string]interface{}{},
+			}
+
+			expectedTemplate.Settings["number_of_shards"] = 1
+			expectedTemplate.Settings["number_of_replicas"] = 0
+
+			config := NewTemplateConfig(bapi.IPSet, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			require.Equal(t, fmt.Sprintf("tigera_secure_ee_threatfeeds_ipset.%s", print(tenant, cluster)), config.TemplateName())
+			template, err := config.Template()
+			require.NoError(t, err)
+			assertTemplate(t, expectedTemplate, template)
+
+			require.Equal(t, fmt.Sprintf("tigera_secure_ee_threatfeeds_ipset.%s.", print(tenant, cluster)), config.Alias())
+			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_threatfeeds_ipset.%s.linseed-{now/s{yyyyMMdd}}-000001>",
+				print(tenant, cluster)), config.BootstrapIndexName())
+
+		})
+	}
+}
+
+func TestBoostrapDomainSetTemplate(t *testing.T) {
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestCreateDomainSetTemplate (tenant=%s)", tenant)
+		t.Run(name, func(t *testing.T) {
+
+			cluster := backendutils.RandomClusterName()
+
+			expectedTemplate := &Template{
+				IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_threatfeeds_domainnameset.%s.*", print(tenant, cluster))},
+				Mappings:      testutils.MustUnmarshalToMap(t, DomainSetMappings),
+				Settings:      map[string]interface{}{},
+			}
+
+			expectedTemplate.Settings["number_of_shards"] = 1
+			expectedTemplate.Settings["number_of_replicas"] = 0
+
+			config := NewTemplateConfig(bapi.DomainNameSet, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			require.Equal(t, fmt.Sprintf("tigera_secure_ee_threatfeeds_domainnameset.%s", print(tenant, cluster)), config.TemplateName())
+			template, err := config.Template()
+			require.NoError(t, err)
+			assertTemplate(t, expectedTemplate, template)
+
+			require.Equal(t, fmt.Sprintf("tigera_secure_ee_threatfeeds_domainnameset.%s.", print(tenant, cluster)), config.Alias())
+			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_threatfeeds_domainnameset.%s.linseed-{now/s{yyyyMMdd}}-000001>",
+				print(tenant, cluster)), config.BootstrapIndexName())
+
+		})
+	}
+}
+
 func assertTemplate(t *testing.T, expected *Template, template *Template) {
 	require.EqualValues(t, expected.IndexPatterns, template.IndexPatterns)
 	require.NotEmpty(t, template.Mappings)

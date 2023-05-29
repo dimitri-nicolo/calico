@@ -154,9 +154,9 @@ func NewIPSetHTTPPuller(
 	secretsClient core.SecretInterface,
 	client *http.Client,
 	gnsController globalnetworksets.Controller,
-	elasticIPSet controller.Controller,
+	controllerIPSet controller.Controller,
 ) Puller {
-	d := ipSetPersistence{d: ipSet, c: elasticIPSet}
+	d := ipSetPersistence{d: ipSet, c: controllerIPSet}
 	c := &ipSetContent{name: f.Name, parser: getParserForFormat(f.Spec.Pull.HTTP.Format)}
 	g := &ipSetGNSHandler{
 		name:          f.Name,

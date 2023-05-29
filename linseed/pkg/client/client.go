@@ -23,6 +23,7 @@ type Client interface {
 	WAFLogs(string) WAFLogsInterface
 	Compliance(string) ComplianceInterface
 	RuntimeReports(string) RuntimeReportsInterface
+	ThreatFeeds(string) ThreatFeedsInterface
 }
 
 type client struct {
@@ -97,6 +98,11 @@ func (c *client) Compliance(cluster string) ComplianceInterface {
 // RuntimeReports returns an interface for managing v1.RuntimeReport resources.
 func (c *client) RuntimeReports(cluster string) RuntimeReportsInterface {
 	return newRuntimeReports(c, cluster)
+}
+
+// ThreatFeeds returns an interface for managing threat feeds resources.
+func (c *client) ThreatFeeds(cluster string) ThreatFeedsInterface {
+	return newThreatFeeds(c, cluster)
 }
 
 func NewClient(tenantID string, cfg rest.Config, opts ...rest.ClientOption) (Client, error) {

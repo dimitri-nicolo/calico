@@ -35,6 +35,12 @@ type WriteHandler[B BulkRequestParams] interface {
 	Create() http.HandlerFunc
 }
 
+// DeleteHandler implements a basic HTTP handler that allows a delete
+// implementation for create APIs
+type DeleteHandler[B BulkRequestParams] interface {
+	Delete() http.HandlerFunc
+}
+
 // AggregationHandler implements a basic HTTP handler that allows a read only
 // implementation for listing data in an aggregated form. Aggregation is
 // performed using the underlying fields presents in the raw data that is being
@@ -53,9 +59,18 @@ type GenericHandler[T any, P RequestParams, B BulkRequestParams, A RequestParams
 	AggregationHandler[A]
 }
 
+// RWDHandler implements a basic HTTP handler that allows us to have a common
+// implementation for most APIs that use common verbs - list, create and delete
+type RWDHandler[T any, P RequestParams, B BulkRequestParams] interface {
+	ReadOnlyHandler[T, P]
+	WriteHandler[B]
+	DeleteHandler[B]
+}
+
 type (
 	CreateFn[B BulkRequestParams]  func(context.Context, bapi.ClusterInfo, []B) (*v1.BulkResponse, error)
 	ListFn[T any, P RequestParams] func(context.Context, bapi.ClusterInfo, *P) (*v1.List[T], error)
+	DeleteFn[B BulkRequestParams]  func(context.Context, bapi.ClusterInfo, []B) (*v1.BulkResponse, error)
 	AggregateFn[A RequestParams]   func(context.Context, bapi.ClusterInfo, *A) (*elastic.Aggregations, error)
 )
 
@@ -311,4 +326,85 @@ func ReadBody(w http.ResponseWriter, req *http.Request) (string, error) {
 	}
 	req.Body = io.NopCloser(bytes.NewBuffer(body))
 	return string(body), nil
+}
+
+type deleteHandler[B BulkRequestParams] struct {
+	DeleteFn[B]
+}
+
+func (h deleteHandler[B]) Delete() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		f := logrus.Fields{
+			"path":   req.URL.Path,
+			"method": req.Method,
+		}
+		logCtx := logrus.WithFields(f)
+
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			// Include the request body in our logs.
+			body, err := ReadBody(w, req)
+			if err != nil {
+				logrus.WithError(err).Warn("Failed to read request body")
+			}
+			logCtx = logCtx.WithField("body", body)
+		}
+
+		data, httpErr := DecodeAndValidateBulkParams[B](w, req)
+		if httpErr != nil {
+			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
+			httputils.JSONError(w, httpErr, httpErr.Status)
+			return
+		}
+
+		// Bulk creation requests don't include a timeout, so use the default.
+		ctx, cancel := context.WithTimeout(context.Background(), v1.DefaultTimeOut)
+		defer cancel()
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: middleware.ClusterIDFromContext(req.Context()),
+			Tenant:  middleware.TenantIDFromContext(req.Context()),
+		}
+
+		// Call the creation function.
+		response, err := h.DeleteFn(ctx, clusterInfo, data)
+		if err != nil {
+			logCtx.WithError(err).Error("Error performing bulk delete")
+			httputils.JSONError(w, &v1.HTTPError{
+				Status: http.StatusInternalServerError,
+				Msg:    err.Error(),
+			}, http.StatusInternalServerError)
+			return
+		}
+		logCtx.WithField("response", response).Debugf("Completed request")
+		httputils.Encode(w, response)
+	}
+}
+
+type rwdHandler[T any, P RequestParams, B BulkRequestParams] struct {
+	createHandler WriteHandler[B]
+	listHandler   ReadOnlyHandler[T, P]
+	deleteHandler DeleteHandler[B]
+}
+
+func (c rwdHandler[T, P, B]) List() http.HandlerFunc {
+	return c.listHandler.List()
+}
+
+func (c rwdHandler[T, P, B]) Create() http.HandlerFunc {
+	return c.createHandler.Create()
+}
+
+func (c rwdHandler[T, P, B]) Delete() http.HandlerFunc {
+	return c.deleteHandler.Delete()
+}
+
+// NewRWDHandler returns a generic implementation for a handler that supports create, delete and list APIs
+func NewRWDHandler[T any, P RequestParams, B BulkRequestParams](c CreateFn[B], l ListFn[T, P], d DeleteFn[B]) RWDHandler[T, P, B] {
+	ch := createHandler[B]{c}
+	lh := listHandler[T, P]{l}
+	dh := deleteHandler[B]{d}
+	return &rwdHandler[T, P, B]{
+		createHandler: ch,
+		listHandler:   lh,
+		deleteHandler: dh,
+	}
 }

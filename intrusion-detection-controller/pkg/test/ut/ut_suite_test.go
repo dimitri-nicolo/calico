@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestElasticsearchUT(t *testing.T) {
+func TestDomainNameFeedsUT(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Elasticsearch UT")
+	RunSpecs(t, "DomainName Thread Feeds UT")
 }

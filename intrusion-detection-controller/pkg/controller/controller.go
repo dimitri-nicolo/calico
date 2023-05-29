@@ -10,7 +10,6 @@ import (
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 
-	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
@@ -85,10 +84,10 @@ type update struct {
 }
 
 const DefaultUpdateQueueLen = 1000
-const DefaultElasticReconcilePeriod = 15 * time.Second
+const DefaultReconcilePeriod = 15 * time.Second
 
 var NewTicker = func() *time.Ticker {
-	tkr := time.NewTicker(DefaultElasticReconcilePeriod)
+	tkr := time.NewTicker(DefaultReconcilePeriod)
 	return tkr
 }
 
@@ -136,7 +135,7 @@ func (c *controller) Run(ctx context.Context) {
 
 func (c *controller) run(ctx context.Context) {
 
-	log.Infof("Starting elastic controller for %T", c.data)
+	log.Infof("Starting threat feeds controller for %T", c.data)
 
 	// Initially, we're just processing state updates, and not triggering any
 	// reconcilliation.
@@ -153,7 +152,7 @@ UpdateLoop:
 		}
 	}
 
-	log.Debug("elastic controller reconciliation started")
+	log.Debug("threat feeds controller reconciliation started")
 
 	// After getting the startGC, we can also include state sync processing
 	tkr := NewTicker()
@@ -190,7 +189,7 @@ func (c *controller) processUpdate(u update) {
 func (c *controller) reconcile(ctx context.Context) {
 	metas, err := c.data.List(ctx)
 	if err != nil {
-		log.WithError(err).Error("failed to reconcile elastic object")
+		log.WithError(err).Error("failed to reconcile thread feed object")
 		for _, u := range c.dirty {
 			feedutils.AddErrorToFeedStatus(u.feedCacher, c.errorType, err)
 		}
@@ -206,7 +205,7 @@ func (c *controller) reconcile(ctx context.Context) {
 			// Garbage collect
 			c.purgeObject(ctx, m)
 		} else {
-			log.WithField("name", m.Name).Debug("Retained elastic object")
+			log.WithField("name", m.Name).Debug("Retained threat feed object")
 		}
 	}
 
@@ -218,7 +217,7 @@ func (c *controller) reconcile(ctx context.Context) {
 func (c *controller) updateObject(ctx context.Context, u update) {
 	err := c.data.Put(ctx, u.name, u.value)
 	if err != nil {
-		log.WithError(err).WithField("name", u.name).Error("failed to update elastic object")
+		log.WithError(err).WithField("name", u.name).Error("failed to update threat feed object")
 		u.fail(err)
 		feedutils.AddErrorToFeedStatus(u.feedCacher, c.errorType, err)
 		return
@@ -245,12 +244,9 @@ func (c *controller) purgeObject(ctx context.Context, m storage.Meta) {
 	}
 
 	err := c.data.Delete(ctx, m)
-	if elastic.IsNotFound(err) {
-		return
-	}
 	if err != nil {
-		log.WithError(err).WithFields(fields).Error("Failed to purge Elastic Sets")
+		log.WithError(err).WithFields(fields).Error("Failed to purge ThreatFeeds Sets")
 		return
 	}
-	log.WithFields(fields).Info("GC'd elastic Sets")
+	log.WithFields(fields).Info("GC'd threat feed Sets")
 }

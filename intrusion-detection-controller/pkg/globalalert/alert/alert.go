@@ -41,7 +41,7 @@ type Alert struct {
 	enableAnomalyDetection bool
 }
 
-// NewAlert sets and returns an Alert, builds Elasticsearch query that will be used periodically to query Elasticsearch data.
+// NewAlert sets and returns an Alert, builds Linseed query that will be used periodically to query Elasticsearch data.
 func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, namespace string, fipsModeEnabled bool) (*Alert, error) {
 	globalAlert.Status.Active = true
 	globalAlert.Status.LastUpdate = &metav1.Time{Time: time.Now()}
@@ -59,12 +59,12 @@ func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lin
 	}
 
 	if !ok || globalAlertType != v3.GlobalAlertTypeAnomalyDetection {
-		elastic, err := query.NewService(linseedClient, clusterName, globalAlert, fipsModeEnabled)
+		service, err := query.NewService(linseedClient, clusterName, globalAlert, fipsModeEnabled)
 		if err != nil {
 			return nil, err
 		}
 
-		alert.service = elastic
+		alert.service = service
 
 	} else {
 		adj, err := ad.NewService(calicoCLI, k8sClient, podTemplateQuery, adDetectionController, adTrainingController, clusterName, namespace, globalAlert)
@@ -121,10 +121,9 @@ func (a *Alert) stopAnomalyDetectionService(ctx context.Context) {
 // ExecuteQuery periodically queries Linseed, updates GlobalAlert status
 // and adds alerts to events index if alert conditions are met.
 // If parent context is cancelled, updates the GlobalAlert status and returns.
-// It also deletes any existing elastic watchers for the cluster.
 func (a *Alert) ExecuteQuery(ctx context.Context) {
 	if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx); err != nil {
-		log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing elastic query`, a.alert.Name)
+		log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing linseed query`, a.alert.Name)
 	}
 
 	for {
@@ -133,13 +132,13 @@ func (a *Alert) ExecuteQuery(ctx context.Context) {
 		case <-timer.C:
 			a.alert.Status = a.service.ExecuteAlert(ctx, a.alert)
 			if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx); err != nil {
-				log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing elastic query`, a.alert.Name)
+				log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing linseed query`, a.alert.Name)
 			}
 			timer.Stop()
 		case <-ctx.Done():
 			a.alert.Status.Active = false
 			if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx); err != nil {
-				log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing elastic query`, a.alert.Name)
+				log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing linseed query`, a.alert.Name)
 			}
 			timer.Stop()
 			return
@@ -166,7 +165,7 @@ func (a *Alert) getDurationUntilNextAlert() time.Duration {
 		timeUntilNextRun := alertPeriod - durationSinceLastExecution
 		if timeUntilNextRun <= 0 {
 			// return MinimumAlertPeriod instead of 0s to guarantee that we would never have a tight loop
-			// that burns through our pod resources and spams Elasticsearch.
+			// that burns through our pod resources and spams Linseed.
 			return MinimumAlertPeriod
 		}
 		return timeUntilNextRun

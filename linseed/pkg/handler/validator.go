@@ -47,7 +47,8 @@ type RequestParams interface {
 		v1.BGPLogParams | v1.ProcessParams |
 		v1.WAFLogParams | v1.WAFLogAggregationParams |
 		v1.ReportDataParams | v1.SnapshotParams | v1.BenchmarksParams |
-		v1.RuntimeReportParams
+		v1.RuntimeReportParams | v1.IPSetThreatFeedParams |
+		v1.DomainNameSetThreatFeedParams
 }
 
 // BulkRequestParams is the collection of request parameters types
@@ -58,7 +59,8 @@ type BulkRequestParams interface {
 		v1.AuditLog | v1.BGPLog |
 		v1.WAFLog | v1.ReportData |
 		v1.Snapshot | v1.Benchmarks |
-		v1.Report
+		v1.Report | v1.IPSetThreatFeed |
+		v1.DomainNameSetThreatFeed
 }
 
 // DecodeAndValidateBulkParams will decode and validate input parameters

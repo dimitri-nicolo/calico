@@ -1,6 +1,8 @@
 {
-  "_index": ".tigera.ipset.cluster",
-  "_id": "test3",
-  "_version": 2,
-  "found": true
+  "total_hits": 1,
+  "items": [
+    {
+      "id": "test3"
+    }
+  ]
 }

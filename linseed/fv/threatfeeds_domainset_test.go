@@ -1,0 +1,194 @@
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
+//go:build fvtests
+
+package fv_test
+
+import (
+	"fmt"
+	"strconv"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+)
+
+func TestFV_ThreatFeedsDomainSet(t *testing.T) {
+	t.Run("should return an empty list if there are no threat feeds", func(t *testing.T) {
+		defer threatFeedsSetupAndTeardown(t)()
+
+		params := v1.DomainNameSetThreatFeedParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Second),
+					To:   time.Now(),
+				},
+			},
+		}
+
+		// Perform a query.
+		feeds, err := cli.ThreatFeeds(cluster).DomainNameSet().List(ctx, &params)
+		require.NoError(t, err)
+		require.Equal(t, []v1.DomainNameSetThreatFeed{}, feeds.Items)
+	})
+
+	t.Run("should create and list threat feeds", func(t *testing.T) {
+		defer threatFeedsSetupAndTeardown(t)()
+
+		feeds := v1.DomainNameSetThreatFeed{
+			ID: "feed-a",
+			Data: &v1.DomainNameSetThreatFeedData{
+				CreatedAt: time.Unix(0, 0).UTC(),
+				Domains:   []string{"a.b.c.d"},
+			},
+		}
+		bulk, err := cli.ThreatFeeds(cluster).DomainNameSet().Create(ctx, []v1.DomainNameSetThreatFeed{feeds})
+		require.NoError(t, err)
+		require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_threatfeeds_domainnameset*")
+
+		// Read it back, passing an ID query.
+		params := v1.DomainNameSetThreatFeedParams{ID: "feed-a"}
+		resp, err := cli.ThreatFeeds(cluster).DomainNameSet().List(ctx, &params)
+		require.NoError(t, err)
+
+		// The ID should be set.
+		require.Len(t, resp.Items, 1)
+		require.Equal(t, feeds.ID, resp.Items[0].ID)
+		require.Equal(t, feeds, resp.Items[0])
+
+		// Delete the feed
+		bulkDelete, err := cli.ThreatFeeds(cluster).DomainNameSet().Delete(ctx, []v1.DomainNameSetThreatFeed{feeds})
+		require.NoError(t, err)
+		require.Equal(t, bulkDelete.Succeeded, 1, "delete did not succeed")
+
+		// Read after delete
+		afterDelete, err := cli.ThreatFeeds(cluster).DomainNameSet().List(ctx, &params)
+		require.NoError(t, err)
+		require.Empty(t, afterDelete.Items)
+	})
+
+	t.Run("should support pagination", func(t *testing.T) {
+		defer threatFeedsSetupAndTeardown(t)()
+
+		totalItems := 5
+
+		// Create 5 Feeds.
+		createdAtTime := time.Unix(0, 0).UTC()
+		for i := 0; i < totalItems; i++ {
+			feeds := []v1.DomainNameSetThreatFeed{
+				{
+					ID: strconv.Itoa(i),
+					Data: &v1.DomainNameSetThreatFeedData{
+						CreatedAt: createdAtTime.Add(time.Duration(i) * time.Second),
+					},
+				},
+			}
+			bulk, err := cli.ThreatFeeds(cluster).DomainNameSet().Create(ctx, feeds)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create feeds did not succeed")
+		}
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_threatfeeds_domainnameset*")
+
+		// Iterate through the first 4 pages and check they are correct.
+		var afterKey map[string]interface{}
+		for i := 0; i < totalItems-1; i++ {
+			params := v1.DomainNameSetThreatFeedParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: createdAtTime.Add(-5 * time.Second),
+						To:   createdAtTime.Add(5 * time.Second),
+					},
+					MaxPageSize: 1,
+					AfterKey:    afterKey,
+				},
+			}
+			resp, err := cli.ThreatFeeds(cluster).DomainNameSet().List(ctx, &params)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(resp.Items))
+			require.Equal(t, []v1.DomainNameSetThreatFeed{
+				{
+					ID: strconv.Itoa(i),
+					Data: &v1.DomainNameSetThreatFeedData{
+						CreatedAt: createdAtTime.Add(time.Duration(i) * time.Second),
+					},
+				},
+			}, resp.Items, fmt.Sprintf("Threat Feed #%d did not match", i))
+			require.NotNil(t, resp.AfterKey)
+			require.Contains(t, resp.AfterKey, "startFrom")
+			require.Equal(t, resp.AfterKey["startFrom"], float64(i+1))
+			require.Equal(t, resp.TotalHits, int64(totalItems))
+
+			// Use the afterKey for the next query.
+			afterKey = resp.AfterKey
+		}
+
+		// If we query once more, we should get the last page, and no afterkey, since
+		// we have paged through all the items.
+		lastItem := totalItems - 1
+		params := v1.DomainNameSetThreatFeedParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: createdAtTime.Add(-5 * time.Second),
+					To:   createdAtTime.Add(5 * time.Second),
+				},
+				MaxPageSize: 1,
+				AfterKey:    afterKey,
+			},
+		}
+		resp, err := cli.ThreatFeeds(cluster).DomainNameSet().List(ctx, &params)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(resp.Items))
+		require.Equal(t, []v1.DomainNameSetThreatFeed{
+			{
+				ID: strconv.Itoa(lastItem),
+				Data: &v1.DomainNameSetThreatFeedData{
+					CreatedAt: createdAtTime.Add(time.Duration(lastItem) * time.Second),
+				},
+			},
+		}, resp.Items, fmt.Sprintf("Feeds #%d did not match", lastItem))
+		require.Equal(t, resp.TotalHits, int64(totalItems))
+
+		// Once we reach the end of the data, we should not receive
+		// an afterKey
+		require.Nil(t, resp.AfterKey)
+	})
+}
+
+func TestFV_DomainNameSetTenancy(t *testing.T) {
+	t.Run("should support tenancy restriction", func(t *testing.T) {
+		defer threatFeedsSetupAndTeardown(t)()
+
+		// Instantiate a client for an unexpected tenant.
+		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		require.NoError(t, err)
+
+		// Create a basic feed. We expect this to fail, since we're using
+		// an unexpected tenant ID on the request.
+		feeds := v1.DomainNameSetThreatFeed{
+			ID: "feed-a",
+			Data: &v1.DomainNameSetThreatFeedData{
+				CreatedAt: time.Unix(0, 0).UTC(),
+				Domains:   []string{"a.b.c.d"},
+			},
+		}
+		bulk, err := tenantCLI.ThreatFeeds(cluster).DomainNameSet().Create(ctx, []v1.DomainNameSetThreatFeed{feeds})
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, bulk)
+
+		// Try a read as well.
+		params := v1.DomainNameSetThreatFeedParams{ID: "feed-a"}
+		resp, err := tenantCLI.ThreatFeeds(cluster).DomainNameSet().List(ctx, &params)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, resp)
+	})
+}

@@ -63,7 +63,7 @@ type service struct {
 	queryBuilder QueryBuilder
 }
 
-// NewService builds Elasticsearch query that will be used periodically to query Elasticsearch data.
+// NewService builds Linseed query that will be used periodically to query Elasticsearch data.
 func NewService(linseedClient client.Client, clusterName string, alert *v3.GlobalAlert, fipsModeEnabled bool) (Service, error) {
 	e := &service{
 		clusterName:   clusterName,

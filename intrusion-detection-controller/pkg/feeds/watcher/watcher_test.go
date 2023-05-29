@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync"
+
 	. "github.com/onsi/gomega"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +18,6 @@ import (
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/calico"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/elastic"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
@@ -31,8 +32,8 @@ func TestWatcher_processQueue(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
-	edn := elastic.NewMockDomainNameSetsController()
+	eip := sync.NewMockIPSetController()
+	edn := sync.NewMockDomainNameSetsController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -167,8 +168,8 @@ func TestWatcher_startFeed_stopFeed_IPSet(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
-	edn := elastic.NewMockDomainNameSetsController()
+	eip := sync.NewMockIPSetController()
+	edn := sync.NewMockDomainNameSetsController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -222,8 +223,8 @@ func TestWatcher_startFeed_stopFeed_DomainNameSet(t *testing.T) {
 
 	dnSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
-	edn := elastic.NewMockDomainNameSetsController()
+	eip := sync.NewMockIPSetController()
+	edn := sync.NewMockDomainNameSetsController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -281,8 +282,8 @@ func TestWatcher_startFeed_defaultcontent(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
-	edn := elastic.NewMockDomainNameSetsController()
+	eip := sync.NewMockIPSetController()
+	edn := sync.NewMockDomainNameSetsController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -327,7 +328,7 @@ func TestWatcher_startFeed_NoPull_IPSet(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -369,7 +370,7 @@ func TestWatcher_startFeed_NoPullHTTP_IPSet(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -405,7 +406,7 @@ func TestWatcher_startFeed_NoPull_DomainNameSet(t *testing.T) {
 
 	dnSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	edn := elastic.NewMockDomainNameSetsController()
+	edn := sync.NewMockDomainNameSetsController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -442,7 +443,7 @@ func TestWatcher_startFeed_NoPullHTTP_DomainNameSet(t *testing.T) {
 
 	dnSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	edn := elastic.NewMockDomainNameSetsController()
+	edn := sync.NewMockDomainNameSetsController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -491,7 +492,7 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -538,7 +539,7 @@ func TestWatcher_startFeed_DomainNameSetWithGNS(t *testing.T) {
 
 	dnSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	edn := elastic.NewMockDomainNameSetsController()
+	edn := sync.NewMockDomainNameSetsController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -598,7 +599,7 @@ func TestWatcher_updateFeed_NotStarted(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -639,7 +640,7 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -704,7 +705,7 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -759,7 +760,7 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -820,7 +821,7 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -880,8 +881,8 @@ func TestWatcher_updateFeed_IPSetToDomainNameSet(t *testing.T) {
 
 	mockSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
-	edn := elastic.NewMockDomainNameSetsController()
+	eip := sync.NewMockIPSetController()
+	edn := sync.NewMockDomainNameSetsController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -953,7 +954,7 @@ func TestWatcher_restartPuller_IPSet(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -1005,7 +1006,7 @@ func TestWatcher_restartPuller_DomainNameSet(t *testing.T) {
 
 	dnSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	edn := elastic.NewMockDomainNameSetsController()
+	edn := sync.NewMockDomainNameSetsController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -1061,7 +1062,7 @@ func TestWatcher_restartPuller_defaultcontent(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -1118,7 +1119,7 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -1175,7 +1176,7 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 
 	ipSet := &storage.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
@@ -1246,8 +1247,8 @@ func TestWatcher_Ping(t *testing.T) {
 	// Include an empty list so that the controller doesn't complain
 	gtf := &calico.MockGlobalThreatFeedInterface{GlobalThreatFeedList: &v3.GlobalThreatFeedList{}}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
-	edn := elastic.NewMockDomainNameSetsController()
+	eip := sync.NewMockIPSetController()
+	edn := sync.NewMockDomainNameSetsController()
 	uut := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, nil, nil, nil, nil, nil)
 
 	ch := make(chan struct{})
@@ -1279,7 +1280,7 @@ func TestWatcher_PingFail(t *testing.T) {
 	// Include an empty list so that the controller doesn't complain
 	gtf := &calico.MockGlobalThreatFeedInterface{GlobalThreatFeedList: &v3.GlobalThreatFeedList{}}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
+	eip := sync.NewMockIPSetController()
 	uut := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, nil, nil, nil, nil, nil)
 
 	err := uut.Ping(ctx)

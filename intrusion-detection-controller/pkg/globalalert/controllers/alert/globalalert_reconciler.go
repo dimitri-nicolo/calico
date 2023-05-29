@@ -21,8 +21,8 @@ import (
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
-// globalAlertReconciler creates a routine for each new GlobalAlert resource that queries Elasticsearch on interval,
-// processes, transforms the Elasticsearch result and updates the Elasticsearch events index and GlobalAlert status.
+// globalAlertReconciler creates a routine for each new GlobalAlert resource that queries Linseed on interval,
+// processes, transforms the result and creates an event via Linseed and updates GlobalAlert status.
 // If GlobalAlert resource is deleted or updated, cancel the current goroutine, and create a new one if resource is updated.
 type globalAlertReconciler struct {
 	linseedClient          client.Client
@@ -45,7 +45,7 @@ type alertState struct {
 }
 
 // Reconcile gets the given GlobalAlert, if it is a new GlobalAlert resource creates a goroutine that periodically
-// check Elasticsearch index data for alert condition.
+// check Linseed data for alert condition.
 // For GlobalAlert with an existing goroutine if spec is same, do nothing, else cancel the existing goroutine and
 // recreate it with new specs from alert.
 func (r *globalAlertReconciler) Reconcile(namespacedName types.NamespacedName) error {

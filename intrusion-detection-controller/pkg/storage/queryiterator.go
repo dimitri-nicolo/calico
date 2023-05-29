@@ -5,16 +5,8 @@ package storage
 import (
 	"context"
 
-	"github.com/olivere/elastic/v7"
-
 	"github.com/projectcalico/calico/linseed/pkg/client"
 )
-
-// Scroller is a subset of elastic.ScrollService
-type Scroller interface {
-	Do(context.Context) (*elastic.SearchResult, error)
-	Clear(context.Context) error
-}
 
 type queryEntry[T any, V any] struct {
 	key         QueryKey

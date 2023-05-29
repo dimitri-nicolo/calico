@@ -1,6 +1,7 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+//
 
-package elastic
+package sync
 
 import (
 	"context"
@@ -15,7 +16,7 @@ type ipSetData struct {
 }
 
 func NewIPSetController(ipSet storage.IPSet) controller.Controller {
-	return controller.NewController(ipSetData{ipSet}, cacher.ElasticSyncFailed)
+	return controller.NewController(ipSetData{ipSet}, cacher.LinseedSyncFailed)
 }
 
 func (d ipSetData) Put(ctx context.Context, name string, value interface{}) error {

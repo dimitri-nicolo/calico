@@ -2,30 +2,6 @@
 
 package storage
 
-const ipSetMapping = `{
-    "properties": {
-        "created_at": {
-              "type": "date",
-              "format": "strict_date_optional_time"
-        },
-        "ips": {
-            "type": "ip_range"
-        }
-    }
-}`
-
-const domainNameSetMapping = `{
-    "properties": {
-        "created_at": {
-            "type": "date",
-            "format": "strict_date_optional_time"
-        },
-        "domains": {
-            "type": "keyword"
-        }
-    }
-}`
-
 // forwarderConfigMapping contains properties that are internal state used by the event forwarder.
 const forwarderConfigMapping = `{
     "properties": {
