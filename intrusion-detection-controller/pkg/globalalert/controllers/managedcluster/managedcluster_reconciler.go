@@ -58,8 +58,8 @@ func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName
 		return err
 	}
 
-	if _, ok := r.alertNameToAlertControllerState[getVariantSpecificClusterName(namespacedName.Name)]; ok {
-		r.cancelAlertController(getVariantSpecificClusterName(namespacedName.Name))
+	if _, ok := r.alertNameToAlertControllerState[namespacedName.Name]; ok {
+		r.cancelAlertController(namespacedName.Name)
 	}
 
 	if k8serrors.IsNotFound(err) {
@@ -101,7 +101,7 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 		return err
 	}
 
-	clusterName := getVariantSpecificClusterName(name)
+	clusterName := name
 
 	// create the GlobalAlertController for the managed cluster - this controller will monitor all GlobalAlert operations
 	// of the assigned managedcluster
