@@ -211,11 +211,6 @@ static CALI_BPF_INLINE struct iphdr* ip_hdr(struct cali_tc_ctx *ctx)
 	return (struct iphdr *)ctx->ip_header;
 }
 
-static CALI_BPF_INLINE struct ipv6hdr* ipv6_hdr(struct cali_tc_ctx *ctx)
-{
-	return (struct ipv6hdr *)ctx->ip_header;
-}
-
 static CALI_BPF_INLINE struct ethhdr* eth_hdr(struct cali_tc_ctx *ctx)
 {
 	return (struct ethhdr *)ctx->data_start;
@@ -234,11 +229,6 @@ static CALI_BPF_INLINE struct udphdr* udp_hdr(struct cali_tc_ctx *ctx)
 static CALI_BPF_INLINE struct icmphdr* icmp_hdr(struct cali_tc_ctx *ctx)
 {
 	return (struct icmphdr *)ctx->scratch->l4;
-}
-
-static CALI_BPF_INLINE struct ipv6_opt_hdr* ipv6ext_hdr(struct cali_tc_ctx *ctx)
-{
-	return (struct ipv6_opt_hdr *)ctx->scratch->l4;
 }
 
 static CALI_BPF_INLINE __u32 ctx_ifindex(struct cali_tc_ctx *ctx)

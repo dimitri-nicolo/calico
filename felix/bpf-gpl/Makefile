@@ -56,7 +56,7 @@ OBJS:=$(shell ./list-objs)
 OBJS+=bin/tc_preamble.o
 OBJS+=bin/xdp_preamble.o
 OBJS+=bin/policy_default.o
-C_FILES:=tc_preamble.c tc.c tc6.c connect_balancer.c connect_balancer_v6.c xdp_preamble.c xdp.c policy_default.c
+C_FILES:=tc_preamble.c tc.c connect_balancer.c connect_balancer_v6.c xdp_preamble.c xdp.c policy_default.c
 # EE only files
 C_FILES+=tcp_kprobe.c udp_kprobe.c tcp_stats.c syscall_kprobe.c
 
