@@ -12,7 +12,10 @@
         "apiVersion": { "type": "keyword" },
         "name": { "type": "keyword" },
         "resource": { "type": "keyword" },
-        "namespace": { "type": "keyword" }
+        "namespace": { "type": "keyword" },
+        "resourceVersion": {"type": "keyword"},
+        "subresource": {"type": "keyword"},
+        "uid": {"type": "keyword"}
       }
     },
     "requestObject": { "type": "object", "enabled": false },
@@ -31,10 +34,17 @@
     "responseStatus": {
       "properties": {
         "code": { "type": "long" },
-        "metadata": { "type": "object", "enabled": false }
+        "metadata": { "type": "object", "enabled": false },
+        "message": {"type": "keyword"},
+        "kind": {"type": "keyword"},
+        "apiVersion": {"type": "keyword"},
+        "status": {"type": "keyword"},
+        "reason": {"type": "keyword"},
+        "details": {"type": "object","enabled": false }
       }
     },
     "sourceIPs": { "type": "text" },
+    "userAgent": {"type": "text"},
     "stage": { "type": "text" },
     "stageTimestamp": { "type": "date" },
     "timestamp": { "type": "date" },
@@ -42,9 +52,19 @@
       "properties": {
         "groups": { "type": "keyword" },
         "username": { "type": "keyword" },
-        "uid": { "type": "keyword" }
+        "uid": { "type": "keyword" },
+        "extra": { "type": "object","enabled": false }
       }
     },
-    "verb": { "type": "keyword" }
+    "impersonatedUser": {
+      "properties": {
+        "groups": { "type": "keyword" },
+        "username": { "type": "keyword" },
+        "uid": { "type": "keyword" },
+        "extra": { "type": "object","enabled": false }
+      }
+    },
+    "verb": { "type": "keyword" },
+    "annotations" :{"type": "flattened"}
   }
 }
