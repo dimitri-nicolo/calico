@@ -45,8 +45,8 @@ RUN JAVA_HOME=/usr/lib/jvm/java-17-openjdk JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF
 # We need to review and update them when upgrading to a newer version of
 # elasticsearch.
 ################################################################################
-ENV OPENJDK_VERSION=11.0.18
-ENV OPENJDK_PATCH=10
+ENV OPENJDK_VERSION=11.0.19
+ENV OPENJDK_PATCH=7
 
 ENV BC_FIPS_VERSION=1.0.2.3
 ENV BCTLS_FIPS_VERSION=1.0.11
