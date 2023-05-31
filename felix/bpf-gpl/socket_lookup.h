@@ -12,6 +12,19 @@ static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 	struct bpf_sock_tuple tuple={};
 	struct bpf_tcp_sock *tsk = NULL;
 
+#if IPVER6
+	if (CALI_F_FROM_WEP) {
+		ipv6hdr_ip_to_be32_4_ip(tuple.ipv6.saddr, &ip_hdr(ctx)->daddr);
+		ipv6hdr_ip_to_be32_4_ip(tuple.ipv6.daddr, &ip_hdr(ctx)->saddr);
+		tuple.ipv6.sport = tcp_hdr(ctx)->dest;
+		tuple.ipv6.dport = tcp_hdr(ctx)->source;
+	} else if (CALI_F_TO_WEP) {
+		ipv6hdr_ip_to_be32_4_ip(tuple.ipv6.saddr, &ip_hdr(ctx)->saddr);
+		ipv6hdr_ip_to_be32_4_ip(tuple.ipv6.daddr, &ip_hdr(ctx)->daddr);
+		tuple.ipv6.sport = tcp_hdr(ctx)->source;
+		tuple.ipv6.dport = tcp_hdr(ctx)->dest;
+	}
+#else
 	if (CALI_F_FROM_WEP) {
 		tuple.ipv4.saddr = ip_hdr(ctx)->daddr;
 		tuple.ipv4.daddr = ip_hdr(ctx)->saddr;
@@ -40,6 +53,7 @@ static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 		}
 		sk = bpf_sk_lookup_tcp(ctx->skb, &tuple, sizeof(tuple.ipv6), IF_NS, 0);
 	}
+#endif
 	if (sk && ((sk->state == BPF_TCP_ESTABLISHED) || (sk->state >= BPF_TCP_FIN_WAIT1 && sk->state <= BPF_TCP_LAST_ACK))) {
 		tsk = bpf_tcp_sock(sk);
 		if (tsk) {

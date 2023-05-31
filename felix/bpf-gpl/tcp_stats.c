@@ -22,11 +22,14 @@ SEC("tc")
 int calico_tcp_stats(struct __sk_buff *skb)
 {
 	__u8 scratch[] = { /* zero it to shut up verifier */ };
+	struct cali_tc_state state;
 
 	struct cali_tc_ctx ctx = {
 		.skb = skb,
 		.ipheader_len = IP_SIZE,
 		.scratch = (void *)scratch,
+		.nh = (void *)scratch,
+		.state = &state,
 	};
 
 	switch (parse_packet_ip(&ctx)) {
