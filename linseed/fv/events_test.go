@@ -108,6 +108,67 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, events, testutils.AssertLogIDAndCopyEventsWithoutID(t, resp))
 	})
 
+	t.Run("should filter events with selector", func(t *testing.T) {
+		defer eventsSetupAndTeardown(t)()
+
+		// Create some test events.
+		events := []v1.Event{
+			{
+				Time:        v1.NewEventTimestamp(time.Now().Unix()),
+				Description: "A rather uneventful evening",
+				Origin:      "TODO",
+				Severity:    1,
+				Type:        "TODO",
+			},
+			{
+				Time:            v1.NewEventTimestamp(time.Now().Unix()),
+				Description:     "A suspicious DNS query",
+				Origin:          "TODO",
+				Severity:        1,
+				Type:            "suspicious_dns_query",
+				SourceName:      "my-source-name-123",
+				SourceNamespace: "my-app-namespace",
+			},
+			{
+				Time:            v1.NewEventTimestamp(time.Now().Unix()),
+				Description:     "A NOT so suspicious DNS query",
+				Origin:          "TODO",
+				Severity:        1,
+				Type:            "suspicious_dns_query",
+				SourceName:      "my-source-name-456",
+				SourceNamespace: "my-app-namespace",
+			},
+		}
+		bulk, err := cli.Events(cluster).Create(ctx, events)
+		require.NoError(t, err)
+		require.Equal(t, bulk.Succeeded, 3, "create event did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+
+		// Read it back.
+		params := v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Second),
+					To:   time.Now().Add(5 * time.Second),
+				},
+			},
+			LogSelectionParams: v1.LogSelectionParams{
+				Selector: "type IN { suspicious_dns_query, gtf_suspicious_dns_query} " +
+					// `in` with a value allows us to use wildcards
+					"AND \"source_name\" in {\"*source-name-123\"} " +
+					// and here we're doing an exact match
+					"AND \"source_namespace\" = \"my-app-namespace\"",
+			},
+		}
+		resp, err := cli.Events(cluster).List(ctx, &params)
+		require.NoError(t, err)
+
+		// The ID should be set, but random, so we can't assert on its value.
+		require.Equal(t, []v1.Event{events[1]}, testutils.AssertLogIDAndCopyEventsWithoutID(t, resp))
+	})
+
 	t.Run("should dismiss and delete events", func(t *testing.T) {
 		defer eventsSetupAndTeardown(t)()
 
