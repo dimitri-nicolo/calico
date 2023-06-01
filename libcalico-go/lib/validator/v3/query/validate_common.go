@@ -98,7 +98,7 @@ func URLValidator(a *Atom) error {
 
 func IPValidator(a *Atom) error {
 	switch a.Comparator {
-	case CmpEqual, CmpNotEqual:
+	case CmpEqual, CmpNotEqual, CmpGt, CmpGte, CmpLt, CmpLte:
 	default:
 		return fmt.Errorf("invalid comparator for %s: %s", a.Key, a.Comparator)
 	}

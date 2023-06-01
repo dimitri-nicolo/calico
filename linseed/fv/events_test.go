@@ -111,6 +111,8 @@ func TestFV_Events(t *testing.T) {
 	t.Run("should filter events with selector", func(t *testing.T) {
 		defer eventsSetupAndTeardown(t)()
 
+		ip := "172.17.0.1"
+
 		// Create some test events.
 		events := []v1.Event{
 			{
@@ -128,6 +130,7 @@ func TestFV_Events(t *testing.T) {
 				Type:            "suspicious_dns_query",
 				SourceName:      "my-source-name-123",
 				SourceNamespace: "my-app-namespace",
+				SourceIP:        &ip,
 			},
 			{
 				Time:            v1.NewEventTimestamp(time.Now().Unix()),
@@ -137,6 +140,7 @@ func TestFV_Events(t *testing.T) {
 				Type:            "suspicious_dns_query",
 				SourceName:      "my-source-name-456",
 				SourceNamespace: "my-app-namespace",
+				SourceIP:        &ip,
 			},
 		}
 		bulk, err := cli.Events(cluster).Create(ctx, events)
@@ -159,7 +163,8 @@ func TestFV_Events(t *testing.T) {
 					// `in` with a value allows us to use wildcards
 					"AND \"source_name\" in {\"*source-name-123\"} " +
 					// and here we're doing an exact match
-					"AND \"source_namespace\" = \"my-app-namespace\"",
+					"AND \"source_namespace\" = \"my-app-namespace\" " +
+					"AND 'source_ip' >= '172.16.0.0' AND source_ip <= '172.32.0.0'",
 			},
 		}
 		resp, err := cli.Events(cluster).List(ctx, &params)

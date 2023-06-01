@@ -23,7 +23,6 @@ var (
 		"source_name_aggr": DomainValidator,
 		"source_namespace": DomainValidator,
 		"source_port":      IntRangeValidator(0, MaxTCPUDPPortNum),
-		"time":             NullValidator,
 		// sync with manager ApiSecurityEventType if anything changes.
 		"type": SetValidator(
 			"alert",
