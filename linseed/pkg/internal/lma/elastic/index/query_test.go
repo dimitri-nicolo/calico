@@ -135,14 +135,6 @@ var _ = Describe("Query Converter", func() {
 			// Existing "filter" param sample value:
 			// [
 			// 	{
-			// 		"range":{
-			// 			"time":{
-			// 				"gte":"2023-05-31T00:00:00Z",
-			// 				"lte":"2023-06-02T23:59:59Z"
-			// 			}
-			// 		}
-			// 	},
-			// 	{
 			// 		"terms":{
 			// 			"type":[
 			// 				"suspicious_dns_query",
