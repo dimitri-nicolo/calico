@@ -182,14 +182,27 @@ var _ = Describe("Query Converter", func() {
 			//  {
 			//      "term":{
 			// 	        "source_name":{
-			// 		        "value": "basic-123"
+			// 		        "value": "default"
 			// 	        }
 			//      }
 			//   },
-			//    which will achieve the same result in most cases.
-			//    However it will not work as expected when the user inputs a * like in "my-namespace-*-dev".
-			//    We probably don't need to care. If we do, we could update converter.go to output a
-			//    "wildcard" term when the value contains a *...
+			//    which won't achieve the same result as it looks for an exact match.
+			//    Instead, we need to use the IN operator with a set containing one element
+			//    in order to generate a wildcard query.
+			//    Selector "source_namespace IN {'default'}" produces the following filters:
+			//  {
+			//      "bool":{
+			//      	"should": [
+			//      		{
+			//      			"wildcard":{
+			//      				"source_namespace":{
+			//      					"value": "default"
+			//      				}
+			//      			}
+			//      		}
+			//      	]
+			//      },
+			//  },
 			//
 			// 2. The filter for source_ip used in the UI
 			// {
@@ -273,16 +286,28 @@ var _ = Describe("Query Converter", func() {
 							},
 						},
 						{
-							"term": JsonObject{
-								"source_name": JsonObject{
-									"value": "basic-123",
+							"bool": JsonObject{
+								"should": []JsonObject{
+									{
+										"wildcard": JsonObject{
+											"source_name": JsonObject{
+												"value": "*basic-123*",
+											},
+										},
+									},
 								},
 							},
 						},
 						{
-							"term": JsonObject{
-								"source_namespace": JsonObject{
-									"value": "default",
+							"bool": JsonObject{
+								"should": []JsonObject{
+									{
+										"wildcard": JsonObject{
+											"source_namespace": JsonObject{
+												"value": "*default*",
+											},
+										},
+									},
 								},
 							},
 						},
@@ -325,7 +350,7 @@ var _ = Describe("Query Converter", func() {
 			}
 
 			query := "type IN { suspicious_dns_query, gtf_suspicious_dns_query} AND " +
-				"\"source_name\"=\"basic-123\" AND \"source_namespace\" = \"default\" AND " +
+				"\"source_name\" IN {\"*basic-123*\"} AND \"source_namespace\" IN {\"*default*\"} AND " +
 				"'source_ip' >= '172.16.0.0' AND source_ip <= '172.32.0.0' and " +
 				"suspicious_domains in {'sysdig.com','cilium.io'}"
 			esquery, err := Alerts().NewSelectorQuery(query)
