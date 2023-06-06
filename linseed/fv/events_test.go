@@ -150,28 +150,59 @@ func TestFV_Events(t *testing.T) {
 		// Refresh elasticsearch so that results appear.
 		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
 
-		// Read it back.
-		params := v1.EventParams{
-			QueryParams: v1.QueryParams{
-				TimeRange: &lmav1.TimeRange{
-					From: time.Now().Add(-5 * time.Second),
-					To:   time.Now().Add(5 * time.Second),
+		testEventsFiltering := func(selector string, expectedEvents []v1.Event) {
+			// Read it back.
+			params := v1.EventParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Second),
+						To:   time.Now().Add(5 * time.Second),
+					},
 				},
-			},
-			LogSelectionParams: v1.LogSelectionParams{
-				Selector: "type IN { suspicious_dns_query, gtf_suspicious_dns_query} " +
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: selector,
+				},
+			}
+			resp, err := cli.Events(cluster).List(ctx, &params)
+			require.NoError(t, err)
+
+			// The ID should be set, but random, so we can't assert on its value.
+			require.Equal(t, expectedEvents, testutils.AssertLogIDAndCopyEventsWithoutID(t, resp))
+		}
+		tests := []struct {
+			selector       string
+			expectedEvents []v1.Event
+		}{
+			{
+				"type IN { suspicious_dns_query, gtf_suspicious_dns_query } " +
 					// `in` with a value allows us to use wildcards
 					"AND \"source_name\" in {\"*source-name-123\"} " +
 					// and here we're doing an exact match
 					"AND \"source_namespace\" = \"my-app-namespace\" " +
 					"AND 'source_ip' >= '172.16.0.0' AND source_ip <= '172.32.0.0'",
+				[]v1.Event{events[1]},
 			},
+			{
+				"NOT (type IN { suspicious_dns_query, gtf_suspicious_dns_query })",
+				[]v1.Event{events[0]},
+			},
+			{
+				"type IN { suspicious_dns_query, gtf_suspicious_dns_query } ",
+				[]v1.Event{events[1], events[2]},
+			},
+			{"source_namespace IN {'app'}", nil},
+			{"source_namespace IN {'*app*'}", []v1.Event{events[1], events[2]}},
+			{"source_name IN {'my-*-123'}", []v1.Event{events[1]}},
+			{"'source_ip' >= '172.16.0.0' AND source_ip <= '172.32.0.0'", []v1.Event{events[1], events[2]}},
+			{"'source_ip' >= '172.16.0.0' AND source_ip <= '172.17.0.0'", nil},
 		}
-		resp, err := cli.Events(cluster).List(ctx, &params)
-		require.NoError(t, err)
 
-		// The ID should be set, but random, so we can't assert on its value.
-		require.Equal(t, []v1.Event{events[1]}, testutils.AssertLogIDAndCopyEventsWithoutID(t, resp))
+		for _, tt := range tests {
+			name := fmt.Sprintf("filter events with selector: %s", tt.selector)
+			t.Run(name, func(t *testing.T) {
+				testEventsFiltering(tt.selector, tt.expectedEvents)
+			})
+		}
 	})
 
 	t.Run("should dismiss and delete events", func(t *testing.T) {
