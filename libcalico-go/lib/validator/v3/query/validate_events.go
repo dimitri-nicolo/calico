@@ -32,6 +32,7 @@ var (
 			"gtf_suspicious_dns_query",
 			"gtf_suspicious_flow",
 			"honeypod",
+			"runtime_security",
 			"suspicious_dns_query",
 			"suspicious_flow",
 		),
