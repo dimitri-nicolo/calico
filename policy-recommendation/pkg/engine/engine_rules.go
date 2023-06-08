@@ -127,7 +127,6 @@ type privateNetworkRuleKey struct {
 }
 
 type privateNetworkRule struct {
-	name      string
 	protocol  numorstring.Protocol
 	ports     []numorstring.Port
 	timestamp string
@@ -386,7 +385,6 @@ func (er *engineRules) addFlowToNetworkSetRules(direction calico.DirectionType, 
 //
 // A global network set will be created by the PRE containing private CIDRs.
 //
-//	Name: 'private-network'
 //	Label:
 //			policyrecommendation.tigera.io/scope = 'Private'
 //	CIDRs will be defaults to those defined in RFC 1918
@@ -422,7 +420,6 @@ func (er *engineRules) addFlowToPrivateNetworkRules(direction calico.DirectionTy
 	// The key does not exist, define a new value and add the key-value to the egress to service rules
 
 	val := &privateNetworkRule{
-		name:      calicores.PrivateNetworkSetName,
 		protocol:  *protocol,
 		timestamp: clock.NowRFC3339(),
 	}
@@ -507,10 +504,6 @@ func getFlowType(direction calico.DirectionType, flow api.Flow) flowType {
 	}
 
 	if endpoint.Type == api.FlowLogEndpointTypeNetworkSet {
-		// Private
-		if endpoint.Name == calicores.PrivateNetworkSetName {
-			return privateNetworkFlowType
-		}
 		// NetworkSet
 		return networkSetFlowType
 	}

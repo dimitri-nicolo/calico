@@ -117,17 +117,6 @@ func RunEngine(
 	// Update staged network policy
 	engine := getRecommendationEngine(*snp, clock, recInterval, stabilizationPeriod, *clog)
 	engine.processRecommendation(flows, snp)
-
-	// If private network flows have generated new rules, then create a 'private-network' global
-	// network set. The global network set must be updated manually by the user to include new
-	// subnets.
-	if len(engine.egress.privateNetworkRules) > 0 || len(engine.ingress.privateNetworkRules) > 0 {
-		clog.Infof("Creating global network set: 'private-network'")
-		if err := calicores.MaybeCreatePrivateNetworkSet(ctx, calico, *owner); err != nil {
-			clog.WithError(err).Errorf("failed to create private network set: %s", calicores.PrivateNetworkSetName)
-			return
-		}
-	}
 }
 
 // Recommendation Engine
@@ -352,11 +341,6 @@ func (ere *recommendationEngine) buildPrivate(dir calicores.DirectionType, rule 
 		return
 	}
 
-	nameKey := fmt.Sprintf("%s/name", calicores.PolicyRecKeyName)
-	name, ok := getRuleMetadata(nameKey, rule)
-	if !ok {
-		return
-	}
 	ts, ok := getRuleMetadata(calicores.LastUpdatedKey, rule)
 	if !ok {
 		return
@@ -366,7 +350,6 @@ func (ere *recommendationEngine) buildPrivate(dir calicores.DirectionType, rule 
 		protocol: *rule.Protocol,
 	}
 	val := &privateNetworkRule{
-		name:      name,
 		protocol:  *rule.Protocol,
 		ports:     rule.Destination.Ports, // Always destination
 		timestamp: ts,
@@ -472,7 +455,7 @@ func (ere *recommendationEngine) getSortedEngineAsV3Rules(direction calicores.Di
 	// PrivateNetwork
 	prnRules := []v3.Rule{}
 	for _, er := range engRules.privateNetworkRules {
-		rule := calicores.GetPrivateNetworkSetV3Rule(direction, er.ports, &er.protocol, er.timestamp)
+		rule := calicores.GetPrivateNetworkV3Rule(direction, er.ports, &er.protocol, er.timestamp)
 		prnRules = append(prnRules, *rule)
 	}
 	sort.Slice(prnRules, func(i, j int) bool {
@@ -519,9 +502,6 @@ func (ere *recommendationEngine) processRecommendation(flows []*api.Flow, snp *v
 	// Get sorted v3 rules
 	egress := ere.getSortedEngineAsV3Rules(calicores.EgressTraffic)
 	ingress := ere.getSortedEngineAsV3Rules(calicores.IngressTraffic)
-
-	// If the egress or ingress private network contains rules, create the 'private-network' global()
-	// network set if it doesn't already exist
 
 	emptyRules := len(egress) == 0 && len(ingress) == 0
 	if calicores.UpdateStagedNetworkPolicyRules(snp, egress, ingress) {

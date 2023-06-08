@@ -804,6 +804,138 @@ var _ = Describe("Policy Recommendation Rules", func() {
 		rule := GetNetworkSetV3Rule(IngressTraffic, name, namespace, isGlobal, []numorstring.Port{}, &protocolICMP, rfc3339Time)
 		testRuleEquality(rule, expectedRule)
 	})
+
+	It("returns a valid Ingress GetPrivateNetworkV3Rule with TCP protocol", func() {
+		expectedProtocol := &protocolTCP
+		expectedRule := &v3.Rule{
+			Metadata: &v3.RuleMetadata{
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
+					"policyrecommendation.tigera.io/scope":       "Private",
+				},
+			},
+			Action:   v3.Allow,
+			Protocol: expectedProtocol,
+			Source: v3.EntityRule{
+				Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
+			},
+			Destination: v3.EntityRule{
+				Ports: []numorstring.Port{{MinPort: 80, MaxPort: 80}},
+			},
+		}
+
+		rule := GetPrivateNetworkV3Rule(IngressTraffic, []numorstring.Port{{MinPort: 80, MaxPort: 80}}, &protocolTCP, rfc3339Time)
+		testRuleEquality(rule, expectedRule)
+	})
+
+	It("returns a valid Ingress GetPrivateNetworkV3Rule with UDP protocol", func() {
+		expectedProtocol := &protocolUDP
+		expectedRule := &v3.Rule{
+			Metadata: &v3.RuleMetadata{
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
+					"policyrecommendation.tigera.io/scope":       "Private",
+				},
+			},
+			Action:   v3.Allow,
+			Protocol: expectedProtocol,
+			Source: v3.EntityRule{
+				Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
+			},
+			Destination: v3.EntityRule{
+				Ports: []numorstring.Port{{MinPort: 53, MaxPort: 53}},
+			},
+		}
+
+		rule := GetPrivateNetworkV3Rule(IngressTraffic, []numorstring.Port{{MinPort: 53, MaxPort: 53}}, &protocolUDP, rfc3339Time)
+		testRuleEquality(rule, expectedRule)
+	})
+
+	It("returns a valid Ingress GetPrivateNetworkV3Rule with ICMP protocol", func() {
+		expectedProtocol := &protocolICMP
+		expectedRule := &v3.Rule{
+			Metadata: &v3.RuleMetadata{
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
+					"policyrecommendation.tigera.io/scope":       "Private",
+				},
+			},
+			Action:   v3.Allow,
+			Protocol: expectedProtocol,
+			Source: v3.EntityRule{
+				Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
+			},
+			Destination: v3.EntityRule{},
+		}
+
+		rule := GetPrivateNetworkV3Rule(IngressTraffic, []numorstring.Port{}, &protocolICMP, rfc3339Time)
+		testRuleEquality(rule, expectedRule)
+	})
+
+	It("returns a valid Egress GetPrivateNetworkV3Rule with TCP protocol", func() {
+		expectedProtocol := &protocolTCP
+		expectedRule := &v3.Rule{
+			Metadata: &v3.RuleMetadata{
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
+					"policyrecommendation.tigera.io/scope":       "Private",
+				},
+			},
+			Action:   v3.Allow,
+			Protocol: expectedProtocol,
+			Source:   v3.EntityRule{},
+			Destination: v3.EntityRule{
+				Nets:  []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
+				Ports: []numorstring.Port{{MinPort: 80, MaxPort: 80}},
+			},
+		}
+
+		rule := GetPrivateNetworkV3Rule(EgressTraffic, []numorstring.Port{{MinPort: 80, MaxPort: 80}}, &protocolTCP, rfc3339Time)
+		testRuleEquality(rule, expectedRule)
+	})
+
+	It("returns a valid Egress GetPrivateNetworkV3Rule with UDP protocol", func() {
+		expectedProtocol := &protocolUDP
+		expectedRule := &v3.Rule{
+			Metadata: &v3.RuleMetadata{
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
+					"policyrecommendation.tigera.io/scope":       "Private",
+				},
+			},
+			Action:   v3.Allow,
+			Protocol: expectedProtocol,
+			Source:   v3.EntityRule{},
+			Destination: v3.EntityRule{
+				Nets:  []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
+				Ports: []numorstring.Port{{MinPort: 53, MaxPort: 53}},
+			},
+		}
+
+		rule := GetPrivateNetworkV3Rule(EgressTraffic, []numorstring.Port{{MinPort: 53, MaxPort: 53}}, &protocolUDP, rfc3339Time)
+		testRuleEquality(rule, expectedRule)
+	})
+
+	It("returns a valid Egress GetPrivateNetworkV3Rule with ICMP protocol", func() {
+		expectedProtocol := &protocolICMP
+		expectedRule := &v3.Rule{
+			Metadata: &v3.RuleMetadata{
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
+					"policyrecommendation.tigera.io/scope":       "Private",
+				},
+			},
+			Action:   v3.Allow,
+			Protocol: expectedProtocol,
+			Source:   v3.EntityRule{},
+			Destination: v3.EntityRule{
+				Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
+			},
+		}
+
+		rule := GetPrivateNetworkV3Rule(EgressTraffic, []numorstring.Port{}, &protocolICMP, rfc3339Time)
+		testRuleEquality(rule, expectedRule)
+	})
 })
 
 func testStagedNetworkPolicyEquality(leftSnp, rightSnp *v3.StagedNetworkPolicy) {

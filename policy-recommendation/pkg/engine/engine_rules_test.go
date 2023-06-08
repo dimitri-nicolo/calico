@@ -373,9 +373,9 @@ var _ = Describe("EngineRules", func() {
 
 			expectedEngineRules := NewEngineRules()
 			expectedEngineRules.privateNetworkRules = map[privateNetworkRuleKey]*privateNetworkRule{
-				key1: &privateNetworkRule{name: "private-network", ports: []numorstring.Port{{}, {MinPort: port444, MaxPort: port444}}, protocol: protocolTCP, timestamp: timeNowRFC3339},
-				key2: &privateNetworkRule{name: "private-network", ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port55, MaxPort: port55}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key3: &privateNetworkRule{name: "private-network", ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
+				key1: &privateNetworkRule{ports: []numorstring.Port{{}, {MinPort: port444, MaxPort: port444}}, protocol: protocolTCP, timestamp: timeNowRFC3339},
+				key2: &privateNetworkRule{ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port55, MaxPort: port55}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
+				key3: &privateNetworkRule{ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
 			}
 
 			expectedNumberOfRules := 3
@@ -420,9 +420,9 @@ var _ = Describe("EngineRules", func() {
 
 			expectedEngineRules := NewEngineRules()
 			expectedEngineRules.privateNetworkRules = map[privateNetworkRuleKey]*privateNetworkRule{
-				key1: &privateNetworkRule{name: "private-network", ports: []numorstring.Port{{}, {MinPort: port444, MaxPort: port444}}, protocol: protocolTCP, timestamp: timeNowRFC3339},
-				key2: &privateNetworkRule{name: "private-network", ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port55, MaxPort: port55}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key3: &privateNetworkRule{name: "private-network", ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
+				key1: &privateNetworkRule{ports: []numorstring.Port{{}, {MinPort: port444, MaxPort: port444}}, protocol: protocolTCP, timestamp: timeNowRFC3339},
+				key2: &privateNetworkRule{ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port55, MaxPort: port55}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
+				key3: &privateNetworkRule{ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
 			}
 
 			expectedNumberOfRules := 3
