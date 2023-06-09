@@ -59,9 +59,9 @@ var _ = Describe("Policy Recommendation Batch", func() {
 		mockLmaK8sClientSet := lmak8s.MockClientSet{}
 
 		mockAuthenticator.On("Authenticate", mock.Anything).Return(&user.DefaultInfo{}, http.StatusOK, nil)
-		mockAuthenticator.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
 		mockLmaK8sClientFactory.On("NewClientSetForApplication", clusterID).Return(&mockLmaK8sClientSet, nil)
+		mockLmaK8sClientFactory.On("NewClientSetForUser", mock.Anything, clusterID).Return(&mockLmaK8sClientSet, nil)
 
 		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
 		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
@@ -193,6 +193,7 @@ var _ = Describe("Policy Recommendation Batch Authen/Authz", func() {
 		mockLmaK8sClientSet := lmak8s.MockClientSet{}
 
 		mockLmaK8sClientFactory.On("NewClientSetForApplication", clusterID).Return(&mockLmaK8sClientSet, nil)
+		mockLmaK8sClientFactory.On("NewClientSetForUser", mock.Anything, clusterID).Return(&mockLmaK8sClientSet, nil)
 
 		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
 		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
@@ -203,7 +204,6 @@ var _ = Describe("Policy Recommendation Batch Authen/Authz", func() {
 	DescribeTable("Authentication",
 		func(query *BatchStagedActionParams, userInfo user.Info, httpStatusCode int, expectedErr error) {
 			mockAuthenticator.On("Authenticate", mock.Anything).Return(userInfo, httpStatusCode, expectedErr)
-			mockAuthenticator.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
 			jsonQuery, err := json.Marshal(query)
 			Expect(err).To(BeNil())
@@ -252,59 +252,6 @@ var _ = Describe("Policy Recommendation Batch Authen/Authz", func() {
 		Entry("Unauthorized request - 401", activateQuery, nil, http.StatusUnauthorized, errors.New("401 error authenticating user")),
 		Entry("Internal server error - 500", activateQuery, nil, http.StatusInternalServerError, errors.New("500 error authenticating user")),
 	)
-
-	DescribeTable("RBAC Authorization",
-		func(query *BatchStagedActionParams, allowed bool, authError, expectedErr error) {
-			mockAuthenticator.On("Authenticate", mock.Anything).Return(&user.DefaultInfo{}, http.StatusOK, nil)
-			mockAuthenticator.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(allowed, authError)
-
-			jsonQuery, err := json.Marshal(query)
-			Expect(err).To(BeNil())
-
-			req, err := http.NewRequest(
-				http.MethodPatch, recommendationBatchURLPath, bytes.NewBuffer(jsonQuery))
-			Expect(err).To(BeNil())
-
-			cs, err := mockLmaK8sClientFactory.NewClientSetForApplication(clusterID)
-			Expect(err).NotTo(HaveOccurred())
-
-			// Create staged network policies for test
-			err = createSnps(req.Context(), cs)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Updating the snp StagedAction to set")
-			hdlr := BatchStagedActionsHandler(mockAuthenticator, mockLmaK8sClientFactory, mockK8sClientFactory)
-
-			// Add a bogus user
-			req = req.WithContext(request.WithUser(req.Context(), &user.DefaultInfo{}))
-
-			w := httptest.NewRecorder()
-			hdlr.ServeHTTP(w, req)
-			Expect(err).To(BeNil())
-
-			body, err := io.ReadAll(w.Body)
-			Expect(err).To(BeNil())
-
-			if len(body) > 0 {
-				err = json.Unmarshal(body, &errorMessage)
-				Expect(err).To(BeNil())
-
-				if errorMessage.Message == "" {
-					resp := BatchResponse{}
-					err = json.Unmarshal(body, &resp)
-					Expect(err).To(BeNil())
-
-					Expect(resp.Status).To(Equal(http.StatusOK))
-					Expect(resp.Error).To(BeNil())
-				} else {
-					Expect(errorMessage.Message).To(Equal(expectedErr.Error()))
-				}
-			}
-		},
-		Entry("Valid Authorization", activateQuery, true, nil, nil),
-		Entry("Error authorizing request", activateQuery, false, errors.New("error authorizing request"), errors.New("error authorizing request")),
-		Entry("Unauthorize request", activateQuery, false, nil, errors.New("forbidden user")),
-	)
 })
 
 var _ = Describe("Policy Recommendation Batch Patch", func() {
@@ -322,6 +269,7 @@ var _ = Describe("Policy Recommendation Batch Patch", func() {
 		mockLmaK8sClientSet := lmak8s.MockClientSet{}
 
 		mockLmaK8sClientFactory.On("NewClientSetForApplication", clusterID).Return(&mockLmaK8sClientSet, nil)
+		mockLmaK8sClientFactory.On("NewClientSetForUser", mock.Anything, clusterID).Return(&mockLmaK8sClientSet, nil)
 
 		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
 		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())

@@ -12,7 +12,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	v1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -78,57 +77,29 @@ func BatchStagedActionsHandler(auth lmaauth.JWTAuth, clientSetk8sClientFactory l
 			return
 		}
 		// Get the k8s client set for this cluster
-		clientSet, err := clientSetk8sClientFactory.NewClientSetForApplication(clusterID)
+		clientSet, err := clientSetk8sClientFactory.NewClientSetForUser(usr, clusterID)
 		if err != nil {
-			msg := fmt.Sprintf("failed to get the k8s client set for this cluster: %s", clusterID)
+			msg := fmt.Sprintf("failed to get the k8s client set for usr: %s and cluster: %s", usr.GetName(), clusterID)
 			createAndReturnError(err, msg, http.StatusInternalServerError, api.PolicyRec, w)
 
 			return
 		}
 
 		// Update the spec.stagedAction for every batch item
-		errs := make(chan error, len(params.StagedNetworkPolicies))
 		var wg sync.WaitGroup
-		// Set the resource attribute for stagednetworkpolicies to patch
-		resourceAttributes := &v1.ResourceAttributes{
-			Verb:     "patch",
-			Group:    "projectcalico.org",
-			Version:  "v3",
-			Resource: "stagednetworkpolicies",
-		}
-
+		errs := make(chan error, len(params.StagedNetworkPolicies))
 		for _, item := range params.StagedNetworkPolicies {
-			// Set the name and namespace resource attributes for each resource that we want to patch
-			resourceAttributes.Name = item.Name
-			resourceAttributes.Namespace = item.Namespace
-
-			// Authorize user
-			log.Debugf("authorizing resource %+v with user %s ,%+v, %+v", resourceAttributes, usr.GetName(), usr.GetGroups(), usr.GetExtra())
-			allowed, err := auth.Authorize(usr, resourceAttributes, nil)
-			if err != nil {
-				createAndReturnError(err, "error authorizing request", http.StatusForbidden, api.PolicyRec, w)
-
-				return
+			snp := &v3.StagedNetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            item.Name,
+					Namespace:       item.Namespace,
+					ResourceVersion: item.ResourceVersion,
+					UID:             types.UID(item.Uid),
+				},
 			}
-			if allowed {
-				snp := &v3.StagedNetworkPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            item.Name,
-						Namespace:       item.Namespace,
-						ResourceVersion: item.ResourceVersion,
-						UID:             types.UID(item.Uid),
-					},
-				}
 
-				wg.Add(1)
-				go patchSNP(req.Context(), clientSet, *snp, params.StagedAction, errs, &wg)
-			} else {
-				// If any of the permission requirements are not met unauthorize the request since at this
-				// point we know the user does not have complete permissions requirement.
-				createAndReturnError(err, "forbidden user", http.StatusForbidden, api.PolicyRec, w)
-
-				return
-			}
+			wg.Add(1)
+			go patchSNP(req.Context(), clientSet, *snp, params.StagedAction, errs, &wg)
 		}
 		// Wait for all patch routines to complete
 		wg.Wait()
