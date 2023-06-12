@@ -67,7 +67,7 @@ bin/csi-driver-amd64: $(SRC_FILES)
 	$(call build_static_cgo_boring_binary, csidriver/main.go, $@)
 
 UPSTREAM_REGISTRAR_PROJECT ?= kubernetes-csi/$(REGISTRAR_IMAGE)
-UPSTREAM_REGISTRAR_TAG     ?= v2.7.0
+UPSTREAM_REGISTRAR_TAG     ?= v2.8.0
 
 REGISTRAR_TIGERA_BUILD_CMD_LDFLAGS = -ldflags '-extldflags "-static" -linkmode external'
 
