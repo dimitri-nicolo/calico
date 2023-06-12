@@ -35,7 +35,6 @@ type Event struct {
 	Origin          string          `json:"origin" validate:"required"`
 	Severity        int             `json:"severity" validate:"required"`
 	Type            string          `json:"type" validate:"required"`
-	Alert           string          `json:"alert,omitempty"`
 	DestIP          *string         `json:"dest_ip,omitempty"`
 	DestName        string          `json:"dest_name,omitempty"`
 	DestNameAggr    string          `json:"dest_name_aggr,omitempty"`

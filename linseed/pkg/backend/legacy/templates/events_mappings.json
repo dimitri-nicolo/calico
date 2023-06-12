@@ -11,9 +11,6 @@
     "type": {
       "type": "keyword"
     },
-    "alert": {
-      "type": "keyword"
-    },
     "description": {
       "type": "keyword"
     },
