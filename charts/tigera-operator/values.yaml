@@ -109,3 +109,4 @@ techPreviewOptions:
   # pod will be annotated with 'container.apparmor.security.beta.kubernetes.io/calico-node'
   nodeApparmorPolicyName: ""
 
+kubeletVolumePluginPath: /var/lib/kubelet
