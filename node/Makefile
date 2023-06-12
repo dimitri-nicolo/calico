@@ -164,6 +164,8 @@ ST_TO_RUN?=tests/st/
 # Can exclude the slower tests with "-a '!slow'"
 ST_OPTIONS?=
 
+K8ST_REPORT_FILENAME ?= k8s-tests.xml
+
 # Filesystem of the node container that is checked in to this repository.
 NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 
