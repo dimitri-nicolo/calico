@@ -70,14 +70,13 @@ UPSTREAM_REGISTRAR_PROJECT ?= kubernetes-csi/$(REGISTRAR_IMAGE)
 UPSTREAM_REGISTRAR_TAG     ?= v2.8.0
 
 ifeq ($(ARCH), $(filter $(ARCH),amd64))
-REGISTRAR_TIGERA_BUILD_CMD_LDFLAGS = -ldflags '-linkmode external -extldflags -static'
+REGISTRAR_TIGERA_BUILD_CMD_LDFLAGS = -ldflags '-s -w -linkmode external -extldflags -static'
 else
-REGISTRAR_TIGERA_BUILD_CMD_LDFLAGS =
+REGISTRAR_TIGERA_BUILD_CMD_LDFLAGS = -ldflags '-s -w'
 endif
 
-# FIXME set the "-s -w" ldfalgs causes "Felix: BPF UT/FV tests on new kernel" FVs to fail or timeout.
 REGISTRAR_TIGERA_BUILD_CMD="cd /go/src/github.com/$(UPSTREAM_REGISTRAR_PROJECT) && \
-        go build -buildvcs=false $(REGISTRAR_TIGERA_BUILD_CMD_LDFLAGS) -tags $(TAGS) -v -o bin/csi-node-driver-registrar cmd/csi-node-driver-registrar/*.go"
+	go build -buildvcs=false $(REGISTRAR_TIGERA_BUILD_CMD_LDFLAGS) -tags $(TAGS) -v -o bin/csi-node-driver-registrar cmd/csi-node-driver-registrar/*.go"
 REGISTRAR_UPSTREAM_BUILD_CMD="cd /go/src/github.com/$(UPSTREAM_REGISTRAR_PROJECT) && \
 	make build BUILD_PLATFORMS=$(BUILD_PLATFORMS)"
 
