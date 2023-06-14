@@ -141,7 +141,7 @@ var _ = Describe("Secret watcher tests", func() {
 		Expect(mock.updates).To(HaveLen(0))
 
 		By("watcher provides update and invoking GetSecretData again - value should be retureds, no backend requests")
-		watcher.OnAdd(secret1)
+		watcher.OnAdd(secret1, true)
 		d, err = watcher.GetSecretData("namespace1", "name1")
 		Expect(d).To(Equal(data1))
 		Expect(err).ToNot(HaveOccurred())
@@ -150,7 +150,7 @@ var _ = Describe("Secret watcher tests", func() {
 		Expect(mock.updates).To(Equal([]types.NamespacedName{nn}))
 
 		By("watcher provides update and invoking GetSecretData again - new value should be returned, no backend requests")
-		watcher.OnAdd(secret2)
+		watcher.OnAdd(secret2, true)
 		d, err = watcher.GetSecretData("namespace1", "name1")
 		Expect(d).To(Equal(data2))
 		Expect(err).ToNot(HaveOccurred())

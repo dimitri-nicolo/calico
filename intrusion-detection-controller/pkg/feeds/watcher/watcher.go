@@ -176,7 +176,7 @@ func (s *watcher) Run(ctx context.Context) {
 	})
 }
 
-func (s *watcher) processQueue(obj interface{}) error {
+func (s *watcher) processQueue(obj interface{}, isInInitialList bool) error {
 	// In general, this function only operates on local caches and FIFOs, so
 	// will never return an error.  We panic on any errors since these indicate
 	// programming bugs.
