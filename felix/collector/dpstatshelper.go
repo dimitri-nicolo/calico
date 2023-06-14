@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -9,6 +9,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/collector/dnslog"
+	"github.com/projectcalico/calico/felix/collector/flowlog"
+	"github.com/projectcalico/calico/felix/collector/l7log"
+	p "github.com/projectcalico/calico/felix/collector/prometheus"
+	"github.com/projectcalico/calico/felix/collector/reporter"
+	"github.com/projectcalico/calico/felix/collector/reporter/file"
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/wireguard"
@@ -35,7 +41,7 @@ func New(
 		registry.MustRegister(wireguard.MustNewWireguardMetrics())
 	}
 
-	rm := NewReporterManager(configParams.FlowLogsCollectorDebugTrace)
+	rm := reporter.NewManager(configParams.FlowLogsCollectorDebugTrace)
 	if configParams.PrometheusReporterEnabled {
 		fipsModeEnabled := os.Getenv("FIPS_MODE_ENABLED") == "true"
 		log.WithFields(log.Fields{
@@ -46,7 +52,7 @@ func New(
 			"caFile":          configParams.PrometheusReporterCAFile,
 		}).Info("Starting prometheus reporter")
 
-		pr := NewPrometheusReporter(
+		pr := p.NewReporter(
 			registry,
 			configParams.PrometheusReporterPort,
 			configParams.DeletedMetricsRetentionSecs,
@@ -55,20 +61,20 @@ func New(
 			configParams.PrometheusReporterCAFile,
 			fipsModeEnabled,
 		)
-		pr.AddAggregator(NewPolicyRulesAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))
-		pr.AddAggregator(NewDeniedPacketsAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))
+		pr.AddAggregator(p.NewPolicyRulesAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))
+		pr.AddAggregator(p.NewDeniedPacketsAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))
 		rm.RegisterMetricsReporter(pr)
 	}
-	dispatchers := map[string]LogDispatcher{}
+	dispatchers := map[string]reporter.LogDispatcher{}
 	if configParams.FlowLogsFileEnabled {
 		log.WithFields(log.Fields{
 			"directory": configParams.GetFlowLogsFileDirectory(),
 			"max_size":  configParams.FlowLogsFileMaxFileSizeMB,
 			"max_files": configParams.FlowLogsFileMaxFiles,
 		}).Info("Creating Flow Logs FileDispatcher")
-		fd := NewFileDispatcher(
+		fd := file.NewDispatcher(
 			configParams.GetFlowLogsFileDirectory(),
-			FlowLogFilename,
+			file.FlowLogFilename,
 			configParams.FlowLogsFileMaxFileSizeMB,
 			configParams.FlowLogsFileMaxFiles,
 		)
@@ -76,18 +82,18 @@ func New(
 	}
 	if len(dispatchers) > 0 {
 		log.Info("Creating Flow Logs Reporter")
-		var offsetReader LogOffset = &NoOpLogOffset{}
+		var offsetReader flowlog.LogOffset = &flowlog.NoOpLogOffset{}
 		if configParams.FlowLogsDynamicAggregationEnabled {
-			offsetReader = NewRangeLogOffset(NewFluentDLogOffsetReader(configParams.GetFlowLogsPositionFilePath()),
+			offsetReader = flowlog.NewRangeLogOffset(flowlog.NewFluentDLogOffsetReader(configParams.GetFlowLogsPositionFilePath()),
 				int64(configParams.FlowLogsAggregationThresholdBytes))
 		}
-		cw := NewFlowLogsReporter(dispatchers, configParams.FlowLogsFlushInterval, healthAggregator,
+		cw := flowlog.NewReporter(dispatchers, configParams.FlowLogsFlushInterval, healthAggregator,
 			configParams.FlowLogsEnableHostEndpoint, configParams.FlowLogsCollectorDebugTrace, offsetReader)
 		configureFlowAggregation(configParams, cw)
 		rm.RegisterMetricsReporter(cw)
 	}
 
-	syslogReporter := NewSyslogReporter(configParams.SyslogReporterNetwork, configParams.SyslogReporterAddress)
+	syslogReporter := reporter.NewSyslog(configParams.SyslogReporterNetwork, configParams.SyslogReporterAddress)
 	if syslogReporter != nil {
 		rm.RegisterMetricsReporter(syslogReporter)
 	}
@@ -109,11 +115,11 @@ func New(
 
 	if configParams.DNSLogsFileEnabled {
 		// Create the reporter, aggregator and dispatcher for DNS logging.
-		dnsLogReporter := NewDNSLogReporter(
-			map[string]LogDispatcher{
-				DNSLogsFileDispatcherName: NewFileDispatcher(
+		dnsLogReporter := dnslog.NewReporter(
+			map[string]reporter.LogDispatcher{
+				DNSLogsFileDispatcherName: file.NewDispatcher(
 					configParams.DNSLogsFileDirectory,
-					DNSLogFilename,
+					file.DNSLogFilename,
 					configParams.DNSLogsFileMaxFileSizeMB,
 					configParams.DNSLogsFileMaxFiles,
 				),
@@ -122,8 +128,8 @@ func New(
 			healthAggregator,
 		)
 		dnsLogReporter.AddAggregator(
-			NewDNSLogAggregator().
-				AggregateOver(DNSAggregationKind(configParams.DNSLogsFileAggregationKind)).
+			dnslog.NewAggregator().
+				AggregateOver(dnslog.AggregationKind(configParams.DNSLogsFileAggregationKind)).
 				IncludeLabels(configParams.DNSLogsFileIncludeLabels).
 				PerNodeLimit(configParams.DNSLogsFilePerNodeLimit),
 			[]string{DNSLogsFileDispatcherName},
@@ -133,11 +139,11 @@ func New(
 
 	if configParams.L7LogsFileEnabled {
 		// Create the reporter, aggregator and dispatcher for L7 logging.
-		l7LogReporter := NewL7LogReporter(
-			map[string]LogDispatcher{
-				L7LogsFileDispatcherName: NewFileDispatcher(
+		l7LogReporter := l7log.NewReporter(
+			map[string]reporter.LogDispatcher{
+				L7LogsFileDispatcherName: file.NewDispatcher(
 					configParams.L7LogsFileDirectory,
-					L7LogFilename,
+					file.L7LogFilename,
 					configParams.L7LogsFileMaxFileSizeMB,
 					configParams.L7LogsFileMaxFiles,
 				),
@@ -146,9 +152,9 @@ func New(
 			healthAggregator,
 		)
 		// Create the aggregation kind
-		aggKind := getL7AggregationKindFromConfigParams(configParams)
+		aggKind := l7log.AggregationKindFromConfigParams(configParams)
 		l7LogReporter.AddAggregator(
-			NewL7LogAggregator().
+			l7log.NewAggregator().
 				AggregateOver(aggKind).
 				PerNodeLimit(configParams.L7LogsFilePerNodeLimit),
 			[]string{L7LogsFileDispatcherName},
@@ -159,15 +165,15 @@ func New(
 	return statsCollector
 }
 
-// configureFlowAggregation adds appropriate aggregators to the FlowLogsReporter, depending on configuration.
-func configureFlowAggregation(configParams *config.Config, fr *FlowLogsReporter) {
+// configureFlowAggregation adds appropriate aggregators to the FlowLogReporter, depending on configuration.
+func configureFlowAggregation(configParams *config.Config, fr *flowlog.FlowLogReporter) {
 	addedFileAllow := false
 	addedFileDeny := false
 	if configParams.FlowLogsFileEnabled {
 		if !addedFileAllow && configParams.FlowLogsFileEnabledForAllowed {
 			log.Info("Creating Flow Logs Aggregator for allowed")
-			caa := NewFlowLogAggregator().
-				AggregateOver(FlowAggregationKind(configParams.FlowLogsFileAggregationKindForAllowed)).
+			caa := flowlog.NewAggregator().
+				AggregateOver(flowlog.AggregationKind(configParams.FlowLogsFileAggregationKindForAllowed)).
 				DisplayDebugTraceLogs(configParams.FlowLogsCollectorDebugTrace).
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
@@ -185,8 +191,8 @@ func configureFlowAggregation(configParams *config.Config, fr *FlowLogsReporter)
 		}
 		if !addedFileDeny && configParams.FlowLogsFileEnabledForDenied {
 			log.Info("Creating Flow Logs Aggregator for denied")
-			cad := NewFlowLogAggregator().
-				AggregateOver(FlowAggregationKind(configParams.FlowLogsFileAggregationKindForDenied)).
+			cad := flowlog.NewAggregator().
+				AggregateOver(flowlog.AggregationKind(configParams.FlowLogsFileAggregationKindForDenied)).
 				DisplayDebugTraceLogs(configParams.FlowLogsCollectorDebugTrace).
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).

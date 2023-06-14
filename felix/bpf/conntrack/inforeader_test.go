@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package conntrack_test
 
@@ -11,7 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
-	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/timeshim/mocktime"
 )
 
@@ -41,7 +42,7 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 	})
 
 	DescribeTable("forward entries",
-		func(k conntrack.Key, v conntrack.Value, expected collector.ConntrackInfo) {
+		func(k conntrack.Key, v conntrack.Value, expected dataplane.ConntrackInfo) {
 			reader.IterationStart()
 			reader.Check(k, v, nil)
 			reader.IterationEnd()
@@ -52,21 +53,21 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		Entry("normal entry - no NAT",
 			conntrack.NewKey(123, clientIP, clientPort, backendIP, backendPort),
 			conntrack.NewValueNormal(now, now, 0, LegSrcDst, LegDstSrc),
-			collector.ConntrackInfo{
+			dataplane.ConntrackInfo{
 				Tuple: makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
 			},
 		),
 		Entry("normal entry - no NAT - swapped legs",
 			conntrack.NewKey(123, backendIP, backendPort, clientIP, clientPort),
 			conntrack.NewValueNormal(now, now, 0, LegDstSrc, LegSrcDst),
-			collector.ConntrackInfo{
+			dataplane.ConntrackInfo{
 				Tuple: makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
 			},
 		),
 		Entry("normal entry - no NAT - expired",
 			conntrack.NewKey(123, clientIP, clientPort, backendIP, backendPort),
 			conntrack.NewValueNormal(now-2*time.Hour, now-time.Hour, 0, LegSrcDst, LegDstSrc),
-			collector.ConntrackInfo{
+			dataplane.ConntrackInfo{
 				Expired: true,
 				Tuple:   makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
 			},
@@ -74,7 +75,7 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		Entry("normal entry - no NAT - expired - swapped legs",
 			conntrack.NewKey(123, backendIP, backendPort, clientIP, clientPort),
 			conntrack.NewValueNormal(now-2*time.Hour, now-time.Hour, 0, LegDstSrc, LegSrcDst),
-			collector.ConntrackInfo{
+			dataplane.ConntrackInfo{
 				Expired: true,
 				Tuple:   makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
 			},
@@ -83,7 +84,7 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		Entry("reverse entry - NAT",
 			conntrack.NewKey(123, clientIP, clientPort, backendIP, backendPort),
 			conntrack.NewValueNATReverse(now, now, 0, LegSrcDst, LegDstSrc, net.IPv4(0, 0, 0, 0), svcIP, svcPort),
-			collector.ConntrackInfo{
+			dataplane.ConntrackInfo{
 				IsDNAT:       true,
 				Tuple:        makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
 				PreDNATTuple: makeTuple(clientIP, svcIP, clientPort, svcPort, 123),
@@ -92,7 +93,7 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		Entry("reverse entry - NAT - swapped legs",
 			conntrack.NewKey(123, backendIP, backendPort, clientIP, clientPort),
 			conntrack.NewValueNATReverse(now, now, 0, LegDstSrc, LegSrcDst, net.IPv4(0, 0, 0, 0), svcIP, svcPort),
-			collector.ConntrackInfo{
+			dataplane.ConntrackInfo{
 				IsDNAT:       true,
 				Tuple:        makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
 				PreDNATTuple: makeTuple(clientIP, svcIP, clientPort, svcPort, 123),
@@ -101,7 +102,7 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		Entry("reverse entry - NAT - expired",
 			conntrack.NewKey(123, clientIP, clientPort, backendIP, backendPort),
 			conntrack.NewValueNATReverse(now-2*time.Hour, now-time.Hour, 0, LegSrcDst, LegDstSrc, net.IPv4(0, 0, 0, 0), svcIP, svcPort),
-			collector.ConntrackInfo{
+			dataplane.ConntrackInfo{
 				Expired:      true,
 				IsDNAT:       true,
 				Tuple:        makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
@@ -111,7 +112,7 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		Entry("reverse entry - NAT - expired - swapped legs",
 			conntrack.NewKey(123, backendIP, backendPort, clientIP, clientPort),
 			conntrack.NewValueNATReverse(now-2*time.Hour, now-time.Hour, 0, LegDstSrc, LegSrcDst, net.IPv4(0, 0, 0, 0), svcIP, svcPort),
-			collector.ConntrackInfo{
+			dataplane.ConntrackInfo{
 				Expired:      true,
 				IsDNAT:       true,
 				Tuple:        makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
@@ -121,11 +122,9 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 	)
 })
 
-func makeTuple(src, dst net.IP, srcP, dstP uint16, proto uint8) collector.Tuple {
+func makeTuple(src, dst net.IP, srcP, dstP uint16, proto uint8) tuple.Tuple {
 	var s, d [16]byte
-
 	copy(s[:], src.To16())
 	copy(d[:], dst.To16())
-
-	return collector.MakeTuple(s, d, int(proto), int(srcP), int(dstP))
+	return tuple.Make(s, d, int(proto), int(srcP), int(dstP))
 }

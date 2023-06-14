@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/projectcalico/calico/felix/calc"
-	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/dataplane"
 )
 
 // InfoReader implements collector.PacketInfoReader and collector.ConntrackInfoReader.
@@ -24,12 +24,12 @@ func (r *InfoReader) Stop() {
 }
 
 // PacketInfoChan returns the channel with converted PacketInfo.
-func (r *InfoReader) PacketInfoChan() <-chan collector.PacketInfo {
+func (r *InfoReader) PacketInfoChan() <-chan dataplane.PacketInfo {
 	return nil
 }
 
 // ConntrackInfoChan returns the channel with converted ConntrackInfo.
-func (r *InfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
+func (r *InfoReader) ConntrackInfoChan() <-chan []dataplane.ConntrackInfo {
 	return nil
 }
 

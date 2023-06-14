@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -17,6 +17,15 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector/dnslog"
+	"github.com/projectcalico/calico/felix/collector/l7log"
+	"github.com/projectcalico/calico/felix/collector/reporter"
+	"github.com/projectcalico/calico/felix/collector/types/boundedset"
+	"github.com/projectcalico/calico/felix/collector/types/endpoint"
+	"github.com/projectcalico/calico/felix/collector/types/metric"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
+	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/jitter"
 	logutil "github.com/projectcalico/calico/felix/logutils"
@@ -112,34 +121,34 @@ type Config struct {
 // Note that the dataplane statistics channel (ds) is currently just used for the
 // policy syncer but will eventually also include NFLOG stats as well.
 type collector struct {
-	packetInfoReader      PacketInfoReader
-	conntrackInfoReader   ConntrackInfoReader
-	processInfoCache      ProcessInfoCache
-	domainLookup          EgressDomainCache
+	packetInfoReader      dataplane.PacketInfoReader
+	conntrackInfoReader   dataplane.ConntrackInfoReader
+	processInfoCache      dataplane.ProcessInfoCache
+	domainLookup          dataplane.EgressDomainCache
 	luc                   *calc.LookupsCache
-	epStats               map[Tuple]*Data
+	epStats               map[tuple.Tuple]*dataplane.Data
 	ticker                jitter.JitterTicker
 	sigChan               chan os.Signal
 	config                *Config
 	dumpLog               *log.Logger
-	reporterMgr           *ReporterManager
+	reporterMgr           *reporter.Manager
 	ds                    chan *proto.DataplaneStats
-	dnsLogReporter        DNSLogReporterInterface
-	l7LogReporter         L7LogReporterInterface
+	dnsLogReporter        dnslog.ReporterInterface
+	l7LogReporter         l7log.ReporterInterface
 	displayDebugTraceLogs bool
 }
 
 // newCollector instantiates a new collector. The StartDataplaneStatsCollector function is the only public
 // function for collector instantiation.
-func newCollector(lc *calc.LookupsCache, rm *ReporterManager, cfg *Config) Collector {
+func newCollector(lc *calc.LookupsCache, rm *reporter.Manager, cfg *Config) Collector {
 	displayTraceLogs := false
 	if rm != nil {
-		displayTraceLogs = rm.displayDebugTraceLogs
+		displayTraceLogs = rm.DisplayDebugTraceLogs
 	}
 
 	return &collector{
 		luc:                   lc,
-		epStats:               make(map[Tuple]*Data),
+		epStats:               make(map[tuple.Tuple]*dataplane.Data),
 		ticker:                jitter.NewTicker(cfg.ExportingInterval, cfg.ExportingInterval/10),
 		sigChan:               make(chan os.Signal, 1),
 		config:                cfg,
@@ -193,25 +202,25 @@ func (c *collector) Start() error {
 	return nil
 }
 
-func (c *collector) SetPacketInfoReader(pir PacketInfoReader) {
+func (c *collector) SetPacketInfoReader(pir dataplane.PacketInfoReader) {
 	c.packetInfoReader = pir
 }
 
-func (c *collector) SetConntrackInfoReader(cir ConntrackInfoReader) {
+func (c *collector) SetConntrackInfoReader(cir dataplane.ConntrackInfoReader) {
 	c.conntrackInfoReader = cir
 }
 
-func (c *collector) SetProcessInfoCache(pic ProcessInfoCache) {
+func (c *collector) SetProcessInfoCache(pic dataplane.ProcessInfoCache) {
 	c.processInfoCache = pic
 }
 
-func (c *collector) SetDomainLookup(dlu EgressDomainCache) {
+func (c *collector) SetDomainLookup(dlu dataplane.EgressDomainCache) {
 	c.domainLookup = dlu
 }
 
 func (c *collector) startStatsCollectionAndReporting() {
-	var pktInfoC <-chan PacketInfo
-	var ctInfoC <-chan []ConntrackInfo
+	var pktInfoC <-chan dataplane.PacketInfo
+	var ctInfoC <-chan []dataplane.ConntrackInfo
 
 	if c.packetInfoReader != nil {
 		pktInfoC = c.packetInfoReader.PacketInfoChan()
@@ -259,19 +268,19 @@ func (c *collector) startStatsCollectionAndReporting() {
 //
 // This method also updates the endpoint data from the cache, so beware - it is not as lightweight as a
 // simple map lookup.
-func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool, packetinfo bool) *Data {
-	data, okData := c.epStats[tuple]
+func (c *collector) getDataAndUpdateEndpoints(t tuple.Tuple, expired bool, packetinfo bool) *dataplane.Data {
+	data, okData := c.epStats[t]
 	if expired {
 		// If the connection has expired then return the data as is. If there is no entry, that's fine too.
 		return data
 	}
 
 	// Get the source endpoint.
-	srcEp := c.lookupEndpoint(tuple.src, false)
+	srcEp := c.lookupEndpoint(t.Src, false)
 	srcEpIsNotLocal := srcEp == nil || !srcEp.IsLocal
 
 	// Get the destination endpoint. If the source is local then we can use egress domain lookups if required.
-	dstEp := c.lookupEndpoint(tuple.dst, !srcEpIsNotLocal)
+	dstEp := c.lookupEndpoint(t.Dst, !srcEpIsNotLocal)
 	dstEpIsNotLocal := dstEp == nil || !dstEp.IsLocal
 
 	if !okData {
@@ -281,10 +290,10 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool, packeti
 		}
 
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
-		data = NewData(tuple, srcEp, dstEp, c.config.MaxOriginalSourceIPsIncluded)
-		c.updateEpStatsCache(tuple, data)
-	} else if data.reported {
-		if !data.unreportedPacketInfo && !packetinfo {
+		data = dataplane.NewData(t, srcEp, dstEp, c.config.MaxOriginalSourceIPsIncluded)
+		c.updateEpStatsCache(t, data)
+	} else if data.Reported {
+		if !data.UnreportedPacketInfo && !packetinfo {
 			// Data has been reported.  If the request has not come from a packet info update (e.g. nflog) and we do not
 			// have an unreported packetinfo then the endpoint data should be considered frozen.
 			return data
@@ -292,7 +301,7 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool, packeti
 
 		// If the endpoints have changed then we'll need to expire the current data and possibly delete the entry if
 		// if not longer represents local endpoints.
-		if endpointChanged(data.srcEp, srcEp) || endpointChanged(data.dstEp, dstEp) {
+		if endpointChanged(data.SrcEp, srcEp) || endpointChanged(data.DstEp, dstEp) {
 			// The endpoint information has now changed. Handle the endpoint changes.
 			c.handleDataEndpointOrRulesChanged(data)
 
@@ -305,15 +314,15 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool, packeti
 
 		// Update the source and dest data. We do this even if the endpoints haven't changed because the labels on the
 		// endpoints may have changed and so our matches might be different.
-		data.srcEp, data.dstEp = srcEp, dstEp
+		data.SrcEp, data.DstEp = srcEp, dstEp
 	} else {
 		// Data has not been reported. Don't downgrade found endpoints (in case the endpoint is deleted prior to being
 		// reported).
 		if srcEp != nil {
-			data.srcEp = srcEp
+			data.SrcEp = srcEp
 		}
 		if dstEp != nil {
-			data.dstEp = dstEp
+			data.DstEp = dstEp
 		}
 	}
 
@@ -322,7 +331,7 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool, packeti
 	// this for every packet update, but we need to do it early as we know some customers have DNS TTLs lower than the
 	// export interval so we need to do this before we export.
 	if packetinfo {
-		data.unreportedPacketInfo = true
+		data.UnreportedPacketInfo = true
 	}
 	c.maybeUpdateDomains(data)
 
@@ -374,9 +383,8 @@ func (c *collector) lookupEndpoint(ip [16]byte, canCheckEgressDomains bool) *cal
 
 // updateEpStatsCache updates/add entry to the epStats cache (map[Tuple]*Data) and update the
 // prometheus reporting
-func (c *collector) updateEpStatsCache(tuple Tuple, data *Data) {
-	c.epStats[tuple] = data
-
+func (c *collector) updateEpStatsCache(t tuple.Tuple, data *dataplane.Data) {
+	c.epStats[t] = data
 	c.reportEpStatsCacheMetrics()
 }
 
@@ -393,7 +401,7 @@ func (c *collector) reportEpStatsCacheMetrics() {
 //   - If we don't track the tuple, this call will be a no-op as this update
 //     is just waiting for the conntrack entry to timeout.
 func (c *collector) applyConntrackStatUpdate(
-	data *Data, packets int, bytes int, reversePackets int, reverseBytes int, entryExpired bool,
+	data *dataplane.Data, packets int, bytes int, reversePackets int, reverseBytes int, entryExpired bool,
 ) {
 	if data != nil {
 		data.SetConntrackCounters(packets, bytes)
@@ -414,14 +422,14 @@ func (c *collector) applyConntrackStatUpdate(
 }
 
 // applyNflogStatUpdate applies a stats update from an NFLOG.
-func (c *collector) applyNflogStatUpdate(data *Data, ruleID *calc.RuleID, matchIdx, numPkts, numBytes int) {
-	if ru := data.AddRuleID(ruleID, matchIdx, numPkts, numBytes); ru == RuleMatchIsDifferent {
+func (c *collector) applyNflogStatUpdate(data *dataplane.Data, ruleID *calc.RuleID, matchIdx, numPkts, numBytes int) {
+	if ru := data.AddRuleID(ruleID, matchIdx, numPkts, numBytes); ru == dataplane.RuleMatchIsDifferent {
 		c.handleDataEndpointOrRulesChanged(data)
 		data.ReplaceRuleID(ruleID, matchIdx, numPkts, numBytes)
 	}
 }
 
-func (c *collector) handleDataEndpointOrRulesChanged(data *Data) {
+func (c *collector) handleDataEndpointOrRulesChanged(data *dataplane.Data) {
 	// The endpoints or rule matched have changed. If reported then expire the metrics and update the
 	// endpoint data.
 	if c.reportMetrics(data, false) {
@@ -434,7 +442,7 @@ func (c *collector) handleDataEndpointOrRulesChanged(data *Data) {
 		data.ResetApplicationCounters()
 		data.ResetTcpStats()
 		// Set reported to false so the data can be updated without further reports.
-		data.reported = false
+		data.Reported = false
 	}
 }
 
@@ -450,7 +458,7 @@ func (c *collector) checkEpStats() {
 	//   the flow is terminated or has changed.
 	// - check age and expire the entry if needed.
 	for _, data := range c.epStats {
-		if data.IsDirty() && (data.reported || data.RuleUpdatedAt() < minLastRuleUpdatedAt) {
+		if data.IsDirty() && (data.Reported || data.RuleUpdatedAt() < minLastRuleUpdatedAt) {
 			c.checkPreDNATTuple(data)
 			c.reportMetrics(data, true)
 		}
@@ -461,9 +469,9 @@ func (c *collector) checkEpStats() {
 	}
 }
 
-func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
+func (c *collector) LookupProcessInfoCacheAndUpdate(data *dataplane.Data) {
 	t, _ := data.PreDNATTuple()
-	processInfo, ok := c.processInfoCache.Lookup(t, TrafficDirOutbound)
+	processInfo, ok := c.processInfoCache.Lookup(t, dataplane.TrafficDirOutbound)
 
 	// In BPF dataplane, the existing connection tuples will be pre-DNAT and the new connections will
 	// be post-DNAT, because of connecttime load balancer. Hence if the lookup with preDNAT tuple fails,
@@ -471,13 +479,13 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 	if !ok && c.config.IsBPFDataplane {
 		logutil.Tracef(c.displayDebugTraceLogs,
 			"Lookup process cache for post DNAT tuple %+v for Outbound traffic", data.Tuple)
-		processInfo, ok = c.processInfoCache.Lookup(data.Tuple, TrafficDirOutbound)
+		processInfo, ok = c.processInfoCache.Lookup(data.Tuple, dataplane.TrafficDirOutbound)
 	}
 
 	if ok {
 		logutil.Tracef(c.displayDebugTraceLogs,
 			"Setting source process name to %s and pid to %d for tuple %+v", processInfo.Name, processInfo.Pid, data.Tuple)
-		if !data.reported && data.SourceProcessData().Name == "" && data.SourceProcessData().Pid == 0 {
+		if !data.Reported && data.SourceProcessData().Name == "" && data.SourceProcessData().Pid == 0 {
 			data.SetSourceProcessData(processInfo.Name, processInfo.Arguments, processInfo.Pid)
 		}
 		if processInfo.TcpStatsData.IsDirty {
@@ -489,17 +497,17 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 		}
 	}
 
-	processInfo, ok = c.processInfoCache.Lookup(t, TrafficDirInbound)
+	processInfo, ok = c.processInfoCache.Lookup(t, dataplane.TrafficDirInbound)
 	if !ok && c.config.IsBPFDataplane {
 		logutil.Tracef(c.displayDebugTraceLogs,
 			"Lookup process cache for post DNAT tuple %+v for Inbound traffic", data.Tuple)
-		processInfo, ok = c.processInfoCache.Lookup(data.Tuple, TrafficDirInbound)
+		processInfo, ok = c.processInfoCache.Lookup(data.Tuple, dataplane.TrafficDirInbound)
 	}
 
 	if ok {
 		logutil.Tracef(c.displayDebugTraceLogs,
-			"Setting dest process name to %s and pid to %d from reverse tuple %+v", processInfo.Name, processInfo.Pid, t.GetReverseTuple())
-		if !data.reported && data.DestProcessData().Name == "" && data.DestProcessData().Pid == 0 {
+			"Setting dest process name to %s and pid to %d from reverse tuple %+v", processInfo.Name, processInfo.Pid, t.Reverse())
+		if !data.Reported && data.DestProcessData().Name == "" && data.DestProcessData().Pid == 0 {
 			data.SetDestProcessData(processInfo.Name, processInfo.Arguments, processInfo.Pid)
 		}
 		if processInfo.TcpStatsData.IsDirty {
@@ -512,7 +520,7 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 	}
 }
 
-func (c *collector) checkPreDNATTuple(data *Data) {
+func (c *collector) checkPreDNATTuple(data *dataplane.Data) {
 	preDNATTuple, err := data.PreDNATTuple()
 	if err != nil {
 		return
@@ -534,7 +542,7 @@ func (c *collector) checkPreDNATTuple(data *Data) {
 	// - the tuple that looks like the pre DNAT tuple is not a connection i.e, we only received NFLOGs.
 	// - Both ingress and egress rule trace is not dirty. Otherwise we want to let the usual report metrics
 	//   go ahead first as this cleanup here is a last resort.
-	if !preDNATData.isConnection && !preDNATData.EgressRuleTrace.IsDirty() && !preDNATData.IngressRuleTrace.IsDirty() {
+	if !preDNATData.IsConnection && !preDNATData.EgressRuleTrace.IsDirty() && !preDNATData.IngressRuleTrace.IsDirty() {
 		c.reportMetrics(preDNATData, true)
 		c.expireMetrics(preDNATData)
 		c.deleteDataFromEpStats(preDNATData)
@@ -542,34 +550,33 @@ func (c *collector) checkPreDNATTuple(data *Data) {
 }
 
 // maybeUpdateDomains set the egress Domains if there are any.
-//
 // We only do this for source reported flows where the destination is either network or networkset.
-func (c *collector) maybeUpdateDomains(data *Data) {
+func (c *collector) maybeUpdateDomains(data *dataplane.Data) {
 	if c.domainLookup == nil {
 		return
 	}
-	if data.dstEp == nil || data.dstEp.Networkset != nil {
-		if egressDomains := c.domainLookup.GetTopLevelDomainsForIP(data.Tuple.dst); len(egressDomains) > len(data.destDomains) {
-			data.destDomains = egressDomains
+	if data.DstEp == nil || data.DstEp.Networkset != nil {
+		if egressDomains := c.domainLookup.GetTopLevelDomainsForIP(data.Tuple.Dst); len(egressDomains) > len(data.DestDomains) {
+			data.DestDomains = egressDomains
 		}
 	}
 }
 
 // reportMetrics reports the metrics if all required data is present, or returns false if not reported.
 // Set the force flag to true if the data should be reported before all asynchronous data is collected.
-func (c *collector) reportMetrics(data *Data, force bool) bool {
+func (c *collector) reportMetrics(data *dataplane.Data, force bool) bool {
 	foundService := true
 	c.LookupProcessInfoCacheAndUpdate(data)
 
-	if !data.reported {
+	if !data.Reported {
 		// Check if the destination was accessed via a service. Once reported, this will not be updated again.
-		if data.dstSvc.Name == "" {
-			if data.isDNAT {
+		if data.DstSvc.Name == "" {
+			if data.IsDNAT {
 				// Destination is NATed, look up service from the pre-DNAT record.
-				data.dstSvc, foundService = c.luc.GetServiceFromPreDNATDest(data.preDNATAddr, data.preDNATPort, data.Tuple.proto)
-			} else if _, ok := c.luc.GetNode(data.Tuple.dst); ok {
+				data.DstSvc, foundService = c.luc.GetServiceFromPreDNATDest(data.PreDNATAddr, data.PreDNATPort, data.Tuple.Proto)
+			} else if _, ok := c.luc.GetNode(data.Tuple.Dst); ok {
 				// Destination is a node, so could be a node port service.
-				data.dstSvc, foundService = c.luc.GetNodePortService(data.Tuple.l4Dst, data.Tuple.proto)
+				data.DstSvc, foundService = c.luc.GetNodePortService(data.Tuple.L4Dst, data.Tuple.Proto)
 			}
 		}
 		if !force {
@@ -578,7 +585,7 @@ func (c *collector) reportMetrics(data *Data, force bool) bool {
 			// - The verdict rules have not been found for the local endpoints
 			// - The remote endpoint is not known (which could potentially resolve to a DNS name or NetworkSet).
 			// In this case data will be reported later during ticker processing.
-			if !foundService || !data.VerdictFound() || data.dstEp == nil {
+			if !foundService || !data.VerdictFound() || data.DstEp == nil {
 				log.Debug("Service not found - delay statistics reporting until normal flush processing")
 				return false
 			}
@@ -592,26 +599,26 @@ func (c *collector) reportMetrics(data *Data, force bool) bool {
 
 	// Send the metrics.
 	c.sendMetrics(data, false)
-	data.reported = true
+	data.Reported = true
 	return true
 }
 
-func (c *collector) expireMetrics(data *Data) {
-	if data.reported {
+func (c *collector) expireMetrics(data *dataplane.Data) {
+	if data.Reported {
 		c.sendMetrics(data, true)
 	}
 }
 
-func (c *collector) deleteDataFromEpStats(data *Data) {
+func (c *collector) deleteDataFromEpStats(data *dataplane.Data) {
 	delete(c.epStats, data.Tuple)
 
 	c.reportEpStatsCacheMetrics()
 }
 
-func (c *collector) sendMetrics(data *Data, expired bool) {
-	ut := UpdateTypeReport
+func (c *collector) sendMetrics(data *dataplane.Data, expired bool) {
+	ut := metric.UpdateTypeReport
 	if expired {
-		ut = UpdateTypeExpire
+		ut = metric.UpdateTypeExpire
 	}
 	// For connections and non-connections, we only send ingress and egress updates if:
 	// -  There is something to report, i.e.
@@ -621,7 +628,7 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 	//    to DropActionOverride setting (e.g. if set to ALLOW, then we'll get connection stats, but the metrics will
 	//    indicate Denied).
 	// Only clear the associated stats and dirty flag once the metrics are reported.
-	if data.isConnection {
+	if data.IsConnection {
 		// Report connection stats.
 		if expired || data.IsDirty() {
 			// Track if we need to send a separate expire metric update. This is required when we are only
@@ -630,34 +637,34 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 			// send this.
 			sendOrigSourceIPsExpire := true
 			if data.EgressRuleTrace.FoundVerdict() {
-				c.reporterMgr.ReportChan <- data.metricUpdateEgressConn(ut)
+				c.reporterMgr.ReportChan <- data.MetricUpdateEgressConn(ut)
 			}
 			if data.IngressRuleTrace.FoundVerdict() {
 				sendOrigSourceIPsExpire = false
-				c.reporterMgr.ReportChan <- data.metricUpdateIngressConn(ut)
+				c.reporterMgr.ReportChan <- data.MetricUpdateIngressConn(ut)
 			}
 
 			// We may receive HTTP Request data after we've flushed the connection counters.
-			if (expired && data.origSourceIPsActive && sendOrigSourceIPsExpire) || data.NumUniqueOriginalSourceIPs() != 0 {
-				data.origSourceIPsActive = !expired
-				c.reporterMgr.ReportChan <- data.metricUpdateOrigSourceIPs(ut)
+			if (expired && data.OrigSourceIPsActive && sendOrigSourceIPsExpire) || data.NumUniqueOriginalSourceIPs() != 0 {
+				data.OrigSourceIPsActive = !expired
+				c.reporterMgr.ReportChan <- data.MetricUpdateOrigSourceIPs(ut)
 			}
 
 			// Clear the connection dirty flag once the stats have been reported. Note that we also clear the
 			// rule trace stats here too since any data stored in them has been superceded by the connection
 			// stats.
-			data.clearConnDirtyFlag()
+			data.ClearConnDirtyFlag()
 			data.EgressRuleTrace.ClearDirtyFlag()
 			data.IngressRuleTrace.ClearDirtyFlag()
 		}
 	} else {
 		// Report rule trace stats.
 		if (expired || data.EgressRuleTrace.IsDirty()) && data.EgressRuleTrace.FoundVerdict() {
-			c.reporterMgr.ReportChan <- data.metricUpdateEgressNoConn(ut)
+			c.reporterMgr.ReportChan <- data.MetricUpdateEgressNoConn(ut)
 			data.EgressRuleTrace.ClearDirtyFlag()
 		}
 		if (expired || data.IngressRuleTrace.IsDirty()) && data.IngressRuleTrace.FoundVerdict() {
-			c.reporterMgr.ReportChan <- data.metricUpdateIngressNoConn(ut)
+			c.reporterMgr.ReportChan <- data.MetricUpdateIngressNoConn(ut)
 			data.IngressRuleTrace.ClearDirtyFlag()
 		}
 
@@ -665,7 +672,7 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 		// from a connection to non-connection state.
 	}
 	data.TcpStats.ClearDirtyFlag()
-	data.unreportedPacketInfo = false
+	data.UnreportedPacketInfo = false
 }
 
 // handleCtInfo handles an update from conntrack
@@ -681,21 +688,21 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 // This is important for services where the connection will have the cluster IP as the
 // pre-DNAT-ed destination, but we want the post-DNAT workload IP and port.
 // The pre-DNAT entry will also be used to lookup service related information.
-func (c *collector) handleCtInfo(ctInfo ConntrackInfo) {
+func (c *collector) handleCtInfo(ctInfo dataplane.ConntrackInfo) {
 	// Get or create a data entry and update the counters. If no entry is returned then neither source nor dest are
 	// calico managed endpoints. A relevant conntrack entry requires at least one of the endpoints to be a local
 	// Calico managed endpoint.
 
 	if data := c.getDataAndUpdateEndpoints(ctInfo.Tuple, ctInfo.Expired, false); data != nil {
 
-		if !data.isDNAT && ctInfo.IsDNAT {
+		if !data.IsDNAT && ctInfo.IsDNAT {
 			originalTuple := ctInfo.PreDNATTuple
-			data.isDNAT = true
-			data.preDNATAddr = originalTuple.dst
-			data.preDNATPort = originalTuple.l4Dst
+			data.IsDNAT = true
+			data.PreDNATAddr = originalTuple.Dst
+			data.PreDNATPort = originalTuple.L4Dst
 		}
-		data.isProxied = ctInfo.IsProxy
-		data.natOutgoingPort = ctInfo.NatOutgoingPort
+		data.IsProxied = ctInfo.IsProxy
+		data.NatOutgoingPort = ctInfo.NatOutgoingPort
 
 		c.applyConntrackStatUpdate(data,
 			ctInfo.Counters.Packets, ctInfo.Counters.Bytes,
@@ -704,38 +711,38 @@ func (c *collector) handleCtInfo(ctInfo ConntrackInfo) {
 	}
 }
 
-func (c *collector) applyPacketInfo(pktInfo PacketInfo) {
+func (c *collector) applyPacketInfo(pktInfo dataplane.PacketInfo) {
 	var (
 		localEp        *calc.EndpointData
 		localMatchData *calc.MatchData
-		data           *Data
+		data           *dataplane.Data
 	)
 
-	tuple := pktInfo.Tuple
+	t := pktInfo.Tuple
 
-	if data = c.getDataAndUpdateEndpoints(tuple, false, true); data == nil {
+	if data = c.getDataAndUpdateEndpoints(t, false, true); data == nil {
 		// Data is nil, so the destination endpoint cannot be managed by local Calico.
 		return
 	}
 
-	if !data.isDNAT && pktInfo.IsDNAT {
+	if !data.IsDNAT && pktInfo.IsDNAT {
 		originalTuple := pktInfo.PreDNATTuple
-		data.isDNAT = true
-		data.preDNATAddr = originalTuple.dst
-		data.preDNATPort = originalTuple.l4Dst
+		data.IsDNAT = true
+		data.PreDNATAddr = originalTuple.Dst
+		data.PreDNATPort = originalTuple.L4Dst
 	}
 
 	// Determine the local endpoint for this update.
 	switch pktInfo.Direction {
 	case rules.RuleDirIngress:
 		// The local destination should be local.
-		if localEp = data.dstEp; localEp == nil || !localEp.IsLocal {
+		if localEp = data.DstEp; localEp == nil || !localEp.IsLocal {
 			return
 		}
 		localMatchData = localEp.Ingress
 	case rules.RuleDirEgress:
 		// The cache will return nil for egress if the source endpoint is not local.
-		if localEp = data.srcEp; localEp == nil || !localEp.IsLocal {
+		if localEp = data.SrcEp; localEp == nil || !localEp.IsLocal {
 			return
 		}
 		localMatchData = localEp.Egress
@@ -797,7 +804,7 @@ func (c *collector) applyPacketInfo(pktInfo PacketInfo) {
 		c.applyNflogStatUpdate(data, ruleID, policyIdx, rule.Hits, rule.Bytes)
 	}
 
-	if data.IsExpired() && c.reportMetrics(data, false) {
+	if data.Expired && c.reportMetrics(data, false) {
 		// If the data is expired then attempt to report it now so that we can remove the connection entry. If reported
 		// the data can be expired and deleted immediately, otherwise it will get exported during ticker processing.
 		c.expireMetrics(data)
@@ -878,7 +885,7 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 			httpDataCount = len(ips)
 		}
 
-		bs := NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, ips, httpDataCount)
+		bs := boundedset.NewFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, ips, httpDataCount)
 		data.AddOriginalSourceIPs(bs)
 	} else if httpDataCount != 0 && !isL7Data {
 		data.IncreaseNumUniqueOriginalSourceIPs(httpDataCount)
@@ -891,7 +898,7 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	}
 }
 
-func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (Tuple, error) {
+func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (tuple.Tuple, error) {
 	var protocol int32
 	switch n := d.Protocol.GetNumberOrName().(type) {
 	case *proto.Protocol_Number:
@@ -904,7 +911,7 @@ func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (Tuple, error) {
 			protocol = 17
 		default:
 			reportDataplaneStatsUpdateErrorMetrics(1)
-			return Tuple{}, fmt.Errorf("unhandled protocol: %s", n)
+			return tuple.Tuple{}, fmt.Errorf("unhandled protocol: %s", n)
 		}
 	}
 
@@ -912,17 +919,17 @@ func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (Tuple, error) {
 	srcIP, ok := ip.ParseIPAs16Byte(d.SrcIp)
 	if !ok {
 		reportDataplaneStatsUpdateErrorMetrics(1)
-		return Tuple{}, fmt.Errorf("bad source IP: %s", d.SrcIp)
+		return tuple.Tuple{}, fmt.Errorf("bad source IP: %s", d.SrcIp)
 	}
 	dstIP, ok := ip.ParseIPAs16Byte(d.DstIp)
 	if !ok {
 		reportDataplaneStatsUpdateErrorMetrics(1)
-		return Tuple{}, fmt.Errorf("bad destination IP: %s", d.DstIp)
+		return tuple.Tuple{}, fmt.Errorf("bad destination IP: %s", d.DstIp)
 	}
 
 	// Locate the data for this connection, creating if not yet available (it's possible to get an update
 	// before nflogs or conntrack).
-	return MakeTuple(srcIP, dstIP, int(protocol), int(d.SrcPort), int(d.DstPort)), nil
+	return tuple.Make(srcIP, dstIP, int(protocol), int(d.SrcPort), int(d.DstPort)), nil
 }
 
 // reportDataplaneStatsUpdateErrorMetrics reports error statistics encoutered when updating Dataplane stats
@@ -948,13 +955,9 @@ func (c *collector) dumpStats() {
 	c.dumpLog.Infof("Stats Dump Started: %v", time.Now().Format("2006-01-02 15:04:05.000"))
 	c.dumpLog.Infof("Number of Entries: %v", len(c.epStats))
 	for _, v := range c.epStats {
-		c.dumpLog.Info(fmtEntry(v))
+		c.dumpLog.Info(fmt.Sprintf("%v", v))
 	}
 	c.dumpLog.Infof("Stats Dump Completed: %v", time.Now().Format("2006-01-02 15:04:05.000"))
-}
-
-func fmtEntry(data *Data) string {
-	return fmt.Sprintf("%v", data)
 }
 
 // Logrus Formatter that strips the log entry of formatting such as time, log
@@ -969,7 +972,7 @@ func (f *MessageOnlyFormatter) Format(entry *log.Entry) ([]byte, error) {
 }
 
 // DNS activity logging.
-func (c *collector) SetDNSLogReporter(reporter DNSLogReporterInterface) {
+func (c *collector) SetDNSLogReporter(reporter dnslog.ReporterInterface) {
 	c.dnsLogReporter = reporter
 }
 
@@ -979,17 +982,17 @@ func (c *collector) LogDNS(server, client net.IP, dns *layers.DNS, latencyIfKnow
 	}
 	// DNS responses come through here, so the source IP is the DNS server and the dest IP is
 	// the client.
-	serverEP, _ := c.luc.GetEndpoint(ipTo16Byte(server))
-	clientEP, _ := c.luc.GetEndpoint(ipTo16Byte(client))
+	serverEP, _ := c.luc.GetEndpoint(utils.IpTo16Byte(server))
+	clientEP, _ := c.luc.GetEndpoint(utils.IpTo16Byte(client))
 	if serverEP == nil {
-		serverEP, _ = c.luc.GetNetworkSet(ipTo16Byte(server))
+		serverEP, _ = c.luc.GetNetworkSet(utils.IpTo16Byte(server))
 	}
 	logutil.Tracef(c.displayDebugTraceLogs, "Src %v -> Server %v", server, serverEP)
 	logutil.Tracef(c.displayDebugTraceLogs, "Dst %v -> Client %v", client, clientEP)
 	if latencyIfKnown != nil {
 		logutil.Tracef(c.displayDebugTraceLogs, "DNS-LATENCY: Log %v", *latencyIfKnown)
 	}
-	update := DNSUpdate{
+	update := dnslog.Update{
 		ClientIP:       client,
 		ClientEP:       clientEP,
 		ServerIP:       server,
@@ -1008,14 +1011,14 @@ func (c *collector) LogDNS(server, client net.IP, dns *layers.DNS, latencyIfKnow
 	}
 }
 
-func (c *collector) SetL7LogReporter(reporter L7LogReporterInterface) {
+func (c *collector) SetL7LogReporter(reporter l7log.ReporterInterface) {
 	c.l7LogReporter = reporter
 }
 
-func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataCount int) {
+func (c *collector) LogL7(hd *proto.HTTPData, data *dataplane.Data, t tuple.Tuple, httpDataCount int) {
 	// Translate endpoint data into L7Update
-	update := L7Update{
-		Tuple:         tuple,
+	update := l7log.Update{
+		Tuple:         t,
 		Duration:      int(hd.Duration),
 		DurationMax:   int(hd.DurationMax),
 		BytesReceived: int(hd.BytesReceived),
@@ -1032,8 +1035,8 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	// This means that this log was collected for traffic that was forwarded through
 	// this node (like traffic through a nodeport service).
 	if data != nil {
-		update.SrcEp = data.srcEp
-		update.DstEp = data.dstEp
+		update.SrcEp = data.SrcEp
+		update.DstEp = data.DstEp
 	}
 
 	// Handle setting the response code. An empty response code is valid for overflow logs.
@@ -1050,14 +1053,14 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	}
 
 	// Grab the destination metadata to use the namespace to validate the service name
-	dstMeta, err := getFlowLogEndpointMetadata(update.DstEp, tuple.dst)
+	dstMeta, err := endpoint.GetMetadata(update.DstEp, t.Dst)
 	if err != nil {
 		reportDataplaneStatsUpdateErrorMetrics(1)
 		log.WithError(err).Errorf("Failed to extract metadata for destination %v", update.DstEp)
 	}
 
 	// Split out the service port if available
-	addr, port := getAddressAndPort(hd.Domain)
+	addr, port := utils.AddressAndPort(hd.Domain)
 
 	// Set default ports for specific log types.
 	// Currently the only default ports we set are for http log types since
@@ -1074,12 +1077,12 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	// have endpoint data on this node.
 	var svcPortName string
 	if data != nil {
-		svcPortName = data.dstSvc.Port
+		svcPortName = data.DstSvc.Port
 	}
 
 	if ip := net.ParseIP(addr); ip != nil {
 		// Address is an IP. Attempt to look up a service name by cluster IP
-		k8sSvcPortName, found := c.luc.GetServiceFromPreDNATDest(ipStrTo16Byte(addr), port, tuple.proto)
+		k8sSvcPortName, found := c.luc.GetServiceFromPreDNATDest(utils.IpStrTo16Byte(addr), port, t.Proto)
 		if found {
 			svcName = k8sSvcPortName.NamespacedName.Name
 			svcNamespace = k8sSvcPortName.NamespacedName.Namespace
@@ -1088,7 +1091,7 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 		}
 	} else {
 		// Check if the address is a Kubernetes service name
-		k8sSvcName, k8sSvcNamespace := extractK8sServiceNameAndNamespace(addr)
+		k8sSvcName, k8sSvcNamespace := utils.ExtractK8sServiceNameAndNamespace(addr)
 		if k8sSvcName != "" {
 			svcName = k8sSvcName
 			svcNamespace = k8sSvcNamespace
@@ -1120,8 +1123,8 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	if err := c.l7LogReporter.Log(update); err != nil {
 		reportDataplaneStatsUpdateErrorMetrics(1)
 		log.WithError(err).WithFields(log.Fields{
-			"src": tuple.src,
-			"dst": tuple.src,
+			"src": t.Src,
+			"dst": t.Src,
 		}).Error("Failed to log request")
 	}
 }
@@ -1132,7 +1135,6 @@ func getPortNameFromServicSpec(serviceSpec kapiv1.ServiceSpec, port int) string 
 			return servicePort.Name
 		}
 	}
-
 	return ""
 }
 
@@ -1145,8 +1147,8 @@ func NewNilProcessInfoCache() *NilProcessInfoCache {
 	return &NilProcessInfoCache{}
 }
 
-func (r *NilProcessInfoCache) Lookup(tuple Tuple, dir TrafficDirection) (ProcessInfo, bool) {
-	return ProcessInfo{}, false
+func (r *NilProcessInfoCache) Lookup(_ tuple.Tuple, _ dataplane.TrafficDirection) (dataplane.ProcessInfo, bool) {
+	return dataplane.ProcessInfo{}, false
 }
 
 func (r *NilProcessInfoCache) Start() error {
@@ -1155,5 +1157,5 @@ func (r *NilProcessInfoCache) Start() error {
 
 func (r *NilProcessInfoCache) Stop() {}
 
-func (r *NilProcessInfoCache) Update(tuple Tuple, dirty bool) {
+func (r *NilProcessInfoCache) Update(_ tuple.Tuple, _ bool) {
 }

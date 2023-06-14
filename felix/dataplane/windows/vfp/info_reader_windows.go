@@ -1,4 +1,5 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
+
 package vfp
 
 import (
@@ -8,7 +9,8 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 
 	"sigs.k8s.io/kind/pkg/errors"
 
@@ -75,7 +77,7 @@ func (h *EndpointEventHandler) processUpdates(vfpOps *vfpctrl.VfpOperations) {
 	h.inSync = true
 }
 
-// InfoReader implements collector.PacketInfoReader and collector.ConntrackInfoReader.
+// InfoReader implements dataplane.PacketInfoReader and dataplane.ConntrackInfoReader.
 // It makes sense to have a single goroutine handling VFP events/flows to avoid possible race
 // on same endpoints cache of underlying structure.
 type InfoReader struct {
@@ -92,12 +94,12 @@ type InfoReader struct {
 	etwOps *etw.EtwOperations
 	vfpOps *vfpctrl.VfpOperations
 
-	packetInfoC    chan collector.PacketInfo
-	bufferedEvents []*collector.PacketInfo
+	packetInfoC    chan dataplane.PacketInfo
+	bufferedEvents []*dataplane.PacketInfo
 
 	ticker             jitter.JitterTicker
-	conntrackInfoC     chan []collector.ConntrackInfo
-	bufferedConntracks []collector.ConntrackInfo
+	conntrackInfoC     chan []dataplane.ConntrackInfo
+	bufferedConntracks []dataplane.ConntrackInfo
 
 	epEventHandler *EndpointEventHandler
 }
@@ -117,11 +119,11 @@ func NewInfoReader(lookupsCache *calc.LookupsCache, period time.Duration) *InfoR
 		vfpOps:             vfpOps,
 		eventAggrC:         make(chan *etw.EventAggregate, 1000),
 		eventDoneC:         make(chan struct{}, 1),
-		packetInfoC:        make(chan collector.PacketInfo, 1000),
+		packetInfoC:        make(chan dataplane.PacketInfo, 1000),
 		ticker:             jitter.NewTicker(period, period/10),
-		conntrackInfoC:     make(chan []collector.ConntrackInfo, 1000),
-		bufferedEvents:     []*collector.PacketInfo{},
-		bufferedConntracks: []collector.ConntrackInfo{},
+		conntrackInfoC:     make(chan []dataplane.ConntrackInfo, 1000),
+		bufferedEvents:     []*dataplane.PacketInfo{},
+		bufferedConntracks: []dataplane.ConntrackInfo{},
 		epEventHandler: &EndpointEventHandler{
 			endpoints:             []string{},
 			epSetWithPolicyUpdate: set.New[string](),
@@ -157,12 +159,12 @@ func (r *InfoReader) Stop() {
 }
 
 // PacketInfoChan returns the channel with converted PacketInfo.
-func (r *InfoReader) PacketInfoChan() <-chan collector.PacketInfo {
+func (r *InfoReader) PacketInfoChan() <-chan dataplane.PacketInfo {
 	return r.packetInfoC
 }
 
 // ConntrackInfoChan returns the channel with converted ConntrackInfo.
-func (r *InfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
+func (r *InfoReader) ConntrackInfoChan() <-chan []dataplane.ConntrackInfo {
 	return r.conntrackInfoC
 }
 
@@ -178,8 +180,8 @@ func (r *InfoReader) subscribe() error {
 func (r *InfoReader) run() {
 
 	var (
-		packetInfoC   chan collector.PacketInfo
-		nextPktToSend collector.PacketInfo
+		packetInfoC   chan dataplane.PacketInfo
+		nextPktToSend dataplane.PacketInfo
 	)
 
 	// Kick off the conntrack scanning loop, it executes periodically.
@@ -219,15 +221,15 @@ func (r *InfoReader) conntrackScanner() {
 		case <-r.stopC:
 			return
 		case <-r.ticker.Channel():
-			r.bufferedConntracks = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+			r.bufferedConntracks = make([]dataplane.ConntrackInfo, 0, dataplane.ConntrackInfoBatchSize)
 			r.vfpOps.ListFlows(func(fe *vfpctrl.FlowEntry) {
 				r.handleFlowEntry(fe)
-				if len(r.bufferedConntracks) > collector.ConntrackInfoBatchSize {
+				if len(r.bufferedConntracks) > dataplane.ConntrackInfoBatchSize {
 					select {
 					case <-r.stopC:
 						return
 					case r.conntrackInfoC <- r.bufferedConntracks:
-						r.bufferedConntracks = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+						r.bufferedConntracks = make([]dataplane.ConntrackInfo, 0, dataplane.ConntrackInfoBatchSize)
 					default:
 						// Keep buffering
 					}
@@ -244,13 +246,13 @@ func (r *InfoReader) conntrackScanner() {
 	}
 }
 
-func (r *InfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*collector.PacketInfo, error) {
+func (r *InfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*dataplane.PacketInfo, error) {
 	var dir rules.RuleDir
 
 	log.Debugf("Collector: Handle EventAggr tuple %s rule <%s> count <%d> %#v",
 		ea.Event.TupleString(), ea.Count, ea.Event)
 
-	tuple, err := extractTupleFromEventAggr(ea)
+	t, err := extractTupleFromEventAggr(ea)
 	if err != nil {
 		log.WithError(err).Errorf("failed to get tuple from ETW event")
 		return nil, err
@@ -283,14 +285,14 @@ func (r *InfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*collector.Pac
 	// Etw Event has one RuleHits prefix.
 	// It has no service ip information (DNAT).
 	// It has no bytes information.
-	info := collector.PacketInfo{
+	info := dataplane.PacketInfo{
 		IsDNAT:    false,
 		Direction: dir,
-		RuleHits:  make([]collector.RuleHit, 0, 1),
-		Tuple:     *tuple,
+		RuleHits:  make([]dataplane.RuleHit, 0, 1),
+		Tuple:     *t,
 	}
 
-	info.RuleHits = append(info.RuleHits, collector.RuleHit{
+	info.RuleHits = append(info.RuleHits, dataplane.RuleHit{
 		RuleID: ruleID,
 		Hits:   ea.Count,
 		Bytes:  0,
@@ -299,10 +301,10 @@ func (r *InfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*collector.Pac
 	return &info, nil
 }
 
-func convertFlowEntry(fe *vfpctrl.FlowEntry) (collector.ConntrackInfo, error) {
-	tuple, err := extractTupleFromFlowEntry(fe)
+func convertFlowEntry(fe *vfpctrl.FlowEntry) (dataplane.ConntrackInfo, error) {
+	t, err := extractTupleFromFlowEntry(fe)
 	if err != nil {
-		return collector.ConntrackInfo{}, err
+		return dataplane.ConntrackInfo{}, err
 	}
 
 	// In the case of TCP, check if we can expire the entry early. We try to expire
@@ -324,14 +326,14 @@ func convertFlowEntry(fe *vfpctrl.FlowEntry) (collector.ConntrackInfo, error) {
 		bytesReplyCounters = fe.BytesIn
 	}
 
-	ctInfo := collector.ConntrackInfo{
-		Tuple:   *tuple,
+	ctInfo := dataplane.ConntrackInfo{
+		Tuple:   *t,
 		Expired: entryExpired,
-		Counters: collector.ConntrackCounters{
+		Counters: dataplane.ConntrackCounters{
 			Packets: pktCounters,
 			Bytes:   bytesCounters,
 		},
-		ReplyCounters: collector.ConntrackCounters{
+		ReplyCounters: dataplane.ConntrackCounters{
 			Packets: pktReplyCounters,
 			Bytes:   bytesReplyCounters,
 		},
@@ -340,7 +342,7 @@ func convertFlowEntry(fe *vfpctrl.FlowEntry) (collector.ConntrackInfo, error) {
 	if fe.IsDNAT() {
 		vTuple, err := extractPreDNATTupleFromFlowEntry(fe)
 		if err != nil {
-			return collector.ConntrackInfo{}, err
+			return dataplane.ConntrackInfo{}, err
 		}
 		ctInfo.IsDNAT = true
 		ctInfo.PreDNATTuple = *vTuple
@@ -375,26 +377,26 @@ func extractPrefixStrFromRuleName(name string) string {
 	return strs[0]
 }
 
-func extractTupleFromEventAggr(ea *etw.EventAggregate) (*collector.Tuple, error) {
-	tuple, err := ea.Event.Tuple()
+func extractTupleFromEventAggr(ea *etw.EventAggregate) (*tuple.Tuple, error) {
+	t, err := ea.Event.Tuple()
 	if err != nil {
 		return nil, err
 	}
-	return collector.NewTuple(tuple.Src, tuple.Dst, tuple.Proto, tuple.L4SrcPort, tuple.L4DstPort), nil
+	return tuple.New(t.Src, t.Dst, t.Proto, t.L4SrcPort, t.L4DstPort), nil
 }
 
-func extractTupleFromFlowEntry(fe *vfpctrl.FlowEntry) (*collector.Tuple, error) {
-	tuple, err := fe.Tuple()
+func extractTupleFromFlowEntry(fe *vfpctrl.FlowEntry) (*tuple.Tuple, error) {
+	t, err := fe.Tuple()
 	if err != nil {
 		return nil, err
 	}
-	return collector.NewTuple(tuple.Src, tuple.Dst, tuple.Proto, tuple.L4SrcPort, tuple.L4DstPort), nil
+	return tuple.New(t.Src, t.Dst, t.Proto, t.L4SrcPort, t.L4DstPort), nil
 }
 
-func extractPreDNATTupleFromFlowEntry(fe *vfpctrl.FlowEntry) (*collector.Tuple, error) {
-	tuple, err := fe.TuplePreDNAT()
+func extractPreDNATTupleFromFlowEntry(fe *vfpctrl.FlowEntry) (*tuple.Tuple, error) {
+	t, err := fe.TuplePreDNAT()
 	if err != nil {
 		return nil, err
 	}
-	return collector.NewTuple(tuple.Src, tuple.Dst, tuple.Proto, tuple.L4SrcPort, tuple.L4DstPort), nil
+	return tuple.New(t.Src, t.Dst, t.Proto, t.L4SrcPort, t.L4DstPort), nil
 }

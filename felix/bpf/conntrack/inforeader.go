@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package conntrack
 
@@ -8,7 +8,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/timeshim"
 )
 
@@ -24,7 +25,7 @@ func init() {
 }
 
 // InfoReader is an EntryScannerSynced that provides information to Collector as
-// collector.ConntrackInfo.
+// dataplane.ConntrackInfo.
 type InfoReader struct {
 	timeouts Timeouts
 	dsr      bool
@@ -36,9 +37,9 @@ type InfoReader struct {
 	// cachedKTime is the most recent kernel time.
 	cachedKTime int64
 
-	outC chan []collector.ConntrackInfo
+	outC chan []dataplane.ConntrackInfo
 
-	bufferedConntrackInfo []collector.ConntrackInfo
+	bufferedConntrackInfo []dataplane.ConntrackInfo
 }
 
 // NewInfoReader returns a new instance of InfoReader that can be used as a
@@ -50,7 +51,7 @@ func NewInfoReader(timeouts Timeouts, dsr bool, time timeshim.Interface) *InfoRe
 		dsr:      dsr,
 		time:     time,
 
-		outC: make(chan []collector.ConntrackInfo, 1000),
+		outC: make(chan []dataplane.ConntrackInfo, 1000),
 	}
 
 	if r.time == nil {
@@ -60,7 +61,7 @@ func NewInfoReader(timeouts Timeouts, dsr bool, time timeshim.Interface) *InfoRe
 	return r
 }
 
-// Check checks a conntrack entry and translates to collector.ConntrackInfo.
+// Check checks a conntrack entry and translates to dataplane.ConntrackInfo.
 func (r *InfoReader) Check(key Key, val Value, get EntryGet) ScanVerdict {
 
 	switch val.Type() {
@@ -79,16 +80,14 @@ func (r *InfoReader) Check(key Key, val Value, get EntryGet) ScanVerdict {
 	return ScanVerdictOK
 }
 
-func makeTuple(ipSrc, ipDst net.IP, portSrc, portDst uint16, proto uint8) collector.Tuple {
+func makeTuple(ipSrc, ipDst net.IP, portSrc, portDst uint16, proto uint8) tuple.Tuple {
 	var src, dst [16]byte
-
 	copy(src[:], ipSrc.To16())
 	copy(dst[:], ipDst.To16())
-
-	return collector.MakeTuple(src, dst, int(proto), int(portSrc), int(portDst))
+	return tuple.Make(src, dst, int(proto), int(portSrc), int(portDst))
 }
 
-func (r *InfoReader) makeConntrackInfo(key Key, val Value, dnat bool) collector.ConntrackInfo {
+func (r *InfoReader) makeConntrackInfo(key Key, val Value, dnat bool) dataplane.ConntrackInfo {
 	_, expired := r.timeouts.EntryExpired(r.cachedKTime, key.Proto(), val)
 
 	proto := key.Proto()
@@ -100,12 +99,12 @@ func (r *InfoReader) makeConntrackInfo(key Key, val Value, dnat bool) collector.
 
 	data := val.Data()
 
-	coutersSrc := collector.ConntrackCounters{
+	coutersSrc := dataplane.ConntrackCounters{
 		Packets: int(data.A2B.Packets),
 		Bytes:   int(data.A2B.Bytes),
 	}
 
-	coutersDst := collector.ConntrackCounters{
+	coutersDst := dataplane.ConntrackCounters{
 		Packets: int(data.B2A.Packets),
 		Bytes:   int(data.B2A.Bytes),
 	}
@@ -118,7 +117,7 @@ func (r *InfoReader) makeConntrackInfo(key Key, val Value, dnat bool) collector.
 		coutersSrc, coutersDst = coutersDst, coutersSrc
 	}
 
-	info := collector.ConntrackInfo{
+	info := dataplane.ConntrackInfo{
 		Expired:       expired,
 		IsDNAT:        dnat,
 		Tuple:         makeTuple(ipSrc, ipDst, portSrc, portDst, proto),
@@ -133,12 +132,12 @@ func (r *InfoReader) makeConntrackInfo(key Key, val Value, dnat bool) collector.
 	return info
 }
 
-func (r *InfoReader) pushOut(i collector.ConntrackInfo) {
+func (r *InfoReader) pushOut(i dataplane.ConntrackInfo) {
 	r.bufferedConntrackInfo = append(r.bufferedConntrackInfo, i)
-	if len(r.bufferedConntrackInfo) >= collector.ConntrackInfoBatchSize {
+	if len(r.bufferedConntrackInfo) >= dataplane.ConntrackInfoBatchSize {
 		select {
 		case r.outC <- r.bufferedConntrackInfo:
-			r.bufferedConntrackInfo = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+			r.bufferedConntrackInfo = make([]dataplane.ConntrackInfo, 0, dataplane.ConntrackInfoBatchSize)
 		default:
 			conntrackInfoReaderBlocks.Inc()
 			// keep buffering
@@ -154,7 +153,7 @@ func (r *InfoReader) IterationStart() {
 	}
 
 	if r.bufferedConntrackInfo == nil {
-		r.bufferedConntrackInfo = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+		r.bufferedConntrackInfo = make([]dataplane.ConntrackInfo, 0, dataplane.ConntrackInfoBatchSize)
 	}
 }
 
@@ -172,7 +171,7 @@ func (r *InfoReader) IterationEnd() {
 			// It's ok to keep ConntrackInfoBatchSize items around until the next
 			// iteration, we want to avoid keeping many more since we were possibly not able
 			// to push the buffer out for a while.
-			expired := make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+			expired := make([]dataplane.ConntrackInfo, 0, dataplane.ConntrackInfoBatchSize)
 			for _, info := range r.bufferedConntrackInfo {
 				if info.Expired {
 					expired = append(expired, info)
@@ -191,6 +190,6 @@ func (r *InfoReader) IterationEnd() {
 func (r *InfoReader) Start() error { return nil }
 
 // ConntrackInfoChan returns a channel for collector to consume data.
-func (r *InfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
+func (r *InfoReader) ConntrackInfoChan() <-chan []dataplane.ConntrackInfo {
 	return r.outC
 }

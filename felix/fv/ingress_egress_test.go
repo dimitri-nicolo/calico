@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import (
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/flowlog"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 
 	"github.com/projectcalico/calico/felix/fv/containers"
@@ -141,11 +141,11 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 				return err
 			}
 			for _, fl := range cwlogs {
-				if fl.FlowMeta.Action != collector.FlowLogActionAllow {
+				if fl.FlowMeta.Action != flowlog.ActionAllow {
 					return errors.New("Unexpected non-allow flow log")
 				}
 				dir := "dst"
-				if fl.Reporter == collector.FlowLogReporterSrc {
+				if fl.Reporter == flowlog.ReporterSrc {
 					dir = "src"
 				}
 				key := fl.SrcMeta.AggregatedName + "--" + fl.DstMeta.AggregatedName + "--" + dir

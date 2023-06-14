@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -24,6 +24,15 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector/dnslog"
+	"github.com/projectcalico/calico/felix/collector/l7log"
+	"github.com/projectcalico/calico/felix/collector/reporter"
+	"github.com/projectcalico/calico/felix/collector/types/boundedset"
+	"github.com/projectcalico/calico/felix/collector/types/counter"
+	"github.com/projectcalico/calico/felix/collector/types/metric"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
+	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
 
@@ -42,25 +51,26 @@ const (
 
 var (
 	localIp1Str     = "10.0.0.1"
-	localIp1        = ipStrTo16Byte(localIp1Str)
+	localIp1        = utils.IpStrTo16Byte(localIp1Str)
 	localNodeIp1Str = "192.168.180.1"
-	localNodeIp1    = ipStrTo16Byte(localNodeIp1Str)
+	localNodeIp1    = utils.IpStrTo16Byte(localNodeIp1Str)
 	localIp2Str     = "10.0.0.2"
-	localIp2        = ipStrTo16Byte(localIp2Str)
+	localIp2        = utils.IpStrTo16Byte(localIp2Str)
 	remoteIp1Str    = "20.0.0.1"
-	remoteIp1       = ipStrTo16Byte(remoteIp1Str)
+	remoteIp1       = utils.IpStrTo16Byte(remoteIp1Str)
 	remoteIp2Str    = "20.0.0.2"
-	remoteIp2       = ipStrTo16Byte(remoteIp2Str)
-	localIp1DNAT    = ipStrTo16Byte("192.168.0.1")
-	localIp2DNAT    = ipStrTo16Byte("192.168.0.2")
+	remoteIp2       = utils.IpStrTo16Byte(remoteIp2Str)
+	localIp1DNAT    = utils.IpStrTo16Byte("192.168.0.1")
+	localIp2DNAT    = utils.IpStrTo16Byte("192.168.0.2")
 	publicIP1Str    = "1.0.0.1"
 	publicIP2Str    = "2.0.0.2"
 	netSetIp1Str    = "8.8.8.8"
-	netSetIp1       = ipStrTo16Byte(netSetIp1Str)
+	netSetIp1       = utils.IpStrTo16Byte(netSetIp1Str)
 )
 
 var (
 	srcPort        = 54123
+	srcPort2       = 54124
 	serviceSrcPort = 456123
 	nodeSrcPort    = 890123
 	proxyPort      = 34754
@@ -83,11 +93,6 @@ var (
 		EndpointID:     "localepid2",
 	}
 
-	localHostEpKey1 = model.HostEndpointKey{
-		Hostname:   "localhost",
-		EndpointID: "eth1",
-	}
-
 	remoteWlEpKey1 = model.WorkloadEndpointKey{
 		OrchestratorID: "orchestrator",
 		WorkloadID:     "remoteworkloadid1",
@@ -99,16 +104,11 @@ var (
 		EndpointID:     "remoteepid2",
 	}
 
-	remoteHostEpKey1 = model.HostEndpointKey{
-		Hostname:   "remotehost",
-		EndpointID: "eth1",
-	}
-
 	localWlEp1 = &model.WorkloadEndpoint{
 		State:    "active",
 		Name:     "cali1",
-		Mac:      mustParseMac("01:02:03:04:05:06"),
-		IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32")},
+		Mac:      utils.MustParseMac("01:02:03:04:05:06"),
+		IPv4Nets: []net.IPNet{utils.MustParseNet("10.0.0.1/32")},
 		Labels: map[string]string{
 			"id": "local-ep-1",
 		},
@@ -116,24 +116,17 @@ var (
 	localWlEp2 = &model.WorkloadEndpoint{
 		State:    "active",
 		Name:     "cali2",
-		Mac:      mustParseMac("01:02:03:04:05:07"),
-		IPv4Nets: []net.IPNet{mustParseNet("10.0.0.2/32")},
+		Mac:      utils.MustParseMac("01:02:03:04:05:07"),
+		IPv4Nets: []net.IPNet{utils.MustParseNet("10.0.0.2/32")},
 		Labels: map[string]string{
 			"id": "local-ep-2",
-		},
-	}
-	localHostEp1 = &model.HostEndpoint{
-		Name:              "eth1",
-		ExpectedIPv4Addrs: []net.IP{mustParseIP("10.0.0.1")},
-		Labels: map[string]string{
-			"id": "loc-ep-1",
 		},
 	}
 	remoteWlEp1 = &model.WorkloadEndpoint{
 		State:    "active",
 		Name:     "cali3",
-		Mac:      mustParseMac("02:02:03:04:05:06"),
-		IPv4Nets: []net.IPNet{mustParseNet("20.0.0.1/32")},
+		Mac:      utils.MustParseMac("02:02:03:04:05:06"),
+		IPv4Nets: []net.IPNet{utils.MustParseNet("20.0.0.1/32")},
 		Labels: map[string]string{
 			"id": "remote-ep-1",
 		},
@@ -141,17 +134,10 @@ var (
 	remoteWlEp2 = &model.WorkloadEndpoint{
 		State:    "active",
 		Name:     "cali4",
-		Mac:      mustParseMac("02:03:03:04:05:06"),
-		IPv4Nets: []net.IPNet{mustParseNet("20.0.0.2/32")},
+		Mac:      utils.MustParseMac("02:03:03:04:05:06"),
+		IPv4Nets: []net.IPNet{utils.MustParseNet("20.0.0.2/32")},
 		Labels: map[string]string{
 			"id": "remote-ep-2",
-		},
-	}
-	remoteHostEp1 = &model.HostEndpoint{
-		Name:              "eth1",
-		ExpectedIPv4Addrs: []net.IP{mustParseIP("20.0.0.1")},
-		Labels: map[string]string{
-			"id": "rem-ep-1",
 		},
 	}
 	localEd1 = &calc.EndpointData{
@@ -230,50 +216,12 @@ var (
 		Endpoint: remoteWlEp2,
 		IsLocal:  false,
 	}
-	localHostEd1 = &calc.EndpointData{
-		Key:      localHostEpKey1,
-		Endpoint: localHostEp1,
-		IsLocal:  true,
-		Ingress: &calc.MatchData{
-			PolicyMatches: map[calc.PolicyID]int{
-				calc.PolicyID{Name: "policy1", Tier: "default"}: 0,
-				calc.PolicyID{Name: "policy2", Tier: "default"}: 0,
-			},
-			TierData: map[string]*calc.TierData{
-				"default": {
-					ImplicitDropRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIDIndexImplicitDrop,
-						rules.RuleDirIngress, rules.RuleActionDeny),
-					EndOfTierMatchIndex: 0,
-				},
-			},
-			ProfileMatchIndex: 0,
-		},
-		Egress: &calc.MatchData{
-			PolicyMatches: map[calc.PolicyID]int{
-				calc.PolicyID{Name: "policy1", Tier: "default"}: 0,
-				calc.PolicyID{Name: "policy2", Tier: "default"}: 0,
-			},
-			TierData: map[string]*calc.TierData{
-				"default": {
-					ImplicitDropRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIDIndexImplicitDrop,
-						rules.RuleDirIngress, rules.RuleActionDeny),
-					EndOfTierMatchIndex: 0,
-				},
-			},
-			ProfileMatchIndex: 0,
-		},
-	}
-	remoteHostEd1 = &calc.EndpointData{
-		Key:      remoteHostEpKey1,
-		Endpoint: remoteHostEp1,
-		IsLocal:  false,
-	}
 
 	netSetKey1 = model.NetworkSetKey{
 		Name: "dns-servers",
 	}
 	netSet1 = model.NetworkSet{
-		Nets:   []net.IPNet{mustParseNet(netSetIp1Str + "/32")},
+		Nets:   []net.IPNet{utils.MustParseNet(netSetIp1Str + "/32")},
 		Labels: map[string]string{"public": "true"},
 	}
 
@@ -300,29 +248,29 @@ var (
 		},
 	}
 
-	proc1 = ProcessInfo{
-		Tuple: Tuple{
-			src:   remoteIp1,
-			dst:   localIp1,
-			proto: proto_tcp,
-			l4Src: srcPort,
-			l4Dst: dstPort,
+	proc1 = dataplane.ProcessInfo{
+		Tuple: tuple.Tuple{
+			Src:   remoteIp1,
+			Dst:   localIp1,
+			Proto: proto_tcp,
+			L4Src: srcPort,
+			L4Dst: dstPort,
 		},
-		ProcessData: ProcessData{
+		ProcessData: dataplane.ProcessData{
 			Name: "test-process",
 			Pid:  1234,
 		},
 	}
 
-	proc2 = ProcessInfo{
-		Tuple: Tuple{
-			src:   localIp1,
-			dst:   localIp1DNAT,
-			proto: proto_tcp,
-			l4Src: srcPort,
-			l4Dst: dstPortDNAT,
+	proc2 = dataplane.ProcessInfo{
+		Tuple: tuple.Tuple{
+			Src:   localIp1,
+			Dst:   localIp1DNAT,
+			Proto: proto_tcp,
+			L4Src: srcPort,
+			L4Dst: dstPortDNAT,
 		},
-		ProcessData: ProcessData{
+		ProcessData: dataplane.ProcessData{
 			Name: "test-process",
 			Pid:  1234,
 		},
@@ -399,7 +347,7 @@ var ingressPktAllow = &nfnetlink.NflogPacketAggregate{
 	},
 }
 
-var ingressPktAllowTuple = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+var ingressPktAllowTuple = tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
 var egressPktAllow = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
@@ -418,7 +366,7 @@ var egressPktAllow = &nfnetlink.NflogPacketAggregate{
 		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 	},
 }
-var egressPktAllowTuple = NewTuple(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
+var egressPktAllowTuple = tuple.New(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
 
 var ingressPktDeny = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
@@ -437,7 +385,7 @@ var ingressPktDeny = &nfnetlink.NflogPacketAggregate{
 		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 	},
 }
-var ingressPktDenyTuple = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+var ingressPktDenyTuple = tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
 var localPktIngress = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
@@ -501,7 +449,7 @@ var localPktEgress = &nfnetlink.NflogPacketAggregate{
 	},
 }
 
-var localPktEgressDenyTuplePreDNAT = NewTuple(localIp1, localIp1DNAT, proto_tcp, srcPort, dstPortDNAT)
+var localPktEgressDenyTuplePreDNAT = tuple.New(localIp1, localIp1DNAT, proto_tcp, srcPort, dstPortDNAT)
 
 var localPktEgressDeniedPreDNAT = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
@@ -522,7 +470,7 @@ var localPktEgressDeniedPreDNAT = &nfnetlink.NflogPacketAggregate{
 	IsDNAT: false,
 }
 
-var localPktEgressAllowTuple = NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+var localPktEgressAllowTuple = tuple.New(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
 
 var localPktEgressAllowedPreDNAT = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
@@ -556,7 +504,7 @@ var _ = Describe("NFLOG Datasource", func() {
 		// Inject info nflogChan
 		var c *collector
 		var lm *calc.LookupsCache
-		var nflogReader *NFLogReader
+		var nflogReader *dataplane.NFLogReader
 		conf := &Config{
 			StatsDumpFilePath:            "/tmp/qwerty",
 			AgeTimeout:                   time.Duration(10) * time.Second,
@@ -564,7 +512,7 @@ var _ = Describe("NFLOG Datasource", func() {
 			ExportingInterval:            time.Duration(1) * time.Second,
 			MaxOriginalSourceIPsIncluded: 5,
 		}
-		rm := NewReporterManager(true)
+		rm := reporter.NewManager(true)
 		BeforeEach(func() {
 			epMap := map[[16]byte]*calc.EndpointData{
 				localIp1:  localEd1,
@@ -578,7 +526,7 @@ var _ = Describe("NFLOG Datasource", func() {
 			}
 
 			lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
-			nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
+			nflogReader = dataplane.NewNFLogReader(lm, 0, 0, 0, false)
 			nflogReader.Start()
 			c = newCollector(lm, rm, conf).(*collector)
 			c.SetPacketInfoReader(nflogReader)
@@ -590,15 +538,15 @@ var _ = Describe("NFLOG Datasource", func() {
 		})
 		Describe("Test local destination", func() {
 			It("should receive a single stat update with allow ruleid trace", func() {
-				t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-				nflogReader.nfIngressC <- ingressPktAllow
+				t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+				nflogReader.IngressC <- ingressPktAllow
 				Eventually(c.epStats).Should(HaveKey(*t))
 			})
 		})
 		Describe("Test local to local", func() {
 			It("should receive a single stat update with deny ruleid trace", func() {
-				t := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-				nflogReader.nfIngressC <- localPktIngress
+				t := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+				nflogReader.IngressC <- localPktIngress
 				Eventually(c.epStats).Should(HaveKey(*t))
 			})
 		})
@@ -711,8 +659,8 @@ var proxyBackendIngressPktAllow = &nfnetlink.NflogPacketAggregate{
 	},
 }
 
-func convertCtEntry(e nfnetlink.CtEntry, markProxy uint32) ConntrackInfo {
-	i, _ := convertCtEntryToConntrackInfo(e, markProxy)
+func convertCtEntry(e nfnetlink.CtEntry, markProxy uint32) dataplane.ConntrackInfo {
+	i, _ := dataplane.ConvertCtEntryToConntrackInfo(e, markProxy)
 	return i
 }
 
@@ -933,12 +881,12 @@ var outCtEntryWithDNAT = nfnetlink.CtEntry{
 
 var _ = Describe("Conntrack Datasource", func() {
 	var c *collector
-	var ciReaderSenderChan chan []ConntrackInfo
+	var ciReaderSenderChan chan []dataplane.ConntrackInfo
 	// var piReaderInfoSenderChan chan PacketInfo
 	var lm *calc.LookupsCache
 	var epMapDelete map[[16]byte]*calc.EndpointData
 	var epMapSwapLocal map[[16]byte]*calc.EndpointData
-	var nflogReader *NFLogReader
+	var nflogReader *dataplane.NFLogReader
 	conf := &Config{
 		StatsDumpFilePath:            "/tmp/qwerty",
 		AgeTimeout:                   time.Duration(10) * time.Second,
@@ -946,7 +894,7 @@ var _ = Describe("Conntrack Datasource", func() {
 		ExportingInterval:            time.Duration(1) * time.Second,
 		MaxOriginalSourceIPsIncluded: 5,
 	}
-	rm := NewReporterManager(true)
+	rm := reporter.NewManager(true)
 	BeforeEach(func() {
 		epMap := map[[16]byte]*calc.EndpointData{
 			localIp1:  localEd1,
@@ -971,12 +919,12 @@ var _ = Describe("Conntrack Datasource", func() {
 		}
 
 		lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
-		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
+		nflogReader = dataplane.NewNFLogReader(lm, 0, 0, 0, false)
 		c = newCollector(lm, rm, conf).(*collector)
 
 		c.SetPacketInfoReader(nflogReader)
 
-		ciReaderSenderChan = make(chan []ConntrackInfo, 1)
+		ciReaderSenderChan = make(chan []dataplane.ConntrackInfo, 1)
 		c.SetConntrackInfoReader(dummyConntrackInfoReader{
 			MockSenderChannel: ciReaderSenderChan,
 		})
@@ -986,45 +934,45 @@ var _ = Describe("Conntrack Datasource", func() {
 
 	Describe("Test local destination", func() {
 		It("should create a single entry in inbound direction", func() {
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			data := c.epStats[*t]
-			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*counter.New(inCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Bytes)))
 		})
 		It("should handle destination becoming non-local by removing entry on next conntrack update for reported flow", func() {
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Flag the data as reported, remove endpoints from mock data and send in CT entry again.
 			data := c.epStats[*t]
-			data.reported = true
+			data.Reported = true
 			lm.SetMockData(epMapDelete, nil, nil, nil)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all.
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 		})
 		It("should handle destination becoming non-local by removing entry on next conntrack update for unreported flow", func() {
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Data is not reported. Remove endpoints from mock data and send in CT entry again.
 			lm.SetMockData(epMapDelete, nil, nil, nil)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint, but we never downgrade
 			// to having no endpoint (since we handle the situation where endpoint is deleted before we gather all
@@ -1032,98 +980,98 @@ var _ = Describe("Conntrack Datasource", func() {
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 		})
 		It("should handle destination changing on next conntrack update for reported flow", func() {
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Flag the data as reported, swap local endpoints from mock data and send in CT entry again.
 			data := c.epStats[*t]
-			data.reported = true
-			oldSrc := data.srcEp
-			oldDest := data.dstEp
+			data.Reported = true
+			oldSrc := data.SrcEp
+			oldDest := data.DstEp
 
 			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all since
 			// the endpoint should not be changing for a constant connection.
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
-			Expect(data.srcEp).To(Equal(oldSrc))
-			Expect(data.dstEp).To(Equal(oldDest))
+			Expect(data.SrcEp).To(Equal(oldSrc))
+			Expect(data.DstEp).To(Equal(oldDest))
 		})
 		It("should handle destination changing on next conntrack update for unreported flow", func() {
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Data is not reported. swap local endpoints from mock data and send in packetinfo entry again.
 			data := c.epStats[*t]
-			oldSrc := data.srcEp
-			oldDest := data.dstEp
+			oldSrc := data.SrcEp
+			oldDest := data.DstEp
 
 			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
-			Expect(data.srcEp).To(Equal(oldSrc))
-			Expect(data.dstEp).NotTo(Equal(oldDest))
+			Expect(data.SrcEp).To(Equal(oldSrc))
+			Expect(data.DstEp).NotTo(Equal(oldDest))
 		})
 		It("should handle destination becoming non-local by removing entry on next packetinfo update for reported flow", func() {
-			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
 			c.applyPacketInfo(pktinfo)
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Flag the data as reported, remove endpoints from mock data and send in packetinfo entry again.
 			data := c.epStats[*t]
-			data.reported = true
+			data.Reported = true
 			lm.SetMockData(epMapDelete, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is a reported flow but we are going through packet processing still. It should be expired and
 			// removed.
 			Eventually(c.epStats, "500ms", "100ms").ShouldNot(HaveKey(*t))
-			Expect(data.reported).To(BeFalse())
+			Expect(data.Reported).To(BeFalse())
 		})
 		It("should handle destination becoming non-local by removing entry on next packetinfo update for unreported flow", func() {
-			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
 			c.applyPacketInfo(pktinfo)
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Data is not reported. Remove endpoints from mock data and send in packetinfo entry again.
 			data := c.epStats[*t]
-			oldSrc := data.srcEp
-			oldDest := data.dstEp
+			oldSrc := data.SrcEp
+			oldDest := data.DstEp
 			lm.SetMockData(epMapDelete, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is an unreported flow but we are going through packet processing still. However, since the endpoint
 			// data has been removed assume it has just been deleted and don't downgrade our endpoint data.
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
-			Expect(data.reported).To(BeFalse())
-			Expect(data.srcEp).To(Equal(oldSrc))
-			Expect(data.dstEp).To(Equal(oldDest))
+			Expect(data.Reported).To(BeFalse())
+			Expect(data.SrcEp).To(Equal(oldSrc))
+			Expect(data.DstEp).To(Equal(oldDest))
 		})
 		It("should handle destination changing on next packetinfo update for reported flow", func() {
-			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
 			c.applyPacketInfo(pktinfo)
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Flag the data as reported, swap local endpoints from mock data and send in packetinfo entry again.
 			data := c.epStats[*t]
-			data.reported = true
-			oldSrc := data.srcEp
-			oldDest := data.dstEp
+			data.Reported = true
+			oldSrc := data.SrcEp
+			oldDest := data.DstEp
 
 			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
@@ -1131,98 +1079,98 @@ var _ = Describe("Conntrack Datasource", func() {
 			// This is a reported flow but we are going through packet processing still. It should be expired and
 			// the endpoints updated.
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
-			Expect(data.reported).To(BeFalse())
-			Expect(data.srcEp).To(Equal(oldSrc))
-			Expect(data.dstEp).NotTo(Equal(oldDest))
+			Expect(data.Reported).To(BeFalse())
+			Expect(data.SrcEp).To(Equal(oldSrc))
+			Expect(data.DstEp).NotTo(Equal(oldDest))
 		})
 		It("should handle destination changing on next packetinfo update for unreported flow", func() {
-			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
 			c.applyPacketInfo(pktinfo)
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Data is not reported, swap local endpoints from mock data and send in CT entry again.
 			data := c.epStats[*t]
-			oldSrc := data.srcEp
-			oldDest := data.dstEp
+			oldSrc := data.SrcEp
+			oldDest := data.DstEp
 
 			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
-			Expect(data.reported).To(BeFalse())
-			Expect(data.srcEp).To(Equal(oldSrc))
-			Expect(data.dstEp).NotTo(Equal(oldDest))
+			Expect(data.Reported).To(BeFalse())
+			Expect(data.SrcEp).To(Equal(oldSrc))
+			Expect(data.DstEp).NotTo(Equal(oldDest))
 		})
 	})
 	Describe("Test local source", func() {
 		It("should create a single entry with outbound direction", func() {
-			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
 
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 			data := c.epStats[*t]
 
-			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(outCtEntry.OriginalCounters.Packets)))
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(outCtEntry.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(outCtEntry.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(outCtEntry.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*counter.New(outCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(outCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(outCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(outCtEntry.ReplyCounters.Bytes)))
 
 			// Not SNAT'd so natOutgoingPort should not be set.
-			Expect(data.natOutgoingPort).Should(Equal(0))
+			Expect(data.NatOutgoingPort).Should(Equal(0))
 		})
 		It("should create a single entry with outbound direction for SNAT'd packet with nat outgoing port set", func() {
-			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
 
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntryWithSNAT, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(outCtEntryWithSNAT, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 			data := c.epStats[*t]
 
-			Expect(data.natOutgoingPort).Should(Equal(nodeSrcPort))
+			Expect(data.NatOutgoingPort).Should(Equal(nodeSrcPort))
 		})
 		It("should create a single entry with outbound direction for SNAT'd packet sent to self without nat outgoing port set", func() {
-			t := NewTuple(localIp1, localIp1, proto_tcp, srcPort, srcPort2)
+			t := tuple.New(localIp1, localIp1, proto_tcp, srcPort, srcPort2)
 
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntrySNATToServiceToSelf, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(outCtEntrySNATToServiceToSelf, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 			data := c.epStats[*t]
 
-			Expect(data.natOutgoingPort).Should(Equal(0))
+			Expect(data.NatOutgoingPort).Should(Equal(0))
 		})
 		It("should handle source becoming non-local by removing entry on next conntrack update for reported flow", func() {
-			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Flag the data as reported, remove endpoints from mock data and send in CT entry again.
 			data := c.epStats[*t]
-			data.reported = true
+			data.Reported = true
 			lm.SetMockData(epMapDelete, nil, nil, nil)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all.
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 		})
 		It("should handle source becoming non-local by removing entry on next conntrack update for unreported flow", func() {
-			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Data is not reported. Remove endpoints from mock data and send in CT entry again.
 			lm.SetMockData(epMapDelete, nil, nil, nil)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint, but we never downgrade
 			// to having no endpoint (since we handle the situation where endpoint is deleted before we gather all
@@ -1230,98 +1178,98 @@ var _ = Describe("Conntrack Datasource", func() {
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 		})
 		It("should handle source changing on next conntrack update for reported flow", func() {
-			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Flag the data as reported, swap local endpoints from mock data and send in CT entry again.
 			data := c.epStats[*t]
-			data.reported = true
-			oldSrc := data.srcEp
-			oldDest := data.dstEp
+			data.Reported = true
+			oldSrc := data.SrcEp
+			oldDest := data.DstEp
 
 			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all since
 			// the endpoint should not be changing for a constant connection.
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
-			Expect(data.srcEp).To(Equal(oldSrc))
-			Expect(data.dstEp).To(Equal(oldDest))
+			Expect(data.SrcEp).To(Equal(oldSrc))
+			Expect(data.DstEp).To(Equal(oldDest))
 		})
 		It("should handle source changing on next conntrack update for unreported flow", func() {
-			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Data is not reported. swap local endpoints from mock data and send in packetinfo entry again.
 			data := c.epStats[*t]
-			oldSrc := data.srcEp
-			oldDest := data.dstEp
+			oldSrc := data.SrcEp
+			oldDest := data.DstEp
 
 			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(outCtEntry, 0)}
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
-			Expect(data.srcEp).NotTo(Equal(oldSrc))
-			Expect(data.dstEp).To(Equal(oldDest))
+			Expect(data.SrcEp).NotTo(Equal(oldSrc))
+			Expect(data.DstEp).To(Equal(oldDest))
 		})
 		It("should handle source becoming non-local by removing entry on next packetinfo update for reported flow", func() {
-			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirEgress, egressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirEgress, egressPktAllow)
 			c.applyPacketInfo(pktinfo)
-			t := NewTuple(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
+			t := tuple.New(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Flag the data as reported, remove endpoints from mock data and send in packetinfo entry again.
 			data := c.epStats[*t]
-			data.reported = true
+			data.Reported = true
 			lm.SetMockData(epMapDelete, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is a reported flow but we are going through packet processing still. It should be expired and
 			// removed.
 			Eventually(c.epStats, "500ms", "100ms").ShouldNot(HaveKey(*t))
-			Expect(data.reported).To(BeFalse())
+			Expect(data.Reported).To(BeFalse())
 		})
 		It("should handle source becoming non-local by removing entry on next packetinfo update for unreported flow", func() {
-			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirEgress, egressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirEgress, egressPktAllow)
 			c.applyPacketInfo(pktinfo)
-			t := NewTuple(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
+			t := tuple.New(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Data is not reported. Remove endpoints from mock data and send in packetinfo entry again.
 			data := c.epStats[*t]
-			oldSrc := data.srcEp
-			oldDest := data.dstEp
+			oldSrc := data.SrcEp
+			oldDest := data.DstEp
 			lm.SetMockData(epMapDelete, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is an unreported flow but we are going through packet processing still. However, since the endpoint
 			// data has been removed assume it has just been deleted and don't downgrade our endpoint data.
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
-			Expect(data.reported).To(BeFalse())
-			Expect(data.srcEp).To(Equal(oldSrc))
-			Expect(data.dstEp).To(Equal(oldDest))
+			Expect(data.Reported).To(BeFalse())
+			Expect(data.SrcEp).To(Equal(oldSrc))
+			Expect(data.DstEp).To(Equal(oldDest))
 		})
 		It("should handle source changing on next packetinfo update for reported flow", func() {
-			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirEgress, egressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirEgress, egressPktAllow)
 			c.applyPacketInfo(pktinfo)
-			t := NewTuple(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
+			t := tuple.New(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Flag the data as reported, swap local endpoints from mock data and send in packetinfo entry again.
 			data := c.epStats[*t]
-			data.reported = true
-			oldSrc := data.srcEp
-			oldDest := data.dstEp
+			data.Reported = true
+			oldSrc := data.SrcEp
+			oldDest := data.DstEp
 
 			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
@@ -1329,87 +1277,87 @@ var _ = Describe("Conntrack Datasource", func() {
 			// This is a reported flow but we are going through packet processing still. It should be expired and
 			// the endpoints updated.
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
-			Expect(data.reported).To(BeFalse())
-			Expect(data.srcEp).NotTo(Equal(oldSrc))
-			Expect(data.dstEp).To(Equal(oldDest))
+			Expect(data.Reported).To(BeFalse())
+			Expect(data.SrcEp).NotTo(Equal(oldSrc))
+			Expect(data.DstEp).To(Equal(oldDest))
 		})
 		It("should handle source changing on next packetinfo update for unreported flow", func() {
-			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirEgress, egressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirEgress, egressPktAllow)
 			c.applyPacketInfo(pktinfo)
-			t := NewTuple(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
+			t := tuple.New(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Data is not reported, swap local endpoints from mock data and send in CT entry again.
 			data := c.epStats[*t]
-			oldSrc := data.srcEp
-			oldDest := data.dstEp
+			oldSrc := data.SrcEp
+			oldDest := data.DstEp
 
 			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
 			c.applyPacketInfo(pktinfo)
 
 			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
 			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
-			Expect(data.reported).To(BeFalse())
-			Expect(data.srcEp).NotTo(Equal(oldSrc))
-			Expect(data.dstEp).To(Equal(oldDest))
+			Expect(data.Reported).To(BeFalse())
+			Expect(data.SrcEp).NotTo(Equal(oldSrc))
+			Expect(data.DstEp).To(Equal(oldDest))
 		})
 	})
 	Describe("Test local source to local destination", func() {
 		It("should create a single entry with 'local' direction", func() {
-			t1 := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+			t1 := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
 
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(localCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(localCtEntry, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t1))
 
 			data := c.epStats[*t1]
-			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(localCtEntry.OriginalCounters.Packets)))
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(localCtEntry.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(localCtEntry.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(localCtEntry.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*counter.New(localCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(localCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(localCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(localCtEntry.ReplyCounters.Bytes)))
 		})
 	})
 	Describe("Test local destination with DNAT", func() {
 		It("should create a single entry with inbound connection direction and with correct tuple extracted", func() {
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntryWithDNAT, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntryWithDNAT, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			data := c.epStats[*t]
-			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntryWithDNAT.OriginalCounters.Packets)))
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntryWithDNAT.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntryWithDNAT.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntryWithDNAT.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*counter.New(inCtEntryWithDNAT.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(inCtEntryWithDNAT.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(inCtEntryWithDNAT.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(inCtEntryWithDNAT.ReplyCounters.Bytes)))
 		})
 	})
 	Describe("Test local source to local destination with DNAT", func() {
 		It("should create a single entry with 'local' connection direction and with correct tuple extracted", func() {
-			t1 := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(localCtEntryWithDNAT, 0)}
+			t1 := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(localCtEntryWithDNAT, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey((Equal(*t1))))
 			data := c.epStats[*t1]
-			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(localCtEntryWithDNAT.OriginalCounters.Packets)))
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(localCtEntryWithDNAT.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(localCtEntryWithDNAT.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(localCtEntryWithDNAT.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*counter.New(localCtEntryWithDNAT.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(localCtEntryWithDNAT.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(localCtEntryWithDNAT.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(localCtEntryWithDNAT.ReplyCounters.Bytes)))
 		})
 	})
 	Describe("Test conntrack TCP Protoinfo State", func() {
 		It("Handle TCP conntrack entries with TCP state TIME_WAIT after NFLOGs gathered", func() {
 			By("handling a conntrack update to start tracking stats for tuple")
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 			data := c.epStats[*t]
-			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*counter.New(inCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Bytes)))
 
 			By("handling a conntrack update with updated counters")
 			inCtEntryUpdatedCounters := inCtEntry
@@ -1417,38 +1365,38 @@ var _ = Describe("Conntrack Datasource", func() {
 			inCtEntryUpdatedCounters.OriginalCounters.Bytes = inCtEntry.OriginalCounters.Bytes + 10
 			inCtEntryUpdatedCounters.ReplyCounters.Packets = inCtEntry.ReplyCounters.Packets + 2
 			inCtEntryUpdatedCounters.ReplyCounters.Bytes = inCtEntry.ReplyCounters.Bytes + 50
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntryUpdatedCounters, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntryUpdatedCounters, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 			// know update is complete
-			Eventually(func() Counter {
+			Eventually(func() counter.Counter {
 				return c.epStats[*t].ConntrackPacketsCounter()
-			}, "500ms", "100ms").Should(Equal(*NewCounter(inCtEntryUpdatedCounters.OriginalCounters.Packets)))
+			}, "500ms", "100ms").Should(Equal(*counter.New(inCtEntryUpdatedCounters.OriginalCounters.Packets)))
 
 			data = c.epStats[*t]
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(inCtEntryUpdatedCounters.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(inCtEntryUpdatedCounters.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(inCtEntryUpdatedCounters.ReplyCounters.Bytes)))
 
 			By("handling a conntrack update with TCP CLOSE_WAIT")
 			inCtEntryStateCloseWait := inCtEntryUpdatedCounters
 			inCtEntryStateCloseWait.ProtoInfo.State = nfnl.TCP_CONNTRACK_CLOSE_WAIT
 			inCtEntryStateCloseWait.ReplyCounters.Packets = inCtEntryUpdatedCounters.ReplyCounters.Packets + 1
 			inCtEntryStateCloseWait.ReplyCounters.Bytes = inCtEntryUpdatedCounters.ReplyCounters.Bytes + 10
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntryStateCloseWait, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntryStateCloseWait, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 			// know update is complete
-			Eventually(func() Counter {
+			Eventually(func() counter.Counter {
 				return c.epStats[*t].ConntrackPacketsCounterReverse()
-			}, "500ms", "100ms").Should(Equal(*NewCounter(inCtEntryStateCloseWait.ReplyCounters.Packets)))
+			}, "500ms", "100ms").Should(Equal(*counter.New(inCtEntryStateCloseWait.ReplyCounters.Packets)))
 
 			data = c.epStats[*t]
-			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.OriginalCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*counter.New(inCtEntryStateCloseWait.OriginalCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(inCtEntryStateCloseWait.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(inCtEntryStateCloseWait.ReplyCounters.Bytes)))
 
 			By("handling an nflog update for destination matching on policy - all policy info is now gathered",
 				func() {
-					pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+					pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
 					c.applyPacketInfo(pktinfo)
 				},
 			)
@@ -1456,24 +1404,24 @@ var _ = Describe("Conntrack Datasource", func() {
 			By("handling a conntrack update with TCP TIME_WAIT")
 			inCtEntryStateTimeWait := inCtEntry
 			inCtEntryStateTimeWait.ProtoInfo.State = nfnl.TCP_CONNTRACK_TIME_WAIT
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntryStateTimeWait, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntryStateTimeWait, 0)}
 			Eventually(c.epStats, "500ms", "100ms").ShouldNot(HaveKey(*t))
 		})
 		It("Handle TCP conntrack entries with TCP state TIME_WAIT before NFLOGs gathered", func() {
 			By("handling a conntrack update to start tracking stats for tuple")
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// know update is complete
-			Eventually(func() Counter {
+			Eventually(func() counter.Counter {
 				return c.epStats[*t].ConntrackPacketsCounter()
-			}, "500ms", "100ms").Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
+			}, "500ms", "100ms").Should(Equal(*counter.New(inCtEntry.OriginalCounters.Packets)))
 			data := c.epStats[*t]
 
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Bytes)))
 
 			By("handling a conntrack update with updated counters")
 			inCtEntryUpdatedCounters := inCtEntry
@@ -1481,45 +1429,45 @@ var _ = Describe("Conntrack Datasource", func() {
 			inCtEntryUpdatedCounters.OriginalCounters.Bytes = inCtEntry.OriginalCounters.Bytes + 10
 			inCtEntryUpdatedCounters.ReplyCounters.Packets = inCtEntry.ReplyCounters.Packets + 2
 			inCtEntryUpdatedCounters.ReplyCounters.Bytes = inCtEntry.ReplyCounters.Bytes + 50
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntryUpdatedCounters, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntryUpdatedCounters, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// know update is complete
-			Eventually(func() Counter {
+			Eventually(func() counter.Counter {
 				return c.epStats[*t].ConntrackPacketsCounter()
-			}, "500ms", "100ms").Should(Equal(*NewCounter(inCtEntryUpdatedCounters.OriginalCounters.Packets)))
+			}, "500ms", "100ms").Should(Equal(*counter.New(inCtEntryUpdatedCounters.OriginalCounters.Packets)))
 			data = c.epStats[*t]
 
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(inCtEntryUpdatedCounters.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(inCtEntryUpdatedCounters.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(inCtEntryUpdatedCounters.ReplyCounters.Bytes)))
 
 			By("handling a conntrack update with TCP CLOSE_WAIT")
 			inCtEntryStateCloseWait := inCtEntryUpdatedCounters
 			inCtEntryStateCloseWait.ProtoInfo.State = nfnl.TCP_CONNTRACK_CLOSE_WAIT
 			inCtEntryStateCloseWait.ReplyCounters.Packets = inCtEntryUpdatedCounters.ReplyCounters.Packets + 1
 			inCtEntryStateCloseWait.ReplyCounters.Bytes = inCtEntryUpdatedCounters.ReplyCounters.Bytes + 10
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntryStateCloseWait, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntryStateCloseWait, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// know update is complete
-			Eventually(func() Counter {
+			Eventually(func() counter.Counter {
 				return c.epStats[*t].ConntrackPacketsCounterReverse()
-			}, "500ms", "100ms").Should(Equal(*NewCounter(inCtEntryStateCloseWait.ReplyCounters.Packets)))
+			}, "500ms", "100ms").Should(Equal(*counter.New(inCtEntryStateCloseWait.ReplyCounters.Packets)))
 			data = c.epStats[*t]
-			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.OriginalCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*counter.New(inCtEntryStateCloseWait.OriginalCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(inCtEntryStateCloseWait.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(inCtEntryStateCloseWait.ReplyCounters.Bytes)))
 
 			By("handling a conntrack update with TCP TIME_WAIT")
 			inCtEntryStateTimeWait := inCtEntry
 			inCtEntryStateTimeWait.ProtoInfo.State = nfnl.TCP_CONNTRACK_TIME_WAIT
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntryStateTimeWait, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntryStateTimeWait, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			By("handling an nflog update for destination matching on policy - all policy info is now gathered",
 				func() {
-					pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+					pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
 					c.applyPacketInfo(pktinfo)
 				},
 			)
@@ -1529,12 +1477,12 @@ var _ = Describe("Conntrack Datasource", func() {
 
 	Describe("Test data race", func() {
 		It("getDataAndUpdateEndpoints does not cause a data race contention with deleteDataFromEpStats after deleteDataFromEpStats removes it from epstats", func() {
-			existingTuple := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			existingTuple := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			testData := c.getDataAndUpdateEndpoints(*existingTuple, false, true)
 
-			newTuple := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+			newTuple := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
 
-			var resultantNewTupleData *Data
+			var resultantNewTupleData *dataplane.Data
 
 			time.AfterFunc(2*time.Second, func() {
 				c.deleteDataFromEpStats(testData)
@@ -1557,19 +1505,19 @@ var _ = Describe("Conntrack Datasource", func() {
 	Describe("Test pre-DNAT handling", func() {
 		It("handle pre-DNAT info on conntrack", func() {
 			By("handling a conntrack update to start tracking stats for tuple (w/ DNAT)")
-			t := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(localCtEntryWithDNAT, 0)}
+			t := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(localCtEntryWithDNAT, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// Flagging as expired will attempt to expire the data when NFLOGs and service info are gathered.
 			By("flagging the data as expired")
 			data := c.epStats[*t]
-			data.expired = true
-			Expect(data.isDNAT).Should(BeTrue())
+			data.Expired = true
+			Expect(data.IsDNAT).Should(BeTrue())
 
 			By("handling nflog updates for destination matching on policy - all policy info is now gathered, but no service")
-			c.applyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirIngress, localPktIngress))
-			c.applyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirEgress, localPktEgress))
+			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress))
+			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirEgress, localPktEgress))
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			By("creating a matching service for the pre-DNAT cluster IP and port")
@@ -1589,22 +1537,22 @@ var _ = Describe("Conntrack Datasource", func() {
 			})
 
 			By("handling another nflog update for destination matching on policy - should rematch and expire the entry")
-			c.applyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirIngress, localPktIngress))
+			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress))
 			Expect(c.epStats).ShouldNot(HaveKey(*t))
 		})
 		It("handle pre-DNAT info on nflog update", func() {
 			By("handling egress nflog updates for destination matching on policy - this contains pre-DNAT info")
-			t := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-			c.applyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirIngress, localPktIngressWithDNAT))
+			t := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngressWithDNAT))
 
 			// Flagging as expired will attempt to expire the data when NFLOGs and service info are gathered.
 			By("flagging the data as expired")
 			data := c.epStats[*t]
-			data.expired = true
-			Expect(data.isDNAT).Should(BeTrue())
+			data.Expired = true
+			Expect(data.IsDNAT).Should(BeTrue())
 
 			By("handling ingree nflog updates for destination matching on policy - all policy info is now gathered, but no service")
-			c.applyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirEgress, localPktEgress))
+			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirEgress, localPktEgress))
 			Expect(c.epStats).Should(HaveKey(*t))
 
 			By("creating a matching service for the pre-DNAT cluster IP and port")
@@ -1624,55 +1572,55 @@ var _ = Describe("Conntrack Datasource", func() {
 			})
 
 			By("handling another nflog update for destination matching on policy - should rematch and expire the entry")
-			c.applyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirIngress, localPktIngress))
+			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress))
 			Expect(c.epStats).ShouldNot(HaveKey(*t))
 		})
 	})
 	Describe("Test local destination combined with ALP stats", func() {
 		It("should create a single entry in inbound direction", func() {
 			By("Sending a conntrack update and a dataplane stats update and checking for combined values")
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			c.convertDataplaneStatsAndApplyUpdate(&inALPEntry)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// know update is complete
-			Eventually(func() Counter {
+			Eventually(func() counter.Counter {
 				return c.epStats[*t].ConntrackPacketsCounter()
-			}, "500ms", "100ms").Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
+			}, "500ms", "100ms").Should(Equal(*counter.New(inCtEntry.OriginalCounters.Packets)))
 
 			data := c.epStats[*t]
-			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
-			Expect(data.HTTPRequestsAllowed()).Should(Equal(*NewCounter(alpEntryHTTPReqAllowed)))
-			Expect(data.HTTPRequestsDenied()).Should(Equal(*NewCounter(alpEntryHTTPReqDenied)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*counter.New(inCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.HTTPRequestsAllowed()).Should(Equal(*counter.New(alpEntryHTTPReqAllowed)))
+			Expect(data.HTTPRequestsDenied()).Should(Equal(*counter.New(alpEntryHTTPReqDenied)))
 
 			By("Sending in another dataplane stats update and check for incremented counter")
 			c.convertDataplaneStatsAndApplyUpdate(&inALPEntry)
-			Expect(data.HTTPRequestsAllowed()).Should(Equal(*NewCounter(2 * alpEntryHTTPReqAllowed)))
-			Expect(data.HTTPRequestsDenied()).Should(Equal(*NewCounter(2 * alpEntryHTTPReqDenied)))
+			Expect(data.HTTPRequestsAllowed()).Should(Equal(*counter.New(2 * alpEntryHTTPReqAllowed)))
+			Expect(data.HTTPRequestsDenied()).Should(Equal(*counter.New(2 * alpEntryHTTPReqDenied)))
 		})
 	})
 	Describe("Test DataplaneStat with HTTPData", func() {
 		It("should process DataplaneStat update with X-Forwarded-For HTTP Data", func() {
 			By("Sending a conntrack update and a dataplane stats update and checking for combined values")
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			expectedOrigSourceIPs := []net2.IP{net2.ParseIP(publicIP1Str)}
 			c.convertDataplaneStatsAndApplyUpdate(&dpStatsEntryWithFwdFor)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			// know update is complete
-			Eventually(func() Counter {
+			Eventually(func() counter.Counter {
 				return c.epStats[*t].ConntrackPacketsCounterReverse()
-			}, "500ms", "100ms").Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
+			}, "500ms", "100ms").Should(Equal(*counter.New(inCtEntry.ReplyCounters.Packets)))
 			data := c.epStats[*t]
-			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*counter.New(inCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Bytes)))
 			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(dpStatsHTTPDataValue))
 
@@ -1700,7 +1648,7 @@ var _ = Describe("Conntrack Datasource", func() {
 		})
 		It("should process DataplaneStat update with X-Real-IP HTTP Data", func() {
 			By("Sending a conntrack update and a dataplane stats update and checking for combined values")
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			expectedOrigSourceIPs := []net2.IP{net2.ParseIP(publicIP1Str)}
 			dpStatsEntryWithRealIP := dpStatsEntryWithFwdFor
 			dpStatsEntryWithRealIP.HttpData = []*proto.HTTPData{
@@ -1709,17 +1657,17 @@ var _ = Describe("Conntrack Datasource", func() {
 				},
 			}
 			c.convertDataplaneStatsAndApplyUpdate(&dpStatsEntryWithRealIP)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 			// know update is complete
-			Eventually(func() Counter {
+			Eventually(func() counter.Counter {
 				return c.epStats[*t].ConntrackPacketsCounter()
-			}, "500ms", "100ms").Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
+			}, "500ms", "100ms").Should(Equal(*counter.New(inCtEntry.OriginalCounters.Packets)))
 			data := c.epStats[*t]
-			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*counter.New(inCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Bytes)))
 			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(dpStatsHTTPDataValue))
 
@@ -1747,19 +1695,19 @@ var _ = Describe("Conntrack Datasource", func() {
 		})
 		It("should process DataplaneStat update with X-Real-IP and X-Forwarded-For HTTP Data", func() {
 			By("Sending a conntrack update and a dataplane stats update and checking for combined values")
-			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			expectedOrigSourceIPs := []net2.IP{net2.ParseIP(publicIP1Str)}
 			c.convertDataplaneStatsAndApplyUpdate(&dpStatsEntryWithFwdFor)
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 			// know update is complete
-			Eventually(func() Counter {
+			Eventually(func() counter.Counter {
 				return c.epStats[*t].ConntrackPacketsCounter()
-			}, "500ms", "100ms").Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
+			}, "500ms", "100ms").Should(Equal(*counter.New(inCtEntry.OriginalCounters.Packets)))
 			data := c.epStats[*t]
-			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
-			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
-			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*counter.New(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*counter.New(inCtEntry.ReplyCounters.Bytes)))
 			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(dpStatsHTTPDataValue))
 
@@ -1806,9 +1754,9 @@ func policyIDStrToRuleIDParts(r *calc.RuleID) [64]byte {
 
 var _ = Describe("Reporting Metrics", func() {
 	var c *collector
-	var nflogReader *NFLogReader
+	var nflogReader *dataplane.NFLogReader
 	var mockReporter *mockReporter
-	var rm *ReporterManager
+	var rm *reporter.Manager
 	var lm *calc.LookupsCache
 
 	const (
@@ -1837,11 +1785,11 @@ var _ = Describe("Reporting Metrics", func() {
 		}
 
 		lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
-		rm = NewReporterManager(true)
+		rm = reporter.NewManager(true)
 		mockReporter = newMockReporter()
 		rm.RegisterMetricsReporter(mockReporter)
 		rm.Start()
-		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
+		nflogReader = dataplane.NewNFLogReader(lm, 0, 0, 0, false)
 		nflogReader.Start()
 		c = newCollector(lm, rm, conf).(*collector)
 		c.SetPacketInfoReader(nflogReader)
@@ -1856,13 +1804,13 @@ var _ = Describe("Reporting Metrics", func() {
 		})
 		Describe("Report Denied Packets", func() {
 			BeforeEach(func() {
-				nflogReader.nfIngressC <- ingressPktDeny
+				nflogReader.IngressC <- ingressPktDeny
 			})
 			Context("reporting tick", func() {
 				It("should receive metric", func() {
 					tmu := testMetricUpdate{
-						updateType:   UpdateTypeReport,
-						tuple:        *ingressPktDenyTuple,
+						updateType:   metric.UpdateTypeReport,
+						tpl:          *ingressPktDenyTuple,
 						srcEp:        remoteEd1,
 						dstEp:        localEd1,
 						ruleIDs:      []*calc.RuleID{defTierPolicy2DenyIngressRuleID},
@@ -1874,13 +1822,13 @@ var _ = Describe("Reporting Metrics", func() {
 		})
 		Describe("Report Allowed Packets (ingress)", func() {
 			BeforeEach(func() {
-				nflogReader.nfIngressC <- ingressPktAllow
+				nflogReader.IngressC <- ingressPktAllow
 			})
 			Context("reporting tick", func() {
 				It("should receive metric", func() {
 					tmu := testMetricUpdate{
-						updateType:   UpdateTypeReport,
-						tuple:        *ingressPktAllowTuple,
+						updateType:   metric.UpdateTypeReport,
+						tpl:          *ingressPktAllowTuple,
 						srcEp:        remoteEd1,
 						dstEp:        localEd1,
 						ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
@@ -1892,15 +1840,15 @@ var _ = Describe("Reporting Metrics", func() {
 		})
 		Describe("Report Packets that switch from deny to allow", func() {
 			BeforeEach(func() {
-				nflogReader.nfIngressC <- ingressPktDeny
+				nflogReader.IngressC <- ingressPktDeny
 				time.Sleep(time.Duration(500) * time.Millisecond)
-				nflogReader.nfIngressC <- ingressPktAllow
+				nflogReader.IngressC <- ingressPktAllow
 			})
 			Context("reporting tick", func() {
 				It("should receive metric", func() {
 					tmu := testMetricUpdate{
-						updateType:   UpdateTypeReport,
-						tuple:        *ingressPktAllowTuple,
+						updateType:   metric.UpdateTypeReport,
+						tpl:          *ingressPktAllowTuple,
 						srcEp:        remoteEd1,
 						dstEp:        localEd1,
 						ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
@@ -1912,13 +1860,13 @@ var _ = Describe("Reporting Metrics", func() {
 		})
 		Describe("Report Allowed Packets (egress)", func() {
 			BeforeEach(func() {
-				nflogReader.nfEgressC <- egressPktAllow
+				nflogReader.EgressC <- egressPktAllow
 			})
 			Context("reporting tick", func() {
 				It("should receive metric", func() {
 					tmu := testMetricUpdate{
-						updateType:   UpdateTypeReport,
-						tuple:        *egressPktAllowTuple,
+						updateType:   metric.UpdateTypeReport,
+						tpl:          *egressPktAllowTuple,
 						srcEp:        localEd1,
 						dstEp:        remoteEd1,
 						ruleIDs:      []*calc.RuleID{defTierPolicy1AllowEgressRuleID},
@@ -1932,10 +1880,10 @@ var _ = Describe("Reporting Metrics", func() {
 			Describe("Report Allowed Packets (ingress)", func() {
 				It("should receive metric", func() {
 					By("Sending a NFLOG packet update")
-					nflogReader.nfIngressC <- ingressPktAllow
+					nflogReader.IngressC <- ingressPktAllow
 					tmuIngress := testMetricUpdate{
-						updateType:   UpdateTypeReport,
-						tuple:        *ingressPktAllowTuple,
+						updateType:   metric.UpdateTypeReport,
+						tpl:          *ingressPktAllowTuple,
 						srcEp:        remoteEd1,
 						dstEp:        localEd1,
 						ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
@@ -1945,12 +1893,12 @@ var _ = Describe("Reporting Metrics", func() {
 					By("Sending a dataplane stats update with HTTP Data")
 					c.ds <- &dpStatsEntryWithFwdFor
 					tmuOrigIP := testMetricUpdate{
-						updateType:    UpdateTypeReport,
-						tuple:         *ingressPktAllowTuple,
+						updateType:    metric.UpdateTypeReport,
+						tpl:           *ingressPktAllowTuple,
 						srcEp:         remoteEd1,
 						dstEp:         localEd1,
 						ruleIDs:       []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
-						origSourceIPs: NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, []net2.IP{net2.ParseIP(publicIP1Str)}, dpStatsHTTPDataValue),
+						origSourceIPs: boundedset.NewFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, []net2.IP{net2.ParseIP(publicIP1Str)}, dpStatsHTTPDataValue),
 						isConnection:  true,
 					}
 					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmuOrigIP)))
@@ -1962,12 +1910,12 @@ var _ = Describe("Reporting Metrics", func() {
 					By("Sending a dataplane stats update with HTTP Data")
 					c.ds <- &dpStatsEntryWithFwdFor
 					tmuOrigIP := testMetricUpdate{
-						updateType:    UpdateTypeReport,
-						tuple:         *ingressPktAllowTuple,
+						updateType:    metric.UpdateTypeReport,
+						tpl:           *ingressPktAllowTuple,
 						srcEp:         remoteEd1,
 						dstEp:         localEd1,
 						ruleIDs:       nil,
-						origSourceIPs: NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, []net2.IP{net2.ParseIP(publicIP1Str)}, dpStatsHTTPDataValue),
+						origSourceIPs: boundedset.NewFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, []net2.IP{net2.ParseIP(publicIP1Str)}, dpStatsHTTPDataValue),
 						unknownRuleID: unknownRuleID,
 						isConnection:  true,
 					}
@@ -1978,14 +1926,14 @@ var _ = Describe("Reporting Metrics", func() {
 	})
 	Context("With process info enabled", func() {
 		var mpc mockProcessCache
-		var ciReaderSenderChan chan []ConntrackInfo
+		var ciReaderSenderChan chan []dataplane.ConntrackInfo
 		BeforeEach(func() {
 			mpc = mockProcessCache{
-				inboundCache:  make(map[Tuple]ProcessInfo),
-				outboundCache: make(map[Tuple]ProcessInfo),
+				inboundCache:  make(map[tuple.Tuple]dataplane.ProcessInfo),
+				outboundCache: make(map[tuple.Tuple]dataplane.ProcessInfo),
 			}
 			c.SetProcessInfoCache(mpc)
-			ciReaderSenderChan = make(chan []ConntrackInfo, 1)
+			ciReaderSenderChan = make(chan []dataplane.ConntrackInfo, 1)
 			c.SetConntrackInfoReader(dummyConntrackInfoReader{
 				MockSenderChannel: ciReaderSenderChan,
 			})
@@ -1996,12 +1944,12 @@ var _ = Describe("Reporting Metrics", func() {
 			mpc.inboundCache[*ingressPktAllowTuple] = proc1
 
 			By("Sending a NFLOG update")
-			nflogReader.nfIngressC <- ingressPktAllow
+			nflogReader.IngressC <- ingressPktAllow
 
 			By("Receiving a metric update")
 			tmu := testMetricUpdate{
-				updateType:   UpdateTypeReport,
-				tuple:        *ingressPktAllowTuple,
+				updateType:   metric.UpdateTypeReport,
+				tpl:          *ingressPktAllowTuple,
 				srcEp:        remoteEd1,
 				dstEp:        localEd1,
 				ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
@@ -2016,15 +1964,15 @@ var _ = Describe("Reporting Metrics", func() {
 			mpc.outboundCache[*localPktEgressDenyTuplePreDNAT] = proc2
 
 			By("Sending a NFLOG update with denied verdict")
-			nflogReader.nfEgressC <- localPktEgressDeniedPreDNAT
+			nflogReader.EgressC <- localPktEgressDeniedPreDNAT
 
 			By("Checking epstats for pre DNAT denied tuple")
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*localPktEgressDenyTuplePreDNAT))
 
 			By("Receiving a metric update for pre-DNAT denied connection")
 			tmu := testMetricUpdate{
-				updateType:   UpdateTypeReport,
-				tuple:        *localPktEgressDenyTuplePreDNAT,
+				updateType:   metric.UpdateTypeReport,
+				tpl:          *localPktEgressDenyTuplePreDNAT,
 				srcEp:        localEd1,
 				dstEp:        nil,
 				ruleIDs:      []*calc.RuleID{defTierPolicy2DenyEgressRuleID},
@@ -2034,23 +1982,23 @@ var _ = Describe("Reporting Metrics", func() {
 			}
 			Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 
-			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			t := tuple.New(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
 
 			By("Checking epstats for connection tuple")
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*localPktEgressDenyTuplePreDNAT))
 
 			By("Sending a NFLOG update with allowed verdict")
-			nflogReader.nfEgressC <- localPktEgressAllowedPreDNAT
+			nflogReader.EgressC <- localPktEgressAllowedPreDNAT
 
 			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntryWithDNAT, 0)}
+			ciReaderSenderChan <- []dataplane.ConntrackInfo{convertCtEntry(outCtEntryWithDNAT, 0)}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			By("Receiving a expire metric update for pre DNAT denied connection")
 			tmu = testMetricUpdate{
-				updateType:   UpdateTypeExpire,
-				tuple:        *localPktEgressDenyTuplePreDNAT,
+				updateType:   metric.UpdateTypeExpire,
+				tpl:          *localPktEgressDenyTuplePreDNAT,
 				srcEp:        localEd1,
 				dstEp:        nil,
 				ruleIDs:      []*calc.RuleID{defTierPolicy2DenyEgressRuleID},
@@ -2062,8 +2010,8 @@ var _ = Describe("Reporting Metrics", func() {
 
 			By("Receiving a metric update for connection")
 			tmu = testMetricUpdate{
-				updateType:   UpdateTypeReport,
-				tuple:        *t,
+				updateType:   metric.UpdateTypeReport,
+				tpl:          *t,
 				srcEp:        localEd1,
 				dstEp:        remoteEd1,
 				ruleIDs:      []*calc.RuleID{defTierPolicy1AllowEgressRuleID},
@@ -2075,8 +2023,8 @@ var _ = Describe("Reporting Metrics", func() {
 
 			By("Receiving a expire metric update for connection")
 			tmu = testMetricUpdate{
-				updateType:   UpdateTypeExpire,
-				tuple:        *t,
+				updateType:   metric.UpdateTypeExpire,
+				tpl:          *t,
 				srcEp:        localEd1,
 				dstEp:        remoteEd1,
 				ruleIDs:      []*calc.RuleID{defTierPolicy1AllowEgressRuleID},
@@ -2088,10 +2036,10 @@ var _ = Describe("Reporting Metrics", func() {
 		})
 	})
 	Context("Withtproxyenabled", func() {
-		var ciChan chan []ConntrackInfo
+		var ciChan chan []dataplane.ConntrackInfo
 
 		BeforeEach(func() {
-			ciChan = make(chan []ConntrackInfo)
+			ciChan = make(chan []dataplane.ConntrackInfo)
 			// increase the timeout to avoid force expiring the entries early (collector.go - checkEpStats)
 			c.config.AgeTimeout = time.Duration(5) * time.Second
 			c.SetConntrackInfoReader(dummyConntrackInfoReader{
@@ -2102,7 +2050,7 @@ var _ = Describe("Reporting Metrics", func() {
 
 		Describe("Ensure we get Expire type metric update", func() {
 			tmu := testMetricUpdate{
-				updateType:   UpdateTypeExpire,
+				updateType:   metric.UpdateTypeExpire,
 				srcEp:        localEd1,
 				dstEp:        localEd2,
 				isConnection: true,
@@ -2111,45 +2059,45 @@ var _ = Describe("Reporting Metrics", func() {
 			Context("For Local connections with proxy mark", func() {
 
 				It("should receive expire update for marked connections - with only egress verdict", func() {
-					t := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-					tmu.tuple = *t
+					t := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+					tmu.tpl = *t
 					tmu.ruleIDs = []*calc.RuleID{defTierPolicy1AllowEgressRuleID}
 
-					nflogReader.nfEgressC <- podProxyEgressPktAllow
+					nflogReader.EgressC <- podProxyEgressPktAllow
 					// order of nflog and conntrack entry matters here
 					// Eventually block here also prevents race condition between nflog and conntrack readers
 					Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
-					ciChan <- []ConntrackInfo{convertCtEntry(podProxyCTEntry, 1024)}
+					ciChan <- []dataplane.ConntrackInfo{convertCtEntry(podProxyCTEntry, 1024)}
 
 					// ensure we get expire update before AgeTimeout
 					// TODO: we can make a check here to ensure report type update also exists (adding is making the tests flaky so postponing it for now)
 					Eventually(mockReporter.reportChan, c.config.AgeTimeout-c.config.AgeTimeout/10).Should(Receive(Equal(tmu)))
 				})
 				It("should receive expire update for marked connections - with only ingress verdict", func() {
-					t := NewTuple(localIp1, localIp2, proto_tcp, proxyPort, dstPort)
-					tmu.tuple = *t
+					t := tuple.New(localIp1, localIp2, proto_tcp, proxyPort, dstPort)
+					tmu.tpl = *t
 					tmu.ruleIDs = []*calc.RuleID{defTierPolicy1AllowIngressRuleID}
 
-					nflogReader.nfEgressC <- proxyBackendIngressPktAllow
+					nflogReader.EgressC <- proxyBackendIngressPktAllow
 					// order of nflog and conntrack entry matters here
 					Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
-					ciChan <- []ConntrackInfo{convertCtEntry(proxyBackEndCTEntry, 1024)}
+					ciChan <- []dataplane.ConntrackInfo{convertCtEntry(proxyBackEndCTEntry, 1024)}
 					// ensure we get expire update before AgeTimeout
 					Eventually(mockReporter.reportChan, c.config.AgeTimeout-c.config.AgeTimeout/10).Should(Receive(Equal(tmu)))
 				})
 			})
 			Context("For connections without a proxy mark", func() {
 				It("should not receive expiry update for local connections with only egress verdict", func() {
-					t := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-					tmu.tuple = *t
+					t := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+					tmu.tpl = *t
 					tmu.ruleIDs = []*calc.RuleID{defTierPolicy1AllowEgressRuleID}
 
-					nflogReader.nfEgressC <- podProxyEgressPktAllow
+					nflogReader.EgressC <- podProxyEgressPktAllow
 					Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
-					ciChan <- []ConntrackInfo{convertCtEntry(podProxyCTEntry, 0)}
+					ciChan <- []dataplane.ConntrackInfo{convertCtEntry(podProxyCTEntry, 0)}
 					// TODO: we can make a check here to ensure report type update also exists (adding is making the tests flaky so postponing it for now)
 					// Make sure we don't get expire update until AgeTimeout
 					// confirm we don't receive expire update, this would mean flow logs will keep getting sent for this case
@@ -2163,19 +2111,19 @@ var _ = Describe("Reporting Metrics", func() {
 })
 
 type mockDNSReporter struct {
-	updates []DNSUpdate
+	updates []dnslog.Update
 }
 
 func (c *mockDNSReporter) Start() {}
 
-func (c *mockDNSReporter) Log(update DNSUpdate) error {
+func (c *mockDNSReporter) Log(update dnslog.Update) error {
 	c.updates = append(c.updates, update)
 	return nil
 }
 
 var _ = Describe("DNS logging", func() {
 	var c *collector
-	var nflogReader *NFLogReader
+	var nflogReader *dataplane.NFLogReader
 	var r *mockDNSReporter
 	BeforeEach(func() {
 		epMap := map[[16]byte]*calc.EndpointData{
@@ -2185,7 +2133,7 @@ var _ = Describe("DNS logging", func() {
 		}
 		nflogMap := map[[64]byte]*calc.RuleID{}
 		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1}, nil)
-		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
+		nflogReader = dataplane.NewNFLogReader(lm, 0, 0, 0, false)
 		c = newCollector(lm, nil, &Config{
 			AgeTimeout:            time.Duration(10) * time.Second,
 			InitialReportingDelay: time.Duration(5) * time.Second,
@@ -2221,12 +2169,12 @@ func newMockLookupsCache(
 }
 
 type mockL7Reporter struct {
-	updates []L7Update
+	updates []l7log.Update
 }
 
 func (c *mockL7Reporter) Start() {}
 
-func (c *mockL7Reporter) Log(update L7Update) error {
+func (c *mockL7Reporter) Log(update l7log.Update) error {
 	c.updates = append(c.updates, update)
 	return nil
 }
@@ -2235,8 +2183,8 @@ var _ = Describe("L7 logging", func() {
 	var c *collector
 	var r *mockL7Reporter
 	var hd *proto.HTTPData
-	var d *Data
-	var t Tuple
+	var d *dataplane.Data
+	var t tuple.Tuple
 	var hdsvc *proto.HTTPData
 	var hdsvcip *proto.HTTPData
 	var hdsvcnoport *proto.HTTPData
@@ -2313,9 +2261,9 @@ var _ = Describe("L7 logging", func() {
 			DurationMax:   int32(12),
 		}
 
-		t = *NewTuple(remoteIp1, remoteIp2, proto_tcp, srcPort, dstPort)
-		d = NewData(t, remoteEd1, remoteEd2, 0)
-		d.dstSvc = proxy.ServicePortName{
+		t = tuple.Make(remoteIp1, remoteIp2, proto_tcp, srcPort, dstPort)
+		d = dataplane.NewData(t, remoteEd1, remoteEd2, 0)
+		d.DstSvc = proxy.ServicePortName{
 			Port: "test-port",
 			NamespacedName: types.NamespacedName{
 				Name:      svcKey1.Name,
@@ -2485,12 +2433,12 @@ var _ = Describe("L7 logging", func() {
 // Define a separate metric type that doesn't include the actual stats.  We use this
 // for simpler comparisons.
 type testMetricUpdate struct {
-	updateType UpdateType
+	updateType metric.UpdateType
 
 	// Tuple key
-	tuple Tuple
+	tpl tuple.Tuple
 
-	origSourceIPs *boundedSet
+	origSourceIPs *boundedset.BoundedSet
 
 	// Endpoint information.
 	srcEp *calc.EndpointData
@@ -2529,41 +2477,20 @@ func (mr *mockReporter) Start() {
 	// Do nothing. We are a mock anyway.
 }
 
-func (mr *mockReporter) Report(mu MetricUpdate) error {
+func (mr *mockReporter) Report(mu metric.Update) error {
 	mr.reportChan <- testMetricUpdate{
-		updateType:    mu.updateType,
-		tuple:         mu.tuple,
-		srcEp:         mu.srcEp,
-		dstEp:         mu.dstEp,
-		ruleIDs:       mu.ruleIDs,
-		unknownRuleID: mu.unknownRuleID,
-		origSourceIPs: mu.origSourceIPs,
-		isConnection:  mu.isConnection,
-		processName:   mu.processName,
-		processID:     mu.processID,
+		updateType:    mu.UpdateType,
+		tpl:           mu.Tuple,
+		srcEp:         mu.SrcEp,
+		dstEp:         mu.DstEp,
+		ruleIDs:       mu.RuleIDs,
+		unknownRuleID: mu.UnknownRuleID,
+		origSourceIPs: mu.OrigSourceIPs,
+		isConnection:  mu.IsConnection,
+		processName:   mu.ProcessName,
+		processID:     mu.ProcessID,
 	}
 	return nil
-}
-
-func mustParseIP(s string) net.IP {
-	ip := net2.ParseIP(s)
-	return net.IP{ip}
-}
-
-func mustParseMac(m string) *net.MAC {
-	hwAddr, err := net2.ParseMAC(m)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to parse MAC: %v; %v", m, err))
-	}
-	return &net.MAC{hwAddr}
-}
-
-func mustParseNet(n string) net.IPNet {
-	_, cidr, err := net.ParseCIDR(n)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to parse CIDR %v; %v", n, err))
-	}
-	return *cidr
 }
 
 func BenchmarkNflogPktToStat(b *testing.B) {
@@ -2586,16 +2513,16 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		ExportingInterval:            time.Duration(1) * time.Second,
 		MaxOriginalSourceIPsIncluded: 5,
 	}
-	rm := NewReporterManager(true)
+	rm := reporter.NewManager(true)
 	lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
-	nflogReader := NewNFLogReader(lm, 0, 0, 0, false)
+	nflogReader := dataplane.NewNFLogReader(lm, 0, 0, 0, false)
 	c := newCollector(lm, rm, conf).(*collector)
 	c.SetPacketInfoReader(nflogReader)
 	c.SetConntrackInfoReader(dummyConntrackInfoReader{})
 	b.ResetTimer()
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+		pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
 		c.applyPacketInfo(pktinfo)
 	}
 }
@@ -2619,18 +2546,18 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		ExportingInterval:            time.Duration(1) * time.Second,
 		MaxOriginalSourceIPsIncluded: 5,
 	}
-	rm := NewReporterManager(true)
+	rm := reporter.NewManager(true)
 	lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
-	nflogReader := NewNFLogReader(lm, 0, 0, 0, false)
+	nflogReader := dataplane.NewNFLogReader(lm, 0, 0, 0, false)
 	c := newCollector(lm, rm, conf).(*collector)
 	c.SetPacketInfoReader(nflogReader)
 	c.SetConntrackInfoReader(dummyConntrackInfoReader{})
-	var tuples []Tuple
+	var tuples []tuple.Tuple
 	MaxSrcPort := 1000
 	MaxDstPort := 1000
 	for sp := 1; sp < MaxSrcPort; sp++ {
 		for dp := 1; dp < MaxDstPort; dp++ {
-			t := NewTuple(localIp1, localIp2, proto_tcp, sp, dp)
+			t := tuple.New(localIp1, localIp2, proto_tcp, sp, dp)
 			tuples = append(tuples, *t)
 		}
 	}
@@ -2644,39 +2571,39 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
 		for i := 0; i < MaxEntries; i++ {
-			data := NewData(tuples[i], localEd1, remoteEd1, 100)
+			data := dataplane.NewData(tuples[i], localEd1, remoteEd1, 100)
 			c.applyNflogStatUpdate(data, rids[i], 0, 1, 2)
 		}
 	}
 }
 
 type dummyConntrackInfoReader struct {
-	MockSenderChannel chan []ConntrackInfo
+	MockSenderChannel chan []dataplane.ConntrackInfo
 }
 
 func (d dummyConntrackInfoReader) Start() error { return nil }
-func (d dummyConntrackInfoReader) ConntrackInfoChan() <-chan []ConntrackInfo {
+func (d dummyConntrackInfoReader) ConntrackInfoChan() <-chan []dataplane.ConntrackInfo {
 	return d.MockSenderChannel
 }
 
 type mockProcessCache struct {
-	inboundCache  map[Tuple]ProcessInfo
-	outboundCache map[Tuple]ProcessInfo
+	inboundCache  map[tuple.Tuple]dataplane.ProcessInfo
+	outboundCache map[tuple.Tuple]dataplane.ProcessInfo
 }
 
 func (mockProcessCache) Start() error { return nil }
 func (mockProcessCache) Stop()        {}
-func (m mockProcessCache) Lookup(tuple Tuple, dir TrafficDirection) (ProcessInfo, bool) {
-	if dir == TrafficDirInbound {
-		if pi, ok := m.inboundCache[tuple]; ok {
+func (m mockProcessCache) Lookup(tpl tuple.Tuple, dir dataplane.TrafficDirection) (dataplane.ProcessInfo, bool) {
+	if dir == dataplane.TrafficDirInbound {
+		if pi, ok := m.inboundCache[tpl]; ok {
 			return pi, true
 		}
 	} else {
-		if pi, ok := m.outboundCache[tuple]; ok {
+		if pi, ok := m.outboundCache[tpl]; ok {
 			return pi, true
 		}
 	}
 
-	return ProcessInfo{}, false
+	return dataplane.ProcessInfo{}, false
 }
-func (mockProcessCache) Update(tuple Tuple, dirty bool) {}
+func (mockProcessCache) Update(tpl tuple.Tuple, dirty bool) {}

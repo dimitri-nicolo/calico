@@ -1,7 +1,7 @@
 //go:build fvtests
 // +build fvtests
 
-// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -14,7 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/flowlog"
+	"github.com/projectcalico/calico/felix/collector/types/endpoint"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/ip"
 
 	"github.com/projectcalico/calico/felix/fv/connectivity"
@@ -786,13 +788,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			CheckFlowsCompleted:  true,
 		})
 
-		ep1_1_Meta := collector.EndpointMetadata{
+		ep1_1_Meta := endpoint.Metadata{
 			Type:           "wep",
 			Namespace:      "default",
 			Name:           ep1_1.Name,
 			AggregatedName: ep1_1.Name,
 		}
-		ep2_1_Meta := collector.EndpointMetadata{
+		ep2_1_Meta := endpoint.Metadata{
 			Type:           "wep",
 			Namespace:      "default",
 			Name:           ep2_1.Name,
@@ -802,8 +804,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := collector.MakeTuple(ip1_1, ip2_1, 6, metrics.SourcePortIsIncluded, wepPort)
-		ep1_1_to_ep2_1_Tuple_Agg1 := collector.MakeTuple(ip1_1, ip2_1, 6, metrics.SourcePortIsNotIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsNotIncluded, wepPort)
 
 		Eventually(func() error {
 			// Felix 0.
@@ -812,8 +814,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			}
 
 			flowTester.CheckFlow(
-				collector.FlowLog{
-					FlowMeta: collector.FlowMeta{
+				flowlog.FlowLog{
+					FlowMeta: flowlog.FlowMeta{
 						Tuple:      ep1_1_to_ep2_1_Tuple_Agg0,
 						SrcMeta:    ep1_1_Meta,
 						DstMeta:    ep2_1_Meta,
@@ -821,13 +823,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "src",
 					},
-					FlowPolicies: collector.FlowPolicies{
+					FlowPolicies: flowlog.FlowPolicies{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
-					FlowProcessReportedStats: collector.FlowProcessReportedStats{
-						FlowReportedStats: collector.FlowReportedStats{
+					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+						FlowReportedStats: flowlog.FlowReportedStats{
 							PacketsIn:       3,
 							PacketsOut:      3,
 							NumFlowsStarted: 3,
@@ -836,8 +838,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 				},
 			)
 			flowTester.CheckFlow(
-				collector.FlowLog{
-					FlowMeta: collector.FlowMeta{
+				flowlog.FlowLog{
+					FlowMeta: flowlog.FlowMeta{
 						Tuple:      ep1_1_to_ep2_1_Tuple_Agg1,
 						SrcMeta:    ep1_1_Meta,
 						DstMeta:    ep2_1_Meta,
@@ -845,13 +847,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "src",
 					},
-					FlowPolicies: collector.FlowPolicies{
+					FlowPolicies: flowlog.FlowPolicies{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|allow|0":    {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
-					FlowProcessReportedStats: collector.FlowProcessReportedStats{
-						FlowReportedStats: collector.FlowReportedStats{
+					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+						FlowReportedStats: flowlog.FlowReportedStats{
 							PacketsIn:       3,
 							PacketsOut:      3,
 							NumFlowsStarted: 3,
@@ -870,8 +872,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			}
 
 			flowTester.CheckFlow(
-				collector.FlowLog{
-					FlowMeta: collector.FlowMeta{
+				flowlog.FlowLog{
+					FlowMeta: flowlog.FlowMeta{
 						Tuple:      ep1_1_to_ep2_1_Tuple_Agg0,
 						SrcMeta:    ep1_1_Meta,
 						DstService: metrics.NoDestService,
@@ -879,13 +881,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "dst",
 					},
-					FlowPolicies: collector.FlowPolicies{
+					FlowPolicies: flowlog.FlowPolicies{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
-					FlowProcessReportedStats: collector.FlowProcessReportedStats{
-						FlowReportedStats: collector.FlowReportedStats{
+					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+						FlowReportedStats: flowlog.FlowReportedStats{
 							PacketsIn:       3,
 							PacketsOut:      3,
 							NumFlowsStarted: 3,
@@ -894,8 +896,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 				},
 			)
 			flowTester.CheckFlow(
-				collector.FlowLog{
-					FlowMeta: collector.FlowMeta{
+				flowlog.FlowLog{
+					FlowMeta: flowlog.FlowMeta{
 						Tuple:      ep1_1_to_ep2_1_Tuple_Agg1,
 						SrcMeta:    ep1_1_Meta,
 						DstService: metrics.NoDestService,
@@ -903,13 +905,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "dst",
 					},
-					FlowPolicies: collector.FlowPolicies{
+					FlowPolicies: flowlog.FlowPolicies{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|allow|0":    {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
-					FlowProcessReportedStats: collector.FlowProcessReportedStats{
-						FlowReportedStats: collector.FlowReportedStats{
+					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+						FlowReportedStats: flowlog.FlowReportedStats{
 							PacketsIn:       3,
 							PacketsOut:      3,
 							NumFlowsStarted: 3,
@@ -984,13 +986,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			CheckFlowsCompleted:  true,
 		})
 
-		ep1_1_Meta := collector.EndpointMetadata{
+		ep1_1_Meta := endpoint.Metadata{
 			Type:           "wep",
 			Namespace:      "default",
 			Name:           ep1_1.Name,
 			AggregatedName: ep1_1.Name,
 		}
-		ep2_1_Meta := collector.EndpointMetadata{
+		ep2_1_Meta := endpoint.Metadata{
 			Type:           "wep",
 			Namespace:      "default",
 			Name:           ep2_1.Name,
@@ -1000,8 +1002,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := collector.MakeTuple(ip1_1, ip2_1, 6, metrics.SourcePortIsIncluded, wepPort)
-		ep1_1_to_ep2_1_Tuple_Agg1 := collector.MakeTuple(ip1_1, ip2_1, 6, metrics.SourcePortIsNotIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsNotIncluded, wepPort)
 
 		Eventually(func() error {
 			// Felix 0.
@@ -1010,8 +1012,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			}
 
 			flowTester.CheckFlow(
-				collector.FlowLog{
-					FlowMeta: collector.FlowMeta{
+				flowlog.FlowLog{
+					FlowMeta: flowlog.FlowMeta{
 						Tuple:      ep1_1_to_ep2_1_Tuple_Agg1,
 						SrcMeta:    ep1_1_Meta,
 						DstMeta:    ep2_1_Meta,
@@ -1019,13 +1021,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "src",
 					},
-					FlowPolicies: collector.FlowPolicies{
+					FlowPolicies: flowlog.FlowPolicies{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|allow|0":    {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
-					FlowProcessReportedStats: collector.FlowProcessReportedStats{
-						FlowReportedStats: collector.FlowReportedStats{
+					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+						FlowReportedStats: flowlog.FlowReportedStats{
 							PacketsIn:       3,
 							PacketsOut:      3,
 							NumFlowsStarted: 3,
@@ -1034,8 +1036,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 				},
 			)
 			flowTester.CheckFlow(
-				collector.FlowLog{
-					FlowMeta: collector.FlowMeta{
+				flowlog.FlowLog{
+					FlowMeta: flowlog.FlowMeta{
 						Tuple:      ep1_1_to_ep2_1_Tuple_Agg0,
 						SrcMeta:    ep1_1_Meta,
 						DstMeta:    ep2_1_Meta,
@@ -1043,13 +1045,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "src",
 					},
-					FlowPolicies: collector.FlowPolicies{
+					FlowPolicies: flowlog.FlowPolicies{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|deny|0":     {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
-					FlowProcessReportedStats: collector.FlowProcessReportedStats{
-						FlowReportedStats: collector.FlowReportedStats{
+					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+						FlowReportedStats: flowlog.FlowReportedStats{
 							PacketsIn:       3,
 							PacketsOut:      3,
 							NumFlowsStarted: 3,
@@ -1068,8 +1070,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			}
 
 			flowTester.CheckFlow(
-				collector.FlowLog{
-					FlowMeta: collector.FlowMeta{
+				flowlog.FlowLog{
+					FlowMeta: flowlog.FlowMeta{
 						Tuple:      ep1_1_to_ep2_1_Tuple_Agg1,
 						SrcMeta:    ep1_1_Meta,
 						DstService: metrics.NoDestService,
@@ -1077,13 +1079,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "dst",
 					},
-					FlowPolicies: collector.FlowPolicies{
+					FlowPolicies: flowlog.FlowPolicies{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|allow|0":    {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
-					FlowProcessReportedStats: collector.FlowProcessReportedStats{
-						FlowReportedStats: collector.FlowReportedStats{
+					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+						FlowReportedStats: flowlog.FlowReportedStats{
 							PacketsIn:       3,
 							PacketsOut:      3,
 							NumFlowsStarted: 3,
@@ -1092,8 +1094,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 				},
 			)
 			flowTester.CheckFlow(
-				collector.FlowLog{
-					FlowMeta: collector.FlowMeta{
+				flowlog.FlowLog{
+					FlowMeta: flowlog.FlowMeta{
 						Tuple:      ep1_1_to_ep2_1_Tuple_Agg0,
 						SrcMeta:    ep1_1_Meta,
 						DstService: metrics.NoDestService,
@@ -1101,13 +1103,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "dst",
 					},
-					FlowPolicies: collector.FlowPolicies{
+					FlowPolicies: flowlog.FlowPolicies{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|deny|0":     {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
 					},
-					FlowProcessReportedStats: collector.FlowProcessReportedStats{
-						FlowReportedStats: collector.FlowReportedStats{
+					FlowProcessReportedStats: flowlog.FlowProcessReportedStats{
+						FlowReportedStats: flowlog.FlowReportedStats{
 							PacketsIn:       3,
 							PacketsOut:      3,
 							NumFlowsStarted: 3,

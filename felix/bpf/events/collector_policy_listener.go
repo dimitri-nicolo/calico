@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package events
 
@@ -8,7 +8,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/projectcalico/calico/felix/calc"
-	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 )
 
 var (
@@ -27,7 +28,7 @@ func init() {
 type CollectorPolicyListener struct {
 	lc   *calc.LookupsCache
 	inC  chan PolicyVerdict
-	outC chan collector.PacketInfo
+	outC chan dataplane.PacketInfo
 }
 
 // NewCollectorPolicyListener return a new instance of a CollectorPolicyListener.
@@ -35,7 +36,7 @@ func NewCollectorPolicyListener(lc *calc.LookupsCache) *CollectorPolicyListener 
 	return &CollectorPolicyListener{
 		lc:   lc,
 		inC:  make(chan PolicyVerdict, 100),
-		outC: make(chan collector.PacketInfo),
+		outC: make(chan dataplane.PacketInfo),
 	}
 }
 
@@ -51,13 +52,11 @@ func (c *CollectorPolicyListener) Start() error {
 	return nil
 }
 
-func makeTuple(src, dst net.IP, proto uint8, srcPort, dstPort uint16) collector.Tuple {
+func makeTuple(src, dst net.IP, proto uint8, srcPort, dstPort uint16) tuple.Tuple {
 	var src16, dst16 [16]byte
-
 	copy(src16[:], src.To16())
 	copy(dst16[:], dst.To16())
-
-	return collector.MakeTuple(src16, dst16, int(proto), int(srcPort), int(dstPort))
+	return tuple.Make(src16, dst16, int(proto), int(srcPort), int(dstPort))
 }
 
 func (c *CollectorPolicyListener) run() {
@@ -74,10 +73,10 @@ func (c *CollectorPolicyListener) run() {
 			continue
 		}
 
-		pktInfo := collector.PacketInfo{
+		pktInfo := dataplane.PacketInfo{
 			IsDNAT:   !e.DstAddr.Equal(e.PostNATDstAddr) || e.DstPort != e.PostNATDstPort,
 			Tuple:    makeTuple(e.SrcAddr, e.PostNATDstAddr, e.IPProto, e.SrcPort, e.PostNATDstPort),
-			RuleHits: make([]collector.RuleHit, e.RulesHit),
+			RuleHits: make([]dataplane.RuleHit, e.RulesHit),
 		}
 
 		if pktInfo.IsDNAT {
@@ -87,7 +86,7 @@ func (c *CollectorPolicyListener) run() {
 		for i := 0; i < int(e.RulesHit); i++ {
 			id := e.RuleIDs[i]
 			rid := c.lc.GetRuleIDFromID64(id)
-			pktInfo.RuleHits[i] = collector.RuleHit{
+			pktInfo.RuleHits[i] = dataplane.RuleHit{
 				RuleID: rid,
 				Hits:   1,
 				Bytes:  int(e.IPSize),
@@ -124,6 +123,6 @@ func (c *CollectorPolicyListener) Stop() {
 }
 
 // PacketInfoChan provides the output channel with converted information.
-func (c *CollectorPolicyListener) PacketInfoChan() <-chan collector.PacketInfo {
+func (c *CollectorPolicyListener) PacketInfoChan() <-chan dataplane.PacketInfo {
 	return c.outC
 }
