@@ -48,7 +48,12 @@ type Event struct {
 	SourceNameAggr  string          `json:"source_name_aggr,omitempty"`
 	SourceNamespace string          `json:"source_namespace,omitempty"`
 	SourcePort      *int64          `json:"source_port,omitempty"`
-	Record          interface{}     `json:"record,omitempty"`
+	Name            string          `json:"name,omitempty"`
+	// AttackVector    string          `json:"attack_vector,omitempty"`
+	// AttackPhase     string          `json:"attack_phase,omitempty"`
+	// MitreIDs        []string        `json:"mitre_ids,omitempty"`
+	// Mitigations     []string        `json:"mitigations,omitempty"`
+	Record interface{} `json:"record,omitempty"`
 }
 
 // Events can take records of numerous forms. GetRecord extracts the record

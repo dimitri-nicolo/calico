@@ -63,6 +63,9 @@
     "protocol": {
       "type": "keyword"
     },
+    "name": {
+      "type": "keyword"
+    },
     "record": {
       "type": "object"
     }

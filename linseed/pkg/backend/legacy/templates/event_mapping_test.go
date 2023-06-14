@@ -43,6 +43,7 @@ func TestCompareEventStructAndTemplate(t *testing.T) {
 			Protocol        string             `json:"protocol,omitempty"`
 			Dismissed       bool               `json:"dismissed,omitempty"`
 			Host            string             `json:"host,omitempty"`
+			Name            string             `json:"name,omitempty"`
 			SourceIP        *string            `json:"source_ip,omitempty"`
 			SourceName      string             `json:"source_name,omitempty"`
 			SourceNameAggr  string             `json:"source_name_aggr,omitempty"`

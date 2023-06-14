@@ -10,6 +10,7 @@ var (
 	EventsKeys = map[string]Validator{
 		"_id":              NullValidator,
 		"alert":            NullValidator,
+		"attack_vector":    NullValidator,
 		"dest_ip":          IPValidator,
 		"dest_name":        DomainValidator,
 		"dest_name_aggr":   DomainValidator,
@@ -17,6 +18,7 @@ var (
 		"dest_port":        IntRangeValidator(0, MaxTCPUDPPortNum),
 		"dismissed":        SetValidator("true", "false"),
 		"host":             NullValidator,
+		"name":             NullValidator,
 		"origin":           NullValidator,
 		"source_ip":        IPValidator,
 		"source_name":      DomainValidator,

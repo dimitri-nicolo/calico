@@ -339,6 +339,124 @@ func TestEventSelector(t *testing.T) {
 	}
 }
 
+func TestSecurityEvents(t *testing.T) {
+	defer setupTest(t)()
+
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+	// In this test we want to simulate 2 security events, RS and WAF.
+	// Then we want to make sure that we can filter by required fields:
+	//  - Name, Severity, AttackVector, AttackPhase, MITRE IDs (match one)
+	// The event to create
+	events := []v1.Event{
+		{
+			Time:            v1.NewEventTimestamp(time.Now().Unix()),
+			Description:     "A sample Security Event",
+			Name:            "Proc File Access",
+			Origin:          "Proc File Access",
+			Severity:        90,
+			Type:            "runtime_security",
+			Dismissed:       false,
+			Host:            "test-host",
+			SourceName:      "my-pod-123",
+			SourceNameAggr:  "my-pod",
+			SourceNamespace: "test-ns",
+			// AttackVector:    "Process",
+			// AttackPhase:     "Access",
+			// MitreIDs:        []string{"T1003.007", "T1057", "T1083"},
+			// Mitigations:     []string{"Do not expose proc file system to your containers."},
+		},
+	}
+
+	// Create the event in ES.
+	resp, err := b.Create(ctx, clusterInfo, events)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(resp.Errors))
+	require.Equal(t, 1, resp.Total)
+	require.Equal(t, 0, resp.Failed)
+	require.Equal(t, 1, resp.Succeeded)
+
+	// Refresh the index.
+	err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_events.*")
+	require.NoError(t, err)
+
+	// This will be used to test various selectors to list events.
+	// Selectors can be invalid and return an error.
+	// When valid, the number of results we get can change depending
+	// on what events the selector matches.
+	testEventsFiltering := func(selector string, expectedEvents []v1.Event) {
+		r, e := b.List(ctx, clusterInfo, &v1.EventParams{
+			LogSelectionParams: v1.LogSelectionParams{
+				Selector: selector,
+			},
+		})
+		require.NoError(t, e)
+		require.Equal(t, len(expectedEvents), len(r.Items))
+		for i := range expectedEvents {
+			// We expect the ID to be present, but it's a random value so we
+			// can't assert on the exact value.
+			require.Equal(t, expectedEvents[i], backendutils.AssertEventIDAndReset(t, r.Items[i]))
+		}
+	}
+
+	tests := []struct {
+		selector       string
+		expectedEvents []v1.Event
+	}{
+		// These ones match events as expected
+		// {"host=\"midnight-train\"", 1, true},
+		// {"source_name=\"south-detroit-1234\"", 1, true},
+		{"origin=\"Proc File Access\"", []v1.Event{events[0]}},
+		{"name=\"Proc File Access\"", []v1.Event{events[0]}},
+		// {"attack_vector=\"Process\"", []v1.Event{events[0]}},
+		// {"dest_port=53", 1, true},
+		// {"source_port=48127", 1, true},
+		// {"source_port > 1024", 1, true},
+
+		// // Valid but do not match any event
+		// {"host=\"some-other-host\"", 0, true},
+
+		// // Those fail for invalid keys.
+		// // Valid keys are defined in libcalico-go/lib/validator/v3/query/validate_events.go.
+		// // The validation is performed in linseed/pkg/internal/lma/elastic/index/alerts.go.
+		// // If we comment out the call to `query.Validate()` in alerts.go, the "invalid key"
+		// // error won't occur and the resulting ES query will be executed.
+		// {"Host=\"midnight-train\"", 0, false},
+		// {"description=\"Just a city event\"", 0, false},
+		// {"type=\"TODO\"", 0, false},
+		// {"severity=1", 0, false},
+		// {"time>0", 0, false},
+
+		// // The dismissed key is a bit odd (probably like all boolean values).
+		// // There is validation for the value, but it does not return
+		// // the event with a seemingly valid selector (dismissed=false).
+		// // Instead we need to use something like "dismissed != true".
+		// // The UI uses "NOT dismissed = true"
+		// {"dismissed=f", 0, false},
+		// {"dismissed=t", 0, false},
+		// {"dismissed=False", 0, false},
+		// {"dismissed=True", 0, false},
+		// {"dismissed=0", 0, false},
+		// {"dismissed=1", 0, false},
+		// {"dismissed=false", 0, true},
+		// {"dismissed=true", 0, true},
+		// {"dismissed=\"false\"", 0, true},
+		// {"dismissed=\"true\"", 0, true},
+		// {"dismissed!=\"true\"", 1, true},
+		// {"dismissed!=true", 1, true},
+		// {"dismissed != true", 1, true},
+		// {"NOT dismissed = true", 1, true},
+		// {"NOT dismissed", 0, false},
+	}
+
+	for _, tt := range tests {
+		name := fmt.Sprintf("TestEventSelector: %s", tt.selector)
+		t.Run(name, func(t *testing.T) {
+			testEventsFiltering(tt.selector, tt.expectedEvents)
+		})
+	}
+}
+
 func TestPagination(t *testing.T) {
 	defer setupTest(t)()
 
