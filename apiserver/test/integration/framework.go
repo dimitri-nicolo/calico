@@ -184,8 +184,8 @@ func waitForApiserverUp(serverURL string, stopCh <-chan struct{}) error {
 	timeout := 30 * time.Second
 	startWaiting := time.Now()
 	tries := 0
-	return wait.PollImmediate(interval, timeout,
-		func() (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true,
+		func(ctx context.Context) (bool, error) {
 			select {
 			// we've been told to stop, so no reason to keep going
 			case <-stopCh:
