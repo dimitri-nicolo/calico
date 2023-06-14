@@ -56,7 +56,7 @@ func TestWatcher_processQueue(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, true)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	// a feed is added
@@ -69,7 +69,7 @@ func TestWatcher_processQueue(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, true)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(w.listFeedWatchers()).Should(HaveLen(1))
 
@@ -83,7 +83,7 @@ func TestWatcher_processQueue(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, true)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(w.listFeedWatchers()).Should(HaveLen(2))
 
@@ -98,7 +98,7 @@ func TestWatcher_processQueue(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, true)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(w.listFeedWatchers()).Should(HaveLen(2))
 	fw, ok := w.getFeedWatcher("feed1")
@@ -116,7 +116,7 @@ func TestWatcher_processQueue(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, true)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(w.listFeedWatchers()).Should(HaveLen(2))
 	fw, ok = w.getFeedWatcher("feed1")
@@ -133,7 +133,7 @@ func TestWatcher_processQueue(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, true)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(w.listFeedWatchers()).Should(HaveLen(1))
 	_, ok = w.getFeedWatcher("feed1")
