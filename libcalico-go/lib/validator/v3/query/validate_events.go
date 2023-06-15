@@ -11,6 +11,7 @@ var (
 		"_id":              NullValidator,
 		"alert":            NullValidator,
 		"attack_vector":    NullValidator,
+		"attack_phase":     NullValidator,
 		"dest_ip":          IPValidator,
 		"dest_name":        DomainValidator,
 		"dest_name_aggr":   DomainValidator,

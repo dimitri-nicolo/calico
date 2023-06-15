@@ -66,6 +66,18 @@
     "name": {
       "type": "keyword"
     },
+    "attack_vector": {
+      "type": "keyword"
+    },
+    "attack_phase": {
+      "type": "keyword"
+    },
+    "mitre_ids": {
+      "type": "keyword"
+    },
+    "mitigations": {
+      "type": "keyword"
+    },
     "record": {
       "type": "object"
     }

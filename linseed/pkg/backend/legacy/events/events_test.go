@@ -344,10 +344,6 @@ func TestSecurityEvents(t *testing.T) {
 
 	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
-	// In this test we want to simulate 2 security events, RS and WAF.
-	// Then we want to make sure that we can filter by required fields:
-	//  - Name, Severity, AttackVector, AttackPhase, MITRE IDs (match one)
-	// The event to create
 	events := []v1.Event{
 		{
 			Time:            v1.NewEventTimestamp(time.Now().Unix()),
@@ -361,10 +357,24 @@ func TestSecurityEvents(t *testing.T) {
 			SourceName:      "my-pod-123",
 			SourceNameAggr:  "my-pod",
 			SourceNamespace: "test-ns",
-			// AttackVector:    "Process",
-			// AttackPhase:     "Access",
-			// MitreIDs:        []string{"T1003.007", "T1057", "T1083"},
-			// Mitigations:     []string{"Do not expose proc file system to your containers."},
+			AttackVector:    "Process",
+			AttackPhase:     "Access",
+			MitreIDs:        []string{"T1003.007", "T1057", "T1083"},
+			Mitigations:     []string{"Do not expose proc file system to your containers.", "Do not run containers as root."},
+		},
+		{
+			Time:         v1.NewEventTimestamp(time.Now().Unix()),
+			Description:  "A sample WAF Security Event",
+			Name:         "WAF Event",
+			Origin:       "waf-new-alert-rule-info",
+			Severity:     100,
+			Type:         "global_alert",
+			Dismissed:    false,
+			Host:         "test-host",
+			AttackVector: "Network",
+			AttackPhase:  "Access",
+			MitreIDs:     []string{"T1190"},
+			Mitigations:  []string{"Use WAF :)"},
 		},
 	}
 
@@ -372,9 +382,9 @@ func TestSecurityEvents(t *testing.T) {
 	resp, err := b.Create(ctx, clusterInfo, events)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(resp.Errors))
-	require.Equal(t, 1, resp.Total)
+	require.Equal(t, 2, resp.Total)
 	require.Equal(t, 0, resp.Failed)
-	require.Equal(t, 1, resp.Succeeded)
+	require.Equal(t, 2, resp.Succeeded)
 
 	// Refresh the index.
 	err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_events.*")
@@ -403,50 +413,14 @@ func TestSecurityEvents(t *testing.T) {
 		selector       string
 		expectedEvents []v1.Event
 	}{
-		// These ones match events as expected
-		// {"host=\"midnight-train\"", 1, true},
-		// {"source_name=\"south-detroit-1234\"", 1, true},
-		{"origin=\"Proc File Access\"", []v1.Event{events[0]}},
 		{"name=\"Proc File Access\"", []v1.Event{events[0]}},
-		// {"attack_vector=\"Process\"", []v1.Event{events[0]}},
-		// {"dest_port=53", 1, true},
-		// {"source_port=48127", 1, true},
-		// {"source_port > 1024", 1, true},
-
-		// // Valid but do not match any event
-		// {"host=\"some-other-host\"", 0, true},
-
-		// // Those fail for invalid keys.
-		// // Valid keys are defined in libcalico-go/lib/validator/v3/query/validate_events.go.
-		// // The validation is performed in linseed/pkg/internal/lma/elastic/index/alerts.go.
-		// // If we comment out the call to `query.Validate()` in alerts.go, the "invalid key"
-		// // error won't occur and the resulting ES query will be executed.
-		// {"Host=\"midnight-train\"", 0, false},
-		// {"description=\"Just a city event\"", 0, false},
-		// {"type=\"TODO\"", 0, false},
-		// {"severity=1", 0, false},
-		// {"time>0", 0, false},
-
-		// // The dismissed key is a bit odd (probably like all boolean values).
-		// // There is validation for the value, but it does not return
-		// // the event with a seemingly valid selector (dismissed=false).
-		// // Instead we need to use something like "dismissed != true".
-		// // The UI uses "NOT dismissed = true"
-		// {"dismissed=f", 0, false},
-		// {"dismissed=t", 0, false},
-		// {"dismissed=False", 0, false},
-		// {"dismissed=True", 0, false},
-		// {"dismissed=0", 0, false},
-		// {"dismissed=1", 0, false},
-		// {"dismissed=false", 0, true},
-		// {"dismissed=true", 0, true},
-		// {"dismissed=\"false\"", 0, true},
-		// {"dismissed=\"true\"", 0, true},
-		// {"dismissed!=\"true\"", 1, true},
-		// {"dismissed!=true", 1, true},
-		// {"dismissed != true", 1, true},
-		// {"NOT dismissed = true", 1, true},
-		// {"NOT dismissed", 0, false},
+		{"origin=\"Proc File Access\"", []v1.Event{events[0]}},
+		{"attack_vector=\"Process\"", []v1.Event{events[0]}},
+		{"attack_phase=\"Access\"", []v1.Event{events[0], events[1]}},
+		{"name=\"WAF Event\"", []v1.Event{events[1]}},
+		{"type=global_alert AND origin='waf-new-alert-rule-info'", []v1.Event{events[1]}},
+		{"attack_vector=\"Network\"", []v1.Event{events[1]}},
+		{"host='test-host'", []v1.Event{events[0], events[1]}},
 	}
 
 	for _, tt := range tests {
