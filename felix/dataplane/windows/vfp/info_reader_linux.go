@@ -1,11 +1,11 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 package vfp
 
 import (
 	"time"
 
 	"github.com/projectcalico/calico/felix/calc"
-	"github.com/projectcalico/calico/felix/collector/dataplane"
+	collector "github.com/projectcalico/calico/felix/collector/dataplane"
 )
 
 // InfoReader implements collector.PacketInfoReader and collector.ConntrackInfoReader.
@@ -24,12 +24,12 @@ func (r *InfoReader) Stop() {
 }
 
 // PacketInfoChan returns the channel with converted PacketInfo.
-func (r *InfoReader) PacketInfoChan() <-chan dataplane.PacketInfo {
+func (r *InfoReader) PacketInfoChan() <-chan collector.PacketInfo {
 	return nil
 }
 
 // ConntrackInfoChan returns the channel with converted ConntrackInfo.
-func (r *InfoReader) ConntrackInfoChan() <-chan []dataplane.ConntrackInfo {
+func (r *InfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
 	return nil
 }
 

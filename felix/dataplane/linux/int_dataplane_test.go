@@ -27,7 +27,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/collector"
-	"github.com/projectcalico/calico/felix/collector/dataplane"
+	dpcollector "github.com/projectcalico/calico/felix/collector/dataplane"
 	"github.com/projectcalico/calico/felix/collector/dnslog"
 	"github.com/projectcalico/calico/felix/collector/l7log"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
@@ -52,18 +52,18 @@ func (_ *mockCollector) LogDNS(net.IP, net.IP, *layers.DNS, *time.Duration) {}
 
 func (_ *mockCollector) SetDNSLogReporter(dnslog.ReporterInterface) {}
 
-func (_ *mockCollector) LogL7(*proto.HTTPData, *dataplane.Data, tuple.Tuple, int) {
+func (_ *mockCollector) LogL7(*proto.HTTPData, *dpcollector.Data, tuple.Tuple, int) {
 }
 
 func (_ *mockCollector) SetL7LogReporter(l7log.ReporterInterface) {}
 
-func (_ *mockCollector) SetPacketInfoReader(dataplane.PacketInfoReader) {}
+func (_ *mockCollector) SetPacketInfoReader(dpcollector.PacketInfoReader) {}
 
-func (_ *mockCollector) SetConntrackInfoReader(dataplane.ConntrackInfoReader) {}
+func (_ *mockCollector) SetConntrackInfoReader(dpcollector.ConntrackInfoReader) {}
 
-func (_ *mockCollector) SetProcessInfoCache(dataplane.ProcessInfoCache) {}
+func (_ *mockCollector) SetProcessInfoCache(dpcollector.ProcessInfoCache) {}
 
-func (_ *mockCollector) SetDomainLookup(dataplane.EgressDomainCache) {}
+func (_ *mockCollector) SetDomainLookup(dpcollector.EgressDomainCache) {}
 
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config

@@ -29,9 +29,6 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/felix/collector"
-	"github.com/projectcalico/calico/felix/ip"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -52,6 +49,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/stats"
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/environment"
+	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/iptables/cmdshim"
 
 	"github.com/projectcalico/calico/felix/bpf"
@@ -65,6 +63,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/tc"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/capture"
+	"github.com/projectcalico/calico/felix/collector"
 	dpcollector "github.com/projectcalico/calico/felix/collector/dataplane"
 	"github.com/projectcalico/calico/felix/config"
 	felixconfig "github.com/projectcalico/calico/felix/config"
