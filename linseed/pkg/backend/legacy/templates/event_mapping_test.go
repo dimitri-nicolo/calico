@@ -35,6 +35,8 @@ func TestCompareEventStructAndTemplate(t *testing.T) {
 			Severity        int                `json:"severity" validate:"required"`
 			Type            string             `json:"type" validate:"required"`
 			Alert           string             `json:"alert,omitempty"`
+			AttackVector    string             `json:"attack_vector,omitempty"`
+			AttackPhase     string             `json:"attack_phase,omitempty"`
 			DestIP          *string            `json:"dest_ip,omitempty"`
 			DestName        string             `json:"dest_name,omitempty"`
 			DestNameAggr    string             `json:"dest_name_aggr,omitempty"`
@@ -44,6 +46,8 @@ func TestCompareEventStructAndTemplate(t *testing.T) {
 			Dismissed       bool               `json:"dismissed,omitempty"`
 			Host            string             `json:"host,omitempty"`
 			Name            string             `json:"name,omitempty"`
+			MitreIDs        []string           `json:"mitre_ids,omitempty"`
+			Mitigations     []string           `json:"mitigations,omitempty"`
 			SourceIP        *string            `json:"source_ip,omitempty"`
 			SourceName      string             `json:"source_name,omitempty"`
 			SourceNameAggr  string             `json:"source_name_aggr,omitempty"`
