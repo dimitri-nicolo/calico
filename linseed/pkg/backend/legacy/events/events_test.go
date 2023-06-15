@@ -294,9 +294,13 @@ func TestEventSelector(t *testing.T) {
 		{"dest_port=53", 1, true},
 		{"source_port=48127", 1, true},
 		{"source_port > 1024", 1, true},
+		{"severity=1", 1, true},
+		{"origin IN {'**'}", 1, true}, // Matches if non-empty
+		{"name NOTIN {'**'}", 1, true},
 
 		// Valid but do not match any event
 		{"host=\"some-other-host\"", 0, true},
+		{"severity > 10", 0, true},
 
 		// Those fail for invalid keys.
 		// Valid keys are defined in libcalico-go/lib/validator/v3/query/validate_events.go.
@@ -306,8 +310,8 @@ func TestEventSelector(t *testing.T) {
 		{"Host=\"midnight-train\"", 0, false},
 		{"description=\"Just a city event\"", 0, false},
 		{"type=\"TODO\"", 0, false},
-		{"severity=1", 0, false},
 		{"time>0", 0, false},
+		{"origin IN {'*'}", 0, false}, // Need to use `**` to match any non-empty value
 
 		// The dismissed key is a bit odd (probably like all boolean values).
 		// There is validation for the value, but it does not return
@@ -376,24 +380,25 @@ func TestSecurityEvents(t *testing.T) {
 			MitreIDs:     []string{"T1190"},
 			Mitigations:  []string{"Use WAF :)"},
 		},
+		{
+			Time:        v1.NewEventTimestamp(time.Now().Unix()),
+			Description: "A hopeless Security Event",
+			// No severity, mitigations etc...
+		},
 	}
 
 	// Create the event in ES.
 	resp, err := b.Create(ctx, clusterInfo, events)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(resp.Errors))
-	require.Equal(t, 2, resp.Total)
+	require.Equal(t, len(events), resp.Total)
 	require.Equal(t, 0, resp.Failed)
-	require.Equal(t, 2, resp.Succeeded)
+	require.Equal(t, len(events), resp.Succeeded)
 
 	// Refresh the index.
 	err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_events.*")
 	require.NoError(t, err)
 
-	// This will be used to test various selectors to list events.
-	// Selectors can be invalid and return an error.
-	// When valid, the number of results we get can change depending
-	// on what events the selector matches.
 	testEventsFiltering := func(selector string, expectedEvents []v1.Event) {
 		r, e := b.List(ctx, clusterInfo, &v1.EventParams{
 			LogSelectionParams: v1.LogSelectionParams{
@@ -421,6 +426,20 @@ func TestSecurityEvents(t *testing.T) {
 		{"type=global_alert AND origin='waf-new-alert-rule-info'", []v1.Event{events[1]}},
 		{"attack_vector=\"Network\"", []v1.Event{events[1]}},
 		{"host='test-host'", []v1.Event{events[0], events[1]}},
+		{"severity > 95", []v1.Event{events[1]}},
+		{"severity = 100", []v1.Event{events[1]}},
+		{"severity>=70", []v1.Event{events[0], events[1]}},
+		{"severity < 70", []v1.Event{events[2]}},
+		{"severity>=70 AND severity < 95", []v1.Event{events[0]}},
+		{"mitre_ids IN {'T1190'}", []v1.Event{events[1]}},
+		{"mitre_ids IN {'T1057'}", []v1.Event{events[0]}},
+		// Getting a bit silly now, but it's nice that it works
+		{"mitre_ids IN {'T10*'}", []v1.Event{events[0]}},
+		{"mitre_ids NOTIN {'T10*'}", []v1.Event{events[1], events[2]}},
+		{"mitigations IN {'Do not*'}", []v1.Event{events[0]}},
+		{"mitigations IN {'Use WAF :)'}", []v1.Event{events[1]}},
+		{"mitigations IN {'**'}", []v1.Event{events[0], events[1]}},
+		{"mitigations NOTIN {'**'}", []v1.Event{events[2]}},
 	}
 
 	for _, tt := range tests {

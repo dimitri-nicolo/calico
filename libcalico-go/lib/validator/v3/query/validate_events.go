@@ -21,6 +21,7 @@ var (
 		"host":             NullValidator,
 		"name":             NullValidator,
 		"origin":           NullValidator,
+		"severity":         IntRangeValidator(0, 100),
 		"source_ip":        IPValidator,
 		"source_name":      DomainValidator,
 		"source_name_aggr": DomainValidator,
