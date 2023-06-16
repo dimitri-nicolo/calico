@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021, 2023 Tigera, Inc. All rights reserved.
 
 package eventgenerator
 
@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -54,7 +55,7 @@ type eventGenerator struct {
 	wepCache       cache3.WEPCache
 	dpiUpdater     dpiupdater.DPIStatusUpdater
 	dpiKey         model.ResourceKey
-	filePathToTail map[string]*tail.Tail
+	filePathToTail sync.Map
 }
 
 func NewEventGenerator(
@@ -67,7 +68,7 @@ func NewEventGenerator(
 	r := &eventGenerator{
 		cfg:            cfg,
 		alertForwarder: esForwarder,
-		filePathToTail: make(map[string]*tail.Tail),
+		filePathToTail: sync.Map{},
 		dpiUpdater:     dpiUpdater,
 		dpiKey:         dpiKey,
 		wepCache:       wepCache,
@@ -79,7 +80,7 @@ func NewEventGenerator(
 func (r *eventGenerator) GenerateEventsForWEP(wepKey model.WorkloadEndpointKey) {
 	log.WithFields(log.Fields{"DPI": r.dpiKey, "WEP": wepKey}).Debugf("Starting to generate events on alert files.")
 	fileRelativePath := fileutils.AlertFileRelativePath(r.dpiKey, wepKey)
-	r.filePathToTail[fileRelativePath] = nil
+	r.filePathToTail.Store(fileRelativePath, nil)
 	go r.readRotatedFiles(wepKey)
 	go r.tailFile(wepKey)
 }
@@ -95,10 +96,11 @@ func (r *eventGenerator) StopGeneratingEventsForWEP(wepKey model.WorkloadEndpoin
 
 // Close waits for all the running tail processes to reach EOF on alert files and then deletes the files.
 func (r *eventGenerator) Close() {
-	log.WithFields(log.Fields{"DPI": r.dpiKey}).Debugf("Stop generating events on alert files.")
-	for fileRelativePath := range r.filePathToTail {
-		r.deleteFile(fileRelativePath, fmt.Sprintf("%s/%s", r.cfg.SnortAlertFileBasePath, fileRelativePath))
-	}
+	defer log.WithFields(log.Fields{"DPI": r.dpiKey}).Debugf("Stop generating events on alert files.")
+	r.filePathToTail.Range(func(key any, value any) bool {
+		r.deleteFile(key.(string), fmt.Sprintf("%s/%s", r.cfg.SnortAlertFileBasePath, key.(string)))
+		return true
+	})
 }
 
 // readRotatedFiles reads any previously rotated files, generates events using them
@@ -152,7 +154,7 @@ func (r *eventGenerator) tailFile(wepKey model.WorkloadEndpointKey) {
 	// loop and restart tailing unless parent context is closed
 	// or if file path no longer exists in filePathToTail (meaning either WEP or DPI resource is not available).
 	for {
-		if _, ok := r.filePathToTail[fileRelativePath]; !ok {
+		if _, ok := r.filePathToTail.Load(fileRelativePath); !ok {
 			return
 		}
 
@@ -166,7 +168,7 @@ func (r *eventGenerator) tailFile(wepKey model.WorkloadEndpointKey) {
 		}
 
 		log.Infof("Started tailing files for %s and %s.", r.dpiKey, wepKey)
-		r.filePathToTail[fileRelativePath] = t
+		r.filePathToTail.Store(fileRelativePath, t)
 		for line := range t.Lines {
 			r.alertForwarder.Forward(r.convertAlertToSecurityEvent(line.Text))
 		}
@@ -185,18 +187,17 @@ func (r *eventGenerator) tailFile(wepKey model.WorkloadEndpointKey) {
 			continue
 		}
 		return
-
 	}
 }
 
 func (r *eventGenerator) deleteFile(fileRelativePath, fileAbsolutePath string) {
-	if t, ok := r.filePathToTail[fileRelativePath]; ok && t != nil {
-		err := t.StopAtEOF()
+	if t, ok := r.filePathToTail.Load(fileRelativePath); ok && t != nil {
+		err := t.(*tail.Tail).StopAtEOF()
 		if err != nil && !strings.Contains(err.Error(), "tail: stop at eof") {
 			log.WithError(err).Errorf("Failed to stop tailing the alert file in %s", fileRelativePath)
 		}
 	}
-	delete(r.filePathToTail, fileRelativePath)
+	r.filePathToTail.Delete(fileRelativePath)
 	err := os.Remove(fmt.Sprintf("%s/%s", fileAbsolutePath, fileName))
 	if err != nil {
 		log.WithError(err).Errorf("Failed to delete file in %s", fileRelativePath)
