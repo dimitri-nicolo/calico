@@ -113,25 +113,26 @@ COPY --from=builder /fluentd/ /fluentd/
 COPY --from=builder /var/lib/ruby/ /var/lib/ruby/
 
 # Copy binaries needed by fluentd scripts
+COPY --from=builder /bin/awk /bin/awk
 COPY --from=builder /bin/bash /bin/bash
-COPY --from=builder /bin/sh /bin/sh
-COPY --from=builder /usr/bin/bash /usr/bin/bash
-COPY --from=builder /bin/sed /bin/sed
-COPY --from=builder /bin/test /bin/test
-COPY --from=builder /bin/echo /bin/echo
 COPY --from=builder /bin/cat /bin/cat
 COPY --from=builder /bin/cp /bin/cp
 COPY --from=builder /bin/curl /bin/curl
-COPY --from=builder /bin/awk /bin/awk
-COPY --from=builder /bin/sort /bin/sort
+COPY --from=builder /bin/echo /bin/echo
 COPY --from=builder /bin/ls /bin/ls
+COPY --from=builder /bin/sed /bin/sed
+COPY --from=builder /bin/sh /bin/sh
+COPY --from=builder /bin/sort /bin/sort
+COPY --from=builder /bin/test /bin/test
 COPY --from=builder /bin/which /bin/which
+COPY --from=builder /usr/bin/bash /usr/bin/bash
 COPY --from=builder /usr/bin/coreutils /usr/bin/coreutils
-COPY --from=builder /usr/bin/rm /usr/bin/rm
-COPY --from=builder /usr/bin/tar /usr/bin/tar
-COPY --from=builder /usr/bin/jq /usr/bin/jq
+COPY --from=builder /usr/bin/find /usr/bin/find
 COPY --from=builder /usr/bin/fluentd /usr/bin/fluentd
 COPY --from=builder /usr/bin/fluent-gem /usr/bin/fluent-gem
+COPY --from=builder /usr/bin/jq /usr/bin/jq
+COPY --from=builder /usr/bin/rm /usr/bin/rm
+COPY --from=builder /usr/bin/tar /usr/bin/tar
 
 # Copy scripts needed by fluentd
 COPY --from=builder /bin/readiness.sh /bin/readiness.sh
