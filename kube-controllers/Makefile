@@ -144,6 +144,9 @@ ut fv: $(TEST_BINARIES)
 		   CERTS_PATH=$(CERTS_PATH) \
 		   ./run-uts $(WHAT)
 
+st:
+	@echo "No ST tests specified"
+
 # Produce test binaries for each package that needs them.
 # ginkgo doesn't let you produce a single test binary with multiple packages.
 # Only do this if there are .go files in the path.
