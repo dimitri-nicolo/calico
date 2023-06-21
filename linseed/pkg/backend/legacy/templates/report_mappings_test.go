@@ -3,13 +3,12 @@
 package templates
 
 import (
-	"fmt"
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	utils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
@@ -41,7 +40,6 @@ func TestCompareReportStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		fmt.Println("unmarshalled", m)
 		require.True(t, utils.CheckFieldsInJSON(t, m, reportMap["properties"].(map[string]interface{}), excludeReportField))
 	})
 
@@ -57,7 +55,6 @@ func TestCompareReportStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		fmt.Println("unmarshalled", m)
 		require.False(t, utils.CheckFieldsInJSON(t, m, reportMap["properties"].(map[string]interface{}), excludeReportField))
 	})
 }

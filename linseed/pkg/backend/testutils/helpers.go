@@ -5,9 +5,10 @@ package testutils
 
 import (
 	"fmt"
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"reflect"
 	"testing"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	"github.com/stretchr/testify/require"
 
@@ -129,16 +130,16 @@ func IsDynamicMappingDisabled(t *testing.T, mappings map[string]interface{}) {
 
 func parseArray(t *testing.T, anArray []interface{}, mappings map[string]interface{}, excludeFieldList map[string]bool) bool {
 	for _, val := range anArray {
-		switch val.(type) {
+		switch val := val.(type) {
 		case map[string]interface{}:
-			if checkExcludeSliceItem(val.(map[string]interface{}), excludeFieldList) {
+			if checkExcludeSliceItem(val, excludeFieldList) {
 				continue
 			}
-			if !CheckFieldsInJSON(t, val.(map[string]interface{}), mappings["properties"].(map[string]interface{}), excludeFieldList) {
+			if !CheckFieldsInJSON(t, val, mappings["properties"].(map[string]interface{}), excludeFieldList) {
 				return false
 			}
 		case []interface{}:
-			if !parseArray(t, val.([]interface{}), mappings, excludeFieldList) {
+			if !parseArray(t, val, mappings, excludeFieldList) {
 				return false
 			}
 		}
@@ -147,7 +148,7 @@ func parseArray(t *testing.T, anArray []interface{}, mappings map[string]interfa
 }
 
 func checkExcludeSliceItem(tempMap map[string]interface{}, excludeFieldList map[string]bool) bool {
-	for key, _ := range tempMap {
+	for key := range tempMap {
 		if excludeFieldList[key] { // if string check for it in excluded list
 			return true
 		}

@@ -1,12 +1,14 @@
 package templates
 
 import (
+	"reflect"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	utils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
-	"github.com/stretchr/testify/require"
-	"reflect"
-	"testing"
 )
 
 func TestCompareAuditStructAndTemplate(t *testing.T) {
