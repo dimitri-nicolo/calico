@@ -1852,6 +1852,12 @@ func validateEgressGatewayPolicy(structLevel validator.StructLevel) {
 			structLevel.ReportError(reflect.ValueOf(destCIDR), "Destination", "",
 				reason("Invalid destination cidr specified."), "")
 		}
+		if r.GatewayPreference != nil {
+			if *r.GatewayPreference != api.GatewayPreferenceNone && *r.GatewayPreference != api.GatewayPreferenceNodeLocal {
+				structLevel.ReportError(reflect.ValueOf(*r.GatewayPreference), "GatewayPreference", "",
+					reason("Invalid gateway preference specified."), "")
+			}
+		}
 		if cidr != nil {
 			if cidr.Version() != 4 {
 				structLevel.ReportError(reflect.ValueOf(destCIDR), "Destination", "",

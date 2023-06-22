@@ -273,6 +273,7 @@ type gateway struct {
 	healthPort     uint16
 	healthStatus   EGWHealth
 	healthFailedAt time.Time
+	hostname       string
 }
 
 type EGWHealth string
@@ -437,6 +438,17 @@ func (g gatewaysByIP) allIPs() set.Set[ip.Addr] {
 		s.Add(m.addr)
 	}
 	return s
+}
+
+func (g gatewaysByIP) localGateways(clientHostname string) gatewaysByIP {
+	local := make(gatewaysByIP)
+	for _, m := range g {
+		if m.hostname != clientHostname {
+			continue
+		}
+		local[m.addr] = m
+	}
+	return local
 }
 
 func (g gatewaysByIP) activeGateways() gatewaysByIP {

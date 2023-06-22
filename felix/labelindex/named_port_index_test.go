@@ -144,7 +144,7 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 		It("should only match an egress IP set against workload endpoints", func() {
 			uut.OnUpdate(api.Update{
 				KVPair: model.KVPair{
-					Key: model.WorkloadEndpointKey{WorkloadID: "we1"},
+					Key: model.WorkloadEndpointKey{WorkloadID: "we1", Hostname: "test-host"},
 					Value: &model.WorkloadEndpoint{
 						Labels: map[string]string{"villain": "ghost"},
 						IPv4Nets: []calinet.IPNet{
@@ -182,6 +182,7 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 			Expect(set).To(HaveKey(IPSetMember{
 				CIDR:            cidr,
 				IsEgressGateway: true,
+				Hostname:        "test-host",
 			}))
 		})
 	})
