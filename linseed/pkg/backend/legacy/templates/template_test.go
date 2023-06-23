@@ -435,11 +435,12 @@ func TestBoostrapEventsTemplate(t *testing.T) {
 			cluster := backendutils.RandomClusterName()
 
 			settings := fmt.Sprintf(`{
-"lifecycle": {
-"name": "tigera_secure_ee_events_policy",
-"rollover_alias": "tigera_secure_ee_events.%s."
-}
-}`, print(tenant, cluster))
+	"analysis":{
+		"normalizer":{"lowercase":{"filter":"lowercase", "type":"custom"}}
+	}, "lifecycle":{
+		"name":"tigera_secure_ee_events_policy",
+		"rollover_alias":"tigera_secure_ee_events.%s."
+	}}`, print(tenant, cluster))
 
 			expectedTemplate := &Template{
 				IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_events.%s.*", print(tenant, cluster))},

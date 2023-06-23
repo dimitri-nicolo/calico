@@ -12,13 +12,15 @@
       "type": "keyword"
     },
     "description": {
-      "type": "keyword"
+      "type": "keyword",
+      "normalizer": "lowercase"
     },
     "severity": {
       "type": "long"
     },
     "origin": {
-      "type": "keyword"
+      "type": "keyword",
+      "normalizer": "lowercase"
     },
     "dismissed": {
       "type": "boolean"
@@ -64,19 +66,24 @@
       "type": "keyword"
     },
     "name": {
-      "type": "keyword"
+      "type": "keyword",
+      "normalizer": "lowercase"
     },
     "attack_vector": {
-      "type": "keyword"
+      "type": "keyword",
+      "normalizer": "lowercase"
     },
     "attack_phase": {
-      "type": "keyword"
+      "type": "keyword",
+      "normalizer": "lowercase"
     },
     "mitre_ids": {
-      "type": "keyword"
+      "type": "keyword",
+      "normalizer": "lowercase"
     },
     "mitigations": {
-      "type": "keyword"
+      "type": "keyword",
+      "normalizer": "lowercase"
     },
     "record": {
       "type": "object"
