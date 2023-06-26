@@ -42,6 +42,18 @@ compliance:
 policyRecommendation:
   enabled: true
 
+authentication:
+  enabled: false
+
+applicationLayer:
+  enabled: false
+
+amazonCloudIntegration:
+  enabled: false
+
+defaultFelixConfiguration:
+  enabled: false
+
 # Optional configuration for setting custom BGP templates where
 # key is the filename of the template and value is the contents of the template.
 bgp: {}

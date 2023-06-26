@@ -5073,21 +5073,21 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"logSeverityFile": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LogSeverityFile is the log severity above which logs are sent to the log file. [Default: Info]",
+							Description: "LogSeverityFile is the log severity above which logs are sent to the log file. [Default: Info] kubebuilder:validation:Pattern=`^(?i)(Debug|Info|Warning|Error|Fatal)?$`",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"logSeverityScreen": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LogSeverityScreen is the log severity above which logs are sent to the stdout. [Default: Info]",
+							Description: "LogSeverityScreen is the log severity above which logs are sent to the stdout. [Default: Info] kubebuilder:validation:Pattern=`^(?i)(Debug|Info|Warning|Error|Fatal)?$`",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"logSeveritySys": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LogSeveritySys is the log severity above which logs are sent to the syslog. Set to None for no logging to syslog. [Default: Info]",
+							Description: "LogSeveritySys is the log severity above which logs are sent to the syslog. Set to None for no logging to syslog. [Default: Info] kubebuilder:validation:Pattern=`^(?i)(Debug|Info|Warning|Error|Fatal)?$`",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -6181,7 +6181,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"l7LogsFileAggregationTrimURL": {
 						SchemaProps: spec.SchemaProps{
-							Description: "L7LogsFileAggregationTrimURL is used to choose the type of aggregation for the url on L7 log entries. [Default: IncludeL7FullURL - include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath]. Accepted values are 0 and 1. IncludeL7FullURL - Include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath. TrimURLQuery - Aggregate over all other fields ignoring the query parameters on the URL. TrimURLQueryAndPath - Aggregate over all other fields and the base URL only. ExcludeL7URL - Aggregate over all other fields ignoring the URL entirely.",
+							Description: "L7LogsFileAggregationTrimURL is used to choose the type of aggregation for the url on L7 log entries. [Default: IncludeL7FullURL - include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath]. Accepted values: IncludeL7FullURL - Include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath. TrimURLQuery - Aggregate over all other fields ignoring the query parameters on the URL. TrimURLQueryAndPath - Aggregate over all other fields and the base URL only. ExcludeL7URL - Aggregate over all other fields ignoring the URL entirely.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
