@@ -10,7 +10,7 @@ require (
 	github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2
 	github.com/alecthomas/participle v0.7.1
 	github.com/apparentlymart/go-cidr v1.1.0
-	github.com/aquasecurity/kube-bench v0.6.13
+	github.com/aquasecurity/kube-bench v0.6.15
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/aws/aws-sdk-go-v2 v1.18.0
@@ -147,7 +147,7 @@ require (
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/kube-openapi v0.0.0-20230303024457-afdc3dddf62d
 	k8s.io/kubectl v0.26.4
-	k8s.io/kubernetes v1.26.0-alpha.1
+	k8s.io/kubernetes v1.26.4
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106
 	modernc.org/memory v1.5.0
 	sigs.k8s.io/kind v0.18.0
@@ -351,12 +351,13 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.1 // indirect
 	gorm.io/driver/postgres v1.4.6 // indirect
-	gorm.io/gorm v1.24.2 // indirect
+	gorm.io/gorm v1.25.1 // indirect
 	howett.net/plist v1.0.0 // indirect
 	k8s.io/cloud-provider v0.26.4 // indirect
 	k8s.io/component-helpers v0.26.4 // indirect
 	k8s.io/cri-api v0.0.0 // indirect
 	k8s.io/csi-translation-lib v0.26.4 // indirect
+	k8s.io/dynamic-resource-allocation v0.26.4 // indirect
 	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
 	k8s.io/kms v0.26.4 // indirect
 	k8s.io/kube-proxy v0.0.0 // indirect
