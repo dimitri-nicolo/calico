@@ -593,7 +593,7 @@ var _ = Describe("ElasticseachUsers", func() {
 									Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 									Indices: []elasticsearch.RoleIndex{
 										{
-											Names:      []string{"tigera_secure_ee_*.cluster.*"},
+											Names:      []string{"tigera_secure_ee_*.*.*"},
 											Privileges: []string{"create_index", "write", "manage", "read"},
 										},
 									},
