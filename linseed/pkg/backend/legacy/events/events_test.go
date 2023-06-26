@@ -363,8 +363,8 @@ func TestSecurityEvents(t *testing.T) {
 			SourceNamespace: "test-ns",
 			AttackVector:    "Process",
 			AttackPhase:     "Access",
-			MitreIDs:        []string{"T1003.007", "T1057", "T1083"},
-			Mitigations:     []string{"Do not expose proc file system to your containers.", "Do not run containers as root."},
+			MitreIDs:        &[]string{"T1003.007", "T1057", "T1083"},
+			Mitigations:     &[]string{"Do not expose proc file system to your containers.", "Do not run containers as root."},
 		},
 		{
 			Time:         v1.NewEventTimestamp(time.Now().Unix()),
@@ -377,8 +377,8 @@ func TestSecurityEvents(t *testing.T) {
 			Host:         "test-host",
 			AttackVector: "Network",
 			AttackPhase:  "Access",
-			MitreIDs:     []string{"T1190"},
-			Mitigations:  []string{"Use WAF :)"},
+			MitreIDs:     &[]string{"T1190"},
+			Mitigations:  &[]string{"Use WAF :)"},
 		},
 		{
 			Time:        v1.NewEventTimestamp(time.Now().Unix()),
