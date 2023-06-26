@@ -451,6 +451,7 @@ message EgressGatewayRule {
     string ip_set_id = 1;
     int32 max_next_hops = 2;
     string destination = 3;
+    bool prefer_local_egress_gateway = 4;
 }
 
 message WorkloadEndpoint {

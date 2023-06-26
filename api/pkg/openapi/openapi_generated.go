@@ -3941,6 +3941,13 @@ func schema_pkg_apis_projectcalico_v3_EgressGatewayRule(ref common.ReferenceCall
 							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec"),
 						},
 					},
+					"gatewayPreference": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GatewayPreference specifies which egress gateways to use. If set to PreferNodeLocal, egress gateways in the same node as the client will be used if available. Otherwise all the active egress gateways will be used.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

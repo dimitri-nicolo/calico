@@ -55,15 +55,17 @@ type epEgressConfig struct {
 
 // Combines the egress ip set id and max next hops.
 type EpEgressData struct {
-	IpSetID     string
-	MaxNextHops int
-	CIDR        string
+	IpSetID       string
+	MaxNextHops   int
+	CIDR          string
+	PreferLocalGW bool
 }
 
 type egressPolicyRule struct {
-	selector    string
-	maxNextHops int
-	cidr        string
+	selector      string
+	maxNextHops   int
+	cidr          string
+	preferLocalGW bool
 }
 
 // Information that we track for each active local endpoint.
@@ -337,6 +339,9 @@ func (aec *ActiveEgressCalculator) v3ResourceToEgressRules(rules []v3.EgressGate
 			sourceData.selector = PreprocessEgressSelector(r.Gateway, "")
 			sourceData.maxNextHops = r.Gateway.MaxNextHops
 		}
+		if r.GatewayPreference != nil {
+			sourceData.preferLocalGW = (*r.GatewayPreference == v3.GatewayPreferenceNodeLocal)
+		}
 		out = append(out, sourceData)
 	}
 	return out
@@ -362,8 +367,9 @@ func (aec *ActiveEgressCalculator) policyRulesToEgressData(sourceRules []egressP
 	var out []EpEgressData
 	for _, s := range sourceRules {
 		newEgressData := EpEgressData{
-			CIDR:        s.cidr,
-			MaxNextHops: s.maxNextHops,
+			CIDR:          s.cidr,
+			MaxNextHops:   s.maxNextHops,
+			PreferLocalGW: s.preferLocalGW,
 		}
 		if s.selector != "" {
 			sel, err := sel.Parse(s.selector)
