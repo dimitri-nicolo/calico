@@ -56,6 +56,9 @@ type recommendationEngine struct {
 	// Stabilization interval.
 	stabilization time.Duration
 
+	// serviceNameSuffix is the server name suffix of the local domain.
+	serviceNameSuffix string
+
 	// log entry
 	clog log.Entry
 }
@@ -74,6 +77,7 @@ func RunEngine(
 	lookback time.Duration,
 	order *float64,
 	clusterID string,
+	serviceNameSuffix string,
 	clock Clock,
 	recInterval time.Duration,
 	stabilizationPeriod time.Duration,
@@ -115,7 +119,7 @@ func RunEngine(
 	}
 
 	// Update staged network policy
-	engine := getRecommendationEngine(*snp, clock, recInterval, stabilizationPeriod, *clog)
+	engine := getRecommendationEngine(*snp, clock, recInterval, stabilizationPeriod, serviceNameSuffix, *clog)
 	engine.processRecommendation(flows, snp)
 }
 
@@ -128,20 +132,22 @@ func newRecommendationEngine(
 	clock Clock,
 	interval time.Duration,
 	stabilization time.Duration,
+	serviceNameSuffix string,
 	clog log.Entry,
 ) *recommendationEngine {
 	return &recommendationEngine{
-		name:          name,
-		namespace:     namespace,
-		tier:          tier,
-		order:         order,
-		egress:        NewEngineRules(),
-		ingress:       NewEngineRules(),
-		nets:          set.New[NetworkSet](),
-		clock:         clock,
-		interval:      interval,
-		stabilization: stabilization,
-		clog:          clog,
+		name:              name,
+		namespace:         namespace,
+		tier:              tier,
+		order:             order,
+		egress:            NewEngineRules(),
+		ingress:           NewEngineRules(),
+		nets:              set.New[NetworkSet](),
+		clock:             clock,
+		interval:          interval,
+		stabilization:     stabilization,
+		serviceNameSuffix: serviceNameSuffix,
+		clog:              clog,
 	}
 }
 
@@ -541,13 +547,13 @@ func (ere *recommendationEngine) processEngineRuleFromFlow(apiFlow api.Flow) {
 	var flowType flowType
 	var direction calicores.DirectionType
 	if ere.matchesSourceNamespace(apiFlow) {
-		if flowType = getFlowType(calicores.EgressTraffic, apiFlow); flowType == unsupportedFlowType {
+		if flowType = getFlowType(calicores.EgressTraffic, apiFlow, ere.serviceNameSuffix); flowType == unsupportedFlowType {
 			ere.clog.Debug("Unsupported flow type")
 			return
 		}
 		direction = calicores.EgressTraffic
 	} else if ere.matchesDestinationNamespace(apiFlow) {
-		if flowType = getFlowType(calicores.IngressTraffic, apiFlow); flowType == unsupportedFlowType {
+		if flowType = getFlowType(calicores.IngressTraffic, apiFlow, ere.serviceNameSuffix); flowType == unsupportedFlowType {
 			ere.clog.Debug("Unsupported flow type")
 			return
 		}
@@ -569,7 +575,7 @@ func (ere *recommendationEngine) processEngineRuleFromFlow(apiFlow api.Flow) {
 	// Add the flow to the existing set of engine rules, or log a warning if unsupported
 	switch flowType {
 	case egressToDomainFlowType:
-		engRules.addFlowToEgressToDomainRules(direction, apiFlow, ere.clock)
+		engRules.addFlowToEgressToDomainRules(direction, apiFlow, ere.clock, ere.serviceNameSuffix)
 	case egressToServiceFlowType:
 		engRules.addFlowToEgressToServiceRules(direction, apiFlow, ere.clock)
 	case namespaceFlowType:
@@ -671,10 +677,10 @@ func getNamespacePolicyRecParams(st time.Duration, ns, cl string) *flows.PolicyR
 // getRecommendationEngine returns a recommendation engine. Instantiated a new recommendation
 // engine and uses any existing staged network policy rules for instantiation.
 func getRecommendationEngine(
-	snp v3.StagedNetworkPolicy, clock Clock, interval, stabilization time.Duration, clog log.Entry,
+	snp v3.StagedNetworkPolicy, clock Clock, interval, stabilization time.Duration, serviceNameSuffix string, clog log.Entry,
 ) recommendationEngine {
 	eng := newRecommendationEngine(
-		snp.Name, snp.Namespace, snp.Spec.Tier, snp.Spec.Order, clock, interval, stabilization, clog)
+		snp.Name, snp.Namespace, snp.Spec.Tier, snp.Spec.Order, clock, interval, stabilization, serviceNameSuffix, clog)
 	eng.buildRules(calicores.EgressTraffic, snp.Spec.Egress)
 	eng.buildRules(calicores.IngressTraffic, snp.Spec.Ingress)
 

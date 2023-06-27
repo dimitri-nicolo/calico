@@ -10,7 +10,6 @@ import (
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
-	calico "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 	calicores "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 )
 
@@ -29,13 +28,13 @@ const (
 )
 
 type EngineRules interface {
-	addFlowToEgressToDomainRules(direction calico.DirectionType, flow api.Flow)
-	addFlowToEgressToDomainSetRules(direction calico.DirectionType, flow api.Flow)
-	addFlowToEgressToServiceRules(direction calico.DirectionType, flow api.Flow)
-	addFlowToNamespaceRules(direction calico.DirectionType, flow api.Flow)
-	addFlowToNetworkSetRules(direction calico.DirectionType, flow api.Flow)
-	addFlowToPrivateNetworkRules(direction calico.DirectionType, flow api.Flow)
-	addFlowToPublicNetworkRules(direction calico.DirectionType, flow api.Flow)
+	addFlowToEgressToDomainRules(direction calicores.DirectionType, flow api.Flow)
+	addFlowToEgressToDomainSetRules(direction calicores.DirectionType, flow api.Flow)
+	addFlowToEgressToServiceRules(direction calicores.DirectionType, flow api.Flow)
+	addFlowToNamespaceRules(direction calicores.DirectionType, flow api.Flow)
+	addFlowToNetworkSetRules(direction calicores.DirectionType, flow api.Flow)
+	addFlowToPrivateNetworkRules(direction calicores.DirectionType, flow api.Flow)
+	addFlowToPublicNetworkRules(direction calicores.DirectionType, flow api.Flow)
 }
 
 // engineRules implements the EngineRules interface. It defines the policy recommendation engine
@@ -162,8 +161,8 @@ type publicNetworkRule struct {
 // Policy rules will be added as follows for each protocol that we need to support:
 // Note: The lastUpdated timestamp will be updated if the corresponding NetworkSet is updated to
 // include an additional domain, even if the rule itself is unchanged.
-func (er *engineRules) addFlowToEgressToDomainRules(direction calico.DirectionType, flow api.Flow, clock Clock) {
-	if direction != calico.EgressTraffic {
+func (er *engineRules) addFlowToEgressToDomainRules(direction calicores.DirectionType, flow api.Flow, clock Clock, serviceNameSuffix string) {
+	if direction != calicores.EgressTraffic {
 		log.WithField("flow", flow).Warn("flow cannot be processed, unsupported traffic direction")
 		return
 	}
@@ -175,6 +174,16 @@ func (er *engineRules) addFlowToEgressToDomainRules(direction calico.DirectionTy
 		return
 	}
 	domains := parseDomains(flow.Destination.Domains)
+	// All domains containing a local service suffix should be removed. The fact that we've gotten
+	// this far means the check in the flow log response indicated at least one domain without the
+	// suffix, that should be converted to a rule. Otherwise, the flow would have been deemed as an
+	// unsupportedFlowType.
+	filteredDomains := []string{}
+	for _, domain := range domains {
+		if !strings.HasSuffix(domain, serviceNameSuffix) {
+			filteredDomains = append(filteredDomains, domain)
+		}
+	}
 
 	key := egressToDomainRuleKey{
 		protocol: *protocol,
@@ -183,7 +192,7 @@ func (er *engineRules) addFlowToEgressToDomainRules(direction calico.DirectionTy
 
 	// Update the ports and return if the value already exists
 	if v, ok := er.egressToDomainRules[key]; ok {
-		for _, domain := range domains {
+		for _, domain := range filteredDomains {
 			// If no new domains are added then no update to the timestamp will occur
 			if !containsDomain(v.domains, domain) {
 				// Timestamp recorded will be that of last update.
@@ -201,7 +210,7 @@ func (er *engineRules) addFlowToEgressToDomainRules(direction calico.DirectionTy
 		port:      port,
 		timestamp: clock.NowRFC3339(),
 	}
-	val.domains = domains
+	val.domains = filteredDomains
 
 	// Add the value to the map of egress to domain rules and increment the total engine rules count
 	er.egressToDomainRules[key] = &val
@@ -210,8 +219,8 @@ func (er *engineRules) addFlowToEgressToDomainRules(direction calico.DirectionTy
 
 // addFlowToEgressToServiceRules updates the ports if a rule already exists, otherwise defines a
 // new egressToDomainRule for egress flows, where the remote is to a domain.
-func (er *engineRules) addFlowToEgressToServiceRules(direction calico.DirectionType, flow api.Flow, clock Clock) {
-	if direction != calico.EgressTraffic {
+func (er *engineRules) addFlowToEgressToServiceRules(direction calicores.DirectionType, flow api.Flow, clock Clock) {
+	if direction != calicores.EgressTraffic {
 		log.WithField("flow", flow).Warn("flow cannot be processed, unsupported traffic direction")
 		return
 	}
@@ -262,11 +271,11 @@ func (er *engineRules) addFlowToEgressToServiceRules(direction calico.DirectionT
 // addFlowToNamespaceRules updates the ports if a rule already exists, otherwise defines a
 // new namespaceRule for flows where the remote is a pod. The rule simply selects the pod's
 // namespace.
-func (er *engineRules) addFlowToNamespaceRules(direction calico.DirectionType, flow api.Flow, clock Clock) {
+func (er *engineRules) addFlowToNamespaceRules(direction calicores.DirectionType, flow api.Flow, clock Clock) {
 	var endpoint *api.FlowEndpointData
-	if direction == calico.EgressTraffic {
+	if direction == calicores.EgressTraffic {
 		endpoint = &flow.Destination
-	} else if direction == calico.IngressTraffic {
+	} else if direction == calicores.IngressTraffic {
 		endpoint = &flow.Source
 	} else {
 		log.WithField("flow", flow).Warn("flow cannot be processed, unsupported traffic direction")
@@ -317,11 +326,11 @@ func (er *engineRules) addFlowToNamespaceRules(direction calico.DirectionType, f
 // new networkSetRule for flows where the remote is an existing NetworkSet or GlobalNetworkSet.
 // A rule will be added to select the NetworkSet by name - this ensures we don’t require label
 // schema knowledge.
-func (er *engineRules) addFlowToNetworkSetRules(direction calico.DirectionType, flow api.Flow, clock Clock) {
+func (er *engineRules) addFlowToNetworkSetRules(direction calicores.DirectionType, flow api.Flow, clock Clock) {
 	var endpoint *api.FlowEndpointData
-	if direction == calico.EgressTraffic {
+	if direction == calicores.EgressTraffic {
 		endpoint = &flow.Destination
-	} else if direction == calico.IngressTraffic {
+	} else if direction == calicores.IngressTraffic {
 		endpoint = &flow.Source
 	} else {
 		log.WithField("flow", flow).Warn("flow cannot be processed, unsupported traffic direction")
@@ -393,7 +402,7 @@ func (er *engineRules) addFlowToNetworkSetRules(direction calico.DirectionType, 
 // The set of private CIDRs may/should be updated by the customer to only contain private CIDRs
 // specific to the customer network, and should exclude the CIDR ranges used by the cluster for
 // nodes and pods (**). The PRE will not update the CIDRs once the network set is created.
-func (er *engineRules) addFlowToPrivateNetworkRules(direction calico.DirectionType, flow api.Flow, clock Clock) {
+func (er *engineRules) addFlowToPrivateNetworkRules(direction calicores.DirectionType, flow api.Flow, clock Clock) {
 	port, protocol := getPortAndProtocol(flow.Destination.Port, flow.Proto)
 	if protocol == nil {
 		// No need to add an empty protocol
@@ -434,7 +443,7 @@ func (er *engineRules) addFlowToPrivateNetworkRules(direction calico.DirectionTy
 // new publicNetworkRule covering all ingress and egress flows from/to other CIDRs that are not all
 // other categories. It is a mop-up rule that is broad in scope. It covers all remaining flow
 // endpoints limited only by port and protocol.
-func (er *engineRules) addFlowToPublicNetworkRules(direction calico.DirectionType, flow api.Flow, clock Clock) {
+func (er *engineRules) addFlowToPublicNetworkRules(direction calicores.DirectionType, flow api.Flow, clock Clock) {
 	port, protocol := getPortAndProtocol(flow.Destination.Port, flow.Proto)
 	if protocol == nil {
 		// No need to add an empty protocol
@@ -493,7 +502,7 @@ func containsPort(arr []numorstring.Port, val numorstring.Port) bool {
 }
 
 // getFlowType returns the engine flow type, or an error if the flow defines unsupported traffic.
-func getFlowType(direction calico.DirectionType, flow api.Flow) flowType {
+func getFlowType(direction calicores.DirectionType, flow api.Flow, serviceNameSuffix string) flowType {
 	var endpoint *api.FlowEndpointData
 	dest := false
 	if direction == calicores.EgressTraffic {
@@ -520,12 +529,17 @@ func getFlowType(direction calico.DirectionType, flow api.Flow) flowType {
 	}
 
 	if endpoint.Type == api.EndpointTypeNet {
-		// EgressToDomain
 		if dest && endpoint.Domains != "" && endpoint.Domains != "-" {
-			return egressToDomainFlowType
+			if !shouldSuppressDomains(endpoint.Domains, serviceNameSuffix) {
+				// EgressToDomain
+				return egressToDomainFlowType
+			}
+			return unsupportedFlowType
 		}
-		// An api.Flow name is defined by the source/dest_name of a flow log, or by the
-		// source/dest_name_aggr, if the name is a "-".
+		if dest && endpoint.ServiceName != "-" && endpoint.ServiceName != "" {
+			// EgressToService (Non-namespaced)
+			return egressToServiceFlowType
+		}
 		name := endpoint.Name
 		switch name {
 		case api.FlowLogNetworkPrivate:
@@ -562,4 +576,18 @@ func parseDomains(domainsAsStr string) []string {
 	domains := strings.Split(domainsAsStr, ",")
 
 	return domains
+}
+
+// shouldSuppressDomains returns true if every domain in the list contains a local service name
+// suffix.
+func shouldSuppressDomains(domains, serviceNameSuffix string) bool {
+	unfiltered := strings.Split(domains, ",")
+	filtered := []string{}
+	for _, domain := range unfiltered {
+		if !strings.HasSuffix(domain, serviceNameSuffix) {
+			filtered = append(filtered, domain)
+		}
+	}
+
+	return len(filtered) == 0
 }

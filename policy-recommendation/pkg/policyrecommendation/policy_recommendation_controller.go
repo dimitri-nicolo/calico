@@ -50,15 +50,17 @@ func NewPolicyRecommendationController(
 	synchronizer client.QueryInterface,
 	caches *syncer.CacheSet,
 	cluster string,
+	serviceNameSuffix string,
 ) controller.Controller {
 	prReconciler := &policyRecommendationReconciler{
-		calico:        calico,
-		linseedClient: linseedClient,
-		synchronizer:  synchronizer,
-		caches:        caches,
-		cluster:       cluster,
-		tickDuration:  make(chan time.Duration),
-		clock:         &realClock{},
+		calico:            calico,
+		linseedClient:     linseedClient,
+		synchronizer:      synchronizer,
+		caches:            caches,
+		cluster:           cluster,
+		serviceNameSuffix: serviceNameSuffix,
+		tickDuration:      make(chan time.Duration),
+		clock:             &realClock{},
 	}
 
 	watcher := controller.NewWatcher(
