@@ -1,12 +1,9 @@
 {
-  "dynamic": "false",
+  "dynamic": false,
   "properties": {
     "time": {
       "type": "date",
       "format": "strict_date_optional_time||epoch_second"
-    },
-    "id": {
-      "type": "keyword"
     },
     "type": {
       "type": "keyword"
