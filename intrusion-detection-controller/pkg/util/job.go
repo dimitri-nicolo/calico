@@ -25,8 +25,11 @@ const (
 // - end with an alphanumeric character
 // - contain at most 57 characters
 // - contain only lowercase alphanumeric characters or '-' or '.'
-func GetValidInitialTrainingJobName(clusterName, detectorName, suffix string) string {
-	name := fmt.Sprintf("%s-%s-%s", clusterName, detectorName, suffix)
+func GetValidInitialTrainingJobName(clusterName, tenantID, detectorName, suffix string) string {
+	// We need to take into account Calico Cloud setup that functions in a multi-tenant flavour
+	// In order to keep backwards compatibility, a job name will have <tenant_id.cluster_name-detector-suffix>
+	// in multi-tenant setup and <cluster_name-detector-suffix> for Enterprise
+	name := fmt.Sprintf("%s-%s-%s", Unify(tenantID, clusterName), detectorName, suffix)
 
 	// If the name length is less than or equal to the length of a valid DNS1123 label length,
 	// minus the length of the hash suffix appended onto it and is a valid DNS1123 subdomain format,
@@ -44,6 +47,9 @@ func GetValidInitialTrainingJobName(clusterName, detectorName, suffix string) st
 	validDetectorName := ConvertToValidName(detectorName)
 
 	rfcName := fmt.Sprintf("%s-%s-initial-training", validClusterName, validDetectorName)
+	if tenantID != "" {
+		rfcName = fmt.Sprintf("%s.%s-%s-initial-training", tenantID, validClusterName, validDetectorName)
+	}
 
 	// If the length of the name exceeds the length of lenOfMaxValidInitialTrainingJobName,
 	// then cut the length of the rfcName, so that its length with the hash is less than the length of

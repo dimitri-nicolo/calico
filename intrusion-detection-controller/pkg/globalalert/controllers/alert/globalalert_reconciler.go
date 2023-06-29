@@ -33,6 +33,7 @@ type globalAlertReconciler struct {
 	adTrainingController   controller.AnomalyDetectionController
 	alertNameToAlertState  map[string]alertState
 	clusterName            string
+	tenantID               string
 	namespace              string
 	enableAnomalyDetection bool
 	fipsModeEnabled        bool
@@ -68,7 +69,7 @@ func (r *globalAlertReconciler) Reconcile(namespacedName types.NamespacedName) e
 		return nil
 	}
 
-	alert, err := alert.NewAlert(obj, r.calicoCLI, r.linseedClient, r.k8sClient, r.enableAnomalyDetection, r.podTemplateQuery, r.adDetectionController, r.adTrainingController, r.clusterName, r.namespace, r.fipsModeEnabled)
+	alert, err := alert.NewAlert(obj, r.calicoCLI, r.linseedClient, r.k8sClient, r.enableAnomalyDetection, r.podTemplateQuery, r.adDetectionController, r.adTrainingController, r.clusterName, r.tenantID, r.namespace, r.fipsModeEnabled)
 	if err != nil {
 		return err
 	}
@@ -91,7 +92,7 @@ func (r *globalAlertReconciler) Close() {
 
 // cancelAlertRoutine cancels the context of alert goroutine and removes it from the map
 func (r *globalAlertReconciler) cancelAlertRoutine(name string) {
-	log.Debugf("Cancelling routine for alert %s in cluster %s", name, r.clusterName)
+	log.WithFields(log.Fields{"tenant": r.tenantID, "cluster": r.clusterName, "alert": name}).Debug("Cancelling routine for alert")
 	a := r.alertNameToAlertState[name]
 	a.cancel()
 	delete(r.alertNameToAlertState, name)

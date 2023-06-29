@@ -28,6 +28,7 @@ import (
 // If managed cluster is updated or deleted close the corresponding GlobalAlertController this in turn cancels all the goroutines.
 type managedClusterReconciler struct {
 	namespace                       string
+	tenantID                        string
 	lsClient                        lsclient.Client
 	k8sClient                       kubernetes.Interface
 	managementCalicoCLI             calicoclient.Interface
@@ -46,6 +47,7 @@ type managedClusterReconciler struct {
 type alertControllerState struct {
 	alertController controller.Controller
 	clusterName     string
+	tenantID        string
 	cancel          context.CancelFunc
 }
 
@@ -105,11 +107,13 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 
 	// create the GlobalAlertController for the managed cluster - this controller will monitor all GlobalAlert operations
 	// of the assigned managedcluster
-	alertController, _ := alert.NewGlobalAlertController(managedCLI, r.lsClient, r.k8sClient, r.enableAnomalyDetection, r.podTemplateQuery, r.adDetectionController, r.adTrainingController, clusterName, r.namespace, r.fipsModeEnabled)
+	// This will create global alerts and anomaly detection services per managed cluster
+	alertController, _ := alert.NewGlobalAlertController(managedCLI, r.lsClient, r.k8sClient, r.enableAnomalyDetection, r.podTemplateQuery, r.adDetectionController, r.adTrainingController, clusterName, r.tenantID, r.namespace, r.fipsModeEnabled)
 
 	r.alertNameToAlertControllerState[clusterName] = alertControllerState{
 		alertController: alertController,
 		clusterName:     clusterName,
+		tenantID:        r.tenantID,
 		cancel:          cancel,
 	}
 

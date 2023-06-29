@@ -31,6 +31,7 @@ type globalAlertController struct {
 	calicoCLI     calicoclient.Interface
 	k8sClient     kubernetes.Interface
 	clusterName   string
+	tenantID      string
 	namespace     string
 	cancel        context.CancelFunc
 	worker        worker.Worker
@@ -38,12 +39,13 @@ type globalAlertController struct {
 
 // NewGlobalAlertController returns a globalAlertController and for each object it watches,
 // a health.Pinger object is created returned for health check.
-func NewGlobalAlertController(calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, namespace string, fipsModeEnabled bool) (controller.Controller, []health.Pinger) {
+func NewGlobalAlertController(calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, tenantID string, namespace string, fipsModeEnabled bool) (controller.Controller, []health.Pinger) {
 	c := &globalAlertController{
 		linseedClient: linseedClient,
 		calicoCLI:     calicoCLI,
 		k8sClient:     k8sClient,
 		clusterName:   clusterName,
+		tenantID:      tenantID,
 		namespace:     namespace,
 	}
 
@@ -58,6 +60,7 @@ func NewGlobalAlertController(calicoCLI calicoclient.Interface, linseedClient cl
 			adTrainingController:   adTrainingController,
 			alertNameToAlertState:  map[string]alertState{},
 			clusterName:            c.clusterName,
+			tenantID:               c.tenantID,
 			namespace:              namespace,
 			enableAnomalyDetection: enableAnomalyDetection,
 			fipsModeEnabled:        fipsModeEnabled,

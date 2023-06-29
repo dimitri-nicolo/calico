@@ -54,6 +54,7 @@ type ADService interface {
 
 type adService struct {
 	clusterName string
+	tenantID    string
 	namespace   string
 
 	// globalAlert has the copy of GlobalAlert, it is updated periodically when AnomalyDetection
@@ -71,10 +72,11 @@ type adService struct {
 func NewService(calicoCLI calicoclient.Interface, k8sClient kubernetes.Interface,
 	podTemplateQuery podtemplate.ADPodTemplateQuery, anomalyDetectionController controller.AnomalyDetectionController,
 	anomalyDetectionTrainingController controller.AnomalyDetectionController,
-	clusterName string, namespace string, globalAlert *v3.GlobalAlert) (ADService, error) {
+	clusterName string, tenantID string, namespace string, globalAlert *v3.GlobalAlert) (ADService, error) {
 
 	s := &adService{
 		clusterName:           clusterName,
+		tenantID:              tenantID,
 		namespace:             namespace,
 		calicoCLI:             calicoCLI,
 		k8sClient:             k8sClient,
@@ -127,6 +129,7 @@ func (s *adService) Stop() v3.GlobalAlertStatus {
 
 	err := s.adDetectionController.RemoveDetector(adjcontroller.DetectionCycleRequest{
 		ClusterName: s.clusterName,
+		TenantID:    s.tenantID,
 		GlobalAlert: s.globalAlert,
 	})
 
@@ -140,6 +143,7 @@ func (s *adService) Stop() v3.GlobalAlertStatus {
 
 	err = s.adTrainingController.RemoveDetector(adjcontroller.TrainingDetectorsRequest{
 		ClusterName: s.clusterName,
+		TenantID:    s.tenantID,
 		GlobalAlert: s.globalAlert,
 	})
 	if err != nil {
@@ -164,6 +168,7 @@ func (s *adService) manageDetectionGlobalAlert() error {
 
 	err := s.adDetectionController.AddDetector(adjcontroller.DetectionCycleRequest{
 		ClusterName: s.clusterName,
+		TenantID:    s.tenantID,
 		GlobalAlert: s.globalAlert,
 		CalicoCLI:   s.calicoCLI,
 	})
@@ -174,6 +179,7 @@ func (s *adService) manageDetectionGlobalAlert() error {
 
 	err = s.adTrainingController.AddDetector(adjcontroller.TrainingDetectorsRequest{
 		ClusterName: s.clusterName,
+		TenantID:    s.tenantID,
 		GlobalAlert: s.globalAlert,
 	})
 

@@ -4,7 +4,6 @@ package anomalydetection
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -55,6 +54,7 @@ var GlobalAlertGroupVersionKind = schema.GroupVersionKind{
 type adDetectionReconciler struct {
 	managementClusterCtx  context.Context
 	managementClusterName string
+	tenantID              string
 
 	k8sClient                   kubernetes.Interface
 	calicoCLI                   calicoclient.Interface
@@ -69,6 +69,7 @@ type adDetectionReconciler struct {
 
 type detectionCycleState struct {
 	ClusterName string
+	TenantID    string
 	CronJob     *batchv1.CronJob
 	GlobalAlert *v3.GlobalAlert
 	CalicoCLI   calicoclient.Interface
@@ -150,14 +151,7 @@ func (r *adDetectionReconciler) reconcile() bool {
 	forceDelete := false
 	// skip the check if it is an udpate to a detector for the management cluster
 	if detectionJobState.ClusterName != r.managementClusterName {
-		// variant tenant id might be present in calico cloud but managed clusters resoruces would not contain this name
-		clusterNameToQuery := detectionJobState.ClusterName
-		tenantIDPrefix := os.Getenv("TENANT_ID")
-		if strings.HasPrefix(clusterNameToQuery, tenantIDPrefix) {
-			clusterNameToQuery = strings.Trim(clusterNameToQuery, tenantIDPrefix+".")
-		}
-
-		mc, err := r.calicoCLI.ProjectcalicoV3().ManagedClusters().Get(context.Background(), clusterNameToQuery, metav1.GetOptions{})
+		mc, err := r.calicoCLI.ProjectcalicoV3().ManagedClusters().Get(context.Background(), detectionJobState.ClusterName, metav1.GetOptions{})
 		if err != nil && !k8serrors.IsNotFound(err) {
 			log.Errorf("invalid state, received request to delete training cronjob %s, not marked for deletion",
 				detectionCronJobNameKey)
@@ -214,7 +208,7 @@ func (r *adDetectionReconciler) reconcile() bool {
 		// create / restore deleted managed cronJobs
 		createdDetectionCycle, err := r.k8sClient.BatchV1().CronJobs(detectionJobState.CronJob.Namespace).
 			Create(r.managementClusterCtx, detectionJobState.CronJob, metav1.CreateOptions{})
-			// update GlobalAlertStats with events for newly created CronJob
+		// update GlobalAlertStats with events for newly created CronJob
 		if err != nil {
 			r.reportErrorStatus(detectionJobState, detectionCronJobNameSpacedName, err)
 			return true
@@ -374,6 +368,7 @@ func (r *adDetectionReconciler) addDetector(detectionResource DetectionCycleRequ
 
 	r.detectionADDetectorStates[detectionResourceCronJob.Name] = detectionCycleState{
 		ClusterName: detectionResource.ClusterName,
+		TenantID:    detectionResource.TenantID,
 		GlobalAlert: detectionResource.GlobalAlert,
 		CronJob:     detectionResourceCronJob,
 		CalicoCLI:   detectionResource.CalicoCLI,
@@ -391,14 +386,14 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 		detectionSchedule = globalAlert.Spec.Period.Duration
 	}
 
-	err := podtemplate.DecoratePodTemplateForDetectionCycle(podTemplate, detectionResource.ClusterName, *globalAlert)
+	err := podtemplate.DecoratePodTemplateForDetectionCycle(podTemplate, detectionResource.ClusterName, detectionResource.TenantID, *globalAlert)
 	if err != nil {
 		return nil, err
 	}
 
 	detectionCronJobName := r.getDetectionCycleCronJobNameForGlobaAlert(detectionResource.ClusterName, globalAlert.Name)
 	detectionLabels := DetectionJobLabels()
-	detectionLabels[ClusterKey] = detectionResource.ClusterName
+	detectionLabels[ClusterKey] = util.Unify(detectionResource.TenantID, detectionResource.ClusterName)
 
 	detectionCycleCronJob := podtemplate.CreateCronJobFromPodTemplate(detectionCronJobName, r.namespace,
 		detectionSchedule, detectionLabels, *podTemplate)
@@ -432,7 +427,7 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 // max CronJob 52 char limit
 func (r *adDetectionReconciler) getDetectionCycleCronJobNameForGlobaAlert(clusterName string, globaAlertName string) string {
 	// Convert all uppercase to lower case
-	rfcClusterGlobalAlertName := strings.ToLower(fmt.Sprintf("%s-%s", clusterName, globaAlertName))
+	rfcClusterGlobalAlertName := strings.ToLower(fmt.Sprintf("%s-%s", util.Unify(r.tenantID, clusterName), globaAlertName))
 
 	if len(rfcClusterGlobalAlertName) > acceptableRFCGlobalAlertNameLen {
 		rfcClusterGlobalAlertName = rfcClusterGlobalAlertName[:acceptableRFCGlobalAlertNameLen]
@@ -459,10 +454,10 @@ func (r *adDetectionReconciler) removeDetector(detectionState DetectionCycleRequ
 
 func (r *adDetectionReconciler) stopAllDetectionCyclesForCluster(clusterName string) error {
 	cronJobList, err := r.k8sClient.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", ClusterKey, clusterName),
+		LabelSelector: fmt.Sprintf("%s=%s", ClusterKey, util.Unify(r.tenantID, clusterName)),
 	})
 
-	log.Infof("removing all cronjobs for cluster %s", clusterName)
+	log.WithFields(log.Fields{"tenant": r.tenantID, "cluster": clusterName}).Info("removing all cronjobs for cluster")
 
 	if err != nil {
 		return err

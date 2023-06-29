@@ -7,6 +7,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	"github.com/stretchr/testify/mock"
@@ -89,6 +90,9 @@ var _ = Describe("AnomalyDetection Service", func() {
 		},
 	}
 
+	noTenant := ""
+	tenant := "tenant"
+
 	BeforeEach(func() {
 		mockCalicoCLI = fake.NewSimpleClientset(defaultSampleGlobalAlert)
 		mockK8sClient = fakeK8s.NewSimpleClientset()
@@ -104,20 +108,13 @@ var _ = Describe("AnomalyDetection Service", func() {
 
 		mockADTrainingController.On("AddDetector", mock.AnythingOfType("anomalydetection.TrainingDetectorsRequest")).Return(nil)
 		mockADTrainingController.On("RemoveDetector", mock.AnythingOfType("anomalydetection.TrainingDetectorsRequest")).Return(nil)
-
-		var err error
-		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, mockADDetectionController,
-			mockADTrainingController, clusterName, namespace, defaultSampleGlobalAlert)
-
-		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterEach(func() {
 		cancel()
-		adjService.Stop()
 	})
 
-	It("Start exits with error globalAlert status if ADDetectionController throws error", func() {
+	DescribeTable("Start exits with error globalAlert status if ADDetectionController throws error", func(tenant string) {
 		errMockADDetectionController := &idscontroller.MockAnomalyDetectionController{}
 		errMockADDetectionController.On("AddDetector", mock.AnythingOfType("anomalydetection.DetectionCycleRequest")).Return(
 			errors.New("unsuccessful attempt at creating detection cycle"),
@@ -126,7 +123,8 @@ var _ = Describe("AnomalyDetection Service", func() {
 
 		var err error
 		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, errMockADDetectionController,
-			mockADTrainingController, clusterName, namespace, defaultSampleGlobalAlert)
+			mockADTrainingController, clusterName, tenant, namespace, defaultSampleGlobalAlert)
+		defer adjService.Stop()
 
 		Expect(err).ShouldNot(HaveOccurred())
 
@@ -135,9 +133,12 @@ var _ = Describe("AnomalyDetection Service", func() {
 		Expect(len(result.ErrorConditions)).To(BeNumerically(">", 0))
 		Expect(result.Healthy).To(BeFalse())
 		Expect(result.Active).To(BeFalse())
-	})
+	},
+		Entry("no tenant", noTenant),
+		Entry("with tenant", tenant),
+	)
 
-	It("Start exits with error globalAlert status if ADTrainingController throws error", func() {
+	DescribeTable("Start exits with error globalAlert status if ADTrainingController throws error", func(tenant string) {
 		errMockADTrainingController := &idscontroller.MockAnomalyDetectionController{}
 		errMockADTrainingController.On("AddDetector", mock.AnythingOfType("anomalydetection.TrainingDetectorsRequest")).Return(
 			errors.New("unsuccessful attempt at adding to training cycle"),
@@ -146,7 +147,7 @@ var _ = Describe("AnomalyDetection Service", func() {
 
 		var err error
 		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, mockADDetectionController,
-			errMockADTrainingController, clusterName, namespace, defaultSampleGlobalAlert)
+			errMockADTrainingController, clusterName, tenant, namespace, defaultSampleGlobalAlert)
 
 		Expect(err).ShouldNot(HaveOccurred())
 
@@ -155,9 +156,12 @@ var _ = Describe("AnomalyDetection Service", func() {
 		Expect(len(result.ErrorConditions)).To(BeNumerically(">", 0))
 		Expect(result.Healthy).To(BeFalse())
 		Expect(result.Active).To(BeFalse())
-	})
+	},
+		Entry("no tenant", noTenant),
+		Entry("with tenant", tenant),
+	)
 
-	It("Stop exits with error globalAlert status if ADDetectionController throws error", func() {
+	DescribeTable("Stop exits with error globalAlert status if ADDetectionController throws error", func(tenant string) {
 		errMockADDetectionController := &idscontroller.MockAnomalyDetectionController{}
 		errMockADDetectionController.On("RemoveDetector", mock.AnythingOfType("anomalydetection.DetectionCycleRequest")).Return(
 			errors.New("unsuccessful attempt at deleting detection cycle"),
@@ -166,7 +170,7 @@ var _ = Describe("AnomalyDetection Service", func() {
 
 		var err error
 		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, errMockADDetectionController,
-			mockADTrainingController, clusterName, namespace, defaultSampleGlobalAlert)
+			mockADTrainingController, clusterName, tenant, namespace, defaultSampleGlobalAlert)
 
 		Expect(err).ShouldNot(HaveOccurred())
 
@@ -175,9 +179,12 @@ var _ = Describe("AnomalyDetection Service", func() {
 		Expect(len(result.ErrorConditions)).To(BeNumerically(">", 0))
 		Expect(result.Healthy).To(BeFalse())
 		Expect(result.Active).To(BeFalse())
-	})
+	},
+		Entry("no tenant", noTenant),
+		Entry("with tenant", tenant),
+	)
 
-	It("Stop exits with error globalAlert status if ADTrainingController throws error", func() {
+	DescribeTable("Stop exits with error globalAlert status if ADTrainingController throws error", func(tenant string) {
 		errMockADTrainingController := &idscontroller.MockAnomalyDetectionController{}
 		errMockADTrainingController.On("RemoveDetector", mock.AnythingOfType("anomalydetection.TrainingDetectorsRequest")).Return(
 			errors.New("unsuccessful attempt at removing from training cycle"),
@@ -186,7 +193,7 @@ var _ = Describe("AnomalyDetection Service", func() {
 
 		var err error
 		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, mockADDetectionController,
-			errMockADTrainingController, clusterName, namespace, defaultSampleGlobalAlert)
+			errMockADTrainingController, clusterName, tenant, namespace, defaultSampleGlobalAlert)
 
 		Expect(err).ShouldNot(HaveOccurred())
 
@@ -195,5 +202,8 @@ var _ = Describe("AnomalyDetection Service", func() {
 		Expect(len(result.ErrorConditions)).To(BeNumerically(">", 0))
 		Expect(result.Healthy).To(BeFalse())
 		Expect(result.Active).To(BeFalse())
-	})
+	},
+		Entry("no tenant", noTenant),
+		Entry("with tenant", tenant),
+	)
 })
