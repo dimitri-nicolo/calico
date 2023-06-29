@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021, 2023 Tigera, Inc. All rights reserved.
 
 package eventgenerator_test
 
@@ -8,26 +8,23 @@ import (
 	"os"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
+
 	"github.com/sirupsen/logrus"
-
-	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
-
-	"github.com/projectcalico/calico/linseed/pkg/client"
 
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/alert"
 	cache2 "github.com/projectcalico/calico/deep-packet-inspection/pkg/cache"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/config"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/eventgenerator"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
-
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 var _ = Describe("File Parser", func() {
@@ -152,7 +149,7 @@ var _ = Describe("File Parser", func() {
 		alertForwarder.Run(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, false, mock.Anything).Return(nil).Times(1)
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, true, mock.Anything).Return(nil).Times(1)
 
 		// Copy and create an alert file
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
@@ -383,7 +380,7 @@ var _ = Describe("File Parser", func() {
 		alertForwarder.Run(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, false, mock.Anything).Return(nil).Times(1)
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, true, mock.Anything).Return(nil).Times(1)
 
 		// Copy and create an alert file
 		path1 := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)

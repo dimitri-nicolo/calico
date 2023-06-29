@@ -11,7 +11,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	v1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -74,33 +73,10 @@ func PagedRecommendationsHandler(auth lmaauth.JWTAuth, clientSetk8sClientFactory
 			return
 		}
 		// Get the k8s client set for this cluster
-		clientSet, err := clientSetk8sClientFactory.NewClientSetForApplication(clusterID)
+		clientSet, err := clientSetk8sClientFactory.NewClientSetForUser(usr, clusterID)
 		if err != nil {
-			msg := fmt.Sprintf("failed to get the k8s client set for this cluster: %s", clusterID)
+			msg := fmt.Sprintf("failed to get the k8s client set for usr: %s and cluster: %s", usr.GetName(), clusterID)
 			createAndReturnError(err, msg, http.StatusInternalServerError, api.PolicyRec, w)
-
-			return
-		}
-
-		// Authorize user
-		// Set the resource attribute for stagednetworkpolicies to patch
-		pagedRecommendationsResourceAttributes := &v1.ResourceAttributes{
-			Verb:     "list",
-			Group:    "projectcalico.org",
-			Version:  "v3",
-			Resource: "stagednetworkpolicies",
-		}
-		log.Debugf("authorizing resource %+v with user %s ,%+v, %+v", pagedRecommendationsResourceAttributes, usr.GetName(), usr.GetGroups(), usr.GetExtra())
-		allowed, err := auth.Authorize(usr, pagedRecommendationsResourceAttributes, nil)
-		if err != nil {
-			createAndReturnError(err, "error authorizing request", http.StatusForbidden, api.PolicyRec, w)
-
-			return
-		}
-		if !allowed {
-			// If any of the permission requirements are not met unauthorize the request since at this
-			// point we know the user does not have complete permissions requirement
-			createAndReturnError(err, "forbidden user", http.StatusForbidden, api.PolicyRec, w)
 
 			return
 		}

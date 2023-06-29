@@ -584,6 +584,23 @@ var _ = Describe("ElasticseachUsers", func() {
 							},
 						}},
 					},
+					"tigera-ee-linseed": {
+						Username: "tigera-ee-linseed-secure",
+						Roles: []elasticsearch.Role{
+							{
+								Name: "tigera-ee-linseed-secure",
+								Definition: &elasticsearch.RoleDefinition{
+									Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
+									Indices: []elasticsearch.RoleIndex{
+										{
+											Names:      []string{"tigera_secure_ee_*.*.*"},
+											Privileges: []string{"create_index", "write", "manage", "read"},
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 				map[users.ElasticsearchUserName]elasticsearch.User{
 					"tigera-fluentd": {

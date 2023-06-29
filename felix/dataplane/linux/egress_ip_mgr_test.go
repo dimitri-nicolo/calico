@@ -69,6 +69,7 @@ var _ = Describe("EgressIPManager", func() {
 			},
 			EgressIPRoutingRulePriority: 100,
 			FelixHostname:               "host0",
+			Hostname:                    "host0",
 		}
 
 		podStatusCallback = &mockEgressPodStatusCallback{state: []statusCallbackEntry{}}
@@ -179,14 +180,14 @@ var _ = Describe("EgressIPManager", func() {
 			inSixtySecsTime = nowTime.Add(time.Second * 60)
 
 			ips0 = []string{
-				formatActiveEgressMemberStr("10.0.0.1"),
-				formatActiveEgressMemberStr("10.0.0.2"),
-				formatActiveEgressMemberStr("10.0.0.3"),
+				formatActiveEgressMemberStr("10.0.0.1", "host0"),
+				formatActiveEgressMemberStr("10.0.0.2", "host1"),
+				formatActiveEgressMemberStr("10.0.0.3", "host2"),
 			}
 			ips1 = []string{
-				formatActiveEgressMemberPortStr("10.0.1.1", 8080),
-				formatActiveEgressMemberPortStr("10.0.1.2", 8080),
-				formatActiveEgressMemberPortStr("10.0.1.3", 8082),
+				formatActiveEgressMemberPortStr("10.0.1.1", 8080, "host0"),
+				formatActiveEgressMemberPortStr("10.0.1.2", 8080, "host1"),
+				formatActiveEgressMemberPortStr("10.0.1.3", 8082, "host2"),
 			}
 
 			manager.OnUpdate(&proto.IPSetUpdate{
@@ -210,16 +211,19 @@ var _ = Describe("EgressIPManager", func() {
 					addr:                ip.FromString("10.0.0.1"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
+					hostname:            "host0",
 				},
 				{
 					addr:                ip.FromString("10.0.0.2"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
+					hostname:            "host1",
 				},
 				{
 					addr:                ip.FromString("10.0.0.3"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
+					hostname:            "host2",
 				},
 			})
 			expectIPSetMembers("set1", []gateway{
@@ -228,18 +232,21 @@ var _ = Describe("EgressIPManager", func() {
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
 					healthPort:          8080,
+					hostname:            "host0",
 				},
 				{
 					addr:                ip.FromString("10.0.1.2"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
 					healthPort:          8080,
+					hostname:            "host1",
 				},
 				{
 					addr:                ip.FromString("10.0.1.3"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
 					healthPort:          8082,
+					hostname:            "host2",
 				},
 			})
 			Expect(manager.egwTracker.ipSetIDToGateways["nonEgressSet"]).To(BeNil())
@@ -381,6 +388,133 @@ var _ = Describe("EgressIPManager", func() {
 			})
 		})
 
+		It("should have the right routes when PreferLocalEgressGateway is set", func() {
+			egwRules := []*proto.EgressGatewayRule{
+				&proto.EgressGatewayRule{
+					IpSetId:                  "set0",
+					Destination:              "10.0.0.0/8",
+					PreferLocalEgressGateway: true,
+				},
+				&proto.EgressGatewayRule{
+					IpSetId:     "set1",
+					Destination: defaultDestv4,
+				},
+			}
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(6, []string{"10.0.246.0/32", "10.1.246.0/32"}, egwRules))
+			err := manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, "egress.calico", []routetable.Target{
+				{
+					CIDR: ip.MustParseCIDROrIP("10.0.0.0/8"),
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
+				},
+			})
+
+			// Set the preferLocalEgressGateway to false
+			egwRulesUpdated := []*proto.EgressGatewayRule{
+				&proto.EgressGatewayRule{
+					IpSetId:     "set0",
+					Destination: "10.0.0.0/8",
+				},
+				&proto.EgressGatewayRule{
+					IpSetId:     "set1",
+					Destination: defaultDestv4,
+				},
+			}
+
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(6, []string{"10.0.246.0/32", "10.1.246.0/32"}, egwRulesUpdated))
+			err = manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      ip.MustParseCIDROrIP("10.0.0.0/8"),
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
+				},
+			})
+
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(6, []string{"10.0.246.0/32", "10.1.246.0/32"}, egwRules))
+			err = manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, "egress.calico", []routetable.Target{
+				{
+					CIDR: ip.MustParseCIDROrIP("10.0.0.0/8"),
+					Type: routetable.TargetTypeVXLAN,
+					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
+				},
+			})
+			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
+				},
+			})
+
+			// Add another local EGW
+			manager.OnUpdate(&proto.IPSetDeltaUpdate{
+				Id: "set0",
+				AddedMembers: []string{
+					formatActiveEgressMemberStr("10.0.0.7", "host0"),
+				},
+				RemovedMembers: []string{},
+			})
+
+			err = manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      ip.MustParseCIDROrIP("10.0.0.0/8"),
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.7"}),
+				},
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
+				},
+			})
+
+			// Set MaxNextHop to 1
+			// Remove both the local EGW
+			manager.OnUpdate(&proto.IPSetDeltaUpdate{
+				Id:           "set0",
+				AddedMembers: []string{},
+				RemovedMembers: []string{
+					formatActiveEgressMemberStr("10.0.0.7", "host0"),
+					formatActiveEgressMemberStr("10.0.0.1", "host0"),
+				},
+			})
+			err = manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      ip.MustParseCIDROrIP("10.0.0.0/8"),
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3"}),
+				},
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
+				},
+			})
+
+		})
+
 		It("should be possible to use two egress gateway for different destinations", func() {
 
 			egwRules := []*proto.EgressGatewayRule{
@@ -507,8 +641,8 @@ var _ = Describe("EgressIPManager", func() {
 		It("should support delta update", func() {
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set1",
-				AddedMembers:   []string{formatActiveEgressMemberStr("10.0.1.4"), formatActiveEgressMemberStr("10.0.1.5")},
-				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.1.1")},
+				AddedMembers:   []string{formatActiveEgressMemberStr("10.0.1.4", "host0"), formatActiveEgressMemberStr("10.0.1.5", "host1")},
+				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.1.1", "host0")},
 			})
 
 			err := manager.CompleteDeferredWork()
@@ -736,9 +870,9 @@ var _ = Describe("EgressIPManager", func() {
 				Id:           "set1",
 				AddedMembers: []string{},
 				RemovedMembers: []string{
-					formatActiveEgressMemberStr("10.0.1.1"),
-					formatActiveEgressMemberStr("10.0.1.2"),
-					formatActiveEgressMemberStr("10.0.1.3"),
+					formatActiveEgressMemberStr("10.0.1.1", "host0"),
+					formatActiveEgressMemberStr("10.0.1.2", "host1"),
+					formatActiveEgressMemberStr("10.0.1.3", "host2"),
 				},
 			})
 
@@ -853,9 +987,9 @@ var _ = Describe("EgressIPManager", func() {
 			manager.OnUpdate(&proto.IPSetUpdate{
 				Id: "setx",
 				Members: []string{
-					formatActiveEgressMemberStr("10.0.10.1"),
-					formatActiveEgressMemberStr("10.0.10.2"),
-					formatActiveEgressMemberStr("10.0.10.3"),
+					formatActiveEgressMemberStr("10.0.10.1", "host0"),
+					formatActiveEgressMemberStr("10.0.10.2", "host1"),
+					formatActiveEgressMemberStr("10.0.10.3", "host2"),
 				},
 				Type: proto.IPSetUpdate_EGRESS_IP,
 			})
@@ -922,8 +1056,8 @@ var _ = Describe("EgressIPManager", func() {
 		It("should leave terminating egw pod in existing tables, but not use it for new tables", func() {
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set0",
-				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.0.1", nowTime, inSixtySecsTime)},
-				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.0.1")},
+				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.0.1", nowTime, inSixtySecsTime, "host0")},
+				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.0.1", "host0")},
 			})
 
 			err := manager.CompleteDeferredWork()
@@ -1030,8 +1164,8 @@ var _ = Describe("EgressIPManager", func() {
 
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set0",
-				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.0.4", zeroTime, zeroTime)},
-				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.0.1")},
+				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.0.4", zeroTime, zeroTime, "host0")},
+				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.0.1", "host0")},
 			})
 
 			// Create new endpoint8. It has specified 3 next hops, which are currently available.
@@ -1060,8 +1194,8 @@ var _ = Describe("EgressIPManager", func() {
 		It("should not notify when maintenance window is unchanged", func() {
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set0",
-				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.0.1", nowTime, inSixtySecsTime)},
-				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.0.1")},
+				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.0.1", nowTime, inSixtySecsTime, "host0")},
+				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.0.1", "host0")},
 			})
 
 			err := manager.CompleteDeferredWork()
@@ -1100,12 +1234,12 @@ var _ = Describe("EgressIPManager", func() {
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id: "set0",
 				AddedMembers: []string{
-					formatTerminatingEgressMemberStr("10.0.0.1", thirtySecsAgo, inThirtySecsTime),
-					formatTerminatingEgressMemberStr("10.0.0.2", nowTime, inSixtySecsTime),
+					formatTerminatingEgressMemberStr("10.0.0.1", thirtySecsAgo, inThirtySecsTime, "host0"),
+					formatTerminatingEgressMemberStr("10.0.0.2", nowTime, inSixtySecsTime, "host1"),
 				},
 				RemovedMembers: []string{
-					formatActiveEgressMemberStr("10.0.0.1"),
-					formatActiveEgressMemberStr("10.0.0.2"),
+					formatActiveEgressMemberStr("10.0.0.1", "host0"),
+					formatActiveEgressMemberStr("10.0.0.2", "host1"),
 				},
 			})
 
@@ -1145,8 +1279,8 @@ var _ = Describe("EgressIPManager", func() {
 			// egw 10.0.1.1 is terminating
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set1",
-				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.1.1", nowTime, inSixtySecsTime)},
-				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.1.1")},
+				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.1.1", nowTime, inSixtySecsTime, "host1")},
+				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.1.1", "host1")},
 			})
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -1171,7 +1305,7 @@ var _ = Describe("EgressIPManager", func() {
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id: "set1",
 				AddedMembers: []string{
-					formatActiveEgressMemberStr("10.0.1.4"),
+					formatActiveEgressMemberStr("10.0.1.4", "host0"),
 				},
 			})
 			err = manager.CompleteDeferredWork()
@@ -1180,8 +1314,8 @@ var _ = Describe("EgressIPManager", func() {
 			// egw 10.0.1.2 is terminating
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set1",
-				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.1.2", thirtySecsAgo, inThirtySecsTime)},
-				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.1.2")},
+				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.1.2", thirtySecsAgo, inThirtySecsTime, "host1")},
+				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.1.2", "host1")},
 			})
 			err = manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -1213,7 +1347,7 @@ var _ = Describe("EgressIPManager", func() {
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id: "set0",
 				AddedMembers: []string{
-					formatActiveEgressMemberStr("10.0.0.5"),
+					formatActiveEgressMemberStr("10.0.0.5", "host1"),
 				},
 			})
 			err = manager.CompleteDeferredWork()
@@ -1224,7 +1358,7 @@ var _ = Describe("EgressIPManager", func() {
 				Id:           "set0",
 				AddedMembers: []string{},
 				RemovedMembers: []string{
-					formatActiveEgressMemberStr("10.0.0.1"),
+					formatActiveEgressMemberStr("10.0.0.1", "host0"),
 				},
 			})
 			err = manager.CompleteDeferredWork()
@@ -1235,7 +1369,7 @@ var _ = Describe("EgressIPManager", func() {
 				Id:           "set0",
 				AddedMembers: []string{},
 				RemovedMembers: []string{
-					formatActiveEgressMemberStr("10.0.0.2"),
+					formatActiveEgressMemberStr("10.0.0.2", "host1"),
 				},
 			})
 			err = manager.CompleteDeferredWork()
@@ -1268,7 +1402,7 @@ var _ = Describe("EgressIPManager", func() {
 		It("should be tolerant of missing timestamp", func() {
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set1",
-				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.3.0", nowTime, inSixtySecsTime), "10.0.3.1"},
+				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.3.0", nowTime, inSixtySecsTime, "host2"), "10.0.3.1"},
 				RemovedMembers: []string{"10.0.1.1"},
 			})
 			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, []string{"10.0.242.0"}, egwPolicyWithSingleRule("set1", 0)))
@@ -1333,9 +1467,9 @@ var _ = Describe("EgressIPManager", func() {
 			inSixtySecsTime = nowTime.Add(time.Second * 60)
 
 			ips0 = []string{
-				formatActiveEgressMemberStr("10.0.0.1"),
-				formatActiveEgressMemberStr("10.0.0.2"),
-				formatActiveEgressMemberStr("10.0.0.3"),
+				formatActiveEgressMemberStr("10.0.0.1", "host0"),
+				formatActiveEgressMemberStr("10.0.0.2", "host1"),
+				formatActiveEgressMemberStr("10.0.0.3", "host2"),
 			}
 
 			manager.OnUpdate(&proto.IPSetUpdate{
@@ -1349,16 +1483,19 @@ var _ = Describe("EgressIPManager", func() {
 					addr:                ip.FromString("10.0.0.1"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
+					hostname:            "host0",
 				},
 				{
 					addr:                ip.FromString("10.0.0.2"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
+					hostname:            "host1",
 				},
 				{
 					addr:                ip.FromString("10.0.0.3"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
+					hostname:            "host2",
 				},
 			})
 
@@ -1558,9 +1695,9 @@ var _ = Describe("EgressIPManager", func() {
 
 		It("should allocate per-deployment route tables excluding any terminating gateway hops", func() {
 			ips0 = []string{
-				formatActiveEgressMemberStr("10.0.0.1"),
-				formatTerminatingEgressMemberStr("10.0.0.2", nowTime, inSixtySecsTime),
-				formatActiveEgressMemberStr("10.0.0.3"),
+				formatActiveEgressMemberStr("10.0.0.1", "host0"),
+				formatTerminatingEgressMemberStr("10.0.0.2", nowTime, inSixtySecsTime, "host1"),
+				formatActiveEgressMemberStr("10.0.0.3", "host2"),
 			}
 
 			manager.OnUpdate(&proto.IPSetUpdate{
@@ -1807,24 +1944,24 @@ func (f *mockRouteRulesFactory) Rules() *mockRouteRules {
 	return f.routeRules
 }
 
-func formatActiveEgressMemberStr(cidr string) string {
-	return formatTerminatingEgressMemberStr(cidr, time.Time{}, time.Time{})
+func formatActiveEgressMemberStr(cidr string, hostname string) string {
+	return formatTerminatingEgressMemberStr(cidr, time.Time{}, time.Time{}, hostname)
 }
 
-func formatActiveEgressMemberPortStr(cidr string, healthPort int) string {
-	return formatTerminatingEgressMemberPortStr(cidr, time.Time{}, time.Time{}, healthPort)
+func formatActiveEgressMemberPortStr(cidr string, healthPort int, hostname string) string {
+	return formatTerminatingEgressMemberPortStr(cidr, time.Time{}, time.Time{}, healthPort, hostname)
 }
 
-func formatTerminatingEgressMemberStr(cidr string, start, finish time.Time) string {
-	return formatTerminatingEgressMemberPortStr(cidr, start, finish, 0)
+func formatTerminatingEgressMemberStr(cidr string, start, finish time.Time, hostname string) string {
+	return formatTerminatingEgressMemberPortStr(cidr, start, finish, 0, hostname)
 }
 
-func formatTerminatingEgressMemberPortStr(cidr string, start time.Time, finish time.Time, healthPort int) string {
+func formatTerminatingEgressMemberPortStr(cidr string, start time.Time, finish time.Time, healthPort int, hostname string) string {
 	startBytes, err := start.MarshalText()
 	Expect(err).NotTo(HaveOccurred())
 	finishBytes, err := finish.MarshalText()
 	Expect(err).NotTo(HaveOccurred())
-	return fmt.Sprintf("%s,%s,%s,%d", cidr, string(startBytes), string(finishBytes), healthPort)
+	return fmt.Sprintf("%s,%s,%s,%d,%s", cidr, string(startBytes), string(finishBytes), healthPort, hostname)
 }
 
 func ipSetMemberEquals(expected gateway) types.GomegaMatcher {
@@ -1849,7 +1986,8 @@ func (m *ipSetMemberMatcher) Match(actual interface{}) (bool, error) {
 		m.expected.maintenanceStarted.Equal(member.maintenanceStarted) &&
 		m.expected.maintenanceFinished.Equal(member.maintenanceFinished) &&
 		m.expected.healthPort == member.healthPort &&
-		m.expected.healthStatus == member.healthStatus
+		m.expected.healthStatus == member.healthStatus &&
+		m.expected.hostname == member.hostname
 	return match, nil
 
 }

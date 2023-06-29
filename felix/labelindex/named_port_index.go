@@ -135,6 +135,7 @@ type IPSetMember struct {
 	IsEgressGateway            bool
 	DeletionTimestamp          time.Time
 	DeletionGracePeriodSeconds int64
+	Hostname                   string
 }
 
 type ipSetData struct {
@@ -781,7 +782,7 @@ func (idx *SelectorAndNamedPortIndex) calculateEndpointContribution(id interface
 			})
 		}
 	} else {
-		_, endpointIsWorkload := id.(model.WorkloadEndpointKey)
+		wep, endpointIsWorkload := id.(model.WorkloadEndpointKey)
 		if endpointIsWorkload || !ipSetData.isEgressSelector {
 			// Non-named port match, simply return the CIDRs.
 			for _, addr := range d.nets {
@@ -792,6 +793,7 @@ func (idx *SelectorAndNamedPortIndex) calculateEndpointContribution(id interface
 							IsEgressGateway:            true,
 							DeletionTimestamp:          d.deletionTimestamp,
 							DeletionGracePeriodSeconds: d.deletionGracePeriodSeconds,
+							Hostname:                   wep.Hostname,
 						}
 						// For egress gateways, we include the health port, if available.  The dataplane uses this
 						// to do health probes of remote EGWs.

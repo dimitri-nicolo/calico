@@ -38,7 +38,6 @@ const (
 	nonServiceTypeWarning          = "NonServicePortsAndProtocol"
 	policyRecommendationTimeFormat = time.RFC3339
 	namespaceScope                 = "namespace"
-	PrivateNetworkSetName          = "private-network"
 
 	CreationTimestampKey = PolicyRecKeyName + "/creationTimestamp"
 	LastUpdatedKey       = PolicyRecKeyName + "/lastUpdated"
@@ -55,6 +54,14 @@ const (
 	StaleStatus       = "Stale"
 
 	PolicyRecSnpNameSuffix = "recommendation"
+)
+
+var (
+	// Private RFC 1918 blocks
+	// Note: Make sure this list reflects the equivalent list in felix/collector/flowlog_util.go
+	privateNetwork24BitBlock = "10.0.0.0/8"
+	privateNetwork20BitBlock = "172.16.0.0/12"
+	privateNetwork16BitBlock = "192.168.0.0/16"
 )
 
 // NewStagedNetworkPolicy returns a pointer to a staged network policy.
@@ -351,16 +358,15 @@ func GetNetworkSetV3Rule(
 	return rule
 }
 
-// GetPrivateNetworkSetV3Rule returns the traffic to private network set rule. The entity rule ports
+// GetPrivateNetworkV3Rule returns the traffic to private network set rule. The entity rule ports
 // are in sorted order.
 //
 // Metadata.Annotations
 //
 //	policyrecommendation.tigera.io/lastUpdated=<RFC3339 formatted timestamp>
-//	policyrecommendation.tigera.io/name = ‘private-network’
 //	policyrecommendation.tigera.io/scope = ‘Private’
 //
-// EntityRule.Ports:
+// Destination.Ports:
 //
 //	set of ports from flows (always destination rule)
 //
@@ -368,17 +374,18 @@ func GetNetworkSetV3Rule(
 //
 //	policyrecommendation.tigera.io/scope == ‘Private’
 //
-// EntityRule.NamespaceSelector:
+// EntityRule.Nets:
 //
-//	global()
-func GetPrivateNetworkSetV3Rule(
+//   - "10.0.0.0/8"
+//   - "172.16.0.0/12"
+//   - "192.168.0.0/16"
+func GetPrivateNetworkV3Rule(
 	direction DirectionType, ports []numorstring.Port, protocol *numorstring.Protocol, rfc3339Time string,
 ) *v3.Rule {
 	rule := &v3.Rule{
 		Metadata: &v3.RuleMetadata{
 			Annotations: map[string]string{
 				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): rfc3339Time,
-				fmt.Sprintf("%s/name", PolicyRecKeyName):        PrivateNetworkSetName,
 				fmt.Sprintf("%s/scope", PolicyRecKeyName):       string(PrivateNetworkScope),
 			},
 		},
@@ -390,9 +397,7 @@ func GetPrivateNetworkSetV3Rule(
 	if protocol.SupportsPorts() {
 		rule.Destination.Ports = sortPorts(ports)
 	}
-	entityRule.Selector = fmt.Sprintf("%s/name == '%s' && %s/kind == '%s'",
-		projectCalicoKeyName, PrivateNetworkSetName, projectCalicoKeyName, string(PrivateNetworkScope))
-	entityRule.NamespaceSelector = "global()"
+	entityRule.Nets = []string{privateNetwork24BitBlock, privateNetwork20BitBlock, privateNetwork16BitBlock}
 
 	return rule
 }

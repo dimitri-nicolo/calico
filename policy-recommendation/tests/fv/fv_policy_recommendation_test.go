@@ -22,9 +22,11 @@ import (
 	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	linseed "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/cache"
 	calres "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
+	"github.com/projectcalico/calico/policy-recommendation/pkg/engine"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/namespace"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/policyrecommendation"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
@@ -35,20 +37,30 @@ import (
 
 var time *string
 
-type mockClock struct{}
+type MockClock struct{}
 
-func (mockClock) NowRFC3339() string { return *time }
+func (MockClock) NowRFC3339() string { return *time }
 
 var _ = Describe("Tests policy recommendation controller", func() {
 	const (
 		clusterID                     = "ClusterID"
 		policyRecommendationScopeName = "default"
 
+		timeAtStep1               = "2002-10-02T10:00:00-05:00"
+		timeAtStep2               = "2002-10-02T10:02:30-05:00"
+		timeAtStep3               = "2002-10-02T10:05:00-05:00"
 		timestampStep4Stabilizing = "2002-10-02T10:05:01-05:00"
 		timestampStep5Stabilizing = "2002-10-02T10:07:31-05:00"
 		timestampStep6Stabilizing = "2002-10-02T10:10:01-05:00"
 		timestampStep7Stable      = "2002-10-02T10:15:01-05:00"
+		timestampStep8Relearning  = "2002-10-02T11:02:01-05:00"
 	)
+
+	type recommendationTest struct {
+		timeStep string
+		data     []rest.MockResult
+		expected map[string]*v3.StagedNetworkPolicy
+	}
 
 	var (
 		ctx context.Context
@@ -66,7 +78,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		mockClientSetFactory   *lmak8s.MockClientSetFactory
 		mockClientSetForApp    lmak8s.ClientSet
 		mockConstructorTesting mockConstructorTestingTNewMockClientSet
-		mockClock              mockClock
+		mockClock              MockClock
 		mockLinseedClient      linseed.MockClient
 
 		namespaces []*v1.Namespace
@@ -75,6 +87,8 @@ var _ = Describe("Tests policy recommendation controller", func() {
 	)
 
 	Context("State if StagedNetworkPolicies after sequential engine calls", func() {
+		const serviceSuffixName = "svc.cluster.local"
+
 		BeforeEach(func() {
 			ctx = context.Background()
 
@@ -141,7 +155,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
 			err := prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -152,198 +166,77 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				Expect(err).To(BeNil())
 			}
 
-			// Step-1
+			tr := testRecommendation{
+				ctx:           ctx,
+				client:        mockClientSet,
+				linseedClient: mockLinseedClient,
+				caches:        caches,
+				clock:         mockClock,
+				namespaces:    namespaces,
+				reconciler:    prsReconciler.RecommendSnp,
+				tier:          tier,
+			}
+
+			testCases := []recommendationTest{
+				{
+					timeStep: timeAtStep1,
+					data:     fvdata.Step1Results,
+					expected: expectedEgressToDomainRecommendationsStep1,
+				},
+				{
+					timeStep: timeAtStep2,
+					data:     fvdata.Step2Results,
+					expected: expectedEgressToDomainRecommendationsStep2,
+				},
+				{
+					timeStep: timeAtStep3,
+					data:     fvdata.Step3Results,
+					expected: expectedEgressToDomainRecommendationsStep3,
+				},
+				// Test status transition from 'Learning' to 'Stabilizing'
+				{
+					timeStep: timestampStep4Stabilizing,
+					data:     fvdata.Step3Results,
+					expected: expectedEgressToDomainRecommendationsStep4,
+				},
+				// Test status transition from 'Learning' to 'Stabilizing'
+				{
+					timeStep: timestampStep5Stabilizing,
+					data:     fvdata.Step3Results,
+					expected: expectedEgressToDomainRecommendationsStep5,
+				},
+				// Test status transition from 'Stabilizing' to 'Stable'
+				{
+					timeStep: timestampStep6Stabilizing,
+					data:     fvdata.Step3Results,
+					expected: expectedEgressToDomainRecommendationsStep6,
+				},
+				// Test status transition from 'Stabilizing' to 'Stable'
+				{
+					timeStep: timestampStep7Stable,
+					data:     fvdata.Step3Results,
+					expected: expectedEgressToDomainRecommendationsStep7,
+				},
+				// Test adding PVT to cluster.local domain.
+				// The test data adds two suppressed flows, so expected data should stay the same
+				{
+					timeStep: timestampStep8Relearning,
+					data:     fvdata.Step4DomainWithNamespacesResults,
+					expected: expectedEgressToDomainRecommendationsStep7,
+				},
+			}
+
 			By("recommending new egress to domain flows")
-			// Update the mockClock RFC3339() return value
-			*time = timeAtStep1
-
-			// Run the engine to update the snps
-			snps := caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step1Results...)
-				*time = "2002-10-02T10:00:00-05:00"
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			By("verifying the staged network policies for step-1")
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedEgressToDomainRecommendationsStep1[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
-
-			// Step-2
-			By("recommending new egress to domain flows")
-			// Update the mockClock RFC3339() return value
-			*time = timeAtStep2
-
-			// Run the engine to update the snps
-			snps = caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step2Results...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			By("verifying the staged network policies for step-2")
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedEgressToDomainRecommendationsStep2[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
-
-			// Step-3
-			By("recommending new egress to domain flows")
-			// Update the mockClock RFC3339() return value
-			*time = timeAtStep3
-
-			// Run the engine to update the snps
-			snps = caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step3Results...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			By("verifying the staged network policies for step-3")
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedEgressToDomainRecommendationsStep3[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
-
-			// Step-4
-			// Test status transition from 'Learning' to 'Stabilizing'
-
-			// Update the mockClock RFC3339() return value
-			*time = timestampStep4Stabilizing
-
-			// Run the engine to update the snps
-			snps = caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step3Results...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			By("verifying the staged network policies for step-4")
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedEgressToDomainRecommendationsStep4[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
-
-			// Step-5
-			// Test status transition from 'Learning' to 'Stabilizing'
-
-			// Update the mockClock RFC3339() return value
-			*time = timestampStep5Stabilizing
-
-			// Run the engine to update the snps
-			snps = caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step3Results...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			By("verifying the staged network policies for step-5")
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedEgressToDomainRecommendationsStep5[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
-
-			// Step-6
-			// Test status transition from 'Stabilizing' to 'Stable'
-
-			// Update the mockClock RFC3339() return value
-			*time = timestampStep6Stabilizing
-
-			// Run the engine to update the snps
-			snps = caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step3Results...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			By("verifying the staged network policies for step-6")
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedEgressToDomainRecommendationsStep6[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
-
-			// Step-7
-			// Test status transition from 'Stabilizing' to 'Stable'
-
-			// Update the mockClock RFC3339() return value
-			*time = timestampStep7Stable
-
-			// Run the engine to update the snps
-			snps = caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step3Results...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			By("verifying the staged network policies for step-7")
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedEgressToDomainRecommendationsStep7[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
+			for _, t := range testCases {
+				tr.recommendAtTimestamp(t.timeStep, t.data)
+				tr.verifyRecommendations(t.expected)
 			}
 		})
 
 		It("EgressToService 2 step updates", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -354,61 +247,41 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				Expect(err).To(BeNil())
 			}
 
-			// Step-1
-			By("recommending new egress to service flows - step-1")
-			// Update the mockClock RFC3339() return value
-			*time = timeAtStep1
-
-			// Run the engine to update the snps
-			snps := caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step4Results...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedEgressToServiceRecommendationsStep1[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
+			tr := testRecommendation{
+				ctx:           ctx,
+				client:        mockClientSet,
+				linseedClient: mockLinseedClient,
+				caches:        caches,
+				clock:         mockClock,
+				namespaces:    namespaces,
+				reconciler:    prsReconciler.RecommendSnp,
+				tier:          tier,
 			}
 
-			// Step-2
-			By("recommending new egress to service flows - step-2")
-			// Update the mockClock RFC3339() return value
-			*time = timeAtStep2
-
-			// Run the engine to update the snps
-			snps = caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step5Results...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
+			testCases := []recommendationTest{
+				{
+					timeStep: timeAtStep1,
+					data:     fvdata.Step4Results,
+					expected: expectedEgressToServiceRecommendationsStep1,
+				},
+				{
+					timeStep: timeAtStep2,
+					data:     fvdata.Step5Results,
+					expected: expectedEgressToServiceRecommendationsStep2,
+				},
 			}
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
-				if expectedSnp, ok := expectedEgressToServiceRecommendationsStep2[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
+			By("recommending new egress to service flows")
+			for _, t := range testCases {
+				tr.recommendAtTimestamp(t.timeStep, t.data)
+				tr.verifyRecommendations(t.expected)
 			}
 		})
 
 		It("Namespace 2 step update", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -419,36 +292,36 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				Expect(err).To(BeNil())
 			}
 
-			// Step-1
-			By("recommending new egress to service flows")
-			// Update the mockClock RFC3339() return value
-			*time = timeAtStep1
-
-			// Run the engine to update the snps
-			snps := caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step6Results...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
+			tr := testRecommendation{
+				ctx:           ctx,
+				client:        mockClientSet,
+				linseedClient: mockLinseedClient,
+				caches:        caches,
+				clock:         mockClock,
+				namespaces:    namespaces,
+				reconciler:    prsReconciler.RecommendSnp,
+				tier:          tier,
 			}
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
 
-				if expectedSnp, ok := expectedNamespaceRecommendationsStep1[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
+			testCases := []recommendationTest{
+				{
+					timeStep: timeAtStep1,
+					data:     fvdata.Step6Results,
+					expected: expectedNamespaceRecommendationsStep1,
+				},
+			}
+
+			By("recommending new egress to service flows")
+			for _, t := range testCases {
+				tr.recommendAtTimestamp(t.timeStep, t.data)
+				tr.verifyRecommendations(t.expected)
 			}
 		})
 
 		It("NetworkSet", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -459,85 +332,46 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				Expect(err).To(BeNil())
 			}
 
-			// Step-1
+			tr := testRecommendation{
+				ctx:           ctx,
+				client:        mockClientSet,
+				linseedClient: mockLinseedClient,
+				caches:        caches,
+				clock:         mockClock,
+				namespaces:    namespaces,
+				reconciler:    prsReconciler.RecommendSnp,
+				tier:          tier,
+			}
+
+			testCases := []recommendationTest{
+				{
+					timeStep: timeAtStep1,
+					data:     fvdata.NetworkSetLinseedResults,
+					expected: expectedNetworkSetRecommendationsStep1,
+				},
+				{
+					timeStep: timestampStep4Stabilizing,
+					data:     fvdata.NetworkSetLinseedResults,
+					expected: expectedNetworkSetRecommendationsStep2,
+				},
+				{
+					timeStep: timestampStep7Stable,
+					data:     fvdata.NetworkSetLinseedResults,
+					expected: expectedNetworkSetRecommendationsStep3,
+				},
+			}
+
 			By("recommending new networkset flows")
-			// Update the mockClock RFC3339() return value
-			*time = timeAtStep1
-
-			// Run the engine to update the snps
-			snps := caches.StagedNetworkPolicies.GetAll()
-
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.NetworkSetLinseedResults...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedNetworkSetRecommendationsStep1[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
-
-			// Step-2 - Stabilizing
-			// Process the same recommendations, so we expect no change to occur and thus the state
-			// will change from 'Learning' to 'Stabilizing'
-			*time = timestampStep4Stabilizing
-
-			// Run the engine to update the snps
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.NetworkSetLinseedResults...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedNetworkSetRecommendationsStep2[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
-
-			// Step-3 - Stable
-			// Process the same recommendations, so we expect no change to occur and thus the state
-			// will change from 'Stabilizing' to 'Stable'
-			*time = timestampStep7Stable
-
-			// Run the engine to update the snps
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.NetworkSetLinseedResults...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedNetworkSetRecommendationsStep3[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
+			for _, t := range testCases {
+				tr.recommendAtTimestamp(t.timeStep, t.data)
+				tr.verifyRecommendations(t.expected)
 			}
 		})
 
 		It("PrivateNetwork", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -548,83 +382,46 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				Expect(err).To(BeNil())
 			}
 
-			// Step-1
+			tr := testRecommendation{
+				ctx:           ctx,
+				client:        mockClientSet,
+				linseedClient: mockLinseedClient,
+				caches:        caches,
+				clock:         mockClock,
+				namespaces:    namespaces,
+				reconciler:    prsReconciler.RecommendSnp,
+				tier:          tier,
+			}
+
+			testCases := []recommendationTest{
+				{
+					timeStep: timeAtStep1,
+					data:     fvdata.PrivateNetworkLinseedResults,
+					expected: expectedPrivateNetworkRecommendationsStep1,
+				},
+				{
+					timeStep: timestampStep4Stabilizing,
+					data:     fvdata.PrivateNetworkLinseedResults,
+					expected: expectedPrivateNetworkRecommendationsStep2,
+				},
+				{
+					timeStep: timestampStep7Stable,
+					data:     fvdata.PrivateNetworkLinseedResults,
+					expected: expectedPrivateNetworkRecommendationsStep3,
+				},
+			}
+
 			By("recommending new private network flows")
-			// Update the mockClock RFC3339() return value
-			*time = timeAtStep1
-
-			// Run the engine to update the snps
-			snps := caches.StagedNetworkPolicies.GetAll()
-
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.PrivateNetworkLinseedResults...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedPrivateNetworkRecommendationsStep1[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
-
-			// Step-2 - Stabilizing
-			// Process the same recommendations, so we expect no change to occur and thus the state
-			// will change from 'Learning' to 'Stabilizing'
-			*time = timestampStep4Stabilizing
-
-			// Run the engine to update the snps
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.PrivateNetworkLinseedResults...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedPrivateNetworkRecommendationsStep2[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
-
-			// Step-3 - Stable
-			// Process the same recommendations, so we expect no change to occur and thus the state
-			// will change from 'Stabilizing' to 'Stable'
-			*time = timestampStep7Stable
-
-			// Run the engine to update the snps
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.PrivateNetworkLinseedResults...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
-			}
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedPrivateNetworkRecommendationsStep3[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
+			for _, t := range testCases {
+				tr.recommendAtTimestamp(t.timeStep, t.data)
+				tr.verifyRecommendations(t.expected)
 			}
 		})
 	})
 
 	Context("Deleting namespaces", func() {
+		const serviceSuffixName = "svc.cluster.local"
+
 		BeforeEach(func() {
 			ctx = context.Background()
 
@@ -685,7 +482,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("Timestamp update after 2 steps", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName, Namespace: ""})
 			Expect(err).To(BeNil())
 
@@ -696,34 +493,28 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				Expect(err).To(BeNil())
 			}
 
+			tr := testRecommendation{
+				ctx:           ctx,
+				client:        mockClientSet,
+				linseedClient: mockLinseedClient,
+				caches:        caches,
+				clock:         mockClock,
+				namespaces:    namespaces,
+				reconciler:    prsReconciler.RecommendSnp,
+				tier:          tier,
+			}
+
 			// Step-1
 			// - All of the egress to domain rules have the same timestamp
 			// - The snp timestamp has been set
 			By("recommending new egress to domain flows")
-			// Update the mockClock RFC3339() return value
-			*time = timeAtStep1
-
-			// Run the engine to update the snps
-			snps := caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step1Results...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
+			testCase1 := recommendationTest{
+				timeStep: timeAtStep1,
+				data:     fvdata.Step1Results,
+				expected: expectedEgressToDomainRecommendationsStep1,
 			}
-			By("verifying the staged network policies for step-1")
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedEgressToDomainRecommendationsStep1[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(snp.Annotations[calres.LastUpdatedKey]).To(Equal(expectedSnp.Annotations[calres.LastUpdatedKey]))
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
+			tr.recommendAtTimestamp(testCase1.timeStep, testCase1.data)
+			tr.verifyRecommendations(testCase1.expected)
 
 			// Delete and reconcile Namespace3
 			By("deleting and reconciling namespace3")
@@ -733,29 +524,19 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			Expect(err).To(BeNil())
 
 			By("verifying the staged network policies after deleting namespace3")
-			// Run the engine to update the snps
-			snps = caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step1Results...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
+			testCase2 := recommendationTest{
+				timeStep: timeAtStep1,
+				data:     fvdata.Step1Results,
+				expected: expectedEgressToDomainRecommendationsStep1AfterDeletingNamespace3,
 			}
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedEgressToDomainRecommendationsStep1AfterDeletingNamespace3[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
+			tr.recommendAtTimestamp(testCase2.timeStep, testCase2.data)
+			tr.verifyRecommendations(testCase2.expected)
 		})
 	})
 
 	Context("Enforcing a recommendation", func() {
+		const serviceSuffixName = "svc.cluster.local"
+
 		BeforeEach(func() {
 			ctx = context.Background()
 
@@ -822,7 +603,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
 			err := prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -833,32 +614,26 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				Expect(err).To(BeNil())
 			}
 
+			tr := testRecommendation{
+				ctx:           ctx,
+				client:        mockClientSet,
+				linseedClient: mockLinseedClient,
+				caches:        caches,
+				clock:         mockClock,
+				namespaces:    namespaces,
+				reconciler:    prsReconciler.RecommendSnp,
+				tier:          tier,
+			}
+
 			// Step-1
 			By("recommending new egress to domain flows")
-			// Update the mockClock RFC3339() return value
-			*time = timeAtStep1
-
-			// Run the engine to update the snps
-			snps := caches.StagedNetworkPolicies.GetAll()
-			for _, snp := range snps {
-				mockLinseedClient.SetResults(fvdata.Step1Results...)
-				prsReconciler.RecommendSnp(ctx, mockClock, snp)
+			testCase1 := recommendationTest{
+				timeStep: timeAtStep1,
+				data:     fvdata.Step1Results,
+				expected: expectedEgressToDomainRecommendationsStep1,
 			}
-			By("verifying the staged network policies for step-1")
-			for _, ns := range namespaces {
-				expectedNamespace := ns.Name
-				expectedSnpName := fmt.Sprintf("%s.%s-%s", tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-				snp, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-					Get(ctx, expectedSnpName, metav1.GetOptions{})
-
-				if expectedSnp, ok := expectedEgressToDomainRecommendationsStep1[expectedSnpName]; ok {
-					Expect(err).To(BeNil())
-					Expect(snp.Annotations[calres.LastUpdatedKey]).To(Equal(expectedSnp.Annotations[calres.LastUpdatedKey]))
-					Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-				} else {
-					Expect(err).NotTo(BeNil())
-				}
-			}
+			tr.recommendAtTimestamp(testCase1.timeStep, testCase1.data)
+			tr.verifyRecommendations(testCase1.expected)
 
 			snpName := fmt.Sprintf("%s.%s-%s", tier, namespace3.Name, calres.PolicyRecSnpNameSuffix)
 			ds, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace3.Name).Get(ctx, snpName, metav1.GetOptions{})
@@ -1048,6 +823,7 @@ func compareSnps(left, right *v3.StagedNetworkPolicy) bool {
 	for i := 0; i < length; i++ {
 		compareRules(&left.Spec.Egress[i], &right.Spec.Egress[i])
 	}
+	Expect(len(left.Spec.Ingress)).To(Equal(len(right.Spec.Ingress)))
 	length = len(left.Spec.Ingress)
 	for i := 0; i < length; i++ {
 		compareRules(&left.Spec.Ingress[i], &right.Spec.Ingress[i])
@@ -1070,6 +846,50 @@ func compareRules(left, right *v3.Rule) bool {
 	Expect(reflect.DeepEqual(left.Destination.Ports, right.Destination.Ports)).To(BeTrue())
 
 	return true
+}
+
+type testRecommendation struct {
+	ctx           context.Context
+	client        *lmak8s.MockClientSet
+	linseedClient linseed.MockClient
+	caches        *syncer.CacheSet
+	clock         MockClock
+	namespaces    []*v1.Namespace
+	tier          string
+	reconciler    func(context.Context, engine.Clock, *v3.StagedNetworkPolicy)
+}
+
+func (t *testRecommendation) recommendAtTimestamp(
+	timestamp string,
+	results []rest.MockResult,
+) {
+	// Update the mockClock RFC3339() return value
+	*time = timestamp
+
+	// Run the engine to update the snps
+	snps := t.caches.StagedNetworkPolicies.GetAll()
+	for _, snp := range snps {
+		t.linseedClient.SetResults(results...)
+		t.reconciler(t.ctx, t.clock, snp)
+	}
+}
+
+func (t *testRecommendation) verifyRecommendations(
+	expectedRecommendation map[string]*v3.StagedNetworkPolicy,
+) {
+	for _, ns := range t.namespaces {
+		expectedNamespace := ns.Name
+		expectedSnpName := fmt.Sprintf("%s.%s-%s", t.tier, ns.Name, calres.PolicyRecSnpNameSuffix)
+		snp, err := t.client.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
+			Get(t.ctx, expectedSnpName, metav1.GetOptions{})
+
+		if expectedSnp, ok := expectedRecommendation[expectedSnpName]; ok {
+			Expect(err).To(BeNil())
+			Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
+		} else {
+			Expect(err).NotTo(BeNil())
+		}
+	}
 }
 
 var (

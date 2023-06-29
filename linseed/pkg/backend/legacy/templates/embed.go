@@ -29,6 +29,9 @@ var BGPMappings string
 //go:embed events_mappings.json
 var EventsMappings string
 
+//go:embed event_settings.json
+var EventSettings string
+
 //go:embed waf_mappings.json
 var WAFMappings string
 
@@ -53,6 +56,7 @@ var DomainSetMappings string
 // SettingsLookup will keep track if an index requires special settings, add its settings template to the map.
 var SettingsLookup = map[bapi.DataType]string{
 	bapi.DNSLogs: DNSLogSettings,
+	bapi.Events:  EventSettings,
 }
 
 // IndexPatternsPrefixLookup will keep track of the index patterns created

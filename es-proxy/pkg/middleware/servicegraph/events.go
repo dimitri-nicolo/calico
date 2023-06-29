@@ -226,7 +226,7 @@ func parseTigeraEvent(item lapi.Event) *Event {
 		ID: v1.GraphEventID{
 			Type:           v1.GraphEventType(item.Type),
 			ID:             id,
-			NamespacedName: v1.NamespacedName{Name: item.Alert},
+			NamespacedName: v1.NamespacedName{Name: item.Origin},
 		},
 		Details: v1.GraphEventDetails{
 			Severity:    &sev,

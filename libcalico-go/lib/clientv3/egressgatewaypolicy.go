@@ -27,9 +27,19 @@ type EgressGatewayPolicy struct {
 	client client
 }
 
+func fillDefaults(res *apiv3.EgressGatewayPolicy) {
+	preferNone := apiv3.GatewayPreferenceNone
+	for _, rule := range res.Spec.Rules {
+		if rule.GatewayPreference == nil {
+			rule.GatewayPreference = &preferNone
+		}
+	}
+}
+
 // Create takes the representation of a EgressGatewayPolicy and creates it. Returns the stored
 // representation of the EgressGatewayPolicy, and an error, if there is any.
 func (e EgressGatewayPolicy) Create(ctx context.Context, res *apiv3.EgressGatewayPolicy, opts options.SetOptions) (*apiv3.EgressGatewayPolicy, error) {
+	fillDefaults(res)
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
@@ -44,6 +54,7 @@ func (e EgressGatewayPolicy) Create(ctx context.Context, res *apiv3.EgressGatewa
 // Update takes the representation of a EgressGatewayPolicy and updates it. Returns the stored
 // representation of the EgressGatewayPolicy, and an error, if there is any.
 func (e EgressGatewayPolicy) Update(ctx context.Context, res *apiv3.EgressGatewayPolicy, opts options.SetOptions) (*apiv3.EgressGatewayPolicy, error) {
+	fillDefaults(res)
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}

@@ -49,10 +49,10 @@ To run all tests
 make test
 ```
 
-In order to run locally, start an elastic server on localhost using:
+In order to run locally, start an elastic server on localhost and k8s server using:
 
 ```
-make run-elastic
+make run-elastic k8s-setup
 ```
 
 Start Linseed with the following environment variables:
@@ -62,6 +62,9 @@ Start Linseed with the following environment variables:
 - LINSEED_HTTPS_CERT=~/calico-private/linseed/fv/cert/localhost.crt
 - LINSEED_HTTPS_KEY=~/calico-private/linseed/fv/cert/localhost.key
 - LINSEED_CA=~/calico-private/linseed/fv/cert/RootCA.crt
+- KUBERNETES_SERVICE_HOST=127.0.0.1
+- KUBERNETES_SERVICE_PORT=6443
+
 
 Or simply use the following command:
 
@@ -169,13 +172,19 @@ It has the following clients, via service `tigera-linseed.tigera-elasticsearch.s
 - `es-proxy` container from `tigera-manager/tigera-manager-*` pod, deployment `tigera-manager/tigera-manager`
 - `intrusion-detection-controller` container from `tigera-intrusion-detection/intrusion-detection-controller-*` pod, deployment `tigera-intrusion-detection/intrusion-detection-controller`
 - `fluentd-node` container from `tigera-fluentd/fluentd-node-*` pod, daemonset `tigera-fluentd/fluentd-node`
+- `fluentd-node` container from `tigera-fluentd/fluentd-node-windows*` pod, daemonset `tigera-fluentd/fluentd-node-windows`
 - `tigera-dpi` container from `tigera-dpi/tigera-dpi-*` pod, daemonset `tigera-dpi/tigera-dpi`
 - `compliance-benchmarker` container from `tigera-compliance/compliance-benchmarker-*` pod, daemonset `tigera-compliance/compliace-benchmarker`
 - `compliance-controller` container from `tigera-compliance/compliance-controller-*` pod, deployment `tigera-compliance/compliace-controller`
 - `compliance-snapshotter` container from `tigera-compliance/compliance-snapshotter-*` pod, deployment `tigera-compliance/compliace-snapshotter`
 - `compliance-server` container from `tigera-compliance/compliance-server-*` pod, deployment `tigera-compliance/compliance-server`
+- `policy-recommendation-controller` container from `tigera-policy-recommendation/tigera-policy-recommendation-*` pod, deployment `tigera-policy-recommendation\tigera-policy-recommendation`
+- `adjobs` container from `tigera-intrusion-detection/cluster-tigera.io.detector.*` cron jobs
 
-It requires RBAC access for CREATE for authorization.k8s.io.SubjectAccessReview at namespace level.
+It requires RBAC access for:
+- CREATE for authorization.k8s.io.SubjectAccessReview
+- CREATE for authentication.k8s.io.TokenReviews.
+- LIST,WATCH for projectcalico.org.ManagedClusters
 
 All communication wil Linseed requires mTLS. X509 certificates will be mounted inside the pod via operator at `/etc/pki/tls/certs/` and `/tigera-secure-linseed-cert`
 

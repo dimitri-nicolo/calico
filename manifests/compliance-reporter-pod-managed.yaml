@@ -41,7 +41,7 @@ spec:
         - name: LINSEED_CLIENT_KEY
           value: /tigera-compliance-reporter-tls/tls.key
         - name: LINSEED_TOKEN
-          value: /var/run/secrets/kubernetes.io/serviceaccount/token
+          value: /var/run/secrets/tigera.io/linseed/token
       securityContext:
         allowPrivilegeEscalation: false
         capabilities:
@@ -62,6 +62,8 @@ spec:
         - mountPath: /tigera-compliance-reporter-tls
           name: tigera-compliance-reporter-tls
           readOnly: true
+        - mountPath: /var/run/secrets/tigera.io/linseed/
+          name: linseed-token
       livenessProbe:
         httpGet:
           path: /liveness
@@ -80,3 +82,10 @@ spec:
       secret:
         defaultMode: 420
         secretName: tigera-compliance-reporter-tls
+    - name: linseed-token
+      secret:
+        defaultMode: 420
+        secretName: tigera-compliance-reporter-tigera-linseed-token
+        items:
+          - key: token
+            path: token

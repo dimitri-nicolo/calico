@@ -294,9 +294,13 @@ func TestEventSelector(t *testing.T) {
 		{"dest_port=53", 1, true},
 		{"source_port=48127", 1, true},
 		{"source_port > 1024", 1, true},
+		{"severity=1", 1, true},
+		{"origin IN {'**'}", 1, true}, // Matches if non-empty
+		{"name NOTIN {'**'}", 1, true},
 
 		// Valid but do not match any event
 		{"host=\"some-other-host\"", 0, true},
+		{"severity > 10", 0, true},
 
 		// Those fail for invalid keys.
 		// Valid keys are defined in libcalico-go/lib/validator/v3/query/validate_events.go.
@@ -306,8 +310,8 @@ func TestEventSelector(t *testing.T) {
 		{"Host=\"midnight-train\"", 0, false},
 		{"description=\"Just a city event\"", 0, false},
 		{"type=\"TODO\"", 0, false},
-		{"severity=1", 0, false},
 		{"time>0", 0, false},
+		{"origin IN {'*'}", 0, false}, // Need to use `**` to match any non-empty value
 
 		// The dismissed key is a bit odd (probably like all boolean values).
 		// There is validation for the value, but it does not return
@@ -335,6 +339,124 @@ func TestEventSelector(t *testing.T) {
 		name := fmt.Sprintf("TestEventSelector: %s", tt.selector)
 		t.Run(name, func(t *testing.T) {
 			testSelector(tt.selector, tt.numResults, tt.shouldSucceed)
+		})
+	}
+}
+
+func TestSecurityEvents(t *testing.T) {
+	defer setupTest(t)()
+
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+	events := []v1.Event{
+		{
+			Time:            v1.NewEventTimestamp(time.Now().Unix()),
+			Description:     "A sample Security Event",
+			Name:            "Proc File Access",
+			Origin:          "Proc File Access",
+			Severity:        90,
+			Type:            "runtime_security",
+			Dismissed:       false,
+			Host:            "test-host",
+			SourceName:      "my-pod-123",
+			SourceNameAggr:  "my-pod",
+			SourceNamespace: "test-ns",
+			AttackVector:    "Process",
+			AttackPhase:     "Access",
+			MitreIDs:        &[]string{"T1003.007", "T1057", "T1083"},
+			Mitigations:     &[]string{"Do not expose proc file system to your containers.", "Do not run containers as root."},
+		},
+		{
+			Time:         v1.NewEventTimestamp(time.Now().Unix()),
+			Description:  "A sample WAF Security Event",
+			Name:         "WAF Event",
+			Origin:       "waf-new-alert-rule-info",
+			Severity:     100,
+			Type:         "global_alert",
+			Dismissed:    false,
+			Host:         "test-host",
+			AttackVector: "Network",
+			AttackPhase:  "Access",
+			MitreIDs:     &[]string{"T1190"},
+			Mitigations:  &[]string{"Use WAF :)"},
+		},
+		{
+			Time:        v1.NewEventTimestamp(time.Now().Unix()),
+			Description: "A hopeless Security Event",
+			// No severity, mitigations etc...
+		},
+	}
+
+	// Create the event in ES.
+	resp, err := b.Create(ctx, clusterInfo, events)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(resp.Errors))
+	require.Equal(t, len(events), resp.Total)
+	require.Equal(t, 0, resp.Failed)
+	require.Equal(t, len(events), resp.Succeeded)
+
+	// Refresh the index.
+	err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_events.*")
+	require.NoError(t, err)
+
+	testEventsFiltering := func(selector string, expectedEvents []v1.Event) {
+		r, e := b.List(ctx, clusterInfo, &v1.EventParams{
+			LogSelectionParams: v1.LogSelectionParams{
+				Selector: selector,
+			},
+		})
+		require.NoError(t, e)
+		require.Equal(t, len(expectedEvents), len(r.Items))
+		for i := range expectedEvents {
+			// We expect the ID to be present, but it's a random value so we
+			// can't assert on the exact value.
+			require.Equal(t, expectedEvents[i], backendutils.AssertEventIDAndReset(t, r.Items[i]))
+		}
+	}
+
+	tests := []struct {
+		selector       string
+		expectedEvents []v1.Event
+	}{
+		{"name=\"Proc File Access\"", []v1.Event{events[0]}},
+		{"name IN {\"*file access*\"}", []v1.Event{events[0]}},
+		{"origin=\"Proc File Access\"", []v1.Event{events[0]}},
+		{"attack_vector=\"Process\"", []v1.Event{events[0]}},
+		// Some fields support case-insensitive filtering for Security Events Management UI
+		{"attack_vector=\"process\"", []v1.Event{events[0]}},
+		{"attack_vector=\"PROCESS\"", []v1.Event{events[0]}},
+		{"attack_phase=\"Access\"", []v1.Event{events[0], events[1]}},
+		{"attack_phase=\"access\"", []v1.Event{events[0], events[1]}},
+		{"attack_phase=\"ACCESS\"", []v1.Event{events[0], events[1]}},
+		{"name=\"WAF Event\"", []v1.Event{events[1]}},
+		{"name IN {\"*waf*\"}", []v1.Event{events[1]}},
+		{"type=global_alert AND origin='waf-new-alert-rule-info'", []v1.Event{events[1]}},
+		{"attack_vector=\"Network\"", []v1.Event{events[1]}},
+		{"attack_vector=\"netWORK\"", []v1.Event{events[1]}},
+		{"host='test-host'", []v1.Event{events[0], events[1]}},
+		{"description IN {'*security event*'}", []v1.Event{events[0], events[1], events[2]}},
+		{"severity > 95", []v1.Event{events[1]}},
+		{"severity = 100", []v1.Event{events[1]}},
+		{"severity>=70", []v1.Event{events[0], events[1]}},
+		{"severity < 70", []v1.Event{events[2]}},
+		{"severity>=70 AND severity < 95", []v1.Event{events[0]}},
+		{"mitre_ids IN {'T1190'}", []v1.Event{events[1]}},
+		{"mitre_ids IN {'T1057'}", []v1.Event{events[0]}},
+		{"mitre_ids IN {'t1057'}", []v1.Event{events[0]}},
+		// Getting a bit silly now, but it's nice that it works
+		{"mitre_ids IN {'T10*'}", []v1.Event{events[0]}},
+		{"mitre_ids NOTIN {'T10*'}", []v1.Event{events[1], events[2]}},
+		{"mitigations IN {'Do not*'}", []v1.Event{events[0]}},
+		{"mitigations IN {'DO NOT*'}", []v1.Event{events[0]}},
+		{"mitigations IN {'Use WAF :)'}", []v1.Event{events[1]}},
+		{"mitigations IN {'**'}", []v1.Event{events[0], events[1]}},
+		{"mitigations NOTIN {'**'}", []v1.Event{events[2]}},
+	}
+
+	for _, tt := range tests {
+		name := fmt.Sprintf("TestEventSelector: %s", tt.selector)
+		t.Run(name, func(t *testing.T) {
+			testEventsFiltering(tt.selector, tt.expectedEvents)
 		})
 	}
 }

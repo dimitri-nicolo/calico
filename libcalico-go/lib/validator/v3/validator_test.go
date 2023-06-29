@@ -100,6 +100,12 @@ func init() {
 	iptablesBackendAuto := api.IptablesBackend(api.IptablesBackendAuto)
 	iptablesBackendbadVal := api.IptablesBackend("badVal")
 
+	var invalidEGWPreference, noneEGWPreference, localEGWPreference api.GatewayPreferenceType
+
+	invalidEGWPreference = api.GatewayPreferenceType("invalid")
+	noneEGWPreference = api.GatewayPreferenceNone
+	localEGWPreference = api.GatewayPreferenceNodeLocal
+
 	// longLabelsValue is 63 and 64 chars long
 	maxAnnotationsLength := 256 * (1 << 10)
 	longValue := make([]byte, maxAnnotationsLength)
@@ -4520,6 +4526,37 @@ func init() {
 						NamespaceSelector: "projectcalico.org/name == 'calico-egress'",
 						MaxNextHops:       2,
 					},
+				},
+			},
+		}, true),
+		Entry("should reject egress gateway policy if an invalid GatewayPreference is specified", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "10.0.0.0/8",
+					},
+					GatewayPreference: &invalidEGWPreference,
+				},
+			},
+		}, false),
+		Entry("should accept egress gateway policy if a valid GatewayPreference is specified", api.EgressGatewayPolicySpec{
+			Rules: []api.EgressGatewayRule{
+				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "10.0.0.0/8",
+					},
+					GatewayPreference: &noneEGWPreference,
+				},
+				{
+					Destination: &api.EgressGatewayPolicyDestinationSpec{
+						CIDR: "172.16.0.0/16",
+					},
+					Gateway: &api.EgressSpec{
+						Selector:          "egress-code == 'red'",
+						NamespaceSelector: "projectcalico.org/name == 'calico-egress'",
+						MaxNextHops:       2,
+					},
+					GatewayPreference: &localEGWPreference,
 				},
 			},
 		}, true),

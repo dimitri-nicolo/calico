@@ -56,6 +56,9 @@ type recommendationEngine struct {
 	// Stabilization interval.
 	stabilization time.Duration
 
+	// serviceNameSuffix is the server name suffix of the local domain.
+	serviceNameSuffix string
+
 	// log entry
 	clog log.Entry
 }
@@ -74,6 +77,7 @@ func RunEngine(
 	lookback time.Duration,
 	order *float64,
 	clusterID string,
+	serviceNameSuffix string,
 	clock Clock,
 	recInterval time.Duration,
 	stabilizationPeriod time.Duration,
@@ -115,19 +119,8 @@ func RunEngine(
 	}
 
 	// Update staged network policy
-	engine := getRecommendationEngine(*snp, clock, recInterval, stabilizationPeriod, *clog)
+	engine := getRecommendationEngine(*snp, clock, recInterval, stabilizationPeriod, serviceNameSuffix, *clog)
 	engine.processRecommendation(flows, snp)
-
-	// If private network flows have generated new rules, then create a 'private-network' global
-	// network set. The global network set must be updated manually by the user to include new
-	// subnets.
-	if len(engine.egress.privateNetworkRules) > 0 || len(engine.ingress.privateNetworkRules) > 0 {
-		clog.Infof("Creating global network set: 'private-network'")
-		if err := calicores.MaybeCreatePrivateNetworkSet(ctx, calico, *owner); err != nil {
-			clog.WithError(err).Errorf("failed to create private network set: %s", calicores.PrivateNetworkSetName)
-			return
-		}
-	}
 }
 
 // Recommendation Engine
@@ -139,20 +132,22 @@ func newRecommendationEngine(
 	clock Clock,
 	interval time.Duration,
 	stabilization time.Duration,
+	serviceNameSuffix string,
 	clog log.Entry,
 ) *recommendationEngine {
 	return &recommendationEngine{
-		name:          name,
-		namespace:     namespace,
-		tier:          tier,
-		order:         order,
-		egress:        NewEngineRules(),
-		ingress:       NewEngineRules(),
-		nets:          set.New[NetworkSet](),
-		clock:         clock,
-		interval:      interval,
-		stabilization: stabilization,
-		clog:          clog,
+		name:              name,
+		namespace:         namespace,
+		tier:              tier,
+		order:             order,
+		egress:            NewEngineRules(),
+		ingress:           NewEngineRules(),
+		nets:              set.New[NetworkSet](),
+		clock:             clock,
+		interval:          interval,
+		stabilization:     stabilization,
+		serviceNameSuffix: serviceNameSuffix,
+		clog:              clog,
 	}
 }
 
@@ -352,11 +347,6 @@ func (ere *recommendationEngine) buildPrivate(dir calicores.DirectionType, rule 
 		return
 	}
 
-	nameKey := fmt.Sprintf("%s/name", calicores.PolicyRecKeyName)
-	name, ok := getRuleMetadata(nameKey, rule)
-	if !ok {
-		return
-	}
 	ts, ok := getRuleMetadata(calicores.LastUpdatedKey, rule)
 	if !ok {
 		return
@@ -366,7 +356,6 @@ func (ere *recommendationEngine) buildPrivate(dir calicores.DirectionType, rule 
 		protocol: *rule.Protocol,
 	}
 	val := &privateNetworkRule{
-		name:      name,
 		protocol:  *rule.Protocol,
 		ports:     rule.Destination.Ports, // Always destination
 		timestamp: ts,
@@ -472,7 +461,7 @@ func (ere *recommendationEngine) getSortedEngineAsV3Rules(direction calicores.Di
 	// PrivateNetwork
 	prnRules := []v3.Rule{}
 	for _, er := range engRules.privateNetworkRules {
-		rule := calicores.GetPrivateNetworkSetV3Rule(direction, er.ports, &er.protocol, er.timestamp)
+		rule := calicores.GetPrivateNetworkV3Rule(direction, er.ports, &er.protocol, er.timestamp)
 		prnRules = append(prnRules, *rule)
 	}
 	sort.Slice(prnRules, func(i, j int) bool {
@@ -520,9 +509,6 @@ func (ere *recommendationEngine) processRecommendation(flows []*api.Flow, snp *v
 	egress := ere.getSortedEngineAsV3Rules(calicores.EgressTraffic)
 	ingress := ere.getSortedEngineAsV3Rules(calicores.IngressTraffic)
 
-	// If the egress or ingress private network contains rules, create the 'private-network' global()
-	// network set if it doesn't already exist
-
 	emptyRules := len(egress) == 0 && len(ingress) == 0
 	if calicores.UpdateStagedNetworkPolicyRules(snp, egress, ingress) {
 		snp.Annotations[calicores.LastUpdatedKey] = ere.clock.NowRFC3339()
@@ -561,13 +547,13 @@ func (ere *recommendationEngine) processEngineRuleFromFlow(apiFlow api.Flow) {
 	var flowType flowType
 	var direction calicores.DirectionType
 	if ere.matchesSourceNamespace(apiFlow) {
-		if flowType = getFlowType(calicores.EgressTraffic, apiFlow); flowType == unsupportedFlowType {
+		if flowType = getFlowType(calicores.EgressTraffic, apiFlow, ere.serviceNameSuffix); flowType == unsupportedFlowType {
 			ere.clog.Debug("Unsupported flow type")
 			return
 		}
 		direction = calicores.EgressTraffic
 	} else if ere.matchesDestinationNamespace(apiFlow) {
-		if flowType = getFlowType(calicores.IngressTraffic, apiFlow); flowType == unsupportedFlowType {
+		if flowType = getFlowType(calicores.IngressTraffic, apiFlow, ere.serviceNameSuffix); flowType == unsupportedFlowType {
 			ere.clog.Debug("Unsupported flow type")
 			return
 		}
@@ -589,7 +575,7 @@ func (ere *recommendationEngine) processEngineRuleFromFlow(apiFlow api.Flow) {
 	// Add the flow to the existing set of engine rules, or log a warning if unsupported
 	switch flowType {
 	case egressToDomainFlowType:
-		engRules.addFlowToEgressToDomainRules(direction, apiFlow, ere.clock)
+		engRules.addFlowToEgressToDomainRules(direction, apiFlow, ere.clock, ere.serviceNameSuffix)
 	case egressToServiceFlowType:
 		engRules.addFlowToEgressToServiceRules(direction, apiFlow, ere.clock)
 	case namespaceFlowType:
@@ -691,10 +677,10 @@ func getNamespacePolicyRecParams(st time.Duration, ns, cl string) *flows.PolicyR
 // getRecommendationEngine returns a recommendation engine. Instantiated a new recommendation
 // engine and uses any existing staged network policy rules for instantiation.
 func getRecommendationEngine(
-	snp v3.StagedNetworkPolicy, clock Clock, interval, stabilization time.Duration, clog log.Entry,
+	snp v3.StagedNetworkPolicy, clock Clock, interval, stabilization time.Duration, serviceNameSuffix string, clog log.Entry,
 ) recommendationEngine {
 	eng := newRecommendationEngine(
-		snp.Name, snp.Namespace, snp.Spec.Tier, snp.Spec.Order, clock, interval, stabilization, clog)
+		snp.Name, snp.Namespace, snp.Spec.Tier, snp.Spec.Order, clock, interval, stabilization, serviceNameSuffix, clog)
 	eng.buildRules(calicores.EgressTraffic, snp.Spec.Egress)
 	eng.buildRules(calicores.IngressTraffic, snp.Spec.Ingress)
 

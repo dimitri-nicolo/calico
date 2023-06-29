@@ -185,6 +185,7 @@ func run() {
 			{Namespace: "tigera-compliance", Name: "tigera-compliance-snapshotter"},
 			{Namespace: "tigera-dpi", Name: "tigera-dpi"},
 			{Namespace: "tigera-intrusion-detection", Name: "intrusion-detection-controller"},
+			{Namespace: "tigera-intrusion-detection", Name: "anomaly-detectors"},
 		}
 
 		factory := k8s.NewClientSetFactory(cfg.MultiClusterForwardingCA, cfg.MultiClusterForwardingEndpoint)
