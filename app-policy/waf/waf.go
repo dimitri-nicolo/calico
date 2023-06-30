@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -35,6 +36,22 @@ var filenames []string
 
 var owaspLogInfo = map[string][]map[string]string{}
 var owaspLogMutex sync.Mutex
+
+// WAF Error structures
+type WAFError struct {
+	Disruption WAFIntervention
+	Msg        string
+}
+
+type WAFIntervention struct {
+	Status int32
+	Log    string
+	URL    string
+}
+
+func (e WAFError) Error() string {
+	return e.Msg
+}
 
 // CheckRulesSetExists
 // invoke this WAF function first checking if rules argument set and if so with destination directory.
@@ -88,15 +105,31 @@ func ExtractRulesSetFilenames() error {
 		return err
 	}
 
+	forcedLoadFirst := []string{
+		"modsecdefault.conf",
+		"crs-setup.conf",
+	}
+	forcedLoadFirstIdx := map[string]interface{}{}
+	for _, s := range forcedLoadFirst {
+		_, err := os.Stat(filepath.Join(rulesetDirectory, s))
+		if err != nil {
+			log.Infof("WAF Disabled: Error checking expected file '%s' on directory '%s': '%v'", s, rulesetDirectory, err)
+			filenames = nil
+			return nil
+		}
+		forcedLoadFirstIdx[s] = nil
+	}
+
 	var itemNames []string
 	for _, i := range items {
-		itemNames = append(itemNames, i.Name())
+		if _, ok := forcedLoadFirstIdx[i.Name()]; !ok {
+			itemNames = append(itemNames, i.Name())
+		}
 	}
 	// Sort files descending to ensure lower cased files like crs-setup.conf are loaded first.
 	// This is a requirement for Core Rules Set and REQUEST-901-INITIALIZATION.conf bootstrap.
-	sort.Slice(itemNames, func(i, j int) bool {
-		return itemNames[i] > itemNames[j]
-	})
+	sort.Strings(itemNames)
+	itemNames = append(forcedLoadFirst, itemNames...)
 
 	count := 1
 	filenames = nil
@@ -182,6 +215,7 @@ func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHo
 	}
 	log.Info(message)
 
+	var Cerr C.int
 	Cid := C.CString(id)
 	defer C.free(unsafe.Pointer(Cid))
 
@@ -224,14 +258,9 @@ func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHo
 	CreqBodyText := C.CString(reqBody)
 	defer C.free(unsafe.Pointer(CreqBodyText))
 
-	intervention := C.NewModSecurityIntervention()
-	if intervention == nil {
-		return errors.New("unable to allocate memory for modsec intervention struct")
-	}
-	defer C.free(unsafe.Pointer(intervention))
-
 	start := time.Now()
-	retVal, err := C.ProcessHttpRequest(
+	in := C.ProcessHttpRequest(
+		&Cerr,
 		Cid,
 		Curi,
 		ChttpMethod,
@@ -246,24 +275,40 @@ func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHo
 		CreqHeaderSize,
 		CreqBodyText,
 		CreqBodySize,
-		intervention,
 	)
+	if in != nil {
+		defer C.freeIntervention(in)
+	}
 
 	elapsed := time.Since(start)
-	if err != nil {
-		errMsg := fmt.Sprintf("%s URL '%s' ModSecurity error '%v'", prefix, url, err.Error())
-		return errors.New(errMsg)
+
+	return processErrors(int(Cerr), in, prefix, url, elapsed)
+}
+
+func processErrors(err int, in *C.ModSecurityIntervention, prefix, url string,
+	elapsed time.Duration) error {
+
+	if err > 0 {
+		log.Errorf("%s URL '%s' ModSecurity error '%v'", prefix, url,
+			err)
 	}
 
-	detection := int(retVal)
-	log.Infof("%s URL '%s' Detection=%d Time elapsed: %s", prefix, url, detection, elapsed)
+	log.Infof("%s URL '%s' Disruption=%v Time elapsed: %s", prefix,
+		url, in != nil, elapsed)
 
-	if detection > 0 {
-		errMsg := fmt.Sprintf("%s URL '%s' Detection=%d", prefix, url, detection)
-		return errors.New(errMsg)
+	if in == nil {
+		return nil
 	}
 
-	return nil
+	return WAFError{
+		Disruption: WAFIntervention{
+			Status: int32(in.status),
+			Log:    C.GoString(in.log),
+			URL:    C.GoString(in.url),
+		},
+		Msg: fmt.Sprintf("%s URL '%s' Disruption=%v", prefix, url,
+			in != nil),
+	}
 }
 
 func Initialize(rulesetArgument interface{}) {
@@ -308,13 +353,14 @@ func GetProcessHttpRequestPrefix(id string) string {
 
 //export GoModSecurityLoggingCallback
 func GoModSecurityLoggingCallback(Cpayload *C.char) {
-
+	//
 	payload := C.GoString(Cpayload)
 	dictionary := ParseLog(payload)
 	uniqueId := dictionary[ParserUniqueId]
 
 	// Ignore edge case in which log payload is missing the UniqueId;
-	// in theory log should always include UniqueId because we construct ModSec transaction with this UniqueId explicitly.
+	// in theory log should always include UniqueId because we construct
+	// ModSec transaction with this UniqueId explicitly.
 	if len(uniqueId) == 0 {
 		return
 	}
@@ -334,7 +380,8 @@ func GetAndClearOwaspLogs(uniqueId string) []*OwaspInfo {
 
 	var owaspLogEntries []*OwaspInfo
 	for _, owaspDictionary := range owaspInfos {
-		owaspLogEntries = append(owaspLogEntries, NewOwaspInfo(owaspDictionary))
+		owaspLogEntries = append(owaspLogEntries,
+			NewOwaspInfo(owaspDictionary))
 	}
 
 	return owaspLogEntries

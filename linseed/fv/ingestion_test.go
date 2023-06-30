@@ -389,7 +389,7 @@ func TestFV_BGPIngestion(t *testing.T) {
 func TestFV_WAFIngestion(t *testing.T) {
 	addr := "https://localhost:8444/api/v1/waf/logs/bulk"
 	tenant := "tenant-a"
-	expectedResponse := `{"failed":0, "succeeded":1, "total":1}`
+	expectedResponse := `{"failed":0, "succeeded":2, "total":2}`
 	indexPrefix := "tigera_secure_ee_waf.tenant-a."
 
 	t.Run("ingest waf logs via bulk API with production data", func(t *testing.T) {
@@ -409,9 +409,9 @@ func TestFV_WAFIngestion(t *testing.T) {
 		_, err := esClient.Refresh(index).Do(ctx)
 		require.NoError(t, err)
 
-		endTime, err := time.Parse(time.RFC3339Nano, "2022-02-11T10:04:23.460223952Z")
+		endTime, err := time.Parse(time.RFC3339Nano, "2023-06-22T23:59:59.999999999Z")
 		require.NoError(t, err)
-		startTime, err := time.Parse(time.RFC3339Nano, "2022-02-11T10:03:23.460223952Z")
+		startTime, err := time.Parse(time.RFC3339Nano, "2022-02-11T00:00:00.000000000Z")
 		require.NoError(t, err)
 
 		params := v1.WAFLogParams{
@@ -427,7 +427,7 @@ func TestFV_WAFIngestion(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resultList)
 
-		require.Equal(t, int64(1), resultList.TotalHits)
+		require.Equal(t, int64(2), resultList.TotalHits)
 
 		var esLogs []string
 		for _, log := range resultList.Items {

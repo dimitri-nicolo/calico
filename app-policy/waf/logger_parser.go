@@ -80,32 +80,33 @@ func FormatMap(dictionary map[string]string) string {
 }
 
 type OwaspInfo struct {
-	Host      string
-	File      string
-	Line      string
-	RequestId string
-	Data      string
-	Severity  string
-	Version   string
-	Message   string
+	Host       string
+	File       string
+	Line       string
+	RuleId     string
+	Data       string
+	Severity   string
+	Version    string
+	Message    string
+	Disruptive bool
 }
 
 func NewOwaspInfo(dict map[string]string) *OwaspInfo {
 	return &OwaspInfo{
-		Host:      dict[ParserHostname],
-		File:      dict[ParserFile],
-		Line:      dict[ParserLine],
-		RequestId: dict[ParserId],
-		Data:      dict[ParserData],
-		Severity:  dict[ParserSeverity],
-		Version:   dict[ParserVersion],
-		Message:   dict[ParserMsg],
+		Host:     dict[ParserHostname],
+		File:     dict[ParserFile],
+		Line:     dict[ParserLine],
+		RuleId:   dict[ParserId],
+		Data:     dict[ParserData],
+		Severity: dict[ParserSeverity],
+		Version:  dict[ParserVersion],
+		Message:  dict[ParserMsg],
 	}
 }
 
 func (o *OwaspInfo) String() string {
 	return fmt.Sprintf(
 		"Host:'%s' File:'%s' Line:'%s' ID:'%s' Data:'%s' Severity:'%s' Version:'%s'",
-		o.Host, o.File, o.Line, o.RequestId, o.Data, o.Severity, o.Version,
+		o.Host, o.File, o.Line, o.RuleId, o.Data, o.Severity, o.Version,
 	)
 }
