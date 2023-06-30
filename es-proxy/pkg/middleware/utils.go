@@ -44,7 +44,7 @@ func createAndReturnError(err error, errorStr string, code int, featureID lmaerr
 		return
 	}
 
-	w.WriteHeader(http.StatusNotFound)
+	w.WriteHeader(code)
 	_, err = w.Write(responseJSON)
 	if err != nil {
 		log.WithError(err).Infof("Error writing JSON: %v", responseJSON)
