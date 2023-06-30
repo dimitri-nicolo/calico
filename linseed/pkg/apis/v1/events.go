@@ -169,6 +169,11 @@ func (t *TimestampOrDate) MarshalJSON() ([]byte, error) {
 		return json.Marshal(t.timeVal.Format(ISO8601Format))
 	}
 
+	if t.timeVal == nil && t.intVal == nil {
+		var zero = 0
+		return json.Marshal(&zero)
+	}
+
 	return nil, nil
 }
 

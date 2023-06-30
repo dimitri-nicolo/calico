@@ -211,6 +211,7 @@ func TestFV_Events(t *testing.T) {
 		// Create a basic event.
 		events := []v1.Event{
 			{
+				ID:          "ABC",
 				Time:        v1.NewEventTimestamp(time.Now().Unix()),
 				Description: "A rather uneventful evening",
 				Origin:      "TODO",
@@ -242,7 +243,7 @@ func TestFV_Events(t *testing.T) {
 		require.False(t, resp.Items[0].Dismissed)
 
 		// We should be able to dismiss the event.
-		bulk, err = cli.Events(cluster).Dismiss(ctx, resp.Items)
+		bulk, err = cli.Events(cluster).Dismiss(ctx, []v1.Event{{ID: "ABC"}})
 		require.NoError(t, err)
 		require.Equal(t, bulk.Succeeded, 1, "dismiss event did not succeed")
 
@@ -254,7 +255,7 @@ func TestFV_Events(t *testing.T) {
 		require.True(t, resp.Items[0].Dismissed)
 
 		// Now, delete the event.
-		bulk, err = cli.Events(cluster).Delete(ctx, resp.Items)
+		bulk, err = cli.Events(cluster).Delete(ctx, []v1.Event{{ID: "ABC"}})
 		require.NoError(t, err)
 		require.Equal(t, bulk.Succeeded, 1, "delete event did not succeed")
 

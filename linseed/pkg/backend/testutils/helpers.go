@@ -167,11 +167,7 @@ func Populate(value reflect.Value) {
 	fmt.Println(value.String())
 	if value.IsValid() {
 		typeOf := value.Type()
-		if typeOf.Name() == "TimestampOrDate" { // TimestampOrDate has private fields which can not be set using reflection
-			newStruct := reflect.ValueOf(v1.NewEventTimestamp(1630343977))
-			value.Set(newStruct)
-			return
-		} else if typeOf.Name() == "Unknown" { // runtime.Unknown is an interface
+		if typeOf.Name() == "Unknown" { // runtime.Unknown is an interface
 			return
 		}
 		if typeOf.Kind() == reflect.Struct {
