@@ -36,6 +36,9 @@ const (
 	TypeTcpStats Type = 4
 	// TypeProcessPath reports process exec path, arguments
 	TypeProcessPath Type = 5
+	// TypeDNSEventL3 is like TypeDNSEvent but from a L3 device - i.e. one whose packets begin
+	// with the L3 header
+	TypeDNSEventL3 Type = 6
 )
 
 func (t Type) String() string {

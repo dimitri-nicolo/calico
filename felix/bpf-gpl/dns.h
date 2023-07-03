@@ -16,7 +16,11 @@ static CALI_BPF_INLINE void calico_report_dns(struct cali_tc_ctx *ctx)
 	int plen = ctx->skb->len;
 	struct perf_event_timestamp_header hdr;
 	__builtin_memset(&hdr, 0, sizeof(hdr));
-	hdr.h.type = EVENT_DNS;
+	if (CALI_F_L3) {
+		hdr.h.type = EVENT_DNS_L3;
+	} else {
+		hdr.h.type = EVENT_DNS;
+	}
 	hdr.h.len = sizeof(hdr) + plen;
 	hdr.timestamp_ns = bpf_ktime_get_ns();
 	int err = perf_commit_event_ctx(ctx->skb, plen, &hdr, sizeof(hdr));

@@ -896,6 +896,23 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 					}
 				})
 			log.Info("BPF: Registered events sink for TypeDNSEvent")
+
+			// Register BPF event handling for DNS events from L3 devices.
+			bpfEventPoller.Register(events.TypeDNSEventL3,
+				func(e events.Event) {
+					log.Debugf("DNS L3 packet from BPF: %v", e)
+					// The first 8 bytes of the event data are a 64-bit timestamp (in nanoseconds).  The DNS
+					// packet data begins after that.
+					timestampNS := binary.LittleEndian.Uint64(e.Data())
+					consumed := 8
+					dp.domainInfoStore.MsgChannel() <- common.DataWithTimestamp{
+						// On L3 devices the packet data begins with the IP
+						// header, and we don't need to strip anything off.
+						Data:      e.Data()[consumed:],
+						Timestamp: timestampNS,
+					}
+				})
+			log.Info("BPF: Registered events sink for TypeDNSEvent")
 		}
 	}
 	if config.FlowLogsCollectProcessInfo {
