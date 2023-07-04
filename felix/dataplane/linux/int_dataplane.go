@@ -888,8 +888,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 					timestampNS := binary.LittleEndian.Uint64(e.Data())
 					consumed := 8
 					dp.domainInfoStore.MsgChannel() <- common.DataWithTimestamp{
-						// We currently only capture DNS packets on workload interfaces, and the packet data
-						// on those interfaces always begins with an Ethernet header that we don't want.
+						// When we capture DNS packets on Ethernet interfaces - i.e. those that are not
+						// "L3 devices" - the packet data begins with an Ethernet header that we don't
+						// want.  (Note, Ethernet interfaces can be either workload or host interfaces.)
 						// Therefore strip off that Ethernet header, which occupies the first 14 bytes.
 						Data:      e.Data()[consumed+14:],
 						Timestamp: timestampNS,
