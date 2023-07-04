@@ -5,6 +5,7 @@ package templates
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/projectcalico/go-json/json"
@@ -21,6 +22,7 @@ var IndexBootstrapper Load = func(ctx context.Context, client *elastic.Client, c
 	}
 
 	// Create/Update the template in Elastic
+	logrus.WithField("template", template).Info("Template to be created...")
 	logrus.WithField("name", templateName).Info("Creating index template")
 	_, err = client.IndexPutTemplate(templateName).BodyJson(template).Do(ctx)
 	if err != nil {
@@ -35,9 +37,11 @@ var IndexBootstrapper Load = func(ctx context.Context, client *elastic.Client, c
 	}
 
 	var aliasExists bool
+	var aliasedIndex string
 	for _, row := range response {
 		if row.Alias == config.Alias() {
 			aliasExists = true
+			aliasedIndex = row.Index
 			break
 		}
 	}
@@ -69,6 +73,44 @@ var IndexBootstrapper Load = func(ctx context.Context, client *elastic.Client, c
 			_, err := client.Alias().Add(config.BootstrapIndexName(), config.Alias()).Do(ctx)
 			if err != nil {
 				return nil, err
+			}
+		}
+	} else {
+		// Alias exists. This means that the index was setup previously.
+		logrus.Infof("alias %s exists for index %s", config.Alias(), aliasedIndex)
+
+		// We now want to compare its mappings to our mappings.
+		// If different, we want to rollover the index so that it uses the latest mappings.
+
+		ir, err := client.IndexGet(aliasedIndex).Do(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		indexMappings := ir[aliasedIndex].Mappings
+		if indexMappings == nil {
+			return nil, fmt.Errorf("failed to get index mappings")
+		}
+
+		// Please note that we only compare the mappings.
+		// One could argue that similar logic should be done to detect settings changes.
+		// This is possible, but we would need to ignore the following fields: provided_name, creation_date, uuid, version.
+		// To keep things simple, we'll ignore this and assume that we're unlikely to update the settings without updating the mappings...
+		if reflect.DeepEqual(indexMappings, template.Mappings) {
+			logrus.Info("Existing index already uses the latest mappings")
+		} else {
+			logrus.Info("Existing index does not use the latest mappings, let's rollover the index so that it uses the latest mappings")
+			response, err := client.RolloverIndex(config.Alias()).Do(ctx)
+			if err != nil {
+				return nil, err
+			}
+			if !response.Acknowledged {
+				return nil, fmt.Errorf("failed to acknowledge index rollover")
+			}
+			if response.RolledOver {
+				logrus.Infof("Rolled over index %s to index %s", response.OldIndex, response.NewIndex)
+			} else {
+				logrus.Infof("Did not rollover index %s", response.OldIndex)
 			}
 		}
 	}
