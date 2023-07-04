@@ -912,7 +912,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 						Timestamp: timestampNS,
 					}
 				})
-			log.Info("BPF: Registered events sink for TypeDNSEvent")
+			log.Info("BPF: Registered events sink for TypeDNSEventL3")
 		}
 	}
 	if config.FlowLogsCollectProcessInfo {
