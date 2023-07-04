@@ -925,7 +925,7 @@ var _ = Describe("Policy Recommendation", func() {
 			Expect(err).To(BeNil())
 
 			if statusCode != http.StatusOK {
-				Expect(w.Code).To(Equal(http.StatusNotFound))
+				Expect(w.Code).To(Equal(statusCode))
 				recResponse, err := io.ReadAll(w.Body)
 				Expect(err).NotTo(HaveOccurred())
 				errorBody := &api.Error{}
