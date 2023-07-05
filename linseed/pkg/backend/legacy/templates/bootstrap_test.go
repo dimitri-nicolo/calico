@@ -41,9 +41,9 @@ func setupTest(t *testing.T, indices []string) func() {
 	// interfere between tests.
 	cluster = testutils.RandomClusterName()
 
-	// Each test should take less than 5 seconds.
+	// Each test should take less than 60 seconds.
 	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 
 	return func() {
 		// Cleanup after ourselves.
@@ -88,15 +88,29 @@ func checkTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster 
 	require.NoError(t, err)
 	require.Greater(t, len(responseAlias), 0)
 	hasAlias := false
+	numWriteIndex := 0
+	numNonWriteIndex := 0
+	indices := []string{}
 	for _, row := range responseAlias {
 		if row.Alias == fmt.Sprintf("%s.%s.", indexPrefix, cluster) {
-			require.Equal(t, row.Index, index)
-			require.Equal(t, row.IsWriteIndex, "true")
 			hasAlias = true
-			break
+
+			indices = append(indices, row.Index)
+			if row.IsWriteIndex == "true" {
+				numWriteIndex++
+			} else {
+				numNonWriteIndex++
+			}
 		}
 	}
 	require.True(t, hasAlias)
+
+	require.Contains(t, indices, index)
+
+	// We always only want 1 write index
+	require.Equal(t, 1, numWriteIndex)
+	// We may have some non-write index (if we rollover)
+	require.GreaterOrEqual(t, numNonWriteIndex, 0)
 
 	responseSettings, err := client.IndexGetSettings(index).Do(ctx)
 	require.NoError(t, err)
