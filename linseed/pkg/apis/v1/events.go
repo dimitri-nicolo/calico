@@ -128,11 +128,20 @@ type DPIRecord struct {
 }
 
 // NewEventTimestamp will create a new TimestampOrDate
-// that has only timestamp field populated with a value
+// that has only the timestamp field populated with a value
 // that represents unix time in seconds
 func NewEventTimestamp(val int64) TimestampOrDate {
 	return TimestampOrDate{
 		intVal: &val,
+	}
+}
+
+// NewEventDate will create a new TimestampOrDate
+// that has only the date field populated with a value
+// that represents a time in RFC ISO format
+func NewEventDate(val time.Time) TimestampOrDate {
+	return TimestampOrDate{
+		timeVal: &val,
 	}
 }
 

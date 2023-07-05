@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
@@ -162,6 +164,56 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		// an afterKey
 		require.Nil(t, resp.AfterKey)
 	})
+
+	t.Run("should support pagination for items >= 10000 for threat feeds", func(t *testing.T) {
+		defer threatFeedsSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K threat feeds.
+		createdAtTime := time.Unix(0, 0).UTC()
+		var feeds []v1.DomainNameSetThreatFeed
+		for i := 0; i < totalItems; i++ {
+			feeds = append(feeds, v1.DomainNameSetThreatFeed{
+				ID: strconv.Itoa(i),
+				Data: &v1.DomainNameSetThreatFeedData{
+					CreatedAt: createdAtTime.Add(time.Duration(i) * time.Second),
+				},
+			},
+			)
+		}
+		bulk, err := cli.ThreatFeeds(cluster).DomainNameSet().Create(ctx, feeds)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Total, "create feeds did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_threatfeeds_domainnameset*")
+
+		// Stream through all the items.
+		params := v1.DomainNameSetThreatFeedParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: createdAtTime.Add(-5 * time.Second),
+					To:   createdAtTime.Add(time.Duration(totalItems) * time.Second),
+				},
+				MaxPageSize: 1000,
+			},
+		}
+
+		pager := client.NewListPager[v1.DomainNameSetThreatFeed](&params)
+		pages, errors := pager.Stream(ctx, cli.ThreatFeeds(cluster).DomainNameSet().List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
+	})
+
 }
 
 func TestFV_DomainNameSetTenancy(t *testing.T) {

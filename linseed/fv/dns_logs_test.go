@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	"github.com/google/gopacket/layers"
@@ -199,6 +201,54 @@ func TestDNS_FlowLogs(t *testing.T) {
 		// an afterKey
 		require.Nil(t, resp.AfterKey)
 	})
+
+	t.Run("should support pagination for items >= 10000 for dns", func(t *testing.T) {
+		defer dnslogSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K dns logs.
+		logTime := time.Unix(100, 0).UTC()
+		var logs []v1.DNSLog
+		for i := 0; i < totalItems; i++ {
+			logs = append(logs, v1.DNSLog{
+				StartTime: logTime,
+				EndTime:   logTime.Add(time.Duration(i) * time.Second), // Make sure logs are ordered.
+				Host:      fmt.Sprintf("%d", i),
+			})
+		}
+		bulk, err := cli.DNSLogs(cluster).Create(ctx, logs)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Total, "create dns log did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_dns*")
+
+		// Stream through all the items.
+		params := v1.DNSLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: logTime.Add(-5 * time.Second),
+					To:   logTime.Add(time.Duration(totalItems) * time.Second),
+				},
+				MaxPageSize: 1000,
+			},
+		}
+
+		pager := client.NewListPager[v1.DNSLog](&params)
+		pages, errors := pager.Stream(ctx, cli.DNSLogs(cluster).List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
+	})
+
 }
 
 func TestFV_DNSLogTenancy(t *testing.T) {

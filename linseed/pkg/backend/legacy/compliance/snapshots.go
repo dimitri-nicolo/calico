@@ -12,31 +12,32 @@ import (
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
-func NewSnapshotBackend(c lmaelastic.Client, cache bapi.Cache) bapi.SnapshotsBackend {
+func NewSnapshotBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.SnapshotsBackend {
 	return &snapshotsBackend{
-		client:    c.Backend(),
-		lmaclient: c,
-		templates: cache,
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
 	}
 }
 
 type snapshotsBackend struct {
-	client    *elastic.Client
-	templates bapi.Cache
-	lmaclient lmaelastic.Client
+	client               *elastic.Client
+	templates            bapi.Cache
+	lmaclient            lmaelastic.Client
+	deepPaginationCutOff int64
 }
 
-func (b *snapshotsBackend) List(ctx context.Context, i bapi.ClusterInfo, p *v1.SnapshotParams) (*v1.List[v1.Snapshot], error) {
+func (b *snapshotsBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.SnapshotParams) (*v1.List[v1.Snapshot], error) {
 	log := bapi.ContextLogger(i)
 
-	query, startFrom, err := b.getSearch(ctx, i, p)
+	query, startFrom, err := b.getSearch(i, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -60,10 +61,17 @@ func (b *snapshotsBackend) List(ctx context.Context, i bapi.ClusterInfo, p *v1.S
 		snapshots = append(snapshots, snapshot)
 	}
 
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.List[v1.Snapshot]{
 		Items:     snapshots,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextStartFromAfterKey(p, len(results.Hits.Hits), startFrom, results.TotalHits()),
+		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
 	}, nil
 }
 
@@ -112,34 +120,35 @@ func (b *snapshotsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v
 	}, nil
 }
 
-func (b *snapshotsBackend) getSearch(ctx context.Context, i api.ClusterInfo, p *v1.SnapshotParams) (*elastic.SearchService, int, error) {
+func (b *snapshotsBackend) getSearch(i bapi.ClusterInfo, opts *v1.SnapshotParams) (*elastic.SearchService, int, error) {
 	if err := i.Valid(); err != nil {
 		return nil, 0, err
 	}
 
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(p)
+	q := b.buildQuery(opts)
+
+	// Build the query, sorting by time.
+	query := b.client.Search().
+		Size(opts.GetMaxPageSize()).
+		Query(q)
+
+	// Configure pagination options
+	var startFrom int
+	var err error
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
 	if err != nil {
 		return nil, 0, err
 	}
 
-	q := b.buildQuery(p)
-
-	// Build the query, sorting by time.
-	query := b.client.Search().
-		Index(b.index(i)).
-		Size(p.GetMaxPageSize()).
-		From(startFrom).
-		Query(q)
-
 	// Configure sorting.
-	if len(p.Sort) != 0 {
-		for _, s := range p.Sort {
+	if len(opts.Sort) != 0 {
+		for _, s := range opts.Sort {
 			query.Sort(s.Field, !s.Descending)
 		}
 	} else {
-		query.Sort("requestCompletedTimestamp", false)
+		query.SortBy(elastic.NewFieldSort("requestCompletedTimestamp").Order(false), elastic.SortByDoc{})
 	}
+
 	return query, startFrom, nil
 }
 

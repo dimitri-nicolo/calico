@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
@@ -382,6 +384,54 @@ func TestFV_RuntimeReports(t *testing.T) {
 		// Once we reach the end of the data, we should not receive
 		// an afterKey
 		require.Nil(t, resp.AfterKey)
+	})
+
+	t.Run("should support pagination for items >= 10000 for runtime reports", func(t *testing.T) {
+		defer runtimeReportsSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K runtime reports.
+		referenceTime := time.Unix(1, 0).UTC()
+		var reports []v1.Report
+		for i := 0; i < totalItems; i++ {
+			logTime := referenceTime.Add(time.Duration(i) * time.Second) // Make sure reports are ordered.
+			reports = append(reports, v1.Report{
+				GeneratedTime: &logTime,
+				Host:          fmt.Sprintf("%d", i),
+			},
+			)
+		}
+		bulk, err := cli.RuntimeReports(cluster).Create(ctx, reports)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Total, "create reports did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_runtime*")
+
+		// Stream through all the items.
+		params := v1.RuntimeReportParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: referenceTime,
+					To:   time.Now(),
+				},
+				MaxPageSize: 1000,
+			},
+		}
+
+		pager := client.NewListPager[v1.RuntimeReport](&params)
+		pages, errors := pager.Stream(ctx, cli.RuntimeReports(cluster).List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
 	})
 
 	t.Run("should read data for multiple clusters", func(t *testing.T) {

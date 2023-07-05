@@ -24,14 +24,16 @@ type runtimeReportBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
 
-	templates bapi.Cache
+	templates            bapi.Cache
+	deepPaginationCutOff int64
 }
 
-func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.RuntimeBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.RuntimeBackend {
 	return &runtimeReportBackend{
-		client:    c.Backend(),
-		lmaclient: c,
-		templates: cache,
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
 	}
 }
 
@@ -86,18 +88,18 @@ func (b *runtimeReportBackend) Create(ctx context.Context, i bapi.ClusterInfo, r
 func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.RuntimeReportParams) (*v1.List[v1.RuntimeReport], error) {
 	log := bapi.ContextLogger(i)
 
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(&opts.QueryParams)
+	// Build the query.
+	query := b.client.Search().
+		Size(opts.GetMaxPageSize()).
+		Query(b.buildQuery(i, opts))
+
+	// Configure pagination options
+	var startFrom int
+	var err error
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
 	if err != nil {
 		return nil, err
 	}
-
-	// Build the query.
-	query := b.client.Search().
-		Index(b.index(i)).
-		Size(opts.GetMaxPageSize()).
-		From(startFrom).
-		Query(b.buildQuery(i, opts))
 
 	// Configure sorting.
 	if len(opts.GetSortBy()) != 0 {
@@ -105,7 +107,7 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 			query.Sort(s.Field, !s.Descending)
 		}
 	} else {
-		query.Sort("start_time", true)
+		query.SortBy(elastic.NewFieldSort("start_time").Order(true), elastic.SortByDoc{})
 	}
 
 	results, err := query.Do(ctx)
@@ -129,10 +131,17 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 		reports = append(reports, v1.RuntimeReport{ID: id, Tenant: tenant, Cluster: cluster, Report: l})
 	}
 
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.List[v1.RuntimeReport]{
 		TotalHits: results.TotalHits(),
 		Items:     reports,
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
+		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
 	}, nil
 }
 

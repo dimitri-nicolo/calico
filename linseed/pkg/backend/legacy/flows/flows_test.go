@@ -59,7 +59,7 @@ func setupTest(t *testing.T) func() {
 
 	// Create backends to use.
 	fb = flows.NewFlowBackend(client)
-	flb = flows.NewFlowLogBackend(client, cache)
+	flb = flows.NewFlowLogBackend(client, cache, 10000)
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.

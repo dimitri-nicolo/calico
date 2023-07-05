@@ -21,18 +21,20 @@ import (
 )
 
 type auditLogBackend struct {
-	client    *elastic.Client
-	lmaclient lmaelastic.Client
-	helper    index.Helper
-	templates bapi.Cache
+	client               *elastic.Client
+	lmaclient            lmaelastic.Client
+	helper               index.Helper
+	templates            bapi.Cache
+	deepPaginationCutOff int64
 }
 
-func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.AuditBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.AuditBackend {
 	return &auditLogBackend{
-		client:    c.Backend(),
-		helper:    index.AuditLogs(),
-		lmaclient: c,
-		templates: cache,
+		client:               c.Backend(),
+		helper:               index.AuditLogs(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
 	}
 }
 
@@ -103,7 +105,7 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.AuditLogParams) (*v1.List[v1.AuditLog], error) {
 	log := bapi.ContextLogger(i)
 
-	query, startFrom, err := b.getSearch(ctx, i, opts)
+	query, startFrom, err := b.getSearch(i, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -124,16 +126,23 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 		auditLogs = append(auditLogs, e)
 	}
 
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(opts.Type, i), results, b.deepPaginationCutOff, log)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.List[v1.AuditLog]{
 		TotalHits: results.TotalHits(),
 		Items:     auditLogs,
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
+		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
 	}, nil
 }
 
 func (b *auditLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.AuditLogAggregationParams) (*elastic.Aggregations, error) {
 	// Get the base query.
-	search, _, err := b.getSearch(ctx, i, &opts.AuditLogParams)
+	search, _, err := b.getSearch(i, &opts.AuditLogParams)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +174,7 @@ func (b *auditLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, o
 	return &results.Aggregations, nil
 }
 
-func (b *auditLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v1.AuditLogParams) (*elastic.SearchService, int, error) {
+func (b *auditLogBackend) getSearch(i api.ClusterInfo, opts *v1.AuditLogParams) (*elastic.SearchService, int, error) {
 	if err := i.Valid(); err != nil {
 		return nil, 0, err
 	}
@@ -180,12 +189,6 @@ func (b *auditLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts
 		return nil, 0, fmt.Errorf("invalid audit log type: %s", opts.Type)
 	}
 
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(opts)
-	if err != nil {
-		return nil, 0, err
-	}
-
 	q, err := b.buildQuery(i, opts)
 	if err != nil {
 		return nil, 0, err
@@ -193,10 +196,15 @@ func (b *auditLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts
 
 	// Build the query.
 	query := b.client.Search().
-		Index(b.index(opts.Type, i)).
 		Size(opts.GetMaxPageSize()).
-		From(startFrom).
 		Query(q)
+
+	// Configure pagination options
+	var startFrom int
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(opts.Type, i))
+	if err != nil {
+		return nil, 0, err
+	}
 
 	// Configure sorting.
 	if len(opts.Sort) != 0 {

@@ -125,43 +125,44 @@ An example to make a paginated query to read flow logs from the last 5 minutes i
 
 ## Configuration and permissions
 
-| ENV                        |                  Default value                   |                                                                                           Description |
-|----------------------------|:------------------------------------------------:|------------------------------------------------------------------------------------------------------:|
-| LINSEED_PORT               |                      `443`                       |                                                                       Local Port to start the service |
-| LINSEED_HOST               |                     <empty>                      |                                                                                  Host for the service |
-| LINSEED_LOG_LEVEL          |                      `Info`                      |                                                                              Log Level across service |
-| LINSEED_HTTPS_CERT         |              `/certs/https/tls.crt`              |                                                                                      Path to tls cert |
-| LINSEED_HTTPS_KEY          |              `/certs/https/tls.key`              |                                                                                       Path to tls key |
-| LINSEED_CA_CERT            |            `/certs/https/client.crt`             |                                                                                       Path to ca cert |
-| LINSEED_FIPS_MODE_ENABLED  |                     `false`                      |                                               FIPSModeEnabled Enables FIPS 140-2 verified crypto mode |
-| LINSEED_EXPECTED_TENANT_ID |                        -                         |                        ExpectedTenantID will be verified against x-tenant-id header for all API calls |
-| ELASTIC_HOST               | `tigera-secure-es-http.tigera-elasticsearch.svc` |                                                     Elastic Host; For local development use localhost |
-| ELASTIC_PORT               |                      `9200`                      |                                                          Elastic Port; For local development use 9200 |
-| ELASTIC_SCHEME             |                     `https`                      |                                                  Defines what protocol is used to sniff Elastic nodes |
-| ELASTIC_USERNAME           |                     <empty>                      |                 Elastic username; If left empty, communication with Elastic will not be authenticated |
-| ELASTIC_PASSWORD           |                     <empty>                      |                 Elastic password; If left empty, communication with Elastic will not be authenticated |
-| ELASTIC_CA                 |          `/certs/elasticsearch/tls.crt`          |                                                                           Elastic ca certificate path |
-| ELASTIC_CLIENT_CERT        |        `/certs/elasticsearch/client.crt`         | Elastic client certificate path; It will only be picked up if LINSEED_ELASTIC_MTLS_ENABLED is enabled |
-| ELASTIC_CLIENT_KEY         |        `/certs/elasticsearch/client.key`         |         Elastic client key path; It will only be picked up if LINSEED_ELASTIC_MTLS_ENABLED is enabled |
-| ELASTIC_MTLS_ENABLED       |                     `false`                      |                                                Enables mTLS communication between Elastic and Linseed |
-| ELASTIC_GZIP_ENABLED       |                     `false`                      |                                                Enables gzip communication between Elastic and Linseed |
-| ELASTIC_SNIFFING_ENABLED   |                     `false`                      |                                                                    Enabled sniffing for Elastic nodes |
-| ELASTIC_REPLICAS           |                       `0`                        |                                                                   Elastic replicas for index creation |
-| ELASTIC_SHARDS             |                       `1`                        |                                                                     Elastic shards for index creation |
-| ELASTIC_FLOW_REPLICAS      |                       `0`                        |                                                             Elastic replicas for flows index creation |
-| ELASTIC_FLOW_SHARDS        |                       `1`                        |                                                               Elastic shards for flows index creation |
-| ELASTIC_DNS_REPLICAS       |                       `0`                        |                                                               Elastic replicas for DNS index creation |
-| ELASTIC_DNS_SHARDS         |                       `1`                        |                                                                 Elastic shards for DNS index creation |
-| ELASTIC_AUDIT_REPLICAS     |                       `0`                        |                                                             Elastic replicas for Audit index creation |
-| ELASTIC_AUDIT_SHARDS       |                       `1`                        |                                                               Elastic shards for Audit index creation |
-| ELASTIC_BGP_REPLICAS       |                       `0`                        |                                                               Elastic replicas for BGP index creation |
-| ELASTIC_BGP_SHARDS         |                       `1`                        |                                                                 Elastic shards for BGP index creation |
-| ELASTIC_WAF_REPLICAS       |                       `0`                        |                                                               Elastic replicas for WAF index creation |
-| ELASTIC_WAF_SHARDS         |                       `1`                        |                                                                 Elastic shards for WAF index creation |
-| ELASTIC_L7_REPLICAS        |                       `0`                        |                                                                Elastic replicas for L7 index creation |
-| ELASTIC_L7_SHARDS          |                       `1`                        |                                                                  Elastic shards for L7 index creation |
-| ELASTIC_RUNTIME_REPLICAS   |                       `0`                        |                                                           Elastic replicas for runtime index creation |
-| ELASTIC_RUNTIME_SHARDS     |                       `1`                        |                                                             Elastic shards for runtime index creation |
+| ENV                             |                  Default value                   |                                                                                                                  Description |
+|---------------------------------|:------------------------------------------------:|-----------------------------------------------------------------------------------------------------------------------------:|
+| LINSEED_PORT                    |                      `443`                       |                                                                                              Local Port to start the service |
+| LINSEED_HOST                    |                     <empty>                      |                                                                                                         Host for the service |
+| LINSEED_LOG_LEVEL               |                      `Info`                      |                                                                                                     Log Level across service |
+| LINSEED_HTTPS_CERT              |              `/certs/https/tls.crt`              |                                                                                                             Path to tls cert |
+| LINSEED_HTTPS_KEY               |              `/certs/https/tls.key`              |                                                                                                              Path to tls key |
+| LINSEED_CA_CERT                 |            `/certs/https/client.crt`             |                                                                                                              Path to ca cert |
+| LINSEED_FIPS_MODE_ENABLED       |                     `false`                      |                                                                      FIPSModeEnabled Enables FIPS 140-2 verified crypto mode |
+| LINSEED_EXPECTED_TENANT_ID      |                        -                         |                                               ExpectedTenantID will be verified against x-tenant-id header for all API calls |
+| ELASTIC_HOST                    | `tigera-secure-es-http.tigera-elasticsearch.svc` |                                                                            Elastic Host; For local development use localhost |
+| ELASTIC_PORT                    |                      `9200`                      |                                                                                 Elastic Port; For local development use 9200 |
+| ELASTIC_SCHEME                  |                     `https`                      |                                                                         Defines what protocol is used to sniff Elastic nodes |
+| ELASTIC_USERNAME                |                     <empty>                      |                                        Elastic username; If left empty, communication with Elastic will not be authenticated |
+| ELASTIC_PASSWORD                |                     <empty>                      |                                        Elastic password; If left empty, communication with Elastic will not be authenticated |
+| ELASTIC_CA                      |          `/certs/elasticsearch/tls.crt`          |                                                                                                  Elastic ca certificate path |
+| ELASTIC_CLIENT_CERT             |        `/certs/elasticsearch/client.crt`         |                        Elastic client certificate path; It will only be picked up if LINSEED_ELASTIC_MTLS_ENABLED is enabled |
+| ELASTIC_CLIENT_KEY              |        `/certs/elasticsearch/client.key`         |                                Elastic client key path; It will only be picked up if LINSEED_ELASTIC_MTLS_ENABLED is enabled |
+| ELASTIC_MTLS_ENABLED            |                     `false`                      |                                                                       Enables mTLS communication between Elastic and Linseed |
+| ELASTIC_GZIP_ENABLED            |                     `false`                      |                                                                       Enables gzip communication between Elastic and Linseed |
+| ELASTIC_SNIFFING_ENABLED        |                     `false`                      |                                                                                           Enabled sniffing for Elastic nodes |
+| ELASTIC_REPLICAS                |                       `0`                        |                                                                                          Elastic replicas for index creation |
+| ELASTIC_SHARDS                  |                       `1`                        |                                                                                            Elastic shards for index creation |
+| ELASTIC_FLOW_REPLICAS           |                       `0`                        |                                                                                    Elastic replicas for flows index creation |
+| ELASTIC_FLOW_SHARDS             |                       `1`                        |                                                                                      Elastic shards for flows index creation |
+| ELASTIC_DNS_REPLICAS            |                       `0`                        |                                                                                      Elastic replicas for DNS index creation |
+| ELASTIC_DNS_SHARDS              |                       `1`                        |                                                                                        Elastic shards for DNS index creation |
+| ELASTIC_AUDIT_REPLICAS          |                       `0`                        |                                                                                    Elastic replicas for Audit index creation |
+| ELASTIC_AUDIT_SHARDS            |                       `1`                        |                                                                                      Elastic shards for Audit index creation |
+| ELASTIC_BGP_REPLICAS            |                       `0`                        |                                                                                      Elastic replicas for BGP index creation |
+| ELASTIC_BGP_SHARDS              |                       `1`                        |                                                                                        Elastic shards for BGP index creation |
+| ELASTIC_WAF_REPLICAS            |                       `0`                        |                                                                                      Elastic replicas for WAF index creation |
+| ELASTIC_WAF_SHARDS              |                       `1`                        |                                                                                        Elastic shards for WAF index creation |
+| ELASTIC_L7_REPLICAS             |                       `0`                        |                                                                                       Elastic replicas for L7 index creation |
+| ELASTIC_L7_SHARDS               |                       `1`                        |                                                                                         Elastic shards for L7 index creation |
+| ELASTIC_RUNTIME_REPLICAS        |                       `0`                        |                                                                                  Elastic replicas for runtime index creation |
+| ELASTIC_RUNTIME_SHARDS          |                       `1`                        |                                                                                    Elastic shards for runtime index creation |
+| ELASTIC_INDEX_MAX_RESULT_WINDOW |                     `10000`                      | Elastic setting that sets the maximum value of from + size for searches. After this limit is hit, deep pagination is enabled |
 
 
 Linseed is deployed in namespace `tigera-elasticsearch` as part of Calico Enterprise installation.

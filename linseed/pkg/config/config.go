@@ -54,17 +54,18 @@ type Config struct {
 	MultiClusterForwardingCA       string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
 
 	// Elastic configuration
-	ElasticScheme          string `envconfig:"ELASTIC_SCHEME" default:"https"`
-	ElasticHost            string `envconfig:"ELASTIC_HOST" default:"tigera-secure-es-http.tigera-elasticsearch.svc"`
-	ElasticPort            string `envconfig:"ELASTIC_PORT" default:"9200"`
-	ElasticUsername        string `envconfig:"ELASTIC_USERNAME" default:""`
-	ElasticPassword        string `envconfig:"ELASTIC_PASSWORD" default:"" json:",omitempty"`
-	ElasticCA              string `envconfig:"ELASTIC_CA" default:"/certs/elasticsearch/tls.crt"`
-	ElasticClientKey       string `envconfig:"ELASTIC_CLIENT_KEY" default:"/certs/elasticsearch/client.key"`
-	ElasticClientCert      string `envconfig:"ELASTIC_CLIENT_CERT" default:"/certs/elasticsearch/client.crt"`
-	ElasticGZIPEnabled     bool   `envconfig:"ELASTIC_GZIP_ENABLED" default:"false"`
-	ElasticMTLSEnabled     bool   `envconfig:"ELASTIC_MTLS_ENABLED" default:"false"`
-	ElasticSniffingEnabled bool   `envconfig:"ELASTIC_SNIFFING_ENABLED" default:"false"`
+	ElasticScheme               string `envconfig:"ELASTIC_SCHEME" default:"https"`
+	ElasticHost                 string `envconfig:"ELASTIC_HOST" default:"tigera-secure-es-http.tigera-elasticsearch.svc"`
+	ElasticPort                 string `envconfig:"ELASTIC_PORT" default:"9200"`
+	ElasticUsername             string `envconfig:"ELASTIC_USERNAME" default:""`
+	ElasticPassword             string `envconfig:"ELASTIC_PASSWORD" default:"" json:",omitempty"`
+	ElasticCA                   string `envconfig:"ELASTIC_CA" default:"/certs/elasticsearch/tls.crt"`
+	ElasticClientKey            string `envconfig:"ELASTIC_CLIENT_KEY" default:"/certs/elasticsearch/client.key"`
+	ElasticClientCert           string `envconfig:"ELASTIC_CLIENT_CERT" default:"/certs/elasticsearch/client.crt"`
+	ElasticGZIPEnabled          bool   `envconfig:"ELASTIC_GZIP_ENABLED" default:"false"`
+	ElasticMTLSEnabled          bool   `envconfig:"ELASTIC_MTLS_ENABLED" default:"false"`
+	ElasticSniffingEnabled      bool   `envconfig:"ELASTIC_SNIFFING_ENABLED" default:"false"`
+	ElasticIndexMaxResultWindow int64  `envconfig:"ELASTIC_INDEX_MAX_RESULT_WINDOW" default:"10000"`
 
 	// Default value for replicas and shards
 	ElasticReplicas int `envconfig:"ELASTIC_REPLICAS" default:"0"`

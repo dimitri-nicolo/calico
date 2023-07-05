@@ -23,14 +23,16 @@ type bgpLogBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
 
-	templates bapi.Cache
+	templates            bapi.Cache
+	deepPaginationCutOff int64
 }
 
-func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.BGPBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.BGPBackend {
 	return &bgpLogBackend{
-		client:    c.Backend(),
-		lmaclient: c,
-		templates: cache,
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
 	}
 }
 
@@ -88,18 +90,20 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 		return nil, fmt.Errorf("no cluster ID on request")
 	}
 
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(opts)
+	// Build the query.
+	query := b.client.Search().
+		Size(opts.QueryParams.GetMaxPageSize()).
+		Query(b.buildQuery(i, opts))
+
+	// Configure pagination options
+	var startFrom int
+	var err error
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
 	if err != nil {
 		return nil, err
 	}
 
-	// Build the query.
-	query := b.client.Search().
-		Index(b.index(i)).
-		From(startFrom).
-		Size(opts.QueryParams.GetMaxPageSize()).
-		Query(b.buildQuery(i, opts))
+	query.Sort("logtime", true)
 
 	results, err := query.Do(ctx)
 	if err != nil {
@@ -117,10 +121,17 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 		logs = append(logs, l)
 	}
 
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.List[v1.BGPLog]{
 		TotalHits: results.TotalHits(),
 		Items:     logs,
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
+		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
 	}, nil
 }
 

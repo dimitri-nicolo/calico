@@ -21,18 +21,20 @@ import (
 )
 
 type l7LogBackend struct {
-	client    *elastic.Client
-	lmaclient lmaelastic.Client
-	helper    lmaindex.Helper
-	templates bapi.Cache
+	client               *elastic.Client
+	lmaclient            lmaelastic.Client
+	helper               lmaindex.Helper
+	templates            bapi.Cache
+	deepPaginationCutOff int64
 }
 
-func NewL7LogBackend(c lmaelastic.Client, cache bapi.Cache) bapi.L7LogBackend {
+func NewL7LogBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.L7LogBackend {
 	b := &l7LogBackend{
-		client:    c.Backend(),
-		lmaclient: c,
-		templates: cache,
-		helper:    lmaindex.L7Logs(),
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		helper:               lmaindex.L7Logs(),
+		deepPaginationCutOff: deepPaginationCutOff,
 	}
 	return b
 }
@@ -85,7 +87,7 @@ func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1
 
 func (b *l7LogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.L7AggregationParams) (*elastic.Aggregations, error) {
 	// Get the base query.
-	search, _, err := b.getSearch(ctx, i, &opts.L7LogParams)
+	search, _, err := b.getSearch(i, &opts.L7LogParams)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +123,7 @@ func (b *l7LogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts
 func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.L7LogParams) (*v1.List[v1.L7Log], error) {
 	log := bapi.ContextLogger(i)
 
-	query, startFrom, err := b.getSearch(ctx, i, opts)
+	query, startFrom, err := b.getSearch(i, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -142,21 +144,22 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.L7L
 		logs = append(logs, l)
 	}
 
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.List[v1.L7Log]{
 		Items:     logs,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
+		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
 	}, nil
 }
 
-func (b *l7LogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v1.L7LogParams) (*elastic.SearchService, int, error) {
+func (b *l7LogBackend) getSearch(i bapi.ClusterInfo, opts *v1.L7LogParams) (*elastic.SearchService, int, error) {
 	if err := i.Valid(); err != nil {
-		return nil, 0, err
-	}
-
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(opts)
-	if err != nil {
 		return nil, 0, err
 	}
 
@@ -168,10 +171,15 @@ func (b *l7LogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v
 
 	// Build the query.
 	query := b.client.Search().
-		Index(b.index(i)).
 		Size(opts.QueryParams.GetMaxPageSize()).
-		From(startFrom).
 		Query(q)
+
+	// Configure pagination options
+	var startFrom int
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	if err != nil {
+		return nil, 0, err
+	}
 
 	// Configure sorting.
 	if len(opts.GetSortBy()) != 0 {

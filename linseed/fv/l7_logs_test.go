@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -213,6 +215,55 @@ func TestL7_FlowLogs(t *testing.T) {
 		// an afterKey
 		require.Nil(t, resp.AfterKey)
 	})
+
+	t.Run("should support pagination for items >= 10000 for l7 logs", func(t *testing.T) {
+		defer l7logSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K logs.
+		logTime := time.Now().UTC().Unix()
+		var logs []v1.L7Log
+		for i := 0; i < totalItems; i++ {
+			logs = append(logs, v1.L7Log{
+				StartTime: logTime,
+				EndTime:   logTime + int64(i), // Make sure logs are ordered.
+				Host:      fmt.Sprintf("%d", i),
+			},
+			)
+		}
+		bulk, err := cli.L7Logs(cluster).Create(ctx, logs)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Total, "create logs did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_l7*")
+
+		// Stream through all the items.
+		params := v1.L7LogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Second),
+					To:   time.Now().Add(time.Duration(totalItems) * time.Second),
+				},
+				MaxPageSize: 1000,
+			},
+		}
+
+		pager := client.NewListPager[v1.L7Log](&params)
+		pages, errors := pager.Stream(ctx, cli.L7Logs(cluster).List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
+	})
+
 }
 
 func TestFV_L7LogsTenancy(t *testing.T) {

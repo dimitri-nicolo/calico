@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	elastic "github.com/olivere/elastic/v7"
@@ -210,6 +212,59 @@ func TestFV_ComplianceReports(t *testing.T) {
 		// Once we reach the end of the data, we should not receive
 		// an afterKey
 		require.Nil(t, resp.AfterKey)
+	})
+
+	t.Run("should support pagination for items >= 10000 for Reports", func(t *testing.T) {
+		defer complianceSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K reports.
+		logTime := time.Unix(100, 0).UTC()
+		var reports []v1.ReportData
+		for i := 0; i < totalItems; i++ {
+			reports = append(reports,
+				v1.ReportData{
+					ReportData: &apiv3.ReportData{
+						ReportName:     fmt.Sprintf("test-report-%d", i),
+						ReportTypeName: "my-report-type",
+						StartTime:      metav1.Time{Time: logTime.Add(time.Duration(i) * time.Second).UTC()},
+						EndTime:        metav1.Time{Time: logTime.Add(time.Duration(i+1) * time.Second).UTC()},
+						GenerationTime: metav1.Time{Time: logTime.Add(time.Duration(i+2) * time.Second).UTC()},
+					},
+				},
+			)
+		}
+		bulk, err := cli.Compliance(cluster).ReportData().Create(ctx, reports)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Succeeded, "create reports did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_compliance_reports*")
+
+		// Stream through all the items.
+		params := v1.ReportDataParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: logTime.Add(-5 * time.Second),
+					To:   logTime.Add(time.Duration(totalItems) * time.Second),
+				},
+				MaxPageSize: 1000,
+			},
+		}
+
+		pager := client.NewListPager[v1.ReportData](&params)
+		pages, errors := pager.Stream(ctx, cli.Compliance(cluster).ReportData().List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
 	})
 }
 

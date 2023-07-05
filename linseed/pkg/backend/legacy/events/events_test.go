@@ -50,7 +50,7 @@ func setupTest(t *testing.T) func() {
 	cache = templates.NewTemplateCache(client, 1, 0)
 
 	// Instantiate a backend.
-	b = events.NewBackend(client, cache)
+	b = events.NewBackend(client, cache, 10000)
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
