@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 // ProcessUpdate -  Update the PolicyStore with the information passed over the Sync API.
@@ -27,9 +28,13 @@ func (store *PolicyStore) ProcessUpdate(subscriptionType string, update *proto.T
 	case *proto.ToDataplane_ActiveProfileRemove:
 		store.processActiveProfileRemove(payload.ActiveProfileRemove)
 	case *proto.ToDataplane_ActivePolicyUpdate:
-		store.processActivePolicyUpdate(payload.ActivePolicyUpdate)
+		if !model.PolicyIsStaged(payload.ActivePolicyUpdate.Id.Name) {
+			store.processActivePolicyUpdate(payload.ActivePolicyUpdate)
+		}
 	case *proto.ToDataplane_ActivePolicyRemove:
-		store.processActivePolicyRemove(payload.ActivePolicyRemove)
+		if !model.PolicyIsStaged(payload.ActivePolicyRemove.Id.Name) {
+			store.processActivePolicyRemove(payload.ActivePolicyRemove)
+		}
 	case *proto.ToDataplane_WorkloadEndpointUpdate:
 		store.processWorkloadEndpointUpdate(subscriptionType, payload.WorkloadEndpointUpdate)
 	case *proto.ToDataplane_WorkloadEndpointRemove:
