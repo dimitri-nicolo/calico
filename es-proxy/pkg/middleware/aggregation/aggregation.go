@@ -4,6 +4,7 @@ package aggregation
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -246,7 +247,11 @@ func extractAggregationResults(aggs elastic.Aggregations, rd *RequestData) (*v1.
 		// bucket is in the sub aggregation.
 		timebuckets, ok := aggs.AutoDateHistogram(lapi.TimeSeriesBucketName)
 		if !ok {
-			return nil, fmt.Errorf("no valid time buckets in aggregation response")
+			return nil, &httputils.HttpStatusError{
+				Status: http.StatusBadRequest,
+				Msg:    "no valid time buckets in aggregation response",
+				Err:    errors.New("no valid time buckets in aggregation response"),
+			}
 		}
 		for _, b := range timebuckets.Buckets {
 			// Pull out the aggregation results.
