@@ -125,17 +125,20 @@ func NewConfigFromEnv() (*Config, error) {
 }
 
 func validateConfig(config *Config) error {
-	if config.ElasticURL.Scheme == "" || config.ElasticURL.Host == "" {
-		return errors.New("Invalid Elasticsearch backend URL specified")
-	}
-	if config.ElasticUsername == "" || config.ElasticPassword == "" {
-		return errors.New("Elasticsearch credentials not provided")
-	}
-	if config.ElasticURL.Scheme == "https" && config.ElasticCAPath == "" {
-		return errors.New("Elasticsearch CA not provided")
-	}
-	if config.ElasticURL.Scheme == "http" && config.ElasticCAPath != "" {
-		return errors.New("Elasticsearch CA provided but scheme is set to http")
+	if !config.ElasticKibanaDisabled {
+		// Elastic configuration is only needed for Kibana access.
+		if config.ElasticURL.Scheme == "" || config.ElasticURL.Host == "" {
+			return errors.New("Invalid Elasticsearch backend URL specified")
+		}
+		if config.ElasticUsername == "" || config.ElasticPassword == "" {
+			return errors.New("Elasticsearch credentials not provided")
+		}
+		if config.ElasticURL.Scheme == "https" && config.ElasticCAPath == "" {
+			return errors.New("Elasticsearch CA not provided")
+		}
+		if config.ElasticURL.Scheme == "http" && config.ElasticCAPath != "" {
+			return errors.New("Elasticsearch CA provided but scheme is set to http")
+		}
 	}
 	return nil
 }
