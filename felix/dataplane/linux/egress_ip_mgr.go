@@ -177,7 +177,7 @@ func (g gateway) String() string {
 	if err != nil {
 		finish = []byte("<invalid_finish_time>")
 	}
-	return fmt.Sprintf("gateway: [ip=%s, maintenanceStarted=%s, maintenanceFinished=%s]", g.addr, string(start), string(finish))
+	return fmt.Sprintf("gateway: [ip=%s, maintenanceStarted=%s, maintenanceFinished=%s, hostname=%s]", g.addr, string(start), string(finish), g.hostname)
 }
 
 type egressRule struct {
@@ -737,7 +737,7 @@ func (m *egressIPManager) processGatewayUpdates() error {
 					"nextHop":    route.nextHops,
 				}).Info("Processing gateway update.")
 
-				numActiveGateways := len(gateways.activeGateways())
+				numActiveGateways := len(m.getActiveGateways(gateways, r.PreferLocalEgressGateway))
 				maxNextHops := int(r.MaxNextHops)
 				if maxNextHops == 0 {
 					// No limit so default to using all EGWs.
@@ -747,8 +747,15 @@ func (m *egressIPManager) processGatewayUpdates() error {
 				if numDesiredGateways > numActiveGateways {
 					numDesiredGateways = numActiveGateways
 				}
+
 				workloadHasLessHopsThanDesired := route.nextHops.Len() < numDesiredGateways
 				workloadHasNonExistentHop := !gatewayIPs.ContainsAll(route.nextHops)
+				if r.PreferLocalEgressGateway {
+					localGateways := gateways.localGateways(m.dpConfig.Hostname)
+					if len(localGateways) > 0 {
+						workloadHasNonExistentHop = !localGateways.allIPs().ContainsAll(route.nextHops)
+					}
+				}
 				workloadHasFailedHop := len(failedGateways.filteredByHopIPs(route.nextHops)) > 0
 				if workloadHasLessHopsThanDesired || workloadHasNonExistentHop || workloadHasFailedHop {
 					log.WithFields(log.Fields{
@@ -1174,16 +1181,16 @@ func (m *egressIPManager) createWorkloadRuleAndTable(workloadID proto.WorkloadEn
 			if !exists {
 				gateways = make(gatewaysByIP)
 			}
-			adjustedNumHops := workloadNumHops(int(r.MaxNextHops), gateways.activeGateways().allIPs().Len())
+			activeGatewayIPs := m.getActiveGateways(gateways, r.PreferLocalEgressGateway).allIPs()
+			adjustedNumHops := workloadNumHops(int(r.MaxNextHops), activeGatewayIPs.Len())
 
-			hopIPs, err := m.determineRouteNextHops(workloadID, r.IpSetId, adjustedNumHops)
+			hopIPs, err := m.determineRouteNextHops(workloadID, r.IpSetId, adjustedNumHops, r.PreferLocalEgressGateway)
 			if err != nil {
 				log.WithError(err).Errorf("Failed to determine next hop for gateway %s", r.IpSetId)
 				continue
 			}
 			egrRoute.nextHops = hopIPs
 		}
-
 		t.routes[normaliseDestination(r.Destination)] = egrRoute
 	}
 	m.createWorkloadRuleAndTableWithIndex(workloadID, workload, &t)
@@ -1538,14 +1545,14 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	return nil
 }
 
-func (m *egressIPManager) determineRouteNextHops(workloadID proto.WorkloadEndpointID, ipSetID string, maxNextHops int) (set.Set[ip.Addr], error) {
+func (m *egressIPManager) determineRouteNextHops(workloadID proto.WorkloadEndpointID, ipSetID string, maxNextHops int, preferLocalEGW bool) (set.Set[ip.Addr], error) {
 	members, exists := m.egwTracker.GatewaysByID(ipSetID)
 	if !exists {
 		log.Infof("Workload with ID: %s references an empty set of gateways: %s. Setting its next hops to none.", workloadID, ipSetID)
 		return set.NewBoxed[ip.Addr](), nil
 	}
-	gatewayIPs := members.activeGateways().allIPs()
-	usage := usageMap(workloadID, gatewayIPs, m.tableIndexToEgressTable)
+	activeGatewayIPs := m.getActiveGateways(members, preferLocalEGW).allIPs()
+	usage := usageMap(workloadID, activeGatewayIPs, m.tableIndexToEgressTable)
 	var freqs []int
 	for n := range usage {
 		freqs = append(freqs, n)
@@ -1558,7 +1565,7 @@ func (m *egressIPManager) determineRouteNextHops(workloadID proto.WorkloadEndpoi
 		m.hopRand.Shuffle(len(nHops), func(i, j int) { nHops[i], nHops[j] = nHops[j], nHops[i] })
 		hops = append(hops, nHops...)
 	}
-	numHops := workloadNumHops(maxNextHops, gatewayIPs.Len())
+	numHops := workloadNumHops(maxNextHops, activeGatewayIPs.Len())
 	index := numHops
 	if len(hops) < numHops {
 		index = len(hops)
@@ -1632,7 +1639,8 @@ func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoi
 			if !exists {
 				gateways = make(gatewaysByIP)
 			}
-			activeGatewayIPs := gateways.activeGateways().allIPs()
+
+			activeGatewayIPs := m.getActiveGateways(gateways, r.PreferLocalEgressGateway).allIPs()
 			numHops := workloadNumHops(int(r.MaxNextHops), activeGatewayIPs.Len())
 
 			if kernelRoutes.nextHops == nil {
@@ -1695,6 +1703,17 @@ func (m *egressIPManager) removeIndicesFromTableStack(indices set.Set[int]) {
 
 func (m *egressIPManager) OnEGWHealthReport(msg EGWHealthReport) {
 	m.egwTracker.OnEGWHealthReport(msg)
+}
+
+func (m *egressIPManager) getActiveGateways(gateways gatewaysByIP, preferNodeLocal bool) gatewaysByIP {
+	activeGateways := gateways.activeGateways()
+	if preferNodeLocal {
+		localGateways := activeGateways.localGateways(m.dpConfig.Hostname)
+		if len(localGateways) > 0 {
+			return localGateways
+		}
+	}
+	return activeGateways
 }
 
 // hardwareAddrForNode deterministically creates a unique hardware address from a hostname.
@@ -1774,14 +1793,15 @@ func parseEGWIPSetMember(memberStr string) (*gateway, error) {
 	maintenanceStarted := time.Time{}
 	maintenanceFinished := time.Time{}
 	var healthPort uint16
+	var hostname string
 
 	a := strings.Split(memberStr, ",")
-	if len(a) == 0 || len(a) > 4 {
-		return nil, fmt.Errorf("error parsing member str, expected \"cidr,maintenanceStartedTimestamp,maintenanceFinishedTimestamp\" but got: %s", memberStr)
+	if len(a) == 0 || len(a) > 5 {
+		return nil, fmt.Errorf("error parsing member str, expected \"cidr,maintenanceStartedTimestamp,maintenanceFinishedTimestamp,hostname\" but got: %s", memberStr)
 	}
 
 	addr := ip.MustParseCIDROrIP(a[0]).Addr()
-	if len(a) == 4 {
+	if len(a) == 5 {
 		if err := maintenanceStarted.UnmarshalText([]byte(strings.ToUpper(a[1]))); err != nil {
 			log.WithField("memberStr", memberStr).Warn("unable to parse maintenance started timestamp from member str, defaulting to zero value.")
 		}
@@ -1793,6 +1813,7 @@ func parseEGWIPSetMember(memberStr string) (*gateway, error) {
 		} else {
 			healthPort = uint16(healthPort64)
 		}
+		hostname = a[4]
 	}
 
 	return &gateway{
@@ -1800,6 +1821,7 @@ func parseEGWIPSetMember(memberStr string) (*gateway, error) {
 		maintenanceStarted:  maintenanceStarted,
 		maintenanceFinished: maintenanceFinished,
 		healthPort:          healthPort,
+		hostname:            hostname,
 	}, nil
 }
 

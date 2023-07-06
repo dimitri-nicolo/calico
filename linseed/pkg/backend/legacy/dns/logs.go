@@ -19,18 +19,20 @@ import (
 )
 
 type dnsLogBackend struct {
-	client    *elastic.Client
-	lmaclient lmaelastic.Client
-	helper    lmaindex.Helper
-	templates bapi.Cache
+	client               *elastic.Client
+	lmaclient            lmaelastic.Client
+	helper               lmaindex.Helper
+	templates            bapi.Cache
+	deepPaginationCutOff int64
 }
 
-func NewDNSLogBackend(c lmaelastic.Client, cache bapi.Cache) bapi.DNSLogBackend {
+func NewDNSLogBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.DNSLogBackend {
 	return &dnsLogBackend{
-		client:    c.Backend(),
-		lmaclient: c,
-		helper:    lmaindex.DnsLogs(),
-		templates: cache,
+		client:               c.Backend(),
+		lmaclient:            c,
+		helper:               lmaindex.DnsLogs(),
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
 	}
 }
 
@@ -82,7 +84,7 @@ func (b *dnsLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 
 func (b *dnsLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.DNSAggregationParams) (*elastic.Aggregations, error) {
 	// Get the base query.
-	search, _, err := b.getSearch(ctx, i, &opts.DNSLogParams)
+	search, _, err := b.getSearch(i, &opts.DNSLogParams)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +120,7 @@ func (b *dnsLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opt
 func (b *dnsLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.DNSLogParams) (*v1.List[v1.DNSLog], error) {
 	log := bapi.ContextLogger(i)
 
-	query, startFrom, err := b.getSearch(ctx, i, opts)
+	query, startFrom, err := b.getSearch(i, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -140,22 +142,23 @@ func (b *dnsLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.DN
 		logs = append(logs, l)
 	}
 
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.List[v1.DNSLog]{
 		Items:     logs,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
+		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
 	}, nil
 }
 
-func (b *dnsLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v1.DNSLogParams) (*elastic.SearchService, int, error) {
+func (b *dnsLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.DNSLogParams) (*elastic.SearchService, int, error) {
 	if i.Cluster == "" {
 		return nil, 0, fmt.Errorf("no cluster ID on request")
-	}
-
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(opts)
-	if err != nil {
-		return nil, 0, err
 	}
 
 	q, err := b.buildQuery(i, opts)
@@ -165,10 +168,15 @@ func (b *dnsLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *
 
 	// Build the query.
 	query := b.client.Search().
-		Index(b.index(i)).
 		Size(opts.QueryParams.GetMaxPageSize()).
-		From(startFrom).
 		Query(q)
+
+	// Configure pagination options
+	var startFrom int
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	if err != nil {
+		return nil, 0, err
+	}
 
 	// Configure sorting.
 	if len(opts.GetSortBy()) != 0 {

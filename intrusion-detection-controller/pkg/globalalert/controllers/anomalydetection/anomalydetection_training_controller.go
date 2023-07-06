@@ -46,7 +46,7 @@ var (
 )
 
 type adJobTrainingController struct {
-	clusterName                string
+	tenantID                   string
 	k8sClient                  kubernetes.Interface
 	cancel                     context.CancelFunc
 	namespace                  string
@@ -56,6 +56,7 @@ type adJobTrainingController struct {
 
 type TrainingDetectorsRequest struct {
 	ClusterName      string
+	TenantID         string
 	IsManagedCluster bool
 	GlobalAlert      *v3.GlobalAlert
 }
@@ -64,10 +65,11 @@ type TrainingDetectorsRequest struct {
 // In a MCM Architecture and Calico cloud it maintains a training cronjob per cluster
 func NewADJobTrainingController(k8sClient kubernetes.Interface,
 	calicoCLI calicoclient.Interface, podTemplateQuery podtemplate.ADPodTemplateQuery, namespace string,
-	clusterName string) controller.AnomalyDetectionController {
+	managementClusterName string, tenantID string) controller.AnomalyDetectionController {
 
 	adTrainingReconciler := &adJobTrainingReconciler{
-		managementClusterName:       clusterName,
+		managementClusterName:       managementClusterName,
+		tenantID:                    tenantID,
 		calicoCLI:                   calicoCLI,
 		k8sClient:                   k8sClient,
 		podTemplateQuery:            podTemplateQuery,
@@ -76,7 +78,7 @@ func NewADJobTrainingController(k8sClient kubernetes.Interface,
 	}
 
 	adTrainingController := &adJobTrainingController{
-		clusterName:          clusterName,
+		tenantID:             tenantID,
 		k8sClient:            k8sClient,
 		namespace:            namespace,
 		adTrainingReconciler: adTrainingReconciler,
@@ -102,7 +104,7 @@ func (c *adJobTrainingController) Run(parentCtx context.Context) {
 	ctx, c.cancel = context.WithCancel(parentCtx)
 	c.adTrainingReconciler.managementClusterCtx = ctx
 
-	log.Infof("Starting AD Training controller on cluster %s", c.clusterName)
+	log.WithFields(log.Fields{"tenant": c.tenantID}).Info("Starting AD Training controller on cluster")
 
 	c.trainingCycleResourceCache.Run(detectionCycleResourceCachePeriod.String())
 
@@ -120,8 +122,8 @@ func (c *adJobTrainingController) AddDetector(resource interface{}) error {
 
 	// Kicks-off an initial training job if the training cycle isn't found or for a first time
 	// detector, otherwise returns.
-	log.Infof("Run initial training job for cluster: %s",
-		trainingDetectorStateForCluster.ClusterName)
+	log.Infof("Run initial training job for cluster: %s.%s",
+		trainingDetectorStateForCluster.TenantID, trainingDetectorStateForCluster.ClusterName)
 	err := c.adTrainingReconciler.runInitialTrainingJob(trainingDetectorStateForCluster)
 	if err != nil {
 		// No need to continue with training cycles, as the pod template will not available for cronJobs
@@ -134,8 +136,8 @@ func (c *adJobTrainingController) AddDetector(resource interface{}) error {
 		log.Warn("Initial training job cannot complete rely on training model fallbacks")
 	}
 
-	log.Infof("Add a training cycle cronJob for cluster: %s",
-		trainingDetectorStateForCluster.ClusterName)
+	log.Infof("Add a training cycle cronJob for cluster: %s.%s",
+		trainingDetectorStateForCluster.TenantID, trainingDetectorStateForCluster.ClusterName)
 	err = c.adTrainingReconciler.addTrainingCycle(trainingDetectorStateForCluster)
 	if err != nil {
 		return err

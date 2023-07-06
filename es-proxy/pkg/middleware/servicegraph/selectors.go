@@ -439,7 +439,7 @@ func (s *SelectorHelper) GetServiceNodeSelectors(svc v1.NamespacedName) Selector
 		}
 	}
 	for ep := range allEps {
-		epsp = epsp.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Protocol, ep.PortNum, NoDirection))
+		epsp = epsp.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, NoProto, ep.PortNum, NoDirection))
 	}
 
 	// Only include the endpoint dest selectors, not the source.
@@ -535,7 +535,7 @@ func (s *SelectorHelper) GetServiceGroupNodeSelectors(sg *ServiceGroup) Selector
 		gs = gs.Or(s.GetServiceNodeSelectors(svc))
 	}
 	for ep := range allEps {
-		gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Protocol, ep.PortNum, NoDirection))
+		gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, NoProto, ep.PortNum, NoDirection))
 	}
 	return gs
 }
@@ -664,7 +664,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 			l3Dest,
 		)
 	}
-	if proto != "" {
+	if proto != NoProto {
 		l3Source = NewGraphSelectorConstructor(v1.OpAnd,
 			NewGraphSelectorConstructor(v1.OpEqual, "proto", proto),
 			l3Source,

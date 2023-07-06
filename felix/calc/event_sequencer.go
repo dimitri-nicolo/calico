@@ -515,9 +515,10 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 			if !protoEp.IsEgressGateway {
 				for _, r := range buf.pendingEndpointEgressUpdates[key].EgressGatewayRules {
 					egressRule := proto.EgressGatewayRule{
-						IpSetId:     r.IpSetID,
-						MaxNextHops: int32(r.MaxNextHops),
-						Destination: r.CIDR,
+						IpSetId:                  r.IpSetID,
+						MaxNextHops:              int32(r.MaxNextHops),
+						Destination:              r.CIDR,
+						PreferLocalEgressGateway: r.PreferLocalGW,
 					}
 					protoEp.EgressGatewayRules = append(protoEp.EgressGatewayRules, &egressRule)
 				}
@@ -898,11 +899,12 @@ func EgressIPSetMemberToProto(member labelindex.IPSetMember) string {
 		return fmt.Sprintf("%s,,", member.CIDR.String())
 	}
 
-	return fmt.Sprintf("%s,%s,%s,%d",
+	return fmt.Sprintf("%s,%s,%s,%d,%s",
 		member.CIDR.String(),
 		strings.ToLower(string(startBytes)),
 		strings.ToLower(string(finishBytes)),
 		member.PortNumber,
+		member.Hostname,
 	)
 }
 

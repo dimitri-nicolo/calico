@@ -42,7 +42,7 @@ var (
 )
 
 func init() {
-	clusterName := os.Getenv("CLUSTER_NAME")
+	clusterName := os.Getenv("ELASTIC_INDEX_SUFFIX")
 	if clusterName == "" {
 		clusterName = "cluster"
 	}

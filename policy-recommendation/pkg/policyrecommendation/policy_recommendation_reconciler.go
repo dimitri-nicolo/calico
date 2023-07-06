@@ -43,16 +43,17 @@ const (
 )
 
 type policyRecommendationReconciler struct {
-	stateLock     sync.Mutex
-	state         *policyRecommendationScopeState
-	calico        calicoclient.ProjectcalicoV3Interface
-	linseedClient linseed.Client
-	synchronizer  client.QueryInterface
-	caches        *syncer.CacheSet
-	cluster       string
-	tickDuration  chan time.Duration
-	clock         engine.Clock
-	ticker        *time.Ticker
+	stateLock         sync.Mutex
+	state             *policyRecommendationScopeState
+	calico            calicoclient.ProjectcalicoV3Interface
+	linseedClient     linseed.Client
+	synchronizer      client.QueryInterface
+	caches            *syncer.CacheSet
+	cluster           string
+	serviceNameSuffix string
+	tickDuration      chan time.Duration
+	clock             engine.Clock
+	ticker            *time.Ticker
 }
 
 type policyRecommendationScopeState struct {
@@ -66,17 +67,19 @@ func NewPolicyRecommendationReconciler(
 	synchronizer client.QueryInterface,
 	caches *syncer.CacheSet,
 	clock engine.Clock,
+	serviceSuffixName string,
 ) *policyRecommendationReconciler {
 	td := new(chan time.Duration)
 
 	return &policyRecommendationReconciler{
-		state:         nil,
-		calico:        calico,
-		linseedClient: linseedClient,
-		synchronizer:  synchronizer,
-		caches:        caches,
-		tickDuration:  *td,
-		clock:         clock,
+		state:             nil,
+		calico:            calico,
+		linseedClient:     linseedClient,
+		synchronizer:      synchronizer,
+		caches:            caches,
+		tickDuration:      *td,
+		clock:             clock,
+		serviceNameSuffix: serviceSuffixName,
 	}
 }
 
@@ -312,7 +315,7 @@ func (pr *policyRecommendationReconciler) RecommendSnp(ctx context.Context, cloc
 
 	// Run the engine to update the snp's rules from new flows
 	engine.RunEngine(
-		ctx, pr.calico, pr.linseedClient, lookback, &order, pr.cluster, clock, interval, stbl, owner, snp,
+		ctx, pr.calico, pr.linseedClient, lookback, &order, pr.cluster, pr.serviceNameSuffix, clock, interval, stbl, owner, snp,
 	)
 
 	// Create the Policy Recommendation tier, if it doesn't already exist

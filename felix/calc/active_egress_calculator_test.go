@@ -39,6 +39,10 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		Name:                "we1",
 		EgressGatewayPolicy: "egw-policy2",
 	}
+	we1ValueWithPolicy3 := &model.WorkloadEndpoint{
+		Name:                "we1",
+		EgressGatewayPolicy: "egw-policy3",
+	}
 
 	we2Key := model.WorkloadEndpointKey{WorkloadID: "we2"}
 
@@ -46,6 +50,8 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		Kind: v3.KindEgressGatewayPolicy,
 		Name: "egw-policy1",
 	}
+	preferenceNone := v3.GatewayPreferenceNone
+	preferNodeLocal := v3.GatewayPreferenceNodeLocal
 	egwp1Value := &v3.EgressGatewayPolicy{
 		Spec: v3.EgressGatewayPolicySpec{
 			Rules: []v3.EgressGatewayRule{
@@ -53,6 +59,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 					Destination: &v3.EgressGatewayPolicyDestinationSpec{
 						CIDR: "10.0.0.0/8",
 					},
+					GatewayPreference: &preferenceNone,
 				},
 				{
 					Destination: &v3.EgressGatewayPolicyDestinationSpec{
@@ -61,11 +68,13 @@ var _ = Describe("ActiveEgressCalculator", func() {
 					Gateway: &v3.EgressSpec{
 						Selector: "black == 'green'",
 					},
+					GatewayPreference: &preferenceNone,
 				},
 				{
 					Gateway: &v3.EgressSpec{
 						Selector: "black == 'blue'",
 					},
+					GatewayPreference: &preferenceNone,
 				},
 			},
 		},
@@ -85,16 +94,45 @@ var _ = Describe("ActiveEgressCalculator", func() {
 					Gateway: &v3.EgressSpec{
 						Selector: "black == 'sky'",
 					},
+					GatewayPreference: &preferenceNone,
 				},
 				{
 					Destination: &v3.EgressGatewayPolicyDestinationSpec{
 						CIDR: "110.0.0.0/8",
 					},
+					GatewayPreference: &preferenceNone,
 				},
 				{
 					Gateway: &v3.EgressSpec{
 						Selector: "black == 'ocean'",
 					},
+					GatewayPreference: &preferenceNone,
+				},
+			},
+		},
+	}
+
+	egwp3Key := model.ResourceKey{
+		Kind: v3.KindEgressGatewayPolicy,
+		Name: "egw-policy3",
+	}
+	egwp3Value := &v3.EgressGatewayPolicy{
+		Spec: v3.EgressGatewayPolicySpec{
+			Rules: []v3.EgressGatewayRule{
+				{
+					Destination: &v3.EgressGatewayPolicyDestinationSpec{
+						CIDR: "111.0.0.0/8",
+					},
+					Gateway: &v3.EgressSpec{
+						Selector: "black == 'sky'",
+					},
+					GatewayPreference: &preferNodeLocal,
+				},
+				{
+					Destination: &v3.EgressGatewayPolicyDestinationSpec{
+						CIDR: "110.0.0.0/8",
+					},
+					GatewayPreference: &preferenceNone,
 				},
 			},
 		},
@@ -220,6 +258,29 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		Expect(ipSetID3).NotTo(Equal(ipSetID1))
 		Expect(ipSetID4).NotTo(Equal(ipSetID2))
 
+		By("setting local Egress gateway preference to PreferLocal")
+
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key:   egwp3Key,
+				Value: egwp3Value,
+			},
+			UpdateType: api.UpdateTypeKVNew,
+		})
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key:   we1Key,
+				Value: we1ValueWithPolicy3,
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		})
+		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{
+			{IpSetID: ipSetID3, CIDR: "111.0.0.0/8", PreferLocalGW: true},
+			{IpSetID: "", CIDR: "110.0.0.0/8"},
+		})
+		cbs.ExpectInactive(ipSetID4)
+		cbs.ExpectNoMoreCallbacks()
+
 		By("deleting egress gateway policy")
 		aec.OnUpdate(api.Update{
 			KVPair: model.KVPair{
@@ -229,9 +290,16 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVUpdated,
 		})
 
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key:   egwp3Key,
+				Value: nil,
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		})
+
 		// Expect IPSetInactive for old selector.
 		cbs.ExpectInactive(ipSetID3)
-		cbs.ExpectInactive(ipSetID4)
 
 		blockIPSet := cbs.ExpectActive()
 		cbs.ExpectEgressUpdate(we1Key, []EpEgressData{{IpSetID: blockIPSet}})

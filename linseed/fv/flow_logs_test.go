@@ -195,6 +195,55 @@ func TestFV_FlowLogs(t *testing.T) {
 		// an afterKey
 		require.Nil(t, resp.AfterKey)
 	})
+
+	t.Run("should support pagination for items >= 10000 for flows", func(t *testing.T) {
+		defer flowlogSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K logs.
+		logTime := time.Now().UTC().Unix()
+		var logs []v1.FlowLog
+		for i := 0; i < totalItems; i++ {
+			logs = append(logs, v1.FlowLog{
+				StartTime: logTime,
+				EndTime:   logTime + int64(i), // Make sure logs are ordered.
+				Host:      fmt.Sprintf("%d", i),
+			},
+			)
+		}
+		bulk, err := cli.FlowLogs(cluster).Create(ctx, logs)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Total, "create logs did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_flows*")
+
+		// Stream through all the items.
+		params := v1.FlowLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Second),
+					To:   time.Now().Add(time.Duration(totalItems) * time.Second),
+				},
+				MaxPageSize: 1000,
+			},
+		}
+
+		pager := client.NewListPager[v1.FlowLog](&params)
+		pages, errors := pager.Stream(ctx, cli.FlowLogs(cluster).List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
+	})
+
 }
 
 func TestFV_FlowLogsTenancy(t *testing.T) {

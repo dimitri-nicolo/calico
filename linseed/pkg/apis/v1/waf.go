@@ -47,7 +47,9 @@ type WAFLog struct {
 	Msg         string       `json:"msg"`
 	Path        string       `json:"path"`
 	Protocol    string       `json:"protocol"`
-	RuleInfo    string       `json:"rule_info"`
+	RequestId   string       `json:"request_id,omitempty"`
+	RuleInfo    string       `json:"rule_info,omitempty"`
+	Rules       []WAFRuleHit `json:"rules,omitempty"`
 	Source      *WAFEndpoint `json:"source"`
 	Host        string       `json:"host"`
 }
@@ -56,4 +58,13 @@ type WAFEndpoint struct {
 	Hostname string `json:"hostname"`
 	IP       string `json:"ip"`
 	PortNum  int32  `json:"port_num"`
+}
+
+type WAFRuleHit struct {
+	Id         string `json:"id"`
+	Message    string `json:"message"`
+	Severity   string `json:"severity"`
+	File       string `json:"file"`
+	Line       string `json:"line"`
+	Disruptive bool   `json:"disruptive"`
 }

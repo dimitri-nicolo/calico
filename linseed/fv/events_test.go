@@ -7,8 +7,11 @@ package fv_test
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
+
+	"github.com/projectcalico/calico/linseed/pkg/client"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
@@ -108,12 +111,110 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, events, testutils.AssertLogIDAndCopyEventsWithoutID(t, resp))
 	})
 
+	t.Run("should filter events with selector", func(t *testing.T) {
+		defer eventsSetupAndTeardown(t)()
+
+		ip := "172.17.0.1"
+
+		// Create some test events.
+		events := []v1.Event{
+			{
+				Time:        v1.NewEventTimestamp(time.Now().Unix()),
+				Description: "A rather uneventful evening",
+				Origin:      "TODO",
+				Severity:    1,
+				Type:        "TODO",
+			},
+			{
+				Time:            v1.NewEventTimestamp(time.Now().Unix()),
+				Description:     "A suspicious DNS query",
+				Origin:          "TODO",
+				Severity:        1,
+				Type:            "suspicious_dns_query",
+				SourceName:      "my-source-name-123",
+				SourceNamespace: "my-app-namespace",
+				SourceIP:        &ip,
+			},
+			{
+				Time:            v1.NewEventTimestamp(time.Now().Unix()),
+				Description:     "A NOT so suspicious DNS query",
+				Origin:          "TODO",
+				Severity:        1,
+				Type:            "suspicious_dns_query",
+				SourceName:      "my-source-name-456",
+				SourceNamespace: "my-app-namespace",
+				SourceIP:        &ip,
+			},
+		}
+		bulk, err := cli.Events(cluster).Create(ctx, events)
+		require.NoError(t, err)
+		require.Equal(t, bulk.Succeeded, 3, "create event did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+
+		testEventsFiltering := func(selector string, expectedEvents []v1.Event) {
+			// Read it back.
+			params := v1.EventParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-5 * time.Second),
+						To:   time.Now().Add(5 * time.Second),
+					},
+				},
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: selector,
+				},
+			}
+			resp, err := cli.Events(cluster).List(ctx, &params)
+			require.NoError(t, err)
+
+			// The ID should be set, but random, so we can't assert on its value.
+			require.Equal(t, expectedEvents, testutils.AssertLogIDAndCopyEventsWithoutID(t, resp))
+		}
+		tests := []struct {
+			selector       string
+			expectedEvents []v1.Event
+		}{
+			{
+				"type IN { suspicious_dns_query, gtf_suspicious_dns_query } " +
+					// `in` with a value allows us to use wildcards
+					"AND \"source_name\" in {\"*source-name-123\"} " +
+					// and here we're doing an exact match
+					"AND \"source_namespace\" = \"my-app-namespace\" " +
+					"AND 'source_ip' >= '172.16.0.0' AND source_ip <= '172.32.0.0'",
+				[]v1.Event{events[1]},
+			},
+			{
+				"NOT (type IN { suspicious_dns_query, gtf_suspicious_dns_query })",
+				[]v1.Event{events[0]},
+			},
+			{
+				"type IN { suspicious_dns_query, gtf_suspicious_dns_query } ",
+				[]v1.Event{events[1], events[2]},
+			},
+			{"source_namespace IN {'app'}", nil},
+			{"source_namespace IN {'*app*'}", []v1.Event{events[1], events[2]}},
+			{"source_name IN {'my-*-123'}", []v1.Event{events[1]}},
+			{"'source_ip' >= '172.16.0.0' AND source_ip <= '172.32.0.0'", []v1.Event{events[1], events[2]}},
+			{"'source_ip' >= '172.16.0.0' AND source_ip <= '172.17.0.0'", nil},
+		}
+
+		for _, tt := range tests {
+			name := fmt.Sprintf("filter events with selector: %s", tt.selector)
+			t.Run(name, func(t *testing.T) {
+				testEventsFiltering(tt.selector, tt.expectedEvents)
+			})
+		}
+	})
+
 	t.Run("should dismiss and delete events", func(t *testing.T) {
 		defer eventsSetupAndTeardown(t)()
 
 		// Create a basic event.
 		events := []v1.Event{
 			{
+				ID:          "ABC",
 				Time:        v1.NewEventTimestamp(time.Now().Unix()),
 				Description: "A rather uneventful evening",
 				Origin:      "TODO",
@@ -145,7 +246,7 @@ func TestFV_Events(t *testing.T) {
 		require.False(t, resp.Items[0].Dismissed)
 
 		// We should be able to dismiss the event.
-		bulk, err = cli.Events(cluster).Dismiss(ctx, resp.Items)
+		bulk, err = cli.Events(cluster).Dismiss(ctx, []v1.Event{{ID: "ABC"}})
 		require.NoError(t, err)
 		require.Equal(t, bulk.Succeeded, 1, "dismiss event did not succeed")
 
@@ -157,7 +258,7 @@ func TestFV_Events(t *testing.T) {
 		require.True(t, resp.Items[0].Dismissed)
 
 		// Now, delete the event.
-		bulk, err = cli.Events(cluster).Delete(ctx, resp.Items)
+		bulk, err = cli.Events(cluster).Delete(ctx, []v1.Event{{ID: "ABC"}})
 		require.NoError(t, err)
 		require.Equal(t, bulk.Succeeded, 1, "delete event did not succeed")
 
@@ -188,7 +289,7 @@ func TestFV_Events(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_event*")
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
 
 		// Read them back one at a time.
 		var afterKey map[string]interface{}
@@ -248,6 +349,118 @@ func TestFV_Events(t *testing.T) {
 		// Once we reach the end of the data, we should not receive
 		// an afterKey
 		require.Nil(t, resp.AfterKey)
+	})
+
+	t.Run("should support pagination for items >= 10000 for events", func(t *testing.T) {
+		defer eventsSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K events.
+		logTime := time.Now().UTC()
+		var events []v1.Event
+		// add events with timestamp format
+		for i := 0; i < totalItems; i++ {
+			events = append(events, v1.Event{
+				ID:   strconv.Itoa(i + 1),
+				Time: v1.NewEventTimestamp(logTime.Add(time.Duration(i+1) * time.Second).Unix()), // Make sure events are ordered.
+				Host: fmt.Sprintf("%d", i+1),
+			},
+			)
+		}
+
+		bulk, err := cli.Events(cluster).Create(ctx, events)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Total, "create events did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+
+		// Stream through all the items.
+		params := v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Time{},
+					To:   time.Now().Add(time.Duration(2*totalItems) * time.Minute),
+				},
+				MaxPageSize: 1000,
+			},
+		}
+
+		pager := client.NewListPager[v1.Event](&params)
+		pages, errors := pager.Stream(ctx, cli.Events(cluster).List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+			logrus.Infof("Total Hits is %d", page.TotalHits)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
+	})
+
+	t.Run("should support pagination for items >= 10000 for events with timestamps in different formats", func(t *testing.T) {
+		defer eventsSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K events.
+		logTime := time.Now().UTC()
+		var events []v1.Event
+		// add events with timestamp format
+		for i := 0; i < totalItems/2; i++ {
+			events = append(events, v1.Event{
+				ID:   strconv.Itoa(i + 1),
+				Time: v1.NewEventTimestamp(logTime.Add(time.Duration(i+1) * time.Second).Unix()), // Make sure events are ordered.
+				Host: fmt.Sprintf("%d", i+1),
+			},
+			)
+		}
+
+		// add additional events with ISO format
+		for i := totalItems / 2; i < totalItems; i++ {
+			events = append(events, v1.Event{
+				ID:   strconv.Itoa(totalItems + i + 1),
+				Time: v1.NewEventDate(logTime.Add(time.Duration(i+1+totalItems) * time.Second)), // Make sure events are ordered.
+				Host: fmt.Sprintf("%d", i+1+totalItems),
+			},
+			)
+		}
+
+		bulk, err := cli.Events(cluster).Create(ctx, events)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Total, "create events did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+
+		// Stream through all the items.
+		params := v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Time{},
+					To:   time.Now().Add(time.Duration(2*totalItems) * time.Minute),
+				},
+				MaxPageSize: 1000,
+			},
+		}
+
+		pager := client.NewListPager[v1.Event](&params)
+		pages, errors := pager.Stream(ctx, cli.Events(cluster).List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+			logrus.Infof("Total Hits is %d", page.TotalHits)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
 	})
 }
 

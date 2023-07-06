@@ -33,7 +33,8 @@ var _ = Describe("AnomalyDetection Detection Reconciler", func() {
 		It("creates a RFC1123 Valid name an long globalalert and cluster name from a CC management cluster", func() {
 			// bug where the CC cloud management / managed cluster name creates a bib rfc1123 compliant name
 			// since acceptableRFCGlobalAlertNameLen will create the cronjob name bh0iuz1z.cluster-tigera.io.detectors.-detection...
-			cluster := "bh0iuz1z.cluster"
+			reconciler.tenantID = "bh0iuz1z"
+			cluster := "cluster"
 			globalAlertName := "tigera.io.detectors.port-scan"
 			result := reconciler.getDetectionCycleCronJobNameForGlobaAlert(cluster, globalAlertName)
 			// IsDNS1123Subdomain returns list of error strings

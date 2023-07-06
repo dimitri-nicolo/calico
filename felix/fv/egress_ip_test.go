@@ -587,6 +587,110 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				cancel()
 			})
 
+			Context("egress gateway policy with localPreference", func() {
+				var egwClient *workload.Workload
+				var redGWs []*workload.Workload
+				var blueGWs []*workload.Workload
+				var gw *workload.Workload
+
+				BeforeEach(func() {
+					overlay = OV_NONE
+					protocol = "tcp"
+				})
+
+				JustBeforeEach(func() {
+					for _, l := range []string{"blue", "red"} {
+						j := 0
+						if l == "red" {
+							j = 2
+						}
+						for i := 0; i < 2; i++ {
+							gwName := fmt.Sprintf("gw%v-%v", l, i)
+							gwAddr := fmt.Sprintf("10.10.11.%v", i+j)
+							gwRoute := fmt.Sprintf("10.10.11.%v/32", i+j)
+
+							if i == 0 {
+								gw = makeGatewayWithLabel(felixes[0], gwAddr, gwName, l)
+							} else {
+								gw = makeGatewayWithLabel(felixes[1], gwAddr, gwName, l)
+								felixes[0].Exec("ip", "route", "add", gwRoute, "via", gw.C.IP)
+							}
+							if l == "blue" {
+								blueGWs = append(blueGWs, gw)
+							} else {
+								redGWs = append(redGWs, gw)
+							}
+							for i := 0; i < 4; i++ {
+								extWorkloads[i].C.Exec("ip", "route", "add", gwRoute, "via", gw.C.IP)
+							}
+						}
+					}
+					for i := 0; i < 4; i++ {
+						extWorkloads[i].C.Exec("ip", "route", "add", "10.65.0.2", "via", felixes[0].IP)
+					}
+					if BPFMode() {
+						ensureAllNodesBPFProgramsAttached(felixes)
+					}
+				})
+				AfterEach(func() {
+					for i := 0; i < 2; i++ {
+						redGWs[i].Stop()
+						blueGWs[i].Stop()
+					}
+					redGWs = nil
+					blueGWs = nil
+				})
+
+				It("Should use the local gateway when GatewayPreference is set to PreferNodeLocal", func() {
+					egwClient = makeClientWithEGWPolicy(felixes[0], "10.65.0.2", "client", "egw-policy1")
+					defer egwClient.Stop()
+
+					Eventually(getIPRules, "10s", "1s").Should(HaveLen(1))
+					Eventually(getIPRules, "10s", "1s").Should(HaveKey("10.65.0.2"))
+					table := getIPRules()["10.65.0.2"]
+					Expect(table).To(Equal("250"))
+
+					By("should use the local gateway to connect to external server")
+					// update the EGW policy to set LocalPrefence
+					ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+					egwPolicy1, err := client.EgressGatewayPolicy().Get(ctx, "egw-policy1", options.GetOptions{})
+					Expect(err).NotTo(HaveOccurred())
+					localNodePreference := api.GatewayPreferenceNodeLocal
+					egwPolicy1.Spec.Rules[0].GatewayPreference = &localNodePreference
+					egwPolicy1.Spec.Rules[1].GatewayPreference = &localNodePreference
+					egwPolicy1.Spec.Rules[2].GatewayPreference = &localNodePreference
+					egwPolicy1.Spec.Rules[3].GatewayPreference = &localNodePreference
+					_, err = client.EgressGatewayPolicy().Update(ctx, egwPolicy1, options.SetOptions{})
+					Expect(err).NotTo(HaveOccurred())
+
+					cc.ExpectSNAT(egwClient, egwClient.IP, extWorkloads[0], 4321)
+					cc.ExpectSNAT(egwClient, blueGWs[0].IP, extWorkloads[1], 4321)
+					cc.ExpectSNAT(egwClient, redGWs[0].IP, extWorkloads[2], 4321)
+					cc.ExpectSNAT(egwClient, egwClient.IP, extWorkloads[3], 4321)
+					cc.CheckConnectivity()
+
+					By("Deleting the local gateway, client should connect via the non-local gateway")
+					blueGWs[0].Stop()
+					redGWs[0].Stop()
+					blueGWs[0].RemoveFromInfra(infra)
+					redGWs[0].RemoveFromInfra(infra)
+					cc.ResetExpectations()
+					cc.ExpectSNAT(egwClient, blueGWs[1].IP, extWorkloads[1], 4321)
+					cc.ExpectSNAT(egwClient, redGWs[1].IP, extWorkloads[2], 4321)
+					cc.CheckConnectivity()
+					cc.ResetExpectations()
+
+					By("Adding the local pods back")
+					blueGWs[0].Start()
+					redGWs[0].Start()
+					blueGWs[0].ConfigureInInfra(infra)
+					redGWs[0].ConfigureInInfra(infra)
+					cc.ExpectSNAT(egwClient, blueGWs[0].IP, extWorkloads[1], 4321)
+					cc.ExpectSNAT(egwClient, redGWs[0].IP, extWorkloads[2], 4321)
+					cc.CheckConnectivity()
+				})
+			})
+
 			for _, sameNode := range []bool{true, false} {
 				sameNode := sameNode
 				for _, ov := range []Overlay{OV_NONE, OV_VXLAN, OV_IPIP} {

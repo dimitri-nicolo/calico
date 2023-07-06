@@ -101,21 +101,52 @@ func WafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 	id := waf.GenerateModSecurityID()
 
 	httpProtocol, httpVersion := splitInput(inputProtocol, "/", "HTTP", "1.1")
-	err := waf.ProcessHttpRequest(id, uri, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort, reqHeaders, reqBody)
+	// Fix request header Host
+	if reqHeaders == nil {
+		reqHeaders = map[string]string{}
+	}
+	reqHeaders["host"] = destinationHost
+	err := waf.ProcessHttpRequest(id, uri, httpMethod, httpProtocol,
+		httpVersion, clientHost, clientPort, serverHost, serverPort,
+		reqHeaders, reqBody)
 
 	// Collect OWASP log information:
-	owaspLogInfo := waf.GetAndClearOwaspLogs(id)
+	var owaspLogInfo []*waf.OwaspInfo
+	owaspLogInfo = waf.GetAndClearOwaspLogs(id)
 
 	action := "pass-through"
 	if err != nil {
 		action = "blocked"
+		owaspInfo := waf.NewOwaspInfo(waf.ParseLog(err.(waf.WAFError).Disruption.Log))
+		owaspInfo.Disruptive = true
+		owaspLogInfo = append(owaspLogInfo, owaspInfo)
 	}
+	var rules []log.Fields
 	for _, owaspInfo := range owaspLogInfo {
+		rules = append(rules, log.Fields{
+			"id":         owaspInfo.RuleId,
+			"message":    owaspInfo.Message,
+			"severity":   owaspInfo.Severity,
+			"file":       owaspInfo.File,
+			"line":       owaspInfo.Line,
+			"disruptive": owaspInfo.Disruptive,
+		})
+
+		// Log to Dikastes logs.
+		log.WithFields(log.Fields{
+			"id":      id,
+			"url":     uri,
+			"message": owaspInfo.Message,
+		}).Warn(owaspInfo.String())
+	}
+
+	if rules != nil {
 		// Log to Elasticsearch => Kibana.
 		waf.Logger.WithFields(log.Fields{
-			"path":     uri,
-			"method":   httpMethod,
-			"protocol": inputProtocol,
+			"request_id": id,
+			"path":       uri,
+			"method":     httpMethod,
+			"protocol":   inputProtocol,
 			"source": log.Fields{
 				"ip":       clientHost,
 				"port_num": clientPort,
@@ -126,17 +157,10 @@ func WafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 				"port_num": serverPort,
 				"hostname": destinationHost,
 			},
-			"rule_info": owaspInfo.String(),
+			"rules": rules,
 		}).Error(
-			fmt.Sprintf("[%s] %s", action, owaspInfo.Message),
+			fmt.Sprintf("[%s] %d WAF rule(s) got hit", action, len(rules)),
 		)
-
-		// Log to Dikastes logs.
-		log.WithFields(log.Fields{
-			"id":      id,
-			"url":     uri,
-			"message": owaspInfo.Message,
-		}).Warn(owaspInfo.String())
 	}
 
 	return err

@@ -257,13 +257,11 @@ func Start(cfg *Config) error {
 	sm.Handle("/batchActions",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
-				middleware.AuthorizeRequest(authz,
-					middleware.BatchStagedActionsHandler(authn, k8sClientSetFactory, k8sClientFactory)))))
+				middleware.BatchStagedActionsHandler(authn, k8sClientSetFactory, k8sClientFactory))))
 	sm.Handle("/pagedRecommendations",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
-				middleware.AuthorizeRequest(authz,
-					middleware.PagedRecommendationsHandler(authn, k8sClientSetFactory, k8sClientFactory)))))
+				middleware.PagedRecommendationsHandler(authn, k8sClientSetFactory, k8sClientFactory))))
 	sm.Handle("/recommend",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,

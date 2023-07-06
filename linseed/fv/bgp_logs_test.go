@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
@@ -187,6 +189,54 @@ func TestFV_BGP(t *testing.T) {
 		// an afterKey
 		require.Nil(t, resp.AfterKey)
 	})
+
+	t.Run("should support pagination for items >= 10000 for BGP logs", func(t *testing.T) {
+		defer bgpSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K bgp logs.
+		logTime := time.Unix(100, 0).UTC()
+		var logs []v1.BGPLog
+		for i := 0; i < totalItems; i++ {
+			bgpLog := v1.BGPLog{
+				LogTime: logTime.Add(time.Duration(i) * time.Second).Format(v1.BGPLogTimeFormat),
+				Host:    fmt.Sprintf("%d", i),
+			}
+			logs = append(logs, bgpLog)
+		}
+		bulk, err := cli.BGPLogs(cluster).Create(ctx, logs)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Total, "create bgp log did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_bgp*")
+
+		// Stream through all the items.
+		params := v1.BGPLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: logTime.Add(-5 * time.Second),
+					To:   logTime.Add(time.Duration(totalItems) * time.Second),
+				},
+				MaxPageSize: 1000,
+			},
+		}
+
+		pager := client.NewListPager[v1.BGPLog](&params)
+		pages, errors := pager.Stream(ctx, cli.BGPLogs(cluster).List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
+	})
+
 }
 
 func TestFV_BGPTenancy(t *testing.T) {

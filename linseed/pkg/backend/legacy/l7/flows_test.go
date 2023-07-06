@@ -52,7 +52,7 @@ func setupTest(t *testing.T) func() {
 
 	// Create backends to use.
 	b = l7.NewL7FlowBackend(client)
-	lb = l7.NewL7LogBackend(client, cache)
+	lb = l7.NewL7LogBackend(client, cache, 10000)
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.

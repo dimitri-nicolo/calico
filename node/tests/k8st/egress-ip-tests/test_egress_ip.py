@@ -581,6 +581,146 @@ EOF
             self.validate_egress_ip(client_no_annotations, server, gw_red.ip)
             self.validate_egress_ip(client_annotation_override, server, gw_red.ip)
 
+    def test_egress_ip_local_preference(self):
+        with DiagsCollector():
+
+            gw_red1 = self.create_egress_gateway_pod("kind-worker", "gw-red1", self.egress_cidr)
+            gw_red2 = self.create_egress_gateway_pod("kind-worker2", "gw-red2", self.egress_cidr)
+            gw_blue1 = self.create_egress_gateway_pod("kind-worker", "gw-blue1", self.egress_cidr, color="blue")
+            gw_blue2 = self.create_egress_gateway_pod("kind-worker2", "gw-blue2", self.egress_cidr, color="blue")
+
+            for g in [gw_red1, gw_red2, gw_blue1, gw_blue2]:
+                g.wait_ready()
+
+            server1 = NetcatServerTCP(8089)
+            self.add_cleanup(server1.kill)
+            server1.wait_running()
+
+            server2 = NetcatServerTCP(8089)
+            self.add_cleanup(server2.kill)
+            server2.wait_running()
+
+            for s in [server1, server2]:
+                self.server_add_route(s, gw_red1)
+                self.server_add_route(s, gw_red2)
+                self.server_add_route(s, gw_blue1)
+                self.server_add_route(s, gw_blue2)
+
+                calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: EgressGatewayPolicy
+metadata:
+  name: egw-policy
+spec:
+  rules:
+    - description: "Gateway blue"
+      destination:
+        cidr: %s/32
+      gateway:
+        namespaceSelector: "projectcalico.org/name == 'default'"
+        selector: "color == 'blue'"
+    - description: "Gateway red"
+      gateway:
+        namespaceSelector: "projectcalico.org/name == 'default'"
+        selector: "color == 'red'"
+EOF
+""" % (server1.ip))
+            self.add_cleanup(lambda: calicoctl("delete egressgatewaypolicy egw-policy"))
+
+            client_ns = "ns-client"
+            self.create_namespace(client_ns)
+            egw_client = NetcatClientTCP(client_ns, "test-red", node="kind-worker", annotations={
+                "egress.projectcalico.org/egressGatewayPolicy": "egw-policy",
+            })
+            self.add_cleanup(egw_client.delete)
+            egw_client.wait_ready()
+            retry_until_success(self.has_ip_route_and_table, retries=3, wait_time=3,
+                                function_kwargs={
+                                    "nodename": egw_client.nodename,
+                                    "client_ip": egw_client.ip,
+                                    "gateway_ips": [gw_red1.ip, gw_red2.ip, gw_blue1.ip, gw_blue2.ip]
+                                })
+            # Update EGW policy to use local EGWs
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: EgressGatewayPolicy
+metadata:
+  name: egw-policy
+spec:
+  rules:
+    - description: "Gateway blue"
+      destination:
+        cidr: %s/32
+      gateway:
+        namespaceSelector: "projectcalico.org/name == 'default'"
+        selector: "color == 'blue'"
+      gatewayPreference: PreferNodeLocal
+    - description: "Gateway red"
+      gateway:
+        namespaceSelector: "projectcalico.org/name == 'default'"
+        selector: "color == 'red'"
+      gatewayPreference: PreferNodeLocal
+EOF
+""" % (server1.ip))
+            self.validate_egress_ip(egw_client, server1, gw_blue1.ip)
+            self.validate_egress_ip(egw_client, server2, gw_red1.ip)
+
+            # Delete blue_2 and recreate in kind-worker
+            self.delete(gw_blue2.name, "pod", "default", "false")
+            self.confirm_deletion(gw_blue2.name, "pod", "default")
+            self.cleanups.remove(gw_blue2.delete)
+
+            gw_blue2 = self.create_egress_gateway_pod("kind-worker", "gw-blue2", self.egress_cidr, color="blue")
+            gw_blue2.wait_ready()
+            # Update EGW policy to use blue gateways alone
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: EgressGatewayPolicy
+metadata:
+  name: egw-policy
+spec:
+  rules:
+    - description: "Gateway blue"
+      destination:
+        cidr: %s/32
+      gateway:
+        namespaceSelector: "projectcalico.org/name == 'default'"
+        selector: "color == 'blue'"
+      gatewayPreference: PreferNodeLocal
+EOF
+""" % (server1.ip))
+            retry_until_success(self.has_ip_route_and_table, retries=3, wait_time=3,
+                                function_kwargs={
+                                    "nodename": egw_client.nodename,
+                                    "client_ip": egw_client.ip,
+                                    "gateway_ips": [gw_blue1.ip, gw_blue2.ip]
+                                })
+            # Update EGW policy with maxNextHops
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: EgressGatewayPolicy
+metadata:
+  name: egw-policy
+spec:
+  rules:
+    - description: "Gateway blue"
+      destination:
+        cidr: %s/32
+      gateway:
+        namespaceSelector: "projectcalico.org/name == 'default'"
+        selector: "color == 'blue'"
+        maxNextHops: 1
+      gatewayPreference: PreferNodeLocal
+EOF
+""" % (server1.ip))
+            node_rules_and_tables = self.read_client_hops_for_node("kind-worker")
+            if egw_client.ip in node_rules_and_tables:
+                rule_and_table = node_rules_and_tables[egw_client.ip]
+                table = rule_and_table["table"]
+                hops = rule_and_table["hops"]
+                assert(len(hops)) == 1
+
+
     def test_egress_ip_host_endpoint_policy(self):
         with DiagsCollector():
             client, server, gw = self.setup_client_server_gateway("kind-worker2")

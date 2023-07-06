@@ -1,4 +1,5 @@
 {
+  "dynamic": false,
   "properties": {
     "@timestamp": {
       "type": "date"
@@ -47,10 +48,36 @@
     "msg": {
       "type": "keyword"
     },
-    "rule_info": {
+    "request_id": {
       "type": "keyword"
     },
-    "node": {
+    "rules": {
+      "type": "nested",
+      "properties": {
+        "id": {
+          "type": "keyword"
+	},
+        "message": {
+          "type": "text"
+	},
+        "severity": {
+          "type": "keyword"
+	},
+        "file": {
+          "type": "keyword"
+	},
+        "line": {
+          "type": "long"
+	},
+        "disruptive": {
+          "type": "boolean"
+	}
+      }
+    },
+    "host": {
+      "type": "keyword"
+    },
+    "level": {
       "type": "keyword"
     }
   }

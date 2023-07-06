@@ -66,7 +66,7 @@ func TestTimeStampOrDate_MarshalJSON(t *testing.T) {
 			timestamp: nil,
 			date:      nil,
 			wantErr:   false,
-			want:      nil,
+			want:      []byte(`0`),
 		},
 	}
 	for _, tt := range tests {

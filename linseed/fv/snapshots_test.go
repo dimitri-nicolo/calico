@@ -6,8 +6,11 @@ package fv_test
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
+
+	"github.com/projectcalico/calico/linseed/pkg/client"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
@@ -238,6 +241,70 @@ func TestFV_Snapshots(t *testing.T) {
 		// Once we reach the end of the data, we should not receive
 		// an afterKey
 		require.Nil(t, resp.AfterKey)
+	})
+
+	t.Run("should support pagination for items >= 10000 for Snapshots", func(t *testing.T) {
+		defer complianceSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K snapshots.
+		logTime := time.Unix(100, 0).UTC()
+		var snapshots []v1.Snapshot
+		for i := 0; i < totalItems; i++ {
+			snapshots = append(snapshots,
+				v1.Snapshot{
+					ID: strconv.Itoa(i),
+					ResourceList: list.TimestampedResourceList{
+						ResourceList: &apiv3.NetworkPolicyList{
+							TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
+							ListMeta: metav1.ListMeta{},
+							Items: []apiv3.NetworkPolicy{
+								{
+									TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      fmt.Sprintf("np-%d", i),
+										Namespace: "default",
+									},
+								},
+							},
+						},
+						RequestStartedTimestamp:   metav1.Time{Time: logTime.Add(time.Duration(i) * time.Second)},
+						RequestCompletedTimestamp: metav1.Time{Time: logTime.Add(time.Duration(2*i) * time.Second)},
+					},
+				},
+			)
+		}
+		bulk, err := cli.Compliance(cluster).Snapshots().Create(ctx, snapshots)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Succeeded, "create snapshots did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_snapshots*")
+
+		// Stream through all the items.
+		params := v1.SnapshotParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: logTime.Add(-5 * time.Second),
+					To:   logTime.Add(time.Duration(2*totalItems) * time.Second),
+				},
+				MaxPageSize: 1000,
+			},
+		}
+
+		pager := client.NewListPager[v1.Snapshot](&params)
+		pages, errors := pager.Stream(ctx, cli.Compliance(cluster).Snapshots().List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
 	})
 }
 

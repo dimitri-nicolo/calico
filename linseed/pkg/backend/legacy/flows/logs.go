@@ -22,18 +22,20 @@ import (
 )
 
 type flowLogBackend struct {
-	client    *elastic.Client
-	lmaclient lmaelastic.Client
-	helper    lmaindex.Helper
-	templates bapi.Cache
+	client               *elastic.Client
+	lmaclient            lmaelastic.Client
+	helper               lmaindex.Helper
+	templates            bapi.Cache
+	deepPaginationCutOff int64
 }
 
-func NewFlowLogBackend(c lmaelastic.Client, cache bapi.Cache) bapi.FlowLogBackend {
+func NewFlowLogBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.FlowLogBackend {
 	return &flowLogBackend{
-		client:    c.Backend(),
-		lmaclient: c,
-		templates: cache,
-		helper:    lmaindex.FlowLogs(),
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		helper:               lmaindex.FlowLogs(),
+		deepPaginationCutOff: deepPaginationCutOff,
 	}
 }
 
@@ -91,7 +93,7 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 		return nil, err
 	}
 
-	query, startFrom, err := b.getSearch(ctx, i, opts)
+	query, startFrom, err := b.getSearch(i, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -113,16 +115,23 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 		logs = append(logs, l)
 	}
 
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.List[v1.FlowLog]{
 		Items:     logs,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
+		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
 	}, nil
 }
 
 func (b *flowLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.FlowLogAggregationParams) (*elastic.Aggregations, error) {
 	// Get the base query.
-	search, _, err := b.getSearch(ctx, i, &opts.FlowLogParams)
+	search, _, err := b.getSearch(i, &opts.FlowLogParams)
 	if err != nil {
 		return nil, err
 	}
@@ -154,15 +163,9 @@ func (b *flowLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, op
 	return &results.Aggregations, nil
 }
 
-func (b *flowLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v1.FlowLogParams) (*elastic.SearchService, int, error) {
+func (b *flowLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.FlowLogParams) (*elastic.SearchService, int, error) {
 	if i.Cluster == "" {
 		return nil, 0, fmt.Errorf("no cluster ID on request")
-	}
-
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(opts)
-	if err != nil {
-		return nil, 0, err
 	}
 
 	q, err := b.buildQuery(i, opts)
@@ -172,10 +175,15 @@ func (b *flowLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts 
 
 	// Build the query, sorting by time.
 	query := b.client.Search().
-		Index(b.index(i)).
 		Size(opts.GetMaxPageSize()).
-		From(startFrom).
 		Query(q)
+
+	// Configure pagination options
+	var startFrom int
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	if err != nil {
+		return nil, 0, err
+	}
 
 	// Configure sorting.
 	if len(opts.GetSortBy()) != 0 {

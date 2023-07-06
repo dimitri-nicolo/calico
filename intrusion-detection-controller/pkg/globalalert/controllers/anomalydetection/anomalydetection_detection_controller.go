@@ -38,12 +38,14 @@ type adJobDetectionController struct {
 	k8sClient                   kubernetes.Interface
 	cancel                      context.CancelFunc
 	clusterName                 string
+	tenantID                    string
 	adJobDetectionReconciler    *adDetectionReconciler
 	detectionCycleResourceCache rcache.ResourceCache
 }
 
 type DetectionCycleRequest struct {
 	ClusterName string
+	TenantID    string
 	GlobalAlert *v3.GlobalAlert
 	CalicoCLI   calicoclient.Interface
 }
@@ -53,20 +55,23 @@ type DetectionCycleRequest struct {
 // and ManagedClusterController - to handle GlobalAlert of typed AnomalyDetection in Standalone or Management clusters
 // through GlobalAlertController, and Managed Cluster through ManagedClusterController.
 func NewADJobDetectionController(ctx context.Context, k8sClient kubernetes.Interface, calicoCLI calicoclient.Interface,
-	podTemplateQuery podtemplate.ADPodTemplateQuery, namespace string, clusterName string) controller.AnomalyDetectionController {
+	podTemplateQuery podtemplate.ADPodTemplateQuery, namespace string, managementClusterName string, tenantID string) controller.AnomalyDetectionController {
 
 	adJobDetectionReconciler := &adDetectionReconciler{
 		calicoCLI:                 calicoCLI,
 		k8sClient:                 k8sClient,
 		podTemplateQuery:          podTemplateQuery,
 		detectionADDetectorStates: make(map[string]detectionCycleState),
-		managementClusterName:     clusterName,
-		namespace:                 namespace,
+		managementClusterName:     managementClusterName,
+		tenantID:                  tenantID,
+
+		namespace: namespace,
 	}
 
 	adDetectionController := &adJobDetectionController{
 		ctx:                      ctx,
-		clusterName:              clusterName,
+		clusterName:              managementClusterName,
+		tenantID:                 tenantID,
 		k8sClient:                k8sClient,
 		adJobDetectionReconciler: adJobDetectionReconciler,
 	}
@@ -91,7 +96,7 @@ func (c *adJobDetectionController) Run(parentCtx context.Context) {
 	ctx, c.cancel = context.WithCancel(parentCtx)
 	c.adJobDetectionReconciler.managementClusterCtx = ctx
 
-	log.Infof("Starting AD Detection controller on cluster %s", c.clusterName)
+	log.WithFields(log.Fields{"tenant": c.tenantID, "cluster": c.clusterName}).Info("Starting AD Detection controller on cluster")
 
 	c.detectionCycleResourceCache.Run(detectionCycleResourceCachePeriod.String())
 

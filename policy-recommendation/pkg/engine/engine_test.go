@@ -45,6 +45,8 @@ func (mockRealClock) NowRFC3339() string { return timeNowRFC3339 }
 var mrc mockRealClock
 
 var _ = Describe("processFlow", func() {
+	const serviceNameSuffix = "svc.cluster.local"
+
 	var (
 		recEngine *recommendationEngine
 
@@ -63,7 +65,7 @@ var _ = Describe("processFlow", func() {
 
 	BeforeEach(func() {
 		recEngine = newRecommendationEngine(
-			name, namespace, tier, &order, clock, interval, stabilization, *log.WithField("cluster", "my-cluster"))
+			name, namespace, tier, &order, clock, interval, stabilization, serviceNameSuffix, *log.WithField("cluster", "my-cluster"))
 
 		err := testutils.LoadData(testDataFile, &flowData)
 		Expect(err).To(BeNil())
@@ -204,6 +206,8 @@ var _ = Describe("processFlow", func() {
 })
 
 var _ = Describe("ProcessRecommendation", func() {
+	const serviceNameSuffix = "svc.cluster.local"
+
 	var (
 		recEngine *recommendationEngine
 
@@ -222,7 +226,7 @@ var _ = Describe("ProcessRecommendation", func() {
 
 	BeforeEach(func() {
 		recEngine = newRecommendationEngine(
-			name, namespace, tier, &order, clock, interval, stabilization, *log.WithField("cluster", "my-cluster"))
+			name, namespace, tier, &order, clock, interval, stabilization, serviceNameSuffix, *log.WithField("cluster", "my-cluster"))
 
 		err := testutils.LoadData(testDataFile, &flowData)
 		Expect(err).To(BeNil())

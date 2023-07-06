@@ -166,9 +166,8 @@ var _ = Describe("PagedRecommendationsHandler", func() {
 		mockLmaK8sClientSet = lmak8s.MockClientSet{}
 
 		mockAuthenticator.On("Authenticate", mock.Anything).Return(&user.DefaultInfo{}, http.StatusOK, nil)
-		mockAuthenticator.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
-		mockLmaK8sClientFactory.On("NewClientSetForApplication", clusterID).Return(&mockLmaK8sClientSet, nil)
+		mockLmaK8sClientFactory.On("NewClientSetForUser", mock.Anything, clusterID).Return(&mockLmaK8sClientSet, nil)
 
 		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
 		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())

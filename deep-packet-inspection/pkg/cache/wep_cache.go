@@ -1,10 +1,11 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021, 2023 Tigera, Inc. All rights reserved.
 
 package cache
 
 import (
 	"net"
 	"reflect"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 
@@ -29,18 +30,18 @@ type WEPCache interface {
 
 func NewWEPCache() WEPCache {
 	return &wepCache{
-		wepKeyToWEPData: make(map[model.WorkloadEndpointKey]wepData),
-		ipToWEPKey:      make(map[string]model.WorkloadEndpointKey),
+		wepKeyToWEPData: sync.Map{},
+		ipToWEPKey:      sync.Map{},
 	}
 }
 
 // wepCache implements interface WEPCache
 type wepCache struct {
 	// ipToWEPKey maps IP to WEP key, it is in turn used to map WEP Key to WEP Data needed for processing the alert file content.
-	ipToWEPKey map[string]model.WorkloadEndpointKey
+	ipToWEPKey sync.Map
 
 	// wepKeyToWEPData is used to cache pod name, namespace, IPs to WEP Key.
-	wepKeyToWEPData map[model.WorkloadEndpointKey]wepData
+	wepKeyToWEPData sync.Map
 }
 
 type wepData struct {
@@ -51,9 +52,9 @@ type wepData struct {
 
 // Get returns the pod name and namespace for the give ip address.
 func (r *wepCache) Get(ip string) (ok bool, podName, namespace string) {
-	if wepKey, ok := r.ipToWEPKey[ip]; ok {
-		if d, ok := r.wepKeyToWEPData[wepKey]; ok {
-			return ok, d.podName, d.ns
+	if wepKey, ok := r.ipToWEPKey.Load(ip); ok {
+		if d, ok := r.wepKeyToWEPData.Load(wepKey.(model.WorkloadEndpointKey)); ok {
+			return ok, d.(wepData).podName, d.(wepData).ns
 		}
 	}
 	return false, "", ""
@@ -75,14 +76,14 @@ func (r *wepCache) Update(updateType bapi.UpdateType, wepKVPair model.KVPair) {
 			}
 
 			newIPs := extractIPsFromWorkloadEndpoint(wepKVPair.Value.(*model.WorkloadEndpoint))
-			data, ok := r.wepKeyToWEPData[wepKey]
+			data, ok := r.wepKeyToWEPData.Load(wepKey)
 			if ok {
 				// Remove the old IPs that are no longer in the WEP
-				oldIPList := data.ipList
+				oldIPList := data.(wepData).ipList
 				oldIPList.Iter(func(item string) error {
 					for i := range newIPs {
 						if !reflect.DeepEqual(newIPs[i], item) {
-							delete(r.ipToWEPKey, item)
+							r.ipToWEPKey.Delete(item)
 						}
 					}
 					return nil
@@ -95,32 +96,36 @@ func (r *wepCache) Update(updateType bapi.UpdateType, wepKVPair model.KVPair) {
 			}
 
 			// Cache all the IPs in WEP
-			data.ipList = set.New[string]()
+			wd := data.(wepData)
+			wd.ipList = set.New[string]()
 			for i := range newIPs {
 				ip := net.IP(newIPs[i][:16])
-				data.ipList.Add(ip.String())
-				r.ipToWEPKey[ip.String()] = wepKey
+				wd.ipList.Add(ip.String())
+				r.ipToWEPKey.Store(ip.String(), wepKey)
 			}
+			data = wd
 
-			r.wepKeyToWEPData[wepKey] = data
+			r.wepKeyToWEPData.Store(wepKey, data)
 		}
 	case bapi.UpdateTypeKVDeleted:
 		if wepKey, ok := wepKVPair.Key.(model.WorkloadEndpointKey); ok {
-			oldWEPData, ok := r.wepKeyToWEPData[wepKey]
+			oldWEPData, ok := r.wepKeyToWEPData.Load(wepKey)
 			if ok {
-				oldWEPData.ipList.Iter(func(item string) error {
-					delete(r.ipToWEPKey, item)
-					return nil
-				})
-				delete(r.wepKeyToWEPData, wepKey)
+				if oldWEPData.(wepData).ipList != nil {
+					oldWEPData.(wepData).ipList.Iter(func(item string) error {
+						r.ipToWEPKey.Delete(item)
+						return nil
+					})
+				}
+				r.ipToWEPKey.Delete(wepKey)
 			}
 		}
 	}
 }
 
 func (r *wepCache) Flush() {
-	r.ipToWEPKey = nil
-	r.wepKeyToWEPData = nil
+	r.ipToWEPKey = sync.Map{}
+	r.wepKeyToWEPData = sync.Map{}
 }
 
 // ExtractIPsFromWorkloadEndpoint converts the IPv[46]Nets fields of the WorkloadEndpoint into

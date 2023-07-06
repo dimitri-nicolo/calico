@@ -1245,6 +1245,7 @@ var (
 	}
 	egressGatewayPolicy1    = "egw-policy1"
 	egressGatewayPolicyKey1 = ResourceKey{Name: "egw-policy1", Kind: apiv3.KindEgressGatewayPolicy}
+	preferenceNone          = v3.GatewayPreferenceNone
 	egressGatewayPolicyVal1 = &apiv3.EgressGatewayPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "egw-policy1",
@@ -1256,6 +1257,7 @@ var (
 						Selector:          egwpSelector1,
 						NamespaceSelector: namespaceSelector,
 					},
+					GatewayPreference: &preferenceNone,
 				},
 				{
 					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
@@ -1265,11 +1267,13 @@ var (
 						Selector:          egwpSelector2,
 						NamespaceSelector: namespaceSelector,
 					},
+					GatewayPreference: &preferenceNone,
 				},
 				{
 					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
 						CIDR: "11.0.0.0/8",
 					},
+					GatewayPreference: &preferenceNone,
 				},
 			},
 		},
@@ -1285,6 +1289,7 @@ var (
 						Selector:          egwpSelector2,
 						NamespaceSelector: namespaceSelector,
 					},
+					GatewayPreference: &preferenceNone,
 				},
 				{
 					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
@@ -1294,6 +1299,7 @@ var (
 						Selector:          egwpSelector1,
 						NamespaceSelector: namespaceSelector,
 					},
+					GatewayPreference: &preferenceNone,
 				},
 				{
 					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
@@ -1303,16 +1309,19 @@ var (
 						Selector:          egwpSelector3,
 						NamespaceSelector: namespaceSelector,
 					},
+					GatewayPreference: &preferenceNone,
 				},
 				{
 					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
 						CIDR: "11.0.0.0/8",
 					},
+					GatewayPreference: &preferenceNone,
 				},
 				{
 					Destination: &apiv3.EgressGatewayPolicyDestinationSpec{
 						CIDR: "12.0.0.0/8",
 					},
+					GatewayPreference: &preferenceNone,
 				},
 			},
 		},
@@ -1354,7 +1363,7 @@ var (
 			},
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKey.Hostname),
 	},
 	).withName("endpointWithOwnEgressGateway")
 
@@ -1445,10 +1454,10 @@ var (
 			},
 		},
 	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKey.Hostname),
 	},
 	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
-		egressActiveMemberStr("137.0.0.10/32"),
+		egressActiveMemberStr("137.0.0.10/32", gatewayKey3.Hostname),
 	},
 	).withActiveProfiles(
 		proto.ProfileID{Name: "egress"},
@@ -1516,14 +1525,14 @@ var (
 			},
 		},
 	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKey.Hostname),
 	},
 	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
-		egressActiveMemberStr("137.0.0.10/32"),
+		egressActiveMemberStr("137.0.0.10/32", gatewayKey3.Hostname),
 	},
 	).withIPSet(egressSelectorID(egwpCombinedSelector3), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
-		egressActiveMemberStr("137.0.0.10/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKey.Hostname),
+		egressActiveMemberStr("137.0.0.10/32", gatewayKey3.Hostname),
 	},
 	).withActiveProfiles(
 		proto.ProfileID{Name: "egress"},
@@ -1563,7 +1572,7 @@ var (
 			},
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -1634,10 +1643,10 @@ var (
 			},
 		},
 	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
 	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
-		egressActiveMemberStr("137.0.0.10/32"),
+		egressActiveMemberStr("137.0.0.10/32", gatewayKey3.Hostname),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -1690,7 +1699,7 @@ var (
 			},
 		},
 	).withIPSet(egressSelectorID(egressProfileSelector), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKey.Hostname),
 	},
 	).withActiveProfiles(
 		proto.ProfileID{Name: "egress"},
@@ -1787,10 +1796,10 @@ var (
 			},
 		},
 	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
-		egressActiveMemberStr("137.0.0.10/32"),
+		egressActiveMemberStr("137.0.0.10/32", gatewayKey3.Hostname),
 	},
 	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKey.Hostname),
 	},
 	).withActiveProfiles(
 		proto.ProfileID{Name: "egress"},
@@ -1833,7 +1842,7 @@ var (
 			},
 		},
 	).withIPSet(egressSelectorID(egressProfileSelector), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
 	).withActiveProfiles(
 		proto.ProfileID{Name: "egress"},
@@ -1903,10 +1912,10 @@ var (
 			},
 		},
 	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
 	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
-		egressActiveMemberStr("137.0.0.10/32"),
+		egressActiveMemberStr("137.0.0.10/32", gatewayKey3.Hostname),
 	},
 	).withActiveProfiles(
 		proto.ProfileID{Name: "egress"},
@@ -2027,7 +2036,7 @@ var (
 			IsEgressGateway: true,
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -2130,10 +2139,10 @@ var (
 			IsEgressGateway: true,
 		},
 	).withIPSet(egressSelectorID(egwpCombinedSelector1), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
 	).withIPSet(egressSelectorID(egwpCombinedSelector2), []string{
-		egressActiveMemberStr("137.0.0.10/32"),
+		egressActiveMemberStr("137.0.0.10/32", gatewayKey3.Hostname),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -2205,10 +2214,10 @@ var (
 			IsEgressGateway: true,
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
 	).withIPSet(egressSelectorID(egressSelectorSim), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -2227,12 +2236,12 @@ var (
 			Value: gatewayEndpoint2,
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
-		egressActiveMemberStr("137.0.0.2/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
+		egressActiveMemberStr("137.0.0.2/32", gatewayKeyLocal2.Hostname),
 	},
 	).withIPSet(egressSelectorID(egressSelectorSim), []string{
-		egressActiveMemberStr("137.0.0.1/32"),
-		egressActiveMemberStr("137.0.0.2/32"),
+		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
+		egressActiveMemberStr("137.0.0.2/32", gatewayKeyLocal2.Hostname),
 	},
 	).withEndpoint(
 		"orch/gw2/ep1",
@@ -2380,32 +2389,32 @@ var (
 	endpointWithRemoteActiveEgressGateway = createEndpointWithRemoteEgressGateway(
 		"endpointWithRemoteActiveEgressGateway",
 		activeGatewayEndpoint,
-		egressActiveMemberStr("137.0.0.1/32"))
+		egressActiveMemberStr("137.0.0.1/32", gatewayKey.Hostname))
 
 	endpointWithRemoteActiveEgressGatewayWithPort = createEndpointWithRemoteEgressGateway(
 		"endpointWithRemoteActiveEgressGatewayWithPort",
 		activeGatewayEndpointWithPort,
-		egressActiveMemberStrWithPort("137.0.0.1/32", 8080))
+		egressActiveMemberStrWithPort("137.0.0.1/32", 8080, gatewayKey.Hostname))
 
 	endpointWithRemoteTerminatingEgressGateway = createEndpointWithRemoteEgressGateway(
 		"endpointWithRemoteTerminatingEgressGateway",
 		terminatingGatewayEndpoint,
-		egressTerminatingMemberStr("137.0.0.1/32", nowTime, inSixtySecsTime, 0))
+		egressTerminatingMemberStr("137.0.0.1/32", nowTime, inSixtySecsTime, 0, gatewayKey.Hostname))
 
 	endpointWithLocalActiveEgressGateway = createEndpointWithLocalEgressGateway(
 		"endpointWithLocalActiveEgressGateway",
 		activeGatewayEndpoint,
-		egressActiveMemberStr("137.0.0.1/32"))
+		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname))
 
 	endpointWithLocalActiveEgressGatewayAndPort = createEndpointWithLocalEgressGateway(
 		"endpointWithLocalActiveEgressGatewayAndPort",
 		activeGatewayEndpointWithPort,
-		egressActiveMemberStrWithPort("137.0.0.1/32", 8080))
+		egressActiveMemberStrWithPort("137.0.0.1/32", 8080, gatewayKeyLocal.Hostname))
 
 	endpointWithLocalTerminatingEgressGateway = createEndpointWithLocalEgressGateway(
 		"endpointWithLocalTerminatingEgressGateway",
 		terminatingGatewayEndpoint,
-		egressTerminatingMemberStr("137.0.0.1/32", nowTime, inSixtySecsTime, 0))
+		egressTerminatingMemberStr("137.0.0.1/32", nowTime, inSixtySecsTime, 0, gatewayKeyLocal.Hostname))
 
 	createEndpointWithMaxNextHopsOnPod = func(name string, maxNextHops int) State {
 		return initialisedStore.withKVUpdates(
@@ -2443,7 +2452,7 @@ var (
 				},
 			},
 		).withIPSet(egressSelectorID(egressSelector), []string{
-			egressActiveMemberStr("137.0.0.1/32"),
+			egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 		},
 		).withRoutes(
 			proto.RouteUpdate{
@@ -2506,7 +2515,7 @@ var (
 				},
 			},
 		).withIPSet(egressSelectorID(egressProfileSelector), []string{
-			egressActiveMemberStr("137.0.0.1/32"),
+			egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 		},
 		).withActiveProfiles(
 			proto.ProfileID{Name: "egress"},
@@ -2537,15 +2546,15 @@ var (
 		3)
 )
 
-func egressActiveMemberStr(cidr string) string {
-	return egressTerminatingMemberStr(cidr, time.Time{}, time.Time{}, 0)
+func egressActiveMemberStr(cidr string, hostname string) string {
+	return egressTerminatingMemberStr(cidr, time.Time{}, time.Time{}, 0, hostname)
 }
 
-func egressActiveMemberStrWithPort(cidr string, port uint16) string {
-	return egressTerminatingMemberStr(cidr, time.Time{}, time.Time{}, port)
+func egressActiveMemberStrWithPort(cidr string, port uint16, hostname string) string {
+	return egressTerminatingMemberStr(cidr, time.Time{}, time.Time{}, port, hostname)
 }
 
-func egressTerminatingMemberStr(cidr string, start, finish time.Time, port uint16) string {
+func egressTerminatingMemberStr(cidr string, start, finish time.Time, port uint16, hostname string) string {
 	startBytes, err := start.MarshalText()
 	if err != nil {
 		panic(err)
@@ -2554,7 +2563,7 @@ func egressTerminatingMemberStr(cidr string, start, finish time.Time, port uint1
 	if err != nil {
 		panic(err)
 	}
-	return fmt.Sprintf("%s,%s,%s,%d", cidr, strings.ToLower(string(startBytes)), strings.ToLower(string(finishBytes)), port)
+	return fmt.Sprintf("%s,%s,%s,%d,%s", cidr, strings.ToLower(string(startBytes)), strings.ToLower(string(finishBytes)), port, hostname)
 }
 
 func namespaceToProfile(ns *kapiv1.Namespace) *v3.Profile {

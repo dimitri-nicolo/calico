@@ -52,7 +52,7 @@ func setupTest(t *testing.T) func() {
 	cache := templates.NewTemplateCache(client, 1, 0)
 
 	// Instantiate a backend.
-	b = waf.NewBackend(client, cache)
+	b = waf.NewBackend(client, cache, 10000)
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
@@ -94,11 +94,29 @@ func TestWAFLogBasic(t *testing.T) {
 					PortNum:  987,
 					Hostname: "dest-hostname",
 				},
-				Path:     "/yellow/brick/road",
-				Method:   "GET",
-				Protocol: "TCP",
-				Msg:      "This is a friendly reminder that nobody knows what is going on",
-				RuleInfo: "WAF rules, rule WAF",
+				Path:      "/yellow/brick/road",
+				Method:    "GET",
+				Protocol:  "HTTP/1.1",
+				Msg:       "This is a friendly reminder that nobody knows what is going on",
+				RequestId: "abaecb62-c7fc-42d2-b7b9-44be7571d216",
+				Rules: []v1.WAFRuleHit{
+					{
+						Id:         "9992",
+						Message:    "WAF rules, rule WAF",
+						Severity:   "2",
+						File:       "JOJO-000.conf",
+						Line:       "666",
+						Disruptive: false,
+					},
+					{
+						Id:         "9993",
+						Message:    "WAF rules, rule, rule WAF",
+						Severity:   "4",
+						File:       "JOJO-001.conf",
+						Line:       "6669",
+						Disruptive: true,
+					},
+				},
 			}
 
 			// Create the log in ES.
@@ -202,11 +220,29 @@ func TestAggregations(t *testing.T) {
 						PortNum:  987,
 						Hostname: "dest-hostname",
 					},
-					Path:     "/yellow/brick/road",
-					Method:   "GET",
-					Protocol: "TCP",
-					Msg:      "This is a friendly reminder that nobody knows what is going on",
-					RuleInfo: "WAF rules, rule WAF",
+					Path:      "/yellow/brick/road",
+					Method:    "GET",
+					Protocol:  "HTTP/1.1",
+					Msg:       "This is a friendly reminder that nobody knows what is going on",
+					RequestId: "abaecb62-c7fc-42d2-b7b9-44be7571d216",
+					Rules: []v1.WAFRuleHit{
+						{
+							Id:         "9992",
+							Message:    "WAF rules, rule WAF",
+							Severity:   "2",
+							File:       "JOJO-000.conf",
+							Line:       "666",
+							Disruptive: false,
+						},
+						{
+							Id:         "9993",
+							Message:    "WAF rules, rule, rule WAF",
+							Severity:   "4",
+							File:       "JOJO-001.conf",
+							Line:       "6669",
+							Disruptive: true,
+						},
+					},
 				}
 				start = start.Add(timeBetweenLogs)
 				logs = append(logs, log)
@@ -290,11 +326,29 @@ func TestAggregations(t *testing.T) {
 						PortNum:  987,
 						Hostname: "dest-hostname",
 					},
-					Path:     "/yellow/brick/road",
-					Method:   "GET",
-					Protocol: "TCP",
-					Msg:      "This is a friendly reminder that nobody knows what is going on",
-					RuleInfo: "WAF rules, rule WAF",
+					Path:      "/yellow/brick/road",
+					Method:    "GET",
+					Protocol:  "HTTP/1.1",
+					Msg:       "This is a friendly reminder that nobody knows what is going on",
+					RequestId: "abaecb62-c7fc-42d2-b7b9-44be7571d216",
+					Rules: []v1.WAFRuleHit{
+						{
+							Id:         "9992",
+							Message:    "WAF rules, rule WAF",
+							Severity:   "2",
+							File:       "JOJO-000.conf",
+							Line:       "666",
+							Disruptive: false,
+						},
+						{
+							Id:         "9993",
+							Message:    "WAF rules, rule, rule WAF",
+							Severity:   "4",
+							File:       "JOJO-001.conf",
+							Line:       "6669",
+							Disruptive: true,
+						},
+					},
 				}
 				start = start.Add(timeBetweenLogs)
 				logs = append(logs, log)
@@ -357,9 +411,13 @@ func TestSorting(t *testing.T) {
 			Destination: &v1.WAFEndpoint{IP: "4.3.2.1", PortNum: 987, Hostname: "dest-hostname"},
 			Path:        "/yellow/brick/road",
 			Method:      "GET",
-			Protocol:    "TCP",
+			Protocol:    "HTTP/1.1",
 			Msg:         "This is a friendly reminder that nobody knows what is going on",
-			RuleInfo:    "WAF rules, rule WAF",
+			RequestId:   "abaecb62-c7fc-42d2-b7b9-44be7571d216",
+			Rules: []v1.WAFRuleHit{
+				{Id: "9992", Message: "WAF rules, rule WAF", Severity: "2", File: "JOJO-000.conf", Line: "666", Disruptive: false},
+				{Id: "9993", Message: "WAF rules, rule, rule WAF", Severity: "4", File: "JOJO-001.conf", Line: "6669", Disruptive: true},
+			},
 		}
 		log2 := v1.WAFLog{
 			Timestamp:   t2,
@@ -367,9 +425,11 @@ func TestSorting(t *testing.T) {
 			Destination: &v1.WAFEndpoint{IP: "4.3.2.1", PortNum: 987, Hostname: "dest-hostname"},
 			Path:        "/red/lobster",
 			Method:      "PUT",
-			Protocol:    "UDP",
+			Protocol:    "HTTP/2",
 			Msg:         "This is an unreasonable fear of failure",
-			RuleInfo:    "Information cannot be found",
+			Rules: []v1.WAFRuleHit{
+				{Id: "9993", Message: "WAF rules waf waf waf", Severity: "1", File: "JOJO-003.conf", Line: "6611", Disruptive: false},
+			},
 		}
 
 		response, err := b.Create(ctx, clusterInfo, []v1.WAFLog{log1, log2})

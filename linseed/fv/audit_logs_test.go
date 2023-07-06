@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	"k8s.io/apimachinery/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -171,6 +173,106 @@ func TestFV_AuditEE(t *testing.T) {
 		resp.Items[0].RequestReceivedTimestamp = metav1.NewMicroTime(reqTime)
 
 		require.Equal(t, audits, resp.Items)
+	})
+
+	t.Run("should support pagination for items >= 10000 for EE Audit", func(t *testing.T) {
+		defer auditSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K audit logs.
+		logTime := time.Unix(100, 0).UTC()
+		var logs []v1.AuditLog
+		for i := 0; i < totalItems; i++ {
+			auditLog := v1.AuditLog{
+				Event: audit.Event{
+					RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(i) * time.Second)),
+					AuditID:                  types.UID(fmt.Sprintf("some-uuid-%d", i)),
+				},
+			}
+			logs = append(logs, auditLog)
+		}
+		bulk, err := cli.AuditLogs(cluster).Create(ctx, v1.AuditLogTypeEE, logs)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Total, "create EE audit log did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_ee*")
+
+		// Stream through all the items.
+		params := v1.AuditLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: logTime.Add(-5 * time.Second),
+					To:   logTime.Add(time.Duration(totalItems) * time.Second),
+				},
+				MaxPageSize: 1000,
+			},
+			Type: v1.AuditLogTypeEE,
+		}
+
+		pager := client.NewListPager[v1.AuditLog](&params)
+		pages, errors := pager.Stream(ctx, cli.AuditLogs(cluster).List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
+	})
+
+	t.Run("should support pagination for items >= 10000 for Kube Audit", func(t *testing.T) {
+		defer auditSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K audit logs.
+		logTime := time.Unix(100, 0).UTC()
+		var logs []v1.AuditLog
+		for i := 0; i < totalItems; i++ {
+			auditLog := v1.AuditLog{
+				Event: audit.Event{
+					RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(i) * time.Second)),
+					AuditID:                  types.UID(fmt.Sprintf("some-uuid-%d", i)),
+				},
+			}
+			logs = append(logs, auditLog)
+		}
+		bulk, err := cli.AuditLogs(cluster).Create(ctx, v1.AuditLogTypeKube, logs)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Total, "create Kube audit log did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_kube*")
+
+		// Stream through all the items.
+		params := v1.AuditLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: logTime.Add(-5 * time.Second),
+					To:   logTime.Add(time.Duration(totalItems) * time.Second),
+				},
+				MaxPageSize: 1000,
+			},
+			Type: v1.AuditLogTypeKube,
+		}
+
+		pager := client.NewListPager[v1.AuditLog](&params)
+		pages, errors := pager.Stream(ctx, cli.AuditLogs(cluster).List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
 	})
 
 	t.Run("should support pagination for EE Audit", func(t *testing.T) {

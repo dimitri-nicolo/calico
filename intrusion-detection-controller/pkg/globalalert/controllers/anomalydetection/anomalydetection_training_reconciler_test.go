@@ -8,6 +8,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -88,7 +89,10 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 	})
 
 	Context("runInitialTrainingJob", func() {
-		It("does not create an initial training job, as training cycle found and detector present", func() {
+		const noTenant = ""
+		const tenant = "tenant"
+
+		DescribeTable("does not create an initial training job, as training cycle found and detector present", func(tenant string) {
 			adJobTr := adJobTrainingReconciler{
 				managementClusterCtx:       ctx,
 				k8sClient:                  mockK8sClient,
@@ -97,10 +101,11 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 				trainingCycleResourceCache: mockrc,
 
 				namespace: namespace,
+				tenantID:  tenant,
 
 				// key: cluster name
 				trainingDetectorsPerCluster: map[string]trainingCycleStatePerCluster{
-					"ut-cluster-training-cycle": {
+					getKey(tenant, clusterName, "training-cycle"): {
 						ClusterName: clusterName,
 						CronJob:     nil,
 						GlobalAlerts: []*v3.GlobalAlert{
@@ -125,6 +130,7 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 
 			mcs := TrainingDetectorsRequest{
 				ClusterName: clusterName,
+				TenantID:    tenant,
 				GlobalAlert: &v3.GlobalAlert{
 					Spec: v3.GlobalAlertSpec{
 						Detector: &v3.DetectorParams{
@@ -142,9 +148,143 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 			list, err := mockK8sClient.BatchV1().Jobs(namespace).List(ctx, metav1.ListOptions{})
 			Expect(err).To(BeNil())
 			Expect(list.Items).To(BeNil())
-		})
+		},
+			Entry("no tenant", noTenant),
+			Entry("with tenant", tenant),
+		)
 
-		It("create an initial training job for 'detector1'", func() {
+		expectedJobEnterprise := batchv1.Job{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-detector1-initial-training", clusterName),
+				Namespace: namespace,
+				Labels: map[string]string{
+					"tigera.io.detector-cycle": "training",
+					"cluster":                  clusterName,
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion:         "apps/v1",
+						Kind:               "Deployment",
+						Name:               "intrusion-detection-controller",
+						UID:                "",
+						Controller:         boolPtr(true),
+						BlockOwnerDeletion: boolPtr(true),
+					},
+				},
+			},
+			Spec: batchv1.JobSpec{
+				BackoffLimit: int32Ptr(0),
+				Template: v1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s-detector1-initial-training", clusterName),
+						Namespace: namespace,
+						Labels: map[string]string{
+							"tigera.io.detector-cycle": "training",
+							"cluster":                  clusterName,
+						},
+					},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							{
+								Name:       "adjobs",
+								Image:      "",
+								Command:    []string{"python3"},
+								Args:       []string{"-m", "adj", "train"},
+								WorkingDir: "",
+								Ports:      nil,
+								EnvFrom:    nil,
+								Env: []v1.EnvVar{
+									{
+										Name:      "CLUSTER_NAME",
+										Value:     clusterName,
+										ValueFrom: nil,
+									},
+									{
+										Name:      "TENANT_ID",
+										Value:     noTenant,
+										ValueFrom: nil,
+									},
+									{
+										Name:      "AD_ENABLED_DETECTORS",
+										Value:     "detector1",
+										ValueFrom: nil,
+									},
+								},
+							},
+						},
+						RestartPolicy: "Never",
+					},
+				},
+			},
+		}
+
+		expectedJobCloud := batchv1.Job{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s.%s-detector1-initial-training", tenant, clusterName),
+				Namespace: namespace,
+				Labels: map[string]string{
+					"tigera.io.detector-cycle": "training",
+					"cluster":                  fmt.Sprintf("%s.%s", tenant, clusterName),
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion:         "apps/v1",
+						Kind:               "Deployment",
+						Name:               "intrusion-detection-controller",
+						UID:                "",
+						Controller:         boolPtr(true),
+						BlockOwnerDeletion: boolPtr(true),
+					},
+				},
+			},
+			Spec: batchv1.JobSpec{
+				BackoffLimit: int32Ptr(0),
+				Template: v1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s.%s-detector1-initial-training", tenant, clusterName),
+						Namespace: namespace,
+						Labels: map[string]string{
+							"tigera.io.detector-cycle": "training",
+							"cluster":                  fmt.Sprintf("%s.%s", tenant, clusterName),
+						},
+					},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							{
+								Name:       "adjobs",
+								Image:      "",
+								Command:    []string{"python3"},
+								Args:       []string{"-m", "adj", "train"},
+								WorkingDir: "",
+								Ports:      nil,
+								EnvFrom:    nil,
+								Env: []v1.EnvVar{
+									{
+										Name:      "CLUSTER_NAME",
+										Value:     clusterName,
+										ValueFrom: nil,
+									},
+									{
+										Name:      "TENANT_ID",
+										Value:     tenant,
+										ValueFrom: nil,
+									},
+
+									{
+										Name:      "AD_ENABLED_DETECTORS",
+										Value:     "detector1",
+										ValueFrom: nil,
+									},
+								},
+							},
+						},
+						RestartPolicy: "Never",
+					},
+				},
+			},
+		}
+
+		DescribeTable("create an initial training job for 'detector1'", func(tenant string, expectedJob batchv1.Job) {
 			adJobTr := adJobTrainingReconciler{
 				managementClusterCtx:       ctx,
 				k8sClient:                  mockK8sClient,
@@ -153,11 +293,13 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 				trainingCycleResourceCache: mockrc,
 
 				namespace: namespace,
+				tenantID:  tenant,
 
 				// key: cluster name
 				trainingDetectorsPerCluster: map[string]trainingCycleStatePerCluster{
 					"clusterKey1": {
 						ClusterName: clusterName,
+						TenantID:    tenant,
 						CronJob:     nil,
 						GlobalAlerts: []*v3.GlobalAlert{
 							{
@@ -175,72 +317,11 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 
 			mcs := TrainingDetectorsRequest{
 				ClusterName: clusterName,
+				TenantID:    tenant,
 				GlobalAlert: &v3.GlobalAlert{
 					Spec: v3.GlobalAlertSpec{
 						Detector: &v3.DetectorParams{
 							Name: "detector1",
-						},
-					},
-				},
-			}
-
-			expectedControllerOwner := true
-			expectedBlockOwnerDeletion := true
-			expectedbackoffLimit := int32(0)
-			expectedJob := batchv1.Job{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-detector1-initial-training", clusterName),
-					Namespace: namespace,
-					Labels: map[string]string{
-						"tigera.io.detector-cycle": "training",
-						"cluster":                  clusterName,
-					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion:         "apps/v1",
-							Kind:               "Deployment",
-							Name:               "intrusion-detection-controller",
-							UID:                "",
-							Controller:         &expectedControllerOwner,
-							BlockOwnerDeletion: &expectedBlockOwnerDeletion,
-						},
-					},
-				},
-				Spec: batchv1.JobSpec{
-					BackoffLimit: &expectedbackoffLimit,
-					Template: v1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-detector1-initial-training", clusterName),
-							Namespace: namespace,
-							Labels: map[string]string{
-								"tigera.io.detector-cycle": "training",
-								"cluster":                  clusterName,
-							},
-						},
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								{
-									Name:       "adjobs",
-									Image:      "",
-									Command:    []string{"python3"},
-									Args:       []string{"-m", "adj", "train"},
-									WorkingDir: "",
-									Ports:      nil,
-									EnvFrom:    nil,
-									Env: []v1.EnvVar{
-										{
-											Name:      "CLUSTER_NAME",
-											Value:     clusterName,
-											ValueFrom: nil},
-										{
-											Name:      "AD_ENABLED_DETECTORS",
-											Value:     "detector1",
-											ValueFrom: nil,
-										},
-									},
-								},
-							},
-							RestartPolicy: "Never",
 						},
 					},
 				},
@@ -263,9 +344,28 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 			By("verifying the new job in the list is expected")
 			job := list.Items[0]
 			Expect(job).To(Equal(expectedJob))
-		})
+		},
+			Entry("no tenant", noTenant, expectedJobEnterprise),
+			Entry("with tenant", tenant, expectedJobCloud),
+		)
 	})
 })
+
+func getKey(tenant, clusterName, suffix string) string {
+	if tenant == "" {
+		return fmt.Sprintf("%s-%s", clusterName, suffix)
+	}
+
+	return fmt.Sprintf("%s.%s-%s", tenant, clusterName, suffix)
+}
+
+func boolPtr(val bool) *bool {
+	return &val
+}
+
+func int32Ptr(val int32) *int32 {
+	return &val
+}
 
 // Mocks the resource cache.
 type mockResourceCache struct {

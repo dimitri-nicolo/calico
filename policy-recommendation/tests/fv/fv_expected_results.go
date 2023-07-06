@@ -3189,8 +3189,7 @@ var (
 						Action:   v3.Allow,
 						Protocol: &protocolTCP,
 						Source: v3.EntityRule{
-							NamespaceSelector: "global()",
-							Selector:          "projectcalico.org/name == 'private-network' && projectcalico.org/kind == 'Private'",
+							Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
 						},
 						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{
@@ -3207,7 +3206,6 @@ var (
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "private-network",
 								"policyrecommendation.tigera.io/scope":       "Private",
 							},
 						},
@@ -3241,13 +3239,11 @@ var (
 									MaxPort: 8081,
 								},
 							},
-							NamespaceSelector: "global()",
-							Selector:          "projectcalico.org/name == 'private-network' && projectcalico.org/kind == 'Private'",
+							Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "private-network",
 								"policyrecommendation.tigera.io/scope":       "Private",
 							},
 						},
@@ -3291,8 +3287,7 @@ var (
 						Action:   v3.Allow,
 						Protocol: &protocolTCP,
 						Source: v3.EntityRule{
-							NamespaceSelector: "global()",
-							Selector:          "projectcalico.org/name == 'private-network' && projectcalico.org/kind == 'Private'",
+							Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
 						},
 						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{
@@ -3309,7 +3304,6 @@ var (
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "private-network",
 								"policyrecommendation.tigera.io/scope":       "Private",
 							},
 						},
@@ -3343,13 +3337,11 @@ var (
 									MaxPort: 8081,
 								},
 							},
-							NamespaceSelector: "global()",
-							Selector:          "projectcalico.org/name == 'private-network' && projectcalico.org/kind == 'Private'",
+							Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "private-network",
 								"policyrecommendation.tigera.io/scope":       "Private",
 							},
 						},
@@ -3393,8 +3385,7 @@ var (
 						Action:   v3.Allow,
 						Protocol: &protocolTCP,
 						Source: v3.EntityRule{
-							NamespaceSelector: "global()",
-							Selector:          "projectcalico.org/name == 'private-network' && projectcalico.org/kind == 'Private'",
+							Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
 						},
 						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{
@@ -3411,7 +3402,6 @@ var (
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "private-network",
 								"policyrecommendation.tigera.io/scope":       "Private",
 							},
 						},
@@ -3445,13 +3435,11 @@ var (
 									MaxPort: 8081,
 								},
 							},
-							NamespaceSelector: "global()",
-							Selector:          "projectcalico.org/name == 'private-network' && projectcalico.org/kind == 'Private'",
+							Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "private-network",
 								"policyrecommendation.tigera.io/scope":       "Private",
 							},
 						},

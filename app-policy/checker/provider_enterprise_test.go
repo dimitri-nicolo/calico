@@ -3,8 +3,9 @@ package checker_test
 import (
 	"bytes"
 	"context"
-	"strings"
 	"testing"
+
+	. "github.com/onsi/gomega"
 
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/genproto/googleapis/rpc/status"
@@ -131,11 +132,12 @@ T:
 
 }
 
-func TestWafProcessHttpRequestWithDenyModSecAction(t *testing.T) {
+func TestWafProcessHttpRequestSQLIPassThrough(t *testing.T) {
+	RegisterTestingT(t)
 	waf.Logger = nil // this is required to reconfigure the waf package logger :/
 	memoryLog := bytes.Buffer{}
 	waf.InitializeLogging(&memoryLog)
-	waf.Initialize("../test/waf_test_files/core-rules-deny")
+	waf.Initialize(waf.TestCoreRulesetPassDirectory)
 	defer waf.CleanupModSecurity()
 
 	err := checker.WafProcessHttpRequest(
@@ -151,20 +153,41 @@ func TestWafProcessHttpRequestWithDenyModSecAction(t *testing.T) {
 		"",
 	)
 
-	if err == nil {
-		t.Fatal("Expected error, got nil")
-	}
-
-	if !strings.Contains(memoryLog.String(), `"msg":"[blocked] SQL Injection Attack Detected via libinjection"`) {
-		t.Error("Expected message in WAF Elasticsearch log not found!")
-	}
+	Expect(err).NotTo(HaveOccurred())
+	Expect(memoryLog.String()).To(ContainSubstring(
+		`"SQL Injection Attack Detected via libinjection"`))
 }
 
-func TestWafProcessHttpRequestWithPassThroughModSecAction(t *testing.T) {
+func TestWafProcessHttpSimpleRequestWithCoreRules(t *testing.T) {
+	RegisterTestingT(t)
 	waf.Logger = nil // this is required to reconfigure the waf package logger :/
 	memoryLog := bytes.Buffer{}
 	waf.InitializeLogging(&memoryLog)
-	waf.Initialize("../test/waf_test_files/core-rules")
+	waf.Initialize(waf.TestCoreRulesetPassDirectory)
+	defer waf.CleanupModSecurity()
+
+	err := checker.WafProcessHttpRequest(
+		"http://host//test/artists.php",
+		"GET",
+		"HTTP",
+		"192.168.0.123",
+		12345,
+		"host",
+		80,
+		"host",
+		map[string]string{},
+		"",
+	)
+
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func TestWafProcessHttpSQLIRequestWithCoreRules(t *testing.T) {
+	RegisterTestingT(t)
+	waf.Logger = nil // this is required to reconfigure the waf package logger :/
+	memoryLog := bytes.Buffer{}
+	waf.InitializeLogging(&memoryLog)
+	waf.Initialize(waf.TestCoreRulesetPassDirectory)
 	defer waf.CleanupModSecurity()
 
 	err := checker.WafProcessHttpRequest(
@@ -180,11 +203,7 @@ func TestWafProcessHttpRequestWithPassThroughModSecAction(t *testing.T) {
 		"",
 	)
 
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	if !strings.Contains(memoryLog.String(), `"msg":"[pass-through] SQL Injection Attack Detected via libinjection"`) {
-		t.Error("Expected message in WAF Elasticsearch log not found!")
-	}
+	Expect(err).NotTo(HaveOccurred())
+	Expect(memoryLog.String()).To(ContainSubstring(
+		`"Inbound Anomaly Score Exceeded (Total Score: 10)"`))
 }

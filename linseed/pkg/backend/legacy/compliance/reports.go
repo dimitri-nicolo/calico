@@ -12,30 +12,31 @@ import (
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func NewReportsBackend(c lmaelastic.Client, cache bapi.Cache) bapi.ReportsBackend {
+func NewReportsBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.ReportsBackend {
 	return &reportsBackend{
-		client:    c.Backend(),
-		lmaclient: c,
-		templates: cache,
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
 	}
 }
 
 type reportsBackend struct {
-	client    *elastic.Client
-	templates bapi.Cache
-	lmaclient lmaelastic.Client
+	client               *elastic.Client
+	templates            bapi.Cache
+	lmaclient            lmaelastic.Client
+	deepPaginationCutOff int64
 }
 
-func (b *reportsBackend) List(ctx context.Context, i bapi.ClusterInfo, p *v1.ReportDataParams) (*v1.List[v1.ReportData], error) {
+func (b *reportsBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.ReportDataParams) (*v1.List[v1.ReportData], error) {
 	log := bapi.ContextLogger(i)
 
-	query, startFrom, err := b.getSearch(ctx, i, p)
+	query, startFrom, err := b.getSearch(i, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -57,10 +58,17 @@ func (b *reportsBackend) List(ctx context.Context, i bapi.ClusterInfo, p *v1.Rep
 		logs = append(logs, l)
 	}
 
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.List[v1.ReportData]{
 		Items:     logs,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextStartFromAfterKey(p, len(results.Hits.Hits), startFrom, results.TotalHits()),
+		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
 	}, nil
 }
 
@@ -112,29 +120,29 @@ func (b *reportsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v1.
 	}, nil
 }
 
-func (b *reportsBackend) getSearch(ctx context.Context, i api.ClusterInfo, p *v1.ReportDataParams) (*elastic.SearchService, int, error) {
+func (b *reportsBackend) getSearch(i bapi.ClusterInfo, opts *v1.ReportDataParams) (*elastic.SearchService, int, error) {
 	if err := i.Valid(); err != nil {
 		return nil, 0, err
 	}
 
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(p)
+	q := b.buildQuery(opts)
+
+	// Build the query, sorting by time.
+	query := b.client.Search().
+		Size(opts.GetMaxPageSize()).
+		Query(q)
+
+	// Configure pagination options
+	var startFrom int
+	var err error
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
 	if err != nil {
 		return nil, 0, err
 	}
 
-	q := b.buildQuery(p)
-
-	// Build the query, sorting by time.
-	query := b.client.Search().
-		Index(b.index(i)).
-		Size(p.GetMaxPageSize()).
-		From(startFrom).
-		Query(q)
-
 	// Configure sorting.
-	if len(p.Sort) != 0 {
-		for _, s := range p.Sort {
+	if len(opts.Sort) != 0 {
+		for _, s := range opts.Sort {
 			query.Sort(s.Field, !s.Descending)
 		}
 	} else {
