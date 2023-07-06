@@ -1,5 +1,21 @@
 package policyrecommendation
 
+import (
+	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
+
+	log "github.com/sirupsen/logrus"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	calres "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
+)
+
 //TODO(dimitrin): [EV-3439] Re-write tests and add back
 // 								- Address empty namespace and staged network policy caches
 // 								- Address empty search query results
@@ -223,3 +239,98 @@ package policyrecommendation
 // 		Expect(scope.Spec.NamespaceSpec.TierName).To(Equal("namespace-isolation"))
 // 	})
 // })
+
+const timeNowRFC3339 = "2022-11-30T09:01:38Z"
+
+type MockClock struct{}
+
+func (MockClock) NowRFC3339() string { return timeNowRFC3339 }
+
+var _ = Describe("updateStatusAnnotation", func() {
+	const (
+		defaultInterval      = 150 * time.Second
+		defaultStabilization = 10 * time.Minute
+	)
+
+	ts, err := time.Parse(time.RFC3339, timeNowRFC3339)
+	Expect(err).To(BeNil())
+
+	pr := policyRecommendationReconciler{
+		state: &policyRecommendationScopeState{
+			object: v3.PolicyRecommendationScope{
+				Spec: v3.PolicyRecommendationScopeSpec{
+					Interval:            &metav1.Duration{},
+					StabilizationPeriod: &metav1.Duration{},
+				},
+			},
+		},
+		clock: MockClock{},
+	}
+
+	var _ = DescribeTable("Status update",
+		func(lastUpdateDuration time.Duration, interval time.Duration, stabilization time.Duration, expectedStatus string) {
+			log.Infof("interval: %f, stabilization: %f, expectedStatus: %s", interval.Seconds(), stabilization.Seconds(), expectedStatus)
+
+			lastUpdate := map[string]string{
+				calres.LastUpdatedKey: ts.Add(-(lastUpdateDuration)).Format(time.RFC3339),
+			}
+
+			pr.state.object.Spec.Interval.Duration = interval
+			pr.state.object.Spec.StabilizationPeriod.Duration = stabilization
+
+			snp := &v3.StagedNetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "my-recommendation-xvjfz",
+					Annotations: lastUpdate,
+				},
+				Spec: v3.StagedNetworkPolicySpec{
+					Egress: []v3.Rule{
+						{},
+					},
+					Types: []v3.PolicyType{
+						"Egress",
+					},
+				},
+			}
+
+			pr.updateStatusAnnotation(snp)
+			Expect(snp.Annotations[calres.StatusKey]).To(Equal(expectedStatus))
+		},
+		Entry("LearningStatus with default interval and stabilization periods",
+			2*defaultInterval,     // Time equal to the learning period
+			defaultInterval,       // Duration of the engine interval
+			defaultStabilization,  // Duration of the stabilization period
+			calres.LearningStatus, // Expected status annotation
+		),
+		Entry("StabilizingStatus with default interval and stabilization periods",
+			2*defaultInterval+time.Second, // One second after the learning and still within the stable period
+			defaultInterval,
+			defaultStabilization,
+			calres.StabilizingStatus,
+		),
+		Entry("StableStatus with default interval and stabilization periods",
+			defaultStabilization+time.Second, // One second after the stable period
+			defaultInterval,
+			defaultStabilization,
+			calres.StableStatus,
+		),
+		Entry("LearningStatus with updated interval and default stabilization periods",
+			2*defaultInterval,           // Well within the updated learning period
+			defaultInterval+time.Second, // The updated learning period
+			defaultStabilization,
+			calres.LearningStatus,
+		),
+		Entry("StabilizingStatus with updated interval and default stabilization periods",
+			2*defaultInterval+(3*time.Second), // One second after the updated learning period and within the stable period
+			defaultInterval+time.Second,       // The updated learning period
+			defaultStabilization,
+			calres.StabilizingStatus,
+		),
+		Entry("StableStatus with default interval and updated stabilization periods",
+			defaultStabilization+2*time.Second, // One second after the updated stable period
+			defaultInterval,
+			defaultStabilization+time.Second, // The updated stable period
+			calres.StableStatus,
+		),
+	)
+})

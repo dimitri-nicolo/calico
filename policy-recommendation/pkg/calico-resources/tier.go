@@ -51,14 +51,13 @@ func MaybeCreateTier(ctx context.Context, calico calicoclient.ProjectcalicoV3Int
 			// Tier doesn't exist, create a new one
 			tier := newTier(name, order)
 
-			_, err = calico.Tiers().Create(ctx, tier, metav1.CreateOptions{})
-			if err != nil {
-				log.WithError(err).Errorf("failed to create tier: %s.", name)
+			log.WithField("key", name).Info("Creating new tier")
+			if _, err = calico.Tiers().Create(ctx, tier, metav1.CreateOptions{}); err != nil {
+				log.WithField("key", name).WithError(err).Error("failed to create tier")
 				return err
 			}
-			log.Infof("New tier '%s' created", name)
 		} else {
-			log.WithError(err).Debug("Failed to get tier")
+			log.WithField("key", name).WithError(err).Error("failed to get tier")
 			return err
 		}
 	}

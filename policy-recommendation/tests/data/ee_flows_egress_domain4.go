@@ -77,6 +77,28 @@ var Step4DomainWithNamespacesResults = []rest.MockResult{
 					LogStats:    &lapi.LogStats{FlowLogCount: 3698},
 					DestDomains: []string{"namespace3service.namespace3.svc.cluster.local"},
 				},
+				{
+					// key-4
+					Key: lapi.L3FlowKey{
+						Action:   lapi.FlowActionAllow,
+						Reporter: lapi.FlowReporterSource,
+						Source: lapi.Endpoint{
+							Namespace:      "namespace5",
+							AggregatedName: "namespace5-cb7967547-*",
+							Type:           lapi.WEP,
+						},
+						Destination: lapi.Endpoint{
+							Name:           "-",
+							Namespace:      "-",
+							AggregatedName: "pvt",
+							Type:           lapi.Network,
+							Port:           99,
+						},
+						Protocol: "udp",
+					},
+					LogStats:    &lapi.LogStats{FlowLogCount: 3698},
+					DestDomains: []string{"www.projectcalico.org"},
+				},
 			},
 		},
 	},

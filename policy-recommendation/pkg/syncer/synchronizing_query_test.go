@@ -6,9 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+
 	v1 "k8s.io/api/core/v1"
 	netV1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -16,11 +14,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/cache"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
+	"github.com/projectcalico/calico/policy-recommendation/utils"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 )
 
@@ -37,7 +39,7 @@ var _ = Describe("Syncer", func() {
 		testCancel          context.CancelFunc
 		synchronizer        client.QueryInterface
 		mockLmaK8sClientSet *lmak8s.MockClientSet
-		fakeClient          *fake.Clientset
+		fakeClient          *fakecalico.Clientset
 		k8sClient           kubernetes.Interface
 		cacheSet            syncer.CacheSet
 	)
@@ -62,7 +64,8 @@ var _ = Describe("Syncer", func() {
 			StagedNetworkPolicies: cache.NewSynchronizedObjectCache[*v3.StagedNetworkPolicy](),
 			NetworkSets:           cache.NewSynchronizedObjectCache[*v3.NetworkSet](),
 		}
-		synchronizer = syncer.NewCacheSynchronizer(mockLmaK8sClientSet, cacheSet)
+
+		synchronizer = syncer.NewCacheSynchronizer(mockLmaK8sClientSet, cacheSet, mockSuffixGenerator)
 	})
 
 	AfterEach(func() {
@@ -150,17 +153,17 @@ var _ = Describe("Syncer", func() {
 
 			for i := 0; i < 2; i++ {
 				ns := fmt.Sprintf("%s-%d", testNamespacePrefix, i)
-				snpName := fmt.Sprintf("%s.%s-%s", testTierName, ns, syncer.StagedNetworkPolicyNameSuffix)
+				storeName := utils.GetPolicyName(testTierName, ns, mockSuffixGenerator)
 				snpsOnCluster, err := fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns).Get(
 					testCtx,
-					snpName,
+					storeName,
 					metav1.GetOptions{})
 				// The namespace sych query is not responsible for creating staged network polices
 				Expect(err).NotTo(BeNil())
 				Expect(snpsOnCluster).To(BeNil())
 
 				// check caches are also updated
-				snpInCache := cacheSet.StagedNetworkPolicies.Get(snpName)
+				snpInCache := cacheSet.StagedNetworkPolicies.Get(ns)
 				Expect(snpInCache).ToNot(BeNil())
 				Expect(snpInCache.Spec.StagedAction).To(Equal(v3.StagedActionLearn))
 				Expect(snpInCache.Spec.Tier).To(Equal(testTierName))
@@ -180,7 +183,7 @@ var _ = Describe("Syncer", func() {
 			ns := fmt.Sprintf("%s-%d", testNamespacePrefix, i)
 			snp := v3.StagedNetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s.%s-%s", testTierName, ns, syncer.StagedNetworkPolicyNameSuffix),
+					Name:      utils.GetPolicyName(testTierName, ns, mockSuffixGenerator),
 					Namespace: ns,
 				},
 			}
@@ -196,7 +199,7 @@ var _ = Describe("Syncer", func() {
 		cacheSet = syncer.CacheSet{
 			StagedNetworkPolicies: snpCache,
 		}
-		synchronizer = syncer.NewCacheSynchronizer(mockLmaK8sClientSet, cacheSet)
+		synchronizer = syncer.NewCacheSynchronizer(mockLmaK8sClientSet, cacheSet, mockSuffixGenerator)
 
 		// pre-req setup policyrec that will be deleted
 		policyRec := v3.PolicyRecommendationScope{
@@ -250,7 +253,7 @@ var _ = Describe("Syncer", func() {
 
 		for i := 0; i < 2; i++ {
 			ns := fmt.Sprintf("%s-%d", testNamespacePrefix, i)
-			snpName := fmt.Sprintf("%s.%s-%s", testTierName, ns, syncer.StagedNetworkPolicyNameSuffix)
+			snpName := utils.GetPolicyName(testTierName, ns, mockSuffixGenerator)
 			_, err := fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns).Get(
 				testCtx,
 				snpName,
@@ -258,7 +261,7 @@ var _ = Describe("Syncer", func() {
 			Expect(err).ToNot(BeNil())
 			Expect(k8serrors.IsNotFound(err)).To(BeTrue())
 
-			snpInCache := cacheSet.StagedNetworkPolicies.Get(snpName)
+			snpInCache := cacheSet.StagedNetworkPolicies.Get(ns)
 			Expect(snpInCache).To(BeNil())
 		}
 	})
@@ -347,7 +350,7 @@ var _ = Describe("Syncer", func() {
 
 			snpsOnCluster, err := fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns).Get(
 				testCtx,
-				fmt.Sprintf("%s.%s-%s", testTierName, ns, syncer.StagedNetworkPolicyNameSuffix),
+				utils.GetPolicyName(testTierName, ns, mockSuffixGenerator),
 				metav1.GetOptions{})
 			Expect(err).NotTo(BeNil())
 			Expect(snpsOnCluster).To(BeNil())
@@ -442,7 +445,7 @@ var _ = Describe("Syncer", func() {
 			cacheSet = syncer.CacheSet{
 				StagedNetworkPolicies: snpCache,
 			}
-			synchronizer = syncer.NewCacheSynchronizer(mockLmaK8sClientSet, cacheSet)
+			synchronizer = syncer.NewCacheSynchronizer(mockLmaK8sClientSet, cacheSet, mockSuffixGenerator)
 
 			// setup policyrec to enable namespace listening
 			policyRec := v3.PolicyRecommendationScope{
@@ -510,7 +513,8 @@ var _ = Describe("Syncer", func() {
 				metav1.GetOptions{})
 			Expect(err).ToNot(BeNil())
 			Expect(k8serrors.IsNotFound(err)).ToNot(BeNil())
-			cacheresult := cacheSet.StagedNetworkPolicies.Get(snp1.Name)
+			key := snp1.Namespace
+			cacheresult := cacheSet.StagedNetworkPolicies.Get(key)
 			Expect(cacheresult).To(BeNil())
 
 			snp2Result, err := fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns2).Get(
@@ -519,7 +523,8 @@ var _ = Describe("Syncer", func() {
 				metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			Expect(snp2Result).ToNot(BeNil())
-			cacheresult = cacheSet.StagedNetworkPolicies.Get(snp2.Name)
+			key = snp2.Namespace
+			cacheresult = cacheSet.StagedNetworkPolicies.Get(key)
 			Expect(cacheresult).ToNot(BeNil())
 			Expect(*snp2Result).To(Equal(*cacheresult))
 			Expect(snp2Result.Spec.Egress).To(BeEmpty())
@@ -530,10 +535,15 @@ var _ = Describe("Syncer", func() {
 				metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			Expect(snp3Result).ToNot(BeNil())
-			cacheresult = cacheSet.StagedNetworkPolicies.Get(snp3.Name)
+			key = snp3.Namespace
+			cacheresult = cacheSet.StagedNetworkPolicies.Get(key)
 			Expect(cacheresult).ToNot(BeNil())
 			Expect(*snp3Result).To(Equal(*cacheresult))
 
 		})
 	})
 })
+
+func mockSuffixGenerator() string {
+	return "xv5fb"
+}

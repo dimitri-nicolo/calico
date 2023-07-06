@@ -29,10 +29,6 @@ type realClock struct{}
 
 // NowRFC3339 returns time Now() as a string, in RFC3339 format.
 func (realClock) NowRFC3339() string {
-	// TODO(dimitrin): Replace the function for getting the time Now(), to account for server side
-	// timezone differences. If we use this a s base line to retieve logs from ES, we may not get
-	// expected results
-
 	// The rule is new and should be timestamped.
 	return time.Now().UTC().Format(time.RFC3339)
 }
@@ -51,6 +47,7 @@ func NewPolicyRecommendationController(
 	caches *syncer.CacheSet,
 	cluster string,
 	serviceNameSuffix string,
+	suffixGenerator *func() string,
 ) controller.Controller {
 	prReconciler := &policyRecommendationReconciler{
 		calico:            calico,
@@ -61,6 +58,7 @@ func NewPolicyRecommendationController(
 		serviceNameSuffix: serviceNameSuffix,
 		tickDuration:      make(chan time.Duration),
 		clock:             &realClock{},
+		suffixGenerator:   suffixGenerator,
 	}
 
 	watcher := controller.NewWatcher(

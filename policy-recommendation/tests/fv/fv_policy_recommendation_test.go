@@ -3,7 +3,6 @@ package fv
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	. "github.com/onsi/ginkgo"
@@ -57,9 +56,10 @@ var _ = Describe("Tests policy recommendation controller", func() {
 	)
 
 	type recommendationTest struct {
-		timeStep string
-		data     []rest.MockResult
-		expected map[string]*v3.StagedNetworkPolicy
+		timeStep        string
+		data            []rest.MockResult
+		expected        map[string]*v3.StagedNetworkPolicy
+		suffixGenerator func() string
 	}
 
 	var (
@@ -89,6 +89,8 @@ var _ = Describe("Tests policy recommendation controller", func() {
 	Context("State if StagedNetworkPolicies after sequential engine calls", func() {
 		const serviceSuffixName = "svc.cluster.local"
 
+		var suffixGenerator func() string
+
 		BeforeEach(func() {
 			ctx = context.Background()
 
@@ -132,7 +134,8 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				StagedNetworkPolicies: snpResourceCache,
 			}
 			// Setup cache synchronizer
-			cacheSynchronizer = syncer.NewCacheSynchronizer(mockClientSetForApp, *caches)
+			suffixGenerator = mockSuffixGenerator
+			cacheSynchronizer = syncer.NewCacheSynchronizer(mockClientSetForApp, *caches, suffixGenerator)
 
 			By("creating a list of namespaces")
 			// Create namespaces
@@ -155,7 +158,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err := prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -179,55 +182,67 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			testCases := []recommendationTest{
 				{
-					timeStep: timeAtStep1,
-					data:     fvdata.Step1Results,
-					expected: expectedEgressToDomainRecommendationsStep1,
+					timeStep:        timeAtStep1,
+					data:            fvdata.Step1Results,
+					expected:        expectedEgressToDomainRecommendationsStep1,
+					suffixGenerator: mockSuffixGenerator,
 				},
 				{
-					timeStep: timeAtStep2,
-					data:     fvdata.Step2Results,
-					expected: expectedEgressToDomainRecommendationsStep2,
+					timeStep:        timeAtStep2,
+					data:            fvdata.Step2Results,
+					expected:        expectedEgressToDomainRecommendationsStep2,
+					suffixGenerator: mockSuffixGenerator,
 				},
 				{
-					timeStep: timeAtStep3,
-					data:     fvdata.Step3Results,
-					expected: expectedEgressToDomainRecommendationsStep3,
-				},
-				// Test status transition from 'Learning' to 'Stabilizing'
-				{
-					timeStep: timestampStep4Stabilizing,
-					data:     fvdata.Step3Results,
-					expected: expectedEgressToDomainRecommendationsStep4,
+					timeStep:        timeAtStep3,
+					data:            fvdata.Step3Results,
+					expected:        expectedEgressToDomainRecommendationsStep3,
+					suffixGenerator: mockSuffixGenerator,
 				},
 				// Test status transition from 'Learning' to 'Stabilizing'
 				{
-					timeStep: timestampStep5Stabilizing,
-					data:     fvdata.Step3Results,
-					expected: expectedEgressToDomainRecommendationsStep5,
+					timeStep:        timestampStep4Stabilizing,
+					data:            fvdata.Step3Results,
+					expected:        expectedEgressToDomainRecommendationsStep4,
+					suffixGenerator: mockSuffixGenerator,
+				},
+				// Test status transition from 'Learning' to 'Stabilizing'
+				{
+					timeStep:        timestampStep5Stabilizing,
+					data:            fvdata.Step3Results,
+					expected:        expectedEgressToDomainRecommendationsStep5,
+					suffixGenerator: mockSuffixGenerator,
 				},
 				// Test status transition from 'Stabilizing' to 'Stable'
 				{
-					timeStep: timestampStep6Stabilizing,
-					data:     fvdata.Step3Results,
-					expected: expectedEgressToDomainRecommendationsStep6,
+					timeStep:        timestampStep6Stabilizing,
+					data:            fvdata.Step3Results,
+					expected:        expectedEgressToDomainRecommendationsStep6,
+					suffixGenerator: mockSuffixGeneratorForStable,
 				},
 				// Test status transition from 'Stabilizing' to 'Stable'
 				{
-					timeStep: timestampStep7Stable,
-					data:     fvdata.Step3Results,
-					expected: expectedEgressToDomainRecommendationsStep7,
+					timeStep:        timestampStep7Stable,
+					data:            fvdata.Step3Results,
+					expected:        expectedEgressToDomainRecommendationsStep7,
+					suffixGenerator: mockSuffixGeneratorForStable,
 				},
 				// Test adding PVT to cluster.local domain.
 				// The test data adds two suppressed flows, so expected data should stay the same
 				{
-					timeStep: timestampStep8Relearning,
-					data:     fvdata.Step4DomainWithNamespacesResults,
-					expected: expectedEgressToDomainRecommendationsStep7,
+					timeStep:        timestampStep8Relearning,
+					data:            fvdata.Step4DomainWithNamespacesResults,
+					expected:        expectedEgressToDomainRecommendationsStep8,
+					suffixGenerator: mockSuffixGeneratorForStable,
 				},
 			}
 
 			By("recommending new egress to domain flows")
-			for _, t := range testCases {
+			for i, t := range testCases {
+				log.Infof("Test iteration: %d", i)
+
+				suffixGenerator = t.suffixGenerator // Update the value so it can be picked up by the reconciler's suffixGenerator
+
 				tr.recommendAtTimestamp(t.timeStep, t.data)
 				tr.verifyRecommendations(t.expected)
 			}
@@ -236,7 +251,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("EgressToService 2 step updates", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -260,19 +275,25 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			testCases := []recommendationTest{
 				{
-					timeStep: timeAtStep1,
-					data:     fvdata.Step4Results,
-					expected: expectedEgressToServiceRecommendationsStep1,
+					timeStep:        timeAtStep1,
+					data:            fvdata.Step4Results,
+					expected:        expectedEgressToServiceRecommendationsStep1,
+					suffixGenerator: mockSuffixGenerator,
 				},
 				{
-					timeStep: timeAtStep2,
-					data:     fvdata.Step5Results,
-					expected: expectedEgressToServiceRecommendationsStep2,
+					timeStep:        timeAtStep2,
+					data:            fvdata.Step5Results,
+					expected:        expectedEgressToServiceRecommendationsStep2,
+					suffixGenerator: mockSuffixGenerator,
 				},
 			}
 
 			By("recommending new egress to service flows")
-			for _, t := range testCases {
+			for i, t := range testCases {
+				log.Infof("Test iteration: %d", i)
+
+				suffixGenerator = t.suffixGenerator // Update the value so it can be picked up by the suffixGenerator
+
 				tr.recommendAtTimestamp(t.timeStep, t.data)
 				tr.verifyRecommendations(t.expected)
 			}
@@ -281,7 +302,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("Namespace 2 step update", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -305,14 +326,19 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			testCases := []recommendationTest{
 				{
-					timeStep: timeAtStep1,
-					data:     fvdata.Step6Results,
-					expected: expectedNamespaceRecommendationsStep1,
+					timeStep:        timeAtStep1,
+					data:            fvdata.Step6Results,
+					expected:        expectedNamespaceRecommendationsStep1,
+					suffixGenerator: mockSuffixGenerator,
 				},
 			}
 
 			By("recommending new egress to service flows")
-			for _, t := range testCases {
+			for i, t := range testCases {
+				log.Infof("Test iteration: %d", i)
+
+				suffixGenerator = t.suffixGenerator // Update the value so it can be picked up by the suffixGenerator
+
 				tr.recommendAtTimestamp(t.timeStep, t.data)
 				tr.verifyRecommendations(t.expected)
 			}
@@ -321,7 +347,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("NetworkSet", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -345,24 +371,31 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			testCases := []recommendationTest{
 				{
-					timeStep: timeAtStep1,
-					data:     fvdata.NetworkSetLinseedResults,
-					expected: expectedNetworkSetRecommendationsStep1,
+					timeStep:        timeAtStep1,
+					data:            fvdata.NetworkSetLinseedResults,
+					expected:        expectedNetworkSetRecommendationsStep1,
+					suffixGenerator: mockSuffixGenerator,
 				},
 				{
-					timeStep: timestampStep4Stabilizing,
-					data:     fvdata.NetworkSetLinseedResults,
-					expected: expectedNetworkSetRecommendationsStep2,
+					timeStep:        timestampStep4Stabilizing,
+					data:            fvdata.NetworkSetLinseedResults,
+					expected:        expectedNetworkSetRecommendationsStep2,
+					suffixGenerator: mockSuffixGenerator,
 				},
 				{
-					timeStep: timestampStep7Stable,
-					data:     fvdata.NetworkSetLinseedResults,
-					expected: expectedNetworkSetRecommendationsStep3,
+					timeStep:        timestampStep7Stable,
+					data:            fvdata.NetworkSetLinseedResults,
+					expected:        expectedNetworkSetRecommendationsStep3,
+					suffixGenerator: mockSuffixGeneratorForStable,
 				},
 			}
 
 			By("recommending new networkset flows")
-			for _, t := range testCases {
+			for i, t := range testCases {
+				log.Infof("Test iteration: %d", i)
+
+				suffixGenerator = t.suffixGenerator // Update the value so it can be picked up by the suffixGenerator
+
 				tr.recommendAtTimestamp(t.timeStep, t.data)
 				tr.verifyRecommendations(t.expected)
 			}
@@ -371,7 +404,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("PrivateNetwork", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -395,24 +428,31 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			testCases := []recommendationTest{
 				{
-					timeStep: timeAtStep1,
-					data:     fvdata.PrivateNetworkLinseedResults,
-					expected: expectedPrivateNetworkRecommendationsStep1,
+					timeStep:        timeAtStep1,
+					data:            fvdata.PrivateNetworkLinseedResults,
+					expected:        expectedPrivateNetworkRecommendationsStep1,
+					suffixGenerator: mockSuffixGenerator,
 				},
 				{
-					timeStep: timestampStep4Stabilizing,
-					data:     fvdata.PrivateNetworkLinseedResults,
-					expected: expectedPrivateNetworkRecommendationsStep2,
+					timeStep:        timestampStep4Stabilizing,
+					data:            fvdata.PrivateNetworkLinseedResults,
+					expected:        expectedPrivateNetworkRecommendationsStep2,
+					suffixGenerator: mockSuffixGenerator,
 				},
 				{
-					timeStep: timestampStep7Stable,
-					data:     fvdata.PrivateNetworkLinseedResults,
-					expected: expectedPrivateNetworkRecommendationsStep3,
+					timeStep:        timestampStep7Stable,
+					data:            fvdata.PrivateNetworkLinseedResults,
+					expected:        expectedPrivateNetworkRecommendationsStep3,
+					suffixGenerator: mockSuffixGeneratorForStable,
 				},
 			}
 
 			By("recommending new private network flows")
-			for _, t := range testCases {
+			for i, t := range testCases {
+				log.Infof("Test iteration: %d", i)
+
+				suffixGenerator = t.suffixGenerator // Update the value so it can be picked up by the suffixGenerator
+
 				tr.recommendAtTimestamp(t.timeStep, t.data)
 				tr.verifyRecommendations(t.expected)
 			}
@@ -422,7 +462,11 @@ var _ = Describe("Tests policy recommendation controller", func() {
 	Context("Deleting namespaces", func() {
 		const serviceSuffixName = "svc.cluster.local"
 
+		var suffixGenerator func() string
+
 		BeforeEach(func() {
+			*time = ""
+
 			ctx = context.Background()
 
 			fakeClient = fakecalico.NewSimpleClientset()
@@ -463,8 +507,11 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				NetworkSets:           networkSetCache,
 				StagedNetworkPolicies: snpResourceCache,
 			}
+
+			suffixGenerator = mockSuffixGenerator
+
 			// Setup cache synchronizer
-			cacheSynchronizer = syncer.NewCacheSynchronizer(mockClientSetForApp, *caches)
+			cacheSynchronizer = syncer.NewCacheSynchronizer(mockClientSetForApp, *caches, suffixGenerator)
 
 			By("creating a list of namespaces")
 			// Create namespaces
@@ -482,7 +529,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("Timestamp update after 2 steps", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName, Namespace: ""})
 			Expect(err).To(BeNil())
 
@@ -509,10 +556,12 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// - The snp timestamp has been set
 			By("recommending new egress to domain flows")
 			testCase1 := recommendationTest{
-				timeStep: timeAtStep1,
-				data:     fvdata.Step1Results,
-				expected: expectedEgressToDomainRecommendationsStep1,
+				timeStep:        timeAtStep1,
+				data:            fvdata.Step1Results,
+				expected:        expectedEgressToDomainRecommendationsStep1,
+				suffixGenerator: mockSuffixGenerator,
 			}
+			suffixGenerator = testCase1.suffixGenerator // Update the value so it can be picked up by the suffixGenerator
 			tr.recommendAtTimestamp(testCase1.timeStep, testCase1.data)
 			tr.verifyRecommendations(testCase1.expected)
 
@@ -536,6 +585,8 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 	Context("Enforcing a recommendation", func() {
 		const serviceSuffixName = "svc.cluster.local"
+
+		var suffixGenerator func() string
 
 		BeforeEach(func() {
 			ctx = context.Background()
@@ -579,8 +630,11 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				NetworkSets:           networkSetCache,
 				StagedNetworkPolicies: snpResourceCache,
 			}
+
+			suffixGenerator = mockSuffixGenerator
+
 			// Setup cache synchronizer
-			cacheSynchronizer = syncer.NewCacheSynchronizer(mockClientSetForApp, *caches)
+			cacheSynchronizer = syncer.NewCacheSynchronizer(mockClientSetForApp, *caches, suffixGenerator)
 
 			By("creating a list of namespaces")
 			// Create namespaces
@@ -603,7 +657,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName)
+				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err := prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -628,14 +682,16 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Step-1
 			By("recommending new egress to domain flows")
 			testCase1 := recommendationTest{
-				timeStep: timeAtStep1,
-				data:     fvdata.Step1Results,
-				expected: expectedEgressToDomainRecommendationsStep1,
+				timeStep:        timeAtStep1,
+				data:            fvdata.Step1Results,
+				expected:        expectedEgressToDomainRecommendationsStep1,
+				suffixGenerator: mockSuffixGenerator,
 			}
+			suffixGenerator = testCase1.suffixGenerator
 			tr.recommendAtTimestamp(testCase1.timeStep, testCase1.data)
 			tr.verifyRecommendations(testCase1.expected)
 
-			snpName := fmt.Sprintf("%s.%s-%s", tier, namespace3.Name, calres.PolicyRecSnpNameSuffix)
+			snpName := "namespace-isolation.namespace3-xv5fb"
 			ds, err := mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace3.Name).Get(ctx, snpName, metav1.GetOptions{})
 			defaultSnp := *ds
 			Expect(err).To(BeNil())
@@ -701,9 +757,11 @@ var _ = Describe("Tests policy recommendation controller", func() {
 				},
 			}
 
-			defaultCacheSnp := *caches.StagedNetworkPolicies.Get(snpName)
+			defaultCacheSnp := *caches.StagedNetworkPolicies.Get(namespace3.Name)
 
-			for _, test := range testCases {
+			for i, test := range testCases {
+				log.Infof("Test iteration: %d", i)
+
 				// Re-set the datastore snp
 				snp := defaultSnp
 				startingCache := defaultCacheSnp
@@ -817,14 +875,15 @@ func compareSnps(left, right *v3.StagedNetworkPolicy) bool {
 	Expect(left.Spec.Order).To(Equal(right.Spec.Order))
 	Expect(left.Spec.Selector).To(Equal(right.Spec.Selector))
 	Expect(left.Spec.Types).To(Equal(right.Spec.Types))
-	Expect(len(left.Spec.Egress)).To(Equal(len(right.Spec.Egress)))
-	length := len(left.Spec.Egress)
 
+	length := len(left.Spec.Egress)
+	Expect(length).To(Equal(len(right.Spec.Egress)))
 	for i := 0; i < length; i++ {
 		compareRules(&left.Spec.Egress[i], &right.Spec.Egress[i])
 	}
-	Expect(len(left.Spec.Ingress)).To(Equal(len(right.Spec.Ingress)))
+
 	length = len(left.Spec.Ingress)
+	Expect(length).To(Equal(len(right.Spec.Ingress)))
 	for i := 0; i < length; i++ {
 		compareRules(&left.Spec.Ingress[i], &right.Spec.Ingress[i])
 	}
@@ -874,21 +933,16 @@ func (t *testRecommendation) recommendAtTimestamp(
 	}
 }
 
-func (t *testRecommendation) verifyRecommendations(
-	expectedRecommendation map[string]*v3.StagedNetworkPolicy,
-) {
-	for _, ns := range t.namespaces {
-		expectedNamespace := ns.Name
-		expectedSnpName := fmt.Sprintf("%s.%s-%s", t.tier, ns.Name, calres.PolicyRecSnpNameSuffix)
-		snp, err := t.client.ProjectcalicoV3().StagedNetworkPolicies(expectedNamespace).
-			Get(t.ctx, expectedSnpName, metav1.GetOptions{})
+func (t *testRecommendation) verifyRecommendations(expectedRecommendation map[string]*v3.StagedNetworkPolicy) {
+	recs, _ := t.client.ProjectcalicoV3().StagedNetworkPolicies("").List(t.ctx, metav1.ListOptions{})
+	Expect(len(recs.Items) == len(expectedRecommendation)).To(BeTrue())
 
-		if expectedSnp, ok := expectedRecommendation[expectedSnpName]; ok {
-			Expect(err).To(BeNil())
-			Expect(compareSnps(snp, expectedSnp)).To(BeTrue())
-		} else {
-			Expect(err).NotTo(BeNil())
-		}
+	for key, expected := range expectedRecommendation {
+		snp, err := t.client.ProjectcalicoV3().StagedNetworkPolicies(expected.Namespace).
+			Get(t.ctx, key, metav1.GetOptions{})
+
+		Expect(err).To(BeNil())
+		Expect(compareSnps(snp, expected)).To(BeTrue())
 	}
 }
 
@@ -953,4 +1007,12 @@ func (m mockConstructorTestingTNewMockClientSet) Errorf(format string, args ...i
 }
 
 func (m mockConstructorTestingTNewMockClientSet) FailNow() {
+}
+
+func mockSuffixGenerator() string {
+	return "xv5fb"
+}
+
+func mockSuffixGeneratorForStable() string {
+	return "76kle"
 }

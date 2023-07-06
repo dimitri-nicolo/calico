@@ -13,6 +13,8 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
+
+	"github.com/projectcalico/calico/policy-recommendation/utils"
 )
 
 const (
@@ -59,11 +61,11 @@ var (
 	}
 )
 
-var _ = Describe("NewStagedNetowrkPolicy", func() {
+var _ = Describe("NewStagedNetworkPolicy", func() {
 	It("valid staged network policy", func() {
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, mockSuffixGenerator()),
 				Namespace: namespace,
 			},
 
@@ -87,8 +89,7 @@ var _ = Describe("NewStagedNetowrkPolicy", func() {
 			Controller:         &ctrl,
 			BlockOwnerDeletion: &bod,
 		}
-
-		snp := NewStagedNetworkPolicy(name, namespace, tier, owner)
+		snp := NewStagedNetworkPolicy(utils.GetPolicyName(tier, name, mockSuffixGenerator), namespace, tier, owner)
 		Expect(snp).ToNot(BeNil())
 
 		testStagedNetworkPolicyEquality(snp, expectedStagedNetworkPolicy)
@@ -99,7 +100,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 	It("no update", func() {
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, mockSuffixGenerator()),
 				Namespace: namespace,
 			},
 
@@ -124,7 +125,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 			BlockOwnerDeletion: &bod,
 		}
 
-		snp := NewStagedNetworkPolicy(name, namespace, tier, owner)
+		snp := NewStagedNetworkPolicy(utils.GetPolicyName(tier, name, mockSuffixGenerator), namespace, tier, owner)
 		Expect(snp).ToNot(Equal(nil))
 
 		// Set the initial state of the snp.
@@ -151,7 +152,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 	It("update egress", func() {
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, mockSuffixGenerator()),
 				Namespace: namespace,
 			},
 
@@ -189,7 +190,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 			BlockOwnerDeletion: &bod,
 		}
 
-		snp := NewStagedNetworkPolicy(name, namespace, tier, owner)
+		snp := NewStagedNetworkPolicy(utils.GetPolicyName(tier, name, mockSuffixGenerator), namespace, tier, owner)
 		Expect(snp).ToNot(Equal(nil))
 
 		// Set the initial state of the snp.
@@ -227,7 +228,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 	It("update egress with empty rules", func() {
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, mockSuffixGenerator()),
 				Namespace: namespace,
 			},
 
@@ -251,7 +252,8 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 			Controller:         &ctrl,
 			BlockOwnerDeletion: &bod,
 		}
-		snp := NewStagedNetworkPolicy(name, namespace, tier, owner)
+
+		snp := NewStagedNetworkPolicy(utils.GetPolicyName(tier, name, mockSuffixGenerator), namespace, tier, owner)
 		Expect(snp).ToNot(Equal(nil))
 
 		// Set the initial state of the snp.
@@ -278,7 +280,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 	It("update ingress", func() {
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, mockSuffixGenerator()),
 				Namespace: namespace,
 			},
 
@@ -316,7 +318,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 			BlockOwnerDeletion: &bod,
 		}
 
-		snp := NewStagedNetworkPolicy(name, namespace, tier, owner)
+		snp := NewStagedNetworkPolicy(utils.GetPolicyName(tier, name, mockSuffixGenerator), namespace, tier, owner)
 		Expect(snp).ToNot(Equal(nil))
 
 		// Set the initial state of the snp.
@@ -352,10 +354,9 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 	})
 
 	It("update ingress with empty rules", func() {
-
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, mockSuffixGenerator()),
 				Namespace: namespace,
 			},
 
@@ -380,7 +381,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 			BlockOwnerDeletion: &bod,
 		}
 
-		snp := NewStagedNetworkPolicy(name, namespace, tier, owner)
+		snp := NewStagedNetworkPolicy(utils.GetPolicyName(tier, name, mockSuffixGenerator), namespace, tier, owner)
 		Expect(snp).ToNot(Equal(nil))
 
 		// Set the initial state of the snp.
@@ -407,7 +408,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 	It("update ingress and egress of policy with empty rules", func() {
 		expectedStagedNetworkPolicy := &v3.StagedNetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix),
+				Name:      fmt.Sprintf("%s.%s-%s", tier, name, mockSuffixGenerator()),
 				Namespace: namespace,
 			},
 
@@ -432,7 +433,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 			BlockOwnerDeletion: &bod,
 		}
 
-		snp := NewStagedNetworkPolicy(name, namespace, tier, owner)
+		snp := NewStagedNetworkPolicy(utils.GetPolicyName(tier, name, mockSuffixGenerator), namespace, tier, owner)
 		Expect(snp).ToNot(Equal(nil))
 
 		// Set the initial state of the snp.
@@ -993,4 +994,8 @@ func testRuleEquality(leftRule, rightRule *v3.Rule) {
 
 	Expect(reflect.DeepEqual(leftRule.Destination.Domains, rightRule.Destination.Domains)).To(Equal(true))
 	Expect(reflect.DeepEqual(leftRule.Destination.Services, rightRule.Destination.Services)).To(Equal(true))
+}
+
+func mockSuffixGenerator() string {
+	return "xv5fb"
 }
