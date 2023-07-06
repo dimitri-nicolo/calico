@@ -716,7 +716,6 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Action:   v3.Allow,
 			Protocol: expectedProtocol,
 			Source: v3.EntityRule{
-				Selector:          "projectcalico.org/orchestrator == 'k8s'",
 				NamespaceSelector: "projectcalico.org/name == 'test_namespace'",
 			},
 			Destination: v3.EntityRule{
@@ -741,7 +740,6 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Action:   v3.Allow,
 			Protocol: expectedProtocol,
 			Source: v3.EntityRule{
-				Selector:          "projectcalico.org/orchestrator == 'k8s'",
 				NamespaceSelector: "projectcalico.org/name == 'test_namespace'",
 			},
 			Destination: v3.EntityRule{},

@@ -270,8 +270,6 @@ func GetEgressToServiceV3Rule(
 //
 // EntityRule.Selector:
 //
-//	projectcalico.org/orchestrator == 'k8s'
-//
 // EntityRule.NamespaceSelector:
 //
 //	projectcalico.org/name == '<namespace>'
@@ -292,7 +290,6 @@ func GetNamespaceV3Rule(
 	}
 
 	entityRule := getEntityRuleReference(direction, rule)
-	entityRule.Selector = fmt.Sprintf("%s/orchestrator == 'k8s'", projectCalicoKeyName)
 	entityRule.NamespaceSelector = fmt.Sprintf("%s/name == '%s'", projectCalicoKeyName, namespace)
 	if protocol.SupportsPorts() {
 		rule.Destination.Ports = sortPorts(ports)

@@ -3310,7 +3310,6 @@ var (
 								},
 							},
 							NamespaceSelector: "projectcalico.org/name == 'namespace4'",
-							Selector:          "projectcalico.org/orchestrator == k8s",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -3333,7 +3332,6 @@ var (
 								},
 							},
 							NamespaceSelector: "projectcalico.org/name == 'namespace2'",
-							Selector:          "projectcalico.org/orchestrator == k8s",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -3356,7 +3354,6 @@ var (
 								},
 							},
 							NamespaceSelector: "projectcalico.org/name == 'namespace3'",
-							Selector:          "projectcalico.org/orchestrator == k8s",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -3416,7 +3413,6 @@ var (
 								},
 							},
 							NamespaceSelector: "projectcalico.org/name == 'namespace5'",
-							Selector:          "projectcalico.org/orchestrator == k8s",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -3439,7 +3435,6 @@ var (
 								},
 							},
 							NamespaceSelector: "projectcalico.org/name == 'namespace2'",
-							Selector:          "projectcalico.org/orchestrator == k8s",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -3495,7 +3490,6 @@ var (
 								},
 							},
 							NamespaceSelector: "projectcalico.org/name == 'namespace1'",
-							Selector:          "projectcalico.org/orchestrator == k8s",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{

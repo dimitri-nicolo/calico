@@ -827,7 +827,6 @@ var (
 			Destination: v3.EntityRule{
 				NamespaceSelector: namespace1,
 				Ports:             portsOrdered1,
-				Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 			},
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -843,7 +842,6 @@ var (
 			Destination: v3.EntityRule{
 				NamespaceSelector: namespace1,
 				Ports:             portsOrdered1,
-				Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 			},
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -859,7 +857,6 @@ var (
 			Destination: v3.EntityRule{
 				NamespaceSelector: namespace2,
 				Ports:             portsOrdered3,
-				Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 			},
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -875,7 +872,6 @@ var (
 			Destination: v3.EntityRule{
 				NamespaceSelector: namespace3,
 				Ports:             portsOrdered3,
-				Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 			},
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -894,7 +890,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace1,
 	// 			Ports:             portsOrdered2,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -909,7 +904,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace2,
 	// 			Ports:             portsOrdered1,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -924,7 +918,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace1,
 	// 			Ports:             portsOrdered1,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -939,7 +932,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace2,
 	// 			Ports:             portsOrdered3,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -957,7 +949,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace1,
 	// 			Ports:             portsOrdered2,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -973,7 +964,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace2,
 	// 			Ports:             portsOrdered1,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -989,7 +979,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace1,
 	// 			Ports:             portsOrdered1,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -1005,7 +994,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace2,
 	// 			Ports:             portsOrdered3,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -1021,7 +1009,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace3,
 	// 			Ports:             portsOrdered3,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -1076,7 +1063,6 @@ var (
 					Protocol: &protocolTCP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
-						Selector:          "projectcalico.org/orchestrator == k8s",
 						NamespaceSelector: "projectcalico.org/name == namespace1",
 						Ports: []numorstring.Port{
 							{
@@ -1099,7 +1085,6 @@ var (
 					Protocol: &protocolTCP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
-						Selector:          "projectcalico.org/orchestrator == k8s",
 						NamespaceSelector: "projectcalico.org/name == namespace2",
 						Ports: []numorstring.Port{
 							{
@@ -1122,7 +1107,6 @@ var (
 					Protocol: &protocolTCP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
-						Selector:          "policyrecommendation.tigera.io/orchestrator == k8s",
 						NamespaceSelector: "ns1",
 						Ports: []numorstring.Port{
 							{
@@ -1152,7 +1136,6 @@ var (
 					Protocol: &protocolUDP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
-						Selector:          "policyrecommendation.tigera.io/orchestrator == k8s",
 						NamespaceSelector: "ns1",
 						Ports: []numorstring.Port{
 							{
@@ -1182,7 +1165,6 @@ var (
 					Protocol: &protocolUDP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
-						Selector:          "policyrecommendation.tigera.io/orchestrator == k8s",
 						NamespaceSelector: "ns2",
 						Ports: []numorstring.Port{
 							{
@@ -1204,7 +1186,6 @@ var (
 					Protocol: &protocolUDP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
-						Selector:          "policyrecommendation.tigera.io/orchestrator == k8s",
 						NamespaceSelector: "ns3",
 						Ports: []numorstring.Port{
 							{
@@ -1227,7 +1208,6 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protocolTCP,
 					Source: v3.EntityRule{
-						Selector:          "projectcalico.org/orchestrator == k8s",
 						NamespaceSelector: "projectcalico.org/name == namespace1",
 						Ports: []numorstring.Port{
 							{
@@ -1250,7 +1230,6 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protocolTCP,
 					Source: v3.EntityRule{
-						Selector:          "projectcalico.org/orchestrator == k8s",
 						NamespaceSelector: "projectcalico.org/name == namespace1",
 						Ports: []numorstring.Port{
 							{
@@ -1273,7 +1252,6 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protocolTCP,
 					Source: v3.EntityRule{
-						Selector:          "projectcalico.org/orchestrator == k8s",
 						NamespaceSelector: "projectcalico.org/name == namespace1",
 						Ports: []numorstring.Port{
 							{
@@ -1296,7 +1274,6 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protocolTCP,
 					Source: v3.EntityRule{
-						Selector:          "projectcalico.org/orchestrator == k8s",
 						NamespaceSelector: "projectcalico.org/name == namespace1",
 						Ports: []numorstring.Port{
 							{
