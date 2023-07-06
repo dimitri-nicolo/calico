@@ -10,20 +10,17 @@ import (
 	"net/http/httptest"
 	"sort"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
-
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
-	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/es-proxy/test/thirdpartymock"
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+
+	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (
@@ -36,6 +33,8 @@ var (
 	// responses from elastic to es-proxy
 	//go:embed testdata/l7_response.json
 	l7Response string
+	//go:embed testdata/l7_response_zero_duration.json
+	l7ResponseZeroDuration string
 	//go:embed testdata/l7_response_with_namespace.json
 	l7ResponseWithNamespace string
 )
@@ -192,6 +191,41 @@ var _ = Describe("Application middleware tests", func() {
 			Expect(resp.Services[1].InboundThroughput).To(BeNumerically("~", 2316.12, 0.01))
 			Expect(resp.Services[1].OutboundThroughput).To(BeNumerically("~", 3217.60, 0.01))
 			Expect(resp.Services[1].RequestThroughput).To(BeNumerically("~", 0.090, 0.001))
+		})
+
+		It("should ignore zero duration log entries", func() {
+			// Unmarshal L7 response
+			response := lapi.List[lapi.L7Log]{}
+			err := json.Unmarshal([]byte(l7ResponseZeroDuration), &response)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Build mock response from Linseed.
+			results := []rest.MockResult{}
+			results = append(results, rest.MockResult{
+				Body: lapi.List[lapi.L7Log]{
+					Items:     response.Items,
+					TotalHits: response.TotalHits,
+				},
+			})
+
+			// mock linseed client
+			lsc := client.NewMockClient("", results...)
+
+			// validate responses
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(ApplicationRequest)))
+			Expect(err).NotTo(HaveOccurred())
+
+			rr := httptest.NewRecorder()
+			handler := ApplicationHandler(userAuthReview, lsc, ApplicationTypeService)
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusOK))
+
+			var resp v1.ServiceResponse
+			err = json.Unmarshal(rr.Body.Bytes(), &resp)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resp.Services).To(BeEmpty())
 		})
 
 		It("should return error when request is not POST", func() {
