@@ -56,22 +56,22 @@
       "properties": {
         "id": {
           "type": "keyword"
-	},
+        },
         "message": {
           "type": "text"
-	},
+        },
         "severity": {
           "type": "keyword"
-	},
+        },
         "file": {
           "type": "keyword"
-	},
+        },
         "line": {
           "type": "long"
-	},
+        },
         "disruptive": {
           "type": "boolean"
-	}
+        }
       }
     },
     "host": {

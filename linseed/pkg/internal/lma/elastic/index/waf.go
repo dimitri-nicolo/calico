@@ -5,6 +5,7 @@ package index
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/olivere/elastic/v7"
@@ -24,7 +25,24 @@ func WAFLogs() Helper {
 
 // NewWAFLogsConverter returns a Converter instance defined for waf logs.
 func NewWAFLogsConverter() converter {
-	return converter{basicAtomToElastic}
+	return converter{wafAtomToElastic}
+}
+
+// wafAtomToElastic returns a waf log atom as an elastic JsonObject.
+func wafAtomToElastic(a *query.Atom) JsonObject {
+	switch a.Key {
+	case "rules.id", "rules.message", "rules.severity", "rules.file", "rules.disruptive", "rules.line":
+
+		path := a.Key[:strings.Index(a.Key, ".")]
+		return JsonObject{
+			"nested": JsonObject{
+				"path":  path,
+				"query": basicAtomToElastic(a),
+			},
+		}
+	}
+
+	return basicAtomToElastic(a)
 }
 
 func (h wafLogsIndexHelper) NewSelectorQuery(selector string) (elastic.Query, error) {
