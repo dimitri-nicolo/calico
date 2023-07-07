@@ -32,17 +32,21 @@ func (store *PolicyStore) ProcessUpdate(subscriptionType string, update *proto.T
 			log.WithFields(log.Fields{
 				"id": payload.ActivePolicyUpdate.Id,
 			}).Debug("Skipping StagedPolicy ActivePolicyUpdate")
-		} else {
-			store.processActivePolicyUpdate(payload.ActivePolicyUpdate)
+
+			return
 		}
+
+		store.processActivePolicyUpdate(payload.ActivePolicyUpdate)
 	case *proto.ToDataplane_ActivePolicyRemove:
 		if model.PolicyIsStaged(payload.ActivePolicyRemove.Id.Name) {
 			log.WithFields(log.Fields{
 				"id": payload.ActivePolicyRemove.Id,
 			}).Debug("Skipping StagedPolicy ActivePolicyRemove")
-		} else {
-			store.processActivePolicyRemove(payload.ActivePolicyRemove)
+
+			return
 		}
+
+		store.processActivePolicyRemove(payload.ActivePolicyRemove)
 	case *proto.ToDataplane_WorkloadEndpointUpdate:
 		store.processWorkloadEndpointUpdate(subscriptionType, payload.WorkloadEndpointUpdate)
 	case *proto.ToDataplane_WorkloadEndpointRemove:
