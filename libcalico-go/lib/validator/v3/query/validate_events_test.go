@@ -19,7 +19,7 @@ var _ = DescribeTable("Events", func(atom Atom, ok bool) {
 	Entry("_id", Atom{Key: "_id", Value: "foo"}, true),
 	Entry("alert", Atom{Key: "alert", Value: "foo"}, true),
 	Entry("attack_vector", Atom{Key: "attack_vector", Value: "Process"}, true),
-	Entry("attack_phase", Atom{Key: "attack_phase", Value: "Access"}, true),
+	Entry("mitre_tactic", Atom{Key: "mitre_tactic", Value: "Access"}, true),
 	Entry("dest_ip", Atom{Key: "dest_ip", Value: "1.2.3.4"}, true),
 	Entry("dest_ip invalid", Atom{Key: "dest_ip", Value: "invalid-ip"}, false),
 	Entry("dest_name", Atom{Key: "dest_name", Value: "foo"}, true),
