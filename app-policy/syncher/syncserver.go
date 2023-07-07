@@ -28,7 +28,6 @@ import (
 	dikastesproto "github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/felix/proto"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 const (
@@ -137,16 +136,6 @@ func (s *SyncClient) sync(stream proto.PolicySync_SyncClient, ctx context.Contex
 			s.storeManager.OnInSync()
 		default:
 			s.storeManager.Write(func(ps *policystore.PolicyStore) {
-				switch payload := update.Payload.(type) {
-				case *proto.ToDataplane_ActivePolicyUpdate:
-					if model.PolicyIsStaged(payload.ActivePolicyUpdate.Id.Name) {
-						return
-					}
-				case *proto.ToDataplane_ActivePolicyRemove:
-					if model.PolicyIsStaged(payload.ActivePolicyRemove.Id.Name) {
-						return
-					}
-				}
 				ps.ProcessUpdate(s.subscriptionType, update)
 			})
 		}
