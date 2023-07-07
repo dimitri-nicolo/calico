@@ -534,6 +534,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		}()
 
 		// Write 10 packets
+		// We set the max size to one packet and want to keep only 3 files
 		wg.Add(numberOfPackets)
 		go func() {
 			for i := 0; i < numberOfPackets; i++ {
@@ -572,7 +573,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 				rotatedFileOrderZeroSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
 		}
 
-	}, 10)
+	}, 20)
 
 	It("Start a capture after it has been stopped", func(done Done) {
 		defer close(done)
