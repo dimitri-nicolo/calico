@@ -275,7 +275,7 @@ func (r *adJobTrainingReconciler) addTrainingCycle(mcs TrainingDetectorsRequest)
 
 	// Add specs for training cycle.
 	detectorList := collectDetectorsFromGlobalAlerts(trainingCycle.GlobalAlerts)
-	adTrainingJobPT, err := r.getADPodTemplateWithEnabledDecorators(clusterName, detectorList)
+	adTrainingJobPT, err := r.getADPodTemplateWithEnabledDetectors(clusterName, detectorList)
 	if err != nil {
 		log.WithError(err).
 			Errorf("Unable to start training cycles for on cluster %s, unable to retrieve podtemplate for training cronjobs",
@@ -309,12 +309,12 @@ func (r *adJobTrainingReconciler) runInitialTrainingJob(mcs TrainingDetectorsReq
 
 	trainingCycle, found := r.trainingDetectorsPerCluster[trainingCycleJobStateNameKey]
 
-	// kick-off an initial training job if there is not existing training cycle or for a first time
+	// kick-off an initial training job if there is no existing training cycle or for a first time
 	// detector.
 	detector := mcs.GlobalAlert.Spec.Detector.Name
 	if !found || !collectDetectorsSetFromGlobalAlerts(trainingCycle.GlobalAlerts).Contains(detector) {
 		trainingJobStateNameKey := r.getInitialTrainingJobNameForCluster(clusterName, detector)
-		adTrainingJobPT, err := r.getADPodTemplateWithEnabledDecorator(clusterName, detector)
+		adTrainingJobPT, err := r.getADPodTemplateWithEnabledDetectors(clusterName, detector)
 		if err != nil {
 			log.WithError(err).
 				Errorf("Unable to start initial training pod for on cluster %s, unable to retrieve podtemplate for training job",
@@ -346,16 +346,29 @@ func (r *adJobTrainingReconciler) runInitialTrainingJob(mcs TrainingDetectorsReq
 // getInitialTrainingJobNameForCluster creates a standardized string from the cluster's name to be
 // used as the initial training job name created for the cluster.
 func (r *adJobTrainingReconciler) getInitialTrainingJobNameForCluster(cluster, detector string) string {
-	return util.GetValidInitialTrainingJobName(cluster, r.tenantID, detector, initialTrainingJobSuffix)
+	jobName := util.GetValidInitialTrainingJobName(cluster, r.tenantID, detector, initialTrainingJobSuffix)
+	log.Infof("getInitialTrainingJobNameForCluster: jobName=%v", jobName)
+	return jobName
 }
 
 // getTrainingCycleCronJobNameForCluster creates a standardized string from the cluster's name to be
 // used as the cronjob name created for the cluster.
 func (r *adJobTrainingReconciler) getTrainingCycleJobNameForCluster(clusterName string) string {
-	// We need to take into account Calico Cloud setup that functions in a multi-tenant flavour
-	// In order to keep backwards compatibility, a job name will have <tenant_id.cluster_name-training-cycle>
-	// in multi-tenant setup and <cluster_name-training-cycle> for Enterprise
-	return fmt.Sprintf("%s-%s-cycle", util.Unify(r.tenantID, clusterName), trainingCycleSuffix)
+	// Convert all uppercase to lower case
+	name := strings.ToLower(util.Unify(r.tenantID, clusterName))
+
+	if len(name) > acceptableRFCGlobalAlertNameLen {
+		name = name[:acceptableRFCGlobalAlertNameLen]
+	}
+
+	// clusterName should be already RFC1123 compliant since it is retrieved from an individual
+	// Calico resource, but trimming the name might result in a non-compliant name (i.e. ending
+	// with period ".")
+	name = util.ConvertToValidName(name)
+
+	jobName := fmt.Sprintf("%s-%s-cycle-%s", name, trainingCycleSuffix, util.ComputeSha256HashWithLimit(name, numHashChars))
+	log.Infof("getTrainingCycleJobNameForCluster: jobName=%v", jobName)
+	return jobName
 }
 
 // collectDetectorsSetFromGlobalAlerts collects and returns the comma delimited string of detectors
@@ -382,34 +395,13 @@ func collectDetectorsSetFromGlobalAlerts(globalAlerts []*v3.GlobalAlert) set.Set
 	return detectors
 }
 
-// getADPodTemplateWithEnabledDecorator returns a pod template with enabled detector for an individual detector.
-func (r *adJobTrainingReconciler) getADPodTemplateWithEnabledDecorator(
-	clusterName string, detector string,
-) (*v1.PodTemplate, error) {
-	adTrainingJobPT, err := r.podTemplateQuery.GetPodTemplate(r.managementClusterCtx, r.namespace, ADTrainingJobTemplateName)
-	if err != nil {
-		log.WithError(err).
-			Errorf("Unable to start initial training pod for on cluster %s, unable to specify training ADJob run to the ADJob PodTemnplate",
-				clusterName)
-		return nil, err
-	}
-
-	// Add specs for training cycle.
-	err = podtemplate.DecoratePodTemplateForTrainingCycle(adTrainingJobPT, clusterName, r.tenantID, detector)
-	if err != nil {
-		return nil, err
-	}
-
-	return adTrainingJobPT, nil
-}
-
-// getADPodTemplateWithEnabledDecorators returns a pod template with enabled detector for a list of detectors.
-func (r *adJobTrainingReconciler) getADPodTemplateWithEnabledDecorators(
+// getADPodTemplateWithEnabledDetectors returns a pod template with a list of enabled detectors.
+func (r *adJobTrainingReconciler) getADPodTemplateWithEnabledDetectors(
 	clusterName string, detectorList string,
 ) (*v1.PodTemplate, error) {
 	adTrainingJobPT, err := r.podTemplateQuery.GetPodTemplate(r.managementClusterCtx, r.namespace, ADTrainingJobTemplateName)
 	if err != nil {
-		log.WithError(err).Errorf("Unable to start training cycles for on cluster %s, unable to specify training ADJob run to the ADJob PodTemnplate",
+		log.WithError(err).Errorf("Unable to start training cycles on cluster %s, unable to specify training ADJob run to the ADJob PodTemplate",
 			clusterName)
 		return nil, err
 	}
@@ -419,6 +411,7 @@ func (r *adJobTrainingReconciler) getADPodTemplateWithEnabledDecorators(
 	if err != nil {
 		return nil, err
 	}
+	log.Infof("getADPodTemplateWithEnabledDetectors: podTemplate=%#v", *adTrainingJobPT)
 
 	return adTrainingJobPT, nil
 }
@@ -430,6 +423,10 @@ func (r *adJobTrainingReconciler) createInitialTrainingJobForCluster(
 ) (*batchv1.Job, error) {
 	trainingLabels := TrainingJobLabels()
 	trainingLabels[ClusterKey] = util.Unify(r.tenantID, clusterName)
+	if len(trainingLabels[ClusterKey]) > maxClusterLabelLen {
+		trainingLabels[ClusterKey] = trainingLabels[ClusterKey][:maxClusterLabelLen]
+	}
+	log.Infof("createInitialTrainingJobForCluster: %v=%v", ClusterKey, trainingLabels[ClusterKey])
 
 	// Restart policy set to 'Never' and a backoffLimit of zero means that in the event that it
 	// results in an error, the initial training job would not be put in a crashloop since we have the
@@ -463,6 +460,10 @@ func (r *adJobTrainingReconciler) createInitialTrainingJobForCluster(
 func (r *adJobTrainingReconciler) createTrainingCronJobForCluster(clusterName string, cronJobName string, adTrainingJobPT v1.PodTemplate) (*batchv1.CronJob, error) {
 	trainingCronLabels := TrainingCycleLabels()
 	trainingCronLabels["cluster"] = clusterName
+	if len(trainingCronLabels["cluster"]) > maxClusterLabelLen {
+		trainingCronLabels["cluster"] = trainingCronLabels["cluster"][:maxClusterLabelLen]
+	}
+	log.Infof("createTrainingCronJobForCluster: %v=%v", "cluster", trainingCronLabels["cluster"])
 
 	trainingCronJob := podtemplate.CreateCronJobFromPodTemplate(cronJobName, r.namespace,
 		DefaultADDetectorTrainingSchedule, trainingCronLabels, adTrainingJobPT)
@@ -515,7 +516,7 @@ func (r *adJobTrainingReconciler) removeTrainingCycles(mcs TrainingDetectorsRequ
 	// else update AD_ENABLED_DETECTORS to exclude detector with deleted GlobalAlert
 	detectorList := collectDetectorsFromGlobalAlerts(managedTrainingDetectorsForCluster.GlobalAlerts)
 
-	adTrainingJobPT, err := r.getADPodTemplateWithEnabledDecorators(managedTrainingDetectorsForCluster.ClusterName, detectorList)
+	adTrainingJobPT, err := r.getADPodTemplateWithEnabledDetectors(managedTrainingDetectorsForCluster.ClusterName, detectorList)
 	if err != nil {
 		log.WithError(err).Errorf("Unable to update training cycles for on cluster %s, unable to retrieve podtemplate for training cronjobs",
 			managedTrainingDetectorsForCluster.ClusterName)
