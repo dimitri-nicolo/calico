@@ -589,6 +589,16 @@ func (e *service) convert(record JsonObject) lsv1.Event {
 	eventData.Time = lsv1.NewEventTimestamp(time.Now().Unix())
 	eventData.Type = AlertEventType
 	eventData.Description = description
+	if e.queryBuilder.IsWAF() {
+		eventData.Type = query.WafEventType
+		eventData.MitreIDs = &[]string{"T1190"}
+		eventData.Mitigations = &[]string{"Review the source of this event - an attacker could be inside your cluster attempting to exploit your web application. Calico network policy can be used to block the connection if the activity is not expected"}
+		eventData.AttackVector = "Network"
+		eventData.MitreTactic = "Initial Access"
+		eventData.Name = "WAF Event"
+		eventData.Description = "Some traffic inside your cluster triggered some Web Application Firewall rules"
+	}
+
 	eventData.Severity = e.globalAlert.Spec.Severity
 	eventData.Origin = e.globalAlert.Name
 

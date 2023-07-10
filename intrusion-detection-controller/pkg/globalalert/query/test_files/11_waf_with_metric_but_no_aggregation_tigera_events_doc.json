@@ -1,1 +1,15 @@
-{"description":"test alert: sample-test","origin":"sample-test","record":{"count":1},"severity":100,"time":0,"type":"global_alert"}
+{
+  "origin": "sample-test",
+  "record": { "count": 1 },
+  "severity": 100,
+  "time": 0,
+  "type": "waf",
+  "mitre_ids": ["T1190"],
+  "mitigations": [
+    "Review the source of this event - an attacker could be inside your cluster attempting to exploit your web application. Calico network policy can be used to block the connection if the activity is not expected"
+  ],
+  "attack_vector": "Network",
+  "mitre_tactic": "Initial Access",
+  "name": "WAF Event",
+  "description": "Some traffic inside your cluster triggered some Web Application Firewall rules"
+}

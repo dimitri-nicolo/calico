@@ -6,6 +6,8 @@ import (
 	"fmt"
 )
 
+const WafEventType = "waf"
+
 var (
 	EventsKeys = map[string]Validator{
 		"_id":              NullValidator,
@@ -39,6 +41,7 @@ var (
 			"runtime_security",
 			"suspicious_dns_query",
 			"suspicious_flow",
+			"waf",
 		),
 	}
 )
