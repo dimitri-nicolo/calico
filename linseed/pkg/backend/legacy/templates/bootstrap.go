@@ -12,106 +12,68 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type IndexInfo struct {
+	AliasExists  bool
+	IndexExists  bool
+	AliasedIndex string
+	Mappings     map[string]interface{}
+}
+
+func (index IndexInfo) HasMappings(mappings map[string]interface{}) bool {
+	// Please note that we only compare the mappings.
+	// One could argue that similar logic should be done to detect settings changes.
+	// This is possible, but we would need to ignore the following fields: provided_name, creation_date, uuid, version.
+	// To keep things simple, we'll ignore this and assume that we're unlikely to update the settings without updating the mappings...
+	return reflect.DeepEqual(index.Mappings, mappings)
+}
+
 // IndexBootstrapper creates an index template for the give log type and cluster information
 // pairing and create a bootstrap index that uses that template
 var IndexBootstrapper Load = func(ctx context.Context, client *elastic.Client, config *TemplateConfig) (*Template, error) {
+
+	// Get some info about the index in ES
+	indexInfo, err := GetIndexInfo(ctx, client, config)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get template for the index
 	templateName := config.TemplateName()
 	template, err := config.Template()
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if the alias already exists
-	logrus.WithField("name", config.Alias()).Debug("Checking if alias exists")
-	response, err := client.CatAliases().Alias(config.Alias()).Do(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var aliasExists bool
-	var aliasedIndex string
-	for _, row := range response {
-		if row.Alias == config.Alias() {
-			aliasExists = true
-			aliasedIndex = row.Index
-			break
-		}
-	}
-
-	var indexMappings map[string]interface{}
-
-	if aliasExists {
-		// Alias exists. This means that the index was setup previously.
-		logrus.Infof("alias %s exists for index %s", config.Alias(), aliasedIndex)
-
-		// We now want to retrieve mappings from the index and store them in indexMappings.
-		// This will then be used to decide whether we need to update the mappings and rollover the index.
-
-		ir, err := client.IndexGet(aliasedIndex).Do(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		indexMappings = ir[aliasedIndex].Mappings
-		if indexMappings == nil {
-			return nil, fmt.Errorf("failed to get index mappings")
-		}
-
-		err = UpdateMappingsDynamicProperty(indexMappings)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Please note that we only compare the mappings.
-	// One could argue that similar logic should be done to detect settings changes.
-	// This is possible, but we would need to ignore the following fields: provided_name, creation_date, uuid, version.
-	// To keep things simple, we'll ignore this and assume that we're unlikely to update the settings without updating the mappings...
-	if reflect.DeepEqual(indexMappings, template.Mappings) {
+	// Check if the index mappings are up to date.
+	if indexInfo.HasMappings(template.Mappings) {
 		logrus.Info("Existing index already uses the latest mappings")
 	} else {
-		// We need to update the index mappings so that we can either create or rollover the index
-
-		// Create/Update the template in Elastic
-		// logrus.WithField("template", template).Info("Template to be created...")
+		// Create/Update the index template in Elastic
 		logrus.WithField("name", templateName).Info("Creating index template")
 		_, err = client.IndexPutTemplate(templateName).BodyJson(template).Do(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		if !aliasExists {
-			indexExists, err := client.IndexExists(config.BootstrapIndexName()).Do(ctx)
+		if indexInfo.AliasExists {
+			// Rollover index to get latest mappings
+			err = RolloverIndex(ctx, client, config)
 			if err != nil {
 				return nil, err
-			}
-			if !indexExists {
-				err = CreateIndex(ctx, client, config)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				// Alias doesn't exist, but the index does.
-				logrus.WithField("name", config.BootstrapIndexName()).Infof("Creating alias for index")
-				_, err := client.Alias().Add(config.BootstrapIndexName(), config.Alias()).Do(ctx)
-				if err != nil {
-					return nil, err
-				}
 			}
 		} else {
-			logrus.Info("Existing index does not use the latest mappings, let's rollover the index so that it uses the latest mappings")
-
-			response, err := client.RolloverIndex(config.Alias()).Do(ctx)
-			if err != nil {
-				return nil, err
-			}
-			if !response.Acknowledged {
-				return nil, fmt.Errorf("failed to acknowledge index rollover")
-			}
-			if response.RolledOver {
-				logrus.Infof("Rolled over index %s to index %s", response.OldIndex, response.NewIndex)
+			if !indexInfo.IndexExists {
+				// Create index and alias
+				err = CreateIndexAndAlias(ctx, client, config)
+				if err != nil {
+					return nil, err
+				}
 			} else {
-				logrus.Infof("Did not rollover index %s", response.OldIndex)
+				// Alias doesn't exist, but the index does
+				err = CreateAliasForIndex(ctx, client, config)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -119,7 +81,77 @@ var IndexBootstrapper Load = func(ctx context.Context, client *elastic.Client, c
 	return template, nil
 }
 
-func CreateIndex(ctx context.Context, client *elastic.Client, config *TemplateConfig) error {
+func GetIndexInfo(ctx context.Context, client *elastic.Client, config *TemplateConfig) (index IndexInfo, err error) {
+	// Check if the alias already exists
+	logrus.WithField("name", config.Alias()).Debug("Checking if alias exists")
+	response, err := client.CatAliases().Alias(config.Alias()).Do(ctx)
+	if err != nil {
+		return index, err
+	}
+
+	for _, row := range response {
+		if row.Alias == config.Alias() {
+			index.AliasExists = true
+			index.AliasedIndex = row.Index
+			break
+		}
+	}
+
+	if index.AliasExists {
+		// Alias exists. This means that the index was setup previously.
+		logrus.Infof("alias %s exists for index %s", config.Alias(), index.AliasedIndex)
+
+		ir, err := client.IndexGet(index.AliasedIndex).Do(ctx)
+		if err != nil {
+			return index, err
+		}
+
+		// Get mappings
+		index.Mappings = ir[index.AliasedIndex].Mappings
+		if index.Mappings == nil {
+			return index, fmt.Errorf("failed to get index mappings")
+		}
+
+		// Deal with odd "dynamic" property
+		err = updateMappingsDynamicProperty(index.Mappings)
+		if err != nil {
+			return index, err
+		}
+	} else {
+		// Check if index exists even though it's not aliased
+		index.IndexExists, err = client.IndexExists(config.BootstrapIndexName()).Do(ctx)
+		if err != nil {
+			return index, err
+		}
+	}
+
+	return index, nil
+}
+
+// The "dynamic" property is an odd one. We typically use `"dynamic": false` in our mapping files
+// and the docs suggest that's correct: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/dynamic-field-mapping.html
+// However when reading the mappings from the index, we get `"dynamic": "false"`, probably because
+// the "dynamic" property can accept multiple types, and is just serialized as a string for some reason...
+func updateMappingsDynamicProperty(mappings map[string]interface{}) error {
+	if mappings["dynamic"] != nil {
+		if reflect.TypeOf(mappings["dynamic"]) == reflect.TypeOf(string("")) {
+			s, ok := mappings["dynamic"].(string)
+			if !ok {
+				return fmt.Errorf("dynamic property in not a string (%v)", mappings["dynamic"])
+			}
+
+			if s == "false" {
+				mappings["dynamic"] = false
+			}
+			if s == "true" {
+				mappings["dynamic"] = true
+			}
+		}
+	}
+	return nil
+}
+
+func CreateIndexAndAlias(ctx context.Context, client *elastic.Client, config *TemplateConfig) error {
 	logrus.WithField("name", config.BootstrapIndexName()).Infof("Creating bootstrap index")
 	aliasJson := fmt.Sprintf(`{"%s": {"is_write_index": true}}`, config.Alias())
 
@@ -138,25 +170,25 @@ func CreateIndex(ctx context.Context, client *elastic.Client, config *TemplateCo
 	return nil
 }
 
-// The "dynamic" property is an odd one. We typically use `"dynamic": false` in our mapping files
-// and the docs suggest that's correct: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/dynamic-field-mapping.html
-// However when reading the mappings from the index, we get `"dynamic": "false"`, probably because
-// the "dynamic" property can accept multiple types, and is just serialized as a string for some reason...
-func UpdateMappingsDynamicProperty(mappings map[string]interface{}) error {
-	if mappings["dynamic"] != nil {
-		if reflect.TypeOf(mappings["dynamic"]) == reflect.TypeOf(string("")) {
-			s, ok := mappings["dynamic"].(string)
-			if !ok {
-				return fmt.Errorf("dynamic property in not a string (%v)", mappings["dynamic"])
-			}
+func CreateAliasForIndex(ctx context.Context, client *elastic.Client, config *TemplateConfig) error {
+	logrus.WithField("name", config.BootstrapIndexName()).Infof("Creating alias for index")
+	_, err := client.Alias().Add(config.BootstrapIndexName(), config.Alias()).Do(ctx)
+	return err
+}
 
-			if s == "false" {
-				mappings["dynamic"] = false
-			}
-			if s == "true" {
-				mappings["dynamic"] = true
-			}
-		}
+func RolloverIndex(ctx context.Context, client *elastic.Client, config *TemplateConfig) error {
+	logrus.Info("Existing index does not use the latest mappings, let's rollover the index so that it uses the latest mappings")
+	response, err := client.RolloverIndex(config.Alias()).Do(ctx)
+	if err != nil {
+		return err
+	}
+	if !response.Acknowledged {
+		return fmt.Errorf("failed to acknowledge index rollover")
+	}
+	if response.RolledOver {
+		logrus.Infof("Rolled over index %s to index %s", response.OldIndex, response.NewIndex)
+	} else {
+		logrus.Infof("Did not rollover index %s", response.OldIndex)
 	}
 	return nil
 }

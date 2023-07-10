@@ -94,11 +94,6 @@ func checkTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster 
 	for _, row := range responseAlias {
 		if row.Alias == fmt.Sprintf("%s.%s.", indexPrefix, cluster) {
 			hasAlias = true
-			logrus.WithFields(logrus.Fields{
-				"row.Alias":        row.Alias,
-				"row.Index":        row.Index,
-				"row.IsWriteIndex": row.IsWriteIndex,
-			}).Warn("Some stats")
 			if expectedNumberIndices == 1 {
 				require.Equal(t, index, row.Index)
 				require.Equal(t, "true", row.IsWriteIndex)
@@ -292,43 +287,26 @@ func TestMappingsValidity(t *testing.T) {
 			_, err = client.IndexPutTemplate(config.TemplateName()).BodyJson(template).Do(ctx)
 			require.NoError(t, err)
 
-			// Sanity check that the index does not exists
-			indexExists, err := client.IndexExists(config.BootstrapIndexName()).Do(ctx)
+			// Get initial indexInfo
+			indexInfo, err := templates.GetIndexInfo(ctx, client, config)
 			require.NoError(t, err)
-			require.False(t, indexExists)
+
+			// Sanity check that the index does not exists
+			require.NoError(t, err)
+			require.False(t, indexInfo.IndexExists)
 
 			// Create the bootstrap index and mark it to be used for writes
-			err = templates.CreateIndex(ctx, client, config)
+			err = templates.CreateIndexAndAlias(ctx, client, config)
 			require.NoError(t, err)
 
-			// Check if the alias already exists (and get index name)
-			logrus.WithField("name", config.Alias()).Debug("Checking if alias exists")
-			ar, err := client.CatAliases().Alias(config.Alias()).Do(ctx)
+			// Update indexInfo following index creation
+			indexInfo, err = templates.GetIndexInfo(ctx, client, config)
 			require.NoError(t, err)
 
-			var aliasExists bool
-			var aliasedIndex string
-			for _, row := range ar {
-				if row.Alias == config.Alias() {
-					aliasExists = true
-					aliasedIndex = row.Index
-					break
-				}
-			}
-			require.True(t, aliasExists)
+			require.True(t, indexInfo.AliasExists)
 
-			// Get index mappings
-			ir, err := client.IndexGet(aliasedIndex).Do(ctx)
-			require.NoError(t, err)
-
-			indexMappings := ir[aliasedIndex].Mappings
-			require.NoError(t, err)
-
-			// Make sure that the indexMappings are as defined in the mappings file
-			err = templates.UpdateMappingsDynamicProperty(indexMappings)
-			require.NoError(t, err)
-
-			require.Equal(t, indexMappings, template.Mappings)
+			// If this fails, need to update mappings file
+			require.Equal(t, indexInfo.Mappings, template.Mappings)
 		})
 	}
 
