@@ -983,8 +983,20 @@ func assertPcapFiles(baseDir string, expected []outputFile) {
 	})
 
 	for i, f := range expected {
-		Eventually(func() int { return int(read(baseDir)[i].Size()) }).Should(Equal(f.Size))
-		Eventually(func() string { return read(baseDir)[i].Name() }).Should(MatchRegexp(f.Name))
+		Eventually(func() int {
+			files := read(baseDir)
+			if len(files) > i {
+				return int(files[i].Size())
+			}
+			return -1
+		}).Should(Equal(f.Size))
+		Eventually(func() string {
+			files := read(baseDir)
+			if len(files) > i {
+				return files[i].Name()
+			}
+			return ""
+		}).Should(MatchRegexp(f.Name))
 	}
 }
 
@@ -1005,7 +1017,7 @@ func assertStatusUpdates(update *proto.PacketCaptureStatusUpdate, expected []out
 func read(baseDir string) []os.FileInfo {
 	pCaps, err := os.ReadDir(baseDir)
 	if err != nil {
-		return nil
+		return []os.FileInfo{}
 	}
 
 	var pcapInfo []os.FileInfo
