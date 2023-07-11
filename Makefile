@@ -13,7 +13,7 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-KIBANA_VERSION = 7.17.9
+KIBANA_VERSION = 7.17.11
 
 # Set GTM_INTEGRATION explicitly so that in case the defaults change, we will still not
 # accidentally enable the integration
@@ -59,7 +59,6 @@ $(KIBANA_DOWNLOADED):
 	mkdir -p kibana
 	curl -sfL https://github.com/elastic/kibana/archive/refs/tags/v$(KIBANA_VERSION).tar.gz | tar xz --strip-components 1 -C kibana
 	patch -d kibana -p1 < patches/0001-Apply-Tigera-customizations-to-Kibana.patch
-	patch -d kibana -p1 < patches/0002-Upgrade-transitive-dependency-http-cache-semantics.patch
 	touch $@
 
 .PHONY: build
