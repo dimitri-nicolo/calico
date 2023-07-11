@@ -148,6 +148,11 @@ func (w *L7WorkloadIPSetCalculator) OnEgressSelectorMatchStopped(_ string, _ int
 func (w *L7WorkloadIPSetCalculator) OnResourceUpdate(update api.Update) (_ bool) {
 	switch k := update.Key.(type) {
 	case model.PolicyKey:
+		// Staged NetworkPolicies/GlobalNetworkPolicies should be
+		// skipped
+		if model.PolicyIsStaged(k.Name) {
+			return
+		}
 		wasALP := w.policiesWithALP.Contains(k)
 		isALP := false
 		if update.Value != nil {
