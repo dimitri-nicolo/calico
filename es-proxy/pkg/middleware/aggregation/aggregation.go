@@ -249,8 +249,8 @@ func extractAggregationResults(aggs elastic.Aggregations, rd *RequestData) (*v1.
 		if !ok {
 			return nil, &httputils.HttpStatusError{
 				Status: http.StatusBadRequest,
-				Msg:    "no valid time buckets in aggregation response",
-				Err:    errors.New("no valid time buckets in aggregation response"),
+				Msg:    "there isn't enough data to create a valid histogram from the selected time range",
+				Err:    errors.New("there isn't enough data to create a valid histogram from the selected time range"),
 			}
 		}
 		for _, b := range timebuckets.Buckets {
