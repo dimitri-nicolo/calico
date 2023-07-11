@@ -52,9 +52,9 @@ func setupTest(t *testing.T) func() {
 	cache = templates.NewTemplateCache(client, 1, 0)
 
 	// Create backends to use.
-	rb = compliance.NewReportsBackend(client, cache)
-	bb = compliance.NewBenchmarksBackend(client, cache)
-	sb = compliance.NewSnapshotBackend(client, cache)
+	rb = compliance.NewReportsBackend(client, cache, 10000)
+	bb = compliance.NewBenchmarksBackend(client, cache, 10000)
+	sb = compliance.NewSnapshotBackend(client, cache, 10000)
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.

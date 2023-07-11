@@ -7,7 +7,6 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
-	// . "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	log "github.com/sirupsen/logrus"
@@ -20,6 +19,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/api"
 	calres "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 	testutils "github.com/projectcalico/calico/policy-recommendation/tests/utils"
+	"github.com/projectcalico/calico/policy-recommendation/utils"
 )
 
 const (
@@ -32,9 +32,6 @@ const (
 	namespace2 = "ns2"
 	namespace3 = "ns3"
 
-	defaultInterval      = 150 * time.Second
-	defaultStabilization = 10 * time.Minute
-
 	timeNowRFC3339 = "2022-11-30T09:01:38Z"
 )
 
@@ -45,6 +42,8 @@ func (mockRealClock) NowRFC3339() string { return timeNowRFC3339 }
 var mrc mockRealClock
 
 var _ = Describe("processFlow", func() {
+	const serviceNameSuffix = "svc.cluster.local"
+
 	var (
 		recEngine *recommendationEngine
 
@@ -63,7 +62,7 @@ var _ = Describe("processFlow", func() {
 
 	BeforeEach(func() {
 		recEngine = newRecommendationEngine(
-			name, namespace, tier, &order, clock, interval, stabilization, *log.WithField("cluster", "my-cluster"))
+			name, namespace, tier, &order, clock, interval, stabilization, serviceNameSuffix, *log.WithField("cluster", "my-cluster"))
 
 		err := testutils.LoadData(testDataFile, &flowData)
 		Expect(err).To(BeNil())
@@ -204,6 +203,8 @@ var _ = Describe("processFlow", func() {
 })
 
 var _ = Describe("ProcessRecommendation", func() {
+	const serviceNameSuffix = "svc.cluster.local"
+
 	var (
 		recEngine *recommendationEngine
 
@@ -222,7 +223,7 @@ var _ = Describe("ProcessRecommendation", func() {
 
 	BeforeEach(func() {
 		recEngine = newRecommendationEngine(
-			name, namespace, tier, &order, clock, interval, stabilization, *log.WithField("cluster", "my-cluster"))
+			name, namespace, tier, &order, clock, interval, stabilization, serviceNameSuffix, *log.WithField("cluster", "my-cluster"))
 
 		err := testutils.LoadData(testDataFile, &flowData)
 		Expect(err).To(BeNil())
@@ -248,7 +249,8 @@ var _ = Describe("ProcessRecommendation", func() {
 			Controller:         &ctrl,
 			BlockOwnerDeletion: &bod,
 		}
-		snp := calres.NewStagedNetworkPolicy("name1", "namespace1", "tier1", owner)
+
+		snp := calres.NewStagedNetworkPolicy(utils.GetPolicyName(tier, "name1", func() string { return "xv5fb" }), "namespace1", tier, owner)
 		snp.Spec.Egress = currentNamespaceRules
 
 		recEngine.processRecommendation([]*api.Flow{}, snp)
@@ -295,39 +297,6 @@ var _ = Describe("CompStrArrays", func() {
 	for _, testCase := range testCases {
 		It(fmt.Sprintf("returns %v when comparing %v and %v", testCase.expected, testCase.a, testCase.b), func() {
 			Expect(compStrArrays(testCase.a, testCase.b)).To(Equal(testCase.expected))
-		})
-	}
-})
-
-var _ = Describe("updateStatusAnnotation", func() {
-	tstr := timeNowRFC3339
-	ts, err := time.Parse(time.RFC3339, tstr)
-	Expect(err).To(BeNil())
-	testCases := []struct {
-		an             map[string]string
-		er             bool
-		invl           time.Duration
-		stbl           time.Duration
-		tnow           string
-		expectedStatus string
-	}{
-		{an: map[string]string{calres.LastUpdatedKey: ts.Add(-(2 * defaultInterval)).Format(time.RFC3339)}, er: false, invl: -(2 * defaultInterval), stbl: defaultStabilization, tnow: tstr, expectedStatus: calres.LearningStatus},
-		{an: map[string]string{calres.LastUpdatedKey: ts.Add(-(defaultStabilization)).Format(time.RFC3339)}, er: false, invl: -(defaultStabilization), stbl: defaultStabilization, tnow: tstr, expectedStatus: calres.StabilizingStatus},
-		{an: map[string]string{calres.LastUpdatedKey: ts.Add(-(defaultStabilization + (1 * time.Second))).Format(time.RFC3339)}, invl: -(defaultStabilization + (1 * time.Second)), stbl: defaultStabilization, tnow: tstr, er: false, expectedStatus: calres.StableStatus},
-	}
-
-	for _, testCase := range testCases {
-		It(fmt.Sprintf("returns %s for time now: %s, lastUpdated time: %s with interval: %s and stabilization: %s",
-			testCase.expectedStatus, testCase.tnow, testCase.an[calres.LastUpdatedKey], testCase.invl, testCase.stbl), func() {
-
-			snp := &v3.StagedNetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: testCase.an,
-				},
-			}
-
-			updateStatusAnnotation(snp, testCase.er, testCase.tnow, testCase.invl, testCase.stbl)
-			Expect(snp.Annotations[calres.StatusKey]).To(Equal(testCase.expectedStatus))
 		})
 	}
 })
@@ -581,12 +550,7 @@ var (
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: mrc.NowRFC3339(),
-	// 				calres.ScopeKey:       "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
+	// 				calres.LastUpdatedKey: mrc.NowRFC3339(),s.clock
 	// 	{
 	// 		Action: v3.Allow,
 	// 		Destination: v3.EntityRule{
@@ -863,7 +827,6 @@ var (
 			Destination: v3.EntityRule{
 				NamespaceSelector: namespace1,
 				Ports:             portsOrdered1,
-				Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 			},
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -879,7 +842,6 @@ var (
 			Destination: v3.EntityRule{
 				NamespaceSelector: namespace1,
 				Ports:             portsOrdered1,
-				Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 			},
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -895,7 +857,6 @@ var (
 			Destination: v3.EntityRule{
 				NamespaceSelector: namespace2,
 				Ports:             portsOrdered3,
-				Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 			},
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -911,7 +872,6 @@ var (
 			Destination: v3.EntityRule{
 				NamespaceSelector: namespace3,
 				Ports:             portsOrdered3,
-				Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 			},
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -930,7 +890,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace1,
 	// 			Ports:             portsOrdered2,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -945,7 +904,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace2,
 	// 			Ports:             portsOrdered1,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -960,7 +918,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace1,
 	// 			Ports:             portsOrdered1,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -975,7 +932,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace2,
 	// 			Ports:             portsOrdered3,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -993,7 +949,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace1,
 	// 			Ports:             portsOrdered2,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -1009,7 +964,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace2,
 	// 			Ports:             portsOrdered1,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -1025,7 +979,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace1,
 	// 			Ports:             portsOrdered1,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -1041,7 +994,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace2,
 	// 			Ports:             portsOrdered3,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -1057,7 +1009,6 @@ var (
 	// 		Destination: v3.EntityRule{
 	// 			NamespaceSelector: namespace3,
 	// 			Ports:             portsOrdered3,
-	// 			Selector:          fmt.Sprintf("%s/orchestrator == k8s", calres.PolicyRecKeyName),
 	// 		},
 	// 		Metadata: &v3.RuleMetadata{
 	// 			Annotations: map[string]string{
@@ -1075,17 +1026,17 @@ var (
 	exptedBlockOwnerDelete = false
 	expectedSnp            = v3.StagedNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "tier1.name1-recommendation",
+			Name:      "test_tier.name1-xv5fb",
 			Namespace: "namespace1",
 			Labels: map[string]string{
 				"policyrecommendation.tigera.io/scope":  "namespace",
 				"projectcalico.org/spec.stagedAction":   "Learn",
-				"projectcalico.org/tier":                "tier1",
+				"projectcalico.org/tier":                "test_tier",
 				"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
 			},
 			Annotations: map[string]string{
 				"policyrecommendation.tigera.io/lastUpdated": "2022-11-30T09:01:38Z",
-				"policyrecommendation.tigera.io/status":      "Learning",
+				"policyrecommendation.tigera.io/status":      "NoData",
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -1100,7 +1051,7 @@ var (
 		},
 		Spec: v3.StagedNetworkPolicySpec{
 			StagedAction: v3.StagedActionLearn,
-			Tier:         "tier1",
+			Tier:         "test_tier",
 			Order:        &expectedOrder,
 			Selector:     "projectcalico.org/namespace == 'namespace1'",
 			Types: []v3.PolicyType{
@@ -1112,7 +1063,6 @@ var (
 					Protocol: &protocolTCP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
-						Selector:          "projectcalico.org/orchestrator == k8s",
 						NamespaceSelector: "projectcalico.org/name == namespace1",
 						Ports: []numorstring.Port{
 							{
@@ -1135,7 +1085,6 @@ var (
 					Protocol: &protocolTCP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
-						Selector:          "projectcalico.org/orchestrator == k8s",
 						NamespaceSelector: "projectcalico.org/name == namespace2",
 						Ports: []numorstring.Port{
 							{
@@ -1158,7 +1107,6 @@ var (
 					Protocol: &protocolTCP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
-						Selector:          "policyrecommendation.tigera.io/orchestrator == k8s",
 						NamespaceSelector: "ns1",
 						Ports: []numorstring.Port{
 							{
@@ -1188,7 +1136,6 @@ var (
 					Protocol: &protocolUDP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
-						Selector:          "policyrecommendation.tigera.io/orchestrator == k8s",
 						NamespaceSelector: "ns1",
 						Ports: []numorstring.Port{
 							{
@@ -1218,7 +1165,6 @@ var (
 					Protocol: &protocolUDP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
-						Selector:          "policyrecommendation.tigera.io/orchestrator == k8s",
 						NamespaceSelector: "ns2",
 						Ports: []numorstring.Port{
 							{
@@ -1240,7 +1186,6 @@ var (
 					Protocol: &protocolUDP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
-						Selector:          "policyrecommendation.tigera.io/orchestrator == k8s",
 						NamespaceSelector: "ns3",
 						Ports: []numorstring.Port{
 							{
@@ -1263,7 +1208,6 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protocolTCP,
 					Source: v3.EntityRule{
-						Selector:          "projectcalico.org/orchestrator == k8s",
 						NamespaceSelector: "projectcalico.org/name == namespace1",
 						Ports: []numorstring.Port{
 							{
@@ -1286,7 +1230,6 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protocolTCP,
 					Source: v3.EntityRule{
-						Selector:          "projectcalico.org/orchestrator == k8s",
 						NamespaceSelector: "projectcalico.org/name == namespace1",
 						Ports: []numorstring.Port{
 							{
@@ -1309,7 +1252,6 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protocolTCP,
 					Source: v3.EntityRule{
-						Selector:          "projectcalico.org/orchestrator == k8s",
 						NamespaceSelector: "projectcalico.org/name == namespace1",
 						Ports: []numorstring.Port{
 							{
@@ -1332,7 +1274,6 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protocolTCP,
 					Source: v3.EntityRule{
-						Selector:          "projectcalico.org/orchestrator == k8s",
 						NamespaceSelector: "projectcalico.org/name == namespace1",
 						Ports: []numorstring.Port{
 							{

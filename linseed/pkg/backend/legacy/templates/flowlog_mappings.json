@@ -1,4 +1,5 @@
 {
+  "dynamic": false,
     "properties": {
       "@timestamp": {
         "type": "date"
@@ -35,7 +36,7 @@
       },
       "dest_port": {
         "type": "long",
-        "null_value": "0"
+        "null_value": 0
       },
       "dest_port_num": {
         "type": "alias",
@@ -59,7 +60,7 @@
       },
       "dest_service_port_num": {
         "type": "long",
-        "null_value": "0"
+        "null_value": 0
       },
       "dest_labels": {
         "type": "nested",
@@ -161,7 +162,7 @@
       },
       "source_port": {
         "type": "long",
-        "null_value": "0"
+        "null_value": 0
       },
       "source_port_num": {
         "type": "alias",

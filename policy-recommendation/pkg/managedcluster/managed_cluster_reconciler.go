@@ -23,6 +23,7 @@ import (
 	"github.com/projectcalico/calico/policy-recommendation/pkg/policyrecommendation"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/stagednetworkpolicies"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
+	"github.com/projectcalico/calico/policy-recommendation/utils"
 )
 
 type managedClusterReconciler struct {
@@ -81,6 +82,12 @@ func (r *managedClusterReconciler) startRecommendationPolicyControllerForManaged
 		return err
 	}
 
+	// TODO(dimitrin): Get the managed cluster clusterDomain from each managed cluster's
+	// /etc/resolv.conf contents.
+	// We set the cluster domain for each managed cluster to a const value, until an approach has
+	// been implemented to address accessing the files contents for each managed cluster.
+	serviceNameSuffix := utils.GetServiceNameSuffix(utils.DefaultClusterDomain)
+
 	// SNP cache
 	snpResourceCache := cache.NewSynchronizedObjectCache[*v3.StagedNetworkPolicy]()
 
@@ -97,14 +104,17 @@ func (r *managedClusterReconciler) startRecommendationPolicyControllerForManaged
 	}
 
 	// Setup Synchronizer
-	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSetForCluster, *caches)
+	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSetForCluster, *caches, utils.SuffixGenerator)
 
+	suffixGenerator := utils.SuffixGenerator
 	policyRecController := policyrecommendation.NewPolicyRecommendationController(
 		clientSetForCluster.ProjectcalicoV3(),
 		r.linseed,
 		cacheSynchronizer,
 		caches,
 		mc.Name,
+		serviceNameSuffix,
+		&suffixGenerator,
 	)
 	stagednetworkpoliciesController := stagednetworkpolicies.NewStagedNetworkPolicyController(
 		clientSetForCluster.ProjectcalicoV3(),

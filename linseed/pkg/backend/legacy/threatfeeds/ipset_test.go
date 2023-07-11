@@ -49,8 +49,8 @@ func setupTest(t *testing.T) func() {
 	cache = templates.NewTemplateCache(client, 1, 0)
 
 	// Create backends to use.
-	ib = threatfeeds.NewIPSetBackend(client, cache)
-	db = threatfeeds.NewDomainNameSetBackend(client, cache)
+	ib = threatfeeds.NewIPSetBackend(client, cache, 10000)
+	db = threatfeeds.NewDomainNameSetBackend(client, cache, 10000)
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.

@@ -6,10 +6,13 @@ import (
 	"fmt"
 )
 
+const WafEventType = "waf"
+
 var (
 	EventsKeys = map[string]Validator{
 		"_id":              NullValidator,
 		"alert":            NullValidator,
+		"attack_vector":    NullValidator,
 		"dest_ip":          IPValidator,
 		"dest_name":        DomainValidator,
 		"dest_name_aggr":   DomainValidator,
@@ -17,7 +20,10 @@ var (
 		"dest_port":        IntRangeValidator(0, MaxTCPUDPPortNum),
 		"dismissed":        SetValidator("true", "false"),
 		"host":             NullValidator,
+		"mitre_tactic":     NullValidator,
+		"name":             NullValidator,
 		"origin":           NullValidator,
+		"severity":         IntRangeValidator(0, 100),
 		"source_ip":        IPValidator,
 		"source_name":      DomainValidator,
 		"source_name_aggr": DomainValidator,
@@ -32,8 +38,10 @@ var (
 			"gtf_suspicious_dns_query",
 			"gtf_suspicious_flow",
 			"honeypod",
+			"runtime_security",
 			"suspicious_dns_query",
 			"suspicious_flow",
+			"waf",
 		),
 	}
 )

@@ -5,6 +5,7 @@ package policyrecommendation
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"reflect"
 	"sync"
@@ -23,11 +24,12 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	linseed "github.com/projectcalico/calico/linseed/pkg/client"
-	calicoresources "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
+	calicores "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/engine"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/resources"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
 	prtypes "github.com/projectcalico/calico/policy-recommendation/pkg/types"
+	"github.com/projectcalico/calico/policy-recommendation/utils"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 )
 
@@ -43,16 +45,18 @@ const (
 )
 
 type policyRecommendationReconciler struct {
-	stateLock     sync.Mutex
-	state         *policyRecommendationScopeState
-	calico        calicoclient.ProjectcalicoV3Interface
-	linseedClient linseed.Client
-	synchronizer  client.QueryInterface
-	caches        *syncer.CacheSet
-	cluster       string
-	tickDuration  chan time.Duration
-	clock         engine.Clock
-	ticker        *time.Ticker
+	stateLock         sync.Mutex
+	state             *policyRecommendationScopeState
+	calico            calicoclient.ProjectcalicoV3Interface
+	linseedClient     linseed.Client
+	synchronizer      client.QueryInterface
+	caches            *syncer.CacheSet
+	cluster           string
+	serviceNameSuffix string
+	tickDuration      chan time.Duration
+	clock             engine.Clock
+	ticker            *time.Ticker
+	suffixGenerator   *func() string
 }
 
 type policyRecommendationScopeState struct {
@@ -66,31 +70,23 @@ func NewPolicyRecommendationReconciler(
 	synchronizer client.QueryInterface,
 	caches *syncer.CacheSet,
 	clock engine.Clock,
+	serviceSuffixName string,
+	suffixGenerator *func() string,
 ) *policyRecommendationReconciler {
 	td := new(chan time.Duration)
 
 	return &policyRecommendationReconciler{
-		state:         nil,
-		calico:        calico,
-		linseedClient: linseedClient,
-		synchronizer:  synchronizer,
-		caches:        caches,
-		tickDuration:  *td,
-		clock:         clock,
+		state:             nil,
+		calico:            calico,
+		linseedClient:     linseedClient,
+		synchronizer:      synchronizer,
+		caches:            caches,
+		tickDuration:      *td,
+		clock:             clock,
+		serviceNameSuffix: serviceSuffixName,
+		suffixGenerator:   suffixGenerator,
 	}
 }
-
-func NewPolicyRecommendationScopeState(
-	object *v3.PolicyRecommendationScope,
-	cancel context.CancelFunc,
-) *policyRecommendationScopeState {
-	return &policyRecommendationScopeState{
-		object: *object,
-		cancel: cancel,
-	}
-}
-
-// Public
 
 func (pr *policyRecommendationReconciler) Reconcile(name types.NamespacedName) error {
 	if pr.calico == nil {
@@ -189,8 +185,6 @@ func (pr *policyRecommendationReconciler) Close() {
 	pr.cancelRecommendationRoutine()
 }
 
-// Private
-
 func (pr *policyRecommendationReconciler) cancelRecommendationRoutine() {
 	pr.stateLock.Lock()
 	defer pr.stateLock.Unlock()
@@ -234,12 +228,11 @@ func (pr *policyRecommendationReconciler) continuousRecommend(ctx context.Contex
 
 						if currEnabled {
 							// Generate new recommendations, and sync with datastore
-
-							// Get the list of synched-up policies
 							snps := pr.caches.StagedNetworkPolicies.GetAll()
 							for _, snp := range snps {
 								pr.RecommendSnp(ctx, pr.clock, snp)
 							}
+
 						}
 					}
 				}
@@ -301,31 +294,46 @@ func (pr *policyRecommendationReconciler) getLookback(snp v3.StagedNetworkPolicy
 // RecommendSnp consolidates an snp rules into the engine's for a new run, and updates the datastore
 // if a change occurs.
 func (pr *policyRecommendationReconciler) RecommendSnp(ctx context.Context, clock engine.Clock, snp *v3.StagedNetworkPolicy) {
-	// time to look back while querying flows
-	lookback := pr.getLookback(*snp)
-
-	order := float64(tierOrder)
-	interval := pr.state.object.Spec.Interval.Duration
-	stbl := pr.state.object.Spec.StabilizationPeriod.Duration
-
-	owner := getRecommendationScopeOwner(&pr.state.object)
+	tierOrderPtr := ptrFloat64(tierOrder)
 
 	// Run the engine to update the snp's rules from new flows
 	engine.RunEngine(
-		ctx, pr.calico, pr.linseedClient, lookback, &order, pr.cluster, clock, interval, stbl, owner, snp,
+		ctx,
+		pr.calico,
+		pr.linseedClient,
+		pr.getLookback(*snp),
+		tierOrderPtr,
+		pr.cluster,
+		pr.serviceNameSuffix,
+		clock,
+		pr.state.object.Spec.Interval.Duration,
+		pr.state.object.Spec.StabilizationPeriod.Duration,
+		getRecommendationScopeOwner(&pr.state.object),
+		snp,
 	)
 
-	// Create the Policy Recommendation tier, if it doesn't already exist
-	tier := snp.Spec.Tier
-	if err := calicoresources.MaybeCreateTier(ctx, pr.calico, tier, &order); err != nil {
-		log.WithError(err).Errorf("failed to create tier: %s", tier)
+	if err := calicores.MaybeCreateTier(ctx, pr.calico, prtypes.PolicyRecommendationTier, tierOrderPtr); err != nil {
+		// Failed to create the tier, cannot proceed further. Will give it a go in the next cycle
 		return
 	}
 
-	// Update the snp on the datastore
-	if err := pr.syncToDatastore(ctx, snp); err != nil {
-		log.WithError(err).Debugf("failed to write staged network policy for namespace: %s", snp.Name)
+	prevStatus, currStatus := pr.updateStatus(snp)
+	if currStatus == calicores.StableStatus && prevStatus != calicores.StableStatus {
+		// Once stable, replace the policy with a new one, containing a different name suffix
+		pr.replaceRecommendation(ctx, snp)
+	} else {
+		// Update the snp on the datastore
+		_ = pr.syncToDatastore(ctx, snp.Name, snp.Namespace, snp)
 	}
+}
+
+// getPolicyCopyWithNewSuffix returns a copy of the staged network policy with a new hash suffix in
+// the name.
+func (pr *policyRecommendationReconciler) getPolicyCopyWithNewSuffix(snp v3.StagedNetworkPolicy) v3.StagedNetworkPolicy {
+	// Create a copy with a new suffix in the name
+	snp.Name = utils.GetPolicyName(snp.Spec.Tier, snp.Namespace, *pr.suffixGenerator)
+
+	return snp
 }
 
 // reconcileCacheMeta reconciles the staged action metadata of the cache, if the datastore values
@@ -337,137 +345,225 @@ func (pr *policyRecommendationReconciler) reconcileCacheMeta(cache, store *v3.St
 	}
 
 	sa := store.Spec.StagedAction
-	if cache.Spec.StagedAction != sa || cache.Labels[calicoresources.StagedActionKey] != string(sa) {
+	if cache.Spec.StagedAction != sa || cache.Labels[calicores.StagedActionKey] != string(sa) {
 		log.WithField("key", cache).Debugf("Reconciling cached staged action to: %s", sa)
 		cache.Spec.StagedAction = sa
-		cache.Labels[calicoresources.StagedActionKey] = string(sa)
+		cache.Labels[calicores.StagedActionKey] = string(sa)
 	}
 }
 
-// shouldSkipStoreUpdate returns true of the store is nil, but the cache isn't or if the store's
-// staged action metadata differs from that of the cache's
-func (pr *policyRecommendationReconciler) shouldSkipStoreUpdate(cache, store *v3.StagedNetworkPolicy) bool {
-	if cache == nil {
-		return true
+// isEnforced returns true if there is a policy within the same namespace that is enforced within
+// the same tier.
+func (pr *policyRecommendationReconciler) isEnforced(ctx context.Context, namespace string, clog *log.Entry) bool {
+	if nps, err := pr.calico.NetworkPolicies(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", calicores.TierKey, pr.state.object.Spec.NamespaceSpec.TierName),
+	}); err == nil {
+		if len(nps.Items) > 0 {
+			return true
+		}
+	} else {
+		clog.WithError(err).Error("failed to get the network policy")
+	}
+
+	return false
+}
+
+// isLearning returns true if the recommendation is in 'Learning' status. The recommendation has to
+// be owned by the v3.PolicyRecommendationScope resource to be learning.
+func (pr *policyRecommendationReconciler) isLearning(snp *v3.StagedNetworkPolicy) bool {
+	if snp == nil {
+		return false
 	}
 
 	owner := getRecommendationScopeOwner(&pr.state.object)
 	owners := []metav1.OwnerReference{*owner}
-	if cache.OwnerReferences == nil || !reflect.DeepEqual(cache.OwnerReferences, owners) {
-		// If the recommendation is not owned by policy recommendation, don't update
-		return true
+	if snp.OwnerReferences == nil || !reflect.DeepEqual(snp.OwnerReferences, owners) {
+		// If the recommendation is not owned by policy recommendation, it isn't learning
+		return false
 	}
-
-	if (store == nil && cache.Spec.StagedAction == v3.StagedActionLearn) ||
-		(store != nil && store.Spec.StagedAction == v3.StagedActionLearn) {
-		// An update should occur. The cache is in 'Learn' state, and the only source of truth, or the
-		// store is in 'Learn' state
+	if snp.Spec.StagedAction != v3.StagedActionLearn {
 		return false
 	}
 
 	return true
 }
 
+// replaceRecommendation replaces the cache and store entries with a new policy. The new policy is a copy of the old one, with a new
+// The approach meant to address denied-bytes associated with long lived connections.
+func (pr *policyRecommendationReconciler) replaceRecommendation(ctx context.Context, snp *v3.StagedNetworkPolicy) {
+	namespace := snp.Namespace
+	// Delete the processing recommendation from the store
+	oldKey := snp.Name
+	if err := pr.syncToDatastore(ctx, oldKey, namespace, nil); err != nil {
+		log.WithField("key", oldKey).Debug("Could not delete policy")
+		return
+	}
+	// Add the new recommendation to the store. This will be the stable version of the old policy
+	newSnp := pr.getPolicyCopyWithNewSuffix(*snp)
+	newKey := newSnp.Name
+	if err := pr.syncToDatastore(ctx, newKey, namespace, &newSnp); err != nil {
+		log.WithField("key", newKey).Debug("Could not create policy")
+		return
+	}
+	// Update the cache after a successful replacement
+	pr.caches.StagedNetworkPolicies.Set(namespace, &newSnp)
+	log.WithField("key", newSnp.Name).Debug("Added item to cache")
+
+	log.Infof("Replaced %s with stable recommendation %s", oldKey, newKey)
+}
+
 // syncToDatastore syncs staged network policy item in the cache with the Calico datastore. Updates
 // the datastore only if there are rules associated with the cached policy, otherwise returns
 // without error.
-func (pr *policyRecommendationReconciler) syncToDatastore(ctx context.Context, cacheItem *v3.StagedNetworkPolicy) error {
-	if cacheItem == nil {
-		log.Debug("Empty cache item, skipping sync to datastore")
-		return nil
-	}
-
-	key := cacheItem.Name
-	clog := log.WithField("key", key)
+func (pr *policyRecommendationReconciler) syncToDatastore(ctx context.Context, cacheKey, namespace string, cacheItem *v3.StagedNetworkPolicy) error {
+	clog := log.WithField("key", cacheKey)
+	key := cacheKey
 	clog.Debug("Synching to datastore")
 
-	if len(cacheItem.Spec.Types) == 0 {
+	if cacheItem == nil {
+		datastoreSnp, err := pr.calico.StagedNetworkPolicies(namespace).Get(ctx, key, metav1.GetOptions{})
+		if err == nil {
+			if datastoreSnp != nil && pr.isLearning(datastoreSnp) {
+				if err := pr.calico.StagedNetworkPolicies(namespace).Delete(ctx, cacheKey, metav1.DeleteOptions{}); err != nil {
+					if !k8serrors.IsNotFound(err) {
+						clog.WithError(err).Error("failed to delete StagedNetworkPolicy")
+					}
+
+					return err
+				}
+				clog.Info("Deleted StagedNetworkPolicy from datastore")
+				return nil
+			}
+
+			return errors.New("cannot delete an active policy")
+		}
+
+		return err
+	}
+
+	if skipUpdate(cacheItem) {
 		// Cached item does not contain rules, return without error
-		clog.WithField("stagedNetworkPolicy", key).Debugf("Skipping StagedNetworkPolicy update, cached item contains empty rules")
+		clog.Debugf("Skipping StagedNetworkPolicy update, cached item doesn't contain rules")
 		return nil
 	}
 
-	namespace := cacheItem.Namespace
-
-	// Lookup the item in the datastore
 	datastoreSnp, err := pr.calico.StagedNetworkPolicies(namespace).Get(ctx, key, metav1.GetOptions{})
 	if err != nil {
 		if !k8serrors.IsNotFound(err) {
-			clog.WithError(err).Info("Unexpected error querying StagedNetworkPolicies")
+			clog.WithError(err).Error("failed to create StagedNetworkPolicy in datastore")
 			// We hit an error other than "not found"
 			return err
 		}
 
-		if pr.shouldSkipStoreUpdate(cacheItem, nil) {
+		if pr.isEnforced(ctx, namespace, clog) {
+			// An enforced network policy exists in the tier and namespace
+			clog.Debug("Skipping datastore creation, enforced policy exists")
 			return nil
 		}
 
-		addCreationTimestamp(pr.clock, cacheItem)
-
 		// Item does not exist in the datastore - create a new StagedNetworkPolicy
-		clog.WithField("stagedNetworkPolicy", key).Info("Creating StagedNetworkPolicy in Calico datastore")
 		if _, err = pr.calico.StagedNetworkPolicies(namespace).Create(ctx, cacheItem, metav1.CreateOptions{}); err != nil {
-			clog.WithError(err).Infof("Error creating StagedNetworkPolicy in Calico datastore: %#v", cacheItem)
+			clog.WithError(err).Error("failed to create StagedNetworkPolicy in datastore")
 			return err
 		}
+		clog.Info("Created StagedNetworkPolicy in datastore")
 
 		return nil
 	}
 
+	// Updates to the store value's stagedAction should be synced with the cache item
 	pr.reconcileCacheMeta(cacheItem, datastoreSnp)
 
-	// Update the datastore to reflect the its latest state
-	if !pr.shouldSkipStoreUpdate(cacheItem, datastoreSnp) && !equalSnps(datastoreSnp, cacheItem) {
-		clog.WithField("stagedNetworkPolicy", key).Infof("Updating StagedNetworkPolicy in Calico datastore")
-		// Copy over relevant items. This way we make sure that we don't update any unintended parameters
-		copyStagedNetworkPolicy(datastoreSnp, *cacheItem)
+	if pr.isLearning(datastoreSnp) && !equalSnps(datastoreSnp, cacheItem) {
+		// Update a store to reflect the update to the cache
+		utils.CopyStagedNetworkPolicy(datastoreSnp, *cacheItem)
+
 		if _, err = pr.calico.StagedNetworkPolicies(namespace).Update(ctx, datastoreSnp, metav1.UpdateOptions{}); err != nil {
-			clog.WithError(err).Infof("Error updating StagedNetworkPolicy in Calico datastore: %#v", datastoreSnp)
+			clog.WithError(err).Error("failed to update StagedNetworkPolicy in datastore")
 			return err
 		}
+		clog.WithField("stagedNetworkPolicy", key).Info("Updated StagedNetworkPolicy in datastore")
 	}
 
 	return nil
 }
 
-// Utilities
+// updateStatus updates the recommendation's status, and returns true if the status has become
+// stable
+func (pr *policyRecommendationReconciler) updateStatus(snp *v3.StagedNetworkPolicy) (prev, curr string) {
+	prev = snp.Annotations[calicores.StatusKey]
+	// Update the status annotation, if necessary
+	pr.updateStatusAnnotation(snp)
+	curr = snp.Annotations[calicores.StatusKey]
 
-func addCreationTimestamp(clock engine.Clock, snp *v3.StagedNetworkPolicy) {
-	if clock == nil || snp == nil {
-		log.Errorf("failed to update creation timestamp")
+	return
+}
+
+// updateStatusAnnotation updates the learning annotation of a staged network policy given
+// the time since the last update.
+//
+//   - Learning
+//     Policy rule was updated <= 2 x recommendation interval ago
+//   - Stabilizing
+//     Policy was updated > 2 x recommendation interval ago. The flows contain policy matches that
+//     match the expected policy hits for the recommended policy, and may still contain some logs
+//     that do not. The flows that do not match are fully covered by the existing rules in the
+//     recommended policy (i.e. no further changes are required to the policy)
+//   - Stable
+//     Policy was updated > stabilization period ago. The flows all contain the expected
+//     recommended policy hits
+func (pr *policyRecommendationReconciler) updateStatusAnnotation(snp *v3.StagedNetworkPolicy) {
+	if len(snp.Spec.Egress) == 0 && len(snp.Spec.Ingress) == 0 {
+		// No update to status annotation necessary
 		return
 	}
-	snp.Annotations[calicoresources.CreationTimestampKey] = clock.NowRFC3339()
+
+	lastUpdateStr, ok := snp.Annotations[calicores.LastUpdatedKey]
+	if !ok {
+		// Fist time creating the last update key
+		snp.Annotations[calicores.StatusKey] = calicores.LearningStatus
+		return
+	}
+	snpLastUpdateTime, err := time.Parse(time.RFC3339, lastUpdateStr)
+	if err != nil {
+		log.WithError(err).Debugf("Failed to parse snp last update time using the RFC3339 format")
+		return
+	}
+	nowTime, err := time.Parse(time.RFC3339, pr.clock.NowRFC3339())
+	if err != nil {
+		log.WithError(err).Debugf("Failed to parse the time now using the RFC3339 format")
+		return
+	}
+	durationSinceLastUpdate := nowTime.Sub(snpLastUpdateTime)
+
+	learningPeriod := 2 * pr.state.object.Spec.Interval.Duration
+	stabilizingPeriod := pr.state.object.Spec.StabilizationPeriod.Duration
+
+	// Update status
+	switch {
+	case durationSinceLastUpdate >= 0 && durationSinceLastUpdate <= learningPeriod:
+		if snp.Annotations[calicores.StatusKey] != calicores.LearningStatus {
+			log.WithField("key", snp.Name).Debugf("Learning. Duration since last update %f <= %f", durationSinceLastUpdate.Seconds(), learningPeriod.Seconds())
+			snp.Annotations[calicores.StatusKey] = calicores.LearningStatus
+		}
+	case durationSinceLastUpdate <= stabilizingPeriod:
+		if snp.Annotations[calicores.StatusKey] != calicores.StabilizingStatus {
+			log.WithField("key", snp.Name).Debugf("Stablizing. Duration since last update %f > %f (learning period) and %f <= %f (stable period)",
+				durationSinceLastUpdate.Seconds(), learningPeriod.Seconds(), durationSinceLastUpdate.Seconds(), stabilizingPeriod.Seconds())
+			snp.Annotations[calicores.StatusKey] = calicores.StabilizingStatus
+		}
+	case durationSinceLastUpdate > stabilizingPeriod:
+		if snp.Annotations[calicores.StatusKey] != calicores.StableStatus {
+			log.WithField("key", snp.Name).Debugf("Stable. Duration since last update %f > %f", durationSinceLastUpdate.Seconds(), stabilizingPeriod.Seconds())
+			snp.Annotations[calicores.StatusKey] = calicores.StableStatus
+		}
+	default:
+		log.Warnf("Invalid status")
+		snp.Annotations[calicores.StatusKey] = calicores.NoDataStatus
+	}
 }
 
-// copyStagedNetworkPolicy copies the StagedNetworkPolicy context that may be altered by the engine,
-// from a source to a destination.
-// Copy:
-// - egress, ingress rules, and policy types
-// - Name, and namespace
-// - Labels, and annotations
-func copyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkPolicy) {
-	// Copy egress, ingres and policy type over to the destination
-	dest.Spec.Egress = make([]v3.Rule, len(src.Spec.Egress))
-	copy(dest.Spec.Egress, src.Spec.Egress)
-	dest.Spec.Ingress = make([]v3.Rule, len(src.Spec.Ingress))
-	copy(dest.Spec.Ingress, src.Spec.Ingress)
-	dest.Spec.Types = make([]v3.PolicyType, len(src.Spec.Types))
-	copy(dest.Spec.Types, src.Spec.Types)
-
-	// Copy ObjectMeta context. Context relevant to this controller is name, labels and annotation
-	dest.ObjectMeta.Name = src.GetObjectMeta().GetName()
-	dest.ObjectMeta.Namespace = src.GetObjectMeta().GetNamespace()
-
-	dest.ObjectMeta.Labels = make(map[string]string)
-	for key, label := range src.GetObjectMeta().GetLabels() {
-		dest.ObjectMeta.Labels[key] = label
-	}
-	dest.ObjectMeta.Annotations = make(map[string]string)
-	for key, annotation := range src.GetObjectMeta().GetAnnotations() {
-		dest.ObjectMeta.Annotations[key] = annotation
-	}
-}
+// Utilities
 
 // equalSnps returns true if two compared staged network policies are equal by name, namespace,
 // spec.selector, owner references, annotations, labels and rules to determine their equality.
@@ -578,6 +674,11 @@ func getRecommendationScopeOwner(scope *v3.PolicyRecommendationScope) *metav1.Ow
 	}
 }
 
+// ptrFloat64 returns a pointer to the float64 parameter passed in as input.
+func ptrFloat64(fl float64) *float64 {
+	return &fl
+}
+
 // setPolicyRecommendationScopeDefaults sets the default values of policy recommendations scope
 // parameters, if not defined in the resource definition. The recStatus and selector are assumed
 // to have been set.
@@ -612,4 +713,10 @@ func setPolicyRecommendationScopeDefaults(scope *v3.PolicyRecommendationScope) {
 	if scope.Spec.NamespaceSpec.TierName == "" {
 		scope.Spec.NamespaceSpec.TierName = prtypes.PolicyRecommendationTier
 	}
+}
+
+// skipUpdate returns true if the staged network policy's v3.PolicyType is empty, i.e. doesn't
+// contain any rules.
+func skipUpdate(snp *v3.StagedNetworkPolicy) bool {
+	return len(snp.Spec.Types) == 0
 }

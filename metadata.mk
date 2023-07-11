@@ -3,12 +3,12 @@
 #################################################################################################
 
 # The version of github.com/projectcalico/go-build to use.
-GO_BUILD_VER = v0.85
+GO_BUILD_VER = v0.86
 
 # Version of Kubernetes and kindest/node to use for tests.
-K8S_VERSION     = v1.24.7
+K8S_VERSION     = v1.24.15
 # This is used for bitnami/kubectl and kubectl binary release in compliance benchmarker, confd, and kube-controllers.
-KUBECTL_VERSION = v1.26.5
+KUBECTL_VERSION = v1.26.6
 
 # Version of various tools used in the build and tests.
 COREDNS_VERSION=1.5.2

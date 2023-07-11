@@ -4,6 +4,7 @@
 package checker
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -79,9 +80,14 @@ func TestWAFProcessHttpRequestHTTPGetAllowed(t *testing.T) {
 	Expect(resp.GetStatus().GetCode()).To(Equal(OK))
 }
 
-func TestWAFProcessHttpRequestHTTPGetDeniedSQLInjection(t *testing.T) {
+func TestWAFProcessHttpRequestPassThroughSQLInjection(t *testing.T) {
 	RegisterTestingT(t)
-	waf.InitializeLogging()
+
+	// Logging
+	waf.Logger = nil
+	memoryLog := bytes.Buffer{}
+	waf.InitializeLogging(&memoryLog)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -129,7 +135,7 @@ func TestWAFProcessHttpRequestHTTPGetDeniedSQLInjection(t *testing.T) {
 		},
 	}}
 
-	_ = waf.CheckRulesSetExists(waf.TestCoreRulesetDenyDirectory)
+	_ = waf.CheckRulesSetExists(waf.TestCoreRulesetPassDirectory)
 
 	waf.InitializeModSecurity()
 	filenames := waf.GetRulesSetFilenames()
@@ -137,7 +143,9 @@ func TestWAFProcessHttpRequestHTTPGetDeniedSQLInjection(t *testing.T) {
 
 	resp, err := uut.Check(ctx, req)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(resp.GetStatus().GetCode()).To(Equal(PERMISSION_DENIED))
+	Expect(resp.GetStatus().GetCode()).To(Equal(OK))
+	Expect(memoryLog.String()).To(ContainSubstring(
+		"\"message\":\"SQL Injection Attack Detected via libinjection\""))
 }
 
 func TestWAFProcessHttpRequestHTTPPostDeniedCrossSiteScript(t *testing.T) {

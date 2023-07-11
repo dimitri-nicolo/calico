@@ -3,7 +3,9 @@ package engine
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
@@ -11,7 +13,11 @@ import (
 )
 
 var _ = Describe("EngineRules", func() {
-	const timeNowRFC3339 = "2022-11-30T09:01:38Z"
+	const (
+		timeNowRFC3339 = "2022-11-30T09:01:38Z"
+
+		serviceNameSuffix = "svc.cluster.local"
+	)
 
 	var (
 		er *engineRules
@@ -38,11 +44,11 @@ var _ = Describe("EngineRules", func() {
 			}{
 				{direction: calicores.EgressTraffic, flow: api.Flow{}},
 				{direction: calicores.IngressTraffic, flow: api.Flow{}},
+				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Destination: api.FlowEndpointData{Domains: "www.some-domain.com,service.service-ns.svc.cluster.local", Port: &port444}}},
+				{direction: calicores.EgressTraffic, flow: api.Flow{Destination: api.FlowEndpointData{Domains: "www.some-empty-protocol-domain.com", Port: &port444}}},                                    // Empty Protocol
+				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Destination: api.FlowEndpointData{Domains: "service.service-ns.svc.cluster.local,www.empty-ports-domain.com"}}}, // Empty Ports
 				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Destination: api.FlowEndpointData{Domains: "www.some-domain.com", Port: &port444}}},
-				{direction: calicores.EgressTraffic, flow: api.Flow{Destination: api.FlowEndpointData{Domains: "www.some-empty-protocol-domain.com", Port: &port444}}}, // Empty Protocol
-				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Destination: api.FlowEndpointData{Domains: "www.empty-ports-domain.com"}}},   // Empty Ports
-				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Destination: api.FlowEndpointData{Domains: "www.some-domain.com", Port: &port444}}},
-				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Destination: api.FlowEndpointData{Domains: "www.some-other-domain.com", Port: &port444}}},
+				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Destination: api.FlowEndpointData{Domains: "www.some-other-domain.com,service.service-ns.svc.cluster.local", Port: &port444}}},
 				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Destination: api.FlowEndpointData{Domains: "www.some-domain.com", Port: &port444}}},  // no update necessary
 				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoICMP, Destination: api.FlowEndpointData{Domains: "www.some-icmp-domain.com", Port: nil}}}, // no update necessary
 			}
@@ -61,7 +67,7 @@ var _ = Describe("EngineRules", func() {
 			expectedNumberOfRules := 3
 
 			for _, td := range testData {
-				er.addFlowToEgressToDomainRules(td.direction, td.flow, mockRealClock{})
+				er.addFlowToEgressToDomainRules(td.direction, td.flow, mockRealClock{}, serviceNameSuffix)
 			}
 
 			Expect(er.size).To(Equal(expectedNumberOfRules))
@@ -541,5 +547,101 @@ var _ = Describe("EngineRules", func() {
 			Expect(len(er.networkSetRules)).To(Equal(0))
 			Expect(len(er.privateNetworkRules)).To(Equal(0))
 		})
+	})
+
+	Context("getFlowType", func() {
+		DescribeTable("Flow to rule mapping",
+			func(dir calicores.DirectionType, flow api.Flow, exp flowType) {
+				ft := getFlowType(dir, flow, serviceNameSuffix)
+
+				Expect(ft).To(Equal(exp))
+			},
+			// Egress
+			Entry("src/Net/Domain - EgressToDomain", calicores.EgressTraffic, api.Flow{
+				Reporter:    "src",
+				Source:      api.FlowEndpointData{},
+				Destination: api.FlowEndpointData{Type: api.EndpointTypeNet, Name: "pub", Domains: "www.tigera.com"},
+				ActionFlag:  api.ActionFlagAllow,
+			}, egressToDomainFlowType),
+			Entry("src/WEP/Service - EgressToService", calicores.EgressTraffic, api.Flow{
+				Reporter:    "src",
+				Source:      api.FlowEndpointData{},
+				Destination: api.FlowEndpointData{Type: api.EndpointTypeNet, ServiceName: "svc-ext"},
+				ActionFlag:  api.ActionFlagAllow,
+			}, egressToServiceFlowType),
+			Entry("src/WEP/Namespace - Namespace (Egress)", calicores.EgressTraffic, api.Flow{
+				Reporter:    "src",
+				Source:      api.FlowEndpointData{},
+				Destination: api.FlowEndpointData{Type: api.EndpointTypeWep, Namespace: "ns1"},
+				ActionFlag:  api.ActionFlagAllow,
+			}, namespaceFlowType),
+			Entry("src/NET/Domain - EgressToDomain (Egress)", calicores.EgressTraffic, api.Flow{
+				Reporter:    "src",
+				Source:      api.FlowEndpointData{},
+				Destination: api.FlowEndpointData{Type: api.EndpointTypeNet, Name: "pvt", Namespace: "-", Domains: "my.web.com,*.*.svc.cluster.local"},
+				ActionFlag:  api.ActionFlagAllow,
+			}, egressToDomainFlowType),
+			Entry("src/NET/Domain - Unsupported (Egress)", calicores.EgressTraffic, api.Flow{
+				Reporter:    "src",
+				Source:      api.FlowEndpointData{},
+				Destination: api.FlowEndpointData{Type: api.EndpointTypeNet, Name: "pvt", Namespace: "-", Domains: "*.*.svc.cluster.local"},
+				ActionFlag:  api.ActionFlagAllow,
+			}, unsupportedFlowType),
+			Entry("src/NS/Name - NetworkSet", calicores.EgressTraffic, api.Flow{
+				Reporter:    "src",
+				Source:      api.FlowEndpointData{},
+				Destination: api.FlowEndpointData{Type: api.EndpointTypeNs, Name: "public-ips"},
+				ActionFlag:  api.ActionFlagAllow,
+			}, networkSetFlowType),
+			Entry("src/NET/pvt - Private", calicores.EgressTraffic, api.Flow{
+				Reporter:    "src",
+				Source:      api.FlowEndpointData{},
+				Destination: api.FlowEndpointData{Type: api.EndpointTypeNet, Name: "pvt"},
+				ActionFlag:  api.ActionFlagAllow,
+			}, privateNetworkFlowType),
+			Entry("src/NETpub - Public", calicores.EgressTraffic, api.Flow{
+				Reporter:    "src",
+				Source:      api.FlowEndpointData{},
+				Destination: api.FlowEndpointData{Type: api.EndpointTypeNet, Name: "pub"},
+				ActionFlag:  api.ActionFlagAllow,
+			}, publicNetworkFlowType),
+			Entry("Hep - Unsupported", calicores.EgressTraffic, api.Flow{
+				Reporter:    "src",
+				Source:      api.FlowEndpointData{},
+				Destination: api.FlowEndpointData{Type: api.EndpointTypeHep},
+				ActionFlag:  api.ActionFlagAllow,
+			}, unsupportedFlowType),
+			// Ingress
+			Entry("dst/WEP/Namespace - Namespace (Ingress)", calicores.IngressTraffic, api.Flow{
+				Reporter:    "dst",
+				Source:      api.FlowEndpointData{Type: api.EndpointTypeWep, Namespace: "ns1"},
+				Destination: api.FlowEndpointData{},
+				ActionFlag:  api.ActionFlagAllow,
+			}, namespaceFlowType),
+			Entry("dst/WEP/Namespace - Namespace (Ingress)", calicores.IngressTraffic, api.Flow{
+				Reporter:    "dst",
+				Source:      api.FlowEndpointData{Type: api.EndpointTypeNs},
+				Destination: api.FlowEndpointData{},
+				ActionFlag:  api.ActionFlagAllow,
+			}, networkSetFlowType),
+			Entry("dst/Net/pvt - Private (Ingress)", calicores.IngressTraffic, api.Flow{
+				Reporter:    "dst",
+				Source:      api.FlowEndpointData{Type: api.EndpointTypeNet, Name: "pvt"},
+				Destination: api.FlowEndpointData{},
+				ActionFlag:  api.ActionFlagAllow,
+			}, privateNetworkFlowType),
+			Entry("dst/Net/pvt - Public (Ingress)", calicores.IngressTraffic, api.Flow{
+				Reporter:    "dst",
+				Source:      api.FlowEndpointData{Type: api.EndpointTypeNet, Name: "pub"},
+				Destination: api.FlowEndpointData{},
+				ActionFlag:  api.ActionFlagAllow,
+			}, publicNetworkFlowType),
+			Entry("Hep - Unsupported", calicores.IngressTraffic, api.Flow{
+				Reporter:    "dst",
+				Source:      api.FlowEndpointData{Type: api.EndpointTypeHep},
+				Destination: api.FlowEndpointData{},
+				ActionFlag:  api.ActionFlagAllow,
+			}, unsupportedFlowType),
+		)
 	})
 })

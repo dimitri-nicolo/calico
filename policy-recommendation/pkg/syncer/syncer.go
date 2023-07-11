@@ -11,10 +11,6 @@ import (
 	"github.com/projectcalico/calico/policy-recommendation/pkg/cache"
 )
 
-const (
-	StagedNetworkPolicyNameSuffix = "recommendation"
-)
-
 // The following are Query structs used for the RunQuery Interface from the corresponding
 // controller indicated by the Kubernetes Resource in the name.  (ie, NamespaceQuery will
 // be called from the  Namespace Controller to synchronize the caches)

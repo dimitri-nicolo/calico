@@ -21,18 +21,20 @@ import (
 )
 
 type wafLogBackend struct {
-	client    *elastic.Client
-	helper    index.Helper
-	lmaclient lmaelastic.Client
-	templates bapi.Cache
+	client               *elastic.Client
+	helper               index.Helper
+	lmaclient            lmaelastic.Client
+	templates            bapi.Cache
+	deepPaginationCutOff int64
 }
 
-func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.WAFBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.WAFBackend {
 	return &wafLogBackend{
-		client:    c.Backend(),
-		helper:    index.WAFLogs(),
-		lmaclient: c,
-		templates: cache,
+		client:               c.Backend(),
+		helper:               index.WAFLogs(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
 	}
 }
 
@@ -87,7 +89,7 @@ func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WA
 	log := bapi.ContextLogger(i)
 
 	// Get the base query.
-	search, startFrom, err := b.getSearch(ctx, i, opts)
+	search, startFrom, err := b.getSearch(i, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -108,16 +110,23 @@ func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WA
 		logs = append(logs, l)
 	}
 
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.List[v1.WAFLog]{
 		TotalHits: results.TotalHits(),
 		Items:     logs,
-		AfterKey:  logtools.NextStartFromAfterKey(opts, len(results.Hits.Hits), startFrom, results.TotalHits()),
+		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
 	}, nil
 }
 
 func (b *wafLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogAggregationParams) (*elastic.Aggregations, error) {
 	// Get the base query.
-	search, _, err := b.getSearch(ctx, i, &opts.WAFLogParams)
+	search, _, err := b.getSearch(i, &opts.WAFLogParams)
 	if err != nil {
 		return nil, err
 	}
@@ -149,14 +158,8 @@ func (b *wafLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opt
 	return &results.Aggregations, nil
 }
 
-func (b *wafLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogParams) (*elastic.SearchService, int, error) {
+func (b *wafLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.WAFLogParams) (*elastic.SearchService, int, error) {
 	if err := i.Valid(); err != nil {
-		return nil, 0, err
-	}
-
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(opts)
-	if err != nil {
 		return nil, 0, err
 	}
 
@@ -166,10 +169,15 @@ func (b *wafLogBackend) getSearch(ctx context.Context, i api.ClusterInfo, opts *
 		return nil, 0, err
 	}
 	query := b.client.Search().
-		Index(b.index(i)).
 		Size(opts.GetMaxPageSize()).
-		From(startFrom).
 		Query(q)
+
+	// Configure pagination options
+	var startFrom int
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	if err != nil {
+		return nil, 0, err
+	}
 
 	// Configure sorting.
 	if len(opts.Sort) != 0 {

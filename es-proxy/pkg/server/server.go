@@ -97,15 +97,6 @@ func Start(cfg *Config) error {
 	k8sClientSet := datastore.MustGetClientSet()
 	policyCalcConfig := pipcfg.MustLoadConfig()
 
-	// initialize Elastic client factory
-	envCfg := lmaelastic.MustLoadConfig()
-	esClientFactory := lmaelastic.NewClusterContextClientFactory(envCfg)
-	esClient, err := esClientFactory.ClientForCluster(cfg.ElasticIndexSuffix)
-	if err != nil {
-		log.WithError(err).Error("failed to create Elastic client from factory")
-		return err
-	}
-
 	// Create linseed Client.
 	config := lsrest.Config{
 		URL:             cfg.LinseedURL,
@@ -287,6 +278,15 @@ func Start(cfg *Config) error {
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
 
 	if !cfg.ElasticKibanaDisabled {
+		// initialize Elastic client factory
+		envCfg := lmaelastic.MustLoadConfig()
+		esClientFactory := lmaelastic.NewClusterContextClientFactory(envCfg)
+		esClient, err := esClientFactory.ClientForCluster(cfg.ElasticIndexSuffix)
+		if err != nil {
+			log.WithError(err).Error("failed to create Elastic client from factory")
+			return err
+		}
+
 		kibanaTLSConfig := calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
 		kibanaTLSConfig.InsecureSkipVerify = true
 		kibanaCli := kibana.NewClient(&http.Client{

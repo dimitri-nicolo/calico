@@ -29,6 +29,7 @@ import (
 	"github.com/projectcalico/calico/policy-recommendation/pkg/policyrecommendation"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/stagednetworkpolicies"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
+	"github.com/projectcalico/calico/policy-recommendation/utils"
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -82,6 +83,15 @@ func main() {
 		log.WithError(err).Fatal("Failed to build v3 Calico client")
 	}
 
+	clusterDomain, err := utils.GetClusterDomain(utils.DefaultResolveConfPath)
+	if err != nil {
+		clusterDomain = utils.DefaultClusterDomain
+		log.WithError(err).Errorf("Couldn't find the cluster domain from the resolv.conf, defaulting to %s", clusterDomain)
+	} else {
+		log.Debugf("clusterDomain: %s", clusterDomain)
+	}
+	serviceNameSuffix := utils.GetServiceNameSuffix(clusterDomain)
+
 	// Define some of the callbacks for the license monitor. Any changes
 	// just send a signal back on the license changed channel.
 	licenseMonitor := monitor.New(v3Client.(backendClientAccessor).Backend())
@@ -131,16 +141,19 @@ func main() {
 	}
 
 	// Setup Synchronizer
-	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSet, *caches)
+	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSet, *caches, utils.SuffixGenerator)
 
 	// Controller Setup
 	// create main controller
+	suffixGenerator := utils.SuffixGenerator
 	managementStandalonePolicyRecController := policyrecommendation.NewPolicyRecommendationController(
 		clientSet.ProjectcalicoV3(),
 		linseed,
 		cacheSynchronizer,
 		caches,
 		lmak8s.DefaultCluster,
+		serviceNameSuffix,
+		&suffixGenerator,
 	)
 	managedclusterController := managedcluster.NewManagedClusterController(
 		clientSet.ProjectcalicoV3(),

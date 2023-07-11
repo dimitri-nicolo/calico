@@ -2,6 +2,7 @@ package podtemplate
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -43,12 +44,11 @@ var _ = Describe("AD PodTemplate", func() {
 	})
 
 	Context("CreateJobFromPodTemplate", func() {
-		It("create a job ", func() {
+		DescribeTable("create a job ", func(tenant, clusterName, clusterLabels string) {
 			name := "job-name1"
 			namespace := "job-namespace1"
-			clusterName := "cluster-name1"
 			trainingLabels := TrainingJobLabels()
-			trainingLabels["cluster"] = clusterName
+			trainingLabels["cluster"] = clusterLabels
 			bfl := int32(10)
 			detectorList := "dector1,detector2,detector3"
 
@@ -59,7 +59,7 @@ var _ = Describe("AD PodTemplate", func() {
 					Namespace: "job-namespace1",
 					Labels: map[string]string{
 						"tigera.io.detector-cycle": "training",
-						"cluster":                  "cluster-name1",
+						"cluster":                  clusterLabels,
 					},
 				},
 				Spec: batchv1.JobSpec{
@@ -70,7 +70,7 @@ var _ = Describe("AD PodTemplate", func() {
 							Namespace: "job-namespace1",
 							Labels: map[string]string{
 								"tigera.io.detector-cycle": "training",
-								"cluster":                  "cluster-name1",
+								"cluster":                  clusterLabels,
 							},
 						},
 						Spec: v1.PodSpec{
@@ -82,9 +82,15 @@ var _ = Describe("AD PodTemplate", func() {
 									Env: []v1.EnvVar{
 										{
 											Name:      "CLUSTER_NAME",
-											Value:     "cluster-name1",
+											Value:     clusterName,
 											ValueFrom: nil,
 										},
+										{
+											Name:      "TENANT_ID",
+											Value:     tenant,
+											ValueFrom: nil,
+										},
+
 										{
 											Name:      "AD_ENABLED_DETECTORS",
 											Value:     "dector1,detector2,detector3",
@@ -98,11 +104,14 @@ var _ = Describe("AD PodTemplate", func() {
 				},
 			}
 			// add specs for training cycle
-			err := DecoratePodTemplateForTrainingCycle(defaultPodTemplate, clusterName, detectorList)
+			err := DecoratePodTemplateForTrainingCycle(defaultPodTemplate, clusterName, tenant, detectorList)
 			Expect(err).To(BeNil())
 
 			job := CreateJobFromPodTemplate(name, namespace, trainingLabels, *defaultPodTemplate, &bfl)
 			Expect(job).To(Equal(expectedJob))
-		})
+		},
+			Entry("no tenant", "", "cluster-name1", "cluster-name1"),
+			Entry("with tenant", "tenantA", "cluster-name1", "tenantA.cluster-name1"),
+		)
 	})
 })

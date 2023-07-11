@@ -41,6 +41,8 @@ type User struct {
 	Username string
 	Password string
 	Roles    []Role
+	// Indicate whether this user will connect directly to Elastic or via a proxy
+	DirectConnection bool
 }
 
 // RoleNames is a convenience function for getting the names of all the roles defined for this Elasticsearch user

@@ -32,13 +32,13 @@ var (
 
 // DecoratePodTemplateForTrainingCycle adds the appropriate labels and env_vars to setup the v1.PodTemplate for
 // an AD training cycle
-func DecoratePodTemplateForTrainingCycle(adJobPT *v1.PodTemplate, clusterName, detectors string) error {
+func DecoratePodTemplateForTrainingCycle(adJobPT *v1.PodTemplate, clusterName, tenantID, detectors string) error {
 	adContainer, err := findContainer(&adJobPT.Template.Spec.Containers, ADJobsContainerName)
 	if err != nil {
 		return err
 	}
 
-	err = decorateBaseADPodTemplate(clusterName, adContainer)
+	err = decorateBaseADPodTemplate(clusterName, tenantID, adContainer)
 	if err != nil {
 		return err
 	}
@@ -62,13 +62,13 @@ func DecoratePodTemplateForTrainingCycle(adJobPT *v1.PodTemplate, clusterName, d
 
 // DecoratePodTemplateForDetectionCycle adds the appropriate labels and env_vars to setup the v1.PodTemplate for
 // an AD detection cycle
-func DecoratePodTemplateForDetectionCycle(adJobPT *v1.PodTemplate, clusterName string, globalAlert v3.GlobalAlert) error {
+func DecoratePodTemplateForDetectionCycle(adJobPT *v1.PodTemplate, clusterName string, tenantID string, globalAlert v3.GlobalAlert) error {
 	adContainer, err := findContainer(&adJobPT.Template.Spec.Containers, ADJobsContainerName)
 	if err != nil {
 		return err
 	}
 
-	err = decorateBaseADPodTemplate(clusterName, adContainer)
+	err = decorateBaseADPodTemplate(clusterName, tenantID, adContainer)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func DecoratePodTemplateForDetectionCycle(adJobPT *v1.PodTemplate, clusterName s
 
 // decorateBaseADPodTemplate adds required fields and environment variables for ADContainer
 // common to both detection and training cycles found in the v1.PodTemplate
-func decorateBaseADPodTemplate(clusterName string, adContainer *v1.Container) error {
+func decorateBaseADPodTemplate(clusterName string, tenantID string, adContainer *v1.Container) error {
 	if adContainer == nil {
 		return ErrADContainerNotFound
 	}
@@ -121,6 +121,10 @@ func decorateBaseADPodTemplate(clusterName string, adContainer *v1.Container) er
 		v1.EnvVar{
 			Name:  "CLUSTER_NAME",
 			Value: clusterName,
+		},
+		v1.EnvVar{
+			Name:  "TENANT_ID",
+			Value: tenantID,
 		},
 	)
 

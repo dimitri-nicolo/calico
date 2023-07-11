@@ -12,7 +12,7 @@ var _ = Describe("HashUtils", func() {
 
 			result := ComputeSha256HashWithLimit(smallString, 10)
 			Expect(result).ToNot(BeNil())
-			Expect(len(result) < 10).To(BeTrue())
+			Expect(len(result) == 10).To(BeTrue())
 		})
 
 		It("generate sha256 hashstring for a small string char much less than expected limit", func() {

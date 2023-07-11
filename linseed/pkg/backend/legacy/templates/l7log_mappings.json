@@ -1,4 +1,5 @@
 {
+  "dynamic": false,
     "properties": {
       "@timestamp": {
         "type": "date"
@@ -52,7 +53,7 @@
       },
       "source_port_num": {
         "type": "long",
-        "null_value": "0"
+        "null_value": 0
       },
       "dest_service_name": {
         "type": "keyword"
@@ -62,7 +63,7 @@
       },
       "dest_service_port": {
         "type": "long",
-        "null_value": "0"
+        "null_value": 0
       },
       "dest_service_port_name": {
         "type": "keyword"
@@ -82,7 +83,7 @@
       },
       "dest_port_num": {
         "type": "long",
-        "null_value": "0"
+        "null_value": 0
       },
       "url": {
         "type": "keyword"

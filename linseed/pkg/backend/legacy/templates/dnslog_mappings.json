@@ -1,4 +1,5 @@
 {
+  "dynamic": false,
     "properties": {
       "@timestamp" : {
         "type" : "alias",
@@ -155,8 +156,8 @@
       "latency_max": {
         "type": "long"
       },
-      "host": { 
-	"type": "keyword" 
+      "host": {
+	"type": "keyword"
       }
   }
 }

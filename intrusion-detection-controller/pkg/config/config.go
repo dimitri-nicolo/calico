@@ -27,7 +27,6 @@ type Config struct {
 	TenantID string `envconfig:"TENANT_ID"`
 
 	// MCM configuration
-	ClusterName                    string `envconfig:"CLUSTER_NAME" default:"cluster"`
 	MultiClusterForwardingCA       string `envconfig:"MULTI_CLUSTER_FORWARDING_CA" default:"/manager-tls/cert"`
 	MultiClusterForwardingEndpoint string `envconfig:"MULTI_CLUSTER_FORWARDING_ENDPOINT" default:"https://tigera-manager.tigera-manager.svc:9443"`
 }

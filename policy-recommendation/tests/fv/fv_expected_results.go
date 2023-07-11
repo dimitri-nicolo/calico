@@ -14,14 +14,15 @@ var (
 	protocolTCP = numorstring.ProtocolFromString("TCP")
 	protocolUDP = numorstring.ProtocolFromString("UDP")
 
-	timeAtStep1 = "2002-10-02T10:00:00-05:00"
-	timeAtStep2 = "2002-10-02T10:02:30-05:00"
-	timeAtStep3 = "2002-10-02T10:05:00-05:00"
+	timeAtStep1              = "2002-10-02T10:00:00-05:00"
+	timeAtStep2              = "2002-10-02T10:02:30-05:00"
+	timeAtStep3              = "2002-10-02T10:05:00-05:00"
+	timestampStep8Relearning = "2002-10-02T11:02:01-05:00"
 
 	expectedEgressToDomainRecommendationsStep1 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -93,9 +94,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-xv5fb",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -210,9 +211,9 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep2 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -284,9 +285,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-xv5fb",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -377,9 +378,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-xv5fb",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -513,9 +514,9 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep3 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -586,9 +587,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-xv5fb",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -679,9 +680,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-xv5fb",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -812,9 +813,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace5-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace5-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace5-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-xv5fb",
 				Namespace: "namespace5",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -868,9 +869,9 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep4 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -941,9 +942,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-xv5fb",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -1034,9 +1035,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-xv5fb",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -1167,9 +1168,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace5-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace5-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace5-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-xv5fb",
 				Namespace: "namespace5",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -1223,9 +1224,9 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep5 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -1296,9 +1297,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-xv5fb",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -1389,9 +1390,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-xv5fb",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -1522,9 +1523,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace5-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace5-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace5-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-xv5fb",
 				Namespace: "namespace5",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -1578,9 +1579,9 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep6 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-76kle": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-76kle",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -1651,9 +1652,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-xv5fb",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -1744,9 +1745,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-xv5fb",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -1877,9 +1878,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace5-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace5-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace5-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-xv5fb",
 				Namespace: "namespace5",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -1933,9 +1934,9 @@ var (
 	}
 
 	expectedEgressToDomainRecommendationsStep7 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-76kle": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-76kle",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -2006,9 +2007,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-76kle": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-76kle",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -2099,9 +2100,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-76kle": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-76kle",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -2232,9 +2233,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace5-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace5-76kle": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace5-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-76kle",
 				Namespace: "namespace5",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -2287,10 +2288,365 @@ var (
 		},
 	}
 
-	expectedEgressToDomainRecommendationsStep1AfterDeletingNamespace3 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+	expectedEgressToDomainRecommendationsStep8 = map[string]*v3.StagedNetworkPolicy{
+		prtypes.PolicyRecommendationTier + ".namespace1-76kle": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-76kle",
+				Namespace: "namespace1",
+				Labels: map[string]string{
+					"policyrecommendation.tigera.io/scope":  "namespace",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
+					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					"projectcalico.org/spec.stagedAction":   "Learn",
+				},
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+					"policyrecommendation.tigera.io/status":      "Stable",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "projectcalico.org/v3",
+						Kind:       "PolicyRecommendationScope",
+						Name:       "default",
+					},
+				},
+			},
+			TypeMeta: metav1.TypeMeta{},
+			Spec: v3.StagedNetworkPolicySpec{
+				StagedAction: v3.StagedActionLearn,
+				Tier:         prtypes.PolicyRecommendationTier,
+				Ingress:      []v3.Rule{},
+				Egress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+							},
+							Domains: []string{"www.google.com"},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/scope":       "Domains",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 81,
+									MaxPort: 81,
+								},
+							},
+							Domains: []string{"www.google.com", "www.website.com"},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/scope":       "Domains",
+							},
+						},
+					},
+				},
+				Selector: "projectcalico.org/namespace == 'namespace1'",
+				Types:    []v3.PolicyType{"Egress"},
+			},
+		},
+		prtypes.PolicyRecommendationTier + ".namespace2-76kle": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-76kle",
+				Namespace: "namespace2",
+				Labels: map[string]string{
+					"policyrecommendation.tigera.io/scope":  "namespace",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
+					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					"projectcalico.org/spec.stagedAction":   "Learn",
+				},
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
+					"policyrecommendation.tigera.io/status":      "Stable",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "projectcalico.org/v3",
+						Kind:       "PolicyRecommendationScope",
+						Name:       "default",
+					},
+				},
+			},
+			TypeMeta: metav1.TypeMeta{},
+			Spec: v3.StagedNetworkPolicySpec{
+				StagedAction: v3.StagedActionLearn,
+				Tier:         prtypes.PolicyRecommendationTier,
+				Ingress:      []v3.Rule{},
+				Egress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 666,
+									MaxPort: 666,
+								},
+							},
+							Domains: []string{"www.tigera.io"},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
+								"policyrecommendation.tigera.io/scope":       "Domains",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 667,
+									MaxPort: 667,
+								},
+							},
+							Domains: []string{"www.tigera.io"},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
+								"policyrecommendation.tigera.io/scope":       "Domains",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolUDP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 9090,
+									MaxPort: 9090,
+								},
+							},
+							Domains: []string{"www.calico.org"},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
+								"policyrecommendation.tigera.io/scope":       "Domains",
+							},
+						},
+					},
+				},
+				Selector: "projectcalico.org/namespace == 'namespace2'",
+				Types:    []v3.PolicyType{"Egress"},
+			},
+		},
+		prtypes.PolicyRecommendationTier + ".namespace3-76kle": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-76kle",
+				Namespace: "namespace3",
+				Labels: map[string]string{
+					"policyrecommendation.tigera.io/scope":  "namespace",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
+					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					"projectcalico.org/spec.stagedAction":   "Learn",
+				},
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
+					"policyrecommendation.tigera.io/status":      "Stable",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "projectcalico.org/v3",
+						Kind:       "PolicyRecommendationScope",
+						Name:       "default",
+					},
+				},
+			},
+			TypeMeta: metav1.TypeMeta{},
+			Spec: v3.StagedNetworkPolicySpec{
+				StagedAction: v3.StagedActionLearn,
+				Tier:         prtypes.PolicyRecommendationTier,
+				Ingress:      []v3.Rule{},
+				Egress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 1,
+									MaxPort: 1,
+								},
+							},
+							Domains: []string{"www.calico.org"},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/scope":       "Domains",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 81,
+									MaxPort: 81,
+								},
+							},
+							Domains: []string{"www.google.com"},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
+								"policyrecommendation.tigera.io/scope":       "Domains",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 666,
+									MaxPort: 666,
+								},
+							},
+							Domains: []string{"www.google.com", "www.tigera.io"},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
+								"policyrecommendation.tigera.io/scope":       "Domains",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 667,
+									MaxPort: 667,
+								},
+							},
+							Domains: []string{"www.docker.com", "www.tigera.io", "www.website.com"},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
+								"policyrecommendation.tigera.io/scope":       "Domains",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolUDP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 9090,
+									MaxPort: 9090,
+								},
+							},
+							Domains: []string{"www.calico.org"},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/scope":       "Domains",
+							},
+						},
+					},
+				},
+				Selector: "projectcalico.org/namespace == 'namespace3'",
+				Types:    []v3.PolicyType{"Egress"},
+			},
+		},
+		prtypes.PolicyRecommendationTier + ".namespace5-76kle": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-76kle",
+				Namespace: "namespace5",
+				Labels: map[string]string{
+					"policyrecommendation.tigera.io/scope":  "namespace",
+					"projectcalico.org/tier":                prtypes.PolicyRecommendationTier,
+					"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					"projectcalico.org/spec.stagedAction":   "Learn",
+				},
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": timestampStep8Relearning,
+					"policyrecommendation.tigera.io/status":      "Learning",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "projectcalico.org/v3",
+						Kind:       "PolicyRecommendationScope",
+						Name:       "default",
+					},
+				},
+			},
+			TypeMeta: metav1.TypeMeta{},
+			Spec: v3.StagedNetworkPolicySpec{
+				StagedAction: v3.StagedActionLearn,
+				Tier:         prtypes.PolicyRecommendationTier,
+				Ingress:      []v3.Rule{},
+				Egress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolUDP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 99,
+									MaxPort: 99,
+								},
+							},
+							Domains: []string{"www.google.com", "www.projectcalico.org", "www.tigera.io", "www.website.com"},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timestampStep8Relearning,
+								"policyrecommendation.tigera.io/scope":       "Domains",
+							},
+						},
+					},
+				},
+				Selector: "projectcalico.org/namespace == 'namespace5'",
+				Types:    []v3.PolicyType{"Egress"},
+			},
+		},
+	}
+
+	expectedEgressToDomainRecommendationsStep1AfterDeletingNamespace3 = map[string]*v3.StagedNetworkPolicy{
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -2365,9 +2721,9 @@ var (
 	}
 
 	expectedEgressToServiceRecommendationsStep1 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -2473,9 +2829,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-xv5fb",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -2588,9 +2944,9 @@ var (
 	}
 
 	expectedEgressToServiceRecommendationsStep2 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -2700,9 +3056,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace2-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace2-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace2-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace2-xv5fb",
 				Namespace: "namespace2",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -2795,9 +3151,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-xv5fb",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -2914,9 +3270,9 @@ var (
 	}
 
 	expectedNamespaceRecommendationsStep1 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -2954,7 +3310,6 @@ var (
 								},
 							},
 							NamespaceSelector: "projectcalico.org/name == 'namespace4'",
-							Selector:          "projectcalico.org/orchestrator == k8s",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -2977,7 +3332,6 @@ var (
 								},
 							},
 							NamespaceSelector: "projectcalico.org/name == 'namespace2'",
-							Selector:          "projectcalico.org/orchestrator == k8s",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -3000,7 +3354,6 @@ var (
 								},
 							},
 							NamespaceSelector: "projectcalico.org/name == 'namespace3'",
-							Selector:          "projectcalico.org/orchestrator == k8s",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -3016,9 +3369,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace3-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace3-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace3-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace3-xv5fb",
 				Namespace: "namespace3",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -3060,7 +3413,6 @@ var (
 								},
 							},
 							NamespaceSelector: "projectcalico.org/name == 'namespace5'",
-							Selector:          "projectcalico.org/orchestrator == k8s",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -3083,7 +3435,6 @@ var (
 								},
 							},
 							NamespaceSelector: "projectcalico.org/name == 'namespace2'",
-							Selector:          "projectcalico.org/orchestrator == k8s",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -3099,9 +3450,9 @@ var (
 				Types:    []v3.PolicyType{"Egress"},
 			},
 		},
-		prtypes.PolicyRecommendationTier + ".namespace5-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace5-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace5-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace5-xv5fb",
 				Namespace: "namespace5",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -3139,7 +3490,6 @@ var (
 								},
 							},
 							NamespaceSelector: "projectcalico.org/name == 'namespace1'",
-							Selector:          "projectcalico.org/orchestrator == k8s",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
@@ -3158,9 +3508,9 @@ var (
 	}
 
 	expectedPrivateNetworkRecommendationsStep1 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -3256,9 +3606,9 @@ var (
 	}
 
 	expectedPrivateNetworkRecommendationsStep2 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -3354,9 +3704,9 @@ var (
 	}
 
 	expectedPrivateNetworkRecommendationsStep3 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-76kle": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-76kle",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -3452,9 +3802,9 @@ var (
 	}
 
 	expectedNetworkSetRecommendationsStep1 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -3575,9 +3925,9 @@ var (
 	}
 
 	expectedNetworkSetRecommendationsStep2 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-xv5fb": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-xv5fb",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",
@@ -3697,9 +4047,9 @@ var (
 	}
 
 	expectedNetworkSetRecommendationsStep3 = map[string]*v3.StagedNetworkPolicy{
-		prtypes.PolicyRecommendationTier + ".namespace1-recommendation": {
+		prtypes.PolicyRecommendationTier + ".namespace1-76kle": {
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      prtypes.PolicyRecommendationTier + ".namespace1-recommendation",
+				Name:      prtypes.PolicyRecommendationTier + ".namespace1-76kle",
 				Namespace: "namespace1",
 				Labels: map[string]string{
 					"policyrecommendation.tigera.io/scope":  "namespace",

@@ -48,6 +48,11 @@ type Event struct {
 	SourceNameAggr  string          `json:"source_name_aggr,omitempty"`
 	SourceNamespace string          `json:"source_namespace,omitempty"`
 	SourcePort      *int64          `json:"source_port,omitempty"`
+	Name            string          `json:"name,omitempty"`
+	AttackVector    string          `json:"attack_vector,omitempty"`
+	MitreTactic     string          `json:"mitre_tactic,omitempty"`
+	MitreIDs        *[]string       `json:"mitre_ids,omitempty"`
+	Mitigations     *[]string       `json:"mitigations,omitempty"`
 	Record          interface{}     `json:"record,omitempty"`
 }
 
@@ -123,11 +128,20 @@ type DPIRecord struct {
 }
 
 // NewEventTimestamp will create a new TimestampOrDate
-// that has only timestamp field populated with a value
+// that has only the timestamp field populated with a value
 // that represents unix time in seconds
 func NewEventTimestamp(val int64) TimestampOrDate {
 	return TimestampOrDate{
 		intVal: &val,
+	}
+}
+
+// NewEventDate will create a new TimestampOrDate
+// that has only the date field populated with a value
+// that represents a time in RFC ISO format
+func NewEventDate(val time.Time) TimestampOrDate {
+	return TimestampOrDate{
+		timeVal: &val,
 	}
 }
 
@@ -162,6 +176,11 @@ func (t *TimestampOrDate) MarshalJSON() ([]byte, error) {
 
 	if t.timeVal != nil {
 		return json.Marshal(t.timeVal.Format(ISO8601Format))
+	}
+
+	if t.timeVal == nil && t.intVal == nil {
+		var zero = 0
+		return json.Marshal(&zero)
 	}
 
 	return nil, nil

@@ -7,18 +7,30 @@
 # Helm binary to use. Default to the one installed by the Makefile.
 HELM=${HELM:-../bin/helm}
 
+# yq binary to use for parsing component versions not found in charts. Default to the one installed by the Makefile.
+YQ=${YQ:-../bin/yq}
+
+if [[ ! -f $HELM ]]; then
+    echo "[ERROR] Helm binary ${HELM} not found."
+    exit 1
+fi
+if [[ ! -f $YQ ]]; then
+    echo "[ERROR] yq binary ${YQ} not found."
+    exit 1
+fi
+
 # Get versions to install.
-defaultCalicoVersion=master
+defaultCalicoVersion=$($YQ '.[0].title' ../calico/_data/versions.yml)
 CALICO_VERSION=${CALICO_VERSION:-$defaultCalicoVersion}
 
 defaultRegistry=gcr.io/unique-caldron-775/cnx
 REGISTRY=${REGISTRY:-$defaultRegistry}
 
 # Versions retrieved from charts.
-defaultOperatorVersion=$(cat ../charts/tigera-operator/values.yaml | grep version: | cut -d" " -f4)
+defaultOperatorVersion=$($YQ .tigeraOperator.version < ../charts/tigera-operator/values.yaml)
 OPERATOR_VERSION=${OPERATOR_VERSION:-$defaultOperatorVersion}
 
-defaultOperatorRegistry=$(cat ../charts/tigera-operator/values.yaml | grep registry: | cut -d" " -f4)
+defaultOperatorRegistry=$($YQ .tigeraOperator.registry < ../charts/tigera-operator/values.yaml)
 OPERATOR_REGISTRY=${OPERATOR_REGISTRY:-$defaultOperatorRegistry}
 
 # Images used in manifests that are not rendered by Helm.
@@ -28,8 +40,6 @@ tigera/license-agent tigera/prometheus-operator tigera/prometheus-config-reloade
 tigera/honeypod tigera/honeypod-controller tigera/honeypod-exp-service tigera/calico-windows tigera/calicoctl"
 NON_HELM_MANIFEST_IMAGES+=" $NON_HELM_MANIFEST_IMAGES_ENT"
 
-# yq binary to use for parsing component versions not found in charts. Default to the one installed by the Makefile.
-YQ=${YQ:-../bin/yq}
 
 # Version file used when components in non-helm manifests have unique image versions. Should only be set for hashreleases.
 # Defaults to nil, which results in CALICO_VERSION being set as the version for all non-helm manifest images.

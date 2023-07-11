@@ -23,6 +23,7 @@ import (
 // managedClusterController is responsible for watching ManagedCluster resource.
 type managedClusterController struct {
 	lsClient               client.Client
+	tenantID               string
 	calicoCLI              calicoclient.Interface
 	createManagedCalicoCLI func(string) (calicoclient.Interface, error)
 	cancel                 context.CancelFunc
@@ -31,11 +32,12 @@ type managedClusterController struct {
 
 // NewManagedClusterController returns a managedClusterController and returns health.Pinger for resources it watches and also
 // returns another health.Pinger that monitors health of GlobalAlertController in each of the managed cluster.
-func NewManagedClusterController(calicoCLI calicoclient.Interface, lsClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, anomalyTrainingController controller.AnomalyDetectionController, anomalyDetectionController controller.AnomalyDetectionController, namespace string, createManagedCalicoCLI func(string) (calicoclient.Interface, error), fipsModeEnabled bool) controller.Controller {
+func NewManagedClusterController(calicoCLI calicoclient.Interface, lsClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, anomalyTrainingController controller.AnomalyDetectionController, anomalyDetectionController controller.AnomalyDetectionController, namespace string, createManagedCalicoCLI func(string) (calicoclient.Interface, error), fipsModeEnabled bool, tenantID string) controller.Controller {
 	m := &managedClusterController{
 		lsClient:               lsClient,
 		calicoCLI:              calicoCLI,
 		createManagedCalicoCLI: createManagedCalicoCLI,
+		tenantID:               tenantID,
 	}
 
 	// Create worker to watch ManagedCluster resource
@@ -50,6 +52,7 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, lsClient clie
 		alertNameToAlertControllerState: map[string]alertControllerState{},
 		enableAnomalyDetection:          enableAnomalyDetection,
 		fipsModeEnabled:                 fipsModeEnabled,
+		tenantID:                        tenantID,
 	})
 
 	m.worker.AddWatch(

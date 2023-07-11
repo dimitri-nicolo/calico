@@ -159,9 +159,15 @@ func processServiceRequest(
 	serviceMap := make(map[string]*service)
 	for page := range pages {
 		for _, l7Log := range page.Items {
+			// ignore l7 log entries when source is empty.
 			sourceNameAggr := l7Log.SourceNameAggr
+			// filter out zero-duration l7 log entries.
+			// l7-log-collector sometimes reports zero duration_mean log entries. this will cause invalid
+			// rate calculation below and internal server error when marshaling json response.
+			durationMean := l7Log.DurationMean
 			if sourceNameAggr != "" &&
-				sourceNameAggr != api.FlowLogNetworkPrivate && sourceNameAggr != api.FlowLogNetworkPublic {
+				sourceNameAggr != api.FlowLogNetworkPrivate && sourceNameAggr != api.FlowLogNetworkPublic &&
+				durationMean > 0 {
 				errCount := 0
 				if responseCode, err := strconv.Atoi(l7Log.ResponseCode); err == nil {
 					// Count HTTP error responses from 400 - 499 (client error) + 500 - 599 (server error)

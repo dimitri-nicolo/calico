@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	"github.com/stretchr/testify/require"
@@ -188,6 +190,55 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 		// an afterKey
 		require.Nil(t, resp.AfterKey)
 	})
+
+	t.Run("should support pagination for items >= 10000 for Benchmarks", func(t *testing.T) {
+		defer complianceSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K benchmarks.
+		logTime := time.Unix(0, 0).UTC()
+		var benchmarks []v1.Benchmarks
+		for i := 0; i < totalItems; i++ {
+			benchmarks = append(benchmarks,
+				v1.Benchmarks{
+					Timestamp: metav1.Time{Time: logTime.Add(time.Duration(i) * time.Second)},
+					NodeName:  fmt.Sprintf("%d", i),
+				},
+			)
+		}
+		bulk, err := cli.Compliance(cluster).Benchmarks().Create(ctx, benchmarks)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Succeeded, "create benchmarks did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_benchmark_results*")
+
+		// Stream through all the items.
+		params := v1.BenchmarksParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: logTime.Add(-5 * time.Second),
+					To:   logTime.Add(time.Duration(totalItems) * time.Second),
+				},
+				MaxPageSize: 1000,
+			},
+		}
+
+		pager := client.NewListPager[v1.Benchmarks](&params)
+		pages, errors := pager.Stream(ctx, cli.Compliance(cluster).Benchmarks().List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
+	})
+
 }
 
 func TestFV_BenchmarksTenancy(t *testing.T) {

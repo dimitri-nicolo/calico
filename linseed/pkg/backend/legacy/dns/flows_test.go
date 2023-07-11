@@ -56,7 +56,7 @@ func setupTest(t *testing.T) func() {
 
 	// Instantiate backends.
 	b = dns.NewDNSFlowBackend(client)
-	lb = dns.NewDNSLogBackend(client, cache)
+	lb = dns.NewDNSLogBackend(client, cache, 10000)
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.

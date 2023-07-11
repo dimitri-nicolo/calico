@@ -17,18 +17,20 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func NewIPSetBackend(c lmaelastic.Client, cache bapi.Cache) bapi.IPSetBackend {
+func NewIPSetBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.IPSetBackend {
 	return &ipSetThreatFeedBackend{
-		client:    c.Backend(),
-		lmaclient: c,
-		templates: cache,
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
 	}
 }
 
 type ipSetThreatFeedBackend struct {
-	client    *elastic.Client
-	templates bapi.Cache
-	lmaclient lmaelastic.Client
+	client               *elastic.Client
+	templates            bapi.Cache
+	lmaclient            lmaelastic.Client
+	deepPaginationCutOff int64
 }
 
 func (b *ipSetThreatFeedBackend) Create(ctx context.Context, i bapi.ClusterInfo, feeds []v1.IPSetThreatFeed) (*v1.BulkResponse, error) {
@@ -106,21 +108,22 @@ func (b *ipSetThreatFeedBackend) List(ctx context.Context, i bapi.ClusterInfo, p
 		feeds = append(feeds, ipSetFeed)
 	}
 
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.List[v1.IPSetThreatFeed]{
 		Items:     feeds,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextStartFromAfterKey(params, len(results.Hits.Hits), startFrom, results.TotalHits()),
+		AfterKey:  logtools.NextAfterKey(params, startFrom, pitID, results, b.deepPaginationCutOff),
 	}, nil
 }
 
 func (b *ipSetThreatFeedBackend) getSearch(i bapi.ClusterInfo, p *v1.IPSetThreatFeedParams) (*elastic.SearchService, int, error) {
 	if err := i.Valid(); err != nil {
-		return nil, 0, err
-	}
-
-	// Get the startFrom param, if any.
-	startFrom, err := logtools.StartFrom(p)
-	if err != nil {
 		return nil, 0, err
 	}
 
@@ -131,10 +134,17 @@ func (b *ipSetThreatFeedBackend) getSearch(i bapi.ClusterInfo, p *v1.IPSetThreat
 
 	// Build the query, sorting by time.
 	query := b.client.Search().
-		Index(b.index(i)).
 		Size(p.GetMaxPageSize()).
-		From(startFrom).
 		Query(q)
+
+	// Configure pagination options
+	var startFrom int
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, p, b.index(i))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	query.Sort("created_at", true)
 
 	return query, startFrom, nil
 }

@@ -38,11 +38,12 @@ type Alert struct {
 	service                query.Service
 	adj                    ad.ADService
 	clusterName            string
+	tenantID               string
 	enableAnomalyDetection bool
 }
 
 // NewAlert sets and returns an Alert, builds Linseed query that will be used periodically to query Elasticsearch data.
-func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, namespace string, fipsModeEnabled bool) (*Alert, error) {
+func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, tenantID string, namespace string, fipsModeEnabled bool) (*Alert, error) {
 	globalAlert.Status.Active = true
 	globalAlert.Status.LastUpdate = &metav1.Time{Time: time.Now()}
 
@@ -55,6 +56,7 @@ func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lin
 		alert:                  globalAlert,
 		calicoCLI:              calicoCLI,
 		clusterName:            clusterName,
+		tenantID:               tenantID,
 		enableAnomalyDetection: enableAnomalyDetection,
 	}
 
@@ -67,7 +69,7 @@ func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lin
 		alert.service = service
 
 	} else {
-		adj, err := ad.NewService(calicoCLI, k8sClient, podTemplateQuery, adDetectionController, adTrainingController, clusterName, namespace, globalAlert)
+		adj, err := ad.NewService(calicoCLI, k8sClient, podTemplateQuery, adDetectionController, adTrainingController, clusterName, tenantID, namespace, globalAlert)
 		if err != nil {
 			return nil, err
 		}

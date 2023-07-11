@@ -4,7 +4,6 @@ package anomalydetection
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -41,6 +40,7 @@ var (
 type adJobTrainingReconciler struct {
 	managementClusterCtx  context.Context
 	managementClusterName string
+	tenantID              string
 
 	k8sClient                  kubernetes.Interface
 	calicoCLI                  calicoclient.Interface
@@ -49,13 +49,14 @@ type adJobTrainingReconciler struct {
 
 	namespace string
 
-	// key: cluster name
+	// key: tenant_id.cluster_name
 	trainingDetectorsPerCluster map[string]trainingCycleStatePerCluster
 	trainingJobsMutex           sync.Mutex
 }
 
 type trainingCycleStatePerCluster struct {
 	ClusterName  string
+	TenantID     string
 	CronJob      *batchv1.CronJob
 	GlobalAlerts []*v3.GlobalAlert
 }
@@ -135,12 +136,7 @@ func (r *adJobTrainingReconciler) reconcile() bool {
 	forceDelete := false
 	// skip the check if it is an udpate to a detector for the management cluster
 	if trainingCronJobStaterForCluster.ClusterName != r.managementClusterName {
-		// variant tenant id might be present in calico cloud but managed clusters resoruces would not contain this name
 		clusterNameToQuery := trainingCronJobStaterForCluster.ClusterName
-		tenantIDPrefix := os.Getenv("ELASTIC_INDEX_TENANT_ID")
-		if strings.HasPrefix(trainingCronJobStaterForCluster.ClusterName, tenantIDPrefix) {
-			clusterNameToQuery = strings.Trim(clusterNameToQuery, tenantIDPrefix+".")
-		}
 
 		managedCluster, err := r.calicoCLI.ProjectcalicoV3().ManagedClusters().Get(context.Background(), clusterNameToQuery, metav1.GetOptions{})
 		if err != nil && !k8serrors.IsNotFound(err) {
@@ -270,6 +266,7 @@ func (r *adJobTrainingReconciler) addTrainingCycle(mcs TrainingDetectorsRequest)
 	if !found {
 		trainingCycle = trainingCycleStatePerCluster{
 			ClusterName:  mcs.ClusterName,
+			TenantID:     mcs.TenantID,
 			GlobalAlerts: []*v3.GlobalAlert{},
 		}
 	}
@@ -349,13 +346,16 @@ func (r *adJobTrainingReconciler) runInitialTrainingJob(mcs TrainingDetectorsReq
 // getInitialTrainingJobNameForCluster creates a standardized string from the cluster's name to be
 // used as the initial training job name created for the cluster.
 func (r *adJobTrainingReconciler) getInitialTrainingJobNameForCluster(cluster, detector string) string {
-	return util.GetValidInitialTrainingJobName(cluster, detector, initialTrainingJobSuffix)
+	return util.GetValidInitialTrainingJobName(cluster, r.tenantID, detector, initialTrainingJobSuffix)
 }
 
 // getTrainingCycleCronJobNameForCluster creates a standardized string from the cluster's name to be
 // used as the cronjob name created for the cluster.
 func (r *adJobTrainingReconciler) getTrainingCycleJobNameForCluster(clusterName string) string {
-	return fmt.Sprintf("%s-%s-cycle", clusterName, trainingCycleSuffix)
+	// We need to take into account Calico Cloud setup that functions in a multi-tenant flavour
+	// In order to keep backwards compatibility, a job name will have <tenant_id.cluster_name-training-cycle>
+	// in multi-tenant setup and <cluster_name-training-cycle> for Enterprise
+	return fmt.Sprintf("%s-%s-cycle", util.Unify(r.tenantID, clusterName), trainingCycleSuffix)
 }
 
 // collectDetectorsSetFromGlobalAlerts collects and returns the comma delimited string of detectors
@@ -395,7 +395,7 @@ func (r *adJobTrainingReconciler) getADPodTemplateWithEnabledDecorator(
 	}
 
 	// Add specs for training cycle.
-	err = podtemplate.DecoratePodTemplateForTrainingCycle(adTrainingJobPT, clusterName, detector)
+	err = podtemplate.DecoratePodTemplateForTrainingCycle(adTrainingJobPT, clusterName, r.tenantID, detector)
 	if err != nil {
 		return nil, err
 	}
@@ -415,7 +415,7 @@ func (r *adJobTrainingReconciler) getADPodTemplateWithEnabledDecorators(
 	}
 
 	// add specs for training cycle
-	err = podtemplate.DecoratePodTemplateForTrainingCycle(adTrainingJobPT, clusterName, detectorList)
+	err = podtemplate.DecoratePodTemplateForTrainingCycle(adTrainingJobPT, clusterName, r.tenantID, detectorList)
 	if err != nil {
 		return nil, err
 	}
@@ -429,7 +429,7 @@ func (r *adJobTrainingReconciler) createInitialTrainingJobForCluster(
 	clusterName string, cronJobName string, adTrainingJobPT v1.PodTemplate,
 ) (*batchv1.Job, error) {
 	trainingLabels := TrainingJobLabels()
-	trainingLabels[ClusterKey] = clusterName
+	trainingLabels[ClusterKey] = util.Unify(r.tenantID, clusterName)
 
 	// Restart policy set to 'Never' and a backoffLimit of zero means that in the event that it
 	// results in an error, the initial training job would not be put in a crashloop since we have the

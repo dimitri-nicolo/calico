@@ -30,6 +30,7 @@ const (
 	ElasticsearchUserNameCurator               ElasticsearchUserName = "tigera-ee-curator"
 	ElasticsearchUserNameOperator              ElasticsearchUserName = "tigera-ee-operator"
 	ElasticsearchUserNameElasticsearchMetrics  ElasticsearchUserName = "tigera-ee-elasticsearch-metrics"
+	ElasticsearchUserNameLinseed               ElasticsearchUserName = "tigera-ee-linseed"
 
 	// This suffix is used to maintain a 1:1 mapping of public users that can be safely propagated to the managed cluster and
 	// private users that will be swapped into the request at the ES gateway in the management cluster by stripping this suffix.
@@ -216,6 +217,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 			},
 		},
 	}
+
 	publicUsers := map[ElasticsearchUserName]elasticsearch.User{
 		ElasticsearchUserNameFluentd: {
 			Username: formatName(ElasticsearchUserNameFluentd, clusterName, management, false),
@@ -477,7 +479,26 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 				},
 			},
 		},
+		ElasticsearchUserNameLinseed: {
+			DirectConnection: true,
+			Username:         formatName(ElasticsearchUserNameLinseed, clusterName, true, true),
+			Roles: []elasticsearch.Role{
+				{
+					Name: formatName(ElasticsearchUserNameLinseed, clusterName, true, true),
+					Definition: &elasticsearch.RoleDefinition{
+						Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
+						Indices: []elasticsearch.RoleIndex{
+							{
+								Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*")},
+								Privileges: []string{"create_index", "write", "manage", "read"},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
+
 	publicUsers := map[ElasticsearchUserName]elasticsearch.User{
 		ElasticsearchUserNameComplianceServer: {
 			Username: formatName(ElasticsearchUserNameComplianceServer, clusterName, true, false),

@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/client"
+
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
@@ -201,6 +203,56 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 		// an afterKey
 		require.Nil(t, resp.AfterKey)
 	})
+
+	t.Run("should support pagination for items >= 10000 for threat feeds", func(t *testing.T) {
+		defer threatFeedsSetupAndTeardown(t)()
+
+		totalItems := 10001
+		// Create > 10K threat feeds.
+		createdAtTime := time.Unix(0, 0).UTC()
+		var feeds []v1.IPSetThreatFeed
+		for i := 0; i < totalItems; i++ {
+			feeds = append(feeds, v1.IPSetThreatFeed{
+				ID: strconv.Itoa(i),
+				Data: &v1.IPSetThreatFeedData{
+					CreatedAt: createdAtTime.Add(time.Duration(i) * time.Second),
+				},
+			},
+			)
+		}
+		bulk, err := cli.ThreatFeeds(cluster).IPSet().Create(ctx, feeds)
+		require.NoError(t, err)
+		require.Equal(t, totalItems, bulk.Total, "create feeds did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_threatfeeds_ipset*")
+
+		// Stream through all the items.
+		params := v1.IPSetThreatFeedParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: createdAtTime.Add(-5 * time.Second),
+					To:   createdAtTime.Add(time.Duration(totalItems) * time.Second),
+				},
+				MaxPageSize: 1000,
+			},
+		}
+
+		pager := client.NewListPager[v1.IPSetThreatFeed](&params)
+		pages, errors := pager.Stream(ctx, cli.ThreatFeeds(cluster).IPSet().List)
+
+		receivedItems := 0
+		for page := range pages {
+			receivedItems = receivedItems + len(page.Items)
+		}
+
+		if err, ok := <-errors; ok {
+			require.NoError(t, err)
+		}
+
+		require.Equal(t, receivedItems, totalItems)
+	})
+
 }
 
 func TestFV_IPSetTenancy(t *testing.T) {

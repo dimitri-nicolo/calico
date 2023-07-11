@@ -7,6 +7,8 @@ package waf
 
 import (
 	"testing"
+
+	. "github.com/onsi/gomega"
 )
 
 func TestCheckRulesSetExists_OK(t *testing.T) {
@@ -38,7 +40,7 @@ func TestCheckRulesSetExists_InvalidDirectory(t *testing.T) {
 func TestCheckRulesSetExists_EmptyDirectory(t *testing.T) {
 
 	err := CheckRulesSetExists(TestEmptyRulesetDirectory)
-	if err == nil {
+	if err != nil {
 		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
 
@@ -65,8 +67,38 @@ func TestExtractRulesSetFilenamesCore(t *testing.T) {
 	expectFilenames := []string{
 		"../test/waf_test_files/core-rules/modsecdefault.conf",
 		"../test/waf_test_files/core-rules/crs-setup.conf",
-		"../test/waf_test_files/core-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
 		"../test/waf_test_files/core-rules/REQUEST-901-INITIALIZATION.conf",
+		"../test/waf_test_files/core-rules/REQUEST-903.9001-DRUPAL-EXCLUSION-RULES.conf",
+		"../test/waf_test_files/core-rules/REQUEST-903.9002-WORDPRESS-EXCLUSION-RULES.conf",
+		"../test/waf_test_files/core-rules/REQUEST-903.9003-NEXTCLOUD-EXCLUSION-RULES.conf",
+		"../test/waf_test_files/core-rules/REQUEST-903.9004-DOKUWIKI-EXCLUSION-RULES.conf",
+		"../test/waf_test_files/core-rules/REQUEST-903.9005-CPANEL-EXCLUSION-RULES.conf",
+		"../test/waf_test_files/core-rules/REQUEST-903.9006-XENFORO-EXCLUSION-RULES.conf",
+		"../test/waf_test_files/core-rules/REQUEST-905-COMMON-EXCEPTIONS.conf",
+		"../test/waf_test_files/core-rules/REQUEST-910-IP-REPUTATION.conf",
+		"../test/waf_test_files/core-rules/REQUEST-911-METHOD-ENFORCEMENT.conf",
+		"../test/waf_test_files/core-rules/REQUEST-912-DOS-PROTECTION.conf",
+		"../test/waf_test_files/core-rules/REQUEST-913-SCANNER-DETECTION.conf",
+		"../test/waf_test_files/core-rules/REQUEST-920-PROTOCOL-ENFORCEMENT.conf",
+		"../test/waf_test_files/core-rules/REQUEST-921-PROTOCOL-ATTACK.conf",
+		"../test/waf_test_files/core-rules/REQUEST-922-MULTIPART-ATTACK.conf",
+		"../test/waf_test_files/core-rules/REQUEST-930-APPLICATION-ATTACK-LFI.conf",
+		"../test/waf_test_files/core-rules/REQUEST-931-APPLICATION-ATTACK-RFI.conf",
+		"../test/waf_test_files/core-rules/REQUEST-932-APPLICATION-ATTACK-RCE.conf",
+		"../test/waf_test_files/core-rules/REQUEST-933-APPLICATION-ATTACK-PHP.conf",
+		"../test/waf_test_files/core-rules/REQUEST-934-APPLICATION-ATTACK-NODEJS.conf",
+		"../test/waf_test_files/core-rules/REQUEST-941-APPLICATION-ATTACK-XSS.conf",
+		"../test/waf_test_files/core-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
+		"../test/waf_test_files/core-rules/REQUEST-943-APPLICATION-ATTACK-SESSION-FIXATION.conf",
+		"../test/waf_test_files/core-rules/REQUEST-944-APPLICATION-ATTACK-JAVA.conf",
+		"../test/waf_test_files/core-rules/REQUEST-949-BLOCKING-EVALUATION.conf",
+		"../test/waf_test_files/core-rules/RESPONSE-950-DATA-LEAKAGES.conf",
+		"../test/waf_test_files/core-rules/RESPONSE-951-DATA-LEAKAGES-SQL.conf",
+		"../test/waf_test_files/core-rules/RESPONSE-952-DATA-LEAKAGES-JAVA.conf",
+		"../test/waf_test_files/core-rules/RESPONSE-953-DATA-LEAKAGES-PHP.conf",
+		"../test/waf_test_files/core-rules/RESPONSE-954-DATA-LEAKAGES-IIS.conf",
+		"../test/waf_test_files/core-rules/RESPONSE-959-BLOCKING-EVALUATION.conf",
+		"../test/waf_test_files/core-rules/RESPONSE-980-CORRELATION.conf",
 	}
 
 	_ = ExtractRulesSetFilenames()
@@ -99,6 +131,8 @@ func TestExtractRulesSetFilenamesData(t *testing.T) {
 	DefineRulesSetDirectory(TestDataRulesetDirectory)
 
 	expectFilenames := []string{
+		"../test/waf_test_files/data-rules/modsecdefault.conf",
+		"../test/waf_test_files/data-rules/crs-setup.conf",
 		"../test/waf_test_files/data-rules/REQUEST-913-SCANNER-DETECTION.conf",
 	}
 
@@ -194,6 +228,7 @@ func TestGenerateModSecurityID(t *testing.T) {
 }
 
 func TestProcessHttpRequest_ValidURL_OK(t *testing.T) {
+	RegisterTestingT(t)
 
 	InitializeModSecurity()
 	DefineRulesSetDirectory(TestCoreRulesetDirectory)
@@ -213,12 +248,14 @@ func TestProcessHttpRequest_ValidURL_OK(t *testing.T) {
 	serverPort := uint32(80)
 
 	err := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort, nil, "")
-	if err != nil {
-		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
-	}
+	Expect(err).To(HaveOccurred())
+	Expect(err.(WAFError)).NotTo(BeZero())
+	Expect(err.(WAFError).Disruption.Log).To(ContainSubstring(
+		`"Inbound Anomaly Score Exceeded (Total Score: 8)"`))
 }
 
 func TestProcessHttpRequest_InvalidURL_BlockDueToWarning(t *testing.T) {
+	RegisterTestingT(t)
 
 	InitializeModSecurity()
 	DefineRulesSetDirectory(TestCoreRulesetDirectory)
@@ -238,9 +275,10 @@ func TestProcessHttpRequest_InvalidURL_BlockDueToWarning(t *testing.T) {
 	serverPort := uint32(80)
 
 	err := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort, nil, "")
-	if err != nil {
-		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
-	}
+	Expect(err).To(HaveOccurred())
+	Expect(err.(WAFError)).NotTo(BeZero())
+	Expect(err.(WAFError).Disruption.Log).To(ContainSubstring(
+		`"Inbound Anomaly Score Exceeded (Total Score: 13)"`))
 }
 
 func TestProcessHttpRequest_InvalidURL_NoRulesLoad_OK(t *testing.T) {
@@ -293,7 +331,7 @@ func TestProcessHttpRequest_InvalidURL_CustomRulesLoad_BadRequest(t *testing.T) 
 func TestProcessHttpRequest_AddRequestInfo_CoreRulesDenyLoad_OK(t *testing.T) {
 
 	InitializeModSecurity()
-	DefineRulesSetDirectory(TestCoreRulesetDenyDirectory)
+	DefineRulesSetDirectory(TestCoreRulesetPassDirectory)
 
 	_ = ExtractRulesSetFilenames()
 	filenames := GetRulesSetFilenames()

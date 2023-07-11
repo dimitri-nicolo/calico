@@ -335,9 +335,15 @@ func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser e
 		}
 
 		if c.management {
-			name = fmt.Sprintf("%s-elasticsearch-access-gateway", string(username))
+			name = fmt.Sprintf("%s-elasticsearch", string(username))
 		} else {
-			name = fmt.Sprintf("%s-%s-elasticsearch-access-gateway", string(username), c.clusterName)
+			name = fmt.Sprintf("%s-%s-elasticsearch", string(username), c.clusterName)
+		}
+
+		if esUser.DirectConnection {
+			name = fmt.Sprintf("%s-user-secret", name)
+		} else {
+			name = fmt.Sprintf("%s-access-gateway", name)
 		}
 
 		// Set required labels for the user secret.
