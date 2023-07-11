@@ -42,6 +42,10 @@ var (
 	validRequestBodyPageSizeGreaterThanLTE string
 	//go:embed testdata/valid_request_body_page_size_less_than_gte.json
 	validRequestBodyPageSizeLessThanGTE string
+	//go:embed testdata/valid_request_body_only_from.json
+	validRequestBodyOnlyFrom string
+	//go:embed testdata/valid_request_body_only_to.json
+	validRequestBodyOnlyTo string
 	//go:embed testdata/invalid_request_body_badly_formed_string_value.json
 	invalidRequestBodyBadlyFormedStringValue string
 	//go:embed testdata/invalid_request_body_time_range_contains_invalid_time_value.json
@@ -631,6 +635,30 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(se.Status).To(Equal(400))
 			Expect(se.Msg).To(Equal("Request body contains an invalid value for the \"time_range\" "+
 				"field (at position 20)"), se.Msg)
+		})
+
+		It("Should parse request that have only from", func() {
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(validRequestBodyOnlyFrom)))
+			Expect(err).NotTo(HaveOccurred())
+
+			var w http.ResponseWriter
+			searchRequest, err := parseRequestBodyForParams(w, r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(searchRequest.TimeRange.From).NotTo(Equal(time.Time{}))
+			Expect(searchRequest.TimeRange.To).NotTo(Equal(time.Time{}))
+		})
+
+		It("Should parse request that have only to", func() {
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(validRequestBodyOnlyTo)))
+			Expect(err).NotTo(HaveOccurred())
+
+			var w http.ResponseWriter
+			searchRequest, err := parseRequestBodyForParams(w, r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(searchRequest.TimeRange.From).To(Equal(time.Time{}))
+			Expect(searchRequest.TimeRange.To).NotTo(Equal(time.Time{}))
 		})
 	})
 
