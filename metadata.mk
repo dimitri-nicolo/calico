@@ -3,11 +3,7 @@
 #################################################################################################
 
 # The version of github.com/projectcalico/go-build to use.
-<<<<<<< HEAD
 GO_BUILD_VER = v0.86
-=======
-GO_BUILD_VER = v0.85
->>>>>>> b8051f8047
 
 # Version of Kubernetes and kindest/node to use for tests.
 K8S_VERSION     = v1.24.15
