@@ -16,6 +16,25 @@ import (
 // - Name, and namespace
 // - Labels, and annotations
 func CopyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkPolicy) {
+	// Metadata
+
+	// Copy ObjectMeta context. Context relevant to this controller is name, labels and annotation
+	dest.ObjectMeta.Name = src.GetObjectMeta().GetName()
+	dest.ObjectMeta.Namespace = src.GetObjectMeta().GetNamespace()
+	dest.ObjectMeta.OwnerReferences = src.GetObjectMeta().GetOwnerReferences()
+	dest.ObjectMeta.Annotations = make(map[string]string)
+	for key, annotation := range src.GetObjectMeta().GetAnnotations() {
+		dest.ObjectMeta.Annotations[key] = annotation
+	}
+	dest.ObjectMeta.Labels = make(map[string]string)
+	for key, label := range src.GetObjectMeta().GetLabels() {
+		dest.ObjectMeta.Labels[key] = label
+	}
+
+	// Spec
+
+	dest.Spec.Selector = src.Spec.Selector
+	dest.Spec.Tier = src.Spec.Tier
 	// Copy egress, ingres and policy type over to the destination
 	dest.Spec.Egress = make([]v3.Rule, len(src.Spec.Egress))
 	copy(dest.Spec.Egress, src.Spec.Egress)
@@ -23,23 +42,6 @@ func CopyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkP
 	copy(dest.Spec.Ingress, src.Spec.Ingress)
 	dest.Spec.Types = make([]v3.PolicyType, len(src.Spec.Types))
 	copy(dest.Spec.Types, src.Spec.Types)
-
-	// Copy ObjectMeta context. Context relevant to this controller is name, labels and annotation
-	dest.ObjectMeta.Name = src.GetObjectMeta().GetName()
-	dest.ObjectMeta.Namespace = src.GetObjectMeta().GetNamespace()
-
-	dest.ObjectMeta.Labels = make(map[string]string)
-	for key, label := range src.GetObjectMeta().GetLabels() {
-		dest.ObjectMeta.Labels[key] = label
-	}
-	dest.ObjectMeta.Annotations = make(map[string]string)
-	for key, annotation := range src.GetObjectMeta().GetAnnotations() {
-		dest.ObjectMeta.Annotations[key] = annotation
-	}
-
-	dest.Spec.Selector = src.Spec.Selector
-
-	dest.OwnerReferences = src.OwnerReferences
 }
 
 // GetPolicyName returns a policy name with tier prefix and 5 char hash suffix.
