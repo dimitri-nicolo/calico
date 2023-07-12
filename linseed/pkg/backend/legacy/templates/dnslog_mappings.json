@@ -156,8 +156,8 @@
       "latency_max": {
         "type": "long"
       },
-      "host": { 
-	"type": "keyword" 
+      "host": {
+	"type": "keyword"
       }
   }
 }
