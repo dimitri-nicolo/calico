@@ -32,7 +32,7 @@ require (
 	github.com/distribution/distribution v2.8.2+incompatible
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/elastic/cloud-on-k8s/v2 v2.7.0
-	github.com/elastic/go-elasticsearch/v7 v7.17.7
+	github.com/elastic/go-elasticsearch/v7 v7.17.10
 	// check compatibility with our fork https://github.com/tigera/envoy when upgrade
 	github.com/envoyproxy/go-control-plane v0.11.0
 	github.com/felixge/httpsnoop v1.0.3
