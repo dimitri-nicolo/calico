@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/tigera/elasticsearch-metrics
-GO_BUILD_VER?=v0.85
+GO_BUILD_VER?=v0.87
 
 ELASTICSEARCH_METRICS_IMAGE ?=tigera/elasticsearch-metrics
 BUILD_IMAGES                ?=$(ELASTICSEARCH_METRICS_IMAGE)
