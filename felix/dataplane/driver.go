@@ -368,6 +368,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				DNSTrustedServers:                  configParams.DNSTrustedServers,
 				NATOutgoingAddress:                 configParams.NATOutgoingAddress,
 				BPFEnabled:                         configParams.BPFEnabled,
+				BPFForceTrackPacketsFromIfaces:     configParams.BPFForceTrackPacketsFromIfaces,
 				ServiceLoopPrevention:              configParams.ServiceLoopPrevention,
 
 				TPROXYMode:             configParams.TPROXYMode,

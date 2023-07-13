@@ -208,6 +208,7 @@ type Config struct {
 	BPFHostConntrackBypass             bool             `config:"bool;true"`
 	BPFEnforceRPF                      string           `config:"oneof(Disabled,Strict,Loose);Loose;non-zero"`
 	BPFPolicyDebugEnabled              bool             `config:"bool;true"`
+	BPFForceTrackPacketsFromIfaces     []string         `config:"interface-name-slice;docker+"`
 
 	FlowLogsCollectProcessInfo  bool `config:"bool;false"`
 	FlowLogsCollectTcpStats     bool `config:"bool;false"`
@@ -1245,6 +1246,10 @@ func loadParams() {
 			param = &CIDRListParam{}
 		case "server-list":
 			param = &ServerListParam{}
+		case "string-slice":
+			param = &StringSliceParam{}
+		case "interface-name-slice":
+			param = &StringSliceParam{ValidationRegex: IfaceParamRegexp}
 		case "route-table-range":
 			param = &RouteTableRangeParam{}
 		case "route-table-ranges":

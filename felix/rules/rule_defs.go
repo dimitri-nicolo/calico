@@ -449,8 +449,9 @@ type Config struct {
 	NATPortRange                       numorstring.Port
 	IptablesNATOutgoingInterfaceFilter string
 
-	NATOutgoingAddress net.IP
-	BPFEnabled         bool
+	NATOutgoingAddress             net.IP
+	BPFEnabled                     bool
+	BPFForceTrackPacketsFromIfaces []string
 
 	ServiceLoopPrevention string
 
