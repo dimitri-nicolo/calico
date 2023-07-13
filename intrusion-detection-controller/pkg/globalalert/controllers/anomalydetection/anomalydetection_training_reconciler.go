@@ -3,7 +3,6 @@ package anomalydetection
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -346,7 +345,7 @@ func (r *adJobTrainingReconciler) runInitialTrainingJob(mcs TrainingDetectorsReq
 // getInitialTrainingJobNameForCluster creates a standardized string from the cluster's name to be
 // used as the initial training job name created for the cluster.
 func (r *adJobTrainingReconciler) getInitialTrainingJobNameForCluster(cluster, detector string) string {
-	jobName := util.GetValidInitialTrainingJobName(cluster, r.tenantID, detector, initialTrainingJobSuffix)
+	jobName := util.MakeADJobName("it", r.tenantID, cluster, detector)
 	log.Infof("getInitialTrainingJobNameForCluster: jobName=%v", jobName)
 	return jobName
 }
@@ -354,19 +353,7 @@ func (r *adJobTrainingReconciler) getInitialTrainingJobNameForCluster(cluster, d
 // getTrainingCycleCronJobNameForCluster creates a standardized string from the cluster's name to be
 // used as the cronjob name created for the cluster.
 func (r *adJobTrainingReconciler) getTrainingCycleJobNameForCluster(clusterName string) string {
-	// Convert all uppercase to lower case
-	name := strings.ToLower(util.Unify(r.tenantID, clusterName))
-
-	if len(name) > acceptableRFCGlobalAlertNameLen {
-		name = name[:acceptableRFCGlobalAlertNameLen]
-	}
-
-	// clusterName should be already RFC1123 compliant since it is retrieved from an individual
-	// Calico resource, but trimming the name might result in a non-compliant name (i.e. ending
-	// with period ".")
-	name = util.ConvertToValidName(name)
-
-	jobName := fmt.Sprintf("%s-%s-cycle-%s", name, trainingCycleSuffix, util.ComputeSha256HashWithLimit(name, numHashChars))
+	jobName := util.MakeADJobName("tc", r.tenantID, clusterName, "")
 	log.Infof("getTrainingCycleJobNameForCluster: jobName=%v", jobName)
 	return jobName
 }

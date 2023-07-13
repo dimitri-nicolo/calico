@@ -1,12 +1,12 @@
 package anomalydetection
 
 import (
-	"strings"
-
 	"k8s.io/apimachinery/pkg/util/validation"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 )
 
 var _ = Describe("AnomalyDetection Detection Reconciler", func() {
@@ -26,8 +26,7 @@ var _ = Describe("AnomalyDetection Detection Reconciler", func() {
 			result := reconciler.getDetectionCycleCronJobNameForGlobaAlert(cluster, globalAlertName)
 			// IsDNS1123Subdomain returns list of error strings
 			Expect(validation.IsDNS1123Subdomain(result)).To(HaveLen(0))
-			parts := strings.Split(result, "-detection")
-			Expect(parts[0]).To(HaveLen(acceptableRFCGlobalAlertNameLen))
+			Expect(len(result)).To(BeNumerically("<=", util.MaxJobNameLen))
 		})
 
 		It("creates a RFC1123 Valid name an long globalalert and cluster name from a CC management cluster", func() {
@@ -39,8 +38,7 @@ var _ = Describe("AnomalyDetection Detection Reconciler", func() {
 			result := reconciler.getDetectionCycleCronJobNameForGlobaAlert(cluster, globalAlertName)
 			// IsDNS1123Subdomain returns list of error strings
 			Expect(validation.IsDNS1123Subdomain(result)).To(HaveLen(0))
-			parts := strings.Split(result, "-detection")
-			Expect(parts[0]).To(HaveLen(acceptableRFCGlobalAlertNameLen))
+			Expect(len(result)).To(BeNumerically("<=", util.MaxJobNameLen))
 		})
 
 		It("creates a RFC1123 Valid name short globalalert and cluster name", func() {
@@ -49,9 +47,7 @@ var _ = Describe("AnomalyDetection Detection Reconciler", func() {
 			result := reconciler.getDetectionCycleCronJobNameForGlobaAlert(cluster, globalAlertName)
 			// IsDNS1123Subdomain returns list of error strings
 			Expect(validation.IsDNS1123Subdomain(result)).To(HaveLen(0))
-			parts := strings.Split(result, "-detection")
-			// should include the full cluster-globalalertname if they are less than acceptableRFCGlobalAlertNameLen
-			Expect(parts[0]).To(HaveLen(len(cluster + "-" + globalAlertName)))
+			Expect(len(result)).To(BeNumerically("<=", util.MaxJobNameLen))
 		})
 	})
 })

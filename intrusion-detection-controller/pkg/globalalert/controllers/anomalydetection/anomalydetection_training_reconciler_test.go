@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -108,7 +107,7 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 
 				// key: cluster name
 				trainingDetectorsPerCluster: map[string]trainingCycleStatePerCluster{
-					getKey(tenant, clusterName, "training-cycle"): {
+					util.MakeADJobName("tc", tenant, clusterName, ""): {
 						ClusterName: clusterName,
 						CronJob:     nil,
 						GlobalAlerts: []*v3.GlobalAlert{
@@ -156,7 +155,8 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 			Entry("with tenant", tenant),
 		)
 
-		expectedJob := func(name, clusterLabel, tenant, clusterName string) batchv1.Job {
+		expectedJob := func(clusterLabel, tenant, clusterName string) batchv1.Job {
+			name := util.MakeADJobName("it", tenant, clusterName, "detector1")
 			return batchv1.Job{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -224,14 +224,12 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 		}
 
 		expectedJobEnterprise := expectedJob(
-			fmt.Sprintf("%s-detector1-initial-training", clusterName),
 			clusterName,
 			noTenant,
 			clusterName,
 		)
 
 		expectedJobCloud := expectedJob(
-			fmt.Sprintf("%s.%s-detector1-initial-training", tenant, clusterName),
 			fmt.Sprintf("%s.%s", tenant, clusterName),
 			tenant,
 			clusterName,
@@ -239,7 +237,6 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 
 		expectedJobCloudLongClusterName := func(clusterName string) batchv1.Job {
 			return expectedJob(
-				fmt.Sprintf("%s.%s-detector1-initial-training", tenant, clusterName)[:57],
 				fmt.Sprintf("%s.%s", tenant, clusterName)[:maxClusterLabelLen],
 				tenant,
 				clusterName,
@@ -313,17 +310,6 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 		)
 	})
 })
-
-func getKey(tenant, clusterName, suffix string) string {
-	name := tenant + "." + clusterName
-	if tenant == "" {
-		name = clusterName
-	}
-
-	key := fmt.Sprintf("%s-%s-%s", name, suffix, util.ComputeSha256HashWithLimit(name, numHashChars))
-	log.Infof("getKey: %v", key)
-	return key
-}
 
 func boolPtr(val bool) *bool {
 	return &val
