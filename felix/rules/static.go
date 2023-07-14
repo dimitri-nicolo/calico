@@ -48,9 +48,6 @@ const (
 
 const (
 	DNSActionPrefix = "DNS"
-
-	// match the size of the conntrack rules for DNS policies expect
-	DNSNFlogExpectedPacketSize = 1024
 )
 
 func (r *DefaultRuleRenderer) tproxyInputPolicyRules(ipVersion uint8) []Rule {
@@ -854,10 +851,8 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 					Action: NflogAction{
 						Group:  NFLOGDomainGroup,
 						Prefix: DNSActionPrefix,
-						// Traditional DNS over UDP has a maximum size of 512 bytes,
-						// but we need to allow for headers as well (Ethernet, IP
-						// and UDP); DNSNflogExpectedPacketSize will amply cover what we need.
-						Size: DNSNFlogExpectedPacketSize,
+						// Don't truncate the DNS packet when copying it to Felix.
+						Size: -1,
 					},
 				},
 			)
@@ -893,10 +888,8 @@ func (r *DefaultRuleRenderer) dnsRequestSnoopingRules(ifaceMatch string, ipVersi
 				Action: NflogAction{
 					Group:  NFLOGDomainGroup,
 					Prefix: DNSActionPrefix,
-					// Traditional DNS over UDP has a maximum size of 512 bytes,
-					// but we need to allow for headers as well (Ethernet, IP
-					// and UDP); DNSNflogExpectedPacketSize will amply cover what we need.
-					Size: DNSNFlogExpectedPacketSize,
+					// Don't truncate the DNS packet when copying it to Felix.
+					Size: -1,
 				},
 			},
 		)
@@ -2030,7 +2023,8 @@ func (r *DefaultRuleRenderer) nodeLocalDNSPreRoutingRules(nodeLocalDNSAddrs []co
 				Action: NflogAction{
 					Group:  NFLOGDomainGroup,
 					Prefix: DNSActionPrefix,
-					Size:   DNSNFlogExpectedPacketSize,
+					// Don't truncate the DNS packet when copying it to Felix.
+					Size: -1,
 				},
 			},
 			{
@@ -2040,7 +2034,8 @@ func (r *DefaultRuleRenderer) nodeLocalDNSPreRoutingRules(nodeLocalDNSAddrs []co
 				Action: NflogAction{
 					Group:  NFLOGDomainGroup,
 					Prefix: DNSActionPrefix,
-					Size:   DNSNFlogExpectedPacketSize,
+					// Don't truncate the DNS packet when copying it to Felix.
+					Size: -1,
 				},
 			},
 		}
@@ -2105,7 +2100,8 @@ func (r *DefaultRuleRenderer) nodeLocalDNSOutputRules(nodeLocalDNSAddrs []config
 				Action: NflogAction{
 					Group:  NFLOGDomainGroup,
 					Prefix: DNSActionPrefix,
-					Size:   DNSNFlogExpectedPacketSize,
+					// Don't truncate the DNS packet when copying it to Felix.
+					Size: -1,
 				},
 			},
 			{
@@ -2115,7 +2111,8 @@ func (r *DefaultRuleRenderer) nodeLocalDNSOutputRules(nodeLocalDNSAddrs []config
 				Action: NflogAction{
 					Group:  NFLOGDomainGroup,
 					Prefix: DNSActionPrefix,
-					Size:   DNSNFlogExpectedPacketSize,
+					// Don't truncate the DNS packet when copying it to Felix.
+					Size: -1,
 				},
 			},
 		}
