@@ -110,6 +110,30 @@ type IPSetData struct {
 	cachedUID string
 }
 
+func (d *IPSetData) String() string {
+	var parts []string
+	if d.Selector != nil {
+		parts = append(parts, fmt.Sprintf("selector:%q", d.Selector.String()))
+	}
+	if d.isDomainSet {
+		parts = append(parts, "domain")
+	}
+	if d.IsEgressSelector {
+		parts = append(parts, "egress")
+	}
+	if d.NamedPort != "" {
+		parts = append(parts, fmt.Sprintf("namedPort:%s(%s)", d.NamedPort, d.NamedPortProtocol.String()))
+	}
+	if d.Service != "" {
+		parts = append(parts, fmt.Sprintf("service:%q", d.Service))
+	}
+	if d.ServiceIncludePorts {
+		parts = append(parts, "serviceIncludePorts=true")
+	}
+	parts = append(parts, fmt.Sprintf("uniqueID:%q", d.UniqueID()))
+	return "IPSetData{" + strings.Join(parts, ", ") + "}"
+}
+
 func (d *IPSetData) SetIDForDomains(dstDomains []string) {
 	if d.cachedUID != "" {
 		log.WithField("IPSetData", d).Panic("cachedUID already set")
@@ -270,7 +294,7 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 			rs.OnIPSetActive(ipSet)
 			// Also emit the IP set membership, in the directly specified domains case.
 			for _, domain := range currentUIDToDomains[uid] {
-				log.Infof("Domain %v", domain)
+				log.Debugf("Domain %v", domain)
 				rs.OnIPSetMemberAdded(uid, labelindex.IPSetMember{Domain: strings.ToLower(domain)})
 			}
 		}
@@ -438,14 +462,14 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 		// If the rule is of type allow egress, check whether domains are directly specified
 		// and convert those to IPSets. If they are not, use the destination selector and
 		// calculate its IPSet(s).
-		log.Infof("Check rule %v %v for domains %v", ingressRule, rule.Action, rule.DstDomains)
+		log.Debugf("Check rule %v %v for domains %v", ingressRule, rule.Action, rule.DstDomains)
 		if !ingressRule && rule.Action == "allow" {
 			if len(rule.DstDomains) != 0 {
-				log.Infof("Rule with domains %v", rule.DstDomains)
+				log.Debugf("Rule with domains %v", rule.DstDomains)
 				dstDomainIPSets = domainsToIPSets(rule.DstDomains)
 				dstDomains = rule.DstDomains
 			} else {
-				log.Infof("Rule with selector %v", dstSel)
+				log.Debugf("Rule with selector %v", dstSel)
 				dstDomainIPSets = selectorsToIPSets(dstSel, true)
 			}
 		}
