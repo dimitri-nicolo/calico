@@ -23,6 +23,10 @@ promotions:
     when: "result = 'stopped'"
 # Have separate promotions for publishing images so we can re-run
 # them individually if they fail, and so we can run them in parallel.
+- name: Run Fossa scans
+  pipeline_file: license-scanning/fossa-scan.yml
+  auto_promote:
+    when: "branch =~ 'master|release-.*'"
 - name: Push apiserver images
   pipeline_file: push-images/apiserver.yml
   auto_promote:
@@ -192,23 +196,6 @@ blocks:
     - name: "Pre-flight checks"
       commands:
       - make ci-preflight-checks
-
-- name: "FOSSA scan"
-  run:
-    when: "branch =~ '^release-calient-v' OR branch = 'master'"
-  execution_time_limit:
-    minutes: 30
-  dependencies: ["Prerequisites"]
-  task:
-    prologue:
-      commands:
-      - "curl -fsSLH 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install-latest.sh | bash"
-    jobs:
-    - name: "FOSSA scan"
-      commands:
-      - "fossa analyze"
-    secrets:
-      - name: foss-api-key
 
 - name: "API"
   run:
