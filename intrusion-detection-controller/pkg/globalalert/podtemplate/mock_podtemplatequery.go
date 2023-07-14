@@ -7,6 +7,7 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 
+	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -17,6 +18,7 @@ type MockPodTemplateQuery struct {
 
 // GetPodTemplate provides a mock function with given fields: ctx, namespace, name
 func (_m *MockPodTemplateQuery) GetPodTemplate(ctx context.Context, namespace string, name string) (*v1.PodTemplate, error) {
+	log.Infof("GetPodTemplate: ctx=%#v namespace=%v name=%v", ctx, namespace, name)
 	ret := _m.Called(ctx, namespace, name)
 
 	var r0 *v1.PodTemplate

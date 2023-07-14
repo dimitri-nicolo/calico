@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -34,13 +33,9 @@ import (
 const (
 	ADDetectionJobTemplateName      = "tigera.io.detectors.detection"
 	DefaultCronJobDetectionSchedule = 20 * time.Minute
-	maxCronJobNameLen               = 52
-	numHashChars                    = 5
-	acceptableRFCGlobalAlertNameLen = maxCronJobNameLen - len(detectionCronJobSuffix) - numHashChars - 2
 
-	ClusterKey = "cluster"
-
-	detectionCronJobSuffix = "detection"
+	ClusterKey         = "cluster"
+	maxClusterLabelLen = 52
 )
 
 // controllerKind refers to the GlobalAlert kind that the resources created / reconciled
@@ -393,7 +388,15 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 
 	detectionCronJobName := r.getDetectionCycleCronJobNameForGlobaAlert(detectionResource.ClusterName, globalAlert.Name)
 	detectionLabels := DetectionJobLabels()
+	// The label value here can be too long, because customers can define an arbitrarily long
+	// name for the managed cluster, and then we may add the tenant ID as well.  So truncate to
+	// a max of 52 chars.  Note, this affects the "cluster" label value both on top level
+	// CronJob and in job spec pod template.
 	detectionLabels[ClusterKey] = util.Unify(detectionResource.TenantID, detectionResource.ClusterName)
+	if len(detectionLabels[ClusterKey]) > maxClusterLabelLen {
+		detectionLabels[ClusterKey] = detectionLabels[ClusterKey][:maxClusterLabelLen]
+	}
+	log.Infof("createDetectionCycle: %v=%v", ClusterKey, detectionLabels[ClusterKey])
 
 	detectionCycleCronJob := podtemplate.CreateCronJobFromPodTemplate(detectionCronJobName, r.namespace,
 		detectionSchedule, detectionLabels, *podTemplate)
@@ -421,25 +424,12 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 	return detectionCycleCronJob, nil
 }
 
-// getDetectionCycleCronJobNameForGlobaAlert creates a shortned RFC1123 compliant name for the detection cronjob
+// getDetectionCycleCronJobNameForGlobaAlert creates a shortened RFC1123 compliant name for the detection cronjob
 // based on the globalalert name in the format <acceptable-global-detection-alert-name>-hash256(globalaertname, 5)
 // where the acceptable-global-detection-alert-name is a concatenated name of the received globalalert to fit the
 // max CronJob 52 char limit
 func (r *adDetectionReconciler) getDetectionCycleCronJobNameForGlobaAlert(clusterName string, globaAlertName string) string {
-	// Convert all uppercase to lower case
-	rfcClusterGlobalAlertName := strings.ToLower(fmt.Sprintf("%s-%s", util.Unify(r.tenantID, clusterName), globaAlertName))
-
-	if len(rfcClusterGlobalAlertName) > acceptableRFCGlobalAlertNameLen {
-		rfcClusterGlobalAlertName = rfcClusterGlobalAlertName[:acceptableRFCGlobalAlertNameLen]
-	}
-
-	// clusterName and globalAlertName should be RFC1123 compliant since they are retrieved from individual Calico resource
-	// the combination with trimming the name might result in an non compliant name (ie. ending with period ".")
-	rfcClusterGlobalAlertName = util.ConvertToValidName(rfcClusterGlobalAlertName)
-
-	fullCronJobName := fmt.Sprintf("%s-%s-%s", rfcClusterGlobalAlertName, detectionCronJobSuffix, util.ComputeSha256HashWithLimit(globaAlertName, numHashChars))
-
-	return fullCronJobName
+	return util.MakeADJobName("dc", r.tenantID, clusterName, globaAlertName)
 }
 
 // removeDetector removes from the GlobalAlert from the detection state for the cluster and signals for the detection CronJob to be delete.
