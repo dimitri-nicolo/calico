@@ -16,7 +16,6 @@ import (
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/alert"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -32,7 +31,6 @@ type managedClusterReconciler struct {
 	lsClient                        lsclient.Client
 	k8sClient                       kubernetes.Interface
 	managementCalicoCLI             calicoclient.Interface
-	podTemplateQuery                podtemplate.ADPodTemplateQuery
 	createManagedCalicoCLI          func(string) (calicoclient.Interface, error)
 	alertNameToAlertControllerState map[string]alertControllerState
 
@@ -108,7 +106,7 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 	// create the GlobalAlertController for the managed cluster - this controller will monitor all GlobalAlert operations
 	// of the assigned managedcluster
 	// This will create global alerts and anomaly detection services per managed cluster
-	alertController, _ := alert.NewGlobalAlertController(managedCLI, r.lsClient, r.k8sClient, r.enableAnomalyDetection, r.podTemplateQuery, r.adDetectionController, r.adTrainingController, clusterName, r.tenantID, r.namespace, r.fipsModeEnabled)
+	alertController, _ := alert.NewGlobalAlertController(managedCLI, r.lsClient, r.k8sClient, r.enableAnomalyDetection, r.adDetectionController, r.adTrainingController, clusterName, r.tenantID, r.namespace, r.fipsModeEnabled)
 
 	r.alertNameToAlertControllerState[clusterName] = alertControllerState{
 		alertController: alertController,

@@ -14,7 +14,6 @@ import (
 
 	adjcontroller "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/anomalydetection"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/reporting"
 )
 
@@ -59,10 +58,9 @@ type adService struct {
 
 	// globalAlert has the copy of GlobalAlert, it is updated periodically when AnomalyDetection
 	// is queried for alert.
-	globalAlert      *v3.GlobalAlert
-	calicoCLI        calicoclient.Interface
-	k8sClient        kubernetes.Interface
-	podTemplateQuery podtemplate.ADPodTemplateQuery
+	globalAlert *v3.GlobalAlert
+	calicoCLI   calicoclient.Interface
+	k8sClient   kubernetes.Interface
 
 	adDetectionController controller.AnomalyDetectionController
 	adTrainingController  controller.AnomalyDetectionController
@@ -70,7 +68,7 @@ type adService struct {
 
 // NewService creates the Anomaly Detection service. Currently initialized per GlobalAlertController
 func NewService(calicoCLI calicoclient.Interface, k8sClient kubernetes.Interface,
-	podTemplateQuery podtemplate.ADPodTemplateQuery, anomalyDetectionController controller.AnomalyDetectionController,
+	anomalyDetectionController controller.AnomalyDetectionController,
 	anomalyDetectionTrainingController controller.AnomalyDetectionController,
 	clusterName string, tenantID string, namespace string, globalAlert *v3.GlobalAlert) (ADService, error) {
 
@@ -80,7 +78,6 @@ func NewService(calicoCLI calicoclient.Interface, k8sClient kubernetes.Interface
 		namespace:             namespace,
 		calicoCLI:             calicoCLI,
 		k8sClient:             k8sClient,
-		podTemplateQuery:      podTemplateQuery,
 		adDetectionController: anomalyDetectionController,
 		adTrainingController:  anomalyDetectionTrainingController,
 		globalAlert:           globalAlert,

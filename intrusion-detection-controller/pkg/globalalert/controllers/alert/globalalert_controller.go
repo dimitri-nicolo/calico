@@ -16,7 +16,6 @@ import (
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/worker"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
 )
@@ -39,7 +38,7 @@ type globalAlertController struct {
 
 // NewGlobalAlertController returns a globalAlertController and for each object it watches,
 // a health.Pinger object is created returned for health check.
-func NewGlobalAlertController(calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, tenantID string, namespace string, fipsModeEnabled bool) (controller.Controller, []health.Pinger) {
+func NewGlobalAlertController(calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, tenantID string, namespace string, fipsModeEnabled bool) (controller.Controller, []health.Pinger) {
 	c := &globalAlertController{
 		linseedClient: linseedClient,
 		calicoCLI:     calicoCLI,
@@ -55,7 +54,6 @@ func NewGlobalAlertController(calicoCLI calicoclient.Interface, linseedClient cl
 			linseedClient:          c.linseedClient,
 			calicoCLI:              c.calicoCLI,
 			k8sClient:              k8sClient,
-			podTemplateQuery:       podTemplateQuery,
 			adDetectionController:  adDetectionController,
 			adTrainingController:   adTrainingController,
 			alertNameToAlertState:  map[string]alertState{},
