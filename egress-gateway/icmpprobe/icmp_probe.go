@@ -44,9 +44,9 @@ func LoopDoingProbes(ctx context.Context, addr net.IP, interval time.Duration, h
 		cmd := exec.Command("ping", args...)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			if err, ok := err.(*exec.ExitError); ok {
+			if errExit, ok := err.(*exec.ExitError); ok {
 				// Avoid logging the ExitError, it's very verbose and not useful.
-				logCtx.WithField("rc", err.ExitCode()).Warnf("ICMP probe failed:\n%s", string(out))
+				logCtx.WithField("rc", errExit.ExitCode()).Warnf("ICMP probe failed:\n%s", string(out))
 			} else {
 				logCtx.WithError(err).Errorf("ICMP probe failed with unexpected error. Output from ping (if any): %q", string(out))
 			}
