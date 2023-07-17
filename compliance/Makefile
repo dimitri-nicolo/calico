@@ -193,7 +193,7 @@ $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): docker-image/scaleloader/Dockerfile
 KUBE_BENCH_VERSION := $(shell grep -E 'github.com/aquasecurity/kube-bench' ../go.mod | awk '{print$$2;exit}')
 $(COMPLIANCE_BENCHMARKER_IMAGE): $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED)
 $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): docker-image/benchmarker/Dockerfile.$(ARCH) bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH) register
-	$(DOCKER_BUILD) --build-arg KUBECTL_VERSION=$(KUBECTL_VERSION) --build-arg KUBE_BENCH_VERSION=$(KUBE_BENCH_VERSION) -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) -f docker-image/benchmarker/Dockerfile.$(ARCH) . --load
+	$(DOCKER_BUILD) --build-arg K8S_VERSION=$(K8S_VERSION) --build-arg KUBE_BENCH_VERSION=$(KUBE_BENCH_VERSION) -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) -f docker-image/benchmarker/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_BENCHMARKER_IMAGE)
 	touch $@
 
