@@ -89,7 +89,14 @@ func New(
 ) PacketProcessor {
 	options := []nfqueue.Option{
 		nfqueue.OptMaxQueueLength(queueLength),
-		// Don't risk truncating DNS response packet.
+		// Don't risk truncating DNS response packets.  Note that only DNS response packets
+		// should be coming through this queue, and DNS response packets will never actually
+		// be as big as this (65535 bytes).  The original spec for DNS over UDP only allows
+		// 512 bytes, and the EDNS0 extension, which is now well deployed, allows up to 4096
+		// bytes.  But there is no downside from configuring a larger limit here.  In
+		// principle we always want the complete DNS response packet, and the kernel only
+		// uses an amount of space in the NFQUEUE buffer that is equal to the actual size of
+		// the packet.
 		nfqueue.OptMaxPacketLength(0xFFFF),
 		nfqueue.OptMaxHoldTime(maxHoldDuration),
 		nfqueue.OptHoldTimeCheckInterval(holdTimeCheckInterval),
