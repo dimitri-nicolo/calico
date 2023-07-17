@@ -59,6 +59,7 @@ $(KIBANA_DOWNLOADED):
 	mkdir -p kibana
 	curl -sfL https://github.com/elastic/kibana/archive/refs/tags/v$(KIBANA_VERSION).tar.gz | tar xz --strip-components 1 -C kibana
 	patch -d kibana -p1 < patches/0001-Apply-Tigera-customizations-to-Kibana.patch
+	patch -d kibana -p1 < patches/0002-Update-semver-to-patch-CVE-2022-25883.patch
 	touch $@
 
 .PHONY: build
