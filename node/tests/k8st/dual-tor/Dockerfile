@@ -1,5 +1,5 @@
-ARG K8S_VERSION
-FROM kindest/node:${K8S_VERSION}
+ARG KINDEST_NODE_VERSION
+FROM kindest/node:${KINDEST_NODE_VERSION}
 
 # docker build on gcloud VMs fails when running 'apt-get update' with this error:
 # E: Problem executing scripts APT::Update::Post-Invoke 'rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true'
