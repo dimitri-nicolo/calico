@@ -2,7 +2,7 @@ ARG UBI_IMAGE
 
 FROM ${UBI_IMAGE} AS ubi
 
-ARG KUBECTL_VERSION
+ARG K8S_VERSION
 ARG KUBE_BENCH_VERSION
 
 RUN microdnf upgrade && microdnf install tar gzip
@@ -14,7 +14,7 @@ RUN curl -sfL https://github.com/aquasecurity/kube-bench/archive/refs/tags/${KUB
 	mkdir -p /etc/kube-bench && mv /tmp/kube-bench/cfg /etc/kube-bench/
 
 # install kubectl
-RUN curl -sfL https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl -o /usr/bin/kubectl && \
+RUN curl -sfL https://dl.k8s.io/release/${K8S_VERSION}/bin/linux/amd64/kubectl -o /usr/bin/kubectl && \
 	chmod 755 /usr/bin/kubectl
 
 
