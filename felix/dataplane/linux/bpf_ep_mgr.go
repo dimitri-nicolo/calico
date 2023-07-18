@@ -776,7 +776,7 @@ func (m *bpfEndpointManager) updateIfaceStateMap(name string, iface *bpfInterfac
 			iface.dpState.filterIdx[hook.Ingress],
 			iface.dpState.filterIdx[hook.Egress],
 		)
-		m.ifStateMap.SetDesired(k, v)
+		m.ifStateMap.Desired().Set(k, v)
 	} else {
 		if err := m.jumpMapDelete(hook.XDP, iface.dpState.policyIdx[hook.XDP]); err != nil {
 			log.WithError(err).Warn("Policy program may leak.")
@@ -813,7 +813,7 @@ func (m *bpfEndpointManager) updateIfaceStateMap(name string, iface *bpfInterfac
 			log.WithError(err).Error("Ingress")
 		}
 
-		m.ifStateMap.DeleteDesired(k)
+		m.ifStateMap.Desired().Delete(k)
 		iface.dpState.clearJumps()
 	}
 }
@@ -1109,13 +1109,13 @@ func (m *bpfEndpointManager) syncIfStateMap() {
 	m.ifacesLock.Lock()
 	defer m.ifacesLock.Unlock()
 
-	m.ifStateMap.IterDataplaneCache(func(k ifstate.Key, v ifstate.Value) {
+	m.ifStateMap.Dataplane().Iter(func(k ifstate.Key, v ifstate.Value) {
 		ifindex := int(k.IfIndex())
 		netiface, err := m.dp.interfaceByIndex(ifindex)
 		if err != nil {
 			// "net" does not export the strings or err types :(
 			if strings.Contains(err.Error(), "no such network interface") {
-				m.ifStateMap.DeleteDesired(k)
+				m.ifStateMap.Desired().Delete(k)
 				// Device does not exist anymore so delete all associated policies we know
 				// about as we will not hear about that device again.
 				for _, fn := range []func() int{
@@ -1137,7 +1137,7 @@ func (m *bpfEndpointManager) syncIfStateMap() {
 		} else if m.isDataIface(netiface.Name) || m.isWorkloadIface(netiface.Name) || m.isL3Iface(netiface.Name) {
 			// We only add iface that we still manage as configuration could have changed.
 
-			m.ifStateMap.SetDesired(k, v)
+			m.ifStateMap.Desired().Set(k, v)
 
 			m.withIface(netiface.Name, func(iface *bpfInterface) bool {
 				if netiface.Flags&net.FlagUp != 0 {
@@ -1187,7 +1187,7 @@ func (m *bpfEndpointManager) syncIfStateMap() {
 			})
 		} else {
 			// We no longer manage this device
-			m.ifStateMap.DeleteDesired(k)
+			m.ifStateMap.Desired().Delete(k)
 		}
 	})
 
