@@ -43,6 +43,9 @@ func NewEndpointsCache() EndpointsCache {
 	return &endpointsCache{
 		workloadEndpointsByNamespace: make(map[string]*endpointCache),
 		hostEndpoints:                newEndpointCache(),
+
+		converter:    conversion.NewConverter(),
+		wepConverter: conversion.NewWorkloadEndpointConverter(),
 	}
 }
 
@@ -51,6 +54,9 @@ func NewEndpointsCache() EndpointsCache {
 type endpointsCache struct {
 	workloadEndpointsByNamespace map[string]*endpointCache
 	hostEndpoints                *endpointCache
+
+	converter    conversion.Converter
+	wepConverter conversion.WorkloadEndpointConverter
 }
 
 // newEndpointCache creates a new endpointCache.
@@ -144,14 +150,18 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 func (c *endpointsCache) onPodDelete(obj interface{}) {
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
-		log.Debug("onPodDelete is called but the obj isn't *corev1.Pod type")
+		log.Debug("can't assert obj to *corev1.Pod")
 		return
 	}
 
-	wepConverter := conversion.NewWorkloadEndpointConverter()
-	kvps, err := wepConverter.PodToWorkloadEndpoints(pod)
+	if !c.converter.IsValidCalicoWorkloadEndpoint(pod) {
+		log.WithField("pod", pod).Debug("failed to validate a pod as a wep")
+		return
+	}
+
+	kvps, err := c.wepConverter.PodToWorkloadEndpoints(pod)
 	if err != nil {
-		log.WithError(err).Warn("failed to convert a pod to wep in Pod deletion callback.")
+		log.WithError(err).WithField("pod", pod).Debug("failed to convert a pod to a wep")
 		return
 	}
 
