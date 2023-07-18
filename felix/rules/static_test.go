@@ -323,10 +323,10 @@ var _ = Describe("Static", func() {
 							Rules: []Rule{
 								// DNS response capture.
 								{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-									Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+									Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
 								// DNS request capture.
 								{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-									Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+									Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
 								// Incoming host endpoint chains.
 								{Action: ClearMarkAction{Mark: 0xe1}},
 								{Match: Match().MarkClear(0x10),
@@ -349,10 +349,10 @@ var _ = Describe("Static", func() {
 								Rules: []Rule{
 									// DNS response capture.
 									{Match: Match().Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
 									// DNS request capture.
 									{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
 
 									// Forward check chain.
 									{Action: ClearMarkAction{Mark: conf.IptablesMarkEndpoint}},
@@ -387,10 +387,10 @@ var _ = Describe("Static", func() {
 								Rules: []Rule{
 									// DNS response capture.
 									{Match: Match().Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
 									// DNS request capture.
 									{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
 
 									// Per-prefix workload jump rules.  Note use of goto so that we
 									// don't return here.
@@ -431,11 +431,11 @@ var _ = Describe("Static", func() {
 
 									// DNS request capture.
 									{Match: Match().Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
 
 									// DNS response capture.
 									{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
 
 									// To workload traffic.
 									{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
@@ -464,11 +464,11 @@ var _ = Describe("Static", func() {
 
 									// DNS request capture.
 									{Match: Match().Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
 
 									// DNS response capture.
 									{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
 
 									// To workload traffic.
 									{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
@@ -556,7 +556,7 @@ var _ = Describe("Static", func() {
 										Action: NfqueueWithBypassAction{QueueNum: 101}},
 									// DNS request capture.
 									{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
 									// Incoming host endpoint chains.
 									{Action: ClearMarkAction{Mark: 0xe1}},
 									{Match: Match().MarkClear(0x10),
@@ -1867,7 +1867,7 @@ var _ = Describe("Static", func() {
 						Action: NflogAction{
 							Group:  rules.NFLOGDomainGroup,
 							Prefix: rules.DNSActionPrefix,
-							Size:   rules.DNSNFlogExpectedPacketSize,
+							Size:   -1,
 						},
 					},
 				))
@@ -1879,7 +1879,7 @@ var _ = Describe("Static", func() {
 						Action: NflogAction{
 							Group:  rules.NFLOGDomainGroup,
 							Prefix: rules.DNSActionPrefix,
-							Size:   rules.DNSNFlogExpectedPacketSize,
+							Size:   -1,
 						},
 					},
 				))
@@ -1897,7 +1897,7 @@ var _ = Describe("Static", func() {
 						Action: NflogAction{
 							Group:  rules.NFLOGDomainGroup,
 							Prefix: rules.DNSActionPrefix,
-							Size:   rules.DNSNFlogExpectedPacketSize,
+							Size:   -1,
 						},
 					},
 				))
@@ -1909,7 +1909,7 @@ var _ = Describe("Static", func() {
 						Action: NflogAction{
 							Group:  rules.NFLOGDomainGroup,
 							Prefix: rules.DNSActionPrefix,
-							Size:   rules.DNSNFlogExpectedPacketSize,
+							Size:   -1,
 						},
 					},
 				))

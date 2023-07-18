@@ -122,7 +122,7 @@ var _ = Describe("AnomalyDetection Service", func() {
 		errMockADDetectionController.On("RemoveDetector", mock.AnythingOfType("anomalydetection.DetectionCycleRequest")).Return(nil)
 
 		var err error
-		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, errMockADDetectionController,
+		adjService, err = NewService(mockCalicoCLI, mockK8sClient, errMockADDetectionController,
 			mockADTrainingController, clusterName, tenant, namespace, defaultSampleGlobalAlert)
 		defer adjService.Stop()
 
@@ -146,7 +146,7 @@ var _ = Describe("AnomalyDetection Service", func() {
 		errMockADTrainingController.On("RemoveDetector", mock.AnythingOfType("anomalydetection.TrainingDetectorsRequest")).Return(nil)
 
 		var err error
-		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, mockADDetectionController,
+		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockADDetectionController,
 			errMockADTrainingController, clusterName, tenant, namespace, defaultSampleGlobalAlert)
 
 		Expect(err).ShouldNot(HaveOccurred())
@@ -169,7 +169,7 @@ var _ = Describe("AnomalyDetection Service", func() {
 		errMockADDetectionController.On("AddDetector", mock.AnythingOfType("anomalydetection.DetectionCycleRequest")).Return(nil)
 
 		var err error
-		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, errMockADDetectionController,
+		adjService, err = NewService(mockCalicoCLI, mockK8sClient, errMockADDetectionController,
 			mockADTrainingController, clusterName, tenant, namespace, defaultSampleGlobalAlert)
 
 		Expect(err).ShouldNot(HaveOccurred())
@@ -192,7 +192,7 @@ var _ = Describe("AnomalyDetection Service", func() {
 		errMockADTrainingController.On("AddDetector", mock.AnythingOfType("anomalydetection.TrainingDetectorsRequest")).Return(nil)
 
 		var err error
-		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, mockADDetectionController,
+		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockADDetectionController,
 			errMockADTrainingController, clusterName, tenant, namespace, defaultSampleGlobalAlert)
 
 		Expect(err).ShouldNot(HaveOccurred())

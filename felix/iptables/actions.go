@@ -175,7 +175,9 @@ func (n NflogAction) ToFragment(features *environment.Features) string {
 	if n.Size != 0 {
 		size = n.Size
 	}
-	if features.NFLogSize {
+	if n.Size < 0 {
+		return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s", n.Group, n.Prefix)
+	} else if features.NFLogSize {
 		return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-size %d", n.Group, n.Prefix, size)
 	} else {
 		return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range %d", n.Group, n.Prefix, size)
