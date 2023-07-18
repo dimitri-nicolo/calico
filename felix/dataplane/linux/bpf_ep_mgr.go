@@ -590,9 +590,9 @@ func (m *bpfEndpointManager) updateIfaceStateMap(name string, iface *bpfInterfac
 			flags |= ifstate.FlgReady
 		}
 		v := ifstate.NewValue(flags, name)
-		m.ifStateMap.SetDesired(k, v)
+		m.ifStateMap.Desired().Set(k, v)
 	} else {
-		m.ifStateMap.DeleteDesired(k)
+		m.ifStateMap.Desired().Delete(k)
 	}
 }
 
@@ -857,20 +857,20 @@ func (m *bpfEndpointManager) markExistingWEPDirty(wlID proto.WorkloadEndpointID,
 }
 
 func (m *bpfEndpointManager) syncIfStateMap() {
-	m.ifStateMap.IterDataplaneCache(func(k ifstate.Key, v ifstate.Value) {
+	m.ifStateMap.Dataplane().Iter(func(k ifstate.Key, v ifstate.Value) {
 		ifindex := int(k.IfIndex())
 		_, err := net.InterfaceByIndex(ifindex)
 		if err != nil {
 			// "net" does not export the strings or err types :(
 			if strings.Contains(err.Error(), "no such network interface") {
-				m.ifStateMap.DeleteDesired(k)
+				m.ifStateMap.Desired().Delete(k)
 			} else {
 				// It will get deleted by the first CompleteDeferredWork() if we
 				// do not get any state update on that interface.
 				log.WithError(err).Warnf("Failed to sync ifstate for iface %d, deffering it.", ifindex)
 			}
 		} else {
-			m.ifStateMap.SetDesired(k, v)
+			m.ifStateMap.Desired().Set(k, v)
 		}
 	})
 }
