@@ -4,6 +4,7 @@ package managedcluster
 
 import (
 	"context"
+	"fmt"
 
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 
@@ -16,6 +17,7 @@ import (
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/alert"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/waf"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -72,6 +74,9 @@ func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName
 		if err := r.startManagedClusterAlertController(mc.Name); err != nil {
 			return err
 		}
+		if err := r.startManagedClusterWafController(mc.Name); err != nil {
+			return err
+		}
 	} else {
 		log.Infof("Managed cluster %s is not connected", namespacedName.Name)
 		r.stopADForCluster(namespacedName.Name)
@@ -116,6 +121,28 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 	}
 
 	go alertController.Run(ctx)
+	return nil
+}
+
+// startManagedClusterWafController creates a client for the managed cluster, starts a new WafAlertController.
+func (r *managedClusterReconciler) startManagedClusterWafController(name string) error {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	clusterName := name
+
+	// create the WafAlertController for the managed cluster - this controller will monitor all waf logs
+	// of the assigned managedcluster
+	wafAlertController := waf.NewWafAlertController(r.lsClient, clusterName, r.tenantID, r.namespace)
+
+	wafAlertControllerName := fmt.Sprintf("waf-%s", clusterName)
+	r.alertNameToAlertControllerState[wafAlertControllerName] = alertControllerState{
+		alertController: wafAlertController,
+		clusterName:     clusterName,
+		tenantID:        r.tenantID,
+		cancel:          cancel,
+	}
+
+	go wafAlertController.Run(ctx)
 	return nil
 }
 

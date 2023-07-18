@@ -34,6 +34,7 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/anomalydetection"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/managedcluster"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/waf"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
@@ -201,7 +202,7 @@ func main() {
 		healthPingers = append(healthPingers, s)
 	}
 
-	var managementAlertController, managedClusterController controller.Controller
+	var managementAlertController, managedClusterController, wafEventController controller.Controller
 	var alertHealthPinger health.Pingers
 
 	enableAlerts := os.Getenv("DISABLE_ALERTS") != "yes"
@@ -229,6 +230,8 @@ func main() {
 		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, linseed, k8sClient, enableAnomalyDetection, anomalyDetectionController, anomalyTrainingController, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.FIPSMode)
 		healthPingers = append(healthPingers, &alertHealthPinger)
 
+		// This will managed all waf logs inside the management cluster
+		wafEventController = waf.NewWafAlertController(linseed, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace)
 		// This controller will monitor managed cluster updated from K8S and create a NewGlobalAlertController per managed cluster
 		managedClusterController = managedcluster.NewManagedClusterController(calicoClient, linseed, k8sClient, enableAnomalyDetection, anomalyTrainingController, anomalyDetectionController, TigeraIntrusionDetectionNamespace, util.ManagedClusterClient(k8sConfig, cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA), cfg.FIPSMode, cfg.TenantID)
 	}
@@ -267,6 +270,9 @@ func main() {
 				defer managedClusterController.Close()
 				managementAlertController.Run(ctx)
 				defer managementAlertController.Close()
+
+				wafEventController.Run(ctx)
+				defer wafEventController.Close()
 			}
 
 			if enableForwarding {
