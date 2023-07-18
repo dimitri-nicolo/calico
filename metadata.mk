@@ -3,7 +3,7 @@
 #################################################################################################
 
 # The version of github.com/projectcalico/go-build to use.
-GO_BUILD_VER=v0.86
+GO_BUILD_VER=v0.87
 
 # Version of Kubernetes to use for tests, bitnami/kubectl, and kubectl binary release in
 # compliance benchmarker, confd, and kube-controllers.
