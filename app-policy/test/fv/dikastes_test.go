@@ -50,6 +50,26 @@ func (s *dikastesTestSuite) TestBasicExtAuthz() {
 			},
 		},
 		{
+			comment: "basics: has wep, staged policy only policy -- so no effect",
+			updates: []*proto.ToDataplane{
+				stagedPolicyUpdate("default", "secure", inboundRule),
+				inSync(),
+			},
+			checks: []dikastesTestCaseData{
+				{
+					comment: "GET 10.0.0.1/public yields deny when no profiles",
+					inputReq: newRequest(
+						s.uidAlloc.NextUID(), "GET", "http://10.0.1.1/public", nil,
+						newPeer("10.0.0.1", "default", "default"),
+						newPeer("10.0.1.1", "default", "default"),
+					),
+					// no active profiles.. so we expect a deny!
+					expectedResp: newResponseWithStatus(int32(code.Code_PERMISSION_DENIED)),
+					expectedErr:  nil,
+				},
+			},
+		},
+		{
 			comment: "basics: info about policy arrives",
 			updates: append([]*proto.ToDataplane{
 				wepUpdate("pod-1", []string{"10.0.1.1/32"}, []string{"default"}),

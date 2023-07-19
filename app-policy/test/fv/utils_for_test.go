@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"sync"
+	"testing"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
@@ -14,6 +15,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 type UIDAllocator struct {
@@ -118,6 +120,23 @@ func policyAndProfileUpdate(policyName, profileName string, inboundRule *proto.R
 	return res
 }
 
+func stagedPolicyUpdate(name, ns string, inboundRule *proto.Rule) *proto.ToDataplane {
+	policyName := fmt.Sprintf("%s/staged:%s", ns, name)
+	policy := &proto.Policy{
+		InboundRules: []*proto.Rule{
+			inboundRule,
+		},
+	}
+	return &proto.ToDataplane{
+		Payload: &proto.ToDataplane_ActivePolicyUpdate{
+			ActivePolicyUpdate: &proto.ActivePolicyUpdate{
+				Id:     &proto.PolicyID{Name: policyName},
+				Policy: policy,
+			},
+		},
+	}
+}
+
 func newRequest(
 	id uint64,
 	method, requestUrl string,
@@ -166,5 +185,12 @@ func newResponseWithStatus(code int32) *authzv3.CheckResponse {
 		Status: &status.Status{
 			Code: code,
 		},
+	}
+}
+
+func TestStagedPolicyUpdate(t *testing.T) {
+	stagedPolicy := stagedPolicyUpdate("test", "default", &proto.Rule{})
+	if !model.PolicyIsStaged(stagedPolicy.GetActivePolicyUpdate().GetId().GetName()) {
+		t.Error("Expected staged policy")
 	}
 }
