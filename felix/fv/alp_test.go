@@ -90,7 +90,7 @@ func describeALPTest(ipip bool) bool {
 						return true
 					}
 					Expect(err).NotTo(HaveOccurred())
-					return (strings.Contains(out, ip)) == exists 
+					return (strings.Contains(out, ip)) == exists
 				}, "90s", "5s").Should(BeTrue())
 			}
 
