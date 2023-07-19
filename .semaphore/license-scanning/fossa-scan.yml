@@ -19,10 +19,12 @@ blocks:
       prologue:
         commands:
         - "curl -fsSLH 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install-latest.sh | bash"
+        - checkout
+        - retry git fetch --unshallow
       jobs:
       - name: "FOSSA scan"
         commands:
-        - "fossa analyze"
+        - fossa analyze
       secrets:
         - name: foss-api-key
 
