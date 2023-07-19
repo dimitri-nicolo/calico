@@ -168,10 +168,17 @@ helm-index:
 # Excludes manifests that should be applied after cluster creation.
 manifests/ocp.tgz:
 	rm -f $@
-	tar czvf $@ -C manifests/ \
+	mkdir -p ocp-tmp
+	cp -r manifests/ocp ocp-tmp/
+	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "                                        \
+		for file in ocp-tmp/ocp/*crd* ;                                                 \
+        	do bin/yq -i 'del(.. | select(has(\"description\")).description)' \$$file ; \
+        done"
+	tar czvf $@ -C ocp-tmp \
 		--exclude=tigera-enterprise-resources.yaml \
 		--exclude=tigera-prometheus-operator.yaml \
-		 ocp
+		ocp
+	rm -rf ocp-tmp
 
 ## Generates release notes for the given version.
 .PHONY: release-notes
