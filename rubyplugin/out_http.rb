@@ -94,6 +94,9 @@ module Fluent::Plugin
     # we'll use that location.
     config_param :token, :string, :default => '/var/run/secrets/kubernetes.io/serviceaccount/token', :secret => false
 
+    # The tenant ID to run as.
+    config_param :tenant, :string, :default => '', :secret => false
+
     def initialize
       super
 
@@ -248,6 +251,11 @@ module Fluent::Plugin
       elsif @authentication == :bearer
          req['Authorization'] = "Bearer #{raw_token}"
       end
+
+      if @tenant != ''
+        req['x-tenant-id'] = @tenant
+      end
+
       req.body = @json_array ? "[#{chunk.read.chop}]" : chunk.read
       req
     end
