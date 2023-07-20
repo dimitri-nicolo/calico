@@ -171,7 +171,7 @@ manifests/ocp.tgz:
 	mkdir -p ocp-tmp
 	cp -r manifests/ocp ocp-tmp/
 	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "                                        \
-		for file in ocp-tmp/ocp/*crd* ;                                                 \
+		for file in ocp-tmp/ocp/* ;                                                 \
         	do bin/yq -i 'del(.. | select(has(\"description\")).description)' \$$file ; \
         done"
 	tar czvf $@ -C ocp-tmp \
