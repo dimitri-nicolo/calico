@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	"github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
@@ -69,12 +70,17 @@ func TestBootstrapTemplate(t *testing.T) {
 	require.NotNil(t, templ)
 	require.Len(t, templ.IndexPatterns, 1)
 
-	checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1)
+	checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1, true)
 }
 
-func checkTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster string, indexNumber string, expectedNumberIndices int) {
+func checkTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster, indexNumber string, expectedNumberIndices int, templateNameEndsInDot bool) {
 	// Check that the template was created
-	templateExists, err := client.IndexTemplateExists(fmt.Sprintf("%s.%s.", indexPrefix, cluster)).Do(ctx)
+	templateName := fmt.Sprintf("%s.%s", indexPrefix, cluster)
+	// Some template names do not end with a dot, like the template name for events
+	if templateNameEndsInDot {
+		templateName = fmt.Sprintf("%s.%s.", indexPrefix, cluster)
+	}
+	templateExists, err := client.IndexTemplateExists(templateName).Do(ctx)
 	require.NoError(t, err)
 	require.True(t, templateExists)
 
@@ -94,19 +100,12 @@ func checkTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster 
 	for _, row := range responseAlias {
 		if row.Alias == fmt.Sprintf("%s.%s.", indexPrefix, cluster) {
 			hasAlias = true
-			if expectedNumberIndices == 1 {
+			if row.IsWriteIndex == "true" {
 				require.Equal(t, index, row.Index)
-				require.Equal(t, "true", row.IsWriteIndex)
 				numWriteIndex++
-				break
 			} else {
-				if row.IsWriteIndex == "true" {
-					require.Equal(t, index, row.Index)
-					numWriteIndex++
-				} else {
-					require.NotEqual(t, index, row.Index)
-					numNonWriteIndex++
-				}
+				require.NotEqual(t, index, row.Index)
+				numNonWriteIndex++
 			}
 		}
 	}
@@ -158,8 +157,34 @@ func TestBootstrapAuditTemplates(t *testing.T) {
 
 	// Check that the template returned has the correct
 	// index_patterns, ILM policy, mappings and shards and replicas
-	checkTemplateBootstrapping(t, "tigera_secure_ee_audit_kube", "fluentd", cluster, "000001", 1)
-	checkTemplateBootstrapping(t, "tigera_secure_ee_audit_ee", "fluentd", cluster, "000001", 1)
+	checkTemplateBootstrapping(t, "tigera_secure_ee_audit_kube", "fluentd", cluster, "000001", 1, true)
+	checkTemplateBootstrapping(t, "tigera_secure_ee_audit_ee", "fluentd", cluster, "000001", 1, true)
+}
+
+func TestBootstrapEventsBackwardsCompatibility(t *testing.T) {
+	defer setupTest(t, []string{"tigera_secure_ee_events"})()
+
+	// Create an old index that has the same name as the one defined in 3.16
+	oldIndexName := fmt.Sprintf("tigera_secure_ee_events.%s.lma", cluster)
+	resultIndex, err := client.CreateIndex(oldIndexName).Do(ctx)
+	require.NoError(t, err)
+	require.True(t, resultIndex.Acknowledged)
+
+	aliasName := fmt.Sprintf("tigera_secure_ee_events.%s.", cluster)
+	resultAlias, err := client.Alias().Action(elastic.NewAliasAddAction(aliasName).
+		Index(oldIndexName).IsWriteIndex(true)).Do(ctx)
+	require.NoError(t, err)
+	require.True(t, resultAlias.Acknowledged)
+
+	eventsTemplateConfig := templates.NewTemplateConfig(bapi.Events, bapi.ClusterInfo{Cluster: cluster})
+	templEvents, err := templates.IndexBootstrapper(ctx, client, eventsTemplateConfig)
+	require.NoError(t, err)
+	require.NotNil(t, templEvents)
+	require.Len(t, templEvents.IndexPatterns, 1)
+
+	// Check that the template returned has the correct
+	// index_patterns, ILM policy, mappings and shards and replicas
+	checkTemplateBootstrapping(t, "tigera_secure_ee_events", "lma", cluster, "000000", 2, false)
 }
 
 func TestBootstrapTemplateMultipleTimes(t *testing.T) {
@@ -170,7 +195,7 @@ func TestBootstrapTemplateMultipleTimes(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		_, err := templates.IndexBootstrapper(ctx, client, templateConfig)
 		require.NoError(t, err)
-		checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1)
+		checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1, true)
 	}
 }
 
@@ -209,7 +234,7 @@ func TestBootstrapTemplateNewMappings(t *testing.T) {
 		require.NotNil(t, templ)
 		require.Len(t, templ.IndexPatterns, 1)
 
-		checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1)
+		checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1, true)
 	}
 
 	// We now have an older index (without "dest_domains")
@@ -242,7 +267,7 @@ func TestBootstrapTemplateNewMappings(t *testing.T) {
 		require.NotNil(t, templ)
 		require.Len(t, templ.IndexPatterns, 1)
 
-		checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000002", 2)
+		checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000002", 2, true)
 	}
 }
 

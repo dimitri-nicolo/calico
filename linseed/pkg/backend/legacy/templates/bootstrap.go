@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"regexp"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/projectcalico/go-json/json"
@@ -57,7 +58,7 @@ var IndexBootstrapper Load = func(ctx context.Context, client *elastic.Client, c
 
 		if indexInfo.AliasExists {
 			// Rollover index to get latest mappings
-			err = RolloverIndex(ctx, client, config)
+			err = RolloverIndex(ctx, client, config, indexInfo.AliasedIndex)
 			if err != nil {
 				return nil, err
 			}
@@ -176,9 +177,22 @@ func CreateAliasForIndex(ctx context.Context, client *elastic.Client, config *Te
 	return err
 }
 
-func RolloverIndex(ctx context.Context, client *elastic.Client, config *TemplateConfig) error {
+func RolloverIndex(ctx context.Context, client *elastic.Client, config *TemplateConfig, oldIndex string) error {
 	logrus.Info("Existing index does not use the latest mappings, let's rollover the index so that it uses the latest mappings")
-	response, err := client.RolloverIndex(config.Alias()).Do(ctx)
+	rolloverReq := client.RolloverIndex(config.Alias())
+	// Event indices prior to 3.17 were created to match the pattern tigera_secure_ee_events.{$managed_cluster}.lma
+	// or tigera_secure_ee_events.{$tenant_id}.{$managed_cluster}.lma. Because the index does
+	// not have a suffix like `-000000` or `-0`, it will result in an error when trying to perform a roll-over request
+	// We need to specify an index that ends in a number as a target-index on the Elastic API calls
+	match, err := regexp.MatchString("^(tigera_secure_ee_events.).+(.lma)$", oldIndex)
+	if err != nil {
+		return err
+	}
+	if match {
+		logrus.Infof("Existing index %s does not end in an number. Will need to specify a index that ends with a number", oldIndex)
+		rolloverReq.NewIndex(config.BootstrapIndexName())
+	}
+	response, err := rolloverReq.Do(ctx)
 	if err != nil {
 		return err
 	}
