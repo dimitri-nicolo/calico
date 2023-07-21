@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/projectcalico/calico/felix/calc"
-	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 )
 
@@ -28,7 +28,7 @@ func init() {
 type CollectorPolicyListener struct {
 	lc   *calc.LookupsCache
 	inC  chan PolicyVerdict
-	outC chan dataplane.PacketInfo
+	outC chan collector.PacketInfo
 }
 
 // NewCollectorPolicyListener return a new instance of a CollectorPolicyListener.
@@ -36,7 +36,7 @@ func NewCollectorPolicyListener(lc *calc.LookupsCache) *CollectorPolicyListener 
 	return &CollectorPolicyListener{
 		lc:   lc,
 		inC:  make(chan PolicyVerdict, 100),
-		outC: make(chan dataplane.PacketInfo),
+		outC: make(chan collector.PacketInfo),
 	}
 }
 
@@ -73,10 +73,10 @@ func (c *CollectorPolicyListener) run() {
 			continue
 		}
 
-		pktInfo := dataplane.PacketInfo{
+		pktInfo := collector.PacketInfo{
 			IsDNAT:   !e.DstAddr.Equal(e.PostNATDstAddr) || e.DstPort != e.PostNATDstPort,
 			Tuple:    makeTuple(e.SrcAddr, e.PostNATDstAddr, e.IPProto, e.SrcPort, e.PostNATDstPort),
-			RuleHits: make([]dataplane.RuleHit, e.RulesHit),
+			RuleHits: make([]collector.RuleHit, e.RulesHit),
 		}
 
 		if pktInfo.IsDNAT {
@@ -86,7 +86,7 @@ func (c *CollectorPolicyListener) run() {
 		for i := 0; i < int(e.RulesHit); i++ {
 			id := e.RuleIDs[i]
 			rid := c.lc.GetRuleIDFromID64(id)
-			pktInfo.RuleHits[i] = dataplane.RuleHit{
+			pktInfo.RuleHits[i] = collector.RuleHit{
 				RuleID: rid,
 				Hits:   1,
 				Bytes:  int(e.IPSize),
@@ -123,6 +123,6 @@ func (c *CollectorPolicyListener) Stop() {
 }
 
 // PacketInfoChan provides the output channel with converted information.
-func (c *CollectorPolicyListener) PacketInfoChan() <-chan dataplane.PacketInfo {
+func (c *CollectorPolicyListener) PacketInfoChan() <-chan collector.PacketInfo {
 	return c.outC
 }

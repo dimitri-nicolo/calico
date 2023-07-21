@@ -3,7 +3,7 @@
 
 // Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 
-package reporter
+package syslog
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
@@ -46,10 +46,10 @@ func init() {
 	)
 }
 
-// NewSyslogReporter configures and returns a SyslogReporter.
+// New configures and returns a SyslogReporter.
 // Network and Address can be used to configure remote syslogging. Leaving both
 // of these values empty implies using local syslog such as /dev/log.
-func NewSyslog(network, address string) *Syslog {
+func New(network, address string) *Syslog {
 	slog := log.New()
 	priority := syslog.LOG_USER | syslog.LOG_INFO
 	tag := "calico-felix"
@@ -75,11 +75,16 @@ func NewSyslog(network, address string) *Syslog {
 	}
 }
 
-func (s *Syslog) Start() {
+func (s *Syslog) Start() error {
 	log.Info("Starting Syslog Reporter")
+	return nil
 }
 
-func (s *Syslog) Report(mu metric.Update) error {
+func (s *Syslog) Report(u any) error {
+	mu, ok := u.(metric.Update)
+	if !ok {
+		return fmt.Errorf("invalid metric update")
+	}
 	if (mu.InMetric.DeltaPackets == 0 && mu.InMetric.DeltaBytes == 0) &&
 		(mu.OutMetric.DeltaPackets == 0 && mu.OutMetric.DeltaBytes == 0) {
 		// No update. It isn't an error.
@@ -101,7 +106,7 @@ func (s *Syslog) Report(mu metric.Update) error {
 		"rule":       lastRuleID.IndexStr,
 		"action":     lastRuleID.ActionString(),
 		"ruleDir":    lastRuleID.DirectionString(),
-		"trafficDir": dataplane.RuleDirToTrafficDir(lastRuleID.Direction).String(),
+		"trafficDir": types.RuleDirToTrafficDir(lastRuleID.Direction).String(),
 		"inPackets":  mu.InMetric.DeltaPackets,
 		"inBytes":    mu.InMetric.DeltaBytes,
 		"outPackets": mu.OutMetric.DeltaPackets,

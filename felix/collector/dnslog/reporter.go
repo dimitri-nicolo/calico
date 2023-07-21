@@ -9,23 +9,18 @@ import (
 	"github.com/gavv/monotime"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/collector/reporter"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 
 type aggregatorRef struct {
 	a *Aggregator
-	d []reporter.LogDispatcher
-}
-
-type ReporterInterface interface {
-	Start()
-	Log(update Update) error
+	d []types.Reporter
 }
 
 type DNSReporter struct {
-	dispatchers  map[string]reporter.LogDispatcher
+	dispatchers  map[string]types.Reporter
 	aggregators  []aggregatorRef
 	flushTrigger <-chan time.Time
 
@@ -41,11 +36,11 @@ const (
 )
 
 // NewReporter constructs a Reporter using a dispatcher and aggregator.
-func NewReporter(dispatchers map[string]reporter.LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator) *DNSReporter {
+func NewReporter(dispatchers map[string]types.Reporter, flushInterval time.Duration, healthAggregator *health.HealthAggregator) *DNSReporter {
 	return NewReporterWithShims(dispatchers, jitter.NewTicker(flushInterval, flushInterval/10).Channel(), healthAggregator)
 }
 
-func NewReporterWithShims(dispatchers map[string]reporter.LogDispatcher, flushTrigger <-chan time.Time, healthAggregator *health.HealthAggregator) *DNSReporter {
+func NewReporterWithShims(dispatchers map[string]types.Reporter, flushTrigger <-chan time.Time, healthAggregator *health.HealthAggregator) *DNSReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(dnsHealthName, &health.HealthReport{Live: true, Ready: true}, dnsHealthInterval*2)
 	}
@@ -71,11 +66,16 @@ func (c *DNSReporter) AddAggregator(agg *Aggregator, dispatchers []string) {
 	c.aggregators = append(c.aggregators, ref)
 }
 
-func (r *DNSReporter) Start() {
+func (r *DNSReporter) Start() error {
 	go r.run()
+	return nil
 }
 
-func (r *DNSReporter) Log(update Update) error {
+func (r *DNSReporter) Report(u any) error {
+	update, ok := u.(Update)
+	if !ok {
+		return fmt.Errorf("invalid dns log update")
+	}
 	for _, agg := range r.aggregators {
 		if err := agg.a.FeedUpdate(update); err != nil {
 			return err
@@ -106,7 +106,7 @@ func (r *DNSReporter) run() {
 							"size":       len(fl),
 							"dispatcher": d,
 						}).Debug("Dispatching log buffer")
-						d.Dispatch(fl)
+						d.Report(fl)
 					}
 				}
 			}
@@ -128,7 +128,7 @@ func (r *DNSReporter) reportHealth() {
 
 func (r *DNSReporter) canPublish() bool {
 	for name, d := range r.dispatchers {
-		err := d.Initialize()
+		err := d.Start()
 		if err != nil {
 			log.WithError(err).
 				WithField("name", name).

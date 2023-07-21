@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/calc"
-	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/rules"
@@ -57,7 +57,7 @@ type RuleAggregateKey struct {
 
 // PacketByteLabels returns the Prometheus packet/byte counter labels associated
 // with a specific rule and traffic direction.
-func (k *RuleAggregateKey) PacketByteLabels(trafficDir dataplane.TrafficDirection, felixHostname string) prometheus.Labels {
+func (k *RuleAggregateKey) PacketByteLabels(trafficDir types.TrafficDirection, felixHostname string) prometheus.Labels {
 	return prometheus.Labels{
 		LABEL_ACTION:      k.ruleID.ActionString(),
 		LABEL_TIER:        k.ruleID.TierString(),
@@ -79,7 +79,7 @@ func (k *RuleAggregateKey) ConnectionLabels(felixHostname string) prometheus.Lab
 		LABEL_POLICY:      k.ruleID.NameString(),
 		LABEL_RULE_DIR:    k.ruleID.DirectionString(),
 		LABEL_RULE_IDX:    k.ruleID.IndexStr,
-		LABEL_TRAFFIC_DIR: dataplane.RuleDirToTrafficDir(k.ruleID.Direction).String(),
+		LABEL_TRAFFIC_DIR: types.RuleDirToTrafficDir(k.ruleID.Direction).String(),
 		LABEL_INSTANCE:    felixHostname,
 	}
 }
@@ -98,8 +98,8 @@ func newRuleAggregateValue(key RuleAggregateKey, felixHostname string) *RuleAggr
 	// not resulted in any connections, we create the counters anyways - the rule stats are expected to
 	// be semi-long lived.
 	cLabels := key.ConnectionLabels(felixHostname)
-	pbInLabels := key.PacketByteLabels(dataplane.TrafficDirInbound, felixHostname)
-	pbOutLabels := key.PacketByteLabels(dataplane.TrafficDirOutbound, felixHostname)
+	pbInLabels := key.PacketByteLabels(types.TrafficDirInbound, felixHostname)
+	pbOutLabels := key.PacketByteLabels(types.TrafficDirOutbound, felixHostname)
 	return &RuleAggregateValue{
 		tuples:         tuple.NewSet(),
 		inPackets:      counterRulePackets.With(pbInLabels),
@@ -233,8 +233,8 @@ func (pa *PolicyRulesAggregator) deleteRuleAggregateMetric(key RuleAggregateKey)
 		// Nothing to do here.
 		return
 	}
-	pbInLabels := key.PacketByteLabels(dataplane.TrafficDirInbound, pa.felixHostname)
-	pbOutLabels := key.PacketByteLabels(dataplane.TrafficDirOutbound, pa.felixHostname)
+	pbInLabels := key.PacketByteLabels(types.TrafficDirInbound, pa.felixHostname)
+	pbOutLabels := key.PacketByteLabels(types.TrafficDirOutbound, pa.felixHostname)
 	cLabels := key.ConnectionLabels(pa.felixHostname)
 	switch key.ruleID.Direction {
 	case rules.RuleDirIngress:

@@ -27,9 +27,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/collector"
-	dpcollector "github.com/projectcalico/calico/felix/collector/dataplane"
-	"github.com/projectcalico/calico/felix/collector/dnslog"
-	"github.com/projectcalico/calico/felix/collector/l7log"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/config"
 	intdataplane "github.com/projectcalico/calico/felix/dataplane/linux"
@@ -50,20 +48,22 @@ func (_ *mockCollector) Start() error { return nil }
 
 func (_ *mockCollector) LogDNS(net.IP, net.IP, *layers.DNS, *time.Duration) {}
 
-func (_ *mockCollector) SetDNSLogReporter(dnslog.ReporterInterface) {}
+func (_ *mockCollector) SetDNSLogReporter(types.Reporter) {}
 
-func (_ *mockCollector) LogL7(*proto.HTTPData, *dpcollector.Data, tuple.Tuple, int) {
+func (_ *mockCollector) LogL7(*proto.HTTPData, *collector.Data, tuple.Tuple, int) {
 }
 
-func (_ *mockCollector) SetL7LogReporter(l7log.ReporterInterface) {}
+func (_ *mockCollector) SetL7LogReporter(types.Reporter) {}
 
-func (_ *mockCollector) SetPacketInfoReader(dpcollector.PacketInfoReader) {}
+func (_ *mockCollector) RegisterMetricsReporter(types.Reporter) {}
 
-func (_ *mockCollector) SetConntrackInfoReader(dpcollector.ConntrackInfoReader) {}
+func (_ *mockCollector) SetPacketInfoReader(collector.PacketInfoReader) {}
 
-func (_ *mockCollector) SetProcessInfoCache(dpcollector.ProcessInfoCache) {}
+func (_ *mockCollector) SetConntrackInfoReader(collector.ConntrackInfoReader) {}
 
-func (_ *mockCollector) SetDomainLookup(dpcollector.EgressDomainCache) {}
+func (_ *mockCollector) SetProcessInfoCache(collector.ProcessInfoCache) {}
+
+func (_ *mockCollector) SetDomainLookup(collector.EgressDomainCache) {}
 
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config

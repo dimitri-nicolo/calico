@@ -3,6 +3,7 @@
 package prometheus
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gavv/monotime"
@@ -73,13 +74,18 @@ func (pr *PrometheusReporter) AddAggregator(agg PromAggregator) {
 	pr.aggregators = append(pr.aggregators, agg)
 }
 
-func (pr *PrometheusReporter) Start() {
+func (pr *PrometheusReporter) Start() error {
 	log.Info("Starting PrometheusReporter")
 	go pr.servePrometheusMetrics()
 	go pr.startReporter()
+	return nil
 }
 
-func (pr *PrometheusReporter) Report(mu metric.Update) error {
+func (pr *PrometheusReporter) Report(u any) error {
+	mu, ok := u.(metric.Update)
+	if !ok {
+		return fmt.Errorf("invalid metric update")
+	}
 	pr.reportChan <- mu
 	return nil
 }

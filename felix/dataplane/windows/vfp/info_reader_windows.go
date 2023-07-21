@@ -9,7 +9,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 
 	"sigs.k8s.io/kind/pkg/errors"
@@ -77,7 +77,7 @@ func (h *EndpointEventHandler) processUpdates(vfpOps *vfpctrl.VfpOperations) {
 	h.inSync = true
 }
 
-// InfoReader implements dataplane.PacketInfoReader and dataplane.ConntrackInfoReader.
+// InfoReader implements collector.PacketInfoReader and collector.ConntrackInfoReader.
 // It makes sense to have a single goroutine handling VFP events/flows to avoid possible race
 // on same endpoints cache of underlying structure.
 type InfoReader struct {
@@ -94,12 +94,12 @@ type InfoReader struct {
 	etwOps *etw.EtwOperations
 	vfpOps *vfpctrl.VfpOperations
 
-	packetInfoC    chan dataplane.PacketInfo
-	bufferedEvents []*dataplane.PacketInfo
+	packetInfoC    chan collector.PacketInfo
+	bufferedEvents []*collector.PacketInfo
 
 	ticker             jitter.JitterTicker
-	conntrackInfoC     chan []dataplane.ConntrackInfo
-	bufferedConntracks []dataplane.ConntrackInfo
+	conntrackInfoC     chan []collector.ConntrackInfo
+	bufferedConntracks []collector.ConntrackInfo
 
 	epEventHandler *EndpointEventHandler
 }
@@ -119,11 +119,11 @@ func NewInfoReader(lookupsCache *calc.LookupsCache, period time.Duration) *InfoR
 		vfpOps:             vfpOps,
 		eventAggrC:         make(chan *etw.EventAggregate, 1000),
 		eventDoneC:         make(chan struct{}, 1),
-		packetInfoC:        make(chan dataplane.PacketInfo, 1000),
+		packetInfoC:        make(chan collector.PacketInfo, 1000),
 		ticker:             jitter.NewTicker(period, period/10),
-		conntrackInfoC:     make(chan []dataplane.ConntrackInfo, 1000),
-		bufferedEvents:     []*dataplane.PacketInfo{},
-		bufferedConntracks: []dataplane.ConntrackInfo{},
+		conntrackInfoC:     make(chan []collector.ConntrackInfo, 1000),
+		bufferedEvents:     []*collector.PacketInfo{},
+		bufferedConntracks: []collector.ConntrackInfo{},
 		epEventHandler: &EndpointEventHandler{
 			endpoints:             []string{},
 			epSetWithPolicyUpdate: set.New[string](),
@@ -159,12 +159,12 @@ func (r *InfoReader) Stop() {
 }
 
 // PacketInfoChan returns the channel with converted PacketInfo.
-func (r *InfoReader) PacketInfoChan() <-chan dataplane.PacketInfo {
+func (r *InfoReader) PacketInfoChan() <-chan collector.PacketInfo {
 	return r.packetInfoC
 }
 
 // ConntrackInfoChan returns the channel with converted ConntrackInfo.
-func (r *InfoReader) ConntrackInfoChan() <-chan []dataplane.ConntrackInfo {
+func (r *InfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
 	return r.conntrackInfoC
 }
 
@@ -180,8 +180,8 @@ func (r *InfoReader) subscribe() error {
 func (r *InfoReader) run() {
 
 	var (
-		packetInfoC   chan dataplane.PacketInfo
-		nextPktToSend dataplane.PacketInfo
+		packetInfoC   chan collector.PacketInfo
+		nextPktToSend collector.PacketInfo
 	)
 
 	// Kick off the conntrack scanning loop, it executes periodically.
@@ -221,15 +221,15 @@ func (r *InfoReader) conntrackScanner() {
 		case <-r.stopC:
 			return
 		case <-r.ticker.Channel():
-			r.bufferedConntracks = make([]dataplane.ConntrackInfo, 0, dataplane.ConntrackInfoBatchSize)
+			r.bufferedConntracks = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
 			r.vfpOps.ListFlows(func(fe *vfpctrl.FlowEntry) {
 				r.handleFlowEntry(fe)
-				if len(r.bufferedConntracks) > dataplane.ConntrackInfoBatchSize {
+				if len(r.bufferedConntracks) > collector.ConntrackInfoBatchSize {
 					select {
 					case <-r.stopC:
 						return
 					case r.conntrackInfoC <- r.bufferedConntracks:
-						r.bufferedConntracks = make([]dataplane.ConntrackInfo, 0, dataplane.ConntrackInfoBatchSize)
+						r.bufferedConntracks = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
 					default:
 						// Keep buffering
 					}
@@ -246,7 +246,7 @@ func (r *InfoReader) conntrackScanner() {
 	}
 }
 
-func (r *InfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*dataplane.PacketInfo, error) {
+func (r *InfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*collector.PacketInfo, error) {
 	var dir rules.RuleDir
 
 	log.Debugf("Collector: Handle EventAggr tuple %s rule <%s> count <%d> %#v",
@@ -285,14 +285,14 @@ func (r *InfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*dataplane.Pac
 	// Etw Event has one RuleHits prefix.
 	// It has no service ip information (DNAT).
 	// It has no bytes information.
-	info := dataplane.PacketInfo{
+	info := collector.PacketInfo{
 		IsDNAT:    false,
 		Direction: dir,
-		RuleHits:  make([]dataplane.RuleHit, 0, 1),
+		RuleHits:  make([]collector.RuleHit, 0, 1),
 		Tuple:     *t,
 	}
 
-	info.RuleHits = append(info.RuleHits, dataplane.RuleHit{
+	info.RuleHits = append(info.RuleHits, collector.RuleHit{
 		RuleID: ruleID,
 		Hits:   ea.Count,
 		Bytes:  0,
@@ -301,10 +301,10 @@ func (r *InfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*dataplane.Pac
 	return &info, nil
 }
 
-func convertFlowEntry(fe *vfpctrl.FlowEntry) (dataplane.ConntrackInfo, error) {
+func convertFlowEntry(fe *vfpctrl.FlowEntry) (collector.ConntrackInfo, error) {
 	t, err := extractTupleFromFlowEntry(fe)
 	if err != nil {
-		return dataplane.ConntrackInfo{}, err
+		return collector.ConntrackInfo{}, err
 	}
 
 	// In the case of TCP, check if we can expire the entry early. We try to expire
@@ -326,14 +326,14 @@ func convertFlowEntry(fe *vfpctrl.FlowEntry) (dataplane.ConntrackInfo, error) {
 		bytesReplyCounters = fe.BytesIn
 	}
 
-	ctInfo := dataplane.ConntrackInfo{
+	ctInfo := collector.ConntrackInfo{
 		Tuple:   *t,
 		Expired: entryExpired,
-		Counters: dataplane.ConntrackCounters{
+		Counters: collector.ConntrackCounters{
 			Packets: pktCounters,
 			Bytes:   bytesCounters,
 		},
-		ReplyCounters: dataplane.ConntrackCounters{
+		ReplyCounters: collector.ConntrackCounters{
 			Packets: pktReplyCounters,
 			Bytes:   bytesReplyCounters,
 		},
@@ -342,7 +342,7 @@ func convertFlowEntry(fe *vfpctrl.FlowEntry) (dataplane.ConntrackInfo, error) {
 	if fe.IsDNAT() {
 		vTuple, err := extractPreDNATTupleFromFlowEntry(fe)
 		if err != nil {
-			return dataplane.ConntrackInfo{}, err
+			return collector.ConntrackInfo{}, err
 		}
 		ctInfo.IsDNAT = true
 		ctInfo.PreDNATTuple = *vTuple

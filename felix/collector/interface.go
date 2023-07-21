@@ -8,9 +8,7 @@ import (
 
 	"github.com/google/gopacket/layers"
 
-	"github.com/projectcalico/calico/felix/collector/dataplane"
-	"github.com/projectcalico/calico/felix/collector/dnslog"
-	"github.com/projectcalico/calico/felix/collector/l7log"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/proto"
 )
@@ -18,12 +16,13 @@ import (
 type Collector interface {
 	Start() error
 	ReportingChannel() chan<- *proto.DataplaneStats
-	SetDNSLogReporter(dnslog.ReporterInterface)
+	SetDNSLogReporter(types.Reporter)
 	LogDNS(net.IP, net.IP, *layers.DNS, *time.Duration)
-	SetL7LogReporter(l7log.ReporterInterface)
-	LogL7(*proto.HTTPData, *dataplane.Data, tuple.Tuple, int)
-	SetPacketInfoReader(dataplane.PacketInfoReader)
-	SetConntrackInfoReader(dataplane.ConntrackInfoReader)
-	SetProcessInfoCache(dataplane.ProcessInfoCache)
-	SetDomainLookup(dataplane.EgressDomainCache)
+	SetL7LogReporter(types.Reporter)
+	LogL7(*proto.HTTPData, *Data, tuple.Tuple, int)
+	RegisterMetricsReporter(types.Reporter)
+	SetPacketInfoReader(PacketInfoReader)
+	SetConntrackInfoReader(ConntrackInfoReader)
+	SetProcessInfoCache(ProcessInfoCache)
+	SetDomainLookup(EgressDomainCache)
 }

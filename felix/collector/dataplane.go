@@ -1,11 +1,12 @@
 // Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 
-package dataplane
+package collector
 
 import (
 	"fmt"
 
 	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/rules"
 )
@@ -110,7 +111,7 @@ type ProcessInfo struct {
 type ProcessInfoCache interface {
 	Start() error
 	Stop()
-	Lookup(tuple.Tuple, TrafficDirection) (ProcessInfo, bool)
+	Lookup(tuple.Tuple, types.TrafficDirection) (ProcessInfo, bool)
 	Update(tuple.Tuple, bool)
 }
 

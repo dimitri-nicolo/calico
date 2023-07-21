@@ -9,23 +9,18 @@ import (
 	"github.com/gavv/monotime"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/collector/reporter"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 
 type aggregatorRef struct {
 	a *Aggregator
-	d []reporter.LogDispatcher
-}
-
-type ReporterInterface interface {
-	Start()
-	Log(update Update) error
+	d []types.Reporter
 }
 
 type L7Reporter struct {
-	dispatchers  map[string]reporter.LogDispatcher
+	dispatchers  map[string]types.Reporter
 	aggregators  []aggregatorRef
 	flushTrigger <-chan time.Time
 
@@ -40,11 +35,11 @@ const (
 	l7HealthInterval = 10 * time.Second
 )
 
-func NewReporter(dispatchers map[string]reporter.LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator) *L7Reporter {
+func NewReporter(dispatchers map[string]types.Reporter, flushInterval time.Duration, healthAggregator *health.HealthAggregator) *L7Reporter {
 	return NewReporterWithShims(dispatchers, jitter.NewTicker(flushInterval, flushInterval/10).Channel(), healthAggregator)
 }
 
-func NewReporterWithShims(dispatchers map[string]reporter.LogDispatcher, flushTrigger <-chan time.Time, healthAggregator *health.HealthAggregator) *L7Reporter {
+func NewReporterWithShims(dispatchers map[string]types.Reporter, flushTrigger <-chan time.Time, healthAggregator *health.HealthAggregator) *L7Reporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(l7HealthName, &health.HealthReport{Live: true, Ready: true}, l7HealthInterval*2)
 	}
@@ -70,11 +65,16 @@ func (r *L7Reporter) AddAggregator(agg *Aggregator, dispatchers []string) {
 	r.aggregators = append(r.aggregators, ref)
 }
 
-func (r *L7Reporter) Start() {
+func (r *L7Reporter) Start() error {
 	go r.run()
+	return nil
 }
 
-func (r *L7Reporter) Log(update Update) error {
+func (r *L7Reporter) Report(u any) error {
+	update, ok := u.(Update)
+	if !ok {
+		return fmt.Errorf("invalid l7 log update")
+	}
 	for _, agg := range r.aggregators {
 		if err := agg.a.FeedUpdate(update); err != nil {
 			return err
@@ -105,7 +105,7 @@ func (r *L7Reporter) run() {
 							"size":       len(fl),
 							"dispatcher": d,
 						}).Debug("Dispatching log buffer")
-						d.Dispatch(fl)
+						d.Report(fl)
 					}
 				}
 			}
@@ -127,7 +127,7 @@ func (r *L7Reporter) reportHealth() {
 
 func (r *L7Reporter) canPublish() bool {
 	for name, d := range r.dispatchers {
-		err := d.Initialize()
+		err := d.Start()
 		if err != nil {
 			log.WithError(err).
 				WithField("name", name).

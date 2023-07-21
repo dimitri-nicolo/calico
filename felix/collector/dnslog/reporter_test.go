@@ -13,23 +13,23 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/calc"
-	"github.com/projectcalico/calico/felix/collector/reporter"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/felix/testutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-type testDispatcher struct {
+type testReporter struct {
 	mutex sync.Mutex
 	logs  []*v1.DNSLog
 }
 
-func (d *testDispatcher) Initialize() error {
+func (d *testReporter) Start() error {
 	return nil
 }
 
-func (d *testDispatcher) Dispatch(logSlice interface{}) error {
+func (d *testReporter) Report(logSlice interface{}) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -39,7 +39,7 @@ func (d *testDispatcher) Dispatch(logSlice interface{}) error {
 	return nil
 }
 
-func (d *testDispatcher) getLogs() []*v1.DNSLog {
+func (d *testReporter) getLogs() []*v1.DNSLog {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -51,7 +51,7 @@ type testSink struct {
 	includeLabels bool
 	aggregation   AggregationKind
 	aggregator    *Aggregator
-	dispatcher    *testDispatcher
+	dispatcher    *testReporter
 }
 
 var _ = Describe("DNS Log Reporter", func() {
@@ -66,10 +66,10 @@ var _ = Describe("DNS Log Reporter", func() {
 		sinks = append(sinks, &testSink{name: "noLabelsOrAgg", includeLabels: false, aggregation: DNSDefault})
 		sinks = append(sinks, &testSink{name: "LabelsAndAgg", includeLabels: true, aggregation: DNSPrefixNameAndIP})
 		sinks = append(sinks, &testSink{name: "LabelsNoAgg", includeLabels: true, aggregation: DNSDefault})
-		dispatcherMap := map[string]reporter.LogDispatcher{}
+		dispatcherMap := map[string]types.Reporter{}
 		for _, sink := range sinks {
 			sink.aggregator = NewAggregator().IncludeLabels(sink.includeLabels).AggregateOver(sink.aggregation)
-			sink.dispatcher = &testDispatcher{}
+			sink.dispatcher = &testReporter{}
 			dispatcherMap[sink.name] = sink.dispatcher
 		}
 		flushTrigger = make(chan time.Time)
@@ -121,14 +121,14 @@ var _ = Describe("DNS Log Reporter", func() {
 				},
 			},
 		}
-		err := r.Log(Update{
+		err := r.Report(Update{
 			ClientEP: client1,
 			ClientIP: net.ParseIP("1.2.3.4"),
 			ServerIP: net.ParseIP("8.8.8.8"),
 			DNS:      dns,
 		})
 		Expect(err).NotTo(HaveOccurred())
-		err = r.Log(Update{
+		err = r.Report(Update{
 			ClientEP: client2,
 			ClientIP: net.ParseIP("1.2.3.5"),
 			ServerIP: net.ParseIP("8.8.8.8"),

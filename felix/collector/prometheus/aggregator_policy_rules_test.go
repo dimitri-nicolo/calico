@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector/types"
 )
 
 var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
@@ -37,8 +37,8 @@ var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
 		expectedBytesInbound += muNoConn1Rule1AllowUpdate.InMetric.DeltaBytes
 
 		expectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
-		expectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		expectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		expectRuleAggregates(pa, types.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		expectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("reporting metrics for the same rule and traffic direction, but conntrack has kicked in")
 		pa.OnUpdate(muConn1Rule1AllowUpdate)
@@ -50,8 +50,8 @@ var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
 		expectedConnsInbound += 1
 
 		expectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
-		expectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		expectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		expectRuleAggregates(pa, types.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		expectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("reporting metrics for same rule and traffic direction, but a different connection")
 		pa.OnUpdate(muConn2Rule1AllowUpdate)
@@ -60,8 +60,8 @@ var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
 		expectedConnsInbound += 1
 
 		expectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
-		expectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		expectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		expectRuleAggregates(pa, types.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		expectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("reporting one of the same metrics")
 		pa.OnUpdate(muConn1Rule1AllowUpdate)
@@ -72,8 +72,8 @@ var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
 		expectedConnsInbound += 0 // connection is not new.
 
 		expectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
-		expectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		expectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		expectRuleAggregates(pa, types.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		expectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("expiring one of the metric updates for Rule1 Inbound and one for Outbound")
 		pa.OnUpdate(muConn1Rule1AllowExpire)
@@ -87,8 +87,8 @@ var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
 		pa.CheckRetainedMetrics(mt.getMockTime())
 
 		expectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
-		expectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		expectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		expectRuleAggregates(pa, types.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		expectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("incrementing time by the retention time - outbound rule should be expunged")
 		mt.incMockTime(retentionTime)
@@ -105,7 +105,7 @@ var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
 		pa.CheckRetainedMetrics(mt.getMockTime())
 
 		expectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
-		expectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		expectRuleAggregates(pa, types.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
 
 		By("incrementing time by the retention time - inbound rule should be expunged")
 		mt.incMockTime(retentionTime)
@@ -124,7 +124,7 @@ func expectRuleAggregateKeys(pa *PolicyRulesAggregator, keys []RuleAggregateKey)
 }
 
 func expectRuleAggregates(
-	pa *PolicyRulesAggregator, dir dataplane.TrafficDirection, k RuleAggregateKey,
+	pa *PolicyRulesAggregator, dir types.TrafficDirection, k RuleAggregateKey,
 	expectedPackets int, expectedBytes int, expectedConnections int,
 ) {
 	By("checking for the correct " + dir.String() + " packet count")
@@ -145,7 +145,7 @@ func expectRuleAggregates(
 		return getMetricCount(getDirectionalBytes(dir, value))
 	}()).To(Equal(expectedBytes))
 
-	if dataplane.RuleDirToTrafficDir(k.ruleID.Direction) != dir {
+	if types.RuleDirToTrafficDir(k.ruleID.Direction) != dir {
 		// Don't check connections if rules doesn't match direction.
 		return
 	}

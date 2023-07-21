@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/projectcalico/calico/felix/calc"
-	collector "github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector"
 )
 
 // InfoReader implements collector.PacketInfoReader and collector.ConntrackInfoReader.

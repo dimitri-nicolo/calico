@@ -9,13 +9,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/jitter"
 )
 
 type ProcessEntry struct {
-	dataplane.ProcessInfo
+	collector.ProcessInfo
 	expiresAt time.Time
 }
 
@@ -36,7 +37,7 @@ type BPFProcessInfoCache struct {
 	stopC             chan struct{}
 	eventProcessInfo  <-chan EventProtoStats
 	eventTcpStatsInfo <-chan EventTcpStats
-	processInfoC      chan dataplane.ProcessInfo
+	processInfoC      chan collector.ProcessInfo
 	processPathCache  *BPFProcessPathCache
 }
 
@@ -107,12 +108,12 @@ func (r *BPFProcessInfoCache) Stop() {
 	r.wg.Wait()
 }
 
-func (r *BPFProcessInfoCache) Lookup(tuple tuple.Tuple, direction dataplane.TrafficDirection) (dataplane.ProcessInfo, bool) {
+func (r *BPFProcessInfoCache) Lookup(tuple tuple.Tuple, direction types.TrafficDirection) (collector.ProcessInfo, bool) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
 	t := tuple
-	if direction == dataplane.TrafficDirInbound {
+	if direction == types.TrafficDirInbound {
 		// Inbound data is stored in the reverse order.
 		t = t.Reverse()
 	}
@@ -122,7 +123,7 @@ func (r *BPFProcessInfoCache) Lookup(tuple tuple.Tuple, direction dataplane.Traf
 		return entry.ProcessInfo, true
 	}
 	log.Debugf("Process info not found for tuple %+v in direction %v", tuple, direction)
-	return dataplane.ProcessInfo{}, false
+	return collector.ProcessInfo{}, false
 }
 
 func (r *BPFProcessInfoCache) Update(tuple tuple.Tuple, dirty bool) {
@@ -140,7 +141,7 @@ func (r *BPFProcessInfoCache) updateCacheWithTcpStatsDirty(tuple tuple.Tuple, di
 	// May be entry has expired
 }
 
-func (r *BPFProcessInfoCache) updateCacheWithProcessInfo(info dataplane.ProcessInfo) {
+func (r *BPFProcessInfoCache) updateCacheWithProcessInfo(info collector.ProcessInfo) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	log.Debugf("Updating process info %+v", info)
@@ -168,7 +169,7 @@ func (r *BPFProcessInfoCache) updateCacheWithProcessInfo(info dataplane.ProcessI
 	return
 }
 
-func (r *BPFProcessInfoCache) updateCacheWithStats(info dataplane.ProcessInfo) {
+func (r *BPFProcessInfoCache) updateCacheWithStats(info collector.ProcessInfo) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	log.Debugf("Updating process info with stats %+v", info)
@@ -201,31 +202,31 @@ func (r *BPFProcessInfoCache) expireCacheEntries() {
 	}
 }
 
-func convertProtoEventToProcessInfo(event EventProtoStats) dataplane.ProcessInfo {
+func convertProtoEventToProcessInfo(event EventProtoStats) collector.ProcessInfo {
 	srcIP := event.Saddr
 	dstIP := event.Daddr
 	sport := int(event.Sport)
 	dport := int(event.Dport)
 	tuple := tuple.Make(srcIP, dstIP, int(event.Proto), sport, dport)
 	pname := bytes.Trim(event.ProcessName[:], "\x00")
-	return dataplane.ProcessInfo{
+	return collector.ProcessInfo{
 		Tuple: tuple,
-		ProcessData: dataplane.ProcessData{
+		ProcessData: collector.ProcessData{
 			Name: string(pname),
 			Pid:  int(event.Pid),
 		},
 	}
 }
 
-func convertTcpStatsEventToProcessInfo(event EventTcpStats) dataplane.ProcessInfo {
+func convertTcpStatsEventToProcessInfo(event EventTcpStats) collector.ProcessInfo {
 	srcIP := event.Saddr
 	dstIP := event.Daddr
 	sport := int(event.Sport)
 	dport := int(event.Dport)
 	tuple := tuple.Make(srcIP, dstIP, 6, sport, dport)
-	return dataplane.ProcessInfo{
+	return collector.ProcessInfo{
 		Tuple: tuple,
-		TcpStatsData: dataplane.TcpStatsData{
+		TcpStatsData: collector.TcpStatsData{
 			SendCongestionWnd: event.SendCongestionWnd,
 			SmoothRtt:         event.SmoothRtt,
 			MinRtt:            event.MinRtt,

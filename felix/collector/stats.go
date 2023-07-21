@@ -1,6 +1,6 @@
 // Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 
-package dataplane
+package collector
 
 import (
 	"errors"
@@ -24,25 +24,6 @@ import (
 
 var ErrorIsNotDNAT = errors.New("Tuple is not a DNAT connection")
 
-type TrafficDirection int
-
-const (
-	TrafficDirInbound TrafficDirection = iota
-	TrafficDirOutbound
-)
-
-const (
-	TrafficDirInboundStr  = "inbound"
-	TrafficDirOutboundStr = "outbound"
-)
-
-func (t TrafficDirection) String() string {
-	if t == TrafficDirInbound {
-		return TrafficDirInboundStr
-	}
-	return TrafficDirOutboundStr
-}
-
 // RuleMatch type is used to indicate whether a rule match from an nflog is newly set, unchanged from the previous
 // value, or has been updated. In the latter case the existing entry should be reported and expired.
 type RuleMatch byte
@@ -52,15 +33,6 @@ const (
 	RuleMatchSet
 	RuleMatchIsDifferent
 )
-
-// RuleDirToTrafficDir converts the rule direction to the equivalent traffic direction
-// (useful for NFLOG based updates where ingress/inbound and egress/outbound are tied).
-func RuleDirToTrafficDir(r rules.RuleDir) TrafficDirection {
-	if r == rules.RuleDirIngress {
-		return TrafficDirInbound
-	}
-	return TrafficDirOutbound
-}
 
 const RuleTraceInitLen = 10
 

@@ -10,16 +10,21 @@ import (
 	"github.com/gavv/monotime"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/collector/reporter"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	"github.com/projectcalico/calico/felix/jitter"
 	logutil "github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 
+const (
+	healthName     = "CloudWatchReporter"
+	healthInterval = 10 * time.Second
+)
+
 type aggregatorRef struct {
 	a *Aggregator
-	d []reporter.LogDispatcher
+	d []types.Reporter
 }
 
 type flowLogAverage struct {
@@ -27,9 +32,16 @@ type flowLogAverage struct {
 	lastReportTime time.Time
 }
 
-// Reporter implements the MetricsReporter interface.
+func newFlowLogAverage() *flowLogAverage {
+	return &flowLogAverage{
+		totalFlows:     0,
+		lastReportTime: time.Now(),
+	}
+}
+
+// Reporter implements the Reporter interface.
 type FlowLogReporter struct {
-	dispatchers           map[string]reporter.LogDispatcher
+	dispatchers           map[string]types.Reporter
 	aggregators           []aggregatorRef
 	flushInterval         time.Duration
 	flushTicker           jitter.JitterTicker
@@ -47,15 +59,46 @@ type FlowLogReporter struct {
 	flowLogAvgMutex       sync.RWMutex
 }
 
-const (
-	healthName     = "CloudWatchReporter"
-	healthInterval = 10 * time.Second
-)
+// NewReporter constructs a FlowLogs MetricsReporter using
+// a dispatcher and aggregator.
+func NewReporter(dispatchers map[string]types.Reporter, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled, displayDebugTraceLogs bool, logOffset LogOffset) *FlowLogReporter {
+	if healthAggregator != nil {
+		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
+	}
 
-func newFlowLogAverage() *flowLogAverage {
-	return &flowLogAverage{
-		totalFlows:     0,
-		lastReportTime: time.Now(),
+	return &FlowLogReporter{
+		dispatchers:      dispatchers,
+		flushTicker:      jitter.NewTicker(flushInterval, flushInterval/10),
+		flushInterval:    flushInterval,
+		timeNowFn:        monotime.Now,
+		healthAggregator: healthAggregator,
+		hepEnabled:       hepEnabled,
+		logOffset:        logOffset,
+
+		// Initialize FlowLogAverage struct
+		flowLogAvg:            newFlowLogAverage(),
+		flushIntervalDuration: flushInterval.Seconds(),
+		flowLogAvgMutex:       sync.RWMutex{},
+	}
+}
+
+func newReporterTest(dispatchers map[string]types.Reporter, healthAggregator *health.HealthAggregator, hepEnabled bool, flushTicker jitter.JitterTicker, logOffset LogOffset) *FlowLogReporter {
+	if healthAggregator != nil {
+		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
+	}
+
+	return &FlowLogReporter{
+		dispatchers:      dispatchers,
+		flushTicker:      flushTicker,
+		flushInterval:    time.Millisecond,
+		timeNowFn:        monotime.Now,
+		healthAggregator: healthAggregator,
+		hepEnabled:       hepEnabled,
+		logOffset:        logOffset,
+
+		// Initialize FlowLogAverage struct
+		flowLogAvg:      newFlowLogAverage(),
+		flowLogAvgMutex: sync.RWMutex{},
 	}
 }
 
@@ -93,49 +136,6 @@ func (fr *FlowLogReporter) resetFlowLogsAvg() {
 	fr.flowLogAvg.lastReportTime = time.Now()
 }
 
-// NewReporter constructs a FlowLogs MetricsReporter using
-// a dispatcher and aggregator.
-func NewReporter(dispatchers map[string]reporter.LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled, displayDebugTraceLogs bool, logOffset LogOffset) *FlowLogReporter {
-	if healthAggregator != nil {
-		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
-	}
-
-	return &FlowLogReporter{
-		dispatchers:      dispatchers,
-		flushTicker:      jitter.NewTicker(flushInterval, flushInterval/10),
-		flushInterval:    flushInterval,
-		timeNowFn:        monotime.Now,
-		healthAggregator: healthAggregator,
-		hepEnabled:       hepEnabled,
-		logOffset:        logOffset,
-
-		// Initialize FlowLogAverage struct
-		flowLogAvg:            newFlowLogAverage(),
-		flushIntervalDuration: flushInterval.Seconds(),
-		flowLogAvgMutex:       sync.RWMutex{},
-	}
-}
-
-func newReporterTest(dispatchers map[string]reporter.LogDispatcher, healthAggregator *health.HealthAggregator, hepEnabled bool, flushTicker jitter.JitterTicker, logOffset LogOffset) *FlowLogReporter {
-	if healthAggregator != nil {
-		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
-	}
-
-	return &FlowLogReporter{
-		dispatchers:      dispatchers,
-		flushTicker:      flushTicker,
-		flushInterval:    time.Millisecond,
-		timeNowFn:        monotime.Now,
-		healthAggregator: healthAggregator,
-		hepEnabled:       hepEnabled,
-		logOffset:        logOffset,
-
-		// Initialize FlowLogAverage struct
-		flowLogAvg:      newFlowLogAverage(),
-		flowLogAvgMutex: sync.RWMutex{},
-	}
-}
-
 func (c *FlowLogReporter) AddAggregator(agg *Aggregator, dispatchers []string) {
 	var ref aggregatorRef
 	ref.a = agg
@@ -150,12 +150,17 @@ func (c *FlowLogReporter) AddAggregator(agg *Aggregator, dispatchers []string) {
 	c.aggregators = append(c.aggregators, ref)
 }
 
-func (c *FlowLogReporter) Start() {
+func (c *FlowLogReporter) Start() error {
 	log.Info("Starting FlowLogReporter")
 	go c.run()
+	return nil
 }
 
-func (c *FlowLogReporter) Report(mu metric.Update) error {
+func (c *FlowLogReporter) Report(u interface{}) error {
+	mu, ok := u.(metric.Update)
+	if !ok {
+		return fmt.Errorf("invalid metric update")
+	}
 	log.Debug("Flow Logs Report got Metric Update")
 	if !c.hepEnabled {
 		if mu.SrcEp != nil && mu.SrcEp.IsHostEndpoint() {
@@ -206,7 +211,7 @@ func (fr *FlowLogReporter) run() {
 							"size":       len(fl),
 							"dispatcher": d,
 						}).Debug("Dispatching log buffer")
-						d.Dispatch(fl)
+						d.Report(fl)
 					}
 				}
 			}
@@ -243,7 +248,7 @@ func (c *FlowLogReporter) reportHealth() {
 
 func (c *FlowLogReporter) canPublish() bool {
 	for name, d := range c.dispatchers {
-		err := d.Initialize()
+		err := d.Start()
 		if err != nil {
 			log.WithError(err).
 				WithField("name", name).

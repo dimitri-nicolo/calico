@@ -15,7 +15,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/dnslog"
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/collector/l7log"
-	"github.com/projectcalico/calico/felix/collector/reporter"
+	"github.com/projectcalico/calico/felix/collector/types"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -25,9 +25,9 @@ const (
 	L7LogFilename   = "l7.log"
 )
 
-// dispatcher is a LogDispatcher that writes logs to a local,
+// fileReporter is a Reporter that writes logs to a local,
 // auto-rotated log file. We write one JSON-encoded log per line.
-type dispatcher struct {
+type fileReporter struct {
 	directory string
 	fileName  string
 	maxMB     int
@@ -35,36 +35,36 @@ type dispatcher struct {
 	logger    io.WriteCloser
 }
 
-func NewDispatcher(directory, fileName string, maxMB, numFiles int) reporter.LogDispatcher {
-	return &dispatcher{directory: directory, fileName: fileName, maxMB: maxMB, numFiles: numFiles}
+func NewReporter(directory, fileName string, maxMB, numFiles int) types.Reporter {
+	return &fileReporter{directory: directory, fileName: fileName, maxMB: maxMB, numFiles: numFiles}
 }
 
-func (d *dispatcher) Initialize() error {
-	if d.logger != nil {
+func (f *fileReporter) Start() error {
+	if f.logger != nil {
 		// Already initialized; no-op
 		return nil
 	}
 	// Create the log directory before creating the logger.  If the logger creates it, it will do so
 	// with permission 0744, meaning that non-root users won't be able to "see" files in the
 	// directory, since "execute" permission on a directory needs to be granted.
-	err := os.MkdirAll(d.directory, 0o755)
+	err := os.MkdirAll(f.directory, 0o755)
 	if err != nil {
 		return fmt.Errorf("can't make directories for new logfile: %s", err)
 	}
-	d.logger = &lumberjack.Logger{
-		Filename:   path.Join(d.directory, d.fileName),
-		MaxSize:    d.maxMB,
-		MaxBackups: d.numFiles,
+	f.logger = &lumberjack.Logger{
+		Filename:   path.Join(f.directory, f.fileName),
+		MaxSize:    f.maxMB,
+		MaxBackups: f.numFiles,
 	}
 	return nil
 }
 
-func (d *dispatcher) Dispatch(logSlice interface{}) error {
+func (f *fileReporter) Report(logSlice interface{}) error {
 	writeLog := func(b []byte) error {
 		b = append(b, '\n')
 		// It is an error to call Dispatch before Initialize, so it's safe to
 		// assume d.logger is non-nil.
-		_, err := d.logger.Write(b)
+		_, err := f.logger.Write(b)
 		if err != nil {
 			// NOTE: the FlowLogsReporter ignores errors returned by Dispatch,
 			// so log the error here.  We don't want to do anything more drastic

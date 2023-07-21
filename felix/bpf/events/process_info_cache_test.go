@@ -9,7 +9,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/bpf/events"
-	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/collector/utils"
 )
@@ -64,19 +65,19 @@ var (
 )
 
 type lookupResult struct {
-	name dataplane.ProcessInfo
+	name collector.ProcessInfo
 	ok   bool
 }
 
 var _ = Describe("ProcessInfoCache tests", func() {
 	var (
-		pic                 dataplane.ProcessInfoCache
+		pic                 collector.ProcessInfoCache
 		testProcessChan     chan events.EventProtoStats
 		testTcpStatsChan    chan events.EventTcpStats
 		testProcessPathChan chan events.ProcessPath
 	)
 
-	eventuallyCheckCache := func(key tuple.Tuple, dir dataplane.TrafficDirection, expectedProcessInfo dataplane.ProcessInfo, infoInCache bool) {
+	eventuallyCheckCache := func(key tuple.Tuple, dir types.TrafficDirection, expectedProcessInfo collector.ProcessInfo, infoInCache bool) {
 		Eventually(func() lookupResult {
 			processInfo, ok := pic.Lookup(key, dir)
 			return lookupResult{processInfo, ok}
@@ -93,22 +94,22 @@ var _ = Describe("ProcessInfoCache tests", func() {
 	})
 	It("Should cache process information", func() {
 		By("Checking that lookup cache doesn't contain the right process info")
-		expectedProcessInfo := dataplane.ProcessInfo{}
+		expectedProcessInfo := collector.ProcessInfo{}
 
-		eventuallyCheckCache(tuple1, dataplane.TrafficDirOutbound, expectedProcessInfo, false)
+		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, false)
 
 		By("Sending a process info event")
 		testProcessChan <- processEvent1
 		testTcpStatsChan <- tcpStatsEvent1
 
 		By("Checking that lookup returns process information and is converted correctly")
-		expectedProcessInfo = dataplane.ProcessInfo{
+		expectedProcessInfo = collector.ProcessInfo{
 			Tuple: tuple1,
-			ProcessData: dataplane.ProcessData{
+			ProcessData: collector.ProcessData{
 				Name: "curl",
 				Pid:  12345,
 			},
-			TcpStatsData: dataplane.TcpStatsData{
+			TcpStatsData: collector.TcpStatsData{
 				SendCongestionWnd: 10,
 				SmoothRtt:         1234,
 				MinRtt:            256,
@@ -119,19 +120,19 @@ var _ = Describe("ProcessInfoCache tests", func() {
 				IsDirty:           true,
 			},
 		}
-		eventuallyCheckCache(tuple1, dataplane.TrafficDirOutbound, expectedProcessInfo, true)
+		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, true)
 
 		By("replacing the process info event")
 		testProcessChan <- processEvent1DifferentProcessName
 
 		By("Checking that lookup returns process information and is converted correctly")
-		expectedProcessInfo = dataplane.ProcessInfo{
+		expectedProcessInfo = collector.ProcessInfo{
 			Tuple: tuple1,
-			ProcessData: dataplane.ProcessData{
+			ProcessData: collector.ProcessData{
 				Name: "wget",
 				Pid:  54321,
 			},
-			TcpStatsData: dataplane.TcpStatsData{
+			TcpStatsData: collector.TcpStatsData{
 				SendCongestionWnd: 10,
 				SmoothRtt:         1234,
 				MinRtt:            256,
@@ -142,13 +143,13 @@ var _ = Describe("ProcessInfoCache tests", func() {
 				IsDirty:           true,
 			},
 		}
-		eventuallyCheckCache(tuple1, dataplane.TrafficDirOutbound, expectedProcessInfo, true)
+		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, true)
 	})
 	It("Should cache process path information if available", func() {
 		By("Checking that lookup cache doesn't contain the right process info")
-		expectedProcessInfo := dataplane.ProcessInfo{}
+		expectedProcessInfo := collector.ProcessInfo{}
 
-		eventuallyCheckCache(tuple1, dataplane.TrafficDirOutbound, expectedProcessInfo, false)
+		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, false)
 
 		By("Sending a process info event, path event")
 		testProcessPathChan <- processPathEvent1
@@ -158,14 +159,14 @@ var _ = Describe("ProcessInfoCache tests", func() {
 
 		//time.Sleep(1 * time.Millisecond)
 		By("Checking that lookup returns process information and is converted correctly")
-		expectedProcessInfo = dataplane.ProcessInfo{
+		expectedProcessInfo = collector.ProcessInfo{
 			Tuple: tuple1,
-			ProcessData: dataplane.ProcessData{
+			ProcessData: collector.ProcessData{
 				Name:      "/usr/bin/curl",
 				Pid:       12345,
 				Arguments: "example.com",
 			},
-			TcpStatsData: dataplane.TcpStatsData{
+			TcpStatsData: collector.TcpStatsData{
 				SendCongestionWnd: 10,
 				SmoothRtt:         1234,
 				MinRtt:            256,
@@ -176,30 +177,30 @@ var _ = Describe("ProcessInfoCache tests", func() {
 				IsDirty:           true,
 			},
 		}
-		eventuallyCheckCache(tuple1, dataplane.TrafficDirOutbound, expectedProcessInfo, true)
+		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, true)
 	})
 	It("Should expire cached process information", func() {
 		By("Checking that lookup cache doesn't contain the right process info")
-		expectedProcessInfo := dataplane.ProcessInfo{}
-		eventuallyCheckCache(tuple1, dataplane.TrafficDirOutbound, expectedProcessInfo, false)
+		expectedProcessInfo := collector.ProcessInfo{}
+		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, false)
 
 		By("Sending a process info event")
 		testProcessChan <- processEvent1
 
 		By("Checking that lookup returns process information")
-		expectedProcessInfo = dataplane.ProcessInfo{
+		expectedProcessInfo = collector.ProcessInfo{
 			Tuple: tuple1,
-			ProcessData: dataplane.ProcessData{
+			ProcessData: collector.ProcessData{
 				Name: "curl",
 				Pid:  12345,
 			},
 		}
-		eventuallyCheckCache(tuple1, dataplane.TrafficDirOutbound, expectedProcessInfo, true)
+		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, true)
 
 		By("Checking that lookup expires process information")
-		expectedProcessInfo = dataplane.ProcessInfo{}
+		expectedProcessInfo = collector.ProcessInfo{}
 
-		eventuallyCheckCache(tuple1, dataplane.TrafficDirOutbound, expectedProcessInfo, false)
+		eventuallyCheckCache(tuple1, types.TrafficDirOutbound, expectedProcessInfo, false)
 	})
 	AfterEach(func() {
 		pic.Stop()

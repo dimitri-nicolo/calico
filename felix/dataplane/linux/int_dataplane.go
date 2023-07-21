@@ -64,7 +64,6 @@ import (
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/collector"
-	dpcollector "github.com/projectcalico/calico/felix/collector/dataplane"
 	"github.com/projectcalico/calico/felix/config"
 	felixconfig "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dataplane/common"
@@ -862,9 +861,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		eventTcpStatsSink    *events.EventTcpStatsSink
 		eventProcessPathSink *events.EventProcessPathSink
 
-		collectorPacketInfoReader    dpcollector.PacketInfoReader
-		collectorConntrackInfoReader dpcollector.ConntrackInfoReader
-		processInfoCache             dpcollector.ProcessInfoCache
+		collectorPacketInfoReader    collector.PacketInfoReader
+		collectorConntrackInfoReader collector.ConntrackInfoReader
+		processInfoCache             collector.ProcessInfoCache
 		processPathInfoCache         *events.BPFProcessPathCache
 	)
 
@@ -1505,11 +1504,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.Collector != nil {
 		if !config.BPFEnabled {
 			log.Debug("Stats collection is required, create nflog reader")
-			nflogrd := dpcollector.NewNFLogReader(config.LookupsCache, 1, 2,
+			nflogrd := collector.NewNFLogReader(config.LookupsCache, 1, 2,
 				config.NfNetlinkBufSize, config.FlowLogsFileIncludeService)
 			collectorPacketInfoReader = nflogrd
 			log.Debug("Stats collection is required, create conntrack reader")
-			ctrd := dpcollector.NewNetLinkConntrackReader(felixconfig.DefaultConntrackPollingInterval, config.RulesConfig.IptablesMarkProxy)
+			ctrd := collector.NewNetLinkConntrackReader(felixconfig.DefaultConntrackPollingInterval, config.RulesConfig.IptablesMarkProxy)
 			collectorConntrackInfoReader = ctrd
 		}
 

@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/calc"
-	"github.com/projectcalico/calico/felix/collector/reporter"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/endpoint"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/collector/utils"
@@ -63,16 +63,16 @@ var (
 	}
 )
 
-type testL7Dispatcher struct {
+type testL7Reporter struct {
 	mutex sync.Mutex
 	logs  []*L7Log
 }
 
-func (d *testL7Dispatcher) Initialize() error {
+func (d *testL7Reporter) Start() error {
 	return nil
 }
 
-func (d *testL7Dispatcher) Dispatch(logSlice interface{}) error {
+func (d *testL7Reporter) Report(logSlice interface{}) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -82,7 +82,7 @@ func (d *testL7Dispatcher) Dispatch(logSlice interface{}) error {
 	return nil
 }
 
-func (d *testL7Dispatcher) getLogs() []*L7Log {
+func (d *testL7Reporter) getLogs() []*L7Log {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -93,14 +93,14 @@ var _ = Describe("L7 Log Reporter", func() {
 
 	var (
 		ed1, ed2, ed3 *calc.EndpointData
-		dispatcher    *testL7Dispatcher
+		dispatcher    *testL7Reporter
 		flushTrigger  chan time.Time
 		r             *L7Reporter
 	)
 
 	JustBeforeEach(func() {
-		dispatcherMap := map[string]reporter.LogDispatcher{}
-		dispatcher = &testL7Dispatcher{}
+		dispatcherMap := map[string]types.Reporter{}
+		dispatcher = &testL7Reporter{}
 		dispatcherMap["testL7"] = dispatcher
 		flushTrigger = make(chan time.Time)
 		// Set all the aggregation fields off
@@ -180,7 +180,7 @@ var _ = Describe("L7 Log Reporter", func() {
 	})
 
 	It("should generate correct logs", func() {
-		err := r.Log(Update{
+		err := r.Report(Update{
 			Tuple:         tuple.Make(remoteIp1, remoteIp2, proto_tcp, srcPort, dstPort),
 			SrcEp:         ed1,
 			DstEp:         ed2,
@@ -197,7 +197,7 @@ var _ = Describe("L7 Log Reporter", func() {
 			Count:         1,
 		})
 		Expect(err).NotTo(HaveOccurred())
-		err = r.Log(Update{
+		err = r.Report(Update{
 			Tuple:         tuple.Make(remoteIp1, localIp1, proto_tcp, srcPort, dstPort),
 			SrcEp:         ed1,
 			DstEp:         ed3,

@@ -14,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/calico/felix/collector/reporter"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/boundedset"
 	"github.com/projectcalico/calico/felix/collector/types/endpoint"
 	"github.com/projectcalico/calico/felix/collector/types/metric"
@@ -38,7 +38,7 @@ var (
 	pubMeta = endpoint.Metadata{Type: endpoint.Net, Namespace: "-", Name: "-", AggregatedName: "pub"}
 )
 
-type testFlowLogDispatcher struct {
+type testFlowLogReporter struct {
 	mutex    sync.Mutex
 	logs     []*FlowLog
 	failInit bool
@@ -57,14 +57,14 @@ func (mt *mockTime) incMockTime(inc time.Duration) {
 	atomic.AddInt64(&mt.val, int64(inc))
 }
 
-func (d *testFlowLogDispatcher) Initialize() error {
+func (d *testFlowLogReporter) Start() error {
 	if d.failInit {
-		return errors.New("failed to initialize testFlowLogDispatcher")
+		return errors.New("failed to initialize testFlowLogReporter")
 	}
 	return nil
 }
 
-func (d *testFlowLogDispatcher) Dispatch(logSlice interface{}) error {
+func (d *testFlowLogReporter) Report(logSlice interface{}) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -74,7 +74,7 @@ func (d *testFlowLogDispatcher) Dispatch(logSlice interface{}) error {
 	return nil
 }
 
-func (d *testFlowLogDispatcher) getLogs() []*FlowLog {
+func (d *testFlowLogReporter) getLogs() []*FlowLog {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -85,7 +85,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 	var (
 		cr         *FlowLogReporter
 		ca         *Aggregator
-		dispatcher *testFlowLogDispatcher
+		dispatcher *testFlowLogReporter
 	)
 
 	mt := &mockTime{}
@@ -157,8 +157,8 @@ var _ = Describe("FlowLog Reporter verification", func() {
 	}
 	Context("No Aggregation kind specified", func() {
 		BeforeEach(func() {
-			dispatcherMap := map[string]reporter.LogDispatcher{}
-			dispatcher = &testFlowLogDispatcher{}
+			dispatcherMap := map[string]types.Reporter{}
+			dispatcher = &testFlowLogReporter{}
 			dispatcherMap["testFlowLog"] = dispatcher
 			ca = NewAggregator()
 			ca.IncludePolicies(true)
@@ -347,8 +347,8 @@ var _ = Describe("FlowLog Reporter verification", func() {
 	})
 	Context("Enable Flowlogs for HEPs", func() {
 		BeforeEach(func() {
-			dispatcherMap := map[string]reporter.LogDispatcher{}
-			dispatcher = &testFlowLogDispatcher{}
+			dispatcherMap := map[string]types.Reporter{}
+			dispatcher = &testFlowLogReporter{}
 			dispatcherMap["testFlowLog"] = dispatcher
 			ca = NewAggregator()
 			ca.IncludePolicies(true)
@@ -384,14 +384,14 @@ var _ = Describe("Flowlog Reporter health verification", func() {
 	var (
 		cr         *FlowLogReporter
 		hr         *health.HealthAggregator
-		dispatcher *testFlowLogDispatcher
+		dispatcher *testFlowLogReporter
 	)
 
 	mt := &mockTime{}
 	Context("Test with no errors", func() {
 		BeforeEach(func() {
-			dispatcherMap := map[string]reporter.LogDispatcher{}
-			dispatcher = &testFlowLogDispatcher{}
+			dispatcherMap := map[string]types.Reporter{}
+			dispatcher = &testFlowLogReporter{}
 			dispatcherMap["testFlowLog"] = dispatcher
 			hr = health.NewHealthAggregator()
 			cr = NewReporter(dispatcherMap, flushInterval, hr, false, true, &NoOpLogOffset{})
@@ -407,8 +407,8 @@ var _ = Describe("Flowlog Reporter health verification", func() {
 	})
 	Context("Test with dispatcher that fails to initialize", func() {
 		BeforeEach(func() {
-			dispatcherMap := map[string]reporter.LogDispatcher{}
-			dispatcher = &testFlowLogDispatcher{failInit: true}
+			dispatcherMap := map[string]types.Reporter{}
+			dispatcher = &testFlowLogReporter{failInit: true}
 			dispatcherMap["testFlowLog"] = dispatcher
 			hr = health.NewHealthAggregator()
 			cr = NewReporter(dispatcherMap, flushInterval, hr, false, true, &NoOpLogOffset{})
@@ -428,7 +428,7 @@ var _ = Describe("FlowLog per minute verification", func() {
 	var (
 		cr         *FlowLogReporter
 		ca         *Aggregator
-		dispatcher *testFlowLogDispatcher
+		dispatcher *testFlowLogReporter
 	)
 
 	mt := &mockTime{}
@@ -437,8 +437,8 @@ var _ = Describe("FlowLog per minute verification", func() {
 		It("Usage report is triggered before flushIntervalDuration", func() {
 			By("Triggering report right away before flushIntervalDuration")
 			ca = NewAggregator()
-			dispatcherMap := map[string]reporter.LogDispatcher{}
-			dispatcher = &testFlowLogDispatcher{}
+			dispatcherMap := map[string]types.Reporter{}
+			dispatcher = &testFlowLogReporter{}
 			dispatcherMap["testFlowLog"] = dispatcher
 			mockFlushInterval := 600 * time.Second
 			cr = NewReporter(dispatcherMap, mockFlushInterval, nil, false, true, &NoOpLogOffset{})
@@ -452,8 +452,8 @@ var _ = Describe("FlowLog per minute verification", func() {
 			By("Triggering report post flushIntervalDuration by mocking flushInterval")
 			ca = NewAggregator()
 			ca.IncludePolicies(true)
-			dispatcherMap := map[string]reporter.LogDispatcher{}
-			dispatcher = &testFlowLogDispatcher{}
+			dispatcherMap := map[string]types.Reporter{}
+			dispatcher = &testFlowLogReporter{}
 			dispatcherMap["testFlowLog"] = dispatcher
 			cr = NewReporter(dispatcherMap, flushInterval, nil, false, true, &NoOpLogOffset{})
 			cr.AddAggregator(ca, []string{"testFlowLog"})
@@ -472,14 +472,14 @@ var _ = Describe("FlowLogAvg reporting for a Reporter", func() {
 	var (
 		cr         *FlowLogReporter
 		ca         *Aggregator
-		dispatcher *testFlowLogDispatcher
+		dispatcher *testFlowLogReporter
 	)
 
 	BeforeEach(func() {
 		ca = NewAggregator()
 		ca.IncludePolicies(true)
-		dispatcherMap := map[string]reporter.LogDispatcher{}
-		dispatcher = &testFlowLogDispatcher{}
+		dispatcherMap := map[string]types.Reporter{}
+		dispatcher = &testFlowLogReporter{}
 		dispatcherMap["testFlowLog"] = dispatcher
 
 		cr = NewReporter(dispatcherMap, flushInterval, nil, false, true, &NoOpLogOffset{})
@@ -541,16 +541,16 @@ type dispatcherMock struct {
 	collector    chan []*FlowLog
 }
 
-func (m *dispatcherMock) Initialize() error {
+func (m *dispatcherMock) Start() error {
 	m.collector = make(chan []*FlowLog)
 	return nil
 }
 
-func (m *dispatcherMock) Dispatch(logSlice interface{}) error {
+func (m *dispatcherMock) Report(logSlice interface{}) error {
 	m.iteration++
 	log.Infof("Mocked dispatcher was called %d times ", m.iteration)
 	logs := logSlice.([]*FlowLog)
-	log.Infof("Dispatching num=%d of logs", len(logs))
+	log.Infof("Reporting num=%d of logs", len(logs))
 	if m.iteration <= m.maxIteration {
 		m.collector <- logs
 	}
@@ -605,7 +605,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			cd := &dispatcherMock{}
 			cd.maxIteration = 4
 			defer cd.Close()
-			ds := map[string]reporter.LogDispatcher{"mock": cd}
+			ds := map[string]types.Reporter{"mock": cd}
 
 			// add a flow log aggregator  to a reporter with a mocked log offset
 			cr := newReporterTest(ds, nil, false, ticker, mockLogOffset)
@@ -655,7 +655,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			cd := &dispatcherMock{}
 			cd.maxIteration = 4
 			defer cd.Close()
-			ds := map[string]reporter.LogDispatcher{"mock": cd}
+			ds := map[string]types.Reporter{"mock": cd}
 
 			// add a flow log aggregator  to a reporter with a mocked log offset
 			cr := newReporterTest(ds, nil, false, ticker, mockLogOffset)
@@ -699,7 +699,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			var cd = &dispatcherMock{}
 			cd.maxIteration = 1
 			defer cd.Close()
-			var ds = map[string]LogDispatcher{"mock": cd}
+			var ds = map[string]LogReporter{"mock": cd}
 
 			// add two flow log aggregators to a reporter with a mocked log offset
 			var cr = newReporterTest(ds, nil, false, ticker, mockLogOffset)
@@ -746,7 +746,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			cd := &dispatcherMock{}
 			cd.maxIteration = 5
 			defer cd.Close()
-			ds := map[string]reporter.LogDispatcher{"mock": cd}
+			ds := map[string]types.Reporter{"mock": cd}
 
 			// add a flow log aggregator  to a reporter with a mocked log offset
 			cr := newReporterTest(ds, nil, false, ticker, mockLogOffset)

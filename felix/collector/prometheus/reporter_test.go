@@ -12,7 +12,7 @@ import (
 	dto "github.com/prometheus/client_model/go"
 
 	"github.com/projectcalico/calico/felix/calc"
-	"github.com/projectcalico/calico/felix/collector/dataplane"
+	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/collector/utils"
@@ -323,21 +323,21 @@ func getMetricCount(m prometheus.Counter) int {
 	return int(*dtoMetric.Counter.Value)
 }
 
-func getDirectionalPackets(dir dataplane.TrafficDirection, v *RuleAggregateValue) (ret prometheus.Counter) {
+func getDirectionalPackets(dir types.TrafficDirection, v *RuleAggregateValue) (ret prometheus.Counter) {
 	switch dir {
-	case dataplane.TrafficDirInbound:
+	case types.TrafficDirInbound:
 		ret = v.inPackets
-	case dataplane.TrafficDirOutbound:
+	case types.TrafficDirOutbound:
 		ret = v.outPackets
 	}
 	return
 }
 
-func getDirectionalBytes(dir dataplane.TrafficDirection, v *RuleAggregateValue) (ret prometheus.Counter) {
+func getDirectionalBytes(dir types.TrafficDirection, v *RuleAggregateValue) (ret prometheus.Counter) {
 	switch dir {
-	case dataplane.TrafficDirInbound:
+	case types.TrafficDirInbound:
 		ret = v.inBytes
-	case dataplane.TrafficDirOutbound:
+	case types.TrafficDirOutbound:
 		ret = v.outBytes
 	}
 	return
@@ -352,7 +352,7 @@ func eventuallyExpectRuleAggregateKeys(pa *PolicyRulesAggregator, keys []RuleAgg
 }
 
 func eventuallyExpectRuleAggregates(
-	pa *PolicyRulesAggregator, dir dataplane.TrafficDirection, k RuleAggregateKey,
+	pa *PolicyRulesAggregator, dir types.TrafficDirection, k RuleAggregateKey,
 	expectedPackets int, expectedBytes int, expectedConnections int,
 ) {
 	Eventually(func() int {
@@ -385,7 +385,7 @@ func eventuallyExpectRuleAggregates(
 		return getMetricCount(getDirectionalBytes(dir, value))
 	}, expectTimeout).Should(Equal(expectedBytes))
 
-	if dataplane.RuleDirToTrafficDir(k.ruleID.Direction) != dir {
+	if types.RuleDirToTrafficDir(k.ruleID.Direction) != dir {
 		// Don't check connections if rules doesn't match direction.
 		return
 	}
@@ -448,8 +448,8 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("reporting one of the same metrics")
 		pr.Report(muConn1Rule1AllowUpdate)
@@ -463,8 +463,8 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("expiring one of the metric updates for Rule1 Inbound and one for Outbound")
 		pr.Report(muConn1Rule1AllowExpire)
@@ -480,8 +480,8 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("incrementing time by the retention time - outbound rule should be expunged")
 		mt.incMockTime(retentionTime)
@@ -499,7 +499,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
 
 		By("incrementing time by the retention time - inbound rule should be expunged")
 		mt.incMockTime(retentionTime)
@@ -520,10 +520,10 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule3Pass, keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule3Pass, expectedPacketsInbound, expectedBytesInbound, expectedPassConns)
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirInbound, keyRule3Pass, expectedPacketsInbound, expectedBytesInbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("expiring one of the metric updates for Rule1 Inbound and one for Outbound")
 		pr.Report(muConn1Rule3AllowExpire)
@@ -539,10 +539,10 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule3Pass, keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule3Pass, expectedPacketsInbound, expectedBytesInbound, expectedPassConns)
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirInbound, keyRule3Pass, expectedPacketsInbound, expectedBytesInbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 	})
 	It("handles multiple rules within the metric update which is a deny", func() {
 		var expectedPacketsInbound, expectedBytesInbound, expectedPassConns int
@@ -559,10 +559,10 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyEgressRule3Pass, keyRule2Deny})
 
 		By("checking for the correct packet and byte counts")
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirInbound, keyEgressRule3Pass, expectedPacketsInbound, expectedBytesInbound, expectedPassConns)
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyEgressRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirInbound, keyEgressRule3Pass, expectedPacketsInbound, expectedBytesInbound, expectedPassConns)
-		eventuallyExpectRuleAggregates(pa, dataplane.TrafficDirOutbound, keyEgressRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirInbound, keyEgressRule3Pass, expectedPacketsInbound, expectedBytesInbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyEgressRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirInbound, keyEgressRule3Pass, expectedPacketsInbound, expectedBytesInbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyEgressRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
 
 		By("expiring the deny metric")
 		pr.Report(muNoConn1Rule4DenyExpire)
