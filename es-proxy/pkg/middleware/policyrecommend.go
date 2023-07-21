@@ -96,11 +96,6 @@ func PolicyRecommendationHandler(
 
 		if len(flows) == 0 {
 			log.WithField("params", params).Info("No matching flows found")
-			errorStr := fmt.Sprintf(
-				"No matching flows found for endpoint name '%v' in namespace '%v' within the time range '%v:%v'",
-				params.EndpointName, params.Namespace, params.StartTime, params.EndTime)
-			err := fmt.Errorf(errorStr)
-			createAndReturnError(err, errorStr, http.StatusNotFound, api.PolicyRec, w)
 			return
 		}
 

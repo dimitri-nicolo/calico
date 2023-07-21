@@ -939,15 +939,19 @@ var _ = Describe("Policy Recommendation", func() {
 			recResponse, err := io.ReadAll(w.Body)
 			Expect(err).NotTo(HaveOccurred())
 
-			actualRec := &PolicyRecommendationResponse{}
-			err = json.Unmarshal(recResponse, actualRec)
-			Expect(err).To(BeNil())
-
-			if expectedResponse == nil {
-				Expect(actualRec).To(BeNil())
+			if len(expectedResponse.Recommendation.NetworkPolicies) == 0 && len(expectedResponse.Recommendation.GlobalNetworkPolicies) == 0 {
+				Expect(len(recResponse)).To(Equal(0))
 			} else {
-				Expect(actualRec).ToNot(BeNil())
-				Expect(actualRec).To(Equal(expectedResponse))
+				actualRec := &PolicyRecommendationResponse{}
+				err = json.Unmarshal(recResponse, actualRec)
+				Expect(err).To(BeNil())
+
+				if expectedResponse == nil {
+					Expect(actualRec).To(BeNil())
+				} else {
+					Expect(actualRec).ToNot(BeNil())
+					Expect(actualRec).To(Equal(expectedResponse))
+				}
 			}
 		},
 
@@ -994,8 +998,13 @@ var _ = Describe("Policy Recommendation", func() {
 				EndpointName: "idontexist-*",
 				Namespace:    "default",
 			},
-			nil,
-			http.StatusNotFound,
+			&PolicyRecommendationResponse{
+				Recommendation: &lmapolicyrec.Recommendation{
+					NetworkPolicies:       []*v3.StagedNetworkPolicy{},
+					GlobalNetworkPolicies: []*v3.StagedGlobalNetworkPolicy{},
+				},
+			},
+			http.StatusOK,
 		),
 
 		Entry("for query that errors out - invalid time parameters",
