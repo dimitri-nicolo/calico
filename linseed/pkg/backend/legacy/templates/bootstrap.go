@@ -91,7 +91,7 @@ func GetIndexInfo(ctx context.Context, client *elastic.Client, config *TemplateC
 	}
 
 	for _, row := range response {
-		if row.Alias == config.Alias() {
+		if row.Alias == config.Alias() && row.IsWriteIndex == "true" {
 			index.AliasExists = true
 			index.AliasedIndex = row.Index
 			break
