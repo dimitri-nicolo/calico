@@ -185,8 +185,6 @@ func Run() {
 		}
 	}
 
-	configureAndCheckIPAddressSubnets(ctx, cli, node, k8sNode)
-
 	// Allow setting this node's AS number and rack label(s) from an EarlyNetworkConfiguration
 	// mapped in at $CALICO_EARLY_NETWORKING.  Note that the "AS" environment variable can still
 	// override the AS number.
@@ -197,6 +195,7 @@ func Run() {
 
 	// Write BGP related details to the Node if BGP is enabled or environment variable IP is used (for ipsec support).
 	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
+		configureAndCheckIPAddressSubnets(ctx, cli, node, k8sNode)
 		configureASNumber(node, os.Getenv("AS"), "environment")
 	}
 
@@ -378,6 +377,12 @@ func configureAndCheckIPAddressSubnets(ctx context.Context, cli client.Interface
 }
 
 func MonitorIPAddressSubnets() {
+	// If Calico is running in policy only mode we don't need to write BGP
+	// related details to the Node.
+	if os.Getenv("CALICO_NETWORKING_BACKEND") == "none" {
+		log.Info("Skipped monitoring node IP changes when CALICO_NETWORKING_BACKEND=none")
+		return
+	}
 	ctx := context.Background()
 	_, cli := calicoclient.CreateClient()
 	nodeName := utils.DetermineNodeName()
