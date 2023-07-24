@@ -31,7 +31,8 @@ type TcGlobalData struct {
 	NatOut        uint32
 	EgwVxlanPort  uint16
 	EgwHealthPort uint16
-	Jumps         [16]uint32
+	LogFilterJmp  uint32
+	Jumps         [32]uint32
 }
 
 type TcStatsGlobalData struct {
@@ -40,5 +41,5 @@ type TcStatsGlobalData struct {
 
 type XDPGlobalData struct {
 	IfaceName string
-	Jumps     [16]uint32
+	Jumps     [32]uint32
 }

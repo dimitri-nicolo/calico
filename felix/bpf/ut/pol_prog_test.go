@@ -30,6 +30,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/asm"
 	"github.com/projectcalico/calico/felix/bpf/ipsets"
+	"github.com/projectcalico/calico/felix/bpf/jump"
 	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/bpf/polprog"
 	"github.com/projectcalico/calico/felix/bpf/state"
@@ -2903,7 +2904,7 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 
 	setUpIPSets(tp.IPSets(), realAlloc, ipsMap)
 
-	jumpMap = polprog.Map()
+	jumpMap = jump.Map()
 	_ = unix.Unlink(jumpMap.Path())
 	err := jumpMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())

@@ -46,6 +46,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/hook"
 	"github.com/projectcalico/calico/felix/bpf/ifstate"
 	"github.com/projectcalico/calico/felix/bpf/ipsets"
+	"github.com/projectcalico/calico/felix/bpf/jump"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
 	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/bpf/nat"
@@ -167,6 +168,12 @@ var xdpJumpMapIndexes = map[string]map[int]string{
 		tcdefs.ProgIndexAllowed: "calico_xdp_accepted_entrypoint",
 		tcdefs.ProgIndexDrop:    "calico_xdp_drop",
 	},
+	"IPv4 debug": map[int]string{
+		tcdefs.ProgIndexMain:    "calico_xdp_main",
+		tcdefs.ProgIndexPolicy:  "calico_xdp_norm_pol_tail",
+		tcdefs.ProgIndexAllowed: "calico_xdp_accepted_entrypoint",
+		tcdefs.ProgIndexDrop:    "calico_xdp_drop",
+	},
 }
 
 var tcJumpMapIndexes = map[string][]int{
@@ -178,12 +185,20 @@ var tcJumpMapIndexes = map[string][]int{
 		tcdefs.ProgIndexDrop,
 		tcdefs.ProgIndexHostCtConflict,
 	},
+	"IPv4 debug": []int{
+		tcdefs.ProgIndexMainDebug,
+		tcdefs.ProgIndexPolicyDebug,
+		tcdefs.ProgIndexAllowedDebug,
+		tcdefs.ProgIndexIcmpDebug,
+		tcdefs.ProgIndexDropDebug,
+		tcdefs.ProgIndexHostCtConflictDebug,
+	},
 	"IPv6": []int{
-		tcdefs.ProgIndexV6Prologue,
-		tcdefs.ProgIndexV6Policy,
-		tcdefs.ProgIndexV6Allowed,
-		tcdefs.ProgIndexV6Icmp,
-		tcdefs.ProgIndexV6Drop,
+		tcdefs.ProgIndexV6PrologueDebug,
+		tcdefs.ProgIndexV6PolicyDebug,
+		tcdefs.ProgIndexV6AllowedDebug,
+		tcdefs.ProgIndexV6IcmpDebug,
+		tcdefs.ProgIndexV6DropDebug,
 	},
 }
 
@@ -324,7 +339,12 @@ func setupAndRun(logger testLogger, loglevel, section string, rules *polprog.Rul
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())
 
-	o, err := objLoad(tempObj, bpfFsDir, "IPv4", topts, rules != nil, true)
+	ipFamily := "IPv4"
+	if loglevel == "debug" {
+		ipFamily += " debug"
+	}
+
+	o, err := objLoad(tempObj, bpfFsDir, ipFamily, topts, rules != nil, true)
 	Expect(err).NotTo(HaveOccurred())
 	defer o.Close()
 
@@ -340,12 +360,12 @@ func setupAndRun(logger testLogger, loglevel, section string, rules *polprog.Rul
 	Expect(err).NotTo(HaveOccurred())
 
 	if rules != nil {
-		jmpMap := jumpMap
-		polMap := policyMap
+		jmpMap := progMap
+		polMap := jumpMap
 		popts := []polprog.Option{}
 		if topts.xdp {
-			jmpMap = jumpMapXDP
-			polMap = policyMapXDP
+			jmpMap = progMapXDP
+			polMap = jumpMapXDP
 			popts = append(popts, polprog.WithAllowDenyJumps(tcdefs.ProgIndexAllowed, tcdefs.ProgIndexDrop))
 		}
 		alloc := &forceAllocator{alloc: idalloc.New()}
@@ -472,9 +492,9 @@ func bpftool(args ...string) ([]byte, error) {
 var (
 	mapInitOnce sync.Once
 
-	natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, jumpMap, jumpMapXDP, affinityMap, arpMap, fsafeMap, countersMap, ifstateMap, policyMap, policyMapXDP maps.Map
-	perfMap                                                                                                                                                              maps.Map
-	allMaps                                                                                                                                                              []maps.Map
+	natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, progMap, progMapXDP, affinityMap, arpMap, fsafeMap, countersMap, ifstateMap, jumpMap, jumpMapXDP maps.Map
+	perfMap                                                                                                                                                          maps.Map
+	allMaps                                                                                                                                                          []maps.Map
 )
 
 func initMapsOnce() {
@@ -518,7 +538,7 @@ func cleanUpMaps() {
 	defer log.SetLevel(logLevel)
 
 	for _, m := range allMaps {
-		if m == stateMap || m == testStateMap || m == jumpMap || m == countersMap {
+		if m == stateMap || m == testStateMap || m == progMap || m == countersMap {
 			continue // Can't clean up array maps
 		}
 		log.WithField("map", m.GetName()).Info("Cleaning")
@@ -567,14 +587,22 @@ func ipToU32(ip net.IP) uint32 {
 
 func tcUpdateJumpMap(obj *libbpf.Obj, progs []int, hasPolicyProg, hasHostConflictProg bool) error {
 	for _, idx := range progs {
-		if (idx == tcdefs.ProgIndexPolicy || idx == tcdefs.ProgIndexV6Policy) && !hasPolicyProg {
-			continue
+		switch idx {
+		case
+			tcdefs.ProgIndexPolicy,
+			tcdefs.ProgIndexPolicyDebug,
+			tcdefs.ProgIndexV6Policy,
+			tcdefs.ProgIndexV6PolicyDebug:
+
+			if !hasPolicyProg {
+				continue
+			}
 		}
-		if idx == tcdefs.ProgIndexHostCtConflict && !hasHostConflictProg {
+		if (idx == tcdefs.ProgIndexHostCtConflict || idx == tcdefs.ProgIndexHostCtConflictDebug) && !hasHostConflictProg {
 			continue
 		}
 		log.WithField("prog", tcdefs.ProgramNames[idx]).WithField("idx", idx).Debug("UpdateJumpMap")
-		err := obj.UpdateJumpMap(jumpMap.GetName(), tcdefs.ProgramNames[idx], idx)
+		err := obj.UpdateJumpMap(progMap.GetName(), tcdefs.ProgramNames[idx], idx)
 		if err != nil {
 			return fmt.Errorf("error updating %s program: %w", tcdefs.ProgramNames[idx], err)
 		}
@@ -589,23 +617,23 @@ func objLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHostC
 	forXDP := topts.xdp
 
 	// XXX we do not need to create both sets of maps, but, well, who cares here ;-)
-	jumpMap = hook.NewProgramsMap()
-	policyMap = polprog.Map()
-	jumpMapXDP = hook.NewXDPProgramsMap()
-	policyMapXDP = polprog.XDPMap()
+	progMap = hook.NewProgramsMap()
+	jumpMap = jump.Map()
+	progMapXDP = hook.NewXDPProgramsMap()
+	jumpMapXDP = jump.XDPMap()
 	if ipFamily == "preamble" {
+		_ = unix.Unlink(progMap.Path())
 		_ = unix.Unlink(jumpMap.Path())
-		_ = unix.Unlink(policyMap.Path())
+		_ = unix.Unlink(progMapXDP.Path())
 		_ = unix.Unlink(jumpMapXDP.Path())
-		_ = unix.Unlink(policyMapXDP.Path())
 	}
-	err := jumpMap.EnsureExists()
+	err := progMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
-	err = policyMap.EnsureExists()
+	err = jumpMap.EnsureExists()
+	Expect(err).NotTo(HaveOccurred())
+	err = progMapXDP.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 	err = jumpMapXDP.EnsureExists()
-	Expect(err).NotTo(HaveOccurred())
-	err = policyMapXDP.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
 	obj, err := libbpf.OpenObject(fname)
@@ -668,7 +696,7 @@ func objLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHostC
 	progDir := bpfFsDir
 	policyIdx := tcdefs.ProgIndexPolicy
 
-	if ipFamily == "IPv6" {
+	if strings.HasPrefix(ipFamily, "IPv6") {
 		progDir += "_v6"
 		policyIdx = tcdefs.ProgIndexV6Policy
 	}
@@ -687,9 +715,9 @@ func objLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHostC
 		polProgPath = path.Join(bpfFsDir, polProgPath)
 		_, err = os.Stat(polProgPath)
 		if err == nil {
-			m := policyMap
+			m := jumpMap
 			if forXDP {
-				m = policyMapXDP
+				m = jumpMapXDP
 			}
 			err = jumpMapUpdatePinned(m, policyIdx, polProgPath)
 			if err != nil {
@@ -701,6 +729,7 @@ func objLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHostC
 	}
 
 	if !forXDP {
+		log.WithField("ipFamily", ipFamily).Debug("Udating jump map")
 		err = tcUpdateJumpMap(obj, tcJumpMapIndexes[ipFamily], false, hasHostConflictProg)
 		if err != nil && !strings.Contains(err.Error(), "error updating calico_tc_host_ct_conflict program") {
 			goto out
@@ -1496,7 +1525,7 @@ func TestMapIterWithDeleteLastOfBatch(t *testing.T) {
 func TestJumpMap(t *testing.T) {
 	RegisterTestingT(t)
 
-	jumpMapFD := jumpMap.MapFD()
+	jumpMapFD := progMap.MapFD()
 	pg := polprog.NewBuilder(idalloc.New(), ipsMap.MapFD(), stateMap.MapFD(), jumpMapFD,
 		polprog.WithAllowDenyJumps(tcdefs.ProgIndexAllowed, tcdefs.ProgIndexDrop))
 	rules := polprog.Rules{}

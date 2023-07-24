@@ -1861,6 +1861,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkPass:     0x20,
 				IptablesMarkScratch0: 0x40,
 				BPFEnabled:           true,
+				IptablesMarkDrop:     0x200,
 			}
 		})
 

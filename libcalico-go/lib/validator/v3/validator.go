@@ -261,6 +261,7 @@ func init() {
 	registerFieldValidator("ipsecLogLevel", validateIPSecLogLevel)
 	registerFieldValidator("ipsecMode", validateIPSecMode)
 	registerFieldValidator("bpfLogLevel", validateBPFLogLevel)
+	registerFieldValidator("bpfLogFilters", validateBPFLogFilters)
 	registerFieldValidator("bpfServiceMode", validateBPFServiceMode)
 	registerFieldValidator("dropAcceptReturn", validateFelixEtoHAction)
 	registerFieldValidator("acceptReturn", validateAcceptReturn)
@@ -701,6 +702,23 @@ func validateIPSecMode(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate IPSec mode: %s", s)
 	return IPSecModeRegex.MatchString(s)
+}
+
+func validateBPFLogFilters(fl validator.FieldLevel) bool {
+	log.Debugf("Validate Felix BPF log level: %s", fl.Field().String())
+
+	m, ok := fl.Field().Interface().(map[string]string)
+	if !ok {
+		return false
+	}
+
+	for k := range m {
+		if !interfaceRegex.MatchString(k) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func validateBPFLogLevel(fl validator.FieldLevel) bool {

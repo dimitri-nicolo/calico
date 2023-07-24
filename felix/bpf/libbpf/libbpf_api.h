@@ -152,6 +152,7 @@ void bpf_tc_set_globals(struct bpf_map *map,
 			uint natout,
 			ushort egw_vxlan_port,
 			ushort egw_health_port,
+			uint log_filter_jmp,
 			uint *jumps)
 {
 	struct cali_tc_globals data = {
@@ -170,6 +171,7 @@ void bpf_tc_set_globals(struct bpf_map *map,
 		.natout_idx = natout,
 		.egw_vxlan_port = egw_vxlan_port,
 		.egw_health_port = egw_health_port,
+		.log_filter_jmp = log_filter_jmp,
 	};
 
 	strncpy(data.iface_name, iface_name, sizeof(data.iface_name));

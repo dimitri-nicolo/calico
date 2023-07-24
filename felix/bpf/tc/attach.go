@@ -41,6 +41,8 @@ import (
 type AttachPoint struct {
 	bpf.AttachPoint
 
+	LogFilter            string
+	LogFilterIdx         int
 	Type                 tcdefs.EndpointType
 	ToOrFrom             tcdefs.ToOrFromEp
 	HookLayout4          hook.Layout
@@ -445,6 +447,8 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		NatOut:        ap.NATout,
 		EgwVxlanPort:  ap.EGWVxlanPort,
 		EgwHealthPort: ap.EgressGatewayHealthPort,
+
+		LogFilterJmp: uint32(ap.LogFilterIdx),
 	}
 	var err error
 
@@ -503,7 +507,12 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		}
 	}
 
+	for i := 0; i < len(globalData.Jumps); i++ {
+		globalData.Jumps[i] = 0xffffffff /* uint32(-1) */
+	}
+
 	if ap.HookLayout4 != nil {
+		log.WithField("HookLayout4", ap.HookLayout4).Debugf("ConfigureProgram")
 		for p, i := range ap.HookLayout4 {
 			globalData.Jumps[p] = uint32(i)
 		}
