@@ -1209,7 +1209,7 @@ func (r *DefaultRuleRenderer) StaticNATPreroutingChains(ipVersion uint8) []*Chai
 		egressRules = append(egressRules,
 			Rule{
 				Match:   Match().MarkSingleBitSet(r.IptablesMarkEgress),
-				Action:  SaveConnMarkAction{},
+				Action:  SaveConnMarkAction{SaveMask: r.IptablesMarkEgress},
 				Comment: []string{"Save mark for egress connection"},
 			},
 		)
