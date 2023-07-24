@@ -25,6 +25,9 @@ const (
 	ADTrainingJobTemplateName         = "tigera.io.detectors.training"
 	DefaultADDetectorTrainingSchedule = 1 * time.Hour
 
+	initialTrainingJobSuffix = "initial-training"
+	trainingCycleSuffix      = "training"
+
 	ADJobOwnerLabelValue = "intrusion-detection-controller"
 )
 
