@@ -1485,7 +1485,7 @@ var _ = Describe("Static", func() {
 						},
 						{
 							Match:   Match().MarkSingleBitSet(0x400),
-							Action:  SaveConnMarkAction{},
+							Action:  SaveConnMarkAction{SaveMask: 0x400},
 							Comment: []string{"Save mark for egress connection"},
 						},
 					},
