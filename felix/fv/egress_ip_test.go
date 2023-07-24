@@ -98,9 +98,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 	rulesProgrammed := func(felix *infrastructure.Felix, polNames []string) bool {
 		out, err := felix.ExecOutput("iptables-save", "-t", "filter")
-		if err != nil {
-			return false
-		}
+		Expect(err).NotTo(HaveOccurred())
 		for _, polName := range polNames {
 			if strings.Count(out, polName) == 0 {
 				return false
