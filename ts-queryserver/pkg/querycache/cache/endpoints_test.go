@@ -10,6 +10,7 @@ import (
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
@@ -28,6 +29,9 @@ var _ = Describe("Querycache endpoints cache tests", func() {
 		epc = &endpointsCache{
 			workloadEndpointsByNamespace: make(map[string]*endpointCache),
 			hostEndpoints:                newEndpointCache(),
+
+			converter:    conversion.NewConverter(),
+			wepConverter: conversion.NewWorkloadEndpointConverter(),
 		}
 
 		key1 = model.KVPair{

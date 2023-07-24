@@ -473,3 +473,87 @@ func TestSorting(t *testing.T) {
 		require.Equal(t, log1, r.Items[1])
 	})
 }
+
+func TestWAFLogFiltering(t *testing.T) {
+	type testCase struct {
+		Name   string
+		Params v1.WAFLogParams
+
+		// Configuration for which logs are expected to match.
+		ExpectLogIndex int
+	}
+
+	testcases := []testCase{
+		{
+			Name: "should query based on level",
+			Params: v1.WAFLogParams{
+				Selector: `level="DANGER"`,
+			},
+			ExpectLogIndex: 1,
+		},
+		{
+			Name: "should query based on rules id",
+			Params: v1.WAFLogParams{
+				Selector: `"rules.id" = 8`,
+			},
+			ExpectLogIndex: 0,
+		},
+	}
+
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		for _, testcase := range testcases {
+			// Each testcase creates multiple flow logs, and then uses
+			// different filtering parameters provided in the params
+			// to query one or more flow logs.
+			name := fmt.Sprintf("%s (tenant=%s)", testcase.Name, tenant)
+			t.Run(name, func(t *testing.T) {
+				defer setupTest(t)()
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+
+				reqTime := time.Now()
+				// Create a basic waf logs
+				wafLogs := []v1.WAFLog{
+					{
+						Timestamp: reqTime,
+						Msg:       "Strawberry Fields Forever",
+						Rules: []v1.WAFRuleHit{
+							{
+								Id: "8",
+							},
+						},
+					},
+					{
+						Timestamp: reqTime,
+						Msg:       "High Voltage",
+						Level:     "DANGER",
+					},
+				}
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+
+				resp, err := b.Create(ctx, clusterInfo, wafLogs)
+				require.NoError(t, err)
+				require.Empty(t, resp.Errors)
+
+				// Refresh.
+				index := fmt.Sprintf("tigera_secure_ee_waf.%s.*", cluster)
+				if tenant != "" {
+					index = fmt.Sprintf("tigera_secure_ee_waf.%s.%s.*", tenant, cluster)
+				}
+				err = backendutils.RefreshIndex(ctx, client, index)
+				require.NoError(t, err)
+
+				result, err := b.List(ctx, clusterInfo, &testcase.Params)
+				require.NoError(t, err)
+
+				require.Len(t, result.Items, 1)
+				//Reset the time as it microseconds to not match perfectly
+				require.NotEqual(t, "", result.Items[0].Timestamp)
+				result.Items[0].Timestamp = reqTime
+
+				require.Equal(t, wafLogs[testcase.ExpectLogIndex], result.Items[0])
+			})
+		}
+	}
+}

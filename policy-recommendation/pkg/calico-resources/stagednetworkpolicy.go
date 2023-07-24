@@ -39,21 +39,19 @@ const (
 	policyRecommendationTimeFormat = time.RFC3339
 	namespaceScope                 = "namespace"
 
-	CreationTimestampKey = PolicyRecKeyName + "/creationTimestamp"
-	LastUpdatedKey       = PolicyRecKeyName + "/lastUpdated"
-	NameKey              = PolicyRecKeyName + "/name"
-	NamespaceKey         = PolicyRecKeyName + "/namespace"
-	ScopeKey             = PolicyRecKeyName + "/scope"
-	StagedActionKey      = projectCalicoKeyName + "/spec.stagedAction"
-	StatusKey            = PolicyRecKeyName + "/status"
+	LastUpdatedKey  = PolicyRecKeyName + "/lastUpdated"
+	NameKey         = PolicyRecKeyName + "/name"
+	NamespaceKey    = PolicyRecKeyName + "/namespace"
+	ScopeKey        = PolicyRecKeyName + "/scope"
+	StagedActionKey = projectCalicoKeyName + "/spec.stagedAction"
+	StatusKey       = PolicyRecKeyName + "/status"
+	TierKey         = projectCalicoKeyName + "/tier"
 
 	LearningStatus    = "Learning"
 	NoDataStatus      = "NoData"
 	StableStatus      = "Stable"
 	StabilizingStatus = "Stabilizing"
 	StaleStatus       = "Stale"
-
-	PolicyRecSnpNameSuffix = "recommendation"
 )
 
 var (
@@ -65,16 +63,14 @@ var (
 )
 
 // NewStagedNetworkPolicy returns a pointer to a staged network policy.
-func NewStagedNetworkPolicy(
-	name, namespace, tier string, owner metav1.OwnerReference,
-) *v3.StagedNetworkPolicy {
+func NewStagedNetworkPolicy(name, namespace, tier string, owner metav1.OwnerReference) *v3.StagedNetworkPolicy {
 	return &v3.StagedNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				StatusKey: NoDataStatus,
 			},
 			// TODO(dimitri): Must define a valid RFC1123 policy name.
-			Name:      GetPolicyName(tier, name),
+			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
 				"projectcalico.org/tier":                tier,
@@ -274,8 +270,6 @@ func GetEgressToServiceV3Rule(
 //
 // EntityRule.Selector:
 //
-//	projectcalico.org/orchestrator == 'k8s'
-//
 // EntityRule.NamespaceSelector:
 //
 //	projectcalico.org/name == '<namespace>'
@@ -296,7 +290,6 @@ func GetNamespaceV3Rule(
 	}
 
 	entityRule := getEntityRuleReference(direction, rule)
-	entityRule.Selector = fmt.Sprintf("%s/orchestrator == 'k8s'", projectCalicoKeyName)
 	entityRule.NamespaceSelector = fmt.Sprintf("%s/name == '%s'", projectCalicoKeyName, namespace)
 	if protocol.SupportsPorts() {
 		rule.Destination.Ports = sortPorts(ports)
@@ -468,10 +461,4 @@ func sortPorts(ports []numorstring.Port) []numorstring.Port {
 	})
 
 	return sortedPorts
-}
-
-// Utilities
-
-func GetPolicyName(tier, name string) string {
-	return fmt.Sprintf("%s.%s-%s", tier, name, PolicyRecSnpNameSuffix)
 }

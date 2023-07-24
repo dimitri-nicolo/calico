@@ -104,8 +104,9 @@ func (r *managedClusterReconciler) startRecommendationPolicyControllerForManaged
 	}
 
 	// Setup Synchronizer
-	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSetForCluster, *caches)
+	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSetForCluster, *caches, utils.SuffixGenerator)
 
+	suffixGenerator := utils.SuffixGenerator
 	policyRecController := policyrecommendation.NewPolicyRecommendationController(
 		clientSetForCluster.ProjectcalicoV3(),
 		r.linseed,
@@ -113,6 +114,7 @@ func (r *managedClusterReconciler) startRecommendationPolicyControllerForManaged
 		caches,
 		mc.Name,
 		serviceNameSuffix,
+		&suffixGenerator,
 	)
 	stagednetworkpoliciesController := stagednetworkpolicies.NewStagedNetworkPolicyController(
 		clientSetForCluster.ProjectcalicoV3(),

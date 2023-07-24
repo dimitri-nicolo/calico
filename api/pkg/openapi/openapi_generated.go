@@ -6196,7 +6196,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"l7LogsFileAggregationTrimURL": {
 						SchemaProps: spec.SchemaProps{
-							Description: "L7LogsFileAggregationTrimURL is used to choose the type of aggregation for the url on L7 log entries. [Default: IncludeL7FullURL - include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath]. Accepted values are 0 and 1. IncludeL7FullURL - Include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath. TrimURLQuery - Aggregate over all other fields ignoring the query parameters on the URL. TrimURLQueryAndPath - Aggregate over all other fields and the base URL only. ExcludeL7URL - Aggregate over all other fields ignoring the URL entirely.",
+							Description: "L7LogsFileAggregationTrimURL is used to choose the type of aggregation for the url on L7 log entries. [Default: IncludeL7FullURL - include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath]. Accepted values: IncludeL7FullURL - Include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath. TrimURLQuery - Aggregate over all other fields ignoring the query parameters on the URL. TrimURLQueryAndPath - Aggregate over all other fields and the base URL only. ExcludeL7URL - Aggregate over all other fields ignoring the URL entirely.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

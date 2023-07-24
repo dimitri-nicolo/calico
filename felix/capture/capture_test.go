@@ -534,6 +534,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		}()
 
 		// Write 10 packets
+		// We set the max size to one packet and want to keep only 3 files
 		wg.Add(numberOfPackets)
 		go func() {
 			for i := 0; i < numberOfPackets; i++ {
@@ -572,7 +573,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 				rotatedFileOrderZeroSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
 		}
 
-	}, 10)
+	}, 20)
 
 	It("Start a capture after it has been stopped", func(done Done) {
 		defer close(done)
@@ -982,8 +983,20 @@ func assertPcapFiles(baseDir string, expected []outputFile) {
 	})
 
 	for i, f := range expected {
-		Eventually(func() int { return int(read(baseDir)[i].Size()) }).Should(Equal(f.Size))
-		Eventually(func() string { return read(baseDir)[i].Name() }).Should(MatchRegexp(f.Name))
+		Eventually(func() int {
+			files := read(baseDir)
+			if len(files) > i {
+				return int(files[i].Size())
+			}
+			return -1
+		}).Should(Equal(f.Size))
+		Eventually(func() string {
+			files := read(baseDir)
+			if len(files) > i {
+				return files[i].Name()
+			}
+			return ""
+		}).Should(MatchRegexp(f.Name))
 	}
 }
 
@@ -1004,7 +1017,7 @@ func assertStatusUpdates(update *proto.PacketCaptureStatusUpdate, expected []out
 func read(baseDir string) []os.FileInfo {
 	pCaps, err := os.ReadDir(baseDir)
 	if err != nil {
-		return nil
+		return []os.FileInfo{}
 	}
 
 	var pcapInfo []os.FileInfo

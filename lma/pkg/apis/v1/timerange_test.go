@@ -18,7 +18,15 @@ var _ = Describe("Unmarshaling works correctly", func() {
 
 		err := json.Unmarshal([]byte(d), &tr)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(Equal("Request body contains an invalid value for the time range: missing `from` field"))
+		Expect(err.Error()).To(Equal("Request body contains an invalid time range: values must either both be explicit times or both be relative to now"))
+	})
+
+	It("No errors with no from field", func() {
+		var tr TimeRange
+		d := "{\"to\":\"2021-05-30T21:23:10Z\"}"
+
+		err := json.Unmarshal([]byte(d), &tr)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("Errors with no to field", func() {
@@ -27,7 +35,15 @@ var _ = Describe("Unmarshaling works correctly", func() {
 
 		err := json.Unmarshal([]byte(d), &tr)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(Equal("Request body contains an invalid value for the time range: missing `to` field"))
+		Expect(err.Error()).To(Equal("Request body contains an invalid time range: values must either both be explicit times or both be relative to now"))
+	})
+
+	It("No errors with no to field", func() {
+		var tr TimeRange
+		d := "{\"from\":\"2021-05-30T21:23:10Z\"}"
+
+		err := json.Unmarshal([]byte(d), &tr)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("Parses relative times", func() {

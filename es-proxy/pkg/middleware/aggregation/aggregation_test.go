@@ -447,7 +447,7 @@ var _ = Describe("Aggregation tests", func() {
 		Entry("Missing time range fields",
 			`{"time_range": {}, "aggregations": {"test": {}}}`,
 			http.StatusBadRequest,
-			"Request body contains an invalid value for the time range: missing `from` field",
+			"Request body contains an invalid value for the time range: missing `to` and `from` fields",
 		),
 	)
 })

@@ -1,0 +1,9 @@
+{
+  "cluster": "c_val",
+  "page_size": 152,
+  "page_num": 1,
+  "time_range": {
+    "from": "2023-07-09T00:00:00Z"
+  },
+  "timeout": "60s"
+}

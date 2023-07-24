@@ -447,7 +447,7 @@ dual-tor-setup: dual-tor-cleanup kubectl dist/calicoctl $(K8ST_IMAGE_TARS) .cali
 	docker build -t calico-test/busybox-with-reliable-nc tests/k8st/reliable-nc
 	mkdir -p $(DUAL_TOR_DIR)/tmp
 	cp -a $(K8ST_IMAGE_TARS) $(DUAL_TOR_DIR)/tmp/
-	docker build --build-arg K8S_VERSION=$(K8S_VERSION) -t calico/dual-tor-node $(DUAL_TOR_DIR)
+	docker build --build-arg KINDEST_NODE_VERSION=$(KINDEST_NODE_VERSION) -t calico/dual-tor-node $(DUAL_TOR_DIR)
 	rm -rf $(DUAL_TOR_DIR)/tmp
 	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup \
 	ROUTER_IMAGE=$(BIRD_IMAGE) CALICOCTL=`pwd`/dist/calicoctl $(DUAL_TOR_DIR)/dualtor.sh

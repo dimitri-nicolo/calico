@@ -16,7 +16,6 @@ import (
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/alert"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
 
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
@@ -28,7 +27,6 @@ type globalAlertReconciler struct {
 	linseedClient          client.Client
 	k8sClient              kubernetes.Interface
 	calicoCLI              calicoclient.Interface
-	podTemplateQuery       podtemplate.ADPodTemplateQuery
 	adDetectionController  controller.AnomalyDetectionController
 	adTrainingController   controller.AnomalyDetectionController
 	alertNameToAlertState  map[string]alertState
@@ -69,7 +67,7 @@ func (r *globalAlertReconciler) Reconcile(namespacedName types.NamespacedName) e
 		return nil
 	}
 
-	alert, err := alert.NewAlert(obj, r.calicoCLI, r.linseedClient, r.k8sClient, r.enableAnomalyDetection, r.podTemplateQuery, r.adDetectionController, r.adTrainingController, r.clusterName, r.tenantID, r.namespace, r.fipsModeEnabled)
+	alert, err := alert.NewAlert(obj, r.calicoCLI, r.linseedClient, r.k8sClient, r.enableAnomalyDetection, r.adDetectionController, r.adTrainingController, r.clusterName, r.tenantID, r.namespace, r.fipsModeEnabled)
 	if err != nil {
 		return err
 	}

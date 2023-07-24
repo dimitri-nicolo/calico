@@ -97,14 +97,8 @@ func RunEngine(
 		return
 	}
 
-	// Update the status annotation, if necessary
-	emptyRules := len(snp.Spec.Egress) == 0 && len(snp.Spec.Ingress) == 0
-	updateStatusAnnotation(snp, emptyRules, clock.NowRFC3339(), recInterval, stabilizationPeriod)
-
-	namespace := snp.Namespace
-
 	// Define flow log query params
-	params := getNamespacePolicyRecParams(lookback, namespace, clusterID)
+	params := getNamespacePolicyRecParams(lookback, snp.Namespace, clusterID)
 
 	// Query flows
 	query := flows.NewPolicyRecommendationQuery(ctx, linseedClient, clusterID)
@@ -508,12 +502,9 @@ func (ere *recommendationEngine) processRecommendation(flows []*api.Flow, snp *v
 	// Get sorted v3 rules
 	egress := ere.getSortedEngineAsV3Rules(calicores.EgressTraffic)
 	ingress := ere.getSortedEngineAsV3Rules(calicores.IngressTraffic)
-
-	emptyRules := len(egress) == 0 && len(ingress) == 0
 	if calicores.UpdateStagedNetworkPolicyRules(snp, egress, ingress) {
 		snp.Annotations[calicores.LastUpdatedKey] = ere.clock.NowRFC3339()
 	}
-	updateStatusAnnotation(snp, emptyRules, ere.clock.NowRFC3339(), ere.interval, ere.stabilization)
 }
 
 // Check if the flow matches the destination namespace.
@@ -770,65 +761,4 @@ func lessPrivateNetwork(left, right v3.Rule) bool {
 // assumed that no two rules will not have the same protocol.
 func lessPublicNetwork(left, right v3.Rule) bool {
 	return left.Protocol.StrVal < right.Protocol.StrVal
-}
-
-// updateStatusAnnotation updates the learning annotation of a staged network policy given
-// the time since the last update.
-//
-//   - Learning
-//     Policy rule was updated <= 2 x recommendation interval ago
-//   - Stale
-//     Policy was updated > stabilization period ago, and the flows contain policy matches that do
-//     not match the expected policy hits. This is usually the result of long-running connections
-//     that were established before the recommended staged policy was created or modified.
-//     Resolving this may require the connections to be restarted by cycling the impacted pods
-//   - Stabilizing
-//     Policy was updated > 2 x recommendation interval ago. The flows contain policy matches that
-//     match the expected policy hits for the recommended policy, and may still contain some logs
-//     that do not. The flows that do not match are fully covered by the existing rules in the
-//     recommended policy (i.e. no further changes are required to the policy)
-//   - Stable
-//     Policy was updated > stabilization period ago. The flows all contain the expected
-//     recommended policy hits
-func updateStatusAnnotation(
-	snp *v3.StagedNetworkPolicy,
-	emptyRules bool,
-	timeNowFRC3339 string,
-	interval, stabilization time.Duration,
-) {
-	if emptyRules {
-		// No update to status annotation necessary
-		return
-	}
-
-	lastUpdateStr, ok := snp.Annotations[calicores.LastUpdatedKey]
-	if !ok {
-		// Fist time creating the last update key
-		snp.Annotations[calicores.StatusKey] = calicores.LearningStatus
-		return
-	}
-	snpLastUpdateTime, err := time.Parse(time.RFC3339, lastUpdateStr)
-	if err != nil {
-		log.WithError(err).Debugf("Failed to parse snp last update time using the RFC3339 format")
-		return
-	}
-	nowTime, err := time.Parse(time.RFC3339, timeNowFRC3339)
-	if err != nil {
-		log.WithError(err).Debugf("Failed to parse the time now using the RFC3339 format")
-		return
-	}
-	durationSinceLastUpdate := nowTime.Sub(snpLastUpdateTime)
-
-	// Update status
-	switch {
-	case durationSinceLastUpdate <= 2*interval:
-		snp.Annotations[calicores.StatusKey] = calicores.LearningStatus
-	case durationSinceLastUpdate > 2*interval && durationSinceLastUpdate <= stabilization:
-		snp.Annotations[calicores.StatusKey] = calicores.StabilizingStatus
-	case durationSinceLastUpdate > stabilization:
-		snp.Annotations[calicores.StatusKey] = calicores.StableStatus
-	default:
-		log.Warnf("Invalid status")
-		snp.Annotations[calicores.StatusKey] = calicores.NoDataStatus
-	}
 }

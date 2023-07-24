@@ -21,7 +21,6 @@ import (
 
 	ad "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/anomalydetection"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/reporting"
 )
 
@@ -43,7 +42,7 @@ type Alert struct {
 }
 
 // NewAlert sets and returns an Alert, builds Linseed query that will be used periodically to query Elasticsearch data.
-func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, tenantID string, namespace string, fipsModeEnabled bool) (*Alert, error) {
+func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, tenantID string, namespace string, fipsModeEnabled bool) (*Alert, error) {
 	globalAlert.Status.Active = true
 	globalAlert.Status.LastUpdate = &metav1.Time{Time: time.Now()}
 
@@ -69,7 +68,7 @@ func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lin
 		alert.service = service
 
 	} else {
-		adj, err := ad.NewService(calicoCLI, k8sClient, podTemplateQuery, adDetectionController, adTrainingController, clusterName, tenantID, namespace, globalAlert)
+		adj, err := ad.NewService(calicoCLI, k8sClient, adDetectionController, adTrainingController, clusterName, tenantID, namespace, globalAlert)
 		if err != nil {
 			return nil, err
 		}

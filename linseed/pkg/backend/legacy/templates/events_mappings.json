@@ -70,7 +70,7 @@
       "type": "keyword",
       "normalizer": "lowercase"
     },
-    "attack_phase": {
+    "mitre_tactic": {
       "type": "keyword",
       "normalizer": "lowercase"
     },

@@ -20,24 +20,30 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	libcalicoselector "github.com/projectcalico/calico/libcalico-go/lib/selector"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-	calicoresources "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
+	calicores "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
+	"github.com/projectcalico/calico/policy-recommendation/utils"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 )
 
-const selectorNamespaceKey = "projectcalico.org/name"
+const (
+	selectorNamespaceKey            = "projectcalico.org/name"
+	ownerReferenceKindLabelSelector = "projectcalico.org/ownerReference.kind=PolicyRecommendationScope"
+)
 
 // NewCacheSynchronizer creates the QueryInterface instance
-func NewCacheSynchronizer(clientSet lmak8s.ClientSet, cacheSet CacheSet) client.QueryInterface {
+func NewCacheSynchronizer(clientSet lmak8s.ClientSet, cacheSet CacheSet, suffixGenerator func() string) client.QueryInterface {
 	return &synchronizer{
-		clientSet: clientSet,
-		cacheSet:  cacheSet,
+		clientSet:       clientSet,
+		cacheSet:        cacheSet,
+		suffixGenerator: suffixGenerator,
 	}
 }
 
 type synchronizer struct {
-	policyRecScope *v3.PolicyRecommendationScope
-	clientSet      lmak8s.ClientSet
-	cacheSet       CacheSet
+	policyRecScope  *v3.PolicyRecommendationScope
+	clientSet       lmak8s.ClientSet
+	cacheSet        CacheSet
+	suffixGenerator func() string
 }
 
 // RunQuery is used to  synchronize the caches referenced in the CacheSet from Kubernetes events
@@ -99,10 +105,8 @@ func (s *synchronizer) synchronizeFromPolicyRec(ctx context.Context, query Polic
 		for _, namespace := range namespaces {
 			// sync the namespace cache to initialize it from the PolicyRecSpec deployment
 			s.cacheSet.Namespaces.Set(namespace.GetName(), &namespace)
-			result, err := s.createEmptySNPForNamespace(ctx, namespace, policyRecScope.Spec.NamespaceSpec.TierName)
-			if err != nil {
-				errors[namespace.Name] = err
-			} else {
+			result := s.addRecommendationToCache(ctx, namespace, policyRecScope.Spec.NamespaceSpec.TierName)
+			if result != nil {
 				results = append(results, result)
 			}
 		}
@@ -124,7 +128,7 @@ func (s *synchronizer) synchronizeFromPolicyRec(ctx context.Context, query Polic
 			}
 		}
 
-		if err := calicoresources.DeleteTier(ctx, s.clientSet.ProjectcalicoV3(), s.policyRecScope.Spec.NamespaceSpec.TierName); err != nil {
+		if err := calicores.DeleteTier(ctx, s.clientSet.ProjectcalicoV3(), s.policyRecScope.Spec.NamespaceSpec.TierName); err != nil {
 			return nil, err
 		}
 
@@ -164,10 +168,7 @@ func (s *synchronizer) synchronizeFromNamespaces(ctx context.Context, query Name
 		}
 		log.Infof("Namespace: %s, added to policy recommendation engine", namespacesource.Name)
 
-		result, err := s.createEmptySNPForNamespace(ctx, *namespacesource, s.policyRecScope.Spec.NamespaceSpec.TierName)
-		if err != nil {
-			return nil, err
-		}
+		result := s.addRecommendationToCache(ctx, *namespacesource, s.policyRecScope.Spec.NamespaceSpec.TierName)
 
 		return &NamespaceQueryResult{
 			StagedNetworkPolicies: []*v3.StagedNetworkPolicy{result},
@@ -233,23 +234,60 @@ func removeNamespaceContainingRule(rules []v3.Rule, namespace string) []v3.Rule 
 	return rules
 }
 
-// createEmptySNPForNamespace creates an empty staged network policy. Defines the policy
-// recommendation scope resource as its owner, and sets a new key in the snp cache.
-func (s *synchronizer) createEmptySNPForNamespace(ctx context.Context, namespace v1.Namespace, tier string) (*v3.StagedNetworkPolicy, error) {
-	name := namespace.GetName()
-	ns := namespace.GetName()
-	owner := getRecommendationScopeOwner(s.policyRecScope)
+// addRecommendationToCache adds a recommendation for this namespace to the cache. Copies over an
+// existing recommendation from the store, or creates a new recommendation, if a store item
+// doesn't exist.
+func (s *synchronizer) addRecommendationToCache(ctx context.Context, namespace v1.Namespace, tier string) *v3.StagedNetworkPolicy {
+	// If a store value already exists, set that as the cache item
+	log.Debugf("Get staged network policy list for namespace: %s", namespace.Name)
 
-	log.WithField("key", name).Debugf("Creating new recommendation")
-	snp := calicoresources.NewStagedNetworkPolicy(name, ns, tier, *owner)
+	labelSelector := strings.Join([]string{
+		fmt.Sprintf("%s=%s", calicores.TierKey, tier), // projectcalico.org/tier=<TIER_NAME>
+		ownerReferenceKindLabelSelector,
+	}, ",")
 
-	s.cacheSet.StagedNetworkPolicies.Set(snp.Name, snp)
+	if storeSnps, err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace.Name).List(ctx, metav1.ListOptions{
+		LabelSelector: labelSelector,
+	}); err == nil {
+		// We are working around the inability to GET the StagedNetworkPolicy from the
+		// 'namespace-isolation' tier
+		if len(storeSnps.Items) > 0 {
+			// A store value already exists, add that to the cache and don't create a new one.
 
-	return snp, nil
+			snp := &v3.StagedNetworkPolicy{}
+
+			// There should only exist one recommendation within this namespace
+			utils.CopyStagedNetworkPolicy(snp, storeSnps.Items[0])
+
+			log.WithField("key", snp).Debug("Adding recommendation to cache")
+			s.cacheSet.StagedNetworkPolicies.Set(namespace.Name, snp)
+
+			return snp
+		}
+
+	}
+
+	if s.cacheSet.StagedNetworkPolicies.Get(namespace.Name) == nil {
+		// No store or cache item exists, create a new one
+		name := namespace.GetName()
+		ns := namespace.GetName()
+		owner := getRecommendationScopeOwner(s.policyRecScope)
+
+		log.WithField("key", name).Debugf("Creating new recommendation")
+		snp := calicores.NewStagedNetworkPolicy(utils.GetPolicyName(tier, name, s.suffixGenerator), ns, tier, *owner)
+
+		s.cacheSet.StagedNetworkPolicies.Set(namespace.Name, snp)
+
+		return snp
+	}
+
+	return nil
 }
 
 func (s *synchronizer) updateSNP(ctx context.Context, snp *v3.StagedNetworkPolicy) (*v3.StagedNetworkPolicy, error) {
-	result, err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(snp.GetNamespace()).Update(
+	namespace := snp.GetNamespace()
+	key := namespace
+	result, err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Update(
 		ctx,
 		snp,
 		metav1.UpdateOptions{},
@@ -259,13 +297,15 @@ func (s *synchronizer) updateSNP(ctx context.Context, snp *v3.StagedNetworkPolic
 		return nil, err
 	}
 
-	s.cacheSet.StagedNetworkPolicies.Set(result.Name, result)
+	s.cacheSet.StagedNetworkPolicies.Set(key, result)
 
 	return result, nil
 }
 
 func (s *synchronizer) deleteUntrackedSNP(ctx context.Context, snp v3.StagedNetworkPolicy) error {
-	err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(snp.GetNamespace()).Delete(
+	namespace := snp.GetNamespace()
+	key := namespace
+	err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Delete(
 		ctx,
 		snp.GetName(),
 		metav1.DeleteOptions{},
@@ -275,7 +315,7 @@ func (s *synchronizer) deleteUntrackedSNP(ctx context.Context, snp v3.StagedNetw
 		return err
 	}
 
-	s.cacheSet.StagedNetworkPolicies.Delete(snp.Name)
+	s.cacheSet.StagedNetworkPolicies.Delete(key)
 	return nil
 }
 

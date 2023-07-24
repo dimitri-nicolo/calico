@@ -141,10 +141,11 @@ func main() {
 	}
 
 	// Setup Synchronizer
-	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSet, *caches)
+	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSet, *caches, utils.SuffixGenerator)
 
 	// Controller Setup
 	// create main controller
+	suffixGenerator := utils.SuffixGenerator
 	managementStandalonePolicyRecController := policyrecommendation.NewPolicyRecommendationController(
 		clientSet.ProjectcalicoV3(),
 		linseed,
@@ -152,6 +153,7 @@ func main() {
 		caches,
 		lmak8s.DefaultCluster,
 		serviceNameSuffix,
+		&suffixGenerator,
 	)
 	managedclusterController := managedcluster.NewManagedClusterController(
 		clientSet.ProjectcalicoV3(),

@@ -226,7 +226,7 @@ func main() {
 		}
 
 		// This will manage global alerts and anomaly detection inside the management cluster
-		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, linseed, k8sClient, enableAnomalyDetection, podtemplateQuery, anomalyDetectionController, anomalyTrainingController, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.FIPSMode)
+		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, linseed, k8sClient, enableAnomalyDetection, anomalyDetectionController, anomalyTrainingController, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.FIPSMode)
 		healthPingers = append(healthPingers, &alertHealthPinger)
 
 		// This controller will monitor managed cluster updated from K8S and create a NewGlobalAlertController per managed cluster
