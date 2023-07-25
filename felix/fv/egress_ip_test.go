@@ -98,7 +98,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 	rulesProgrammed := func(felix *infrastructure.Felix, polNames []string) bool {
 		out, err := felix.ExecOutput("iptables-save", "-t", "filter")
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return false
+		}
 		for _, polName := range polNames {
 			if strings.Count(out, polName) == 0 {
 				return false
@@ -188,8 +190,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
 				"Expected HostEndpoint iptables rules to appear")
 			polNames := []string{"default.allow-all", "default.deny-egw", "default.deny-egw-health"}
-			Eventually(rulesProgrammed(felix, polNames), "10s", "1s").Should(BeTrue(),
-				"Expected iptables rules to appear on the felix instances")
+			Eventually(func() bool {
+				return rulesProgrammed(felix, polNames)
+			}, "10s", "1s").Should(BeTrue(), "Expected iptables rules to appear on the felix instances")
 		}
 
 	}

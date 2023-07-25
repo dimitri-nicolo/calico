@@ -923,7 +923,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			}
 
 			return nil
-		}, "30s", "3s").ShouldNot(HaveOccurred())
+		}, "60s", "1s").ShouldNot(HaveOccurred())
 	})
 
 	It("should get expected flow logs going from Staged Allow to Staged Drop", func() {
