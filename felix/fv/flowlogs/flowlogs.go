@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/collector/flowlog"
-	"github.com/projectcalico/calico/felix/collector/reporter/file"
+	"github.com/projectcalico/calico/felix/collector/file
 )
 
 func ReadFlowLogs(flowLogDir, output string) ([]flowlog.FlowLog, error) {
