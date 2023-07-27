@@ -37,6 +37,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/projectcalico/calico/felix/ethtool"
+
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -285,6 +287,9 @@ type bpfEndpointManager struct {
 	// RPF mode
 	rpfEnforceOption string
 
+	// BPF Disable GRO ifaces map
+	bpfDisableGROForIfaces *regexp.Regexp
+
 	// Service routes
 	ctlbWorkaroundMode ctlbWorkaroundMode
 
@@ -441,14 +446,15 @@ func newBPFEndpointManager(
 		// ipv6Enabled Should be set to config.Ipv6Enabled, but for now it is better
 		// to set it to BPFIpv6Enabled which is a dedicated flag for development of IPv6.
 		// TODO: set ipv6Enabled to config.Ipv6Enabled when IPv6 support is complete
-		ipv6Enabled:           config.BPFIpv6Enabled,
-		rpfEnforceOption:      config.BPFEnforceRPF,
-		bpfPolicyDebugEnabled: config.BPFPolicyDebugEnabled,
-		egwVxlanPort:          uint16(config.EgressIPVXLANPort),
-		egIPEnabled:           config.EgressIPEnabled,
-		polNameToMatchIDs:     map[string]set.Set[polprog.RuleMatchID]{},
-		dirtyRules:            set.New[polprog.RuleMatchID](),
-		arpMap:                bpfmaps.ArpMap,
+		ipv6Enabled:            config.BPFIpv6Enabled,
+		rpfEnforceOption:       config.BPFEnforceRPF,
+		bpfDisableGROForIfaces: config.BPFDisableGROForIfaces,
+		bpfPolicyDebugEnabled:  config.BPFPolicyDebugEnabled,
+		egwVxlanPort:           uint16(config.EgressIPVXLANPort),
+		egIPEnabled:            config.EgressIPEnabled,
+		polNameToMatchIDs:      map[string]set.Set[polprog.RuleMatchID]{},
+		dirtyRules:             set.New[polprog.RuleMatchID](),
+		arpMap:                 bpfmaps.ArpMap,
 	}
 
 	// Calculate allowed XDP attachment modes.  Note, in BPF mode untracked ingress policy is
@@ -1169,10 +1175,31 @@ func (m *bpfEndpointManager) syncIfStateMap() {
 	}
 }
 
-func (m *bpfEndpointManager) syncIfaceCounters() error {
+func (m *bpfEndpointManager) syncIfaceProperties() error {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return fmt.Errorf("cannot list interfaces: %w", err)
+	}
+
+	// Update Generic Receive Offload [GRO] if configured.
+	if m.bpfDisableGROForIfaces != nil {
+		expr := m.bpfDisableGROForIfaces.String()
+		if len(expr) > 0 {
+			var config = map[string]bool{
+				ethtool.EthtoolRxGRO: false,
+			}
+
+			for _, entry := range ifaces {
+				iface := entry.Name
+				if m.bpfDisableGROForIfaces.MatchString(iface) {
+					log.WithField(expr, iface).Debug("BPF Disable GRO iface match")
+					err = ethtool.EthtoolChangeImpl(iface, config)
+					if err == nil {
+						log.WithField(iface, config).Debug("ethtool.Change() succeeded")
+					}
+				}
+			}
+		}
 	}
 
 	exists := set.New[int]()
@@ -1268,7 +1295,7 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 
 		m.initUnknownIfaces = nil
 
-		if err := m.syncIfaceCounters(); err != nil {
+		if err := m.syncIfaceProperties(); err != nil {
 			log.WithError(err).Warn("Failed to sync counters map with existing interfaces - some counters may have leaked.")
 		}
 	})
