@@ -127,7 +127,7 @@ func describeALPTest(ipip bool) bool {
 				infra = getInfra()
 				_ = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 
-				felixes, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
+				felixes, _, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
 
 				proxies = []*tproxy.TProxy{}
 				for _, felix := range felixes {
