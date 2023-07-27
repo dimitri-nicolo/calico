@@ -360,10 +360,6 @@ func (c *calculator) loadResources() error {
 		}
 
 		for _, rr := range l.APIResources {
-			if rr.Group != "" {
-				// This is a sub-resource which we currently do not handle.
-				continue
-			}
 			rt := ResourceType{APIGroup: gv.Group, Resource: rr.Name}
 			resources[rt] = apiResource{ResourceType: rt, Namespaced: rr.Namespaced}
 		}
