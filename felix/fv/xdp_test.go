@@ -84,7 +84,7 @@ func xdpTest(getInfra infrastructure.InfraFactory, proto string) {
 		}
 
 		roles := []string{"client", "server"}
-		felixes, client = infrastructure.StartNNodeTopology(len(roles), opts, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(len(roles), opts, infra)
 
 		err := infra.AddAllowToDatastore("host-endpoint=='true'")
 		Expect(err).NotTo(HaveOccurred())

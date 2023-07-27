@@ -335,7 +335,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			topologyOptions.IPIPEnabled = false
 			topologyOptions.IPIPRoutesEnabled = false
 		}
-		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()

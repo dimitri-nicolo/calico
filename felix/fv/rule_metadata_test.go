@@ -43,7 +43,7 @@ var _ = Describe("Rule Metadata tests", func() {
 	)
 
 	BeforeEach(func() {
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
+		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
 
 		wl0 = workload.Run(felix, "test0", "default", "10.65.0.1", "80", "tcp")
 		wl0.Configure(client)

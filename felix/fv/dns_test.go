@@ -185,7 +185,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		// Tests in this file require a node IP, so that Felix can attach a BPF program to
 		// host interfaces.
 		opts.NeedNodeIP = true
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		// Create a workload, using that profile.
@@ -870,7 +870,7 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DEBUGDNSRESPONSEDELAY"] = "200"
 		opts.ExtraEnvVars["FELIX_DebugConsoleEnabled"] = "true"
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		workload1 = workload.Run(felix, workload1Name, "default", workload1IP, "8055", "tcp")

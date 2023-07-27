@@ -85,7 +85,7 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests with policy tiers _
 		opts.IPIPEnabled = false
 
 		// Start felix instances.
-		felixes, client = infrastructure.StartNNodeTopology(2, opts, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
@@ -259,7 +259,7 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests with policy tiers _
 		// the service to test the destination service name handling.
 		svcName := "test-service"
 		k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
-		tSvc := k8sService(svcName, clusterIP, ep2_1, svcPort, wepPort, 0, "tcp")
+		tSvc := k8sService(svcName, clusterIP, ep2_1, svcPort, wepPort, 0, "tcp", false)
 		tSvcNamespace := tSvc.ObjectMeta.Namespace
 		_, err = k8sClient.CoreV1().Services(tSvcNamespace).Create(context.Background(), tSvc, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())

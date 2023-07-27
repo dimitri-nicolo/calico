@@ -52,7 +52,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ do-not-track policy tests; 
 		infra = getInfra()
 
 		options := infrastructure.DefaultTopologyOptions()
-		felixes, client = infrastructure.StartNNodeTopology(2, options, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(2, options, infra)
 		cc = &connectivity.Checker{}
 
 		// Start a host networked workload on each host for connectivity checks.

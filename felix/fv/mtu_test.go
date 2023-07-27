@@ -53,7 +53,7 @@ var _ = infrastructure.DatastoreDescribe("VXLAN topology before adding host IPs 
 					// Configure the interface pattern so that it doesn't match any host interfaces.
 					topologyOptions.ExtraEnvVars["FELIX_MTUIFACEPATTERN"] = "foo"
 
-					felixes, client = infrastructure.StartNNodeTopology(3, topologyOptions, infra)
+					felixes, _, client = infrastructure.StartNNodeTopology(3, topologyOptions, infra)
 
 					// Wait until the vxlan device appears.
 					Eventually(func() error {

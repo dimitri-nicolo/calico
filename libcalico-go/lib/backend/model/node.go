@@ -174,7 +174,7 @@ type HostIPKey struct {
 
 func (key HostIPKey) defaultPath() (string, error) {
 	return fmt.Sprintf("/calico/v1/host/%s/bird_ip",
-		key.Hostname), nil
+		escapeName(key.Hostname)), nil
 }
 
 func (key HostIPKey) defaultDeletePath() (string, error) {
@@ -240,7 +240,7 @@ func (key WireguardKey) defaultPath() (string, error) {
 		return "", errors.ErrorInsufficientIdentifiers{Name: "name"}
 	}
 	return fmt.Sprintf("/calico/v1/host/%s/wireguard",
-		key.NodeName), nil
+		escapeName(key.NodeName)), nil
 }
 
 func (key WireguardKey) defaultDeletePath() (string, error) {

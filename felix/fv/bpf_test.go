@@ -418,7 +418,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 			}
 
 			JustBeforeEach(func() {
-				felixes, calicoClient = infrastructure.StartNNodeTopology(1, options, infra)
+				felixes, _, calicoClient = infrastructure.StartNNodeTopology(1, options, infra)
 
 				hostW = workload.Run(
 					felixes[0],
@@ -839,7 +839,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 		)
 
 		setupCluster := func() {
-			felixes, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
+			felixes, _, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
 
 			addWorkload := func(run bool, ii, wi, port int, labels map[string]string) *workload.Workload {
 				if labels == nil {
@@ -1169,7 +1169,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					It("should fail connect if there is no backed or a service", func() {
 						By("setting up a service without backends")
 
-						testSvc := k8sService("svc-no-backends", "10.101.0.111", w[0][0], 80, 1234, 0, testOpts.protocol)
+						testSvc := k8sService("svc-no-backends", "10.101.0.111", w[0][0], 80, 1234, 0, testOpts.protocol, false)
 						testSvcNamespace := testSvc.ObjectMeta.Namespace
 						testSvc.Spec.Selector = map[string]string{"somelabel": "somevalue"}
 						_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(),
@@ -1515,7 +1515,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 					// Create a service of type clusterIP
 					BeforeEach(func() {
-						testSvc = k8sService(testSvcName, clusterIP, w[0][0], 80, tgtPort, 0, testOpts.protocol)
+						testSvc = k8sService(testSvcName, clusterIP, w[0][0], 80, tgtPort, 0, testOpts.protocol, false)
 						testSvcNamespace = testSvc.ObjectMeta.Namespace
 						_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
 						Expect(err).NotTo(HaveOccurred())
@@ -1578,7 +1578,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							var testSvcNodePort *v1.Service
 							npPort := uint16(30333)
 							BeforeEach(func() {
-								testSvcNodePort = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, int32(npPort), testOpts.protocol)
+								testSvcNodePort = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, int32(npPort), testOpts.protocol, false)
 								k8sUpdateService(k8sClient, testSvcNamespace, testSvcName, testSvc, testSvcNodePort)
 							})
 							It("should have connectivity via the node port to workload 0", func() {
@@ -1598,7 +1598,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						Context("change service from external IP to cluster IP", func() {
 							var testSvcWithoutExtIP *v1.Service
 							BeforeEach(func() {
-								testSvcWithoutExtIP = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, 0, testOpts.protocol)
+								testSvcWithoutExtIP = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, 0, testOpts.protocol, false)
 								k8sUpdateService(k8sClient, testSvcNamespace, testSvcName, testSvc, testSvcWithoutExtIP)
 							})
 							It("should not have connectivity to workload 0 via external IP", func() {
@@ -1661,7 +1661,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							var testSvcNodePort *v1.Service
 							npPort := uint16(30333)
 							BeforeEach(func() {
-								testSvcNodePort = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, int32(npPort), testOpts.protocol)
+								testSvcNodePort = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, int32(npPort), testOpts.protocol, false)
 								k8sUpdateService(k8sClient, testSvcNamespace, testSvcName, testSvc, testSvcNodePort)
 							})
 							It("should have connectivity via the node port to workload 0 and not via external IP", func() {
@@ -1680,7 +1680,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						Context("Change service type from LoadBalancer to cluster IP", func() {
 							var testSvcClusterIP *v1.Service
 							BeforeEach(func() {
-								testSvcClusterIP = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, 0, testOpts.protocol)
+								testSvcClusterIP = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, 0, testOpts.protocol, false)
 								k8sUpdateService(k8sClient, testSvcNamespace, testSvcName, testSvc, testSvcClusterIP)
 							})
 							It("should have connectivity to workload 0 via cluster IP and not external IP", func() {
@@ -1711,7 +1711,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						var testSvcNodePort *v1.Service
 						npPort := uint16(30333)
 						BeforeEach(func() {
-							testSvcNodePort = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, int32(npPort), testOpts.protocol)
+							testSvcNodePort = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, int32(npPort), testOpts.protocol, false)
 							k8sUpdateService(k8sClient, testSvcNamespace, testSvcName, testSvc, testSvcNodePort)
 						})
 						It("should have connectivity via the node port to workload 0", func() {
@@ -1776,7 +1776,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						Context("Change service type from nodeport to cluster IP", func() {
 							var testSvcClusterIP *v1.Service
 							BeforeEach(func() {
-								testSvcClusterIP = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, 0, testOpts.protocol)
+								testSvcClusterIP = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, 0, testOpts.protocol, false)
 								k8sUpdateService(k8sClient, testSvcNamespace, testSvcName, testSvc, testSvcClusterIP)
 							})
 							It("should have connectivity to workload 0 via cluster IP and not via nodeport", func() {
@@ -1808,7 +1808,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					tgtPort := 8055
 
 					BeforeEach(func() {
-						testSvc = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, 0, testOpts.protocol)
+						testSvc = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, tgtPort, 0, testOpts.protocol, false)
 						testSvcNamespace = testSvc.ObjectMeta.Namespace
 						_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
 						Expect(err).NotTo(HaveOccurred())
@@ -1965,7 +1965,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							}
 							log.Info("NAT maps converged.")
 
-							testSvcUpdated = k8sService(testSvcName, "10.101.0.10", w[0][0], 88, 8055, 0, testOpts.protocol)
+							testSvcUpdated = k8sService(testSvcName, "10.101.0.10", w[0][0], 88, 8055, 0, testOpts.protocol, false)
 
 							svc, err := k8sClient.CoreV1().
 								Services(testSvcNamespace).
@@ -2091,7 +2091,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						testSvcName := "test-service"
 
 						BeforeEach(func() {
-							testSvc = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, 8055, 0, testOpts.protocol)
+							testSvc = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, 8055, 0, testOpts.protocol, false)
 							testSvcNamespace = testSvc.ObjectMeta.Namespace
 							// select all pods with port 8055
 							testSvc.Spec.Selector = map[string]string{"port": "8055"}
@@ -2217,7 +2217,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						testSvcName := "test-service"
 
 						By("Setting up the service", func() {
-							testSvc = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, 8055, 0, testOpts.protocol)
+							testSvc = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, 8055, 0, testOpts.protocol, false)
 							testSvcNamespace = testSvc.ObjectMeta.Namespace
 							// select all pods with port 8055
 							testSvc.Spec.Selector = map[string]string{"port": "8055"}
@@ -2265,7 +2265,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						w[1][0].Stop()
 
 						By("changing the service backend to completely different ones")
-						testSvc8056 := k8sService(testSvcName, "10.101.0.10", w[1][1], 80, 8056, 0, testOpts.protocol)
+						testSvc8056 := k8sService(testSvcName, "10.101.0.10", w[1][1], 80, 8056, 0, testOpts.protocol, false)
 						testSvc8056.Spec.SessionAffinity = "ClientIP"
 						k8sUpdateService(k8sClient, testSvcNamespace, testSvcName, testSvc, testSvc8056)
 
@@ -2304,7 +2304,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						testSvcName := "test-service"
 
 						By("Setting up the service", func() {
-							testSvc = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, 8055, 0, testOpts.protocol)
+							testSvc = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, 8055, 0, testOpts.protocol, false)
 							testSvcNamespace = testSvc.ObjectMeta.Namespace
 							_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
 							Expect(err).NotTo(HaveOccurred())
@@ -2354,7 +2354,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							"Expected to see pong responses on the connection but didn't receive any")
 
 						By("changing the service backend to completely different ones")
-						testSvc2 := k8sService(testSvcName, "10.101.0.10", w[1][0], 80, 8055, 0, testOpts.protocol)
+						testSvc2 := k8sService(testSvcName, "10.101.0.10", w[1][0], 80, 8055, 0, testOpts.protocol, false)
 						k8sUpdateService(k8sClient, testSvcNamespace, testSvcName, testSvc, testSvc2)
 
 						By("Stoping the original backend to make sure it is not reachable")
@@ -2384,7 +2384,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					BeforeEach(func() {
 						k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 						testSvc = k8sService(testSvcName, "10.101.0.10",
-							w[0][0], 80, 8055, int32(npPort), testOpts.protocol)
+							w[0][0], 80, 8055, int32(npPort), testOpts.protocol, false)
 						testSvc.Spec.ExternalIPs = []string{testSvcExtIP0, testSvcExtIP1}
 						if extLocal {
 							testSvc.Spec.ExternalTrafficPolicy = v1.ServiceExternalTrafficPolicyTypeLocal
@@ -3163,7 +3163,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					JustBeforeEach(func() {
 						k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 						testSvc = k8sService(testSvcName, "10.101.0.10",
-							tgtWorkload, 80, tgtPort, int32(npPort), testOpts.protocol)
+							tgtWorkload, 80, tgtPort, int32(npPort), testOpts.protocol, false)
 						testSvcNamespace = testSvc.ObjectMeta.Namespace
 						_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
 						Expect(err).NotTo(HaveOccurred())
@@ -3954,7 +3954,7 @@ func ensureBPFProgramsAttachedOffset(offset int, felix *infrastructure.Felix, if
 }
 
 func k8sService(name, clusterIP string, w *workload.Workload, port,
-	tgtPort int, nodePort int32, protocol string) *v1.Service {
+	tgtPort int, nodePort int32, protocol string, serviceInRemoteCluster bool) *v1.Service {
 	k8sProto := v1.ProtocolTCP
 	if protocol == "udp" {
 		k8sProto = v1.ProtocolUDP
@@ -3965,15 +3965,12 @@ func k8sService(name, clusterIP string, w *workload.Workload, port,
 		svcType = v1.ServiceTypeNodePort
 	}
 
-	return &v1.Service{
+	svc := &v1.Service{
 		TypeMeta:   typeMetaV1("Service"),
 		ObjectMeta: objectMetaV1(name),
 		Spec: v1.ServiceSpec{
 			ClusterIP: clusterIP,
 			Type:      svcType,
-			Selector: map[string]string{
-				"name": w.Name,
-			},
 			Ports: []v1.ServicePort{
 				{
 					Protocol:   k8sProto,
@@ -3982,6 +3979,32 @@ func k8sService(name, clusterIP string, w *workload.Workload, port,
 					Name:       fmt.Sprintf("port-%d", tgtPort),
 					TargetPort: intstr.FromInt(tgtPort),
 				},
+			},
+		},
+	}
+
+	if !serviceInRemoteCluster {
+		svc.Spec.Selector = map[string]string{
+			"name": w.Name,
+		}
+	}
+
+	return svc
+}
+
+func k8sServiceEndpoints(serviceName string, tgtIP string, tgtPort int, protocol string) *v1.Endpoints {
+	k8sProto := v1.ProtocolTCP
+	if protocol == "udp" {
+		k8sProto = v1.ProtocolUDP
+	}
+
+	return &v1.Endpoints{
+		TypeMeta:   typeMetaV1("Endpoints"),
+		ObjectMeta: objectMetaV1(serviceName),
+		Subsets: []v1.EndpointSubset{
+			{
+				Addresses: []v1.EndpointAddress{{IP: tgtIP}},
+				Ports:     []v1.EndpointPort{{Name: fmt.Sprintf("port-%d", tgtPort), Port: int32(tgtPort), Protocol: k8sProto}},
 			},
 		},
 	}

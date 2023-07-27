@@ -48,12 +48,63 @@ func DatastoreDescribe(description string, datastores []apiconfig.DatastoreType,
 		case apiconfig.Kubernetes:
 			Describe(fmt.Sprintf("%s (kubernetes backend)", description),
 				func() {
-					body(createK8sDatastoreInfra)
+					body(createLocalK8sDatastoreInfra)
 				})
 		default:
 			panic(fmt.Errorf("Unknown DatastoreType, %s", ds))
 		}
 	}
+
+	return true
+}
+
+type LocalRemoteInfraFactories struct {
+	Local  InfraFactory
+	Remote InfraFactory
+}
+
+func (r *LocalRemoteInfraFactories) IsRemoteSetup() bool {
+	return r.Remote != nil
+}
+func (r *LocalRemoteInfraFactories) AllFactories() []InfraFactory {
+	factories := []InfraFactory{r.Local}
+	if r.IsRemoteSetup() {
+		factories = append(factories, r.Remote)
+	}
+	return factories
+}
+
+// DatastoreDescribeWithRemote is similar to DatastoreDescribe. It invokes Describe for the provided datastores, providing
+// just a local datastore driver. However, it also invokes Describe for supported remote scenarios, providing both a local
+// and remote datastore drivers. Currently, the only remote scenario is local kubernetes and remote kubernetes.
+func DatastoreDescribeWithRemote(description string, localDatastores []apiconfig.DatastoreType, body func(factories LocalRemoteInfraFactories)) bool {
+	for _, ds := range localDatastores {
+		switch ds {
+		case apiconfig.EtcdV3:
+			if len(localDatastores) > 1 {
+				// Enterprise only supports KDD so skip running etcd tests if this test also runs
+				// on KDD.
+				log.Infof("Skipping etcd mode tests for %q", description)
+				continue
+			}
+			Describe(fmt.Sprintf("%s (etcdv3 backend)", description),
+				func() {
+					body(LocalRemoteInfraFactories{Local: createEtcdDatastoreInfra})
+				})
+		case apiconfig.Kubernetes:
+			Describe(fmt.Sprintf("%s (kubernetes backend)", description),
+				func() {
+					body(LocalRemoteInfraFactories{Local: createLocalK8sDatastoreInfra})
+				})
+		default:
+			panic(fmt.Errorf("Unknown DatastoreType, %s", ds))
+		}
+	}
+
+	Describe(fmt.Sprintf("%s (local kubernetes, remote kubernetes)", description),
+		func() {
+			body(LocalRemoteInfraFactories{Local: createLocalK8sDatastoreInfra, Remote: createRemoteK8sDatastoreInfra})
+		})
 
 	return true
 }

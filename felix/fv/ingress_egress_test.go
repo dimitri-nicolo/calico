@@ -57,7 +57,7 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "120"
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
@@ -321,7 +321,7 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 
 	BeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
@@ -409,6 +409,7 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 	var (
 		etcd   *containers.Container
 		felix  *infrastructure.Felix
+		typha  *infrastructure.Typha
 		client client.Interface
 		infra  infrastructure.DatastoreInfra
 		w      [3]*workload.Workload
@@ -419,7 +420,7 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 		options := infrastructure.DefaultTopologyOptions()
 		options.WithTypha = true
 		options.WithFelixTyphaTLS = true
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(options)
+		felix, typha, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(options)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
@@ -442,6 +443,7 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 			w[ii].Stop()
 		}
 		felix.Stop()
+		typha.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
@@ -489,6 +491,7 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 	var (
 		etcd    *containers.Container
 		felix   *infrastructure.Felix
+		typha   *infrastructure.Typha
 		client  client.Interface
 		infra   infrastructure.DatastoreInfra
 		w       [3]*workload.Workload
@@ -500,7 +503,7 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 		options = infrastructure.DefaultTopologyOptions()
 		options.WithTypha = true
 		options.WithPrometheusPortTLS = true
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(options)
+		felix, typha, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(options)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
@@ -523,6 +526,7 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 			w[ii].Stop()
 		}
 		felix.Stop()
+		typha.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")

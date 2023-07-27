@@ -15,9 +15,14 @@
 package felixsyncer
 
 import (
-	log "github.com/sirupsen/logrus"
+	"strings"
 
+	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
@@ -214,6 +219,8 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 }
 
 // felixRemoteClusterProcessor provides the Felix syncer specific remote cluster processing.
+// Remote resource updates that Felix can treat equivalently to local resource updates have their key types preserved, and key names prefixed.
+// Remote resource updates that Felix can NOT treat equivalently have their keys wrapped in a RemoteClusterResourceKey.
 type felixRemoteClusterProcessor struct{}
 
 func (_ felixRemoteClusterProcessor) CreateResourceTypes() []watchersyncer.ResourceType {
@@ -229,6 +236,25 @@ func (_ felixRemoteClusterProcessor) CreateResourceTypes() []watchersyncer.Resou
 		{
 			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindProfile},
 			UpdateProcessor: updateprocessors.NewProfileUpdateProcessor(),
+		},
+		{
+			ListInterface: model.ResourceListOptions{Kind: libapiv3.KindNode},
+			// We set usePodCIDR to false as currently the Node object is synced purely for federated VXLAN.
+			// Host-local IPAM is not supported for VXLAN, since a tunnel IP is not allocated (see resources.K8sNodeToCalico).
+			UpdateProcessor: updateprocessors.NewFelixNodeUpdateProcessor(false),
+		},
+		// Remote IP pool updates should not utilize the same update as local, as this would remove the updates guarantee of disjoint CIDRs.
+		{
+			ListInterface: model.ResourceListOptions{Kind: apiv3.KindIPPool},
+			// Relay the full v3 Resource, we'll replace its key with a RemoteClusterResourceKey (this key requires a Resource value).
+			UpdateProcessor: nil,
+		},
+		// Remote block updates should not utilize the same update as local, as this would remove the updates guarantee of disjoint CIDRs.
+		{
+			// The Resource interface is not used for operations on the V1/backend API involving Blocks, so we will not receive a v3 Resource value.
+			ListInterface: model.BlockListOptions{},
+			// Relay the v1 resource. We'll convert it to a v3 Resource representation so that we can key it with a RemoteClusterResourceKey.
+			UpdateProcessor: nil,
 		},
 	}
 }
@@ -259,6 +285,16 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 			case model.ProfileLabelsKey:
 				t.Name = clusterName + "/" + t.Name
 				updates[i].Key = t
+			case model.HostIPKey:
+				t.Hostname = clusterName + "/" + t.Hostname
+				updates[i].Key = t
+			case model.HostConfigKey:
+				t.Hostname = clusterName + "/" + t.Hostname
+				updates[i].Key = t
+			case model.WireguardKey:
+				// WireguardKey is not propagated to prevent establishment of Wireguard overlay via federation before
+				// it is investigated and validated.
+				continue
 			case model.ResourceKey:
 				switch t.Kind {
 				case apiv3.KindProfile:
@@ -269,9 +305,47 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 					updates[i].Value.(*apiv3.Profile).Spec.Ingress = nil
 					updates[i].Value.(*apiv3.Profile).Spec.Egress = nil
 					updates[i].Key = t
+				case libapiv3.KindNode:
+					t.Name = clusterName + "/" + t.Name
+					updates[i].Key = t
+					// Wireguard values are stripped from updates to prevent establishment of Wireguard overlay via federation
+					// before it is investigated and validated.
+					updates[i].Value.(*libapiv3.Node).Spec.Wireguard = nil
+					updates[i].Value.(*libapiv3.Node).Status.WireguardPublicKey = ""
+					updates[i].Value.(*libapiv3.Node).Status.WireguardPublicKeyV6 = ""
+				case apiv3.KindIPPool:
+					rk := updates[i].Key.(model.ResourceKey)
+					rcrk := model.RemoteClusterResourceKey{
+						Cluster:     clusterName,
+						ResourceKey: rk,
+					}
+					updates[i].Key = rcrk
 				default:
 					log.Panicf("Don't expect to federate other v3 resources (%v)", t)
 				}
+			case model.BlockKey:
+				// Convert the v1 object to the internal v3 Resource object.
+				v3KVPair := resources.IPAMBlockV1toV3(&updates[i].KVPair)
+				v3Block := v3KVPair.Value.(*libapiv3.IPAMBlock)
+				v3Block.APIVersion = apiv3.GroupVersionCurrent
+
+				// Prefix any node references with the cluster name.
+				if v3Block.Spec.Affinity != nil {
+					affinity := "host:" + clusterName + "/" + strings.TrimPrefix(*v3Block.Spec.Affinity, "host:")
+					v3Block.Spec.Affinity = &affinity
+				}
+				for _, attribute := range v3Block.Spec.Attributes {
+					if node, ok := attribute.AttrSecondary[ipam.AttributeNode]; ok {
+						attribute.AttrSecondary[ipam.AttributeNode] = clusterName + "/" + node
+					}
+				}
+
+				remoteKey := model.RemoteClusterResourceKey{
+					Cluster:     clusterName,
+					ResourceKey: v3KVPair.Key.(model.ResourceKey),
+				}
+				updates[i].Key = remoteKey
+				updates[i].Value = v3Block
 			}
 		} else if update.UpdateType == api.UpdateTypeKVDeleted {
 			switch t := update.Key.(type) {
@@ -289,6 +363,16 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 			case model.ProfileLabelsKey:
 				t.Name = clusterName + "/" + t.Name
 				updates[i].Key = t
+			case model.HostIPKey:
+				t.Hostname = clusterName + "/" + t.Hostname
+				updates[i].Key = t
+			case model.HostConfigKey:
+				t.Hostname = clusterName + "/" + t.Hostname
+				updates[i].Key = t
+			case model.WireguardKey:
+				// WireguardKey is not propagated to prevent establishment of Wireguard overlay via federation before
+				// it is investigated and validated.
+				continue
 			case model.ResourceKey:
 				switch t.Kind {
 				case apiv3.KindProfile:
@@ -297,9 +381,30 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 					// federation of the legacy v1 ProfileLabels object.
 					t.Name = clusterName + "/" + t.Name
 					updates[i].Key = t
+				case libapiv3.KindNode:
+					t.Name = clusterName + "/" + t.Name
+					updates[i].Key = t
+				case apiv3.KindIPPool:
+					rk := updates[i].Key.(model.ResourceKey)
+					rcrk := model.RemoteClusterResourceKey{
+						Cluster:     clusterName,
+						ResourceKey: rk,
+					}
+					updates[i].Key = rcrk
 				default:
 					log.Panicf("Don't expect to federate other v3 resources (%v)", t)
 				}
+			case model.BlockKey:
+				name := names.CIDRToName(t.CIDR)
+				key := model.ResourceKey{
+					Name: name,
+					Kind: libapiv3.KindIPAMBlock,
+				}
+				remoteKey := model.RemoteClusterResourceKey{
+					Cluster:     clusterName,
+					ResourceKey: key,
+				}
+				updates[i].Key = remoteKey
 			}
 		}
 		propagatedUpdates = append(propagatedUpdates, updates[i])

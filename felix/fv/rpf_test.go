@@ -62,7 +62,7 @@ var _ = infrastructure.DatastoreDescribe(
 		})
 
 		JustBeforeEach(func() {
-			felixes, calicoClient = infrastructure.StartNNodeTopology(1, options, infra)
+			felixes, _, calicoClient = infrastructure.StartNNodeTopology(1, options, infra)
 
 			wIP := "10.65.0.2"
 			w = workload.Run(felixes[0], "w0", "default", wIP, "8055", "udp")

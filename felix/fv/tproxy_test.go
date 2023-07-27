@@ -175,7 +175,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				infra = getInfra()
 				clientset = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 
-				felixes, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
+				felixes, _, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
 
 				if !ipip {
 					expectedFelix0IP = ExpectWithSrcIPs(felixes[0].IP)
@@ -347,7 +347,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							"-j", "MASQUERADE", "--random-fully")
 					}
 					// for this context create service before each test
-					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp", false)
 					if TPROXYMode == "Enabled" {
 						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					}
@@ -605,7 +605,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					}
 
 					// for this context create service before each test
-					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, int32(nodeport), "tcp")
+					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, int32(nodeport), "tcp", false)
 					if TPROXYMode == "Enabled" {
 						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					}
@@ -898,7 +898,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							"-j", "MASQUERADE", "--random-fully")
 					}
 					// for this context create service before each test
-					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, int32(nodeport), "tcp")
+					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, int32(nodeport), "tcp", false)
 					if TPROXYMode == "Enabled" {
 						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					}
@@ -955,7 +955,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 					By("setting up annotated service for the end points ")
 					// create service resource that has annotation at creation
-					v1Svc := k8sService("l7-service", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+					v1Svc := k8sService("l7-service", clusterIP, w[0][0], 8090, 8055, 0, "tcp", false)
 					v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					annotatedSvc := createService(v1Svc, clientset)
 
@@ -1049,7 +1049,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							"-j", "MASQUERADE", "--random-fully")
 					}
 					// for this context create service before each test
-					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp", false)
 					if TPROXYMode == "Enabled" {
 						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					}

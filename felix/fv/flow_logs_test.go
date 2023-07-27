@@ -129,7 +129,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 	})
 
 	JustBeforeEach(func() {
-		felixes, client = infrastructure.StartNNodeTopology(2, opts, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
 		if useInvalidLicense {
 			var felixPIDs []int

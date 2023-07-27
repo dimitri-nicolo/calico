@@ -109,7 +109,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		opts.ExtraEnvVars["FELIX_DNSLOGSLATENCY"] = "false"
 
 		// Start felix instances.
-		felixes, client = infrastructure.StartNNodeTopology(1, opts, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(1, opts, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()

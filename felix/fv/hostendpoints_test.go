@@ -54,6 +54,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 		bpfEnabled       = os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
 		infra            infrastructure.DatastoreInfra
 		felixes          []*infrastructure.Felix
+		typha            *infrastructure.Typha
 		client           client.Interface
 		w                [2]*workload.Workload
 		hostW            [2]*workload.Workload
@@ -67,7 +68,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 		options := infrastructure.DefaultTopologyOptions()
 		options.IPIPEnabled = false
 		options.WithTypha = true
-		felixes, client = infrastructure.StartNNodeTopology(2, options, infra)
+		felixes, typha, client = infrastructure.StartNNodeTopology(2, options, infra)
 
 		// Create workloads, using that profile. One on each "host".
 		for ii := range w {
@@ -105,6 +106,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 		for _, felix := range felixes {
 			felix.Stop()
 		}
+		typha.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
@@ -135,7 +137,17 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			serviceIP := fmt.Sprintf("10.101.0.%v", i+20)
 			svcName := fmt.Sprintf("test-svc-%v", i+20)
 
-			createK8sServiceWithoutKubeProxy(infra, felixes[i], w[i], svcName, serviceIP, w[i].IP, port, tgtPort, "OUTPUT")
+			createK8sServiceWithoutKubeProxy(createK8sServiceWithoutKubeProxyArgs{
+				infra:     infra,
+				felix:     felixes[i],
+				w:         w[i],
+				svcName:   svcName,
+				serviceIP: serviceIP,
+				targetIP:  w[i].IP,
+				port:      port,
+				tgtPort:   tgtPort,
+				chain:     "OUTPUT",
+			})
 
 			// Expect connectivity to the service IP.
 			cc.ExpectSome(felixes[i], connectivity.TargetIP(serviceIP), uint16(port))
@@ -151,7 +163,17 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			serviceIP := fmt.Sprintf("10.101.10.%v", i+10)
 			svcName := fmt.Sprintf("test-svc-%v", i+10)
 
-			createK8sServiceWithoutKubeProxy(infra, felixes[i], w[1-i], svcName, serviceIP, w[1-i].IP, port, tgtPort, "OUTPUT")
+			createK8sServiceWithoutKubeProxy(createK8sServiceWithoutKubeProxyArgs{
+				infra:     infra,
+				felix:     felixes[i],
+				w:         w[1-i],
+				svcName:   svcName,
+				serviceIP: serviceIP,
+				targetIP:  w[1-i].IP,
+				port:      port,
+				tgtPort:   tgtPort,
+				chain:     "OUTPUT",
+			})
 
 			// Expect not to be able to connect to the service IP.
 			cc.ExpectNone(felixes[i], connectivity.TargetIP(serviceIP), uint16(port))
@@ -170,7 +192,17 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			// Allocate a service IP.
 			serviceIP := fmt.Sprintf("10.101.10.%v", i)
 			svcName := fmt.Sprintf("test-svc-%v", i)
-			createK8sServiceWithoutKubeProxy(infra, felixes[i], w[1-i], svcName, serviceIP, w[1-i].IP, port, tgtPort, "PREROUTING")
+			createK8sServiceWithoutKubeProxy(createK8sServiceWithoutKubeProxyArgs{
+				infra:     infra,
+				felix:     felixes[i],
+				w:         w[1-i],
+				svcName:   svcName,
+				serviceIP: serviceIP,
+				targetIP:  w[1-i].IP,
+				port:      port,
+				tgtPort:   tgtPort,
+				chain:     "PREROUTING",
+			})
 
 			// Expect to connect from local pod to the service IP.
 			cc.ExpectSome(w[i], connectivity.TargetIP(serviceIP), uint16(port))

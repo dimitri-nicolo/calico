@@ -48,7 +48,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf test conntrack ma
 	BeforeEach(func() {
 		infra = getInfra()
 		opts := infrastructure.DefaultTopologyOptions()
-		felixes, _ = infrastructure.StartNNodeTopology(1, opts, infra)
+		felixes, _, _ = infrastructure.StartNNodeTopology(1, opts, infra)
 	})
 
 	AfterEach(func() {

@@ -45,7 +45,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 		topologyOptions.ExtraEnvVars["FELIX_IPSECREKEYTIME"] = "20"
 		topologyOptions.IPIPEnabled = false
 
-		felixes, _ = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
+		felixes, _, _ = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()

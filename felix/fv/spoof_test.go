@@ -99,7 +99,7 @@ var _ = Describe("Spoof tests", func() {
 			infra, err = infrastructure.GetEtcdDatastoreInfra()
 			Expect(err).NotTo(HaveOccurred())
 			opts := infrastructure.DefaultTopologyOptions()
-			felixes, _ = infrastructure.StartNNodeTopology(3, opts, infra)
+			felixes, _, _ = infrastructure.StartNNodeTopology(3, opts, infra)
 			// Install a default profile allowing all ingress and egress,
 			// in the absence of policy.
 			infra.AddDefaultAllow()
@@ -139,7 +139,7 @@ var _ = Describe("Spoof tests", func() {
 			// felix, but our current topology setup tooling doesn't yet
 			// support that for IPv6. So for these tests, we'll run the
 			// workloads on a single felix.
-			felixes, _ = infrastructure.StartNNodeTopology(1, opts, infra)
+			felixes, _, _ = infrastructure.StartNNodeTopology(1, opts, infra)
 
 			// Install a default profile allowing all ingress and egress,
 			// in the absence of policy.

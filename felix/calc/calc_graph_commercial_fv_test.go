@@ -1098,6 +1098,108 @@ var commercialTests = []StateList{
 	// Select all states
 	{withCaptureSelectAll, withCaptureSelectA, withCaptureSelectTwice},
 
+	// Cross-cluster VXLAN: scenarios involving clusters with the same pool CIDR and block size.
+	{
+		// All tests in this scenario are based on a disjoint local VXLAN pool (pool 1).
+		remoteClusterVXLANBlocksBase,
+
+		// Remaining states deal with pool 2.
+		// Add local VXLAN pool.
+		remoteClusterVXLANLocalOnly,
+
+		// Add a remote VXLAN pool and block with identical CIDRs. Expect the remote routes do not flush.
+		remoteClusterVXLANLocalOverlapsWithRemoteA,
+
+		// Remove the local pool and block. Expect the remote routes now flush.
+		// This state validates the standard configuration of local and remote disjoint VXLAN pools.
+		remoteClusterVXLANRemoteAOnly,
+
+		// Add another remote VXLAN pool and block with identical CIDRs. Expect the new remote routes do not flush.
+		remoteClusterVXLANRemoteAOverlapsWithRemoteB,
+	},
+	// Same scenario as above, with clusters in WEP mode.
+	{
+		// All tests in this scenario are based on a disjoint local VXLAN pool (pool 1).
+		remoteClusterVXLANWEPsBase,
+
+		// Remaining states deal with pool 2.
+		// Add local VXLAN pool.
+		remoteClusterVXLANWEPsLocalOnly,
+
+		// Add a remote VXLAN pool and WEP with identical CIDRs. Expect the remote routes do not flush.
+		remoteClusterVXLANWEPsLocalOverlapsWithRemoteA,
+
+		// Remove the local pool and WEP. Expect the remote routes now flush.
+		// This state validates the standard configuration of local and remote disjoint VXLAN pools.
+		remoteClusterVXLANWEPsRemoteAOnly,
+
+		// Add another remote VXLAN pool and WEP with identical CIDRs. Expect the new remote routes do not flush.
+		remoteClusterVXLANWEPsRemoteAOverlapsWithRemoteB,
+	},
+
+	// Cross-cluster CIDR overlap handling: remote pool containing local pool scenarios.
+	{
+		remoteClusterPoolWithLargerBlockSizeContainsLocalPoolWithBlocks,
+		remoteClusterPoolWithLargerBlockSizeContainsLocalPoolWithTunnels,
+		remoteClusterPoolContainsLocalPoolWithOverlappedBlocks,
+	},
+	{
+		remoteClusterPoolAndBlocksContainLocalPoolWithBlocks,
+		overlappedRemoteAndLocalClusterPoolContainsRemoteBlock,
+	},
+
+	// Cross-cluster CIDR overlap handling: local pool containing remote pool scenarios.
+	// Same scenario as above, with remote and local flipped.
+	{
+		localClusterPoolWithLargerBlockSizeContainsRemotePoolWithBlocks,
+		localClusterPoolWithLargerBlockSizeContainsRemotePoolWithTunnels,
+		localClusterPoolContainsRemotePoolWithOverlappedBlocks,
+	},
+	{
+		localClusterPoolAndBlocksContainRemotePoolWithBlocks,
+		overlappedRemoteAndLocalClusterPoolContainsLocalBlock,
+	},
+
+	// Cross-cluster CIDR overlap handling: remote pool containing remote pool scenarios.
+	// Same scenario as above, with two remote clusters.
+	{
+		remoteClusterAPoolWithLargerBlockSizeContainsRemoteBPoolWithBlocks,
+		remoteClusterAPoolWithLargerBlockSizeContainsRemoteBPoolWithTunnels,
+		remoteClusterAPoolContainsRemoteBPoolWithOverlappedBlocks,
+		remoteClusterAPoolWithOverlappedBlocks,
+		remoteClusterBPoolContainsRemoteAPoolWithOverlappedBlocks,
+	},
+	{
+		remoteClusterAPoolAndBlocksContainRemoteBPoolWithBlock,
+		remoteOverlappedPoolsContainRemoteABlock,
+		remoteOverlappedPoolsContainRemoteBBlock,
+	},
+
+	// Cross-cluster CIDR overlap handling: when no IP pool is present to resolve conflict, all CIDRs flush.
+	{
+		remoteClusterBlockEnclosesLocalBlock,
+		remoteClusterBlockEnclosesLocalWEP,
+		remoteClusterBlockEnclosesRemoteBlock,
+	},
+
+	// Cross-cluster CIDR overlap handling: orphans that enclose before any pool will flush.
+	{
+		localClusterOrphanBlockContainsRemotePoolAndBlock,
+
+		// Test the inverse of the above state by providing a parent pool to local block,
+		// and enclosing the pool with another remote orphan.
+		remoteClusterOrphanBlockContainsLocalPoolAndBlock,
+	},
+
+	// Cross-cluster CIDR overlap handling: orphans underneath pools from other clusters do not flush.
+	{
+		remoteClusterPoolAndBlockContainLocalOrphanBlock,
+
+		// Test the inverse of the above state by providing a parent pool to local block,
+		// and having the block enclose a remote orphan.
+		localClusterPoolAndBlockContainRemoteOrphanBlock,
+	},
+
 	// TODO(smc): Test config calculation
 	// TODO(smc): Test mutation of endpoints
 	// TODO(smc): Test mutation of host endpoints

@@ -659,7 +659,7 @@ func kvpsEqual(actual, expected model.KVPair) bool {
 			expectedStatusCopy.Error = ""
 		}
 		return reflect.DeepEqual(actualStatusCopy, expectedStatusCopy)
-	case model.ResourceKey:
+	case model.ResourceKey, model.RemoteClusterResourceKey:
 		// For resources, take
 		actualCopy, ok := actual.Value.(resource)
 		if !ok {

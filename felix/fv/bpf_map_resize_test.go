@@ -60,7 +60,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf test configurable
 	BeforeEach(func() {
 		infra = getInfra()
 		opts := infrastructure.DefaultTopologyOptions()
-		felixes, client = infrastructure.StartNNodeTopology(1, opts, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(1, opts, infra)
 	})
 
 	AfterEach(func() {

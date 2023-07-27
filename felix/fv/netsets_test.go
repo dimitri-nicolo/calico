@@ -108,7 +108,7 @@ var _ = Context("_NET_SETS_ Network sets tests with initialized Felix and etcd d
 
 	BeforeEach(func() {
 		topologyOptions := infrastructure.DefaultTopologyOptions()
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(topologyOptions)
+		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(topologyOptions)
 		felixPID = felix.GetFelixPID()
 	})
 

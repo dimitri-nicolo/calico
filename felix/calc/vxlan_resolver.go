@@ -383,7 +383,9 @@ func (c *VXLANResolver) vtepMACForHost(nodename string, ipVersion int) string {
 
 	// Otherwise generate a MAC address
 	hasher := sha1.New()
-	_, err := hasher.Write([]byte(nodename))
+	// The node might be from a remote cluster.
+	// Remove any prefix to ensure the MAC is calculated the same in both clusters.
+	_, err := hasher.Write([]byte(model.RemoveRemoteClusterPrefix(nodename)))
 	if err != nil {
 		logCtx.Panic("Failed to write hash for node")
 	}

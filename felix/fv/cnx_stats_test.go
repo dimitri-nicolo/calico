@@ -47,7 +47,7 @@ var _ = infrastructure.DatastoreDescribe("CNX Metrics, etcd datastore, 4 workloa
 		infra = getInfra()
 
 		var felixes []*infrastructure.Felix
-		felixes, client = infrastructure.StartNNodeTopology(1, infrastructure.DefaultTopologyOptions(), infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(1, infrastructure.DefaultTopologyOptions(), infra)
 		felix = felixes[0]
 
 		// Default profile that ensures connectivity.
@@ -915,7 +915,7 @@ var _ = infrastructure.DatastoreDescribe("cnx stats with staged policy tests", [
 		opts := infrastructure.DefaultTopologyOptions()
 
 		// Start felix instances.
-		felixes, client = infrastructure.StartNNodeTopology(1, opts, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(1, opts, infra)
 		felix = felixes[0]
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.

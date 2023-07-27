@@ -50,7 +50,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		infra = getInfra()
 
 		topologyOptions := ipSecTopologyOptions()
-		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
@@ -518,7 +518,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 		fc.Spec.IPSecAllowUnsecuredTraffic = &t
 
 		topologyOptions.InitialFelixConfiguration = fc
-		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
@@ -605,7 +605,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 	BeforeEach(func() {
 		infra = getInfra()
 
-		felixes, client = infrastructure.StartNNodeTopology(3, ipSecTopologyOptions(), infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(3, ipSecTopologyOptions(), infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()

@@ -55,7 +55,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ apply on forward tests; wit
 
 		options := infrastructure.DefaultTopologyOptions()
 		options.IPIPEnabled = false
-		felixes, client = infrastructure.StartNNodeTopology(2, options, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(2, options, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()

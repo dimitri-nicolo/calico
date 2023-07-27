@@ -95,7 +95,15 @@ var (
 		Transport: insecureTransport,
 	}
 
-	K8sInfra *K8sDatastoreInfra
+	// K*sSupport two infrastructures for local <> remote tests. Indexed by K8sInfraIndex.
+	K8sInfra [2]*K8sDatastoreInfra
+)
+
+type K8sInfraIndex int
+
+const (
+	K8SInfraLocalCluster  K8sInfraIndex = 0
+	K8sInfraRemoteCluster               = 1
 )
 
 func TearDownK8sInfra(kds *K8sDatastoreInfra) {
@@ -137,32 +145,40 @@ func TearDownK8sInfra(kds *K8sDatastoreInfra) {
 	log.Info("TearDownK8sInfra done")
 }
 
-func createK8sDatastoreInfra() DatastoreInfra {
-	infra, err := GetK8sDatastoreInfra()
+func createK8sDatastoreInfra(index K8sInfraIndex) DatastoreInfra {
+	infra, err := GetK8sDatastoreInfra(index)
 	Expect(err).NotTo(HaveOccurred())
 	return infra
 }
 
-func GetK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
-	if K8sInfra != nil {
-		if K8sInfra.runningTest != "" {
-			ginkgo.Fail(fmt.Sprintf("Previous test didn't clean up the infra: %s", K8sInfra.runningTest))
+func createLocalK8sDatastoreInfra() DatastoreInfra {
+	return createK8sDatastoreInfra(K8SInfraLocalCluster)
+}
+
+func createRemoteK8sDatastoreInfra() DatastoreInfra {
+	return createK8sDatastoreInfra(K8sInfraRemoteCluster)
+}
+
+func GetK8sDatastoreInfra(index K8sInfraIndex) (*K8sDatastoreInfra, error) {
+	if K8sInfra[index] != nil {
+		if K8sInfra[index].runningTest != "" {
+			ginkgo.Fail(fmt.Sprintf("Previous test didn't clean up the infra: %s", K8sInfra[index].runningTest))
 		}
-		K8sInfra.EnsureReady()
-		K8sInfra.PerTestSetup()
-		return K8sInfra, nil
+		K8sInfra[index].EnsureReady()
+		K8sInfra[index].PerTestSetup(index)
+		return K8sInfra[index], nil
 	}
 
 	var err error
-	K8sInfra, err = setupK8sDatastoreInfra()
+	K8sInfra[index], err = setupK8sDatastoreInfra()
 	if err == nil {
-		K8sInfra.PerTestSetup()
+		K8sInfra[index].PerTestSetup(index)
 	}
 
-	return K8sInfra, err
+	return K8sInfra[index], err
 }
 
-func (kds *K8sDatastoreInfra) PerTestSetup() {
+func (kds *K8sDatastoreInfra) PerTestSetup(index K8sInfraIndex) {
 	// In BPF mode, start BPF logging.
 	arch := utils.GetSysArch()
 
@@ -174,7 +190,7 @@ func (kds *K8sDatastoreInfra) PerTestSetup() {
 			}, "--privileged",
 			"calico/bpftool:v5.3-"+arch, "/bpftool", "prog", "tracelog")
 	}
-	K8sInfra.runningTest = ginkgo.CurrentGinkgoTestDescription().FullTestText
+	K8sInfra[index].runningTest = ginkgo.CurrentGinkgoTestDescription().FullTestText
 }
 
 func runK8sApiserver(etcdIp string) *containers.Container {
@@ -511,6 +527,7 @@ func (kds *K8sDatastoreInfra) CleanUp() {
 		cleanupAllHostEndpoints,
 		cleanupAllFelixConfigurations,
 		cleanupAllServices,
+		cleanupAllRemoteClusterConfigs,
 	} {
 		f(kds.K8sClient, kds.calicoClient)
 	}
@@ -576,30 +593,30 @@ func (kds *K8sDatastoreInfra) GetClusterGUID() string {
 	return ci.Spec.ClusterGUID
 }
 
-func (kds *K8sDatastoreInfra) SetExpectedIPIPTunnelAddr(felix *Felix, idx int, needBGP bool) {
-	felix.ExpectedIPIPTunnelAddr = fmt.Sprintf("10.65.%d.1", idx)
+func (kds *K8sDatastoreInfra) SetExpectedIPIPTunnelAddr(felix *Felix, cidr *net.IPNet, idx int, needBGP bool) {
+	felix.ExpectedIPIPTunnelAddr = fmt.Sprintf("%d.%d.%d.1", cidr.IP[0], cidr.IP[1], idx)
 	felix.ExtraSourceIPs = append(felix.ExtraSourceIPs, felix.ExpectedIPIPTunnelAddr)
 }
 
-func (kds *K8sDatastoreInfra) SetExpectedVXLANTunnelAddr(felix *Felix, idx int, needBGP bool) {
-	felix.ExpectedVXLANTunnelAddr = fmt.Sprintf("10.65.%d.0", idx)
+func (kds *K8sDatastoreInfra) SetExpectedVXLANTunnelAddr(felix *Felix, cidr *net.IPNet, idx int, needBGP bool) {
+	felix.ExpectedVXLANTunnelAddr = fmt.Sprintf("%d.%d.%d.0", cidr.IP[0], cidr.IP[1], idx)
 	felix.ExtraSourceIPs = append(felix.ExtraSourceIPs, felix.ExpectedVXLANTunnelAddr)
 }
 
-func (kds *K8sDatastoreInfra) SetExpectedVXLANV6TunnelAddr(felix *Felix, idx int, needBGP bool) {
-	felix.ExpectedVXLANV6TunnelAddr = fmt.Sprintf("dead:beef::%d:0", idx)
+func (kds *K8sDatastoreInfra) SetExpectedVXLANV6TunnelAddr(felix *Felix, cidr *net.IPNet, idx int, needBGP bool) {
+	felix.ExpectedVXLANV6TunnelAddr = fmt.Sprintf("%x%x:%x%x:%x%x:%x%x:%x%x:%x%x:%d:0", cidr.IP[0], cidr.IP[1], cidr.IP[2], cidr.IP[3], cidr.IP[4], cidr.IP[5], cidr.IP[6], cidr.IP[7], cidr.IP[8], cidr.IP[9], cidr.IP[10], cidr.IP[11], idx)
 	felix.ExtraSourceIPs = append(felix.ExtraSourceIPs, felix.ExpectedVXLANV6TunnelAddr)
 }
 
-func (kds *K8sDatastoreInfra) SetExpectedWireguardTunnelAddr(felix *Felix, idx int, needWg bool) {
+func (kds *K8sDatastoreInfra) SetExpectedWireguardTunnelAddr(felix *Felix, cidr *net.IPNet, idx int, needWg bool) {
 	// Set to be the same as IPIP tunnel address.
-	felix.ExpectedWireguardTunnelAddr = fmt.Sprintf("10.65.%d.1", idx)
+	felix.ExpectedWireguardTunnelAddr = fmt.Sprintf("%d.%d.%d.1", cidr.IP[0], cidr.IP[1], idx)
 	felix.ExtraSourceIPs = append(felix.ExtraSourceIPs, felix.ExpectedWireguardTunnelAddr)
 }
 
-func (kds *K8sDatastoreInfra) SetExpectedWireguardV6TunnelAddr(felix *Felix, idx int, needWg bool) {
+func (kds *K8sDatastoreInfra) SetExpectedWireguardV6TunnelAddr(felix *Felix, cidr *net.IPNet, idx int, needWg bool) {
 	// Set to be the same as IPIP tunnel address.
-	felix.ExpectedWireguardV6TunnelAddr = fmt.Sprintf("dead:beef::%d:0", idx)
+	felix.ExpectedWireguardV6TunnelAddr = fmt.Sprintf("%x%x:%x%x:%x%x:%x%x:%x%x:%x%x:%d:0", cidr.IP[0], cidr.IP[1], cidr.IP[2], cidr.IP[3], cidr.IP[4], cidr.IP[5], cidr.IP[6], cidr.IP[7], cidr.IP[8], cidr.IP[9], cidr.IP[10], cidr.IP[11], idx)
 	felix.ExtraSourceIPs = append(felix.ExtraSourceIPs, felix.ExpectedWireguardV6TunnelAddr)
 }
 
@@ -620,7 +637,7 @@ func (kds *K8sDatastoreInfra) RemoveNodeAddresses(felix *Felix) {
 	}
 }
 
-func (kds *K8sDatastoreInfra) AddNode(felix *Felix, idx int, needBGP bool) {
+func (kds *K8sDatastoreInfra) AddNode(felix *Felix, v4CIDR *net.IPNet, v6CIDR *net.IPNet, idx int, needBGP bool) {
 	nodeIn := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: felix.Hostname,
@@ -628,7 +645,7 @@ func (kds *K8sDatastoreInfra) AddNode(felix *Felix, idx int, needBGP bool) {
 				"projectcalico.org/IPv4Address": fmt.Sprintf("%s/%s", felix.IP, felix.IPPrefix),
 			},
 		},
-		Spec: v1.NodeSpec{PodCIDRs: []string{fmt.Sprintf("10.65.%d.0/24", idx)}},
+		Spec: v1.NodeSpec{PodCIDRs: []string{fmt.Sprintf("%d.%d.%d.0/24", v4CIDR.IP[0], v4CIDR.IP[1], idx)}},
 		Status: v1.NodeStatus{
 			Addresses: []v1.NodeAddress{{
 				Address: felix.IP,
@@ -638,7 +655,7 @@ func (kds *K8sDatastoreInfra) AddNode(felix *Felix, idx int, needBGP bool) {
 	}
 	if len(felix.IPv6) > 0 {
 		nodeIn.ObjectMeta.Annotations["projectcalico.org/IPv6Address"] = fmt.Sprintf("%s/%s", felix.IPv6, felix.IPv6Prefix)
-		nodeIn.Spec.PodCIDRs = append(nodeIn.Spec.PodCIDRs, fmt.Sprintf("dead:beef::%d:0/96", idx))
+		nodeIn.Spec.PodCIDRs = append(nodeIn.Spec.PodCIDRs, fmt.Sprintf("%x%x:%x%x:%x%x:%x%x:%x%x:%x%x:%d:0/96", v6CIDR.IP[0], v6CIDR.IP[1], v6CIDR.IP[2], v6CIDR.IP[3], v6CIDR.IP[4], v6CIDR.IP[5], v6CIDR.IP[6], v6CIDR.IP[7], v6CIDR.IP[8], v6CIDR.IP[9], v6CIDR.IP[10], v6CIDR.IP[11], idx))
 		nodeIn.Status.Addresses = append(nodeIn.Status.Addresses, v1.NodeAddress{
 			Address: felix.IPv6,
 			Type:    v1.NodeInternalIP,
@@ -802,6 +819,21 @@ func (kds *K8sDatastoreInfra) AddDefaultDeny() error {
 	policy.Spec.Selector = "all()"
 	_, err := kds.calicoClient.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 	return err
+}
+
+func (kds *K8sDatastoreInfra) GetRemoteClusterConfig() *api.RemoteClusterConfiguration {
+	return &api.RemoteClusterConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "k8s-fv-remote",
+		},
+		Spec: api.RemoteClusterConfigurationSpec{
+			DatastoreType: "kubernetes",
+			KubeConfig: api.KubeConfig{
+				K8sAPIEndpoint:           kds.Endpoint,
+				K8sInsecureSkipTLSVerify: true,
+			},
+		},
+	}
 }
 
 func (kds *K8sDatastoreInfra) DumpErrorData() {
@@ -1136,4 +1168,20 @@ func cleanupAllServices(clientset *kubernetes.Clientset, calicoClient client.Int
 		}
 	}
 	log.Info("Cleaned up services")
+}
+
+func cleanupAllRemoteClusterConfigs(clientset *kubernetes.Clientset, calicoClient client.Interface) {
+	log.Info("Cleaning up RemoteClusterConfigurations")
+	rccs, err := calicoClient.RemoteClusterConfigurations().List(context.Background(), options.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
+	log.WithField("count", len(rccs.Items)).Info("RemoteClusterConfigurations present")
+	for _, rcc := range rccs.Items {
+		_, err := calicoClient.RemoteClusterConfigurations().Delete(context.Background(), rcc.Name, options.DeleteOptions{})
+		if err != nil {
+			panic(err)
+		}
+	}
+	log.Info("Cleaned up RemoteClusterConfigurations")
 }

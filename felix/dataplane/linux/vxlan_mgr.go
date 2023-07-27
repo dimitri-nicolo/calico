@@ -19,10 +19,15 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -92,6 +97,10 @@ type vxlanManager struct {
 
 	// Log context
 	logCtx *logrus.Entry
+
+	// IPs and MAC addresses of programmable VTEPs, used for conflict resolution with remote clusters.
+	vtepRoutesByDest map[string]*proto.RouteUpdate
+	nodesByVTEPMAC   map[string]set.Set[string]
 }
 
 const (
@@ -211,6 +220,8 @@ func newVXLANManagerWithShims(
 		noEncapProtocol:     noEncapProtocol,
 		noEncapRTConstruct:  noEncapRTConstruct,
 		logCtx:              logCtx,
+		vtepRoutesByDest:    map[string]*proto.RouteUpdate{},
+		nodesByVTEPMAC:      map[string]set.Set[string]{},
 	}
 }
 
@@ -231,6 +242,7 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 		// In case the route changes type to one we no longer care about...
 		m.deleteRoute(msg.Dst)
 
+		// Process remote IPAM blocks.
 		if msg.Type == proto.RouteType_REMOTE_WORKLOAD && msg.IpPoolType == proto.IPPoolType_VXLAN {
 			m.logCtx.WithField("msg", msg).Debug("VXLAN data plane received route update")
 			m.routesByDest[msg.Dst] = msg
@@ -246,6 +258,15 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 			m.logCtx.WithField("msg", msg).Debug("VXLAN data plane IPAM block changed to something else")
 			delete(m.localIPAMBlocks, msg.Dst)
 			m.routesDirty = true
+		}
+
+		// Process tunnel endpoint routes. We capture these routes to ensure that we only flush VTEPs that pass the CIDR conflict resolution
+		// performed by the Calc Graph.
+		if (msg.Type == proto.RouteType_LOCAL_TUNNEL || msg.Type == proto.RouteType_REMOTE_TUNNEL) && msg.IpPoolType == proto.IPPoolType_VXLAN {
+			m.logCtx.WithField("msg", msg).Debug("VXLAN dataplane received VTEP route update")
+			m.vtepRoutesByDest[msg.Dst] = msg
+			m.routesDirty = true
+			m.vtepsDirty = true
 		}
 
 	case *proto.RouteRemove:
@@ -275,18 +296,56 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 		} else {
 			m.vtepsByNode[msg.Node] = msg
 		}
+
+		// Track MAC addresses for VTEPs to detect conflicts involving remote clusters.
+		m.addVTEPToAddressTracking(msg)
+
 		m.routesDirty = true
 		m.vtepsDirty = true
 	case *proto.VXLANTunnelEndpointRemove:
 		m.logCtx.WithField("msg", msg).Debug("VXLAN data plane received VTEP remove")
+		var vtep *proto.VXLANTunnelEndpointUpdate
 		if msg.Node == m.hostname {
 			m.logCtx.WithField("msg", msg).Info("Local VTEP was removed")
+			vtep = m.getLocalVTEP()
 			m.setLocalVTEP(nil)
 		} else {
+			vtep = m.vtepsByNode[msg.Node]
 			delete(m.vtepsByNode, msg.Node)
 		}
+
+		if vtep != nil {
+			m.deleteVTEPFromAddressTracking(vtep)
+		} else {
+			m.logCtx.WithField("msg", msg).Warn("Received remove for unknown VTEP. VTEP state may be invalid.")
+		}
+
 		m.routesDirty = true
 		m.vtepsDirty = true
+	}
+}
+
+func (m *vxlanManager) addVTEPToAddressTracking(msg *proto.VXLANTunnelEndpointUpdate) {
+	vtepMAC, err := m.parseMacForIPVersion(msg)
+	if err != nil {
+		// MAC address is invalid, no need to track this (VTEPs that conflict with it will fail to parse too)
+		return
+	}
+	if m.nodesByVTEPMAC[vtepMAC.String()] == nil {
+		m.nodesByVTEPMAC[vtepMAC.String()] = set.New[string]()
+	}
+	m.nodesByVTEPMAC[vtepMAC.String()].Add(msg.Node)
+}
+
+func (m *vxlanManager) deleteVTEPFromAddressTracking(msg *proto.VXLANTunnelEndpointUpdate) {
+	vtepMAC, err := m.parseMacForIPVersion(msg)
+	if err != nil {
+		// MAC address is invalid, no need to delete as this was not part of our tracking state to begin with.
+		return
+	}
+	m.nodesByVTEPMAC[vtepMAC.String()].Discard(msg.Node)
+	if m.nodesByVTEPMAC[vtepMAC.String()].Len() == 0 {
+		delete(m.nodesByVTEPMAC, vtepMAC.String())
 	}
 }
 
@@ -347,6 +406,13 @@ func (m *vxlanManager) deleteRoute(dst string) {
 		logrus.Debug("deleting local ipam dst ", dst)
 		delete(m.localIPAMBlocks, dst)
 		m.routesDirty = true
+	}
+
+	if _, exists := m.vtepRoutesByDest[dst]; exists {
+		logrus.Debug("deleting tunnel dst ", dst)
+		delete(m.vtepRoutesByDest, dst)
+		m.routesDirty = true
+		m.vtepsDirty = true
 	}
 }
 
@@ -435,10 +501,38 @@ func (m *vxlanManager) CompleteDeferredWork() error {
 			}
 			addr := u.Ipv4Addr
 			parentDeviceIP := u.ParentDeviceIp
+			suffix := "/32"
 			if m.ipVersion == 6 {
 				addr = u.Ipv6Addr
 				parentDeviceIP = u.ParentDeviceIpv6
+				suffix = "/128"
 			}
+
+			// If VTEP is from a remote cluster, check if its IP or MAC address conflicts with other VTEPs.
+			if model.GetRemoteClusterPrefix(u.Node) != "" {
+				logCtx := m.logCtx.WithFields(logrus.Fields{"vtep": u, "vtepRoutesByDest": m.vtepRoutesByDest, "nodesByVTEPMAC": m.nodesByVTEPMAC[mac.String()]})
+
+				// Check if VTEP conflicts based on IP address.
+				// If the VTEP IP does not have a route, or is routed by a different node, this VTEP lost an IP conflict in the Calc Graph.
+				if !m.vtepIPRoutedByNode(addr+suffix, u.Node) {
+					logCtx.Warn("VTEP conflicts with another based on IP address. VTEP will not be programmed.")
+					continue
+				}
+
+				// Validate that our VTEP MAC address state is valid.
+				if m.nodesByVTEPMAC[mac.String()] == nil || !m.nodesByVTEPMAC[mac.String()].Contains(u.Node) {
+					logCtx.Error("BUG: MAC address state missing node associated with VTEP. VTEP will be not be programmed.")
+					continue
+				}
+
+				// Then, check if VTEP conflicts based on MAC address.
+				preferredNodeForVTEPMAC := m.getPreferredNodeForVTEPMAC(mac.String())
+				if preferredNodeForVTEPMAC != u.Node {
+					logCtx.Warnf("VTEP conflicts with another node (%s) based on MAC address. VTEP will not be programmed.", preferredNodeForVTEPMAC)
+					continue
+				}
+			}
+
 			l2routes = append(l2routes, routetable.L2Target{
 				VTEPMAC: mac,
 				GW:      ip.FromString(addr),
@@ -777,6 +871,48 @@ func (m *vxlanManager) ensureAddressOnLink(ipStr string, link netlink.Link) erro
 		}
 	}
 	return nil
+}
+
+func (m *vxlanManager) vtepIPRoutedByNode(cidr string, node string) bool {
+	return m.vtepRoutesByDest[cidr] != nil && m.vtepRoutesByDest[cidr].DstNodeName == node
+}
+
+func (m *vxlanManager) getVTEPIPForNode(node string) (string, error) {
+	var vtep *proto.VXLANTunnelEndpointUpdate
+	if m.hostname == node {
+		vtep = m.getLocalVTEP()
+	} else {
+		vtep = m.vtepsByNode[node]
+	}
+
+	if vtep == nil {
+		return "", fmt.Errorf("could not resolve VTEP for node %s", node)
+	}
+
+	if m.ipVersion == 4 {
+		return vtep.Ipv4Addr + "/32", nil
+	} else {
+		return vtep.Ipv6Addr + "/128", nil
+	}
+}
+
+func (m *vxlanManager) getPreferredNodeForVTEPMAC(mac string) string {
+	var programmableNodesForVTEPMAC []string
+
+	m.nodesByVTEPMAC[mac].Iter(func(node string) error {
+		vtepIP, err := m.getVTEPIPForNode(node)
+		if err == nil && m.vtepIPRoutedByNode(vtepIP, node) {
+			programmableNodesForVTEPMAC = append(programmableNodesForVTEPMAC, node)
+		}
+		return nil
+	})
+
+	if len(programmableNodesForVTEPMAC) == 0 {
+		return ""
+	} else {
+		sort.Strings(programmableNodesForVTEPMAC)
+		return programmableNodesForVTEPMAC[0]
+	}
 }
 
 // vlanLinksIncompat takes two vxlan devices and compares them to make sure they match. If they do not match,

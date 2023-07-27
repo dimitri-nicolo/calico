@@ -78,7 +78,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 		// options.ExtraEnvVars["FELIX_DebugDisableLogDropping"] = "true"
 		// options.FelixLogSeverity = "debug"
 		options.ExtraVolumes[tempDir] = "/var/run/calico/policysync"
-		felix, etcd, calicoClient, infra = infrastructure.StartSingleNodeEtcdTopology(options)
+		felix, _, etcd, calicoClient, infra = infrastructure.StartSingleNodeEtcdTopology(options)
 		infrastructure.CreateDefaultProfile(calicoClient, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
@@ -716,7 +716,7 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 		// resulting slow down!
 		// options.ExtraEnvVars["FELIX_DebugDisableLogDropping"] = "true"
 		// options.FelixLogSeverity = "debug"
-		felixes, _ = infrastructure.StartNNodeTopology(3, options, infra)
+		felixes, _, _ = infrastructure.StartNNodeTopology(3, options, infra)
 
 		// Create one workload per felix, using that profile.
 		for ii := range w {

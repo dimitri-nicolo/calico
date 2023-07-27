@@ -55,7 +55,7 @@ var _ = Context("Config update tests, after starting felix", func() {
 	)
 
 	BeforeEach(func() {
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
+		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
 		felixPID = felix.GetSinglePID("calico-felix")
 	})
 

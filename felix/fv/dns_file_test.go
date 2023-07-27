@@ -67,7 +67,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 	}
 
 	Describe("file with 1000 entries", func() {

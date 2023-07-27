@@ -214,7 +214,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
 				opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = scapyTrusted.IP
 				opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
-				felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+				felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 				infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 				// Create a workload, using that profile.
@@ -706,7 +706,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		// Create a workload, using that profile.
@@ -842,7 +842,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DefaultEndpointToHostAction"] = "ACCEPT"
 		opts.IPIPEnabled = false
-		felixes, etcd, client, infra = infrastructure.StartNNodeEtcdTopology(2, opts)
+		felixes, _, etcd, client, infra = infrastructure.StartNNodeEtcdTopology(2, opts)
 		felix = felixes[0]
 		server = felixes[1]
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")

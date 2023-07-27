@@ -47,7 +47,7 @@ var _ = infrastructure.DatastoreDescribe("service loop prevention; with 2 nodes"
 
 		options := infrastructure.DefaultTopologyOptions()
 		options.IPIPEnabled = false
-		felixes, client = infrastructure.StartNNodeTopology(2, options, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(2, options, infra)
 	})
 
 	AfterEach(func() {

@@ -98,7 +98,7 @@ func describeNamedPortTests(testSourcePorts bool, protocol string) {
 	)
 
 	BeforeEach(func() {
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
+		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 		// Create some workloads, using that profile.
 		for ii := range w {
@@ -734,7 +734,7 @@ var _ = Describe("TCP: named port with a simulated kubernetes nginx and client",
 	)
 
 	BeforeEach(func() {
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
+		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
 		// Create a namespace profile and write to the datastore.
 		infrastructure.CreateDefaultProfile(client, "kns.test", map[string]string{"name": "test"}, "")
 		// Create nginx workload.
@@ -869,7 +869,7 @@ func describeNamedPortHostEndpointTests(getInfra infrastructure.InfraFactory, na
 	BeforeEach(func() {
 		infra = getInfra()
 
-		felixes, client = infrastructure.StartNNodeTopology(2, infrastructure.DefaultTopologyOptions(), infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(2, infrastructure.DefaultTopologyOptions(), infra)
 
 		err := infra.AddAllowToDatastore("host-endpoint=='true'")
 		Expect(err).NotTo(HaveOccurred())
@@ -1043,7 +1043,7 @@ var _ = Describe("tests with mixed TCP/UDP", func() {
 	)
 
 	BeforeEach(func() {
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
+		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
 		infrastructure.CreateDefaultProfile(client, "open", map[string]string{"default": ""}, "")
 
 		createTarget := func(ip, protocol string) *workload.Workload {

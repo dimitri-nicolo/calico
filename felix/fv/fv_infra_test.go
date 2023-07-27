@@ -56,7 +56,7 @@ func describeConnCheckTests(protocol string) bool {
 
 			BeforeEach(func() {
 				infra = getInfra()
-				felixes, _ = infrastructure.StartNNodeTopology(2, infrastructure.DefaultTopologyOptions(), infra)
+				felixes, _, _ = infrastructure.StartNNodeTopology(2, infrastructure.DefaultTopologyOptions(), infra)
 
 				// Create host-networked "workloads", one on each "host".
 				for ii := range felixes {
@@ -160,7 +160,7 @@ var _ = infrastructure.DatastoreDescribe("Container self tests",
 
 		JustBeforeEach(func() {
 			infra = getInfra()
-			felixes, _ = infrastructure.StartNNodeTopology(1, options, infra)
+			felixes, _, _ = infrastructure.StartNNodeTopology(1, options, infra)
 		})
 
 		AfterEach(func() {

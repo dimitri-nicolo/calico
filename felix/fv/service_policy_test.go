@@ -56,7 +56,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Service network policy test
 	BeforeEach(func() {
 		infra = getInfra()
 		topologyOptions = infrastructure.DefaultTopologyOptions()
-		felixes, client = infrastructure.StartNNodeTopology(3, topologyOptions, infra)
+		felixes, _, client = infrastructure.StartNNodeTopology(3, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()

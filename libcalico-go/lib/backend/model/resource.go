@@ -268,6 +268,12 @@ func init() {
 		"EgressGatewayPolicies",
 		reflect.TypeOf(apiv3.EgressGatewayPolicy{}),
 	)
+	// Resources that may be transported in a ResourceKey but are not part of the public API, for use-cases like Federation.
+	registerResourceInfo(
+		libapiv3.KindIPAMBlock,
+		"ipamblocks",
+		reflect.TypeOf(libapiv3.IPAMBlock{}),
+	)
 }
 
 type ResourceKey struct {
