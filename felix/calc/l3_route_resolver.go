@@ -759,6 +759,8 @@ func (c *L3RouteResolver) routesFromBlock(update api.Update) map[string]nodename
 			return make(map[string]nodenameRoute)
 		}
 		b = kvp.Value.(*model.AllocationBlock)
+	default:
+		logrus.WithField("key", k).Panic("Unexpected key type for Block update")
 	}
 
 	routes := make(map[string]nodenameRoute)
