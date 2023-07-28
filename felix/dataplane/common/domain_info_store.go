@@ -659,6 +659,10 @@ type jsonMappingV1 struct {
 	Type   string
 }
 
+type epochDeclaration struct {
+	Epoch int
+}
+
 func (s *DomainInfoStore) readMappings() error {
 	// Lock while we populate the cache.
 	s.mutex.Lock()
@@ -705,6 +709,40 @@ func (s *DomainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
 	hasParent := make(map[string]bool)
 
 	for scanner.Scan() {
+		// Ignore the mappings in this file if DNSCacheEpoch has changed since the file was
+		// written.  Upgrade/downgrade considerations are as follows.
+		//
+		// 1. Normal situation: the file was written with an epoch declaration, and is being
+		// read by (this) code that checks for an epoch declaration.
+		//
+		// 2. Downgrade: the file was written with an epoch declaration, and is being read
+		// by downlevel code that doesn't know about this.  The following
+		// `json.Unmarshal(scanner.Bytes(), &jsonMapping)` line will succeed in
+		// 'unmarshalling' the epoch declaration, because it doesn't police against unknown
+		// fields, but there will be an error when trying to parse the empty string as
+		// time.RFC3339 format - which will then lead to a warning log and the mappings
+		// being ignored.  Then the downlevel code will start building up DNS info again
+		// from scratch.  Worst case is failing to allow connections for which the DNS
+		// exchange happened before Felix restart and the connection setup happened after
+		// Felix restart.  This feels unlikely, and is acceptable given that the downgrade
+		// scenario is also unlikely.
+		//
+		// 3. Upgrade: the file was written without an epoch declaration, and is being read
+		// by this code.  Mappings will be read from the file, even though the epoch _might_
+		// have changed - i.e. the same situation as before this fix.
+		var epochDeclaration epochDeclaration
+		d := json.NewDecoder(strings.NewReader(scanner.Text()))
+		d.DisallowUnknownFields()
+		if err := d.Decode(&epochDeclaration); err == nil {
+			log.Debugf("Mappings file epoch is %v", epochDeclaration.Epoch)
+			if epochDeclaration.Epoch != s.epoch {
+				// Ignore any further mappings in this file.
+				log.Infof("Ignoring old DNS mappings because epoch changed from %v to %v", epochDeclaration.Epoch, s.epoch)
+				return nil
+			}
+			continue
+		}
+
 		var jsonMapping jsonMappingV1
 		if err := json.Unmarshal(scanner.Bytes(), &jsonMapping); err != nil {
 			return err
@@ -765,6 +803,9 @@ func (s *DomainInfoStore) SaveMappingsV1() error {
 		return err
 	}
 	jsonEncoder := json.NewEncoder(f)
+	if err = jsonEncoder.Encode(epochDeclaration{Epoch: s.epoch}); err != nil {
+		return err
+	}
 	for lhsName, nameData := range s.mappings {
 		for rhsName, valueData := range nameData.values {
 			jsonMapping := jsonMappingV1{LHS: lhsName, RHS: rhsName, Type: v1TypeIP}
