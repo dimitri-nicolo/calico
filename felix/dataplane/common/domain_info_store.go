@@ -73,6 +73,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -659,9 +660,44 @@ type jsonMappingV1 struct {
 	Type   string
 }
 
-type epochDeclaration struct {
-	Epoch int
+// In v2 there is a mandatory initial header that specifies features required to correctly
+// interpret the following mappings, with any settings related to those features.
+//
+// So far there is only one feature - encoding the epoch when the file was written, with the
+// implication that the following mappings should be ignored if the epoch is now different from that
+// - but this approach will allow us to add further features without having to evolve the overall
+// format of the mappings file.
+//
+// Currently the v2 per-mapping content is the same as for v1.
+//
+// Upgrade/downgrade considerations are as follows.
+//
+// 1. Normal situation: the file was written as v2 with an epoch declaration, and is being read as
+// v2 by (this) code that then check the epoch declaration.
+//
+// 2. Downgrade: the file was written as v2 with an epoch declaration, and is being read by
+// downlevel code that only understands v1.  Reading will fail with `fmt.Errorf("Unrecognised format
+// version: %v", version)`, which will then lead to a warning log and the mappings being ignored.
+// Then the downlevel code will start building up DNS info again from scratch.  Worst case is
+// failing to allow connections for which the DNS exchange happened before Felix restart and the
+// connection setup happened after Felix restart.  This feels unlikely, and is acceptable given that
+// the downgrade scenario is also unlikely.
+//
+// 3. Upgrade: the file was written as v1 without an epoch declaration, and is being read by this
+// code.  Mappings will be read from the file, even though the epoch _might_ have changed - i.e. the
+// same situation as before this fix.
+type v2FileHeader struct {
+	RequiredFeatures []v2FileFeature
+	Epoch            int
 }
+
+type v2FileFeature string
+
+const (
+	v2FileFeatureEpoch v2FileFeature = "Epoch"
+)
+
+var currentV2Features = []v2FileFeature{v2FileFeatureEpoch}
 
 func (s *DomainInfoStore) readMappings() error {
 	// Lock while we populate the cache.
@@ -685,6 +721,7 @@ func (s *DomainInfoStore) readMappings() error {
 		version := strings.TrimSpace(scanner.Text())
 		readerFunc := map[string]func(*bufio.Scanner) error{
 			"1": s.readMappingsV1,
+			"2": s.readMappingsV2,
 		}[version]
 		if readerFunc != nil {
 			log.Infof("Read mappings in v%v format", version)
@@ -704,45 +741,42 @@ const (
 	v1TypeName = "name"
 )
 
+func (s *DomainInfoStore) readMappingsV2(scanner *bufio.Scanner) error {
+	// Read the first line, which must be the v2 file header.
+	if !scanner.Scan() {
+		return fmt.Errorf("failed to read v2 file header: %w", scanner.Err())
+	}
+	headerLine := scanner.Text()
+
+	// Parse the header.
+	var v2FileHeader v2FileHeader
+	d := json.NewDecoder(strings.NewReader(headerLine))
+	d.DisallowUnknownFields()
+	if err := d.Decode(&v2FileHeader); err != nil {
+		return fmt.Errorf("failed to parse v2 file header '%q': %w", headerLine, err)
+	}
+
+	// Check if it requires different features than this code supports.
+	if !reflect.DeepEqual(v2FileHeader.RequiredFeatures, currentV2Features) {
+		return fmt.Errorf("v2 file requires unsupported features (%v != %v)", v2FileHeader.RequiredFeatures, currentV2Features)
+	}
+
+	log.Debugf("Mappings file epoch is %v", v2FileHeader.Epoch)
+	if v2FileHeader.Epoch != s.epoch {
+		// Ignore the mappings in this file.
+		log.Infof("Ignoring old DNS mappings because epoch changed from %v to %v", v2FileHeader.Epoch, s.epoch)
+		return nil
+	}
+
+	// Epoch is good, so continue reading mappings as for v1.
+	return s.readMappingsV1(scanner)
+}
+
 func (s *DomainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
 	// Track which of the names is top-level (i.e. has no parent in the CNAME chain)
 	hasParent := make(map[string]bool)
 
 	for scanner.Scan() {
-		// Ignore the mappings in this file if DNSCacheEpoch has changed since the file was
-		// written.  Upgrade/downgrade considerations are as follows.
-		//
-		// 1. Normal situation: the file was written with an epoch declaration, and is being
-		// read by (this) code that checks for an epoch declaration.
-		//
-		// 2. Downgrade: the file was written with an epoch declaration, and is being read
-		// by downlevel code that doesn't know about this.  The following
-		// `json.Unmarshal(scanner.Bytes(), &jsonMapping)` line will succeed in
-		// 'unmarshalling' the epoch declaration, because it doesn't police against unknown
-		// fields, but there will be an error when trying to parse the empty string as
-		// time.RFC3339 format - which will then lead to a warning log and the mappings
-		// being ignored.  Then the downlevel code will start building up DNS info again
-		// from scratch.  Worst case is failing to allow connections for which the DNS
-		// exchange happened before Felix restart and the connection setup happened after
-		// Felix restart.  This feels unlikely, and is acceptable given that the downgrade
-		// scenario is also unlikely.
-		//
-		// 3. Upgrade: the file was written without an epoch declaration, and is being read
-		// by this code.  Mappings will be read from the file, even though the epoch _might_
-		// have changed - i.e. the same situation as before this fix.
-		var epochDeclaration epochDeclaration
-		d := json.NewDecoder(strings.NewReader(scanner.Text()))
-		d.DisallowUnknownFields()
-		if err := d.Decode(&epochDeclaration); err == nil {
-			log.Debugf("Mappings file epoch is %v", epochDeclaration.Epoch)
-			if epochDeclaration.Epoch != s.epoch {
-				// Ignore any further mappings in this file.
-				log.Infof("Ignoring old DNS mappings because epoch changed from %v to %v", epochDeclaration.Epoch, s.epoch)
-				return nil
-			}
-			continue
-		}
-
 		var jsonMapping jsonMappingV1
 		if err := json.Unmarshal(scanner.Bytes(), &jsonMapping); err != nil {
 			return err
@@ -798,12 +832,15 @@ func (s *DomainInfoStore) SaveMappingsV1() error {
 		}
 	}()
 
-	// File format 1.
-	if _, err = f.WriteString("1\n"); err != nil {
+	// File format 2.
+	if _, err = f.WriteString("2\n"); err != nil {
 		return err
 	}
 	jsonEncoder := json.NewEncoder(f)
-	if err = jsonEncoder.Encode(epochDeclaration{Epoch: s.epoch}); err != nil {
+	if err = jsonEncoder.Encode(v2FileHeader{
+		RequiredFeatures: currentV2Features,
+		Epoch:            s.epoch,
+	}); err != nil {
 		return err
 	}
 	for lhsName, nameData := range s.mappings {

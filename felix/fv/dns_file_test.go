@@ -136,23 +136,38 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		return errors.New("No IP set with 1000 members")
 	}
 
-	Describe("file with 1000 entries", func() {
-
-		It("should read and program those entries", func() {
-			startWithPersistentFileContent("1\n" + gen1000XYZMappings())
-			triggerCreateXYZIPSet()
-			Eventually(findIPSetWith1000Entries, "5s", "1s").Should(Succeed())
-		})
-	})
-
-	It("should program DNS info from file with current epoch declaration", func() {
-		startWithPersistentFileContent("1\n{\"Epoch\":0}\n" + gen1000XYZMappings())
+	It("programs DNS info from v1 file", func() {
+		startWithPersistentFileContent("1\n" + gen1000XYZMappings())
 		triggerCreateXYZIPSet()
 		Eventually(findIPSetWith1000Entries, "5s", "1s").Should(Succeed())
 	})
 
-	It("should ignore DNS info from file with non-current epoch declaration", func() {
-		startWithPersistentFileContent("1\n{\"Epoch\":11}\n" + gen1000XYZMappings())
+	It("programs DNS info from v2 file with current epoch declaration", func() {
+		startWithPersistentFileContent("2\n{\"Epoch\":0,\"RequiredFeatures\":[\"Epoch\"]}\n" + gen1000XYZMappings())
+		triggerCreateXYZIPSet()
+		Eventually(findIPSetWith1000Entries, "5s", "1s").Should(Succeed())
+	})
+
+	It("ignores DNS info from v2 file with non-current epoch declaration", func() {
+		startWithPersistentFileContent("2\n{\"Epoch\":11,\"RequiredFeatures\":[\"Epoch\"]}\n" + gen1000XYZMappings())
+		triggerCreateXYZIPSet()
+		Consistently(findIPSetWith1000Entries, "10s", "2s").ShouldNot(Succeed())
+	})
+
+	It("ignores DNS info from v2 file with invalid header", func() {
+		startWithPersistentFileContent("2\n{\"Nonsuch\":11}\n" + gen1000XYZMappings())
+		triggerCreateXYZIPSet()
+		Consistently(findIPSetWith1000Entries, "10s", "2s").ShouldNot(Succeed())
+	})
+
+	It("ignores DNS info from v2 file with unsupported features", func() {
+		startWithPersistentFileContent("2\n{\"Epoch\":0},\"RequiredFeatures\":[\"Epoch\",\"NewSemantics\"]\n" + gen1000XYZMappings())
+		triggerCreateXYZIPSet()
+		Consistently(findIPSetWith1000Entries, "10s", "2s").ShouldNot(Succeed())
+	})
+
+	It("ignores DNS info from file with unsupported version", func() {
+		startWithPersistentFileContent("3\n{\"Epoch\":0,\"RequiredFeatures\":[\"Epoch\"]}\n" + gen1000XYZMappings())
 		triggerCreateXYZIPSet()
 		Consistently(findIPSetWith1000Entries, "10s", "2s").ShouldNot(Succeed())
 	})
