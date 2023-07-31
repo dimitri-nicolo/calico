@@ -39,7 +39,6 @@ require (
 	github.com/florianl/go-nfqueue v1.3.1
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424
-	github.com/ghodss/yaml v1.0.0
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-ini/ini v1.67.0
 	github.com/go-openapi/runtime v0.25.0
@@ -151,6 +150,12 @@ require (
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106
 	modernc.org/memory v1.6.0
 	sigs.k8s.io/kind v0.20.0
+	sigs.k8s.io/yaml v1.3.0
+)
+
+require (
+	github.com/projectcalico/api v0.0.0-20230602153125-fb7148692637
+	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
 )
 
 require (
@@ -305,7 +310,6 @@ require (
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/rivo/uniseg v0.1.0 // indirect
 	github.com/rubiojr/go-vhd v0.0.0-20200706105327-02e210299021 // indirect
-	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1 // indirect
 	github.com/seccomp/libseccomp-golang v0.9.2-0.20220502022130-f33da4d89646 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
@@ -370,7 +374,6 @@ require (
 	sigs.k8s.io/controller-runtime v0.14.6 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
 replace (
