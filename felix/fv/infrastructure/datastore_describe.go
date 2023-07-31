@@ -48,7 +48,7 @@ func DatastoreDescribe(description string, datastores []apiconfig.DatastoreType,
 		case apiconfig.Kubernetes:
 			Describe(fmt.Sprintf("%s (kubernetes backend)", description),
 				func() {
-					body(createLocalK8sDatastoreInfra)
+					body(createK8sDatastoreInfra)
 				})
 		default:
 			panic(fmt.Errorf("Unknown DatastoreType, %s", ds))
@@ -94,7 +94,7 @@ func DatastoreDescribeWithRemote(description string, localDatastores []apiconfig
 		case apiconfig.Kubernetes:
 			Describe(fmt.Sprintf("%s (kubernetes backend)", description),
 				func() {
-					body(LocalRemoteInfraFactories{Local: createLocalK8sDatastoreInfra})
+					body(LocalRemoteInfraFactories{Local: createK8sDatastoreInfra})
 				})
 		default:
 			panic(fmt.Errorf("Unknown DatastoreType, %s", ds))
@@ -103,7 +103,7 @@ func DatastoreDescribeWithRemote(description string, localDatastores []apiconfig
 
 	Describe(fmt.Sprintf("%s (local kubernetes, remote kubernetes)", description),
 		func() {
-			body(LocalRemoteInfraFactories{Local: createLocalK8sDatastoreInfra, Remote: createRemoteK8sDatastoreInfra})
+			body(LocalRemoteInfraFactories{Local: createK8sDatastoreInfra, Remote: createRemoteK8sDatastoreInfra})
 		})
 
 	return true
