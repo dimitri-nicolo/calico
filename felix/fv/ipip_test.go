@@ -520,7 +520,10 @@ type createK8sServiceWithoutKubeProxyArgs struct {
 func createK8sServiceWithoutKubeProxy(args createK8sServiceWithoutKubeProxyArgs) {
 	if BPFMode() {
 		k8sClient := args.infra.(*infrastructure.K8sDatastoreInfra).K8sClient
-		testSvc := k8sService(args.svcName, args.serviceIP, args.w, args.port, args.tgtPort, 0, "tcp", args.serviceInRemoteCluster)
+		testSvc := k8sService(args.svcName, args.serviceIP, args.w, args.port, args.tgtPort, 0, "tcp")
+		if args.serviceInRemoteCluster {
+			testSvc.Spec.Selector = nil
+		}
 		testSvcNamespace := testSvc.ObjectMeta.Namespace
 		_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())

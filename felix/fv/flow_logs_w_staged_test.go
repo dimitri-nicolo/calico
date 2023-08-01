@@ -280,7 +280,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		// the service to test the destination service name handling.
 		svcName := "test-service"
 		k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
-		tSvc := k8sService(svcName, clusterIP, ep2_1, svcPort, wepPort, 0, "tcp", false)
+		tSvc := k8sService(svcName, clusterIP, ep2_1, svcPort, wepPort, 0, "tcp")
 		tSvcNamespace := tSvc.ObjectMeta.Namespace
 		_, err = k8sClient.CoreV1().Services(tSvcNamespace).Create(context.Background(), tSvc, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
