@@ -154,11 +154,6 @@ require (
 )
 
 require (
-	github.com/projectcalico/api v0.0.0-20230602153125-fb7148692637
-	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
-)
-
-require (
 	cloud.google.com/go/compute v1.19.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/Azure/azure-sdk-for-go v55.0.0+incompatible // indirect
@@ -310,6 +305,7 @@ require (
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/rivo/uniseg v0.1.0 // indirect
 	github.com/rubiojr/go-vhd v0.0.0-20200706105327-02e210299021 // indirect
+	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
 	github.com/seccomp/libseccomp-golang v0.9.2-0.20220502022130-f33da4d89646 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
