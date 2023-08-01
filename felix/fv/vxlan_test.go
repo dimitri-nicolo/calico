@@ -112,14 +112,14 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 						Skip("Skipping BPF tests for etcdv3 backend.")
 					}
 
-					felixes, typha, client := infrastructure.StartNNodeTopology(3, topologyOptions, infra)
+					tc, client := infrastructure.StartNNodeTopology(3, topologyOptions, infra)
 
 					// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 					infra.AddDefaultAllow()
 
 					// Wait until the vxlan device appears.
 					Eventually(func() error {
-						for i, f := range felixes {
+						for i, f := range tc.Felixes {
 							out, err := f.ExecOutput("ip", "link")
 							if err != nil {
 								return err
@@ -134,7 +134,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 
 					if enableIPv6 {
 						Eventually(func() error {
-							for i, f := range felixes {
+							for i, f := range tc.Felixes {
 								out, err := f.ExecOutput("ip", "link")
 								if err != nil {
 									return err
@@ -161,13 +161,13 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 							IP:       net.MustParseIP(wIP),
 							HandleID: &wName,
 							Attrs: map[string]string{
-								ipam.AttributeNode: felixes[ii].Hostname,
+								ipam.AttributeNode: tc.Felixes[ii].Hostname,
 							},
-							Hostname: felixes[ii].Hostname,
+							Hostname: tc.Felixes[ii].Hostname,
 						})
 						Expect(err).NotTo(HaveOccurred())
 
-						w[ii] = workload.Run(felixes[ii], wName, "default", wIP, "8055", "tcp")
+						w[ii] = workload.Run(tc.Felixes[ii], wName, "default", wIP, "8055", "tcp")
 						w[ii].ConfigureInInfra(infra)
 
 						if enableIPv6 {
@@ -177,31 +177,31 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 								IP:       net.MustParseIP(w6IP),
 								HandleID: &w6Name,
 								Attrs: map[string]string{
-									ipam.AttributeNode: felixes[ii].Hostname,
+									ipam.AttributeNode: tc.Felixes[ii].Hostname,
 								},
-								Hostname: felixes[ii].Hostname,
+								Hostname: tc.Felixes[ii].Hostname,
 							})
 							Expect(err).NotTo(HaveOccurred())
 
-							w6[ii] = workload.Run(felixes[ii], w6Name, "default", w6IP, "8055", "tcp")
+							w6[ii] = workload.Run(tc.Felixes[ii], w6Name, "default", w6IP, "8055", "tcp")
 							w6[ii].ConfigureInInfra(infra)
 						}
 
-						hostW[ii] = workload.Run(felixes[ii], fmt.Sprintf("host%d", ii), "", felixes[ii].IP, "8055", "tcp")
+						hostW[ii] = workload.Run(tc.Felixes[ii], fmt.Sprintf("host%d", ii), "", tc.Felixes[ii].IP, "8055", "tcp")
 						if enableIPv6 {
-							hostW6[ii] = workload.Run(felixes[ii], fmt.Sprintf("host%d-v6", ii), "", felixes[ii].IPv6, "8055", "tcp")
+							hostW6[ii] = workload.Run(tc.Felixes[ii], fmt.Sprintf("host%d-v6", ii), "", tc.Felixes[ii].IPv6, "8055", "tcp")
 						}
 					}
 
 					if BPFMode() {
-						ensureAllNodesBPFProgramsAttached(felixes)
+						ensureAllNodesBPFProgramsAttached(tc.Felixes)
 					}
 
 					clusterState := &VXLANClusterState{
 						infra:   infra,
 						client:  client,
-						felixes: [3]*infrastructure.Felix{felixes[0], felixes[1], felixes[2]},
-						typha:   typha,
+						tc:      tc,
+						felixes: [3]*infrastructure.Felix{tc.Felixes[0], tc.Felixes[1], tc.Felixes[2]},
 						w:       w,
 						w6:      w6,
 						hostW:   hostW,
@@ -269,13 +269,8 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					for _, wl := range c.hostW {
 						wl.Stop()
 					}
-					for _, felix := range c.felixes {
-						felix.Stop()
-					}
-					if c.typha != nil {
-						c.typha.Stop()
-					}
 
+					c.tc.Stop()
 					if CurrentGinkgoTestDescription().Failed {
 						c.infra.DumpErrorData()
 					}
@@ -1192,13 +1187,13 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 
 type VXLANClusterState struct {
 	infra   infrastructure.DatastoreInfra
+	tc      infrastructure.TopologyContainers
 	client  client.Interface
 	felixes [3]*infrastructure.Felix
 	w       [3]*workload.Workload
 	w6      [3]*workload.Workload
 	hostW   [3]*workload.Workload
 	hostW6  [3]*workload.Workload
-	typha   *infrastructure.Typha
 }
 
 type VXLANClusters struct {

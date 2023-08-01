@@ -54,7 +54,7 @@ func describeALPTest(ipip bool) bool {
 
 			var (
 				infra        infrastructure.DatastoreInfra
-				felixes      []*infrastructure.Felix
+				tc           infrastructure.TopologyContainers
 				proxies      []*tproxy.TProxy
 				cc           *Checker
 				options      infrastructure.TopologyOptions
@@ -127,10 +127,10 @@ func describeALPTest(ipip bool) bool {
 				infra = getInfra()
 				_ = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 
-				felixes, _, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
+				tc, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
 
 				proxies = []*tproxy.TProxy{}
-				for _, felix := range felixes {
+				for _, felix := range tc.Felixes {
 					proxy := tproxy.New(felix, 16001)
 					proxy.Start()
 					proxies = append(proxies, proxy)
@@ -144,7 +144,7 @@ func describeALPTest(ipip bool) bool {
 					wIP := fmt.Sprintf("10.65.%d.%d", ii, wi+2)
 					wName := fmt.Sprintf("w%d-%d", ii, wi)
 
-					w := workload.New(felixes[ii], wName, "default",
+					w := workload.New(tc.Felixes[ii], wName, "default",
 						wIP, strconv.Itoa(port), "tcp")
 					if run {
 						w.Start()
@@ -162,9 +162,9 @@ func describeALPTest(ipip bool) bool {
 							IP:       cnet.MustParseIP(wIP),
 							HandleID: &w.Name,
 							Attrs: map[string]string{
-								ipam.AttributeNode: felixes[ii].Hostname,
+								ipam.AttributeNode: tc.Felixes[ii].Hostname,
 							},
-							Hostname: felixes[ii].Hostname,
+							Hostname: tc.Felixes[ii].Hostname,
 						})
 						Expect(err).NotTo(HaveOccurred())
 					}
@@ -172,12 +172,12 @@ func describeALPTest(ipip bool) bool {
 					return w
 				}
 
-				for ii := range felixes {
+				for ii := range tc.Felixes {
 					hostW[ii] = workload.Run(
-						felixes[ii],
+						tc.Felixes[ii],
 						fmt.Sprintf("host%d", ii),
 						"default",
-						felixes[ii].IP, // Same IP as felix means "run in the host's namespace"
+						tc.Felixes[ii].IP, // Same IP as felix means "run in the host's namespace"
 						"8055",
 						"tcp")
 					hostW[ii].ConfigureInInfra(infra)
@@ -243,7 +243,7 @@ func describeALPTest(ipip bool) bool {
 				// testing. This means that we can sync with the
 				// content of the maps.
 				Eventually(func() bool {
-					for _, felix := range felixes {
+					for _, felix := range tc.Felixes {
 						if _, err := felix.ExecOutput("ipset", "list", TPROXYApplicationLayerPolicyIPSet); err != nil {
 							return false
 						}
@@ -258,7 +258,7 @@ func describeALPTest(ipip bool) bool {
 				}
 
 				if CurrentGinkgoTestDescription().Failed {
-					for _, felix := range felixes {
+					for _, felix := range tc.Felixes {
 						felix.Exec("iptables-save", "-c")
 						felix.Exec("ipset", "list")
 					}
@@ -267,21 +267,19 @@ func describeALPTest(ipip bool) bool {
 
 			AfterEach(func() {
 				log.Info("AfterEach starting")
-				for _, f := range felixes {
-					f.Stop()
-				}
+				tc.Stop()
 				infra.Stop()
 				log.Info("AfterEach done")
 			})
 
 			Context("IPs on IPSet", func() {
 				It("should have only w[0][1] workload IP in felixes[0]", func() {
-					assertIPInIPSetErr(TPROXYApplicationLayerPolicyIPSet, w[0][1].IP, felixes[0], true, true)
-					assertIPInIPSetErr(TPROXYApplicationLayerPolicyIPSet, w[0][0].IP, felixes[0], false, true)
+					assertIPInIPSetErr(TPROXYApplicationLayerPolicyIPSet, w[0][1].IP, tc.Felixes[0], true, true)
+					assertIPInIPSetErr(TPROXYApplicationLayerPolicyIPSet, w[0][0].IP, tc.Felixes[0], false, true)
 				})
 				It("should have only w[1][1] workload IP in felixes[1]", func() {
-					assertIPInIPSetErr(TPROXYApplicationLayerPolicyIPSet, w[1][1].IP, felixes[1], true, true)
-					assertIPInIPSetErr(TPROXYApplicationLayerPolicyIPSet, w[1][0].IP, felixes[1], false, true)
+					assertIPInIPSetErr(TPROXYApplicationLayerPolicyIPSet, w[1][1].IP, tc.Felixes[1], true, true)
+					assertIPInIPSetErr(TPROXYApplicationLayerPolicyIPSet, w[1][0].IP, tc.Felixes[1], false, true)
 				})
 			})
 

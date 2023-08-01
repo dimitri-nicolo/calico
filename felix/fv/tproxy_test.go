@@ -65,7 +65,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 			var (
 				infra        infrastructure.DatastoreInfra
-				felixes      []*infrastructure.Felix
+				tc           infrastructure.TopologyContainers
 				proxies      []*tproxy.TProxy
 				cc           *Checker
 				options      infrastructure.TopologyOptions
@@ -113,7 +113,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							results[felix] = struct{}{}
 						}
 					}
-					return len(results) == len(felixes)
+					return len(results) == len(tc.Felixes)
 				}, "90s", "5s").Should(BeTrue())
 			}
 
@@ -122,13 +122,13 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				port string,
 				felixes []*infrastructure.Felix,
 				exists bool) {
-				assertIPPortInIPSetErr(ipSetID, ip, port, felixes, exists, false)
+				assertIPPortInIPSetErr(ipSetID, ip, port, tc.Felixes, exists, false)
 			}
 
 			assertPortInIPSet := func(ipSetID string, port string, felixes []*infrastructure.Felix, exists bool) {
-				results := make(map[*infrastructure.Felix]struct{}, len(felixes))
+				results := make(map[*infrastructure.Felix]struct{}, len(tc.Felixes))
 				Eventually(func() bool {
-					for _, felix := range felixes {
+					for _, felix := range tc.Felixes {
 						out, err := felix.ExecOutput("ipset", "list", ipSetID)
 						log.Infof("felix ipset list output %s", out)
 						Expect(err).NotTo(HaveOccurred())
@@ -136,7 +136,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							results[felix] = struct{}{}
 						}
 					}
-					return len(results) == len(felixes)
+					return len(results) == len(tc.Felixes)
 				}, "90s", "5s").Should(BeTrue())
 			}
 
@@ -175,18 +175,18 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				infra = getInfra()
 				clientset = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 
-				felixes, _, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
+				tc, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
 
 				if !ipip {
-					expectedFelix0IP = ExpectWithSrcIPs(felixes[0].IP)
-					expectedFelix1IP = ExpectWithSrcIPs(felixes[1].IP)
+					expectedFelix0IP = ExpectWithSrcIPs(tc.Felixes[0].IP)
+					expectedFelix1IP = ExpectWithSrcIPs(tc.Felixes[1].IP)
 				} else {
-					expectedFelix0IP = ExpectWithSrcIPs(felixes[0].ExpectedIPIPTunnelAddr)
-					expectedFelix1IP = ExpectWithSrcIPs(felixes[1].ExpectedIPIPTunnelAddr)
+					expectedFelix0IP = ExpectWithSrcIPs(tc.Felixes[0].ExpectedIPIPTunnelAddr)
+					expectedFelix1IP = ExpectWithSrcIPs(tc.Felixes[1].ExpectedIPIPTunnelAddr)
 				}
 
 				proxies = []*tproxy.TProxy{}
-				for _, felix := range felixes {
+				for _, felix := range tc.Felixes {
 					proxy := tproxy.New(felix, 16001)
 					proxy.Start()
 					proxies = append(proxies, proxy)
@@ -200,7 +200,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					wIP := fmt.Sprintf("10.65.%d.%d", ii, wi+2)
 					wName := fmt.Sprintf("w%d%d", ii, wi)
 
-					w := workload.New(felixes[ii], wName, "default",
+					w := workload.New(tc.Felixes[ii], wName, "default",
 						wIP, strconv.Itoa(port), "tcp")
 					if run {
 						w.Start()
@@ -217,9 +217,9 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							IP:       cnet.MustParseIP(wIP),
 							HandleID: &w.Name,
 							Attrs: map[string]string{
-								ipam.AttributeNode: felixes[ii].Hostname,
+								ipam.AttributeNode: tc.Felixes[ii].Hostname,
 							},
-							Hostname: felixes[ii].Hostname,
+							Hostname: tc.Felixes[ii].Hostname,
 						})
 						Expect(err).NotTo(HaveOccurred())
 					}
@@ -227,12 +227,12 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					return w
 				}
 
-				for ii := range felixes {
+				for ii := range tc.Felixes {
 					hostW[ii] = workload.Run(
-						felixes[ii],
+						tc.Felixes[ii],
 						fmt.Sprintf("host%d", ii),
 						"default",
-						felixes[ii].IP, // Same IP as felix means "run in the host's namespace"
+						tc.Felixes[ii].IP, // Same IP as felix means "run in the host's namespace"
 						"8055",
 						"tcp")
 					hostW[ii].ConfigureInInfra(infra)
@@ -278,7 +278,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				// Make sure the ipsets exist before we do testing. This means
 				// that we can sync with the content of the maps.
 				Eventually(func() bool {
-					for _, felix := range felixes {
+					for _, felix := range tc.Felixes {
 						if _, err := felix.ExecOutput("ipset", "list", "cali40tproxy-svc-ips"); err != nil {
 							return false
 						}
@@ -293,7 +293,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				}
 
 				if CurrentGinkgoTestDescription().Failed {
-					for _, felix := range felixes {
+					for _, felix := range tc.Felixes {
 						felix.Exec("iptables-save", "-c")
 						felix.Exec("ipset", "list", TPROXYServiceIPsIPSetV4)
 						felix.Exec("ipset", "list", TPROXYNodeportsSet)
@@ -305,9 +305,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 			AfterEach(func() {
 				log.Info("AfterEach starting")
-				for _, f := range felixes {
-					f.Stop()
-				}
+				tc.Stop()
 				infra.Stop()
 				log.Info("AfterEach done")
 			})
@@ -329,7 +327,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					pod = w[0][0].IP + ":8055"
 					svc = clusterIP + ":8090"
 
-					for _, f := range felixes {
+					for _, f := range tc.Felixes {
 						// Mimic the kube-proxy service iptable clusterIP rule.
 						f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
 							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
@@ -357,7 +355,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				It("should have connectivity from all workloads via ClusterIP", func() {
 
 					By("asserting that ipaddress, port exists in ipset ")
-					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", felixes, true)
+					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", tc.Felixes, true)
 
 					cc.Expect(Some, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090), expectedFelix0IP)
 					cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -397,8 +395,8 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							pol = createPolicy(pol)
 						})
 						By("asserting that ipaddress, port exists in ipset ")
-						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", felixes, true)
-						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, w[0][0].IP, "8090", felixes, true)
+						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", tc.Felixes, true)
+						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, w[0][0].IP, "8090", tc.Felixes, true)
 
 						cc.Expect(Some, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090), expectedFelix0IP)
 						cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -455,7 +453,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						})
 
 						By("asserting that ipaddress, port exists in ipset ")
-						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", felixes, true)
+						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", tc.Felixes, true)
 
 						cc.Expect(Some, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090), expectedFelix0IP)
 						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -498,7 +496,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							pol = createPolicy(pol)
 						})
 						By("asserting that ipaddress, port exists in ipset ")
-						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", felixes, true)
+						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", tc.Felixes, true)
 
 						cc.Expect(None, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -541,7 +539,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							pol = createPolicy(pol)
 						})
 						By("asserting that ipaddress, port exists in ipset ")
-						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", felixes, true)
+						assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", tc.Felixes, true)
 
 						cc.Expect(None, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -576,10 +574,10 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				JustBeforeEach(func() {
 					pod = w[0][0].IP + ":8055"
 					pod = w[0][0].IP + ":8055"
-					svc = felixes[0].IP + ":" + strconv.Itoa(int(nodeport))
+					svc = tc.Felixes[0].IP + ":" + strconv.Itoa(int(nodeport))
 
 					// Mimic the kube-proxy service iptable nodeport rule.
-					for _, f := range felixes {
+					for _, f := range tc.Felixes {
 						f.Exec("iptables", "-t", "nat",
 							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
 							"-W", "100000", // How often to probe the lock in microsecs.
@@ -611,9 +609,9 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					}
 					createService(v1Svc, clientset)
 
-					assertPortInIPSet(TPROXYNodeportsSet, "30333", felixes, true)
+					assertPortInIPSet(TPROXYNodeportsSet, "30333", tc.Felixes, true)
 
-					for _, f := range felixes {
+					for _, f := range tc.Felixes {
 						Eventually(func() string {
 							out, err := f.ExecOutput("iptables-save")
 							Expect(err).NotTo(HaveOccurred())
@@ -643,17 +641,17 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				})
 
 				It("should have connectivity from all workloads via NodePort on node 0", func() {
-					cc.Expect(Some, w[0][0], TargetIP(felixes[0].IP), opts...)
-					cc.Expect(Some, w[0][1], TargetIP(felixes[0].IP), opts...)
-					cc.Expect(Some, w[1][0], TargetIP(felixes[0].IP), opts...)
-					cc.Expect(Some, w[1][1], TargetIP(felixes[0].IP), opts...)
+					cc.Expect(Some, w[0][0], TargetIP(tc.Felixes[0].IP), opts...)
+					cc.Expect(Some, w[0][1], TargetIP(tc.Felixes[0].IP), opts...)
+					cc.Expect(Some, w[1][0], TargetIP(tc.Felixes[0].IP), opts...)
+					cc.Expect(Some, w[1][1], TargetIP(tc.Felixes[0].IP), opts...)
 					cc.CheckConnectivity()
 
 					// Connection should be proxied at the nodeport's node
 					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 					Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 					// Due to NAT outgoing
-					Eventually(proxies[0].ProxiedCountFn(felixes[1].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(tc.Felixes[1].IP, pod, svc)).Should(BeNumerically(">", 0))
 
 					// Connection should not be proxied on the client pod's node
 					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
@@ -661,20 +659,20 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				})
 
 				It("should have connectivity from all workloads via NodePort on node 1", func() {
-					svc = felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
+					svc = tc.Felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
 					opts = []ExpectationOption{ExpectWithPorts(nodeport), expectedFelix1IP}
 
-					cc.Expect(Some, w[0][0], TargetIP(felixes[1].IP), opts...)
-					cc.Expect(Some, w[0][1], TargetIP(felixes[1].IP), opts...)
-					cc.Expect(Some, w[1][0], TargetIP(felixes[1].IP), opts...)
-					cc.Expect(Some, w[1][1], TargetIP(felixes[1].IP), opts...)
+					cc.Expect(Some, w[0][0], TargetIP(tc.Felixes[1].IP), opts...)
+					cc.Expect(Some, w[0][1], TargetIP(tc.Felixes[1].IP), opts...)
+					cc.Expect(Some, w[1][0], TargetIP(tc.Felixes[1].IP), opts...)
+					cc.Expect(Some, w[1][1], TargetIP(tc.Felixes[1].IP), opts...)
 					cc.CheckConnectivity()
 
 					// Connection should be proxied at the nodeport's node
 					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 					Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 					// Due to NAT outgoing
-					Eventually(proxies[1].ProxiedCountFn(felixes[0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(tc.Felixes[0].IP, pod, svc)).Should(BeNumerically(">", 0))
 
 					// Connection should not be proxied on the client pod's node
 					Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(Equal(0))
@@ -716,15 +714,15 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 						// Wait for iptables to be fully in sync.
 						Eventually(func() string {
-							out, err := felixes[0].ExecOutput("iptables-save")
+							out, err := tc.Felixes[0].ExecOutput("iptables-save")
 							Expect(err).NotTo(HaveOccurred())
 							return out
 						}, "10s").Should(ContainSubstring("policy-deny-1-1"))
 
-						cc.Expect(None, w[0][0], TargetIP(felixes[0].IP), opts...)
-						cc.Expect(None, w[0][1], TargetIP(felixes[0].IP), opts...)
-						cc.Expect(Some, w[1][0], TargetIP(felixes[0].IP), opts...)
-						cc.Expect(Some, w[1][1], TargetIP(felixes[0].IP), opts...)
+						cc.Expect(None, w[0][0], TargetIP(tc.Felixes[0].IP), opts...)
+						cc.Expect(None, w[0][1], TargetIP(tc.Felixes[0].IP), opts...)
+						cc.Expect(Some, w[1][0], TargetIP(tc.Felixes[0].IP), opts...)
+						cc.Expect(Some, w[1][1], TargetIP(tc.Felixes[0].IP), opts...)
 						cc.CheckConnectivity()
 
 						// Connection should be proxied at the nodeport's node
@@ -733,7 +731,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(Equal(0))
 						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(Equal(0))
 						// Due to NAT outgoing
-						Eventually(proxies[0].ProxiedCountFn(felixes[1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(tc.Felixes[1].IP, pod, svc)).Should(BeNumerically(">", 0))
 
 						// Connection should not be proxied on the client pod's node
 						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
@@ -741,17 +739,17 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					})
 				})
 
-				Context("With ingress traffic denied from felixes[1].IP to nodeport", func() {
+				Context("With ingress traffic denied from testContainers.Felix[1].IP to nodeport", func() {
 					It("pods should have no connectivity to w[0][0]", func() {
-						svc = felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
+						svc = tc.Felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
 						opts = []ExpectationOption{ExpectWithPorts(nodeport), expectedFelix1IP}
 
-						felix1IP := felixes[1].IP
+						felix1IP := tc.Felixes[1].IP
 						if ipip {
-							felix1IP = felixes[1].ExpectedIPIPTunnelAddr
+							felix1IP = tc.Felixes[1].ExpectedIPIPTunnelAddr
 						}
 
-						By("Denying traffic from felixes[0].IP to nodeport", func() {
+						By("Denying traffic from testContainers.Felix[0].IP to nodeport", func() {
 							pol := api.NewGlobalNetworkPolicy()
 							pol.Namespace = "fv"
 							pol.Name = "policy-deny-1-1"
@@ -774,17 +772,17 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							pol = createPolicy(pol)
 						})
 
-						cc.Expect(None, w[0][0], TargetIP(felixes[1].IP), opts...)
-						cc.Expect(None, w[0][1], TargetIP(felixes[1].IP), opts...)
-						cc.Expect(None, w[1][0], TargetIP(felixes[1].IP), opts...)
-						cc.Expect(None, w[1][1], TargetIP(felixes[1].IP), opts...)
+						cc.Expect(None, w[0][0], TargetIP(tc.Felixes[1].IP), opts...)
+						cc.Expect(None, w[0][1], TargetIP(tc.Felixes[1].IP), opts...)
+						cc.Expect(None, w[1][0], TargetIP(tc.Felixes[1].IP), opts...)
+						cc.Expect(None, w[1][1], TargetIP(tc.Felixes[1].IP), opts...)
 						cc.CheckConnectivity()
 
 						// Connection should be proxied at the nodeport's node
 						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 						// Due to NAT outgoing
-						Eventually(proxies[1].AcceptedCountFn(felixes[0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(tc.Felixes[0].IP, pod, svc)).Should(BeNumerically(">", 0))
 
 						// Connection should not be proxied on the client pod's node
 						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(Equal(0))
@@ -804,21 +802,21 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					})
 
 					It("should have connectivity via node 0", func() {
-						cc.Expect(Some, externalClient, TargetIP(felixes[0].IP),
-							ExpectWithSrcIPs(felixes[0].IP), ExpectWithPorts(nodeport), expectedFelix0IP)
+						cc.Expect(Some, externalClient, TargetIP(tc.Felixes[0].IP),
+							ExpectWithSrcIPs(tc.Felixes[0].IP), ExpectWithPorts(nodeport), expectedFelix0IP)
 						cc.CheckConnectivity()
 
 						Eventually(proxies[0].ProxiedCountFn(externalClient.IP, pod, svc)).Should(BeNumerically(">", 0))
 					})
 
 					It("should have connectivity via node 1", func() {
-						svc = felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
-						cc.Expect(Some, externalClient, TargetIP(felixes[1].IP),
+						svc = tc.Felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
+						cc.Expect(Some, externalClient, TargetIP(tc.Felixes[1].IP),
 							expectedFelix1IP, ExpectWithPorts(nodeport))
 						cc.CheckConnectivity()
 						Eventually(proxies[1].ProxiedCountFn(externalClient.IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[0].AcceptedCountFn(externalClient.IP, pod, svc)).Should(Equal(0))
-						Eventually(proxies[0].AcceptedCountFn(felixes[1].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[0].AcceptedCountFn(tc.Felixes[1].IP, pod, svc)).Should(Equal(0))
 					})
 
 					It("should not have connectivity when denied by preDNAT policy", func() {
@@ -846,10 +844,10 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 							pol = createPolicy(pol)
 						})
-						cc.Expect(Some, externalClient, TargetIP(felixes[0].IP),
-							ExpectWithSrcIPs(felixes[0].IP), ExpectWithPorts(nodeport), expectedFelix0IP)
-						cc.Expect(Some, externalClient, TargetIP(felixes[1].IP),
-							ExpectWithSrcIPs(felixes[1].IP), ExpectWithPorts(nodeport), expectedFelix1IP)
+						cc.Expect(Some, externalClient, TargetIP(tc.Felixes[0].IP),
+							ExpectWithSrcIPs(tc.Felixes[0].IP), ExpectWithPorts(nodeport), expectedFelix0IP)
+						cc.Expect(Some, externalClient, TargetIP(tc.Felixes[1].IP),
+							ExpectWithSrcIPs(tc.Felixes[1].IP), ExpectWithPorts(nodeport), expectedFelix1IP)
 						cc.CheckConnectivity()
 					})
 				})
@@ -864,7 +862,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					pod = hostW[0].IP + ":8055"
 					svc = clusterIP + ":8090"
 
-					for _, f := range felixes {
+					for _, f := range tc.Felixes {
 						// Mimic the kube-proxy service iptable clusterIP rule.
 						f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
 							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
@@ -907,10 +905,10 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 				It("should have connectivity via ClusterIP", func() {
 					By("asserting that ipaddress, port exists in ipset ")
-					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", felixes, true)
+					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", tc.Felixes, true)
 
 					cc.Expect(Some, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090), expectedFelix0IP)
-					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090), ExpectWithSrcIPs(felixes[1].IP))
+					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090), ExpectWithSrcIPs(tc.Felixes[1].IP))
 					cc.CheckConnectivity()
 
 					Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
@@ -922,28 +920,28 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 				It("should have connectivity via NodePorts", func() {
 					By("asserting that nodeport is programmed in ipsets ")
-					assertPortInIPSet(TPROXYNodeportsSet, "30333", felixes, true)
+					assertPortInIPSet(TPROXYNodeportsSet, "30333", tc.Felixes, true)
 
 					opts := []ExpectationOption{ExpectWithPorts(nodeport), expectedFelix0IP}
 
-					cc.Expect(Some, w[0][0], TargetIP(felixes[0].IP), opts...)
-					cc.Expect(Some, w[1][0], TargetIP(felixes[0].IP), opts...)
+					cc.Expect(Some, w[0][0], TargetIP(tc.Felixes[0].IP), opts...)
+					cc.Expect(Some, w[1][0], TargetIP(tc.Felixes[0].IP), opts...)
 
-					opts = []ExpectationOption{ExpectWithPorts(nodeport), ExpectWithSrcIPs(felixes[1].IP)}
+					opts = []ExpectationOption{ExpectWithPorts(nodeport), ExpectWithSrcIPs(tc.Felixes[1].IP)}
 
-					cc.Expect(Some, w[0][0], TargetIP(felixes[1].IP), opts...)
-					cc.Expect(Some, w[1][0], TargetIP(felixes[1].IP), opts...)
+					cc.Expect(Some, w[0][0], TargetIP(tc.Felixes[1].IP), opts...)
+					cc.Expect(Some, w[1][0], TargetIP(tc.Felixes[1].IP), opts...)
 					cc.CheckConnectivity()
 
-					svc = felixes[0].IP + ":" + strconv.Itoa(int(nodeport))
+					svc = tc.Felixes[0].IP + ":" + strconv.Itoa(int(nodeport))
 
 					// Connection should be proxied at the nodeport's node
 					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-					Eventually(proxies[0].ProxiedCountFn(felixes[1].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(tc.Felixes[1].IP, pod, svc)).Should(BeNumerically(">", 0))
 
-					svc = felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
+					svc = tc.Felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
 
-					Eventually(proxies[1].ProxiedCountFn(felixes[0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(tc.Felixes[0].IP, pod, svc)).Should(BeNumerically(">", 0))
 					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 				})
 			})
@@ -960,7 +958,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					annotatedSvc := createService(v1Svc, clientset)
 
 					By("asserting that ipaddress, port of service updated in ipset ")
-					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, felixes, true)
+					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, tc.Felixes, true)
 
 					By("updating the service to not have l7 annotation ")
 					annotatedSvc.ObjectMeta.Annotations = map[string]string{}
@@ -968,14 +966,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					Expect(err).NotTo(HaveOccurred())
 
 					By("asserting that ip, port exists for EnabledAllServices case and doesn't exist for others case when l7 annotation removed")
-					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, felixes, TPROXYMode == "EnabledAllServices")
+					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, tc.Felixes, TPROXYMode == "EnabledAllServices")
 
 					By("deleting the now unannotated service")
 					err = clientset.CoreV1().Services(v1Svc.ObjectMeta.Namespace).Delete(context.Background(), v1Svc.ObjectMeta.Name, metav1.DeleteOptions{})
 					Expect(err).NotTo(HaveOccurred())
 
 					By("assert that ip, port is removed from ipset when service is deleted")
-					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, felixes, false)
+					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, tc.Felixes, false)
 
 					// In this second stage we create a service resource that does not have annotation at creation
 					// and repeat similar process as above again.
@@ -987,7 +985,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					unannotatedSvc := createService(v1Svc, clientset)
 
 					By("asserting that ip, port exists for EnabledAllServices and doesn't exist for others case when l7 annotation not present")
-					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, felixes, TPROXYMode == "EnabledAllServices")
+					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, tc.Felixes, TPROXYMode == "EnabledAllServices")
 
 					By("updating the service to have l7 annotation ")
 					unannotatedSvc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
@@ -995,14 +993,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					Expect(err).NotTo(HaveOccurred())
 
 					By("asserting that ipaddress, port of service propagated to ipset")
-					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, felixes, true)
+					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, tc.Felixes, true)
 
 					By("deleting the annotated service")
 					err = clientset.CoreV1().Services(v1Svc.ObjectMeta.Namespace).Delete(context.Background(), v1Svc.ObjectMeta.Name, metav1.DeleteOptions{})
 					Expect(err).NotTo(HaveOccurred())
 
 					By("asserting that ipaddress, port of service removed from ipset")
-					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, felixes, false)
+					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, tc.Felixes, false)
 
 				})
 
@@ -1018,7 +1016,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 					// Wait until the ipsets disappear
 					Eventually(func() bool {
-						for _, felix := range felixes {
+						for _, felix := range tc.Felixes {
 							if _, err := felix.ExecOutput("ipset", "list", "cali40tproxy-svc-ips"); err == nil {
 								return false
 							}
@@ -1031,7 +1029,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					pod = w[0][0].IP + ":8055"
 					svc = clusterIP + ":8090"
 
-					for _, f := range felixes {
+					for _, f := range tc.Felixes {
 						// Mimic the kube-proxy service iptable clusterIP rule.
 						f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
 							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
@@ -1079,7 +1077,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					})
 
 					By("asserting that ipaddress, port exists in ipset ")
-					assertIPPortInIPSetErr(TPROXYServiceIPsIPSetV4, clusterIP, "8090", felixes, true, true)
+					assertIPPortInIPSetErr(TPROXYServiceIPsIPSetV4, clusterIP, "8090", tc.Felixes, true, true)
 
 					cc.Expect(Some, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 					cc.CheckConnectivity()

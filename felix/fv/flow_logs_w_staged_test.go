@@ -81,7 +81,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 	var (
 		infra                      infrastructure.DatastoreInfra
 		opts                       infrastructure.TopologyOptions
-		felixes                    []*infrastructure.Felix
+		tc                         infrastructure.TopologyContainers
 		flowLogsReaders            []metrics.FlowLogReader
 		client                     client.Interface
 		ep1_1, ep2_1, ep2_2, ep2_3 *workload.Workload
@@ -105,22 +105,22 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDESERVICE"] = "true"
 
 		// Start felix instances.
-		felixes, _, client = infrastructure.StartNNodeTopology(2, opts, infra)
+		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
 
 		// Create workload on host 1.
-		ep1_1 = workload.Run(felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
+		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
 		ep1_1.ConfigureInInfra(infra)
 
-		ep2_1 = workload.Run(felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
+		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
 		ep2_1.ConfigureInInfra(infra)
 
-		ep2_2 = workload.Run(felixes[1], "ep2-2", "default", "10.65.1.1", wepPortStr, "tcp")
+		ep2_2 = workload.Run(tc.Felixes[1], "ep2-2", "default", "10.65.1.1", wepPortStr, "tcp")
 		ep2_2.ConfigureInInfra(infra)
 
-		ep2_3 = workload.Run(felixes[1], "ep2-3", "default", "10.65.1.2", wepPortStr, "tcp")
+		ep2_3 = workload.Run(tc.Felixes[1], "ep2-3", "default", "10.65.1.2", wepPortStr, "tcp")
 		ep2_3.ConfigureInInfra(infra)
 
 		// Create tiers tier1 and tier2
@@ -313,13 +313,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 
 		if !bpfEnabled {
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
-			Eventually(getRuleFunc(felixes[0], "APE0|default.ep1-1-allow-all"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[0], "DPI|default/staged:default.np3-4"), "10s", "1s").Should(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "APE0|default.ep1-1-allow-all"), "10s", "1s").Should(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "DPI|default/staged:default.np3-4"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "APE0|default.ep1-1-allow-all"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "DPI|default/staged:default.np3-4"), "10s", "1s").Should(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "APE0|default.ep1-1-allow-all"), "10s", "1s").Should(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "DPI|default/staged:default.np3-4"), "10s", "1s").ShouldNot(HaveOccurred())
 		} else {
 			checkNat := func() bool {
-				for _, f := range felixes {
+				for _, f := range tc.Felixes {
 					if !f.BPFNATHasBackendForService(clusterIP, svcPort, 6, ep2_1.IP, wepPort) {
 						return false
 					}
@@ -334,7 +334,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 
 		if !bpfEnabled {
 			// Mimic the kube-proxy service iptable clusterIP rule.
-			for _, f := range felixes {
+			for _, f := range tc.Felixes {
 				f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
 					"-p", "tcp",
 					"-d", clusterIP,
@@ -345,7 +345,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		}
 
 		flowLogsReaders = []metrics.FlowLogReader{}
-		for _, f := range felixes {
+		for _, f := range tc.Felixes {
 			flowLogsReaders = append(flowLogsReaders, f)
 		}
 	})
@@ -371,15 +371,15 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 			// Make sure that conntrack scanning ticks at least once
 			time.Sleep(3 * conntrack.ScanPeriod)
 		} else {
-			// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
+			// Allow 6 seconds for the containers.Felix to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
 			// 10% leeway over the polling jitter of 10%)
 			time.Sleep(6 * time.Second)
 		}
 
 		// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.  This will allow the flows
 		// to expire quickly.
-		for ii := range felixes {
-			felixes[ii].Exec("conntrack", "-F")
+		for ii := range tc.Felixes {
+			tc.Felixes[ii].Exec("conntrack", "-F")
 		}
 
 		Eventually(func() error {
@@ -533,7 +533,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range felixes {
+			for _, felix := range tc.Felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -545,7 +545,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		ep2_1.Stop()
 		ep2_2.Stop()
 		ep2_3.Stop()
-		for _, felix := range felixes {
+		for _, felix := range tc.Felixes {
 			if bpfEnabled {
 				felix.Exec("calico-bpf", "connect-time", "clean")
 			}
@@ -591,7 +591,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 	var (
 		infra        infrastructure.DatastoreInfra
 		opts         infrastructure.TopologyOptions
-		felixes      []*infrastructure.Felix
+		tc           infrastructure.TopologyContainers
 		client       client.Interface
 		ep1_1, ep2_1 *workload.Workload
 		cc           *connectivity.Checker
@@ -615,16 +615,16 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDESERVICE"] = "true"
 
 		// Start felix instances.
-		felixes, _, client = infrastructure.StartNNodeTopology(2, opts, infra)
+		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
 
 		// Create workload on host 1.
-		ep1_1 = workload.Run(felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
+		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
 		ep1_1.ConfigureInInfra(infra)
 
-		ep2_1 = workload.Run(felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
+		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
 		ep2_1.ConfigureInInfra(infra)
 
 		// Create tiers tier1 and tier2
@@ -667,15 +667,15 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		Expect(err).NotTo(HaveOccurred())
 
 		if !bpfEnabled {
-			Eventually(getRuleFunc(felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[0], "DPI|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[0], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "DPI|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Consistently(getRuleFunc(felixes[0], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "DPI|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "DPI|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Consistently(getRuleFunc(tc.Felixes[0], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 		} else {
 			time.Sleep(5 * time.Second)
 		}
@@ -691,15 +691,15 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 
 		if !bpfEnabled {
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
-			Eventually(getRuleFunc(felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[0], "API0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[0], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "API0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Consistently(getRuleFunc(felixes[0], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "API0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "API0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Consistently(getRuleFunc(tc.Felixes[0], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 		} else {
 			time.Sleep(5 * time.Second)
 		}
@@ -717,15 +717,15 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 
 		if !bpfEnabled {
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
-			Eventually(getRuleFunc(felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[0], "DPI0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[0], "DPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "DPI0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Eventually(getRuleFunc(felixes[1], "DPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
-			Consistently(getRuleFunc(felixes[0], "DPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "DPI0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[0], "DPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "PPI0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "PPE0|default/tier1.np1-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "DPI0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(getRuleFunc(tc.Felixes[1], "DPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
+			Consistently(getRuleFunc(tc.Felixes[0], "DPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 		} else {
 			time.Sleep(5 * time.Second)
 		}
@@ -747,7 +747,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			// Make sure that conntrack scanning ticks at least once
 			time.Sleep(3 * conntrack.ScanPeriod)
 		} else {
-			// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
+			// Allow 6 seconds for the containers.Felix to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
 			// 10% leeway over the polling jitter of 10%)
 			time.Sleep(6 * time.Second)
 		}
@@ -764,15 +764,15 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			// Make sure that conntrack scanning ticks at least once
 			time.Sleep(3 * conntrack.ScanPeriod)
 		} else {
-			// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
+			// Allow 6 seconds for the containers.Felix to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
 			// 10% leeway over the polling jitter of 10%)
 			time.Sleep(6 * time.Second)
 		}
 
 		// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.  This will allow the flows
 		// to expire quickly.
-		for ii := range felixes {
-			felixes[ii].Exec("conntrack", "-F")
+		for ii := range tc.Felixes {
+			tc.Felixes[ii].Exec("conntrack", "-F")
 		}
 
 		flowTester := metrics.NewFlowTester(metrics.FlowTesterOptions{
@@ -807,7 +807,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 
 		Eventually(func() error {
 			// Felix 0.
-			if err := flowTester.PopulateFromFlowLogs(felixes[0]); err != nil {
+			if err := flowTester.PopulateFromFlowLogs(tc.Felixes[0]); err != nil {
 				return fmt.Errorf("Unable to populate flow tester from flow logs: %v", err)
 			}
 
@@ -865,7 +865,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			}
 
 			// Felix 1.
-			if err := flowTester.PopulateFromFlowLogs(felixes[1]); err != nil {
+			if err := flowTester.PopulateFromFlowLogs(tc.Felixes[1]); err != nil {
 				return fmt.Errorf("Unable to populate flow tester from flow logs: %v", err)
 			}
 
@@ -969,8 +969,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 
 		// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.  This will allow the flows
 		// to expire quickly.
-		for ii := range felixes {
-			felixes[ii].Exec("conntrack", "-F")
+		for ii := range tc.Felixes {
+			tc.Felixes[ii].Exec("conntrack", "-F")
 		}
 
 		flowTester := metrics.NewFlowTester(metrics.FlowTesterOptions{
@@ -1005,7 +1005,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 
 		Eventually(func() error {
 			// Felix 0.
-			if err := flowTester.PopulateFromFlowLogs(felixes[0]); err != nil {
+			if err := flowTester.PopulateFromFlowLogs(tc.Felixes[0]); err != nil {
 				return fmt.Errorf("Unable to populate flow tester from flow logs: %v", err)
 			}
 
@@ -1063,7 +1063,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			}
 
 			// Felix 1.
-			if err := flowTester.PopulateFromFlowLogs(felixes[1]); err != nil {
+			if err := flowTester.PopulateFromFlowLogs(tc.Felixes[1]); err != nil {
 				return fmt.Errorf("Unable to populate flow tester from flow logs: %v", err)
 			}
 
@@ -1126,7 +1126,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range felixes {
+			for _, felix := range tc.Felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -1136,7 +1136,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 
 		ep1_1.Stop()
 		ep2_1.Stop()
-		for _, felix := range felixes {
+		for _, felix := range tc.Felixes {
 			if bpfEnabled {
 				felix.Exec("calico-bpf", "connect-time", "clean")
 			}
