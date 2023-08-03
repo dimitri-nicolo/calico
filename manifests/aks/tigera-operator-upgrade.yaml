@@ -36513,7 +36513,7 @@ metadata:
   name: tigera-operator-enterprise
   namespace: tigera-operator-enterprise
 imagePullSecrets:
-  []
+  - name: tigera-pull-secret
 ---
 # Source: tigera-operator/templates/tigera-operator/02-role-tigera-operator.yaml
 # Permissions required when running the operator for a Calico cluster.
