@@ -23,7 +23,6 @@ import (
 	"sort"
 	"strings"
 	"text/tabwriter"
-	"text/template"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -33,6 +32,7 @@ import (
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/google/safetext/yamltemplate"
 	"github.com/projectcalico/go-json/json"
 	"github.com/projectcalico/go-yaml-wrapper"
 
@@ -125,13 +125,13 @@ func (r ResourcePrinterTable) Print(client client.Interface, resources []runtime
 
 		// Convert the template string into a template - we need to include the join
 		// function.
-		fns := template.FuncMap{
+		fns := yamltemplate.FuncMap{
 			"join":            join,
 			"joinAndTruncate": joinAndTruncate,
 			"config":          config(client),
 			"localtime":       localTime,
 		}
-		tmpl, err := template.New("get").Funcs(fns).Parse(tpls)
+		tmpl, err := yamltemplate.New("get").Funcs(fns).Parse(tpls)
 		if err != nil {
 			panic(err)
 		}
@@ -208,13 +208,13 @@ type ResourcePrinterTemplate struct {
 func (r ResourcePrinterTemplate) Print(client client.Interface, resources []runtime.Object) error {
 	// We include a join function in the template as it's useful for multi
 	// value columns.
-	fns := template.FuncMap{
+	fns := yamltemplate.FuncMap{
 		"join":            join,
 		"joinAndTruncate": joinAndTruncate,
 		"config":          config(client),
 		"localtime":       localTime,
 	}
-	tmpl, err := template.New("get").Funcs(fns).Parse(r.Template)
+	tmpl, err := yamltemplate.New("get").Funcs(fns).Parse(r.Template)
 	if err != nil {
 		return err
 	}
