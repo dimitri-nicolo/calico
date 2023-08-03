@@ -49,33 +49,36 @@ func (m *VXLANConflictHandler) deleteVTEPFromAddressTracking(msg *proto.VXLANTun
 }
 
 func (m *VXLANConflictHandler) vtepConflicts(ip string, suffix string, mac string, node string) bool {
-	if model.GetRemoteClusterPrefix(node) != "" {
-		logCtx := m.logCtx.WithFields(logrus.Fields{
-			"vtepCIDR":         ip + suffix,
-			"vtepMAC":          mac,
-			"vtepRoutesByDest": m.vtepRoutesByDest,
-			"nodesByVTEPMAC":   m.nodesByVTEPMAC[mac],
-		})
+	if model.GetRemoteClusterPrefix(node) == "" {
+		// No prefix means it's a local node, local nodes win any conflicts.
+		return false
+	}
 
-		// Check if VTEP conflicts based on IP address.
-		// If the VTEP IP does not have a route, or is routed by a different node, this VTEP lost an IP conflict in the Calc Graph.
-		if !m.vtepIPRoutedByNode(ip+suffix, node) {
-			logCtx.Warn("VTEP conflicts with another based on IP address. VTEP will not be programmed.")
-			return true
-		}
+	logCtx := m.logCtx.WithFields(logrus.Fields{
+		"vtepCIDR":         ip + suffix,
+		"vtepMAC":          mac,
+		"vtepRoutesByDest": m.vtepRoutesByDest,
+		"nodesByVTEPMAC":   m.nodesByVTEPMAC[mac],
+	})
 
-		// Validate that our VTEP MAC address state is valid.
-		if m.nodesByVTEPMAC[mac] == nil || !m.nodesByVTEPMAC[mac].Contains(node) {
-			logCtx.Error("BUG: MAC address state missing node associated with VTEP. VTEP will be not be programmed.")
-			return true
-		}
+	// Check if VTEP conflicts based on IP address.
+	// If the VTEP IP does not have a route, or is routed by a different node, this VTEP lost an IP conflict in the Calc Graph.
+	if !m.vtepIPRoutedByNode(ip+suffix, node) {
+		logCtx.Warn("VTEP conflicts with another based on IP address. VTEP will not be programmed.")
+		return true
+	}
 
-		// Then, check if VTEP conflicts based on MAC address.
-		preferredNodeForVTEPMAC := m.getPreferredNodeForVTEPMAC(mac)
-		if preferredNodeForVTEPMAC != node {
-			logCtx.Warnf("VTEP conflicts with another node (%s) based on MAC address. VTEP will not be programmed.", preferredNodeForVTEPMAC)
-			return true
-		}
+	// Validate that our VTEP MAC address state is valid.
+	if m.nodesByVTEPMAC[mac] == nil || !m.nodesByVTEPMAC[mac].Contains(node) {
+		logCtx.Error("BUG: MAC address state missing node associated with VTEP. VTEP will be not be programmed.")
+		return true
+	}
+
+	// Then, check if VTEP conflicts based on MAC address.
+	preferredNodeForVTEPMAC := m.getPreferredNodeForVTEPMAC(mac)
+	if preferredNodeForVTEPMAC != node {
+		logCtx.Warnf("VTEP conflicts with another node (%s) based on MAC address. VTEP will not be programmed.", preferredNodeForVTEPMAC)
+		return true
 	}
 
 	return false
@@ -119,6 +122,9 @@ func (m *VXLANConflictHandler) handleRouteUpdate(msg *proto.RouteUpdate) bool {
 		m.logCtx.WithField("msg", msg).Debug("Handling VTEP route update")
 		m.vtepRoutesByDest[msg.Dst] = msg
 		return true
+	} else if _, routeExists := m.vtepRoutesByDest[msg.Dst]; routeExists {
+		// The route exists but no longer represents a VTEP - it should no longer be tracked.
+		return m.handleRouteRemove(&proto.RouteRemove{Dst: msg.Dst})
 	}
 	return false
 }
