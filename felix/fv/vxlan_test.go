@@ -98,7 +98,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					topologyOptions := createBaseTopologyOptions(vxlanMode, enableIPv6, routeSource, brokenXSum)
 					if infraFactories.IsRemoteSetup() {
 						topologyOptions.WithTypha = true
-						if creatingRemote && testConfig.Overlap == OverlapTestType_None {
+						if creatingRemote && overlap == OverlapTestType_None {
 							// Change CIDR for the second datastore to prevent overlap.
 							topologyOptions.IPPoolCIDR = "10.75.0.0/16"
 							topologyOptions.IPv6PoolCIDR = "dead:cafe::/64"
