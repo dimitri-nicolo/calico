@@ -84,13 +84,13 @@ func TestCreateRuntimeReport(t *testing.T) {
 	endTime := time.Unix(2, 0).UTC()
 	generatedTime := time.Unix(3, 0).UTC()
 	f := v1.Report{
-		GeneratedTime: &generatedTime,
-		StartTime:     startTime,
-		EndTime:       endTime,
-		Host:          "host",
-		Count:         1,
-		Type:          "ProcessStart",
-		ConfigName:    "malware-protection",
+		// Note, GeneratedTime not specified; Linseed will populate it.
+		StartTime:  startTime,
+		EndTime:    endTime,
+		Host:       "host",
+		Count:      1,
+		Type:       "ProcessStart",
+		ConfigName: "malware-protection",
 		Pod: v1.PodInfo{
 			Name:          "app",
 			NameAggr:      "app-*",
@@ -137,6 +137,10 @@ func TestCreateRuntimeReport(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, len(results.Items))
 	sanitized := testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, results)
+	// Linseed populated the GeneratedTime field.  We can't predict it exactly, so copy it
+	// across from the actual to our expected value.
+	require.NotNil(t, sanitized[0].Report.GeneratedTime)
+	f.GeneratedTime = sanitized[0].Report.GeneratedTime
 	require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: cluster, Report: f}}, sanitized)
 
 	// Query using the legacy time range.
@@ -157,13 +161,13 @@ func TestCreateRuntimeReportForMultipleTenants(t *testing.T) {
 	endTime := time.Unix(2, 0).UTC()
 	generatedTime := time.Unix(3, 0).UTC()
 	f := v1.Report{
-		GeneratedTime: &generatedTime,
-		StartTime:     startTime,
-		EndTime:       endTime,
-		Host:          "host",
-		Count:         1,
-		Type:          "ProcessStart",
-		ConfigName:    "malware-protection",
+		// Note, GeneratedTime not specified; Linseed will populate it.
+		StartTime:  startTime,
+		EndTime:    endTime,
+		Host:       "host",
+		Count:      1,
+		Type:       "ProcessStart",
+		ConfigName: "malware-protection",
 		Pod: v1.PodInfo{
 			Name:          "app",
 			NameAggr:      "app-*",
@@ -217,6 +221,10 @@ func TestCreateRuntimeReportForMultipleTenants(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(results.Items))
+	// Linseed populated the GeneratedTime field.  We can't predict it exactly, so copy it
+	// across from the actual to our expected value.
+	require.NotNil(t, results.Items[0].Report.GeneratedTime)
+	f.GeneratedTime = results.Items[0].Report.GeneratedTime
 	require.Equal(t, []v1.RuntimeReport{{Tenant: tenant, Cluster: cluster, Report: f}},
 		testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, results))
 
@@ -231,6 +239,10 @@ func TestCreateRuntimeReportForMultipleTenants(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(results.Items))
+	// Linseed populated the GeneratedTime field.  We can't predict it exactly, so copy it
+	// across from the actual to our expected value.
+	require.NotNil(t, results.Items[0].Report.GeneratedTime)
+	f.GeneratedTime = results.Items[0].Report.GeneratedTime
 	require.Equal(t, []v1.RuntimeReport{{Tenant: anotherTenant, Cluster: cluster, Report: f}},
 		testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, results))
 }
