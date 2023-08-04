@@ -44,8 +44,10 @@ func ipv6Supported() bool {
 }
 
 // configureCloudOrchRef does not do anything for windows
-func configureCloudOrchRef(node *api.Node) {
+// Returns false because the node object does not need to be updated.
+func configureCloudOrchRef(node *api.Node) bool {
 	logrus.Debug("configureCloudOrchRef called on Windows; nothing to do.")
+	return false
 }
 
 func ensureNetworkForOS(ctx context.Context, c client.Interface, nodeName string) error {

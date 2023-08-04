@@ -188,29 +188,27 @@ func Run() {
 	// Allow setting this node's AS number and rack label(s) from an EarlyNetworkConfiguration
 	// mapped in at $CALICO_EARLY_NETWORKING.  Note that the "AS" environment variable can still
 	// override the AS number.
-	if err := configureBGPLayout(node); err != nil {
+	if needsNodeUpdate, err := configureBGPLayout(node); err != nil {
 		log.WithError(err).Error("BGP layout configuration failed")
 		utils.Terminate()
 	}
 
-	// Write BGP related details to the Node if BGP is enabled or environment variable IP is used (for ipsec support).
-	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
-		configureAndCheckIPAddressSubnets(ctx, cli, node, k8sNode)
-		configureASNumber(node, os.Getenv("AS"), "environment")
-	}
-
+	needsNodeUpdate = configureAndCheckIPAddressSubnets(ctx, cli, node, k8sNode) || needsNodeUpdate
+	// Configure the node AS number.
+	needsNodeUpdate = configureASNumber(node, os.Getenv("AS"), "environment") || needsNodeUpdate
 	// Populate a reference to the node based on orchestrator node identifiers.
-	configureNodeRef(node)
-	configureCloudOrchRef(node)
+	needsNodeUpdate = configureNodeRef(node) || needsNodeUpdate
+	needsNodeUpdate = configureCloudOrchRef(node) || needsNodeUpdate
+	if needsNodeUpdate {
+		// Apply the updated node resource.
+		if _, err := CreateOrUpdate(ctx, cli, node); err != nil {
+			log.WithError(err).Errorf("Unable to set node resource configuration")
+			utils.Terminate()
+		}
+	}
 
 	// Check expected filesystem
 	ensureFilesystemAsExpected()
-
-	// Apply the updated node resource.
-	if _, err := CreateOrUpdate(ctx, cli, node); err != nil {
-		log.WithError(err).Errorf("Unable to set node resource configuration")
-		utils.Terminate()
-	}
 
 	// Configure IP Pool configuration.
 	configureIPPools(ctx, cli, kubeadmConfig)
@@ -252,15 +250,15 @@ func Run() {
 	}
 }
 
-func configureBGPLayout(node *libapi.Node) error {
+func configureBGPLayout(node *libapi.Node) (bool, error) {
 	yamlFileName := os.Getenv("CALICO_EARLY_NETWORKING")
 	if yamlFileName == "" {
 		log.Info("CALICO_EARLY_NETWORKING is not set")
-		return nil
+		return false, nil
 	}
 	cfg, err := earlynetworking.GetEarlyNetworkConfig(yamlFileName)
 	if err != nil {
-		return fmt.Errorf("Failed to read EarlyNetworkConfiguration: %v", err)
+		return false, fmt.Errorf("Failed to read EarlyNetworkConfiguration: %v", err)
 	}
 
 	// Find the EarlyNetworkConfiguration entry for this node.
@@ -280,10 +278,11 @@ nodeLoop:
 		}
 	}
 	if thisNode == nil {
-		return fmt.Errorf("Failed to find EarlyNetworkConfiguration entry for this node (%v)", nodeIP)
+		return false, fmt.Errorf("Failed to find EarlyNetworkConfiguration entry for this node (%v)", nodeIP)
 	}
 	log.WithField("cfg", *thisNode).Info("Found EarlyNetworkConfiguration entry for this node")
 
+	changed := false
 	// Add labels to the Node.
 	for k, v := range thisNode.Labels {
 		if v2, exists := node.Labels[k]; exists {
@@ -295,6 +294,7 @@ nodeLoop:
 			node.Labels = make(map[string]string)
 		}
 		node.Labels[k] = v
+		changed = true
 	}
 
 	// Add annotation for the AS number.
@@ -305,8 +305,9 @@ nodeLoop:
 			log.Infof("Setting node AS number: %v", thisNode.ASNumber)
 		}
 		configureASNumber(node, fmt.Sprintf("%v", thisNode.ASNumber), "EarlyNetworkConfiguration")
+		changed = true
 	}
-	return nil
+	return changed, nil
 }
 
 func getMonitorPollInterval() time.Duration {
@@ -325,6 +326,11 @@ func getMonitorPollInterval() time.Duration {
 }
 
 func configureAndCheckIPAddressSubnets(ctx context.Context, cli client.Interface, node *libapi.Node, k8sNode *v1.Node) bool {
+	// If Calico is running in policy only mode we don't need to write BGP related
+	// details to the Node.
+	if os.Getenv("CALICO_NETWORKING_BACKEND") == "none" {
+		return false
+	}
 	// Configure and verify the node IP addresses and subnets.
 	checkConflicts, err := configureIPsAndSubnets(node, k8sNode, func(incl []string, excl []string, version int) ([]autodetection.Interface, error) {
 		return autodetection.GetInterfaces(net.Interfaces, incl, excl, version)
@@ -377,12 +383,6 @@ func configureAndCheckIPAddressSubnets(ctx context.Context, cli client.Interface
 }
 
 func MonitorIPAddressSubnets() {
-	// If Calico is running in policy only mode we don't need to write BGP
-	// related details to the Node.
-	if os.Getenv("CALICO_NETWORKING_BACKEND") == "none" {
-		log.Info("Skipped monitoring node IP changes when CALICO_NETWORKING_BACKEND=none")
-		return
-	}
 	ctx := context.Background()
 	_, cli := calicoclient.CreateClient()
 	nodeName := utils.DetermineNodeName()
@@ -437,16 +437,18 @@ func MonitorIPAddressSubnets() {
 
 // configureNodeRef will attempt to discover the cluster type it is running on, check to ensure we
 // have not already set it on this Node, and set it if need be.
-func configureNodeRef(node *libapi.Node) {
+// Returns true if the node object needs to updated.
+func configureNodeRef(node *libapi.Node) bool {
 	orchestrator := "k8s"
 	nodeRef := ""
 
 	// Sort out what type of cluster we're running on.
 	if nodeRef = os.Getenv("CALICO_K8S_NODE_REF"); nodeRef == "" {
-		return
+		return false
 	}
 
 	node.Spec.OrchRefs = []libapi.OrchRef{{NodeName: nodeRef, Orchestrator: orchestrator}}
+	return true
 }
 
 // CreateOrUpdate creates the Node if ResourceVersion is not specified,
@@ -758,7 +760,8 @@ func evaluateENVBool(envVar string, defaultValue bool) bool {
 
 // configureASNumber configures the Node resource with the specified AS number, or is a no-op if not
 // specified.
-func configureASNumber(node *libapi.Node, asStr string, source string) {
+// Returns true if the node object needs to be updated.
+func configureASNumber(node *libapi.Node, asStr string, source string) bool {
 	if asStr != "" {
 		if asNum, err := numorstring.ASNumberFromString(asStr); err != nil {
 			log.WithError(err).Errorf("The AS number specified in the %v (AS=%s) is not valid", source, asStr)
@@ -766,6 +769,7 @@ func configureASNumber(node *libapi.Node, asStr string, source string) {
 		} else {
 			log.Infof("Using AS number specified in %v (AS=%s)", source, asNum)
 			node.Spec.BGP.ASNumber = &asNum
+			return true
 		}
 	} else {
 		if node.Spec.BGP.ASNumber == nil {
@@ -774,6 +778,7 @@ func configureASNumber(node *libapi.Node, asStr string, source string) {
 			log.Infof("Using AS number %s configured in node resource", node.Spec.BGP.ASNumber)
 		}
 	}
+	return false
 }
 
 // generateIPv6ULAPrefix return a random generated ULA IPv6 prefix as per RFC 4193.  The pool
