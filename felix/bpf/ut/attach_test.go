@@ -547,7 +547,7 @@ func BenchmarkAttachProgram(b *testing.B) {
 	vethName, veth := createVeth()
 	defer deleteLink(veth)
 
-	err := tc.EnsureQdisc(vethName)
+	_, err := tc.EnsureQdisc(vethName)
 	Expect(err).NotTo(HaveOccurred())
 
 	ap := tc.AttachPoint{
