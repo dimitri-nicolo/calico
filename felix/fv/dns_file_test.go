@@ -154,14 +154,8 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		Consistently(findIPSetWith1000Entries, "10s", "2s").ShouldNot(Succeed())
 	})
 
-	It("ignores DNS info from v2 file with invalid header", func() {
-		startWithPersistentFileContent("2\n{\"Nonsuch\":11}\n" + gen1000XYZMappings())
-		triggerCreateXYZIPSet()
-		Consistently(findIPSetWith1000Entries, "10s", "2s").ShouldNot(Succeed())
-	})
-
 	It("ignores DNS info from v2 file with unsupported features", func() {
-		startWithPersistentFileContent("2\n{\"Epoch\":0},\"RequiredFeatures\":[\"Epoch\",\"NewSemantics\"]\n" + gen1000XYZMappings())
+		startWithPersistentFileContent("2\n{\"Epoch\":0,\"RequiredFeatures\":[\"Epoch\",\"NewSemantics\"]}\n" + gen1000XYZMappings())
 		triggerCreateXYZIPSet()
 		Consistently(findIPSetWith1000Entries, "10s", "2s").ShouldNot(Succeed())
 	})

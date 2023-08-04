@@ -73,7 +73,6 @@ import (
 	"net"
 	"os"
 	"path"
-	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -697,7 +696,9 @@ const (
 	v2FileFeatureEpoch v2FileFeature = "Epoch"
 )
 
-var currentV2Features = []v2FileFeature{v2FileFeatureEpoch}
+var currentV2Features = set.From(
+	v2FileFeatureEpoch,
+)
 
 func (s *DomainInfoStore) readMappings() error {
 	// Lock while we populate the cache.
@@ -747,18 +748,25 @@ func (s *DomainInfoStore) readMappingsV2(scanner *bufio.Scanner) error {
 		return fmt.Errorf("failed to read v2 file header: %w", scanner.Err())
 	}
 	headerLine := scanner.Text()
+	log.Infof("v2 file header line is: %v", headerLine)
 
 	// Parse the header.
 	var v2FileHeader v2FileHeader
 	d := json.NewDecoder(strings.NewReader(headerLine))
-	d.DisallowUnknownFields()
 	if err := d.Decode(&v2FileHeader); err != nil {
 		return fmt.Errorf("failed to parse v2 file header '%q': %w", headerLine, err)
 	}
+	log.Infof("Decoded v2 file header as %#v", v2FileHeader)
 
-	// Check if it requires different features than this code supports.
-	if !reflect.DeepEqual(v2FileHeader.RequiredFeatures, currentV2Features) {
-		return fmt.Errorf("v2 file requires unsupported features (%v != %v)", v2FileHeader.RequiredFeatures, currentV2Features)
+	// Check that this code supports all the features that the file header requires.
+	missingFeatures := []v2FileFeature{}
+	for _, feature := range v2FileHeader.RequiredFeatures {
+		if !currentV2Features.Contains(feature) {
+			missingFeatures = append(missingFeatures, feature)
+		}
+	}
+	if len(missingFeatures) > 0 {
+		return fmt.Errorf("v2 file requires unsupported features %v", missingFeatures)
 	}
 
 	log.Debugf("Mappings file epoch is %v", v2FileHeader.Epoch)
@@ -838,7 +846,7 @@ func (s *DomainInfoStore) SaveMappingsV1() error {
 	}
 	jsonEncoder := json.NewEncoder(f)
 	if err = jsonEncoder.Encode(v2FileHeader{
-		RequiredFeatures: currentV2Features,
+		RequiredFeatures: currentV2Features.Slice(),
 		Epoch:            s.epoch,
 	}); err != nil {
 		return err
