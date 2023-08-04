@@ -95,7 +95,7 @@ var (
 		Transport: insecureTransport,
 	}
 
-	// K*sSupport two infrastructures for local <> remote tests. Indexed by K8sInfraIndex.
+	// Support two infrastructures for local <> remote tests. Indexed by K8sInfraIndex.
 	K8sInfra [2]*K8sDatastoreInfra
 )
 
@@ -145,18 +145,18 @@ func TearDownK8sInfra(kds *K8sDatastoreInfra) {
 	log.Info("TearDownK8sInfra done")
 }
 
-func createK8sDatastoreInfra(index K8sInfraIndex) DatastoreInfra {
-	infra, err := GetK8sDatastoreInfra(index)
-	Expect(err).NotTo(HaveOccurred())
-	return infra
-}
-
-func createLocalK8sDatastoreInfra() DatastoreInfra {
-	return createK8sDatastoreInfra(K8SInfraLocalCluster)
+func createK8sDatastoreInfra() DatastoreInfra {
+	return createK8sDatastoreInfraWithIndex(K8SInfraLocalCluster)
 }
 
 func createRemoteK8sDatastoreInfra() DatastoreInfra {
-	return createK8sDatastoreInfra(K8sInfraRemoteCluster)
+	return createK8sDatastoreInfraWithIndex(K8sInfraRemoteCluster)
+}
+
+func createK8sDatastoreInfraWithIndex(index K8sInfraIndex) DatastoreInfra {
+	infra, err := GetK8sDatastoreInfra(index)
+	Expect(err).NotTo(HaveOccurred())
+	return infra
 }
 
 func GetK8sDatastoreInfra(index K8sInfraIndex) (*K8sDatastoreInfra, error) {

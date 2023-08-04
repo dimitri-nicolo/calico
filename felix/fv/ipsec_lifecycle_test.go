@@ -24,8 +24,8 @@ import (
 var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 
 	var (
-		infra   infrastructure.DatastoreInfra
-		felixes []*infrastructure.Felix
+		infra infrastructure.DatastoreInfra
+		tc    infrastructure.TopologyContainers
 		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
@@ -45,7 +45,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 		topologyOptions.ExtraEnvVars["FELIX_IPSECREKEYTIME"] = "20"
 		topologyOptions.IPIPEnabled = false
 
-		felixes, _, _ = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
+		tc, _ = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
@@ -54,18 +54,18 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 		for ii := range w {
 			wIP := fmt.Sprintf("10.65.%d.2", ii)
 			wName := fmt.Sprintf("w%d", ii)
-			w[ii] = workload.Run(felixes[ii], wName, "default", wIP, "8055", "udp")
+			w[ii] = workload.Run(tc.Felixes[ii], wName, "default", wIP, "8055", "udp")
 			w[ii].ConfigureInInfra(infra)
 
-			hostW[ii] = workload.Run(felixes[ii], fmt.Sprintf("host%d", ii), "", felixes[ii].IP, "8055", "udp")
+			hostW[ii] = workload.Run(tc.Felixes[ii], fmt.Sprintf("host%d", ii), "", tc.Felixes[ii].IP, "8055", "udp")
 		}
 
 		// Wait for Felix to program the IPsec policy.  Otherwise, we might see some unencrypted traffic at
 		// start-of-day.  There's not much we can do about that in general since we don't know the workload's IP
 		// to blacklist it until we hear about the workload.
 		const numPoliciesPerWep = 3
-		for i, f := range felixes {
-			for j := range felixes {
+		for i, f := range tc.Felixes {
+			for j := range tc.Felixes {
 				if i == j {
 					continue
 				}
@@ -88,7 +88,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			utils.Run("docker", "ps", "-a")
-			for _, felix := range felixes {
+			for _, felix := range tc.Felixes {
 				felix.Exec("swanctl", "--list-sas")
 				felix.Exec("ip", "-s", "xfrm", "state")
 				felix.Exec("ip", "-s", "xfrm", "policy")
@@ -101,9 +101,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 		for _, wl := range hostW {
 			wl.Stop()
 		}
-		for _, felix := range felixes {
-			felix.Stop()
-		}
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
@@ -138,7 +136,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 		// happen to start their IKE exchange at the same time.
 		var startSPIs []string
 		Eventually(func() []string {
-			startSPIs = getDestSPIs(felixes[0], felixes[1])
+			startSPIs = getDestSPIs(tc.Felixes[0], tc.Felixes[1])
 			return startSPIs
 		}, "10s").Should(Or(HaveLen(1), HaveLen(2)))
 
@@ -148,14 +146,14 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 		cc.ExpectLoss(w[0], w[1], 30*time.Second, -1, 50)
 		cc.CheckConnectivity()
 
-		endSPIs := getDestSPIs(felixes[0], felixes[1])
+		endSPIs := getDestSPIs(tc.Felixes[0], tc.Felixes[1])
 		for _, s := range startSPIs {
 			Expect(endSPIs).NotTo(ContainElement(s), fmt.Sprintf("Expected SA with SPI %s to have been removed after rekey", s))
 		}
 	})
 
 	It("Felix should restart if charon daemon exits", func() {
-		felix := felixes[0]
+		felix := tc.Felixes[0]
 
 		// Get felix/charon's PID so we can check that it restarts...
 		felixPID := felix.GetFelixPID()
