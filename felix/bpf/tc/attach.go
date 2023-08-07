@@ -143,7 +143,7 @@ func (ap *AttachPoint) AttachProgram() (bpf.AttachResult, error) {
 	if ap.Type == tcdefs.EpTypeWorkload {
 		l, err := netlink.LinkByName(ap.Iface)
 		if err != nil {
-			return -1, err
+			return nil, err
 		}
 		ap.VethNS = uint16(l.Attrs().NetNsID)
 	}
@@ -213,7 +213,7 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 		return fmt.Errorf("error loading program %v", err)
 	}
 
-	_, err = obj.AttachClassifier("calico_tcp_stats", ifaceName, true)
+	_, _, _, err = obj.AttachClassifier("calico_tcp_stats", ifaceName, true)
 	return err
 }
 

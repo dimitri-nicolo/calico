@@ -1833,11 +1833,6 @@ func (m *bpfEndpointManager) wepTCAttachPoint(ifaceName string, policyIdx, filte
 	ap.EnableTCPStats = m.enableTcpStats
 	ap.EGWVxlanPort = m.egwVxlanPort
 	ap.EgressIPEnabled = m.egIPEnabled
-	if endpoint != nil {
-		ap.IsEgressGateway = endpoint.IsEgressGateway
-		ap.IsEgressClient = len(endpoint.EgressGatewayRules) > 0
-		ap.EgressGatewayHealthPort = uint16(endpoint.EgressGatewayHealthPort)
-	}
 	if !m.isEgressProgrammingCorrect(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient) {
 		log.WithField("iface", ap.Iface).Infof(
 			"Will reapply BPF program because egress gateway state has changed (client %v gateway %v)",
