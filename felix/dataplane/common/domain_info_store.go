@@ -747,14 +747,12 @@ func (s *DomainInfoStore) readMappingsV2(scanner *bufio.Scanner) error {
 	if !scanner.Scan() {
 		return fmt.Errorf("failed to read v2 file header: %w", scanner.Err())
 	}
-	headerLine := scanner.Text()
-	log.Infof("v2 file header line is: %v", headerLine)
+	log.Infof("v2 file header line is: %v", scanner.Text())
 
 	// Parse the header.
 	var v2FileHeader v2FileHeader
-	d := json.NewDecoder(strings.NewReader(headerLine))
-	if err := d.Decode(&v2FileHeader); err != nil {
-		return fmt.Errorf("failed to parse v2 file header '%q': %w", headerLine, err)
+	if err := json.Unmarshal(scanner.Bytes(), &v2FileHeader); err != nil {
+		return fmt.Errorf("failed to parse v2 file header '%q': %w", scanner.Text(), err)
 	}
 	log.Infof("Decoded v2 file header as %#v", v2FileHeader)
 
