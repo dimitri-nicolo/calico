@@ -77,7 +77,7 @@ func getDNSLogs(logFile string) ([]string, error) {
 var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	var (
 		etcd        *containers.Container
-		felix       *infrastructure.Felix
+		tc          infrastructure.TopologyContainers
 		client      client.Interface
 		infra       infrastructure.DatastoreInfra
 		w           [1]*workload.Workload
@@ -114,7 +114,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	}
 
 	hostWgetMicrosoftErr := func() error {
-		out, err := felix.ExecCombinedOutput("test-dns", "-", "microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+		out, err := tc.Felixes[0].ExecCombinedOutput("test-dns", "-", "microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
 		return logAndReport(out, err)
 	}
 
@@ -185,18 +185,18 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		// Tests in this file require a node IP, so that Felix can attach a BPF program to
 		// host interfaces.
 		opts.NeedNodeIP = true
-		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		// Create a workload, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
-			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			w[ii] = workload.Run(tc.Felixes[0], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
 		}
 
 		// Allow workloads to connect out to the Internet.
-		felix.Exec(
+		tc.Felixes[0].Exec(
 			"iptables", "-w", "-t", "nat",
 			"-A", "POSTROUTING",
 			"-o", "eth0",
@@ -207,16 +207,16 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	// Stop etcd and workloads, collecting some state if anything failed.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			felix.Exec("calico-bpf", "ipsets", "dump", "--debug")
-			felix.Exec("ipset", "list")
-			felix.Exec("iptables-save", "-c")
-			felix.Exec("ip", "r")
+			tc.Felixes[0].Exec("calico-bpf", "ipsets", "dump", "--debug")
+			tc.Felixes[0].Exec("ipset", "list")
+			tc.Felixes[0].Exec("iptables-save", "-c")
+			tc.Felixes[0].Exec("ip", "r")
 		}
 
 		for ii := range w {
 			w[ii].Stop()
 		}
-		felix.Stop()
+		tc.Stop()
 		if saveFileMappedOutsideContainer {
 			Eventually(path.Join(dnsDir, "dnsinfo.txt"), "10s", "1s").Should(BeARegularFile())
 		}
@@ -259,7 +259,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				hep := api.NewHostEndpoint()
 				hep.Name = "felix-eth0"
 				hep.Labels = map[string]string{"host-endpoint": "yes"}
-				hep.Spec.Node = felix.Hostname
+				hep.Spec.Node = tc.Felixes[0].Hostname
 				hep.Spec.InterfaceName = "eth0"
 				_, err := client.HostEndpoints().Create(utils.Ctx, hep, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
@@ -413,7 +413,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			JustBeforeEach(func() {
 				hep := api.NewHostEndpoint()
 				hep.Name = "hep-1"
-				hep.Spec.Node = felix.Hostname
+				hep.Spec.Node = tc.Felixes[0].Hostname
 				hep.Spec.InterfaceName = "eth0"
 				_, err := client.HostEndpoints().Create(utils.Ctx, hep, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
@@ -447,7 +447,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				// Helper used to check iptables contains the correct entries based on DNSPolicyMode and eBPF.
 				checkIPTablesFunc := func(nfq100, nfq101 bool) func() error {
 					return func() error {
-						iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
+						iptablesSaveOutput, err := tc.Felixes[0].ExecCombinedOutput("iptables-save", "-c")
 						if err != nil {
 							return err
 						}
@@ -843,7 +843,7 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 	var (
 		dnsserver *containers.Container
 		etcd      *containers.Container
-		felix     *infrastructure.Felix
+		tc        infrastructure.TopologyContainers
 		client    client.Interface
 		infra     infrastructure.DatastoreInfra
 		workload1 *workload.Workload
@@ -870,14 +870,14 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DEBUGDNSRESPONSEDELAY"] = "200"
 		opts.ExtraEnvVars["FELIX_DebugConsoleEnabled"] = "true"
-		felix, _, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
-		workload1 = workload.Run(felix, workload1Name, "default", workload1IP, "8055", "tcp")
+		workload1 = workload.Run(tc.Felixes[0], workload1Name, "default", workload1IP, "8055", "tcp")
 		workload1.ConfigureInInfra(infra)
 		workloads = append(workloads, workload1)
 
-		workload2 = workload.Run(felix, workload2Name, "default", workload2IP, "8055", "udp")
+		workload2 = workload.Run(tc.Felixes[0], workload2Name, "default", workload2IP, "8055", "udp")
 		workload2.ConfigureInInfra(infra)
 		workloads = append(workloads, workload2)
 
@@ -911,7 +911,7 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Allow workloads to connect out to the Internet.
-		felix.Exec(
+		tc.Felixes[0].Exec(
 			"iptables", "-w", "-t", "nat",
 			"-A", "POSTROUTING",
 			"-o", "eth0",
@@ -919,18 +919,18 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		)
 
 		// Ensure that Felix is connected to nfqueue
-		_, err = felix.ExecCombinedOutput("cat", "/proc/net/netfilter/nfnetlink_queue")
+		_, err = tc.Felixes[0].ExecCombinedOutput("cat", "/proc/net/netfilter/nfnetlink_queue")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	// Stop etcd and workloads, collecting some state if anything failed.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			felix.Exec("calico-bpf", "ipsets", "dump")
-			felix.Exec("ipset", "list")
-			felix.Exec("iptables-save", "-c")
-			felix.Exec("ip", "r")
-			felix.Exec("conntrack", "-L")
+			tc.Felixes[0].Exec("calico-bpf", "ipsets", "dump")
+			tc.Felixes[0].Exec("ipset", "list")
+			tc.Felixes[0].Exec("iptables-save", "-c")
+			tc.Felixes[0].Exec("ip", "r")
+			tc.Felixes[0].Exec("conntrack", "-L")
 		}
 
 		for ii := range workloads {
@@ -938,7 +938,7 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		}
 		workloads = nil
 
-		felix.Stop()
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
@@ -955,18 +955,18 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 				Name: fmt.Sprintf("%s/default.%s", policy.Namespace, policy.Name),
 			})
 
-			waitForIptablesChain(felix, policyChainName)
+			waitForIptablesChain(tc.Felixes[0], policyChainName)
 
 			output, err := checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)
 			Expect(err).ShouldNot(HaveOccurred(), output)
 
 			// Check that we hit the NFQUEUE rule at least once, to prove the packet was NF_REPEATED at least once before
 			// being accepted.
-			nfqueuedPacketsCount := getIptablesSavePacketCount(felix,
+			nfqueuedPacketsCount := getIptablesSavePacketCount(tc.Felixes[0],
 				fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^\n]*NFQUEUE.*")
 			Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
 
-			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(felix, policyChainName, "rule-name=allow-foobar[^\n]*cali40d")
+			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(tc.Felixes[0], policyChainName, "rule-name=allow-foobar[^\n]*cali40d")
 			Expect(dnsPolicyRulePacketsAllowed).Should(Equal(1))
 		})
 
@@ -977,9 +977,9 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 					Name: fmt.Sprintf("%s/default.%s", policy.Namespace, policy.Name),
 				})
 
-				waitForIptablesChain(felix, policyChainName)
+				waitForIptablesChain(tc.Felixes[0], policyChainName)
 
-				output, err := felix.RunDebugConsoleCommand("close-nfqueue-conn")
+				output, err := tc.Felixes[0].RunDebugConsoleCommand("close-nfqueue-conn")
 				Expect(err).ShouldNot(HaveOccurred(), output)
 
 				output = ""
@@ -990,11 +990,11 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 
 				// Check that we hit the NFQUEUE rule at least once, to prove the packet was NF_REPEATED at least once before
 				// being accepted.
-				nfqueuedPacketsCount := getIptablesSavePacketCount(felix,
+				nfqueuedPacketsCount := getIptablesSavePacketCount(tc.Felixes[0],
 					fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^\n]*NFQUEUE.*")
 				Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
 
-				dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(felix, policyChainName, "rule-name=allow-foobar[^\n]*cali40d")
+				dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(tc.Felixes[0], policyChainName, "rule-name=allow-foobar[^\n]*cali40d")
 				Expect(dnsPolicyRulePacketsAllowed).Should(Equal(1))
 			})
 		})

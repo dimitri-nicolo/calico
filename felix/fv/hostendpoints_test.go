@@ -53,8 +53,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 	var (
 		bpfEnabled       = os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
 		infra            infrastructure.DatastoreInfra
-		felixes          []*infrastructure.Felix
-		typha            *infrastructure.Typha
+		tc               infrastructure.TopologyContainers
 		client           client.Interface
 		w                [2]*workload.Workload
 		hostW            [2]*workload.Workload
@@ -68,18 +67,18 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 		options := infrastructure.DefaultTopologyOptions()
 		options.IPIPEnabled = false
 		options.WithTypha = true
-		felixes, typha, client = infrastructure.StartNNodeTopology(2, options, infra)
+		tc, client = infrastructure.StartNNodeTopology(2, options, infra)
 
 		// Create workloads, using that profile. One on each "host".
 		for ii := range w {
 			wIP := fmt.Sprintf("10.65.%d.2", ii)
 			wName := fmt.Sprintf("w%d", ii)
-			w[ii] = workload.Run(felixes[ii], wName, "default", wIP, "8055", "tcp")
+			w[ii] = workload.Run(tc.Felixes[ii], wName, "default", wIP, "8055", "tcp")
 			w[ii].ConfigureInInfra(infra)
 
-			hostW[ii] = workload.Run(felixes[ii], fmt.Sprintf("host%d", ii), "", felixes[ii].IP, "8055", "tcp")
-			rawIPHostW253[ii] = workload.Run(felixes[ii], fmt.Sprintf("raw-host%d", ii), "", felixes[ii].IP, "", "ip4:253")
-			rawIPHostW254[ii] = workload.Run(felixes[ii], fmt.Sprintf("raw-host%d", ii), "", felixes[ii].IP, "", "ip4:254")
+			hostW[ii] = workload.Run(tc.Felixes[ii], fmt.Sprintf("host%d", ii), "", tc.Felixes[ii].IP, "8055", "tcp")
+			rawIPHostW253[ii] = workload.Run(tc.Felixes[ii], fmt.Sprintf("raw-host%d", ii), "", tc.Felixes[ii].IP, "", "ip4:253")
+			rawIPHostW254[ii] = workload.Run(tc.Felixes[ii], fmt.Sprintf("raw-host%d", ii), "", tc.Felixes[ii].IP, "", "ip4:254")
 		}
 
 		cc = &connectivity.Checker{}
@@ -89,7 +88,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range felixes {
+			for _, felix := range tc.Felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -103,10 +102,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 		for _, wl := range hostW {
 			wl.Stop()
 		}
-		for _, felix := range felixes {
-			felix.Stop()
-		}
-		typha.Stop()
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
@@ -115,31 +111,31 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 	})
 
 	expectHostToHostTraffic := func() {
-		cc.ExpectSome(felixes[0], hostW[1])
-		cc.ExpectSome(felixes[1], hostW[0])
+		cc.ExpectSome(tc.Felixes[0], hostW[1])
+		cc.ExpectSome(tc.Felixes[1], hostW[0])
 	}
 	expectHostToOtherPodTraffic := func() {
 		// host to other pod
-		cc.ExpectSome(felixes[0], w[1])
-		cc.ExpectSome(felixes[1], w[0])
+		cc.ExpectSome(tc.Felixes[0], w[1])
+		cc.ExpectSome(tc.Felixes[1], w[0])
 	}
 	expectHostToOwnPodTraffic := func() {
 		// host to own pod always allowed
-		cc.ExpectSome(felixes[0], w[0])
-		cc.ExpectSome(felixes[1], w[1])
+		cc.ExpectSome(tc.Felixes[0], w[0])
+		cc.ExpectSome(tc.Felixes[1], w[1])
 	}
 	expectHostToOwnPodViaServiceTraffic := func() {
 		port := 8055
 		tgtPort := 8055
 		// host to own pod always allowed, even via a service IP
-		for i := range felixes {
+		for i := range tc.Felixes {
 			// Allocate a service IP.
 			serviceIP := fmt.Sprintf("10.101.0.%v", i+20)
 			svcName := fmt.Sprintf("test-svc-%v", i+20)
 
 			createK8sServiceWithoutKubeProxy(createK8sServiceWithoutKubeProxyArgs{
 				infra:     infra,
-				felix:     felixes[i],
+				felix:     tc.Felixes[i],
 				w:         w[i],
 				svcName:   svcName,
 				serviceIP: serviceIP,
@@ -150,7 +146,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			})
 
 			// Expect connectivity to the service IP.
-			cc.ExpectSome(felixes[i], connectivity.TargetIP(serviceIP), uint16(port))
+			cc.ExpectSome(tc.Felixes[i], connectivity.TargetIP(serviceIP), uint16(port))
 		}
 	}
 
@@ -158,14 +154,14 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 		port := 8055
 		tgtPort := 8055
 		// host to remote pod always denied, even via a service IP
-		for i := range felixes {
+		for i := range tc.Felixes {
 			// Allocate a service IP.
 			serviceIP := fmt.Sprintf("10.101.10.%v", i+10)
 			svcName := fmt.Sprintf("test-svc-%v", i+10)
 
 			createK8sServiceWithoutKubeProxy(createK8sServiceWithoutKubeProxyArgs{
 				infra:     infra,
-				felix:     felixes[i],
+				felix:     tc.Felixes[i],
 				w:         w[1-i],
 				svcName:   svcName,
 				serviceIP: serviceIP,
@@ -176,7 +172,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			})
 
 			// Expect not to be able to connect to the service IP.
-			cc.ExpectNone(felixes[i], connectivity.TargetIP(serviceIP), uint16(port))
+			cc.ExpectNone(tc.Felixes[i], connectivity.TargetIP(serviceIP), uint16(port))
 		}
 	}
 
@@ -188,13 +184,13 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 	expectLocalPodToRemotePodViaServiceTraffic := func() {
 		port := 8055
 		tgtPort := 8055
-		for i := range felixes {
+		for i := range tc.Felixes {
 			// Allocate a service IP.
 			serviceIP := fmt.Sprintf("10.101.10.%v", i)
 			svcName := fmt.Sprintf("test-svc-%v", i)
 			createK8sServiceWithoutKubeProxy(createK8sServiceWithoutKubeProxyArgs{
 				infra:     infra,
-				felix:     felixes[i],
+				felix:     tc.Felixes[i],
 				w:         w[1-i],
 				svcName:   svcName,
 				serviceIP: serviceIP,
@@ -210,23 +206,23 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 	}
 
 	expectDenyHostToHostTraffic := func() {
-		cc.ExpectNone(felixes[0], hostW[1])
-		cc.ExpectNone(felixes[1], hostW[0])
+		cc.ExpectNone(tc.Felixes[0], hostW[1])
+		cc.ExpectNone(tc.Felixes[1], hostW[0])
 	}
 	expectDenyHostToOtherPodTraffic := func() {
-		cc.ExpectNone(felixes[0], w[1])
-		cc.ExpectNone(felixes[1], w[0])
+		cc.ExpectNone(tc.Felixes[0], w[1])
+		cc.ExpectNone(tc.Felixes[1], w[0])
 	}
 	expectConnectivityToAPIServer := func() {
 		ip := connectivity.TargetIP(infra.(*infrastructure.K8sDatastoreInfra).EndpointIP)
-		cc.ExpectSome(felixes[0], ip, 6443)
-		cc.ExpectSome(felixes[1], ip, 6443)
+		cc.ExpectSome(tc.Felixes[0], ip, 6443)
+		cc.ExpectSome(tc.Felixes[1], ip, 6443)
 	}
 	expectConnectivityToTypha := func() {
-		typhaIP1 := connectivity.TargetIP(felixes[0].TyphaIP)
-		typhaIP2 := connectivity.TargetIP(felixes[1].TyphaIP)
-		cc.ExpectSome(felixes[0], typhaIP1, 5473)
-		cc.ExpectSome(felixes[1], typhaIP2, 5473)
+		typhaIP1 := connectivity.TargetIP(tc.Felixes[0].TyphaIP)
+		typhaIP2 := connectivity.TargetIP(tc.Felixes[1].TyphaIP)
+		cc.ExpectSome(tc.Felixes[0], typhaIP1, 5473)
+		cc.ExpectSome(tc.Felixes[1], typhaIP2, 5473)
 	}
 
 	Context("_BPF-SAFE_ with no policies and no profiles on the host endpoints", func() {
@@ -235,7 +231,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			// Install a default profile that allows all pod ingress and egress, in the absence of any policy.
 			infra.AddDefaultAllow()
 
-			for _, f := range felixes {
+			for _, f := range tc.Felixes {
 				hep := api.NewHostEndpoint()
 				hep.Name = "hep-" + f.Name
 				hep.Labels = map[string]string{
@@ -265,10 +261,10 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 		})
 
 		It("should block raw IP", func() {
-			cc253.Expect(connectivity.None, felixes[0], rawIPHostW253[1])
-			cc253.Expect(connectivity.None, felixes[1], rawIPHostW253[0])
-			cc254.Expect(connectivity.None, felixes[0], rawIPHostW254[1])
-			cc254.Expect(connectivity.None, felixes[1], rawIPHostW254[0])
+			cc253.Expect(connectivity.None, tc.Felixes[0], rawIPHostW253[1])
+			cc253.Expect(connectivity.None, tc.Felixes[1], rawIPHostW253[0])
+			cc254.Expect(connectivity.None, tc.Felixes[0], rawIPHostW254[1])
+			cc254.Expect(connectivity.None, tc.Felixes[1], rawIPHostW254[0])
 			cc253.CheckConnectivity()
 			cc254.CheckConnectivity()
 		})
@@ -304,7 +300,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			cc.CheckConnectivity()
 		})
 
-		It("should allow felixes[0] => felixes[1] traffic if ingress and egress policies are in place", func() {
+		It("should allow containers.Felix[0] => containers.Felix[1] traffic if ingress and egress policies are in place", func() {
 			// Create a "security" tier.  We had a bug in Enterprise Felix that wrongly
 			// hardcoded the "default" tier name, and most of the tests in this file use
 			// "default" because of having originated in OSS.  This test is modified to
@@ -320,17 +316,17 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			policy.Name = "security.f0-egress"
 			policy.Spec.Tier = "security"
 			policy.Spec.Egress = []api.Rule{{Action: api.Allow}}
-			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felixes[0].Hostname)
+			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", tc.Felixes[0].Hostname)
 			_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
 			// But no policy allowing ingress into felix[1].
-			cc.ExpectNone(felixes[0], hostW[1])
+			cc.ExpectNone(tc.Felixes[0], hostW[1])
 
-			// No policy allowing egress from felixes[1] nor ingress into
-			// felixes[0]
-			cc.ExpectNone(felixes[1], w[0])
-			cc.ExpectNone(felixes[1], hostW[0])
+			// No policy allowing egress from containers.Felix[1] nor ingress into
+			// containers.Felix[0]
+			cc.ExpectNone(tc.Felixes[1], w[0])
+			cc.ExpectNone(tc.Felixes[1], hostW[0])
 
 			expectPodToPodTraffic()
 			expectHostToOwnPodTraffic()
@@ -339,8 +335,8 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 
 			// Should block raw IP too.
 			By("Blocking raw IP from felix[0] <-> felix[1]")
-			cc253.Expect(connectivity.None, felixes[0], rawIPHostW253[1])
-			cc253.Expect(connectivity.None, felixes[1], rawIPHostW253[0])
+			cc253.Expect(connectivity.None, tc.Felixes[0], rawIPHostW253[1])
+			cc253.Expect(connectivity.None, tc.Felixes[1], rawIPHostW253[0])
 			cc253.CheckConnectivity()
 			cc253.ResetExpectations()
 
@@ -349,15 +345,15 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			policy.Name = "security.f1-ingress"
 			policy.Spec.Tier = "security"
 			policy.Spec.Ingress = []api.Rule{{Action: api.Allow}}
-			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felixes[1].Hostname)
+			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", tc.Felixes[1].Hostname)
 			policy, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
-			// Now felixes[0] can reach felixes[1].
-			cc.ExpectSome(felixes[0], hostW[1])
+			// Now containers.Felix[0] can reach containers.Felix[1].
+			cc.ExpectSome(tc.Felixes[0], hostW[1])
 
 			// But not traffic the other way.
-			cc.ExpectNone(felixes[1], hostW[0])
+			cc.ExpectNone(tc.Felixes[1], hostW[0])
 
 			expectPodToPodTraffic()
 			expectHostToOwnPodTraffic()
@@ -365,12 +361,12 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 
 			// Need to test this first because the conntrack is symmetric for portless protocols.
 			By("Blocking raw IP from felix[1] -> felix[0]")
-			cc253.Expect(connectivity.None, felixes[1], rawIPHostW253[0])
+			cc253.Expect(connectivity.None, tc.Felixes[1], rawIPHostW253[0])
 			cc253.CheckConnectivity()
 			cc253.ResetExpectations()
 
 			By("Allowing raw IP from felix[0] -> felix[1]")
-			cc253.Expect(connectivity.Some, felixes[0], rawIPHostW253[1])
+			cc253.Expect(connectivity.Some, tc.Felixes[0], rawIPHostW253[1])
 			cc253.CheckConnectivity()
 
 			// Change the f1-ingress policy to Deny.
@@ -378,9 +374,9 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			_, err = client.GlobalNetworkPolicies().Update(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
-			// Now felixes[0] should NOT be able to reach felixes[1].
+			// Now containers.Felix[0] should NOT be able to reach containers.Felix[1].
 			cc.ResetExpectations()
-			cc.ExpectNone(felixes[0], hostW[1])
+			cc.ExpectNone(tc.Felixes[0], hostW[1])
 			cc.CheckConnectivity()
 		})
 
@@ -393,18 +389,18 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 				Action:   api.Allow,
 				Protocol: &proto253,
 			}}
-			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felixes[0].Hostname)
+			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", tc.Felixes[0].Hostname)
 			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Should block all raw IP until we have the second policy in place.
 			By("Blocking raw IP from felix[0] <-> felix[1]")
-			cc253.Expect(connectivity.None, felixes[0], rawIPHostW253[1])
-			cc253.Expect(connectivity.None, felixes[1], rawIPHostW253[0])
+			cc253.Expect(connectivity.None, tc.Felixes[0], rawIPHostW253[1])
+			cc253.Expect(connectivity.None, tc.Felixes[1], rawIPHostW253[0])
 			cc253.CheckConnectivity()
 			cc253.ResetExpectations()
-			cc254.Expect(connectivity.None, felixes[0], rawIPHostW254[1])
-			cc254.Expect(connectivity.None, felixes[1], rawIPHostW254[0])
+			cc254.Expect(connectivity.None, tc.Felixes[0], rawIPHostW254[1])
+			cc254.Expect(connectivity.None, tc.Felixes[1], rawIPHostW254[0])
 			cc254.CheckConnectivity()
 
 			// Now add a policy selecting felix[1] that allows ingress.
@@ -414,14 +410,14 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 				Action:   api.Allow,
 				Protocol: &proto253,
 			}}
-			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felixes[1].Hostname)
+			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", tc.Felixes[1].Hostname)
 			_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
 			// One-way check because conntrack for unknown protocols is symmetric so, once the
 			// felix[0] -> felix[1] packet goes through, we expect felix[1] -> felix[0] to work too
 			// (and the connectivity checker always does a request-response to check that).
-			cc253.Expect(connectivity.Some, felixes[0], rawIPHostW253[1])
+			cc253.Expect(connectivity.Some, tc.Felixes[0], rawIPHostW253[1])
 			cc253.CheckConnectivity()
 
 			// 254 should still be blocked...
@@ -451,7 +447,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			// Install a default profile that allows all pod ingress and egress, in the absence of any policy.
 			defaultProfileName := infra.AddDefaultAllow()
 
-			for _, f := range felixes {
+			for _, f := range tc.Felixes {
 				hep := api.NewHostEndpoint()
 				hep.Name = "hep-" + f.Name
 				hep.Labels = map[string]string{
@@ -485,44 +481,44 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			policy := api.NewGlobalNetworkPolicy()
 			policy.Name = "f0-egress"
 			policy.Spec.Egress = []api.Rule{{Action: api.Deny}}
-			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felixes[0].Hostname)
+			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", tc.Felixes[0].Hostname)
 			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
-			// Egress from felixes[0] denied
-			cc.ExpectNone(felixes[0], hostW[1])
-			cc.ExpectNone(felixes[0], w[1])
+			// Egress from containers.Felix[0] denied
+			cc.ExpectNone(tc.Felixes[0], hostW[1])
+			cc.ExpectNone(tc.Felixes[0], w[1])
 
-			// Egress from felixes[1] allowed
-			cc.ExpectSome(felixes[1], hostW[0])
-			cc.ExpectSome(felixes[1], w[0])
+			// Egress from containers.Felix[1] allowed
+			cc.ExpectSome(tc.Felixes[1], hostW[0])
+			cc.ExpectSome(tc.Felixes[1], w[0])
 
 			expectHostToOwnPodTraffic()
 			expectPodToPodTraffic()
 			cc.CheckConnectivity()
 		})
 
-		Context("with a policy denying ingress on felixes[1]", func() {
+		Context("with a policy denying ingress on containers.Felix[1]", func() {
 			BeforeEach(func() {
 				// Create a policy selecting felix[1] that denies ingress.
 				policy := api.NewGlobalNetworkPolicy()
 				policy.Name = "f1-ingress"
 				policy.Spec.Ingress = []api.Rule{{Action: api.Deny}}
-				policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felixes[1].Hostname)
+				policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", tc.Felixes[1].Hostname)
 				_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should deny felixes[0] => felixes[1] traffic if policy denies ingress on felixes[1]", func() {
-				// Egress from felixes[1] is allowed
-				cc.ExpectSome(felixes[1], hostW[0])
-				cc.ExpectSome(felixes[1], w[0])
+				// Egress from containers.Felix[1] is allowed
+				cc.ExpectSome(tc.Felixes[1], hostW[0])
+				cc.ExpectSome(tc.Felixes[1], w[0])
 
-				// Ingress into felixes[1] denied
-				cc.ExpectNone(felixes[0], hostW[1])
+				// Ingress into containers.Felix[1] denied
+				cc.ExpectNone(tc.Felixes[0], hostW[1])
 
-				// Forwarded traffic to felixes[1] is allowed
-				cc.ExpectSome(felixes[0], w[1])
+				// Forwarded traffic to containers.Felix[1] is allowed
+				cc.ExpectSome(tc.Felixes[0], w[1])
 
 				expectHostToOwnPodTraffic()
 				expectPodToPodTraffic()
@@ -555,7 +551,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 				},
 			}
 			policy.Spec.Egress = []api.Rule{{Action: api.Allow}}
-			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felixes[1].Hostname)
+			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", tc.Felixes[1].Hostname)
 			policy.Spec.ApplyOnForward = true
 			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
@@ -564,16 +560,16 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			policy.Name = "aof-f0"
 			policy.Spec.Ingress = []api.Rule{{Action: api.Allow}}
 			policy.Spec.Egress = []api.Rule{{Action: api.Allow}}
-			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felixes[0].Hostname)
+			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", tc.Felixes[0].Hostname)
 			policy.Spec.ApplyOnForward = true
 			_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
-			// Ingress into felixes[1] denied
-			cc.ExpectNone(felixes[0], hostW[1])
+			// Ingress into containers.Felix[1] denied
+			cc.ExpectNone(tc.Felixes[0], hostW[1])
 
-			// Because of the AOF policy, forwarded traffic to felixes[1] is blocked.
-			cc.ExpectNone(felixes[0], w[1])
+			// Because of the AOF policy, forwarded traffic to containers.Felix[1] is blocked.
+			cc.ExpectNone(tc.Felixes[0], w[1])
 			cc.ExpectNone(w[0], w[1])
 
 			// Forwarded traffic the other way should be unaffected

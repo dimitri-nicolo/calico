@@ -670,7 +670,7 @@ func (c *L3RouteResolver) OnPoolUpdate(update api.Update) (_ bool) {
 	defer c.flush()
 
 	poolKey := getRemoteClusterAwareKeyString(update)
-	oldPool := c.allPools[poolKey]
+	oldPool, oldPoolExists := c.allPools[poolKey]
 	var newPool *l3rrPoolInfo
 	if update.Value != nil {
 		newPool = c.getPoolInfo(update)
@@ -683,7 +683,7 @@ func (c *L3RouteResolver) OnPoolUpdate(update api.Update) (_ bool) {
 		}).Info("Pool is active")
 		c.allPools[poolKey] = *newPool
 		c.trie.UpdatePool(newPool.CIDR, newPool.Cluster, newPool.PoolType, newPool.NATOutgoing, newPool.CrossSubnet, newPool.AWSSubnetID)
-	} else {
+	} else if oldPoolExists {
 		delete(c.allPools, poolKey)
 		c.trie.RemovePool(oldPool.CIDR, oldPool.Cluster)
 	}
@@ -759,6 +759,8 @@ func (c *L3RouteResolver) routesFromBlock(update api.Update) map[string]nodename
 			return make(map[string]nodenameRoute)
 		}
 		b = kvp.Value.(*model.AllocationBlock)
+	default:
+		logrus.WithField("key", k).Panic("Unexpected key type for Block update")
 	}
 
 	routes := make(map[string]nodenameRoute)

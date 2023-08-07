@@ -102,10 +102,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 
 	var (
 		infra             infrastructure.DatastoreInfra
+		tc                infrastructure.TopologyContainers
 		opts              infrastructure.TopologyOptions
 		useInvalidLicense bool
 		expectation       expectation
-		felixes           []*infrastructure.Felix
 		flowLogsReaders   []metrics.FlowLogReader
 		client            client.Interface
 		wlHost1           [4]*workload.Workload
@@ -129,16 +129,16 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 	})
 
 	JustBeforeEach(func() {
-		felixes, _, client = infrastructure.StartNNodeTopology(2, opts, infra)
+		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
 		if useInvalidLicense {
 			var felixPIDs []int
-			for _, f := range felixes {
+			for _, f := range tc.Felixes {
 				felixPIDs = append(felixPIDs, f.GetFelixPID())
 			}
 			infrastructure.ApplyExpiredLicense(client)
 			// Wait for felix to restart so we don't accidentally generate a flow log before the license takes effect.
-			for i, f := range felixes {
+			for i, f := range tc.Felixes {
 				Eventually(f.GetFelixPID, "10s", "100ms").ShouldNot(Equal(felixPIDs[i]))
 			}
 		}
@@ -150,7 +150,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		for ii := range wlHost1 {
 			wIP := fmt.Sprintf("10.65.0.%d", ii)
 			wName := fmt.Sprintf("wl-host1-%d", ii)
-			wlHost1[ii] = workload.Run(felixes[0], wName, "default", wIP, "8055", "tcp")
+			wlHost1[ii] = workload.Run(tc.Felixes[0], wName, "default", wIP, "8055", "tcp")
 			wlHost1[ii].WorkloadEndpoint.GenerateName = "wl-host1-"
 			wlHost1[ii].ConfigureInInfra(infra)
 		}
@@ -159,20 +159,20 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		for ii := range wlHost2 {
 			wIP := fmt.Sprintf("10.65.1.%d", ii)
 			wName := fmt.Sprintf("wl-host2-%d", ii)
-			wlHost2[ii] = workload.Run(felixes[1], wName, "default", wIP, "8055", "tcp")
+			wlHost2[ii] = workload.Run(tc.Felixes[1], wName, "default", wIP, "8055", "tcp")
 			wlHost2[ii].WorkloadEndpoint.GenerateName = "wl-host2-"
 			wlHost2[ii].ConfigureInInfra(infra)
 		}
 
 		// Create a non-workload server on each host.
 		for ii := range hostW {
-			hostW[ii] = workload.Run(felixes[ii], fmt.Sprintf("host%d", ii), "", felixes[ii].IP, "8055", "tcp")
+			hostW[ii] = workload.Run(tc.Felixes[ii], fmt.Sprintf("host%d", ii), "", tc.Felixes[ii].IP, "8055", "tcp")
 		}
 
 		// Create a GlobalNetworkSet that includes host 1's IP.
 		ns := api.NewGlobalNetworkSet()
 		ns.Name = "ns-1"
-		ns.Spec.Nets = []string{felixes[0].IP + "/32"}
+		ns.Spec.Nets = []string{tc.Felixes[0].IP + "/32"}
 		ns.Labels = map[string]string{
 			"ips-for": "host1",
 		}
@@ -238,20 +238,20 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			"name":          hep.Name,
 			"host-endpoint": "true",
 		}
-		hep.Spec.Node = felixes[1].Hostname
-		hep.Spec.ExpectedIPs = []string{felixes[1].IP}
+		hep.Spec.Node = tc.Felixes[1].Hostname
+		hep.Spec.ExpectedIPs = []string{tc.Felixes[1].IP}
 		_, err = client.HostEndpoints().Create(utils.Ctx, hep, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		if BPFMode() {
-			ensureAllNodesBPFProgramsAttached(felixes)
+			ensureAllNodesBPFProgramsAttached(tc.Felixes)
 		}
 
 		hostEndpointProgrammed := func() bool {
 			if BPFMode() {
-				return felixes[1].NumTCBPFProgsEth0() == 2
+				return tc.Felixes[1].NumTCBPFProgsEth0() == 2
 			} else {
-				out, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
+				out, err := tc.Felixes[1].ExecOutput("iptables-save", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
 				return (strings.Count(out, "cali-thfw-eth0") > 0)
 			}
@@ -260,9 +260,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			"Expected HostEndpoint iptables rules to appear")
 		if !BPFMode() {
 			rulesProgrammed := func() bool {
-				out0, err := felixes[0].ExecOutput("iptables-save", "-t", "filter")
+				out0, err := tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
-				out1, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
+				out1, err := tc.Felixes[1].ExecOutput("iptables-save", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
 				if strings.Count(out0, "ARE0|default") == 0 {
 					return false
@@ -279,16 +279,16 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				"Expected iptables rules to appear on the correct felix instances")
 		} else {
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(felixes[1], "eth0", "egress", "default.gnp-1", "allow", false)
+				return bpfCheckIfPolicyProgrammed(tc.Felixes[1], "eth0", "egress", "default.gnp-1", "allow", false)
 			}, "5s", "200ms").Should(BeTrue())
 
 			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(felixes[1], "eth0", "ingress", "default.gnp-1", "allow", false)
+				return bpfCheckIfPolicyProgrammed(tc.Felixes[1], "eth0", "ingress", "default.gnp-1", "allow", false)
 			}, "5s", "200ms").Should(BeTrue())
 
 			if !applyOnForwardSupported {
 				Eventually(func() bool {
-					return bpfCheckIfPolicyProgrammed(felixes[1], wlHost2[1].InterfaceName, "ingress", "default/default.np-1", "deny", true)
+					return bpfCheckIfPolicyProgrammed(tc.Felixes[1], wlHost2[1].InterfaceName, "ingress", "default/default.np-1", "deny", true)
 				}, "5s", "200ms").Should(BeTrue())
 			}
 		}
@@ -308,38 +308,38 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 
 		// Do 3 rounds of connectivity checking.
 		cc.CheckConnectivity()
-		for ii := range felixes {
-			felixes[ii].Exec("conntrack", "-L")
+		for ii := range tc.Felixes {
+			tc.Felixes[ii].Exec("conntrack", "-L")
 		}
 		cc.CheckConnectivity()
-		for ii := range felixes {
-			felixes[ii].Exec("conntrack", "-L")
+		for ii := range tc.Felixes {
+			tc.Felixes[ii].Exec("conntrack", "-L")
 		}
 		cc.CheckConnectivity()
-		for ii := range felixes {
-			felixes[ii].Exec("conntrack", "-L")
+		for ii := range tc.Felixes {
+			tc.Felixes[ii].Exec("conntrack", "-L")
 		}
 
 		if bpfEnabled {
 			// Make sure that conntrack scanning ticks at least once
 			time.Sleep(3 * conntrack.ScanPeriod)
 		} else {
-			// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
+			// Allow 6 seconds for the containers.Felix to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
 			// 10% leeway over the polling jitter of 10%)
 			time.Sleep(6 * time.Second)
 		}
 
 		// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.  This will allow the flows
 		// to expire quickly.
-		for ii := range felixes {
-			felixes[ii].Exec("conntrack", "-F")
+		for ii := range tc.Felixes {
+			tc.Felixes[ii].Exec("conntrack", "-F")
 		}
-		for ii := range felixes {
-			felixes[ii].Exec("conntrack", "-L")
+		for ii := range tc.Felixes {
+			tc.Felixes[ii].Exec("conntrack", "-L")
 		}
 
 		flowLogsReaders = []metrics.FlowLogReader{}
-		for _, f := range felixes {
+		for _, f := range tc.Felixes {
 			flowLogsReaders = append(flowLogsReaders, f)
 		}
 	})
@@ -548,7 +548,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 
 				err = flowTester.CheckFlow(
 					"wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP,
-					"hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP,
+					"hep - host2-eth0 "+tc.Felixes[1].Hostname, tc.Felixes[1].IP,
 					metrics.NoService, 3, 1,
 					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
@@ -561,7 +561,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				if networkSetIPsSupported {
 					err = flowTester.CheckFlow(
 						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
-						"ns - ns-1 ns-1", felixes[0].IP,
+						"ns - ns-1 ns-1", tc.Felixes[0].IP,
 						metrics.NoService, 3, 1,
 						[]metrics.ExpectedPolicy{
 							{}, // ""
@@ -570,7 +570,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				} else {
 					err = flowTester.CheckFlow(
 						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
-						"net - - pvt", felixes[0].IP,
+						"net - - pvt", tc.Felixes[0].IP,
 						metrics.NoService, 3, 1,
 						[]metrics.ExpectedPolicy{
 							{}, // ""
@@ -608,7 +608,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 
 				err = flowTester.CheckFlow(
 					"wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP,
-					"hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP,
+					"hep - host2-eth0 "+tc.Felixes[1].Hostname, tc.Felixes[1].IP,
 					metrics.NoService, 1, 3,
 					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow|0"}},
@@ -621,7 +621,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				if networkSetIPsSupported {
 					err = flowTester.CheckFlow(
 						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
-						"ns - ns-1 ns-1", felixes[0].IP,
+						"ns - ns-1 ns-1", tc.Felixes[0].IP,
 						metrics.NoService, 1, 3,
 						[]metrics.ExpectedPolicy{
 							{}, // ""
@@ -630,7 +630,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				} else {
 					err = flowTester.CheckFlow(
 						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
-						"net - - pvt", felixes[0].IP,
+						"net - - pvt", tc.Felixes[0].IP,
 						metrics.NoService, 1, 3,
 						[]metrics.ExpectedPolicy{
 							{}, // ""
@@ -673,7 +673,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 
 				err = flowTester.CheckFlow(
 					"wep default - wl-host1-*", "",
-					"hep - - "+felixes[1].Hostname, "",
+					"hep - - "+tc.Felixes[1].Hostname, "",
 					metrics.NoService, 1, 3, policies)
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; hep: %v", err))
@@ -905,7 +905,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				// Check at least twice and for at least 30s.
 				attempts := 0
 				for time.Now().Before(endTime) || attempts < 2 {
-					for _, f := range felixes {
+					for _, f := range tc.Felixes {
 						_, err := flowlogs.ReadFlowLogsFile(f.FlowLogDir())
 						Expect(err).To(BeAssignableToTypeOf(&os.PathError{}))
 					}
@@ -918,7 +918,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range felixes {
+			for _, felix := range tc.Felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -935,7 +935,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		for _, wl := range hostW {
 			wl.Stop()
 		}
-		for _, felix := range felixes {
+		for _, felix := range tc.Felixes {
 			if bpfEnabled {
 				felix.Exec("calico-bpf", "connect-time", "clean")
 			}
@@ -952,7 +952,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 var _ = infrastructure.DatastoreDescribe("nat outgoing flow log tests", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 	var (
 		infra  infrastructure.DatastoreInfra
-		felix  *infrastructure.Felix
+		tc     infrastructure.TopologyContainers
 		client client.Interface
 
 		workload1 *workload.Workload
@@ -968,7 +968,7 @@ var _ = infrastructure.DatastoreDescribe("nat outgoing flow log tests", []apicon
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
 
-		felix, client = infrastructure.StartSingleNodeTopology(opts, infra)
+		tc, client = infrastructure.StartSingleNodeTopology(opts, infra)
 
 		ctx := context.Background()
 
@@ -981,15 +981,15 @@ var _ = infrastructure.DatastoreDescribe("nat outgoing flow log tests", []apicon
 		ippool, err = client.IPPools().Create(ctx, ippool, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		workload1 = workload.Run(felix, "w1", "default", "10.244.255.1", "8055", "tcp")
+		workload1 = workload.Run(tc.Felixes[0], "w1", "default", "10.244.255.1", "8055", "tcp")
 		workload1.ConfigureInInfra(infra)
 
-		workload2 = workload.Run(felix, "w2", "default", "10.65.0.2", "8055", "tcp")
+		workload2 = workload.Run(tc.Felixes[0], "w2", "default", "10.65.0.2", "8055", "tcp")
 		workload2.ConfigureInInfra(infra)
 	})
 
 	AfterEach(func() {
-		felix.Stop()
+		tc.Stop()
 		infra.Stop()
 	})
 
@@ -1004,7 +1004,7 @@ var _ = infrastructure.DatastoreDescribe("nat outgoing flow log tests", []apicon
 		var flows []collector.FlowLog
 		var err error
 		Eventually(func() error {
-			flows, err = flowlogs.ReadFlowLogs(felix.FlowLogDir(), "file")
+			flows, err = flowlogs.ReadFlowLogs(tc.Felixes[0].FlowLogDir(), "file")
 			return err
 		}, "20s", "1s").ShouldNot(HaveOccurred())
 

@@ -36,6 +36,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf reattach object",
 
 	var (
 		infra infrastructure.DatastoreInfra
+		tc    infrastructure.TopologyContainers
 		felix *infrastructure.Felix
 	)
 
@@ -53,8 +54,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf reattach object",
 			IPv6PoolCIDR: infrastructure.DefaultIPv6PoolCIDR,
 		}
 
-		felixes, _, _ := infrastructure.StartNNodeTopology(1, opts, infra)
-		felix = felixes[0]
+		tc, _ = infrastructure.StartNNodeTopology(1, opts, infra)
+		felix = tc.Felixes[0]
 
 		err := infra.AddAllowToDatastore("host-endpoint=='true'")
 		Expect(err).NotTo(HaveOccurred())
@@ -65,7 +66,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf reattach object",
 			infra.DumpErrorData()
 		}
 
-		felix.Stop()
+		tc.Stop()
 		infra.Stop()
 	})
 
