@@ -188,7 +188,8 @@ func Run() {
 	// Allow setting this node's AS number and rack label(s) from an EarlyNetworkConfiguration
 	// mapped in at $CALICO_EARLY_NETWORKING.  Note that the "AS" environment variable can still
 	// override the AS number.
-	if needsNodeUpdate, err := configureBGPLayout(node); err != nil {
+	needsNodeUpdate, err := configureBGPLayout(node)
+	if err != nil {
 		log.WithError(err).Error("BGP layout configuration failed")
 		utils.Terminate()
 	}

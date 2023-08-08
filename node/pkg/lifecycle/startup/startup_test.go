@@ -1335,7 +1335,7 @@ var _ = Describe("BGP layout tests", func() {
 				file.Close()
 
 				// Call configuration function.
-				changed, err = configureBGPLayout(node)
+				changed, err := configureBGPLayout(node)
 				if expectError {
 					Expect(err).To(HaveOccurred())
 				} else {
