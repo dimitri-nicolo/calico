@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"time"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -15,16 +14,12 @@ import (
 
 var _ = Describe("WAF event cache", func() {
 	var (
-		wafLog   v1.WAFLog
-		rawLog   []byte
-		wafCache WafEventsCache
-		err      error
+		wafLog v1.WAFLog
+		rawLog []byte
+		err    error
 	)
 
 	BeforeEach(func() {
-		wafCache = WafEventsCache{
-			lastWafTimestamp: time.Now(), // subject to change
-		}
 		f := mustOpen("test_files/waf_log.json")
 		defer f.Close()
 		rawLog, err = io.ReadAll(f)
@@ -58,22 +53,6 @@ var _ = Describe("WAF event cache", func() {
 			generatedEvent := NewWafEvent(wafLog)
 			Expect(generatedEvent).To(Equal(expected))
 
-		})
-	})
-
-	Context("Testing WAF Event Cache", func() {
-		It("Testing WAF Evennt Cache Add Pass", func() {
-
-			wafCache.Add(wafLog)
-
-			isPresent := wafCache.Contains(wafLog)
-			Expect(isPresent).To(BeTrue())
-		})
-
-		It("Test WAF Event Cache Add Fail", func() {
-
-			isPresent := wafCache.Contains(wafLog)
-			Expect(isPresent).To(BeFalse())
 		})
 	})
 })

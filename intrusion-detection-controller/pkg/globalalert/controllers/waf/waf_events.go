@@ -3,8 +3,6 @@
 package waf
 
 import (
-	"time"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
@@ -14,26 +12,6 @@ const (
 	GlobalAlertSpecTypeFieldName = "Type"
 )
 
-type WafEventsCache struct {
-	lastWafTimestamp time.Time
-	wafEvents        []v1.WAFLog
-}
-
-// Contains compares the query with the waf log
-func (c *WafEventsCache) Contains(wafLog v1.WAFLog) bool {
-	for _, waf := range c.wafEvents {
-		if waf.RequestId == wafLog.RequestId {
-			if waf.Timestamp == wafLog.Timestamp {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func (c *WafEventsCache) Add(wafLog v1.WAFLog) {
-	c.wafEvents = append(c.wafEvents, wafLog)
-}
 
 func NewWafEvent(l v1.WAFLog) v1.Event {
 	// read in the yaml files here and compare to the WAF Log

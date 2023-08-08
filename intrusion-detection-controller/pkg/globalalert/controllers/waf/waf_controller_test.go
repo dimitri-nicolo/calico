@@ -16,14 +16,11 @@ import (
 var _ = Describe("WAF Controller", func() {
 	var (
 		mockClient = client.NewMockClient("", rest.MockResult{})
-		wafCache   = WafEventsCache{
+		wac        = &wafAlertController{
+			clusterName:      "clusterName",
+			wafLogs:          newMockWAFLogs(mockClient, "clustername"),
+			events:           newMockEvents(mockClient, "clustername"),
 			lastWafTimestamp: time.Now(),
-		}
-		wac = &wafAlertController{
-			clusterName: "clusterName",
-			wafLogs:     newMockWAFLogs(mockClient, "clustername"),
-			events:      newMockEvents(mockClient, "clustername"),
-			eventsCache: wafCache,
 		}
 	)
 
@@ -38,7 +35,7 @@ var _ = Describe("WAF Controller", func() {
 			params := &v1.WAFLogParams{
 				QueryParams: v1.QueryParams{
 					TimeRange: &lmav1.TimeRange{
-						From: wac.eventsCache.lastWafTimestamp,
+						From: wac.lastWafTimestamp,
 						To:   now,
 					},
 				},

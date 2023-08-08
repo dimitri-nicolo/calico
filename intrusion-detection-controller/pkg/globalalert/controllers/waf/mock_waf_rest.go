@@ -45,6 +45,9 @@ func (f *MockWaf) List(ctx context.Context, params v1.Params) (*v1.List[v1.WAFLo
 		}
 
 		err = json.Unmarshal(rawLog, &wafLog)
+		if err != nil {
+			panic(err)
+		}
 
 		logs = append(logs, wafLog)
 	}
