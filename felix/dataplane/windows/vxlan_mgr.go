@@ -106,6 +106,7 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 	}
 }
 
+// todo: port address conflicts from linux manager for better support of federated VXLAN scenarios.
 func (m *vxlanManager) CompleteDeferredWork() error {
 	if !m.dirty {
 		logrus.Debug("No change since last application, nothing to do")

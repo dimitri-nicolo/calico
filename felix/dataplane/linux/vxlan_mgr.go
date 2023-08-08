@@ -24,6 +24,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
+
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -92,6 +94,9 @@ type vxlanManager struct {
 
 	// Log context
 	logCtx *logrus.Entry
+
+	// Enterprise additions
+	conflictHandler VXLANConflictHandler
 }
 
 const (
@@ -185,7 +190,7 @@ func newVXLANManagerWithShims(
 	}
 
 	logCtx := logrus.WithField("ipVersion", ipVersion)
-	return &vxlanManager{
+	mgr := &vxlanManager{
 		ipsetsDataplane: ipsetsDataplane,
 		ipSetMetadata: ipsets.IPSetMetadata{
 			MaxSize: dpConfig.MaxIPSetSize,
@@ -212,6 +217,22 @@ func newVXLANManagerWithShims(
 		noEncapRTConstruct:  noEncapRTConstruct,
 		logCtx:              logCtx,
 	}
+
+	mgr.conflictHandler = VXLANConflictHandler{
+		ipVersion: ipVersion,
+		logCtx:    logCtx,
+		vtepAccessor: func(node string) *proto.VXLANTunnelEndpointUpdate {
+			if mgr.hostname == node {
+				return mgr.getLocalVTEP()
+			} else {
+				return mgr.vtepsByNode[node]
+			}
+		},
+		vtepRoutesByDest: map[string]*proto.RouteUpdate{},
+		nodesByVTEPMAC:   map[string]set.Set[string]{},
+	}
+
+	return mgr
 }
 
 func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
@@ -231,6 +252,7 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 		// In case the route changes type to one we no longer care about...
 		m.deleteRoute(msg.Dst)
 
+		// Process remote IPAM blocks.
 		if msg.Type == proto.RouteType_REMOTE_WORKLOAD && msg.IpPoolType == proto.IPPoolType_VXLAN {
 			m.logCtx.WithField("msg", msg).Debug("VXLAN data plane received route update")
 			m.routesByDest[msg.Dst] = msg
@@ -248,6 +270,14 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 			m.routesDirty = true
 		}
 
+		// Process tunnel endpoint routes. We capture these routes to ensure that we only flush VTEPs that pass the CIDR conflict resolution
+		// performed by the Calc Graph.
+		routeUpdated := m.conflictHandler.handleRouteUpdate(msg)
+		if routeUpdated {
+			m.routesDirty = true
+			m.vtepsDirty = true
+		}
+
 	case *proto.RouteRemove:
 		// Check to make sure that we are dealing with messages of the correct IP version.
 		cidr, err := ip.CIDRFromString(msg.Dst)
@@ -260,6 +290,12 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 			return
 		}
 		m.deleteRoute(msg.Dst)
+
+		routeUpdated := m.conflictHandler.handleRouteRemove(msg)
+		if routeUpdated {
+			m.routesDirty = true
+			m.vtepsDirty = true
+		}
 	case *proto.VXLANTunnelEndpointUpdate:
 		// Check to make sure that we are dealing with messages of the correct IP version.
 		if (m.ipVersion == 4 && msg.Ipv4Addr == "") || (m.ipVersion == 6 && msg.Ipv6Addr == "") {
@@ -270,21 +306,26 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 
 		m.logCtx.WithField("msg", msg).Debug("VXLAN data plane received VTEP update")
 		if msg.Node == m.hostname {
-			m.logCtx.WithField("msg", msg).Info("Local VTEP was updated")
 			m.setLocalVTEP(msg)
 		} else {
 			m.vtepsByNode[msg.Node] = msg
 		}
+
+		// Track MAC addresses for VTEPs to detect conflicts involving remote clusters.
+		m.conflictHandler.handleVTEPUpdate(msg)
+
 		m.routesDirty = true
 		m.vtepsDirty = true
 	case *proto.VXLANTunnelEndpointRemove:
 		m.logCtx.WithField("msg", msg).Debug("VXLAN data plane received VTEP remove")
 		if msg.Node == m.hostname {
-			m.logCtx.WithField("msg", msg).Info("Local VTEP was removed")
 			m.setLocalVTEP(nil)
 		} else {
 			delete(m.vtepsByNode, msg.Node)
 		}
+
+		m.conflictHandler.handleVTEPRemove(msg)
+
 		m.routesDirty = true
 		m.vtepsDirty = true
 	}
@@ -427,7 +468,7 @@ func (m *vxlanManager) CompleteDeferredWork() error {
 		// known VTEPs.
 		var l2routes []routetable.L2Target
 		for _, u := range m.vtepsByNode {
-			mac, err := m.parseMacForIPVersion(u)
+			mac, err := parseMacForIPVersion(u, m.ipVersion)
 			if err != nil {
 				// Don't block programming of other VTEPs if somehow we receive one with a bad mac.
 				m.logCtx.WithError(err).Warn("Failed to parse VTEP mac address")
@@ -435,10 +476,18 @@ func (m *vxlanManager) CompleteDeferredWork() error {
 			}
 			addr := u.Ipv4Addr
 			parentDeviceIP := u.ParentDeviceIp
+			suffix := "/32"
 			if m.ipVersion == 6 {
 				addr = u.Ipv6Addr
 				parentDeviceIP = u.ParentDeviceIpv6
+				suffix = "/128"
 			}
+
+			// If VTEP is from a remote cluster, check if its IP or MAC address conflicts with other VTEPs.
+			if m.conflictHandler.vtepConflicts(addr, suffix, mac.String(), u.Node) {
+				continue
+			}
+
 			l2routes = append(l2routes, routetable.L2Target{
 				VTEPMAC: mac,
 				GW:      ip.FromString(addr),
@@ -611,17 +660,6 @@ func (m *vxlanManager) getParentInterface(localVTEP *proto.VXLANTunnelEndpointUp
 	return nil, fmt.Errorf("Unable to find parent interface with address %s", parentDeviceIP)
 }
 
-func (m *vxlanManager) parseMacForIPVersion(vtep *proto.VXLANTunnelEndpointUpdate) (net.HardwareAddr, error) {
-	switch m.ipVersion {
-	case 4:
-		return net.ParseMAC(vtep.Mac)
-	case 6:
-		return net.ParseMAC(vtep.MacV6)
-	default:
-		return nil, fmt.Errorf("Invalid IP version")
-	}
-}
-
 // configureVXLANDevice ensures the VXLAN tunnel device is up and configured correctly.
 func (m *vxlanManager) configureVXLANDevice(mtu int, localVTEP *proto.VXLANTunnelEndpointUpdate, xsumBroken bool) error {
 	logCtx := m.logCtx.WithFields(logrus.Fields{"device": m.vxlanDevice})
@@ -630,7 +668,7 @@ func (m *vxlanManager) configureVXLANDevice(mtu int, localVTEP *proto.VXLANTunne
 	if err != nil {
 		return err
 	}
-	mac, err := m.parseMacForIPVersion(localVTEP)
+	mac, err := parseMacForIPVersion(localVTEP, m.ipVersion)
 	if err != nil {
 		return err
 	}
@@ -822,4 +860,15 @@ func vxlanLinksIncompat(l1, l2 netlink.Link) string {
 	}
 
 	return ""
+}
+
+func parseMacForIPVersion(vtep *proto.VXLANTunnelEndpointUpdate, ipVersion uint8) (net.HardwareAddr, error) {
+	switch ipVersion {
+	case 4:
+		return net.ParseMAC(vtep.Mac)
+	case 6:
+		return net.ParseMAC(vtep.MacV6)
+	default:
+		return nil, fmt.Errorf("Invalid IP version")
+	}
 }

@@ -124,7 +124,7 @@ func (key HostConfigKey) defaultPath() (string, error) {
 	if key.Hostname == "" {
 		return "", errors.ErrorInsufficientIdentifiers{Name: "node"}
 	}
-	e := fmt.Sprintf("/calico/v1/host/%s/config/%s", key.Hostname, key.Name)
+	e := fmt.Sprintf("/calico/v1/host/%s/config/%s", escapeName(key.Hostname), key.Name)
 	return e, nil
 }
 

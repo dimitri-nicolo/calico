@@ -63,6 +63,9 @@ func (v *ValidationFilter) OnUpdates(updates []api.Update) {
 		if _, isV3 := update.Key.(model.ResourceKey); isV3 {
 			logCxt.Debug("Use v3 validator")
 			validatorFunc = v3v.Validate
+		} else if _, isRemoteV3 := update.Key.(model.RemoteClusterResourceKey); isRemoteV3 {
+			logCxt.Debug("Use v3 validator")
+			validatorFunc = v3v.Validate
 		} else {
 			logCxt.Debug("Use v1 validator")
 		}

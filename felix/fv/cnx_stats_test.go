@@ -36,6 +36,7 @@ var _ = infrastructure.DatastoreDescribe("CNX Metrics, etcd datastore, 4 workloa
 
 	var (
 		infra          infrastructure.DatastoreInfra
+		tc             infrastructure.TopologyContainers
 		defaultProfile *api.Profile
 		felix          *infrastructure.Felix
 		client         client.Interface
@@ -46,9 +47,8 @@ var _ = infrastructure.DatastoreDescribe("CNX Metrics, etcd datastore, 4 workloa
 	BeforeEach(func() {
 		infra = getInfra()
 
-		var felixes []*infrastructure.Felix
-		felixes, client = infrastructure.StartNNodeTopology(1, infrastructure.DefaultTopologyOptions(), infra)
-		felix = felixes[0]
+		tc, client = infrastructure.StartNNodeTopology(1, infrastructure.DefaultTopologyOptions(), infra)
+		felix = tc.Felixes[0]
 
 		// Default profile that ensures connectivity.
 		defaultProfile = api.NewProfile()
@@ -101,7 +101,7 @@ var _ = infrastructure.DatastoreDescribe("CNX Metrics, etcd datastore, 4 workloa
 		for ii := range w {
 			w[ii].Stop()
 		}
-		felix.Stop()
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
@@ -904,7 +904,7 @@ var _ = infrastructure.DatastoreDescribe("cnx stats with staged policy tests", [
 
 	var (
 		infra    infrastructure.DatastoreInfra
-		felixes  []*infrastructure.Felix
+		tc       infrastructure.TopologyContainers
 		felix    *infrastructure.Felix
 		client   client.Interface
 		ep1, ep2 *workload.Workload
@@ -915,8 +915,8 @@ var _ = infrastructure.DatastoreDescribe("cnx stats with staged policy tests", [
 		opts := infrastructure.DefaultTopologyOptions()
 
 		// Start felix instances.
-		felixes, client = infrastructure.StartNNodeTopology(1, opts, infra)
-		felix = felixes[0]
+		tc, client = infrastructure.StartNNodeTopology(1, opts, infra)
+		felix = tc.Felixes[0]
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
@@ -959,7 +959,7 @@ var _ = infrastructure.DatastoreDescribe("cnx stats with staged policy tests", [
 
 		ep1.Stop()
 		ep2.Stop()
-		felix.Stop()
+		tc.Stop()
 
 		infra.Stop()
 	})

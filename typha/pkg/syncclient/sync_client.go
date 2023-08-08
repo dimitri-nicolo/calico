@@ -123,13 +123,17 @@ func New(
 	if options == nil {
 		options = &Options{}
 	}
+	cbskn, ok := cbs.(callbacksWithKeysKnown)
+	if !ok {
+		cbskn = callbacksWithKeysKnownAdapter{cbs}
+	}
 	return &SyncerClient{
 		ID: id,
 		logCxt: log.WithFields(log.Fields{
 			"myID": id,
 			"type": options.SyncerType,
 		}),
-		callbacks:  cbs,
+		callbacks:  cbskn,
 		discoverer: discoverer,
 
 		myVersion:  myVersion,
@@ -158,8 +162,21 @@ type SyncerClient struct {
 	handshakeStatus             *handshakeStatus
 	supportsNodeResourceUpdates bool
 
-	callbacks api.SyncerCallbacks
+	callbacks callbacksWithKeysKnown
 	Finished  sync.WaitGroup
+}
+
+type callbacksWithKeysKnown interface {
+	api.SyncerCallbacks
+	OnUpdatesKeysKnown(updates []api.Update, keys []string)
+}
+
+type callbacksWithKeysKnownAdapter struct {
+	api.SyncerCallbacks
+}
+
+func (c callbacksWithKeysKnownAdapter) OnUpdatesKeysKnown(updates []api.Update, keys []string) {
+	c.OnUpdates(updates)
 }
 
 type handshakeStatus struct {
@@ -478,6 +495,7 @@ func (s *SyncerClient) loop(cxt context.Context, cancelFn context.CancelFunc) {
 			logCxt.Debug("Pong sent to Typha")
 		case syncproto.MsgKVs:
 			updates := make([]api.Update, 0, len(msg.KVs))
+			keys := make([]string, 0, len(msg.KVs))
 			if s.options.DebugDiscardKVUpdates {
 				// For simulating lots of clients in tests, just throw away the data.
 				continue
@@ -495,8 +513,9 @@ func (s *SyncerClient) loop(cxt context.Context, cancelFn context.CancelFunc) {
 					}).Debug("Decoded update from Typha")
 				}
 				updates = append(updates, update)
+				keys = append(keys, kv.Key)
 			}
-			s.callbacks.OnUpdates(updates)
+			s.callbacks.OnUpdatesKeysKnown(updates, keys)
 		case syncproto.MsgDecoderRestart:
 			if s.options.DisableDecoderRestart {
 				log.Error("Server sent MsgDecoderRestart but we signalled no support.")

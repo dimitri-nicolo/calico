@@ -72,7 +72,7 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests with policy tiers _
 	var (
 		infra                      infrastructure.DatastoreInfra
 		opts                       infrastructure.TopologyOptions
-		felixes                    []*infrastructure.Felix
+		tc                         infrastructure.TopologyContainers
 		client                     client.Interface
 		ep1_1, ep2_1, ep2_2, ep2_3 *workload.Workload
 		cc                         *connectivity.Checker
@@ -85,22 +85,22 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests with policy tiers _
 		opts.IPIPEnabled = false
 
 		// Start felix instances.
-		felixes, client = infrastructure.StartNNodeTopology(2, opts, infra)
+		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
 
 		// Create workload on host 1.
-		ep1_1 = workload.Run(felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
+		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", wepPortStr, "tcp")
 		ep1_1.ConfigureInInfra(infra)
 
-		ep2_1 = workload.Run(felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
+		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.1.0", wepPortStr, "tcp")
 		ep2_1.ConfigureInInfra(infra)
 
-		ep2_2 = workload.Run(felixes[1], "ep2-2", "default", "10.65.1.1", wepPortStr, "tcp")
+		ep2_2 = workload.Run(tc.Felixes[1], "ep2-2", "default", "10.65.1.1", wepPortStr, "tcp")
 		ep2_2.ConfigureInInfra(infra)
 
-		ep2_3 = workload.Run(felixes[1], "ep2-3", "default", "10.65.1.2", wepPortStr, "tcp")
+		ep2_3 = workload.Run(tc.Felixes[1], "ep2-3", "default", "10.65.1.2", wepPortStr, "tcp")
 		ep2_3.ConfigureInInfra(infra)
 
 		// Create tiers tier1 and tier2
@@ -293,9 +293,9 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests with policy tiers _
 		if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" {
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
 			rulesProgrammed := func() bool {
-				out0, err := felixes[0].ExecOutput("iptables-save", "-t", "filter")
+				out0, err := tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
-				out1, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
+				out1, err := tc.Felixes[1].ExecOutput("iptables-save", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
 				return strings.Count(out0, "APE0|default.ep1-1-allow-all") > 0 &&
 					strings.Count(out1, "APE0|default.ep1-1-allow-all") == 0 &&
@@ -306,7 +306,7 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests with policy tiers _
 				"Expected iptables rules to appear on the correct felix instances")
 
 			// Mimic the kube-proxy service iptable clusterIP rule.
-			for _, f := range felixes {
+			for _, f := range tc.Felixes {
 				f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
 					"-p", "tcp",
 					"-d", clusterIP,
@@ -334,7 +334,7 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests with policy tiers _
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range felixes {
+			for _, felix := range tc.Felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -346,9 +346,7 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests with policy tiers _
 		ep2_1.Stop()
 		ep2_2.Stop()
 		ep2_3.Stop()
-		for _, felix := range felixes {
-			felix.Stop()
-		}
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()

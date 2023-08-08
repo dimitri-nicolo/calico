@@ -29,18 +29,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-
-	"github.com/prometheus/client_golang/prometheus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/buildinfo"
 	"github.com/projectcalico/calico/felix/calc"
@@ -61,6 +57,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	k8sresources "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/dedupebuffer"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
@@ -598,7 +595,7 @@ configRetry:
 	// which will feed the calculation graph with updates, bringing Felix into sync.
 	var syncer Startable
 	var typhaConnection *syncclient.SyncerClient
-	syncerToValidator := calc.NewSyncerCallbacksDecoupler()
+	syncerToValidator := dedupebuffer.New()
 
 	if typhaDiscoverer.TyphaEnabled() {
 		// Use a remote Syncer, via the Typha server.
@@ -702,7 +699,7 @@ configRetry:
 	// calculation graph.
 	validator := calc.NewValidationFilter(asyncCalcGraph, configParams)
 
-	go syncerToValidator.SendTo(validator)
+	go syncerToValidator.SendToSinkForever(validator)
 	asyncCalcGraph.Start()
 	log.Infof("Started the processing graph")
 	var stopSignalChans []chan<- *sync.WaitGroup

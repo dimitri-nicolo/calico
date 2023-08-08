@@ -17,6 +17,7 @@ package infrastructure
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"regexp"
 	"sync"
@@ -65,12 +66,29 @@ type TopologyOptions struct {
 	FelixStopGraceful         bool
 	ExternalIPs               bool
 	UseIPPools                bool
+	IPPoolCIDR                string
+	IPv6PoolCIDR              string
 	NeedNodeIP                bool
 	PerNodeOptions            []PerNodeOptions
 }
 
 type PerNodeOptions struct {
 	ExtraVolumes map[string]string
+}
+
+// Calico containers created during topology creation.
+type TopologyContainers struct {
+	Felixes []*Felix
+	Typha   *Typha
+}
+
+func (c *TopologyContainers) Stop() {
+	for _, felix := range c.Felixes {
+		felix.Stop()
+	}
+	if c.Typha != nil {
+		c.Typha.Stop()
+	}
 }
 
 func DefaultTopologyOptions() TopologyOptions {
@@ -91,6 +109,8 @@ func DefaultTopologyOptions() TopologyOptions {
 		IPIPEnabled:       true,
 		IPIPRoutesEnabled: true,
 		UseIPPools:        true,
+		IPPoolCIDR:        DefaultIPPoolCIDR,
+		IPv6PoolCIDR:      DefaultIPv6PoolCIDR,
 		PerNodeOptions:    []PerNodeOptions{},
 	}
 }
@@ -108,7 +128,7 @@ func CreateDefaultIPPoolFromOpts(ctx context.Context, client client.Interface, o
 	switch ipVersion {
 	case 4:
 		ipPool.Name = DefaultIPPoolName
-		ipPool.Spec.CIDR = DefaultIPPoolCIDR
+		ipPool.Spec.CIDR = opts.IPPoolCIDR
 
 		// IPIP is only supported on IPv4
 		if opts.IPIPEnabled {
@@ -118,7 +138,7 @@ func CreateDefaultIPPoolFromOpts(ctx context.Context, client client.Interface, o
 		}
 	case 6:
 		ipPool.Name = DefaultIPv6PoolName
-		ipPool.Spec.CIDR = DefaultIPv6PoolCIDR
+		ipPool.Spec.CIDR = opts.IPv6PoolCIDR
 	default:
 		log.WithField("ipVersion", ipVersion).Panic("Unknown IP version")
 	}
@@ -138,9 +158,8 @@ func DeleteDefaultIPPool(ctx context.Context, client client.Interface) (*api.IPP
 
 // StartSingleNodeEtcdTopology starts an etcd container and a single Felix container; it initialises
 // the datastore and installs a Node resource for the Felix node.
-func StartSingleNodeEtcdTopology(options TopologyOptions) (felix *Felix, etcd *containers.Container, calicoClient client.Interface, infra DatastoreInfra) {
-	felixes, etcd, calicoClient, infra := StartNNodeEtcdTopology(1, options)
-	felix = felixes[0]
+func StartSingleNodeEtcdTopology(options TopologyOptions) (tc TopologyContainers, etcd *containers.Container, calicoClient client.Interface, infra DatastoreInfra) {
+	tc, etcd, calicoClient, infra = StartNNodeEtcdTopology(1, options)
 	return
 }
 
@@ -152,7 +171,7 @@ func StartSingleNodeEtcdTopology(options TopologyOptions) (felix *Felix, etcd *c
 //   - Configures routes between the hosts, giving each host 10.65.x.0/24, where x is the
 //     index in the returned array.  When creating workloads, use IPs from the relevant block.
 //   - Configures the Tunnel IP for each host as 10.65.x.1.
-func StartNNodeEtcdTopology(n int, opts TopologyOptions) (felixes []*Felix, etcd *containers.Container, client client.Interface, infra DatastoreInfra) {
+func StartNNodeEtcdTopology(n int, opts TopologyOptions) (tc TopologyContainers, etcd *containers.Container, client client.Interface, infra DatastoreInfra) {
 	log.Infof("Starting a %d-node etcd topology.", n)
 
 	eds, err := GetEtcdDatastoreInfra()
@@ -160,20 +179,19 @@ func StartNNodeEtcdTopology(n int, opts TopologyOptions) (felixes []*Felix, etcd
 	etcd = eds.etcdContainer
 	infra = eds
 
-	felixes, client = StartNNodeTopology(n, opts, eds)
+	tc, client = StartNNodeTopology(n, opts, eds)
 
 	return
 }
 
-// StartSingleNodeEtcdTopology starts an etcd container and a single Felix container; it initialises
+// StartSingleNodeTopology starts an etcd container and a single Felix container; it initialises
 // the datastore and installs a Node resource for the Felix node.
-func StartSingleNodeTopology(options TopologyOptions, infra DatastoreInfra) (felix *Felix, calicoClient client.Interface) {
-	felixes, calicoClient := StartNNodeTopology(1, options, infra)
-	felix = felixes[0]
+func StartSingleNodeTopology(options TopologyOptions, infra DatastoreInfra) (tc TopologyContainers, calicoClient client.Interface) {
+	tc, calicoClient = StartNNodeTopology(1, options, infra)
 	return
 }
 
-// StartNNodeEtcdTopology starts an etcd container and a set of Felix hosts.  If n > 1, sets
+// StartNNodeTopology starts an etcd container and a set of Felix hosts.  If n > 1, sets
 // up IPIP, otherwise this is skipped.
 //
 //   - Configures an IPAM pool for 10.65.0.0/16 (so that Felix programs the all-IPAM blocks IP set)
@@ -181,7 +199,7 @@ func StartSingleNodeTopology(options TopologyOptions, infra DatastoreInfra) (fel
 //   - Configures routes between the hosts, giving each host 10.65.x.0/24, where x is the
 //     index in the returned array.  When creating workloads, use IPs from the relevant block.
 //   - Configures the Tunnel IP for each host as 10.65.x.1.
-func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (felixes []*Felix, client client.Interface) {
+func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (tc TopologyContainers, client client.Interface) {
 	log.WithField("options", opts).Infof("Starting a %d-node topology", n)
 	success := false
 	var err error
@@ -189,9 +207,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 	defer func() {
 		if !success {
 			log.WithError(err).Error("Failed to start topology, tearing down containers")
-			for _, felix := range felixes {
-				felix.Stop()
-			}
+			tc.Stop()
 			infra.Stop()
 			return
 		}
@@ -251,12 +267,12 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 
 	typhaIP := ""
 	if opts.WithTypha {
-		typha := RunTypha(infra, opts)
-		opts.ExtraEnvVars["FELIX_TYPHAADDR"] = typha.IP + ":5473"
-		typhaIP = typha.IP
+		tc.Typha = RunTypha(infra, opts)
+		opts.ExtraEnvVars["FELIX_TYPHAADDR"] = tc.Typha.IP + ":5473"
+		typhaIP = tc.Typha.IP
 	}
 
-	felixes = make([]*Felix, n)
+	tc.Felixes = make([]*Felix, n)
 	var wg sync.WaitGroup
 
 	// Make a separate copy of TopologyOptions for each Felix that we will run.  This
@@ -289,45 +305,49 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 		go func(i int) {
 			defer wg.Done()
 			defer ginkgo.GinkgoRecover()
-			felixes[i] = RunFelix(infra, i, optsPerFelix[i])
+			tc.Felixes[i] = RunFelix(infra, i, optsPerFelix[i])
 		}(i)
 	}
 	wg.Wait()
 
+	_, IPv4CIDR, err := net.ParseCIDR(opts.IPPoolCIDR)
+	Expect(err).To(BeNil())
+	_, IPv6CIDR, err := net.ParseCIDR(opts.IPv6PoolCIDR)
+	Expect(err).To(BeNil())
 	for i := 0; i < n; i++ {
 		opts.ExtraEnvVars["BPF_LOG_PFX"] = ""
-		felix := felixes[i]
+		felix := tc.Felixes[i]
 		felix.TyphaIP = typhaIP
 
 		if opts.EnableIPv6 {
 			Expect(felix.IPv6).ToNot(BeEmpty(), "IPv6 enabled but Felix didn't get an IPv6 address, is docker configured for IPv6?  Look for \"ipv6\" in semaphore.yml to see what is needed.")
 		}
 		expectedIPs := []string{felix.IP}
-
 		if kdd, ok := infra.(*K8sDatastoreInfra); ok && opts.ExternalIPs {
 			kdd.SetExternalIP(felix, i)
 			expectedIPs = append(expectedIPs, felix.ExternalIP)
 		}
+
 		setUpBGPNodeIPAndIPIPTunnelIP := n > 1 || opts.NeedNodeIP
 		if opts.IPIPEnabled {
-			infra.SetExpectedIPIPTunnelAddr(felix, i, setUpBGPNodeIPAndIPIPTunnelIP)
+			infra.SetExpectedIPIPTunnelAddr(felix, IPv4CIDR, i, setUpBGPNodeIPAndIPIPTunnelIP)
 			expectedIPs = append(expectedIPs, felix.ExpectedIPIPTunnelAddr)
 		}
 		if opts.VXLANMode != api.VXLANModeNever {
-			infra.SetExpectedVXLANTunnelAddr(felix, i, n > 1)
+			infra.SetExpectedVXLANTunnelAddr(felix, IPv4CIDR, i, n > 1)
 			expectedIPs = append(expectedIPs, felix.ExpectedVXLANTunnelAddr)
 			if opts.EnableIPv6 {
 				expectedIPs = append(expectedIPs, felix.IPv6)
-				infra.SetExpectedVXLANV6TunnelAddr(felix, i, n > 1)
+				infra.SetExpectedVXLANV6TunnelAddr(felix, IPv6CIDR, i, n > 1)
 				expectedIPs = append(expectedIPs, felix.ExpectedVXLANV6TunnelAddr)
 			}
 		}
 		if opts.WireguardEnabled {
-			infra.SetExpectedWireguardTunnelAddr(felix, i, n > 1)
+			infra.SetExpectedWireguardTunnelAddr(felix, IPv4CIDR, i, n > 1)
 			expectedIPs = append(expectedIPs, felix.ExpectedWireguardTunnelAddr)
 		}
 		if opts.WireguardEnabledV6 {
-			infra.SetExpectedWireguardV6TunnelAddr(felix, i, n > 1)
+			infra.SetExpectedWireguardV6TunnelAddr(felix, IPv6CIDR, i, n > 1)
 			expectedIPs = append(expectedIPs, felix.ExpectedWireguardV6TunnelAddr)
 		}
 
@@ -345,7 +365,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 			// infra isn't doing what we expect.
 			log.Panic("NeedNodeIP set but infra didn't set ExpectedIPIPTunnelAddr.")
 		}
-		infra.AddNode(felix, i, setUpBGPNodeIPAndIPIPTunnelIP)
+		infra.AddNode(felix, IPv4CIDR, IPv6CIDR, i, setUpBGPNodeIPAndIPIPTunnelIP)
 		if w != nil {
 			// Wait for any expected Felix restart...
 			log.Info("Wait for Felix to restart")
@@ -382,8 +402,8 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 
 	// Set up routes between the hosts, note: we're not using BGP here but we set up similar
 	// CIDR-based routes.
-	for i, iFelix := range felixes {
-		for j, jFelix := range felixes {
+	for i, iFelix := range tc.Felixes {
+		for j, jFelix := range tc.Felixes {
 			if i == j {
 				continue
 			}
@@ -391,7 +411,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 			go func(i, j int, iFelix, jFelix *Felix) {
 				defer wg.Done()
 				defer ginkgo.GinkgoRecover()
-				jBlock := fmt.Sprintf("10.65.%d.0/24", j)
+				jBlock := fmt.Sprintf("%d.%d.%d.0/24", IPv4CIDR.IP[0], IPv4CIDR.IP[1], j)
 				if opts.IPIPEnabled && opts.IPIPRoutesEnabled {
 					// Can get "Nexthop device is not up" error here if tunl0 device is
 					// not ready yet, which can happen especially if Felix start was
@@ -405,7 +425,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 					Expect(err).ToNot(HaveOccurred())
 				}
 				if opts.EnableIPv6 {
-					jBlockV6 := fmt.Sprintf("dead:beef::100:%d:0/96", j)
+					jBlockV6 := fmt.Sprintf("%x%x:%x%x:%x%x:%x%x:%x%x:100:%d:0/96", IPv6CIDR.IP[0], IPv6CIDR.IP[1], IPv6CIDR.IP[2], IPv6CIDR.IP[3], IPv6CIDR.IP[4], IPv6CIDR.IP[5], IPv6CIDR.IP[6], IPv6CIDR.IP[7], IPv6CIDR.IP[8], IPv6CIDR.IP[9], j)
 					ipSec := opts.InitialFelixConfiguration != nil && opts.InitialFelixConfiguration.Spec.IPSecMode != ""
 					if opts.VXLANMode == api.VXLANModeNever && !opts.IPIPRoutesEnabled && !ipSec {
 						// If VXLAN is enabled, Felix will program these routes itself.

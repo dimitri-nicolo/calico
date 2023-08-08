@@ -45,7 +45,7 @@ import (
 var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 workloads", func() {
 	var (
 		etcd   *containers.Container
-		felix  *infrastructure.Felix
+		tc     infrastructure.TopologyContainers
 		client client.Interface
 		infra  infrastructure.DatastoreInfra
 		w      [3]*workload.Workload
@@ -57,13 +57,13 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "120"
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
-			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			w[ii] = workload.Run(tc.Felixes[0], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
 		}
 
@@ -72,14 +72,14 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			felix.Exec("iptables-save", "-c")
-			felix.Exec("ip", "r")
+			tc.Felixes[0].Exec("iptables-save", "-c")
+			tc.Felixes[0].Exec("ip", "r")
 		}
 
 		for ii := range w {
 			w[ii].Stop()
 		}
-		felix.Stop()
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
@@ -136,7 +136,7 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 				"end-" + w[2].Name + "--" + w[0].Name + "--dst":   true,
 				"end-" + w[2].Name + "--" + w[0].Name + "--src":   true,
 			}
-			cwlogs, err := flowlogs.ReadFlowLogsFile(felix.FlowLogDir())
+			cwlogs, err := flowlogs.ReadFlowLogsFile(tc.Felixes[0].FlowLogDir())
 			if err != nil {
 				return err
 			}
@@ -312,7 +312,7 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd datastore, 3 workloads", func() {
 	var (
 		etcd   *containers.Container
-		felix  *infrastructure.Felix
+		tc     infrastructure.TopologyContainers
 		client client.Interface
 		infra  infrastructure.DatastoreInfra
 		w      [3]*workload.Workload
@@ -321,13 +321,13 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 
 	BeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
-			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			w[ii] = workload.Run(tc.Felixes[0], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
 		}
 
@@ -336,14 +336,14 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			felix.Exec("iptables-save", "-c")
-			felix.Exec("ip", "r")
+			tc.Felixes[0].Exec("iptables-save", "-c")
+			tc.Felixes[0].Exec("ip", "r")
 		}
 
 		for ii := range w {
 			w[ii].Stop()
 		}
-		felix.Stop()
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
@@ -373,7 +373,7 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 
 		It("should have the expected comment in iptables", func() {
 			Eventually(func() string {
-				out, _ := felix.ExecOutput("iptables-save")
+				out, _ := tc.Felixes[0].ExecOutput("iptables-save")
 				return out
 			}).Should(ContainSubstring("Policy fv/default.policy-1 ingress"))
 		})
@@ -398,7 +398,7 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 
 		It("should have the expected comment in iptables", func() {
 			Eventually(func() string {
-				out, _ := felix.ExecOutput("iptables-save")
+				out, _ := tc.Felixes[0].ExecOutput("iptables-save")
 				return out
 			}).Should(ContainSubstring("Policy fv/default.policy-1 egress"))
 		})
@@ -408,7 +408,7 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 var _ = Context("with Typha and Felix-Typha TLS", func() {
 	var (
 		etcd   *containers.Container
-		felix  *infrastructure.Felix
+		tc     infrastructure.TopologyContainers
 		client client.Interface
 		infra  infrastructure.DatastoreInfra
 		w      [3]*workload.Workload
@@ -419,13 +419,13 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 		options := infrastructure.DefaultTopologyOptions()
 		options.WithTypha = true
 		options.WithFelixTyphaTLS = true
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(options)
+		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(options)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
-			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			w[ii] = workload.Run(tc.Felixes[0], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
 		}
 
@@ -434,14 +434,14 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			felix.Exec("iptables-save", "-c")
-			felix.Exec("ip", "r")
+			tc.Felixes[0].Exec("iptables-save", "-c")
+			tc.Felixes[0].Exec("ip", "r")
 		}
 
 		for ii := range w {
 			w[ii].Stop()
 		}
-		felix.Stop()
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
@@ -488,7 +488,7 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 var _ = Context("with TLS-secured Prometheus ports", func() {
 	var (
 		etcd    *containers.Container
-		felix   *infrastructure.Felix
+		tc      infrastructure.TopologyContainers
 		client  client.Interface
 		infra   infrastructure.DatastoreInfra
 		w       [3]*workload.Workload
@@ -500,13 +500,13 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 		options = infrastructure.DefaultTopologyOptions()
 		options.WithTypha = true
 		options.WithPrometheusPortTLS = true
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(options)
+		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(options)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
-			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			w[ii] = workload.Run(tc.Felixes[0], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
 		}
 
@@ -515,14 +515,14 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			felix.Exec("iptables-save", "-c")
-			felix.Exec("ip", "r")
+			tc.Felixes[0].Exec("iptables-save", "-c")
+			tc.Felixes[0].Exec("ip", "r")
 		}
 
 		for ii := range w {
 			w[ii].Stop()
 		}
-		felix.Stop()
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
@@ -559,17 +559,17 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 	}
 
 	testFelixReporter := testAccess(func(caFile, certFile, keyFile string) error {
-		_, err := metrics.GetMetric(felix.IP, 9092, "calico_denied_packets", caFile, certFile, keyFile)
+		_, err := metrics.GetMetric(tc.Felixes[0].IP, 9092, "calico_denied_packets", caFile, certFile, keyFile)
 		return err
 	})
 
 	testFelixMetrics := testAccess(func(caFile, certFile, keyFile string) error {
-		_, err := metrics.GetMetric(felix.IP, 9091, "felix_host", caFile, certFile, keyFile)
+		_, err := metrics.GetMetric(tc.Felixes[0].IP, 9091, "felix_host", caFile, certFile, keyFile)
 		return err
 	})
 
 	testTyphaMetrics := testAccess(func(caFile, certFile, keyFile string) error {
-		_, err := metrics.GetMetric(felix.TyphaIP, 9093, "typha_connections_active", caFile, certFile, keyFile)
+		_, err := metrics.GetMetric(tc.Felixes[0].TyphaIP, 9093, "typha_connections_active", caFile, certFile, keyFile)
 		return err
 	})
 

@@ -291,7 +291,7 @@ func keyFromDefaultPathInner(path string, parts []string) Key {
 				}
 			case "config":
 				return HostConfigKey{
-					Hostname: hostname,
+					Hostname: unescapeName(hostname),
 					Name:     strings.Join(parts[5:], "/"),
 				}
 			case "metadata":
@@ -306,14 +306,14 @@ func keyFromDefaultPathInner(path string, parts []string) Key {
 					return nil
 				}
 				return HostIPKey{
-					Hostname: hostname,
+					Hostname: unescapeName(hostname),
 				}
 			case "wireguard":
 				if len(parts) != 5 {
 					return nil
 				}
 				return WireguardKey{
-					NodeName: hostname,
+					NodeName: unescapeName(hostname),
 				}
 			}
 		case "netset":
@@ -588,10 +588,10 @@ func OldKeyFromDefaultPath(path string) Key {
 		return TierKey{Name: m[1]}
 	} else if m := matchHostIp.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a host ID: %v", path)
-		return HostIPKey{Hostname: m[1]}
+		return HostIPKey{Hostname: unescapeName(m[1])}
 	} else if m := matchWireguard.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a node name: %v", path)
-		return WireguardKey{NodeName: m[1]}
+		return WireguardKey{NodeName: unescapeName(m[1])}
 	} else if m := matchIPPool.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a pool: %v", path)
 		mungedCIDR := m[1]
@@ -607,7 +607,7 @@ func OldKeyFromDefaultPath(path string) Key {
 		return GlobalConfigKey{Name: m[1]}
 	} else if m := matchHostConfig.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a host config: %v", path)
-		return HostConfigKey{Hostname: m[1], Name: m[2]}
+		return HostConfigKey{Hostname: unescapeName(m[1]), Name: m[2]}
 	} else if matchReadyFlag.MatchString(path) {
 		log.Debugf("Path is a ready flag: %v", path)
 		return ReadyFlagKey{}
@@ -712,4 +712,21 @@ func SerializeValue(d *KVPair) ([]byte, error) {
 		return []byte(fmt.Sprint(d.Value)), nil
 	}
 	return json.Marshal(d.Value)
+}
+
+// GetRemoteClusterPrefix returns the remote cluster prefix of a given node name. Returns zero value if no prefix is
+// present. Can be used to check if a node name in a Key is from a remote cluster. Useful for KVPs which share Keys
+// for remote cluster and local cluster updates, not useful for RemoteClusterResourceKey KVPs.
+func GetRemoteClusterPrefix(nodeName string) string {
+	parts := strings.Split(nodeName, "/")
+	if len(parts) < 2 {
+		return ""
+	} else {
+		return parts[0]
+	}
+}
+
+func RemoveRemoteClusterPrefix(nodeName string) string {
+	nodeNameParts := strings.Split(nodeName, "/")
+	return nodeNameParts[len(nodeNameParts)-1]
 }

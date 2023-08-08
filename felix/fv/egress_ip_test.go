@@ -68,7 +68,7 @@ func (ov Overlay) String() string {
 var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 	var (
 		infra        infrastructure.DatastoreInfra
-		felixes      []*infrastructure.Felix
+		tc           infrastructure.TopologyContainers
 		client       client.Interface
 		err          error
 		supportLevel string
@@ -98,7 +98,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 	rulesProgrammed := func(felix *infrastructure.Felix, polNames []string) bool {
 		out, err := felix.ExecOutput("iptables-save", "-t", "filter")
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return false
+		}
 		for _, polName := range polNames {
 			if strings.Count(out, polName) == 0 {
 				return false
@@ -188,8 +190,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
 				"Expected HostEndpoint iptables rules to appear")
 			polNames := []string{"default.allow-all", "default.deny-egw", "default.deny-egw-health"}
-			Eventually(rulesProgrammed(felix, polNames), "10s", "1s").Should(BeTrue(),
-				"Expected iptables rules to appear on the felix instances")
+			Eventually(func() bool {
+				return rulesProgrammed(felix, polNames)
+			}, "10s", "1s").Should(BeTrue(), "Expected iptables rules to appear on the felix instances")
 		}
 
 	}
@@ -236,7 +239,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 	}
 
 	getIPRules := func() map[string]string {
-		rules, err := felixes[0].ExecOutput("ip", "rule")
+		rules, err := tc.Felixes[0].ExecOutput("ip", "rule")
 		log.WithError(err).Infof("ip rule said:\n%v", rules)
 		Expect(err).NotTo(HaveOccurred())
 		mappings := map[string]string{}
@@ -253,7 +256,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 	}
 
 	getIPRoute := func(table string) string {
-		route, err := felixes[0].ExecOutput("ip", "r", "l", "table", table)
+		route, err := tc.Felixes[0].ExecOutput("ip", "r", "l", "table", table)
 		log.WithError(err).Infof("ip r l said:\n%v", route)
 		Expect(err).NotTo(HaveOccurred())
 		return strings.TrimSpace(route)
@@ -269,7 +272,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 	}
 
 	getIPNeigh := func() map[string]string {
-		neigh, err := felixes[0].ExecOutput("ip", "neigh", "show", "dev", "egress.calico")
+		neigh, err := tc.Felixes[0].ExecOutput("ip", "neigh", "show", "dev", "egress.calico")
 		log.WithError(err).Infof("ip neigh said:\n%v", neigh)
 		Expect(err).NotTo(HaveOccurred())
 		mappings := map[string]string{}
@@ -286,7 +289,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 	}
 
 	getBridgeFDB := func() map[string]string {
-		fdb, err := felixes[0].ExecOutput("bridge", "fdb", "show", "dev", "egress.calico")
+		fdb, err := tc.Felixes[0].ExecOutput("bridge", "fdb", "show", "dev", "egress.calico")
 		log.WithError(err).Infof("bridge fdb said:\n%v", fdb)
 		Expect(err).NotTo(HaveOccurred())
 		mappings := map[string]string{}
@@ -332,7 +335,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			topologyOptions.IPIPEnabled = false
 			topologyOptions.IPIPRoutesEnabled = false
 		}
-		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
+		tc, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
@@ -433,9 +436,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 							JustBeforeEach(func() {
 								rulesProgrammed := func() bool {
-									felix := felixes[1]
+									felix := tc.Felixes[1]
 									if sameNode {
-										felix = felixes[0]
+										felix = tc.Felixes[0]
 									}
 									if BPFMode() {
 										return bpfCheckIfPolicyProgrammed(felix, gw.InterfaceName, "ingress", "default.egw-deny-ingress", "deny", true)
@@ -444,25 +447,25 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									Expect(err).NotTo(HaveOccurred())
 									return (strings.Contains(out, "default.egw-deny-ingress"))
 								}
-								egwClient = makeClient(felixes[0], "10.65.0.2", "client")
+								egwClient = makeClient(tc.Felixes[0], "10.65.0.2", "client")
 								if sameNode {
-									gw = makeGateway(felixes[0], "10.10.10.1", "gw")
+									gw = makeGateway(tc.Felixes[0], "10.10.10.1", "gw")
 								} else {
-									gw = makeGateway(felixes[1], "10.10.10.1", "gw")
+									gw = makeGateway(tc.Felixes[1], "10.10.10.1", "gw")
 									switch ov {
 									case OV_NONE:
-										felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
+										tc.Felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
 									case OV_VXLAN:
 										// Felix programs the routes in this case.
 									case OV_IPIP:
-										felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP, "dev", "tunl0", "onlink")
+										tc.Felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP, "dev", "tunl0", "onlink")
 									}
 								}
 								if BPFMode() {
-									ensureAllNodesBPFProgramsAttached(felixes)
+									ensureAllNodesBPFProgramsAttached(tc.Felixes)
 								}
 								if !sameNode && ov == OV_NONE {
-									createHostEndPointPolicy(felixes[0])
+									createHostEndPointPolicy(tc.Felixes[0])
 								}
 								createEgwIngPol(gw)
 								Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
@@ -610,10 +613,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							gwRoute := fmt.Sprintf("10.10.11.%v/32", i+j)
 
 							if i == 0 {
-								gw = makeGatewayWithLabel(felixes[0], gwAddr, gwName, l)
+								gw = makeGatewayWithLabel(tc.Felixes[0], gwAddr, gwName, l)
 							} else {
-								gw = makeGatewayWithLabel(felixes[1], gwAddr, gwName, l)
-								felixes[0].Exec("ip", "route", "add", gwRoute, "via", gw.C.IP)
+								gw = makeGatewayWithLabel(tc.Felixes[1], gwAddr, gwName, l)
+								tc.Felixes[0].Exec("ip", "route", "add", gwRoute, "via", gw.C.IP)
 							}
 							if l == "blue" {
 								blueGWs = append(blueGWs, gw)
@@ -626,10 +629,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 						}
 					}
 					for i := 0; i < 4; i++ {
-						extWorkloads[i].C.Exec("ip", "route", "add", "10.65.0.2", "via", felixes[0].IP)
+						extWorkloads[i].C.Exec("ip", "route", "add", "10.65.0.2", "via", tc.Felixes[0].IP)
 					}
 					if BPFMode() {
-						ensureAllNodesBPFProgramsAttached(felixes)
+						ensureAllNodesBPFProgramsAttached(tc.Felixes)
 					}
 				})
 				AfterEach(func() {
@@ -642,7 +645,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				})
 
 				It("Should use the local gateway when GatewayPreference is set to PreferNodeLocal", func() {
-					egwClient = makeClientWithEGWPolicy(felixes[0], "10.65.0.2", "client", "egw-policy1")
+					egwClient = makeClientWithEGWPolicy(tc.Felixes[0], "10.65.0.2", "client", "egw-policy1")
 					defer egwClient.Stop()
 
 					Eventually(getIPRules, "10s", "1s").Should(HaveLen(1))
@@ -718,9 +721,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 							JustBeforeEach(func() {
 								rulesProgrammed := func() bool {
-									felix := felixes[1]
+									felix := tc.Felixes[1]
 									if sameNode {
-										felix = felixes[0]
+										felix = tc.Felixes[0]
 									}
 									if BPFMode() {
 										return bpfCheckIfPolicyProgrammed(felix, gw.InterfaceName, "ingress", "default.egw-deny-ingress", "deny", true)
@@ -735,25 +738,25 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									gwAddr := fmt.Sprintf("10.10.1%v.1", i)
 									gwRoute := fmt.Sprintf("10.10.1%v.1/32", i)
 									if sameNode {
-										gw = makeGatewayWithLabel(felixes[0], gwAddr, gwName, l)
+										gw = makeGatewayWithLabel(tc.Felixes[0], gwAddr, gwName, l)
 									} else {
-										gw = makeGatewayWithLabel(felixes[1], gwAddr, gwName, l)
+										gw = makeGatewayWithLabel(tc.Felixes[1], gwAddr, gwName, l)
 										switch ov {
 										case OV_NONE:
-											felixes[0].Exec("ip", "route", "add", gwRoute, "via", gw.C.IP)
+											tc.Felixes[0].Exec("ip", "route", "add", gwRoute, "via", gw.C.IP)
 										case OV_VXLAN:
 											// Felix programs the routes in this case.
 										case OV_IPIP:
-											felixes[0].Exec("ip", "route", "add", gwRoute, "via", gw.C.IP, "dev", "tunl0", "onlink")
+											tc.Felixes[0].Exec("ip", "route", "add", gwRoute, "via", gw.C.IP, "dev", "tunl0", "onlink")
 										}
 									}
 									gws = append(gws, gw)
 								}
 								if BPFMode() {
-									ensureAllNodesBPFProgramsAttached(felixes)
+									ensureAllNodesBPFProgramsAttached(tc.Felixes)
 								}
 								if !sameNode && ov == OV_NONE {
-									createHostEndPointPolicy(felixes[0])
+									createHostEndPointPolicy(tc.Felixes[0])
 								}
 								createEgwIngPol(gw)
 								Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
@@ -763,7 +766,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 										gwRoute := fmt.Sprintf("10.10.1%v.1/32", j)
 										extWorkloads[i].C.Exec("ip", "route", "add", gwRoute, "via", gws[j].C.IP)
 									}
-									extWorkloads[i].C.Exec("ip", "route", "add", "10.65.0.2", "via", felixes[0].IP)
+									extWorkloads[i].C.Exec("ip", "route", "add", "10.65.0.2", "via", tc.Felixes[0].IP)
 								}
 							})
 
@@ -775,7 +778,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							})
 
 							It("server should see correct IPs when client connects to it", func() {
-								egwClient = makeClientWithEGWPolicy(felixes[0], "10.65.0.2", "client", "egw-policy1")
+								egwClient = makeClientWithEGWPolicy(tc.Felixes[0], "10.65.0.2", "client", "egw-policy1")
 								defer egwClient.Stop()
 
 								cc.ExpectSNAT(egwClient, egwClient.IP, extWorkloads[0], 4321)
@@ -793,34 +796,34 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 							It("should reuse existing route rule and table", func() {
 
-								triggerStartup := felixes[0].RestartWithDelayedStartup()
+								triggerStartup := tc.Felixes[0].RestartWithDelayedStartup()
 
 								// Add route rule and table for client, to check if egress ip manager picks table 220 for this client
 								fwmark := "0x80000/0x80000"
 								if BPFMode() {
 									fwmark = "0x10000000/0x10000000"
 								}
-								felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.2", "fwmark", fwmark, "priority", "100", "lookup", "220")
-								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[0].IP, "table", "220")
-								felixes[0].Exec("ip", "route", "add", extWorkloads[1].IP, "via", "10.10.10.1", "dev", "egress.calico", "onlink", "table", "220")
-								felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "220")
-								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[3].IP, "table", "220")
+								tc.Felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.2", "fwmark", fwmark, "priority", "100", "lookup", "220")
+								tc.Felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[0].IP, "table", "220")
+								tc.Felixes[0].Exec("ip", "route", "add", extWorkloads[1].IP, "via", "10.10.10.1", "dev", "egress.calico", "onlink", "table", "220")
+								tc.Felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "220")
+								tc.Felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[3].IP, "table", "220")
 
 								// Add route rules and tables to check if egress ip manager cleans it
-								felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.3", "fwmark", "0x21000000/0x21000000", "priority", "100", "lookup", "230")
-								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[0].IP, "table", "230")
-								felixes[0].Exec("ip", "route", "add", extWorkloads[1].IP, "via", "10.10.10.1", "dev", "egress.calico", "onlink", "table", "230")
-								felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "230")
-								felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[3].IP, "table", "230")
+								tc.Felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.3", "fwmark", "0x21000000/0x21000000", "priority", "100", "lookup", "230")
+								tc.Felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[0].IP, "table", "230")
+								tc.Felixes[0].Exec("ip", "route", "add", extWorkloads[1].IP, "via", "10.10.10.1", "dev", "egress.calico", "onlink", "table", "230")
+								tc.Felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "230")
+								tc.Felixes[0].Exec("ip", "route", "add", "throw", extWorkloads[3].IP, "table", "230")
 
-								felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.4", "fwmark", "0x80000/0x80000", "priority", "100", "lookup", "231")
-								felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "231")
+								tc.Felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.4", "fwmark", "0x80000/0x80000", "priority", "100", "lookup", "231")
+								tc.Felixes[0].Exec("ip", "route", "add", "default", "via", "10.10.11.1", "dev", "egress.calico", "onlink", "table", "231")
 
-								felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.4", "fwmark", "0x10000000/0x10000000", "priority", "100", "lookup", "232")
+								tc.Felixes[0].Exec("ip", "rule", "add", "from", "10.65.0.4", "fwmark", "0x10000000/0x10000000", "priority", "100", "lookup", "232")
 
 								// Need to create client PODs after EGW deployment to make sure IPSets are not empty.
 								// This is just to test re-using existing route rule and table works fine.
-								egwClient = makeClientWithEGWPolicy(felixes[0], "10.65.0.2", "client", "egw-policy1")
+								egwClient = makeClientWithEGWPolicy(tc.Felixes[0], "10.65.0.2", "client", "egw-policy1")
 								defer egwClient.Stop()
 
 								triggerStartup()
@@ -845,9 +848,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 		It("keeps gateway device route when client goes away", func() {
 			By("Create a gateway and client")
-			gw := makeGateway(felixes[0], "10.10.10.1", "gw1")
+			gw := makeGateway(tc.Felixes[0], "10.10.10.1", "gw1")
 			defer gw.Stop()
-			app := makeClient(felixes[0], "10.65.0.2", "app")
+			app := makeClient(tc.Felixes[0], "10.65.0.2", "app")
 			appExists := true
 			defer func() {
 				if appExists {
@@ -857,7 +860,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 			By("Check gateway route exists")
 			checkGatewayRoute := func() (err error) {
-				routes, err := felixes[0].ExecOutput("ip", "r")
+				routes, err := tc.Felixes[0].ExecOutput("ip", "r")
 				if err != nil {
 					return
 				}
@@ -882,14 +885,14 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 		It("updates rules and routing as gateways are added and removed", func() {
 			By("Create a gateway.")
-			gw := makeGateway(felixes[0], "10.10.10.1", "gw1")
+			gw := makeGateway(tc.Felixes[0], "10.10.10.1", "gw1")
 			defer gw.Stop()
 
 			By("No egress ip rules expected yet.")
 			Consistently(getIPRules).Should(BeEmpty())
 
 			By("Create a client.")
-			app := makeClient(felixes[0], "10.65.0.2", "app")
+			app := makeClient(tc.Felixes[0], "10.65.0.2", "app")
 			defer app.Stop()
 
 			By("Check ip rules.")
@@ -909,7 +912,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			}))
 
 			By("Create another client.")
-			app2 := makeClient(felixes[0], "10.65.0.3", "app2")
+			app2 := makeClient(tc.Felixes[0], "10.65.0.3", "app2")
 			defer app2.Stop()
 
 			By("Check ip rules.")
@@ -931,7 +934,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			}))
 
 			By("Create another gateway.")
-			gw2 := makeGateway(felixes[0], "10.10.10.2", "gw2")
+			gw2 := makeGateway(tc.Felixes[0], "10.10.10.2", "gw2")
 			defer gw2.Stop()
 
 			By("Check ip rules and routes.")
@@ -950,7 +953,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			}))
 
 			By("Create 3rd gateway.")
-			gw3 := makeGateway(felixes[0], "10.10.10.3", "gw3")
+			gw3 := makeGateway(tc.Felixes[0], "10.10.10.3", "gw3")
 			defer gw3.Stop()
 
 			By("Check ip rules and routes.")
@@ -971,7 +974,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			}))
 
 			By("Create another client.")
-			app3 := makeClient(felixes[0], "10.65.0.4", "app3")
+			app3 := makeClient(tc.Felixes[0], "10.65.0.4", "app3")
 			defer app3.Stop()
 
 			By("Check ip rules.")
@@ -1043,11 +1046,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 		It("does nothing when egress IP is disabled", func() {
 			By("Create a gateway.")
-			gw := makeGateway(felixes[0], "10.10.10.1", "gw1")
+			gw := makeGateway(tc.Felixes[0], "10.10.10.1", "gw1")
 			defer gw.Stop()
 
 			By("Create a client.")
-			app := makeClient(felixes[0], "10.65.0.2", "app")
+			app := makeClient(tc.Felixes[0], "10.65.0.2", "app")
 			defer app.Stop()
 
 			By("Should be no ip rules.")
@@ -1062,11 +1065,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 		It("honours namespace annotations but not per-pod", func() {
 			By("Create a gateway.")
-			gw := makeGateway(felixes[0], "10.10.10.1", "gw1")
+			gw := makeGateway(tc.Felixes[0], "10.10.10.1", "gw1")
 			defer gw.Stop()
 
 			By("Create a client.")
-			app := makeClient(felixes[0], "10.65.0.2", "app")
+			app := makeClient(tc.Felixes[0], "10.65.0.2", "app")
 			defer app.Stop()
 
 			By("Should be no ip rules.")
@@ -1099,7 +1102,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range felixes {
+			for _, felix := range tc.Felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -1107,9 +1110,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			}
 		}
 
-		for _, felix := range felixes {
-			felix.Stop()
-		}
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()

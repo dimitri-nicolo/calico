@@ -126,28 +126,41 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 		})
 
 		// Add one for each node resource.
-		if remoteClusterPrefix == "" {
-			nodes, err := cs.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+		nodes, err := cs.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		for _, node := range nodes.Items {
+			// Nodes get updated frequently, so don't include the revision info.
+			node.ResourceVersion = ""
+			nodeKV, err := resources2.K8sNodeToCalico(&node, false)
 			Expect(err).NotTo(HaveOccurred())
-			for _, node := range nodes.Items {
-				// Nodes get updated frequently, so don't include the revision info.
-				node.ResourceVersion = ""
-				cnodekv, err := resources2.K8sNodeToCalico(&node, false)
-				Expect(err).NotTo(HaveOccurred())
-				expected = append(expected, *cnodekv)
 
-				if node.Name == controlPlaneNodeName {
-					for _, ip := range cnodekv.Value.(*libapiv3.Node).Spec.Addresses {
-						if ip.Type == libapiv3.InternalIP {
-							expected = append(expected, model.KVPair{
-								Key: model.HostIPKey{
-									Hostname: node.Name,
-								},
-								Value: net.ParseIP(ip.Address),
-							})
-						}
+			var ipKV *model.KVPair
+			for _, ip := range nodeKV.Value.(*libapiv3.Node).Spec.Addresses {
+				if ip.Type == libapiv3.InternalIP {
+					ipKV = &model.KVPair{
+						Key: model.HostIPKey{
+							Hostname: node.Name,
+						},
+						Value: net.ParseIP(ip.Address),
 					}
 				}
+			}
+
+			if len(remoteClusterPrefix) > 0 {
+				nodeKey := nodeKV.Key.(model.ResourceKey)
+				nodeKey.Name = remoteClusterPrefix + node.Name
+				nodeKV.Key = nodeKey
+
+				if ipKV != nil {
+					ipKey := ipKV.Key.(model.HostIPKey)
+					ipKey.Hostname = remoteClusterPrefix + node.Name
+					ipKV.Key = ipKey
+				}
+			}
+
+			expected = append(expected, *nodeKV)
+			if ipKV != nil {
+				expected = append(expected, *ipKV)
 			}
 		}
 
@@ -981,6 +994,9 @@ func (v *ValidationFilter) OnUpdates(updates []api.Update) {
 		logCxt.Debug("Validating KV pair.")
 		validatorFunc := v1v.Validate
 		if _, isV3 := update.Key.(model.ResourceKey); isV3 {
+			logCxt.Debug("Use v3 validator")
+			validatorFunc = v3v.Validate
+		} else if _, isRemoteV3 := update.Key.(model.RemoteClusterResourceKey); isRemoteV3 {
 			logCxt.Debug("Use v3 validator")
 			validatorFunc = v3v.Validate
 		} else {

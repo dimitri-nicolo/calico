@@ -56,7 +56,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 
 	var (
 		etcd              *containers.Container
-		felix             *infrastructure.Felix
+		tc                infrastructure.TopologyContainers
 		calicoClient      client.Interface
 		infra             infrastructure.DatastoreInfra
 		w                 [3]*workload.Workload
@@ -79,13 +79,13 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 		// options.ExtraEnvVars["FELIX_DebugDisableLogDropping"] = "true"
 		// options.FelixLogSeverity = "debug"
 		options.ExtraVolumes[tempDir] = "/var/run/calico/policysync"
-		felix, etcd, calicoClient, infra = infrastructure.StartSingleNodeEtcdTopology(options)
+		tc, etcd, calicoClient, infra = infrastructure.StartSingleNodeEtcdTopology(options)
 		infrastructure.CreateDefaultProfile(calicoClient, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
-			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			w[ii] = workload.Run(tc.Felixes[0], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].WorkloadEndpoint.Spec.Endpoint = "eth0"
 			w[ii].WorkloadEndpoint.Spec.Orchestrator = "k8s"
 			w[ii].WorkloadEndpoint.Spec.Pod = "fv-pod-" + iiStr
@@ -93,7 +93,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 		}
 		hostMgmtCredsPath = filepath.Join(tempDir, binder.CredentialsSubdir)
 		if BPFMode() {
-			ensureBPFProgramsAttached(felix)
+			ensureBPFProgramsAttached(tc.Felixes[0])
 		}
 	})
 
@@ -101,7 +101,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 		for ii := range w {
 			w[ii].Stop()
 		}
-		felix.Stop()
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
@@ -228,7 +228,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 						// Use the fact that anything we exec inside the Felix container runs as root to fix the
 						// permissions on the socket so the test process can connect.
 						Eventually(hostWlSocketPath[i], "3s").Should(BeAnExistingFile())
-						felix.Exec("chmod", "a+rw", containerWlSocketPath[i])
+						tc.Felixes[0].Exec("chmod", "a+rw", containerWlSocketPath[i])
 						wlConn[i], wlClient[i] = createWorkloadConn(i)
 					}
 				})
@@ -682,7 +682,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API tests", []apiconfig.DatastoreType{apiconfig.Kubernetes, apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 
 	var (
-		felixes           []*infrastructure.Felix
+		tc                infrastructure.TopologyContainers
 		infra             infrastructure.DatastoreInfra
 		w                 [3]*workload.Workload
 		tempDirs          [3]string
@@ -717,12 +717,12 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 		// resulting slow down!
 		// options.ExtraEnvVars["FELIX_DebugDisableLogDropping"] = "true"
 		// options.FelixLogSeverity = "debug"
-		felixes, _ = infrastructure.StartNNodeTopology(3, options, infra)
+		tc, _ = infrastructure.StartNNodeTopology(3, options, infra)
 
 		// Create one workload per felix, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
-			wl := workload.Run(felixes[ii], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			wl := workload.Run(tc.Felixes[ii], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			wl.WorkloadEndpoint.Spec.Endpoint = "eth0"
 			wl.WorkloadEndpoint.Spec.Orchestrator = "k8s"
 			wl.WorkloadEndpoint.Spec.Pod = "fv-pod-" + iiStr
@@ -730,15 +730,15 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 			w[ii] = wl
 		}
 		if BPFMode() {
-			ensureAllNodesBPFProgramsAttached(felixes)
+			ensureAllNodesBPFProgramsAttached(tc.Felixes)
 		}
 	})
 
 	AfterEach(func() {
-		for ii, wl := range w {
+		for _, wl := range w {
 			wl.Stop()
-			felixes[ii].Stop()
 		}
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
@@ -870,7 +870,7 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 						// Use the fact that anything we exec inside the Felix container runs as root to fix the
 						// permissions on the socket so the test process can connect.
 						Eventually(hostWlSocketPath[i], "10s").Should(BeAnExistingFile())
-						felixes[i].Exec("chmod", "a+rw", containerWlSocketPath[i])
+						tc.Felixes[i].Exec("chmod", "a+rw", containerWlSocketPath[i])
 						wlConn[i], wlClient[i] = createWorkloadConn(i)
 					}
 				})
@@ -904,13 +904,13 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 
 					It("workload 0's client should receive correct updates", func() {
 						Eventually(mockWlClient[0].InSync).Should(BeTrue())
-						expectRouteUpdates(mockWlClient[0], calcRouteUpdates(0, felixes[:], w[:]))
+						expectRouteUpdates(mockWlClient[0], calcRouteUpdates(0, tc.Felixes[:], w[:]))
 
 					})
 
 					It("workload 1's client should receive correct updates", func() {
 						Eventually(mockWlClient[1].InSync).Should(BeTrue())
-						expectRouteUpdates(mockWlClient[1], calcRouteUpdates(1, felixes[:], w[:]))
+						expectRouteUpdates(mockWlClient[1], calcRouteUpdates(1, tc.Felixes[:], w[:]))
 					})
 
 					Context("after closing one client's gRPC connection", func() {
@@ -929,7 +929,7 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 								iStr := strconv.Itoa(i)
 								By(fmt.Sprintf("Churn %d; targetting workload %d", i, felixIdx))
 
-								wl := workload.Run(felixes[felixIdx], "wl-churn"+iStr, "default", "10.65.66.1"+iStr, "8055", "tcp")
+								wl := workload.Run(tc.Felixes[felixIdx], "wl-churn"+iStr, "default", "10.65.66.1"+iStr, "8055", "tcp")
 								wl.WorkloadEndpoint.Spec.Endpoint = "eth0"
 								wl.WorkloadEndpoint.Spec.Orchestrator = "k8s"
 								wl.WorkloadEndpoint.Spec.Pod = "fv-pod-churn" + iStr
@@ -940,8 +940,8 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 									Type:          proto.RouteType_LOCAL_WORKLOAD,
 									IpPoolType:    proto.IPPoolType_IPIP,
 									Dst:           ipToCIDR(wl.IP),
-									DstNodeName:   felixes[felixIdx].Hostname,
-									DstNodeIp:     felixes[felixIdx].IP,
+									DstNodeName:   tc.Felixes[felixIdx].Hostname,
+									DstNodeIp:     tc.Felixes[felixIdx].IP,
 									LocalWorkload: true,
 								})
 
@@ -984,7 +984,7 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 				expectFullSync := func(client *mockWorkloadClient) {
 					// The new client should take over, getting a full sync.
 					Eventually(client.InSync).Should(BeTrue())
-					expectRouteUpdates(client, calcRouteUpdates(0, felixes[:], w[:]))
+					expectRouteUpdates(client, calcRouteUpdates(0, tc.Felixes[:], w[:]))
 				}
 
 				expectSyncClientErr := func(syncClient proto.PolicySync_SyncClient) {
@@ -1037,7 +1037,7 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 					client.StartRouteSyncing(ctx, wlClient[0])
 
 					// Route updates should be sent over the API.
-					expectRouteUpdates(client, calcRouteUpdates(0, felixes[:], w[:]))
+					expectRouteUpdates(client, calcRouteUpdates(0, tc.Felixes[:], w[:]))
 
 					wlConn[0].Close()
 					Eventually(client.Done).Should(BeClosed())

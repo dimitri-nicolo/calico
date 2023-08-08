@@ -140,7 +140,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		scapyTrusted *containers.Container
 		pingTarget   *containers.Container
 		etcd         *containers.Container
-		felix        *infrastructure.Felix
+		tc           infrastructure.TopologyContainers
 		client       client.Interface
 		infra        infrastructure.DatastoreInfra
 		w            [1]*workload.Workload
@@ -150,11 +150,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		if !BPFMode() {
 			// Establish conntrack state, in Felix, as though the workload just sent a DNS
 			// request to the specified scapy.
-			felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", scapy.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
+			tc.Felixes[0].Exec("conntrack", "-I", "-s", w[0].IP, "-d", scapy.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
 		} else {
 			// Same thing with calico-bpf.
 			key, val := makeBPFConntrackEntry(w[0].InterfaceIndex(), net.ParseIP(w[0].IP), net.ParseIP(scapy.IP), trusted)
-			felix.Exec("calico-bpf", "conntrack", "write",
+			tc.Felixes[0].Exec("calico-bpf", "conntrack", "write",
 				base64.StdEncoding.EncodeToString(key[:]),
 				base64.StdEncoding.EncodeToString(val[:]))
 		}
@@ -164,7 +164,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 		// Allow scapy to route back to the workload.
 		io.WriteString(scapy.Stdin,
-			fmt.Sprintf("conf.route.add(host='%v',gw='%v')\n", w[0].IP, felix.IP))
+			fmt.Sprintf("conf.route.add(host='%v',gw='%v')\n", w[0].IP, tc.Felixes[0].IP))
 	}
 
 	sendDNSResponses := func(scapy *containers.Container, dnsSpecs []string) {
@@ -214,16 +214,16 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
 				opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = scapyTrusted.IP
 				opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
-				felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+				tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 				infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 				// Create a workload, using that profile.
 				for ii := range w {
 					iiStr := strconv.Itoa(ii)
-					w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+					w[ii] = workload.Run(tc.Felixes[0], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 					w[ii].Configure(client)
 					if BPFMode() {
-						ensureBPFProgramsAttached(felix)
+						ensureBPFProgramsAttached(tc.Felixes[0])
 					}
 				}
 			})
@@ -232,12 +232,12 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			AfterEach(func() {
 				if CurrentGinkgoTestDescription().Failed {
 					if BPFMode() {
-						felix.Exec("calico-bpf", "ipsets", "dump")
+						tc.Felixes[0].Exec("calico-bpf", "ipsets", "dump")
 					}
-					felix.Exec("ipset", "list")
-					felix.Exec("iptables-save", "-c")
-					felix.Exec("ip", "r")
-					felix.Exec("conntrack", "-L")
+					tc.Felixes[0].Exec("ipset", "list")
+					tc.Felixes[0].Exec("iptables-save", "-c")
+					tc.Felixes[0].Exec("ip", "r")
+					tc.Felixes[0].Exec("conntrack", "-L")
 				}
 
 				pingTarget.Stop()
@@ -246,7 +246,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				for ii := range w {
 					w[ii].Stop()
 				}
-				felix.Stop()
+				tc.Stop()
 
 				if CurrentGinkgoTestDescription().Failed {
 					etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
@@ -472,7 +472,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
-					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
+					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", tc.Felixes[0].IP)
 
 					// Create a chain of DNS info that maps xyz.com to that IP.
 					dnsServerSetup(scapyTrusted, true)
@@ -503,7 +503,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					hep := api.NewHostEndpoint()
 					hep.Name = "felix-eth0"
 					hep.Labels = map[string]string{"host-endpoint": "yes"}
-					hep.Spec.Node = felix.Hostname
+					hep.Spec.Node = tc.Felixes[0].Hostname
 					hep.Spec.InterfaceName = "eth0"
 					_, err := client.HostEndpoints().Create(utils.Ctx, hep, utils.NoOptions)
 					Expect(err).NotTo(HaveOccurred())
@@ -529,7 +529,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
-					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
+					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", tc.Felixes[0].IP)
 
 					// Create a chain of DNS info that maps xyz.com to that IP.
 					dnsServerSetup(scapyTrusted, true)
@@ -553,7 +553,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				BeforeEach(func() {
 					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
-					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
+					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", tc.Felixes[0].IP)
 
 					// Create a chain of DNS info that maps xyz.com to that IP.
 					dnsServerSetup(scapyTrusted, true)
@@ -618,7 +618,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 						Context("with a Felix restart", func() {
 							BeforeEach(func() {
-								felix.Restart()
+								tc.Felixes[0].Restart()
 								// Allow a bit of time for Felix to re-read the
 								// persistent file and update the dataplane, but not
 								// long enough (8s) for the DNS info to expire.
@@ -657,7 +657,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 						Context("with a Felix restart", func() {
 							BeforeEach(func() {
-								felix.Restart()
+								tc.Felixes[0].Restart()
 								// Allow a bit of time for Felix to re-read the
 								// persistent file and update the dataplane, but not
 								// long enough (8s) for the DNS info to expire.
@@ -689,7 +689,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 	var (
 		scapyTrusted *containers.Container
 		etcd         *containers.Container
-		felix        *infrastructure.Felix
+		tc           infrastructure.TopologyContainers
 		client       client.Interface
 		infra        infrastructure.DatastoreInfra
 		w            [1]*workload.Workload
@@ -706,22 +706,22 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		// Create a workload, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
-			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			w[ii] = workload.Run(tc.Felixes[0], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
 			if BPFMode() {
-				ensureBPFProgramsAttached(felix)
+				ensureBPFProgramsAttached(tc.Felixes[0])
 			}
 		}
 
 		// Start scapy, in the same namespace as Felix.
 		scapyTrusted = containers.Run("scapy",
-			containers.RunOpts{AutoRemove: true, WithStdinPipe: true, SameNamespace: felix.Container},
+			containers.RunOpts{AutoRemove: true, WithStdinPipe: true, SameNamespace: tc.Felixes[0].Container},
 			"-i", "--privileged", "tigera-test/scapy")
 
 		// Configure Felix to trust its own IP as a DNS server.
@@ -729,7 +729,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 		defer cancel()
 		c := api.NewFelixConfiguration()
 		c.Name = "default"
-		c.Spec.DNSTrustedServers = &[]string{felix.IP}
+		c.Spec.DNSTrustedServers = &[]string{tc.Felixes[0].IP}
 		_, err = client.FelixConfigurations().Create(ctx, c, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -741,18 +741,18 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			if BPFMode() {
-				felix.Exec("calico-bpf", "ipsets", "dump")
+				tc.Felixes[0].Exec("calico-bpf", "ipsets", "dump")
 			}
-			felix.Exec("ipset", "list")
-			felix.Exec("iptables-save", "-c")
-			felix.Exec("ip", "r")
-			felix.Exec("conntrack", "-L")
+			tc.Felixes[0].Exec("ipset", "list")
+			tc.Felixes[0].Exec("iptables-save", "-c")
+			tc.Felixes[0].Exec("ip", "r")
+			tc.Felixes[0].Exec("conntrack", "-L")
 		}
 
 		for ii := range w {
 			w[ii].Stop()
 		}
-		felix.Stop()
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
@@ -766,11 +766,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 			// Establish conntrack state, in Felix, as though the workload just sent a DNS
 			// request to the specified scapy.  Note that for this group of tests, scapy shares
 			// Felix's namespace and so has the same IP as Felix.
-			felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", felix.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
+			tc.Felixes[0].Exec("conntrack", "-I", "-s", w[0].IP, "-d", tc.Felixes[0].IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
 		} else {
 			// Same thing with calico-bpf.
-			key, val := makeBPFConntrackEntry(w[0].InterfaceIndex(), net.ParseIP(w[0].IP), net.ParseIP(felix.IP), true)
-			felix.Exec("calico-bpf", "conntrack", "write",
+			key, val := makeBPFConntrackEntry(w[0].InterfaceIndex(), net.ParseIP(w[0].IP), net.ParseIP(tc.Felixes[0].IP), true)
+			tc.Felixes[0].Exec("calico-bpf", "conntrack", "write",
 				base64.StdEncoding.EncodeToString(key[:]),
 				base64.StdEncoding.EncodeToString(val[:]))
 		}
@@ -791,7 +791,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 			io.WriteString(scapy.Stdin, "import socket\n")
 			io.WriteString(scapy.Stdin, "sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)\n")
 			io.WriteString(scapy.Stdin,
-				fmt.Sprintf("sock.bind(('%v', 53))\n", felix.IP))
+				fmt.Sprintf("sock.bind(('%v', 53))\n", tc.Felixes[0].IP))
 			io.WriteString(scapy.Stdin,
 				fmt.Sprintf("sock.sendto(dns.__bytes__(), ('%v', 53))\n", w[0].IP))
 		}
@@ -815,14 +815,14 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 
 var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 	var (
-		etcd    *containers.Container
-		felixes []*infrastructure.Felix
-		felix   *infrastructure.Felix
-		server  *infrastructure.Felix
-		client  client.Interface
-		infra   infrastructure.DatastoreInfra
-		w       [2]*workload.Workload
-		cc      *connectivity.Checker
+		etcd   *containers.Container
+		tc     infrastructure.TopologyContainers
+		felix  *infrastructure.Felix
+		server *infrastructure.Felix
+		client client.Interface
+		infra  infrastructure.DatastoreInfra
+		w      [2]*workload.Workload
+		cc     *connectivity.Checker
 	)
 
 	BeforeEach(func() {
@@ -842,9 +842,9 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DefaultEndpointToHostAction"] = "ACCEPT"
 		opts.IPIPEnabled = false
-		felixes, etcd, client, infra = infrastructure.StartNNodeEtcdTopology(2, opts)
-		felix = felixes[0]
-		server = felixes[1]
+		tc, etcd, client, infra = infrastructure.StartNNodeEtcdTopology(2, opts)
+		felix = tc.Felixes[0]
+		server = tc.Felixes[1]
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		expectedInterfaces := []string{"eth0"}
@@ -904,8 +904,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		for ii := range w {
 			w[ii].Stop()
 		}
-		felix.Stop()
-		server.Stop()
+		tc.Stop()
 		etcd.Stop()
 		infra.Stop()
 	})

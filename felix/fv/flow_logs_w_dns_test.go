@@ -56,7 +56,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 	var (
 		infra           infrastructure.DatastoreInfra
 		opts            infrastructure.TopologyOptions
-		felixes         []*infrastructure.Felix
+		tc              infrastructure.TopologyContainers
 		flowLogsReaders []metrics.FlowLogReader
 		client          client.Interface
 		ep1_1           *workload.Workload
@@ -109,13 +109,13 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		opts.ExtraEnvVars["FELIX_DNSLOGSLATENCY"] = "false"
 
 		// Start felix instances.
-		felixes, client = infrastructure.StartNNodeTopology(1, opts, infra)
+		tc, client = infrastructure.StartNNodeTopology(1, opts, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
 
 		// Create workload on host 1.
-		ep1_1 = workload.Run(felixes[0], "ep1-1", "default", "10.65.0.0", "8055", "tcp")
+		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", "8055", "tcp")
 		ep1_1.ConfigureInInfra(infra)
 
 		// Create tiers tier1 and tier2
@@ -202,12 +202,12 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		Expect(err).NotTo(HaveOccurred())
 
 		flowLogsReaders = []metrics.FlowLogReader{}
-		for _, f := range felixes {
+		for _, f := range tc.Felixes {
 			flowLogsReaders = append(flowLogsReaders, f)
 		}
 
 		// Allow workloads to connect out to the Internet.
-		felixes[0].Exec(
+		tc.Felixes[0].Exec(
 			"iptables", "-w", "-t", "nat",
 			"-A", "POSTROUTING",
 			"-o", "eth0",
@@ -238,8 +238,8 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 
 		// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.  This will allow the flows
 		// to expire quickly.
-		for ii := range felixes {
-			felixes[ii].Exec("conntrack", "-F")
+		for ii := range tc.Felixes {
+			tc.Felixes[ii].Exec("conntrack", "-F")
 		}
 
 		Eventually(func() error {
@@ -364,7 +364,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range felixes {
+			for _, felix := range tc.Felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -373,7 +373,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		}
 
 		ep1_1.Stop()
-		for _, felix := range felixes {
+		for _, felix := range tc.Felixes {
 			if bpfEnabled {
 				felix.Exec("calico-bpf", "connect-time", "clean")
 			}

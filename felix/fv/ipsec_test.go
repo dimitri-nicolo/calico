@@ -36,7 +36,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 	var (
 		infra    infrastructure.DatastoreInfra
-		felixes  []*infrastructure.Felix
+		tc       infrastructure.TopologyContainers
 		tcpdumps []*containers.TCPDump
 		client   clientv3.Interface
 		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
@@ -50,7 +50,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		infra = getInfra()
 
 		topologyOptions := ipSecTopologyOptions()
-		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
+		tc, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
@@ -58,7 +58,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		// Start tcpdump inside each host container.  Dumping inside the container means that we'll see a lot less
 		// noise from the rest of the system.
 		tcpdumps = nil
-		for _, f := range felixes {
+		for _, f := range tc.Felixes {
 			tcpdump := containers.AttachTCPDump(f.Container, "eth0", "esp", "or", "udp", "or", "net", "10.65.0.0/16")
 			tcpdump.AddMatcher("numIKEPackets", regexp.MustCompile(`.*isakmp:.*`))
 			tcpdump.AddMatcher("numInboundESPPackets", regexp.MustCompile(`.*`+regexp.QuoteMeta("> "+f.IP)+`.*ESP.*`))
@@ -73,14 +73,14 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			f.TriggerDelayedStart()
 		}
 
-		startWorkloadsandWaitForPolicy(infra, felixes, w[:], hostW[:], "tcp")
+		startWorkloadsandWaitForPolicy(infra, tc.Felixes, w[:], hostW[:], "tcp")
 
 		cc = &connectivity.Checker{}
 	})
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range felixes {
+			for _, felix := range tc.Felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -100,9 +100,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			t.Stop()
 		}
 
-		for _, felix := range felixes {
-			felix.Stop()
-		}
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
@@ -117,7 +115,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	}
 
 	expectIKE := func() {
-		for i := range felixes {
+		for i := range tc.Felixes {
 			By(fmt.Sprintf("Doing IKE (felix %v)", i))
 			Eventually(tcpdumpMatches(i, "numIKEPackets")).Should(BeNumerically(">", 0),
 				"tcpdump didn't record any IKE packets")
@@ -125,7 +123,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	}
 
 	expectNoESP := func() {
-		for i := range felixes {
+		for i := range tc.Felixes {
 			By(fmt.Sprintf("Doing no ESP (felix %v)", i))
 			Eventually(tcpdumpMatches(i, "numInboundESPPackets")).Should(BeNumerically("==", 0),
 				"tcpdump saw unexpected inbound ESP packets")
@@ -137,7 +135,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	expectIKEAndESP := func() {
 		expectIKE()
 
-		for i := range felixes {
+		for i := range tc.Felixes {
 			By(fmt.Sprintf("Doing ESP (felix %v)", i))
 			Eventually(tcpdumpMatches(i, "numInboundESPPackets")).Should(BeNumerically(">", 0),
 				"tcpdump didn't record any inbound ESP packets")
@@ -153,7 +151,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 		expectIKEAndESP()
 
-		for i := range felixes {
+		for i := range tc.Felixes {
 			By(fmt.Sprintf("Doing IKE and ESP (felix %v)", i))
 
 			// When snooping, tcpdump sees both inbound post-decryption packets as well as both inbound and outbound
@@ -167,24 +165,24 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	})
 
 	felixTunnelAddr := func() string {
-		output, _ := felixes[0].ExecOutput("ip", "addr", "show", "tunl0")
+		output, _ := tc.Felixes[0].ExecOutput("ip", "addr", "show", "tunl0")
 		return output
 	}
 
 	It("should not enable the IPIP tunnel", func() {
-		Consistently(felixTunnelAddr, "5s").ShouldNot(ContainSubstring(felixes[0].ExpectedIPIPTunnelAddr))
+		Consistently(felixTunnelAddr, "5s").ShouldNot(ContainSubstring(tc.Felixes[0].ExpectedIPIPTunnelAddr))
 	})
 
 	It("host-to-workload connections should be encrypted", func() {
-		cc.ExpectSome(felixes[0], w[1])
-		cc.ExpectSome(felixes[1], w[0])
+		cc.ExpectSome(tc.Felixes[0], w[1])
+		cc.ExpectSome(tc.Felixes[1], w[0])
 		cc.ExpectSome(w[0], hostW[1])
 		cc.ExpectSome(w[1], hostW[0])
 		cc.CheckConnectivity()
 
 		expectIKEAndESP()
 
-		for i := range felixes {
+		for i := range tc.Felixes {
 			By(fmt.Sprintf("Having expected mix of encrypted/unencrypted packets (felix %v)", i))
 
 			// When snooping, tcpdump sees both inbound post-decryption packets as well as both inbound and outbound
@@ -202,8 +200,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		// This mimics the NAT rule used by kube-proxy to expose teh kube API server, i.e. a NAT rule from a service IP
 		// to a remote host port.
 		BeforeEach(func() {
-			for i, f := range felixes {
-				for j := range felixes {
+			for i, f := range tc.Felixes {
+				for j := range tc.Felixes {
 					if i == j {
 						continue
 					}
@@ -213,7 +211,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 						"-d", fmt.Sprintf("10.66.%d.1", j),
 						"-m", "tcp", "--dport", "8080",
 						"-j", "DNAT", "--to-destination",
-						felixes[j].IP+":8055")
+						tc.Felixes[j].IP+":8055")
 					f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
 						"-w",
 						"-p", "tcp",
@@ -237,8 +235,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	})
 
 	It("should have unencrypted host to host connectivity", func() {
-		cc.ExpectSome(felixes[0], hostW[1])
-		cc.ExpectSome(felixes[1], hostW[0])
+		cc.ExpectSome(tc.Felixes[0], hostW[1])
+		cc.ExpectSome(tc.Felixes[1], hostW[0])
 		cc.CheckConnectivity()
 
 		expectIKE()
@@ -246,10 +244,10 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	})
 
 	It("should have host to local workload connectivity", func() {
-		cc.ExpectSome(felixes[0], w[0])
-		cc.ExpectSome(felixes[1], w[1])
-		cc.ExpectSome(felixes[0], hostW[0])
-		cc.ExpectSome(felixes[1], hostW[1])
+		cc.ExpectSome(tc.Felixes[0], w[0])
+		cc.ExpectSome(tc.Felixes[1], w[1])
+		cc.ExpectSome(tc.Felixes[0], hostW[0])
+		cc.ExpectSome(tc.Felixes[1], hostW[1])
 		cc.CheckConnectivity()
 	})
 
@@ -262,7 +260,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
-			for _, f := range felixes {
+			for _, f := range tc.Felixes {
 				hep := api.NewHostEndpoint()
 				hep.Name = "eth0-" + f.Name
 				hep.Labels = map[string]string{
@@ -277,8 +275,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 		It("should have workload connectivity but not host connectivity", func() {
 			// Host endpoints (with no policies) block host-host traffic due to default drop.
-			cc.ExpectNone(felixes[0], hostW[1])
-			cc.ExpectNone(felixes[1], hostW[0])
+			cc.ExpectNone(tc.Felixes[0], hostW[1])
+			cc.ExpectNone(tc.Felixes[1], hostW[0])
 			// But the rules to allow IPSec between our hosts let the workload traffic through.
 			cc.ExpectSome(w[0], w[1])
 			cc.ExpectSome(w[1], w[0])
@@ -290,7 +288,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	var node *libapi.Node
 
 	restoreBGPSpec := func() {
-		felixPID := felixes[0].GetFelixPID()
+		felixPID := tc.Felixes[0].GetFelixPID()
 		node.Spec.BGP = &savedBGPSpec
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
@@ -298,7 +296,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		node, err = client.Nodes().Update(ctx, node, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		// Wait for felix to restart.
-		Eventually(felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
+		Eventually(tc.Felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
 	}
 
 	Context("after removing host address from nodes", func() {
@@ -309,9 +307,9 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
-			felixPID := felixes[0].GetFelixPID()
+			felixPID := tc.Felixes[0].GetFelixPID()
 
-			l, err := client.Nodes().List(ctx, options.ListOptions{Name: felixes[0].Hostname})
+			l, err := client.Nodes().List(ctx, options.ListOptions{Name: tc.Felixes[0].Hostname})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(l.Items).To(HaveLen(1))
 			n := l.Items[0]
@@ -322,7 +320,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			Expect(err).NotTo(HaveOccurred())
 
 			// Wait for felix to restart.
-			Eventually(felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
+			Eventually(tc.Felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
 		})
 
 		It("should have no workload to workload connectivity until we restore the host IP", func() {
@@ -351,9 +349,9 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
-			felixPID = felixes[0].GetFelixPID()
+			felixPID = tc.Felixes[0].GetFelixPID()
 
-			l, err := client.Nodes().List(ctx, options.ListOptions{Name: felixes[0].Hostname})
+			l, err := client.Nodes().List(ctx, options.ListOptions{Name: tc.Felixes[0].Hostname})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(l.Items).To(HaveLen(1))
 			n := l.Items[0]
@@ -362,17 +360,17 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 			s := strings.Split(n.Spec.BGP.IPv4Address, "/") // split x.x.x.x/x
 			Expect(len(s)).To(Equal(2))
-			Expect(s[0]).To(Equal(felixes[0].IP))
+			Expect(s[0]).To(Equal(tc.Felixes[0].IP))
 			n.Spec.BGP.IPv4Address = "10.65.0.100" + "/" + s[1] // Unused workload IP.
 			node, err = client.Nodes().Update(ctx, &n, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("felix should program bad policies and then restore the policies once we restore the IP", func() {
-			Eventually(felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
+			Eventually(tc.Felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
 
-			Eventually(func() int { return policyCount(felixes[0], felixes[0].IP) }, "5s", "100ms").Should(BeZero())
-			Eventually(func() int { return policyCount(felixes[0], "10.65.0.100") }, "5s", "100ms").ShouldNot(BeZero())
+			Eventually(func() int { return policyCount(tc.Felixes[0], tc.Felixes[0].IP) }, "5s", "100ms").Should(BeZero())
+			Eventually(func() int { return policyCount(tc.Felixes[0], "10.65.0.100") }, "5s", "100ms").ShouldNot(BeZero())
 
 			// Should have no connectivity with broken config.
 			cc.ExpectNone(w[0], w[1])
@@ -381,8 +379,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 			restoreBGPSpec()
 
-			Eventually(func() int { return policyCount(felixes[0], felixes[0].IP) }, "5s", "100ms").ShouldNot(BeZero())
-			Eventually(func() int { return policyCount(felixes[0], "10.65.0.100") }, "5s", "100ms").Should(BeZero())
+			Eventually(func() int { return policyCount(tc.Felixes[0], tc.Felixes[0].IP) }, "5s", "100ms").ShouldNot(BeZero())
+			Eventually(func() int { return policyCount(tc.Felixes[0], "10.65.0.100") }, "5s", "100ms").Should(BeZero())
 
 			cc.ResetExpectations()
 			cc.ExpectSome(w[0], w[1])
@@ -393,7 +391,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 	Context("after disabling IPsec", func() {
 		totalPolCount := func() (count int) {
-			for _, f := range felixes {
+			for _, f := range tc.Felixes {
 				count += policyCount(f, fmt.Sprint(ipsec.ReqID))
 			}
 			return
@@ -406,7 +404,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		})
 
 		It("should enable the IPIP tunnel", func() {
-			Eventually(felixTunnelAddr, "5s").Should(ContainSubstring(felixes[0].ExpectedIPIPTunnelAddr))
+			Eventually(felixTunnelAddr, "5s").Should(ContainSubstring(tc.Felixes[0].ExpectedIPIPTunnelAddr))
 		})
 
 		It("should remove the IPsec policy and have connectivity", func() {
@@ -415,10 +413,10 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 			cc.ExpectSome(w[0], w[1])
 			cc.ExpectSome(w[1], w[0])
-			cc.ExpectSome(felixes[0], w[1])
-			cc.ExpectSome(felixes[1], w[0])
-			cc.ExpectSome(felixes[0], w[0])
-			cc.ExpectSome(felixes[1], w[1])
+			cc.ExpectSome(tc.Felixes[0], w[1])
+			cc.ExpectSome(tc.Felixes[1], w[0])
+			cc.ExpectSome(tc.Felixes[0], w[0])
+			cc.ExpectSome(tc.Felixes[1], w[1])
 			cc.CheckConnectivity()
 		})
 	})
@@ -434,7 +432,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			felixConfig, err = client.FelixConfigurations().Update(ctx, felixConfig, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			for _, f := range felixes {
+			for _, f := range tc.Felixes {
 				Eventually(func() int { return policyCount(f, "level use") }, "5s").Should(BeNumerically(">", numPoliciesPerWep))
 			}
 		})
@@ -442,10 +440,10 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		It("should have connectivity", func() {
 			cc.ExpectSome(w[0], w[1])
 			cc.ExpectSome(w[1], w[0])
-			cc.ExpectSome(felixes[0], w[1])
-			cc.ExpectSome(felixes[1], w[0])
-			cc.ExpectSome(felixes[0], w[0])
-			cc.ExpectSome(felixes[1], w[1])
+			cc.ExpectSome(tc.Felixes[0], w[1])
+			cc.ExpectSome(tc.Felixes[1], w[0])
+			cc.ExpectSome(tc.Felixes[0], w[0])
+			cc.ExpectSome(tc.Felixes[1], w[1])
 			cc.ExpectSome(w[0], hostW[1])
 			cc.ExpectSome(w[1], hostW[0])
 			cc.CheckConnectivity()
@@ -458,16 +456,16 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		})
 
 		It("should switch to optional policies and have connectivity", func() {
-			for _, f := range felixes {
+			for _, f := range tc.Felixes {
 				Eventually(func() int { return policyCount(f, "level use") }, "5s").Should(BeNumerically(">", numPoliciesPerWep))
 			}
 
 			cc.ExpectSome(w[0], w[1])
 			cc.ExpectSome(w[1], w[0])
-			cc.ExpectSome(felixes[0], w[1])
-			cc.ExpectSome(felixes[1], w[0])
-			cc.ExpectSome(felixes[0], w[0])
-			cc.ExpectSome(felixes[1], w[1])
+			cc.ExpectSome(tc.Felixes[0], w[1])
+			cc.ExpectSome(tc.Felixes[1], w[0])
+			cc.ExpectSome(tc.Felixes[0], w[0])
+			cc.ExpectSome(tc.Felixes[1], w[1])
 			cc.ExpectSome(w[0], hostW[1])
 			cc.ExpectSome(w[1], hostW[0])
 			cc.CheckConnectivity()
@@ -477,7 +475,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	Context("after flushing IPsec policy on one host", func() {
 		BeforeEach(func() {
 			// Felix will spot this eventually, but its default refresh time is several minutes...
-			felixes[0].Exec("ip", "xfrm", "policy", "flush")
+			tc.Felixes[0].Exec("ip", "xfrm", "policy", "flush")
 		})
 
 		It("should have no workload connectivity", func() {
@@ -485,8 +483,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			cc.ExpectNone(w[1], w[0])
 			cc.ExpectNone(w[0], hostW[1])
 			cc.ExpectNone(w[1], hostW[0])
-			cc.ExpectNone(felixes[0], w[1])
-			cc.ExpectNone(felixes[1], w[0])
+			cc.ExpectNone(tc.Felixes[0], w[1])
+			cc.ExpectNone(tc.Felixes[1], w[0])
 			cc.CheckConnectivity()
 		})
 	})
@@ -495,9 +493,9 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 
 	var (
-		infra   infrastructure.DatastoreInfra
-		felixes []*infrastructure.Felix
-		client  clientv3.Interface
+		infra  infrastructure.DatastoreInfra
+		tc     infrastructure.TopologyContainers
+		client clientv3.Interface
 		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
@@ -518,16 +516,16 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 		fc.Spec.IPSecAllowUnsecuredTraffic = &t
 
 		topologyOptions.InitialFelixConfiguration = fc
-		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
+		tc, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
 
-		for _, f := range felixes {
+		for _, f := range tc.Felixes {
 			f.TriggerDelayedStart()
 		}
 
-		createWorkloads(infra, felixes, w[:], hostW[:], "tcp")
+		createWorkloads(infra, tc.Felixes, w[:], hostW[:], "tcp")
 
 		cc = &connectivity.Checker{}
 
@@ -536,22 +534,22 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 
 		// Enable IPsec at node scope on one host.
 		fc = api.NewFelixConfiguration()
-		fc.Name = "node." + felixes[1].Hostname
+		fc.Name = "node." + tc.Felixes[1].Hostname
 		fc.Spec.IPSecMode = "PSK"
 		_, err = client.FelixConfigurations().Create(ctx, fc, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Turning on the option should make felix switch to "use"-level policy.
-		Eventually(func() int { return policyCount(felixes[1], "level use") }, "5s").ShouldNot(BeZero())
-		Eventually(func() int { return policyCount(felixes[1], w[0].IP) }, "5s", "100ms").Should(
+		Eventually(func() int { return policyCount(tc.Felixes[1], "level use") }, "5s").ShouldNot(BeZero())
+		Eventually(func() int { return policyCount(tc.Felixes[1], w[0].IP) }, "5s", "100ms").Should(
 			Equal(numPoliciesPerWep),
 			fmt.Sprintf("Expected to see %d IPsec policies for workload IP %s in felix container %s",
-				numPoliciesPerWep, w[0].IP, felixes[1].Name))
+				numPoliciesPerWep, w[0].IP, tc.Felixes[1].Name))
 	})
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range felixes {
+			for _, felix := range tc.Felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -567,9 +565,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 		for _, wl := range hostW {
 			wl.Stop()
 		}
-		for _, felix := range felixes {
-			felix.Stop()
-		}
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
@@ -582,8 +578,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 		cc.ExpectSome(w[1], w[0])
 		cc.ExpectSome(w[0], hostW[1])
 		cc.ExpectSome(w[1], hostW[0])
-		cc.ExpectSome(felixes[0], w[1])
-		cc.ExpectSome(felixes[1], w[0])
+		cc.ExpectSome(tc.Felixes[0], w[1])
+		cc.ExpectSome(tc.Felixes[1], w[0])
 		cc.CheckConnectivity()
 	})
 })
@@ -592,7 +588,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 
 	var (
 		infra    infrastructure.DatastoreInfra
-		felixes  []*infrastructure.Felix
+		tc       infrastructure.TopologyContainers
 		tcpdumps []*containers.TCPDump
 		client   clientv3.Interface
 		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
@@ -605,7 +601,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 	BeforeEach(func() {
 		infra = getInfra()
 
-		felixes, client = infrastructure.StartNNodeTopology(3, ipSecTopologyOptions(), infra)
+		tc, client = infrastructure.StartNNodeTopology(3, ipSecTopologyOptions(), infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
@@ -613,7 +609,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 		// Start tcpdump inside each host container.  Dumping inside the container means that we'll see a lot less
 		// noise from the rest of the system.
 		tcpdumps = nil
-		for _, f := range felixes {
+		for _, f := range tc.Felixes {
 			tcpdump := containers.AttachTCPDump(f.Container, "eth0", "esp", "or", "udp")
 			tcpdump.AddMatcher("numInboundESPPackets", regexp.MustCompile(`.*`+regexp.QuoteMeta("> "+f.IP)+`.*ESP.*`))
 			tcpdump.AddMatcher("numPlaintextOutboundWorkloadPackets", regexp.MustCompile(`.*10\.65\.\d+\.2.*`+regexp.QuoteMeta(" >")+`.*`))
@@ -625,7 +621,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 			f.TriggerDelayedStart()
 		}
 
-		startWorkloadsandWaitForPolicy(infra, felixes, w[:], hostW[:], "udp") /* UDP for packet loss test */
+		startWorkloadsandWaitForPolicy(infra, tc.Felixes, w[:], hostW[:], "udp") /* UDP for packet loss test */
 
 		cc = &connectivity.Checker{}
 		cc.Protocol = "udp"
@@ -633,7 +629,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			for _, felix := range felixes {
+			for _, felix := range tc.Felixes {
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -653,9 +649,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 			t.Stop()
 		}
 
-		for _, felix := range felixes {
-			felix.Stop()
-		}
+		tc.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
@@ -664,8 +658,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 	})
 
 	It("should have encrypted connectivity from host with no workloads to/from workloads", func() {
-		cc.ExpectSome(felixes[2], w[0])
-		cc.ExpectSome(felixes[2], w[1])
+		cc.ExpectSome(tc.Felixes[2], w[0])
+		cc.ExpectSome(tc.Felixes[2], w[1])
 		cc.ExpectSome(w[0], hostW[2])
 		cc.ExpectSome(w[1], hostW[2])
 		cc.CheckConnectivity()
@@ -694,7 +688,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 
 	describeGracefulShutdownTest := func(disableFunc func(clientv3.Interface)) {
 		totalPolCount := func() (count int) {
-			for _, f := range felixes {
+			for _, f := range tc.Felixes {
 				count += policyCount(f, fmt.Sprint(ipsec.ReqID))
 			}
 			return
