@@ -18,10 +18,10 @@ import (
 // wafAlertController is responsible for watching WAF logs in a cluster
 // and creating corresponding events.
 type wafAlertController struct {
-	clusterName string
-	cancel      context.CancelFunc
-	wafLogs     client.WAFLogsInterface
-	events      client.EventsInterface
+	clusterName      string
+	cancel           context.CancelFunc
+	wafLogs          client.WAFLogsInterface
+	events           client.EventsInterface
 	lastWafTimestamp time.Time
 }
 
@@ -65,7 +65,6 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 func (c *wafAlertController) Close() {
 	c.cancel()
 }
-
 
 func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 	log.Debug("Processing WAF logs")

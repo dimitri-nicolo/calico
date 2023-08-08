@@ -8,10 +8,8 @@ import (
 )
 
 const (
-
 	GlobalAlertSpecTypeFieldName = "Type"
 )
-
 
 func NewWafEvent(l v1.WAFLog) v1.Event {
 	// read in the yaml files here and compare to the WAF Log
