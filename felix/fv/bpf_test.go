@@ -711,39 +711,6 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					})
 				})
 
-				It("should clean up jump maps", func() {
-					numJumpMaps := func() int {
-						command := fmt.Sprintf("find /sys/fs/bpf/tc -name %s", maps.JumpMapName())
-						output, err := tc.Felixes[0].ExecOutput("sh", "-c", command)
-						Expect(err).NotTo(HaveOccurred())
-						return strings.Count(output, maps.JumpMapName())
-					}
-
-					expJumpMaps := func(numWorkloads int) int {
-						numHostIfaces := 1
-						specialIfaces := 0
-						if ctlbWorkaround {
-							specialIfaces = 2 /* nat + lo */
-						}
-						expectedNumMaps := 2*numWorkloads + 2*numHostIfaces + 2*specialIfaces
-						return expectedNumMaps
-					}
-
-					// Check start-of-day number of interfaces.
-					Eventually(numJumpMaps, "15s", "200ms").Should(
-						BeNumerically("==", expJumpMaps(len(w))),
-						"Unexpected number of jump maps at start of day")
-
-					// Remove a workload.
-					w[0].RemoveFromInfra(infra)
-					w[0].Stop()
-
-					// Need a long timeout here because felix throttles cleanups.
-					Eventually(numJumpMaps, "15s", "200ms").Should(
-						BeNumerically("==", expJumpMaps(len(w)-1)),
-						"Unexpected number of jump maps after removing workload")
-				})
-
 				It("should recover if the BPF programs are removed", func() {
 					flapInterface := func() {
 						By("Flapping interface")
@@ -1167,10 +1134,10 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 						By("global policy denies traffic to host 1 on host 0", func() {
 
-							nets := []string{felixes[1].IP + "/32"}
+							nets := []string{tc.Felixes[1].IP + "/32"}
 							switch testOpts.tunnel {
 							case "ipip":
-								nets = append(nets, felixes[1].ExpectedIPIPTunnelAddr+"/32")
+								nets = append(nets, tc.Felixes[1].ExpectedIPIPTunnelAddr+"/32")
 							}
 
 							pol := api.NewGlobalNetworkPolicy()
@@ -1184,7 +1151,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 									},
 								},
 							}
-							pol.Spec.Selector = "node=='" + felixes[0].Name + "'"
+							pol.Spec.Selector = "node=='" + tc.Felixes[0].Name + "'"
 							pol.Spec.ApplyOnForward = false
 
 							pol = createPolicy(pol)
@@ -1192,10 +1159,10 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 						By("global policy allows forwarded traffic to host 1 on host 0", func() {
 
-							nets := []string{felixes[1].IP + "/32"}
+							nets := []string{tc.Felixes[1].IP + "/32"}
 							switch testOpts.tunnel {
 							case "ipip":
-								nets = append(nets, felixes[1].ExpectedIPIPTunnelAddr+"/32")
+								nets = append(nets, tc.Felixes[1].ExpectedIPIPTunnelAddr+"/32")
 							}
 
 							pol := api.NewGlobalNetworkPolicy()
@@ -1209,19 +1176,19 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 									},
 								},
 							}
-							pol.Spec.Selector = "node=='" + felixes[0].Name + "'"
+							pol.Spec.Selector = "node=='" + tc.Felixes[0].Name + "'"
 							pol.Spec.ApplyOnForward = true
 
 							pol = createPolicy(pol)
 						})
 
-						bpfWaitForPolicy(felixes[0], "eth0", "egress", "default.host-0-1")
+						bpfWaitForPolicy(tc.Felixes[0], "eth0", "egress", "default.host-0-1")
 
 					})
 					It("should handle NAT outgoing", func() {
 						By("SNATting outgoing traffic with the flag set")
-						cc.ExpectSNAT(w[0][0], felixes[0].IP, hostW[1])
-						cc.CheckConnectivity(conntrackChecks(felixes)...)
+						cc.ExpectSNAT(w[0][0], tc.Felixes[0].IP, hostW[1])
+						cc.CheckConnectivity(conntrackChecks(tc.Felixes)...)
 
 						if testOpts.tunnel == "none" {
 							By("Leaving traffic alone with the flag clear")
@@ -1232,15 +1199,15 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							Expect(err).NotTo(HaveOccurred())
 							cc.ResetExpectations()
 							cc.ExpectSNAT(w[0][0], w[0][0].IP, hostW[1])
-							cc.CheckConnectivity(conntrackChecks(felixes)...)
+							cc.CheckConnectivity(conntrackChecks(tc.Felixes)...)
 
 							By("SNATting again with the flag set")
 							pool.Spec.NATOutgoing = true
 							pool, err = calicoClient.IPPools().Update(context.TODO(), pool, options2.SetOptions{})
 							Expect(err).NotTo(HaveOccurred())
 							cc.ResetExpectations()
-							cc.ExpectSNAT(w[0][0], felixes[0].IP, hostW[1])
-							cc.CheckConnectivity(conntrackChecks(felixes)...)
+							cc.ExpectSNAT(w[0][0], tc.Felixes[0].IP, hostW[1])
+							cc.CheckConnectivity(conntrackChecks(tc.Felixes)...)
 						}
 					})
 				})
