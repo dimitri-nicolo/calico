@@ -57,6 +57,7 @@ metadata:
   name: tigera-operator
   labels:
     name: tigera-operator
+    pod-security.kubernetes.io/enforce: privileged
 EOF
 
 # Make sure the subchart exists by creating a dummy, such that helm can build the tigera-operator chart. This is because
