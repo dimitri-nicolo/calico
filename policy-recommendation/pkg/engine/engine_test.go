@@ -2,15 +2,17 @@
 package engine
 
 import (
+	"encoding/json"
 	"fmt"
-	"reflect"
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	log "github.com/sirupsen/logrus"
 
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -18,6 +20,8 @@ import (
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	calres "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
+	enginedata "github.com/projectcalico/calico/policy-recommendation/pkg/engine/data"
+	"github.com/projectcalico/calico/policy-recommendation/pkg/types"
 	testutils "github.com/projectcalico/calico/policy-recommendation/tests/utils"
 	"github.com/projectcalico/calico/policy-recommendation/utils"
 )
@@ -25,14 +29,13 @@ import (
 const (
 	testDataFile = "../../tests/data/flows.json"
 
-	// serviceName1 = "serviceName1"
-	// serviceName2 = "serviceName2"
-	// serviceName3 = "serviceName3"
-	namespace1 = "ns1"
-	namespace2 = "ns2"
-	namespace3 = "ns3"
-
 	timeNowRFC3339 = "2022-11-30T09:01:38Z"
+)
+
+var (
+	protocolTCP  = numorstring.ProtocolFromString("TCP")
+	protocolUDP  = numorstring.ProtocolFromString("UDP")
+	protocolICMP = numorstring.ProtocolFromString("ICMP")
 )
 
 type mockRealClock struct{}
@@ -41,11 +44,1390 @@ func (mockRealClock) NowRFC3339() string { return timeNowRFC3339 }
 
 var mrc mockRealClock
 
+var _ = DescribeTable("processFlow",
+	func(eng *recommendationEngine, flow *api.Flow, expectedEgress, expectedIngress engineRules) {
+		eng.processFlow(flow)
+
+		Expect(eng.egress.size).To(Equal(expectedEgress.size))
+		for key, val := range eng.egress.egressToDomainRules {
+			Expect(expectedEgress.egressToDomainRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.egress.egressToServiceRules {
+			Expect(expectedEgress.egressToServiceRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.egress.namespaceRules {
+			Expect(expectedEgress.namespaceRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.egress.networkSetRules {
+			Expect(expectedEgress.networkSetRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.egress.privateNetworkRules {
+			Expect(expectedEgress.privateNetworkRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.egress.publicNetworkRules {
+			Expect(expectedEgress.publicNetworkRules).To(HaveKeyWithValue(key, val))
+		}
+
+		Expect(eng.ingress.size).To(Equal(expectedIngress.size))
+		for key, val := range eng.ingress.egressToDomainRules {
+			Expect(expectedIngress.egressToDomainRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.ingress.egressToServiceRules {
+			Expect(expectedIngress.egressToServiceRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.ingress.namespaceRules {
+			Expect(expectedIngress.namespaceRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.ingress.networkSetRules {
+			Expect(expectedIngress.networkSetRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.ingress.privateNetworkRules {
+			Expect(expectedIngress.privateNetworkRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.ingress.publicNetworkRules {
+			Expect(expectedIngress.publicNetworkRules).To(HaveKeyWithValue(key, val))
+		}
+	},
+	Entry("egress-to-public-domain",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "src",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "net",
+				Domains:   "www.mydomain.com",
+				Namespace: "",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{
+			egressToDomainRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "",
+					protocol:  protocolTCP,
+					port:      numorstring.Port{MinPort: 8081, MaxPort: 8081},
+				}: {
+					Action:    v3.Allow,
+					Domains:   []string{"www.mydomain.com"},
+					Namespace: "",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			publicNetworkRules: map[engineRuleKey]*types.FlowLogData{},
+			size:               1,
+		},
+		engineRules{},
+	),
+	Entry("egress-to-service",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "src",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type:        "wep",
+				Name:        "",
+				Namespace:   "",
+				ServiceName: "some-service",
+				Port:        getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{
+			egressToServiceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					name:      "some-service",
+					namespace: "",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Name:      "some-service",
+					Namespace: "",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("egress-to-local-service",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "src",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type:        "wep",
+				Name:        "my-service.namespace2",
+				Namespace:   "namespace2",
+				ServiceName: "my-service.namespace2.svc.cluster.local",
+				Port:        getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace2",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Name:      "",
+					Namespace: "namespace2",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("egress-to-namespace-allow",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "src",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace2",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace2",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Name:      "",
+					Namespace: "namespace2",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("egress-to-namespace-pass",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "src",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace2",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace2",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Name:      "",
+					Namespace: "namespace2",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("egress-to-intra-namespace-allow",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "src",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace1",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Name:      "",
+					Namespace: "namespace1",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("egress-to-intra-namespace-pass",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "src",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1a-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1b-*",
+				Namespace: "namespace1",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace1",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Pass,
+					Name:      "",
+					Namespace: "namespace1",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("egress-to-networkset",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "src",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "ns",
+				Name:      "netset-1-*",
+				Namespace: "namespace2",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{
+			networkSetRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					name:      "netset-1-*",
+					namespace: "namespace2",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Name:      "netset-1-*",
+					Namespace: "namespace2",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("egress-to-global-networkset",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "src",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type: "ns",
+				Name: "global-netset-1-*",
+				Port: getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{
+			networkSetRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					global:   true,
+					name:     "global-netset-1-*",
+					protocol: protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Global:    true,
+					Name:      "global-netset-1-*",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("egress-to-private-network",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "src",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type: "net",
+				Name: "pvt",
+				Port: getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{
+			privateNetworkRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					protocol: protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("egress-to-public-network",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "src",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type: "net",
+				Name: "pub",
+				Port: getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{
+			publicNetworkRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					protocol: protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("ingress-from-namespace-allow",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "dst",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-2-*",
+				Namespace: "namespace2",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace2",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Namespace: "namespace2",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+	),
+	Entry("ingress-from-namespace-pass",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "dst",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-2-*",
+				Namespace: "namespace2",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace2",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Namespace: "namespace2",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+	),
+	Entry("ingress-from-intra-namespace-pass",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "dst",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-2-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{},
+		engineRules{},
+	),
+	Entry("ingress-from-intra-namespace-pass",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "dst",
+			Source: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-2-*",
+				Namespace: "namespace1",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{},
+		engineRules{},
+	),
+	Entry("ingress-from-networkset",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "dst",
+			Source: api.FlowEndpointData{
+				Type:      "ns",
+				Name:      "networkset-1-*",
+				Namespace: "namespace2",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{},
+		engineRules{
+			networkSetRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					name:      "networkset-1-*",
+					namespace: "namespace2",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Name:      "networkset-1-*",
+					Namespace: "namespace2",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+	),
+	Entry("ingress-from-global-networkset",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "dst",
+			Source: api.FlowEndpointData{
+				Type: "ns",
+				Name: "global-networkset-1-*",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{},
+		engineRules{
+			networkSetRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					global:   true,
+					name:     "global-networkset-1-*",
+					protocol: protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Global:    true,
+					Name:      "global-networkset-1-*",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+	),
+	Entry("ingress-from-private-network",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "dst",
+			Source: api.FlowEndpointData{
+				Type: "net",
+				Name: "pvt",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{},
+		engineRules{
+			privateNetworkRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					protocol: protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+	),
+	Entry("ingress-from-public-network",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		&api.Flow{
+			Reporter: "dst",
+			Source: api.FlowEndpointData{
+				Type: "net",
+				Name: "pub",
+			},
+			Destination: api.FlowEndpointData{
+				Type:      "wep",
+				Name:      "pod-1-*",
+				Namespace: "namespace1",
+				Port:      getPtrUint16(8081),
+			},
+			ActionFlag: 1,
+			Proto:      getPtrUint8(6),
+		},
+		engineRules{},
+		engineRules{
+			publicNetworkRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					protocol: protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+	),
+)
+
+var _ = DescribeTable("buildRules",
+	func(eng *recommendationEngine, dir calres.DirectionType, rules []v3.Rule, expectedEgress, expectedIngress engineRules) {
+		eng.buildRules(dir, rules)
+
+		Expect(eng.egress.size).To(Equal(expectedEgress.size))
+		for key, val := range eng.egress.egressToDomainRules {
+			Expect(expectedEgress.egressToDomainRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.egress.egressToServiceRules {
+			Expect(expectedEgress.egressToServiceRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.egress.namespaceRules {
+			Expect(expectedEgress.namespaceRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.egress.networkSetRules {
+			Expect(expectedEgress.networkSetRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.egress.privateNetworkRules {
+			Expect(expectedEgress.privateNetworkRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.egress.publicNetworkRules {
+			Expect(expectedEgress.publicNetworkRules).To(HaveKeyWithValue(key, val))
+		}
+
+		Expect(eng.ingress.size).To(Equal(expectedIngress.size))
+		Expect(eng.ingress.egressToDomainRules).To(HaveLen(0))
+		Expect(eng.ingress.egressToServiceRules).To(HaveLen(0))
+		for key, val := range eng.ingress.namespaceRules {
+			Expect(expectedIngress.namespaceRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.ingress.networkSetRules {
+			Expect(expectedIngress.networkSetRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.ingress.privateNetworkRules {
+			Expect(expectedIngress.privateNetworkRules).To(HaveKeyWithValue(key, val))
+		}
+		for key, val := range eng.ingress.publicNetworkRules {
+			Expect(expectedIngress.publicNetworkRules).To(HaveKeyWithValue(key, val))
+		}
+	},
+	Entry("build-egress-to-domains",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.EgressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source:   v3.EntityRule{},
+				Destination: v3.EntityRule{
+					Domains: []string{"www.my-domain1.com", "my-domain2.com"},
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.EgressToDomainScope),
+					},
+				},
+			},
+		},
+		engineRules{
+			egressToDomainRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					name:      "",
+					namespace: "",
+					protocol:  numorstring.ProtocolFromInt(6),
+					port:      numorstring.Port{MinPort: 80, MaxPort: 80},
+				}: {
+					Action:    v3.Allow,
+					Domains:   []string{"www.my-domain1.com", "my-domain2.com"},
+					Name:      "",
+					Namespace: "",
+					Protocol:  numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			publicNetworkRules: map[engineRuleKey]*types.FlowLogData{},
+			size:               1,
+		},
+		engineRules{},
+	),
+	Entry("build-egress-to-service",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.EgressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source:   v3.EntityRule{},
+				Destination: v3.EntityRule{
+					Services: &v3.ServiceMatch{
+						Name: "external-service",
+					},
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/name", calres.PolicyRecKeyName):        "external-service",
+						fmt.Sprintf("%s/namespace", calres.PolicyRecKeyName):   "",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.EgressToServiceScope),
+					},
+				},
+			},
+		},
+		engineRules{
+			egressToServiceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					name:     "external-service",
+					protocol: numorstring.ProtocolFromInt(6),
+				}: {
+					Action:   v3.Allow,
+					Name:     "external-service",
+					Protocol: numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("build-egress-to-namespace-allow",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.EgressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source:   v3.EntityRule{},
+				Destination: v3.EntityRule{
+					NamespaceSelector: "projectcalico.org/name == 'namespace2'",
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/name", calres.PolicyRecKeyName):        "pod-2-*",
+						fmt.Sprintf("%s/namespace", calres.PolicyRecKeyName):   "namespace2",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.NamespaceScope),
+					},
+				},
+			},
+		},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace2",
+					protocol:  numorstring.ProtocolFromInt(6),
+				}: {
+					Action:    v3.Allow,
+					Namespace: "namespace2",
+					Protocol:  numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("build-egress-to-namespace-pass",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.EgressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Pass,
+				Protocol: protocolFromInt(uint8(6)),
+				Source:   v3.EntityRule{},
+				Destination: v3.EntityRule{
+					NamespaceSelector: "projectcalico.org/name == 'namespace1'",
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/name", calres.PolicyRecKeyName):        "pod-2-*",
+						fmt.Sprintf("%s/namespace", calres.PolicyRecKeyName):   "namespace1",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.NamespaceScope),
+					},
+				},
+			},
+		},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace1",
+					protocol:  numorstring.ProtocolFromInt(6),
+				}: {
+					Action:    v3.Pass,
+					Namespace: "namespace1",
+					Protocol:  numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("build-egress-to-networkset",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.EgressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source:   v3.EntityRule{},
+				Destination: v3.EntityRule{
+					NamespaceSelector: "projectcalico.org/name == 'namespace2'",
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/name", calres.PolicyRecKeyName):        "networkset-1",
+						fmt.Sprintf("%s/namespace", calres.PolicyRecKeyName):   "namespace2",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.NetworkSetScope),
+					},
+				},
+			},
+		},
+		engineRules{
+			networkSetRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					name:      "networkset-1",
+					namespace: "namespace2",
+					protocol:  numorstring.ProtocolFromInt(6),
+				}: {
+					Action:    v3.Allow,
+					Name:      "networkset-1",
+					Namespace: "namespace2",
+					Protocol:  numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("build-egress-to-global-networkset",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.EgressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source:   v3.EntityRule{},
+				Destination: v3.EntityRule{
+					NamespaceSelector: "global()",
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/name", calres.PolicyRecKeyName):        "global-networkset-1",
+						fmt.Sprintf("%s/namespace", calres.PolicyRecKeyName):   "",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.NetworkSetScope),
+					},
+				},
+			},
+		},
+		engineRules{
+			networkSetRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					global:   true,
+					name:     "global-networkset-1",
+					protocol: numorstring.ProtocolFromInt(6),
+				}: {
+					Action:   v3.Allow,
+					Global:   true,
+					Name:     "global-networkset-1",
+					Protocol: numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("build-egress-to-private-network",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.EgressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source:   v3.EntityRule{},
+				Destination: v3.EntityRule{
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.PrivateNetworkScope),
+					},
+				},
+			},
+		},
+		engineRules{
+			privateNetworkRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					protocol: numorstring.ProtocolFromInt(6),
+				}: {
+					Action:   v3.Allow,
+					Protocol: numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("build-egress-to-public-network",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.EgressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source:   v3.EntityRule{},
+				Destination: v3.EntityRule{
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.PublicNetworkScope),
+					},
+				},
+			},
+		},
+		engineRules{
+			publicNetworkRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					protocol: numorstring.ProtocolFromInt(6),
+				}: {
+					Action:   v3.Allow,
+					Protocol: numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+		engineRules{},
+	),
+	Entry("build-ingress-from-namespace",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.IngressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source: v3.EntityRule{
+					NamespaceSelector: "projectcalico.org/name == 'namespace2'",
+				},
+				Destination: v3.EntityRule{
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/name", calres.PolicyRecKeyName):        "pod-2-*",
+						fmt.Sprintf("%s/namespace", calres.PolicyRecKeyName):   "namespace2",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.NamespaceScope),
+					},
+				},
+			},
+		},
+		engineRules{},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace2",
+					protocol:  numorstring.ProtocolFromInt(6),
+				}: {
+					Action:    v3.Allow,
+					Namespace: "namespace2",
+					Protocol:  numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+	),
+	Entry("build-ingress-from-intra-namespace",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.IngressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source: v3.EntityRule{
+					NamespaceSelector: "projectcalico.org/name == 'namespace1'",
+				},
+				Destination: v3.EntityRule{
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/name", calres.PolicyRecKeyName):        "pod-2-*",
+						fmt.Sprintf("%s/namespace", calres.PolicyRecKeyName):   "namespace1",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.NamespaceScope),
+					},
+				},
+			},
+		},
+		engineRules{},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace1",
+					protocol:  numorstring.ProtocolFromInt(6),
+				}: {
+					Action:    v3.Allow,
+					Namespace: "namespace1",
+					Protocol:  numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+	),
+	Entry("build-ingress-from-networkset",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.IngressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source: v3.EntityRule{
+					NamespaceSelector: "projectcalico.org/name == 'namespace2'",
+					Selector:          fmt.Sprintf("projectcalico.org/name == 'networkset-1' && projectcalico.org/kind == '%s'", string(calres.NetworkSetScope)),
+				},
+				Destination: v3.EntityRule{
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/name", calres.PolicyRecKeyName):        "networkset-1",
+						fmt.Sprintf("%s/namespace", calres.PolicyRecKeyName):   "namespace2",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.NetworkSetScope),
+					},
+				},
+			},
+		},
+		engineRules{},
+		engineRules{
+			networkSetRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					name:      "networkset-1",
+					namespace: "namespace2",
+					protocol:  numorstring.ProtocolFromInt(6),
+				}: {
+					Action:    v3.Allow,
+					Name:      "networkset-1",
+					Namespace: "namespace2",
+					Protocol:  numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+	),
+	Entry("build-ingress-from-global-networkset",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.IngressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source: v3.EntityRule{
+					NamespaceSelector: "global()",
+					Selector:          fmt.Sprintf("projectcalico.org/name == 'global-networkset-1' && projectcalico.org/kind == '%s'", string(calres.NetworkSetScope)),
+				},
+				Destination: v3.EntityRule{
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/name", calres.PolicyRecKeyName):        "global-networkset-1",
+						fmt.Sprintf("%s/namespace", calres.PolicyRecKeyName):   "namespace1",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.NetworkSetScope),
+					},
+				},
+			},
+		},
+		engineRules{},
+		engineRules{
+			networkSetRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					global:   true,
+					name:     "global-networkset-1",
+					protocol: numorstring.ProtocolFromInt(6),
+				}: {
+					Action:   v3.Allow,
+					Global:   true,
+					Name:     "global-networkset-1",
+					Protocol: numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+	),
+	Entry("build-ingress-from-private-network",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.IngressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source:   v3.EntityRule{},
+				Destination: v3.EntityRule{
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.PrivateNetworkScope),
+					},
+				},
+			},
+		},
+		engineRules{},
+		engineRules{
+			privateNetworkRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					protocol: numorstring.ProtocolFromInt(6),
+				}: {
+					Action:   v3.Allow,
+					Protocol: numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+	),
+	Entry("build-ingress-from-public-network",
+		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
+		calres.IngressTraffic,
+		[]v3.Rule{
+			{
+				Action:   v3.Allow,
+				Protocol: protocolFromInt(uint8(6)),
+				Source:   v3.EntityRule{},
+				Destination: v3.EntityRule{
+					Ports: []numorstring.Port{
+						{
+							MinPort: 80,
+							MaxPort: 80,
+						},
+					},
+				},
+				Metadata: &v3.RuleMetadata{
+					Annotations: map[string]string{
+						fmt.Sprintf("%s/lastUpdated", calres.PolicyRecKeyName): "2022-11-30T09:01:38Z",
+						fmt.Sprintf("%s/scope", calres.PolicyRecKeyName):       string(calres.PublicNetworkScope),
+					},
+				},
+			},
+		},
+		engineRules{},
+		engineRules{
+			publicNetworkRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					protocol: numorstring.ProtocolFromInt(6),
+				}: {
+					Action:   v3.Allow,
+					Protocol: numorstring.ProtocolFromInt(6),
+					Ports: []numorstring.Port{
+						{MinPort: 80, MaxPort: 80},
+					},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
+	),
+)
+
+func protocolFromInt(i uint8) *numorstring.Protocol {
+	p := numorstring.ProtocolFromInt(i)
+	return &p
+}
+
 var _ = Describe("processFlow", func() {
 	const serviceNameSuffix = "svc.cluster.local"
 
 	var (
-		recEngine *recommendationEngine
+		eng *recommendationEngine
 
 		flowData []api.Flow
 
@@ -61,8 +1443,18 @@ var _ = Describe("processFlow", func() {
 	)
 
 	BeforeEach(func() {
-		recEngine = newRecommendationEngine(
-			name, namespace, tier, &order, clock, interval, stabilization, serviceNameSuffix, *log.WithField("cluster", "my-cluster"))
+		eng = newRecommendationEngine(
+			name,
+			namespace,
+			tier,
+			&order,
+			clock,
+			interval,
+			stabilization,
+			false,
+			serviceNameSuffix,
+			*log.WithField("cluster", "my-cluster"),
+		)
 
 		err := testutils.LoadData(testDataFile, &flowData)
 		Expect(err).To(BeNil())
@@ -70,18 +1462,18 @@ var _ = Describe("processFlow", func() {
 
 	It("Test valid engine rule generation", func() {
 		for _, data := range flowData {
-			recEngine.processFlow(&data)
+			eng.processFlow(&data)
 		}
 
-		Expect(len(recEngine.egress.namespaceRules)).To(Equal(2))
-		Expect(recEngine.egress.namespaceRules[namespaceRuleKey{namespace: "namespace1", protocol: protocolTCP}]).
-			To(Equal(&namespaceRule{namespace: "namespace1", protocol: protocolTCP, ports: ports1, timestamp: "2022-11-30T09:01:38Z"}))
-		Expect(recEngine.egress.namespaceRules[namespaceRuleKey{namespace: "namespace2", protocol: protocolTCP}]).
-			To(Equal(&namespaceRule{namespace: "namespace2", protocol: protocolTCP, ports: ports2, timestamp: "2022-11-30T09:01:38Z"}))
+		Expect(len(eng.egress.namespaceRules)).To(Equal(2))
+		Expect(eng.egress.namespaceRules[engineRuleKey{namespace: "namespace1", protocol: protocolTCP}]).
+			To(Equal(&types.FlowLogData{Action: v3.Allow, Namespace: "namespace1", Protocol: protocolTCP, Ports: ports1, Timestamp: "2022-11-30T09:01:38Z"}))
+		Expect(eng.egress.namespaceRules[engineRuleKey{namespace: "namespace2", protocol: protocolTCP}]).
+			To(Equal(&types.FlowLogData{Action: v3.Allow, Namespace: "namespace2", Protocol: protocolTCP, Ports: ports2, Timestamp: "2022-11-30T09:01:38Z"}))
 
-		Expect(len(recEngine.ingress.namespaceRules)).To(Equal(1))
-		Expect(recEngine.ingress.namespaceRules[namespaceRuleKey{namespace: "namespace1", protocol: protocolTCP}]).
-			To(Equal(&namespaceRule{namespace: "namespace1", protocol: protocolTCP, ports: ports1, timestamp: "2022-11-30T09:01:38Z"}))
+		Expect(len(eng.ingress.namespaceRules)).To(Equal(1))
+		Expect(eng.ingress.namespaceRules[engineRuleKey{namespace: "namespace2", protocol: protocolTCP}]).
+			To(Equal(&types.FlowLogData{Action: v3.Allow, Namespace: "namespace2", Protocol: protocolTCP, Ports: ports1, Timestamp: "2022-11-30T09:01:38Z"}))
 	})
 
 	It("Test flow with ActionFlagDeny", func() {
@@ -89,9 +1481,9 @@ var _ = Describe("processFlow", func() {
 			ActionFlag: api.ActionFlagDeny,
 		}
 
-		recEngine.processFlow(flow)
-		Expect(recEngine.egress.size).To(Equal(0))
-		Expect(recEngine.ingress.size).To(Equal(0))
+		eng.processFlow(flow)
+		Expect(eng.egress.size).To(Equal(0))
+		Expect(eng.ingress.size).To(Equal(0))
 	})
 
 	It("Test flow with ActionFlagEndOfTierDeny", func() {
@@ -99,9 +1491,9 @@ var _ = Describe("processFlow", func() {
 			ActionFlag: api.ActionFlagEndOfTierDeny,
 		}
 
-		recEngine.processFlow(flow)
-		Expect(recEngine.egress.size).To(Equal(0))
-		Expect(recEngine.ingress.size).To(Equal(0))
+		eng.processFlow(flow)
+		Expect(eng.egress.size).To(Equal(0))
+		Expect(eng.ingress.size).To(Equal(0))
 	})
 
 	It("Test 'src' reported flow that matches", func() {
@@ -115,9 +1507,9 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		recEngine.processFlow(flow)
-		Expect(recEngine.egress.size).To(Equal(0))
-		Expect(recEngine.ingress.size).To(Equal(0))
+		eng.processFlow(flow)
+		Expect(eng.egress.size).To(Equal(0))
+		Expect(eng.ingress.size).To(Equal(0))
 	})
 
 	It("Test 'src' reported flow that is not WEP", func() {
@@ -131,9 +1523,9 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		recEngine.processFlow(flow)
-		Expect(recEngine.egress.size).To(Equal(0))
-		Expect(recEngine.ingress.size).To(Equal(0))
+		eng.processFlow(flow)
+		Expect(eng.egress.size).To(Equal(0))
+		Expect(eng.ingress.size).To(Equal(0))
 	})
 
 	It("Test 'src' reported flow where the source flow is not equal to the rec engine namespace", func() {
@@ -147,9 +1539,9 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		recEngine.processFlow(flow)
-		Expect(recEngine.egress.size).To(Equal(0))
-		Expect(recEngine.ingress.size).To(Equal(0))
+		eng.processFlow(flow)
+		Expect(eng.egress.size).To(Equal(0))
+		Expect(eng.ingress.size).To(Equal(0))
 	})
 
 	It("Test 'dst' reported flow that matches", func() {
@@ -163,9 +1555,9 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		recEngine.processFlow(flow)
-		Expect(recEngine.egress.size).To(Equal(0))
-		Expect(recEngine.ingress.size).To(Equal(0))
+		eng.processFlow(flow)
+		Expect(eng.egress.size).To(Equal(0))
+		Expect(eng.ingress.size).To(Equal(0))
 	})
 
 	It("Test 'dst' reported flow that is not WEP", func() {
@@ -179,9 +1571,9 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		recEngine.processFlow(flow)
-		Expect(recEngine.egress.size).To(Equal(0))
-		Expect(recEngine.ingress.size).To(Equal(0))
+		eng.processFlow(flow)
+		Expect(eng.egress.size).To(Equal(0))
+		Expect(eng.ingress.size).To(Equal(0))
 	})
 
 	It("Test 'dst' reported flow where the source flow is not equal to the rec engine namespace", func() {
@@ -195,131 +1587,170 @@ var _ = Describe("processFlow", func() {
 			},
 		}
 
-		recEngine.processFlow(flow)
-		Expect(recEngine.egress.size).To(Equal(0))
-		Expect(recEngine.ingress.size).To(Equal(0))
+		eng.processFlow(flow)
+		Expect(eng.egress.size).To(Equal(0))
+		Expect(eng.ingress.size).To(Equal(0))
 
 	})
 })
 
 var _ = Describe("ProcessRecommendation", func() {
-	const serviceNameSuffix = "svc.cluster.local"
+	const (
+		serviceNameSuffix = "svc.cluster.local"
+		tier              = "test_tier"
+	)
 
 	var (
-		recEngine *recommendationEngine
-
-		flowData []api.Flow
-
-		name      = "test_name"
-		namespace = "namespace1"
-		tier      = "test_tier"
-		order     = float64(1)
+		flowsEgress, flowsIngress []*api.Flow
 
 		interval      = time.Duration(150 * time.Second)
-		stabilization = time.Duration(5 * time.Minute)
+		stabilization = time.Duration(10 * time.Minute)
 
 		clock = mrc
 	)
 
 	BeforeEach(func() {
-		recEngine = newRecommendationEngine(
-			name, namespace, tier, &order, clock, interval, stabilization, serviceNameSuffix, *log.WithField("cluster", "my-cluster"))
-
-		err := testutils.LoadData(testDataFile, &flowData)
+		data := []api.Flow{}
+		err := testutils.LoadData("./data/flows_egress.json", &data)
 		Expect(err).To(BeNil())
-	})
 
-	// TODO(dimitrin): Add back UTs - [EV-2415] UTs
-	It("Test valid engine rule generation", func() {
-		for _, data := range flowData {
-			recEngine.processFlow(&data)
+		for i := range data {
+			flowsEgress = append(flowsEgress, &data[i])
 		}
 
-		Expect(len(recEngine.egress.namespaceRules)).To(Equal(2))
-		Expect(len(recEngine.ingress.namespaceRules)).To(Equal(1))
+		data = []api.Flow{}
+		err = testutils.LoadData("./data/flows_ingress.json", &data)
+		Expect(err).To(BeNil())
 
-		// Define a new staged network policy to place the egress rules.
-		ctrl := true
-		bod := false
+		for i := range data {
+			flowsIngress = append(flowsIngress, &data[i])
+		}
+	})
+
+	It("Test new rule injection", func() {
 		owner := metav1.OwnerReference{
 			APIVersion:         "projectcalico.org/v3",
 			Kind:               "PolicyRecommendationScope",
 			Name:               "default",
 			UID:                "orikr-9df4d-0k43m",
-			Controller:         &ctrl,
-			BlockOwnerDeletion: &bod,
+			Controller:         getPtrBool(true),
+			BlockOwnerDeletion: getPtrBool(false),
 		}
+		snp := calres.NewStagedNetworkPolicy(
+			utils.GetPolicyName(tier, "name1", func() string { return "xv5fb" }),
+			"namespace1",
+			tier,
+			owner,
+		)
 
-		snp := calres.NewStagedNetworkPolicy(utils.GetPolicyName(tier, "name1", func() string { return "xv5fb" }), "namespace1", tier, owner)
-		snp.Spec.Egress = currentNamespaceRules
+		snp.Spec.Egress = append(snp.Spec.Egress, enginedata.EgressToDomainRulesData...)
+		snp.Spec.Egress = append(snp.Spec.Egress, enginedata.EgressToServiceRulesData...)
+		snp.Spec.Egress = append(snp.Spec.Egress, enginedata.EgressNamespaceRulesData...)
+		snp.Spec.Egress = append(snp.Spec.Egress, enginedata.EgressNetworkSetRulesData...)
+		snp.Spec.Egress = append(snp.Spec.Egress, enginedata.EgressPrivateNetworkRulesData...)
+		snp.Spec.Egress = append(snp.Spec.Egress, enginedata.EgressPublicNetworkRulesData...)
 
-		recEngine.processRecommendation([]*api.Flow{}, snp)
-		Expect(compareSnps(snp, &expectedSnp)).To(BeTrue())
+		snp.Spec.Ingress = append(snp.Spec.Ingress, enginedata.IngressNamespaceRulesData...)
+		snp.Spec.Ingress = append(snp.Spec.Ingress, enginedata.IngressNetworkSetRulesData...)
+		snp.Spec.Ingress = append(snp.Spec.Ingress, enginedata.IngressPrivateNetworkRulesData...)
+		snp.Spec.Ingress = append(snp.Spec.Ingress, enginedata.IngressPublicNetworkRulesData...)
+
+		eng := getRecommendationEngine(
+			*snp,
+			clock,
+			interval,
+			stabilization,
+			true,
+			serviceNameSuffix,
+			*log.WithField("cluster", "my-cluster"),
+		)
+
+		eng.processRecommendation(flowsEgress, snp)
+		log.Infof("actual egress: %s,\nexpected egress: %s", prettyRules(snp.Spec.Egress), prettyRules(enginedata.ExpectedSnpNamespace1.Spec.Egress))
+
+		eng.processRecommendation(flowsIngress, snp)
+		log.Infof("actual ingress: %s,\nexpected ingress: %s", prettyRules(snp.Spec.Ingress), prettyRules(enginedata.ExpectedSnpNamespace1.Spec.Ingress))
+
+		Expect(equality.Semantic.Equalities.DeepDerivative(*snp, *enginedata.ExpectedSnpNamespace1)).To(BeTrue())
 	})
 })
 
-var _ = Describe("compPorts", func() {
-	testCases := []struct {
-		a        []numorstring.Port
-		b        []numorstring.Port
-		expected int
-	}{
-		{[]numorstring.Port{{MinPort: 0, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, []numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, -1},
-		{[]numorstring.Port{{MinPort: 1, MaxPort: 1, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, []numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, -1},
-		{[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 3, PortName: "A"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, []numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, -1},
-		{[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, []numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, 0},
-		{[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, []numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 5, PortName: "C"}}, 1},
-		{[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, []numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "A"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, 1},
-		{[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, []numorstring.Port{{MinPort: 1, MaxPort: 1, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}}, 1},
-	}
+var _ = DescribeTable("lessPorts",
+	func(a, b []numorstring.Port, expected int) {
+		Expect(lessPorts(a, b)).To(Equal(expected))
+	},
+	Entry("less-ports-1",
+		[]numorstring.Port{{MinPort: 0, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		-1,
+	),
+	Entry("less-ports-2",
+		[]numorstring.Port{{MinPort: 1, MaxPort: 1, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		-1,
+	),
+	Entry("less-ports-3",
+		[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 3, PortName: "A"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		-1,
+	),
+	Entry("less-ports-4",
+		[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		0,
+	),
+	Entry("less-ports-5",
+		[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 5, PortName: "C"}},
+		1,
+	),
+	Entry("less-ports-6",
+		[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "A"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		-1,
+	),
+	Entry("less-ports-7",
+		[]numorstring.Port{{MinPort: 1, MaxPort: 2, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		[]numorstring.Port{{MinPort: 1, MaxPort: 1, PortName: "A"}, {MinPort: 3, MaxPort: 4, PortName: "B"}, {MinPort: 5, MaxPort: 6, PortName: "C"}},
+		1,
+	),
+)
 
-	for _, testCase := range testCases {
-		It(fmt.Sprintf("returns %v when comparing %v and %v", testCase.expected, testCase.a, testCase.b), func() {
-			Expect(compPorts(testCase.a, testCase.b)).To(Equal(testCase.expected))
-		})
-	}
-})
-
-var _ = Describe("CompStrArrays", func() {
-	testCases := []struct {
-		a        []string
-		b        []string
-		expected bool
-	}{
-		{[]string{"apple"}, []string{"Apple"}, false},
-		{[]string{"apple", "banana"}, []string{"apple", "banana", "cherry"}, true},
-		{[]string{"apple", "banana", "cherry"}, []string{"apple", "banana", "cherry"}, true},
-		{[]string{"apple", "banana", "cherry"}, []string{"apple", "banana", "apple"}, false},
-		{[]string{"apple", "banana", "cherry"}, []string{"banana", "cherry", "date"}, false},
-		{[]string{"apple", "banana", "cherry"}, []string{"grape", "kiwi", "mango"}, true},
-	}
-
-	for _, testCase := range testCases {
-		It(fmt.Sprintf("returns %v when comparing %v and %v", testCase.expected, testCase.a, testCase.b), func() {
-			Expect(compStrArrays(testCase.a, testCase.b)).To(Equal(testCase.expected))
-		})
-	}
-})
-
-// compareSnps is a helper function used to compare the policy recommendation relevant parameters
-// between two staged network policies.
-func compareSnps(left, right *v3.StagedNetworkPolicy) bool {
-	Expect(left.ObjectMeta.Name).To(Equal(right.ObjectMeta.Name))
-	Expect(left.ObjectMeta.Namespace).To(Equal(right.ObjectMeta.Namespace))
-	Expect(left.ObjectMeta.Labels).To(Equal(right.ObjectMeta.Labels))
-	Expect(left.ObjectMeta.Annotations).To(Equal(right.ObjectMeta.Annotations))
-	Expect(reflect.DeepEqual(left.ObjectMeta.OwnerReferences, right.ObjectMeta.OwnerReferences)).
-		To(BeTrue(), "%+v should equal %+v", left.ObjectMeta.OwnerReferences, right.ObjectMeta.OwnerReferences)
-
-	Expect(left.Spec.StagedAction).To(Equal(right.Spec.StagedAction))
-	Expect(left.Spec.Tier).To(Equal(right.Spec.Tier))
-	Expect(left.Spec.Selector).To(Equal(right.Spec.Selector))
-	Expect(left.Spec.Types).To(Equal(right.Spec.Types))
-	Expect(reflect.DeepEqual(left.Spec.Egress, left.Spec.Egress)).To(BeTrue())
-	Expect(reflect.DeepEqual(left.Spec.Ingress, left.Spec.Ingress)).To(BeTrue())
-
-	return true
-}
+var _ = DescribeTable("lessStringArrays",
+	func(a, b []string, expected bool) {
+		Expect(lessStringArrays(a, b)).To(Equal(expected))
+	},
+	Entry("less-string-arrays-1",
+		[]string{"apple"},
+		[]string{"Apple"},
+		false,
+	),
+	Entry("less-string-arrays-2",
+		[]string{"apple", "banana"},
+		[]string{"apple", "banana", "cherry"},
+		true,
+	),
+	Entry("less-string-arrays-3",
+		[]string{"apple", "banana", "cherry"},
+		[]string{"apple", "banana", "cherry"},
+		false,
+	),
+	Entry("less-string-arrays-4",
+		[]string{"apple", "banana", "cherry"},
+		[]string{"apple", "banana", "apple"},
+		false,
+	),
+	Entry("less-string-arrays-5",
+		[]string{"apple", "banana", "cherry"},
+		[]string{"banana", "cherry", "date"},
+		true,
+	),
+	Entry("less-string-arrays-6",
+		[]string{"grape", "kiwi", "mango"},
+		[]string{"grape", "kiwi", "cherry"},
+		false,
+	),
+)
 
 var (
 	ports1 = []numorstring.Port{
@@ -339,960 +1770,24 @@ var (
 			MaxPort: 5432,
 		},
 	}
-
-	portsOrdered1 = []numorstring.Port{
-		{
-			MinPort: 5,
-			MaxPort: 59,
-		},
-		{
-			MinPort: 22,
-			MaxPort: 22,
-		},
-		{
-			MinPort: 44,
-			MaxPort: 56,
-		},
-	}
-	// portsOrdered2 = []numorstring.Port{
-	// 	{
-	// 		MinPort: 1,
-	// 		MaxPort: 99,
-	// 	},
-	// 	{
-	// 		MinPort: 3,
-	// 		MaxPort: 3,
-	// 	},
-	// 	{
-	// 		MinPort: 24,
-	// 		MaxPort: 35,
-	// 	},
-	// }
-	portsOrdered3 = []numorstring.Port{
-		{
-			MinPort: 8080,
-			MaxPort: 8081,
-		},
-	}
-
-	protocolTCP  = numorstring.ProtocolFromString("TCP")
-	protocolUDP  = numorstring.ProtocolFromString("UDP")
-	protocolICMP = numorstring.ProtocolFromString("ICMP")
-
-	//TODO(dimitrin): Add back data for remaining UT tests.
-	// EgressToDomain
-	// currentEgressToDomainRules = []v3.Rule{
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"calico.org"},
-	// 			Ports:   portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:30:05 PST",
-	// 				calres.ScopeKey:       "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"kubernetes.io"},
-	// 			Ports:   portsOrdered1,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 13:04:05 PST",
-	// 				calres.ScopeKey:       "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"tigera.io"},
-	// 			Ports:   portsOrdered2,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Thu, 30 Nov 2022 12:30:05 PST",
-	// 				calres.ScopeKey:       "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// }
-
-	// incomingEgressToDomainRules = []v3.Rule{
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"calico.org"},
-	// 			Ports:   portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.ScopeKey: "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"projectcalico.com"},
-	// 			Ports:   portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.ScopeKey: "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"tigera.io"},
-	// 			Ports:   portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.ScopeKey: "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// }
-
-	// expectedEgressToDomainRules = []v3.Rule{
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"calico.org"},
-	// 			Ports:   portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:30:05 PST",
-	// 				calres.ScopeKey:       "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"kubernetes.io"},
-	// 			Ports:   portsOrdered1,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 13:04:05 PST",
-	// 				calres.ScopeKey:       "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"projectcalico.com"},
-	// 			Ports:   portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: mrc.NowRFC3339(),
-	// 				calres.ScopeKey:       "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"tigera.io"},
-	// 			Ports:   portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: mrc.NowRFC3339(),
-	// 				calres.ScopeKey:       "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// }
-
-	// expectedEgressToDomainRulesEmptyCurrent = []v3.Rule{
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"calico.org"},
-	// 			Ports:   portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: mrc.NowRFC3339(),
-	// 				calres.ScopeKey:       "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"projectcalico.com"},
-	// 			Ports:   portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: mrc.NowRFC3339(),s.clock
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Domains: []string{"tigera.io"},
-	// 			Ports:   portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: mrc.NowRFC3339(),
-	// 				calres.ScopeKey:       "Domains",
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// }
-
-	// // EgressToService
-	// currentEgressToServiceRules = []v3.Rule{
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName2,
-	// 				Namespace: namespace1,
-	// 			},
-	// 			Ports: portsOrdered1,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Thu, 30 Nov 2022 06:04:05 PST",
-	// 				calres.NameKey:        serviceName2,
-	// 				calres.NamespaceKey:   namespace1,
-	// 				calres.ScopeKey:       string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolTCP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName1,
-	// 				Namespace: namespace1,
-	// 			},
-	// 			Ports: portsOrdered1,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:04:05 PST",
-	// 				calres.NameKey:        serviceName1,
-	// 				calres.NamespaceKey:   namespace1,
-	// 				calres.ScopeKey:       string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName2,
-	// 				Namespace: namespace2,
-	// 			},
-	// 			Ports: portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:05:05 PST",
-	// 				calres.NameKey:        serviceName2,
-	// 				calres.NamespaceKey:   namespace2,
-	// 				calres.ScopeKey:       string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName3,
-	// 				Namespace: namespace3,
-	// 			},
-	// 			Ports: portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:05:05 PST",
-	// 				calres.NameKey:        serviceName3,
-	// 				calres.NamespaceKey:   namespace3,
-	// 				calres.ScopeKey:       string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// }
-
-	// incomingEgressToServiceRules = []v3.Rule{
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName2,
-	// 				Namespace: namespace1,
-	// 			},
-	// 			Ports: portsOrdered2,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.NameKey:      serviceName2,
-	// 				calres.NamespaceKey: namespace1,
-	// 				calres.ScopeKey:     string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolTCP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName2,
-	// 				Namespace: namespace2,
-	// 			},
-	// 			Ports: portsOrdered1,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.NameKey:      serviceName2,
-	// 				calres.NamespaceKey: namespace2,
-	// 				calres.ScopeKey:     string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolTCP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName1,
-	// 				Namespace: namespace1,
-	// 			},
-	// 			Ports: portsOrdered1,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.NameKey:      serviceName1,
-	// 				calres.NamespaceKey: namespace1,
-	// 				calres.ScopeKey:     string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName2,
-	// 				Namespace: namespace2,
-	// 			},
-	// 			Ports: portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.NameKey:      serviceName2,
-	// 				calres.NamespaceKey: namespace2,
-	// 				calres.ScopeKey:     string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// }
-
-	// expectedEgressToServiceRules = []v3.Rule{
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName2,
-	// 				Namespace: namespace1,
-	// 			},
-	// 			Ports: portsOrdered2,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: mrc.NowRFC3339(),
-	// 				calres.NameKey:        serviceName2,
-	// 				calres.NamespaceKey:   namespace1,
-	// 				calres.ScopeKey:       string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolTCP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName2,
-	// 				Namespace: namespace2,
-	// 			},
-	// 			Ports: portsOrdered1,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: mrc.NowRFC3339(),
-	// 				calres.NameKey:        serviceName2,
-	// 				calres.NamespaceKey:   namespace2,
-	// 				calres.ScopeKey:       string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolTCP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName1,
-	// 				Namespace: namespace1,
-	// 			},
-	// 			Ports: portsOrdered1,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:04:05 PST",
-	// 				calres.NameKey:        serviceName1,
-	// 				calres.NamespaceKey:   namespace1,
-	// 				calres.ScopeKey:       string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName2,
-	// 				Namespace: namespace2,
-	// 			},
-	// 			Ports: portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:05:05 PST",
-	// 				calres.NameKey:        serviceName2,
-	// 				calres.NamespaceKey:   namespace2,
-	// 				calres.ScopeKey:       string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			Services: &v3.ServiceMatch{
-	// 				Name:      serviceName3,
-	// 				Namespace: namespace3,
-	// 			},
-	// 			Ports: portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:05:05 PST",
-	// 				calres.NameKey:        serviceName3,
-	// 				calres.NamespaceKey:   namespace3,
-	// 				calres.ScopeKey:       string(calres.EgressToServiceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// }
-
-	// Namespace
-	currentNamespaceRules = []v3.Rule{
-		{
-			Action: v3.Allow,
-			Destination: v3.EntityRule{
-				NamespaceSelector: namespace1,
-				Ports:             portsOrdered1,
-			},
-			Metadata: &v3.RuleMetadata{
-				Annotations: map[string]string{
-					calres.LastUpdatedKey: "Thu, 30 Nov 2022 06:04:05 PST",
-					calres.NamespaceKey:   namespace1,
-					calres.ScopeKey:       string(calres.NamespaceScope),
-				},
-			},
-			Protocol: &protocolTCP,
-		},
-		{
-			Action: v3.Allow,
-			Destination: v3.EntityRule{
-				NamespaceSelector: namespace1,
-				Ports:             portsOrdered1,
-			},
-			Metadata: &v3.RuleMetadata{
-				Annotations: map[string]string{
-					calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:04:05 PST",
-					calres.NamespaceKey:   namespace1,
-					calres.ScopeKey:       string(calres.NamespaceScope),
-				},
-			},
-			Protocol: &protocolUDP,
-		},
-		{
-			Action: v3.Allow,
-			Destination: v3.EntityRule{
-				NamespaceSelector: namespace2,
-				Ports:             portsOrdered3,
-			},
-			Metadata: &v3.RuleMetadata{
-				Annotations: map[string]string{
-					calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:05:05 PST",
-					calres.NamespaceKey:   namespace2,
-					calres.ScopeKey:       string(calres.NamespaceScope),
-				},
-			},
-			Protocol: &protocolUDP,
-		},
-		{
-			Action: v3.Allow,
-			Destination: v3.EntityRule{
-				NamespaceSelector: namespace3,
-				Ports:             portsOrdered3,
-			},
-			Metadata: &v3.RuleMetadata{
-				Annotations: map[string]string{
-					calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:05:05 PST",
-					calres.NamespaceKey:   namespace3,
-					calres.ScopeKey:       string(calres.NamespaceScope),
-				},
-			},
-			Protocol: &protocolUDP,
-		},
-	}
-
-	// incomingNamespaceRules = []v3.Rule{
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			NamespaceSelector: namespace1,
-	// 			Ports:             portsOrdered2,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.NamespaceKey: namespace1,
-	// 				calres.ScopeKey:     string(calres.NamespaceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolTCP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			NamespaceSelector: namespace2,
-	// 			Ports:             portsOrdered1,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.NamespaceKey: namespace2,
-	// 				calres.ScopeKey:     string(calres.NamespaceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolTCP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			NamespaceSelector: namespace1,
-	// 			Ports:             portsOrdered1,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.NamespaceKey: namespace1,
-	// 				calres.ScopeKey:     string(calres.NamespaceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			NamespaceSelector: namespace2,
-	// 			Ports:             portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.NamespaceKey: namespace2,
-	// 				calres.ScopeKey:     string(calres.NamespaceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// }
-
-	// expectedNamespaceRules = []v3.Rule{
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			NamespaceSelector: namespace1,
-	// 			Ports:             portsOrdered2,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: mrc.NowRFC3339(),
-	// 				calres.NamespaceKey:   namespace1,
-	// 				calres.ScopeKey:       string(calres.NamespaceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolTCP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			NamespaceSelector: namespace2,
-	// 			Ports:             portsOrdered1,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: mrc.NowRFC3339(),
-	// 				calres.NamespaceKey:   namespace2,
-	// 				calres.ScopeKey:       string(calres.NamespaceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolTCP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			NamespaceSelector: namespace1,
-	// 			Ports:             portsOrdered1,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:04:05 PST",
-	// 				calres.NamespaceKey:   namespace1,
-	// 				calres.ScopeKey:       string(calres.NamespaceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			NamespaceSelector: namespace2,
-	// 			Ports:             portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:05:05 PST",
-	// 				calres.NamespaceKey:   namespace2,
-	// 				calres.ScopeKey:       string(calres.NamespaceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// 	{
-	// 		Action: v3.Allow,
-	// 		Destination: v3.EntityRule{
-	// 			NamespaceSelector: namespace3,
-	// 			Ports:             portsOrdered3,
-	// 		},
-	// 		Metadata: &v3.RuleMetadata{
-	// 			Annotations: map[string]string{
-	// 				calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:05:05 PST",
-	// 				calres.NamespaceKey:   namespace3,
-	// 				calres.ScopeKey:       string(calres.NamespaceScope),
-	// 			},
-	// 		},
-	// 		Protocol: &protocolUDP,
-	// 	},
-	// }
-
-	expectedOrder          = float64(1)
-	expectedCtrl           = true
-	exptedBlockOwnerDelete = false
-	expectedSnp            = v3.StagedNetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test_tier.name1-xv5fb",
-			Namespace: "namespace1",
-			Labels: map[string]string{
-				"policyrecommendation.tigera.io/scope":  "namespace",
-				"projectcalico.org/spec.stagedAction":   "Learn",
-				"projectcalico.org/tier":                "test_tier",
-				"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
-			},
-			Annotations: map[string]string{
-				"policyrecommendation.tigera.io/lastUpdated": "2022-11-30T09:01:38Z",
-				"policyrecommendation.tigera.io/status":      "NoData",
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion:         "projectcalico.org/v3",
-					Kind:               "PolicyRecommendationScope",
-					Name:               "default",
-					UID:                "orikr-9df4d-0k43m",
-					Controller:         &expectedCtrl,
-					BlockOwnerDeletion: &exptedBlockOwnerDelete,
-				},
-			},
-		},
-		Spec: v3.StagedNetworkPolicySpec{
-			StagedAction: v3.StagedActionLearn,
-			Tier:         "test_tier",
-			Order:        &expectedOrder,
-			Selector:     "projectcalico.org/namespace == 'namespace1'",
-			Types: []v3.PolicyType{
-				"Egress", "Ingress",
-			},
-			Egress: []v3.Rule{
-				{
-					Action:   v3.Allow,
-					Protocol: &protocolTCP,
-					Source:   v3.EntityRule{},
-					Destination: v3.EntityRule{
-						NamespaceSelector: "projectcalico.org/name == namespace1",
-						Ports: []numorstring.Port{
-							{
-								MinPort: 443,
-								MaxPort: 443,
-							},
-						},
-					},
-					Metadata: &v3.RuleMetadata{
-						Annotations: map[string]string{
-							"policyrecommendation.tigera.io/lastUpdated": "Mon, 05 Dec 2022 06:00:20 PST",
-							"policyrecommendation.tigera.io/namespace":   "namespace1",
-							"policyrecommendation.tigera.io/scope":       "Namespace",
-							"projectcalico.org/lastUpdated":              "2022-12-05 06:00:20.239538363 -0800 PST m=+0.033443085",
-						},
-					},
-				},
-				{
-					Action:   v3.Allow,
-					Protocol: &protocolTCP,
-					Source:   v3.EntityRule{},
-					Destination: v3.EntityRule{
-						NamespaceSelector: "projectcalico.org/name == namespace2",
-						Ports: []numorstring.Port{
-							{
-								MinPort: 5432,
-								MaxPort: 8080,
-							},
-						},
-					},
-					Metadata: &v3.RuleMetadata{
-						Annotations: map[string]string{
-							"policyrecommendation.tigera.io/lastUpdated": "Mon, 05 Dec 2022 06:00:20 PST",
-							"policyrecommendation.tigera.io/namespace":   "namespace2",
-							"policyrecommendation.tigera.io/scope":       "Namespace",
-							"projectcalico.org/lastUpdated":              "2022-12-05 06:00:20.239549329 -0800 PST m=+0.033454042",
-						},
-					},
-				},
-				{
-					Action:   v3.Allow,
-					Protocol: &protocolTCP,
-					Source:   v3.EntityRule{},
-					Destination: v3.EntityRule{
-						NamespaceSelector: "ns1",
-						Ports: []numorstring.Port{
-							{
-								MinPort: 1,
-								MaxPort: 99,
-							},
-							{
-								MinPort: 3,
-								MaxPort: 3,
-							},
-							{
-								MinPort: 24,
-								MaxPort: 35,
-							},
-						},
-					},
-					Metadata: &v3.RuleMetadata{
-						Annotations: map[string]string{
-							"policyrecommendation.tigera.io/lastUpdated": "2022-11-30T09:01:38Z",
-							"policyrecommendation.tigera.io/namespace":   "ns1",
-							"policyrecommendation.tigera.io/scope":       "Namespace",
-						},
-					},
-				},
-				{
-					Action:   v3.Allow,
-					Protocol: &protocolUDP,
-					Source:   v3.EntityRule{},
-					Destination: v3.EntityRule{
-						NamespaceSelector: "ns1",
-						Ports: []numorstring.Port{
-							{
-								MinPort: 5,
-								MaxPort: 59,
-							},
-							{
-								MinPort: 22,
-								MaxPort: 22,
-							},
-							{
-								MinPort: 44,
-								MaxPort: 56,
-							},
-						},
-					},
-					Metadata: &v3.RuleMetadata{
-						Annotations: map[string]string{
-							"policyrecommendation.tigera.io/lastUpdated": "Wed, 29 Nov 2022 14:04:05 PST",
-							"policyrecommendation.tigera.io/namespace":   "ns1",
-							"policyrecommendation.tigera.io/scope":       "Namespace",
-						},
-					},
-				},
-				{
-					Action:   v3.Allow,
-					Protocol: &protocolUDP,
-					Source:   v3.EntityRule{},
-					Destination: v3.EntityRule{
-						NamespaceSelector: "ns2",
-						Ports: []numorstring.Port{
-							{
-								MinPort: 8080,
-								MaxPort: 8081,
-							},
-						},
-					},
-					Metadata: &v3.RuleMetadata{
-						Annotations: map[string]string{
-							"policyrecommendation.tigera.io/lastUpdated": "Wed, 29 Nov 2022 14:05:05 PST",
-							"policyrecommendation.tigera.io/namespace":   "ns2",
-							"policyrecommendation.tigera.io/scope":       "Namespace",
-						},
-					},
-				},
-				{
-					Action:   v3.Allow,
-					Protocol: &protocolUDP,
-					Source:   v3.EntityRule{},
-					Destination: v3.EntityRule{
-						NamespaceSelector: "ns3",
-						Ports: []numorstring.Port{
-							{
-								MinPort: 8080,
-								MaxPort: 8081,
-							},
-						},
-					},
-					Metadata: &v3.RuleMetadata{
-						Annotations: map[string]string{
-							"policyrecommendation.tigera.io/lastUpdated": "Wed, 29 Nov 2022 14:05:05 PST",
-							"policyrecommendation.tigera.io/namespace":   "ns3",
-							"policyrecommendation.tigera.io/scope":       "Namespace",
-						},
-					},
-				},
-			},
-			Ingress: []v3.Rule{
-				{
-					Action:   v3.Allow,
-					Protocol: &protocolTCP,
-					Source: v3.EntityRule{
-						NamespaceSelector: "projectcalico.org/name == namespace1",
-						Ports: []numorstring.Port{
-							{
-								MinPort: 443,
-								MaxPort: 443,
-							},
-						},
-					},
-					Destination: v3.EntityRule{},
-					Metadata: &v3.RuleMetadata{
-						Annotations: map[string]string{
-							"policyrecommendation.tigera.io/lastUpdated": "Mon, 05 Dec 2022 06:35:38 PST",
-							"policyrecommendation.tigera.io/namespace":   "namespace1",
-							"policyrecommendation.tigera.io/scope":       "Namespace",
-							"projectcalico.org/lastUpdated":              "2022-12-05 06:35:38.338846583 -0800 PST m=+0.048006979",
-						},
-					},
-				},
-				{
-					Action:   v3.Allow,
-					Protocol: &protocolTCP,
-					Source: v3.EntityRule{
-						NamespaceSelector: "projectcalico.org/name == namespace1",
-						Ports: []numorstring.Port{
-							{
-								MinPort: 443,
-								MaxPort: 443,
-							},
-						},
-					},
-					Destination: v3.EntityRule{},
-					Metadata: &v3.RuleMetadata{
-						Annotations: map[string]string{
-							"policyrecommendation.tigera.io/lastUpdated": "Mon, 05 Dec 2022 06:35:38 PST",
-							"policyrecommendation.tigera.io/namespace":   "namespace1",
-							"policyrecommendation.tigera.io/scope":       "Namespace",
-							"projectcalico.org/lastUpdated":              "2022-12-05 06:35:38.338846583 -0800 PST m=+0.048006979",
-						},
-					},
-				},
-				{
-					Action:   v3.Allow,
-					Protocol: &protocolTCP,
-					Source: v3.EntityRule{
-						NamespaceSelector: "projectcalico.org/name == namespace1",
-						Ports: []numorstring.Port{
-							{
-								MinPort: 443,
-								MaxPort: 443,
-							},
-						},
-					},
-					Destination: v3.EntityRule{},
-					Metadata: &v3.RuleMetadata{
-						Annotations: map[string]string{
-							"policyrecommendation.tigera.io/lastUpdated": "Mon, 05 Dec 2022 06:35:38 PST",
-							"policyrecommendation.tigera.io/namespace":   "namespace1",
-							"policyrecommendation.tigera.io/scope":       "Namespace",
-							"projectcalico.org/lastUpdated":              "2022-12-05 06:35:38.338846583 -0800 PST m=+0.048006979",
-						},
-					},
-				},
-				{
-					Action:   v3.Allow,
-					Protocol: &protocolTCP,
-					Source: v3.EntityRule{
-						NamespaceSelector: "projectcalico.org/name == namespace1",
-						Ports: []numorstring.Port{
-							{
-								MinPort: 443,
-								MaxPort: 443,
-							},
-						},
-					},
-					Destination: v3.EntityRule{},
-					Metadata: &v3.RuleMetadata{
-						Annotations: map[string]string{
-							"policyrecommendation.tigera.io/lastUpdated": "Mon, 05 Dec 2022 06:35:38 PST",
-							"policyrecommendation.tigera.io/namespace":   "namespace1",
-							"policyrecommendation.tigera.io/scope":       "Namespace",
-							"projectcalico.org/lastUpdated":              "2022-12-05 06:35:38.338846583 -0800 PST m=+0.048006979",
-						},
-					},
-				},
-			},
-		},
-	}
 )
+
+// prettyRules logs a pretty version of map[string]string.
+func prettyRules(rules []v3.Rule) string {
+	value, err := json.MarshalIndent(rules, "", " ")
+	Expect(err).NotTo(HaveOccurred())
+
+	return string(value)
+}
+
+func getPtrBool(f bool) *bool {
+	return &f
+}
+
+func getPtrUint8(i uint8) *uint8 {
+	return &i
+}
+
+func getPtrUint16(i uint16) *uint16 {
+	return &i
+}

@@ -11,6 +11,8 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
+
+	"github.com/projectcalico/calico/policy-recommendation/pkg/types"
 )
 
 type DirectionType string
@@ -92,8 +94,10 @@ func NewStagedNetworkPolicy(name, namespace, tier string, owner metav1.OwnerRefe
 	}
 }
 
-// UpdateStagedNetworkPolicyRules updates the egress, ingress rules of a staged network policy.
-func UpdateStagedNetworkPolicyRules(snp *v3.StagedNetworkPolicy, egress, ingress []v3.Rule) bool {
+// SetSnpRules returns true if an update to the staged network policy rules occurred.
+// Replaces the egress/ingress rules in their entirety if the incoming rules differ from the
+// existing.
+func SetSnpRules(snp *v3.StagedNetworkPolicy, egress, ingress []v3.Rule) bool {
 	updated := false
 
 	types := getPolicyTypes(egress, ingress)
@@ -142,26 +146,24 @@ func getPolicyTypes(egress, ingress []v3.Rule) []v3.PolicyType {
 // EntityRule.Domains:
 //
 //	set of domains from flows
-func GetEgressToDomainV3Rule(
-	domains []string, port numorstring.Port, protocol *numorstring.Protocol, rfc3339Time string,
-) *v3.Rule {
+func GetEgressToDomainV3Rule(data types.FlowLogData, direction DirectionType) *v3.Rule {
 	rule := &v3.Rule{
 		Metadata: &v3.RuleMetadata{
 			Annotations: map[string]string{
-				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): rfc3339Time,
+				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): data.Timestamp,
 				fmt.Sprintf("%s/scope", PolicyRecKeyName):       string(EgressToDomainScope),
 			},
 		},
-		Action:   v3.Allow,
-		Protocol: protocol,
+		Action:   data.Action,
+		Protocol: &data.Protocol,
 	}
 
-	if protocol.SupportsPorts() {
-		rule.Destination.Ports = []numorstring.Port{port}
+	if data.Protocol.SupportsPorts() {
+		rule.Destination.Ports = data.Ports
 	}
 
 	// Domains are stored in alphabetical order
-	rule.Destination.Domains = sortDomains(domains)
+	rule.Destination.Domains = sortDomains(data.Domains)
 
 	return rule
 }
@@ -183,24 +185,22 @@ func GetEgressToDomainV3Rule(
 // EntityRule.Selector
 //
 //	policyrecommendation.tigera.io/scope == 'Domains'
-func GetEgressToDomainSetV3Rule(
-	namespace string, ports []numorstring.Port, protocol *numorstring.Protocol, rfc3339Time string,
-) *v3.Rule {
+func GetEgressToDomainSetV3Rule(data types.FlowLogData, direction DirectionType) *v3.Rule {
 	rule := &v3.Rule{
 		Metadata: &v3.RuleMetadata{
 			Annotations: map[string]string{
-				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): rfc3339Time,
-				fmt.Sprintf("%s/name", PolicyRecKeyName):        fmt.Sprintf("%s-egress-domains", namespace),
-				fmt.Sprintf("%s/namespace", PolicyRecKeyName):   namespace,
+				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): data.Timestamp,
+				fmt.Sprintf("%s/name", PolicyRecKeyName):        fmt.Sprintf("%s-egress-domains", data.Namespace),
+				fmt.Sprintf("%s/namespace", PolicyRecKeyName):   data.Namespace,
 				fmt.Sprintf("%s/scope", PolicyRecKeyName):       string(EgressToDomainSetScope),
 			},
 		},
-		Action:   v3.Allow,
-		Protocol: protocol,
+		Action:   data.Action,
+		Protocol: &data.Protocol,
 	}
 
-	if protocol.SupportsPorts() {
-		rule.Destination.Ports = sortPorts(ports)
+	if data.Protocol.SupportsPorts() {
+		rule.Destination.Ports = sortPorts(data.Ports)
 	}
 	rule.Destination.Selector = fmt.Sprintf("%s/scope == '%s'", PolicyRecKeyName, string(EgressToDomainScope))
 
@@ -228,28 +228,26 @@ func GetEgressToDomainSetV3Rule(
 // EntityRule.Namespace:
 //
 //	<service_namespace>
-func GetEgressToServiceV3Rule(
-	name, namespace string, ports []numorstring.Port, protocol *numorstring.Protocol, rfc3339Time string,
-) *v3.Rule {
+func GetEgressToServiceV3Rule(data types.FlowLogData, direction DirectionType) *v3.Rule {
 	rule := &v3.Rule{
 		Metadata: &v3.RuleMetadata{
 			Annotations: map[string]string{
-				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): rfc3339Time,
-				fmt.Sprintf("%s/name", PolicyRecKeyName):        name,
-				fmt.Sprintf("%s/namespace", PolicyRecKeyName):   namespace,
+				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): data.Timestamp,
+				fmt.Sprintf("%s/name", PolicyRecKeyName):        data.Name,
+				fmt.Sprintf("%s/namespace", PolicyRecKeyName):   data.Namespace,
 				fmt.Sprintf("%s/scope", PolicyRecKeyName):       string(EgressToServiceScope),
 			},
 		},
-		Action:   v3.Allow,
-		Protocol: protocol,
+		Action:   data.Action,
+		Protocol: &data.Protocol,
 	}
 
-	if protocol.SupportsPorts() {
-		rule.Destination.Ports = sortPorts(ports)
+	if data.Protocol.SupportsPorts() {
+		rule.Destination.Ports = sortPorts(data.Ports)
 	}
 	rule.Destination.Services = &v3.ServiceMatch{
-		Name:      name,
-		Namespace: namespace,
+		Name:      data.Name,
+		Namespace: data.Namespace,
 	}
 
 	return rule
@@ -273,26 +271,24 @@ func GetEgressToServiceV3Rule(
 // EntityRule.NamespaceSelector:
 //
 //	projectcalico.org/name == '<namespace>'
-func GetNamespaceV3Rule(
-	direction DirectionType, namespace string, ports []numorstring.Port, protocol *numorstring.Protocol, rfc3339Time string,
-) *v3.Rule {
+func GetNamespaceV3Rule(data types.FlowLogData, direction DirectionType) *v3.Rule {
 	rule := &v3.Rule{
 		Metadata: &v3.RuleMetadata{
 			Annotations: map[string]string{
-				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): rfc3339Time,
-				fmt.Sprintf("%s/namespace", PolicyRecKeyName):   namespace,
+				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): data.Timestamp,
+				fmt.Sprintf("%s/namespace", PolicyRecKeyName):   data.Namespace,
 				fmt.Sprintf("%s/scope", PolicyRecKeyName):       string(NamespaceScope),
 				fmt.Sprintf("%s/warnings", PolicyRecKeyName):    nonServiceTypeWarning,
 			},
 		},
-		Action:   v3.Allow,
-		Protocol: protocol,
+		Action:   data.Action,
+		Protocol: &data.Protocol,
 	}
 
 	entityRule := getEntityRuleReference(direction, rule)
-	entityRule.NamespaceSelector = fmt.Sprintf("%s/name == '%s'", projectCalicoKeyName, namespace)
-	if protocol.SupportsPorts() {
-		rule.Destination.Ports = sortPorts(ports)
+	entityRule.NamespaceSelector = fmt.Sprintf("%s/name == '%s'", projectCalicoKeyName, data.Namespace)
+	if data.Protocol.SupportsPorts() {
+		rule.Destination.Ports = sortPorts(data.Ports)
 	}
 
 	return rule
@@ -319,33 +315,31 @@ func GetNamespaceV3Rule(
 // EntityRule.NamespaceSelector:
 //
 //	projectcalico.org/name == '<namespace>', or global()
-func GetNetworkSetV3Rule(
-	direction DirectionType, name, namespace string, global bool, ports []numorstring.Port, protocol *numorstring.Protocol, rfc3339Time string,
-) *v3.Rule {
+func GetNetworkSetV3Rule(data types.FlowLogData, direction DirectionType) *v3.Rule {
 	rule := &v3.Rule{
 		Metadata: &v3.RuleMetadata{
 			Annotations: map[string]string{
-				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): rfc3339Time,
-				fmt.Sprintf("%s/name", PolicyRecKeyName):        name,
-				fmt.Sprintf("%s/namespace", PolicyRecKeyName):   namespace,
+				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): data.Timestamp,
+				fmt.Sprintf("%s/name", PolicyRecKeyName):        data.Name,
+				fmt.Sprintf("%s/namespace", PolicyRecKeyName):   data.Namespace,
 				fmt.Sprintf("%s/scope", PolicyRecKeyName):       string(NetworkSetScope),
 			},
 		},
-		Action:   v3.Allow,
-		Protocol: protocol,
+		Action:   data.Action,
+		Protocol: &data.Protocol,
 	}
 
 	entityRule := getEntityRuleReference(direction, rule)
 	entityRule.Selector = fmt.Sprintf("%s/name == '%s' && %s/kind == '%s'",
-		projectCalicoKeyName, name, projectCalicoKeyName, string(NetworkSetScope))
-	if global {
+		projectCalicoKeyName, data.Name, projectCalicoKeyName, string(NetworkSetScope))
+	if data.Global {
 		entityRule.NamespaceSelector = "global()"
 	} else {
-		entityRule.NamespaceSelector = fmt.Sprintf("%s/name == '%s'", projectCalicoKeyName, namespace)
+		entityRule.NamespaceSelector = fmt.Sprintf("%s/name == '%s'", projectCalicoKeyName, data.Namespace)
 	}
 
-	if protocol.SupportsPorts() {
-		rule.Destination.Ports = sortPorts(ports)
+	if data.Protocol.SupportsPorts() {
+		rule.Destination.Ports = sortPorts(data.Ports)
 	}
 
 	return rule
@@ -372,30 +366,28 @@ func GetNetworkSetV3Rule(
 //   - "10.0.0.0/8"
 //   - "172.16.0.0/12"
 //   - "192.168.0.0/16"
-func GetPrivateNetworkV3Rule(
-	direction DirectionType, ports []numorstring.Port, protocol *numorstring.Protocol, rfc3339Time string,
-) *v3.Rule {
+func GetPrivateNetworkV3Rule(data types.FlowLogData, direction DirectionType) *v3.Rule {
 	rule := &v3.Rule{
 		Metadata: &v3.RuleMetadata{
 			Annotations: map[string]string{
-				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): rfc3339Time,
+				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): data.Timestamp,
 				fmt.Sprintf("%s/scope", PolicyRecKeyName):       string(PrivateNetworkScope),
 			},
 		},
-		Action:   v3.Allow,
-		Protocol: protocol,
+		Action:   data.Action,
+		Protocol: &data.Protocol,
 	}
 
 	entityRule := getEntityRuleReference(direction, rule)
-	if protocol.SupportsPorts() {
-		rule.Destination.Ports = sortPorts(ports)
+	if data.Protocol.SupportsPorts() {
+		rule.Destination.Ports = sortPorts(data.Ports)
 	}
 	entityRule.Nets = []string{privateNetwork24BitBlock, privateNetwork20BitBlock, privateNetwork16BitBlock}
 
 	return rule
 }
 
-// GetPublicV3Rule returns the traffic to public network set rule. The entity rule ports are in
+// GetPublicNetworkV3Rule returns the traffic to public network set rule. The entity rule ports are in
 // sorted order.
 //
 // Metadata.Annotations:
@@ -406,20 +398,20 @@ func GetPrivateNetworkV3Rule(
 // EntityRule.Ports:
 //
 //	set of ports from flows (always destination rule)
-func GetPublicV3Rule(ports []numorstring.Port, protocol *numorstring.Protocol, rfc3339Time string) *v3.Rule {
+func GetPublicNetworkV3Rule(data types.FlowLogData, direction DirectionType) *v3.Rule {
 	rule := &v3.Rule{
 		Metadata: &v3.RuleMetadata{
 			Annotations: map[string]string{
-				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): rfc3339Time,
+				fmt.Sprintf("%s/lastUpdated", PolicyRecKeyName): data.Timestamp,
 				fmt.Sprintf("%s/scope", PolicyRecKeyName):       string(PublicNetworkScope),
 			},
 		},
-		Action:   v3.Allow,
-		Protocol: protocol,
+		Action:   data.Action,
+		Protocol: &data.Protocol,
 	}
 
-	if protocol.SupportsPorts() {
-		rule.Destination.Ports = sortPorts(ports)
+	if data.Protocol.SupportsPorts() {
+		rule.Destination.Ports = sortPorts(data.Ports)
 	}
 
 	return rule

@@ -309,6 +309,7 @@ func (pr *policyRecommendationReconciler) RecommendSnp(ctx context.Context, cloc
 		pr.state.object.Spec.Interval.Duration,
 		pr.state.object.Spec.StabilizationPeriod.Duration,
 		getRecommendationScopeOwner(&pr.state.object),
+		pr.state.object.Spec.NamespaceSpec.IntraNamespacePassThroughTraffic,
 		snp,
 	)
 

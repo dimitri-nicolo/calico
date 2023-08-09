@@ -14,6 +14,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	"github.com/projectcalico/calico/policy-recommendation/pkg/types"
 	"github.com/projectcalico/calico/policy-recommendation/utils"
 )
 
@@ -138,7 +139,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 		By("updating the staged network policy with new ingress rules")
 		sampleEgress := []v3.Rule{egress}
 		sampleIngress := []v3.Rule{ingress}
-		UpdateStagedNetworkPolicyRules(snp, sampleEgress, sampleIngress)
+		SetSnpRules(snp, sampleEgress, sampleIngress)
 		Expect(snp).ToNot(Equal(nil))
 
 		By("verifying that no update occurs to the lastUpdated time")
@@ -214,7 +215,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 			},
 		}
 		sampleIngress := []v3.Rule{ingress}
-		UpdateStagedNetworkPolicyRules(snp, []v3.Rule{newEgress}, sampleIngress)
+		SetSnpRules(snp, []v3.Rule{newEgress}, sampleIngress)
 		Expect(snp).ToNot(Equal(nil))
 
 		By("verifying that no update occurs to the lastUpdated time")
@@ -266,7 +267,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 		By("updating the staged network policy with empty ingress rules")
 		emptyEgress := []v3.Rule{}
 		sampleIngress := []v3.Rule{ingress}
-		UpdateStagedNetworkPolicyRules(snp, emptyEgress, sampleIngress)
+		SetSnpRules(snp, emptyEgress, sampleIngress)
 		Expect(snp).ToNot(Equal(nil))
 
 		By("verifying that no update occurs to the lastUpdated time")
@@ -342,7 +343,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 				},
 			},
 		}
-		UpdateStagedNetworkPolicyRules(snp, sampleEgress, []v3.Rule{newIngress})
+		SetSnpRules(snp, sampleEgress, []v3.Rule{newIngress})
 		Expect(snp).ToNot(Equal(nil))
 
 		By("verifying that no update occurs to the lastUpdated time")
@@ -394,7 +395,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 		By("updating the staged network policy with empty ingress rules")
 		sampleEgress := []v3.Rule{egress}
 		emptyIngress := []v3.Rule{}
-		UpdateStagedNetworkPolicyRules(snp, sampleEgress, emptyIngress)
+		SetSnpRules(snp, sampleEgress, emptyIngress)
 		Expect(snp).ToNot(Equal(nil))
 
 		By("verifying that no update occurs to the lastUpdated time")
@@ -446,7 +447,7 @@ var _ = Describe("UpdateStagedNetworkPolicyRules", func() {
 		By("updating the staged network policy with empty ingress rules")
 		sampleEgress := []v3.Rule{egress}
 		sampleIngress := []v3.Rule{ingress}
-		UpdateStagedNetworkPolicyRules(snp, sampleEgress, sampleIngress)
+		SetSnpRules(snp, sampleEgress, sampleIngress)
 		Expect(snp).ToNot(Equal(nil))
 
 		By("verifying that no update occurs to the lastUpdated time")
@@ -513,7 +514,6 @@ var _ = Describe("Policy Recommendation Rules", func() {
 		domains      []string
 		orderedPorts []numorstring.Port
 		ports        []numorstring.Port
-		protocol     *numorstring.Protocol
 	)
 
 	BeforeEach(func() {
@@ -559,13 +559,9 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				MaxPort: 75,
 			},
 		}
-
-		protocol = &protocolTCP
 	})
 
 	It("returns a valid GetEgressToDomainSetV3Rule", func() {
-		expectedPorts := orderedPorts
-		expectedProtocol := &protocolTCP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -576,19 +572,26 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolTCP,
 			Destination: v3.EntityRule{
-				Ports:    expectedPorts,
+				Ports:    orderedPorts,
 				Selector: "policyrecommendation.tigera.io/scope == 'Domains'",
 			},
 		}
 
-		rule := GetEgressToDomainSetV3Rule(domainNamespace, ports, protocol, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Namespace: domainNamespace,
+			Ports:     ports,
+			Protocol:  protocolTCP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetEgressToDomainSetV3Rule(data, EgressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid GetEgressToDomainSetV3Rule with ICMP protocol", func() {
-		expectedProtocol := &protocolICMP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -599,18 +602,25 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolICMP,
 			Destination: v3.EntityRule{
 				Selector: "policyrecommendation.tigera.io/scope == 'Domains'",
 			},
 		}
 
-		rule := GetEgressToDomainSetV3Rule(domainNamespace, []numorstring.Port{}, &protocolICMP, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Namespace: domainNamespace,
+			Ports:     []numorstring.Port{},
+			Protocol:  protocolICMP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetEgressToDomainSetV3Rule(data, EgressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid GetEgressToDomainV3Rule", func() {
-		expectedProtocol := &protocolTCP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -619,19 +629,26 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolTCP,
 			Destination: v3.EntityRule{
 				Ports:   []numorstring.Port{{MinPort: 55, MaxPort: 55, PortName: ""}},
 				Domains: []string{"calico.org", "kubernetes.io", "tigera.io"},
 			},
 		}
 
-		rule := GetEgressToDomainV3Rule(domains, ports[0], protocol, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Domains:   domains,
+			Ports:     []numorstring.Port{{MinPort: 55, MaxPort: 55, PortName: ""}},
+			Protocol:  protocolTCP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetEgressToDomainV3Rule(data, EgressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid GetEgressToDomainV3Rule with ICMP protocol", func() {
-		expectedProtocol := &protocolICMP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -640,19 +657,25 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolICMP,
 			Destination: v3.EntityRule{
 				Domains: []string{"calico.org", "kubernetes.io", "tigera.io"},
 			},
 		}
 
-		rule := GetEgressToDomainV3Rule(domains, numorstring.Port{}, &protocolICMP, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Domains:   domains,
+			Ports:     []numorstring.Port{},
+			Protocol:  protocolICMP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetEgressToDomainV3Rule(data, EgressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid GetEgressToServiceSetV3Rule", func() {
-		expectedPorts := orderedPorts
-		expectedProtocol := &protocolTCP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -663,9 +686,9 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolTCP,
 			Destination: v3.EntityRule{
-				Ports: expectedPorts,
+				Ports: orderedPorts,
 				Services: &v3.ServiceMatch{
 					Name:      "test_service_name",
 					Namespace: "test_service_namespace",
@@ -673,12 +696,20 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			},
 		}
 
-		rule := GetEgressToServiceV3Rule(service, serviceNamespace, ports, protocol, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Name:      service,
+			Namespace: serviceNamespace,
+			Ports:     ports,
+			Protocol:  protocolTCP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetEgressToServiceV3Rule(data, EgressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid GetEgressToServiceSetV3Rule with ICMP protocol", func() {
-		expectedProtocol := &protocolICMP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -689,7 +720,7 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolICMP,
 			Destination: v3.EntityRule{
 				Services: &v3.ServiceMatch{
 					Name:      "test_service_name",
@@ -698,13 +729,20 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			},
 		}
 
-		rule := GetEgressToServiceV3Rule(service, serviceNamespace, []numorstring.Port{}, &protocolICMP, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Name:      service,
+			Namespace: serviceNamespace,
+			Ports:     []numorstring.Port{},
+			Protocol:  protocolICMP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetEgressToServiceV3Rule(data, EgressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid GetNamespaceV3Rule", func() {
-		expectedPorts := orderedPorts
-		expectedProtocol := &protocolTCP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -714,21 +752,28 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolTCP,
 			Source: v3.EntityRule{
 				NamespaceSelector: "projectcalico.org/name == 'test_namespace'",
 			},
 			Destination: v3.EntityRule{
-				Ports: expectedPorts,
+				Ports: orderedPorts,
 			},
 		}
 
-		rule := GetNamespaceV3Rule(IngressTraffic, namespace, ports, protocol, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Namespace: namespace,
+			Ports:     ports,
+			Protocol:  protocolTCP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetNamespaceV3Rule(data, IngressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid GetNamespaceV3Rule with ICMP protocol", func() {
-		expectedProtocol := &protocolICMP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -738,20 +783,26 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolICMP,
 			Source: v3.EntityRule{
 				NamespaceSelector: "projectcalico.org/name == 'test_namespace'",
 			},
 			Destination: v3.EntityRule{},
 		}
 
-		rule := GetNamespaceV3Rule(IngressTraffic, namespace, []numorstring.Port{}, &protocolICMP, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Namespace: namespace,
+			Ports:     []numorstring.Port{},
+			Protocol:  protocolICMP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetNamespaceV3Rule(data, IngressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid GetNetworkSetV3Rule", func() {
-		expectedPorts := orderedPorts
-		expectedProtocol := &protocolTCP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -762,25 +813,33 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolTCP,
 			Source: v3.EntityRule{
 				Selector:          "projectcalico.org/name == 'test_name' && projectcalico.org/kind == 'NetworkSet'",
 				NamespaceSelector: "global()",
 			},
 			Destination: v3.EntityRule{
-				Ports: expectedPorts,
+				Ports: orderedPorts,
 			},
 		}
 
-		isGlobal := true
-		rule := GetNetworkSetV3Rule(IngressTraffic, name, namespace, isGlobal, ports, protocol, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Global:    true,
+			Name:      name,
+			Namespace: namespace,
+			Ports:     ports,
+			Protocol:  protocolTCP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetNetworkSetV3Rule(data, IngressTraffic)
 		fmt.Print(rule.Destination.Ports)
 		fmt.Print(expectedRule.Destination.Ports)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid GetNetworkSetV3Rule with ICMP protocol", func() {
-		expectedProtocol := &protocolICMP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -791,7 +850,7 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolICMP,
 			Source: v3.EntityRule{
 				Selector:          "projectcalico.org/name == 'test_name' && projectcalico.org/kind == 'NetworkSet'",
 				NamespaceSelector: "global()",
@@ -799,13 +858,21 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Destination: v3.EntityRule{},
 		}
 
-		isGlobal := true
-		rule := GetNetworkSetV3Rule(IngressTraffic, name, namespace, isGlobal, []numorstring.Port{}, &protocolICMP, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Global:    true,
+			Name:      name,
+			Namespace: namespace,
+			Ports:     []numorstring.Port{},
+			Protocol:  protocolICMP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetNetworkSetV3Rule(data, IngressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid Ingress GetPrivateNetworkV3Rule with TCP protocol", func() {
-		expectedProtocol := &protocolTCP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -814,7 +881,7 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolTCP,
 			Source: v3.EntityRule{
 				Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
 			},
@@ -823,12 +890,18 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			},
 		}
 
-		rule := GetPrivateNetworkV3Rule(IngressTraffic, []numorstring.Port{{MinPort: 80, MaxPort: 80}}, &protocolTCP, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Ports:     []numorstring.Port{{MinPort: 80, MaxPort: 80}},
+			Protocol:  protocolTCP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetPrivateNetworkV3Rule(data, IngressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid Ingress GetPrivateNetworkV3Rule with UDP protocol", func() {
-		expectedProtocol := &protocolUDP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -837,7 +910,7 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolUDP,
 			Source: v3.EntityRule{
 				Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
 			},
@@ -846,12 +919,19 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			},
 		}
 
-		rule := GetPrivateNetworkV3Rule(IngressTraffic, []numorstring.Port{{MinPort: 53, MaxPort: 53}}, &protocolUDP, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Ports:     []numorstring.Port{{MinPort: 53, MaxPort: 53}},
+			Protocol:  protocolUDP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetPrivateNetworkV3Rule(data, IngressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid Ingress GetPrivateNetworkV3Rule with ICMP protocol", func() {
-		expectedProtocol := &protocolICMP
+
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -860,19 +940,26 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolICMP,
 			Source: v3.EntityRule{
 				Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
 			},
 			Destination: v3.EntityRule{},
 		}
 
-		rule := GetPrivateNetworkV3Rule(IngressTraffic, []numorstring.Port{}, &protocolICMP, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Ports:     []numorstring.Port{},
+			Protocol:  protocolICMP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetPrivateNetworkV3Rule(data, IngressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid Egress GetPrivateNetworkV3Rule with TCP protocol", func() {
-		expectedProtocol := &protocolTCP
+
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -881,7 +968,7 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolTCP,
 			Source:   v3.EntityRule{},
 			Destination: v3.EntityRule{
 				Nets:  []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
@@ -889,12 +976,18 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			},
 		}
 
-		rule := GetPrivateNetworkV3Rule(EgressTraffic, []numorstring.Port{{MinPort: 80, MaxPort: 80}}, &protocolTCP, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Ports:     []numorstring.Port{{MinPort: 80, MaxPort: 80}},
+			Protocol:  protocolTCP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetPrivateNetworkV3Rule(data, EgressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid Egress GetPrivateNetworkV3Rule with UDP protocol", func() {
-		expectedProtocol := &protocolUDP
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -903,7 +996,7 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolUDP,
 			Source:   v3.EntityRule{},
 			Destination: v3.EntityRule{
 				Nets:  []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
@@ -911,12 +1004,19 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			},
 		}
 
-		rule := GetPrivateNetworkV3Rule(EgressTraffic, []numorstring.Port{{MinPort: 53, MaxPort: 53}}, &protocolUDP, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Ports:     []numorstring.Port{{MinPort: 53, MaxPort: 53}},
+			Protocol:  protocolUDP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetPrivateNetworkV3Rule(data, EgressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 
 	It("returns a valid Egress GetPrivateNetworkV3Rule with ICMP protocol", func() {
-		expectedProtocol := &protocolICMP
+
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
@@ -925,14 +1025,21 @@ var _ = Describe("Policy Recommendation Rules", func() {
 				},
 			},
 			Action:   v3.Allow,
-			Protocol: expectedProtocol,
+			Protocol: &protocolICMP,
 			Source:   v3.EntityRule{},
 			Destination: v3.EntityRule{
 				Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
 			},
 		}
 
-		rule := GetPrivateNetworkV3Rule(EgressTraffic, []numorstring.Port{}, &protocolICMP, rfc3339Time)
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Ports:     []numorstring.Port{},
+			Protocol:  protocolICMP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetPrivateNetworkV3Rule(data, EgressTraffic)
 		testRuleEquality(rule, expectedRule)
 	})
 })

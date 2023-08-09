@@ -1,0 +1,507 @@
+[
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "-",
+      "Namespace": "-",
+      "Domains": "www.tigera.io,www.projectcalico.org",
+      "Port": 443
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "-",
+      "Namespace": "-",
+      "Domains": "www.google.com",
+      "Port": 443
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "-",
+      "Namespace": "-",
+      "Domains": "www.tigera.io",
+      "Port": 442
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "-",
+      "Namespace": "-",
+      "Domains": "www.tigera.io",
+      "Port": 441
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "-",
+      "Namespace": "-",
+      "Domains": "dest1.namespace2.svc.cluster.local",
+      "Port": 441
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+     "Type": "wep",
+     "Name": "pod-1-*",
+     "Namespace": "namespace1"
+    },
+    "Destination": {
+     "Type": "net",
+     "Name": "-",
+     "Namespace": "namespace1",
+     "ServiceName": "service1",
+     "Port": 3434
+    },
+    "ActionFlag": 1,
+    "Proto": 17
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "-",
+      "Namespace": "namespace3",
+      "ServiceName": "service3",
+      "Port": 3031
+    },
+    "ActionFlag": 1,
+    "Proto": 17
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "-",
+      "Namespace": "namespace2",
+      "ServiceName": "service2",
+      "Port": 33
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "-",
+      "Namespace": "namespace3",
+      "ServiceName": "service3",
+      "Port": 3030
+    },
+    "ActionFlag": 1,
+    "Proto": 17
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "-",
+      "Namespace": "namespace4",
+      "ServiceName": "service4"
+    },
+    "ActionFlag": 1,
+    "Proto": 1
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1a-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "wep",
+      "Name": "pod-1b-*",
+      "Namespace": "namespace1",
+      "Port": 9099
+    },
+    "ActionFlag": 1,
+    "Proto": 17
+    },
+  {
+    "Reporter": "src", 
+    "Source": {
+     "Type": "wep",
+     "Name": "pod-1-*",
+     "Namespace": "namespace1"
+    },
+    "Destination": {
+     "Type": "wep",
+     "Name": "pod-2-*",
+     "Namespace": "namespace2"
+    },
+    "ActionFlag": 1,
+    "Proto": 1
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+    "Type": "wep",
+    "Name": "pod-1-*",
+    "Namespace": "namespace1"
+    },
+    "Destination": {
+    "Type": "wep",
+    "Name": "pod-3-*",
+    "Namespace": "namespace3",
+    "Port": 645
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "wep",
+      "Name": "pod-3-*",
+      "Namespace": "namespace3",
+      "Port": 64
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1",
+      "Port": 6464
+    },
+    "ActionFlag": 1,
+    "Proto": 17
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1",
+      "Port": 6465
+    },
+    "ActionFlag": 1,
+    "Proto": 17
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "ns",
+      "Name": "netset-1",
+      "Namespace": "namespace1",
+      "Port": 666
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "ns",
+      "Name": "netset-2",
+      "Namespace": "namespace2",
+      "Port": 999
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "ns",
+      "Name": "netset-2",
+      "Namespace": "namespace2",
+      "Port": 667
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "ns",
+      "Name": "global-netset-1",
+      "Port": 667
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "ns",
+      "Name": "global-netset-2",
+      "Port": 667
+    },
+    "ActionFlag": 1,
+    "Proto": 17
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "ns",
+      "Name": "global-netset-1",
+      "Port": 663
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "pvt",
+      "Port": 8080
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "pvt",
+      "Port": 8081
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "pvt"
+    },
+    "ActionFlag": 1,
+    "Proto": 1
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "pvt",
+      "Port": 4568
+    },
+    "ActionFlag": 1,
+    "Proto": 17
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "pvt",
+      "Port": 999
+    },
+    "ActionFlag": 1,
+    "Proto": 17
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "pub",
+      "Port": 8081
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "pub",
+      "Port": 8080
+    },
+    "ActionFlag": 1,
+    "Proto": 6
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "pub"
+    },
+    "ActionFlag": 1,
+    "Proto": 1
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "pub",
+      "Port": 4568
+    },
+    "ActionFlag": 1,
+    "Proto": 17
+  },
+  {
+    "Reporter": "src", 
+    "Source": {
+      "Type": "wep",
+      "Name": "pod-1-*",
+      "Namespace": "namespace1"
+    },
+    "Destination": {
+      "Type": "net",
+      "Name": "pub",
+      "Port": 999
+    },
+    "ActionFlag": 1,
+    "Proto": 17
+  }
+]

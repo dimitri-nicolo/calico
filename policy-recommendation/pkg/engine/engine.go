@@ -22,6 +22,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/api"
 	calicores "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/flows"
+	"github.com/projectcalico/calico/policy-recommendation/pkg/types"
 )
 
 // Clock is an interface added for testing purposes.
@@ -56,6 +57,9 @@ type recommendationEngine struct {
 	// Stabilization interval.
 	stabilization time.Duration
 
+	// passIntraNamespaceTraffic passes intra-namespace traffic to the next policy.
+	passIntraNamespaceTraffic bool
+
 	// serviceNameSuffix is the server name suffix of the local domain.
 	serviceNameSuffix string
 
@@ -82,6 +86,7 @@ func RunEngine(
 	recInterval time.Duration,
 	stabilizationPeriod time.Duration,
 	owner *metav1.OwnerReference,
+	passIntraNamespaceTraffic bool,
 	snp *v3.StagedNetworkPolicy,
 ) {
 	clog := log.WithField("cluster", clusterID)
@@ -113,94 +118,37 @@ func RunEngine(
 	}
 
 	// Update staged network policy
-	engine := getRecommendationEngine(*snp, clock, recInterval, stabilizationPeriod, serviceNameSuffix, *clog)
+	engine := getRecommendationEngine(*snp, clock, recInterval, stabilizationPeriod, passIntraNamespaceTraffic, serviceNameSuffix, *clog)
 	engine.processRecommendation(flows, snp)
 }
 
 // Recommendation Engine
 
-// NewRecommendationEngine returns a new recommendation engine.
+// newRecommendationEngine returns a new recommendation engine.
 func newRecommendationEngine(
 	name, namespace, tier string,
 	order *float64,
 	clock Clock,
-	interval time.Duration,
-	stabilization time.Duration,
+	interval, stabilization time.Duration,
+	passIntraNamespaceTraffic bool,
 	serviceNameSuffix string,
 	clog log.Entry,
 ) *recommendationEngine {
 	return &recommendationEngine{
-		name:              name,
-		namespace:         namespace,
-		tier:              tier,
-		order:             order,
-		egress:            NewEngineRules(),
-		ingress:           NewEngineRules(),
-		nets:              set.New[NetworkSet](),
-		clock:             clock,
-		interval:          interval,
-		stabilization:     stabilization,
-		serviceNameSuffix: serviceNameSuffix,
-		clog:              clog,
+		name:                      name,
+		namespace:                 namespace,
+		tier:                      tier,
+		order:                     order,
+		egress:                    NewEngineRules(),
+		ingress:                   NewEngineRules(),
+		nets:                      set.New[NetworkSet](),
+		clock:                     clock,
+		interval:                  interval,
+		passIntraNamespaceTraffic: passIntraNamespaceTraffic,
+		stabilization:             stabilization,
+		serviceNameSuffix:         serviceNameSuffix,
+		clog:                      clog,
 	}
-}
-
-func (ere *recommendationEngine) buildRules(dir calicores.DirectionType, rules []v3.Rule) {
-	var scope string
-	var ok bool
-	for _, rule := range rules {
-		if rule.Metadata == nil {
-			ere.clog.Warn("recommended rule metadata is empty")
-			continue
-		}
-		scope, ok = rule.Metadata.Annotations[calicores.ScopeKey]
-		if !ok {
-			ere.clog.Warn("recommended rule does not contain a scope")
-			continue
-		}
-		switch scope {
-		case string(calicores.EgressToDomainScope):
-			ere.buildEgressToDomain(rule)
-		case string(calicores.EgressToDomainSetScope):
-			// TODO(dimitrin): Create buildEgressToDomainSet
-		case string(calicores.EgressToServiceScope):
-			ere.buildEgressToService(rule)
-		case string(calicores.NamespaceScope):
-			ere.buildNamespace(dir, rule)
-		case string(calicores.NetworkSetScope):
-			ere.buildNetworkSet(dir, rule)
-		case string(calicores.PrivateNetworkScope):
-			ere.buildPrivate(dir, rule)
-		case string(calicores.PublicNetworkScope):
-			ere.buildPublic(dir, rule)
-		default:
-			ere.clog.Warnf("Invalid scope: %s", scope)
-		}
-	}
-}
-
-// ProcessFlow adds the flow the recommendation engine rules. Actions other than allow, namespace
-// mismatches and non WEP destination flows are skipped.
-func (ere *recommendationEngine) processFlow(flow *api.Flow) {
-	if flow == nil {
-		return
-	}
-	ere.clog.Debugf("Processing flow: %+v", flow)
-
-	// Only allowed flows are used to recommend policy
-	if flow.ActionFlag&api.ActionFlagAllow == 0 {
-		ere.clog.Debug("Skipping flow, only allow action processed")
-		return
-	}
-	// Make sure we only process flows that have either source or destination in the expected
-	// namespace
-	if !ere.matchesSourceNamespace(*flow) && !ere.matchesDestinationNamespace(*flow) {
-		// Skip this flow, as it doesn't match the namespace, or is not WEP
-		ere.clog.Debug("Skipping flow, namespace mismatch or destination isn't WEP")
-		return
-	}
-	// Construct rule
-	ere.processEngineRuleFromFlow(*flow)
 }
 
 // buildEgressToDomain creates a new EgressToDomain engine rule key. It is assumed that each new
@@ -213,15 +161,16 @@ func (ere *recommendationEngine) buildEgressToDomain(rule v3.Rule) {
 	}
 	// 'Domains' rules should only contain one port
 	port := rule.Destination.Ports[0]
-	key := egressToDomainRuleKey{
+	key := engineRuleKey{
 		port:     port,
 		protocol: *rule.Protocol,
 	}
-	val := &egressToDomainRule{
-		domains:   rule.Destination.Domains,
-		port:      port,
-		protocol:  *rule.Protocol,
-		timestamp: rule.Metadata.Annotations[calicores.LastUpdatedKey],
+	val := &types.FlowLogData{
+		Action:    rule.Action,
+		Domains:   rule.Destination.Domains,
+		Ports:     []numorstring.Port{port},
+		Protocol:  *rule.Protocol,
+		Timestamp: rule.Metadata.Annotations[calicores.LastUpdatedKey],
 	}
 	ere.egress.egressToDomainRules[key] = val
 	ere.egress.size++
@@ -230,17 +179,18 @@ func (ere *recommendationEngine) buildEgressToDomain(rule v3.Rule) {
 // buildEgressToService creates a new EgressToService engine rule key. It is assumed that each new
 // rule will generate a new key.
 func (ere *recommendationEngine) buildEgressToService(rule v3.Rule) {
-	key := egressToServiceRuleKey{
+	key := engineRuleKey{
 		name:      rule.Destination.Services.Name,
 		namespace: rule.Destination.Services.Namespace,
 		protocol:  *rule.Protocol,
 	}
-	val := &egressToServiceRule{
-		name:      rule.Destination.Services.Name,
-		namespace: rule.Destination.Services.Namespace,
-		ports:     rule.Destination.Ports,
-		protocol:  *rule.Protocol,
-		timestamp: rule.Metadata.Annotations[calicores.LastUpdatedKey],
+	val := &types.FlowLogData{
+		Action:    rule.Action,
+		Name:      rule.Destination.Services.Name,
+		Namespace: rule.Destination.Services.Namespace,
+		Ports:     rule.Destination.Ports,
+		Protocol:  *rule.Protocol,
+		Timestamp: rule.Metadata.Annotations[calicores.LastUpdatedKey],
 	}
 	ere.egress.egressToServiceRules[key] = val
 	ere.egress.size++
@@ -259,15 +209,16 @@ func (ere *recommendationEngine) buildNamespace(dir calicores.DirectionType, rul
 		return
 	}
 
-	key := namespaceRuleKey{
+	key := engineRuleKey{
 		namespace: ns,
 		protocol:  *rule.Protocol,
 	}
-	val := &namespaceRule{
-		namespace: ns,
-		ports:     rule.Destination.Ports, // Always destination
-		protocol:  *rule.Protocol,
-		timestamp: ts,
+	val := &types.FlowLogData{
+		Action:    rule.Action,
+		Namespace: ns,
+		Ports:     rule.Destination.Ports, // Always destination
+		Protocol:  *rule.Protocol,
+		Timestamp: ts,
 	}
 
 	var erules *engineRules
@@ -307,19 +258,20 @@ func (ere *recommendationEngine) buildNetworkSet(dir calicores.DirectionType, ru
 		return
 	}
 
-	key := networkSetRuleKey{
+	key := engineRuleKey{
 		global:    gl,
 		name:      name,
 		namespace: ns,
 		protocol:  *rule.Protocol,
 	}
-	val := &networkSetRule{
-		global:    gl,
-		name:      name,
-		namespace: ns,
-		ports:     rule.Destination.Ports, // Always destination
-		protocol:  *rule.Protocol,
-		timestamp: ts,
+	val := &types.FlowLogData{
+		Action:    rule.Action,
+		Global:    gl,
+		Name:      name,
+		Namespace: ns,
+		Ports:     rule.Destination.Ports, // Always destination
+		Protocol:  *rule.Protocol,
+		Timestamp: ts,
 	}
 
 	var erules *engineRules
@@ -346,13 +298,14 @@ func (ere *recommendationEngine) buildPrivate(dir calicores.DirectionType, rule 
 		return
 	}
 
-	key := privateNetworkRuleKey{
+	key := engineRuleKey{
 		protocol: *rule.Protocol,
 	}
-	val := &privateNetworkRule{
-		protocol:  *rule.Protocol,
-		ports:     rule.Destination.Ports, // Always destination
-		timestamp: ts,
+	val := &types.FlowLogData{
+		Action:    rule.Action,
+		Protocol:  *rule.Protocol,
+		Ports:     rule.Destination.Ports, // Always destination
+		Timestamp: ts,
 	}
 
 	var erules *engineRules
@@ -373,13 +326,14 @@ func (ere *recommendationEngine) buildPublic(dir calicores.DirectionType, rule v
 		return
 	}
 
-	key := publicNetworkRuleKey{
+	key := engineRuleKey{
 		protocol: *rule.Protocol,
 	}
-	val := &publicNetworkRule{
-		ports:     rule.Destination.Ports,
-		protocol:  *rule.Protocol,
-		timestamp: ts,
+	val := &types.FlowLogData{
+		Action:    rule.Action,
+		Ports:     rule.Destination.Ports,
+		Protocol:  *rule.Protocol,
+		Timestamp: ts,
 	}
 
 	var engRules *engineRules
@@ -393,11 +347,43 @@ func (ere *recommendationEngine) buildPublic(dir calicores.DirectionType, rule v
 	engRules.size++
 }
 
-// getSortedEngineAsV3Rules returns a list of sorted v3 rules. Each v3 rules is sorted by the keys
-// that define the equivalent recommendation engine rule. The engine rules are first converted into
-//
-//	v3 rules, which are subsequently sorted.
-func (ere *recommendationEngine) getSortedEngineAsV3Rules(direction calicores.DirectionType) []v3.Rule {
+// buildRules builds the engine rules from a list of v3 rules.
+func (ere *recommendationEngine) buildRules(dir calicores.DirectionType, rules []v3.Rule) {
+	var scope string
+	var ok bool
+	for _, rule := range rules {
+		if rule.Metadata == nil {
+			ere.clog.Warn("recommended rule metadata is empty")
+			continue
+		}
+		scope, ok = rule.Metadata.Annotations[calicores.ScopeKey]
+		if !ok {
+			ere.clog.Warn("recommended rule does not contain a scope")
+			continue
+		}
+		switch scope {
+		case string(calicores.EgressToDomainScope):
+			ere.buildEgressToDomain(rule)
+		case string(calicores.EgressToDomainSetScope):
+			// TODO(dimitrin): Create buildEgressToDomainSet
+		case string(calicores.EgressToServiceScope):
+			ere.buildEgressToService(rule)
+		case string(calicores.NamespaceScope):
+			ere.buildNamespace(dir, rule)
+		case string(calicores.NetworkSetScope):
+			ere.buildNetworkSet(dir, rule)
+		case string(calicores.PrivateNetworkScope):
+			ere.buildPrivate(dir, rule)
+		case string(calicores.PublicNetworkScope):
+			ere.buildPublic(dir, rule)
+		default:
+			ere.clog.Warnf("Invalid scope: %s", scope)
+		}
+	}
+}
+
+// getV3Rules returns the engine rules as a sorted list v3 rules.
+func (ere *recommendationEngine) getV3Rules(direction calicores.DirectionType) []v3.Rule {
 	var engRules *engineRules
 	if direction == calicores.EgressTraffic {
 		engRules = ere.egress
@@ -405,120 +391,27 @@ func (ere *recommendationEngine) getSortedEngineAsV3Rules(direction calicores.Di
 		engRules = ere.ingress
 	}
 
-	// Maintain order for each engine rules type
 	rules := []v3.Rule{}
 
-	// EgressToDomain
-	edRules := []v3.Rule{}
-	for _, er := range engRules.egressToDomainRules {
-		rule := calicores.GetEgressToDomainV3Rule(er.domains, er.port, &er.protocol, er.timestamp)
-		edRules = append(edRules, *rule)
-	}
-	sort.Slice(edRules, func(i, j int) bool {
-		return lessEgressToDomain(edRules[i], edRules[j])
-	})
-	rules = append(rules, edRules...)
+	egressToDomainRules := processRules(direction, engRules.egressToDomainRules, calicores.GetEgressToDomainV3Rule, compEgressToDomain)
+	rules = append(rules, egressToDomainRules...)
 
-	// EgressToService
-	esRules := []v3.Rule{}
-	for _, er := range engRules.egressToServiceRules {
-		rule := calicores.GetEgressToServiceV3Rule(er.name, er.namespace, er.ports, &er.protocol, er.timestamp)
-		esRules = append(esRules, *rule)
-	}
-	sort.Slice(esRules, func(i, j int) bool {
-		return lessEgressToService(esRules[i], esRules[j])
-	})
-	rules = append(rules, esRules...)
+	egressToServiceRules := processRules(direction, engRules.egressToServiceRules, calicores.GetEgressToServiceV3Rule, compEgressToService)
+	rules = append(rules, egressToServiceRules...)
 
-	// Namespace
-	nsRules := []v3.Rule{}
-	for _, er := range engRules.namespaceRules {
-		rule := calicores.GetNamespaceV3Rule(direction, er.namespace, er.ports, &er.protocol, er.timestamp)
-		nsRules = append(nsRules, *rule)
-	}
-	sort.Slice(nsRules, func(i, j int) bool {
-		return lessNamespace(direction, nsRules[i], nsRules[j])
-	})
-	rules = append(rules, nsRules...)
+	namespaceRules := processRules(direction, engRules.namespaceRules, calicores.GetNamespaceV3Rule, compNamespace)
+	rules = append(rules, namespaceRules...)
 
-	// NetworkSet
-	netsetRules := []v3.Rule{}
-	for _, er := range engRules.networkSetRules {
-		rule := calicores.GetNetworkSetV3Rule(direction, er.name, er.namespace, er.global, er.ports, &er.protocol, er.timestamp)
-		netsetRules = append(netsetRules, *rule)
-	}
-	sort.Slice(netsetRules, func(i, j int) bool {
-		return lessNetworkSet(direction, netsetRules[i], netsetRules[j])
-	})
-	rules = append(rules, netsetRules...)
+	networkSetRules := processRules(direction, engRules.networkSetRules, calicores.GetNetworkSetV3Rule, compNetworkSet)
+	rules = append(rules, networkSetRules...)
 
-	// PrivateNetwork
-	prnRules := []v3.Rule{}
-	for _, er := range engRules.privateNetworkRules {
-		rule := calicores.GetPrivateNetworkV3Rule(direction, er.ports, &er.protocol, er.timestamp)
-		prnRules = append(prnRules, *rule)
-	}
-	sort.Slice(prnRules, func(i, j int) bool {
-		return lessPrivateNetwork(prnRules[i], prnRules[j])
-	})
-	rules = append(rules, prnRules...)
+	privateNetworkRules := processRules(direction, engRules.privateNetworkRules, calicores.GetPrivateNetworkV3Rule, compPrivateNetwork)
+	rules = append(rules, privateNetworkRules...)
 
-	// PublicNetwork
-	pbnRules := []v3.Rule{}
-	for _, er := range engRules.publicNetworkRules {
-		rule := calicores.GetPublicV3Rule(er.ports, &er.protocol, er.timestamp)
-		pbnRules = append(pbnRules, *rule)
-	}
-	sort.Slice(pbnRules, func(i, j int) bool {
-		return lessPublicNetwork(pbnRules[i], pbnRules[j])
-	})
-	rules = append(rules, pbnRules...)
+	publicNetworkRules := processRules(direction, engRules.publicNetworkRules, calicores.GetPublicNetworkV3Rule, compPublicNetwork)
+	rules = append(rules, publicNetworkRules...)
 
 	return rules
-}
-
-// ProcessRecommendation updates a staged network policy's rules with the recommendation engine
-// incoming rules.
-// The staged network policy's (snp) egress/ingress v3 rules are assumed to be in order and are
-// split into scopes. For each scope, the method merges the snp's with the incoming rules. Current
-// rules are updated accordingly and incoming rules are added in order. A new slice is generated
-// for the egress/ingress rules each time ProcessRecommendation is executed, with the assumption
-// the snp's are compared by value with reflect.DeepEqual(), and a cache is considered altered
-// only if the values of the rules have changed.
-func (ere *recommendationEngine) processRecommendation(flows []*api.Flow, snp *v3.StagedNetworkPolicy) {
-	if snp == nil {
-		ere.clog.Warn("Empty staged network policy")
-		return
-	}
-	ere.clog.Debugf("Processing recommendation: %s", snp.Name)
-
-	// Process flows into egress/ingress rules, and the policy selector.
-	for _, flow := range flows {
-		ere.clog.WithField("flow", flow).Debug("Calling recommendation engine with flow")
-
-		ere.processFlow(flow)
-	}
-
-	// Get sorted v3 rules
-	egress := ere.getSortedEngineAsV3Rules(calicores.EgressTraffic)
-	ingress := ere.getSortedEngineAsV3Rules(calicores.IngressTraffic)
-	if calicores.UpdateStagedNetworkPolicyRules(snp, egress, ingress) {
-		snp.Annotations[calicores.LastUpdatedKey] = ere.clock.NowRFC3339()
-	}
-}
-
-// Check if the flow matches the destination namespace.
-func (ere *recommendationEngine) matchesDestinationNamespace(flow api.Flow) bool {
-	return flow.Reporter == api.ReporterTypeDestination &&
-		flow.Destination.Namespace == ere.namespace &&
-		flow.Destination.Type == api.FlowLogEndpointTypeWEP
-}
-
-// Check if the flow matches the source namespace.
-func (ere *recommendationEngine) matchesSourceNamespace(flow api.Flow) bool {
-	return flow.Reporter == api.ReporterTypeSource &&
-		flow.Source.Namespace == ere.namespace &&
-		flow.Source.Type == api.FlowLogEndpointTypeWEP
 }
 
 // processEngineRuleFromFlow converts a flow into an engine rule. In case of an unsupported flow type, the
@@ -527,12 +420,11 @@ func (ere *recommendationEngine) matchesSourceNamespace(flow api.Flow) bool {
 // Rules are added to the recommended policy by their scope and in the following
 // order:
 // 1. Egress to domains
-// 2. Egress to domain sets
-// 3. Egress to services
-// 4. Namespaces
-// 5. NetworkSets or GlobalNetworkSet
-// 6. Private network
-// 7. Public network
+// 2. Egress to services
+// 3. Namespaces
+// 4. NetworkSets or GlobalNetworkSet
+// 5. Private network
+// 6. Public network
 func (ere *recommendationEngine) processEngineRuleFromFlow(apiFlow api.Flow) {
 	// Get the flow's type and direction.
 	var flowType flowType
@@ -568,11 +460,11 @@ func (ere *recommendationEngine) processEngineRuleFromFlow(apiFlow api.Flow) {
 	case egressToDomainFlowType:
 		engRules.addFlowToEgressToDomainRules(direction, apiFlow, ere.clock, ere.serviceNameSuffix)
 	case egressToServiceFlowType:
-		engRules.addFlowToEgressToServiceRules(direction, apiFlow, ere.clock)
+		engRules.addFlowToEgressToServiceRules(direction, apiFlow, ere.passIntraNamespaceTraffic, ere.clock)
 	case namespaceFlowType:
-		engRules.addFlowToNamespaceRules(direction, apiFlow, ere.clock)
+		engRules.addFlowToNamespaceRules(direction, apiFlow, ere.passIntraNamespaceTraffic, ere.clock)
 	case networkSetFlowType:
-		engRules.addFlowToNetworkSetRules(direction, apiFlow, ere.clock)
+		engRules.addFlowToNetworkSetRules(direction, apiFlow, ere.passIntraNamespaceTraffic, ere.clock)
 	case privateNetworkFlowType:
 		engRules.addFlowToPrivateNetworkRules(direction, apiFlow, ere.clock)
 	case publicNetworkFlowType:
@@ -580,12 +472,78 @@ func (ere *recommendationEngine) processEngineRuleFromFlow(apiFlow api.Flow) {
 	}
 }
 
+// ProcessFlow adds the flow the recommendation engine rules. Actions other than allow, namespace
+// mismatches and non WEP destination flows are skipped.
+func (ere *recommendationEngine) processFlow(flow *api.Flow) {
+	if flow == nil {
+		return
+	}
+	ere.clog.Debugf("Processing flow: %+v", flow)
+
+	// Only allowed flows are used to recommend policy
+	if flow.ActionFlag&api.ActionFlagAllow == 0 {
+		ere.clog.Debug("Skipping flow, only allow action processed")
+		return
+	}
+	// Make sure we only process flows that have either source or destination in the expected
+	// namespace
+	if !ere.matchesSourceNamespace(*flow) && !ere.matchesDestinationNamespace(*flow) {
+		// Skip this flow, as it doesn't match the namespace, or is not WEP
+		ere.clog.Debug("Skipping flow, namespace mismatch or destination isn't WEP")
+		return
+	}
+	// Construct rule
+	ere.processEngineRuleFromFlow(*flow)
+}
+
+// matchesDestinationNamespace returns true if the flow logs is reported by the destination
+// endpoint, is WEP and the namespace is equal to reference namespace.
+func (ere *recommendationEngine) matchesDestinationNamespace(flow api.Flow) bool {
+	return flow.Reporter == api.ReporterTypeDestination &&
+		flow.Destination.Namespace == ere.namespace &&
+		flow.Destination.Type == api.FlowLogEndpointTypeWEP
+}
+
+// matchesSourceNamespace returns true if the flow logs is reported by the source
+// endpoint, is WEP and the namespace is equal to reference namespace.
+func (ere *recommendationEngine) matchesSourceNamespace(flow api.Flow) bool {
+	return flow.Reporter == api.ReporterTypeSource &&
+		flow.Source.Namespace == ere.namespace &&
+		flow.Source.Type == api.FlowLogEndpointTypeWEP
+}
+
+// ProcessRecommendation generates v3 rules from incoming flows and ingests them into a staged
+// network policy.
+func (ere *recommendationEngine) processRecommendation(flows []*api.Flow, snp *v3.StagedNetworkPolicy) {
+	if snp == nil {
+		ere.clog.Warn("Empty staged network policy")
+		return
+	}
+	ere.clog.Debugf("Processing recommendation: %s", snp.Name)
+
+	// Process flows into egress/ingress rules, and the policy selector.
+	for _, flow := range flows {
+		ere.clog.WithField("flow", flow).Debug("Calling recommendation engine with flow")
+
+		ere.processFlow(flow)
+	}
+
+	// Get sorted v3 rules
+	egress := ere.getV3Rules(calicores.EgressTraffic)
+	ingress := ere.getV3Rules(calicores.IngressTraffic)
+
+	// Update the last updated annotation of the policy if there was a change to the SNPs rules
+	if calicores.SetSnpRules(snp, egress, ingress) {
+		snp.Annotations[calicores.LastUpdatedKey] = ere.clock.NowRFC3339()
+	}
+}
+
 // Helpers
 
-// compPorts compares two slices of ports. It returns 0 if the two lists contains the same elements.
+// lessPorts compares two slices of ports. It returns 0 if the two lists contains the same elements.
 // otherwise it returns -1 if slice 'a' contains an element that is lesser than the minPort, maxPort
 // or portName than that of slice 'b' has at the same index.
-func compPorts(a, b []numorstring.Port) int {
+func lessPorts(a, b []numorstring.Port) int {
 	for i := range a {
 		if i >= len(b) {
 			return 1
@@ -619,9 +577,9 @@ func compPorts(a, b []numorstring.Port) int {
 	return 0
 }
 
-// compStrArrays returns true if slice a contains an element that at the same index has a lesser
+// lessStringArrays returns true if slice a contains an element that at the same index has a lesser
 // alphabetical ordering than that of slice b.
-func compStrArrays(a, b []string) bool {
+func lessStringArrays(a, b []string) bool {
 	for i := range a {
 		if i >= len(b) {
 			return false
@@ -633,6 +591,93 @@ func compStrArrays(a, b []string) bool {
 	return len(a) < len(b)
 }
 
+// compEgressToDomain compares two egress to domain rules by the alphabetical order of the protocol
+// the order of ports, and the alphabetical order of the rule's domains. It is assumed that the
+// rules will differ in at least one field.
+func compEgressToDomain(direction calicores.DirectionType, left, right v3.Rule) bool {
+	if left.Protocol.StrVal != right.Protocol.StrVal {
+		return left.Protocol.StrVal < right.Protocol.StrVal
+	}
+	cp := lessPorts(left.Destination.Ports, right.Destination.Ports)
+	if cp != 0 {
+		return cp == -1
+	}
+	return lessStringArrays(left.Destination.Domains, right.Destination.Domains)
+}
+
+// compEgressToService compares two egress to service rules by the alphabetical order of the protocol
+// the order of ports, and the alphabetical order of the destination name and namespace. It is
+// assumed that the rules will differ in at least one field.
+func compEgressToService(direction calicores.DirectionType, left, right v3.Rule) bool {
+	if left.Protocol.StrVal != right.Protocol.StrVal {
+		return left.Protocol.StrVal < right.Protocol.StrVal
+	}
+	cp := lessPorts(left.Destination.Ports, right.Destination.Ports)
+	if cp != 0 {
+		return cp == -1
+	}
+	if left.Destination.Services.Name != right.Destination.Services.Name {
+		return left.Destination.Services.Name < right.Destination.Services.Name
+	}
+	return left.Destination.Services.Namespace < right.Destination.Services.Namespace
+}
+
+// compNamespace compares two namespace rules by the alphabetical order of the protocol
+// the order of ports, and the alphabetical order of the destination name and namespace. It is
+// assumed that the rules will differ in at least one field.
+func compNamespace(direction calicores.DirectionType, left, right v3.Rule) bool {
+	if left.Protocol.StrVal != right.Protocol.StrVal {
+		return left.Protocol.StrVal < right.Protocol.StrVal
+	}
+	cp := lessPorts(left.Destination.Ports, right.Destination.Ports)
+	if cp != 0 {
+		return cp == -1
+	}
+	if direction == calicores.EgressTraffic {
+		return left.Destination.NamespaceSelector < right.Destination.NamespaceSelector
+	} else {
+		return left.Source.NamespaceSelector < right.Source.NamespaceSelector
+	}
+}
+
+// compNetworkSet compares two network set rules by the alphabetical order of the protocol
+// the order of ports, and the alphabetical order of the destination name and namespace. It is
+// assumed that the rules will differ in at least one field.
+func compNetworkSet(direction calicores.DirectionType, left, right v3.Rule) bool {
+	if left.Protocol.StrVal != right.Protocol.StrVal {
+		return left.Protocol.StrVal < right.Protocol.StrVal
+	}
+	cp := lessPorts(left.Destination.Ports, right.Destination.Ports)
+	if cp != 0 {
+		return cp == -1
+	}
+	if direction == calicores.EgressTraffic {
+		if left.Destination.NamespaceSelector != right.Destination.NamespaceSelector {
+			return left.Destination.NamespaceSelector < right.Destination.NamespaceSelector
+		}
+		return left.Destination.Selector < right.Destination.Selector
+	} else {
+		if left.Source.NamespaceSelector != right.Source.NamespaceSelector {
+			return left.Source.NamespaceSelector < right.Source.NamespaceSelector
+		}
+		return left.Source.Selector < right.Source.Selector
+	}
+}
+
+// compPrivateNetwork compares two namespace rules by the alphabetical order of the protocol. It is
+// assumed that no two rules will not have the same protocol.
+func compPrivateNetwork(direction calicores.DirectionType, left, right v3.Rule) bool {
+	return left.Protocol.StrVal < right.Protocol.StrVal
+}
+
+// compPublicNetwork compares two namespace rules by the alphabetical order of the protocol. It is
+// assumed that no two rules will not have the same protocol.
+func compPublicNetwork(direction calicores.DirectionType, left, right v3.Rule) bool {
+	return left.Protocol.StrVal < right.Protocol.StrVal
+}
+
+// getEntityRule returns the destination v3.EntityRule for egress and the source for ingress
+// traffic.
 func getEntityRule(dir calicores.DirectionType, rule *v3.Rule) *v3.EntityRule {
 	var entity *v3.EntityRule
 	if dir == calicores.EgressTraffic {
@@ -644,6 +689,7 @@ func getEntityRule(dir calicores.DirectionType, rule *v3.Rule) *v3.EntityRule {
 	return entity
 }
 
+// getRuleMetadata returns the v3.Rule's annotation, given its key.
 func getRuleMetadata(key string, rule v3.Rule) (string, bool) {
 	val, ok := rule.Metadata.Annotations[key]
 	if !ok {
@@ -668,97 +714,46 @@ func getNamespacePolicyRecParams(st time.Duration, ns, cl string) *flows.PolicyR
 // getRecommendationEngine returns a recommendation engine. Instantiated a new recommendation
 // engine and uses any existing staged network policy rules for instantiation.
 func getRecommendationEngine(
-	snp v3.StagedNetworkPolicy, clock Clock, interval, stabilization time.Duration, serviceNameSuffix string, clog log.Entry,
+	snp v3.StagedNetworkPolicy,
+	clock Clock,
+	interval, stabilization time.Duration,
+	passIntraNamespaceTraffic bool,
+	serviceNameSuffix string,
+	clog log.Entry,
 ) recommendationEngine {
 	eng := newRecommendationEngine(
-		snp.Name, snp.Namespace, snp.Spec.Tier, snp.Spec.Order, clock, interval, stabilization, serviceNameSuffix, clog)
+		snp.Name,
+		snp.Namespace,
+		snp.Spec.Tier,
+		snp.Spec.Order,
+		clock,
+		interval,
+		stabilization,
+		passIntraNamespaceTraffic,
+		serviceNameSuffix,
+		clog,
+	)
 	eng.buildRules(calicores.EgressTraffic, snp.Spec.Egress)
 	eng.buildRules(calicores.IngressTraffic, snp.Spec.Ingress)
 
 	return *eng
 }
 
-// lessEgressToDomain compares two egress to domain rules by the alphabetical order of the protocol
-// the order of ports, and the alphabetical order of the rule's domains. It is assumed that the
-// rules will differ in at least one field.
-func lessEgressToDomain(left, right v3.Rule) bool {
-	if left.Protocol.StrVal != right.Protocol.StrVal {
-		return left.Protocol.StrVal < right.Protocol.StrVal
+// processRules returns engine rules as a sorted list of v3 rules.
+func processRules(
+	direction calicores.DirectionType,
+	engineRules map[engineRuleKey]*types.FlowLogData,
+	v3RuleCreator func(types.FlowLogData, calicores.DirectionType) *v3.Rule,
+	comparator func(direction calicores.DirectionType, i, j v3.Rule) bool,
+) []v3.Rule {
+	rules := []v3.Rule{}
+	for _, data := range engineRules {
+		rule := v3RuleCreator(*data, direction)
+		rules = append(rules, *rule)
 	}
-	cp := compPorts(left.Destination.Ports, right.Destination.Ports)
-	if cp != 0 {
-		return cp == -1
-	}
-	return compStrArrays(left.Destination.Domains, right.Destination.Domains)
-}
+	sort.Slice(rules, func(i, j int) bool {
+		return comparator(direction, rules[i], rules[j])
+	})
 
-// lessEgressToService compares two egress to service rules by the alphabetical order of the protocol
-// the order of ports, and the alphabetical order of the destination name and namespace. It is
-// assumed that the rules will differ in at least one field.
-func lessEgressToService(left, right v3.Rule) bool {
-	if left.Protocol.StrVal != right.Protocol.StrVal {
-		return left.Protocol.StrVal < right.Protocol.StrVal
-	}
-	cp := compPorts(left.Destination.Ports, right.Destination.Ports)
-	if cp != 0 {
-		return cp == -1
-	}
-	if left.Destination.Services.Name != right.Destination.Services.Name {
-		return left.Destination.Services.Name < right.Destination.Services.Name
-	}
-	return left.Destination.Services.Namespace < right.Destination.Services.Namespace
-}
-
-// lessNamespace compares two namespace rules by the alphabetical order of the protocol
-// the order of ports, and the alphabetical order of the destination name and namespace. It is
-// assumed that the rules will differ in at least one field.
-func lessNamespace(direction calicores.DirectionType, left, right v3.Rule) bool {
-	if left.Protocol.StrVal != right.Protocol.StrVal {
-		return left.Protocol.StrVal < right.Protocol.StrVal
-	}
-	cp := compPorts(left.Destination.Ports, right.Destination.Ports)
-	if cp != 0 {
-		return cp == -1
-	}
-	if direction == calicores.EgressTraffic {
-		return left.Destination.NamespaceSelector < right.Destination.NamespaceSelector
-	} else {
-		return left.Source.NamespaceSelector < right.Source.NamespaceSelector
-	}
-}
-
-// lessNetworkSet compares two network set rules by the alphabetical order of the protocol
-// the order of ports, and the alphabetical order of the destination name and namespace. It is
-// assumed that the rules will differ in at least one field.
-func lessNetworkSet(direction calicores.DirectionType, left, right v3.Rule) bool {
-	if left.Protocol.StrVal != right.Protocol.StrVal {
-		return left.Protocol.StrVal < right.Protocol.StrVal
-	}
-	cp := compPorts(left.Destination.Ports, right.Destination.Ports)
-	if cp != 0 {
-		return cp == -1
-	}
-	if direction == calicores.EgressTraffic {
-		if left.Destination.NamespaceSelector != right.Destination.NamespaceSelector {
-			return left.Destination.NamespaceSelector < right.Destination.NamespaceSelector
-		}
-		return left.Destination.Selector < right.Destination.Selector
-	} else {
-		if left.Source.NamespaceSelector != right.Source.NamespaceSelector {
-			return left.Source.NamespaceSelector < right.Source.NamespaceSelector
-		}
-		return left.Source.Selector < right.Source.Selector
-	}
-}
-
-// lessPrivateNetwork compares two namespace rules by the alphabetical order of the protocol. It is
-// assumed that no two rules will not have the same protocol.
-func lessPrivateNetwork(left, right v3.Rule) bool {
-	return left.Protocol.StrVal < right.Protocol.StrVal
-}
-
-// lessPublicNetwork compares two namespace rules by the alphabetical order of the protocol. It is
-// assumed that no two rules will not have the same protocol.
-func lessPublicNetwork(left, right v3.Rule) bool {
-	return left.Protocol.StrVal < right.Protocol.StrVal
+	return rules
 }
