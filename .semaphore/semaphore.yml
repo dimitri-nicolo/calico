@@ -39,7 +39,7 @@ blocks:
             minutes: 30
           commands:
             - make image
-  - name: 'Push Images (non-PR builds only)'
+  - name: 'Run FOSSA scan & Push Images (non-PR builds only)'
     dependencies: ["Build Image"]
     skip:
       # Only run on branches, not PRs.
@@ -47,6 +47,7 @@ blocks:
     task:
       secrets:
         - name: google-service-account-for-gcr
+        - name: foss-api-key
       prologue:
         commands:
           # Correct permissions since they are too open by default:
@@ -55,7 +56,11 @@ blocks:
           - ssh-add ~/.keys/*
           # Login to docker in order to pull images.
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - "curl -fsSLH 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install-latest.sh | bash"
       jobs:
+        - name: "FOSSA scan"
+          commands:
+            - "fossa analyze"
         - name: Run CD
           execution_time_limit:
             minutes: 15
