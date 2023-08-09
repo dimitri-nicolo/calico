@@ -86,6 +86,10 @@ COPY --from=ubi /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=ubi /lib64/libpcre.so.1 /lib64/libpcre.so.1
 COPY --from=ubi /lib64/libpsl.so.5 /lib64/libpsl.so.5
 COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
+
+# The following dependencies do not show up when performing ldd on the binary, but are still necessary.
+COPY --from=ubi /lib64/libnss_dns.so.2 /lib64/libnss_dns.so.2
+COPY --from=ubi /lib64/libnss_files.so.2 /lib64/libnss_files.so.2
 COPY --from=ubi /lib64/libresolv.so.2 /lib64/libresolv.so.2
 COPY --from=ubi /lib64/librt.so.1 /lib64/librt.so.1
 COPY --from=ubi /lib64/libsasl2.so.3 /lib64/libsasl2.so.3
