@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"regexp"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
@@ -20,6 +21,7 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils/cors"
 )
 
 func main() {
@@ -153,7 +155,7 @@ func main() {
 		log.WithField("map", sniServiceMap).Info("SNI map")
 
 		// Create a proxy to use as the "inner proxy" - handling connections _from_ managed clusters to
-		// servies in the management cluster handled directly by Voltron.
+		// services in the management cluster handled directly by Voltron.
 		targetList := []bootstrap.Target{
 			{
 				// All Linseed APIs start with this prefix. In practice, only Linseed connections should ever
@@ -166,7 +168,7 @@ func main() {
 				ClientCert:   cfg.InternalHTTPSCert,
 			},
 		}
-		targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
+		targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled, nil)
 		if err != nil {
 			log.WithError(err).Fatal("failed to parse Linseed proxy targets")
 		}
@@ -300,6 +302,16 @@ func main() {
 		})
 	}
 
+	var modifyResponse cors.ModifyResponse
+	if cfg.CalicoCloudCorsHost != "" {
+		corsOriginRegexp, err := regexp.Compile(cfg.CalicoCloudCorsHost)
+		if err != nil {
+			log.WithError(err).Fatalf("failed to compile regexp for CalicoCloud CORS Host %s", cfg.CalicoCloudCorsHost)
+		}
+		modifyResponse = cors.ResponseHandler(corsOriginRegexp)
+		opts = append(opts, server.WithCalicoCloudCORS(corsOriginRegexp, modifyResponse))
+	}
+
 	var jwtAuthOpts []auth.JWTAuthOption
 	if cfg.OIDCAuthEnabled {
 		// If dex is enabled we need to add the CA Bundle, otherwise the default trusted certs from the image will
@@ -344,7 +356,7 @@ func main() {
 		log.Fatal("Unable to create authenticator", err)
 	}
 
-	targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
+	targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled, modifyResponse)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to parse default proxy targets.")
 	}

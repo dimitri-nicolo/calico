@@ -91,6 +91,7 @@ type Config struct {
 	CalicoCloudRbacApiEndpoint     string `split_words:"true"`
 	CalicoCloudRequireTenantClaim  bool   `split_words:"true"`
 	CalicoCloudTenantClaim         string `split_words:"true"`
+	CalicoCloudCorsHost            string `split_words:"true"`
 
 	// Dex settings
 	DexEnabled      bool   `default:"false" split_words:"true"`

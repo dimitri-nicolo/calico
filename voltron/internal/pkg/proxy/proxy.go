@@ -16,6 +16,7 @@ import (
 	gotls "crypto/tls"
 
 	"github.com/projectcalico/calico/crypto/pkg/tls"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils/cors"
 
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -43,6 +44,8 @@ type Target struct {
 	// Configures client key and certificate for mTLS from Voltron with the target.
 	ClientKey  string
 	ClientCert string
+
+	ModifyResponse cors.ModifyResponse
 }
 
 // Proxy proxies HTTP based on the provided list of targets
@@ -78,6 +81,7 @@ func New(tgts []Target) (*Proxy, error) {
 func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), error) {
 	p := httputil.NewSingleHostReverseProxy(tgt.Dest)
 	p.FlushInterval = -1
+	p.ModifyResponse = tgt.ModifyResponse
 
 	if tgt.Transport != nil {
 		p.Transport = tgt.Transport
