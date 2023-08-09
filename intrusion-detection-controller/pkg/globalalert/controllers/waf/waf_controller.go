@@ -92,7 +92,11 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 
 	if len(wafEvents) > 0 {
 		log.Debugf("About to create %d WAF Events", len(wafEvents))
-		c.events.Create(ctx, wafEvents)
+		_, err = c.events.Create(ctx, wafEvents)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	c.lastWafTimestamp = now
