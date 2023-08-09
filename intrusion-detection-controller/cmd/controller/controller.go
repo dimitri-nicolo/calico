@@ -230,8 +230,9 @@ func main() {
 		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, linseed, k8sClient, enableAnomalyDetection, anomalyDetectionController, anomalyTrainingController, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.FIPSMode)
 		healthPingers = append(healthPingers, &alertHealthPinger)
 
-		// This will managed all waf logs inside the management cluster
+		// This will manage all waf logs inside the management cluster
 		wafEventController = waf.NewWafAlertController(linseed, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace)
+
 		// This controller will monitor managed cluster updated from K8S and create a NewGlobalAlertController per managed cluster
 		managedClusterController = managedcluster.NewManagedClusterController(calicoClient, linseed, k8sClient, enableAnomalyDetection, anomalyTrainingController, anomalyDetectionController, TigeraIntrusionDetectionNamespace, util.ManagedClusterClient(k8sConfig, cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA), cfg.FIPSMode, cfg.TenantID)
 	}

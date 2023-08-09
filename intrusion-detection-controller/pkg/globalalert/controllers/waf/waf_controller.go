@@ -25,8 +25,7 @@ type wafAlertController struct {
 	lastWafTimestamp time.Time
 }
 
-// NewWafAlertController returns a wafAlertController and for each object it watches,
-// a health.Pinger object is created returned for health check.
+// NewWafAlertController returns a wafAlertController for handling waf events
 func NewWafAlertController(linseedClient client.Client, clusterName string, tenantID string, namespace string) controller.Controller {
 	c := &wafAlertController{
 		clusterName: clusterName,

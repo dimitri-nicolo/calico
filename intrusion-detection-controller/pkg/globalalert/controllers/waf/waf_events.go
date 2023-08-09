@@ -7,12 +7,8 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-const (
-	GlobalAlertSpecTypeFieldName = "Type"
-)
-
 func NewWafEvent(l v1.WAFLog) v1.Event {
-	// read in the yaml files here and compare to the WAF Log
+
 	return v1.Event{
 		Type: query.WafEventType,
 		// Deviating from original implementation here

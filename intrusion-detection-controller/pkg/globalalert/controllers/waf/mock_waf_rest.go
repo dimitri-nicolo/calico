@@ -58,7 +58,6 @@ func (f *MockWaf) List(ctx context.Context, params v1.Params) (*v1.List[v1.WAFLo
 
 // ListInto gets the WAF Logs for the given input params.
 func (f *MockWaf) ListInto(ctx context.Context, params v1.Params, l v1.Listable) error {
-	//IDK what this is meant to do
 
 	return nil
 }
@@ -66,9 +65,7 @@ func (f *MockWaf) ListInto(ctx context.Context, params v1.Params, l v1.Listable)
 // create waf logs
 func (f *MockWaf) Create(ctx context.Context, wafl []v1.WAFLog) (*v1.BulkResponse, error) {
 	var err error
-
-	// add waf Logs
-	return &v1.BulkResponse{}, err
+	panic(err)
 }
 
 func (f *MockWaf) Aggregations(ctx context.Context, params v1.Params) (elastic.Aggregations, error) {

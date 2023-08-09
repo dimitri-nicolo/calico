@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("WAF event cache", func() {
+var _ = Describe("WAF new event", func() {
 	var (
 		wafLog v1.WAFLog
 		rawLog []byte
