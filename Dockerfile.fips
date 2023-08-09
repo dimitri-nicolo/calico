@@ -77,6 +77,7 @@ RUN yum install -y --setopt=tsflags=nodocs \
  && ln -s  /var/lib/ruby/bin/fluent-gem /usr/bin/fluent-gem \
  && gem install oj -v 3.10.18 \
  && gem install json -v 2.6.2 \
+ && gem install console -v 1.19.0 \
  && gem install async-http -v 0.54.0 \
  && gem install ext_monitor -v 0.1.2 \
  && gem install bigdecimal -v 1.4.4 \
