@@ -52,6 +52,7 @@ blocks:
     task:
       secrets:
         - name: google-service-account-for-gcr
+        - name: foss-api-key
       prologue:
         commands:
           # Correct permissions since they are too open by default:
@@ -60,7 +61,11 @@ blocks:
           - ssh-add ~/.keys/*
           # Login to docker in order to pull images.
           - docker login -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - "curl -fsSLH 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install-latest.sh | bash"
       jobs:
+        - name: "FOSSA scan"
+          commands:
+            - "fossa analyze"
         - name: Run CD
           execution_time_limit:
             minutes: 60
@@ -76,6 +81,7 @@ blocks:
     task:
       secrets:
         - name: banzai-secrets
+        - name: foss-api-key
       prologue:
         commands:
           # Correct permissions since they are too open by default:
@@ -93,12 +99,16 @@ blocks:
           - tar cvzf ~/windows-tf.tar.gz -C ~/process/testing/windows-instances .
           - artifact push job --expire-in 2w ~/windows-tf.tar.gz
           - popd
+          - "curl -fsSLH 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install-latest.sh | bash"
       epilogue:
         always:
           commands:
             - cd ~/process/testing/windows-instances
             - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh -u
       jobs:
+        - name: "FOSSA scan"
+          commands:
+            - "fossa analyze"
         - name: Run CD
           execution_time_limit:
             minutes: 60
