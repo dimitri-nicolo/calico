@@ -64,8 +64,7 @@ func (f *MockWaf) ListInto(ctx context.Context, params v1.Params, l v1.Listable)
 
 // create waf logs
 func (f *MockWaf) Create(ctx context.Context, wafl []v1.WAFLog) (*v1.BulkResponse, error) {
-	var err error
-	panic(err)
+	panic("mock Create not implemented")
 }
 
 func (f *MockWaf) Aggregations(ctx context.Context, params v1.Params) (elastic.Aggregations, error) {
