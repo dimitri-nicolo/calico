@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,8 @@ import (
 
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/types"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/config"
 	intdataplane "github.com/projectcalico/calico/felix/dataplane/linux"
 	"github.com/projectcalico/calico/felix/idalloc"
@@ -44,14 +46,16 @@ func (_ *mockCollector) ReportingChannel() chan<- *proto.DataplaneStats { return
 
 func (_ *mockCollector) Start() error { return nil }
 
-func (_ *mockCollector) LogDNS(src, dst net.IP, dns *layers.DNS, latencyIfKnown *time.Duration) {}
+func (_ *mockCollector) LogDNS(net.IP, net.IP, *layers.DNS, *time.Duration) {}
 
-func (_ *mockCollector) SetDNSLogReporter(reporter collector.DNSLogReporterInterface) {}
+func (_ *mockCollector) SetDNSLogReporter(types.Reporter) {}
 
-func (_ *mockCollector) LogL7(hd *proto.HTTPData, data *collector.Data, tuple collector.Tuple, httpDataCount int) {
+func (_ *mockCollector) LogL7(*proto.HTTPData, *collector.Data, tuple.Tuple, int) {
 }
 
-func (_ *mockCollector) SetL7LogReporter(reporter collector.L7LogReporterInterface) {}
+func (_ *mockCollector) SetL7LogReporter(types.Reporter) {}
+
+func (_ *mockCollector) RegisterMetricsReporter(types.Reporter) {}
 
 func (_ *mockCollector) SetPacketInfoReader(collector.PacketInfoReader) {}
 
@@ -59,7 +63,7 @@ func (_ *mockCollector) SetConntrackInfoReader(collector.ConntrackInfoReader) {}
 
 func (_ *mockCollector) SetProcessInfoCache(collector.ProcessInfoCache) {}
 
-func (_ *mockCollector) SetDomainLookup(dlu collector.EgressDomainCache) {}
+func (_ *mockCollector) SetDomainLookup(collector.EgressDomainCache) {}
 
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config

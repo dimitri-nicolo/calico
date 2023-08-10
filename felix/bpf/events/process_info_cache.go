@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package events
 
@@ -10,6 +10,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/types"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/jitter"
 )
 
@@ -23,7 +25,7 @@ type BPFProcessInfoCache struct {
 	// Read-Write mutex for process info
 	lock sync.RWMutex
 	// Map of tuple to process information
-	cache map[collector.Tuple]ProcessEntry
+	cache map[tuple.Tuple]ProcessEntry
 
 	// Ticker for running the GC thread that reaps expired entries.
 	expireTicker jitter.JitterTicker
@@ -48,7 +50,7 @@ func NewBPFProcessInfoCache(eventProcessInfoChan <-chan EventProtoStats, eventTc
 		eventTcpStatsInfo: eventTcpStatsInfoChan,
 		expireTicker:      jitter.NewTicker(gcInterval, gcInterval/10),
 		entryTTL:          entryTTL,
-		cache:             make(map[collector.Tuple]ProcessEntry),
+		cache:             make(map[tuple.Tuple]ProcessEntry),
 		lock:              sync.RWMutex{},
 		processPathCache:  processPathCache,
 	}
@@ -106,14 +108,14 @@ func (r *BPFProcessInfoCache) Stop() {
 	r.wg.Wait()
 }
 
-func (r *BPFProcessInfoCache) Lookup(tuple collector.Tuple, direction collector.TrafficDirection) (collector.ProcessInfo, bool) {
+func (r *BPFProcessInfoCache) Lookup(tuple tuple.Tuple, direction types.TrafficDirection) (collector.ProcessInfo, bool) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
 	t := tuple
-	if direction == collector.TrafficDirInbound {
+	if direction == types.TrafficDirInbound {
 		// Inbound data is stored in the reverse order.
-		t = t.GetReverseTuple()
+		t = t.Reverse()
 	}
 	log.Debugf("Looking up process info for tuple %+v in direction %v", tuple, direction)
 	if entry, ok := r.cache[t]; ok {
@@ -124,10 +126,10 @@ func (r *BPFProcessInfoCache) Lookup(tuple collector.Tuple, direction collector.
 	return collector.ProcessInfo{}, false
 }
 
-func (r *BPFProcessInfoCache) Update(tuple collector.Tuple, dirty bool) {
+func (r *BPFProcessInfoCache) Update(tuple tuple.Tuple, dirty bool) {
 	r.updateCacheWithTcpStatsDirty(tuple, dirty)
 }
-func (r *BPFProcessInfoCache) updateCacheWithTcpStatsDirty(tuple collector.Tuple, dirty bool) {
+func (r *BPFProcessInfoCache) updateCacheWithTcpStatsDirty(tuple tuple.Tuple, dirty bool) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	log.Debugf("Setting the dirty flag for TCPStats to %+v", dirty)
@@ -205,7 +207,7 @@ func convertProtoEventToProcessInfo(event EventProtoStats) collector.ProcessInfo
 	dstIP := event.Daddr
 	sport := int(event.Sport)
 	dport := int(event.Dport)
-	tuple := collector.MakeTuple(srcIP, dstIP, int(event.Proto), sport, dport)
+	tuple := tuple.Make(srcIP, dstIP, int(event.Proto), sport, dport)
 	pname := bytes.Trim(event.ProcessName[:], "\x00")
 	return collector.ProcessInfo{
 		Tuple: tuple,
@@ -221,7 +223,7 @@ func convertTcpStatsEventToProcessInfo(event EventTcpStats) collector.ProcessInf
 	dstIP := event.Daddr
 	sport := int(event.Sport)
 	dport := int(event.Dport)
-	tuple := collector.MakeTuple(srcIP, dstIP, 6, sport, dport)
+	tuple := tuple.Make(srcIP, dstIP, 6, sport, dport)
 	return collector.ProcessInfo{
 		Tuple: tuple,
 		TcpStatsData: collector.TcpStatsData{

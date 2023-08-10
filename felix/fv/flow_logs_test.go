@@ -1,7 +1,7 @@
 //go:build fvtests
 // +build fvtests
 
-// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -17,7 +17,7 @@ import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
-	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/flowlogs"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
@@ -1001,7 +1001,7 @@ var _ = infrastructure.DatastoreDescribe("nat outgoing flow log tests", []apicon
 		cc.ExpectSome(workload1, workload2)
 		cc.CheckConnectivity()
 
-		var flows []collector.FlowLog
+		var flows []flowlog.FlowLog
 		var err error
 		Eventually(func() error {
 			flows, err = flowlogs.ReadFlowLogs(tc.Felixes[0].FlowLogDir(), "file")

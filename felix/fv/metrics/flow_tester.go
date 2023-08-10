@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
 package metrics
 
 import (
@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/fv/flowlogs"
 )
 
@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	NoDestService = collector.FlowService{
+	NoDestService = flowlog.FlowService{
 		Namespace: "-",
 		Name:      "-",
 		PortName:  "-",
@@ -49,7 +49,7 @@ type ExpectedPolicy struct {
 // FlowTester is a helper utility to parse and check flows.
 type FlowTester struct {
 	options FlowTesterOptions
-	flows   map[flowMeta]collector.FlowLog
+	flows   map[flowMeta]flowlog.FlowLog
 	errors  []string
 }
 
@@ -73,15 +73,15 @@ type FlowTesterOptions struct {
 }
 
 type flowMeta struct {
-	collector.FlowMeta
+	flowlog.FlowMeta
 	policies string
 	labels   string
 }
 
-type IncludeFilter func(collector.FlowLog) bool
+type IncludeFilter func(flowlog.FlowLog) bool
 
 func IncludeByDestPort(port int) IncludeFilter {
-	return func(f collector.FlowLog) bool {
+	return func(f flowlog.FlowLog) bool {
 		return f.FlowMeta.Tuple.GetDestPort() == port
 	}
 }
@@ -196,7 +196,7 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 //
 // After CheckFlow has been called for all expected flows, call Finish to check that everything has
 // been explicitly checked.
-func (t *FlowTester) CheckFlow(fl collector.FlowLog) {
+func (t *FlowTester) CheckFlow(fl flowlog.FlowLog) {
 	fm := t.flowMetaFromFlowLog(fl)
 	existing, ok := t.flows[fm]
 	if !ok {
@@ -250,7 +250,7 @@ func (t *FlowTester) Finish() error {
 
 // Return a test-specific flowMeta from the flowLog.  We may include policies and labels in the metadata so that
 // flows with different labels or policies will be expicitly matched.
-func (t *FlowTester) flowMetaFromFlowLog(fl collector.FlowLog) flowMeta {
+func (t *FlowTester) flowMetaFromFlowLog(fl flowlog.FlowLog) flowMeta {
 	// If we are including the labels or policies in the match then include them in the meta. We need to convert the
 	// policies and labels to a single string to make it hashable.
 	fm := flowMeta{
@@ -281,6 +281,6 @@ func (t *FlowTester) flowMetaFromFlowLog(fl collector.FlowLog) flowMeta {
 
 // Reset accumulated test data.
 func (t *FlowTester) reset() {
-	t.flows = make(map[flowMeta]collector.FlowLog)
+	t.flows = make(map[flowMeta]flowlog.FlowLog)
 	t.errors = nil
 }

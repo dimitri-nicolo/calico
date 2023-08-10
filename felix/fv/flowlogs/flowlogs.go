@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
 
 package flowlogs
 
@@ -11,10 +11,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/file"
+	"github.com/projectcalico/calico/felix/collector/flowlog"
 )
 
-func ReadFlowLogs(flowLogDir, output string) ([]collector.FlowLog, error) {
+func ReadFlowLogs(flowLogDir, output string) ([]flowlog.FlowLog, error) {
 	switch output {
 	case "file":
 		return ReadFlowLogsFile(flowLogDir)
@@ -23,10 +24,10 @@ func ReadFlowLogs(flowLogDir, output string) ([]collector.FlowLog, error) {
 	}
 }
 
-func ReadFlowLogsFile(flowLogDir string) ([]collector.FlowLog, error) {
-	var flowLogs []collector.FlowLog
+func ReadFlowLogsFile(flowLogDir string) ([]flowlog.FlowLog, error) {
+	var flowLogs []flowlog.FlowLog
 	log.WithField("dir", flowLogDir).Info("Reading Flow Logs from file")
-	filePath := filepath.Join(flowLogDir, collector.FlowLogFilename)
+	filePath := filepath.Join(flowLogDir, file.FlowLogFilename)
 	logFile, err := os.Open(filePath)
 	if err != nil {
 		return flowLogs, err
@@ -35,7 +36,7 @@ func ReadFlowLogsFile(flowLogDir string) ([]collector.FlowLog, error) {
 
 	s := bufio.NewScanner(logFile)
 	for s.Scan() {
-		var fljo collector.FlowLogJSONOutput
+		var fljo flowlog.JSONOutput
 		err = json.Unmarshal(s.Bytes(), &fljo)
 		if err != nil {
 			all, _ := os.ReadFile(filePath)
