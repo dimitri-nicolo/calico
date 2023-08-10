@@ -37,22 +37,6 @@ var filenames []string
 var owaspLogInfo = map[string][]map[string]string{}
 var owaspLogMutex sync.Mutex
 
-// WAF Error structures
-type WAFError struct {
-	Disruption WAFIntervention
-	Msg        string
-}
-
-type WAFIntervention struct {
-	Status int32
-	Log    string
-	URL    string
-}
-
-func (e WAFError) Error() string {
-	return e.Msg
-}
-
 // CheckRulesSetExists
 // invoke this WAF function first checking if rules argument set and if so with destination directory.
 // if this directory does not exist OR zero *.conf Core Rule Sets files exist then do not enable WAF.
