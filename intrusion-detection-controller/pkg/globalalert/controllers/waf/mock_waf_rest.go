@@ -85,12 +85,11 @@ func newMockEvents(c client.Client, cluster string) client.EventsInterface {
 
 // List gets the events for the given input params.
 func (f *mockEvents) List(ctx context.Context, params v1.Params) (*v1.List[v1.Event], error) {
-
 	return &f.events, nil
 }
 
 func (f *mockEvents) Create(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
-
+	f.events.Items = append(f.events.Items, events...)
 	return &v1.BulkResponse{}, nil
 }
 
