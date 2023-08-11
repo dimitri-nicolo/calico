@@ -83,7 +83,7 @@ var _ = Describe("WAF Controller", func() {
 
 			logs2, err := wac.events.List(ctx, params)
 			Expect(err).ToNot(HaveOccurred())
-			// no new Events should have been created 
+			// no new Events should have been created
 			Expect(logs2).To(Equal(numOfAlerts))
 
 		})

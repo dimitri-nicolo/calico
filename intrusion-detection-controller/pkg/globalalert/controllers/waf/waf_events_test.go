@@ -79,10 +79,6 @@ var _ = Describe("WAF new event", func() {
 			Expect(isPresent).To(BeFalse())
 		})
 
-		It("Test WAF caching", func() {
-			f := mustOpen("test_files/waf_log_2.json")
-			defer f.Close()
-		})
 	})
 })
 
