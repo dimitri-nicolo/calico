@@ -59,10 +59,6 @@ type QueryBuilder struct {
 	dataType string
 }
 
-func (q QueryBuilder) IsWAF() bool {
-	return q.dataType == v3.GlobalAlertDataSetWAF
-}
-
 func (q QueryBuilder) queryParams(now time.Time) lsv1.QueryParams {
 	return lsv1.QueryParams{
 		TimeRange: &lmav1.TimeRange{
