@@ -9,6 +9,31 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
+var (
+	// Potentally the maximum time skew difference between components generating WAF alerts
+	MaxTimeSkew = 5 * time.Minute
+)
+
+type WafEventsCache struct {
+	lastWafTimestamp time.Time
+	wafEvents        []string
+}
+
+// Contains checks if we've seen the waf log before
+func (c *WafEventsCache) Contains(wafLog v1.WAFLog) bool {
+	for _, wafID := range c.wafEvents {
+		if wafLog.RequestId == wafID {
+			return true
+		}
+	}
+	return false
+}
+
+// Add adds the uuid requestId of the waf log
+func (c *WafEventsCache) Add(wafLog v1.WAFLog) {
+	c.wafEvents = append(c.wafEvents, wafLog.RequestId)
+}
+
 func NewWafEvent(l v1.WAFLog) v1.Event {
 
 	return v1.Event{

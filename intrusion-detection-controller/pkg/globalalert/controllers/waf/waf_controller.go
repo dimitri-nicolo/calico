@@ -22,7 +22,7 @@ type wafAlertController struct {
 	cancel           context.CancelFunc
 	wafLogs          client.WAFLogsInterface
 	events           client.EventsInterface
-	lastWafTimestamp time.Time
+	eventsCache WafEventsCache
 }
 
 // NewWafAlertController returns a wafAlertController for handling waf events
@@ -31,6 +31,10 @@ func NewWafAlertController(linseedClient client.Client, clusterName string, tena
 		clusterName: clusterName,
 		wafLogs:     linseedClient.WAFLogs(clusterName),
 		events:      linseedClient.Events(clusterName),
+		eventsCache: WafEventsCache{
+			lastWafTimestamp: time.Unix(0, 0),
+			wafEvents:        []string{},
+		},
 	}
 	return c
 }
@@ -41,6 +45,10 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 	ctx, c.cancel = context.WithCancel(parentCtx)
 	log.Infof("Starting waf alert controller for cluster %s", c.clusterName)
 
+	err := c.InitEventsCache(ctx)
+	if err != nil {
+		log.WithError(err).Warn("failed to init events cache")
+	}
 	// Then loop forever...
 	for {
 		err := c.ProcessWafLogs(ctx)
@@ -60,6 +68,32 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 	}
 }
 
+func (c *wafAlertController) InitEventsCache(ctx context.Context) error {
+	// Read existing WAF alerts on startup and prevent them from being generated again
+	log.Debug("Building Cache of existing waf Alerts")
+	now := time.Now()
+	params := &v1.WAFLogParams{
+		QueryParams: v1.QueryParams{
+			TimeRange: &lmav1.TimeRange{
+				From: now.Add(-((time.Hour * 24) * 7)), // this is to get the time 1 week ago
+				To:   now,
+			},
+		},
+	}
+
+	logs, err := c.wafLogs.List(ctx, params)
+	if err != nil {
+		log.WithError(err).WithField("params", params).Error("error reading WAF logs from linseed")
+		return err
+	}
+
+	for _, wafLog := range logs.Items {
+		c.eventsCache.Add(wafLog)
+	}
+	c.eventsCache.lastWafTimestamp = now.Add(-MaxTimeSkew)
+	return nil
+}
+
 // Close cancels the WafAlertForwarder context.
 func (c *wafAlertController) Close() {
 	c.cancel()
@@ -71,7 +105,7 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 	params := &v1.WAFLogParams{
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
-				From: c.lastWafTimestamp,
+				From: c.eventsCache.lastWafTimestamp,
 				To:   now,
 			},
 		},
@@ -85,6 +119,11 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 
 	wafEvents := []v1.Event{}
 	for _, wafLog := range logs.Items {
+		if !c.eventsCache.Contains(wafLog){
+			c.eventsCache.Add(wafLog)
+			// generate the new alerts/events from the waflogs
+			wafEvents = append(wafEvents, NewWafEvent(wafLog))
+		}
 		// generate the new alerts/events from the waflogs
 		wafEvents = append(wafEvents, NewWafEvent(wafLog))
 	}
@@ -98,6 +137,6 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 
 	}
 
-	c.lastWafTimestamp = now
+	c.eventsCache.lastWafTimestamp = now
 	return nil
 }
