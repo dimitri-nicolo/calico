@@ -13,14 +13,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-
-
 var _ = Describe("WAF new event", func() {
 	var (
-		wafLog v1.WAFLog
-		rawLog []byte
+		wafLog   v1.WAFLog
+		rawLog   []byte
 		wafCache WafEventsCache
-		err    error
+		err      error
 	)
 
 	BeforeEach(func() {

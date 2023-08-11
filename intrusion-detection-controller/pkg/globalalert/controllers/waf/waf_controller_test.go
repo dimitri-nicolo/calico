@@ -16,14 +16,14 @@ import (
 var _ = Describe("WAF Controller", func() {
 	var (
 		numOfAlerts = 2
-		mockClient = client.NewMockClient("", rest.MockResult{})
-		wafCache = WafEventsCache{
+		mockClient  = client.NewMockClient("", rest.MockResult{})
+		wafCache    = WafEventsCache{
 			lastWafTimestamp: time.Now(),
 		}
-		wac        = &wafAlertController{
-			clusterName:      "clusterName",
-			wafLogs:          newMockWAFLogs(mockClient, "clustername"),
-			events:           newMockEvents(mockClient, "clustername"),
+		wac = &wafAlertController{
+			clusterName: "clusterName",
+			wafLogs:     newMockWAFLogs(mockClient, "clustername"),
+			events:      newMockEvents(mockClient, "clustername"),
 			eventsCache: wafCache,
 		}
 	)

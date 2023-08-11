@@ -18,10 +18,10 @@ import (
 // wafAlertController is responsible for watching WAF logs in a cluster
 // and creating corresponding events.
 type wafAlertController struct {
-	clusterName      string
-	cancel           context.CancelFunc
-	wafLogs          client.WAFLogsInterface
-	events           client.EventsInterface
+	clusterName string
+	cancel      context.CancelFunc
+	wafLogs     client.WAFLogsInterface
+	events      client.EventsInterface
 	eventsCache WafEventsCache
 }
 
@@ -119,7 +119,7 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 
 	wafEvents := []v1.Event{}
 	for _, wafLog := range logs.Items {
-		if !c.eventsCache.Contains(wafLog){
+		if !c.eventsCache.Contains(wafLog) {
 			c.eventsCache.Add(wafLog)
 			// generate the new alerts/events from the waflogs
 			wafEvents = append(wafEvents, NewWafEvent(wafLog))
