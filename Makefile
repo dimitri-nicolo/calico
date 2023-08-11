@@ -96,6 +96,12 @@ bin/tigera-operator-$(chartVersion).tgz: bin/helm $(shell find ./charts/tigera-o
 	--destination ./bin/ \
 	--version $(chartVersion) \
 	--app-version $(appVersion)
+ifeq ($(SEMAPHORE_GIT_BRANCH), master)
+	bin/helm package ./charts/tigera-operator \
+	--destination ./bin/ \
+	--version v0.0 \
+	--app-version v0.0
+endif
 
 # Build the tigera-prometheus-operator.tgz helm chart.
 bin/tigera-prometheus-operator-$(chartVersion).tgz:
