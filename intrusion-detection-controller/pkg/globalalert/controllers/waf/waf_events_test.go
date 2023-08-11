@@ -25,7 +25,7 @@ var _ = Describe("WAF new event", func() {
 
 	BeforeEach(func() {
 		wafCache = WafEventsCache{
-			lastWafTimestamp: time.Now(), // subject to change
+			lastWafTimestamp: time.Now(),
 		}
 		f := mustOpen("testdata/waf_log.json")
 		defer f.Close()
