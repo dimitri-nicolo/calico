@@ -3,6 +3,8 @@
 package waf
 
 import (
+	"time"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
@@ -16,7 +18,7 @@ func NewWafEvent(l v1.WAFLog) v1.Event {
 
 		// GlobalAlert use time.Now() but it makes more sense to use the
 		// timestamp from the WAF log...
-		Time:        v1.NewEventDate(l.Timestamp),
+		Time:        v1.NewEventDate(time.Now()),
 		Name:        "WAF Event",
 		Description: "Some traffic inside your cluster triggered some Web Application Firewall rules",
 		// Bad but not too bad :) Open for feedback
