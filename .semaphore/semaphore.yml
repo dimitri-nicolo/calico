@@ -44,6 +44,24 @@ blocks:
           commands:
             - make ci
 
+  - name: "FOSSA scan"
+    skip:
+      # Only run on branches, not PRs.
+      when: "branch !~ '.+'"
+    execution_time_limit:
+      minutes: 30
+    dependencies: ["CI"]
+    task:
+      prologue:
+        commands:
+        - "curl -fsSLH 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install-latest.sh | bash"
+      jobs:
+      - name: "FOSSA scan"
+        commands:
+        - "fossa analyze"
+      secrets:
+        - name: foss-api-key
+
   - name: 'Push Images (non-PR builds only)'
     dependencies: ["CI"]
     skip:
@@ -52,6 +70,7 @@ blocks:
     task:
       secrets:
         - name: google-service-account-for-gcr
+        - name: foss-api-key
       prologue:
         commands:
           # Correct permissions since they are too open by default:
@@ -76,6 +95,7 @@ blocks:
     task:
       secrets:
         - name: banzai-secrets
+        - name: foss-api-key
       prologue:
         commands:
           # Correct permissions since they are too open by default:
