@@ -330,6 +330,7 @@
         "l3_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
         "l7_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR src_namespace = \"kube-system\"",
         "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\"",
+        "alerts": "dest_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
         "packet_capture": "all()"
       }
     },
@@ -622,6 +623,7 @@
         "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
         "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\"",
         "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"storefront\" OR source_namespace = \"storefront\"",
         "packet_capture": "all()"
       }
     },
@@ -814,6 +816,7 @@
         "l3_flows": "dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-elasticsearch\"",
         "l7_flows": "dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR src_namespace = \"tigera-elasticsearch\"",
         "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" OR client_namespace = \"tigera-elasticsearch\"",
+        "alerts": "dest_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-elasticsearch\"",
         "packet_capture": "all()"
       }
     },
@@ -933,7 +936,7 @@
         "l3_flows": "dest_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-fluentd\"",
         "l7_flows": "dest_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-fluentd\" OR src_namespace = \"tigera-fluentd\"",
         "dns_logs": "\"servers.namespace\" = \"tigera-fluentd\" OR client_namespace = \"tigera-fluentd\"",
-        "alerts": "_id = \"fakeid\"",
+        "alerts": "dest_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-fluentd\"",
         "packet_capture": "all()"
       },
       "events": [
@@ -1072,6 +1075,7 @@
         "l3_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\"",
         "l7_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR src_namespace = \"tigera-manager\"",
         "dns_logs": "\"servers.namespace\" = \"tigera-manager\" OR client_namespace = \"tigera-manager\"",
+        "alerts": "dest_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\"",
         "packet_capture": "all()"
       }
     },
@@ -1151,6 +1155,7 @@
         "l3_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
         "l7_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR src_namespace = \"tigera-system\"",
         "dns_logs": "\"servers.namespace\" = \"tigera-system\" OR client_namespace = \"tigera-system\"",
+        "alerts": "dest_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
         "packet_capture": "all()"
       }
     },
@@ -1290,7 +1295,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\")"
+        "l3_flows": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\")",
+        "alerts": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\")"
       }
     }
   ],
@@ -1318,7 +1324,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\""
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\"",
+        "alerts": "dest_namespace = \"kube-system\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1394,7 +1401,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND source_type = \"hep\""
+        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND source_type = \"hep\"",
+        "alerts": "dest_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1474,7 +1482,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\") AND source_type = \"hep\""
+        "l3_flows": "(dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\") AND source_type = \"hep\"",
+        "alerts": "dest_namespace = \"tigera-system\""
       },
       "service_ports": [
         {
@@ -1558,7 +1567,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_type = \"hep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_type = \"hep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1621,7 +1631,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_namespace = \"kube-system\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1662,7 +1673,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"storefront\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -1742,7 +1754,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"storefront\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1787,7 +1800,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-elasticsearch\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_namespace = \"tigera-elasticsearch\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-elasticsearch\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-elasticsearch\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_namespace = \"tigera-elasticsearch\""
       },
       "service_ports": [
         {
@@ -1837,7 +1851,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-fluentd\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_namespace = \"tigera-fluentd\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-fluentd\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-fluentd\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_namespace = \"tigera-fluentd\""
       },
       "service_ports": [
         {
@@ -1949,7 +1964,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\") AND source_namespace = \"tigera-fluentd\"",
         "l7_flows": "(dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\") AND src_namespace = \"tigera-fluentd\"",
-        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" AND client_namespace = \"tigera-fluentd\""
+        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" AND client_namespace = \"tigera-fluentd\"",
+        "alerts": "dest_namespace = \"tigera-elasticsearch\" AND source_namespace = \"tigera-fluentd\""
       },
       "service_ports": [
         {
@@ -1999,7 +2015,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-manager\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_namespace = \"tigera-manager\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-manager\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-manager\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_namespace = \"tigera-manager\""
       },
       "service_ports": [
         {
@@ -2063,7 +2080,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\") AND source_namespace = \"tigera-manager\"",
         "l7_flows": "(dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\") AND src_namespace = \"tigera-manager\"",
-        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" AND client_namespace = \"tigera-manager\""
+        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" AND client_namespace = \"tigera-manager\"",
+        "alerts": "dest_namespace = \"tigera-elasticsearch\" AND source_namespace = \"tigera-manager\""
       },
       "service_ports": [
         {
@@ -2111,7 +2129,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+        "l3_flows": "dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\"",
+        "alerts": "source_name_aggr = \"pub\" AND source_namespace = \"-\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -2140,6 +2159,6 @@
     "l3_flows": "(source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\") OR dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR source_namespace = \"kube-system\" OR source_namespace = \"storefront\" OR source_namespace = \"tigera-elasticsearch\" OR source_type = \"hep\"",
     "l7_flows": "dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR src_namespace = \"kube-system\" OR src_namespace = \"storefront\" OR src_namespace = \"tigera-elasticsearch\"",
     "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" OR client_namespace = \"kube-system\" OR client_namespace = \"storefront\" OR client_namespace = \"tigera-elasticsearch\"",
-    "alerts": "_id = \"fakeid\""
+    "alerts": "(source_name_aggr = \"pub\" AND source_namespace = \"-\") OR source_namespace = \"kube-system\" OR source_namespace = \"storefront\" OR source_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-manager\" OR source_namespace = \"tigera-system\""
   }
 }

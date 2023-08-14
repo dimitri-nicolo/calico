@@ -366,7 +366,8 @@
       "selectors": {
         "l3_flows": "(dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\") OR dest_namespace = \"calico-system\" OR dest_namespace = \"crc-local-storage-system\" OR dest_namespace = \"kube-system\" OR dest_service_namespace = \"calico-system\" OR dest_service_namespace = \"crc-local-storage-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"calico-system\" OR source_namespace = \"crc-local-storage-system\" OR source_namespace = \"kube-system\"",
         "l7_flows": "(dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\") OR dest_namespace = \"calico-system\" OR dest_namespace = \"crc-local-storage-system\" OR dest_namespace = \"kube-system\" OR dest_service_namespace = \"calico-system\" OR dest_service_namespace = \"crc-local-storage-system\" OR dest_service_namespace = \"kube-system\" OR src_namespace = \"calico-system\" OR src_namespace = \"crc-local-storage-system\" OR src_namespace = \"kube-system\"",
-        "dns_logs": "\"servers.namespace\" = \"calico-system\" OR \"servers.namespace\" = \"crc-local-storage-system\" OR \"servers.namespace\" = \"kube-system\" OR client_namespace = \"calico-system\" OR client_namespace = \"crc-local-storage-system\" OR client_namespace = \"kube-system\""
+        "dns_logs": "\"servers.namespace\" = \"calico-system\" OR \"servers.namespace\" = \"crc-local-storage-system\" OR \"servers.namespace\" = \"kube-system\" OR client_namespace = \"calico-system\" OR client_namespace = \"crc-local-storage-system\" OR client_namespace = \"kube-system\"",
+        "alerts": "(dest_name = \"kubernetes\" AND dest_namespace = \"default\") OR (source_name = \"kubernetes\" AND source_namespace = \"default\") OR dest_namespace = \"calico-system\" OR dest_namespace = \"crc-local-storage-system\" OR dest_namespace = \"kube-system\" OR source_namespace = \"calico-system\" OR source_namespace = \"crc-local-storage-system\" OR source_namespace = \"kube-system\""
       }
     },
     {
@@ -632,7 +633,7 @@
         "l3_flows": "dest_namespace = \"tigera-compliance\" OR dest_namespace = \"tigera-eck-operator\" OR dest_namespace = \"tigera-elasticsearch\" OR dest_namespace = \"tigera-fluentd\" OR dest_namespace = \"tigera-intrusion-detection\" OR dest_namespace = \"tigera-kibana\" OR dest_namespace = \"tigera-manager\" OR dest_namespace = \"tigera-prometheus\" OR dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-compliance\" OR dest_service_namespace = \"tigera-eck-operator\" OR dest_service_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-intrusion-detection\" OR dest_service_namespace = \"tigera-kibana\" OR dest_service_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-compliance\" OR source_namespace = \"tigera-eck-operator\" OR source_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-intrusion-detection\" OR source_namespace = \"tigera-kibana\" OR source_namespace = \"tigera-manager\" OR source_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-system\"",
         "l7_flows": "dest_namespace = \"tigera-compliance\" OR dest_namespace = \"tigera-eck-operator\" OR dest_namespace = \"tigera-elasticsearch\" OR dest_namespace = \"tigera-fluentd\" OR dest_namespace = \"tigera-intrusion-detection\" OR dest_namespace = \"tigera-kibana\" OR dest_namespace = \"tigera-manager\" OR dest_namespace = \"tigera-prometheus\" OR dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-compliance\" OR dest_service_namespace = \"tigera-eck-operator\" OR dest_service_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-intrusion-detection\" OR dest_service_namespace = \"tigera-kibana\" OR dest_service_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-system\" OR src_namespace = \"tigera-compliance\" OR src_namespace = \"tigera-eck-operator\" OR src_namespace = \"tigera-elasticsearch\" OR src_namespace = \"tigera-fluentd\" OR src_namespace = \"tigera-intrusion-detection\" OR src_namespace = \"tigera-kibana\" OR src_namespace = \"tigera-manager\" OR src_namespace = \"tigera-prometheus\" OR src_namespace = \"tigera-system\"",
         "dns_logs": "\"servers.namespace\" = \"tigera-compliance\" OR \"servers.namespace\" = \"tigera-eck-operator\" OR \"servers.namespace\" = \"tigera-elasticsearch\" OR \"servers.namespace\" = \"tigera-fluentd\" OR \"servers.namespace\" = \"tigera-intrusion-detection\" OR \"servers.namespace\" = \"tigera-kibana\" OR \"servers.namespace\" = \"tigera-manager\" OR \"servers.namespace\" = \"tigera-prometheus\" OR \"servers.namespace\" = \"tigera-system\" OR client_namespace = \"tigera-compliance\" OR client_namespace = \"tigera-eck-operator\" OR client_namespace = \"tigera-elasticsearch\" OR client_namespace = \"tigera-fluentd\" OR client_namespace = \"tigera-intrusion-detection\" OR client_namespace = \"tigera-kibana\" OR client_namespace = \"tigera-manager\" OR client_namespace = \"tigera-prometheus\" OR client_namespace = \"tigera-system\"",
-        "alerts": "_id = \"fakeid\""
+        "alerts": "dest_namespace = \"tigera-compliance\" OR dest_namespace = \"tigera-eck-operator\" OR dest_namespace = \"tigera-elasticsearch\" OR dest_namespace = \"tigera-fluentd\" OR dest_namespace = \"tigera-intrusion-detection\" OR dest_namespace = \"tigera-kibana\" OR dest_namespace = \"tigera-manager\" OR dest_namespace = \"tigera-prometheus\" OR dest_namespace = \"tigera-system\" OR source_namespace = \"tigera-compliance\" OR source_namespace = \"tigera-eck-operator\" OR source_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-intrusion-detection\" OR source_namespace = \"tigera-kibana\" OR source_namespace = \"tigera-manager\" OR source_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-system\""
       },
       "events": [
         {
@@ -972,6 +973,7 @@
         "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
         "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\"",
         "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"storefront\" OR source_namespace = \"storefront\"",
         "packet_capture": "all()"
       }
     },
@@ -1111,7 +1113,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\")"
+        "l3_flows": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\")",
+        "alerts": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\")"
       }
     }
   ],
@@ -1139,7 +1142,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "((dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\") OR dest_namespace = \"calico-system\" OR dest_namespace = \"crc-local-storage-system\" OR dest_namespace = \"kube-system\" OR dest_service_namespace = \"calico-system\" OR dest_service_namespace = \"crc-local-storage-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\""
+        "l3_flows": "((dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\") OR dest_namespace = \"calico-system\" OR dest_namespace = \"crc-local-storage-system\" OR dest_namespace = \"kube-system\" OR dest_service_namespace = \"calico-system\" OR dest_service_namespace = \"crc-local-storage-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\"",
+        "alerts": "(dest_name = \"kubernetes\" AND dest_namespace = \"default\") OR dest_namespace = \"calico-system\" OR dest_namespace = \"crc-local-storage-system\" OR dest_namespace = \"kube-system\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1219,7 +1223,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"tigera-compliance\" OR dest_namespace = \"tigera-eck-operator\" OR dest_namespace = \"tigera-elasticsearch\" OR dest_namespace = \"tigera-fluentd\" OR dest_namespace = \"tigera-intrusion-detection\" OR dest_namespace = \"tigera-kibana\" OR dest_namespace = \"tigera-manager\" OR dest_namespace = \"tigera-prometheus\" OR dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-compliance\" OR dest_service_namespace = \"tigera-eck-operator\" OR dest_service_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-intrusion-detection\" OR dest_service_namespace = \"tigera-kibana\" OR dest_service_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-system\") AND source_type = \"hep\""
+        "l3_flows": "(dest_namespace = \"tigera-compliance\" OR dest_namespace = \"tigera-eck-operator\" OR dest_namespace = \"tigera-elasticsearch\" OR dest_namespace = \"tigera-fluentd\" OR dest_namespace = \"tigera-intrusion-detection\" OR dest_namespace = \"tigera-kibana\" OR dest_namespace = \"tigera-manager\" OR dest_namespace = \"tigera-prometheus\" OR dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-compliance\" OR dest_service_namespace = \"tigera-eck-operator\" OR dest_service_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-intrusion-detection\" OR dest_service_namespace = \"tigera-kibana\" OR dest_service_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-system\") AND source_type = \"hep\"",
+        "alerts": "dest_namespace = \"tigera-compliance\" OR dest_namespace = \"tigera-eck-operator\" OR dest_namespace = \"tigera-elasticsearch\" OR dest_namespace = \"tigera-fluentd\" OR dest_namespace = \"tigera-intrusion-detection\" OR dest_namespace = \"tigera-kibana\" OR dest_namespace = \"tigera-manager\" OR dest_namespace = \"tigera-prometheus\" OR dest_namespace = \"tigera-system\""
       },
       "service_ports": [
         {
@@ -1308,7 +1313,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND source_type = \"hep\""
+        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND source_type = \"hep\"",
+        "alerts": "dest_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1379,7 +1385,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_type = \"hep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_type = \"hep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1442,7 +1449,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(source_namespace = \"calico-system\" OR source_namespace = \"crc-local-storage-system\" OR source_namespace = \"kube-system\") AND dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\""
+        "l3_flows": "(source_namespace = \"calico-system\" OR source_namespace = \"crc-local-storage-system\" OR source_namespace = \"kube-system\") AND dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\"",
+        "alerts": "((source_name = \"kubernetes\" AND source_namespace = \"default\") OR source_namespace = \"calico-system\" OR source_namespace = \"crc-local-storage-system\" OR source_namespace = \"kube-system\") AND dest_name_aggr = \"pub\" AND dest_namespace = \"-\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1506,7 +1514,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(source_namespace = \"tigera-compliance\" OR source_namespace = \"tigera-eck-operator\" OR source_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-intrusion-detection\" OR source_namespace = \"tigera-kibana\" OR source_namespace = \"tigera-manager\" OR source_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-system\") AND dest_type = \"hep\""
+        "l3_flows": "(source_namespace = \"tigera-compliance\" OR source_namespace = \"tigera-eck-operator\" OR source_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-intrusion-detection\" OR source_namespace = \"tigera-kibana\" OR source_namespace = \"tigera-manager\" OR source_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-system\") AND dest_type = \"hep\"",
+        "alerts": "source_namespace = \"tigera-compliance\" OR source_namespace = \"tigera-eck-operator\" OR source_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-intrusion-detection\" OR source_namespace = \"tigera-kibana\" OR source_namespace = \"tigera-manager\" OR source_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-system\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1579,7 +1588,8 @@
       "selectors": {
         "l3_flows": "((dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\") OR dest_namespace = \"calico-system\" OR dest_namespace = \"crc-local-storage-system\" OR dest_namespace = \"kube-system\" OR dest_service_namespace = \"calico-system\" OR dest_service_namespace = \"crc-local-storage-system\" OR dest_service_namespace = \"kube-system\") AND (source_namespace = \"tigera-compliance\" OR source_namespace = \"tigera-eck-operator\" OR source_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-intrusion-detection\" OR source_namespace = \"tigera-kibana\" OR source_namespace = \"tigera-manager\" OR source_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-system\")",
         "l7_flows": "((dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\") OR dest_namespace = \"calico-system\" OR dest_namespace = \"crc-local-storage-system\" OR dest_namespace = \"kube-system\" OR dest_service_namespace = \"calico-system\" OR dest_service_namespace = \"crc-local-storage-system\" OR dest_service_namespace = \"kube-system\") AND (src_namespace = \"tigera-compliance\" OR src_namespace = \"tigera-eck-operator\" OR src_namespace = \"tigera-elasticsearch\" OR src_namespace = \"tigera-fluentd\" OR src_namespace = \"tigera-intrusion-detection\" OR src_namespace = \"tigera-kibana\" OR src_namespace = \"tigera-manager\" OR src_namespace = \"tigera-prometheus\" OR src_namespace = \"tigera-system\")",
-        "dns_logs": "(\"servers.namespace\" = \"calico-system\" OR \"servers.namespace\" = \"crc-local-storage-system\" OR \"servers.namespace\" = \"kube-system\") AND (client_namespace = \"tigera-compliance\" OR client_namespace = \"tigera-eck-operator\" OR client_namespace = \"tigera-elasticsearch\" OR client_namespace = \"tigera-fluentd\" OR client_namespace = \"tigera-intrusion-detection\" OR client_namespace = \"tigera-kibana\" OR client_namespace = \"tigera-manager\" OR client_namespace = \"tigera-prometheus\" OR client_namespace = \"tigera-system\")"
+        "dns_logs": "(\"servers.namespace\" = \"calico-system\" OR \"servers.namespace\" = \"crc-local-storage-system\" OR \"servers.namespace\" = \"kube-system\") AND (client_namespace = \"tigera-compliance\" OR client_namespace = \"tigera-eck-operator\" OR client_namespace = \"tigera-elasticsearch\" OR client_namespace = \"tigera-fluentd\" OR client_namespace = \"tigera-intrusion-detection\" OR client_namespace = \"tigera-kibana\" OR client_namespace = \"tigera-manager\" OR client_namespace = \"tigera-prometheus\" OR client_namespace = \"tigera-system\")",
+        "alerts": "((dest_name = \"kubernetes\" AND dest_namespace = \"default\") OR dest_namespace = \"calico-system\" OR dest_namespace = \"crc-local-storage-system\" OR dest_namespace = \"kube-system\") AND (source_namespace = \"tigera-compliance\" OR source_namespace = \"tigera-eck-operator\" OR source_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-intrusion-detection\" OR source_namespace = \"tigera-kibana\" OR source_namespace = \"tigera-manager\" OR source_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-system\")"
       },
       "service_ports": [
         {
@@ -1645,7 +1655,8 @@
       "selectors": {
         "l3_flows": "((dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\") OR dest_namespace = \"calico-system\" OR dest_namespace = \"crc-local-storage-system\" OR dest_namespace = \"kube-system\" OR dest_service_namespace = \"calico-system\" OR dest_service_namespace = \"crc-local-storage-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"storefront\"",
         "l7_flows": "((dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\") OR dest_namespace = \"calico-system\" OR dest_namespace = \"crc-local-storage-system\" OR dest_namespace = \"kube-system\" OR dest_service_namespace = \"calico-system\" OR dest_service_namespace = \"crc-local-storage-system\" OR dest_service_namespace = \"kube-system\") AND src_namespace = \"storefront\"",
-        "dns_logs": "(\"servers.namespace\" = \"calico-system\" OR \"servers.namespace\" = \"crc-local-storage-system\" OR \"servers.namespace\" = \"kube-system\") AND client_namespace = \"storefront\""
+        "dns_logs": "(\"servers.namespace\" = \"calico-system\" OR \"servers.namespace\" = \"crc-local-storage-system\" OR \"servers.namespace\" = \"kube-system\") AND client_namespace = \"storefront\"",
+        "alerts": "((dest_name = \"kubernetes\" AND dest_namespace = \"default\") OR dest_namespace = \"calico-system\" OR dest_namespace = \"crc-local-storage-system\" OR dest_namespace = \"kube-system\") AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -1725,7 +1736,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"storefront\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1768,7 +1780,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+        "l3_flows": "dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\"",
+        "alerts": "source_name_aggr = \"pub\" AND source_namespace = \"-\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [

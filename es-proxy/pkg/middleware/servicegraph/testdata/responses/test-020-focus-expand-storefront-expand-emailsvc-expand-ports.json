@@ -331,6 +331,7 @@
         "l3_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
         "l7_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR src_namespace = \"kube-system\"",
         "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\"",
+        "alerts": "dest_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
         "packet_capture": "all()"
       }
     },
@@ -624,6 +625,7 @@
         "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
         "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\"",
         "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"storefront\" OR source_namespace = \"storefront\"",
         "packet_capture": "all()"
       }
     },
@@ -763,7 +765,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\")"
+        "l3_flows": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\")",
+        "alerts": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\")"
       }
     },
     {
@@ -856,7 +859,8 @@
       "selectors": {
         "l3_flows": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\" AND proto = \"tcp\") OR (proto = \"tcp\" AND source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"emailservice-9cc657959-*\" AND src_namespace = \"storefront\")",
-        "dns_logs": "(\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"emailservice-9cc657959-*\" AND client_namespace = \"storefront\")"
+        "dns_logs": "(\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"emailservice-9cc657959-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\")"
       }
     },
     {
@@ -1039,7 +1043,8 @@
       "selectors": {
         "l3_flows": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND dest_type = \"wep\") OR (source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"emailservice-9cc657959-*\" AND src_namespace = \"storefront\")",
-        "dns_logs": "(\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"emailservice-9cc657959-*\" AND client_namespace = \"storefront\")"
+        "dns_logs": "(\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"emailservice-9cc657959-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\")"
       }
     },
     {
@@ -1106,6 +1111,7 @@
         "l3_flows": "(dest_name_aggr = \"loadgenerator-795cbf498c-*\" AND dest_namespace = \"storefront\" AND dest_type = \"wep\") OR (source_name_aggr = \"loadgenerator-795cbf498c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"loadgenerator-795cbf498c-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"loadgenerator-795cbf498c-*\" AND src_namespace = \"storefront\")",
         "dns_logs": "(\"servers.name_aggr\" = \"loadgenerator-795cbf498c-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"loadgenerator-795cbf498c-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"loadgenerator-795cbf498c-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"loadgenerator-795cbf498c-*\" AND source_namespace = \"storefront\")",
         "packet_capture": "k8s-app in {\"AnyAp\"} \u0026\u0026 environment not in {\"prod\"} \u0026\u0026 !has(critical) \u0026\u0026 has(test)"
       }
     },
@@ -1128,6 +1134,7 @@
         "l3_flows": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\") OR (dest_service_name = \"emailservice\" AND dest_service_namespace = \"storefront\")",
         "l7_flows": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\") OR (dest_service_name = \"emailservice\" AND dest_service_namespace = \"storefront\")",
         "dns_logs": "\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\"",
+        "alerts": "(dest_name = \"emailservice\" AND dest_namespace = \"storefront\") OR (dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\") OR (source_name = \"emailservice\" AND source_namespace = \"storefront\")",
         "packet_capture": "k8s-app == \"AnyApp\" \u0026\u0026 label == \"any\""
       }
     },
@@ -1246,7 +1253,8 @@
       "selectors": {
         "l3_flows": "(dest_name_aggr = \"adservice-775cc65c85-*\" AND dest_namespace = \"storefront\" AND dest_port = 9555 AND dest_type = \"wep\") OR (source_name_aggr = \"adservice-775cc65c85-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"adservice-775cc65c85-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"adservice-775cc65c85-*\" AND src_namespace = \"storefront\")",
-        "dns_logs": "(\"servers.name_aggr\" = \"adservice-775cc65c85-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"adservice-775cc65c85-*\" AND client_namespace = \"storefront\")"
+        "dns_logs": "(\"servers.name_aggr\" = \"adservice-775cc65c85-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"adservice-775cc65c85-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"adservice-775cc65c85-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"adservice-775cc65c85-*\" AND source_namespace = \"storefront\")"
       }
     },
     {
@@ -1349,7 +1357,8 @@
       "selectors": {
         "l3_flows": "(dest_name_aggr = \"cartservice-5468974d8-*\" AND dest_namespace = \"storefront\" AND dest_port = 7070 AND dest_type = \"wep\") OR (source_name_aggr = \"cartservice-5468974d8-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"cartservice-5468974d8-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"cartservice-5468974d8-*\" AND src_namespace = \"storefront\")",
-        "dns_logs": "(\"servers.name_aggr\" = \"cartservice-5468974d8-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"cartservice-5468974d8-*\" AND client_namespace = \"storefront\")"
+        "dns_logs": "(\"servers.name_aggr\" = \"cartservice-5468974d8-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"cartservice-5468974d8-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"cartservice-5468974d8-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"cartservice-5468974d8-*\" AND source_namespace = \"storefront\")"
       }
     },
     {
@@ -1537,7 +1546,8 @@
       "selectors": {
         "l3_flows": "(dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\" AND dest_port = 5050 AND dest_type = \"wep\") OR (source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\")",
-        "dns_logs": "(\"servers.name_aggr\" = \"checkoutservice-b55dd855c-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\")"
+        "dns_logs": "(\"servers.name_aggr\" = \"checkoutservice-b55dd855c-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\")"
       }
     },
     {
@@ -1710,7 +1720,8 @@
       "selectors": {
         "l3_flows": "(dest_name_aggr = \"currencyservice-86d778fd89-*\" AND dest_namespace = \"storefront\" AND dest_port = 7000 AND dest_type = \"wep\") OR (source_name_aggr = \"currencyservice-86d778fd89-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"currencyservice-86d778fd89-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"currencyservice-86d778fd89-*\" AND src_namespace = \"storefront\")",
-        "dns_logs": "(\"servers.name_aggr\" = \"currencyservice-86d778fd89-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"currencyservice-86d778fd89-*\" AND client_namespace = \"storefront\")"
+        "dns_logs": "(\"servers.name_aggr\" = \"currencyservice-86d778fd89-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"currencyservice-86d778fd89-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"currencyservice-86d778fd89-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"currencyservice-86d778fd89-*\" AND source_namespace = \"storefront\")"
       }
     },
     {
@@ -1892,6 +1903,7 @@
         "l3_flows": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\") OR (source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"emailservice-9cc657959-*\" AND src_namespace = \"storefront\")",
         "dns_logs": "(\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"emailservice-9cc657959-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\")",
         "packet_capture": "k8s-app == \"AnyApp\" \u0026\u0026 label == \"any\""
       }
     },
@@ -2095,7 +2107,8 @@
       "selectors": {
         "l3_flows": "(dest_name_aggr = \"frontend-7bbcdbbcbf-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\") OR (source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"frontend-7bbcdbbcbf-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\")",
-        "dns_logs": "(\"servers.name_aggr\" = \"frontend-7bbcdbbcbf-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\")"
+        "dns_logs": "(\"servers.name_aggr\" = \"frontend-7bbcdbbcbf-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"frontend-7bbcdbbcbf-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\")"
       }
     },
     {
@@ -2275,7 +2288,8 @@
       "selectors": {
         "l3_flows": "(dest_name_aggr = \"paymentservice-5746b87f6c-*\" AND dest_namespace = \"storefront\" AND dest_port = 50051 AND dest_type = \"wep\") OR (source_name_aggr = \"paymentservice-5746b87f6c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"paymentservice-5746b87f6c-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"paymentservice-5746b87f6c-*\" AND src_namespace = \"storefront\")",
-        "dns_logs": "(\"servers.name_aggr\" = \"paymentservice-5746b87f6c-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"paymentservice-5746b87f6c-*\" AND client_namespace = \"storefront\")"
+        "dns_logs": "(\"servers.name_aggr\" = \"paymentservice-5746b87f6c-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"paymentservice-5746b87f6c-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"paymentservice-5746b87f6c-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"paymentservice-5746b87f6c-*\" AND source_namespace = \"storefront\")"
       }
     },
     {
@@ -2427,7 +2441,8 @@
       "selectors": {
         "l3_flows": "(dest_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND dest_namespace = \"storefront\" AND dest_port = 3550 AND dest_type = \"wep\") OR (source_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND src_namespace = \"storefront\")",
-        "dns_logs": "(\"servers.name_aggr\" = \"productcatalogservice-6b9fdd5bbf-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND client_namespace = \"storefront\")"
+        "dns_logs": "(\"servers.name_aggr\" = \"productcatalogservice-6b9fdd5bbf-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND source_namespace = \"storefront\")"
       }
     },
     {
@@ -2630,7 +2645,8 @@
       "selectors": {
         "l3_flows": "(dest_name_aggr = \"recommendationservice-5b8966b965-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\") OR (source_name_aggr = \"recommendationservice-5b8966b965-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"recommendationservice-5b8966b965-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"recommendationservice-5b8966b965-*\" AND src_namespace = \"storefront\")",
-        "dns_logs": "(\"servers.name_aggr\" = \"recommendationservice-5b8966b965-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"recommendationservice-5b8966b965-*\" AND client_namespace = \"storefront\")"
+        "dns_logs": "(\"servers.name_aggr\" = \"recommendationservice-5b8966b965-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"recommendationservice-5b8966b965-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"recommendationservice-5b8966b965-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"recommendationservice-5b8966b965-*\" AND source_namespace = \"storefront\")"
       }
     },
     {
@@ -2783,6 +2799,7 @@
         "l3_flows": "(dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND dest_port = 50051 AND dest_type = \"wep\") OR (source_name_aggr = \"shippingservice-54fbf57657-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"shippingservice-54fbf57657-*\" AND src_namespace = \"storefront\")",
         "dns_logs": "(\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"shippingservice-54fbf57657-*\" AND client_namespace = \"storefront\")",
+        "alerts": "(dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\") OR (source_name_aggr = \"shippingservice-54fbf57657-*\" AND source_namespace = \"storefront\")",
         "packet_capture": "k8s-app == \"AnyApp\" \u0026\u0026 label == \"any\""
       }
     },
@@ -2796,7 +2813,8 @@
       "selectors": {
         "l3_flows": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\" AND proto = \"tcp\") OR (dest_service_name = \"emailservice\" AND dest_service_namespace = \"storefront\" AND dest_service_port = \"grpc\" AND dest_service_port_num = 5000 AND proto = \"tcp\")",
         "l7_flows": "(dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\") OR (dest_service_name = \"emailservice\" AND dest_service_namespace = \"storefront\" AND dest_service_port = 5000 AND dest_service_port_name = \"grpc\") OR (dest_service_name = \"emailservice\" AND dest_service_namespace = \"storefront\")",
-        "dns_logs": "\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\"",
+        "alerts": "(dest_name = \"emailservice\" AND dest_namespace = \"storefront\") OR (dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\") OR (source_name = \"emailservice\" AND source_namespace = \"storefront\")"
       }
     }
   ],
@@ -2824,7 +2842,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\""
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\"",
+        "alerts": "dest_namespace = \"kube-system\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -2895,7 +2914,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_type = \"hep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_type = \"hep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -2984,7 +3004,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"frontend-7bbcdbbcbf-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\" AND source_type = \"hep\""
+        "l3_flows": "dest_name_aggr = \"frontend-7bbcdbbcbf-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\" AND source_type = \"hep\"",
+        "alerts": "dest_name_aggr = \"frontend-7bbcdbbcbf-*\" AND dest_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -3034,7 +3055,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_namespace = \"kube-system\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -3073,7 +3095,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+        "l3_flows": "dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\"",
+        "alerts": "source_name_aggr = \"pub\" AND source_namespace = \"-\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -3121,7 +3144,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"emailservice-9cc657959-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"emailservice-9cc657959-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"emailservice-9cc657959-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -3201,7 +3225,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -3283,7 +3308,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"frontend-7bbcdbbcbf-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\" AND source_name_aggr = \"loadgenerator-795cbf498c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"frontend-7bbcdbbcbf-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"loadgenerator-795cbf498c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"frontend-7bbcdbbcbf-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"loadgenerator-795cbf498c-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"frontend-7bbcdbbcbf-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"loadgenerator-795cbf498c-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"frontend-7bbcdbbcbf-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"loadgenerator-795cbf498c-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -3356,7 +3382,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"adservice-775cc65c85-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"adservice-775cc65c85-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_name_aggr = \"adservice-775cc65c85-*\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -3397,7 +3424,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -3470,7 +3498,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -3548,7 +3577,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\" AND proto = \"tcp\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -3653,7 +3683,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"cartservice-5468974d8-*\" AND dest_namespace = \"storefront\" AND dest_port = 7070 AND dest_type = \"wep\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"cartservice-5468974d8-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"cartservice-5468974d8-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"cartservice-5468974d8-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"cartservice-5468974d8-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -3767,7 +3798,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"currencyservice-86d778fd89-*\" AND dest_namespace = \"storefront\" AND dest_port = 7000 AND dest_type = \"wep\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"currencyservice-86d778fd89-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"currencyservice-86d778fd89-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"currencyservice-86d778fd89-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"currencyservice-86d778fd89-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -3881,7 +3913,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"paymentservice-5746b87f6c-*\" AND dest_namespace = \"storefront\" AND dest_port = 50051 AND dest_type = \"wep\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"paymentservice-5746b87f6c-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"paymentservice-5746b87f6c-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"paymentservice-5746b87f6c-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"paymentservice-5746b87f6c-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -3995,7 +4028,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND dest_namespace = \"storefront\" AND dest_port = 3550 AND dest_type = \"wep\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"productcatalogservice-6b9fdd5bbf-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"productcatalogservice-6b9fdd5bbf-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -4109,7 +4143,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND dest_port = 50051 AND dest_type = \"wep\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -4223,7 +4258,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\" AND proto = \"tcp\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -4273,7 +4309,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_name_aggr = \"currencyservice-86d778fd89-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"currencyservice-86d778fd89-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"currencyservice-86d778fd89-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"currencyservice-86d778fd89-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_name_aggr = \"currencyservice-86d778fd89-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -4346,7 +4383,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"currencyservice-86d778fd89-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"currencyservice-86d778fd89-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_name_aggr = \"currencyservice-86d778fd89-*\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -4387,7 +4425,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -4467,7 +4506,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -4545,7 +4585,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"adservice-775cc65c85-*\" AND dest_namespace = \"storefront\" AND dest_port = 9555 AND dest_type = \"wep\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"adservice-775cc65c85-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"adservice-775cc65c85-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"adservice-775cc65c85-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"adservice-775cc65c85-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -4632,7 +4673,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"cartservice-5468974d8-*\" AND dest_namespace = \"storefront\" AND dest_port = 7070 AND dest_type = \"wep\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"cartservice-5468974d8-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"cartservice-5468974d8-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"cartservice-5468974d8-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"cartservice-5468974d8-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -4719,7 +4761,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\" AND dest_port = 5050 AND dest_type = \"wep\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"checkoutservice-b55dd855c-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"checkoutservice-b55dd855c-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -4806,7 +4849,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"currencyservice-86d778fd89-*\" AND dest_namespace = \"storefront\" AND dest_port = 7000 AND dest_type = \"wep\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"currencyservice-86d778fd89-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"currencyservice-86d778fd89-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"currencyservice-86d778fd89-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"currencyservice-86d778fd89-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -4893,7 +4937,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND dest_namespace = \"storefront\" AND dest_port = 3550 AND dest_type = \"wep\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"productcatalogservice-6b9fdd5bbf-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"productcatalogservice-6b9fdd5bbf-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -4980,7 +5025,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"recommendationservice-5b8966b965-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"recommendationservice-5b8966b965-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"recommendationservice-5b8966b965-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"recommendationservice-5b8966b965-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"recommendationservice-5b8966b965-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -5067,7 +5113,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND dest_port = 50051 AND dest_type = \"wep\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -5117,7 +5164,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_name_aggr = \"paymentservice-5746b87f6c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"paymentservice-5746b87f6c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"paymentservice-5746b87f6c-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"paymentservice-5746b87f6c-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_name_aggr = \"paymentservice-5746b87f6c-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -5197,7 +5245,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"paymentservice-5746b87f6c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"paymentservice-5746b87f6c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_name_aggr = \"paymentservice-5746b87f6c-*\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -5242,7 +5291,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -5313,7 +5363,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -5354,7 +5405,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_name_aggr = \"recommendationservice-5b8966b965-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"recommendationservice-5b8966b965-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"recommendationservice-5b8966b965-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"recommendationservice-5b8966b965-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_name_aggr = \"recommendationservice-5b8966b965-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -5434,7 +5486,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"recommendationservice-5b8966b965-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"recommendationservice-5b8966b965-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_name_aggr = \"recommendationservice-5b8966b965-*\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -5516,7 +5569,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND dest_namespace = \"storefront\" AND dest_port = 3550 AND dest_type = \"wep\" AND source_name_aggr = \"recommendationservice-5b8966b965-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"recommendationservice-5b8966b965-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"productcatalogservice-6b9fdd5bbf-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"recommendationservice-5b8966b965-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"productcatalogservice-6b9fdd5bbf-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"recommendationservice-5b8966b965-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"recommendationservice-5b8966b965-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -5566,7 +5620,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_name_aggr = \"shippingservice-54fbf57657-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"shippingservice-54fbf57657-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"shippingservice-54fbf57657-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"shippingservice-54fbf57657-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_name_aggr = \"shippingservice-54fbf57657-*\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -5646,7 +5701,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"shippingservice-54fbf57657-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"shippingservice-54fbf57657-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_name_aggr = \"shippingservice-54fbf57657-*\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -5751,7 +5807,8 @@
       "selectors": {
         "l3_flows": "dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\" AND proto = \"tcp\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
         "l7_flows": "dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.name_aggr\" = \"emailservice-9cc657959-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"emailservice-9cc657959-*\" AND dest_namespace = \"storefront\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -5772,6 +5829,7 @@
   "selectors": {
     "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
     "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\"",
-    "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\""
+    "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+    "alerts": "(source_name = \"emailservice\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"adservice-775cc65c85-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"cartservice-5468974d8-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"currencyservice-86d778fd89-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"emailservice-9cc657959-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"loadgenerator-795cbf498c-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"paymentservice-5746b87f6c-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"productcatalogservice-6b9fdd5bbf-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\") OR (source_name_aggr = \"recommendationservice-5b8966b965-*\" AND source_namespace = \"storefront\") OR (source_name_aggr = \"shippingservice-54fbf57657-*\" AND source_namespace = \"storefront\") OR source_namespace = \"kube-system\" OR source_namespace = \"storefront\""
   }
 }
