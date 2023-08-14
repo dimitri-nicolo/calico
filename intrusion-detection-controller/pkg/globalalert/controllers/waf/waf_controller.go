@@ -124,8 +124,6 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 			// generate the new alerts/events from the waflogs
 			wafEvents = append(wafEvents, NewWafEvent(wafLog))
 		}
-		// generate the new alerts/events from the waflogs
-		wafEvents = append(wafEvents, NewWafEvent(wafLog))
 	}
 
 	if len(wafEvents) > 0 {
