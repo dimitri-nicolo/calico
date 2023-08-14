@@ -251,6 +251,7 @@
       }
     }
   ],
+  "truncated": false,
   "selectors": {
     "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
     "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR src_namespace = \"default\"",
