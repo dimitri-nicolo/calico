@@ -104,7 +104,7 @@ bin/tigera-operator-%.tgz: bin/helm $(shell find ./charts/tigera-operator -type 
 	bin/helm package ./charts/tigera-operator \
 	--destination ./bin/ \
 	--version $(@:bin/tigera-operator-%.tgz=%) \
-	--app-version $(:bin/tigera-operator-%.tgz=%)
+	--app-version $(@:bin/tigera-operator-%.tgz=%)
 
 # Build the tigera-prometheus-operator.tgz helm chart.
 bin/tigera-prometheus-operator-$(chartVersion).tgz:
