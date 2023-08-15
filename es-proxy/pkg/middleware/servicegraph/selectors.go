@@ -383,6 +383,7 @@ func (s *SelectorHelper) GetNamespaceNodeSelectors(namespace string) SelectorPai
 			L3Flows: NewGraphSelectorConstructor(v1.OpEqual, "source_namespace", namespace),
 			L7Flows: NewGraphSelectorConstructor(v1.OpEqual, "src_namespace", namespace),
 			DNSLogs: NewGraphSelectorConstructor(v1.OpEqual, "client_namespace", namespace),
+			Alerts:  NewGraphSelectorConstructor(v1.OpEqual, "source_namespace", namespace),
 		},
 		Dest: GraphSelectorsConstructor{
 			L3Flows: NewGraphSelectorConstructor(v1.OpOr,
@@ -394,6 +395,7 @@ func (s *SelectorHelper) GetNamespaceNodeSelectors(namespace string) SelectorPai
 				NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", namespace),
 			),
 			DNSLogs: NewGraphSelectorConstructor(v1.OpEqual, "servers.namespace", namespace),
+			Alerts:  NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", namespace),
 		},
 	}
 }
@@ -404,12 +406,16 @@ func (s *SelectorHelper) GetNamespaceNodeSelectors(namespace string) SelectorPai
 func (s *SelectorHelper) GetServiceNodeSelectors(svc v1.NamespacedName) SelectorPairs {
 	// Start with the service selector.
 	selectors := SelectorPairs{
-		// L7 selectors for service are the same for source and dest since we always have the service when it is
-		// available.
 		Source: GraphSelectorsConstructor{
+			// L7 selectors for service are the same for source and dest since we always have the service when it is
+			// available.
 			L7Flows: NewGraphSelectorConstructor(v1.OpAnd,
 				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_namespace", svc.Namespace),
 				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_name", svc.Name),
+			),
+			Alerts: NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "source_namespace", svc.Namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "source_name", svc.Name),
 			),
 		},
 		Dest: GraphSelectorsConstructor{
@@ -420,6 +426,10 @@ func (s *SelectorHelper) GetServiceNodeSelectors(svc v1.NamespacedName) Selector
 			L7Flows: NewGraphSelectorConstructor(v1.OpAnd,
 				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_namespace", svc.Namespace),
 				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_name", svc.Name),
+			),
+			Alerts: NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", svc.Namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_name", svc.Name),
 			),
 		},
 	}
@@ -451,12 +461,16 @@ func (s *SelectorHelper) GetServiceNodeSelectors(svc v1.NamespacedName) Selector
 // GetServicePortNodeSelectors returns the selectors for a service port node.
 func (s *SelectorHelper) GetServicePortNodeSelectors(sp v1.ServicePort) SelectorPairs {
 	selectors := SelectorPairs{
-		// L7 selectors for service are the same for source and dest since we always have the service when it is
-		// available.
 		Source: GraphSelectorsConstructor{
+			// L7 selectors for service are the same for source and dest since we always have the service when it is
+			// available.
 			L7Flows: NewGraphSelectorConstructor(v1.OpAnd,
 				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_namespace", sp.NamespacedName.Namespace),
 				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_name", sp.NamespacedName.Name),
+			),
+			Alerts: NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "source_namespace", sp.NamespacedName.Namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "source_name", sp.NamespacedName.Name),
 			),
 		},
 		Dest: GraphSelectorsConstructor{
@@ -467,6 +481,10 @@ func (s *SelectorHelper) GetServicePortNodeSelectors(sp v1.ServicePort) Selector
 			L7Flows: NewGraphSelectorConstructor(v1.OpAnd,
 				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_namespace", sp.NamespacedName.Namespace),
 				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_name", sp.NamespacedName.Name),
+			),
+			Alerts: NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", sp.NamespacedName.Namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_name", sp.NamespacedName.Name),
 			),
 		},
 	}
@@ -547,7 +565,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 	rawType, isAgg := mapGraphNodeTypeToRawType(epType)
 	namespace = blankToSingleDash(namespace)
 
-	var l3Dest, l7Dest, l3Source, l7Source, dnsSource, dnsDest *GraphSelectorConstructor
+	var l3Dest, l7Dest, l3Source, l7Source, dnsSource, dnsDest, alertSource, alertDest *GraphSelectorConstructor
 	if rawType == "wep" {
 		// DNS logs are only recorded for wep types.
 		if isAgg {
@@ -646,6 +664,14 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 			NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", namespace),
 			NewGraphSelectorConstructor(v1.OpEqual, "dest_name_aggr", nameAggr),
 		)
+		alertSource = NewGraphSelectorConstructor(v1.OpAnd,
+			NewGraphSelectorConstructor(v1.OpEqual, "source_namespace", namespace),
+			NewGraphSelectorConstructor(v1.OpEqual, "source_name_aggr", nameAggr),
+		)
+		alertDest = NewGraphSelectorConstructor(v1.OpAnd,
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", namespace),
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_name_aggr", nameAggr),
+		)
 	} else {
 		l3Source = NewGraphSelectorConstructor(v1.OpAnd,
 			NewGraphSelectorConstructor(v1.OpEqual, "source_type", rawType),
@@ -654,6 +680,14 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 		)
 		l3Dest = NewGraphSelectorConstructor(v1.OpAnd,
 			NewGraphSelectorConstructor(v1.OpEqual, "dest_type", rawType),
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", namespace),
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_name", nameAggr),
+		)
+		alertSource = NewGraphSelectorConstructor(v1.OpAnd,
+			NewGraphSelectorConstructor(v1.OpEqual, "source_namespace", namespace),
+			NewGraphSelectorConstructor(v1.OpEqual, "source_name", nameAggr),
+		)
+		alertDest = NewGraphSelectorConstructor(v1.OpAnd,
 			NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", namespace),
 			NewGraphSelectorConstructor(v1.OpEqual, "dest_name", nameAggr),
 		)
@@ -686,6 +720,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 			L3Flows: l3Source,
 			L7Flows: l7Source,
 			DNSLogs: dnsSource,
+			Alerts:  alertSource,
 		}
 	}
 	if dir != DirectionEgress {
@@ -693,6 +728,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 			L3Flows: l3Dest,
 			L7Flows: l7Dest,
 			DNSLogs: dnsDest,
+			Alerts:  alertDest,
 		}
 	}
 

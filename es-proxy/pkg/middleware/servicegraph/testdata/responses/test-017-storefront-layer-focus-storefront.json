@@ -556,7 +556,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
         "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"storefront\" OR source_namespace = \"storefront\""
       }
     },
     {
@@ -623,6 +624,7 @@
         "l3_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
         "l7_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR src_namespace = \"kube-system\"",
         "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\"",
+        "alerts": "dest_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
         "packet_capture": "all()"
       }
     },
@@ -916,6 +918,7 @@
         "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
         "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\"",
         "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"storefront\" OR source_namespace = \"storefront\"",
         "packet_capture": "all()"
       }
     },
@@ -1055,7 +1058,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\")"
+        "l3_flows": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\")",
+        "alerts": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\")"
       }
     }
   ],
@@ -1083,7 +1087,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\""
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\"",
+        "alerts": "dest_namespace = \"kube-system\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1159,7 +1164,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND source_type = \"hep\""
+        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND source_type = \"hep\"",
+        "alerts": "dest_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1230,7 +1236,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_type = \"hep\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_type = \"hep\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1293,7 +1300,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_namespace = \"kube-system\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1334,7 +1342,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"storefront\"",
         "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"storefront\"",
+        "alerts": "dest_namespace = \"kube-system\" AND source_namespace = \"storefront\""
       },
       "service_ports": [
         {
@@ -1414,7 +1423,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"storefront\""
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"storefront\"",
+        "alerts": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND source_namespace = \"storefront\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1457,7 +1467,8 @@
         }
       ],
       "selectors": {
-        "l3_flows": "dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+        "l3_flows": "dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\"",
+        "alerts": "source_name_aggr = \"pub\" AND source_namespace = \"-\""
       },
       "endpoint_proto_ports": {
         "proto_ports": [
@@ -1485,6 +1496,7 @@
   "selectors": {
     "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
     "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\"",
-    "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\""
+    "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+    "alerts": "(source_name_aggr = \"pub\" AND source_namespace = \"-\") OR source_namespace = \"kube-system\" OR source_namespace = \"storefront\""
   }
 }
