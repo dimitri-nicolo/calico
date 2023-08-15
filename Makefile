@@ -90,18 +90,21 @@ chart-release: var-require-all-CHART_RELEASE-RELEASE_STREAM chart
 	mv ./bin/tigera-operator-$(RELEASE_STREAM).tgz ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
 
 SUB_CHARTS=charts/tigera-operator/charts/tigera-prometheus-operator.tgz
-chart: bin/tigera-operator-$(chartVersion).tgz
-bin/tigera-operator-$(chartVersion).tgz: bin/helm $(shell find ./charts/tigera-operator -type f) $(SUB_CHARTS)
-	bin/helm package ./charts/tigera-operator \
-	--destination ./bin/ \
-	--version $(chartVersion) \
-	--app-version $(appVersion)
+chart: tigera-operator-release tigera-operator-master
+
+tigera-operator-release: bin/tigera-operator-$(chartVersion).tgz
+
+# If we run CD as master from semaphore, we want to also publish bin/tigera-operator-v0.0.tgz for the master docs.
+tigera-operator-master:
 ifeq ($(SEMAPHORE_GIT_BRANCH), master)
+	$(MAKE) bin/tigera-operator-v0.0.tgz
+endif
+
+bin/tigera-operator-%.tgz: bin/helm $(shell find ./charts/tigera-operator -type f) $(SUB_CHARTS)
 	bin/helm package ./charts/tigera-operator \
 	--destination ./bin/ \
-	--version v0.0 \
-	--app-version v0.0
-endif
+	--version $(@:bin/tigera-operator-%.tgz=%) \
+	--app-version $(:bin/tigera-operator-%.tgz=%)
 
 # Build the tigera-prometheus-operator.tgz helm chart.
 bin/tigera-prometheus-operator-$(chartVersion).tgz:
