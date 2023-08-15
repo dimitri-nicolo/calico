@@ -440,7 +440,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// call handler before authentication because the fetch standard
 	// explicitly excludes credentials for cors preflight requests
 	if s.corsPreflightRequestHandler != nil && r.Method == http.MethodOptions {
-		if serveHTTP := s.corsPreflightRequestHandler(r); serveHTTP != nil {
+		if serveHTTP := s.corsPreflightRequestHandler(r, false); serveHTTP != nil {
 			serveHTTP(w, r)
 			return
 		}
@@ -495,6 +495,11 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		msg := fmt.Sprintf("Unknown target cluster %q", clusterID)
 		log.Errorf("clusterMuxer: %s", msg)
+		if s.corsPreflightRequestHandler != nil {
+			if serveHTTP := s.corsPreflightRequestHandler(r, true); serveHTTP != nil {
+				serveHTTP(w, r)
+			}
+		}
 		writeHTTPError(w, clusterNotFoundError(clusterID))
 		return
 	}

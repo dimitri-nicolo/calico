@@ -26,7 +26,7 @@ const (
 )
 
 type ModifyResponse func(r *http.Response) error
-type PreflightRequestHandler func(r *http.Request) http.HandlerFunc
+type PreflightRequestHandler func(r *http.Request, headersOnly bool) http.HandlerFunc
 
 func setCommonHeaders(origin string, headers http.Header) {
 	headers.Set(vary, "Origin")
@@ -34,11 +34,13 @@ func setCommonHeaders(origin string, headers http.Header) {
 	headers.Set(accessControlAllowCredentials, "true")
 }
 
-func HandlePreflight(origin string, w http.ResponseWriter) {
+func HandlePreflight(origin string, w http.ResponseWriter, headersOnly bool) {
 	setCommonHeaders(origin, w.Header())
 	w.Header().Set(accessControlAllowMethods, allowedMethods)
 	w.Header().Set(accessControlAllowHeaders, allowedHeaders)
-	w.WriteHeader(http.StatusOK)
+	if !headersOnly {
+		w.WriteHeader(http.StatusOK)
+	}
 }
 
 func ResponseHandler(corsOriginRegexp *regexp.Regexp) ModifyResponse {

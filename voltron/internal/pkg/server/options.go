@@ -264,14 +264,14 @@ func WithInternalMetricsEndpointEnabled(enabled bool) Option {
 // WithCalicoCloudCORS enables calico cloud CORS handler
 func WithCalicoCloudCORS(corsOriginRegexp *regexp.Regexp, modifyResponse cors.ModifyResponse) Option {
 	return func(s *Server) error {
-		s.corsPreflightRequestHandler = func(r *http.Request) http.HandlerFunc {
+		s.corsPreflightRequestHandler = func(r *http.Request, headersOnly bool) http.HandlerFunc {
 			origin := r.Header.Get("origin")
 			if !corsOriginRegexp.MatchString(origin) {
 				return nil
 			}
 
 			return func(w http.ResponseWriter, r *http.Request) {
-				cors.HandlePreflight(origin, w)
+				cors.HandlePreflight(origin, w, headersOnly)
 			}
 		}
 		s.modifyResponse = modifyResponse
