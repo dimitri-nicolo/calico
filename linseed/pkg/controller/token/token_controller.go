@@ -261,13 +261,20 @@ func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, li
 		return nil
 	}
 
+	ticker := time.After(*c.reconcilePeriod)
+
 	// Main loop.
 	for {
 		select {
 		case <-stop:
 			return
-		case <-time.After(*c.reconcilePeriod):
+		case <-ticker:
 			logrus.Info("Reconciling all clusters tokens")
+
+			// Start a new ticker.
+			ticker = time.After(*c.reconcilePeriod)
+
+			// Get all clusters.
 			items, err := lister.List(labels.Everything())
 			if err != nil {
 				logrus.WithError(err).Error("Failed to list managed clusters")
