@@ -19,8 +19,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
@@ -397,6 +400,99 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Expect a token to have been generated. This happens asynchronously, so we need
 		// to wait for the controller to finish processing.
+		var secret *corev1.Secret
+		secretCreated := func() bool {
+			secret, err = mockK8sClient.CoreV1().Secrets(defaultNamespace).Get(ctx, tokenName, v1.GetOptions{})
+			return err == nil
+		}
+		require.Eventually(t, secretCreated, 5*time.Second, 100*time.Millisecond)
+		require.Equal(t, tokenName, secret.Name)
+		require.Equal(t, defaultNamespace, secret.Namespace)
+
+		// Eventually the secret should be updated to a new token due to the approaching expiry.
+		secretUpdated := func() bool {
+			newSecret, err := mockK8sClient.CoreV1().Secrets(defaultNamespace).Get(ctx, tokenName, v1.GetOptions{})
+			if err != nil {
+				return false
+			}
+			if reflect.DeepEqual(secret, newSecret) {
+				return false
+			}
+			return true
+		}
+		require.Eventually(t, secretUpdated, 5*time.Second, 50*time.Millisecond)
+	})
+
+	t.Run("handle simultaneous periodic and triggered reconciles", func(t *testing.T) {
+		defer setup(t)()
+
+		// Add two managed clusters.
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		require.NoError(t, err)
+
+		mc2 := v3.ManagedCluster{}
+		mc2.Name = "test-managed-cluster-2"
+		mc2.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		_, err = cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc2, v1.CreateOptions{})
+		require.NoError(t, err)
+
+		// Configure the client to error on attempts to create secrets in the second managed cluster. Because this is constantly erroring,
+		// it will result in the kickChan trigger being called repeatedly.
+		mockK8sClient2 := k8sfake.NewSimpleClientset()
+		mockClientSet2 := clientSetSet{mockK8sClient2, cs}
+		mockK8sClient2.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
+		})
+
+		// Make a new controller.
+		opts := []token.ControllerOption{
+			token.WithClient(cs),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
+			token.WithFactory(factory),
+
+			// Configure tokens to expire after 500ms. This means we should see several updates
+			// over the course of this test.
+			token.WithExpiry(500 * time.Millisecond),
+
+			// Set the reconcile period to be very small so that the controller acts faster than
+			// the expiry time of the tokens it creates.
+			token.WithReconcilePeriod(100 * time.Millisecond),
+
+			// Set the retry period to be smaller than either, so that we are constantly triggering
+			// the kick channel.
+			token.WithRetryPeriod(50 * time.Millisecond),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		// Set the mock client set as the return value for the factory. We have one clientset for each managed cluster.
+		factory.On("NewClientSetForApplication", mc.Name).Return(&mockClientSet, nil)
+		factory.On("NewClientSetForApplication", mc2.Name).Return(&mockClientSet2, nil)
+
+		// Reconcile.
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go controller.Run(stopCh)
+
+		// Expect a token to have been generated for the first cluster.
+		// This happens asynchronously, so we need to wait for the controller to finish processing.
 		var secret *corev1.Secret
 		secretCreated := func() bool {
 			secret, err = mockK8sClient.CoreV1().Secrets(defaultNamespace).Get(ctx, tokenName, v1.GetOptions{})
