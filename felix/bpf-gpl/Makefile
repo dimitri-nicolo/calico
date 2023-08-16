@@ -14,8 +14,7 @@ CFLAGS +=  \
 	-O2 \
 	-target bpf \
 	-emit-llvm \
-	-g \
-	-D__TARGET_ARCH_x86
+	-g
 
 # Build against libbpf and its recent copy of the kernel headers.
 # We link against the user API version of the headers because they contain
@@ -44,6 +43,9 @@ CFLAGS +=  \
 TRIPLET := $(shell gcc -dumpmachine)
 CFLAGS += -I/usr/include/$(TRIPLET)
 
+ifeq ($(ARCH),amd64)
+	CFLAGS += -D__TARGET_ARCH_x86
+endif
 CC := clang-12
 LD := llc-12
 
