@@ -28,7 +28,6 @@ import (
 	"sync"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -607,8 +606,6 @@ func objLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHostC
 				goto out
 			}
 			log.Debug("set default policy")
-		}else {
-			time.Sleep(100 * time.Second)
 		}
 	}
 
