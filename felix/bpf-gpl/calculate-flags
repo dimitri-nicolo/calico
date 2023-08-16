@@ -79,7 +79,6 @@ elif [[ "${filename}" =~ .*connect.* ]]; then
   args+=("-DCALI_DEBUG_ALLOW_ALL")
 elif [[ "${filename}" =~ .*kprobe.* ]]; then
   ((flags |= CALI_KPROBE))
-  #args+=("-D__TARGET_ARCH_x86")
 elif [[ "${filename}" =~ .*stats.* ]]; then
   ((flags |= CALI_STATS))
 elif [[ "${filename}" =~ .*wep.* ]]; then
