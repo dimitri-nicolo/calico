@@ -14,7 +14,8 @@ CFLAGS +=  \
 	-O2 \
 	-target bpf \
 	-emit-llvm \
-	-g
+	-g \
+	-D__TARGET_ARCH_x86
 
 # Build against libbpf and its recent copy of the kernel headers.
 # We link against the user API version of the headers because they contain

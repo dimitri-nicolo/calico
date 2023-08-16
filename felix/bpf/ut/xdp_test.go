@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/projectcalico/calico/felix/bpf/failsafes"
 	"github.com/projectcalico/calico/felix/bpf/polprog"
@@ -240,7 +241,8 @@ func TestXDPPrograms(t *testing.T) {
 
 	for i, tc := range xdpTestCases {
 		bpfIfaceName = fmt.Sprintf("XDP-%d", i)
-		runBpfTest(t, "xdp_calico_entrypoint", tc.Rules, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "xdp_calico_entry", tc.Rules, func(bpfrun bpfProgRunFn) {
+			time.Sleep(0 * time.Second)
 			_, _, _, _, pktBytes, err := testPacket(nil, tc.IPv4Header, tc.NextHeader, nil)
 			Expect(err).NotTo(HaveOccurred())
 			res, err := bpfrun(pktBytes)
