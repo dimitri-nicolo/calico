@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
@@ -132,6 +133,13 @@ func WithRetryPeriod(t time.Duration) ControllerOption {
 	}
 }
 
+func WithHealthReport(reportHealth func(*health.HealthReport)) ControllerOption {
+	return func(c *controller) error {
+		c.reportHealth = reportHealth
+		return nil
+	}
+}
+
 func NewController(opts ...ControllerOption) (Controller, error) {
 	c := &controller{}
 	for _, opt := range opts {
@@ -182,6 +190,7 @@ type controller struct {
 	expiry           time.Duration
 	reconcilePeriod  *time.Duration
 	retryPeriod      *time.Duration
+	reportHealth     func(*health.HealthReport)
 	factory          k8s.ClientSetFactory
 
 	// userInfos in the managed cluster that we should provision tokens for.
@@ -299,6 +308,9 @@ func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, li
 						logrus.WithError(err).WithField("cluster", mc.Name).Warn("Error reconciling cluster")
 					}
 				}
+			}
+			if c.reportHealth != nil {
+				c.reportHealth(&health.HealthReport{Live: true, Ready: true})
 			}
 		case name := <-kickChan:
 			if name != "" {
