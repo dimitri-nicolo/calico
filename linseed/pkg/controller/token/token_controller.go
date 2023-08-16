@@ -125,6 +125,13 @@ func WithReconcilePeriod(t time.Duration) ControllerOption {
 	}
 }
 
+func WithRetryPeriod(t time.Duration) ControllerOption {
+	return func(c *controller) error {
+		c.retryPeriod = &t
+		return nil
+	}
+}
+
 func NewController(opts ...ControllerOption) (Controller, error) {
 	c := &controller{}
 	for _, opt := range opts {
@@ -137,6 +144,10 @@ func NewController(opts ...ControllerOption) (Controller, error) {
 	if c.reconcilePeriod == nil {
 		d := 60 * time.Minute
 		c.reconcilePeriod = &d
+	}
+	if c.retryPeriod == nil {
+		d := 30 * time.Second
+		c.retryPeriod = &d
 	}
 
 	// Verify necessary options set.
@@ -170,6 +181,7 @@ type controller struct {
 	managementClient calico.Interface
 	expiry           time.Duration
 	reconcilePeriod  *time.Duration
+	retryPeriod      *time.Duration
 	factory          k8s.ClientSetFactory
 
 	// userInfos in the managed cluster that we should provision tokens for.
@@ -294,7 +306,7 @@ func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, li
 					// Schedule a retry.
 					go func(n string, ch chan string) {
 						logrus.WithError(err).WithField("cluster", name).Info("Scheduling retry for failed sync")
-						time.Sleep(30 * time.Second)
+						time.Sleep(*c.retryPeriod)
 						ch <- n
 					}(name, kickChan)
 				}
