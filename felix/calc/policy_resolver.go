@@ -50,8 +50,8 @@ func init() {
 // expects to be told via its OnPolicyMatch(Stopped) methods which policies match
 // which endpoints.  The ActiveRulesCalculator does that calculation.
 type PolicyResolver struct {
-	policyIDToEndpointIDs multidict.IfaceToIface
-	endpointIDToPolicyIDs multidict.IfaceToIface
+	policyIDToEndpointIDs multidict.Multidict[model.PolicyKey, any]
+	endpointIDToPolicyIDs multidict.Multidict[any, model.PolicyKey]
 	allPolicies           map[model.PolicyKey]*model.Policy
 	sortedTierData        []*TierInfo
 	endpoints             map[model.Key]interface{}
@@ -69,8 +69,8 @@ type PolicyResolverCallbacks interface {
 
 func NewPolicyResolver() *PolicyResolver {
 	return &PolicyResolver{
-		policyIDToEndpointIDs: multidict.NewIfaceToIface(),
-		endpointIDToPolicyIDs: multidict.NewIfaceToIface(),
+		policyIDToEndpointIDs: multidict.New[model.PolicyKey, any](),
+		endpointIDToPolicyIDs: multidict.New[any, model.PolicyKey](),
 		allPolicies:           map[model.PolicyKey]*model.Policy{},
 		endpoints:             make(map[model.Key]interface{}),
 		endpointEgressData:    make(map[model.WorkloadEndpointKey][]EpEgressData),
