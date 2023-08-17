@@ -139,16 +139,21 @@ func (ap *AttachPoint) AttachProgram() (int, error) {
 	defer obj.Close()
 
 	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
+		mapName := m.Name()
 		if m.IsMapInternal() {
+			if strings.HasPrefix(mapName, ".rodata") {
+				continue
+			}
+
 			if err := ConfigureProgram(m, ap.Iface); err != nil {
 				return -1, err
 			}
 			continue
 		}
 		// TODO: We need to set map size here like tc.
-		pinDir := bpf.MapPinDir(m.Type(), m.Name(), ap.Iface, bpf.HookXDP)
-		if err := m.SetPinPath(path.Join(pinDir, m.Name())); err != nil {
-			return -1, fmt.Errorf("error pinning map %s: %w", m.Name(), err)
+		pinDir := bpf.MapPinDir(m.Type(), mapName, ap.Iface, bpf.HookXDP)
+		if err := m.SetPinPath(path.Join(pinDir, mapName)); err != nil {
+			return -1, fmt.Errorf("error pinning map %s: %w", mapName, err)
 		}
 	}
 
