@@ -75,7 +75,7 @@ func NewPolicyResolver() *PolicyResolver {
 		endpoints:             make(map[model.Key]interface{}),
 		endpointEgressData:    make(map[model.WorkloadEndpointKey][]EpEgressData),
 		endpointGatewayUsage:  make(map[model.WorkloadEndpointKey]int),
-		dirtyEndpoints:        set.NewBoxed[any](),
+		dirtyEndpoints:        set.New[any](),
 		policySorter:          NewPolicySorter(),
 		Callbacks:             []PolicyResolverCallbacks{},
 	}
@@ -208,7 +208,7 @@ func (pr *PolicyResolver) maybeFlush() {
 	}
 	pr.sortedTierData = pr.policySorter.Sorted()
 	pr.dirtyEndpoints.Iter(pr.sendEndpointUpdate)
-	pr.dirtyEndpoints = set.NewBoxed[any]()
+	pr.dirtyEndpoints = set.New[any]()
 }
 
 func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
