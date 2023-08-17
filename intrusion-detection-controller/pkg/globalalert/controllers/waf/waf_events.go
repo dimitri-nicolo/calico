@@ -14,14 +14,14 @@ var (
 	MaxTimeSkew = 5 * time.Minute
 )
 
-type WafEventsCache struct {
+type WafLogsCache struct {
 	lastWafTimestamp time.Time
-	wafEvents        []string
+	wafLogs        []string
 }
 
 // Contains checks if we've seen the waf log before
-func (c *WafEventsCache) Contains(wafLog v1.WAFLog) bool {
-	for _, wafID := range c.wafEvents {
+func (c *WafLogsCache) Contains(wafLog v1.WAFLog) bool {
+	for _, wafID := range c.wafLogs {
 		if wafLog.RequestId == wafID {
 			return true
 		}
@@ -30,8 +30,8 @@ func (c *WafEventsCache) Contains(wafLog v1.WAFLog) bool {
 }
 
 // Add adds the uuid requestId of the waf log
-func (c *WafEventsCache) Add(wafLog v1.WAFLog) {
-	c.wafEvents = append(c.wafEvents, wafLog.RequestId)
+func (c *WafLogsCache) Add(wafLog v1.WAFLog) {
+	c.wafLogs = append(c.wafLogs, wafLog.RequestId)
 }
 
 func NewWafEvent(l v1.WAFLog) v1.Event {

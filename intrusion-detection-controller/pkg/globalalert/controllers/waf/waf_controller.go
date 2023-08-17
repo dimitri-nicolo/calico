@@ -22,7 +22,7 @@ type wafAlertController struct {
 	cancel      context.CancelFunc
 	wafLogs     client.WAFLogsInterface
 	events      client.EventsInterface
-	eventsCache WafEventsCache
+	logsCache WafLogsCache
 }
 
 // NewWafAlertController returns a wafAlertController for handling waf events
@@ -31,9 +31,9 @@ func NewWafAlertController(linseedClient client.Client, clusterName string, tena
 		clusterName: clusterName,
 		wafLogs:     linseedClient.WAFLogs(clusterName),
 		events:      linseedClient.Events(clusterName),
-		eventsCache: WafEventsCache{
+		logsCache: WafLogsCache{
 			lastWafTimestamp: time.Unix(0, 0),
-			wafEvents:        []string{},
+			wafLogs:        []string{},
 		},
 	}
 	return c
@@ -69,7 +69,6 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 }
 
 func (c *wafAlertController) InitEventsCache(ctx context.Context) error {
-	// Read existing WAF alerts on startup and prevent them from being generated again
 	log.Debug("Building Cache of existing waf Alerts")
 	now := time.Now()
 	params := &v1.WAFLogParams{
@@ -77,6 +76,14 @@ func (c *wafAlertController) InitEventsCache(ctx context.Context) error {
 			TimeRange: &lmav1.TimeRange{
 				From: now.Add(-((time.Hour * 24) * 7)), // this is to get the time 1 week ago
 				To:   now,
+			},
+		},
+		QuerySortParams: v1.QuerySortParams{
+			Sort: []v1.SearchRequestSortBy{
+				{
+					Field: "timestamp",
+					Descending: true,
+				},
 			},
 		},
 	}
@@ -88,9 +95,14 @@ func (c *wafAlertController) InitEventsCache(ctx context.Context) error {
 	}
 
 	for _, wafLog := range logs.Items {
-		c.eventsCache.Add(wafLog)
+		c.logsCache.Add(wafLog)
 	}
-	c.eventsCache.lastWafTimestamp = now.Add(-MaxTimeSkew)
+	if len(logs.Items) != 0 {
+		c.logsCache.lastWafTimestamp = logs.Items[0].Timestamp
+	} else {
+		c.logsCache.lastWafTimestamp = time.Now()
+	}
+
 	return nil
 }
 
@@ -105,8 +117,16 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 	params := &v1.WAFLogParams{
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
-				From: c.eventsCache.lastWafTimestamp,
+				From: c.logsCache.lastWafTimestamp,
 				To:   now,
+			},
+		},
+		QuerySortParams: v1.QuerySortParams{
+			Sort: []v1.SearchRequestSortBy{
+				{
+					Field: "timestamp",
+					Descending: true,
+				},
 			},
 		},
 	}
@@ -119,8 +139,8 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 
 	wafEvents := []v1.Event{}
 	for _, wafLog := range logs.Items {
-		if !c.eventsCache.Contains(wafLog) {
-			c.eventsCache.Add(wafLog)
+		if !c.logsCache.Contains(wafLog) {
+			c.logsCache.Add(wafLog)
 			// generate the new alerts/events from the waflogs
 			wafEvents = append(wafEvents, NewWafEvent(wafLog))
 		}
@@ -134,7 +154,12 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 		}
 
 	}
+	// by ordering the waf logs in descending order the newest logs will be first
+	if len(logs.Items) != 0 {
+		c.logsCache.lastWafTimestamp = logs.Items[0].Timestamp
+	} else {
+		c.logsCache.lastWafTimestamp = time.Now()
+	}
 
-	c.eventsCache.lastWafTimestamp = now
 	return nil
 }

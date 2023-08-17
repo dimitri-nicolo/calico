@@ -17,12 +17,12 @@ var _ = Describe("WAF new event", func() {
 	var (
 		wafLog   v1.WAFLog
 		rawLog   []byte
-		wafCache WafEventsCache
+		wafCache WafLogsCache
 		err      error
 	)
 
 	BeforeEach(func() {
-		wafCache = WafEventsCache{
+		wafCache = WafLogsCache{
 			lastWafTimestamp: time.Now(),
 		}
 		f := mustOpen("testdata/waf_log.json")
@@ -41,9 +41,9 @@ var _ = Describe("WAF new event", func() {
 				Origin:       "Web Application Firewall",
 				Time:         v1.NewEventTimestamp(wafLog.Timestamp.Unix()),
 				Name:         "WAF Event",
-				Description:  "Some traffic inside your cluster triggered some Web Application Firewall rules",
-				Severity:     80,
-				Host:         "lorcan-bz-wodc-kadm-node-1",
+				Description:  "Some traffic  your cluster triggered some Web Application Firewall rules",
+				Severity:     81,
+				Host:         "lorcan-bz-wodc--node-1",
 				Protocol:     "HTTP/1.1",
 				SourceIP:     &wafLog.Source.IP,
 				SourceName:   "-",
