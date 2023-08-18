@@ -246,7 +246,7 @@ func TestFV_Events(t *testing.T) {
 		require.False(t, resp.Items[0].Dismissed)
 
 		// We should be able to dismiss the event.
-		bulk, err = cli.Events(cluster).Dismiss(ctx, []v1.Event{{ID: "ABC"}})
+		bulk, err = cli.Events(cluster).Dismiss(ctx, []v1.Event{{ID: "ABC", Dismissed: true}})
 		require.NoError(t, err)
 		require.Equal(t, bulk.Succeeded, 1, "dismiss event did not succeed")
 
