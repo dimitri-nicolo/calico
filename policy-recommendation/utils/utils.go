@@ -13,16 +13,16 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 )
 
-// copyStagedNetworkPolicy copies the StagedNetworkPolicy context that may be altered by the engine,
-// from a source to a destination.
+// copyStagedNetworkPolicy copies the StagedNetworkPolicy context relevant to the recommendation
+// engine from a source to a destination.
 // Copy:
-// - egress, ingress rules, and policy types
-// - Name, and namespace
-// - Labels, and annotations
+// - Metadata:
+// -   Name, Namespace, OwnerReference, Annotations, Labels
+// - Spec:
+// -   Selector, StagedAction, Tier
+// -   Egress, Ingress rules, and PolicyTypes
 func CopyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkPolicy) {
 	// Metadata
-
-	// Copy ObjectMeta context. Context relevant to this controller is name, labels and annotation
 	dest.ObjectMeta.Name = src.GetObjectMeta().GetName()
 	dest.ObjectMeta.Namespace = src.GetObjectMeta().GetNamespace()
 	dest.ObjectMeta.OwnerReferences = src.GetObjectMeta().GetOwnerReferences()
@@ -36,10 +36,9 @@ func CopyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkP
 	}
 
 	// Spec
-
 	dest.Spec.Selector = src.Spec.Selector
+	dest.Spec.StagedAction = src.Spec.StagedAction
 	dest.Spec.Tier = src.Spec.Tier
-	// Copy egress, ingres and policy type over to the destination
 	dest.Spec.Egress = make([]v3.Rule, len(src.Spec.Egress))
 	copy(dest.Spec.Egress, src.Spec.Egress)
 	dest.Spec.Ingress = make([]v3.Rule, len(src.Spec.Ingress))
