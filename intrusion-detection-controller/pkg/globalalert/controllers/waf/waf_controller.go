@@ -71,17 +71,18 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 func (c *wafAlertController) InitEventsCache(ctx context.Context) error {
 	log.Debug("Building Cache of existing waf Alerts")
 	now := time.Now()
+	aWeekAgo := now.Add(-((time.Hour * 24) * 7))
 	params := &v1.WAFLogParams{
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
-				From: now.Add(-((time.Hour * 24) * 7)), // this is to get the time 1 week ago
+				From: aWeekAgo,
 				To:   now,
 			},
 		},
 		QuerySortParams: v1.QuerySortParams{
 			Sort: []v1.SearchRequestSortBy{
 				{
-					Field: "timestamp",
+					Field: "@timestamp",
 					Descending: true,
 				},
 			},
@@ -117,14 +118,14 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 	params := &v1.WAFLogParams{
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
-				From: c.logsCache.lastWafTimestamp,
+				From: c.logsCache.lastWafTimestamp.Add(-MaxTimeSkew),
 				To:   now,
 			},
 		},
 		QuerySortParams: v1.QuerySortParams{
 			Sort: []v1.SearchRequestSortBy{
 				{
-					Field: "timestamp",
+					Field: "@timestamp",
 					Descending: true,
 				},
 			},
