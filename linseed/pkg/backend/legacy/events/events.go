@@ -159,7 +159,7 @@ func (b *eventsBackend) Dismiss(ctx context.Context, i api.ClusterInfo, events [
 	// Build a bulk request using the provided events.
 	bulk := b.client.Bulk()
 	for _, event := range events {
-		req := elastic.NewBulkUpdateRequest().Index(alias).Id(event.ID).Doc(map[string]bool{"dismissed": true})
+		req := elastic.NewBulkUpdateRequest().Index(alias).Id(event.ID).Doc(map[string]bool{"dismissed": event.Dismissed})
 		bulk.Add(req)
 	}
 

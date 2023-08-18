@@ -705,7 +705,12 @@ func TestDismissEvent(t *testing.T) {
 	t.Run("Dismiss an Event", func(t *testing.T) {
 
 		//Dismiss Event
-		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{results.Items[0]})
+		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{
+			{
+				ID:        results.Items[0].ID,
+				Dismissed: true,
+			},
+		})
 		require.NoError(t, err)
 		require.Equal(t, 0, len(resp.Errors))
 		require.Equal(t, 1, resp.Total)
@@ -726,6 +731,65 @@ func TestDismissEvent(t *testing.T) {
 		require.Equal(t, 1, len(results.Items))
 		//Check event for the dismiss flag true.
 		require.Equal(t, true, results.Items[0].Dismissed)
+	})
+
+	t.Run("Restore an Event", func(t *testing.T) {
+		defer setupTest(t)()
+		//Dismiss Event (so that it can be restored)
+		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{
+			{
+				ID:        results.Items[0].ID,
+				Dismissed: true,
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
+		require.Equal(t, 1, resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, 1, resp.Succeeded)
+
+		results, err = b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
+			},
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, 1, results)
+		require.Equal(t, 1, len(results.Items))
+		//Check event for the dismiss flag true.
+		require.Equal(t, true, results.Items[0].Dismissed)
+
+		// Restore dismissed event
+		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{
+			{
+				ID:        results.Items[0].ID,
+				Dismissed: false,
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
+		require.Equal(t, 1, resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, 1, resp.Succeeded)
+
+		results, err = b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
+			},
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, 1, results)
+		require.Equal(t, 1, len(results.Items))
+		//Check event for the dismiss flag false.
+		require.Equal(t, false, results.Items[0].Dismissed)
 	})
 
 	t.Run("Try to Dismiss an event that does not exist in Elastic", func(t *testing.T) {
