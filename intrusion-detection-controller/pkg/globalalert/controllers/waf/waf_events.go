@@ -18,7 +18,7 @@ func NewWafEvent(l v1.WAFLog) v1.Event {
 
 		// GlobalAlert use time.Now() but it makes more sense to use the
 		// timestamp from the WAF log...
-		Time:        v1.NewEventDate(time.Now()),
+		Time:        v1.NewEventTimestamp(time.Now().Unix()),
 		Name:        "WAF Event",
 		Description: "Some traffic inside your cluster triggered some Web Application Firewall rules",
 		// Bad but not too bad :) Open for feedback

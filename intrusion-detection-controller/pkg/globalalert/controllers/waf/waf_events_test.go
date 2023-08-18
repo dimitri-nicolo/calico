@@ -34,7 +34,7 @@ var _ = Describe("WAF new event", func() {
 			expected := v1.Event{
 				Type:         query.WafEventType,
 				Origin:       "Web Application Firewall",
-				Time:         v1.NewEventDate(wafLog.Timestamp),
+				Time:         v1.NewEventTimestamp(wafLog.Timestamp.Unix()),
 				Name:         "WAF Event",
 				Description:  "Some traffic inside your cluster triggered some Web Application Firewall rules",
 				Severity:     80,
