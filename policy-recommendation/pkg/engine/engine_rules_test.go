@@ -6,10 +6,12 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	calicores "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
+	"github.com/projectcalico/calico/policy-recommendation/pkg/types"
 )
 
 var _ = Describe("EngineRules", func() {
@@ -53,15 +55,15 @@ var _ = Describe("EngineRules", func() {
 				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoICMP, Destination: api.FlowEndpointData{Domains: "www.some-icmp-domain.com", Port: nil}}}, // no update necessary
 			}
 
-			key1 := egressToDomainRuleKey{protocol: protocolUDP, port: numorstring.Port{MinPort: port444, MaxPort: port444}}
-			key2 := egressToDomainRuleKey{protocol: protocolUDP, port: numorstring.Port{}}
-			key3 := egressToDomainRuleKey{protocol: protocolICMP, port: numorstring.Port{}}
+			key1 := engineRuleKey{protocol: protocolUDP, port: numorstring.Port{MinPort: port444, MaxPort: port444}}
+			key2 := engineRuleKey{protocol: protocolUDP, port: numorstring.Port{}}
+			key3 := engineRuleKey{protocol: protocolICMP, port: numorstring.Port{}}
 
 			expectedEngineRules := NewEngineRules()
-			expectedEngineRules.egressToDomainRules = map[egressToDomainRuleKey]*egressToDomainRule{
-				key1: &egressToDomainRule{domains: []string{"www.some-domain.com", "www.some-other-domain.com"}, protocol: protocolUDP, port: numorstring.Port{MinPort: port444, MaxPort: port444}, timestamp: timeNowRFC3339},
-				key2: &egressToDomainRule{domains: []string{"www.empty-ports-domain.com"}, protocol: protocolUDP, port: numorstring.Port{}, timestamp: timeNowRFC3339},
-				key3: &egressToDomainRule{domains: []string{"www.some-icmp-domain.com"}, protocol: protocolICMP, port: numorstring.Port{}, timestamp: timeNowRFC3339},
+			expectedEngineRules.egressToDomainRules = map[engineRuleKey]*types.FlowLogData{
+				key1: {Action: v3.Allow, Domains: []string{"www.some-domain.com", "www.some-other-domain.com"}, Protocol: protocolUDP, Ports: []numorstring.Port{numorstring.Port{MinPort: port444, MaxPort: port444}}, Timestamp: timeNowRFC3339},
+				key2: {Action: v3.Allow, Domains: []string{"www.empty-ports-domain.com"}, Protocol: protocolUDP, Ports: []numorstring.Port{numorstring.Port{}}, Timestamp: timeNowRFC3339},
+				key3: {Action: v3.Allow, Domains: []string{"www.some-icmp-domain.com"}, Protocol: protocolICMP, Ports: []numorstring.Port{numorstring.Port{}}, Timestamp: timeNowRFC3339},
 			}
 
 			expectedNumberOfRules := 3
@@ -106,23 +108,23 @@ var _ = Describe("EngineRules", func() {
 				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Destination: api.FlowEndpointData{ServiceName: "svc3", Port: &port56}}},
 			}
 
-			key1 := egressToServiceRuleKey{name: "svc1", protocol: protocolUDP}
-			key2 := egressToServiceRuleKey{name: "svc3", protocol: protocolUDP}
-			key3 := egressToServiceRuleKey{name: "svc4", protocol: protocolUDP}
-			key4 := egressToServiceRuleKey{name: "svc5-icmp", protocol: protocolICMP}
+			key1 := engineRuleKey{name: "svc1", protocol: protocolUDP}
+			key2 := engineRuleKey{name: "svc3", protocol: protocolUDP}
+			key3 := engineRuleKey{name: "svc4", protocol: protocolUDP}
+			key4 := engineRuleKey{name: "svc5-icmp", protocol: protocolICMP}
 
 			expectedEngineRules := NewEngineRules()
-			expectedEngineRules.egressToServiceRules = map[egressToServiceRuleKey]*egressToServiceRule{
-				key1: &egressToServiceRule{name: "svc1", ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key2: &egressToServiceRule{name: "svc3", ports: []numorstring.Port{{}, {MinPort: port55, MaxPort: port55}, {MinPort: port45, MaxPort: port45}, {MinPort: port48, MaxPort: port48}, {MinPort: port56, MaxPort: port56}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key3: &egressToServiceRule{name: "svc4", ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key4: &egressToServiceRule{name: "svc5-icmp", ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
+			expectedEngineRules.egressToServiceRules = map[engineRuleKey]*types.FlowLogData{
+				key1: {Action: v3.Allow, Name: "svc1", Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key2: {Action: v3.Allow, Name: "svc3", Ports: []numorstring.Port{{}, {MinPort: port55, MaxPort: port55}, {MinPort: port45, MaxPort: port45}, {MinPort: port48, MaxPort: port48}, {MinPort: port56, MaxPort: port56}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key3: {Action: v3.Allow, Name: "svc4", Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key4: {Action: v3.Allow, Name: "svc5-icmp", Ports: []numorstring.Port{{}}, Protocol: protocolICMP, Timestamp: timeNowRFC3339},
 			}
 
 			expectedNumberOfRules := 4
 
 			for _, td := range testData {
-				er.addFlowToEgressToServiceRules(td.direction, td.flow, mockRealClock{})
+				er.addFlowToEgressToServiceRules(td.direction, td.flow, true, mockRealClock{})
 			}
 
 			Expect(er.size).To(Equal(expectedNumberOfRules))
@@ -159,34 +161,37 @@ var _ = Describe("EngineRules", func() {
 				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Destination: api.FlowEndpointData{Namespace: "ns3", Port: &port45}}},
 				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Destination: api.FlowEndpointData{Namespace: "ns3", Port: &port48}}},
 				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Destination: api.FlowEndpointData{Namespace: "ns3", Port: &port56}}},
+				// Intra-namespace traffic
+				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Source: api.FlowEndpointData{Namespace: "ns6-intra"}, Destination: api.FlowEndpointData{Namespace: "ns6-intra", Port: &port48}}},
 			}
 
-			key1 := namespaceRuleKey{namespace: "ns1", protocol: protocolUDP}
-			key2 := namespaceRuleKey{namespace: "ns3", protocol: protocolUDP}
-			key3 := namespaceRuleKey{namespace: "ns4", protocol: protocolUDP}
-			key4 := namespaceRuleKey{namespace: "ns5-icmp", protocol: protocolICMP}
+			key1 := engineRuleKey{namespace: "ns1", protocol: protocolUDP}
+			key2 := engineRuleKey{namespace: "ns3", protocol: protocolUDP}
+			key3 := engineRuleKey{namespace: "ns4", protocol: protocolUDP}
+			key4 := engineRuleKey{namespace: "ns5-icmp", protocol: protocolICMP}
+			key5 := engineRuleKey{namespace: "ns6-intra", protocol: protocolUDP}
 
 			expectedEngineRules := NewEngineRules()
-			expectedEngineRules.namespaceRules = map[namespaceRuleKey]*namespaceRule{
-				key1: &namespaceRule{namespace: "ns1", ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key2: &namespaceRule{namespace: "ns3", ports: []numorstring.Port{{}, {MinPort: port55, MaxPort: port55}, {MinPort: port45, MaxPort: port45}, {MinPort: port48, MaxPort: port48}, {MinPort: port56, MaxPort: port56}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key3: &namespaceRule{namespace: "ns4", ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key4: &namespaceRule{namespace: "ns5-icmp", ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
+			expectedEngineRules.namespaceRules = map[engineRuleKey]*types.FlowLogData{
+				key1: {Action: v3.Allow, Namespace: "ns1", Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key2: {Action: v3.Allow, Namespace: "ns3", Ports: []numorstring.Port{{}, {MinPort: port55, MaxPort: port55}, {MinPort: port45, MaxPort: port45}, {MinPort: port48, MaxPort: port48}, {MinPort: port56, MaxPort: port56}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key3: {Action: v3.Allow, Namespace: "ns4", Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key4: {Action: v3.Allow, Namespace: "ns5-icmp", Ports: []numorstring.Port{{}}, Protocol: protocolICMP, Timestamp: timeNowRFC3339},
+				key5: {Action: v3.Pass, Namespace: "ns6-intra", Ports: []numorstring.Port{{MinPort: port48, MaxPort: port48}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
 			}
-
-			expectedNumberOfRules := 4
 
 			for _, td := range testData {
-				er.addFlowToNamespaceRules(td.direction, td.flow, mockRealClock{})
+				er.addFlowToNamespaceRules(td.direction, td.flow, true, mockRealClock{})
 			}
 
-			Expect(er.size).To(Equal(expectedNumberOfRules))
+			Expect(er.size).To(Equal(len(expectedEngineRules.namespaceRules)))
 
 			// The egress to service rules contains the expected rules
 			Expect(er.namespaceRules).To(HaveKeyWithValue(key1, expectedEngineRules.namespaceRules[key1]))
 			Expect(er.namespaceRules).To(HaveKeyWithValue(key2, expectedEngineRules.namespaceRules[key2]))
 			Expect(er.namespaceRules).To(HaveKeyWithValue(key3, expectedEngineRules.namespaceRules[key3]))
 			Expect(er.namespaceRules).To(HaveKeyWithValue(key4, expectedEngineRules.namespaceRules[key4]))
+			Expect(er.namespaceRules).To(HaveKeyWithValue(key5, expectedEngineRules.namespaceRules[key5]))
 
 			// The other engine rules should be empty
 			Expect(len(er.egressToDomainRules)).To(Equal(0))
@@ -211,34 +216,38 @@ var _ = Describe("EngineRules", func() {
 				{direction: calicores.IngressTraffic, flow: api.Flow{Proto: &api.ProtoICMP, Source: api.FlowEndpointData{Namespace: "ns5-icmp"}, Destination: api.FlowEndpointData{Port: nil}}},
 				{direction: calicores.IngressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Source: api.FlowEndpointData{Namespace: "ns4"}, Destination: api.FlowEndpointData{Port: &port443}}},
 				{direction: calicores.IngressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Source: api.FlowEndpointData{Namespace: "ns4"}, Destination: api.FlowEndpointData{Port: &port445}}},
+				// Intra-namespace traffic
+				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoUDP, Source: api.FlowEndpointData{Namespace: "ns6-intra"}, Destination: api.FlowEndpointData{Namespace: "ns6-intra", Port: &port48}}},
 			}
 
-			key1 := namespaceRuleKey{namespace: "ns1", protocol: protocolUDP}
-			key2 := namespaceRuleKey{namespace: "ns3", protocol: protocolUDP}
-			key3 := namespaceRuleKey{namespace: "ns4", protocol: protocolUDP}
-			key4 := namespaceRuleKey{namespace: "ns5-icmp", protocol: protocolICMP}
+			key1 := engineRuleKey{namespace: "ns1", protocol: protocolUDP}
+			key2 := engineRuleKey{namespace: "ns3", protocol: protocolUDP}
+			key3 := engineRuleKey{namespace: "ns4", protocol: protocolUDP}
+			key4 := engineRuleKey{namespace: "ns5-icmp", protocol: protocolICMP}
+			key5 := engineRuleKey{namespace: "ns6-intra", protocol: protocolUDP}
 
 			expectedEngineRules := NewEngineRules()
-			expectedEngineRules.namespaceRules = map[namespaceRuleKey]*namespaceRule{
-				key1: &namespaceRule{namespace: "ns1", ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key2: &namespaceRule{namespace: "ns3", ports: []numorstring.Port{{}, {MinPort: port55, MaxPort: port55}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key3: &namespaceRule{namespace: "ns4", ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port443, MaxPort: port443}, {MinPort: port445, MaxPort: port445}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key4: &namespaceRule{namespace: "ns5-icmp", ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
+			expectedEngineRules.namespaceRules = map[engineRuleKey]*types.FlowLogData{
+				key1: {Action: v3.Allow, Namespace: "ns1", Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key2: {Action: v3.Allow, Namespace: "ns3", Ports: []numorstring.Port{{}, {MinPort: port55, MaxPort: port55}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key3: {Action: v3.Allow, Namespace: "ns4", Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port443, MaxPort: port443}, {MinPort: port445, MaxPort: port445}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key4: {Action: v3.Allow, Namespace: "ns5-icmp", Ports: []numorstring.Port{{}}, Protocol: protocolICMP, Timestamp: timeNowRFC3339},
+				key5: {Action: v3.Pass, Namespace: "ns6-intra", Ports: []numorstring.Port{{MinPort: port48, MaxPort: port48}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
 			}
 
-			expectedNumberOfRules := 4
-
+			passIntraNamespaceTraffic := true
 			for _, td := range testData {
-				er.addFlowToNamespaceRules(td.direction, td.flow, mockRealClock{})
+				er.addFlowToNamespaceRules(td.direction, td.flow, passIntraNamespaceTraffic, mockRealClock{})
 			}
 
-			Expect(er.size).To(Equal(expectedNumberOfRules))
+			Expect(er.size).To(Equal(len(expectedEngineRules.namespaceRules)))
 
 			// The egress to service rules contains the expected rules
 			Expect(er.namespaceRules).To(HaveKeyWithValue(key1, expectedEngineRules.namespaceRules[key1]))
 			Expect(er.namespaceRules).To(HaveKeyWithValue(key2, expectedEngineRules.namespaceRules[key2]))
 			Expect(er.namespaceRules).To(HaveKeyWithValue(key3, expectedEngineRules.namespaceRules[key3]))
 			Expect(er.namespaceRules).To(HaveKeyWithValue(key4, expectedEngineRules.namespaceRules[key4]))
+			Expect(er.namespaceRules).To(HaveKeyWithValue(key5, expectedEngineRules.namespaceRules[key5]))
 
 			// The other engine rules should be empty
 			Expect(len(er.egressToDomainRules)).To(Equal(0))
@@ -265,25 +274,25 @@ var _ = Describe("EngineRules", func() {
 				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoICMP, Destination: api.FlowEndpointData{Name: "netset6-icmp", Namespace: "ns6", Port: nil}}},
 			}
 
-			key1 := networkSetRuleKey{global: false, name: "netset1", namespace: "ns1", protocol: protocolUDP}
-			key2 := networkSetRuleKey{global: false, name: "netset3", namespace: "ns3", protocol: protocolUDP}
-			key3 := networkSetRuleKey{global: false, name: "netset4", namespace: "ns4", protocol: protocolUDP}
-			key4 := networkSetRuleKey{global: true, name: "netset5", namespace: "", protocol: protocolUDP}
-			key5 := networkSetRuleKey{global: false, name: "netset6-icmp", namespace: "ns6", protocol: protocolICMP}
+			key1 := engineRuleKey{global: false, name: "netset1", namespace: "ns1", protocol: protocolUDP}
+			key2 := engineRuleKey{global: false, name: "netset3", namespace: "ns3", protocol: protocolUDP}
+			key3 := engineRuleKey{global: false, name: "netset4", namespace: "ns4", protocol: protocolUDP}
+			key4 := engineRuleKey{global: true, name: "netset5", namespace: "", protocol: protocolUDP}
+			key5 := engineRuleKey{global: false, name: "netset6-icmp", namespace: "ns6", protocol: protocolICMP}
 
 			expectedEngineRules := NewEngineRules()
-			expectedEngineRules.networkSetRules = map[networkSetRuleKey]*networkSetRule{
-				key1: &networkSetRule{global: false, name: "netset1", namespace: "ns1", ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key2: &networkSetRule{global: false, name: "netset3", namespace: "ns3", ports: []numorstring.Port{{}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key3: &networkSetRule{global: false, name: "netset4", namespace: "ns4", ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key4: &networkSetRule{global: true, name: "netset5", namespace: "", ports: []numorstring.Port{{MinPort: port55, MaxPort: port55}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key5: &networkSetRule{global: false, name: "netset6-icmp", namespace: "ns6", ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
+			expectedEngineRules.networkSetRules = map[engineRuleKey]*types.FlowLogData{
+				key1: {Action: v3.Allow, Global: false, Name: "netset1", Namespace: "ns1", Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key2: {Action: v3.Allow, Global: false, Name: "netset3", Namespace: "ns3", Ports: []numorstring.Port{{}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key3: {Action: v3.Allow, Global: false, Name: "netset4", Namespace: "ns4", Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key4: {Action: v3.Allow, Global: true, Name: "netset5", Namespace: "", Ports: []numorstring.Port{{MinPort: port55, MaxPort: port55}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key5: {Action: v3.Allow, Global: false, Name: "netset6-icmp", Namespace: "ns6", Ports: []numorstring.Port{{}}, Protocol: protocolICMP, Timestamp: timeNowRFC3339},
 			}
 
 			expectedNumberOfRules := 5
 
 			for _, td := range testData {
-				er.addFlowToNetworkSetRules(td.direction, td.flow, mockRealClock{})
+				er.addFlowToNetworkSetRules(td.direction, td.flow, true, mockRealClock{})
 			}
 
 			Expect(er.size).To(Equal(expectedNumberOfRules))
@@ -318,25 +327,25 @@ var _ = Describe("EngineRules", func() {
 				{direction: calicores.IngressTraffic, flow: api.Flow{Proto: &api.ProtoICMP, Source: api.FlowEndpointData{Name: "netset6-icmp", Namespace: "ns6"}, Destination: api.FlowEndpointData{Port: nil}}},
 			}
 
-			key1 := networkSetRuleKey{global: false, name: "netset1", namespace: "ns1", protocol: protocolUDP}
-			key2 := networkSetRuleKey{global: false, name: "netset3", namespace: "ns3", protocol: protocolUDP}
-			key3 := networkSetRuleKey{global: false, name: "netset4", namespace: "ns4", protocol: protocolUDP}
-			key4 := networkSetRuleKey{global: true, name: "netset5", namespace: "", protocol: protocolUDP}
-			key5 := networkSetRuleKey{global: false, name: "netset6-icmp", namespace: "ns6", protocol: protocolICMP}
+			key1 := engineRuleKey{global: false, name: "netset1", namespace: "ns1", protocol: protocolUDP}
+			key2 := engineRuleKey{global: false, name: "netset3", namespace: "ns3", protocol: protocolUDP}
+			key3 := engineRuleKey{global: false, name: "netset4", namespace: "ns4", protocol: protocolUDP}
+			key4 := engineRuleKey{global: true, name: "netset5", namespace: "", protocol: protocolUDP}
+			key5 := engineRuleKey{global: false, name: "netset6-icmp", namespace: "ns6", protocol: protocolICMP}
 
 			expectedEngineRules := NewEngineRules()
-			expectedEngineRules.networkSetRules = map[networkSetRuleKey]*networkSetRule{
-				key1: &networkSetRule{global: false, name: "netset1", namespace: "ns1", ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key2: &networkSetRule{global: false, name: "netset3", namespace: "ns3", ports: []numorstring.Port{{}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key3: &networkSetRule{global: false, name: "netset4", namespace: "ns4", ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key4: &networkSetRule{global: true, name: "netset5", namespace: "", ports: []numorstring.Port{{MinPort: port55, MaxPort: port55}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key5: &networkSetRule{global: false, name: "netset6-icmp", namespace: "ns6", ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
+			expectedEngineRules.networkSetRules = map[engineRuleKey]*types.FlowLogData{
+				key1: {Action: v3.Allow, Global: false, Name: "netset1", Namespace: "ns1", Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key2: {Action: v3.Allow, Global: false, Name: "netset3", Namespace: "ns3", Ports: []numorstring.Port{{}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key3: {Action: v3.Allow, Global: false, Name: "netset4", Namespace: "ns4", Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key4: {Action: v3.Allow, Global: true, Name: "netset5", Namespace: "", Ports: []numorstring.Port{{MinPort: port55, MaxPort: port55}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key5: {Action: v3.Allow, Global: false, Name: "netset6-icmp", Namespace: "ns6", Ports: []numorstring.Port{{}}, Protocol: protocolICMP, Timestamp: timeNowRFC3339},
 			}
 
 			expectedNumberOfRules := 5
 
 			for _, td := range testData {
-				er.addFlowToNetworkSetRules(td.direction, td.flow, mockRealClock{})
+				er.addFlowToNetworkSetRules(td.direction, td.flow, true, mockRealClock{})
 			}
 
 			Expect(er.size).To(Equal(expectedNumberOfRules))
@@ -373,15 +382,15 @@ var _ = Describe("EngineRules", func() {
 				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoICMP, Destination: api.FlowEndpointData{Port: nil}}},
 			}
 
-			key1 := privateNetworkRuleKey{protocol: protocolTCP}
-			key2 := privateNetworkRuleKey{protocol: protocolUDP}
-			key3 := privateNetworkRuleKey{protocol: protocolICMP}
+			key1 := engineRuleKey{protocol: protocolTCP}
+			key2 := engineRuleKey{protocol: protocolUDP}
+			key3 := engineRuleKey{protocol: protocolICMP}
 
 			expectedEngineRules := NewEngineRules()
-			expectedEngineRules.privateNetworkRules = map[privateNetworkRuleKey]*privateNetworkRule{
-				key1: &privateNetworkRule{ports: []numorstring.Port{{}, {MinPort: port444, MaxPort: port444}}, protocol: protocolTCP, timestamp: timeNowRFC3339},
-				key2: &privateNetworkRule{ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port55, MaxPort: port55}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key3: &privateNetworkRule{ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
+			expectedEngineRules.privateNetworkRules = map[engineRuleKey]*types.FlowLogData{
+				key1: {Action: v3.Allow, Ports: []numorstring.Port{{}, {MinPort: port444, MaxPort: port444}}, Protocol: protocolTCP, Timestamp: timeNowRFC3339},
+				key2: {Action: v3.Allow, Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port55, MaxPort: port55}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key3: {Action: v3.Allow, Ports: []numorstring.Port{{}}, Protocol: protocolICMP, Timestamp: timeNowRFC3339},
 			}
 
 			expectedNumberOfRules := 3
@@ -420,15 +429,15 @@ var _ = Describe("EngineRules", func() {
 				{direction: calicores.IngressTraffic, flow: api.Flow{Proto: &api.ProtoICMP, Destination: api.FlowEndpointData{Port: nil}}},
 			}
 
-			key1 := privateNetworkRuleKey{protocol: protocolTCP}
-			key2 := privateNetworkRuleKey{protocol: protocolUDP}
-			key3 := privateNetworkRuleKey{protocol: protocolICMP}
+			key1 := engineRuleKey{protocol: protocolTCP}
+			key2 := engineRuleKey{protocol: protocolUDP}
+			key3 := engineRuleKey{protocol: protocolICMP}
 
 			expectedEngineRules := NewEngineRules()
-			expectedEngineRules.privateNetworkRules = map[privateNetworkRuleKey]*privateNetworkRule{
-				key1: &privateNetworkRule{ports: []numorstring.Port{{}, {MinPort: port444, MaxPort: port444}}, protocol: protocolTCP, timestamp: timeNowRFC3339},
-				key2: &privateNetworkRule{ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port55, MaxPort: port55}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key3: &privateNetworkRule{ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
+			expectedEngineRules.privateNetworkRules = map[engineRuleKey]*types.FlowLogData{
+				key1: {Action: v3.Allow, Ports: []numorstring.Port{{}, {MinPort: port444, MaxPort: port444}}, Protocol: protocolTCP, Timestamp: timeNowRFC3339},
+				key2: {Action: v3.Allow, Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port55, MaxPort: port55}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key3: {Action: v3.Allow, Ports: []numorstring.Port{{}}, Protocol: protocolICMP, Timestamp: timeNowRFC3339},
 			}
 
 			expectedNumberOfRules := 3
@@ -469,15 +478,15 @@ var _ = Describe("EngineRules", func() {
 				{direction: calicores.EgressTraffic, flow: api.Flow{Proto: &api.ProtoICMP, Destination: api.FlowEndpointData{Port: nil}}},
 			}
 
-			key1 := publicNetworkRuleKey{protocol: protocolTCP}
-			key2 := publicNetworkRuleKey{protocol: protocolUDP}
-			key3 := publicNetworkRuleKey{protocol: protocolICMP}
+			key1 := engineRuleKey{protocol: protocolTCP}
+			key2 := engineRuleKey{protocol: protocolUDP}
+			key3 := engineRuleKey{protocol: protocolICMP}
 
 			expectedEngineRules := NewEngineRules()
-			expectedEngineRules.publicNetworkRules = map[publicNetworkRuleKey]*publicNetworkRule{
-				key1: &publicNetworkRule{ports: []numorstring.Port{{}, {MinPort: port444, MaxPort: port444}}, protocol: protocolTCP, timestamp: timeNowRFC3339},
-				key2: &publicNetworkRule{ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port55, MaxPort: port55}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key3: &publicNetworkRule{ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
+			expectedEngineRules.publicNetworkRules = map[engineRuleKey]*types.FlowLogData{
+				key1: {Action: v3.Allow, Ports: []numorstring.Port{{}, {MinPort: port444, MaxPort: port444}}, Protocol: protocolTCP, Timestamp: timeNowRFC3339},
+				key2: {Action: v3.Allow, Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port55, MaxPort: port55}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key3: {Action: v3.Allow, Ports: []numorstring.Port{{}}, Protocol: protocolICMP, Timestamp: timeNowRFC3339},
 			}
 
 			expectedNumberOfRules := 3
@@ -516,15 +525,15 @@ var _ = Describe("EngineRules", func() {
 				{direction: calicores.IngressTraffic, flow: api.Flow{Proto: &api.ProtoICMP, Destination: api.FlowEndpointData{Port: nil}}},
 			}
 
-			key1 := publicNetworkRuleKey{protocol: protocolTCP}
-			key2 := publicNetworkRuleKey{protocol: protocolUDP}
-			key3 := publicNetworkRuleKey{protocol: protocolICMP}
+			key1 := engineRuleKey{protocol: protocolTCP}
+			key2 := engineRuleKey{protocol: protocolUDP}
+			key3 := engineRuleKey{protocol: protocolICMP}
 
 			expectedEngineRules := NewEngineRules()
-			expectedEngineRules.publicNetworkRules = map[publicNetworkRuleKey]*publicNetworkRule{
-				key1: &publicNetworkRule{ports: []numorstring.Port{{}, {MinPort: port444, MaxPort: port444}}, protocol: protocolTCP, timestamp: timeNowRFC3339},
-				key2: &publicNetworkRule{ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port55, MaxPort: port55}}, protocol: protocolUDP, timestamp: timeNowRFC3339},
-				key3: &publicNetworkRule{ports: []numorstring.Port{{}}, protocol: protocolICMP, timestamp: timeNowRFC3339},
+			expectedEngineRules.publicNetworkRules = map[engineRuleKey]*types.FlowLogData{
+				key1: {Action: v3.Allow, Ports: []numorstring.Port{{}, {MinPort: port444, MaxPort: port444}}, Protocol: protocolTCP, Timestamp: timeNowRFC3339},
+				key2: {Action: v3.Allow, Ports: []numorstring.Port{{MinPort: port444, MaxPort: port444}, {MinPort: port55, MaxPort: port55}}, Protocol: protocolUDP, Timestamp: timeNowRFC3339},
+				key3: {Action: v3.Allow, Ports: []numorstring.Port{{}}, Protocol: protocolICMP, Timestamp: timeNowRFC3339},
 			}
 
 			expectedNumberOfRules := 3
@@ -581,12 +590,12 @@ var _ = Describe("EngineRules", func() {
 				Destination: api.FlowEndpointData{Type: api.EndpointTypeNet, Name: "pvt", Namespace: "-", Domains: "my.web.com,*.*.svc.cluster.local"},
 				ActionFlag:  api.ActionFlagAllow,
 			}, egressToDomainFlowType),
-			Entry("src/NET/Domain - Unsupported (Egress)", calicores.EgressTraffic, api.Flow{
+			Entry("src/NET/Domain - Suppressed (Egress)", calicores.EgressTraffic, api.Flow{
 				Reporter:    "src",
 				Source:      api.FlowEndpointData{},
 				Destination: api.FlowEndpointData{Type: api.EndpointTypeNet, Name: "pvt", Namespace: "-", Domains: "*.*.svc.cluster.local"},
 				ActionFlag:  api.ActionFlagAllow,
-			}, unsupportedFlowType),
+			}, suppressedFlowType),
 			Entry("src/NS/Name - NetworkSet", calicores.EgressTraffic, api.Flow{
 				Reporter:    "src",
 				Source:      api.FlowEndpointData{},

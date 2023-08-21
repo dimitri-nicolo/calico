@@ -10016,6 +10016,13 @@ func schema_pkg_apis_projectcalico_v3_PolicyRecommendationScopeNamespaceSpec(ref
 				Description: "PolicyRecommendationScopeNamespaceSpec contains namespace information that defines the namespace based recommended policy.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"intraNamespacePassThroughTraffic": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Pass intra-namespace traffic. [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"recStatus": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Recommendation status. One of Enabled, Disabled.",
