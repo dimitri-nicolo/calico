@@ -16,7 +16,7 @@ var (
 
 type WafLogsCache struct {
 	lastWafTimestamp time.Time
-	wafLogs        []string
+	wafLogs          []string
 }
 
 // Contains checks if we've seen the waf log before

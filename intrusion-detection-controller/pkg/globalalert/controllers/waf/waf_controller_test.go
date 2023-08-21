@@ -24,7 +24,7 @@ var _ = Describe("WAF Controller", func() {
 			clusterName: "clusterName",
 			wafLogs:     newMockWAFLogs(mockClient, "clustername"),
 			events:      newMockEvents(mockClient, "clustername"),
-			logsCache: wafCache,
+			logsCache:   wafCache,
 		}
 	)
 

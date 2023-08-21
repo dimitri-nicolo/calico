@@ -22,7 +22,7 @@ type wafAlertController struct {
 	cancel      context.CancelFunc
 	wafLogs     client.WAFLogsInterface
 	events      client.EventsInterface
-	logsCache WafLogsCache
+	logsCache   WafLogsCache
 }
 
 // NewWafAlertController returns a wafAlertController for handling waf events
@@ -33,7 +33,7 @@ func NewWafAlertController(linseedClient client.Client, clusterName string, tena
 		events:      linseedClient.Events(clusterName),
 		logsCache: WafLogsCache{
 			lastWafTimestamp: time.Unix(0, 0),
-			wafLogs:        []string{},
+			wafLogs:          []string{},
 		},
 	}
 	return c
@@ -82,7 +82,7 @@ func (c *wafAlertController) InitEventsCache(ctx context.Context) error {
 		QuerySortParams: v1.QuerySortParams{
 			Sort: []v1.SearchRequestSortBy{
 				{
-					Field: "@timestamp",
+					Field:      "@timestamp",
 					Descending: true,
 				},
 			},
@@ -125,7 +125,7 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 		QuerySortParams: v1.QuerySortParams{
 			Sort: []v1.SearchRequestSortBy{
 				{
-					Field: "@timestamp",
+					Field:      "@timestamp",
 					Descending: true,
 				},
 			},
