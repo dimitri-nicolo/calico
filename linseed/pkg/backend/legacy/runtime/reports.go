@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 
@@ -58,7 +59,27 @@ func (b *runtimeReportBackend) Create(ctx context.Context, i bapi.ClusterInfo, r
 	bulk := b.client.Bulk()
 
 	for _, f := range reports {
-		// Reset fields that we do not want to store in Elastic
+		// Populate the report's GeneratedTime field.  This field exists purely to enable a
+		// way for clients to efficiently query newly generated reports, and having Linseed
+		// fill it in - instead of Skimble as previously, or overwriting the Skimble value -
+		// is just the last step in making that really robust.  (Because with Skimble
+		// populating it we are still vulnerable to time skew between the nodes, and/or
+		// differing latencies (2), (3) from Skimble to Linseed; Linseed population
+		// eliminates those problems.)  Please note that if someone wants to know when a
+		// report really happened, we have the StartTime and EndTime fields for that
+		// purpose.
+		//
+		// Why not compute `time.Now().UTC()` before this loop and then store the same value
+		// in each report?  Because if we can advance GeneratedTime as much as possible
+		// (i.e. to the real current time), a client will compute a later value for
+		// `LatestSeenGeneratedTime`, and then a subsequent query with `GeneratedTime >=
+		// LatestSeenGeneratedTime` will return fewer previously seen results.
+		generatedTime := time.Now().UTC()
+		f.GeneratedTime = &generatedTime
+
+		// If there were any fields that we did not want to store in Elastic, we would reset
+		// them here.  But currently there are not.
+
 		// Add this report to the bulk request.
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(f)
 		bulk.Add(req)
