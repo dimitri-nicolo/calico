@@ -94,7 +94,7 @@ func (f *mockEvents) Create(ctx context.Context, events []v1.Event) (*v1.BulkRes
 	return &v1.BulkResponse{}, nil
 }
 
-func (f *mockEvents) Dismiss(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
+func (f *mockEvents) UpdateDismissFlag(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
 
 	return &v1.BulkResponse{}, nil
 }

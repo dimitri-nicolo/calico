@@ -150,7 +150,7 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 	}, nil
 }
 
-func (b *eventsBackend) Dismiss(ctx context.Context, i api.ClusterInfo, events []v1.Event) (*v1.BulkResponse, error) {
+func (b *eventsBackend) UpdateDismissFlag(ctx context.Context, i api.ClusterInfo, events []v1.Event) (*v1.BulkResponse, error) {
 	if i.Cluster == "" {
 		return nil, fmt.Errorf("no cluster ID on request")
 	}

@@ -705,7 +705,7 @@ func TestDismissEvent(t *testing.T) {
 	t.Run("Dismiss an Event", func(t *testing.T) {
 
 		//Dismiss Event
-		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{
+		resp, err = b.UpdateDismissFlag(ctx, clusterInfo, []v1.Event{
 			{
 				ID:        results.Items[0].ID,
 				Dismissed: true,
@@ -736,7 +736,7 @@ func TestDismissEvent(t *testing.T) {
 	t.Run("Restore an Event", func(t *testing.T) {
 		defer setupTest(t)()
 		//Dismiss Event (so that it can be restored)
-		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{
+		resp, err = b.UpdateDismissFlag(ctx, clusterInfo, []v1.Event{
 			{
 				ID:        results.Items[0].ID,
 				Dismissed: true,
@@ -764,7 +764,7 @@ func TestDismissEvent(t *testing.T) {
 		require.Equal(t, true, results.Items[0].Dismissed)
 
 		// Restore dismissed event
-		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{
+		resp, err = b.UpdateDismissFlag(ctx, clusterInfo, []v1.Event{
 			{
 				ID:        results.Items[0].ID,
 				Dismissed: false,
@@ -798,7 +798,7 @@ func TestDismissEvent(t *testing.T) {
 		invalidEvent := v1.Event{
 			ID: "INVALID",
 		}
-		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{invalidEvent})
+		resp, err = b.UpdateDismissFlag(ctx, clusterInfo, []v1.Event{invalidEvent})
 		require.Nil(t, err)
 		require.NotNil(t, resp)
 		require.Equal(t, 1, resp.Total)
@@ -813,7 +813,7 @@ func TestDismissEvent(t *testing.T) {
 	t.Run("Invalid Cluster Info", func(t *testing.T) {
 		defer setupTest(t)()
 		clusterInfo := bapi.ClusterInfo{}
-		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{results.Items[0]})
+		resp, err = b.UpdateDismissFlag(ctx, clusterInfo, []v1.Event{results.Items[0]})
 		require.Error(t, err)
 		require.Equal(t, "no cluster ID on request", err.Error())
 		require.Nil(t, resp)

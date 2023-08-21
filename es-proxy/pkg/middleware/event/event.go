@@ -127,7 +127,7 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 				Dismissed: true,
 			})
 		}
-		dismissResp, err = lsclient.Events(params.ClusterName).Dismiss(ctx, eventsToDismiss)
+		dismissResp, err = lsclient.Events(params.ClusterName).UpdateDismissFlag(ctx, eventsToDismiss)
 		if err != nil {
 			return nil, err
 		}
@@ -140,7 +140,7 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 				Dismissed: false,
 			})
 		}
-		restoreResp, err = lsclient.Events(params.ClusterName).Dismiss(ctx, eventsToRestore)
+		restoreResp, err = lsclient.Events(params.ClusterName).UpdateDismissFlag(ctx, eventsToRestore)
 		if err != nil {
 			return nil, err
 		}
