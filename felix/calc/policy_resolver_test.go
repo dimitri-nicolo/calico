@@ -1,164 +1,16 @@
-// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
-
 package calc
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
-func TestPolicyResolver_OnUpdate_HandleEgressIPSetID(t *testing.T) {
-	uut := NewPolicyResolver()
-	cbs := &prCallbacks{}
-	uut.RegisterCallback(cbs)
-
-	we1Key := model.WorkloadEndpointKey{
-		WorkloadID: "we1",
-	}
-	uut.OnUpdate(api.Update{
-		KVPair: model.KVPair{
-			Key: we1Key,
-			Value: &model.WorkloadEndpoint{
-				Name: "we1",
-			},
-		},
-		UpdateType: api.UpdateTypeKVNew,
-	})
-	uut.OnDatamodelStatus(api.InSync)
-
-	// Expect OnEndpointTierUpdate with no egress ID.
-	cbs.ExpectEndpointTierUpdate(t, we1Key, nil)
-
-	uut.OnEndpointEgressDataUpdate(we1Key, []EpEgressData{{IpSetID: "e:abcdef"}})
-
-	// Expect OnEndpointTierUpdate with that egress IP set ID.
-	cbs.ExpectEndpointTierUpdate(t, we1Key, []string{"e:abcdef"})
-
-	uut.OnUpdate(api.Update{
-		KVPair: model.KVPair{
-			Key: we1Key,
-			Value: &model.WorkloadEndpoint{
-				Name: "we1",
-			},
-		},
-		UpdateType: api.UpdateTypeKVUpdated,
-	})
-	cbs.ExpectEndpointTierUpdate(t, we1Key, []string{"e:abcdef"})
-
-	uut.OnEndpointEgressDataUpdate(we1Key, nil)
-	cbs.ExpectEndpointTierUpdate(t, we1Key, nil)
-}
-
-func (tc *prCallbacks) ExpectEndpointTierUpdate(t *testing.T, key model.WorkloadEndpointKey, egressIPSetIDs []string) {
-	if len(tc.keys) < 1 {
-		t.Error("Expected at least 1 key")
-	}
-
-	if len(tc.egressIPSetIDs) < 1 {
-		t.Error("Expected at least 1 egressIPSetID")
-	}
-
-	if !reflect.DeepEqual(tc.keys[0].(model.WorkloadEndpointKey), key) {
-		t.Errorf("Keys - Expected %v \n but got \n %v", key, tc.keys[0].(model.WorkloadEndpointKey))
-	}
-
-	if !reflect.DeepEqual(tc.egressIPSetIDs[0], egressIPSetIDs) {
-		t.Errorf("EgressIPSetIDs - Expected %v \n but got \n %v", egressIPSetIDs, tc.egressIPSetIDs[0])
-	}
-
-	tc.keys = tc.keys[1:]
-	tc.egressIPSetIDs = tc.egressIPSetIDs[1:]
-}
-
-func (tc *prCallbacks) ExpectNoMoreCallbacks(t *testing.T) {
-	if len(tc.keys) != 0 {
-		t.Error("Expected length of keys to be 0")
-	}
-
-	if len(tc.egressIPSetIDs) != 0 {
-		t.Error("Expected length of egressIPSetIDs to be 0")
-	}
-}
-
-type prCallbacks struct {
-	keys           []model.Key
-	egressIPSetIDs [][]string
-}
-
-func (tc *prCallbacks) OnEndpointTierUpdate(endpointKey model.Key, _ interface{}, egressData EndpointEgressData, _ []TierInfo) {
-	tc.keys = append(tc.keys, endpointKey)
-	var ipsetIDs []string
-	for _, r := range egressData.EgressGatewayRules {
-		ipsetIDs = append(ipsetIDs, r.IpSetID)
-	}
-	tc.egressIPSetIDs = append(tc.egressIPSetIDs, ipsetIDs)
-}
-
-func TestPolicyResolver_OnPolicyMatch(t *testing.T) {
-	pr := NewPolicyResolver()
-
-	polKey := model.PolicyKey{
-		Name: "test-policy",
-	}
-
-	pol := model.Policy{}
-
-	endpointKey := model.WorkloadEndpointKey{
-		Hostname: "test-workload-ep",
-	}
-
-	pr.allPolicies[polKey] = &pol
-	pr.OnPolicyMatch(polKey, endpointKey)
-
-	if !pr.policyIDToEndpointIDs.ContainsKey(polKey) {
-		t.Error("Adding new policy - expected PolicyIDToEndpointIDs to contain new policy but it does not")
-	}
-	if !pr.endpointIDToPolicyIDs.ContainsKey(endpointKey) {
-		t.Error("Adding new policy - expected EndpointIDToPolicyIDs to contain endpoint but it does not")
-	}
-	if !pr.dirtyEndpoints.Contains(endpointKey) {
-		t.Error("Adding new policy - expected DirtyEndpoints to contain endpoint for policy but it does not")
-	}
-
-	pr.OnPolicyMatch(polKey, endpointKey)
-}
-
-func TestPolicyResolver_OnPolicyMatchStopped(t *testing.T) {
-	pr := NewPolicyResolver()
-
-	polKey := model.PolicyKey{
-		Name: "test-policy",
-	}
-
-	pol := model.Policy{}
-
-	endpointKey := model.WorkloadEndpointKey{
-		Hostname: "test-workload-ep",
-	}
-
-	pr.policyIDToEndpointIDs.Put(polKey, endpointKey)
-	pr.endpointIDToPolicyIDs.Put(endpointKey, polKey)
-	pr.policySorter.UpdatePolicy(polKey, &pol)
-	pr.OnPolicyMatchStopped(polKey, endpointKey)
-
-	if pr.policyIDToEndpointIDs.ContainsKey(polKey) {
-		t.Error("Deleting existing policy - expected PolicyIDToEndpointIDs not to contain policy but it does")
-	}
-	if pr.endpointIDToPolicyIDs.ContainsKey(endpointKey) {
-		t.Error("Deleting existing policy - expected EndpointIDToPolicyIDs not to contain endpoint but it does")
-	}
-	if !pr.dirtyEndpoints.Contains(endpointKey) {
-		t.Error("Deleting existing policy - expected DirtyEndpoints to contain endpoint but it does not")
-	}
-
-	pr.OnPolicyMatchStopped(polKey, endpointKey)
-}
-
-func TestPolicyResolver_OnUpdate_Basic(t *testing.T) {
-	pr := NewPolicyResolver()
+func TestPolicyResolver_OnUpdate(t *testing.T) {
+	pr, recorder := createPolicyResolver()
 
 	polKey := model.PolicyKey{
 		Name: "test-policy",
@@ -186,5 +38,243 @@ func TestPolicyResolver_OnUpdate_Basic(t *testing.T) {
 
 	if _, found := pr.allPolicies[polKey]; found {
 		t.Error("Deleting inactive policy - expected AllPolicies not to contain policy but it does")
+	}
+
+	// Haven't sent any endpoints or matches so should get nothing out.
+	pr.OnDatamodelStatus(api.InSync)
+	pr.Flush()
+	if len(recorder.updates) > 0 {
+		t.Error("Unexpected updates from policy resolver:", recorder.updates)
+	}
+}
+
+func createPolicyResolver() (*PolicyResolver, *policyResolverRecorder) {
+	pr := NewPolicyResolver()
+	recorder := newPolicyResolverRecorder()
+	pr.RegisterCallback(recorder)
+	return pr, recorder
+}
+
+type policyResolverUpdate struct {
+	Key        model.Key
+	Endpoint   interface{}
+	Tiers      []TierInfo
+	EgressData EndpointEgressData
+}
+
+type policyResolverRecorder struct {
+	updates []policyResolverUpdate
+}
+
+func (p *policyResolverRecorder) OnEndpointTierUpdate(endpointKey model.Key, endpoint interface{}, egressData EndpointEgressData, filteredTiers []TierInfo) {
+	p.updates = append(p.updates, policyResolverUpdate{
+		Key:        endpointKey,
+		Endpoint:   endpoint,
+		Tiers:      filteredTiers,
+		EgressData: egressData,
+	})
+}
+
+func newPolicyResolverRecorder() *policyResolverRecorder {
+	return &policyResolverRecorder{}
+}
+
+func TestPolicyResolver_OnPolicyMatch(t *testing.T) {
+	pr, recorder := createPolicyResolver()
+
+	polKey := model.PolicyKey{
+		Name: "test-policy",
+	}
+
+	pol := model.Policy{}
+
+	endpointKey := model.WorkloadEndpointKey{
+		Hostname: "test-workload-ep",
+	}
+	wep := &model.WorkloadEndpoint{
+		Name: "we1",
+	}
+	pr.endpoints[endpointKey] = wep
+
+	pr.allPolicies[polKey] = &pol
+
+	// Haven't sent any matches so should get nothing out.
+	pr.Flush()
+	if len(recorder.updates) > 0 {
+		t.Error("Unexpected updates from policy resolver:", recorder.updates)
+	}
+
+	pr.OnPolicyMatch(polKey, endpointKey)
+	if len(recorder.updates) > 0 {
+		// Shouldn't get any updates until we Flush()
+		t.Error("Unexpected updates from policy resolver before calling Flush():", recorder.updates)
+	}
+
+	if !pr.policyIDToEndpointIDs.ContainsKey(polKey) {
+		t.Error("Adding new policy - expected PolicyIDToEndpointIDs to contain new policy but it does not")
+	}
+	if !pr.endpointIDToPolicyIDs.ContainsKey(endpointKey) {
+		t.Error("Adding new policy - expected EndpointIDToPolicyIDs to contain endpoint but it does not")
+	}
+	if !pr.dirtyEndpoints.Contains(endpointKey) {
+		t.Error("Adding new policy - expected DirtyEndpoints to contain endpoint for policy but it does not")
+	}
+
+	pr.OnPolicyMatch(polKey, endpointKey)
+	pr.OnDatamodelStatus(api.InSync)
+	pr.Flush()
+	if len(recorder.updates) != 1 {
+		t.Fatal("Expected only one update after Flush:", recorder.updates)
+	}
+	if d := cmp.Diff(recorder.updates[0], policyResolverUpdate{
+		Key:      endpointKey,
+		Endpoint: wep,
+		Tiers: []TierInfo{{
+			Name: "default",
+			OrderedPolicies: []PolKV{
+				{
+					Key:   polKey,
+					Value: &pol,
+				},
+			},
+		}},
+	}, cmp.AllowUnexported(PolKV{})); d != "" {
+		t.Error("Incorrect update:", d)
+	}
+}
+
+func TestPolicyResolver_OnPolicyMatchStopped(t *testing.T) {
+	pr, recorder := createPolicyResolver()
+	pr.OnDatamodelStatus(api.InSync)
+
+	polKey := model.PolicyKey{
+		Name: "test-policy",
+	}
+
+	pol := model.Policy{}
+
+	endpointKey := model.WorkloadEndpointKey{
+		Hostname: "test-workload-ep",
+	}
+
+	pr.policySorter.UpdatePolicy(polKey, &pol)
+
+	pr.OnPolicyMatch(polKey, endpointKey)
+	pr.OnPolicyMatchStopped(polKey, endpointKey)
+
+	if pr.policyIDToEndpointIDs.ContainsKey(polKey) {
+		t.Error("Deleting existing policy - expected PolicyIDToEndpointIDs not to contain policy but it does")
+	}
+	if pr.endpointIDToPolicyIDs.ContainsKey(endpointKey) {
+		t.Error("Deleting existing policy - expected EndpointIDToPolicyIDs not to contain endpoint but it does")
+	}
+	if !pr.dirtyEndpoints.Contains(endpointKey) {
+		t.Error("Deleting existing policy - expected DirtyEndpoints to contain endpoint but it does not")
+	}
+
+	pr.OnPolicyMatchStopped(polKey, endpointKey)
+
+	if len(recorder.updates) > 0 {
+		// Shouldn't get any updates until we Flush()
+		t.Error("Unexpected updates from policy resolver before calling Flush():", recorder.updates)
+	}
+	pr.Flush()
+	if len(recorder.updates) != 1 {
+		t.Fatal("Expected one update after Flush:", recorder.updates)
+	}
+	if d := cmp.Diff(recorder.updates[0], policyResolverUpdate{
+		Key:      endpointKey,
+		Endpoint: nil,
+		Tiers:    []TierInfo{},
+	}); d != "" {
+		t.Error("Incorrect update:", d)
+	}
+}
+
+func TestPolicyResolver_OnUpdate_HandleEgressIPSetID(t *testing.T) {
+	pr, recorder := createPolicyResolver()
+
+	we1Key := model.WorkloadEndpointKey{
+		WorkloadID: "we1",
+	}
+	wep := &model.WorkloadEndpoint{
+		Name: "we1",
+	}
+	pr.OnUpdate(api.Update{
+		KVPair: model.KVPair{
+			Key:   we1Key,
+			Value: wep,
+		},
+		UpdateType: api.UpdateTypeKVNew,
+	})
+	pr.OnDatamodelStatus(api.InSync)
+	pr.Flush()
+
+	// Expect OnEndpointTierUpdate with no egress ID.
+	if len(recorder.updates) != 1 {
+		t.Fatal("Expected one update after Flush:", recorder.updates)
+	}
+	if d := cmp.Diff(recorder.updates[0], policyResolverUpdate{
+		Key:      we1Key,
+		Endpoint: wep,
+		Tiers:    []TierInfo{},
+	}); d != "" {
+		t.Error("Incorrect update:", d)
+	}
+
+	pr.OnEndpointEgressDataUpdate(we1Key, []EpEgressData{{IpSetID: "e:abcdef"}})
+	pr.Flush()
+
+	// Expect OnEndpointTierUpdate with that egress IP set ID.
+	if len(recorder.updates) != 2 {
+		t.Fatal("Expected one update after Flush:", recorder.updates)
+	}
+	if d := cmp.Diff(recorder.updates[1], policyResolverUpdate{
+		Key:      we1Key,
+		Endpoint: wep,
+		Tiers:    []TierInfo{},
+		EgressData: EndpointEgressData{EgressGatewayRules: []EpEgressData{
+			{IpSetID: "e:abcdef"},
+		}},
+	}); d != "" {
+		t.Error("Incorrect update:", d)
+	}
+
+	pr.OnUpdate(api.Update{
+		KVPair: model.KVPair{
+			Key:   we1Key,
+			Value: wep,
+		},
+		UpdateType: api.UpdateTypeKVUpdated,
+	})
+	pr.Flush()
+	// Expect OnEndpointTierUpdate with that egress IP set ID.
+	if len(recorder.updates) != 3 {
+		t.Fatal("Expected one update after Flush:", recorder.updates)
+	}
+	if d := cmp.Diff(recorder.updates[2], policyResolverUpdate{
+		Key:      we1Key,
+		Endpoint: wep,
+		Tiers:    []TierInfo{},
+		EgressData: EndpointEgressData{EgressGatewayRules: []EpEgressData{
+			{IpSetID: "e:abcdef"},
+		}},
+	}); d != "" {
+		t.Error("Incorrect update:", d)
+	}
+
+	pr.OnEndpointEgressDataUpdate(we1Key, nil)
+	pr.Flush()
+
+	// Expect OnEndpointTierUpdate with no egress info.
+	if len(recorder.updates) != 4 {
+		t.Fatal("Expected one update after Flush:", recorder.updates)
+	}
+	if d := cmp.Diff(recorder.updates[3], policyResolverUpdate{
+		Key:      we1Key,
+		Endpoint: wep,
+		Tiers:    []TierInfo{},
+	}); d != "" {
+		t.Error("Incorrect update:", d)
 	}
 }

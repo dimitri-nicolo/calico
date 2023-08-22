@@ -127,7 +127,6 @@ func (pr *PolicyResolver) OnUpdate(update api.Update) (filterOut bool) {
 		policiesDirty = pr.policySorter.OnUpdate(update)
 		pr.markAllEndpointsDirty()
 	}
-	pr.maybeFlush()
 	gaugeNumActivePolicies.Set(float64(pr.policyIDToEndpointIDs.Len()))
 	return
 }
@@ -135,7 +134,6 @@ func (pr *PolicyResolver) OnUpdate(update api.Update) (filterOut bool) {
 func (pr *PolicyResolver) OnDatamodelStatus(status api.SyncStatus) {
 	if status == api.InSync {
 		pr.InSync = true
-		pr.maybeFlush()
 	}
 }
 
@@ -163,7 +161,6 @@ func (pr *PolicyResolver) OnPolicyMatch(policyKey model.PolicyKey, endpointKey i
 	pr.policyIDToEndpointIDs.Put(policyKey, endpointKey)
 	pr.endpointIDToPolicyIDs.Put(endpointKey, policyKey)
 	pr.dirtyEndpoints.Add(endpointKey)
-	pr.maybeFlush()
 }
 
 func (pr *PolicyResolver) OnPolicyMatchStopped(policyKey model.PolicyKey, endpointKey interface{}) {
@@ -177,7 +174,6 @@ func (pr *PolicyResolver) OnPolicyMatchStopped(policyKey model.PolicyKey, endpoi
 	}
 
 	pr.dirtyEndpoints.Add(endpointKey)
-	pr.maybeFlush()
 }
 
 func (pr *PolicyResolver) OnEgressSelectorMatch(es string, endpointKey interface{}) {
@@ -185,7 +181,6 @@ func (pr *PolicyResolver) OnEgressSelectorMatch(es string, endpointKey interface
 		log.Debugf("Egress selector match %v -> %v", es, key)
 		pr.endpointGatewayUsage[key]++
 		pr.dirtyEndpoints.Add(endpointKey)
-		pr.maybeFlush()
 	}
 }
 
@@ -197,11 +192,10 @@ func (pr *PolicyResolver) OnEgressSelectorMatchStopped(es string, endpointKey in
 			delete(pr.endpointGatewayUsage, key)
 		}
 		pr.dirtyEndpoints.Add(endpointKey)
-		pr.maybeFlush()
 	}
 }
 
-func (pr *PolicyResolver) maybeFlush() {
+func (pr *PolicyResolver) Flush() {
 	if !pr.InSync {
 		log.Debugf("Not in sync, skipping flush")
 		return
@@ -280,5 +274,4 @@ func (pr *PolicyResolver) OnEndpointEgressDataUpdate(key model.WorkloadEndpointK
 		delete(pr.endpointEgressData, key)
 	}
 	pr.dirtyEndpoints.Add(key)
-	pr.maybeFlush()
 }

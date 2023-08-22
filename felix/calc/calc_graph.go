@@ -147,13 +147,43 @@ type endpointPolicyCache interface {
 
 type CalcGraph struct {
 	// AllUpdDispatcher is the input node to the calculation graph.
-	AllUpdDispatcher      *dispatcher.Dispatcher
-	activeRulesCalculator *ActiveRulesCalculator
+	AllUpdDispatcher *dispatcher.Dispatcher
+
+	// Pointers to the other calc graph nodes; we don't use most of
+	// these (because the nodes reference each other directly) but
+	// they're very useful when inspecting the state of the calc graph
+	// in the debugger.
+
+	localEndpointDispatcher *dispatcher.Dispatcher
+	activeRulesCalculator   *ActiveRulesCalculator
+	ruleScanner             *RuleScanner
+	serviceIndex            *serviceindex.ServiceIndex
+	ipsetMemberIndex        *labelindex.SelectorAndNamedPortIndex
+	hostIPPassthru          *DataplanePassthru
+	l3RouteResolver         *L3RouteResolver
+	vxlanResolver           *VXLANResolver
+	configBatcher           *ConfigBatcher
+	profileDecoder          *ProfileDecoder
+	encapsulationResolver   *EncapsulationResolver
+	policyResolver          *PolicyResolver
+}
+
+func (g *CalcGraph) OnUpdates(updates []api.Update) {
+	g.AllUpdDispatcher.OnUpdates(updates)
+}
+
+func (g *CalcGraph) OnStatusUpdated(update api.SyncStatus) {
+	g.AllUpdDispatcher.OnStatusUpdated(update)
+}
+
+func (g *CalcGraph) Flush() {
+	g.policyResolver.Flush()
 }
 
 func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf *config.Config, tiersEnabled bool, liveCallback func()) *CalcGraph {
 	hostname := conf.FelixHostname
 	log.Infof("Creating calculation graph, filtered to hostname %v", hostname)
+	cg := &CalcGraph{}
 
 	// The source of the processing graph, this dispatcher will be fed all the updates from the
 	// datastore, fanning them out to the registered receivers.
@@ -169,6 +199,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//     receiver_1  ...  receiver_n
 	//
 	allUpdDispatcher := dispatcher.NewDispatcher()
+	cg.AllUpdDispatcher = allUpdDispatcher
 
 	// Some of the receivers only need to know about local endpoints. Create a second dispatcher
 	// that will filter out non-local endpoints.
@@ -189,6 +220,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	(*localEndpointDispatcherReg)(localEndpointDispatcher).RegisterWith(allUpdDispatcher)
 	localEndpointFilter := &endpointHostnameFilter{hostname: hostname}
 	localEndpointFilter.RegisterWith(localEndpointDispatcher)
+	cg.localEndpointDispatcher = localEndpointDispatcher
 
 	// The tier filter examines tier and policy updates, potentially filtering out tiers and policies
 	// associated with unlicensed tiers. When tiersEnabled is true, all policies and tiers are allowed.
@@ -227,6 +259,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//
 	activeRulesCalc := NewActiveRulesCalculator()
 	activeRulesCalc.RegisterWith(localEndpointDispatcher, allUpdDispatcher, tierDispatcher)
+	cg.activeRulesCalculator = activeRulesCalc
 
 	// The active rules calculator only figures out which rules are active, it doesn't extract
 	// any information from the rules.  The rule scanner takes the output from the active rules
@@ -254,6 +287,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	// Send IP set added/removed events to the dataplane.  We'll hook up the other outputs
 	// below.
 	ruleScanner.RulesUpdateCallbacks = callbacks
+	cg.ruleScanner = ruleScanner
 
 	serviceIndex := serviceindex.NewServiceIndex()
 	serviceIndex.RegisterWith(allUpdDispatcher)
@@ -277,6 +311,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		callbacks.OnIPSetMemberRemoved(ipSetID, member)
 	}
 	serviceIndex.OnAlive = liveCallback
+	cg.serviceIndex = serviceIndex
 
 	// The rule scanner only goes as far as figuring out which selectors/named ports are
 	// active. Next we need to figure out which endpoints (and hence which IP addresses/ports) are
@@ -350,6 +385,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		}
 		callbacks.OnIPSetMemberRemoved(ipSetID, member)
 	}
+	cg.ipsetMemberIndex = ipsetMemberIndex
 	ruleScanner.OnIPSetMemberAdded = ipsetMemberIndex.OnMemberAdded
 
 	// The endpoint policy resolver marries up the active policies with local endpoints and
@@ -381,6 +417,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	polResolver.RegisterWith(allUpdDispatcher, localEndpointDispatcher, tierDispatcher)
 	// And hook its output to the callbacks.
 	polResolver.RegisterCallback(callbacks)
+	cg.policyResolver = polResolver
 
 	if conf.EgressIPCheckEnabled() {
 		// Create and hook up the active egress calculator.
@@ -440,6 +477,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//
 	hostIPPassthru := NewDataplanePassthru(callbacks)
 	hostIPPassthru.RegisterWith(allUpdDispatcher)
+	cg.hostIPPassthru = hostIPPassthru
 
 	if conf.BPFEnabled || conf.Encapsulation.VXLANEnabled || conf.Encapsulation.VXLANEnabledV6 || conf.WireguardEnabled || conf.WireguardEnabledV6 ||
 		conf.EgressIPSupport == "EnabledPerNamespace" || conf.EgressIPSupport == "EnabledPerNamespaceOrPerPod" ||
@@ -459,6 +497,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		l3RR := NewL3RouteResolver(hostname, callbacks, conf.UseNodeResourceUpdates(), conf.RouteSource)
 		l3RR.RegisterWith(allUpdDispatcher, localEndpointDispatcher)
 		l3RR.OnAlive = liveCallback
+		cg.l3RouteResolver = l3RR
 	}
 
 	// Calculate VXLAN routes.
@@ -476,6 +515,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	if conf.Encapsulation.VXLANEnabled || conf.Encapsulation.VXLANEnabledV6 {
 		vxlanResolver := NewVXLANResolver(hostname, callbacks, conf.UseNodeResourceUpdates())
 		vxlanResolver.RegisterWith(allUpdDispatcher)
+		cg.vxlanResolver = vxlanResolver
 	}
 
 	// Register for config updates.
@@ -493,6 +533,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//
 	configBatcher := NewConfigBatcher(hostname, callbacks)
 	configBatcher.RegisterWith(allUpdDispatcher)
+	cg.configBatcher = configBatcher
 
 	// The profile decoder identifies objects with special dataplane significance which have
 	// been encoded as profiles by libcalico-go. At present this includes Kubernetes Service
@@ -510,6 +551,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//
 	profileDecoder := NewProfileDecoder(callbacks)
 	profileDecoder.RegisterWith(allUpdDispatcher)
+	cg.profileDecoder = profileDecoder
 
 	// The remote endpoint reverse lookup receiver only need to know about non-local endpoints.
 	// Create another dispatcher that will filter out non-local endpoints.
@@ -574,11 +616,9 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//
 	encapsulationResolver := NewEncapsulationResolver(conf, callbacks)
 	encapsulationResolver.RegisterWith(allUpdDispatcher)
+	cg.encapsulationResolver = encapsulationResolver
 
-	return &CalcGraph{
-		AllUpdDispatcher:      allUpdDispatcher,
-		activeRulesCalculator: activeRulesCalc,
-	}
+	return cg
 }
 
 func (c *CalcGraph) EnableIPSec(callbacks ipsecCallbacks) {

@@ -75,7 +75,7 @@ func (w *L7WorkloadIPSetCalculator) InitializeIPSet() {
 // PolicyMatchListener callbacks from the ActiveRulesCalculator; we record which local endpoints match
 // the policies and then further filter to only ALP policies.
 
-func (w *L7WorkloadIPSetCalculator) OnPolicyMatch(policyKey model.PolicyKey, endpointKey any) {
+func (w *L7WorkloadIPSetCalculator) OnPolicyMatch(policyKey model.PolicyKey, endpointKey model.Key) {
 	// We only care about workload endpoints (not host endpoints).
 	wepKey, ok := endpointKey.(model.WorkloadEndpointKey)
 	if !ok {
@@ -109,7 +109,7 @@ func (w *L7WorkloadIPSetCalculator) OnPolicyMatch(policyKey model.PolicyKey, end
 	w.flush()
 }
 
-func (w *L7WorkloadIPSetCalculator) OnPolicyMatchStopped(policyKey model.PolicyKey, endpointKey any) {
+func (w *L7WorkloadIPSetCalculator) OnPolicyMatchStopped(policyKey model.PolicyKey, endpointKey model.Key) {
 	// We only care about workload endpoints, not host endpoints.
 	wepKey, ok := endpointKey.(model.WorkloadEndpointKey)
 	if !ok {
