@@ -76,7 +76,7 @@ func (c *wafAlertController) InitEventsCache(ctx context.Context) error {
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: aWeekAgo,
-				To:   now,
+				To:   now.Add(MaxTimeSkew),
 			},
 		},
 		QuerySortParams: v1.QuerySortParams{
@@ -119,7 +119,7 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: c.logsCache.lastWafTimestamp.Add(-MaxTimeSkew),
-				To:   now,
+				To:   now.Add(MaxTimeSkew),
 			},
 		},
 		QuerySortParams: v1.QuerySortParams{
