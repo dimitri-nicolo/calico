@@ -31,5 +31,21 @@
         "id": "id6"
       }
     ]
+  },
+  "restore": {
+    "items": [
+      {
+        "index": "some-index-7",
+        "id": "id7"
+      },
+      {
+        "index": "some-index-8",
+        "id": "id8"
+      },
+      {
+        "index": "some-index-9",
+        "id": "id9"
+      }
+    ]
   }
 }

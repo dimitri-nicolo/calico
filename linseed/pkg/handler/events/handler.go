@@ -155,7 +155,7 @@ func (h events) Bulk() http.HandlerFunc {
 			handler = h.backend.Create
 		case http.MethodPut:
 			// Dismiss events.
-			handler = h.backend.Dismiss
+			handler = h.backend.UpdateDismissFlag
 		case http.MethodDelete:
 			// Delete events.
 			handler = h.backend.Delete

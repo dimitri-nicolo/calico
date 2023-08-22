@@ -9,8 +9,11 @@ type BulkEventRequest struct {
 	// Delete defines the delete action and its associated source data.
 	Delete *BulkEventRequestData `json:"delete" validate:"omitempty"`
 
-	// Delete defines the dismiss action and its associated source data.
+	// Dismiss defines the dismiss action and its associated source data.
 	Dismiss *BulkEventRequestData `json:"dismiss" validate:"omitempty"`
+
+	// Restore defines the restore action and its associated source data.
+	Restore *BulkEventRequestData `json:"restore" validate:"omitempty"`
 }
 
 // BulkEventRequestData contains the associated source data for each bulk operation.

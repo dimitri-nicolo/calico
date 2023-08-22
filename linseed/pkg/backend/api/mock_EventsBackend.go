@@ -61,8 +61,8 @@ func (_m *MockEventsBackend) Delete(_a0 context.Context, _a1 ClusterInfo, _a2 []
 	return r0, r1
 }
 
-// Dismiss provides a mock function with given fields: _a0, _a1, _a2
-func (_m *MockEventsBackend) Dismiss(_a0 context.Context, _a1 ClusterInfo, _a2 []v1.Event) (*v1.BulkResponse, error) {
+// UpdateDismissFlag provides a mock function with given fields: _a0, _a1, _a2
+func (_m *MockEventsBackend) UpdateDismissFlag(_a0 context.Context, _a1 ClusterInfo, _a2 []v1.Event) (*v1.BulkResponse, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 *v1.BulkResponse

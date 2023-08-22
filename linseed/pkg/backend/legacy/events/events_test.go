@@ -705,7 +705,12 @@ func TestDismissEvent(t *testing.T) {
 	t.Run("Dismiss an Event", func(t *testing.T) {
 
 		//Dismiss Event
-		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{results.Items[0]})
+		resp, err = b.UpdateDismissFlag(ctx, clusterInfo, []v1.Event{
+			{
+				ID:        results.Items[0].ID,
+				Dismissed: true,
+			},
+		})
 		require.NoError(t, err)
 		require.Equal(t, 0, len(resp.Errors))
 		require.Equal(t, 1, resp.Total)
@@ -728,13 +733,72 @@ func TestDismissEvent(t *testing.T) {
 		require.Equal(t, true, results.Items[0].Dismissed)
 	})
 
+	t.Run("Restore an Event", func(t *testing.T) {
+		defer setupTest(t)()
+		//Dismiss Event (so that it can be restored)
+		resp, err = b.UpdateDismissFlag(ctx, clusterInfo, []v1.Event{
+			{
+				ID:        results.Items[0].ID,
+				Dismissed: true,
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
+		require.Equal(t, 1, resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, 1, resp.Succeeded)
+
+		results, err = b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
+			},
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, 1, results)
+		require.Equal(t, 1, len(results.Items))
+		//Check event for the dismiss flag true.
+		require.Equal(t, true, results.Items[0].Dismissed)
+
+		// Restore dismissed event
+		resp, err = b.UpdateDismissFlag(ctx, clusterInfo, []v1.Event{
+			{
+				ID:        results.Items[0].ID,
+				Dismissed: false,
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
+		require.Equal(t, 1, resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, 1, resp.Succeeded)
+
+		results, err = b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
+			},
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, 1, results)
+		require.Equal(t, 1, len(results.Items))
+		//Check event for the dismiss flag false.
+		require.Equal(t, false, results.Items[0].Dismissed)
+	})
+
 	t.Run("Try to Dismiss an event that does not exist in Elastic", func(t *testing.T) {
 		defer setupTest(t)()
 		//Dismiss Event
 		invalidEvent := v1.Event{
 			ID: "INVALID",
 		}
-		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{invalidEvent})
+		resp, err = b.UpdateDismissFlag(ctx, clusterInfo, []v1.Event{invalidEvent})
 		require.Nil(t, err)
 		require.NotNil(t, resp)
 		require.Equal(t, 1, resp.Total)
@@ -749,7 +813,7 @@ func TestDismissEvent(t *testing.T) {
 	t.Run("Invalid Cluster Info", func(t *testing.T) {
 		defer setupTest(t)()
 		clusterInfo := bapi.ClusterInfo{}
-		resp, err = b.Dismiss(ctx, clusterInfo, []v1.Event{results.Items[0]})
+		resp, err = b.UpdateDismissFlag(ctx, clusterInfo, []v1.Event{results.Items[0]})
 		require.Error(t, err)
 		require.Equal(t, "no cluster ID on request", err.Error())
 		require.Nil(t, resp)

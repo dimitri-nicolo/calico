@@ -16,7 +16,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
-// EventHandler handles event bulk requests for deleting and dimssing events.
+// EventHandler handles event bulk requests for deleting, dismissing and restoring events.
 func EventHandler(lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// parse http request body into bulk request.
@@ -26,7 +26,7 @@ func EventHandler(lsclient client.Client) http.Handler {
 			return
 		}
 
-		// Perform bulk actions - only delete and dismiss actions are supported for events.
+		// Perform bulk actions - only delete, dismiss and restore actions are supported for events.
 		resp, err := processEventRequest(r, lsclient, params)
 		if err != nil {
 			httputils.EncodeError(w, err)
@@ -75,6 +75,9 @@ func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkEventReq
 	if params.Dismiss != nil {
 		items = append(items, params.Dismiss.Items...)
 	}
+	if params.Restore != nil {
+		items = append(items, params.Restore.Items...)
+	}
 
 	for _, item := range items {
 		if item.ID == "" {
@@ -101,7 +104,7 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 	defer cancelWithTimeout()
 
 	resp := v1.BulkEventResponse{}
-	var dismissResp, delResp *lapi.BulkResponse
+	var delResp, dismissResp, restoreResp *lapi.BulkResponse
 	var err error
 
 	// We don't actually perform the delete and dismiss together. The UI only sends
@@ -119,15 +122,32 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 	if params.Dismiss != nil {
 		eventsToDismiss := []lapi.Event{}
 		for _, item := range params.Dismiss.Items {
-			eventsToDismiss = append(eventsToDismiss, lapi.Event{ID: item.ID})
+			eventsToDismiss = append(eventsToDismiss, lapi.Event{
+				ID:        item.ID,
+				Dismissed: true,
+			})
 		}
-		dismissResp, err = lsclient.Events(params.ClusterName).Dismiss(ctx, eventsToDismiss)
+		dismissResp, err = lsclient.Events(params.ClusterName).UpdateDismissFlag(ctx, eventsToDismiss)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if params.Restore != nil {
+		eventsToRestore := []lapi.Event{}
+		for _, item := range params.Restore.Items {
+			eventsToRestore = append(eventsToRestore, lapi.Event{
+				ID:        item.ID,
+				Dismissed: false,
+			})
+		}
+		restoreResp, err = lsclient.Events(params.ClusterName).UpdateDismissFlag(ctx, eventsToRestore)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Populate bulk response errors.
+	resp.Errors = resp.Errors || (restoreResp != nil && len(restoreResp.Errors) > 0)
 	resp.Errors = resp.Errors || (dismissResp != nil && len(dismissResp.Errors) > 0)
 	resp.Errors = resp.Errors || (delResp != nil && len(delResp.Errors) > 0)
 
@@ -153,6 +173,24 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 	}
 	if dismissResp != nil {
 		for _, d := range dismissResp.Updated {
+			item := v1.BulkEventResponseItem{
+				ID:     d.ID,
+				Status: d.Status,
+			}
+			switch d.Status {
+			case http.StatusOK:
+				item.Result = "updated"
+			default:
+				item.Error = &v1.BulkEventErrorDetails{
+					Type:   "unknown",
+					Reason: "unknown",
+				}
+			}
+			resp.Items = append(resp.Items, item)
+		}
+	}
+	if restoreResp != nil {
+		for _, d := range restoreResp.Updated {
 			item := v1.BulkEventResponseItem{
 				ID:     d.ID,
 				Status: d.Status,

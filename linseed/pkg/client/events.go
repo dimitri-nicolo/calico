@@ -15,7 +15,7 @@ import (
 type EventsInterface interface {
 	List(context.Context, v1.Params) (*v1.List[v1.Event], error)
 	Create(context.Context, []v1.Event) (*v1.BulkResponse, error)
-	Dismiss(context.Context, []v1.Event) (*v1.BulkResponse, error)
+	UpdateDismissFlag(context.Context, []v1.Event) (*v1.BulkResponse, error)
 	Delete(context.Context, []v1.Event) (*v1.BulkResponse, error)
 }
 
@@ -77,7 +77,7 @@ func (f *events) Create(ctx context.Context, events []v1.Event) (*v1.BulkRespons
 	return &resp, nil
 }
 
-func (f *events) Dismiss(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
+func (f *events) UpdateDismissFlag(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
 	var err error
 	body := []byte{}
 	for _, e := range events {

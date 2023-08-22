@@ -347,7 +347,7 @@ func bulkEvents(response *v1.BulkResponse, err error) *events {
 	mockLogBackend.On("Create", mock.Anything,
 		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("[]v1.Event")).Return(response, err)
 	// mock backend to return the required backendEvent
-	mockLogBackend.On("Dismiss", mock.Anything,
+	mockLogBackend.On("UpdateDismissFlag", mock.Anything,
 		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("[]v1.Event")).Return(response, err)
 	// mock backend to return the required backendEvent
 	mockLogBackend.On("Delete", mock.Anything,
