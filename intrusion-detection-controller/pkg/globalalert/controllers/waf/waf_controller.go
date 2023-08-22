@@ -69,7 +69,7 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 }
 
 func (c *wafAlertController) InitEventsCache(ctx context.Context) error {
-	log.Debug("Building Cache of existing waf Alerts")
+	log.Debug("Building Cache of existing waf Logs")
 	now := time.Now()
 	aWeekAgo := now.Add(-((time.Hour * 24) * 7))
 	params := &v1.WAFLogParams{

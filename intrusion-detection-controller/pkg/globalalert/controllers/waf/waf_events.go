@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	// Potentally the maximum time skew difference between components generating WAF alerts
+	// Potentally the maximum time skew difference between components generating WAF logs
 	MaxTimeSkew = 5 * time.Minute
 )
 
