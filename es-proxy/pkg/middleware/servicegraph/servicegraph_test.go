@@ -159,11 +159,11 @@ func compareNodes(actual, expected v1.GraphNode) []string {
 			toJson(expected.Selectors)),
 		)
 	}
-	if !reflect.DeepEqual(actual.Events, expected.Events) {
+	if actual.EventsCount != expected.EventsCount {
 		errStrs = append(errStrs, fmt.Sprintf(
-			"  Events are not the same:\n    Actual:\n%v\n    Expected:\n%v",
-			toJson(actual.Events),
-			toJson(expected.Events)),
+			"  EventsCount are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.EventsCount),
+			toJson(expected.EventsCount)),
 		)
 	}
 	if len(errStrs) > 0 {

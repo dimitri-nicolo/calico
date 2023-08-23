@@ -975,13 +975,13 @@ func (s *serviceGraphConstructionData) overlayEvents() {
 					Namespace: ep.Namespace, Name: ep.Name,
 				})
 				if node = s.getMostGranularNodeInView(s.nodesMap, fep, sg); node != nil {
-					node.graphNode.IncludeEvent(event.ID, event.Details)
+					node.graphNode.EventsCount += 1
 					eventNodes[node] = struct{}{}
 				}
 			default:
 				sg := s.sgd.ServiceGroups.GetByEndpoint(ep)
 				if node = s.getMostGranularNodeInView(s.nodesMap, ep, sg); node != nil {
-					node.graphNode.IncludeEvent(event.ID, event.Details)
+					node.graphNode.EventsCount += 1
 					eventNodes[node] = struct{}{}
 				}
 			}

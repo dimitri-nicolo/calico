@@ -1008,54 +1008,7 @@
         "alerts": "dest_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-fluentd\"",
         "packet_capture": "all()"
       },
-      "events": [
-        {
-          "id": {
-            "type": "alert",
-            "id": "fakeid",
-            "namespace": "tigera-fluentd",
-            "name": "fluentd-node-tt85d.168bbcfc40012fe3"
-          },
-          "description": "Readiness probe failed: ",
-          "time": "2021-06-25T20:51:06Z"
-        },
-        {
-          "id": {
-            "type": "kubernetes",
-            "namespace": "tigera-fluentd",
-            "name": "fluentd-node-k6wd2.168bbcfb0179cdd2"
-          },
-          "description": "Readiness probe failed: ",
-          "time": "2021-06-25T20:51:21Z"
-        },
-        {
-          "id": {
-            "type": "kubernetes",
-            "namespace": "tigera-fluentd",
-            "name": "fluentd-node-4cmmh.168bbcfa03153747"
-          },
-          "description": "Readiness probe failed: ",
-          "time": "2021-06-25T20:51:52Z"
-        },
-        {
-          "id": {
-            "type": "kubernetes",
-            "namespace": "tigera-fluentd",
-            "name": "fluentd-node-pq6cq.168bbcf9bd8f59be"
-          },
-          "description": "Readiness probe failed: ",
-          "time": "2021-06-25T20:51:56Z"
-        },
-        {
-          "id": {
-            "type": "kubernetes",
-            "namespace": "tigera-fluentd",
-            "name": "fluentd-node-bqk9p.168bbcf7731bff60"
-          },
-          "description": "Readiness probe failed: ",
-          "time": "2021-06-25T20:52:01Z"
-        }
-      ]
+      "events_count": 5
     },
     {
       "id": "namespace/tigera-manager",

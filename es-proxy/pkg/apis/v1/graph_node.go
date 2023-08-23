@@ -76,30 +76,8 @@ type GraphNode struct {
 	// graph node.
 	Selectors GraphSelectors `json:"selectors"`
 
-	// The set of events correlated to this node. The json is rendered in the following format (which differs from the
-	// struct definitions):
-	//   "events": [
-	//     {
-	//       "id": {
-	//         "type": "kubernetes"
-	//         "name": "n2",
-	//         "namespace": "n",
-	//       },
-	//       "description": "A k8s thing occurred",
-	//       "time": "1973-03-14T00:00:00Z"
-	//     },
-	//     {
-	//       "id": {
-	//         "type": "alert"
-	//         "id": "aifn93hrbv_Ds",
-	//         "name": "policy.pod",
-	//       },
-	//       "severity": 100,
-	//       "description": "A pod was modified occurred",
-	//       "time": "1973-03-14T00:00:00Z"
-	//     }
-	//   ]
-	Events GraphEvents `json:"events,omitempty"`
+	// The number of events correlated to this node.
+	EventsCount int `json:"events_count,omitempty"`
 }
 
 func (n *GraphNode) IncludeStatsWithin(ts []GraphStats) {
@@ -141,13 +119,6 @@ func (n *GraphNode) IncludeServicePort(s ServicePort) {
 		n.ServicePorts = make(ServicePorts)
 	}
 	n.ServicePorts[s] = struct{}{}
-}
-
-func (n *GraphNode) IncludeEvent(id GraphEventID, event GraphEventDetails) {
-	if n.Events == nil {
-		n.Events = make(GraphEvents)
-	}
-	n.Events[id] = event
 }
 
 func (n GraphNode) String() string {
