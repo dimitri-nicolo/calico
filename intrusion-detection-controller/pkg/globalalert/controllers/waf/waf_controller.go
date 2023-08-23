@@ -45,9 +45,9 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 	ctx, c.cancel = context.WithCancel(parentCtx)
 	log.Infof("Starting waf alert controller for cluster %s", c.clusterName)
 
-	err := c.InitEventsCache(ctx)
+	err := c.InitLogsCache(ctx)
 	if err != nil {
-		log.WithError(err).Warn("failed to init events cache")
+		log.WithError(err).Warn("failed to init logs cache")
 	}
 	// Then loop forever...
 	for {
@@ -68,7 +68,7 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 	}
 }
 
-func (c *wafAlertController) InitEventsCache(ctx context.Context) error {
+func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 	log.Debug("Building Cache of existing waf Logs")
 	now := time.Now()
 	aWeekAgo := now.Add(-((time.Hour * 24) * 7))
