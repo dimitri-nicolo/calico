@@ -260,6 +260,11 @@ func (a *wrappedCallbacks) updateRCC(key model.ResourceKey, rcConfig *apiv3.Remo
 		a.reportRemoteClusterStatus(key.Name, model.RemoteClusterConfigIncomplete)
 	}
 
+	if datastoreConfig == nil {
+		// This happens when the RCC is newly created and yet to create it's secret in the cluster
+		a.reportRemoteClusterStatus(key.Name, model.RemoteClusterConfigIncomplete)
+	}
+
 	isValid := datastoreConfig != nil
 
 	// Get the existing remote data for this cluster. If it is not present then add as a new RCC

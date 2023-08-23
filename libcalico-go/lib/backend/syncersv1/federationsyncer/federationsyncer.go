@@ -4,11 +4,12 @@ package federationsyncer
 
 import (
 	"reflect"
+	"sync"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/prometheus/client_golang/prometheus"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -25,11 +26,27 @@ const (
 	k8sClientID    = "ks"
 )
 
-var emptyDatastoreConfig = apiconfig.NewCalicoAPIConfig()
+var (
+	emptyDatastoreConfig = apiconfig.NewCalicoAPIConfig()
+
+	remoteClusterStatusGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "remote_cluster_connection_status",
+		Help: "0-NotConnecting ,1-Connecting, 2-InSync, 3-ReSyncInProgress, 4-ConfigChangeRestartRequired, 5-ConfigInComplete.",
+	}, []string{"remote_cluster_name"})
+
+	// prometheusRegisterOnce ensures New gauge vector is registered once.
+	prometheusRegisterOnce sync.Once
+)
+
+func init() {
+	prometheusRegisterOnce.Do(func() {
+		prometheus.MustRegister(remoteClusterStatusGauge)
+	})
+}
 
 // New creates a new federation syncer. This particular syncer requires both Calico datastore access and Kubernetes
 
-func New(calicoClient api.Client, k8sClientset *kubernetes.Clientset, callbacks api.SyncerCallbacks, statusGauge *prometheus.GaugeVec) api.Syncer {
+func New(calicoClient api.Client, k8sClientset *kubernetes.Clientset, callbacks api.SyncerCallbacks) api.Syncer {
 	k8sServicesClient := k8s.NewK8sResourceWrapperClient(k8sClientset)
 	// The resources in this syncer are backed by two different clients, so we specify which client for each
 	// resource type.
@@ -60,7 +77,7 @@ func New(calicoClient api.Client, k8sClientset *kubernetes.Clientset, callbacks 
 	return watchersyncer.NewMultiClient(
 		clients,
 		resourceTypes,
-		remotecluster.NewWrappedCallbacks(callbacks, k8sClientset, federationRemoteClusterProcessor{}, statusGauge),
+		remotecluster.NewWrappedCallbacks(callbacks, k8sClientset, federationRemoteClusterProcessor{}, remoteClusterStatusGauge),
 	)
 }
 
