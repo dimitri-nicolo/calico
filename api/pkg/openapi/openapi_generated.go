@@ -204,6 +204,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.RemoteClusterConfiguration":               schema_pkg_apis_projectcalico_v3_RemoteClusterConfiguration(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.RemoteClusterConfigurationList":           schema_pkg_apis_projectcalico_v3_RemoteClusterConfigurationList(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.RemoteClusterConfigurationSpec":           schema_pkg_apis_projectcalico_v3_RemoteClusterConfigurationSpec(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.RemoteClusterSyncOptions":                 schema_pkg_apis_projectcalico_v3_RemoteClusterSyncOptions(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ReportData":                               schema_pkg_apis_projectcalico_v3_ReportData(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ReportJob":                                schema_pkg_apis_projectcalico_v3_ReportJob(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ReportSpec":                               schema_pkg_apis_projectcalico_v3_ReportSpec(ref),
@@ -10692,11 +10693,37 @@ func schema_pkg_apis_projectcalico_v3_RemoteClusterConfigurationSpec(ref common.
 							Format:      "",
 						},
 					},
+					"syncOptions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Configuration options that do not relate to the underlying datastore connection. These fields relate to the syncing of resources once the connection is established. These fields can be set independent of the other connection-oriented fields, e.g. they can be set when ClusterAccessSecret is non-nil.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.RemoteClusterSyncOptions"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.ObjectReference"},
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.RemoteClusterSyncOptions", "k8s.io/api/core/v1.ObjectReference"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_RemoteClusterSyncOptions(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"overlayRoutingMode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Determines whether overlay routing will be established between federated clusters. If unspecified during create or update of RemoteClusterConfiguration, this field will default based on the encapsulation mode of the local cluster at the time of RemoteClusterConfiguration application: \"Enabled\" if VXLAN, \"Disabled\" otherwise. If upgrading from a version that predates this field, this field will default to \"Disabled\".",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

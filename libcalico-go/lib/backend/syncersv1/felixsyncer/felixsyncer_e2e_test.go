@@ -52,14 +52,19 @@ const (
 	controlPlaneNodeName = "kind-single-control-plane"
 )
 
+type felixSyncerRemote struct {
+	name string
+	mode apiv3.OverlayRoutingMode
+}
+
 // calculateDefaultFelixSyncerEntries determines the expected set of Felix configuration for the currently configured
 // cluster.
-func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.DatastoreType, remoteCluster ...string) (expected []model.KVPair) {
+func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.DatastoreType, remote ...felixSyncerRemote) (expected []model.KVPair) {
 	remoteClusterPrefix := ""
 	defaultProfileRules := []model.Rule{{Action: "allow"}}
-	if len(remoteCluster) > 0 {
+	if len(remote) > 0 {
 		// Names are prefixed with the remote cluster name (if specified) and a "/" separator.
-		remoteClusterPrefix = remoteCluster[0] + "/"
+		remoteClusterPrefix = remote[0].name + "/"
 		defaultProfileRules = nil
 	}
 
@@ -125,42 +130,44 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 			},
 		})
 
-		// Add one for each node resource.
-		nodes, err := cs.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
-		Expect(err).NotTo(HaveOccurred())
-		for _, node := range nodes.Items {
-			// Nodes get updated frequently, so don't include the revision info.
-			node.ResourceVersion = ""
-			nodeKV, err := resources2.K8sNodeToCalico(&node, false)
+		// Add one for each node resource. If invoked for remote cluster, only add if overlay routing is enabled.
+		if len(remoteClusterPrefix) == 0 || remote[0].mode == apiv3.OverlayRoutingModeEnabled {
+			nodes, err := cs.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
+			for _, node := range nodes.Items {
+				// Nodes get updated frequently, so don't include the revision info.
+				node.ResourceVersion = ""
+				nodeKV, err := resources2.K8sNodeToCalico(&node, false)
+				Expect(err).NotTo(HaveOccurred())
 
-			var ipKV *model.KVPair
-			for _, ip := range nodeKV.Value.(*libapiv3.Node).Spec.Addresses {
-				if ip.Type == libapiv3.InternalIP {
-					ipKV = &model.KVPair{
-						Key: model.HostIPKey{
-							Hostname: node.Name,
-						},
-						Value: net.ParseIP(ip.Address),
+				var ipKV *model.KVPair
+				for _, ip := range nodeKV.Value.(*libapiv3.Node).Spec.Addresses {
+					if ip.Type == libapiv3.InternalIP {
+						ipKV = &model.KVPair{
+							Key: model.HostIPKey{
+								Hostname: node.Name,
+							},
+							Value: net.ParseIP(ip.Address),
+						}
 					}
 				}
-			}
 
-			if len(remoteClusterPrefix) > 0 {
-				nodeKey := nodeKV.Key.(model.ResourceKey)
-				nodeKey.Name = remoteClusterPrefix + node.Name
-				nodeKV.Key = nodeKey
+				if len(remoteClusterPrefix) > 0 {
+					nodeKey := nodeKV.Key.(model.ResourceKey)
+					nodeKey.Name = remoteClusterPrefix + node.Name
+					nodeKV.Key = nodeKey
 
-				if ipKV != nil {
-					ipKey := ipKV.Key.(model.HostIPKey)
-					ipKey.Hostname = remoteClusterPrefix + node.Name
-					ipKV.Key = ipKey
+					if ipKV != nil {
+						ipKey := ipKV.Key.(model.HostIPKey)
+						ipKey.Hostname = remoteClusterPrefix + node.Name
+						ipKV.Key = ipKey
+					}
 				}
-			}
 
-			expected = append(expected, *nodeKV)
-			if ipKV != nil {
-				expected = append(expected, *ipKV)
+				expected = append(expected, *nodeKV)
+				if ipKV != nil {
+					expected = append(expected, *ipKV)
+				}
 			}
 		}
 

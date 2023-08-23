@@ -67,7 +67,7 @@ func New(calicoClient api.Client, k8sClientset *kubernetes.Clientset, callbacks 
 // federationRemoteClusterProcessor provides the service syncer specific remote cluster processing.
 type federationRemoteClusterProcessor struct{}
 
-func (_ federationRemoteClusterProcessor) CreateResourceTypes() []watchersyncer.ResourceType {
+func (_ federationRemoteClusterProcessor) CreateResourceTypes(overlayRoutingMode apiv3.OverlayRoutingMode) []watchersyncer.ResourceType {
 	return []watchersyncer.ResourceType{
 		{
 			ListInterface:         model.ResourceListOptions{Kind: model.KindKubernetesService},
