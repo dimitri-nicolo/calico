@@ -143,7 +143,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 			By("Creating the local syncer using etcd for config and k8s for services and endpoints")
 			// Create the syncer
 			syncTester = testutils.NewSyncerTester()
-			syncer = federationsyncer.New(etcdBackend, k8sClientset, syncTester, statusGauge)
+			syncer = federationsyncer.New(etcdBackend, k8sClientset, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -334,11 +334,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 	var syncTester *testutils.SyncerTester
 	var expectedUpdates []api.Update
 	var k8sInlineConfig apiconfig.CalicoAPIConfig
-	var statusGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "remote_cluster_connection_status",
-		Help: "0-NotConnecting ,1-Connecting, 2-InSync, 3-ReSyncInProgress, 4-ConfigChangeRestartRequired, 5-ConfigInComplete.",
-	}, []string{"remote_cluster_name"})
-
 	removeTestK8sConfig := func() {
 		if k8sBackend != nil {
 			// Clean up any endpoints left over by the test.
@@ -394,7 +389,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 	}
 
 	BeforeEach(func() {
-		prometheus.MustRegister(statusGauge)
 		// Create the local backend client and clean the datastore.
 		etcdBackend, err = backend.NewClient(etcdConfig)
 		Expect(err).NotTo(HaveOccurred())
@@ -411,7 +405,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 		By("Creating the local syncer using etcd for config and k8s for services and endpoints")
 		// Create the syncer
 		syncTester = testutils.NewSyncerTester()
-		syncer = federationsyncer.New(etcdBackend, k8sClientset, syncTester, statusGauge)
+		syncer = federationsyncer.New(etcdBackend, k8sClientset, syncTester)
 		syncer.Start()
 
 		By("Checking status is updated to sync'd at start of day")
@@ -506,7 +500,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 	})
 
 	AfterEach(func() {
-		prometheus.Unregister(statusGauge)
 		_, _ = etcdBackend.Delete(ctx,
 			model.ResourceKey{
 				Kind: apiv3.KindRemoteClusterConfiguration,
