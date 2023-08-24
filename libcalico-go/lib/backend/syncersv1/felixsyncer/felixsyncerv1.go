@@ -15,8 +15,9 @@
 package felixsyncer
 
 import (
-	log "github.com/sirupsen/logrus"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 

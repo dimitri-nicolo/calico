@@ -3,9 +3,10 @@
 package federationsyncer
 
 import (
+	"reflect"
+
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
-	"reflect"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
