@@ -15,11 +15,8 @@
 package felixsyncer
 
 import (
-	"strings"
-	"sync"
-
-	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	"strings"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -41,22 +38,6 @@ const (
 	calicoClientID = "calico"
 	k8sClientID    = "ks"
 )
-
-var (
-	remoteClusterStatusGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "remote_cluster_connection_status",
-		Help: "0-NotConnecting ,1-Connecting, 2-InSync, 3-ReSyncInProgress, 4-ConfigChangeRestartRequired, 5-ConfigInComplete.",
-	}, []string{"remote_cluster_name"})
-
-	// prometheusRegisterOnce ensures New gauge vector is registered once.
-	prometheusRegisterOnce sync.Once
-)
-
-func init() {
-	prometheusRegisterOnce.Do(func() {
-		prometheus.MustRegister(remoteClusterStatusGauge)
-	})
-}
 
 // New creates a new Felix v1 Syncer.
 func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks api.SyncerCallbacks, includeServices bool, isLeader bool) api.Syncer {
@@ -233,7 +214,7 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 	return watchersyncer.NewMultiClient(
 		clients,
 		resourceTypes,
-		remotecluster.NewWrappedCallbacks(callbacks, k8sClientSet, felixRemoteClusterProcessor{}, remoteClusterStatusGauge),
+		remotecluster.NewWrappedCallbacks(callbacks, k8sClientSet, felixRemoteClusterProcessor{}),
 	)
 }
 
