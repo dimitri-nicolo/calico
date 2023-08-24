@@ -9,8 +9,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	. "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
@@ -1084,63 +1082,6 @@ var _ = Describe("Graph API tests", func() {
 			ParentID: "rep/a/b",
 		}
 		Expect(node.String()).To(Equal("Node(wep/a/c/b; parent=rep/a/b; expandable=false)"))
-	})
-
-	It("handles GraphNode.IncludeEvent", func() {
-		node := GraphNode{
-			ID:   "a",
-			Type: GraphNodeTypeHost,
-		}
-		node.IncludeEvent(GraphEventID{
-			ID: "abcde",
-		}, GraphEventDetails{
-			Description: "A thing occurred, not sure when",
-			Timestamp:   nil,
-		})
-		t := metav1.Time{Time: time.Date(1973, 3, 14, 0, 0, 0, 0, time.UTC)}
-		node.IncludeEvent(GraphEventID{
-			NamespacedName: NamespacedName{
-				Namespace: "n",
-				Name:      "n2",
-			},
-		}, GraphEventDetails{
-			Description: "A k8s thing occurred",
-			Timestamp:   &t,
-		})
-		node.IncludeEvent(GraphEventID{
-			NamespacedName: NamespacedName{
-				Namespace: "n",
-				Name:      "n2",
-			},
-		}, GraphEventDetails{
-			Description: "A k8s thing occurred",
-			Timestamp:   &t,
-		})
-
-		js, err := json.Marshal(node)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(js).To(MatchJSON(`{
-        "id": "a",
-        "type": "host",
-        "selectors": {},
-        "events": [
-          {
-            "id": {
-              "id": "abcde",
-              "name": ""
-            },
-            "description": "A thing occurred, not sure when"
-          },
-          {
-            "id": {
-              "namespace": "n",
-              "name": "n2"
-            },
-            "description": "A k8s thing occurred",
-            "time": "1973-03-14T00:00:00Z"
-          }
-        ]
-      }`))
 	})
 
 	It("handles GraphNode.IncludeAggregatedProtoPorts", func() {
