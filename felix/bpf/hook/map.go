@@ -17,6 +17,7 @@ package hook
 import (
 	"fmt"
 	"path"
+	"strings"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -135,18 +136,22 @@ func (pm *ProgramsMap) LoadObj(at AttachType) (Layout, error) {
 func (pm *ProgramsMap) loadObj(at AttachType, file string) (Layout, error) {
 	obj, err := libbpf.OpenObject(file)
 	if err != nil {
-		return nil, fmt.Errorf("file %s: %w", file, err)
+		return nil, fmt.Errorf("failed to open obj file %s: %w", file, err)
 	}
 
 	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
-		if err := pm.setMapSize(m); err != nil {
-			return nil, fmt.Errorf("error setting map size %s : %w", m.Name(), err)
+		mapName := m.Name()
+		if strings.HasPrefix(mapName, ".rodata") {
+			continue
 		}
-		if err := m.SetPinPath(path.Join(bpfdefs.GlobalPinDir, m.Name())); err != nil {
-			return nil, fmt.Errorf("error pinning map %s: %w", m.Name(), err)
+		if err := pm.setMapSize(m); err != nil {
+			return nil, fmt.Errorf("error setting map size %s : %w", mapName, err)
+		}
+		if err := m.SetPinPath(path.Join(bpfdefs.GlobalPinDir, mapName)); err != nil {
+			return nil, fmt.Errorf("error pinning map %s: %w", mapName, err)
 		}
 		log.Debugf("map %s pinned to %s for generic object file %s",
-			m.Name(), path.Join(bpfdefs.GlobalPinDir, m.Name()), file)
+			m.Name(), path.Join(bpfdefs.GlobalPinDir, mapName), file)
 	}
 
 	if err := obj.Load(); err != nil {
