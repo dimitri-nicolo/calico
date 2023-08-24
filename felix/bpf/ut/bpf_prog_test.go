@@ -390,9 +390,9 @@ func setupAndRun(logger testLogger, loglevel, section string, rules *polprog.Rul
 	}
 
 	if !topts.xdp {
-		runFn(bpfFsDir + "/classifier_tc_preamble")
+		runFn(bpfFsDir + "/cali_tc_preamble")
 	} else {
-		runFn(bpfFsDir + "/xdp_preamble")
+		runFn(bpfFsDir + "/cali_xdp_preamble")
 	}
 }
 
@@ -671,7 +671,7 @@ func objLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHostC
 				}
 
 				if err := tc.ConfigureProgram(m, ifaceLog, &globals); err != nil {
-					return nil, fmt.Errorf("failed to configure tc program: %w", err)
+					return nil, fmt.Errorf("objLoad: failed to configure tc program: %w", err)
 				}
 				log.WithField("program", fname).Debugf("Configured BPF program iface \"%s\"", ifaceLog)
 			}
@@ -709,7 +709,7 @@ func objLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHostC
 	}
 
 	if polProg {
-		polProgPath := "calico_xdp_norm_pol_tail"
+		polProgPath := "xdp_policy"
 		if !forXDP {
 			polProgPath = "classifier_tc_policy"
 		}
@@ -775,9 +775,9 @@ func objUTLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHos
 				HostTunnelIP: ipToU32(node1tunIP),
 			}
 			if err := tc.ConfigureProgram(m, ifaceLog, &globals); err != nil {
-				return nil, fmt.Errorf("failed to configure tc program: %w", err)
+				return nil, fmt.Errorf("objUTLoad: failed to configure tc program: %w", err)
 			}
-			continue
+			break
 		}
 		pin := "/sys/fs/bpf/tc/globals/" + m.Name()
 		log.WithField("pin", pin).Debug("Pinning map")

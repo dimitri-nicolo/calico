@@ -91,6 +91,7 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 		})
 	}
 
+	RegisterTestingT(t)
 	testObject(path.Join(bpfdefs.ObjectDir, "tc_preamble.o"))
 	testObject(path.Join(bpfdefs.ObjectDir, "xdp_preamble.o"))
 }
