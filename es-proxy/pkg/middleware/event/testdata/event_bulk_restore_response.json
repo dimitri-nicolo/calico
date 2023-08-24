@@ -1,0 +1,13 @@
+{
+  "total": 3,
+  "succeeded": 2,
+  "failed": 1,
+  "errors": [{"resource": "id2", "type": "", "reason": "it failed"}],
+  "created": null,
+  "deleted": null,
+  "updated": [
+	  {"id": "id1", "status": 200},
+	  {"id": "id2", "status": 404},
+	  {"id": "id3", "status": 200}
+  ]
+}

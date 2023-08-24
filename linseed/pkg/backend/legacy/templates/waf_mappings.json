@@ -51,6 +51,9 @@
     "request_id": {
       "type": "keyword"
     },
+    "rule_info": {
+      "type": "keyword"
+    },
     "rules": {
       "type": "nested",
       "properties": {

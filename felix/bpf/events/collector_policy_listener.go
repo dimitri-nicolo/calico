@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package events
 
@@ -9,6 +9,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 )
 
 var (
@@ -51,13 +52,11 @@ func (c *CollectorPolicyListener) Start() error {
 	return nil
 }
 
-func makeTuple(src, dst net.IP, proto uint8, srcPort, dstPort uint16) collector.Tuple {
+func makeTuple(src, dst net.IP, proto uint8, srcPort, dstPort uint16) tuple.Tuple {
 	var src16, dst16 [16]byte
-
 	copy(src16[:], src.To16())
 	copy(dst16[:], dst.To16())
-
-	return collector.MakeTuple(src16, dst16, int(proto), int(srcPort), int(dstPort))
+	return tuple.Make(src16, dst16, int(proto), int(srcPort), int(dstPort))
 }
 
 func (c *CollectorPolicyListener) run() {

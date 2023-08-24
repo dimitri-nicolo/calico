@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -8,18 +8,21 @@ import (
 
 	"github.com/google/gopacket/layers"
 
+	"github.com/projectcalico/calico/felix/collector/types"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/proto"
 )
 
 type Collector interface {
 	Start() error
 	ReportingChannel() chan<- *proto.DataplaneStats
-	SetDNSLogReporter(reporter DNSLogReporterInterface)
-	LogDNS(server, client net.IP, dns *layers.DNS, latencyIfKnown *time.Duration)
-	SetL7LogReporter(reporter L7LogReporterInterface)
-	LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataCount int)
-	SetPacketInfoReader(pir PacketInfoReader)
-	SetConntrackInfoReader(cir ConntrackInfoReader)
-	SetProcessInfoCache(pir ProcessInfoCache)
-	SetDomainLookup(dlu EgressDomainCache)
+	SetDNSLogReporter(types.Reporter)
+	LogDNS(net.IP, net.IP, *layers.DNS, *time.Duration)
+	SetL7LogReporter(types.Reporter)
+	LogL7(*proto.HTTPData, *Data, tuple.Tuple, int)
+	RegisterMetricsReporter(types.Reporter)
+	SetPacketInfoReader(PacketInfoReader)
+	SetConntrackInfoReader(ConntrackInfoReader)
+	SetProcessInfoCache(ProcessInfoCache)
+	SetDomainLookup(EgressDomainCache)
 }

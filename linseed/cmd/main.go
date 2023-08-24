@@ -188,16 +188,27 @@ func run() {
 			{Namespace: "tigera-intrusion-detection", Name: "anomaly-detectors"},
 		}
 
+		const tokenHealthName = "TokenManager"
+		tokenReconcilePeriod := 1 * time.Hour
+		tokenExpiry := 24 * time.Hour
+		// Register the health report period for token reconcile as double the time of the reconcile period
+		healthAggregator.RegisterReporter(tokenHealthName, &health.HealthReport{Live: true}, 2*tokenReconcilePeriod)
+		reportHealth := func(h *health.HealthReport) {
+			healthAggregator.Report(tokenHealthName, h)
+		}
+
 		factory := k8s.NewClientSetFactory(cfg.MultiClusterForwardingCA, cfg.MultiClusterForwardingEndpoint)
 		opts := []token.ControllerOption{
 			token.WithIssuer(token.LinseedIssuer),
 			token.WithIssuerName("tigera-linseed"),
 			token.WithUserInfos(users),
-			token.WithExpiry(24 * time.Hour),
+			token.WithReconcilePeriod(tokenReconcilePeriod),
+			token.WithExpiry(tokenExpiry),
 			token.WithClient(pc),
 			token.WithPrivateKey(key),
 			token.WithFactory(factory),
 			token.WithTenant(cfg.ExpectedTenantID),
+			token.WithHealthReport(reportHealth),
 		}
 		tokenController, err := token.NewController(opts...)
 		if err != nil {

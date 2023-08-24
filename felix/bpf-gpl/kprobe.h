@@ -8,7 +8,7 @@
 #include <linux/in.h>
 
 #include "bpf.h"
-#include "tracing.h"
+#include <bpf_tracing.h>
 
 #define SEND_DATA_INTERVAL 10000000000
 #define MAX_FILENAME_LENGTH 128

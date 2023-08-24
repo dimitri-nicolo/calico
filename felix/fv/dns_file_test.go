@@ -6,6 +6,7 @@
 package fv_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -72,69 +73,99 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		felix = tc.Felixes[0]
 	}
 
-	Describe("file with 1000 entries", func() {
-
-		It("should read and program those entries", func() {
-			fileContent := "1\n"
-			for i := 0; i < 1000; i++ {
-				fileContent = fileContent + fmt.Sprintf(`{"LHS":"xyz.com","RHS":"10.10.%v.%v","Expiry":"3019-04-16T00:12:13Z","Type":"ip"}
+	gen1000XYZMappings := func() string {
+		fileContent := ""
+		for i := 0; i < 1000; i++ {
+			fileContent = fileContent + fmt.Sprintf(`{"LHS":"xyz.com","RHS":"10.10.%v.%v","Expiry":"3019-04-16T00:12:13Z","Type":"ip"}
 `,
-					(i/254)+1,
-					(i%254)+1)
-			}
-			startWithPersistentFileContent(fileContent)
+				(i/254)+1,
+				(i%254)+1)
+		}
+		return fileContent
+	}
 
-			w = workload.Run(felix, "w0", "default", "10.65.0.10", "8055", "tcp")
-			w.Configure(client)
+	triggerCreateXYZIPSet := func() {
+		// Create a workload and a DNS policy with domain "xyz.com" so as to trigger
+		// creation of the underlying IP set.
 
-			policy := api.NewGlobalNetworkPolicy()
-			policy.Name = "allow-xyz"
-			order := float64(20)
-			policy.Spec.Order = &order
-			policy.Spec.Selector = "all()"
-			policy.Spec.Egress = []api.Rule{
-				{
-					Action:      api.Allow,
-					Destination: api.EntityRule{Domains: []string{"xyz.com"}},
-				},
-			}
-			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-			Expect(err).NotTo(HaveOccurred())
+		w = workload.Run(felix, "w0", "default", "10.65.0.10", "8055", "tcp")
+		w.Configure(client)
 
-			if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
-				Eventually(func() error {
-					ipsetsOutput, err := felix.ExecOutput("calico-bpf", "ipsets", "dump")
-					if err != nil {
-						return err
-					}
-					numMembers := 0
-					for _, line := range strings.Split(ipsetsOutput, "\n") {
-						if strings.HasPrefix(line, "IP set ") {
-							// New IP set.
-							numMembers = 0
-						} else if strings.TrimSpace(line) != "" {
-							// Member in current set.
-							numMembers++
-						} else {
-							// Empty line => end of IP set.
-							if numMembers == 1000 {
-								return nil
-							}
-						}
-					}
-					return fmt.Errorf("No IP set with 1000 members in:\n[%v]", ipsetsOutput)
-				}, "5s", "1s").Should(Succeed())
-			} else {
-				Eventually(func() int {
-					for name, count := range getIPSetCounts(felix.Container) {
-						if strings.HasPrefix(name, "cali40d:") {
-							return count
-						}
-					}
-					return 0
-				}, "5s", "1s").Should(Equal(1000))
+		policy := api.NewGlobalNetworkPolicy()
+		policy.Name = "allow-xyz"
+		order := float64(20)
+		policy.Spec.Order = &order
+		policy.Spec.Selector = "all()"
+		policy.Spec.Egress = []api.Rule{
+			{
+				Action:      api.Allow,
+				Destination: api.EntityRule{Domains: []string{"xyz.com"}},
+			},
+		}
+		_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	findIPSetWith1000Entries := func() error {
+		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+			ipsetsOutput, err := felix.ExecOutput("calico-bpf", "ipsets", "dump")
+			if err != nil {
+				return err
 			}
-		})
+			numMembers := 0
+			for _, line := range strings.Split(ipsetsOutput, "\n") {
+				if strings.HasPrefix(line, "IP set ") {
+					// New IP set.
+					numMembers = 0
+				} else if strings.TrimSpace(line) != "" {
+					// Member in current set.
+					numMembers++
+				} else {
+					// Empty line => end of IP set.
+					if numMembers == 1000 {
+						return nil
+					}
+				}
+			}
+			return fmt.Errorf("No IP set with 1000 members in:\n[%v]", ipsetsOutput)
+		}
+
+		for name, count := range getIPSetCounts(felix.Container) {
+			if strings.HasPrefix(name, "cali40d:") && count == 1000 {
+				return nil
+			}
+		}
+		return errors.New("No IP set with 1000 members")
+	}
+
+	It("programs DNS info from v1 file", func() {
+		startWithPersistentFileContent("1\n" + gen1000XYZMappings())
+		triggerCreateXYZIPSet()
+		Eventually(findIPSetWith1000Entries, "5s", "1s").Should(Succeed())
+	})
+
+	It("programs DNS info from v2 file with current epoch declaration", func() {
+		startWithPersistentFileContent("2\n{\"Epoch\":0,\"RequiredFeatures\":[\"Epoch\"]}\n" + gen1000XYZMappings())
+		triggerCreateXYZIPSet()
+		Eventually(findIPSetWith1000Entries, "5s", "1s").Should(Succeed())
+	})
+
+	It("ignores DNS info from v2 file with non-current epoch declaration", func() {
+		startWithPersistentFileContent("2\n{\"Epoch\":11,\"RequiredFeatures\":[\"Epoch\"]}\n" + gen1000XYZMappings())
+		triggerCreateXYZIPSet()
+		Consistently(findIPSetWith1000Entries, "10s", "2s").ShouldNot(Succeed())
+	})
+
+	It("ignores DNS info from v2 file with unsupported features", func() {
+		startWithPersistentFileContent("2\n{\"Epoch\":0,\"RequiredFeatures\":[\"Epoch\",\"NewSemantics\"]}\n" + gen1000XYZMappings())
+		triggerCreateXYZIPSet()
+		Consistently(findIPSetWith1000Entries, "10s", "2s").ShouldNot(Succeed())
+	})
+
+	It("ignores DNS info from file with unsupported version", func() {
+		startWithPersistentFileContent("3\n{\"Epoch\":0,\"RequiredFeatures\":[\"Epoch\"]}\n" + gen1000XYZMappings())
+		triggerCreateXYZIPSet()
+		Consistently(findIPSetWith1000Entries, "10s", "2s").ShouldNot(Succeed())
 	})
 
 	DescribeTable("Persistent file errors",

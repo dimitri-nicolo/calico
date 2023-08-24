@@ -1,4 +1,5 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
+
 package vfp
 
 import (
@@ -9,6 +10,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 
 	"sigs.k8s.io/kind/pkg/errors"
 
@@ -250,7 +252,7 @@ func (r *InfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*collector.Pac
 	log.Debugf("Collector: Handle EventAggr tuple %s rule <%s> count <%d> %#v",
 		ea.Event.TupleString(), ea.Count, ea.Event)
 
-	tuple, err := extractTupleFromEventAggr(ea)
+	t, err := extractTupleFromEventAggr(ea)
 	if err != nil {
 		log.WithError(err).Errorf("failed to get tuple from ETW event")
 		return nil, err
@@ -287,7 +289,7 @@ func (r *InfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*collector.Pac
 		IsDNAT:    false,
 		Direction: dir,
 		RuleHits:  make([]collector.RuleHit, 0, 1),
-		Tuple:     *tuple,
+		Tuple:     *t,
 	}
 
 	info.RuleHits = append(info.RuleHits, collector.RuleHit{
@@ -300,7 +302,7 @@ func (r *InfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*collector.Pac
 }
 
 func convertFlowEntry(fe *vfpctrl.FlowEntry) (collector.ConntrackInfo, error) {
-	tuple, err := extractTupleFromFlowEntry(fe)
+	t, err := extractTupleFromFlowEntry(fe)
 	if err != nil {
 		return collector.ConntrackInfo{}, err
 	}
@@ -325,7 +327,7 @@ func convertFlowEntry(fe *vfpctrl.FlowEntry) (collector.ConntrackInfo, error) {
 	}
 
 	ctInfo := collector.ConntrackInfo{
-		Tuple:   *tuple,
+		Tuple:   *t,
 		Expired: entryExpired,
 		Counters: collector.ConntrackCounters{
 			Packets: pktCounters,
@@ -375,26 +377,26 @@ func extractPrefixStrFromRuleName(name string) string {
 	return strs[0]
 }
 
-func extractTupleFromEventAggr(ea *etw.EventAggregate) (*collector.Tuple, error) {
-	tuple, err := ea.Event.Tuple()
+func extractTupleFromEventAggr(ea *etw.EventAggregate) (*tuple.Tuple, error) {
+	t, err := ea.Event.Tuple()
 	if err != nil {
 		return nil, err
 	}
-	return collector.NewTuple(tuple.Src, tuple.Dst, tuple.Proto, tuple.L4SrcPort, tuple.L4DstPort), nil
+	return tuple.New(t.Src, t.Dst, t.Proto, t.L4SrcPort, t.L4DstPort), nil
 }
 
-func extractTupleFromFlowEntry(fe *vfpctrl.FlowEntry) (*collector.Tuple, error) {
-	tuple, err := fe.Tuple()
+func extractTupleFromFlowEntry(fe *vfpctrl.FlowEntry) (*tuple.Tuple, error) {
+	t, err := fe.Tuple()
 	if err != nil {
 		return nil, err
 	}
-	return collector.NewTuple(tuple.Src, tuple.Dst, tuple.Proto, tuple.L4SrcPort, tuple.L4DstPort), nil
+	return tuple.New(t.Src, t.Dst, t.Proto, t.L4SrcPort, t.L4DstPort), nil
 }
 
-func extractPreDNATTupleFromFlowEntry(fe *vfpctrl.FlowEntry) (*collector.Tuple, error) {
-	tuple, err := fe.TuplePreDNAT()
+func extractPreDNATTupleFromFlowEntry(fe *vfpctrl.FlowEntry) (*tuple.Tuple, error) {
+	t, err := fe.TuplePreDNAT()
 	if err != nil {
 		return nil, err
 	}
-	return collector.NewTuple(tuple.Src, tuple.Dst, tuple.Proto, tuple.L4SrcPort, tuple.L4DstPort), nil
+	return tuple.New(t.Src, t.Dst, t.Proto, t.L4SrcPort, t.L4DstPort), nil
 }

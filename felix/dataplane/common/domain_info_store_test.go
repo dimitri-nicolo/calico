@@ -44,7 +44,7 @@ func (m *mockCollector) LogDNS(server, client net.IP, dns *layers.DNS, latency *
 	m.dnsLogs = append(m.dnsLogs, dnsLog{server, client, dns, latency})
 }
 
-func (m *mockCollector) SetDomainLookup(dlu collector.EgressDomainCache) {
+func (m *mockCollector) SetDomainLookup(_ collector.EgressDomainCache) {
 	// no-op
 }
 

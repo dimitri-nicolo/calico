@@ -489,6 +489,11 @@ func TestFV_RuntimeIngestion(t *testing.T) {
 
 		var esLogs []string
 		for _, log := range resultList.Items {
+			// Null out the GeneratedTime field.  Linseed will have populated this - and
+			// the following line verifies that - but we can't predict the exact value
+			// and hence our runtimeReports fixture does not include it.
+			require.NotNil(t, log.Report.GeneratedTime)
+			log.Report.GeneratedTime = nil
 			logStr, err := json.Marshal(log.Report)
 			require.NoError(t, err)
 			esLogs = append(esLogs, string(logStr))

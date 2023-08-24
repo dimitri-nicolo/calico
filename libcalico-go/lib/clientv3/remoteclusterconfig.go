@@ -30,6 +30,9 @@ type remoteClusterConfiguration struct {
 // Create takes the representation of a RemoteClusterConfiguration and creates it.  Returns the stored
 // representation of the RemoteClusterConfiguration, and an error, if there is any.
 func (r remoteClusterConfiguration) Create(ctx context.Context, res *apiv3.RemoteClusterConfiguration, opts options.SetOptions) (*apiv3.RemoteClusterConfiguration, error) {
+	if err := r.defaultOverlayRoutingMode(ctx, res); err != nil {
+		return nil, err
+	}
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
@@ -44,6 +47,9 @@ func (r remoteClusterConfiguration) Create(ctx context.Context, res *apiv3.Remot
 // Update takes the representation of a RemoteClusterConfiguration and updates it. Returns the stored
 // representation of the RemoteClusterConfiguration, and an error, if there is any.
 func (r remoteClusterConfiguration) Update(ctx context.Context, res *apiv3.RemoteClusterConfiguration, opts options.SetOptions) (*apiv3.RemoteClusterConfiguration, error) {
+	if err := r.defaultOverlayRoutingMode(ctx, res); err != nil {
+		return nil, err
+	}
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
@@ -87,4 +93,24 @@ func (r remoteClusterConfiguration) List(ctx context.Context, opts options.ListO
 // supplied options.
 func (r remoteClusterConfiguration) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
 	return r.client.resources.Watch(ctx, opts, apiv3.KindRemoteClusterConfiguration, nil)
+}
+
+// defaultOverlayRoutingMode sets OverlayRoutingMode to Enabled if a VXLAN IPPool is present, and to Disabled otherwise.
+func (r remoteClusterConfiguration) defaultOverlayRoutingMode(ctx context.Context, res *apiv3.RemoteClusterConfiguration) error {
+	if res.Spec.SyncOptions.OverlayRoutingMode != "" {
+		return nil
+	}
+
+	ipPoolList := &apiv3.IPPoolList{}
+	if err := r.client.resources.List(ctx, options.ListOptions{}, apiv3.KindIPPool, apiv3.KindIPPoolList, ipPoolList); err != nil {
+		return err
+	}
+	for _, ipPool := range ipPoolList.Items {
+		if ipPool.Spec.VXLANMode != apiv3.VXLANModeNever {
+			res.Spec.SyncOptions.OverlayRoutingMode = apiv3.OverlayRoutingModeEnabled
+			return nil
+		}
+	}
+	res.Spec.SyncOptions.OverlayRoutingMode = apiv3.OverlayRoutingModeDisabled
+	return nil
 }

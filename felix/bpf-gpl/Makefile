@@ -43,6 +43,9 @@ CFLAGS +=  \
 TRIPLET := $(shell gcc -dumpmachine)
 CFLAGS += -I/usr/include/$(TRIPLET)
 
+ifeq ($(ARCH),amd64)
+	CFLAGS += -D__TARGET_ARCH_x86
+endif
 CC := clang-12
 LD := llc-12
 

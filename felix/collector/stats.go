@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -13,30 +13,16 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 
 	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/collector/types/boundedset"
+	"github.com/projectcalico/calico/felix/collector/types/counter"
+	"github.com/projectcalico/calico/felix/collector/types/metric"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
+	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 var ErrorIsNotDNAT = errors.New("Tuple is not a DNAT connection")
-
-type TrafficDirection int
-
-const (
-	TrafficDirInbound TrafficDirection = iota
-	TrafficDirOutbound
-)
-
-const (
-	TrafficDirInboundStr  = "inbound"
-	TrafficDirOutboundStr = "outbound"
-)
-
-func (t TrafficDirection) String() string {
-	if t == TrafficDirInbound {
-		return TrafficDirInboundStr
-	}
-	return TrafficDirOutboundStr
-}
 
 // RuleMatch type is used to indicate whether a rule match from an nflog is newly set, unchanged from the previous
 // value, or has been updated. In the latter case the existing entry should be reported and expired.
@@ -47,16 +33,6 @@ const (
 	RuleMatchSet
 	RuleMatchIsDifferent
 )
-
-// ruleDirToTrafficDir converts the rule direction to the equivalent traffic direction
-// (useful for NFLOG based updates where ingress/inbound and egress/outbound are
-// tied).
-func ruleDirToTrafficDir(r rules.RuleDir) TrafficDirection {
-	if r == rules.RuleDirIngress {
-		return TrafficDirInbound
-	}
-	return TrafficDirOutbound
-}
 
 const RuleTraceInitLen = 10
 
@@ -74,8 +50,8 @@ type RuleTrace struct {
 	hasDenyRule bool
 
 	// Counters to store the packets and byte counts for the RuleTrace
-	pktsCtr  Counter
-	bytesCtr Counter
+	pktsCtr  counter.Counter
+	bytesCtr counter.Counter
 	dirty    bool
 
 	// Stores the Index of the RuleID that has a RuleAction Allow or Deny.
@@ -318,72 +294,15 @@ func (t *RuleTrace) maybeResizePath(matchIdx int) {
 	}
 }
 
-// Tuple represents a 5-Tuple value that identifies a connection/flow of packets
-// with an implicit notion of Direction that comes with the use of a source and
-// destination. This is a hashable object and can be used as a map's key.
-type Tuple struct {
-	src   [16]byte
-	dst   [16]byte
-	proto int
-	l4Src int
-	l4Dst int
-}
-
-func NewTuple(src [16]byte, dst [16]byte, proto int, l4Src int, l4Dst int) *Tuple {
-	t := MakeTuple(src, dst, proto, l4Src, l4Dst)
-	return &t
-}
-
-func MakeTuple(src [16]byte, dst [16]byte, proto int, l4Src int, l4Dst int) Tuple {
-	return Tuple{
-		src:   src,
-		dst:   dst,
-		proto: proto,
-		l4Src: l4Src,
-		l4Dst: l4Dst,
-	}
-}
-
-func (t *Tuple) String() string {
-	return fmt.Sprintf("src=%v dst=%v proto=%v sport=%v dport=%v", net.IP(t.src[:16]).String(), net.IP(t.dst[:16]).String(), t.proto, t.l4Src, t.l4Dst)
-}
-
-func (t *Tuple) GetSourcePort() int {
-	return t.l4Src
-}
-
-func (t *Tuple) SetSourcePort(port int) {
-	t.l4Src = port
-}
-
-func (t *Tuple) GetDestPort() int {
-	return t.l4Dst
-}
-
-func (t *Tuple) SourceNet() net.IP {
-	return net.IP(t.src[:16])
-}
-
-func (t *Tuple) DestNet() net.IP {
-	return net.IP(t.dst[:16])
-}
-
-// GetReverseTuple reverses the tuple by swapping the source and destination fields.
-// This is *not* equivalent to the reply tuple and is intented as a convenience
-// method only.
-func (t *Tuple) GetReverseTuple() Tuple {
-	return MakeTuple(t.dst, t.src, t.proto, t.l4Dst, t.l4Src)
-}
-
 type tcpStatsData struct {
 	//TCP stats
 	sendCongestionWnd int
 	smoothRtt         int
 	minRtt            int
 	mss               int
-	totalRetrans      Counter
-	lostOut           Counter
-	unRecoveredRTO    Counter
+	totalRetrans      counter.Counter
+	lostOut           counter.Counter
+	unRecoveredRTO    counter.Counter
 	dirty             bool
 }
 
@@ -403,47 +322,47 @@ func (t *tcpStatsData) ClearDirtyFlag() {
 // source of this connection and ingress into a workload that terminated this.
 // - Connection based counters (e.g, for conntrack packets/bytes and HTTP requests).
 type Data struct {
-	Tuple Tuple
+	Tuple tuple.Tuple
 
-	origSourceIPs       *boundedSet
-	origSourceIPsActive bool
+	origSourceIPs       *boundedset.BoundedSet
+	OrigSourceIPsActive bool
 
 	// Contains endpoint information corresponding to source and
 	// destination endpoints. Either of these values can be nil
 	// if we don't have information about the endpoint.
-	srcEp *calc.EndpointData
-	dstEp *calc.EndpointData
+	SrcEp *calc.EndpointData
+	DstEp *calc.EndpointData
 
 	// Top level destination (egress) Domains.
-	destDomains []string
+	DestDomains []string
 
 	// Pre-DNAT information used to lookup the service information.
-	isDNAT      bool
-	preDNATAddr [16]byte
-	preDNATPort int
+	IsDNAT      bool
+	PreDNATAddr [16]byte
+	PreDNATPort int
 
 	// The source and destination service if uniquely attributable. Once reported this should not change unless
 	// first expired.
-	dstSvc proxy.ServicePortName
+	DstSvc proxy.ServicePortName
 
 	// Indicates if this is a connection
-	isConnection bool
+	IsConnection bool
 
 	// Connection mark, 0 if connection is not marked
 	mark int
 
 	// Indicates if this connection is proxied or not
-	isProxied bool
+	IsProxied bool
 
-	natOutgoingPort int
+	NatOutgoingPort int
 
 	// Connection related counters.
-	conntrackPktsCtr         Counter
-	conntrackPktsCtrReverse  Counter
-	conntrackBytesCtr        Counter
-	conntrackBytesCtrReverse Counter
-	httpReqAllowedCtr        Counter
-	httpReqDeniedCtr         Counter
+	conntrackPktsCtr         counter.Counter
+	conntrackPktsCtrReverse  counter.Counter
+	conntrackBytesCtr        counter.Counter
+	conntrackBytesCtrReverse counter.Counter
+	httpReqAllowedCtr        counter.Counter
+	httpReqDeniedCtr         counter.Counter
 
 	// Process information
 	sourceProcessData ProcessData
@@ -458,22 +377,22 @@ type Data struct {
 	updatedAt     time.Duration
 	ruleUpdatedAt time.Duration
 
-	reported             bool
-	unreportedPacketInfo bool
+	Reported             bool
+	UnreportedPacketInfo bool
 	dirty                bool
-	expired              bool
+	Expired              bool
 }
 
-func NewData(tuple Tuple, srcEp, dstEp *calc.EndpointData, maxOriginalIPsSize int) *Data {
+func NewData(tuple tuple.Tuple, srcEp, dstEp *calc.EndpointData, maxOriginalIPsSize int) *Data {
 	now := monotime.Now()
 	d := &Data{
 		Tuple:         tuple,
-		origSourceIPs: NewBoundedSet(maxOriginalIPsSize),
+		origSourceIPs: boundedset.New(maxOriginalIPsSize),
 		updatedAt:     now,
 		ruleUpdatedAt: now,
 		dirty:         true,
-		srcEp:         srcEp,
-		dstEp:         dstEp,
+		SrcEp:         srcEp,
+		DstEp:         dstEp,
 	}
 	d.IngressRuleTrace.Init()
 	d.EgressRuleTrace.Init()
@@ -487,20 +406,20 @@ func (d *Data) String() string {
 		osi              []net.IP
 		osiTc            int
 	)
-	if d.srcEp != nil {
-		srcName = endpointName(d.srcEp.Key)
+	if d.SrcEp != nil {
+		srcName = utils.EndpointName(d.SrcEp.Key)
 	} else {
-		srcName = "<unknown>"
+		srcName = utils.UnknownEndpoint
 	}
-	if d.dstEp != nil {
-		dstName = endpointName(d.dstEp.Key)
+	if d.DstEp != nil {
+		dstName = utils.EndpointName(d.DstEp.Key)
 	} else {
-		dstName = "<unknown>"
+		dstName = utils.UnknownEndpoint
 	}
-	if d.dstSvc.Name != "" {
-		dstSvcName = d.dstSvc.Namespace + "." + d.dstSvc.Name + "." + d.dstSvc.Port
+	if d.DstSvc.Name != "" {
+		dstSvcName = d.DstSvc.Namespace + "." + d.DstSvc.Name + "." + d.DstSvc.Port
 	} else {
-		dstSvcName = "<unknown>"
+		dstSvcName = utils.UnknownEndpoint
 	}
 	if d.origSourceIPs != nil {
 		osi = d.origSourceIPs.ToIPSlice()
@@ -516,7 +435,7 @@ func (d *Data) String() string {
 		&(d.Tuple), srcName, dstName, dstSvcName, d.conntrackPktsCtr.Absolute(), d.conntrackBytesCtr.Absolute(),
 		d.conntrackPktsCtrReverse.Absolute(), d.conntrackBytesCtrReverse.Absolute(), d.httpReqAllowedCtr.Delta(),
 		d.httpReqDeniedCtr.Delta(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace,
-		d.expired, d.reported, d.isDNAT, d.isConnection,
+		d.Expired, d.Reported, d.IsDNAT, d.IsConnection,
 		osi, osiTc,
 		d.SourceProcessData().Name, d.SourceProcessData().Arguments, d.SourceProcessData().Pid, d.DestProcessData().Name,
 		d.DestProcessData().Arguments, d.DestProcessData().Pid, d.TcpStats.sendCongestionWnd, d.TcpStats.smoothRtt,
@@ -531,7 +450,7 @@ func (d *Data) setDirtyFlag() {
 	d.dirty = true
 }
 
-func (d *Data) clearConnDirtyFlag() {
+func (d *Data) ClearConnDirtyFlag() {
 	d.dirty = false
 	d.httpReqAllowedCtr.ResetDelta()
 	d.httpReqDeniedCtr.ResetDelta()
@@ -571,27 +490,27 @@ func (d *Data) EgressAction() rules.RuleAction {
 	return d.EgressRuleTrace.Action()
 }
 
-func (d *Data) ConntrackPacketsCounter() Counter {
+func (d *Data) ConntrackPacketsCounter() counter.Counter {
 	return d.conntrackPktsCtr
 }
 
-func (d *Data) ConntrackBytesCounter() Counter {
+func (d *Data) ConntrackBytesCounter() counter.Counter {
 	return d.conntrackBytesCtr
 }
 
-func (d *Data) ConntrackPacketsCounterReverse() Counter {
+func (d *Data) ConntrackPacketsCounterReverse() counter.Counter {
 	return d.conntrackPktsCtrReverse
 }
 
-func (d *Data) ConntrackBytesCounterReverse() Counter {
+func (d *Data) ConntrackBytesCounterReverse() counter.Counter {
 	return d.conntrackBytesCtrReverse
 }
 
-func (d *Data) HTTPRequestsAllowed() Counter {
+func (d *Data) HTTPRequestsAllowed() counter.Counter {
 	return d.httpReqAllowedCtr
 }
 
-func (d *Data) HTTPRequestsDenied() Counter {
+func (d *Data) HTTPRequestsDenied() counter.Counter {
 	return d.httpReqDeniedCtr
 }
 
@@ -601,7 +520,7 @@ func (d *Data) SetConntrackCounters(packets int, bytes int) {
 	if d.conntrackPktsCtr.Set(packets) && d.conntrackBytesCtr.Set(bytes) {
 		d.setDirtyFlag()
 	}
-	d.isConnection = true
+	d.IsConnection = true
 	d.touch()
 }
 
@@ -613,14 +532,9 @@ func (d *Data) setTCPCounters(totalRetrans int, lostOut int, unRecoveredRTO int)
 
 // SetExpired flags the connection as expired for later cleanup.
 func (d *Data) SetExpired() {
-	d.expired = true
+	d.Expired = true
 	d.setDirtyFlag()
 	d.touch()
-}
-
-// IsExpired returns true if the connection has been flagged as expired.
-func (d *Data) IsExpired() bool {
-	return d.expired
 }
 
 // VerdictFound returns true if the verdict has been found for the local endpoints in this flow
@@ -632,10 +546,10 @@ func (d *Data) IsExpired() bool {
 // For such cases we make an exception in this logic
 func (d *Data) VerdictFound() bool {
 	// We expect at least one of the source or dest to be a local endpoint.
-	srcIsLocal := d.srcEp != nil && d.srcEp.IsLocal
-	dstIsLocal := d.dstEp != nil && d.dstEp.IsLocal
+	srcIsLocal := d.SrcEp != nil && d.SrcEp.IsLocal
+	dstIsLocal := d.DstEp != nil && d.DstEp.IsLocal
 
-	if d.isProxied {
+	if d.IsProxied {
 		// This is a proxied flow, we'll see both legs but we only expect a verdict for one of them
 		// so we return true if either leg has a verdict.
 		return srcIsLocal && d.EgressRuleTrace.FoundVerdict() || dstIsLocal && d.IngressRuleTrace.FoundVerdict()
@@ -653,7 +567,7 @@ func (d *Data) SetConntrackCountersReverse(packets int, bytes int) {
 	if d.conntrackPktsCtrReverse.Set(packets) && d.conntrackBytesCtrReverse.Set(bytes) {
 		d.setDirtyFlag()
 	}
-	d.isConnection = true
+	d.IsConnection = true
 	d.touch()
 }
 
@@ -680,8 +594,8 @@ func (d *Data) IncreaseHTTPRequestDeniedCounter(delta int) {
 // ResetConntrackCounters resets the counters associated with the tracked connection for
 // the data.
 func (d *Data) ResetConntrackCounters() {
-	d.isConnection = false
-	d.expired = false
+	d.IsConnection = false
+	d.Expired = false
 	d.conntrackPktsCtr.Reset()
 	d.conntrackBytesCtr.Reset()
 	d.conntrackPktsCtrReverse.Reset()
@@ -704,14 +618,6 @@ func (d *Data) ResetTcpStats() {
 	d.TcpStats.totalRetrans.Reset()
 	d.TcpStats.unRecoveredRTO.Reset()
 	d.TcpStats.dirty = false
-}
-
-func (d *Data) SetSourceEndpointData(sep *calc.EndpointData) {
-	d.srcEp = sep
-}
-
-func (d *Data) SetDestinationEndpointData(dep *calc.EndpointData) {
-	d.dstEp = dep
 }
 
 func (d *Data) AddRuleID(ruleID *calc.RuleID, matchIdx, numPkts, numBytes int) RuleMatch {
@@ -751,10 +657,10 @@ func (d *Data) ReplaceRuleID(ruleID *calc.RuleID, matchIdx, numPkts, numBytes in
 	d.touch()
 	d.setDirtyFlag()
 }
-func (d *Data) AddOriginalSourceIPs(bs *boundedSet) {
+func (d *Data) AddOriginalSourceIPs(bs *boundedset.BoundedSet) {
 	d.origSourceIPs.Combine(bs)
-	d.origSourceIPsActive = true
-	d.isConnection = true
+	d.OrigSourceIPsActive = true
+	d.IsConnection = true
 	d.touch()
 	d.setDirtyFlag()
 }
@@ -765,7 +671,7 @@ func (d *Data) OriginalSourceIps() []net.IP {
 
 func (d *Data) IncreaseNumUniqueOriginalSourceIPs(deltaNum int) {
 	d.origSourceIPs.IncreaseTotalCount(deltaNum)
-	d.isConnection = true
+	d.IsConnection = true
 	d.touch()
 	d.setDirtyFlag()
 }
@@ -818,97 +724,97 @@ func (d *Data) SetDestProcessData(name, args string, pid int) bool {
 	return true
 }
 
-func (d *Data) PreDNATTuple() (Tuple, error) {
-	if !d.isDNAT {
+func (d *Data) PreDNATTuple() (tuple.Tuple, error) {
+	if !d.IsDNAT {
 		return d.Tuple, ErrorIsNotDNAT
 	}
-	return MakeTuple(d.Tuple.src, d.preDNATAddr, d.Tuple.proto, d.Tuple.l4Src, d.preDNATPort), nil
+	return tuple.Make(d.Tuple.Src, d.PreDNATAddr, d.Tuple.Proto, d.Tuple.L4Src, d.PreDNATPort), nil
 }
 
 // metricUpdateIngressConn creates a metric update for Inbound connection traffic
-func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
-	metricDstServiceInfo := MetricServiceInfo{
-		d.dstSvc,
-		d.preDNATPort,
+func (d *Data) MetricUpdateIngressConn(ut metric.UpdateType) metric.Update {
+	metricDstServiceInfo := metric.ServiceInfo{
+		d.DstSvc,
+		d.PreDNATPort,
 	}
 
-	metricUpdate := MetricUpdate{
-		updateType:      ut,
-		tuple:           d.Tuple,
-		natOutgoingPort: d.natOutgoingPort,
-		srcEp:           d.srcEp,
-		dstEp:           d.dstEp,
-		dstService:      metricDstServiceInfo,
-		ruleIDs:         d.IngressRuleTrace.Path(),
-		hasDenyRule:     d.IngressRuleTrace.HasDenyRule(),
-		isConnection:    d.isConnection,
-		inMetric: MetricValue{
-			deltaPackets:             d.conntrackPktsCtr.Delta(),
-			deltaBytes:               d.conntrackBytesCtr.Delta(),
-			deltaAllowedHTTPRequests: d.httpReqAllowedCtr.Delta(),
-			deltaDeniedHTTPRequests:  d.httpReqDeniedCtr.Delta(),
+	metricUpdate := metric.Update{
+		UpdateType:      ut,
+		Tuple:           d.Tuple,
+		NatOutgoingPort: d.NatOutgoingPort,
+		SrcEp:           d.SrcEp,
+		DstEp:           d.DstEp,
+		DstService:      metricDstServiceInfo,
+		RuleIDs:         d.IngressRuleTrace.Path(),
+		HasDenyRule:     d.IngressRuleTrace.HasDenyRule(),
+		IsConnection:    d.IsConnection,
+		InMetric: metric.Value{
+			DeltaPackets:             d.conntrackPktsCtr.Delta(),
+			DeltaBytes:               d.conntrackBytesCtr.Delta(),
+			DeltaAllowedHTTPRequests: d.httpReqAllowedCtr.Delta(),
+			DeltaDeniedHTTPRequests:  d.httpReqDeniedCtr.Delta(),
 		},
-		outMetric: MetricValue{
-			deltaPackets: d.conntrackPktsCtrReverse.Delta(),
-			deltaBytes:   d.conntrackBytesCtrReverse.Delta(),
+		OutMetric: metric.Value{
+			DeltaPackets: d.conntrackPktsCtrReverse.Delta(),
+			DeltaBytes:   d.conntrackBytesCtrReverse.Delta(),
 		},
-		processName: d.DestProcessData().Name,
-		processID:   d.DestProcessData().Pid,
-		processArgs: d.DestProcessData().Arguments,
+		ProcessName: d.DestProcessData().Name,
+		ProcessID:   d.DestProcessData().Pid,
+		ProcessArgs: d.DestProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
-		metricUpdate.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
-		metricUpdate.smoothRtt = &d.TcpStats.smoothRtt
-		metricUpdate.minRtt = &d.TcpStats.minRtt
-		metricUpdate.mss = &d.TcpStats.mss
-		metricUpdate.tcpMetric = TCPMetricValue{
-			deltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
-			deltaLostOut:        d.TcpStats.lostOut.Delta(),
-			deltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
+		metricUpdate.SendCongestionWnd = &d.TcpStats.sendCongestionWnd
+		metricUpdate.SmoothRtt = &d.TcpStats.smoothRtt
+		metricUpdate.MinRtt = &d.TcpStats.minRtt
+		metricUpdate.Mss = &d.TcpStats.mss
+		metricUpdate.TcpMetric = metric.TCPValue{
+			DeltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
+			DeltaLostOut:        d.TcpStats.lostOut.Delta(),
+			DeltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
 		}
 	}
 	return metricUpdate
 }
 
-// metricUpdateEgressConn creates a metric update for Outbound connection traffic
-func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
-	metricDstServiceInfo := MetricServiceInfo{
-		d.dstSvc,
-		d.preDNATPort,
+// MetricUpdateEgressConn creates a metric update for Outbound connection traffic
+func (d *Data) MetricUpdateEgressConn(ut metric.UpdateType) metric.Update {
+	metricDstServiceInfo := metric.ServiceInfo{
+		d.DstSvc,
+		d.PreDNATPort,
 	}
 
-	metricUpdate := MetricUpdate{
-		updateType:      ut,
-		tuple:           d.Tuple,
-		natOutgoingPort: d.natOutgoingPort,
-		srcEp:           d.srcEp,
-		dstEp:           d.dstEp,
-		dstService:      metricDstServiceInfo,
-		dstDomains:      d.destDomains,
-		ruleIDs:         d.EgressRuleTrace.Path(),
-		hasDenyRule:     d.EgressRuleTrace.HasDenyRule(),
-		isConnection:    d.isConnection,
-		inMetric: MetricValue{
-			deltaPackets: d.conntrackPktsCtrReverse.Delta(),
-			deltaBytes:   d.conntrackBytesCtrReverse.Delta(),
+	metricUpdate := metric.Update{
+		UpdateType:      ut,
+		Tuple:           d.Tuple,
+		NatOutgoingPort: d.NatOutgoingPort,
+		SrcEp:           d.SrcEp,
+		DstEp:           d.DstEp,
+		DstService:      metricDstServiceInfo,
+		DstDomains:      d.DestDomains,
+		RuleIDs:         d.EgressRuleTrace.Path(),
+		HasDenyRule:     d.EgressRuleTrace.HasDenyRule(),
+		IsConnection:    d.IsConnection,
+		InMetric: metric.Value{
+			DeltaPackets: d.conntrackPktsCtrReverse.Delta(),
+			DeltaBytes:   d.conntrackBytesCtrReverse.Delta(),
 		},
-		outMetric: MetricValue{
-			deltaPackets: d.conntrackPktsCtr.Delta(),
-			deltaBytes:   d.conntrackBytesCtr.Delta(),
+		OutMetric: metric.Value{
+			DeltaPackets: d.conntrackPktsCtr.Delta(),
+			DeltaBytes:   d.conntrackBytesCtr.Delta(),
 		},
-		processName: d.SourceProcessData().Name,
-		processID:   d.SourceProcessData().Pid,
-		processArgs: d.SourceProcessData().Arguments,
+		ProcessName: d.SourceProcessData().Name,
+		ProcessID:   d.SourceProcessData().Pid,
+		ProcessArgs: d.SourceProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
-		metricUpdate.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
-		metricUpdate.smoothRtt = &d.TcpStats.smoothRtt
-		metricUpdate.minRtt = &d.TcpStats.minRtt
-		metricUpdate.mss = &d.TcpStats.mss
-		metricUpdate.tcpMetric = TCPMetricValue{
-			deltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
-			deltaLostOut:        d.TcpStats.lostOut.Delta(),
-			deltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
+		metricUpdate.SendCongestionWnd = &d.TcpStats.sendCongestionWnd
+		metricUpdate.SmoothRtt = &d.TcpStats.smoothRtt
+		metricUpdate.MinRtt = &d.TcpStats.minRtt
+		metricUpdate.Mss = &d.TcpStats.mss
+		metricUpdate.TcpMetric = metric.TCPValue{
+			DeltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
+			DeltaLostOut:        d.TcpStats.lostOut.Delta(),
+			DeltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
 		}
 	}
 	return metricUpdate
@@ -916,39 +822,39 @@ func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 }
 
 // metricUpdateIngressNoConn creates a metric update for Inbound non-connection traffic
-func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
-	metricDstServiceInfo := MetricServiceInfo{
-		d.dstSvc,
-		d.preDNATPort,
+func (d *Data) MetricUpdateIngressNoConn(ut metric.UpdateType) metric.Update {
+	metricDstServiceInfo := metric.ServiceInfo{
+		d.DstSvc,
+		d.PreDNATPort,
 	}
 
-	metricUpdate := MetricUpdate{
-		updateType:      ut,
-		tuple:           d.Tuple,
-		natOutgoingPort: d.natOutgoingPort,
-		srcEp:           d.srcEp,
-		dstEp:           d.dstEp,
-		dstService:      metricDstServiceInfo,
-		ruleIDs:         d.IngressRuleTrace.Path(),
-		hasDenyRule:     d.IngressRuleTrace.HasDenyRule(),
-		isConnection:    d.isConnection,
-		inMetric: MetricValue{
-			deltaPackets: d.IngressRuleTrace.pktsCtr.Delta(),
-			deltaBytes:   d.IngressRuleTrace.bytesCtr.Delta(),
+	metricUpdate := metric.Update{
+		UpdateType:      ut,
+		Tuple:           d.Tuple,
+		NatOutgoingPort: d.NatOutgoingPort,
+		SrcEp:           d.SrcEp,
+		DstEp:           d.DstEp,
+		DstService:      metricDstServiceInfo,
+		RuleIDs:         d.IngressRuleTrace.Path(),
+		HasDenyRule:     d.IngressRuleTrace.HasDenyRule(),
+		IsConnection:    d.IsConnection,
+		InMetric: metric.Value{
+			DeltaPackets: d.IngressRuleTrace.pktsCtr.Delta(),
+			DeltaBytes:   d.IngressRuleTrace.bytesCtr.Delta(),
 		},
-		processName: d.DestProcessData().Name,
-		processID:   d.DestProcessData().Pid,
-		processArgs: d.DestProcessData().Arguments,
+		ProcessName: d.DestProcessData().Name,
+		ProcessID:   d.DestProcessData().Pid,
+		ProcessArgs: d.DestProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
-		metricUpdate.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
-		metricUpdate.smoothRtt = &d.TcpStats.smoothRtt
-		metricUpdate.minRtt = &d.TcpStats.minRtt
-		metricUpdate.mss = &d.TcpStats.mss
-		metricUpdate.tcpMetric = TCPMetricValue{
-			deltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
-			deltaLostOut:        d.TcpStats.lostOut.Delta(),
-			deltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
+		metricUpdate.SendCongestionWnd = &d.TcpStats.sendCongestionWnd
+		metricUpdate.SmoothRtt = &d.TcpStats.smoothRtt
+		metricUpdate.MinRtt = &d.TcpStats.minRtt
+		metricUpdate.Mss = &d.TcpStats.mss
+		metricUpdate.TcpMetric = metric.TCPValue{
+			DeltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
+			DeltaLostOut:        d.TcpStats.lostOut.Delta(),
+			DeltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
 		}
 	}
 	return metricUpdate
@@ -956,40 +862,40 @@ func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 }
 
 // metricUpdateEgressNoConn creates a metric update for Outbound non-connection traffic
-func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
-	metricDstServiceInfo := MetricServiceInfo{
-		d.dstSvc,
-		d.preDNATPort,
+func (d *Data) MetricUpdateEgressNoConn(ut metric.UpdateType) metric.Update {
+	metricDstServiceInfo := metric.ServiceInfo{
+		d.DstSvc,
+		d.PreDNATPort,
 	}
 
-	metricUpdate := MetricUpdate{
-		updateType:      ut,
-		tuple:           d.Tuple,
-		natOutgoingPort: d.natOutgoingPort,
-		srcEp:           d.srcEp,
-		dstEp:           d.dstEp,
-		dstService:      metricDstServiceInfo,
-		dstDomains:      d.destDomains,
-		ruleIDs:         d.EgressRuleTrace.Path(),
-		hasDenyRule:     d.EgressRuleTrace.HasDenyRule(),
-		isConnection:    d.isConnection,
-		outMetric: MetricValue{
-			deltaPackets: d.EgressRuleTrace.pktsCtr.Delta(),
-			deltaBytes:   d.EgressRuleTrace.bytesCtr.Delta(),
+	metricUpdate := metric.Update{
+		UpdateType:      ut,
+		Tuple:           d.Tuple,
+		NatOutgoingPort: d.NatOutgoingPort,
+		SrcEp:           d.SrcEp,
+		DstEp:           d.DstEp,
+		DstService:      metricDstServiceInfo,
+		DstDomains:      d.DestDomains,
+		RuleIDs:         d.EgressRuleTrace.Path(),
+		HasDenyRule:     d.EgressRuleTrace.HasDenyRule(),
+		IsConnection:    d.IsConnection,
+		OutMetric: metric.Value{
+			DeltaPackets: d.EgressRuleTrace.pktsCtr.Delta(),
+			DeltaBytes:   d.EgressRuleTrace.bytesCtr.Delta(),
 		},
-		processName: d.SourceProcessData().Name,
-		processID:   d.SourceProcessData().Pid,
-		processArgs: d.SourceProcessData().Arguments,
+		ProcessName: d.SourceProcessData().Name,
+		ProcessID:   d.SourceProcessData().Pid,
+		ProcessArgs: d.SourceProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
-		metricUpdate.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
-		metricUpdate.smoothRtt = &d.TcpStats.smoothRtt
-		metricUpdate.minRtt = &d.TcpStats.minRtt
-		metricUpdate.mss = &d.TcpStats.mss
-		metricUpdate.tcpMetric = TCPMetricValue{
-			deltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
-			deltaLostOut:        d.TcpStats.lostOut.Delta(),
-			deltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
+		metricUpdate.SendCongestionWnd = &d.TcpStats.sendCongestionWnd
+		metricUpdate.SmoothRtt = &d.TcpStats.smoothRtt
+		metricUpdate.MinRtt = &d.TcpStats.minRtt
+		metricUpdate.Mss = &d.TcpStats.mss
+		metricUpdate.TcpMetric = metric.TCPValue{
+			DeltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
+			DeltaLostOut:        d.TcpStats.lostOut.Delta(),
+			DeltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
 		}
 	}
 	return metricUpdate
@@ -997,7 +903,7 @@ func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
 }
 
 // metricUpdateOrigSourceIPs creates a metric update for HTTP Data (original source ips).
-func (d *Data) metricUpdateOrigSourceIPs(ut UpdateType) MetricUpdate {
+func (d *Data) MetricUpdateOrigSourceIPs(ut metric.UpdateType) metric.Update {
 	// We send Original Source IP updates as standalone metric updates.
 	// If however we can't find out the rule trace then we also include
 	// an unknown rule ID that the rest of the  metric pipeline uses to
@@ -1007,36 +913,36 @@ func (d *Data) metricUpdateOrigSourceIPs(ut UpdateType) MetricUpdate {
 		unknownRuleID = calc.NewRuleID(calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.RuleIDIndexUnknown, rules.RuleDirIngress, rules.RuleActionAllow)
 	}
 
-	metricDstServiceInfo := MetricServiceInfo{
-		d.dstSvc,
-		d.preDNATPort,
+	metricDstServiceInfo := metric.ServiceInfo{
+		d.DstSvc,
+		d.PreDNATPort,
 	}
 
-	mu := MetricUpdate{
-		updateType:      ut,
-		tuple:           d.Tuple,
-		natOutgoingPort: d.natOutgoingPort,
-		srcEp:           d.srcEp,
-		dstEp:           d.dstEp,
-		dstService:      metricDstServiceInfo,
-		origSourceIPs:   d.origSourceIPs.Copy(),
-		ruleIDs:         d.IngressRuleTrace.Path(),
-		hasDenyRule:     d.IngressRuleTrace.HasDenyRule(),
-		unknownRuleID:   unknownRuleID,
-		isConnection:    d.isConnection,
-		processName:     d.DestProcessData().Name,
-		processID:       d.DestProcessData().Pid,
-		processArgs:     d.DestProcessData().Arguments,
+	mu := metric.Update{
+		UpdateType:      ut,
+		Tuple:           d.Tuple,
+		NatOutgoingPort: d.NatOutgoingPort,
+		SrcEp:           d.SrcEp,
+		DstEp:           d.DstEp,
+		DstService:      metricDstServiceInfo,
+		OrigSourceIPs:   d.origSourceIPs.Copy(),
+		RuleIDs:         d.IngressRuleTrace.Path(),
+		HasDenyRule:     d.IngressRuleTrace.HasDenyRule(),
+		UnknownRuleID:   unknownRuleID,
+		IsConnection:    d.IsConnection,
+		ProcessName:     d.DestProcessData().Name,
+		ProcessID:       d.DestProcessData().Pid,
+		ProcessArgs:     d.DestProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
-		mu.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
-		mu.smoothRtt = &d.TcpStats.smoothRtt
-		mu.minRtt = &d.TcpStats.minRtt
-		mu.mss = &d.TcpStats.mss
-		mu.tcpMetric = TCPMetricValue{
-			deltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
-			deltaLostOut:        d.TcpStats.lostOut.Delta(),
-			deltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
+		mu.SendCongestionWnd = &d.TcpStats.sendCongestionWnd
+		mu.SmoothRtt = &d.TcpStats.smoothRtt
+		mu.MinRtt = &d.TcpStats.minRtt
+		mu.Mss = &d.TcpStats.mss
+		mu.TcpMetric = metric.TCPValue{
+			DeltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
+			DeltaLostOut:        d.TcpStats.lostOut.Delta(),
+			DeltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
 		}
 	}
 	d.origSourceIPs.Reset()
@@ -1052,23 +958,4 @@ func (d *Data) SetTcpSocketStats(tcpStats TcpStatsData) {
 	d.TcpStats.dirty = true
 	d.setDirtyFlag()
 	d.touch()
-}
-
-// endpointName is a convenience function to return a printable name for an endpoint.
-func endpointName(key model.Key) (name string) {
-	switch k := key.(type) {
-	case model.WorkloadEndpointKey:
-		name = workloadEndpointName(k)
-	case model.HostEndpointKey:
-		name = hostEndpointName(k)
-	}
-	return
-}
-
-func workloadEndpointName(wep model.WorkloadEndpointKey) string {
-	return "WEP(" + wep.Hostname + "/" + wep.OrchestratorID + "/" + wep.WorkloadID + "/" + wep.EndpointID + ")"
-}
-
-func hostEndpointName(hep model.HostEndpointKey) string {
-	return "HEP(" + hep.Hostname + "/" + hep.EndpointID + ")"
 }

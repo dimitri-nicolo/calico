@@ -73,6 +73,7 @@
         "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
         "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR src_namespace = \"default\"",
         "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\"",
+        "alerts": "dest_namespace = \"default\" OR source_namespace = \"default\"",
         "packet_capture": "all()"
       }
     },
@@ -163,6 +164,7 @@
         "l3_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\"",
         "l7_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR src_namespace = \"tigera-manager\"",
         "dns_logs": "\"servers.namespace\" = \"tigera-manager\" OR client_namespace = \"tigera-manager\"",
+        "alerts": "dest_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\"",
         "packet_capture": "all()"
       }
     }
@@ -225,7 +227,8 @@
       "selectors": {
         "l3_flows": "(dest_namespace = \"default\" OR dest_service_namespace = \"default\") AND source_namespace = \"tigera-manager\"",
         "l7_flows": "(dest_namespace = \"default\" OR dest_service_namespace = \"default\") AND src_namespace = \"tigera-manager\"",
-        "dns_logs": "\"servers.namespace\" = \"default\" AND client_namespace = \"tigera-manager\""
+        "dns_logs": "\"servers.namespace\" = \"default\" AND client_namespace = \"tigera-manager\"",
+        "alerts": "dest_namespace = \"default\" AND source_namespace = \"tigera-manager\""
       },
       "service_ports": [
         {
@@ -251,9 +254,11 @@
       }
     }
   ],
+  "truncated": false,
   "selectors": {
     "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
     "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR src_namespace = \"default\"",
-    "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\""
+    "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\"",
+    "alerts": "source_namespace = \"default\" OR source_namespace = \"tigera-manager\""
   }
 }

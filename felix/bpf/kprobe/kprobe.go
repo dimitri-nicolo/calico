@@ -120,7 +120,12 @@ func (k *bpfKprobe) installKprobe(typ string, fns []string) error {
 	k.objMap[typ] = obj
 	baseDir := "/sys/fs/bpf/tc/globals"
 	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
-		pinPath := path.Join(baseDir, m.Name())
+		mapName := m.Name()
+		if strings.HasPrefix(mapName, ".rodata") {
+			continue
+		}
+
+		pinPath := path.Join(baseDir, mapName)
 		perr := m.SetPinPath(pinPath)
 		if perr != nil {
 			return fmt.Errorf("error pinning map %v errno %v", m.Name(), perr)

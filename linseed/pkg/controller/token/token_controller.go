@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
@@ -125,6 +126,20 @@ func WithReconcilePeriod(t time.Duration) ControllerOption {
 	}
 }
 
+func WithRetryPeriod(t time.Duration) ControllerOption {
+	return func(c *controller) error {
+		c.retryPeriod = &t
+		return nil
+	}
+}
+
+func WithHealthReport(reportHealth func(*health.HealthReport)) ControllerOption {
+	return func(c *controller) error {
+		c.reportHealth = reportHealth
+		return nil
+	}
+}
+
 func NewController(opts ...ControllerOption) (Controller, error) {
 	c := &controller{}
 	for _, opt := range opts {
@@ -137,6 +152,10 @@ func NewController(opts ...ControllerOption) (Controller, error) {
 	if c.reconcilePeriod == nil {
 		d := 60 * time.Minute
 		c.reconcilePeriod = &d
+	}
+	if c.retryPeriod == nil {
+		d := 30 * time.Second
+		c.retryPeriod = &d
 	}
 
 	// Verify necessary options set.
@@ -170,6 +189,8 @@ type controller struct {
 	managementClient calico.Interface
 	expiry           time.Duration
 	reconcilePeriod  *time.Duration
+	retryPeriod      *time.Duration
+	reportHealth     func(*health.HealthReport)
 	factory          k8s.ClientSetFactory
 
 	// userInfos in the managed cluster that we should provision tokens for.
@@ -261,13 +282,20 @@ func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, li
 		return nil
 	}
 
+	ticker := time.After(*c.reconcilePeriod)
+
 	// Main loop.
 	for {
 		select {
 		case <-stop:
 			return
-		case <-time.After(*c.reconcilePeriod):
+		case <-ticker:
 			logrus.Info("Reconciling all clusters tokens")
+
+			// Start a new ticker.
+			ticker = time.After(*c.reconcilePeriod)
+
+			// Get all clusters.
 			items, err := lister.List(labels.Everything())
 			if err != nil {
 				logrus.WithError(err).Error("Failed to list managed clusters")
@@ -281,13 +309,16 @@ func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, li
 					}
 				}
 			}
+			if c.reportHealth != nil {
+				c.reportHealth(&health.HealthReport{Live: true, Ready: true})
+			}
 		case name := <-kickChan:
 			if name != "" {
 				if err := reconcile(name); err != nil {
 					// Schedule a retry.
 					go func(n string, ch chan string) {
 						logrus.WithError(err).WithField("cluster", name).Info("Scheduling retry for failed sync")
-						time.Sleep(30 * time.Second)
+						time.Sleep(*c.retryPeriod)
 						ch <- n
 					}(name, kickChan)
 				}

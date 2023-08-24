@@ -122,6 +122,7 @@ func WafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 		owaspLogInfo = append(owaspLogInfo, owaspInfo)
 	}
 	var rules []log.Fields
+	var rule_info []string
 	for _, owaspInfo := range owaspLogInfo {
 		rules = append(rules, log.Fields{
 			"id":         owaspInfo.RuleId,
@@ -138,6 +139,7 @@ func WafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 			"url":     uri,
 			"message": owaspInfo.Message,
 		}).Warn(owaspInfo.String())
+		rule_info = append(rule_info, owaspInfo.String())
 	}
 
 	if rules != nil {
@@ -157,7 +159,9 @@ func WafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 				"port_num": serverPort,
 				"hostname": destinationHost,
 			},
-			"rules": rules,
+			// keeping this field only for backward compatibility
+			"rule_info": strings.Join(rule_info, "\n"),
+			"rules":     rules,
 		}).Error(
 			fmt.Sprintf("[%s] %d WAF rule(s) got hit", action, len(rules)),
 		)

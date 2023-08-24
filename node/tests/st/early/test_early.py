@@ -156,7 +156,10 @@ spec:
 
         # Now rewrite config with correct IPs.
         self.write_config(ips)
-        retry_until_success(self.early_networking_setup_done, retries=3)
+        # Allow 3s between retries, so as to allow time for 5s overall for
+        # listen port checking in the case where sv says the early BIRD started
+        # up but it didn't really.
+        retry_until_success(self.early_networking_setup_done, retries=3, wait_time=3)
 
         # Check access to the stable address from another container.
         self.access_stable_address(ips)

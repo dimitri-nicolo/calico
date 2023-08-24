@@ -98,16 +98,20 @@ func (ap *AttachPoint) loadObject(ipVer int, file string) (*libbpf.Obj, error) {
 		// In case of global variables, libbpf creates an internal map <prog_name>.rodata
 		// The values are read only for the BPF programs, but can be set to a value from
 		// userspace before the program is loaded.
+		mapName := m.Name()
 		if m.IsMapInternal() {
+			if strings.HasPrefix(mapName, ".rodata") {
+				continue
+			}
 			if err := ap.ConfigureProgram(m); err != nil {
 				return nil, fmt.Errorf("failed to configure %s: %w", file, err)
 			}
 			continue
 		}
 
-		pinDir := bpf.MapPinDir(m.Type(), m.Name(), ap.Iface, ap.Hook)
-		if err := m.SetPinPath(path.Join(pinDir, m.Name())); err != nil {
-			return nil, fmt.Errorf("error pinning map %s: %w", m.Name(), err)
+		pinDir := bpf.MapPinDir(m.Type(), mapName, ap.Iface, ap.Hook)
+		if err := m.SetPinPath(path.Join(pinDir, mapName)); err != nil {
+			return nil, fmt.Errorf("error pinning map %s: %w", mapName, err)
 		}
 	}
 
@@ -193,7 +197,11 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 
 	baseDir := "/sys/fs/bpf/tc/globals"
 	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
+		mapName := m.Name()
 		if m.IsMapInternal() {
+			if strings.HasPrefix(mapName, ".rodata") {
+				continue
+			}
 			err := ConfigureVethNS(m, nsId)
 			if err != nil {
 				return err
@@ -201,7 +209,7 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 			continue
 		}
 
-		pinPath := path.Join(baseDir, m.Name())
+		pinPath := path.Join(baseDir, mapName)
 		err := m.SetPinPath(pinPath)
 		if err != nil {
 			return fmt.Errorf("error pinning map %v errno %v", m.Name(), err)

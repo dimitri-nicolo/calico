@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package conntrack_test
 
@@ -12,6 +12,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/timeshim/mocktime"
 )
 
@@ -121,11 +122,9 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 	)
 })
 
-func makeTuple(src, dst net.IP, srcP, dstP uint16, proto uint8) collector.Tuple {
+func makeTuple(src, dst net.IP, srcP, dstP uint16, proto uint8) tuple.Tuple {
 	var s, d [16]byte
-
 	copy(s[:], src.To16())
 	copy(d[:], dst.To16())
-
-	return collector.MakeTuple(s, d, int(proto), int(srcP), int(dstP))
+	return tuple.Make(s, d, int(proto), int(srcP), int(dstP))
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/metrics"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils/cors"
 )
 
 // Option is a common format for New() options
@@ -256,6 +257,24 @@ func WithInternalMetricsEndpointEnabled(enabled bool) Option {
 			s.internalMux.Handle("/metrics", metrics.NewHandler())
 		}
 
+		return nil
+	}
+}
+
+// WithCalicoCloudCORS enables calico cloud CORS handler
+func WithCalicoCloudCORS(corsOriginRegexp *regexp.Regexp, modifyResponse cors.ModifyResponse) Option {
+	return func(s *Server) error {
+		s.corsPreflightRequestHandler = func(r *http.Request, headersOnly bool) http.HandlerFunc {
+			origin := r.Header.Get("origin")
+			if !corsOriginRegexp.MatchString(origin) {
+				return nil
+			}
+
+			return func(w http.ResponseWriter, r *http.Request) {
+				cors.HandlePreflight(origin, w, headersOnly)
+			}
+		}
+		s.modifyResponse = modifyResponse
 		return nil
 	}
 }

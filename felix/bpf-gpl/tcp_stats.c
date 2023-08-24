@@ -12,7 +12,7 @@ const volatile struct cali_stats_globals __globals;
 #include "socket_lookup.h"
 #include "skb.h"
 
-SEC("classifier/tc/calico_tcp_stats")
+SEC("tc")
 int calico_tcp_stats(struct __sk_buff *skb)
 {
 	struct cali_tc_ctx ctx = {

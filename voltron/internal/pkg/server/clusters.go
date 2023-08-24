@@ -26,6 +26,7 @@ import (
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils/cors"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
@@ -435,7 +436,7 @@ func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	proxy.ServeHTTP(w, r)
 }
 
-func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
+func (c *cluster) assignTunnel(t *tunnel.Tunnel, modifyResponse cors.ModifyResponse) error {
 	// called with RLock held
 	if err := c.tunnelManager.SetTunnel(t); err != nil {
 		return err
@@ -452,6 +453,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 			TLSClientConfig: tlsConfig,
 			AllowHTTP:       true,
 		},
+		ModifyResponse: modifyResponse,
 	}
 
 	if c.tlsProxy != nil {

@@ -7,10 +7,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	calicores "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
+	"github.com/projectcalico/calico/policy-recommendation/pkg/types"
 )
 
 type flowType string
@@ -24,18 +26,9 @@ const (
 	networkSetFlowType        flowType = "networkSetFlowType"
 	privateNetworkFlowType    flowType = "privateNetworkFlowType"
 	publicNetworkFlowType     flowType = "publicNetworkFlowType"
+	suppressedFlowType        flowType = "suppressedFlowType"
 	unsupportedFlowType       flowType = "unsupportedFlowType"
 )
-
-type EngineRules interface {
-	addFlowToEgressToDomainRules(direction calicores.DirectionType, flow api.Flow)
-	addFlowToEgressToDomainSetRules(direction calicores.DirectionType, flow api.Flow)
-	addFlowToEgressToServiceRules(direction calicores.DirectionType, flow api.Flow)
-	addFlowToNamespaceRules(direction calicores.DirectionType, flow api.Flow)
-	addFlowToNetworkSetRules(direction calicores.DirectionType, flow api.Flow)
-	addFlowToPrivateNetworkRules(direction calicores.DirectionType, flow api.Flow)
-	addFlowToPublicNetworkRules(direction calicores.DirectionType, flow api.Flow)
-}
 
 // engineRules implements the EngineRules interface. It defines the policy recommendation engine
 // rules. The following types of rules are recommended by the PRE, and apply to the following flows:
@@ -46,99 +39,33 @@ type EngineRules interface {
 // 5. Private network flows.
 // 6. Public network flows.
 type engineRules struct {
-	egressToDomainRules  map[egressToDomainRuleKey]*egressToDomainRule
-	egressToServiceRules map[egressToServiceRuleKey]*egressToServiceRule
-	namespaceRules       map[namespaceRuleKey]*namespaceRule
-	networkSetRules      map[networkSetRuleKey]*networkSetRule
-	privateNetworkRules  map[privateNetworkRuleKey]*privateNetworkRule
-	publicNetworkRules   map[publicNetworkRuleKey]*publicNetworkRule
+	egressToDomainRules  map[engineRuleKey]*types.FlowLogData
+	egressToServiceRules map[engineRuleKey]*types.FlowLogData
+	namespaceRules       map[engineRuleKey]*types.FlowLogData
+	networkSetRules      map[engineRuleKey]*types.FlowLogData
+	privateNetworkRules  map[engineRuleKey]*types.FlowLogData
+	publicNetworkRules   map[engineRuleKey]*types.FlowLogData
 
 	size int
 }
 
 func NewEngineRules() *engineRules {
 	return &engineRules{
-		egressToDomainRules:  map[egressToDomainRuleKey]*egressToDomainRule{},
-		egressToServiceRules: map[egressToServiceRuleKey]*egressToServiceRule{},
-		namespaceRules:       map[namespaceRuleKey]*namespaceRule{},
-		networkSetRules:      map[networkSetRuleKey]*networkSetRule{},
-		privateNetworkRules:  map[privateNetworkRuleKey]*privateNetworkRule{},
-		publicNetworkRules:   map[publicNetworkRuleKey]*publicNetworkRule{},
+		egressToDomainRules:  map[engineRuleKey]*types.FlowLogData{},
+		egressToServiceRules: map[engineRuleKey]*types.FlowLogData{},
+		namespaceRules:       map[engineRuleKey]*types.FlowLogData{},
+		networkSetRules:      map[engineRuleKey]*types.FlowLogData{},
+		privateNetworkRules:  map[engineRuleKey]*types.FlowLogData{},
+		publicNetworkRules:   map[engineRuleKey]*types.FlowLogData{},
 	}
 }
 
-type egressToDomainRuleKey struct {
-	protocol numorstring.Protocol
-	port     numorstring.Port
-}
-
-type egressToDomainRule struct {
-	domains   []string
+type engineRuleKey struct {
+	global    bool
+	name      string
+	namespace string
 	protocol  numorstring.Protocol
 	port      numorstring.Port
-	timestamp string
-}
-
-type egressToServiceRuleKey struct {
-	name      string
-	namespace string
-	protocol  numorstring.Protocol
-}
-
-type egressToServiceRule struct {
-	name      string
-	namespace string
-	ports     []numorstring.Port
-	protocol  numorstring.Protocol
-	timestamp string
-}
-
-type namespaceRuleKey struct {
-	namespace string
-	protocol  numorstring.Protocol
-}
-
-type namespaceRule struct {
-	namespace string
-	ports     []numorstring.Port
-	protocol  numorstring.Protocol
-	timestamp string
-}
-
-type networkSetRuleKey struct {
-	global    bool
-	name      string
-	namespace string
-	protocol  numorstring.Protocol
-}
-
-type networkSetRule struct {
-	global    bool
-	name      string
-	namespace string
-	ports     []numorstring.Port
-	protocol  numorstring.Protocol
-	timestamp string
-}
-
-type privateNetworkRuleKey struct {
-	protocol numorstring.Protocol
-}
-
-type privateNetworkRule struct {
-	protocol  numorstring.Protocol
-	ports     []numorstring.Port
-	timestamp string
-}
-
-type publicNetworkRuleKey struct {
-	protocol numorstring.Protocol
-}
-
-type publicNetworkRule struct {
-	protocol  numorstring.Protocol
-	ports     []numorstring.Port
-	timestamp string
 }
 
 // addFlowToEgressToDomainRules updates the ports if a rule already exists, otherwise defines a
@@ -185,7 +112,7 @@ func (er *engineRules) addFlowToEgressToDomainRules(direction calicores.Directio
 		}
 	}
 
-	key := egressToDomainRuleKey{
+	key := engineRuleKey{
 		protocol: *protocol,
 		port:     port,
 	}
@@ -194,10 +121,10 @@ func (er *engineRules) addFlowToEgressToDomainRules(direction calicores.Directio
 	if v, ok := er.egressToDomainRules[key]; ok {
 		for _, domain := range filteredDomains {
 			// If no new domains are added then no update to the timestamp will occur
-			if !containsDomain(v.domains, domain) {
+			if !containsDomain(v.Domains, domain) {
 				// Timestamp recorded will be that of last update.
-				v.domains = append(v.domains, domain)
-				v.timestamp = clock.NowRFC3339()
+				v.Domains = append(v.Domains, domain)
+				v.Timestamp = clock.NowRFC3339()
 			}
 		}
 
@@ -205,21 +132,22 @@ func (er *engineRules) addFlowToEgressToDomainRules(direction calicores.Directio
 	}
 
 	// The key does not exist, define a new value and add the key-value to the egressToDomain rules
-	val := egressToDomainRule{
-		protocol:  *protocol,
-		port:      port,
-		timestamp: clock.NowRFC3339(),
+	val := &types.FlowLogData{
+		Action:    getAction(false, flow),
+		Protocol:  *protocol,
+		Ports:     []numorstring.Port{port},
+		Timestamp: clock.NowRFC3339(),
 	}
-	val.domains = filteredDomains
+	val.Domains = filteredDomains
 
 	// Add the value to the map of egress to domain rules and increment the total engine rules count
-	er.egressToDomainRules[key] = &val
+	er.egressToDomainRules[key] = val
 	er.size++
 }
 
 // addFlowToEgressToServiceRules updates the ports if a rule already exists, otherwise defines a
 // new egressToDomainRule for egress flows, where the remote is to a domain.
-func (er *engineRules) addFlowToEgressToServiceRules(direction calicores.DirectionType, flow api.Flow, clock Clock) {
+func (er *engineRules) addFlowToEgressToServiceRules(direction calicores.DirectionType, flow api.Flow, pass bool, clock Clock) {
 	if direction != calicores.EgressTraffic {
 		log.WithField("flow", flow).Warn("flow cannot be processed, unsupported traffic direction")
 		return
@@ -235,7 +163,7 @@ func (er *engineRules) addFlowToEgressToServiceRules(direction calicores.Directi
 	name := flow.Destination.ServiceName
 	namespace := flow.Destination.Namespace
 
-	key := egressToServiceRuleKey{
+	key := engineRuleKey{
 		name:      name,
 		namespace: namespace,
 		protocol:  *protocol,
@@ -243,42 +171,38 @@ func (er *engineRules) addFlowToEgressToServiceRules(direction calicores.Directi
 
 	// Update the ports and return if the value already exists.
 	if v, ok := er.egressToServiceRules[key]; ok {
-		if containsPort(v.ports, port) {
+		if containsPort(v.Ports, port) {
 			// no update necessary
 			return
 		}
-		v.ports = append(v.ports, port)
-		v.timestamp = clock.NowRFC3339()
+		v.Ports = append(v.Ports, port)
+		v.Timestamp = clock.NowRFC3339()
 
 		return
 	}
 
 	// The key does not exist, define a new value and add the key-value to the egress to service rules.
 
-	val := egressToServiceRule{
-		name:      name,
-		namespace: namespace,
-		protocol:  *protocol,
-		timestamp: clock.NowRFC3339(),
+	val := &types.FlowLogData{
+		Action:    getAction(pass, flow),
+		Name:      name,
+		Namespace: namespace,
+		Protocol:  *protocol,
+		Timestamp: clock.NowRFC3339(),
 	}
-	val.ports = []numorstring.Port{port}
+	val.Ports = []numorstring.Port{port}
 
 	// Add the value to the map of egress to service rules and increment the total engine rules count.
-	er.egressToServiceRules[key] = &val
+	er.egressToServiceRules[key] = val
 	er.size++
 }
 
 // addFlowToNamespaceRules updates the ports if a rule already exists, otherwise defines a
 // new namespaceRule for flows where the remote is a pod. The rule simply selects the pod's
 // namespace.
-func (er *engineRules) addFlowToNamespaceRules(direction calicores.DirectionType, flow api.Flow, clock Clock) {
-	var endpoint *api.FlowEndpointData
-	if direction == calicores.EgressTraffic {
-		endpoint = &flow.Destination
-	} else if direction == calicores.IngressTraffic {
-		endpoint = &flow.Source
-	} else {
-		log.WithField("flow", flow).Warn("flow cannot be processed, unsupported traffic direction")
+func (er *engineRules) addFlowToNamespaceRules(direction calicores.DirectionType, flow api.Flow, pass bool, clock Clock) {
+	if ingressIntraNamespaceFlow(direction, flow) {
+		// Avoid adding duplicate rules by skipping ingress rules for intra-namespace flows
 		return
 	}
 
@@ -289,36 +213,38 @@ func (er *engineRules) addFlowToNamespaceRules(direction calicores.DirectionType
 		return
 	}
 
+	endpoint, _ := getEndpoint(direction, flow)
 	namespace := endpoint.Namespace
 
-	key := namespaceRuleKey{
+	key := engineRuleKey{
 		namespace: namespace,
 		protocol:  *protocol,
 	}
 
 	// Update the ports and return if the value already exists.
 	if v, ok := er.namespaceRules[key]; ok {
-		if containsPort(v.ports, port) {
+		if containsPort(v.Ports, port) {
 			// no update necessary
 			return
 		}
-		v.ports = append(v.ports, port)
-		v.timestamp = clock.NowRFC3339()
+		v.Ports = append(v.Ports, port)
+		v.Timestamp = clock.NowRFC3339()
 
 		return
 	}
 
 	// The key does not exist, define a new value and add the key-value to the egress to service rules.
 
-	val := namespaceRule{
-		namespace: namespace,
-		protocol:  *protocol,
-		timestamp: clock.NowRFC3339(),
+	val := &types.FlowLogData{
+		Action:    getAction(pass, flow),
+		Namespace: namespace,
+		Protocol:  *protocol,
+		Timestamp: clock.NowRFC3339(),
 	}
-	val.ports = []numorstring.Port{port}
+	val.Ports = []numorstring.Port{port}
 
 	// Add the value to the map of egress to service rules and increment the total engine rules count.
-	er.namespaceRules[key] = &val
+	er.namespaceRules[key] = val
 	er.size++
 }
 
@@ -326,14 +252,9 @@ func (er *engineRules) addFlowToNamespaceRules(direction calicores.DirectionType
 // new networkSetRule for flows where the remote is an existing NetworkSet or GlobalNetworkSet.
 // A rule will be added to select the NetworkSet by name - this ensures we don’t require label
 // schema knowledge.
-func (er *engineRules) addFlowToNetworkSetRules(direction calicores.DirectionType, flow api.Flow, clock Clock) {
-	var endpoint *api.FlowEndpointData
-	if direction == calicores.EgressTraffic {
-		endpoint = &flow.Destination
-	} else if direction == calicores.IngressTraffic {
-		endpoint = &flow.Source
-	} else {
-		log.WithField("flow", flow).Warn("flow cannot be processed, unsupported traffic direction")
+func (er *engineRules) addFlowToNetworkSetRules(direction calicores.DirectionType, flow api.Flow, pass bool, clock Clock) {
+	if ingressIntraNamespaceFlow(direction, flow) {
+		// Avoid adding duplicate rules by skipping ingress rules for intra-namespace flows
 		return
 	}
 
@@ -344,6 +265,7 @@ func (er *engineRules) addFlowToNetworkSetRules(direction calicores.DirectionTyp
 		return
 	}
 
+	endpoint, _ := getEndpoint(direction, flow)
 	name := endpoint.Name
 	namespace := endpoint.Namespace
 
@@ -352,7 +274,7 @@ func (er *engineRules) addFlowToNetworkSetRules(direction calicores.DirectionTyp
 		gl = true
 	}
 
-	key := networkSetRuleKey{
+	key := engineRuleKey{
 		global:    gl,
 		name:      name,
 		namespace: namespace,
@@ -361,29 +283,30 @@ func (er *engineRules) addFlowToNetworkSetRules(direction calicores.DirectionTyp
 
 	// Update the ports
 	if v, ok := er.networkSetRules[key]; ok {
-		if containsPort(v.ports, port) {
+		if containsPort(v.Ports, port) {
 			// port present, no update necessary
 			return
 		}
-		v.ports = append(v.ports, port)
-		v.timestamp = clock.NowRFC3339()
+		v.Ports = append(v.Ports, port)
+		v.Timestamp = clock.NowRFC3339()
 
 		return
 	}
 
 	// The key does not exist, add the new key-value rule
 
-	val := networkSetRule{
-		global:    gl,
-		name:      name,
-		namespace: namespace,
-		protocol:  *protocol,
-		timestamp: clock.NowRFC3339(),
+	val := &types.FlowLogData{
+		Action:    getAction(pass, flow),
+		Global:    gl,
+		Name:      name,
+		Namespace: namespace,
+		Protocol:  *protocol,
+		Timestamp: clock.NowRFC3339(),
 	}
-	val.ports = []numorstring.Port{port}
+	val.Ports = []numorstring.Port{port}
 
 	// Add the value to the map of egress to service rules and increment the total engine rules count.
-	er.networkSetRules[key] = &val
+	er.networkSetRules[key] = val
 	er.size++
 }
 
@@ -410,29 +333,30 @@ func (er *engineRules) addFlowToPrivateNetworkRules(direction calicores.Directio
 		return
 	}
 
-	key := privateNetworkRuleKey{
+	key := engineRuleKey{
 		protocol: *protocol,
 	}
 
 	// Update the nets, if the value already exists
 	if v, ok := er.privateNetworkRules[key]; ok {
-		if containsPort(v.ports, port) {
+		if containsPort(v.Ports, port) {
 			// no update necessary
 			return
 		}
-		v.ports = append(v.ports, port)
-		v.timestamp = clock.NowRFC3339()
+		v.Ports = append(v.Ports, port)
+		v.Timestamp = clock.NowRFC3339()
 
 		return
 	}
 
 	// The key does not exist, define a new value and add the key-value to the egress to service rules
 
-	val := &privateNetworkRule{
-		protocol:  *protocol,
-		timestamp: clock.NowRFC3339(),
+	val := &types.FlowLogData{
+		Action:    getAction(false, flow),
+		Protocol:  *protocol,
+		Timestamp: clock.NowRFC3339(),
 	}
-	val.ports = []numorstring.Port{port}
+	val.Ports = []numorstring.Port{port}
 
 	// Add the value to the map of private network rules and increment the total engine rules count
 	er.privateNetworkRules[key] = val
@@ -451,30 +375,31 @@ func (er *engineRules) addFlowToPublicNetworkRules(direction calicores.Direction
 		return
 	}
 
-	key := publicNetworkRuleKey{
+	key := engineRuleKey{
 		protocol: *protocol,
 	}
 
 	// Update the ports and return if the value already exists
 	if v, ok := er.publicNetworkRules[key]; ok {
-		if containsPort(v.ports, port) {
+		if containsPort(v.Ports, port) {
 			return
 		}
-		v.ports = append(v.ports, port)
-		v.timestamp = clock.NowRFC3339()
+		v.Ports = append(v.Ports, port)
+		v.Timestamp = clock.NowRFC3339()
 
 		return
 	}
 
 	// The key does not exist, define a new value and add the key-value to the egress to service rules
-	val := publicNetworkRule{
-		protocol:  *protocol,
-		timestamp: clock.NowRFC3339(),
+	val := &types.FlowLogData{
+		Action:    getAction(false, flow),
+		Protocol:  *protocol,
+		Timestamp: clock.NowRFC3339(),
 	}
-	val.ports = []numorstring.Port{port}
+	val.Ports = []numorstring.Port{port}
 
 	// Add the value to the map of egress to service rules and increment the total engine rules count
-	er.publicNetworkRules[key] = &val
+	er.publicNetworkRules[key] = val
 	er.size++
 }
 
@@ -503,56 +428,67 @@ func containsPort(arr []numorstring.Port, val numorstring.Port) bool {
 
 // getFlowType returns the engine flow type, or an error if the flow defines unsupported traffic.
 func getFlowType(direction calicores.DirectionType, flow api.Flow, serviceNameSuffix string) flowType {
-	var endpoint *api.FlowEndpointData
-	dest := false
-	if direction == calicores.EgressTraffic {
-		dest = true
-		endpoint = &flow.Destination
-	} else {
-		endpoint = &flow.Source
-	}
-
+	endpoint, dest := getEndpoint(direction, flow)
 	if endpoint.Type == api.FlowLogEndpointTypeNetworkSet {
-		// NetworkSet
 		return networkSetFlowType
 	}
 
 	if endpoint.Type == api.FlowLogEndpointTypeWEP {
 		if dest && (endpoint.Name == "-" || endpoint.Name == "") && endpoint.ServiceName != "-" && endpoint.ServiceName != "" {
-			// EgressToService. Non-pod service
+			// Non-pod service
 			return egressToServiceFlowType
 		}
 		if endpoint.Namespace != "-" && endpoint.Namespace != "" {
-			// Namespace
 			return namespaceFlowType
 		}
 	}
 
 	if endpoint.Type == api.EndpointTypeNet {
 		if dest && endpoint.Domains != "" && endpoint.Domains != "-" {
-			if !shouldSuppressDomains(endpoint.Domains, serviceNameSuffix) {
-				// EgressToDomain
-				return egressToDomainFlowType
+			if localDomains(endpoint.Domains, serviceNameSuffix) {
+				return suppressedFlowType
 			}
-			return unsupportedFlowType
+			return egressToDomainFlowType
 		}
 		if dest && endpoint.ServiceName != "-" && endpoint.ServiceName != "" {
-			// EgressToService (Non-namespaced)
 			return egressToServiceFlowType
 		}
 		name := endpoint.Name
 		switch name {
 		case api.FlowLogNetworkPrivate:
-			// Private
 			return privateNetworkFlowType
 		default:
-			// Public
 			return publicNetworkFlowType
 		}
 	}
 
 	log.Warnf("Unsupported flow type: %s", endpoint.Type)
 	return unsupportedFlowType
+}
+
+func getEndpoint(dir calicores.DirectionType, flow api.Flow) (*api.FlowEndpointData, bool) {
+	var endpoint *api.FlowEndpointData
+	dest := false
+	if dir == calicores.EgressTraffic {
+		dest = true
+		endpoint = &flow.Destination
+	} else {
+		endpoint = &flow.Source
+	}
+
+	return endpoint, dest
+}
+
+// getAction returns a PASS action if intra-namespace traffic should be passed to the next tier.
+// Otherwise, returns ALLOW.
+func getAction(pass bool, flow api.Flow) v3.Action {
+	srcNamespace := flow.Source.Namespace
+	destNamespace := flow.Destination.Namespace
+	if pass && (srcNamespace != "" && destNamespace != "") && (srcNamespace == destNamespace) {
+		return v3.Pass
+	}
+
+	return v3.Allow
 }
 
 // getPortAndProtocol returns the port and protocol as numborstring types. The port is
@@ -578,9 +514,9 @@ func parseDomains(domainsAsStr string) []string {
 	return domains
 }
 
-// shouldSuppressDomains returns true if every domain in the list contains a local service name
+// localDomains returns true if every domain in the list contains a local service name
 // suffix.
-func shouldSuppressDomains(domains, serviceNameSuffix string) bool {
+func localDomains(domains, serviceNameSuffix string) bool {
 	unfiltered := strings.Split(domains, ",")
 	filtered := []string{}
 	for _, domain := range unfiltered {
@@ -590,4 +526,15 @@ func shouldSuppressDomains(domains, serviceNameSuffix string) bool {
 	}
 
 	return len(filtered) == 0
+}
+
+// ingressIntraNamespaceFlow returns false if the flow is intra-namespace.
+func ingressIntraNamespaceFlow(direction calicores.DirectionType, flow api.Flow) bool {
+	srcNamespace := flow.Source.Namespace
+	destNamespace := flow.Destination.Namespace
+	if direction == calicores.IngressTraffic && (srcNamespace != "" && destNamespace != "") && (srcNamespace == destNamespace) {
+		return true
+	}
+
+	return false
 }

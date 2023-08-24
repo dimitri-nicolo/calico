@@ -35,6 +35,7 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/metrics"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils/cors"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
@@ -122,6 +123,9 @@ type Server struct {
 	checkManagedClusterAuthorizer auth.RBACAuthorizer
 
 	accessLogger *accesslog.Logger
+
+	modifyResponse              cors.ModifyResponse
+	corsPreflightRequestHandler cors.PreflightRequestHandler
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
@@ -343,7 +347,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 				log.Infof("Cluster %s stored fingerprint is successfully updated", clusterID)
 			}
 
-			if err := c.assignTunnel(t); err != nil {
+			if err := c.assignTunnel(t, s.modifyResponse); err != nil {
 				if err == tunnelmgr.ErrTunnelSet {
 					log.Errorf("opening a second tunnel ID %s rejected", clusterID)
 				} else {
@@ -433,8 +437,17 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	isK8sRequest := requestPathMatches(r, s.kubernetesAPITargets)
 	shouldUseTunnel := requestPathMatches(r, s.tunnelTargetWhitelist) && hasClusterHeader
 
+	// call handler before authentication because the fetch standard
+	// explicitly excludes credentials for cors preflight requests
+	if s.corsPreflightRequestHandler != nil && r.Method == http.MethodOptions {
+		if serveHTTP := s.corsPreflightRequestHandler(r, false); serveHTTP != nil {
+			serveHTTP(w, r)
+			return
+		}
+	}
+
 	if requestTargetPathMatches(r, s.defaultProxy, s.unauthenticatedTargetPaths) {
-		// This reque	st is to a target that can be unauthenticated
+		// This request is to a target that can be unauthenticated
 		s.defaultProxy.ServeHTTP(w, r)
 		return
 	}
@@ -482,6 +495,11 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		msg := fmt.Sprintf("Unknown target cluster %q", clusterID)
 		log.Errorf("clusterMuxer: %s", msg)
+		if s.corsPreflightRequestHandler != nil {
+			if serveHTTP := s.corsPreflightRequestHandler(r, true); serveHTTP != nil {
+				serveHTTP(w, r)
+			}
+		}
 		writeHTTPError(w, clusterNotFoundError(clusterID))
 		return
 	}

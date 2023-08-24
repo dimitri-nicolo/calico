@@ -987,20 +987,6 @@ func (s *serviceGraphConstructionData) overlayEvents() {
 			}
 		}
 	}
-
-	// Update the alert selector constructor for each node.
-	for _, node := range s.nodesMap {
-		// Alerts are indexed by ID which is not source or dest based, so handle these explicitly here.
-		var ids []string
-		for event := range node.graphNode.Events {
-			if event.ID != "" {
-				ids = append(ids, event.ID)
-			}
-		}
-		// Set the same selector for both source and dest.
-		node.selectors.Source.Alerts = NewGraphSelectorConstructor(v1.OpIn, "_id", ids)
-		node.selectors.Dest.Alerts = NewGraphSelectorConstructor(v1.OpIn, "_id", ids)
-	}
 }
 
 // overlayDNS iterates through all the DNS logs and overlays them on the existing graph nodes. The stats are added

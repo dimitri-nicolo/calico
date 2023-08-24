@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 
 package collector_test
 
@@ -10,6 +10,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/rules"
 )
 
@@ -130,31 +131,31 @@ var (
 )
 
 var _ = Describe("Tuple", func() {
-	var tuple *collector.Tuple
+	var t *tuple.Tuple
 	Describe("Parse Ipv4 Tuple", func() {
 		BeforeEach(func() {
 			var src, dst [16]byte
 			copy(src[:], net.ParseIP("127.0.0.1").To16())
 			copy(dst[:], net.ParseIP("127.1.1.1").To16())
-			tuple = collector.NewTuple(src, dst, 6, 12345, 80)
+			t = tuple.New(src, dst, 6, 12345, 80)
 		})
 		It("should parse correctly", func() {
-			Expect(tuple.SourceNet().String()).To(Equal("127.0.0.1"))
-			Expect(tuple.DestNet().String()).To(Equal("127.1.1.1"))
+			Expect(t.SourceNet().String()).To(Equal("127.0.0.1"))
+			Expect(t.DestNet().String()).To(Equal("127.1.1.1"))
 		})
 	})
 })
 
 var _ = Describe("Rule Trace", func() {
 	var data *collector.Data
-	var tuple *collector.Tuple
+	var t *tuple.Tuple
 
 	BeforeEach(func() {
 		var src, dst [16]byte
 		copy(src[:], net.ParseIP("127.0.0.1").To16())
 		copy(dst[:], net.ParseIP("127.1.1.1").To16())
-		tuple = collector.NewTuple(src, dst, 6, 12345, 80)
-		data = collector.NewData(*tuple, nil, nil, testMaxBoundedSetSize)
+		t = tuple.New(src, dst, 6, 12345, 80)
+		data = collector.NewData(*t, nil, nil, testMaxBoundedSetSize)
 	})
 
 	Describe("Data with no ingress or egress rule trace ", func() {

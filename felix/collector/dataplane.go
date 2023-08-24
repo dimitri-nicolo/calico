@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/collector/types"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/rules"
 )
 
@@ -19,8 +21,8 @@ type RuleHit struct {
 
 // PacketInfo is information about a packet we received from the dataplane
 type PacketInfo struct {
-	Tuple        Tuple
-	PreDNATTuple Tuple
+	Tuple        tuple.Tuple
+	PreDNATTuple tuple.Tuple
 	IsDNAT       bool
 	Direction    rules.RuleDir
 	RuleHits     []RuleHit
@@ -50,8 +52,8 @@ func (c ConntrackCounters) String() string {
 
 // ConntrackInfo is information about a connection from the dataplane.
 type ConntrackInfo struct {
-	Tuple           Tuple
-	PreDNATTuple    Tuple
+	Tuple           tuple.Tuple
+	PreDNATTuple    tuple.Tuple
 	NatOutgoingPort int
 	IsDNAT          bool
 	Expired         bool
@@ -97,8 +99,8 @@ type ProcessData struct {
 // sense for Windows?
 // ProcessInfo is process information about a packet we received from BPF kprobes.
 type ProcessInfo struct {
-	Tuple        Tuple
-	PreDNATTuple Tuple
+	Tuple        tuple.Tuple
+	PreDNATTuple tuple.Tuple
 	IsDNAT       bool
 
 	ProcessData
@@ -109,8 +111,8 @@ type ProcessInfo struct {
 type ProcessInfoCache interface {
 	Start() error
 	Stop()
-	Lookup(Tuple, TrafficDirection) (ProcessInfo, bool)
-	Update(Tuple, bool)
+	Lookup(tuple.Tuple, types.TrafficDirection) (ProcessInfo, bool)
+	Update(tuple.Tuple, bool)
 }
 
 // EgressDomainCache interface used to perform reverse DNS queries.

@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils/cors"
 )
 
 // Target is the format for env variable to set proxy targets
@@ -58,7 +59,7 @@ func (b *strAsByteSlice) UnmarshalJSON(j []byte) error {
 }
 
 // ProxyTargets decodes Targets into []proxy.Target
-func ProxyTargets(tgts Targets, fipsModeEnabled bool) ([]proxy.Target, error) {
+func ProxyTargets(tgts Targets, fipsModeEnabled bool, modifyResponse cors.ModifyResponse) ([]proxy.Target, error) {
 	var ret []proxy.Target
 
 	// pathSet helps keep track of the paths we've seen so we don't have duplicates
@@ -118,6 +119,7 @@ func ProxyTargets(tgts Targets, fipsModeEnabled bool) ([]proxy.Target, error) {
 			pt.PathRegexp = r
 		}
 		pt.FIPSModeEnabled = fipsModeEnabled
+		pt.ModifyResponse = modifyResponse
 
 		pt.PathReplace = t.PathReplace
 

@@ -4,6 +4,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -76,7 +77,32 @@ func NewDikastesServer(opts ...DikastesServerOptions) *Dikastes {
 	return s
 }
 
-func (s *Dikastes) Serve(ctx context.Context) {
+func ensureSocketFileNone(filePath string) error {
+	_, err := os.Stat(filePath)
+	if !os.IsNotExist(err) {
+		// file exists, try to delete it.
+		if err := os.Remove(filePath); err != nil {
+			return fmt.Errorf("unable to remove socket file: %w", err)
+		}
+	}
+	return nil
+}
+
+func ensureSocketFileAccessible(filePath string) error {
+	// anyone on system can connect.
+	if err := os.Chmod(filePath, 0777); err != nil {
+		return fmt.Errorf("unable to set write permission on socket: %w", err)
+	}
+	return nil
+}
+
+func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
+	if s.listenNetwork == "unix" {
+		if err := ensureSocketFileNone(s.listenAddress); err != nil {
+			log.Fatal("could not start listener: ", err)
+		}
+	}
+
 	lis, err := net.Listen(s.listenNetwork, s.listenAddress)
 	if err != nil {
 		log.Fatal("could not start listener: ", err)
@@ -84,19 +110,19 @@ func (s *Dikastes) Serve(ctx context.Context) {
 	}
 	defer lis.Close()
 
-	switch s.listenNetwork {
-	case "unix":
-		err = os.Chmod(s.listenAddress, 0777) // Anyone on system can connect.
-		if err != nil {
-			log.Fatal("Unable to set write permission on socket.")
+	if s.listenNetwork == "unix" {
+		if err := ensureSocketFileAccessible(s.listenAddress); err != nil {
+			log.Fatal("could not start listener: ", err)
 		}
-		defer func() {
-			log.Error(os.Remove(s.listenAddress))
-		}()
 	}
 
 	log.Infof("Dikastes listening at %s", lis.Addr())
 	s.listenAddress = lis.Addr().String()
+
+	// listen ready
+	for _, r := range readyCh {
+		r <- struct{}{}
+	}
 
 	gs := grpc.NewServer(s.grpcServerOptions...)
 
@@ -141,7 +167,7 @@ func (s *Dikastes) Serve(ctx context.Context) {
 	// Run gRPC server on separate goroutine so we catch any signals and clean up.
 	go func() {
 		if err := gs.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %v", err)
+			log.Errorf("failed to serve: %v", err)
 		}
 	}()
 	close(s.Ready)

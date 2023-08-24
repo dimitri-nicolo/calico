@@ -1,7 +1,7 @@
 //go:build fvtests
 // +build fvtests
 
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -23,7 +23,7 @@ import (
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
-	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/fv/utils"
@@ -250,7 +250,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 			// networkset2 should be allowed.  All should have policy hits from both tiers.
 			var errs []string
 			var foundDNS, foundNetset1, foundNetset2 bool
-			err := flowTester.IterFlows("file", func(flowLog collector.FlowLog) error {
+			err := flowTester.IterFlows("file", func(flowLog flowlog.FlowLog) error {
 				// Source for every log should be ep1_1.
 				if flowLog.SrcMeta.Type != "wep" || flowLog.SrcMeta.Namespace != "default" || flowLog.SrcMeta.Name != ep1_1.Name {
 					errs = append(errs, fmt.Sprintf("Unexpected source meta in flow: %#v", flowLog.SrcMeta))
@@ -387,7 +387,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 	})
 })
 
-func destDomainsToSlice(domains collector.FlowDestDomains) []string {
+func destDomainsToSlice(domains flowlog.FlowDestDomains) []string {
 	var res []string
 	for k := range domains.Domains {
 		res = append(res, k)

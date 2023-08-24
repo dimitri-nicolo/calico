@@ -25,6 +25,10 @@ promotions:
     when: "result = 'stopped'"
 # Have separate promotions for publishing images so we can re-run
 # them individually if they fail, and so we can run them in parallel.
+- name: Run Fossa scans
+  pipeline_file: license-scanning/fossa-scan.yml
+  auto_promote:
+    when: "branch =~ 'master|release-.*'"
 - name: Push apiserver images
   pipeline_file: push-images/apiserver.yml
   auto_promote:

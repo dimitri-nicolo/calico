@@ -207,6 +207,21 @@ func monitorOngoing(thisNode *ConfigNode) {
 
 	periodicCheckC := time.NewTicker(10 * time.Second).C
 	earlyBirdRunning := true
+	var (
+		earlyBirdCheckTicker  *time.Ticker
+		earlyBirdCheckC       <-chan time.Time
+		earlyBirdCheckRetries int
+	)
+	startCheckingEarlyBird := func() {
+		earlyBirdCheckTicker = time.NewTicker(300 * time.Millisecond)
+		earlyBirdCheckC = earlyBirdCheckTicker.C
+		earlyBirdCheckRetries = 10
+	}
+	stopCheckingEarlyBird := func() {
+		earlyBirdCheckTicker.Stop()
+		earlyBirdCheckC = nil
+	}
+	startCheckingEarlyBird()
 	for {
 		select {
 		case earlyBirdWanted := <-earlyBirdWantedC:
@@ -217,6 +232,7 @@ func monitorOngoing(thisNode *ConfigNode) {
 					logrus.WithError(err).Fatal("Failed sv up bird")
 				}
 				earlyBirdRunning = true
+				startCheckingEarlyBird()
 			} else if earlyBirdRunning && !earlyBirdWanted {
 				logrus.Info("Stop early BGP")
 				err := exec.Command("sv", "down", "bird").Run()
@@ -224,6 +240,29 @@ func monitorOngoing(thisNode *ConfigNode) {
 					logrus.WithError(err).Fatal("Failed sv down bird")
 				}
 				earlyBirdRunning = false
+				stopCheckingEarlyBird()
+			}
+		case <-earlyBirdCheckC:
+			if earlyBirdRunning {
+				// Early BIRD should be running.  Check that it really is.
+				if earlyBGPRunning() {
+					logrus.Info("Early BGP is really running")
+					stopCheckingEarlyBird()
+					// We're good, and don't need to keep checking until earlyBirdWanted changes.
+				} else {
+					earlyBirdCheckRetries -= 1
+					if earlyBirdCheckRetries > 0 {
+						logrus.Infof("Early BGP not really running yet (retries=%v)", earlyBirdCheckRetries)
+						// We'll check again when earlyBirdCheckC fires again.
+					} else {
+						logrus.Fatal("Early BGP failed to start running")
+						// Bail out, then the calico-node early container will retry.
+					}
+				}
+			} else {
+				logrus.Info("Early BIRD shouldn't be running, so stop checking for it")
+				stopCheckingEarlyBird()
+				// We're good, and don't need to keep checking until earlyBirdWanted changes.
 			}
 		case <-periodicCheckC:
 			// Recheck interface addresses and routes.
@@ -381,9 +420,18 @@ func writeProcSys(path, value string) error {
 	return err
 }
 
+func earlyBGPRunning() bool {
+	// 00000000:1FF3, if present, indicates a process listening on port 8179.  (8179 = 0x1FF3)
+	return tcpListenOn("00000000:1FF3", "Early BGP")
+}
+
 func normalBGPRunning() bool {
-	// /proc/net/tcp shows TCP listens and connections, and 00000000:00B3, if
-	// present, indicates a process listening on port 179.  (179 = 0xB3)
+	// 00000000:00B3, if present, indicates a process listening on port 179.  (179 = 0xB3)
+	return tcpListenOn("00000000:00B3", "Normal BGP")
+}
+
+func tcpListenOn(addrPort, description string) bool {
+	// /proc/net/tcp shows TCP listens and connections.
 	connFile, err := os.Open("/proc/net/tcp")
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to open /proc/net/tcp")
@@ -392,8 +440,8 @@ func normalBGPRunning() bool {
 
 	scanner := bufio.NewScanner(connFile)
 	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), "00000000:00B3") {
-			logrus.Debug("Normal BGP is running")
+		if strings.Contains(scanner.Text(), addrPort) {
+			logrus.Debugf("%v is running", description)
 			return true
 		}
 	}
@@ -402,6 +450,6 @@ func normalBGPRunning() bool {
 		logrus.WithError(err).Fatal("Failed to read /proc/net/tcp")
 	}
 
-	logrus.Debug("Normal BGP is not running")
+	logrus.Debugf("%v is not running", description)
 	return false
 }

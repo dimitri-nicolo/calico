@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -188,6 +189,12 @@ var _ = Describe("Service graph data tests", func() {
 		// If the test failed then write out the actual contents of the file. We can verify the data by hand and if
 		// correct rename (by removing the .actual from the name).
 		if CurrentGinkgoTestDescription().Failed && actualData != nil && actualDataFilename != "" {
+			sort.Slice(actualData.Nodes, func(i, j int) bool {
+				return actualData.Nodes[i].ID < actualData.Nodes[j].ID
+			})
+			sort.Slice(actualData.Edges, func(i, j int) bool {
+				return actualData.Edges[i].ID.String() < actualData.Edges[j].ID.String()
+			})
 			formatted, err := json.MarshalIndent(actualData, "", "  ")
 			Expect(err).NotTo(HaveOccurred())
 			err = os.WriteFile(actualDataFilename, formatted, os.ModePerm)

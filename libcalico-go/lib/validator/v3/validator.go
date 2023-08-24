@@ -1453,10 +1453,12 @@ func validateRemoteClusterConfigSpec(structLevel validator.StructLevel) {
 		emptyRCC := api.RemoteClusterConfigurationSpec{}
 		emptyRCC.ClusterAccessSecret = h.ClusterAccessSecret
 
+		// Exempt SyncOptions, as it encapsulates fields that do not relate to datastore connection.
+		emptyRCC.SyncOptions = h.SyncOptions
+
 		if !reflect.DeepEqual(h, emptyRCC) {
 			structLevel.ReportError(reflect.ValueOf(h),
-				"RemoteClusterConfigurationSpec", "", reason("When ClusterAccessSecret is set all other fields should not be set."), "")
-
+				"RemoteClusterConfigurationSpec", "", reason("When ClusterAccessSecret is set all other datastore connection fields should not be set."), "")
 		}
 		return
 	}

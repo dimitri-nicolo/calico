@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package conntrack
 
@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/timeshim"
 )
 
@@ -23,8 +24,7 @@ func init() {
 	prometheus.MustRegister(conntrackInfoReaderBlocks)
 }
 
-// InfoReader is an EntryScannerSynced that provides information to Collector as
-// collector.ConntrackInfo.
+// InfoReader is an EntryScannerSynced that provides information to Collector as ConntrackInfo.
 type InfoReader struct {
 	timeouts Timeouts
 	dsr      bool
@@ -79,13 +79,11 @@ func (r *InfoReader) Check(key Key, val Value, get EntryGet) ScanVerdict {
 	return ScanVerdictOK
 }
 
-func makeTuple(ipSrc, ipDst net.IP, portSrc, portDst uint16, proto uint8) collector.Tuple {
+func makeTuple(ipSrc, ipDst net.IP, portSrc, portDst uint16, proto uint8) tuple.Tuple {
 	var src, dst [16]byte
-
 	copy(src[:], ipSrc.To16())
 	copy(dst[:], ipDst.To16())
-
-	return collector.MakeTuple(src, dst, int(proto), int(portSrc), int(portDst))
+	return tuple.Make(src, dst, int(proto), int(portSrc), int(portDst))
 }
 
 func (r *InfoReader) makeConntrackInfo(key Key, val Value, dnat bool) collector.ConntrackInfo {

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 package metrics
 
 import (
@@ -10,7 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/fv/flowlogs"
 
 	. "github.com/onsi/gomega"
@@ -31,10 +31,10 @@ type FlowTesterDeprecated struct {
 	expectLabels   bool
 	expectPolicies bool
 	readers        []FlowLogReader
-	flowsStarted   []map[collector.FlowMeta]int
-	flowsCompleted []map[collector.FlowMeta]int
-	packets        []map[collector.FlowMeta]int
-	policies       []map[collector.FlowMeta][]string
+	flowsStarted   []map[flowlog.FlowMeta]int
+	flowsCompleted []map[flowlog.FlowMeta]int
+	packets        []map[flowlog.FlowMeta]int
+	policies       []map[flowlog.FlowMeta][]string
 
 	// Windows VXLAN can't complete a flow in time.
 	IgnoreStartCompleteCount bool
@@ -48,20 +48,20 @@ func NewFlowTesterDeprecated(readers []FlowLogReader, expectLabels, expectPolici
 		expectLabels:   expectLabels,
 		expectPolicies: expectPolicies,
 		readers:        readers,
-		flowsStarted:   make([]map[collector.FlowMeta]int, len(readers)),
-		flowsCompleted: make([]map[collector.FlowMeta]int, len(readers)),
-		packets:        make([]map[collector.FlowMeta]int, len(readers)),
-		policies:       make([]map[collector.FlowMeta][]string, len(readers)),
+		flowsStarted:   make([]map[flowlog.FlowMeta]int, len(readers)),
+		flowsCompleted: make([]map[flowlog.FlowMeta]int, len(readers)),
+		packets:        make([]map[flowlog.FlowMeta]int, len(readers)),
+		policies:       make([]map[flowlog.FlowMeta][]string, len(readers)),
 	}
 }
 
 // PopulateFromFlowLogs initializes the flow tester from the flow logs.
 func (t *FlowTesterDeprecated) PopulateFromFlowLogs(flowLogsOutput string) error {
 	for ii, f := range t.readers {
-		t.flowsStarted[ii] = make(map[collector.FlowMeta]int)
-		t.flowsCompleted[ii] = make(map[collector.FlowMeta]int)
-		t.packets[ii] = make(map[collector.FlowMeta]int)
-		t.policies[ii] = make(map[collector.FlowMeta][]string)
+		t.flowsStarted[ii] = make(map[flowlog.FlowMeta]int)
+		t.flowsCompleted[ii] = make(map[flowlog.FlowMeta]int)
+		t.packets[ii] = make(map[flowlog.FlowMeta]int)
+		t.policies[ii] = make(map[flowlog.FlowMeta][]string)
 
 		cwlogs, err := flowlogs.ReadFlowLogs(f.FlowLogDir(), flowLogsOutput)
 		if err != nil {
@@ -185,7 +185,7 @@ func (t *FlowTesterDeprecated) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc 
 		} else {
 			template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 " + t.destPortStr + " 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0 " + dstSvc + " - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
 		}
-		fl := &collector.FlowLog{}
+		fl := &flowlog.FlowLog{}
 		err := fl.Deserialize(template)
 		Expect(err).ToNot(HaveOccurred())
 		log.WithField("template", template).WithField("meta", fl.FlowMeta).Info("Looking for")
@@ -255,7 +255,7 @@ func (t *FlowTesterDeprecated) CheckAllFlowsAccountedFor() error {
 	return errors.New(strings.Join(errs, "\n==============\n"))
 }
 
-func (t *FlowTesterDeprecated) IterFlows(flowLogsOutput string, cb func(collector.FlowLog) error) error {
+func (t *FlowTesterDeprecated) IterFlows(flowLogsOutput string, cb func(flowlog.FlowLog) error) error {
 	for _, f := range t.readers {
 		flogs, err := flowlogs.ReadFlowLogs(f.FlowLogDir(), flowLogsOutput)
 		if err != nil {

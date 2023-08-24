@@ -36,7 +36,7 @@ func ProcessHttpRequest(_, _, _, _, _, _ string, _ uint32, _ string, _ uint32, _
 	return nil
 }
 
-func GetAndClearOwaspLogs(_ string) []string {
+func GetAndClearOwaspLogs(_ string) []*OwaspInfo {
 	return nil
 }
 func GetProcessHttpRequestPrefix(_ string) string {

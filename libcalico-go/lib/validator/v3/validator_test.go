@@ -2954,6 +2954,34 @@ func init() {
 			}, false,
 		),
 
+		Entry("allow valid OverlayRoutingMode",
+			api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "kubernetes",
+					SyncOptions: api.RemoteClusterSyncOptions{
+						OverlayRoutingMode: "Enabled",
+					},
+				},
+			}, true,
+		),
+
+		Entry("disallow invalid OverlayRoutingMode",
+			api.RemoteClusterConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "kubernetes",
+					SyncOptions: api.RemoteClusterSyncOptions{
+						OverlayRoutingMode: "invalid",
+					},
+				},
+			}, false,
+		),
+
 		Entry("disallow HTTP in egress rule",
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
