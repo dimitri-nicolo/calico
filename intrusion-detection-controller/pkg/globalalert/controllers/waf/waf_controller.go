@@ -33,7 +33,7 @@ func NewWafAlertController(linseedClient client.Client, clusterName string, tena
 		events:      linseedClient.Events(clusterName),
 		logsCache: WafLogsCache{
 			lastWafTimestamp: time.Unix(0, 0),
-			wafLogs:          []string{},
+			wafLogs:          []cacheInfo{},
 		},
 	}
 	return c
@@ -66,6 +66,24 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 			return
 		}
 	}
+}
+
+func (c *wafAlertController) ManageCache(ctx context.Context) {
+	timeRange := time.Now().Add(-(30 * time.Minute))
+	newCache := []cacheInfo{}
+	for i, log := range c.logsCache.wafLogs {
+		if log.timestamp.Before(timeRange){
+			// remove cache entry
+			if i > 0 {
+				newCache = append(newCache, c.logsCache.wafLogs[:i-1]...)
+			}
+			if i < (len(c.logsCache.wafLogs) - 1) {
+				newCache = append(newCache, c.logsCache.wafLogs[i+1:]...)
+			}
+		}
+	}
+
+	c.logsCache.wafLogs = newCache
 }
 
 func (c *wafAlertController) InitLogsCache(ctx context.Context) error {

@@ -2,6 +2,7 @@ package waf
 
 import (
 	"context"
+	"math/rand"
 	"time"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -15,6 +16,7 @@ import (
 
 var _ = Describe("WAF Controller", func() {
 	var (
+		ctx context.Context
 		numOfAlerts = 2
 		mockClient  = client.NewMockClient("", rest.MockResult{})
 		wafCache    = WafLogsCache{
@@ -27,6 +29,10 @@ var _ = Describe("WAF Controller", func() {
 			logsCache:   wafCache,
 		}
 	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+	})
 
 	Context("Test Waf Controller", func() {
 		It("Test Waf ProcessWAFLogs", func() {
@@ -48,7 +54,7 @@ var _ = Describe("WAF Controller", func() {
 			logs, err := wac.events.List(ctx, params)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(logs).To(Equal(numOfAlerts))
+			Expect(len(logs.Items)).To(Equal(numOfAlerts))
 
 		})
 	})
@@ -73,7 +79,7 @@ var _ = Describe("WAF Controller", func() {
 			logs, err := wac.events.List(ctx, params)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(logs).To(Equal(numOfAlerts))
+			Expect(len(logs.Items)).To(Equal(numOfAlerts))
 
 			// run the process again to make sure no new events are generated
 			err = wac.ProcessWafLogs(ctx)
@@ -84,9 +90,35 @@ var _ = Describe("WAF Controller", func() {
 			logs2, err := wac.events.List(ctx, params)
 			Expect(err).ToNot(HaveOccurred())
 			// no new Events should have been created
-			Expect(logs2).To(Equal(numOfAlerts))
+			Expect(len(logs2.Items)).To(Equal(numOfAlerts))
 
+		})
+		It("Test Waf Cache Management", func() {
+			wac.logsCache.wafLogs = genCacheInfo()
+			wac.ManageCache(ctx)
+			Expect(len(wac.logsCache.wafLogs)).To(Equal(10))
 		})
 	})
 
 })
+
+func genCacheInfo() []cacheInfo{
+	cache := []cacheInfo{}
+	for i := 1; i <= 11; i++ {
+		t := rand.Intn(25)
+		newEntry := cacheInfo{
+			timestamp: time.Now().Add(-(time.Duration(t) * time.Minute)),
+			requestID: "",
+		}
+		cache = append(cache, newEntry)
+	}
+
+	oldEntry := cacheInfo{
+		timestamp: time.Now().Add(-(31* time.Minute)),
+		requestID: "",
+	}
+
+	cache = append(cache, oldEntry)
+
+	return cache
+}

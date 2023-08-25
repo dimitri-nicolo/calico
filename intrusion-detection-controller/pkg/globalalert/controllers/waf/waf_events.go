@@ -16,13 +16,18 @@ var (
 
 type WafLogsCache struct {
 	lastWafTimestamp time.Time
-	wafLogs          []string
+	wafLogs          []cacheInfo
+}
+
+type cacheInfo struct {
+	requestID string
+	timestamp time.Time
 }
 
 // Contains checks if we've seen the waf log before
 func (c *WafLogsCache) Contains(wafLog v1.WAFLog) bool {
 	for _, wafID := range c.wafLogs {
-		if wafLog.RequestId == wafID {
+		if wafLog.RequestId == wafID.requestID {
 			return true
 		}
 	}
@@ -31,7 +36,11 @@ func (c *WafLogsCache) Contains(wafLog v1.WAFLog) bool {
 
 // Add adds the uuid requestId of the waf log
 func (c *WafLogsCache) Add(wafLog v1.WAFLog) {
-	c.wafLogs = append(c.wafLogs, wafLog.RequestId)
+	newCacheEntry := cacheInfo{
+		requestID: wafLog.RequestId,
+		timestamp: wafLog.Timestamp,
+	}
+	c.wafLogs = append(c.wafLogs, newCacheEntry)
 }
 
 func NewWafEvent(l v1.WAFLog) v1.Event {
