@@ -300,7 +300,7 @@ type FelixConfigurationSpec struct {
 
 	// IptablesMarkMask is the mask that Felix selects its IPTables Mark bits from. Should be a 32 bit hexadecimal
 	// number with at least 8 bits set, none of which clash with any other mark bits in use on the system.
-	// [Default: 0xff000000]
+	// [Default: 0xffff0000]
 	IptablesMarkMask *uint32 `json:"iptablesMarkMask,omitempty"`
 
 	DisableConntrackInvalidCheck *bool `json:"disableConntrackInvalidCheck,omitempty"`
