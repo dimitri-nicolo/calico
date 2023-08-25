@@ -126,9 +126,18 @@ func WithReconcilePeriod(t time.Duration) ControllerOption {
 	}
 }
 
-func WithRetryPeriod(t time.Duration) ControllerOption {
+// WithBaseRetryPeriod sets the base retry period for retrying failed operations.
+// The actual retry period is calculated as baseRetryPeriod * 2^retryCount.
+func WithBaseRetryPeriod(t time.Duration) ControllerOption {
 	return func(c *controller) error {
-		c.retryPeriod = &t
+		c.baseRetryPeriod = &t
+		return nil
+	}
+}
+
+func WithMaxRetries(n int) ControllerOption {
+	return func(c *controller) error {
+		c.maxRetries = &n
 		return nil
 	}
 }
@@ -153,9 +162,13 @@ func NewController(opts ...ControllerOption) (Controller, error) {
 		d := 60 * time.Minute
 		c.reconcilePeriod = &d
 	}
-	if c.retryPeriod == nil {
-		d := 30 * time.Second
-		c.retryPeriod = &d
+	if c.baseRetryPeriod == nil {
+		d := 1 * time.Second
+		c.baseRetryPeriod = &d
+	}
+	if c.maxRetries == nil {
+		n := 20
+		c.maxRetries = &n
 	}
 
 	// Verify necessary options set.
@@ -189,7 +202,8 @@ type controller struct {
 	managementClient calico.Interface
 	expiry           time.Duration
 	reconcilePeriod  *time.Duration
-	retryPeriod      *time.Duration
+	baseRetryPeriod  *time.Duration
+	maxRetries       *int
 	reportHealth     func(*health.HealthReport)
 	factory          k8s.ClientSetFactory
 
@@ -283,6 +297,7 @@ func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, li
 	}
 
 	ticker := time.After(*c.reconcilePeriod)
+	rc := NewRetryCalculator(*c.baseRetryPeriod, *c.maxRetries)
 
 	// Main loop.
 	for {
@@ -315,15 +330,72 @@ func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, li
 		case name := <-kickChan:
 			if name != "" {
 				if err := reconcile(name); err != nil {
+					// Check if we should retry this cluster.
+					retry, dur := rc.duration(name)
+					if !retry {
+						logrus.WithError(err).WithField("cluster", name).Warn("Giving up on cluster")
+						continue
+					}
+
 					// Schedule a retry.
-					go func(n string, ch chan string) {
-						logrus.WithError(err).WithField("cluster", name).Info("Scheduling retry for failed sync")
-						time.Sleep(*c.retryPeriod)
-						ch <- n
-					}(name, kickChan)
+					go func(n string, d time.Duration, ch chan string) {
+						logrus.WithError(err).WithField("wait", d).WithField("cluster", name).Info("Scheduling retry for failed sync")
+						time.Sleep(d)
+
+						// Use select to prevent accidentally sending to a closed channel if the controller initiated a shut down
+						// while this routine was sleeping.
+						select {
+						case <-stop:
+						default:
+							ch <- n
+						}
+					}(name, dur, kickChan)
 				}
 			}
 		}
+	}
+}
+
+func NewRetryCalculator(start time.Duration, maxRetries int) *retryCalculator {
+	return &retryCalculator{
+		startDuration:      start,
+		maxRetries:         maxRetries,
+		outstandingRetries: map[string]time.Duration{},
+		numRetries:         map[string]int{},
+	}
+}
+
+type retryCalculator struct {
+	startDuration      time.Duration
+	outstandingRetries map[string]time.Duration
+	numRetries         map[string]int
+	maxRetries         int
+}
+
+// duration returns the next duration to use when retrying the given key.
+// after a max number of retries, it will return (false, 0) to indicate that we should give up.
+func (r *retryCalculator) duration(key string) (bool, time.Duration) {
+	if r.numRetries[key] >= r.maxRetries {
+		// Give up.
+		delete(r.numRetries, key)
+		delete(r.outstandingRetries, key)
+		return false, 0 * time.Second
+	}
+	r.numRetries[key]++
+
+	if d, ok := r.outstandingRetries[key]; ok {
+		// Double the duration, up to a maximum of 1 minute.
+		d = d * 2
+		if d > 1*time.Minute {
+			d = 1 * time.Minute
+		}
+		r.outstandingRetries[key] = d
+		return true, d
+	} else {
+		// First time we've seen this key.
+		d = r.startDuration
+		r.outstandingRetries[key] = d
+		return true, d
 	}
 }
 
