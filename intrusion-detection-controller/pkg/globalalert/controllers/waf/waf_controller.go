@@ -51,6 +51,8 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 	}
 	// Then loop forever...
 	for {
+		c.ManageCache(ctx)
+
 		err := c.ProcessWafLogs(ctx)
 		if err != nil {
 			log.WithError(err).Error("error while processing waf logs")
@@ -71,15 +73,9 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 func (c *wafAlertController) ManageCache(ctx context.Context) {
 	timeRange := time.Now().Add(-(30 * time.Minute))
 	newCache := []cacheInfo{}
-	for i, log := range c.logsCache.wafLogs {
-		if log.timestamp.Before(timeRange){
-			// remove cache entry
-			if i > 0 {
-				newCache = append(newCache, c.logsCache.wafLogs[:i-1]...)
-			}
-			if i < (len(c.logsCache.wafLogs) - 1) {
-				newCache = append(newCache, c.logsCache.wafLogs[i+1:]...)
-			}
+	for _, log := range c.logsCache.wafLogs {
+		if !log.timestamp.Before(timeRange){
+			newCache = append(newCache, log)
 		}
 	}
 
