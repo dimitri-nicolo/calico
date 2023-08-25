@@ -71,7 +71,7 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 	log.Debug("Building Cache of existing waf Logs")
 	now := time.Now()
-	aWeekAgo := now.Add(-((time.Hour * 24) * 7))
+	aWeekAgo := now.Add(-(time.Minute * 30))
 	params := &v1.WAFLogParams{
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
