@@ -126,9 +126,11 @@ func WithReconcilePeriod(t time.Duration) ControllerOption {
 	}
 }
 
-func WithRetryPeriod(t time.Duration) ControllerOption {
+// WithBaseRetryPeriod sets the base retry period for retrying failed operations.
+// The actual retry period is calculated as baseRetryPeriod * 2^retryCount.
+func WithBaseRetryPeriod(t time.Duration) ControllerOption {
 	return func(c *controller) error {
-		c.retryPeriod = &t
+		c.baseRetryPeriod = &t
 		return nil
 	}
 }
@@ -160,9 +162,9 @@ func NewController(opts ...ControllerOption) (Controller, error) {
 		d := 60 * time.Minute
 		c.reconcilePeriod = &d
 	}
-	if c.retryPeriod == nil {
+	if c.baseRetryPeriod == nil {
 		d := 1 * time.Second
-		c.retryPeriod = &d
+		c.baseRetryPeriod = &d
 	}
 	if c.maxRetries == nil {
 		n := 20
@@ -200,7 +202,7 @@ type controller struct {
 	managementClient calico.Interface
 	expiry           time.Duration
 	reconcilePeriod  *time.Duration
-	retryPeriod      *time.Duration
+	baseRetryPeriod  *time.Duration
 	maxRetries       *int
 	reportHealth     func(*health.HealthReport)
 	factory          k8s.ClientSetFactory
@@ -295,7 +297,7 @@ func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, li
 	}
 
 	ticker := time.After(*c.reconcilePeriod)
-	rc := NewRetryCalculator(*c.retryPeriod, *c.maxRetries)
+	rc := NewRetryCalculator(*c.baseRetryPeriod, *c.maxRetries)
 
 	// Main loop.
 	for {

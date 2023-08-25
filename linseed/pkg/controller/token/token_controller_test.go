@@ -471,7 +471,7 @@ func TestMainlineFunction(t *testing.T) {
 			token.WithReconcilePeriod(1 * time.Minute),
 
 			// Set a small initial retry period so that we exaust the retries quickly.
-			token.WithRetryPeriod(1 * time.Millisecond),
+			token.WithBaseRetryPeriod(1 * time.Millisecond),
 			token.WithMaxRetries(5),
 		}
 		controller, err := token.NewController(opts...)
@@ -549,7 +549,7 @@ func TestMainlineFunction(t *testing.T) {
 
 			// Set the retry period to be smaller than either, so that we are constantly triggering
 			// the kick channel.
-			token.WithRetryPeriod(50 * time.Millisecond),
+			token.WithBaseRetryPeriod(50 * time.Millisecond),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
