@@ -105,7 +105,6 @@ clone-registrar-upstream:
 ifeq ("$(wildcard ./$(REGISTRAR_IMAGE))", "")
 	@echo "Directory does not exist."
 	git clone --depth 1 --branch $(UPSTREAM_REGISTRAR_TAG) --single-branch https://github.com/$(UPSTREAM_REGISTRAR_PROJECT).git
-	patch -d node-driver-registrar -p1 < patches/0001-Update-x-dependencies.patch
 	rm -rf node-driver-registrar/vendor
 else
 	@echo "Upstream repo already cloned."
