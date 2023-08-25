@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -421,6 +422,78 @@ func TestMainlineFunction(t *testing.T) {
 			return true
 		}
 		require.Eventually(t, secretUpdated, 5*time.Second, 50*time.Millisecond)
+	})
+
+	t.Run("should not retry indefinitely", func(t *testing.T) {
+		// If the controller fails to create a secret, it should retry a few times and then give up.
+		defer setup(t)()
+
+		// Add a managed cluster.
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		require.NoError(t, err)
+
+		// Configure the mock client to fail to create secrets, and keep track of the number of attempts.
+		mu := sync.Mutex{}
+		count := 0
+		increment := func() {
+			mu.Lock()
+			defer mu.Unlock()
+			count += 1
+		}
+		callsEqual := func(expected int) bool {
+			mu.Lock()
+			defer mu.Unlock()
+			return count == expected
+		}
+
+		mockK8sClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			increment()
+			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
+		})
+
+		// Make a new controller.
+		opts := []token.ControllerOption{
+			token.WithClient(cs),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
+			token.WithFactory(factory),
+			token.WithExpiry(30 * time.Minute),
+			token.WithReconcilePeriod(1 * time.Minute),
+
+			// Set a small initial retry period so that we exaust the retries quickly.
+			token.WithRetryPeriod(1 * time.Millisecond),
+			token.WithMaxRetries(5),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		// Set the mock client set as the return value for the factory. We have one clientset for each managed cluster.
+		factory.On("NewClientSetForApplication", mc.Name).Return(&mockClientSet, nil)
+
+		// Reconcile.
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go controller.Run(stopCh)
+
+		// We should expect 6 total attempts - 5 retries and 1 initial attempt.
+		require.Eventually(t, func() bool {
+			return callsEqual(6)
+		}, 5*time.Second, 10*time.Millisecond)
+		for i := 0; i < 5; i++ {
+			require.True(t, callsEqual(6))
+			time.Sleep(250 * time.Millisecond)
+		}
 	})
 
 	t.Run("handle simultaneous periodic and triggered reconciles", func(t *testing.T) {

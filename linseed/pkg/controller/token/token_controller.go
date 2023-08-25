@@ -133,6 +133,13 @@ func WithRetryPeriod(t time.Duration) ControllerOption {
 	}
 }
 
+func WithMaxRetries(n int) ControllerOption {
+	return func(c *controller) error {
+		c.maxRetries = &n
+		return nil
+	}
+}
+
 func WithHealthReport(reportHealth func(*health.HealthReport)) ControllerOption {
 	return func(c *controller) error {
 		c.reportHealth = reportHealth
@@ -156,6 +163,10 @@ func NewController(opts ...ControllerOption) (Controller, error) {
 	if c.retryPeriod == nil {
 		d := 1 * time.Second
 		c.retryPeriod = &d
+	}
+	if c.maxRetries == nil {
+		n := 20
+		c.maxRetries = &n
 	}
 
 	// Verify necessary options set.
@@ -190,6 +201,7 @@ type controller struct {
 	expiry           time.Duration
 	reconcilePeriod  *time.Duration
 	retryPeriod      *time.Duration
+	maxRetries       *int
 	reportHealth     func(*health.HealthReport)
 	factory          k8s.ClientSetFactory
 
@@ -283,7 +295,7 @@ func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, li
 	}
 
 	ticker := time.After(*c.reconcilePeriod)
-	rc := NewRetryCalculator(*c.retryPeriod)
+	rc := NewRetryCalculator(*c.retryPeriod, *c.maxRetries)
 
 	// Main loop.
 	for {
@@ -325,9 +337,16 @@ func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, li
 
 					// Schedule a retry.
 					go func(n string, d time.Duration, ch chan string) {
-						logrus.WithError(err).WithField("cluster", name).Info("Scheduling retry for failed sync")
+						logrus.WithError(err).WithField("wait", d).WithField("cluster", name).Info("Scheduling retry for failed sync")
 						time.Sleep(d)
-						ch <- n
+
+						// Use select to prevent accidentally sending to a closed channel if the controller initiated a shut down
+						// while this routine was sleeping.
+						select {
+						case <-stop:
+						default:
+							ch <- n
+						}
 					}(name, dur, kickChan)
 				}
 			}
@@ -335,10 +354,10 @@ func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, li
 	}
 }
 
-func NewRetryCalculator(start time.Duration) *retryCalculator {
+func NewRetryCalculator(start time.Duration, maxRetries int) *retryCalculator {
 	return &retryCalculator{
 		startDuration:      start,
-		maxRetries:         20,
+		maxRetries:         maxRetries,
 		outstandingRetries: map[string]time.Duration{},
 		numRetries:         map[string]int{},
 	}
@@ -354,7 +373,7 @@ type retryCalculator struct {
 // duration returns the next duration to use when retrying the given key.
 // after a max number of retries, it will return (false, 0) to indicate that we should give up.
 func (r *retryCalculator) duration(key string) (bool, time.Duration) {
-	if r.numRetries[key] > r.maxRetries {
+	if r.numRetries[key] >= r.maxRetries {
 		// Give up.
 		delete(r.numRetries, key)
 		delete(r.outstandingRetries, key)
