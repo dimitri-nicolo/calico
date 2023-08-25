@@ -612,16 +612,16 @@ ut-watch: $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) ginkgo watch -r -skipPackage $(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)
 
 .PHONY: bin/bpf.test
-bin/bpf.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go')
+bin/bpf.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go') mod-download
 	$(DOCKER_GO_BUILD_CGO) go test $(BUILD_FLAGS) ./bpf/ -c -o $@
 
 .PHONY: bin/bpf_ut.test
-bin/bpf_ut.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go')
+bin/bpf_ut.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go') mod-download
 	$(DOCKER_GO_BUILD_CGO) go test $(BUILD_FLAGS) ./bpf/ut -c -o $@
 
 # Build debug version of bpf.test for use with the delve debugger.
 .PHONY: bin/bpf_debug.test
-bin/bpf_debug.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go')
+bin/bpf_debug.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go') mod-download
 	$(DOCKER_GO_BUILD_CGO) go test $(BUILD_FLAGS) ./bpf/ut -c -gcflags="-N -l" -o $@
 
 .PHONY: ut-bpf
