@@ -1255,8 +1255,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 										},
 										UpdateType: api.UpdateTypeKVUpdated,
 									})
-                } else if {
-                  expectedEvents = append(expectedEvents, api.Update{
+								} else if rcc.Spec.ClusterAccessSecret == nil {
+									expectedEvents = append(expectedEvents, api.Update{
 										KVPair: model.KVPair{
 											Key: model.RemoteClusterStatusKey{Name: rccName},
 											Value: &model.RemoteClusterStatus{
@@ -1265,7 +1265,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 										},
 										UpdateType: api.UpdateTypeKVUpdated,
 									})
-                }
+								}
 								expectedEvents = append(expectedEvents, deleteEvents...)
 								syncTester.ExpectUpdates(expectedEvents, false)
 								Expect(restartCallbackCalled).To(BeFalse())
