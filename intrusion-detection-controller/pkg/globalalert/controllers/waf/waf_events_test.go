@@ -41,9 +41,9 @@ var _ = Describe("WAF new event", func() {
 				Origin:       "Web Application Firewall",
 				Time:         v1.NewEventTimestamp(wafLog.Timestamp.Unix()),
 				Name:         "WAF Event",
-				Description:  "Some traffic  your cluster triggered some Web Application Firewall rules",
+				Description:  "Some traffic inside your cluster triggered some Web Application Firewall rules",
 				Severity:     80,
-				Host:         "lorcan-bz-wodc--node-1",
+				Host:         "lorcan-bz-wodc-kadm-node-1",
 				Protocol:     "HTTP/1.1",
 				SourceIP:     &wafLog.Source.IP,
 				SourceName:   "-",
@@ -63,7 +63,7 @@ var _ = Describe("WAF new event", func() {
 	})
 
 	Context("Testing WAF Event Cache", func() {
-		It("Testing WAF Evennt Cache Add Pass", func() {
+		It("Testing WAF Event Cache Add Pass", func() {
 
 			wafCache.Add(wafLog)
 

@@ -16,7 +16,7 @@ import (
 
 var _ = Describe("WAF Controller", func() {
 	var (
-		ctx context.Context
+		ctx         context.Context
 		numOfAlerts = 2
 		mockClient  = client.NewMockClient("", rest.MockResult{})
 		wafCache    = WafLogsCache{
@@ -102,9 +102,9 @@ var _ = Describe("WAF Controller", func() {
 
 })
 
-func genCacheInfo() []cacheInfo{
+func genCacheInfo() []cacheInfo {
 	cache := []cacheInfo{}
-	for i := 1; i <= 11; i++ {
+	for i := 1; i <= 10; i++ {
 		t := rand.Intn(25)
 		newEntry := cacheInfo{
 			timestamp: time.Now().Add(-(time.Duration(t) * time.Minute)),
@@ -114,7 +114,7 @@ func genCacheInfo() []cacheInfo{
 	}
 
 	oldEntry := cacheInfo{
-		timestamp: time.Now().Add(-(31* time.Minute)),
+		timestamp: time.Now().Add(-(40 * time.Minute)),
 		requestID: "",
 	}
 

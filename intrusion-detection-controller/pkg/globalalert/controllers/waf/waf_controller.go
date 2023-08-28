@@ -74,7 +74,7 @@ func (c *wafAlertController) ManageCache(ctx context.Context) {
 	timeRange := time.Now().Add(-(30 * time.Minute))
 	newCache := []cacheInfo{}
 	for _, log := range c.logsCache.wafLogs {
-		if !log.timestamp.Before(timeRange){
+		if !log.timestamp.Before(timeRange) {
 			newCache = append(newCache, log)
 		}
 	}
