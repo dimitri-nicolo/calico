@@ -84,12 +84,41 @@ func (c *wafAlertController) ManageCache(ctx context.Context) {
 
 func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 	log.Debug("Building Cache of existing waf Logs")
+	var oldestTimeStamp time.Time
 	now := time.Now()
-	aWeekAgo := now.Add(-(time.Minute * 30))
+	halfHourAgo := now.Add(-(time.Minute * 30))
+	eventParams := &v1.EventParams{
+		QueryParams: v1.QueryParams{
+			TimeRange: &lmav1.TimeRange{
+				From: halfHourAgo,
+				To:   now.Add(MaxTimeSkew),
+			},
+		},
+		QuerySortParams: v1.QuerySortParams{
+			Sort: []v1.SearchRequestSortBy{
+				{
+					Field:      "time",
+					Descending: true,
+				},
+			},
+		},
+	}
+
+	events, err := c.events.List(ctx, eventParams)
+	if err != nil {
+		log.WithError(err).WithField("params", eventParams).Error("error reading events logs from linseed")
+		return err
+	}
+	if len(events.Items) > 0{
+		oldestTimeStamp = events.Items[0].Time.GetTime()
+	} else {
+		oldestTimeStamp = halfHourAgo
+	}
+
 	params := &v1.WAFLogParams{
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
-				From: aWeekAgo,
+				From: oldestTimeStamp,
 				To:   now.Add(MaxTimeSkew),
 			},
 		},
