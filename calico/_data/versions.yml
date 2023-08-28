@@ -169,7 +169,7 @@
       image: tigera/eck-operator
       version: master
     coreos-alertmanager:
-      version: v0.25.0
+      version: v0.25.1
     alertmanager:
       image: tigera/alertmanager
       version: master
