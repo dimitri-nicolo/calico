@@ -109,7 +109,7 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 		log.WithError(err).WithField("params", eventParams).Error("error reading events logs from linseed")
 		return err
 	}
-	if len(events.Items) > 0{
+	if len(events.Items) > 0 {
 		oldestTimeStamp = events.Items[0].Time.GetTime()
 	} else {
 		oldestTimeStamp = halfHourAgo
