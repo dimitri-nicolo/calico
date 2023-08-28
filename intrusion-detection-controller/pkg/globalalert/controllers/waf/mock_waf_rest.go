@@ -17,7 +17,7 @@ import (
 )
 
 var testfiles = []string{
-	"test_files/waf_log.json",
+	"testdata/waf_log.json",
 }
 
 // WAFLogs implements WAFLogsInterface.

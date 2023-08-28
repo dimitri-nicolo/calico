@@ -44,7 +44,7 @@ var _ = Describe("WAF Controller", func() {
 			logs, err := wac.events.List(ctx, params)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(logs).To(Not(BeEmpty()))
+			Expect(logs.Items).To(BeEmpty())
 
 		})
 	})

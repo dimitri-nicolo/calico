@@ -58,7 +58,7 @@ var (
 //     naming conflicts across the clusters).
 type RemoteClusterInterface interface {
 	GetCalicoAPIConfig(*apiv3.RemoteClusterConfiguration) *apiconfig.CalicoAPIConfig
-	CreateResourceTypes() []watchersyncer.ResourceType
+	CreateResourceTypes(overlayRoutingMode apiv3.OverlayRoutingMode) []watchersyncer.ResourceType
 	ConvertUpdates(clusterName string, updates []api.Update) []api.Update
 }
 
@@ -237,7 +237,7 @@ func (a *wrappedCallbacks) handleRCCUpdate(update api.Update) {
 	}
 }
 
-func (a *wrappedCallbacks) updateRCC(key model.ResourceKey, rcConfig *apiv3.RemoteClusterConfiguration, updateSrc string, log *log.Entry) {
+func (a *wrappedCallbacks) updateRCC(key model.ResourceKey, newRCC *apiv3.RemoteClusterConfiguration, updateSrc string, log *log.Entry) {
 	// Updates are only partially handled. If the remote cluster config is modified such that
 	// the validity (i.e. whether or not the remote cluster will be used in the syncer) changes
 	// then treat that as a creation or a deletion. The existence of the entry in the remotes
@@ -251,13 +251,12 @@ func (a *wrappedCallbacks) updateRCC(key model.ResourceKey, rcConfig *apiv3.Remo
 	_, existed := a.remotes[key]
 	if !existed {
 		log.Infof("Adding RCC to remotes %v", key)
-		a.remotes[key] = &RemoteSyncer{shouldBlockInsync: false, remoteClusterConfig: rcConfig}
+		a.remotes[key] = &RemoteSyncer{shouldBlockInsync: false}
 	}
 	remote := a.remotes[key]
-	remote.remoteClusterConfig = rcConfig
 
 	// If this returns nil, then this remote cluster is excluded from the syncer (i.e. it's not valid)
-	datastoreConfig, err := a.getDatastoreConfig(rcConfig)
+	datastoreConfig, err := a.getDatastoreConfig(newRCC)
 	if err != nil {
 		log.Warnf("Received %s. Unable to get datastore config: %s", updateSrc, err)
 		log.Debugf("Callback update for %s: %s", key, updateTypeToString(api.UpdateTypeKVUpdated))
@@ -293,11 +292,14 @@ func (a *wrappedCallbacks) updateRCC(key model.ResourceKey, rcConfig *apiv3.Remo
 	// Get the existing remote data for this cluster. If it is not present then add as a new RCC
 	if !existed {
 		// Treat as a new cluster.
+		remote.remoteClusterConfig = newRCC
 		log.Info("Handling modified RCC update as a new RCC")
 		a.startRemoteSyncer(key, datastoreConfig)
 		return
 	}
 	wasValid := remote.datastoreConfig != nil
+	routingModeChanged := remote.remoteClusterConfig.Spec.SyncOptions.OverlayRoutingMode != newRCC.Spec.SyncOptions.OverlayRoutingMode
+	remote.remoteClusterConfig = newRCC
 
 	if isValid && !wasValid {
 		// It is now valid, but was not previously. Treat as a new cluster.
@@ -307,7 +309,7 @@ func (a *wrappedCallbacks) updateRCC(key model.ResourceKey, rcConfig *apiv3.Remo
 		// It is now not valid, but was previously. Treat as a deleted cluster.
 		log.Infof("Handling %s as invalidating remote cluster", updateSrc)
 		a.stopRCC(key, false)
-	} else if isValid && wasValid && !reflect.DeepEqual(remote.datastoreConfig, datastoreConfig) {
+	} else if isValid && wasValid && (!reflect.DeepEqual(remote.datastoreConfig, datastoreConfig) || routingModeChanged) {
 		// It was valid before and is still valid, and the datastore config has changed. Log and send status update
 		// warn that the change requires a restart.
 		log.Warnf("Received %s. Restart process to pick up changes to the connection data.", updateSrc)
@@ -365,13 +367,6 @@ func (a *wrappedCallbacks) getDatastoreConfig(rcConfig *apiv3.RemoteClusterConfi
 	}
 
 	return a.rci.GetCalicoAPIConfig(&rcc), nil
-}
-
-func (a *wrappedCallbacks) addRCC(key model.ResourceKey, rcConfig *apiv3.RemoteClusterConfiguration) (isNew bool) {
-	_, existed := a.remotes[key]
-	log.Infof("Adding RCC by addRCC to remotes %v", key)
-	a.remotes[key] = &RemoteSyncer{shouldBlockInsync: false, remoteClusterConfig: rcConfig}
-	return !existed
 }
 
 // Create and start a watchersyncer using the config in the update.
@@ -450,7 +445,8 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Res
 
 		// Resources that are fetched from remote clusters.  We call into the RemoteClusterInterface to obtain
 		// this as it is dependent on the specific syncer.
-		remoteResources := a.rci.CreateResourceTypes()
+		overlayRoutingMode := a.remotes[key].remoteClusterConfig.Spec.SyncOptions.OverlayRoutingMode
+		remoteResources := a.rci.CreateResourceTypes(overlayRoutingMode)
 
 		remoteEndpointCallbacks := remoteEndpointCallbacks{
 			wrappedCallbacks: a.callbacks,

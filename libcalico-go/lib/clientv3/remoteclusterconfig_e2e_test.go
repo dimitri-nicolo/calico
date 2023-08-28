@@ -5,6 +5,8 @@ package clientv3_test
 import (
 	"time"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -33,6 +35,9 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 			EtcdEndpoints: "https://127.0.0.1:999",
 			EtcdUsername:  "user",
 			EtcdPassword:  "abc123"},
+		SyncOptions: apiv3.RemoteClusterSyncOptions{
+			apiv3.OverlayRoutingModeDisabled,
+		},
 	}
 	spec2 := apiv3.RemoteClusterConfigurationSpec{
 		DatastoreType: "kubernetes",
@@ -44,17 +49,26 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 			K8sAPIToken:              "abcdef123",
 			K8sInsecureSkipTLSVerify: false,
 		},
+		SyncOptions: apiv3.RemoteClusterSyncOptions{
+			OverlayRoutingMode: apiv3.OverlayRoutingModeDisabled,
+		},
 	}
+
+	var c clientv3.Interface
+	var be api.Client
+
+	BeforeEach(func() {
+		var err error
+		c, err = clientv3.New(config)
+		Expect(err).NotTo(HaveOccurred())
+
+		be, err = backend.NewClient(config)
+		Expect(err).NotTo(HaveOccurred())
+		be.Clean()
+	})
 
 	DescribeTable("RemoteClusterConfig e2e CRUD tests",
 		func(name1, name2 string, spec1, spec2 apiv3.RemoteClusterConfigurationSpec) {
-			c, err := clientv3.New(config)
-			Expect(err).NotTo(HaveOccurred())
-
-			be, err := backend.NewClient(config)
-			Expect(err).NotTo(HaveOccurred())
-			be.Clean()
-
 			By("Updating the RemoteClusterConfig before it is created")
 			_, outError := c.RemoteClusterConfigurations().Update(ctx, &apiv3.RemoteClusterConfiguration{
 				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-rcc"},
@@ -263,6 +277,54 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 		// Test 1: Pass two fully populated RemoteClusterConfigurationSpecs and expect the series of operations to succeed.
 		Entry("Two fully populated RemoteClusterConfigurationSpecs", name1, name2, spec1, spec2),
 	)
+
+	Describe("RemoteClusterConfig defaulting tests", func() {
+		It("should default to Enabled when VXLAN pool is present", func() {
+			_, err := c.IPPools().Create(ctx, &apiv3.IPPool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vxlan-pool",
+				},
+				Spec: apiv3.IPPoolSpec{
+					CIDR:      "10.0.0.0/16",
+					VXLANMode: apiv3.VXLANModeAlways,
+				},
+			}, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			specWithoutRoutingMode := spec2
+			specWithoutRoutingMode.SyncOptions.OverlayRoutingMode = ""
+			out, err := c.RemoteClusterConfigurations().Create(ctx, &apiv3.RemoteClusterConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: name2},
+				Spec:       specWithoutRoutingMode,
+			}, options.SetOptions{})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(out.Spec.SyncOptions.OverlayRoutingMode).To(Equal(apiv3.OverlayRoutingModeEnabled))
+		})
+
+		It("should default to Disabled when VXLAN pool is not present", func() {
+			_, err := c.IPPools().Create(ctx, &apiv3.IPPool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "unencapsulated-pool",
+				},
+				Spec: apiv3.IPPoolSpec{
+					CIDR:      "10.0.0.0/16",
+					VXLANMode: apiv3.VXLANModeNever,
+				},
+			}, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			specWithoutRoutingMode := spec2
+			specWithoutRoutingMode.SyncOptions.OverlayRoutingMode = ""
+			out, err := c.RemoteClusterConfigurations().Create(ctx, &apiv3.RemoteClusterConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: name2},
+				Spec:       specWithoutRoutingMode,
+			}, options.SetOptions{})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(out.Spec.SyncOptions.OverlayRoutingMode).To(Equal(apiv3.OverlayRoutingModeDisabled))
+		})
+	})
 
 	Describe("RemoteClusterConfiguration watch functionality", func() {
 		It("should handle watch events for different resource versions and event types", func() {

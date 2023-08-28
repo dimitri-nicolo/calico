@@ -224,8 +224,8 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 // Remote resource updates that Felix can NOT treat equivalently have their keys wrapped in a RemoteClusterResourceKey.
 type felixRemoteClusterProcessor struct{}
 
-func (_ felixRemoteClusterProcessor) CreateResourceTypes() []watchersyncer.ResourceType {
-	return []watchersyncer.ResourceType{
+func (_ felixRemoteClusterProcessor) CreateResourceTypes(overlayRoutingMode apiv3.OverlayRoutingMode) []watchersyncer.ResourceType {
+	resourceTypes := []watchersyncer.ResourceType{
 		{
 			ListInterface:   model.ResourceListOptions{Kind: libapiv3.KindWorkloadEndpoint},
 			UpdateProcessor: updateprocessors.NewWorkloadEndpointUpdateProcessor(),
@@ -238,26 +238,33 @@ func (_ felixRemoteClusterProcessor) CreateResourceTypes() []watchersyncer.Resou
 			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindProfile},
 			UpdateProcessor: updateprocessors.NewProfileUpdateProcessor(),
 		},
-		{
-			ListInterface: model.ResourceListOptions{Kind: libapiv3.KindNode},
-			// We set usePodCIDR to false as currently the Node object is synced purely for federated VXLAN.
-			// Host-local IPAM is not supported for VXLAN, since a tunnel IP is not allocated (see resources.K8sNodeToCalico).
-			UpdateProcessor: updateprocessors.NewFelixNodeUpdateProcessor(false),
-		},
-		// Remote IP pool updates should not utilize the same update as local, as this would remove the updates guarantee of disjoint CIDRs.
-		{
-			ListInterface: model.ResourceListOptions{Kind: apiv3.KindIPPool},
-			// Relay the full v3 Resource, we'll replace its key with a RemoteClusterResourceKey (this key requires a Resource value).
-			UpdateProcessor: nil,
-		},
-		// Remote block updates should not utilize the same update as local, as this would remove the updates guarantee of disjoint CIDRs.
-		{
-			// The Resource interface is not used for operations on the V1/backend API involving Blocks, so we will not receive a v3 Resource value.
-			ListInterface: model.BlockListOptions{},
-			// Relay the v1 resource. We'll convert it to a v3 Resource representation so that we can key it with a RemoteClusterResourceKey.
-			UpdateProcessor: nil,
-		},
 	}
+
+	if overlayRoutingMode == apiv3.OverlayRoutingModeEnabled {
+		resourceTypes = append(resourceTypes, []watchersyncer.ResourceType{
+			{
+				ListInterface: model.ResourceListOptions{Kind: libapiv3.KindNode},
+				// We set usePodCIDR to false as currently the Node object is synced purely for federated VXLAN.
+				// Host-local IPAM is not supported for VXLAN, since a tunnel IP is not allocated (see resources.K8sNodeToCalico).
+				UpdateProcessor: updateprocessors.NewFelixNodeUpdateProcessor(false),
+			},
+			// Remote IP pool updates should not utilize the same update as local, as this would remove the updates guarantee of disjoint CIDRs.
+			{
+				ListInterface: model.ResourceListOptions{Kind: apiv3.KindIPPool},
+				// Relay the full v3 Resource, we'll replace its key with a RemoteClusterResourceKey (this key requires a Resource value).
+				UpdateProcessor: nil,
+			},
+			// Remote block updates should not utilize the same update as local, as this would remove the updates guarantee of disjoint CIDRs.
+			{
+				// The Resource interface is not used for operations on the V1/backend API involving Blocks, so we will not receive a v3 Resource value.
+				ListInterface: model.BlockListOptions{},
+				// Relay the v1 resource. We'll convert it to a v3 Resource representation so that we can key it with a RemoteClusterResourceKey.
+				UpdateProcessor: nil,
+			},
+		}...)
+	}
+
+	return resourceTypes
 }
 
 func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates []api.Update) (propagatedUpdates []api.Update) {

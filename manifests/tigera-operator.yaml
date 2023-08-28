@@ -2110,7 +2110,7 @@ spec:
                 description: 'IptablesMarkMask is the mask that Felix selects its
                   IPTables Mark bits from. Should be a 32 bit hexadecimal number with
                   at least 8 bits set, none of which clash with any other mark bits
-                  in use on the system. [Default: 0xff000000]'
+                  in use on the system. [Default: 0xffff0000]'
                 format: int32
                 type: integer
               iptablesNATOutgoingInterfaceFilter:
@@ -6997,6 +6997,26 @@ spec:
                   overrides Kubeconfig. This contains the contents that would normally
                   be in the file pointed at by Kubeconfig.
                 type: string
+              syncOptions:
+                default:
+                  overlayRoutingMode: Disabled
+                description: Configuration options that do not relate to the underlying
+                  datastore connection. These fields relate to the syncing of resources
+                  once the connection is established. These fields can be set independent
+                  of the other connection-oriented fields, e.g. they can be set when
+                  ClusterAccessSecret is non-nil.
+                properties:
+                  overlayRoutingMode:
+                    default: Disabled
+                    description: 'Determines whether overlay routing will be established
+                      between federated clusters. If unspecified during create or
+                      update of RemoteClusterConfiguration, this field will default
+                      based on the encapsulation mode of the local cluster at the
+                      time of RemoteClusterConfiguration application: "Enabled" if
+                      VXLAN, "Disabled" otherwise. If upgrading from a version that
+                      predates this field, this field will default to "Disabled".'
+                    type: string
+                type: object
             type: object
         type: object
     served: true

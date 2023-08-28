@@ -349,7 +349,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 			},
 		}
 
-		setup := func(local, remote *apiconfig.CalicoAPIConfig) {
+		setup := func(local, remote *apiconfig.CalicoAPIConfig, mode apiv3.OverlayRoutingMode) {
 			localConfig = *local
 			remoteConfig = *remote
 			ctx = context.Background()
@@ -385,7 +385,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 				})
 			}
 			// Get the default entries for the remote cluster.
-			defaultCacheEntries = calculateDefaultFelixSyncerEntries(cs, remote.Spec.DatastoreType, "remote-cluster")
+			defaultCacheEntries = calculateDefaultFelixSyncerEntries(cs, remote.Spec.DatastoreType, felixSyncerRemote{name: "remote-cluster", mode: mode})
 			for _, r := range defaultCacheEntries {
 				expectedEvents = append(expectedEvents, api.Update{
 					KVPair:     r,
@@ -407,26 +407,29 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 		type invalidateFunc func()
 
 		// createRCCDirect creates an RCC with the configuration in the RCC from the remoteConfig
-		createRCCDirect := func() {
-			By("Creating direct RemoteClusterConfiguration")
-			rcc = &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: rccName}}
-			rcc.Spec.DatastoreType = string(remoteConfig.Spec.DatastoreType)
-			rcc.Spec.EtcdEndpoints = remoteConfig.Spec.EtcdEndpoints
-			rcc.Spec.EtcdUsername = remoteConfig.Spec.EtcdUsername
-			rcc.Spec.EtcdPassword = remoteConfig.Spec.EtcdPassword
-			rcc.Spec.EtcdKeyFile = remoteConfig.Spec.EtcdKeyFile
-			rcc.Spec.EtcdCertFile = remoteConfig.Spec.EtcdCertFile
-			rcc.Spec.EtcdCACertFile = remoteConfig.Spec.EtcdCACertFile
-			rcc.Spec.Kubeconfig = remoteConfig.Spec.Kubeconfig
-			rcc.Spec.K8sAPIEndpoint = remoteConfig.Spec.K8sAPIEndpoint
-			rcc.Spec.K8sKeyFile = remoteConfig.Spec.K8sKeyFile
-			rcc.Spec.K8sCertFile = remoteConfig.Spec.K8sCertFile
-			rcc.Spec.K8sCAFile = remoteConfig.Spec.K8sCAFile
-			rcc.Spec.K8sAPIToken = remoteConfig.Spec.K8sAPIToken
-			rcc.Spec.K8sInsecureSkipTLSVerify = remoteConfig.Spec.K8sInsecureSkipTLSVerify
-			rcc.Spec.KubeconfigInline = remoteConfig.Spec.KubeconfigInline
-			_, outError := localClient.RemoteClusterConfigurations().Create(ctx, rcc, options.SetOptions{})
-			Expect(outError).NotTo(HaveOccurred())
+		createRCCDirect := func(mode apiv3.OverlayRoutingMode) func() {
+			return func() {
+				By("Creating direct RemoteClusterConfiguration")
+				rcc = &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: rccName}}
+				rcc.Spec.DatastoreType = string(remoteConfig.Spec.DatastoreType)
+				rcc.Spec.EtcdEndpoints = remoteConfig.Spec.EtcdEndpoints
+				rcc.Spec.EtcdUsername = remoteConfig.Spec.EtcdUsername
+				rcc.Spec.EtcdPassword = remoteConfig.Spec.EtcdPassword
+				rcc.Spec.EtcdKeyFile = remoteConfig.Spec.EtcdKeyFile
+				rcc.Spec.EtcdCertFile = remoteConfig.Spec.EtcdCertFile
+				rcc.Spec.EtcdCACertFile = remoteConfig.Spec.EtcdCACertFile
+				rcc.Spec.Kubeconfig = remoteConfig.Spec.Kubeconfig
+				rcc.Spec.K8sAPIEndpoint = remoteConfig.Spec.K8sAPIEndpoint
+				rcc.Spec.K8sKeyFile = remoteConfig.Spec.K8sKeyFile
+				rcc.Spec.K8sCertFile = remoteConfig.Spec.K8sCertFile
+				rcc.Spec.K8sCAFile = remoteConfig.Spec.K8sCAFile
+				rcc.Spec.K8sAPIToken = remoteConfig.Spec.K8sAPIToken
+				rcc.Spec.K8sInsecureSkipTLSVerify = remoteConfig.Spec.K8sInsecureSkipTLSVerify
+				rcc.Spec.KubeconfigInline = remoteConfig.Spec.KubeconfigInline
+				rcc.Spec.SyncOptions.OverlayRoutingMode = mode
+				_, outError := localClient.RemoteClusterConfigurations().Create(ctx, rcc, options.SetOptions{})
+				Expect(outError).NotTo(HaveOccurred())
+			}
 		}
 
 		// modifyRCCDirect updates the already created RCC with a change, not creating a valid config
@@ -445,34 +448,37 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 		}
 
 		// createRCCSecret creates a secret and an RCC that references the secret, both based on the remoteConfig
-		createRCCSecret := func() {
-			By("Creating secret for the RemoteClusterConfiguration")
-			_, err = k8sClientset.CoreV1().Secrets("namespace-1").Create(ctx,
-				&kapiv1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: rccSecretName, Namespace: "namespace-1"},
-					StringData: map[string]string{
-						"datastoreType": string(remoteConfig.Spec.DatastoreType),
-						"kubeconfig":    remoteConfig.Spec.KubeconfigInline,
-						"etcdEndpoints": remoteConfig.Spec.EtcdEndpoints,
-						"etcdUsername":  remoteConfig.Spec.EtcdUsername,
-						"etcdPassword":  remoteConfig.Spec.EtcdPassword,
-						"etcdKey":       remoteConfig.Spec.EtcdKey,
-						"etcdCert":      remoteConfig.Spec.EtcdCert,
-						"etcdCACert":    remoteConfig.Spec.EtcdCACert,
+		createRCCSecret := func(mode apiv3.OverlayRoutingMode) func() {
+			return func() {
+				By("Creating secret for the RemoteClusterConfiguration")
+				_, err = k8sClientset.CoreV1().Secrets("namespace-1").Create(ctx,
+					&kapiv1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: rccSecretName, Namespace: "namespace-1"},
+						StringData: map[string]string{
+							"datastoreType": string(remoteConfig.Spec.DatastoreType),
+							"kubeconfig":    remoteConfig.Spec.KubeconfigInline,
+							"etcdEndpoints": remoteConfig.Spec.EtcdEndpoints,
+							"etcdUsername":  remoteConfig.Spec.EtcdUsername,
+							"etcdPassword":  remoteConfig.Spec.EtcdPassword,
+							"etcdKey":       remoteConfig.Spec.EtcdKey,
+							"etcdCert":      remoteConfig.Spec.EtcdCert,
+							"etcdCACert":    remoteConfig.Spec.EtcdCACert,
+						},
 					},
-				},
-				metav1.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
+					metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
 
-			By("Configuring the RemoteClusterConfiguration referencing secret")
-			rcc = &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: rccName}}
-			rcc.Spec.ClusterAccessSecret = &kapiv1.ObjectReference{
-				Kind:      reflect.TypeOf(kapiv1.Secret{}).String(),
-				Namespace: "namespace-1",
-				Name:      rccSecretName,
+				By("Configuring the RemoteClusterConfiguration referencing secret")
+				rcc = &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: rccName}}
+				rcc.Spec.ClusterAccessSecret = &kapiv1.ObjectReference{
+					Kind:      reflect.TypeOf(kapiv1.Secret{}).String(),
+					Namespace: "namespace-1",
+					Name:      rccSecretName,
+				}
+				rcc.Spec.SyncOptions.OverlayRoutingMode = mode
+				_, outError := localClient.RemoteClusterConfigurations().Create(ctx, rcc, options.SetOptions{})
+				Expect(outError).NotTo(HaveOccurred())
 			}
-			_, outError := localClient.RemoteClusterConfigurations().Create(ctx, rcc, options.SetOptions{})
-			Expect(outError).NotTo(HaveOccurred())
 		}
 
 		// modifyRCCSecret modifies an already created Secret that is referenced by an RCC
@@ -529,6 +535,27 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 			Expect(err).NotTo(HaveOccurred())
 			s.StringData = map[string]string{"datastoreType": "this-is-not-valid"}
 			_, err = k8sClientset.CoreV1().Secrets("namespace-1").Update(ctx, s, metav1.UpdateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		toggleOverlayMode := func() {
+			By("Toggling overlay mode on RemoteClusterConfiguration")
+			r, err := localClient.RemoteClusterConfigurations().Get(ctx, rccName, options.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			currentValue := r.Spec.SyncOptions.OverlayRoutingMode
+			if currentValue == "Enabled" {
+				r.Spec.SyncOptions.OverlayRoutingMode = "Disabled"
+			} else {
+				r.Spec.SyncOptions.OverlayRoutingMode = "Enabled"
+			}
+			_, err = localBackend.Update(ctx, &model.KVPair{
+				Key: model.ResourceKey{
+					Name: rccName,
+					Kind: apiv3.KindRemoteClusterConfiguration,
+				},
+				Value:    r,
+				Revision: r.ResourceVersion,
+			})
 			Expect(err).NotTo(HaveOccurred())
 		}
 
@@ -738,7 +765,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 			)
 		}
 
-		addPool := func() {
+		addPool := func(mode apiv3.OverlayRoutingMode) {
 			cidrString := "192.168.10.0/24"
 			_, cidrNet, err := net.ParseCIDR(cidrString)
 			Expect(err).NotTo(HaveOccurred())
@@ -753,32 +780,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 			ipPool.Spec.AllowedUses = []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel}
 			_, err = remoteClient.IPPools().Create(ctx, ipPool, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			v3Key := model.ResourceKey{
-				Name: "my-ippool",
-				Kind: apiv3.KindIPPool,
-			}
-
-			// Expect RemoteClusterResourceKey pairs.
-			expectedEvents = append(expectedEvents, api.Update{
-				KVPair: model.KVPair{
-					Key: model.RemoteClusterResourceKey{
-						ResourceKey: v3Key,
-						Cluster:     "remote-cluster",
-					},
-					Value: ipPool,
-				},
-				UpdateType: api.UpdateTypeKVNew,
-			})
-			deleteEvents = append(deleteEvents, api.Update{
-				KVPair: model.KVPair{
-					Key: model.RemoteClusterResourceKey{
-						ResourceKey: v3Key,
-						Cluster:     "remote-cluster",
-					},
-					Value: nil,
-				},
-				UpdateType: api.UpdateTypeKVDeleted,
-			})
 
 			// We only get the local event if the local config is the same datastore (which we can tell from the
 			// datastore type).
@@ -803,9 +804,37 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 					UpdateType: api.UpdateTypeKVNew,
 				})
 			}
+
+			if mode == apiv3.OverlayRoutingModeEnabled {
+				v3Key := model.ResourceKey{
+					Name: "my-ippool",
+					Kind: apiv3.KindIPPool,
+				}
+				// Expect RemoteClusterResourceKey pairs.
+				expectedEvents = append(expectedEvents, api.Update{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterResourceKey{
+							ResourceKey: v3Key,
+							Cluster:     "remote-cluster",
+						},
+						Value: ipPool,
+					},
+					UpdateType: api.UpdateTypeKVNew,
+				})
+				deleteEvents = append(deleteEvents, api.Update{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterResourceKey{
+							ResourceKey: v3Key,
+							Cluster:     "remote-cluster",
+						},
+						Value: nil,
+					},
+					UpdateType: api.UpdateTypeKVDeleted,
+				})
+			}
 		}
 
-		addBlock := func() {
+		addBlock := func(mode apiv3.OverlayRoutingMode) {
 			cidrString := "192.168.10.0/30"
 			_, cidrNet, err := net.ParseCIDR(cidrString)
 			Expect(err).NotTo(HaveOccurred())
@@ -836,48 +865,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			remoteAffinity := "host:remote-cluster/test-node"
-			ipamBlock := libapiv3.NewIPAMBlock()
-			ipamBlock.Name = "192-168-10-0-30"
-			ipamBlock.Spec.CIDR = "192.168.10.0/30"
-			ipamBlock.Spec.Affinity = &remoteAffinity
-			ipamBlock.Spec.Attributes = []libapiv3.AllocationAttribute{
-				{
-					AttrPrimary: &handle,
-					AttrSecondary: map[string]string{
-						ipam.AttributeNode: "remote-cluster/test-node",
-					},
-				},
-			}
-			ipamBlock.Spec.Allocations = []*int{&idx, nil, nil, nil}
-			ipamBlock.Spec.Unallocated = []int{1, 2, 3}
-			v3Key := model.ResourceKey{
-				Name: "192-168-10-0-30",
-				Kind: libapiv3.KindIPAMBlock,
-			}
-
-			// Expect RemoteClusterResourceKey pairs.
-			expectedEvents = append(expectedEvents, api.Update{
-				KVPair: model.KVPair{
-					Key: model.RemoteClusterResourceKey{
-						ResourceKey: v3Key,
-						Cluster:     "remote-cluster",
-					},
-					Value: ipamBlock,
-				},
-				UpdateType: api.UpdateTypeKVNew,
-			})
-			deleteEvents = append(deleteEvents, api.Update{
-				KVPair: model.KVPair{
-					Key: model.RemoteClusterResourceKey{
-						ResourceKey: v3Key,
-						Cluster:     "remote-cluster",
-					},
-					Value: nil,
-				},
-				UpdateType: api.UpdateTypeKVDeleted,
-			})
-
 			// We only get the local event if the local config is the same datastore (which we can tell from the
 			// datastore type).
 			if localConfig.Spec.DatastoreType == remoteConfig.Spec.DatastoreType {
@@ -889,9 +876,53 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 					UpdateType: api.UpdateTypeKVNew,
 				})
 			}
+
+			if mode == apiv3.OverlayRoutingModeEnabled {
+				remoteAffinity := "host:remote-cluster/test-node"
+				ipamBlock := libapiv3.NewIPAMBlock()
+				ipamBlock.Name = "192-168-10-0-30"
+				ipamBlock.Spec.CIDR = "192.168.10.0/30"
+				ipamBlock.Spec.Affinity = &remoteAffinity
+				ipamBlock.Spec.Attributes = []libapiv3.AllocationAttribute{
+					{
+						AttrPrimary: &handle,
+						AttrSecondary: map[string]string{
+							ipam.AttributeNode: "remote-cluster/test-node",
+						},
+					},
+				}
+				ipamBlock.Spec.Allocations = []*int{&idx, nil, nil, nil}
+				ipamBlock.Spec.Unallocated = []int{1, 2, 3}
+				v3Key := model.ResourceKey{
+					Name: "192-168-10-0-30",
+					Kind: libapiv3.KindIPAMBlock,
+				}
+
+				// Expect RemoteClusterResourceKey pairs.
+				expectedEvents = append(expectedEvents, api.Update{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterResourceKey{
+							ResourceKey: v3Key,
+							Cluster:     "remote-cluster",
+						},
+						Value: ipamBlock,
+					},
+					UpdateType: api.UpdateTypeKVNew,
+				})
+				deleteEvents = append(deleteEvents, api.Update{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterResourceKey{
+							ResourceKey: v3Key,
+							Cluster:     "remote-cluster",
+						},
+						Value: nil,
+					},
+					UpdateType: api.UpdateTypeKVDeleted,
+				})
+			}
 		}
 
-		addNode := func() {
+		addNode := func(mode apiv3.OverlayRoutingMode) {
 			node := libapiv3.NewNode()
 			node.Name = "test-node"
 			node.Spec.BGP = &libapiv3.NodeBGPSpec{
@@ -905,342 +936,381 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 			_, err := remoteClient.Nodes().Create(ctx, node, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			// Wireguard is expected to be stripped from the update.
-			node.Spec.Wireguard = nil
-			node.Status.WireguardPublicKey = ""
+			if mode == apiv3.OverlayRoutingModeEnabled {
+				// Wireguard is expected to be stripped from the update.
+				node.Spec.Wireguard = nil
+				node.Status.WireguardPublicKey = ""
 
-			nodeIP := net.MustParseIP("1.2.3.4")
-			expected := []api.Update{
-				{
-					KVPair: model.KVPair{
-						Key: model.HostIPKey{
-							Hostname: "remote-cluster/test-node",
+				nodeIP := net.MustParseIP("1.2.3.4")
+				expected := []api.Update{
+					{
+						KVPair: model.KVPair{
+							Key: model.HostIPKey{
+								Hostname: "remote-cluster/test-node",
+							},
+							Value: &nodeIP,
 						},
-						Value: &nodeIP,
+						UpdateType: api.UpdateTypeKVNew,
 					},
-					UpdateType: api.UpdateTypeKVNew,
-				},
-				{
-					KVPair: model.KVPair{
-						Key: model.ResourceKey{
-							Name: "remote-cluster/test-node",
-							Kind: libapiv3.KindNode,
+					{
+						KVPair: model.KVPair{
+							Key: model.ResourceKey{
+								Name: "remote-cluster/test-node",
+								Kind: libapiv3.KindNode,
+							},
+							Value: node,
 						},
-						Value: node,
+						UpdateType: api.UpdateTypeKVNew,
 					},
-					UpdateType: api.UpdateTypeKVNew,
-				},
-				// We do not expect a WireguardKey, as it should be stripped.
-				//{
-				//	KVPair: model.KVPair{
-				//		Key: model.WireguardKey{
-				//			NodeName: "remote-cluster/test-node",
-				//		},
-				//		Value: &model.Wireguard{},
-				//	},
-				//	UpdateType: api.UpdateTypeKVNew,
-				//},
-				{
-					KVPair: model.KVPair{
-						Key: model.HostConfigKey{
-							Hostname: "remote-cluster/test-node",
-							Name:     "NodeIP",
+					// We do not expect a WireguardKey, as it should be stripped.
+					//{
+					//	KVPair: model.KVPair{
+					//		Key: model.WireguardKey{
+					//			NodeName: "remote-cluster/test-node",
+					//		},
+					//		Value: &model.Wireguard{},
+					//	},
+					//	UpdateType: api.UpdateTypeKVNew,
+					//},
+					{
+						KVPair: model.KVPair{
+							Key: model.HostConfigKey{
+								Hostname: "remote-cluster/test-node",
+								Name:     "NodeIP",
+							},
+							Value: "1.2.3.4",
 						},
-						Value: "1.2.3.4",
+						UpdateType: api.UpdateTypeKVNew,
 					},
-					UpdateType: api.UpdateTypeKVNew,
-				},
-				{
-					KVPair: model.KVPair{
-						Key: model.HostConfigKey{
-							Hostname: "remote-cluster/test-node",
-							Name:     "IPv4VXLANTunnelAddr",
+					{
+						KVPair: model.KVPair{
+							Key: model.HostConfigKey{
+								Hostname: "remote-cluster/test-node",
+								Name:     "IPv4VXLANTunnelAddr",
+							},
+							Value: "192.168.56.78",
 						},
-						Value: "192.168.56.78",
+						UpdateType: api.UpdateTypeKVNew,
 					},
-					UpdateType: api.UpdateTypeKVNew,
-				},
-			}
+				}
 
-			for _, update := range expected {
-				expectedEvents = append(expectedEvents, update)
-				deleteEvents = append(deleteEvents, api.Update{
-					KVPair: model.KVPair{
-						Key:   update.Key,
-						Value: nil,
-					},
-					UpdateType: api.UpdateTypeKVDeleted,
-				})
+				for _, update := range expected {
+					expectedEvents = append(expectedEvents, update)
+					deleteEvents = append(deleteEvents, api.Update{
+						KVPair: model.KVPair{
+							Key:   update.Key,
+							Value: nil,
+						},
+						UpdateType: api.UpdateTypeKVDeleted,
+					})
+				}
 			}
 		}
 
 		type TestCfg struct {
-			name       string
-			localCfg   *apiconfig.CalicoAPIConfig
-			remoteCfg  *apiconfig.CalicoAPIConfig
-			create     createFunc
-			modify     modifyFunc
-			noop       noOpFunc
-			invalidate invalidateFunc
+			name            string
+			localCfg        *apiconfig.CalicoAPIConfig
+			remoteCfg       *apiconfig.CalicoAPIConfig
+			create          createFunc
+			modifyDatastore modifyFunc
+			modifySync      modifyFunc
+			noop            noOpFunc
+			invalidate      invalidateFunc
 		}
 
 		Context("Events handling for all datastore types", func() {
-			for _, tcLoop := range []TestCfg{
-				{
-					name:       "local K8s with remote etcd direct config",
-					localCfg:   &k8sConfig,
-					remoteCfg:  &etcdConfig,
-					create:     createRCCDirect,
-					modify:     modifyRCCDirect,
-					noop:       noOpUpdateRCCDirect,
-					invalidate: invalidateRCCDirect,
-				},
-				{
-					name:       "local K8s with remote etcd secret config",
-					localCfg:   &k8sConfig,
-					remoteCfg:  &etcdConfig,
-					create:     createRCCSecret,
-					modify:     modifyRCCSecret,
-					noop:       noOpRCCSecret,
-					invalidate: invalidateRCCSecret,
-				},
-				{
-					name:       "local K8s with remote k8s direct config",
-					localCfg:   &k8sConfig,
-					remoteCfg:  &k8sConfig,
-					create:     createRCCDirect,
-					modify:     modifyRCCDirect,
-					noop:       noOpUpdateRCCDirect,
-					invalidate: invalidateRCCDirect,
-				},
-				//remoteCfg: k8sConfig,
-				//create: createRCCSecret
-				//This combination is not possible because there is no
-				//way to provide k8s config in a secret that is not inline.
-				//way to provide k8s config in a secret that is not inline.
-				{
-					name:       "local K8s with remote k8s inline direct config",
-					localCfg:   &k8sConfig,
-					remoteCfg:  &k8sInlineConfig,
-					create:     createRCCDirect,
-					modify:     modifyRCCDirect,
-					noop:       noOpUpdateRCCDirect,
-					invalidate: invalidateRCCDirect,
-				},
-				{
-					name:       "local K8s with remote k8s inline secret config",
-					localCfg:   &k8sConfig,
-					remoteCfg:  &k8sInlineConfig,
-					create:     createRCCSecret,
-					modify:     modifyRCCSecret,
-					noop:       noOpRCCSecret,
-					invalidate: invalidateRCCSecret,
-				},
-				{
-					name:       "local etcd with remote k8s inline secret config",
-					localCfg:   &etcdConfig,
-					remoteCfg:  &k8sInlineConfig,
-					create:     createRCCSecret,
-					modify:     modifyRCCSecret,
-					noop:       noOpRCCSecret,
-					invalidate: invalidateRCCSecret,
-				},
-			} {
-				// Local variable tc to ensure it's not updated for all tests.
-				tc := tcLoop
+			for _, rmLoop := range []apiv3.OverlayRoutingMode{apiv3.OverlayRoutingModeEnabled, apiv3.OverlayRoutingModeDisabled} {
+				for _, tcLoop := range []TestCfg{
+					{
+						name:            "local K8s with remote etcd direct config",
+						localCfg:        &k8sConfig,
+						remoteCfg:       &etcdConfig,
+						create:          createRCCDirect(rmLoop),
+						modifyDatastore: modifyRCCDirect,
+						modifySync:      toggleOverlayMode,
+						noop:            noOpUpdateRCCDirect,
+						invalidate:      invalidateRCCDirect,
+					},
+					{
+						name:            "local K8s with remote etcd secret config",
+						localCfg:        &k8sConfig,
+						remoteCfg:       &etcdConfig,
+						create:          createRCCSecret(rmLoop),
+						modifyDatastore: modifyRCCSecret,
+						modifySync:      toggleOverlayMode,
+						noop:            noOpRCCSecret,
+						invalidate:      invalidateRCCSecret,
+					},
+					{
+						name:            "local K8s with remote k8s direct config",
+						localCfg:        &k8sConfig,
+						remoteCfg:       &k8sConfig,
+						create:          createRCCDirect(rmLoop),
+						modifyDatastore: modifyRCCDirect,
+						modifySync:      toggleOverlayMode,
+						noop:            noOpUpdateRCCDirect,
+						invalidate:      invalidateRCCDirect,
+					},
+					//remoteCfg: k8sConfig,
+					//create: createRCCSecret
+					//This combination is not possible because there is no
+					//way to provide k8s config in a secret that is not inline.
+					//way to provide k8s config in a secret that is not inline.
+					{
+						name:            "local K8s with remote k8s inline direct config",
+						localCfg:        &k8sConfig,
+						remoteCfg:       &k8sInlineConfig,
+						create:          createRCCDirect(rmLoop),
+						modifyDatastore: modifyRCCDirect,
+						modifySync:      toggleOverlayMode,
+						noop:            noOpUpdateRCCDirect,
+						invalidate:      invalidateRCCDirect,
+					},
+					{
+						name:            "local K8s with remote k8s inline secret config",
+						localCfg:        &k8sConfig,
+						remoteCfg:       &k8sInlineConfig,
+						create:          createRCCSecret(rmLoop),
+						modifyDatastore: modifyRCCSecret,
+						modifySync:      toggleOverlayMode,
+						noop:            noOpRCCSecret,
+						invalidate:      invalidateRCCSecret,
+					},
+					{
+						name:            "local etcd with remote k8s inline secret config",
+						localCfg:        &etcdConfig,
+						remoteCfg:       &k8sInlineConfig,
+						create:          createRCCSecret(rmLoop),
+						modifyDatastore: modifyRCCSecret,
+						modifySync:      toggleOverlayMode,
+						noop:            noOpRCCSecret,
+						invalidate:      invalidateRCCSecret,
+					},
+				} {
+					// Local variable tc to ensure it's not updated for all tests.
+					tc := tcLoop
+					rm := rmLoop
 
-				Describe("Events are received with "+tc.name, func() {
-					Context("Resources created before starting syncer", func() {
-						BeforeEach(func() {
-							setup(tc.localCfg, tc.remoteCfg)
-							tc.create()
+					Describe("Events are received with "+tc.name, func() {
+						Context("Resources created before starting syncer", func() {
+							BeforeEach(func() {
+								setup(tc.localCfg, tc.remoteCfg, rm)
+								tc.create()
 
-							// In KDD mode, WEPs are backed by Pods, and Profiles are backed by Namespaces, and Nodes are backed by k8s Nodes.
-							// We'll exclude the creation of these resource types for remote KDD. Rationale:
-							// - K8s remote syncer connection testing is not impacted: still tested through the included types
-							// - Remote syncer conversion testing is not impacted:
-							//   - All excluded types are tested explicitly through the etcd tests
-							//   - Profile and Node types are tested implicitly in k8s tests through calculateDefaultFelixSyncerEntries
-							if remoteConfig.Spec.DatastoreType != apiconfig.Kubernetes {
-								addWep()
-								addProfile()
-								addNode()
-							}
-							addPool()
-							addBlock()
-							addHep()
+								// In KDD mode, WEPs are backed by Pods, and Profiles are backed by Namespaces, and Nodes are backed by k8s Nodes.
+								// We'll exclude the creation of these resource types for remote KDD. Rationale:
+								// - K8s remote syncer connection testing is not impacted: still tested through the included types
+								// - Remote syncer conversion testing is not impacted:
+								//   - All excluded types are tested explicitly through the etcd tests
+								//   - Profile and Node types are tested implicitly in k8s tests through calculateDefaultFelixSyncerEntries
+								if remoteConfig.Spec.DatastoreType != apiconfig.Kubernetes {
+									addWep()
+									addProfile()
+									addNode(rm)
+								}
+								addPool(rm)
+								addBlock(rm)
+								addHep()
 
-							By("Creating and starting a syncer")
-							syncTester = testutils.NewSyncerTester()
-							filteredSyncerTester = NewRemoteClusterConnFailedFilter(NewValidationFilter(syncTester))
-							restartCallbackCalled = false
-							restartCallbackMsg = ""
-							restartMonitor := remotecluster.NewRemoteClusterRestartMonitor(filteredSyncerTester, func(reason string) {
-								restartCallbackCalled = true
-								restartCallbackMsg = reason
+								By("Creating and starting a syncer")
+								syncTester = testutils.NewSyncerTester()
+								filteredSyncerTester = NewRemoteClusterConnFailedFilter(NewValidationFilter(syncTester))
+								restartCallbackCalled = false
+								restartCallbackMsg = ""
+								restartMonitor := remotecluster.NewRemoteClusterRestartMonitor(filteredSyncerTester, func(reason string) {
+									restartCallbackCalled = true
+									restartCallbackMsg = reason
+								})
+
+								os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
+								syncer = New(localBackend, localConfig.Spec, restartMonitor, false, true)
+								defer os.Unsetenv("KUBERNETES_MASTER")
+								syncer.Start()
+
+								By("Checking status is updated to sync'd at start of day")
+								syncTester.ExpectStatusUpdate(api.WaitForDatastore)
+								syncTester.ExpectStatusUpdate(api.ResyncInProgress)
+								syncTester.ExpectStatusUpdate(api.InSync)
 							})
 
-							os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
-							syncer = New(localBackend, localConfig.Spec, restartMonitor, false, true)
-							defer os.Unsetenv("KUBERNETES_MASTER")
-							syncer.Start()
+							It("Should get restart message and see callback when datastore config is changed", func() {
+								By("Checking we received the expected events")
+								syncTester.ExpectUpdates(expectedEvents, false)
 
-							By("Checking status is updated to sync'd at start of day")
-							syncTester.ExpectStatusUpdate(api.WaitForDatastore)
-							syncTester.ExpectStatusUpdate(api.ResyncInProgress)
-							syncTester.ExpectStatusUpdate(api.InSync)
-						})
-
-						It("Should get restart message and see callback when valid config is changed", func() {
-							By("Checking we received the expected events")
-							syncTester.ExpectUpdates(expectedEvents, false)
-
-							By("Modifying the RCC/Secret config")
-							tc.modify()
-							By("Checking we received a restart required event")
-							expectedEvents = []api.Update{
-								{
-									KVPair: model.KVPair{
-										Key: model.RemoteClusterStatusKey{Name: rccName},
-										Value: &model.RemoteClusterStatus{
-											Status: model.RemoteClusterConfigChangeRestartRequired,
+								By("Modifying the RCC/Secret config")
+								tc.modifyDatastore()
+								By("Checking we received a restart required event")
+								expectedEvents = []api.Update{
+									{
+										KVPair: model.KVPair{
+											Key: model.RemoteClusterStatusKey{Name: rccName},
+											Value: &model.RemoteClusterStatus{
+												Status: model.RemoteClusterConfigChangeRestartRequired,
+											},
 										},
+										UpdateType: api.UpdateTypeKVUpdated,
 									},
-									UpdateType: api.UpdateTypeKVUpdated,
-								},
-							}
+								}
 
-							syncTester.ExpectUpdates(expectedEvents, false)
+								syncTester.ExpectUpdates(expectedEvents, false)
 
-							By("Expecting that the RestartMonitor is appropriately calling back")
-							Expect(restartCallbackCalled).To(BeTrue())
-							Expect(restartCallbackMsg).NotTo(BeEmpty())
-							By("done with It")
-						})
+								By("Expecting that the RestartMonitor is appropriately calling back")
+								Expect(restartCallbackCalled).To(BeTrue())
+								Expect(restartCallbackMsg).NotTo(BeEmpty())
+								By("done with It")
+							})
 
-						It("Should receive events for resources created before starting syncer", func() {
-							By("Checking we received the expected events")
-							syncTester.ExpectUpdates(expectedEvents, false)
-							By("done with It")
-						})
+							It("Should get restart message and see callback when sync config is changed", func() {
+								By("Checking we received the expected events")
+								syncTester.ExpectUpdates(expectedEvents, false)
 
-						It("Should receive delete events when removing the remote cluster after it is synced", func() {
-							By("Checking we received the expected events")
-							syncTester.ExpectUpdates(expectedEvents, false)
-
-							By("Deleting the remote cluster configuration")
-							_, outError := localClient.RemoteClusterConfigurations().Delete(
-								ctx, rccName, options.DeleteOptions{ResourceVersion: rcc.ResourceVersion},
-							)
-							Expect(outError).NotTo(HaveOccurred())
-
-							By("Checking we received the expected events")
-							expectedDeleteUpdates := []api.Update{{
-								KVPair:     model.KVPair{Key: model.RemoteClusterStatusKey{Name: "remote-cluster"}},
-								UpdateType: api.UpdateTypeKVDeleted,
-							}}
-							expectedDeleteUpdates = append(expectedDeleteUpdates, deleteEvents...)
-
-							syncTester.ExpectUpdates(expectedDeleteUpdates, false)
-						})
-
-						It("Should send no update and see no callback when reapplying RCC", func() {
-							By("Checking we received the expected events")
-							syncTester.ExpectUpdates(expectedEvents, false)
-
-							By("Applying a no-op update to the RCC/Secret config")
-							tc.noop()
-							By("Checking we received no new events")
-							syncTester.ExpectUpdates([]api.Update{}, false)
-							Expect(restartCallbackCalled).To(BeFalse())
-						})
-
-						It("Should send invalid status and see no callback when config is changed to an invalid one", func() {
-							By("Checking we received the expected events")
-							syncTester.ExpectUpdates(expectedEvents, false)
-
-							By("Applying an invalid update to the RCC/Secret config")
-							tc.invalidate()
-							By("Checking we received invalid config events")
-							expectedEvents = []api.Update{
-								{
-									KVPair: model.KVPair{
-										Key: model.RemoteClusterStatusKey{Name: rccName},
-										Value: &model.RemoteClusterStatus{
-											Status: model.RemoteClusterConfigIncomplete,
-											Error:  "Config is incomplete, stopping watch remote",
+								By("Modifying the sync config")
+								tc.modifySync()
+								By("Checking we received a restart required event")
+								expectedEvents = []api.Update{
+									{
+										KVPair: model.KVPair{
+											Key: model.RemoteClusterStatusKey{Name: rccName},
+											Value: &model.RemoteClusterStatus{
+												Status: model.RemoteClusterConfigChangeRestartRequired,
+											},
 										},
+										UpdateType: api.UpdateTypeKVUpdated,
 									},
-									UpdateType: api.UpdateTypeKVUpdated,
-								},
-							}
-							// An additional incomplete event is sent by the secret retrieval logic.
-							if rcc.Spec.ClusterAccessSecret != nil {
-								expectedEvents = append(expectedEvents, api.Update{
-									KVPair: model.KVPair{
-										Key: model.RemoteClusterStatusKey{Name: rccName},
-										Value: &model.RemoteClusterStatus{
-											Status: model.RemoteClusterConfigIncomplete,
-											Error:  ".*failed to validate Field: DatastoreType.*",
+								}
+
+								syncTester.ExpectUpdates(expectedEvents, false)
+
+								By("Expecting that the RestartMonitor is appropriately calling back")
+								Expect(restartCallbackCalled).To(BeTrue())
+								Expect(restartCallbackMsg).NotTo(BeEmpty())
+								By("done with It")
+							})
+
+							It("Should receive events for resources created before starting syncer", func() {
+								By("Checking we received the expected events")
+								syncTester.ExpectUpdates(expectedEvents, false)
+								By("done with It")
+							})
+
+							It("Should receive delete events when removing the remote cluster after it is synced", func() {
+								By("Checking we received the expected events")
+								syncTester.ExpectUpdates(expectedEvents, false)
+
+								By("Deleting the remote cluster configuration")
+								_, outError := localClient.RemoteClusterConfigurations().Delete(
+									ctx, rccName, options.DeleteOptions{ResourceVersion: rcc.ResourceVersion},
+								)
+								Expect(outError).NotTo(HaveOccurred())
+
+								By("Checking we received the expected events")
+								expectedDeleteUpdates := []api.Update{{
+									KVPair:     model.KVPair{Key: model.RemoteClusterStatusKey{Name: "remote-cluster"}},
+									UpdateType: api.UpdateTypeKVDeleted,
+								}}
+								expectedDeleteUpdates = append(expectedDeleteUpdates, deleteEvents...)
+
+								syncTester.ExpectUpdates(expectedDeleteUpdates, false)
+							})
+
+							It("Should send no update and see no callback when reapplying RCC", func() {
+								By("Checking we received the expected events")
+								syncTester.ExpectUpdates(expectedEvents, false)
+
+								By("Applying a no-op update to the RCC/Secret config")
+								tc.noop()
+								By("Checking we received no new events")
+								syncTester.ExpectUpdates([]api.Update{}, false)
+								Expect(restartCallbackCalled).To(BeFalse())
+							})
+
+							It("Should send invalid status and see no callback when config is changed to an invalid one", func() {
+								By("Checking we received the expected events")
+								syncTester.ExpectUpdates(expectedEvents, false)
+
+								By("Applying an invalid update to the RCC/Secret config")
+								tc.invalidate()
+								By("Checking we received invalid config events")
+								expectedEvents = []api.Update{
+									{
+										KVPair: model.KVPair{
+											Key: model.RemoteClusterStatusKey{Name: rccName},
+											Value: &model.RemoteClusterStatus{
+												Status: model.RemoteClusterConfigIncomplete,
+												Error:  "Config is incomplete, stopping watch remote",
+											},
 										},
+										UpdateType: api.UpdateTypeKVUpdated,
 									},
-									UpdateType: api.UpdateTypeKVUpdated,
-								})
-							} else if rcc.Spec.ClusterAccessSecret == nil {
-								expectedEvents = append(expectedEvents, api.Update{
-									KVPair: model.KVPair{
-										Key: model.RemoteClusterStatusKey{Name: rccName},
-										Value: &model.RemoteClusterStatus{
-											Status: model.RemoteClusterConfigIncomplete,
+								}
+								// An additional incomplete event is sent by the secret retrieval logic.
+								if rcc.Spec.ClusterAccessSecret != nil {
+									expectedEvents = append(expectedEvents, api.Update{
+										KVPair: model.KVPair{
+											Key: model.RemoteClusterStatusKey{Name: rccName},
+											Value: &model.RemoteClusterStatus{
+												Status: model.RemoteClusterConfigIncomplete,
+												Error:  ".*failed to validate Field: DatastoreType.*",
+											},
 										},
-									},
-									UpdateType: api.UpdateTypeKVUpdated,
-								})
-							}
-							expectedEvents = append(expectedEvents, deleteEvents...)
-							syncTester.ExpectUpdates(expectedEvents, false)
-							Expect(restartCallbackCalled).To(BeFalse())
+										UpdateType: api.UpdateTypeKVUpdated,
+									})
+                } else if {
+                  expectedEvents = append(expectedEvents, api.Update{
+										KVPair: model.KVPair{
+											Key: model.RemoteClusterStatusKey{Name: rccName},
+											Value: &model.RemoteClusterStatus{
+												Status: model.RemoteClusterConfigIncomplete,
+											},
+										},
+										UpdateType: api.UpdateTypeKVUpdated,
+									})
+                }
+								expectedEvents = append(expectedEvents, deleteEvents...)
+								syncTester.ExpectUpdates(expectedEvents, false)
+								Expect(restartCallbackCalled).To(BeFalse())
+							})
+						})
+
+						Context("Resources created after starting syncer", func() {
+							BeforeEach(func() {
+								setup(tc.localCfg, tc.remoteCfg, rm)
+								tc.create()
+
+								By("Creating and starting a syncer")
+								syncTester = testutils.NewSyncerTester()
+								filteredSyncerTester = NewRemoteClusterConnFailedFilter(NewValidationFilter(syncTester))
+
+								os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
+								syncer = New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
+								defer os.Unsetenv("KUBERNETES_MASTER")
+								syncer.Start()
+
+								By("Checking status is updated to sync'd at start of day")
+								syncTester.ExpectStatusUpdate(api.WaitForDatastore)
+								syncTester.ExpectStatusUpdate(api.ResyncInProgress)
+								syncTester.ExpectStatusUpdate(api.InSync)
+							})
+
+							It("Should receive events for resources created after starting syncer", func() {
+								By("Checking we received the expected events")
+								syncTester.ExpectUpdates(expectedEvents, false)
+
+								expectedEvents = []api.Update{}
+								if remoteConfig.Spec.DatastoreType != apiconfig.Kubernetes {
+									addWep()
+									addProfile()
+									addNode(rm)
+								}
+								addPool(rm)
+								addBlock(rm)
+								addHep()
+								syncTester.ExpectUpdates(expectedEvents, false)
+								By("done with It")
+							})
 						})
 					})
-
-					Context("Resources created after starting syncer", func() {
-						BeforeEach(func() {
-							setup(tc.localCfg, tc.remoteCfg)
-							tc.create()
-
-							By("Creating and starting a syncer")
-							syncTester = testutils.NewSyncerTester()
-							filteredSyncerTester = NewRemoteClusterConnFailedFilter(NewValidationFilter(syncTester))
-
-							os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
-							syncer = New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
-							defer os.Unsetenv("KUBERNETES_MASTER")
-							syncer.Start()
-
-							By("Checking status is updated to sync'd at start of day")
-							syncTester.ExpectStatusUpdate(api.WaitForDatastore)
-							syncTester.ExpectStatusUpdate(api.ResyncInProgress)
-							syncTester.ExpectStatusUpdate(api.InSync)
-						})
-
-						It("Should receive events for resources created after starting syncer", func() {
-							By("Checking we received the expected events")
-							syncTester.ExpectUpdates(expectedEvents, false)
-
-							expectedEvents = []api.Update{}
-							if remoteConfig.Spec.DatastoreType != apiconfig.Kubernetes {
-								addWep()
-								addProfile()
-								addNode()
-							}
-							addPool()
-							addBlock()
-							addHep()
-							syncTester.ExpectUpdates(expectedEvents, false)
-							By("done with It")
-						})
-					})
-				})
+				}
 			}
 		})
 	})

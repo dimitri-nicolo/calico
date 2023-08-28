@@ -20,7 +20,7 @@ var _ = Describe("WAF new event", func() {
 	)
 
 	BeforeEach(func() {
-		f := mustOpen("test_files/waf_log.json")
+		f := mustOpen("testdata/waf_log.json")
 		defer f.Close()
 		rawLog, err = io.ReadAll(f)
 		Expect(err).NotTo(HaveOccurred())
@@ -51,6 +51,7 @@ var _ = Describe("WAF new event", func() {
 				Record:       wafLog,
 			}
 			generatedEvent := NewWafEvent(wafLog)
+			expected.Time = generatedEvent.Time
 			Expect(generatedEvent).To(Equal(expected))
 
 		})

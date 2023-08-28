@@ -216,6 +216,17 @@ func collectSelectedNodeLogs(dir, linkDir string, opts *diagOpts) {
 				collectDiagsForSelectedPods(dir, linkDir, opts, kubeClient, nodeList, ns.Name, d.Spec.Selector)
 			}
 		}
+
+		// Iterate through StatefulSets in this namespace.
+		sl, err := kubeClient.AppsV1().StatefulSets(ns.Name).List(context.TODO(), v1.ListOptions{})
+		if err != nil {
+			fmt.Printf("ERROR listing StatefulSets in namespace %v: %v\n", ns.Name, err)
+			// Continue because other namespaces might work.
+		} else {
+			for _, s := range sl.Items {
+				collectDiagsForSelectedPods(dir, linkDir, opts, kubeClient, nodeList, ns.Name, s.Spec.Selector)
+			}
+		}
 	}
 }
 
@@ -355,6 +366,7 @@ func collectKubernetesResource(dir string) {
 		"pvc",
 		"sc",
 		"services",
+		"statefulsets",
 	} {
 		commands = append(commands, common.Cmd{
 			Info:     fmt.Sprintf("Collect %v (yaml)", resource),
