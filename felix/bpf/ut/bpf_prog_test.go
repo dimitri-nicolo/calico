@@ -199,6 +199,7 @@ var tcJumpMapIndexes = map[string][]int{
 		tcdefs.ProgIndexDrop,
 		tcdefs.ProgIndexHostCtConflict,
 		tcdefs.ProgIndexIcmpInnerNat,
+		tcdefs.ProgIndexNewFlow,
 	},
 	"IPv4 debug": []int{
 		tcdefs.ProgIndexMainDebug,
@@ -208,6 +209,7 @@ var tcJumpMapIndexes = map[string][]int{
 		tcdefs.ProgIndexDropDebug,
 		tcdefs.ProgIndexHostCtConflictDebug,
 		tcdefs.ProgIndexIcmpInnerNatDebug,
+		tcdefs.ProgIndexNewFlowDebug,
 	},
 	"IPv6": []int{
 		tcdefs.ProgIndexV6Main,
@@ -217,6 +219,7 @@ var tcJumpMapIndexes = map[string][]int{
 		tcdefs.ProgIndexV6Drop,
 		tcdefs.ProgIndexV6HostCtConflict,
 		tcdefs.ProgIndexV6IcmpInnerNat,
+		tcdefs.ProgIndexV6NewFlow,
 	},
 	"IPv6 debug": []int{
 		tcdefs.ProgIndexV6MainDebug,
@@ -226,6 +229,7 @@ var tcJumpMapIndexes = map[string][]int{
 		tcdefs.ProgIndexV6DropDebug,
 		tcdefs.ProgIndexV6HostCtConflictDebug,
 		tcdefs.ProgIndexV6IcmpInnerNatDebug,
+		tcdefs.ProgIndexV6NewFlowDebug,
 	},
 }
 
@@ -698,7 +702,7 @@ func objLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHostC
 			}
 			if forXDP {
 				var globals libbpf.XDPGlobalData
-				for i := 0; i < tcdefs.ProgIndexEnd; i++ {
+				for i := 0; i < 16; i++ {
 					globals.Jumps[i] = uint32(i)
 				}
 

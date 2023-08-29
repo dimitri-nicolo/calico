@@ -27,7 +27,7 @@ struct name {				\
 	__be16 egw_vxlan_port;		\
 	__be16 egw_health_port;		\
 	__u32 log_filter_jmp;		\
-	__u32 jumps[32];		\
+	__u32 jumps[40];		\
 	/* Needs to be 32bit aligned as it is followed by scratch area for 				\
 	 * building headers. We reuse the same slot in state map to save 				\
 	 * ourselves a lookup. 										\
