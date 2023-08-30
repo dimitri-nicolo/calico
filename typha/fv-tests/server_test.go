@@ -1678,24 +1678,31 @@ var _ = Describe("with server requiring TLS", func() {
 		})
 
 		It("should timeout after 10 seconds for TCP half open connections", func() {
-			deadline := time.Now().Add(9 * time.Second)
 			serverAddr := fmt.Sprintf("127.0.0.1:%d", server.Port())
+			expectedDisconnectTime := time.Now().Add(10 * time.Second)
 			tcpConn, err := net.Dial("tcp", serverAddr)
 			Expect(err).NotTo(HaveOccurred())
 			defer func() {
 				_ = tcpConn.Close()
 			}()
-			err = tcpConn.SetDeadline(time.Now().Add(30 * time.Second))
+			err = tcpConn.SetDeadline(time.Now().Add(15 * time.Second))
 			Expect(err).NotTo(HaveOccurred())
 
 			// Client sends a few valid bytes of a Client hello but then stops...
 			_, err = tcpConn.Write([]byte{16, 3, 01})
 			Expect(err).NotTo(HaveOccurred())
 
+			// Start a read that we don't expect to complete.
 			received := make([]byte, 1024)
 			_, err = tcpConn.Read(received)
+
+			// io.EOF means the server closed the connection (we'd get
+			// a timeout error if the deadline we set was reached.
 			Expect(err).Should(Equal(io.EOF))
-			Expect(time.Now().Unix()).Should(BeNumerically(">=", deadline.Unix()))
+			// Should get disconnected at approximately the right time.
+			Expect(time.Now()).Should(
+				BeTemporally("~", expectedDisconnectTime, 2*time.Second),
+				"Expected to be disconnected at approx 10s")
 		})
 
 		It("should allow connections while another connection is half-open", func() {
