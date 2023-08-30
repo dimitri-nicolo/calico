@@ -92,7 +92,7 @@ func main() {
 		log.WithError(err).Fatalf("failed to create linseed client")
 	}
 
-	alertForwarder, err := alert.NewForwarder(linseed, retrySendInterval, "cluster")
+	alertForwarder, err := alert.NewForwarder(linseed, retrySendInterval, cfg.ClusterName)
 	if err != nil {
 		log.Fatal(err)
 	}

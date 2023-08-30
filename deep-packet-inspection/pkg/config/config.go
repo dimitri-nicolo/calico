@@ -24,8 +24,8 @@ type Config struct {
 	SnortCommunityRulesFile string        `split_words:"true" default:"/usr/local/etc/rules/snort3-community-rules/snort3-community.rules"`
 
 	// Multi-cluster configuration
-	TenantID    string `split_words:"true" default:""`
-	ClusterName string `split_words:"true" default:""`
+	TenantID    string `envconfig:"TENANT_ID"`
+	ClusterName string `envconfig:"CLUSTER_NAME"`
 
 	// Linseed configuration
 	LinseedURL        string `envconfig:"LINSEED_URL" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
