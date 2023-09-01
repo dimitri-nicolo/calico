@@ -54,6 +54,46 @@ amazonCloudIntegration:
 defaultFelixConfiguration:
   enabled: false
 
+# MCM configuration options.
+# Management cluster.
+managementCluster:
+  enabled: false
+  address:
+  service:
+    type:
+    port: 9449
+    nodePort:
+    targetPort: 9449
+    protocol: TCP
+    annotations:
+      - key:
+        value:
+
+managedClusters:
+  enabled: false
+  clusters:
+  - name:
+    certificate:
+
+# Managed cluster.
+managementClusterConnection:
+  enabled: false
+  managementClusterAddress:
+  management:
+    base64:
+      tls:
+        crt:
+    tls:
+      crt:
+  managed:
+    base64:
+      tls:
+        crt:
+        key:
+    tls:
+      crt:
+      key:
+
 # Optional configuration for setting custom BGP templates where
 # key is the filename of the template and value is the contents of the template.
 bgp: {}
@@ -120,4 +160,3 @@ techPreviewOptions:
   # set to name of desired apparmor policy for the calico-node container and
   # pod will be annotated with 'container.apparmor.security.beta.kubernetes.io/calico-node'
   nodeApparmorPolicyName: ""
-

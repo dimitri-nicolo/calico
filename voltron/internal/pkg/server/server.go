@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package server
 
@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"net"
 	"net/http"
@@ -204,6 +205,8 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, vcfg config.Config, authe
 		if err != nil {
 			return nil, errors.WithMessage(err, "Could not create a template to render manifests")
 		}
+
+		srv.clusters.clientCertificatePool = srv.tunSrv.GetClientCertificatePool()
 	}
 
 	return srv, nil
@@ -285,7 +288,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			}
 		}
 
-		clusterID, fingerprint := s.extractIdentity(t)
+		clusterID, fingerprint, tunnelCert := s.extractIdentity(t)
 
 		c := s.clusters.get(clusterID)
 		if c == nil {
@@ -293,6 +296,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			t.Close()
 			continue
 		}
+		managedCertificate := c.Certificate
 
 		c.RLock()
 
@@ -301,44 +305,52 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 		func() {
 			defer c.RUnlock()
 
-			if len(c.ActiveFingerprint) == 0 {
-				log.Error("no fingerprint has been stored against the current connection")
-				closeTunnel(t)
-				return
-
-			}
-			// Before Calico Enterprise v3.15, we use md5 hash algorithm for the managed cluster
-			// certificate fingerprint. md5 is known to cause collisions and it is not approved in
-			// FIPS mode. From v3.15, we are upgrading the active fingerprint to use sha256 hash algorithm.
-			if hex.DecodedLen(len(c.ActiveFingerprint)) == sha256.Size {
-				if fingerprint != c.ActiveFingerprint {
-					log.Error("stored fingerprint does not match provided fingerprint")
+			if len(managedCertificate) != 0 {
+				if err := validateCertificate(tunnelCert, managedCertificate); err != nil {
+					log.WithError(err).Errorf("failed to verify certificate for cluster %s", clusterID)
 					closeTunnel(t)
 					return
 				}
 			} else {
-				// md5 is not approved in FIPS mode so not upgrading from md5 to sha256
-				if s.fipsModeEnabled {
-					log.Errorf("cluster %s stored fingerprint can not be updated in FIPS mode", clusterID)
+				if len(c.ActiveFingerprint) == 0 {
+					log.Error("no fingerprint has been stored against the current connection")
 					closeTunnel(t)
 					return
-				}
 
-				// check pre-v3.15 fingerprint (md5)
-				if s.extractMD5Identity(t) != c.ActiveFingerprint {
-					log.Error("stored fingerprint does not match provided fingerprint")
-					closeTunnel(t)
-					return
 				}
+				// Before Calico Enterprise v3.15, we use md5 hash algorithm for the managed cluster
+				// certificate fingerprint. md5 is known to cause collisions and it is not approved in
+				// FIPS mode. From v3.15, we are upgrading the active fingerprint to use sha256 hash algorithm.
+				if hex.DecodedLen(len(c.ActiveFingerprint)) == sha256.Size {
+					if fingerprint != c.ActiveFingerprint {
+						log.Error("stored fingerprint does not match provided fingerprint")
+						closeTunnel(t)
+						return
+					}
+				} else {
+					// md5 is not approved in FIPS mode so not upgrading from md5 to sha256
+					if s.fipsModeEnabled {
+						log.Errorf("cluster %s stored fingerprint can not be updated in FIPS mode", clusterID)
+						closeTunnel(t)
+						return
+					}
 
-				// update to v3.15 fingerprint hash (sha256) when matched
-				if err := c.updateActiveFingerprint(fingerprint); err != nil {
-					log.WithError(err).Errorf("failed to update cluster %s stored fingerprint", clusterID)
-					closeTunnel(t)
-					return
+					// check pre-v3.15 fingerprint (md5)
+					if s.extractMD5Identity(t) != c.ActiveFingerprint {
+						log.Error("stored fingerprint does not match provided fingerprint")
+						closeTunnel(t)
+						return
+					}
+
+					// update to v3.15 fingerprint hash (sha256) when matched
+					if err := c.updateActiveFingerprint(fingerprint); err != nil {
+						log.WithError(err).Errorf("failed to update cluster %s stored fingerprint", clusterID)
+						closeTunnel(t)
+						return
+					}
+
+					log.Infof("Cluster %s stored fingerprint is successfully updated", clusterID)
 				}
-
-				log.Infof("Cluster %s stored fingerprint is successfully updated", clusterID)
 			}
 
 			if err := c.assignTunnel(t); err != nil {
@@ -365,7 +377,7 @@ func closeTunnel(t *tunnel.Tunnel) {
 	}
 }
 
-func (s *Server) extractIdentity(t *tunnel.Tunnel) (clusterID, fingerprint string) {
+func (s *Server) extractIdentity(t *tunnel.Tunnel) (clusterID, fingerprint string, certificate *x509.Certificate) {
 	switch id := t.Identity().(type) {
 	case *x509.Certificate:
 		// N.B. By now, we know that we signed this certificate as these checks
@@ -375,6 +387,7 @@ func (s *Server) extractIdentity(t *tunnel.Tunnel) (clusterID, fingerprint strin
 		// for the cert.
 		clusterID = id.Subject.CommonName
 		fingerprint = utils.GenerateFingerprint(id)
+		certificate = id
 	default:
 		log.Errorf("unknown tunnel identity type %T", id)
 	}
@@ -389,6 +402,27 @@ func (s *Server) extractMD5Identity(t *tunnel.Tunnel) (fingerprint string) {
 		log.Errorf("unknown tunnel identity type %T", id)
 	}
 	return
+}
+
+// validateCertificate validates the certificate of the tunnel against the certificate of the
+// managed cluster it is connecting to (if any) and returns an error if they don't match or if the
+// certificate of the managed cluster is not provided. It is assumed that the certificate PEM
+// is a single block.
+func validateCertificate(tunnelCert *x509.Certificate, certPEM []byte) error {
+	block, _ := pem.Decode(certPEM)
+	if block == nil || block.Type != "CERTIFICATE" {
+		log.Fatalf("Failed to decode PEM block containing certificate")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return err
+	}
+
+	if !tunnelCert.Equal(cert) {
+		return errors.New("certificates don't match")
+	}
+	return nil
 }
 
 func wrapInMetricsAndLoggingAwareHandler(metricsEnabled bool, logger *accesslog.Logger, delegate http.HandlerFunc) http.HandlerFunc {

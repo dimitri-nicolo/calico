@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019, 2023 Tigera, Inc. All rights reserved.
 
 package tunnel
 
@@ -68,6 +68,7 @@ func WithClientCert(cert *x509.Certificate) ServerOption {
 			if err != nil {
 				return errors.Errorf("parsing cert PEM failed: %s", err)
 			}
+			// s.certManager.AddCert(fmt.Sprintf("%x", sha256.Sum256(xCert.Raw)), xCert)
 			s.clientCertPool.AddCert(xCert)
 			certPem = rest
 		}
@@ -209,6 +210,10 @@ func (s *Server) AcceptTunnel(opts ...Option) (*Tunnel, error) {
 	}
 
 	return NewServerTunnel(c, opts...)
+}
+
+func (s *Server) GetClientCertificatePool() *x509.CertPool {
+	return s.clientCertPool
 }
 
 // Stop stops the server and terminates all connections.

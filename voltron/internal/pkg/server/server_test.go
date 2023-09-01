@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package server_test
 
@@ -64,6 +64,7 @@ const (
 var (
 	clusterA = "clusterA"
 	clusterB = "clusterB"
+	clusterC = "clusterC"
 	config   = &rest.Config{BearerToken: "tigera-manager-token"}
 
 	// Tokens issued by k8s.
@@ -583,6 +584,90 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 						_, err = tunB2.Accept()
 						Expect(err).Should(HaveOccurred())
+					})
+				})
+
+				Context("A third cluster with certificate is registered", func() {
+					var clusterCTLSCert tls.Certificate
+					BeforeEach(func() {
+						clusterCCertTemplate := test.CreateClientCertificateTemplate(clusterC, "localhost")
+						clusterCPrivKey, clusterCCert, err := test.CreateCertPair(clusterCCertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
+						Expect(err).NotTo(HaveOccurred())
+
+						_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: clusterC,
+							},
+							Spec: calicov3.ManagedClusterSpec{
+								Certificate: test.CertToPemBytes(clusterCCert),
+							},
+						}, metav1.CreateOptions{})
+						Expect(err).ShouldNot(HaveOccurred())
+
+						clusterCTLSCert, err = test.X509CertToTLSCert(clusterCCert, clusterCPrivKey)
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("can send requests from the server to the third cluster", func() {
+						tun, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
+							Certificates: []tls.Certificate{clusterCTLSCert},
+							RootCAs:      voltronTunnelCAs,
+						}, 5*time.Second)
+						Expect(err).NotTo(HaveOccurred())
+
+						WaitForClusterToConnect(k8sAPI, clusterC)
+
+						cli := &http.Client{
+							Transport: &http2.Transport{
+								TLSClientConfig: &tls.Config{
+									NextProtos: []string{"h2"},
+									RootCAs:    voltronHttpsCAs,
+									ServerName: "localhost",
+								},
+							},
+						}
+
+						req, err := http.NewRequest("GET", "https://"+httpsAddr+"/some/path", strings.NewReader("HELLO"))
+						Expect(err).NotTo(HaveOccurred())
+
+						req.Header[utils.ClusterHeaderField] = []string{clusterC}
+						req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+
+						var wg sync.WaitGroup
+						wg.Add(1)
+						go func() {
+							defer GinkgoRecover()
+							defer wg.Done()
+
+							_, err := cli.Do(req)
+							Expect(err).ShouldNot(HaveOccurred())
+						}()
+
+						serve := &http.Server{
+							Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								f, ok := w.(http.Flusher)
+								Expect(ok).To(BeTrue())
+
+								body, err := io.ReadAll(r.Body)
+								Expect(err).ShouldNot(HaveOccurred())
+
+								Expect(string(body)).Should(Equal("HELLO"))
+
+								f.Flush()
+							}),
+						}
+
+						defer serve.Close()
+						go func() {
+							defer GinkgoRecover()
+							err := serve.Serve(tls.NewListener(tun, &tls.Config{
+								Certificates: []tls.Certificate{clusterCTLSCert},
+								NextProtos:   []string{"h2"},
+							}))
+							Expect(err).Should(Equal(fmt.Errorf("http: Server closed")))
+						}()
+
+						wg.Wait()
 					})
 				})
 			})

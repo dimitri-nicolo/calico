@@ -1,10 +1,12 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package server
 
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"net"
 	"net/http"
@@ -99,6 +101,9 @@ type clusters struct {
 
 	// Proxier to use for connections from managed clusters.
 	innerProxy *proxy.Proxy
+
+	// Pool used for client certificate verification.
+	clientCertificatePool *x509.CertPool
 }
 
 func (cs *clusters) makeInnerTLSConfig() error {
@@ -133,6 +138,10 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 		k8sCLI:         cs.k8sCLI,
 		voltronCfg:     cs.voltronCfg,
 	}
+
+	// Append the new certificate to the client certificate pool.
+	cs.clientCertificatePool.AppendCertsFromPEM(mc.Certificate)
+	log.Infof("Appended certificate for cluster %s to client certificate pool", mc.ID)
 
 	// Create a proxy to use for connections received over the tunnel that aren't
 	// directed via SNI. This is just used for Linseed connections from managed clusters.
@@ -221,8 +230,19 @@ func (cs *clusters) updateLocked(mc *jclust.ManagedCluster, recovery bool) error
 	if c, ok := cs.clusters[mc.ID]; ok {
 		c.Lock()
 		log.Infof("Updating cluster ID: %q", c.ID)
+		// Update the certificate pool if the certificate has changed.
+		err, updated := cs.updateCertPool(mc.Certificate, c.Certificate)
+		if err != nil {
+			c.Unlock()
+			return err
+		}
 		c.ManagedCluster = *mc
 		log.Infof("New cluster ID: %q", c.ID)
+		if updated {
+			if err := c.tunnelManager.Close(); err != nil {
+				log.Error("failed to close tunnel")
+			}
+		}
 		c.Unlock()
 		return nil
 	}
@@ -286,6 +306,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			mc := &jclust.ManagedCluster{
 				ID:                mcResource.ObjectMeta.Name,
 				ActiveFingerprint: mcResource.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
+				Certificate:       mcResource.Spec.Certificate,
 				FIPSModeEnabled:   cs.fipsModeEnabled,
 			}
 
@@ -335,6 +356,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 		mc := &jclust.ManagedCluster{
 			ID:                id,
 			ActiveFingerprint: mc.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
+			Certificate:       mc.Spec.Certificate,
 		}
 
 		known[id] = struct{}{}
@@ -394,6 +416,41 @@ func (cs *clusters) watchK8s(ctx context.Context, syncC chan<- error) error {
 		default:
 		}
 	}
+}
+
+// updateCertPool updates the client cert pool if the new (non-empty) certificate is different from
+// the old one.
+func (cs *clusters) updateCertPool(newCertPEM, oldCertPEM []byte) (error, bool) {
+	updated := false
+	if len(newCertPEM) == 0 {
+		// No pool update necessary for an empty certificate.
+		log.Debugf("No pool update necessary for an empty certificate.")
+		return nil, updated
+	}
+
+	newCert, err := parseCertificatePEMBlock(newCertPEM)
+	if err != nil {
+		return err, updated
+	}
+
+	if len(oldCertPEM) != 0 {
+		oldCert, err := parseCertificatePEMBlock(oldCertPEM)
+		if err != nil {
+			return err, updated
+		}
+
+		if oldCert.Equal(newCert) {
+			// No pool update necessary if the certificates are the same.
+			log.Debugf("No pool update necessary if the certificates are the same.")
+			return nil, updated
+		}
+	}
+
+	cs.clientCertificatePool.AddCert(newCert)
+	updated = true
+	log.Infof("Updated client cert pool with new value.")
+
+	return nil, updated
 }
 
 func (c *cluster) checkTunnelState() {
@@ -544,4 +601,19 @@ func (c *cluster) stop() {
 func proxyVoidDirector(*http.Request) {
 	// do nothing with the request, we pass it forward as is, the other side of
 	// the tunnel should do whatever it needs to proxy it further
+}
+
+// parseCertificatePEMBlock decodes a PEM encoded certificate and returns the parsed x509 certificate.
+// The PEM cert is assumed to be a single block.
+func parseCertificatePEMBlock(certPEM []byte) (*x509.Certificate, error) {
+	// Decode PEM content
+	block, _ := pem.Decode(certPEM)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, errors.New("failed to decode PEM block containing certificate")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	return cert, nil
 }

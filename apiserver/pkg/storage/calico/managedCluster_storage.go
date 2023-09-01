@@ -47,6 +47,17 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 			}
 		}
 
+		if len(res.Spec.Certificate) != 0 {
+			// Create the managed cluster resource. No need to generate a certificate, since one was
+			// provided.
+			_, err := c.ManagedClusters().Create(ctx, res, oso)
+			if err != nil {
+				return nil, err
+			}
+
+			return res, nil
+		}
+
 		// Generate x509 certificate and private key for the managed cluster
 		certificate, privKey, err := helpers.Generate(resources.CACert, resources.CAKey, res.ObjectMeta.Name)
 		if err != nil {

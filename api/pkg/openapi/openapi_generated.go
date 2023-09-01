@@ -9096,6 +9096,13 @@ func schema_pkg_apis_projectcalico_v3_ManagedClusterSpec(ref common.ReferenceCal
 							Format:      "",
 						},
 					},
+					"certificate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The certificate used to authenticate the managed cluster to the management cluster.",
+							Type:        []string{"string"},
+							Format:      "byte",
+						},
+					},
 				},
 			},
 		},

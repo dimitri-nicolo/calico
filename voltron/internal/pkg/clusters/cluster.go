@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package clusters
 
@@ -14,6 +14,8 @@ type ManagedCluster struct {
 	// assigned to a managed cluster. Only connections that present the certificate that matches the
 	// active fingerprint will be accepted
 	ActiveFingerprint string `json:"activeFingerprint,omitempty"`
+	// Certificate stores managed cluster certificate.
+	Certificate []byte `json:"certificate,omitempty"`
 
 	// Enable FIPS 140-2 verified mode.
 	FIPSModeEnabled bool

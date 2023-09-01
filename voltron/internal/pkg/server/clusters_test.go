@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package server
 
@@ -7,6 +7,8 @@ package server
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
 	"sync"
 	"time"
 
@@ -15,10 +17,11 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
-
-	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var _ = Describe("Clusters", func() {
@@ -158,5 +161,104 @@ var _ = Describe("Clusters", func() {
 			cancel()
 			wg.Wait()
 		})
+	})
+})
+
+var _ = Describe("Update certificates", func() {
+	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
+	clusters := &clusters{
+		clusters:              make(map[string]*cluster),
+		k8sCLI:                k8sAPI,
+		voltronCfg:            &vcfg.Config{},
+		clientCertificatePool: x509.NewCertPool(),
+	}
+
+	var (
+		err                  error
+		voltronTunnelCert    *x509.Certificate
+		voltronTunnelPrivKey *rsa.PrivateKey
+
+		cluster1Cert *x509.Certificate
+		cluster2Cert *x509.Certificate
+
+		cluster1CertTemplate *x509.Certificate
+		cluster2CertTemplate *x509.Certificate
+	)
+
+	const (
+		cluster1ID = "cluster-1"
+		cluster2ID = "cluster-2"
+		cluster3ID = "cluster-3"
+	)
+
+	BeforeEach(func() {
+		voltronTunnelCertTemplate := test.CreateCACertificateTemplate("voltron")
+		voltronTunnelPrivKey, voltronTunnelCert, err = test.CreateCertPair(voltronTunnelCertTemplate, nil, nil)
+		Expect(err).ShouldNot(HaveOccurred())
+
+	})
+
+	It("should update the certificate pool when a managed cluster containing a certificate is added", func() {
+		cluster1CertTemplate = test.CreateClientCertificateTemplate(cluster1ID, "localhost")
+		_, cluster1Cert, err = test.CreateCertPair(cluster1CertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
+		Expect(err).NotTo(HaveOccurred())
+
+		cluster2CertTemplate = test.CreateClientCertificateTemplate(cluster2ID, "localhost")
+		_, cluster2Cert, err = test.CreateCertPair(cluster2CertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Add a cluster
+		mc := &jclust.ManagedCluster{
+			ID:          cluster1ID,
+			Certificate: test.CertToPemBytes(cluster1Cert),
+		}
+
+		_, err = clusters.add(mc)
+		Expect(err).NotTo(HaveOccurred())
+		// Add a second cluster
+		mc = &jclust.ManagedCluster{
+			ID:          cluster2ID,
+			Certificate: test.CertToPemBytes(cluster2Cert),
+		}
+		_, err = clusters.add(mc)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Validate the certificates are in the map
+		expectedCertCluster1, err := parseCertificatePEMBlock(test.CertToPemBytes(cluster1Cert))
+		Expect(err).NotTo(HaveOccurred())
+		expectedCertCluster2, err := parseCertificatePEMBlock(test.CertToPemBytes(cluster2Cert))
+		Expect(err).NotTo(HaveOccurred())
+
+		// Validate the certificates are in the pool
+		//nolint:staticcheck // Ignore SA1019 deprecated
+		Expect(clusters.clientCertificatePool.Subjects()).To(HaveLen(2))
+		//nolint:staticcheck // Ignore SA1019 deprecated
+		Expect(clusters.clientCertificatePool.Subjects()).To(ContainElement(expectedCertCluster1.RawSubject))
+		//nolint:staticcheck // Ignore SA1019 deprecated
+		Expect(clusters.clientCertificatePool.Subjects()).To(ContainElement(expectedCertCluster2.RawSubject))
+	})
+
+	It("should add a new certificate to the pool when a cluster certificate has been updated", func() {
+		cluster1CertTemplate = test.CreateClientCertificateTemplate("cluster-1-update", "localhost")
+		_, cluster1Cert, err = test.CreateCertPair(cluster1CertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Update the certificate for cluster-1
+		mc := &jclust.ManagedCluster{
+			ID:          cluster1ID,
+			Certificate: test.CertToPemBytes(cluster1Cert),
+		}
+
+		err = clusters.update(mc)
+		Expect(err).NotTo(HaveOccurred())
+
+		expectedCertCluster1, err := parseCertificatePEMBlock(test.CertToPemBytes(cluster1Cert))
+		Expect(err).NotTo(HaveOccurred())
+
+		// Validate the certificates are in the pool
+		//nolint:staticcheck // Ignore SA1019 deprecated
+		Expect(clusters.clientCertificatePool.Subjects()).To(HaveLen(3))
+		//nolint:staticcheck // Ignore SA1019 deprecated
+		Expect(clusters.clientCertificatePool.Subjects()).To(ContainElement(expectedCertCluster1.RawSubject))
 	})
 })
