@@ -297,6 +297,8 @@ func TestEventSelector(t *testing.T) {
 		{"severity=1", 1, true},
 		{"origin IN {'**'}", 1, true}, // Matches if non-empty
 		{"name NOTIN {'**'}", 1, true},
+		{"description=\"Just a city event\"", 1, true},
+		{"time>0", 1, true},
 
 		// Valid but do not match any event
 		{"host=\"some-other-host\"", 0, true},
@@ -308,9 +310,7 @@ func TestEventSelector(t *testing.T) {
 		// If we comment out the call to `query.Validate()` in alerts.go, the "invalid key"
 		// error won't occur and the resulting ES query will be executed.
 		{"Host=\"midnight-train\"", 0, false},
-		{"description=\"Just a city event\"", 0, false},
 		{"type=\"TODO\"", 0, false},
-		{"time>0", 0, false},
 		{"origin IN {'*'}", 0, false}, // Need to use `**` to match any non-empty value
 
 		// The dismissed key is a bit odd (probably like all boolean values).

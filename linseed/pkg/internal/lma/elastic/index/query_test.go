@@ -20,12 +20,12 @@ var _ = Describe("Query Converter", func() {
 		It("should handle a simple clause", func() {
 			result := JsonObject{
 				"term": JsonObject{
-					"alert": JsonObject{
+					"origin": JsonObject{
 						"value": "aval1",
 					},
 				},
 			}
-			query := "alert=aval1"
+			query := "origin=aval1"
 			esquery, err := Alerts().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
@@ -37,7 +37,7 @@ var _ = Describe("Query Converter", func() {
 					"must": []JsonObject{
 						{
 							"term": JsonObject{
-								"alert": JsonObject{
+								"origin": JsonObject{
 									"value": "aval1",
 								},
 							},
@@ -53,7 +53,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 
-			query := "alert=aval1 AND type=global_alert"
+			query := "origin=aval1 AND type=global_alert"
 			esquery, err := Alerts().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
@@ -65,7 +65,7 @@ var _ = Describe("Query Converter", func() {
 					"should": []JsonObject{
 						{
 							"term": JsonObject{
-								"alert": JsonObject{
+								"origin": JsonObject{
 									"value": "aval1",
 								},
 							},
@@ -80,7 +80,7 @@ var _ = Describe("Query Converter", func() {
 					},
 				},
 			}
-			query := "alert=aval1 OR type=global_alert"
+			query := "origin=aval1 OR type=global_alert"
 			esquery, err := Alerts().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
@@ -95,7 +95,7 @@ var _ = Describe("Query Converter", func() {
 								"should": []JsonObject{
 									{
 										"term": JsonObject{
-											"alert": JsonObject{
+											"origin": JsonObject{
 												"value": "aval1",
 											},
 										},
@@ -112,15 +112,15 @@ var _ = Describe("Query Converter", func() {
 						},
 						{
 							"term": JsonObject{
-								"_id": JsonObject{
-									"value": "idval",
+								"host": JsonObject{
+									"value": "hostval",
 								},
 							},
 						},
 					},
 				},
 			}
-			query := "(alert=aval1 OR type=global_alert) AND _id=idval"
+			query := "(origin=aval1 OR type=global_alert) AND host=hostval"
 			esquery, err := Alerts().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
