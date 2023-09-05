@@ -10,9 +10,8 @@ const WafEventType = "waf"
 
 var (
 	EventsKeys = map[string]Validator{
-		"_id":              NullValidator,
-		"alert":            NullValidator,
 		"attack_vector":    NullValidator,
+		"description":      NullValidator,
 		"dest_ip":          IPValidator,
 		"dest_name":        DomainValidator,
 		"dest_name_aggr":   DomainValidator,
@@ -29,6 +28,7 @@ var (
 		"source_name_aggr": DomainValidator,
 		"source_namespace": DomainValidator,
 		"source_port":      IntRangeValidator(0, MaxTCPUDPPortNum),
+		"time":             PositiveIntValidator,
 		// sync with manager ApiSecurityEventType if anything changes.
 		"type": SetValidator(
 			"alert",
