@@ -1,0 +1,90 @@
+// Copyright {{now | date "2006"}} Tigera. All rights reserved.
+
+package proxy
+
+import (
+	"crypto/tls"
+	"net"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"time"
+
+	"github.com/sirupsen/logrus"
+)
+
+type Proxy struct {
+	targetURL *url.URL
+	tlsConfig *tls.Config
+	timeout   time.Duration
+}
+
+// Option exposes different options to build the proxy
+type Option func(proxy *Proxy) error
+
+func NewProxy(targetURL *url.URL, tlsConfig *tls.Config, opts ...Option) *Proxy {
+	proxy := &Proxy{
+		targetURL: targetURL,
+		timeout:   30 * time.Second,
+		tlsConfig: tlsConfig,
+	}
+
+	for _, opt := range opts {
+		err := opt(proxy)
+		if err != nil {
+			logrus.WithError(err).Fatal("invalid options applied to proxy")
+			return nil
+		}
+	}
+
+	return proxy
+}
+
+// WithTimeout will create timeout configuration
+func WithTimeout(timeout time.Duration) Option {
+	return func(p *Proxy) error {
+		p.timeout = timeout
+		return nil
+	}
+}
+
+type loggerRoundTripper struct {
+	defaultTransport http.RoundTripper
+}
+
+func (t *loggerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	b, err := httputil.DumpRequestOut(req, false)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Infof(string(b))
+
+	return t.defaultTransport.RoundTrip(req)
+}
+
+// ServeHTTP is the handler that will forward incoming traffic to
+// the corresponding backend service of a tenant
+func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	logrus.Infof("Received request %+v", r)
+	proxy := httputil.NewSingleHostReverseProxy(p.targetURL)
+	d := proxy.Director
+	proxy.Director = func(r *http.Request) {
+		d(r) // call default director
+
+		r.Host = p.targetURL.Host // set Host header as expected by target
+	}
+
+	proxy.FlushInterval = -1
+	transport := &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   p.timeout,
+			KeepAlive: p.timeout,
+		}).DialContext,
+		TLSHandshakeTimeout: p.timeout,
+		TLSClientConfig:     p.tlsConfig,
+	}
+
+	proxy.Transport = &loggerRoundTripper{defaultTransport: transport}
+
+	proxy.ServeHTTP(w, r)
+}

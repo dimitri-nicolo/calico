@@ -19,16 +19,20 @@ func TestLoadTemplates(t *testing.T) {
 	const LoremLipsum = "Lorem lipsum"
 
 	tests := []struct {
-		name    string
-		args    fstest.MapFS
-		want    []template.File
-		wantErr bool
+		name        string
+		args        fstest.MapFS
+		baseDirName string
+		want        []template.File
+		wantErr     bool
 	}{
-		{name: "single file template",
-			args: fstest.MapFS{"template/file": {Data: []byte(LoremLipsum)}},
-			want: []template.File{{Name: "file", Path: ".", Template: GetTemplate("file", LoremLipsum)}},
+		{
+			name:        "single file template",
+			args:        fstest.MapFS{"template/file": {Data: []byte(LoremLipsum)}},
+			baseDirName: "template",
+			want:        []template.File{{Name: "file", Path: ".", Template: GetTemplate("file", LoremLipsum)}},
 		},
-		{name: "multiple file template",
+		{
+			name: "multiple file template",
 			args: fstest.MapFS{
 				"template/file":           {Data: []byte(LoremLipsum)},
 				"template/dir/file2":      {Data: []byte(LoremLipsum)},
@@ -36,6 +40,7 @@ func TestLoadTemplates(t *testing.T) {
 				"template/dir1/dir2/file": {Data: []byte(LoremLipsum)},
 				"template/.hidden/file":   {Data: []byte(LoremLipsum)},
 			},
+			baseDirName: "template",
 			want: []template.File{
 				{Name: "file", Path: ".", Template: GetTemplate("file", LoremLipsum)},
 				{Name: "file1", Path: "dir", Template: GetTemplate("file1", LoremLipsum)},
@@ -43,16 +48,20 @@ func TestLoadTemplates(t *testing.T) {
 				{Name: "file", Path: "dir1/dir2", Template: GetTemplate("file", LoremLipsum)},
 				{Name: "file", Path: ".hidden", Template: GetTemplate("file", LoremLipsum)},
 			},
-			wantErr: false},
-		{name: "missing template dir",
-			args:    fstest.MapFS{"file": {Data: []byte(LoremLipsum)}},
-			want:    []template.File{},
-			wantErr: true},
+			wantErr: false,
+		},
+		{
+			name:        "missing template dir",
+			args:        fstest.MapFS{"file": {Data: []byte(LoremLipsum)}},
+			baseDirName: "template",
+			want:        []template.File{},
+			wantErr:     true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := template.LoadTemplates(tt.args)
+			got, err := template.LoadTemplates(tt.args, tt.baseDirName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LoadTemplates() error = %v, wantErr %v", err, tt.wantErr)
 				return

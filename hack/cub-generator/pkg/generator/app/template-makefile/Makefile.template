@@ -19,18 +19,14 @@ include ../lib.Makefile
 ###############################################################################
 # Env vars related to building
 ###############################################################################
-SRC_FILES = $(shell find pkg cmd -name '*.go') \
-		$(shell find ../api/pkg -name '*.go') \
-		$(shell find ../libcalico-go/lib -name '*.go') \
-		$(shell find ../lma/pkg -name '*.go')
-
+SRC_FILES = $(shell find pkg cmd -name '*.go')
 
 # We use -X to insert the version information into the placeholder variables
 # in the version package.
-LDFLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-              -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-              -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-              -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
+LDFLAGS = -X $(PACKAGE_NAME)/pkg/config/BuildVersion=$(GIT_VERSION) \
+              -X $(PACKAGE_NAME)/pkg/config/BuildDate=$(DATE) \
+              -X $(PACKAGE_NAME)/pkg/config/GitDescription=$(GIT_DESCRIPTION) \
+              -X $(PACKAGE_NAME)/pkg/config/GitRevision=$(GIT_COMMIT)
 
 ###############################################################################
 # BUILD BINARY
@@ -87,18 +83,35 @@ clean:
 
 .PHONY: ut
 ## Run only Unit Tests.
-ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r -skipPackage=$(FV_PACKAGE) pkg/*'
+ut: ut-fast
+
+ut-fast:
+	# We run the tests n times to try and weed out test flakes.
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 1'
+
 
 st:
-    @echo "No STs available"
+	@echo "No STs available"
 
 ###############################################################################
 # FV Tests
 ###############################################################################
 
+# Run {{ camelcase .Name }} as a local Docker container.
+run-image: stop-image
+	docker run --detach \
+		--net=host \
+		--name=tigera-$({{ snakecase .Name | upper }}_IMAGE) \
+		tigera/$({{ snakecase .Name | upper }}_IMAGE):latest
+	# Wait until {{ camelcase .Name }} is accepting requests on its readiness port.
+	while ! curl -k http://localhost:8080/readiness; do echo "Waiting for {{ camelcase .Name }} to come up..."; sleep 2; done
+
+stop-image:
+	-docker rm -f $(shell docker ps -aq --filter "name=tigera-$({{ snakecase .Name | upper }})")
+
 ## Run the FVs
 fv:
+	@echo "No FVs available at the moment"
 
 ###############################################################################
 # CI/CD
@@ -108,7 +121,7 @@ fv:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks ut fv
+ci: clean static-checks test
 
 ## Deploys images to registry
 cd: image-all cd-common

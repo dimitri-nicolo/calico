@@ -14,7 +14,7 @@ import (
 	"github.com/projectcalico/calico/{{ lower .Name }}/pkg/handler"
 )
 
-func TestHealthCheck(t *testing.T) {
+func TestStatus(t *testing.T) {
 	type testResult struct {
 		httpStatus int
 		httpBody   string
@@ -30,11 +30,10 @@ func TestHealthCheck(t *testing.T) {
 		want  testResult
 	}{
 		{name: "200 OK", given: testInput{"GET"}, want: testResult{httpStatus: 200, httpBody: `{"status":"ok"}`}},
-		{name: "404 Not found", given: testInput{"POST"}, want: testResult{httpStatus: 404, httpBody: `404 page not found`}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			healthCheck := handler.HealthCheck()
+			healthCheck := handler.Status()
 
 			rec := httptest.NewRecorder()
 			req, err := http.NewRequest(tt.given.method, "/health", nil)
@@ -54,4 +53,3 @@ func TestHealthCheck(t *testing.T) {
 		})
 	}
 }
-

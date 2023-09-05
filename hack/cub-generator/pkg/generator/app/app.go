@@ -3,7 +3,6 @@
 package app
 
 import (
-	"embed"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,11 +11,6 @@ import (
 	"github.com/projectcalico/calico/hack/cub-generator/pkg/generator"
 	"github.com/projectcalico/calico/hack/cub-generator/pkg/generator/template"
 )
-
-// AppTemplates are embedded template file to generate a project
-//
-//go:embed template/*
-var AppTemplates embed.FS
 
 type application struct {
 	templates []template.File
