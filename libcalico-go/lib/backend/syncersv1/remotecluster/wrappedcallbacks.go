@@ -272,9 +272,8 @@ func (a *wrappedCallbacks) updateRCC(key model.ResourceKey, newRCC *apiv3.Remote
 		}})
 		a.reportRemoteClusterStatus(key.Name, model.RemoteClusterConfigIncomplete)
 	} else if err == nil && datastoreConfig == nil {
-		// This happens when the RCC is newly created and the secret it references has not yet been created.
 		a.reportRemoteClusterStatus(key.Name, model.RemoteClusterConfigIncomplete)
-		log.Warnf("Received %s. Cluster access secret was not found", updateSrc)
+		log.Warnf("Received %s. Cluster access secret was not found or the inline datastore config was invalid", updateSrc)
 		log.Debugf("Callback update for %s: %s", key, updateTypeToString(api.UpdateTypeKVUpdated))
 		a.callbacks.OnUpdates([]api.Update{{
 			KVPair: model.KVPair{
