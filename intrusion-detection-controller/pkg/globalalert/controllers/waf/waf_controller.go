@@ -139,9 +139,7 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 	}
 	if len(logs.Items) != 0 {
 		c.logsCache.lastWafTimestamp = logs.Items[0].Timestamp
-	} else {
-		c.logsCache.lastWafTimestamp = time.Now()
-	}
+	} 
 
 	return nil
 }
