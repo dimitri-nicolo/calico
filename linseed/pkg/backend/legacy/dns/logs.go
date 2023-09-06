@@ -5,6 +5,7 @@ package dns
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
@@ -56,6 +57,19 @@ func (b *dnsLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 	bulk := b.client.Bulk()
 
 	for _, f := range logs {
+		// Populate the log's GeneratedTime field.  This field exists to enable a way for
+		// clients to efficiently query newly generated logs, and having Linseed fill it in
+		// - instead of an upstream client - makes this less vulnerable to time skew between
+		// clients, and between clients and Linseed.
+		//
+		// Why not compute `time.Now().UTC()` before this loop and then store the same value
+		// in each log?  Because if we can advance GeneratedTime as much as possible
+		// (i.e. to the real current time), a client will compute a later value for
+		// `LatestSeenGeneratedTime`, and then a subsequent query with `GeneratedTime >=
+		// LatestSeenGeneratedTime` will return fewer previously seen results.
+		generatedTime := time.Now().UTC()
+		f.GeneratedTime = &generatedTime
+
 		// Add this log to the bulk request.
 		dnsLog, err := json.Marshal(f)
 		if err != nil {

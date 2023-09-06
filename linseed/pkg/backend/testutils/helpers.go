@@ -57,6 +57,11 @@ func AssertDNSLogIDAndReset(t *testing.T, item v1.DNSLog) v1.DNSLog {
 	require.NotEmpty(t, item.ID)
 	item.ID = ""
 
+	// Similarly for GeneratedTime field, as test code cannot predict the exact value that
+	// Linseed will populate here.
+	require.NotNil(t, item.GeneratedTime)
+	item.GeneratedTime = nil
+
 	return item
 }
 

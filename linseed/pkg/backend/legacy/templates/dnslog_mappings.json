@@ -5,6 +5,9 @@
         "type" : "alias",
         "path" : "end_time"
       },
+      "generated_time": {
+	"type": "date"
+      },
       "start_time": {
         "type": "date"
       },
