@@ -98,7 +98,6 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 			Sort: []v1.SearchRequestSortBy{
 				{
 					Field:      "time",
-					Descending: true,
 				},
 			},
 		},
@@ -124,7 +123,6 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 			Sort: []v1.SearchRequestSortBy{
 				{
 					Field:      "@timestamp",
-					Descending: true,
 				},
 			},
 		},
