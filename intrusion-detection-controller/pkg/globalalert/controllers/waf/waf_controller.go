@@ -97,7 +97,7 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 		QuerySortParams: v1.QuerySortParams{
 			Sort: []v1.SearchRequestSortBy{
 				{
-					Field:      "time",
+					Field: "time",
 				},
 			},
 		},
@@ -124,7 +124,7 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 		QuerySortParams: v1.QuerySortParams{
 			Sort: []v1.SearchRequestSortBy{
 				{
-					Field:      "@timestamp",
+					Field: "@timestamp",
 				},
 			},
 		},
@@ -139,6 +139,7 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 	for _, wafLog := range logs.Items {
 		c.logsCache.Add(wafLog)
 	}
+	// by ordering the waf logs in ascending order the newest logs will be first
 	if len(logs.Items) != 0 {
 		c.logsCache.lastWafTimestamp = logs.Items[0].Timestamp
 	}
@@ -164,7 +165,7 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 		QuerySortParams: v1.QuerySortParams{
 			Sort: []v1.SearchRequestSortBy{
 				{
-					Field:      "@timestamp",
+					Field: "@timestamp",
 				},
 			},
 		},
@@ -193,7 +194,7 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 		}
 
 	}
-	// by ordering the waf logs in descending order the newest logs will be first
+	// by ordering the waf logs in ascending order the newest logs will be first
 	if len(logs.Items) != 0 {
 		c.logsCache.lastWafTimestamp = logs.Items[0].Timestamp
 	}
