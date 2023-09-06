@@ -111,8 +111,6 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 	}
 	if len(events.Items) > 0 {
 		oldestTimeStamp = events.Items[0].Time.GetTime()
-	} else {
-		oldestTimeStamp = halfHourAgo
 	}
 
 	params := &v1.WAFLogParams{
@@ -201,8 +199,6 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 	// by ordering the waf logs in descending order the newest logs will be first
 	if len(logs.Items) != 0 {
 		c.logsCache.lastWafTimestamp = logs.Items[0].Timestamp
-	} else {
-		c.logsCache.lastWafTimestamp = time.Now()
 	}
 
 	return nil
