@@ -167,7 +167,6 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 			Sort: []v1.SearchRequestSortBy{
 				{
 					Field:      "@timestamp",
-					Descending: true,
 				},
 			},
 		},
