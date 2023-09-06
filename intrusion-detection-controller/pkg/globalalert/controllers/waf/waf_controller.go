@@ -110,6 +110,8 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 	}
 	if len(events.Items) > 0 {
 		oldestTimeStamp = events.Items[0].Time.GetTime()
+	} else {
+		oldestTimeStamp = now
 	}
 
 	params := &v1.WAFLogParams{
@@ -139,7 +141,7 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 	}
 	if len(logs.Items) != 0 {
 		c.logsCache.lastWafTimestamp = logs.Items[0].Timestamp
-	} 
+	}
 
 	return nil
 }
