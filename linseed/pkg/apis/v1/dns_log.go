@@ -55,6 +55,7 @@ type DNSAggregationParams struct {
 }
 
 type DNSLog struct {
+	GeneratedTime   *time.Time        `json:"generated_time,omitempty"`
 	StartTime       time.Time         `json:"start_time"`
 	EndTime         time.Time         `json:"end_time"`
 	Type            DNSLogType        `json:"type"`
