@@ -99,6 +99,8 @@ type Interface interface {
 	ExternalNetworks() ExternalNetworkInterface
 	// EgressGatewayPolicy returns an interface for managing EgressGatewayPolicy resources.
 	EgressGatewayPolicy() EgressGatewayPolicyInterface
+	// SecurityEventWebhook returns an interface for managing SecurityEventWebhook resources.
+	SecurityEventWebhook() SecurityEventWebhookInterface
 
 	// EnsureInitialized is used to ensure the backend datastore is correctly
 	// initialized for use by Calico.  This method may be called multiple times, and

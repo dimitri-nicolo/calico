@@ -27,6 +27,7 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	calicoauthenticationreview "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authenticationreview"
 	calicoauthorizationreview "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
+	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/securityeventwebhook"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -924,6 +925,28 @@ func (p RESTStorageProvider) NewV3Storage(
 		[]string{"ipamconfig"},
 	)
 
+	securityeventRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("securityeventwebhooks"))
+	if err != nil {
+		return nil, err
+	}
+	securityeventwebhookOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   securityeventRESTOptions,
+			Capacity:      1000,
+			ObjectType:    securityeventwebhook.EmptyObject(),
+			ScopeStrategy: securityeventwebhook.NewStrategy(scheme),
+			NewListFunc:   securityeventwebhook.NewList,
+			GetAttrsFunc:  securityeventwebhook.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions: securityeventRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{"securityeventwebhook"},
+	)
+
 	blockAffinityRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("blockaffinities"))
 	if err != nil {
 		return nil, err
@@ -1073,6 +1096,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["blockaffinities"] = rESTInPeace(calicoblockaffinity.NewREST(scheme, *blockAffinityOpts))
 	storage["externalnetworks"] = rESTInPeace(calicoexternalnetwork.NewREST(scheme, *externalnetworkOpts))
 	storage["egressgatewaypolicies"] = rESTInPeace(calicoegressgatewaypolicy.NewREST(scheme, *egressGatewayPolicyOpts))
+	storage["securityeventwebhooks"] = rESTInPeace(securityeventwebhook.NewREST(scheme, *securityeventwebhookOpts))
 
 	kubeControllersConfigsStorage, kubeControllersConfigsStatusStorage, err := calicokubecontrollersconfig.NewREST(scheme, *kubeControllersConfigsOpts)
 	if err != nil {

@@ -3,12 +3,23 @@
 package v3
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+type SecurityEventWebhookConsumer string
+type SecurityEventWebhookState string
 
 const (
 	KindSecurityEventWebhook     = "SecurityEventWebhook"
 	KindSecurityEventWebhookList = "SecurityEventWebhookList"
+
+	SecurityEventWebhookConsumerSlack SecurityEventWebhookConsumer = "Slack"
+	SecurityEventWebhookConsumerJira  SecurityEventWebhookConsumer = "Jira"
+
+	SecurityEventWebhookStateEnabled  SecurityEventWebhookState = "Enabled"
+	SecurityEventWebhookStateDisabled SecurityEventWebhookState = "Disabled"
+	SecurityEventWebhookStateDebug    SecurityEventWebhookState = "Debug"
 )
 
 // +genclient
@@ -16,13 +27,10 @@ const (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type SecurityEventWebhook struct {
-	metav1.TypeMeta `json:",inline"`
-	// standard object metadata
+	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// status of the SecurityEventWebhook
-	Status SecurityEventWebhookStatus
-	// specification of the SecurityEventWebhook
-	Spec SecurityEventWebhookSpec
+	Status            []metav1.Condition       `json:"status,omitempty" validate:"omitempty"`
+	Spec              SecurityEventWebhookSpec `json:"spec" validate:"required"`
 }
 
 // +genclient:nonNamespaced
@@ -34,20 +42,11 @@ type SecurityEventWebhookList struct {
 	Items           []SecurityEventWebhook `json:"items"`
 }
 
-type SecurityEventWebhookStatus struct {
-	// last fetch operation time
-	LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
-	// number of processed security events during the latest fetch operation
-	LastTransistionCount uint `json:"lastTransitionCount,omitempty" validate:"omitempty,min=0"`
-	// health of the webhook during the latest fetch operation
-	Health string `json:"health,omitempty"`
-}
-
 type SecurityEventWebhookSpec struct {
 	// indicates the SecurityEventWebhook intended consumer, one of: Slack, Jira
-	Consumer string `json:"consumer" validate:"required,oneof=Slack Jira"`
+	Consumer SecurityEventWebhookConsumer `json:"consumer" validate:"required,oneof=Slack Jira"`
 	// defines the webhook desired state, one of: Enabled, Disabled or Debug
-	State string `json:"state" validate:"required,oneof=Enabled Disabled Debug"`
+	State SecurityEventWebhookState `json:"state" validate:"required,oneof=Enabled Disabled Debug"`
 	// defines the SecurityEventWebhook query to be executed against fields of SecurityEvents
 	Query string `json:"query" validate:"required"`
 	// contains the SecurityEventWebhook's configuration associated with the intended Consumer
@@ -64,21 +63,9 @@ type SecurityEventWebhookConfigVar struct {
 
 type SecurityEventWebhookConfigVarSource struct {
 	// +optional
-	ConfigMapKeyRef *ConfigMapKeySelector `json:"configMapKeyRef,omitempty" protobuf:"bytes,3,opt,name=configMapKeyRef"`
+	ConfigMapKeyRef *corev1.ConfigMapKeySelector `json:"configMapKeyRef,omitempty" protobuf:"bytes,3,opt,name=configMapKeyRef"`
 	// +optional
-	SecretKeyRef *SecretKeySelector `json:"secretKeyRef,omitempty" protobuf:"bytes,4,opt,name=secretKeyRef"`
-}
-
-type ConfigMapKeySelector struct {
-	Namespace string `json:"namespace" validate:"required"`
-	Name      string `json:"name" validate:"required"`
-	Key       string `json:"key" validate:"required"`
-}
-
-type SecretKeySelector struct {
-	Namespace string `json:"namespace" validate:"required"`
-	Name      string `json:"name" validate:"required"`
-	Key       string `json:"key" validate:"required"`
+	SecretKeyRef *corev1.SecretKeySelector `json:"secretKeyRef,omitempty" protobuf:"bytes,4,opt,name=secretKeyRef"`
 }
 
 // NewSecurityEventWebhook creates a new SecurityEventWebhook struct
