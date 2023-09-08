@@ -44,7 +44,7 @@ module Fluent::Plugin
     desc 'The method for HTTP request'
     config_param :http_method, :enum, list: [:put, :post], default: :post
     desc 'The proxy for HTTP request'
-    config_param :proxy, :string, default: ENV['HTTP_PROXY'] || ENV['http_proxy']
+    config_param :proxy, :string, default: nil
     desc 'Content-Type for HTTP request'
     config_param :content_type, :string, default: nil
     desc 'JSON array data format for HTTP request body'
@@ -261,8 +261,9 @@ module Fluent::Plugin
     end
 
     def send_request(uri, req)
-      res = if @proxy_uri
-              Net::HTTP.start(uri.host, uri.port, @proxy_uri.host, @proxy_uri.port, @proxy_uri.user, @proxy_uri.password, @http_opt) { |http|
+      proxy = @proxy_uri || uri.find_proxy()
+      res = if proxy
+              Net::HTTP.start(uri.host, uri.port, proxy.host, proxy.port, proxy.user, proxy.password, @http_opt) { |http|
                 http.request(req)
               }
             else
