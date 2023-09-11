@@ -1024,6 +1024,7 @@ kill_typha() {
 test_confd_templates() {
     # Compare the templates until they match (for a max of 10s).
     testdir=$1
+    echo "Comparing with templates in $testdir"
     for i in $(seq 1 10); do echo "comparing templates attempt $i" && compare_templates $testdir 0 false && break || sleep 1; done
     compare_templates $testdir 1 ${UPDATE_EXPECTED_DATA}
 }
@@ -3924,8 +3925,8 @@ test_bgp_filters() {
   test_multiple_bgp_filter_with_explicit_peers
   test_bgp_filter_with_node_mesh_enabled
   test_bgp_filter_deletion
-  test_bgp_filter_names
   test_bgp_filter_match_operators
+  test_bgp_filter_names
   test_bgp_filter_import_only_explicit_peers
   test_bgp_filter_import_only_global_peers
   test_bgp_filter_export_only_explicit_peers

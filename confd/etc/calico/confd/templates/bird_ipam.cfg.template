@@ -8,9 +8,22 @@ function reject_disabled_pools ()
 {{- end}}
 }
 
+function reject_tunnel_routes () {
+  # Don't export vxlan routes to other nodes, Felix programs them.
+  # IPIP routes are handled by Bird, and it would not re-advertise them.
+  if (defined(ifname)) then {
+    if ((ifname="vxlan.calico") || (ifname="egress.calico")) then {
+      reject;
+    }
+  }
+}
+
 function calico_export_to_bgp_peers () {
-  # filter code terminates when it calls `accept;` or `reject;`, call reject_disabled_pools() first, then apply_communities() and then calico_aggr()
+  # filter code terminates when it calls `accept;` or `reject;`,
+  # call reject_disabled_pools() first, then reject_tunnel_routes(),
+  # then apply_communities() and then calico_aggr()
   reject_disabled_pools();
+  reject_tunnel_routes();
   apply_communities();
   calico_aggr();
 {{- $static_key := "/staticroutes"}}
