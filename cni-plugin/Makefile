@@ -93,7 +93,7 @@ ifeq ($(FIPS), true)
 	$(call build_cgo_boring_binary, $(PACKAGE_NAME)/cmd/calico, $(BIN)/install)
 else
 	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '\
-		$(GIT_CONFIG_SSH) go build -buildvcs=false -v -o $(BIN)/install -ldflags "$(LDFLAGS)" $(PACKAGE_NAME)/cmd/calico'
+		$(GIT_CONFIG_SSH) go build -buildvcs=false -v -o $(BIN)/install -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/cmd/calico'
 endif
 
 ## Build the Calico network plugin and ipam plugins for Windows
@@ -102,8 +102,8 @@ $(BIN_WIN)/calico.exe $(BIN_WIN)/calico-ipam.exe: $(SRC_FILES)
 	-e GOOS=windows \
 	-e CGO_ENABLED=1 \
 	    $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build -v -buildvcs=false -o $(BIN_WIN)/calico.exe -ldflags "$(LDFLAGS)" $(PACKAGE_NAME)/cmd/calico && \
-		go build -v -buildvcs=false -o $(BIN_WIN)/calico-ipam.exe -ldflags "$(LDFLAGS)" $(PACKAGE_NAME)/cmd/calico'
+		go build -v -buildvcs=false -o $(BIN_WIN)/calico.exe -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/cmd/calico && \
+		go build -v -buildvcs=false -o $(BIN_WIN)/calico-ipam.exe -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/cmd/calico'
 
 
 ###############################################################################
@@ -257,7 +257,7 @@ release-verify-fips:
 	rm -rf .tmp && mkdir -p .tmp
 	# Copy binaries from the image so we can analyze them.
 	sh -c "docker create --name calico-cni-verify $(IMAGE); docker cp calico-cni-verify:/opt/cni/bin/install .tmp/calico; docker rm -f calico-cni-verify"
-	go tool nm .tmp/calico | grep '_Cfunc__goboringcrypto_' 1> /dev/null || echo "ERROR: Binary in image '$(IMAGE)' is missing expected goboring symbols"
+	strings .tmp/calico | grep '_Cfunc__goboringcrypto_' 1>/dev/null || echo "ERROR: Binary in image '$(IMAGE)' is missing expected goboring symbols"
 	rm -rf .tmp
 
 release-publish: release-prereqs .release-$(VERSION).published

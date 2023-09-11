@@ -173,9 +173,9 @@ define build_static_cgo_boring_binary
         sh -c '$(GIT_CONFIG_SSH) \
             GOEXPERIMENT=boringcrypto go build -o $(2)  \
             -tags fipsstrict,osusergo,netgo$(if $(BUILD_TAGS),$(comma)$(BUILD_TAGS)) -v -buildvcs=false \
-            -ldflags "$(LDFLAGS) -linkmode external -extldflags -static" \
+            -ldflags "$(LDFLAGS) -s -w -linkmode external -extldflags -static" \
             $(1) \
-            && go tool nm $(2) | grep '_Cfunc__goboringcrypto_' 1> /dev/null'
+            && strings $(2) | grep '_Cfunc__goboringcrypto_' 1>/dev/null'
 endef
 
 # Build a binary with boring crypto support.
@@ -194,9 +194,9 @@ define build_cgo_boring_binary
         sh -c '$(GIT_CONFIG_SSH) \
             GOEXPERIMENT=boringcrypto go build -o $(2)  \
             -tags fipsstrict$(if $(BUILD_TAGS),$(comma)$(BUILD_TAGS)) -v -buildvcs=false \
-            -ldflags "$(LDFLAGS)" \
+            -ldflags "$(LDFLAGS) -s -w" \
             $(1) \
-            && go tool nm $(2) | grep '_Cfunc__goboringcrypto_' 1> /dev/null'
+            && strings $(2) | grep '_Cfunc__goboringcrypto_' 1>/dev/null'
 endef
 
 # Use this when building binaries that need cgo, but have no crypto and therefore would not contain any boring symbols.
@@ -209,18 +209,20 @@ define build_cgo_binary
         sh -c '$(GIT_CONFIG_SSH) \
             go build -o $(2)  \
             -v -buildvcs=false \
-            -ldflags "$(LDFLAGS)" \
+            -ldflags "$(LDFLAGS) -s -w" \
             $(1)'
 endef
 
 # For binaries that do not require boring crypto.
 define build_binary
-	$(DOCKER_RUN) $(GO_BUILD_IMAGE):$(GO_BUILD_VER) \
-		sh -c '$(GIT_CONFIG_SSH) \
-		go build -o $(2)  \
-		-v -buildvcs=false \
-		-ldflags "$(LDFLAGS)" \
-		$(1)'
+    $(DOCKER_RUN) \
+        -e CGO_ENABLED=0 \
+        $(GO_BUILD_IMAGE):$(GO_BUILD_VER) \
+        sh -c '$(GIT_CONFIG_SSH) \
+            go build -o $(2)  \
+            -v -buildvcs=false \
+            -ldflags "$(LDFLAGS) -s -w" \
+            $(1)'
 endef
 
 # Images used in build / test across multiple directories.
