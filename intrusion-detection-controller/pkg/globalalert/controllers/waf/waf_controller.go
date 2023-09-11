@@ -91,7 +91,6 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: halfHourAgo,
-				To:   now.Add(MaxTimeSkew),
 			},
 		},
 		QuerySortParams: v1.QuerySortParams{
@@ -118,7 +117,6 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: oldestTimeStamp,
-				To:   now.Add(MaxTimeSkew),
 			},
 		},
 		QuerySortParams: v1.QuerySortParams{
@@ -154,12 +152,10 @@ func (c *wafAlertController) Close() {
 
 func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 	log.Debug("Processing WAF logs")
-	now := time.Now()
 	params := &v1.WAFLogParams{
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: c.logsCache.lastWafTimestamp.Add(-MaxTimeSkew),
-				To:   now.Add(MaxTimeSkew),
 			},
 		},
 		QuerySortParams: v1.QuerySortParams{

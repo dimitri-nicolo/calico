@@ -11,6 +11,10 @@ import (
 
 var (
 	// Potentally the maximum time skew difference between components generating WAF logs
+	// What is time Skew?
+	// difference between the clocks of different nodes in the managed cluster and/or
+	// differing latencies between when a WAF log is constructed (with @timestamp: now())
+	// on a managed cluster node and when it actually hits ES.
 	MaxTimeSkew = 5 * time.Minute
 )
 
