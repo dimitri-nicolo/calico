@@ -296,6 +296,18 @@ var baseTests = []StateList{
 		withNonALPPolicy,
 	},
 
+	// Always programmed policies.
+	{
+		withPolicyAlways,
+		localEp1WithPolicyAlways,
+	},
+	{
+		withPolicy,
+		localEp1WithPolicyAlways,
+		withPolicyAlways,
+		localEp1WithPolicyOnDemand,
+	},
+
 	// VXLAN tests.
 
 	{

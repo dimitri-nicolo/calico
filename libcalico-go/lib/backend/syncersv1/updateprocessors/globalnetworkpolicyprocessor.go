@@ -70,15 +70,16 @@ func ConvertGlobalPolicyV3ToV1Spec(spec apiv3.GlobalNetworkPolicySpec) (*model.P
 	}
 
 	v1value := &model.Policy{
-		Namespace:      "", // Empty string used to signal a GlobalNetworkPolicy.
-		Order:          spec.Order,
-		InboundRules:   RulesAPIV2ToBackend(spec.Ingress, "", false),
-		OutboundRules:  RulesAPIV2ToBackend(spec.Egress, "", false),
-		Selector:       selector,
-		Types:          policyTypesAPIV2ToBackend(spec.Types),
-		DoNotTrack:     spec.DoNotTrack,
-		PreDNAT:        spec.PreDNAT,
-		ApplyOnForward: spec.ApplyOnForward,
+		Namespace:        "", // Empty string used to signal a GlobalNetworkPolicy.
+		Order:            spec.Order,
+		InboundRules:     RulesAPIV2ToBackend(spec.Ingress, "", false),
+		OutboundRules:    RulesAPIV2ToBackend(spec.Egress, "", false),
+		Selector:         selector,
+		Types:            policyTypesAPIV2ToBackend(spec.Types),
+		DoNotTrack:       spec.DoNotTrack,
+		PreDNAT:          spec.PreDNAT,
+		ApplyOnForward:   spec.ApplyOnForward,
+		PerformanceHints: spec.PerformanceHints,
 	}
 
 	return v1value, nil
