@@ -16,7 +16,6 @@ RUN microdnf install -y \
     unzip
 
 COPY patches/elastic-7.17.x-Update-dependencies-to-reduce-CVEs.patch /elastic-build/update-deps.patch
-COPY patches/elastic-7.17-Update-guava-to-reduce-cves.patch /elastic-build/update-deps-2.patch
 
 RUN curl -sfL https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip -o /tmp/gradle.zip && \
 	unzip /tmp/gradle.zip -d /elastic-build
@@ -27,7 +26,6 @@ RUN curl -sfL https://github.com/elastic/elasticsearch/archive/refs/tags/v${ELAS
 WORKDIR /elastic-build/elasticsearch-${ELASTIC_VERSION}
 
 RUN patch -p1 < /elastic-build/update-deps.patch
-RUN patch -p1 < /elastic-build/update-deps-2.patch
 
 RUN JAVA_HOME=/usr/lib/jvm/java-17-openjdk JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 \
     /elastic-build/gradle-${GRADLE_VERSION}/bin/gradle :distribution:archives:linux-tar:assemble \
