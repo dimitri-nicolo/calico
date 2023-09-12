@@ -70,7 +70,7 @@ UPSTREAM_REGISTRAR_PROJECT ?= kubernetes-csi/$(REGISTRAR_IMAGE)
 UPSTREAM_REGISTRAR_TAG     ?= v2.7.0
 
 REGISTRAR_TIGERA_BUILD_CMD="cd /go/src/github.com/$(UPSTREAM_REGISTRAR_PROJECT) && \
-	go build -buildvcs=false -tags $(TAGS) -ldflags '-s -w' -v -o bin/csi-node-driver-registrar cmd/csi-node-driver-registrar/*.go"
+	go build -buildvcs=false -ldflags \"-s -w\" -tags $(TAGS) -v -o bin/csi-node-driver-registrar cmd/csi-node-driver-registrar/*.go"
 REGISTRAR_UPSTREAM_BUILD_CMD="cd /go/src/github.com/$(UPSTREAM_REGISTRAR_PROJECT) && \
 	make build BUILD_PLATFORMS=$(BUILD_PLATFORMS)"
 
