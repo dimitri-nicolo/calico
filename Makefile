@@ -1,6 +1,6 @@
 .PHONY: cd image
 PACKAGE_NAME?=github.com/tigera/kibana-docker
-GO_BUILD_VER?=v0.81
+GO_BUILD_VER?=v0.88
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_KIBANA_DOCKER_PROJECT_ID)
@@ -13,7 +13,7 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-KIBANA_VERSION = 7.17.11
+KIBANA_VERSION = 7.17.13
 
 # Set GTM_INTEGRATION explicitly so that in case the defaults change, we will still not
 # accidentally enable the integration
@@ -59,8 +59,6 @@ $(KIBANA_DOWNLOADED):
 	mkdir -p kibana
 	curl -sfL https://github.com/elastic/kibana/archive/refs/tags/v$(KIBANA_VERSION).tar.gz | tar xz --strip-components 1 -C kibana
 	patch -d kibana -p1 < patches/0001-Apply-Tigera-customizations-to-Kibana.patch
-	patch -d kibana -p1 < patches/0002-Update-semver-to-patch-CVE-2022-25883.patch
-	patch -d kibana -p1 < patches/0003-Update-node-to-16.20.2.patch
 	touch $@
 
 .PHONY: build
