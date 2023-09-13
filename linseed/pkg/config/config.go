@@ -46,6 +46,8 @@ type Config struct {
 	// single-tenant environment
 	ExpectedTenantID string `default:"" split_words:"true"`
 
+	ManagementOperatorNamespace string `envconfig:"MANAGEMENT_OPERATOR_NS" default:""`
+
 	// Whether or not to run the token controller. This must be true for management clusters.
 	TokenControllerEnabled bool `envconfig:"TOKEN_CONTROLLER_ENABLED" default:"false"`
 

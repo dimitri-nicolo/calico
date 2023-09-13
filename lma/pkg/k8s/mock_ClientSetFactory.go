@@ -37,6 +37,12 @@ func (_m *MockClientSetFactory) NewClientSetForApplication(cluster string) (Clie
 	return r0, r1
 }
 
+func (_m *MockClientSetFactory) Impersonate(usr *user.DefaultInfo) ClientSetFactory {
+	ret := _m.Called(usr)
+
+	return ret.Get(0).(ClientSetFactory)
+}
+
 // NewClientSetForUser provides a mock function with given fields: _a0, clusterID
 func (_m *MockClientSetFactory) NewClientSetForUser(_a0 user.Info, clusterID string) (ClientSet, error) {
 	ret := _m.Called(_a0, clusterID)

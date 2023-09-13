@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	authnv1 "k8s.io/api/authentication/v1"
+
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
 	"github.com/felixge/httpsnoop"
@@ -48,11 +50,6 @@ const (
 
 	// CalicoCloudTenantIDClaimName is the name of the tenantID claim in Calico Cloud issued bearer tokens
 	CalicoCloudTenantIDClaimName = "https://calicocloud.io/tenantID"
-
-	// ImpersonateUserHeader kubernetes user impersonation header name
-	ImpersonateUserHeader = "Impersonate-User"
-	// ImpersonateGroupHeader kubernetes group impersonation header name
-	ImpersonateGroupHeader = "Impersonate-Group"
 
 	AuthzCacheMaxTTL = 20 * time.Second
 )
@@ -477,7 +474,10 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	addImpersonationHeaders(r, usr)
+	// Don't overwrite impersonation headers set by clients
+	if len(r.Header.Get(authnv1.ImpersonateUserHeader)) == 0 {
+		addImpersonationHeaders(r, usr)
+	}
 	removeAuthHeaders(r)
 
 	// Note, we expect the value passed in the request header field to be the resource
@@ -572,9 +572,9 @@ func removeAuthHeaders(r *http.Request) {
 }
 
 func addImpersonationHeaders(r *http.Request, user user.Info) {
-	r.Header.Add(ImpersonateUserHeader, user.GetName())
+	r.Header.Add(authnv1.ImpersonateUserHeader, user.GetName())
 	for _, group := range user.GetGroups() {
-		r.Header.Add(ImpersonateGroupHeader, group)
+		r.Header.Add(authnv1.ImpersonateGroupHeader, group)
 	}
 	log.Debugf("Adding impersonation headers")
 }

@@ -10,6 +10,12 @@ import (
 	"flag"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"k8s.io/apiserver/pkg/authentication/user"
+
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	"github.com/projectcalico/calico/linseed/pkg/handler/threatfeeds"
 
 	"net/http"
@@ -198,18 +204,49 @@ func run() {
 		}
 
 		factory := k8s.NewClientSetFactory(cfg.MultiClusterForwardingCA, cfg.MultiClusterForwardingEndpoint)
+
+		secretsToCopy := []corev1.Secret{
+			{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      resource.VoltronLinseedPublicCert,
+					Namespace: cfg.ManagementOperatorNamespace,
+				},
+			},
+		}
+
 		opts := []token.ControllerOption{
 			token.WithIssuer(token.LinseedIssuer),
 			token.WithIssuerName("tigera-linseed"),
 			token.WithUserInfos(users),
 			token.WithReconcilePeriod(tokenReconcilePeriod),
 			token.WithExpiry(tokenExpiry),
-			token.WithClient(pc),
+			token.WithCalicoClient(pc),
+			token.WithK8sClient(k),
 			token.WithPrivateKey(key),
 			token.WithFactory(factory),
 			token.WithTenant(cfg.ExpectedTenantID),
 			token.WithHealthReport(reportHealth),
+			token.WithSecretsToCopy(secretsToCopy),
 		}
+
+		if cfg.ExpectedTenantID != "" {
+			impersonationInfo := user.DefaultInfo{
+				Name: "tigera-linseed",
+				Groups: []string{
+					serviceaccount.AllServiceAccountsGroup,
+					"system:authenticated",
+					fmt.Sprintf("%s%s", serviceaccount.ServiceAccountGroupPrefix, "tigera-elasticsearch"),
+				},
+			}
+			opts = append(opts, token.WithImpersonation(&impersonationInfo))
+
+			nsBytes, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+			if err != nil {
+				logrus.WithError(err).Fatal()
+			}
+			opts = append(opts, token.WithNamespace(string(nsBytes)))
+		}
+
 		tokenController, err := token.NewController(opts...)
 		if err != nil {
 			logrus.WithError(err).Fatal("Failed to start token controller")

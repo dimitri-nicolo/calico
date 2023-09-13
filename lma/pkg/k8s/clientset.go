@@ -38,6 +38,9 @@ type ClientSetFactory interface {
 
 	// Returns rest config for the application.
 	NewRestConfigForApplication(clusterID string) *rest.Config
+
+	// Adds impersonation headers to the ClientSetFactory's baseRestConfig for the provided user
+	Impersonate(user *user.DefaultInfo) ClientSetFactory
 }
 
 // ClientSet is a combined Calico/Kubernetes client set interface.
@@ -66,8 +69,12 @@ func (c *clientSet) ProjectcalicoV3() projectcalicov3.ProjectcalicoV3Interface {
 
 // NewClientSetFactory creates an implementation of the ClientSetHandlers.
 func NewClientSetFactory(multiClusterForwardingCA, multiClusterForwardingEndpoint string) ClientSetFactory {
+	return NewClientSetFactoryWithConfig(MustGetConfig(), multiClusterForwardingCA, multiClusterForwardingEndpoint)
+}
+
+func NewClientSetFactoryWithConfig(rc *rest.Config, multiClusterForwardingCA, multiClusterForwardingEndpoint string) ClientSetFactory {
 	return &clientSetFactory{
-		baseRestConfig:                 MustGetConfig(),
+		baseRestConfig:                 rc,
 		multiClusterForwardingCA:       multiClusterForwardingCA,
 		multiClusterForwardingEndpoint: multiClusterForwardingEndpoint,
 	}
@@ -83,6 +90,22 @@ func (f *clientSetFactory) NewClientSetForApplication(clusterID string) (ClientS
 // is specified this defaults to the management cluster ("cluster").
 func (f *clientSetFactory) NewClientSetForUser(user user.Info, clusterID string) (ClientSet, error) {
 	return f.getClientSet(user, clusterID)
+}
+
+// Impersonate makes a copy of the factory and adds HTTP Impersonation headers if provided user info is non-nil. If user
+// info is nil the original factory is returned.
+func (f *clientSetFactory) Impersonate(user *user.DefaultInfo) ClientSetFactory {
+	if user == nil {
+		return f
+	}
+	newRestConfig := f.copyRESTConfig()
+	newRestConfig.Impersonate = rest.ImpersonationConfig{
+		UserName: user.Name,
+		Groups:   user.Groups,
+		Extra:    user.Extra,
+		UID:      user.UID,
+	}
+	return NewClientSetFactoryWithConfig(newRestConfig, f.multiClusterForwardingCA, f.multiClusterForwardingEndpoint)
 }
 
 // NewRestConfigForApplication returns a K8S *rest.Config tailored for a particular cluster. Managed clusters will forward

@@ -21,6 +21,8 @@ import (
 	"sync"
 	"time"
 
+	authnv1 "k8s.io/api/authentication/v1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -167,6 +169,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					// Echo the token, such that we can determine if the auth header was successfully swapped.
 					w.Header().Set(authentication.AuthorizationHeader, r.Header.Get(authentication.AuthorizationHeader))
+					w.Header().Set(authnv1.ImpersonateUserHeader, r.Header.Get(authnv1.ImpersonateUserHeader))
+					w.Header().Set(authnv1.ImpersonateGroupHeader, r.Header.Get(authnv1.ImpersonateGroupHeader))
 				}))
 
 			defaultURL, err := url.Parse(defaultServer.URL)
@@ -363,6 +367,27 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(200))
 				Expect(resp.Header.Get(authentication.AuthorizationHeader)).To(Equal(managerSAAuthHeader))
+				Expect(resp.Header.Get(authnv1.ImpersonateUserHeader)).To(Equal(janeBearerToken.UserName()))
+				Expect(resp.Header.Get(authnv1.ImpersonateGroupHeader)).To(Equal("developers"))
+			})
+
+			It("should not overwrite impersonation headers if they have already been configured by client", func() {
+				req, err := http.NewRequest("GET", fmt.Sprintf("https://%s%s", httpsAddr, "/api/v1/namespaces"), nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				impersonatedUser := "impersonated-user"
+				impersonatedGroup := "impersonated-group"
+
+				req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+				req.Header.Set(authnv1.ImpersonateUserHeader, impersonatedUser)
+				req.Header.Set(authnv1.ImpersonateGroupHeader, impersonatedGroup)
+
+				resp, err := configureHTTPSClient().Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(200))
+				Expect(resp.Header.Get(authentication.AuthorizationHeader)).To(Equal(managerSAAuthHeader))
+				Expect(resp.Header.Get(authnv1.ImpersonateUserHeader)).To(Equal(impersonatedUser))
+				Expect(resp.Header.Get(authnv1.ImpersonateGroupHeader)).To(Equal(impersonatedGroup))
 			})
 
 			Context("A single cluster is registered", func() {
@@ -781,7 +806,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(resp.Header.Get("x-echoed-by")).To(Equal(clusterName))
-				Expect(resp.Header.Get(server.ImpersonateUserHeader)).To(Equal(fakeJWT.UserName()))
+				Expect(resp.Header.Get(authnv1.ImpersonateUserHeader)).To(Equal(fakeJWT.UserName()))
 				respBody, err := io.ReadAll(resp.Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(respBody)).To(Equal("foo"))
@@ -1364,8 +1389,8 @@ func newEchoHandler(name string) http.Handler {
 		}
 
 		w.Header().Set("x-echoed-by", name)
-		copyHeaders(server.ImpersonateUserHeader)
-		copyHeaders(server.ImpersonateGroupHeader)
+		copyHeaders(authnv1.ImpersonateUserHeader)
+		copyHeaders(authnv1.ImpersonateGroupHeader)
 
 		_, _ = w.Write(reqBody)
 	})
