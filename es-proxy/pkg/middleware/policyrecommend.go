@@ -11,7 +11,6 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
-
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/policyrec"
@@ -48,11 +47,7 @@ func PolicyRecommendationHandler(
 			return
 		}
 
-		clusterID := req.Header.Get(clusterIdHeader)
-		if clusterID == "" {
-			log.Debug("Cluster ID not present, setting default")
-			clusterID = datastore.DefaultCluster
-		}
+		clusterID := MaybeParseClusterNameFromRequest(req)
 		log.WithField("cluster", clusterID).Debug("Cluster ID from request")
 
 		// Get the k8s client set for this cluster.

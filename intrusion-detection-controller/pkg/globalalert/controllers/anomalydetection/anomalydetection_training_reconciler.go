@@ -429,7 +429,7 @@ func (r *adJobTrainingReconciler) createInitialTrainingJobForCluster(
 	clusterName string, cronJobName string, adTrainingJobPT v1.PodTemplate,
 ) (*batchv1.Job, error) {
 	trainingLabels := TrainingJobLabels()
-	trainingLabels[ClusterKey] = util.Unify(r.tenantID, clusterName)
+	trainingLabels[clusterKey] = util.Unify(r.tenantID, clusterName)
 
 	// Restart policy set to 'Never' and a backoffLimit of zero means that in the event that it
 	// results in an error, the initial training job would not be put in a crashloop since we have the

@@ -27,8 +27,6 @@ const (
 
 	MaxWaitTimeForTrainingJobs  = 5 * time.Minute
 	MaxWaitTimeForDetectionJobs = 5 * time.Minute
-
-	ClusterKey = "cluster"
 )
 
 var (

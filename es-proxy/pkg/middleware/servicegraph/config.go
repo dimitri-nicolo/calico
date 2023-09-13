@@ -34,7 +34,10 @@ type Config struct {
 	// queries.
 	ServiceGraphCachePollQueryInterval time.Duration
 
-	// The max time we expect it to take for data to be collected and stored. This is used to deterine
+	// The max time we expect it to take for data to be collected and stored. This is used to determine
 	// whether a cache entry should be background polled for updates.
 	ServiceGraphCacheDataSettleTime time.Duration
+
+	// Whether or not to prefetch raw data when the cache is initialized.
+	ServiceGraphCacheDataPrefetch bool
 }
