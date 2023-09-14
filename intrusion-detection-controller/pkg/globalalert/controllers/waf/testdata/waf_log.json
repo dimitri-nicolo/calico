@@ -3,7 +3,9 @@
   "destination": {
     "hostname": "nginx-svc",
     "ip": "192.168.121.16",
-    "port_num": 80
+    "port_num": 80,
+    "name": "nginx-s12c97822-jnd92n",
+    "namespace":"nginx"
   },
   "level": "",
   "method": "GET",
@@ -40,7 +42,9 @@
   "source": {
     "hostname": "-",
     "ip": "192.168.111.80",
-    "port_num": 43684
+    "port_num": 43684,
+    "name": "-",
+    "namespace": "-"
   },
   "host": "lorcan-bz-wodc-kadm-node-1"
 }

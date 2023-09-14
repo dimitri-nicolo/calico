@@ -8,6 +8,7 @@ import (
 )
 
 type IPToEndpointsIndex interface {
+	Keys(k ip.Addr) []proto.WorkloadEndpointID
 	Get(k ip.Addr) []*proto.WorkloadEndpoint
 	Update(k ip.Addr, v *proto.WorkloadEndpointUpdate)
 	Delete(k ip.Addr, v *proto.WorkloadEndpointRemove)
@@ -23,6 +24,13 @@ func NewIPToEndpointsIndex() IPToEndpointsIndex {
 
 type IPToEndpointsIndexer struct {
 	store map[ip.Addr]wlMap
+}
+
+func (index *IPToEndpointsIndexer) Keys(k ip.Addr) (res []proto.WorkloadEndpointID) {
+	for item := range index.store[k] {
+		res = append(res, item)
+	}
+	return
 }
 
 func (index *IPToEndpointsIndexer) Get(k ip.Addr) (res []*proto.WorkloadEndpoint) {
