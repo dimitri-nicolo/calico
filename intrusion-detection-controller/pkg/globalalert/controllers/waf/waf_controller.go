@@ -126,7 +126,7 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 		QuerySortParams: v1.QuerySortParams{
 			Sort: []v1.SearchRequestSortBy{
 				{
-					Field: "@timestamp",
+					Field:      "@timestamp",
 					Descending: false,
 				},
 			},
@@ -166,7 +166,7 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 		QuerySortParams: v1.QuerySortParams{
 			Sort: []v1.SearchRequestSortBy{
 				{
-					Field: "@timestamp",
+					Field:      "@timestamp",
 					Descending: false,
 				},
 			},
