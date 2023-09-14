@@ -6,7 +6,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
@@ -94,6 +93,9 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 				From: halfHourAgo,
 			},
 		},
+		LogSelectionParams: v1.LogSelectionParams{
+			Selector: "type = waf",
+		},
 		QuerySortParams: v1.QuerySortParams{
 			Sort: []v1.SearchRequestSortBy{
 				{
@@ -109,15 +111,8 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 		return err
 	}
 
-	wafEvents := []v1.Event{}
-	for _, event := range events.Items {
-		if event.Type == query.WafEventType {
-			wafEvents = append(wafEvents, event)
-		}
-	}
-
-	if len(wafEvents) > 0 {
-		oldestTimeStamp = wafEvents[0].Time.GetTime()
+	if len(events.Items) > 0 {
+		oldestTimeStamp = events.Items[0].Time.GetTime()
 	} else {
 		oldestTimeStamp = now
 	}
