@@ -86,6 +86,10 @@ func (c *wafAlertController) refreshLastQueryTime() {
 	c.lastQueryTimestamp = time.Now().UTC()
 }
 
+func (c *wafAlertController) timeRangeTo() time.Time {
+	return time.Now().Add(MaxTimeSkew).UTC()
+}
+
 func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 	log.Debug("Building Cache of existing waf Logs")
 	// we only want to cache logs that have already been an event/alert
@@ -95,6 +99,7 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: fromPeriod,
+				To:   c.timeRangeTo(),
 			},
 		},
 		LogSelectionParams: v1.LogSelectionParams{
@@ -144,6 +149,7 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: c.lastQueryTimestamp.Add(-MaxTimeSkew),
+				To:   c.timeRangeTo(),
 			},
 		},
 		QuerySortParams: v1.QuerySortParams{
