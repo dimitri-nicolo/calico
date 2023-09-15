@@ -10,6 +10,7 @@ rules:
   - services
   - endpoints
   - pods
+  - nodes
   verbs:
   - get
   - list
@@ -17,6 +18,8 @@ rules:
 - apiGroups: ["crd.projectcalico.org"]
   resources:
   - hostendpoints
+  - ipamblocks
+  - ippools
   verbs:
   - get
   - list
