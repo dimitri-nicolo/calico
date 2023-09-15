@@ -17,14 +17,12 @@ var _ = Describe("WAF new event", func() {
 	var (
 		wafLog   v1.WAFLog
 		rawLog   []byte
-		wafCache WafLogsCache
+		wafCache *WAFLogsCache
 		err      error
 	)
 
 	BeforeEach(func() {
-		wafCache = WafLogsCache{
-			lastWafTimestamp: time.Now(),
-		}
+		wafCache = NewWAFLogsCache(time.Minute)
 		f := mustOpen("testdata/waf_log.json")
 		defer f.Close()
 		rawLog, err = io.ReadAll(f)
@@ -66,16 +64,13 @@ var _ = Describe("WAF new event", func() {
 
 	Context("Testing WAF Event Cache", func() {
 		It("Testing WAF Event Cache Add Pass", func() {
-
-			wafCache.Add(wafLog)
-
-			isPresent := wafCache.Contains(wafLog)
+			wafCache.Add(&wafLog)
+			isPresent := wafCache.Contains(&wafLog)
 			Expect(isPresent).To(BeTrue())
 		})
 
 		It("Test WAF Event Cache Add Fail", func() {
-
-			isPresent := wafCache.Contains(wafLog)
+			isPresent := wafCache.Contains(&wafLog)
 			Expect(isPresent).To(BeFalse())
 		})
 

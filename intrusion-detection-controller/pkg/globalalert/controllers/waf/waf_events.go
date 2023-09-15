@@ -9,42 +9,48 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-var (
-	// Potentally the maximum time skew difference between components generating WAF logs
-	// What is time Skew?
-	// difference between the clocks of different nodes in the managed cluster and/or
-	// differing latencies between when a WAF log is constructed (with @timestamp: now())
-	// on a managed cluster node and when it actually hits ES.
-	MaxTimeSkew = 5 * time.Minute
-)
-
-type WafLogsCache struct {
-	lastWafTimestamp time.Time
-	wafLogs          []cacheInfo
+type WAFLogsCache struct {
+	cache  map[cacheKey]time.Time
+	maxTTL time.Duration
 }
 
-type cacheInfo struct {
+func NewWAFLogsCache(ttl time.Duration) *WAFLogsCache {
+	return &WAFLogsCache{
+		cache:  make(map[cacheKey]time.Time),
+		maxTTL: ttl,
+	}
+}
+
+type cacheKey struct {
 	requestID string
-	timestamp time.Time
+}
+
+func logKey(v *v1.WAFLog) cacheKey {
+	return cacheKey{
+		requestID: v.RequestId,
+	}
 }
 
 // Contains checks if we've seen the waf log before
-func (c *WafLogsCache) Contains(wafLog v1.WAFLog) bool {
-	for _, wafID := range c.wafLogs {
-		if wafLog.RequestId == wafID.requestID {
-			return true
-		}
-	}
-	return false
+func (c *WAFLogsCache) Contains(wafLog *v1.WAFLog) bool {
+	_, ok := c.cache[logKey(wafLog)]
+	return ok
 }
 
 // Add adds the uuid requestId of the waf log
-func (c *WafLogsCache) Add(wafLog v1.WAFLog) {
-	newCacheEntry := cacheInfo{
-		requestID: wafLog.RequestId,
-		timestamp: wafLog.Timestamp,
+func (c *WAFLogsCache) Add(wafLog *v1.WAFLog) {
+	c.cache[logKey(wafLog)] = time.Now()
+}
+
+// cull expiring entries
+func (c *WAFLogsCache) Purge() {
+	timeRange := time.Now().Add(-(c.maxTTL))
+	for k, ts := range c.cache {
+		if ts.Before(timeRange) {
+			// evict
+			delete(c.cache, k)
+		}
 	}
-	c.wafLogs = append(c.wafLogs, newCacheEntry)
 }
 
 func NewWafEvent(l v1.WAFLog) v1.Event {

@@ -2,7 +2,6 @@ package waf
 
 import (
 	"context"
-	"math/rand"
 	"time"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -16,23 +15,15 @@ import (
 
 var _ = Describe("WAF Controller", func() {
 	var (
-		ctx         context.Context
 		numOfAlerts = 2
 		mockClient  = client.NewMockClient("", rest.MockResult{})
-		wafCache    = WafLogsCache{
-			lastWafTimestamp: time.Now(),
-		}
-		wac = &wafAlertController{
+		wac         = &wafAlertController{
 			clusterName: "clusterName",
 			wafLogs:     newMockWAFLogs(mockClient, "clustername"),
 			events:      newMockEvents(mockClient, "clustername"),
-			logsCache:   wafCache,
+			logsCache:   NewWAFLogsCache(time.Minute),
 		}
 	)
-
-	BeforeEach(func() {
-		ctx = context.Background()
-	})
 
 	Context("Test Waf Controller", func() {
 		It("Test Waf ProcessWAFLogs", func() {
@@ -45,7 +36,7 @@ var _ = Describe("WAF Controller", func() {
 			params := &v1.WAFLogParams{
 				QueryParams: v1.QueryParams{
 					TimeRange: &lmav1.TimeRange{
-						From: wac.logsCache.lastWafTimestamp,
+						From: wac.lastQueryTimestamp,
 						To:   now,
 					},
 				},
@@ -70,7 +61,7 @@ var _ = Describe("WAF Controller", func() {
 			params := &v1.WAFLogParams{
 				QueryParams: v1.QueryParams{
 					TimeRange: &lmav1.TimeRange{
-						From: wac.logsCache.lastWafTimestamp,
+						From: wac.lastQueryTimestamp,
 						To:   now,
 					},
 				},
@@ -93,32 +84,7 @@ var _ = Describe("WAF Controller", func() {
 			Expect(len(logs2.Items)).To(Equal(numOfAlerts))
 
 		})
-		It("Test Waf Cache Management", func() {
-			wac.logsCache.wafLogs = genCacheInfo()
-			wac.ManageCache(ctx)
-			Expect(len(wac.logsCache.wafLogs)).To(Equal(10))
-		})
+
 	})
 
 })
-
-func genCacheInfo() []cacheInfo {
-	cache := []cacheInfo{}
-	for i := 1; i <= 10; i++ {
-		t := rand.Intn(25)
-		newEntry := cacheInfo{
-			timestamp: time.Now().Add(-(time.Duration(t) * time.Minute)),
-			requestID: "",
-		}
-		cache = append(cache, newEntry)
-	}
-
-	oldEntry := cacheInfo{
-		timestamp: time.Now().Add(-(40 * time.Minute)),
-		requestID: "",
-	}
-
-	cache = append(cache, oldEntry)
-
-	return cache
-}
