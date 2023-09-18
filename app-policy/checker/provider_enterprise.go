@@ -18,7 +18,7 @@ import (
 	"github.com/projectcalico/calico/felix/tproxydefs"
 )
 
-type wafCheckFn func(ps *policystore.PolicyStore, req *authz.CheckRequest) (*authz.CheckResponse, error)
+type wafCheckFn func(ps *policystore.PolicyStore, req *authz.CheckRequest, src, dst []proto.WorkloadEndpointID) (*authz.CheckResponse, error)
 
 type WAFCheckProvider struct {
 	subscriptionType string
@@ -54,7 +54,16 @@ func (c *WAFCheckProvider) Check(ps *policystore.PolicyStore, req *authz.CheckRe
 	case "per-host-policies":
 		if wafIPSet, ok := ps.IPSetByID[tproxydefs.ServiceIPsIPSet]; ok &&
 			wafIPSet.ContainsAddress(req.Attributes.Destination.Address) {
-			return c.checkFn(ps, req)
+			// lookup endpoints see if we get src or dest
+			src, dst, _ := lookupEndpointKeysFromRequest(ps, req)
+			if len(dst) == 0 {
+				// if we get to here, this means traffic was steered in from tproxy.
+				// but, WAF check is being processed at source (has src info, no dest info)
+				// continue to next (dest) node by returning OK (since waf is currently the last check performed )
+				log.Debug("WAF Check encountered at source. continuing to next check")
+				return &authz.CheckResponse{Status: &status.Status{Code: OK}}, nil
+			}
+			return c.checkFn(ps, req, src, dst)
 		}
 
 		// traffic described in request doesn't need to go through WAF check; or
@@ -64,14 +73,11 @@ func (c *WAFCheckProvider) Check(ps *policystore.PolicyStore, req *authz.CheckRe
 		// in any case, let it continue to next check
 		return &authz.CheckResponse{Status: &status.Status{Code: UNKNOWN}}, nil
 	default:
-		return c.checkFn(ps, req)
+		return c.checkFn(ps, req, nil, nil)
 	}
 }
 
-func defaultWAFCheck(ps *policystore.PolicyStore, req *authz.CheckRequest) (*authz.CheckResponse, error) {
-	// lookup endpoints see if we get src or dest
-	src, dst, _ := lookupEndpointKeysFromRequest(ps, req)
-
+func defaultWAFCheck(ps *policystore.PolicyStore, req *authz.CheckRequest, src, dst []proto.WorkloadEndpointID) (*authz.CheckResponse, error) {
 	resp := &authz.CheckResponse{Status: &status.Status{Code: OK}}
 
 	// Helper variables used to reduce potential code smells.
