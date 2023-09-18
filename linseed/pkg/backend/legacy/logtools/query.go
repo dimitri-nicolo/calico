@@ -19,11 +19,12 @@ import (
 )
 
 // BuildQuery builds an elastic log query using the given parameters.
-func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams, start time.Time, end time.Time) (*elastic.BoolQuery, error) {
+func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (*elastic.BoolQuery, error) {
 	query := h.BaseQuery(i)
 
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
+	start, end := ExtractTimeRange(opts.GetTimeRange())
 	query.Filter(h.NewTimeRangeQuery(start, end))
 
 	// If RBAC constraints were given, add them in.
