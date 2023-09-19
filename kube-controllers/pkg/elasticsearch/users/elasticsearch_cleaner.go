@@ -45,6 +45,10 @@ func (c *ESCleaner) DeleteResidueUsers(clusterName string) {
 		usersToBeDeleted, rolesToBeDeleted = add(usersToBeDeleted, user, rolesToBeDeleted)
 	}
 
+	for _, role := range GetAuthorizationRoles(clusterName) {
+		rolesToBeDeleted[role] = true
+	}
+
 	c.delete(usersToBeDeleted, rolesToBeDeleted)
 }
 
