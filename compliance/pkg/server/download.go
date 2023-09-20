@@ -15,18 +15,18 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // handleDownloadReports sends one or multiple (via zip) reports to the client
 func (s *server) handleDownloadReports(response http.ResponseWriter, request *http.Request) {
-	clusterID := request.Header.Get(datastore.XClusterIDHeader)
+	clusterID := request.Header.Get(lmak8s.XClusterIDHeader)
 	if clusterID == "" {
-		clusterID = datastore.DefaultCluster
+		clusterID = lmak8s.DefaultCluster
 	}
 
 	// Determine the download formats and if there were none set then exit immediately.

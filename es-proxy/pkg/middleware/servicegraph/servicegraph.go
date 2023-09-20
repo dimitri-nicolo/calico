@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
 package servicegraph
 
 import (
@@ -9,17 +9,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
-
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
-
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
-
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 )
 
 // This file implements the main HTTP handler factory for service graph. This is the main entry point for service
@@ -27,25 +25,33 @@ import (
 // filter and aggregate the flows. All HTTP request processing is handled here.
 
 func NewServiceGraphHandler(
-	ctx context.Context,
 	authz auth.RBACAuthorizer,
+	k8sClient datastore.ClientSet,
 	linseed lsclient.Client,
 	clientSetFactory k8s.ClientSetFactory,
 	cfg *Config,
 ) http.Handler {
-	return NewServiceGraphHandlerWithBackend(ctx, &realServiceGraphBackend{
-		authz:            authz,
-		linseed:          linseed,
-		clientSetFactory: clientSetFactory,
-		config:           cfg,
-	}, cfg)
+	return NewServiceGraphHandlerWithBackend(
+		k8sClient,
+		&realServiceGraphBackend{
+			authz:            authz,
+			linseed:          linseed,
+			clientSetFactory: clientSetFactory,
+			config:           cfg,
+		},
+		cfg,
+	)
 }
 
-func NewServiceGraphHandlerWithBackend(ctx context.Context, backend ServiceGraphBackend, cfg *Config) http.Handler {
+func NewServiceGraphHandlerWithBackend(
+	k8sClient datastore.ClientSet,
+	backend ServiceGraphBackend,
+	cfg *Config,
+) http.Handler {
 	noServiceGroups := NewServiceGroups()
 	noServiceGroups.FinishMappings()
 	return &serviceGraph{
-		sgCache:         NewServiceGraphCache(ctx, backend, cfg),
+		sgCache:         NewServiceGraphCache(k8sClient, backend, cfg),
 		noServiceGroups: noServiceGroups,
 	}
 }
@@ -133,7 +139,7 @@ func (s *serviceGraph) getServiceGraphRequest(w http.ResponseWriter, req *http.R
 		sgr.Timeout.Duration = middleware.DefaultRequestTimeout
 	}
 	if sgr.Cluster == "" {
-		sgr.Cluster = "cluster"
+		sgr.Cluster = middleware.MaybeParseClusterNameFromRequest(req)
 	}
 
 	// Sanity check any user configuration that may potentially break the API. In particular all user defined names

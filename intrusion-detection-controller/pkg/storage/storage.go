@@ -11,18 +11,16 @@ import (
 	"sync"
 	"time"
 
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
-	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -44,7 +42,7 @@ var (
 func init() {
 	clusterName := os.Getenv("ELASTIC_INDEX_SUFFIX")
 	if clusterName == "" {
-		clusterName = "cluster"
+		clusterName = lmak8s.DefaultCluster
 	}
 	ForwarderConfigIndex = fmt.Sprintf(ForwarderConfigIndexPattern, clusterName)
 }

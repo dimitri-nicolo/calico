@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 package middleware
 
 import (
@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	lmaerror "github.com/projectcalico/calico/lma/pkg/api"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 const (
@@ -17,10 +18,6 @@ const (
 
 	MaxNumResults     = 10000
 	MaxResultsPerPage = 1000
-
-	clusterParam       = "cluster"
-	clusterIdHeader    = "x-cluster-id"
-	defaultClusterName = "cluster"
 )
 
 var (
@@ -54,9 +51,9 @@ func createAndReturnError(err error, errorStr string, code int, featureID lmaerr
 }
 
 func MaybeParseClusterNameFromRequest(r *http.Request) string {
-	clusterName := defaultClusterName
+	clusterName := lmak8s.DefaultCluster
 	if r != nil && r.Header != nil {
-		xClusterID := r.Header.Get(clusterIdHeader)
+		xClusterID := r.Header.Get(lmak8s.XClusterIDHeader)
 		if xClusterID != "" {
 			clusterName = xClusterID
 		}

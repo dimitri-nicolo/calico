@@ -13,12 +13,10 @@ import (
 
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
-
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
-
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
@@ -186,7 +184,7 @@ func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error)
 
 	// Check whether the params are provided in the request and set default values if not
 	if params.ClusterName == "" {
-		params.ClusterName = "cluster"
+		params.ClusterName = MaybeParseClusterNameFromRequest(req)
 	}
 	valid := validateActions(params.Actions)
 	if !valid {

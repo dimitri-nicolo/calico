@@ -8,17 +8,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/projectcalico/calico/compliance/pkg/api"
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
-
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/compliance/pkg/api"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // handleListReports returns a json list of the reports available to the credentials
 func (s *server) handleListReports(response http.ResponseWriter, request *http.Request) {
-	clusterID := request.Header.Get(datastore.XClusterIDHeader)
+	clusterID := request.Header.Get(lmak8s.XClusterIDHeader)
 	if clusterID == "" {
-		clusterID = datastore.DefaultCluster
+		clusterID = lmak8s.DefaultCluster
 	}
 
 	log.Infof("Request url %v and x-cluster-id: %v ", request.URL, clusterID)

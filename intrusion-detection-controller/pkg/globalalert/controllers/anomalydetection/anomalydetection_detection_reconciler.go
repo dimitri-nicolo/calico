@@ -15,7 +15,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,8 +37,7 @@ const (
 	numHashChars                    = 5
 	acceptableRFCGlobalAlertNameLen = maxCronJobNameLen - len(detectionCronJobSuffix) - numHashChars - 2
 
-	ClusterKey = "cluster"
-
+	clusterKey             = "cluster"
 	detectionCronJobSuffix = "detection"
 )
 
@@ -152,13 +150,13 @@ func (r *adDetectionReconciler) reconcile() bool {
 	// skip the check if it is an udpate to a detector for the management cluster
 	if detectionJobState.ClusterName != r.managementClusterName {
 		mc, err := r.calicoCLI.ProjectcalicoV3().ManagedClusters().Get(context.Background(), detectionJobState.ClusterName, metav1.GetOptions{})
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if err != nil && !errors.IsNotFound(err) {
 			log.Errorf("invalid state, received request to delete training cronjob %s, not marked for deletion",
 				detectionCronJobNameKey)
 			return true
 		}
 
-		forceDelete = k8serrors.IsNotFound(err) || !clusterConnected(mc)
+		forceDelete = errors.IsNotFound(err) || !clusterConnected(mc)
 	}
 
 	detectionCronJobToReconcileInterface, found := r.detectionCycleResourceCache.Get(detectionCronJobNameKey)
@@ -393,7 +391,7 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 
 	detectionCronJobName := r.getDetectionCycleCronJobNameForGlobaAlert(detectionResource.ClusterName, globalAlert.Name)
 	detectionLabels := DetectionJobLabels()
-	detectionLabels[ClusterKey] = util.Unify(detectionResource.TenantID, detectionResource.ClusterName)
+	detectionLabels[clusterKey] = util.Unify(detectionResource.TenantID, detectionResource.ClusterName)
 
 	detectionCycleCronJob := podtemplate.CreateCronJobFromPodTemplate(detectionCronJobName, r.namespace,
 		detectionSchedule, detectionLabels, *podTemplate)
@@ -454,7 +452,7 @@ func (r *adDetectionReconciler) removeDetector(detectionState DetectionCycleRequ
 
 func (r *adDetectionReconciler) stopAllDetectionCyclesForCluster(clusterName string) error {
 	cronJobList, err := r.k8sClient.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", ClusterKey, util.Unify(r.tenantID, clusterName)),
+		LabelSelector: fmt.Sprintf("%s=%s", clusterKey, util.Unify(r.tenantID, clusterName)),
 	})
 
 	log.WithFields(log.Fields{"tenant": r.tenantID, "cluster": clusterName}).Info("removing all cronjobs for cluster")

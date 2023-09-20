@@ -10,12 +10,7 @@ import (
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
-)
-
-const (
-	// Default cluster name for standalone and management cluster.
-	DefaultCluster   = "cluster"
-	XClusterIDHeader = "x-cluster-id"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // ClusterCtxK8sClientFactory is a factory that creates various k8s clients that communicate with specific clusters. The
@@ -88,12 +83,12 @@ func (f *clientSetFactory) RBACAuthorizerForCluster(clusterId string) (auth.RBAC
 
 func (f *clientSetFactory) RestConfigForCluster(clusterID string) *rest.Config {
 	restConfig := f.copyRESTConfig()
-	if clusterID != "" && clusterID != DefaultCluster {
+	if clusterID != "" && clusterID != lmak8s.DefaultCluster {
 		restConfig.Host = f.multiClusterForwardingEndpoint
 		restConfig.CAFile = f.multiClusterForwardingCA
 		restConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
 			return &addHeaderRoundTripper{
-				headers: map[string][]string{XClusterIDHeader: {clusterID}},
+				headers: map[string][]string{lmak8s.XClusterIDHeader: {clusterID}},
 				rt:      rt,
 			}
 		}

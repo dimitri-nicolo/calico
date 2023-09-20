@@ -31,6 +31,7 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/auth"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
@@ -43,9 +44,6 @@ import (
 )
 
 const (
-	// DefaultClusterID is the name of the management cluster. No tunnel is necessary for
-	// requests with this value in the ClusterHeaderField.
-	DefaultClusterID   = "cluster"
 	DefaultReadTimeout = 45 * time.Second
 
 	// CalicoCloudTenantIDClaimName is the name of the tenantID claim in Calico Cloud issued bearer tokens
@@ -484,7 +482,9 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// name for a ManagedCluster resource (which will be human-friendly and unique)
 	clusterID := r.Header.Get(utils.ClusterHeaderField)
 
-	if isK8sRequest && (!hasClusterHeader || clusterID == DefaultClusterID) {
+	// DefaultClusterID is the name of the management cluster. No tunnel is necessary for
+	// requests with this value in the ClusterHeaderField.
+	if isK8sRequest && (!hasClusterHeader || clusterID == lmak8s.DefaultCluster) {
 		r.Header.Set(authentication.AuthorizationHeader, fmt.Sprintf("Bearer %s", s.config.BearerToken))
 		s.defaultProxy.ServeHTTP(w, r)
 		return

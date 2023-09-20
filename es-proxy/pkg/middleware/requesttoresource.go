@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 package middleware
 
 import (
@@ -8,12 +8,12 @@ import (
 	"regexp"
 	"strings"
 
-	esauth "github.com/projectcalico/calico/es-proxy/pkg/auth"
-
 	log "github.com/sirupsen/logrus"
 
+	esauth "github.com/projectcalico/calico/es-proxy/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // Request properties to indicate the cluster used for proxying and RBAC.
@@ -89,8 +89,8 @@ func ClusterRequestToResource(resource string, h http.Handler) http.Handler {
 			return
 		}
 		clusterName := params.ClusterName
-		if len(clusterName) == 0 {
-			clusterName = "cluster"
+		if clusterName == "" {
+			clusterName = MaybeParseClusterNameFromRequest(r)
 		}
 
 		newReq := r.WithContext(auth.NewContextWithReviewResource(
@@ -127,7 +127,7 @@ func parseURLPath(req *http.Request) (cluster, index, urlPath string, err error)
 	}
 
 	if cluster == "" {
-		cluster = defaultClusterName
+		cluster = MaybeParseClusterNameFromRequest(req)
 	}
 
 	return cluster, index, urlPath, nil
@@ -151,12 +151,12 @@ func parseFlowLogURLPath(req *http.Request) (cluster, index string, err error) {
 	if err != nil {
 		return cluster, index, fmt.Errorf("unable to parse query parameters of request %s", req.URL.RawQuery)
 	}
-	clusters := values[clusterParam]
+	clusters := values["cluster"]
 	index, _ = queryToResource(path)
 	if len(clusters) > 0 {
 		return clusters[0], index, nil
 	}
-	return defaultClusterName, index, nil
+	return lmak8s.DefaultCluster, index, nil
 }
 
 // This is a legacy request with a path such as: "some/path/<index>.<cluster>.*/_search".
