@@ -69,8 +69,9 @@ bin/csi-driver-amd64: $(SRC_FILES)
 UPSTREAM_REGISTRAR_PROJECT ?= kubernetes-csi/$(REGISTRAR_IMAGE)
 UPSTREAM_REGISTRAR_TAG     ?= v2.7.0
 
+# FIXME set the "-s -w" ldfalgs causes "Felix: BPF UT/FV tests on new kernel" FVs to fail or timeout.
 REGISTRAR_TIGERA_BUILD_CMD="cd /go/src/github.com/$(UPSTREAM_REGISTRAR_PROJECT) && \
-	go build -buildvcs=false -ldflags \"-s -w\" -tags $(TAGS) -v -o bin/csi-node-driver-registrar cmd/csi-node-driver-registrar/*.go"
+	go build -buildvcs=false -tags $(TAGS) -v -o bin/csi-node-driver-registrar cmd/csi-node-driver-registrar/*.go"
 REGISTRAR_UPSTREAM_BUILD_CMD="cd /go/src/github.com/$(UPSTREAM_REGISTRAR_PROJECT) && \
 	make build BUILD_PLATFORMS=$(BUILD_PLATFORMS)"
 
