@@ -119,8 +119,7 @@ type Server struct {
 
 	accessLogger *accesslog.Logger
 
-	modifyResponse              cors.ModifyResponse
-	corsPreflightRequestHandler cors.PreflightRequestHandler
+	cors *cors.CORS
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
@@ -156,7 +155,7 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, vcfg config.Config, authe
 
 	// Create an HTTP server to handle incoming requests.
 	srv.proxyMux = http.NewServeMux()
-	srv.proxyMux.HandleFunc("/", wrapInMetricsAndLoggingAwareHandler(vcfg.MetricsEnabled, srv.accessLogger, srv.clusterMuxer))
+	srv.proxyMux.HandleFunc("/", wrapInMetricsAndLoggingAwareHandler(vcfg.MetricsEnabled, srv.accessLogger, wrapInCORSHandler(srv.cors, srv.clusterMuxer)))
 	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
 
 	cfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
@@ -342,7 +341,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 				log.Infof("Cluster %s stored fingerprint is successfully updated", clusterID)
 			}
 
-			if err := c.assignTunnel(t, s.modifyResponse); err != nil {
+			if err := c.assignTunnel(t); err != nil {
 				if err == tunnelmgr.ErrTunnelSet {
 					log.Errorf("opening a second tunnel ID %s rejected", clusterID)
 				} else {
@@ -424,22 +423,19 @@ func wrapInMetricsAndLoggingAwareHandler(metricsEnabled bool, logger *accesslog.
 			delegate(w, r)
 		})
 	}
+}
 
+func wrapInCORSHandler(cors *cors.CORS, delegate http.HandlerFunc) http.HandlerFunc {
+	if cors != nil {
+		return cors.NewHandlerFunc(delegate)
+	}
+	return delegate
 }
 
 func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	chdr, hasClusterHeader := r.Header[ClusterHeaderFieldCanon]
 	isK8sRequest := requestPathMatches(r, s.kubernetesAPITargets)
 	shouldUseTunnel := requestPathMatches(r, s.tunnelTargetWhitelist) && hasClusterHeader
-
-	// call handler before authentication because the fetch standard
-	// explicitly excludes credentials for cors preflight requests
-	if s.corsPreflightRequestHandler != nil && r.Method == http.MethodOptions {
-		if serveHTTP := s.corsPreflightRequestHandler(r, false); serveHTTP != nil {
-			serveHTTP(w, r)
-			return
-		}
-	}
 
 	if requestTargetPathMatches(r, s.defaultProxy, s.unauthenticatedTargetPaths) {
 		// This request is to a target that can be unauthenticated
@@ -495,11 +491,6 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		msg := fmt.Sprintf("Unknown target cluster %q", clusterID)
 		log.Errorf("clusterMuxer: %s", msg)
-		if s.corsPreflightRequestHandler != nil {
-			if serveHTTP := s.corsPreflightRequestHandler(r, true); serveHTTP != nil {
-				serveHTTP(w, r)
-			}
-		}
 		writeHTTPError(w, clusterNotFoundError(clusterID))
 		return
 	}

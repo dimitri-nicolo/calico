@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"regexp"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
@@ -21,7 +20,6 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
-	"github.com/projectcalico/calico/voltron/internal/pkg/utils/cors"
 )
 
 func main() {
@@ -168,7 +166,7 @@ func main() {
 				ClientCert:   cfg.InternalHTTPSCert,
 			},
 		}
-		targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled, nil)
+		targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
 		if err != nil {
 			log.WithError(err).Fatal("failed to parse Linseed proxy targets")
 		}
@@ -302,14 +300,8 @@ func main() {
 		})
 	}
 
-	var modifyResponse cors.ModifyResponse
 	if cfg.CalicoCloudCorsHost != "" {
-		corsOriginRegexp, err := regexp.Compile(cfg.CalicoCloudCorsHost)
-		if err != nil {
-			log.WithError(err).Fatalf("failed to compile regexp for CalicoCloud CORS Host %s", cfg.CalicoCloudCorsHost)
-		}
-		modifyResponse = cors.ResponseHandler(corsOriginRegexp)
-		opts = append(opts, server.WithCalicoCloudCORS(corsOriginRegexp, modifyResponse))
+		opts = append(opts, server.WithCalicoCloudCORS(cfg.CalicoCloudCorsHost))
 	}
 
 	var jwtAuthOpts []auth.JWTAuthOption
@@ -356,7 +348,7 @@ func main() {
 		log.Fatal("Unable to create authenticator", err)
 	}
 
-	targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled, modifyResponse)
+	targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to parse default proxy targets.")
 	}

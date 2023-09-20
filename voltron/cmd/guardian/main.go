@@ -173,7 +173,7 @@ func main() {
 			TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
 			CABundlePath: cfg.QueryserverCABundlePath,
 		},
-	}, cfg.FIPSModeEnabled, nil)
+	}, cfg.FIPSModeEnabled)
 	if err != nil {
 		log.Fatalf("Failed to parse default proxy targets: %s", err)
 	}
