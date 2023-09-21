@@ -1,11 +1,5 @@
 {{ if .Values.managementClusterConnection.enabled }}
-{{- if or (and .Values.managementClusterConnection.management.base64.tls.crt 
-               .Values.managementClusterConnection.managed.base64.tls.crt 
-               .Values.managementClusterConnection.managed.base64.tls.key) 
-          (and .Values.managementClusterConnection.management.tls.crt 
-               .Values.managementClusterConnection.managed.tls.crt 
-               .Values.managementClusterConnection.managed.tls.key) 
-}}
+{{ if or (and .Values.managementClusterConnection.management.base64.tls.crt .Values.managementClusterConnection.managed.base64.tls.crt .Values.managementClusterConnection.managed.base64.tls.key) (and .Values.managementClusterConnection.management.tls.crt .Values.managementClusterConnection.managed.tls.crt .Values.managementClusterConnection.managed.tls.key) }}
 
 apiVersion: v1
 kind: Secret
@@ -19,5 +13,5 @@ data:
   managed-cluster.crt: {{ default .Values.managementClusterConnection.managed.base64.tls.crt .Values.managementClusterConnection.managed.tls.crt }}
   managed-cluster.key: {{ default .Values.managementClusterConnection.managed.base64.tls.key .Values.managementClusterConnection.managed.tls.key }}
 
-{{- end }}
+{{ end }}
 {{ end }}
