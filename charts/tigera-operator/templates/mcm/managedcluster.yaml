@@ -1,12 +1,12 @@
 {{ if .Values.managedClusters.enabled }}
 {{- range .Values.managedClusters.clusters }}
 
-apiVersion: projectcalico.org/v3
+apiVersion: crd.projectcalico.org/v1
 kind: ManagedCluster
 metadata:
   name: {{ .name }}
 spec:
-  operatorNamespace: {{.Release.Namespace}}
+  operatorNamespace: {{ $.Release.Namespace }}
   certificate: {{ .certificate }}
 
 {{- end }}
