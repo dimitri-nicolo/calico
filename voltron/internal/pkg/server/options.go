@@ -138,7 +138,10 @@ func WithKeepAliveSettings(enable bool, intervalMs int) Option {
 	}
 }
 
-// WithDefaultProxy set the default proxy if no x-cluster-id header is present.
+// WithDefaultProxy sets the default proxy which is used for requests that do not specify an x-cluster-id header.
+// It primarily handles requests from the user's browser which are destined to the
+// management cluster (or standalone).
+//
 // it is optional. If this option is not set, then the server will returns a 400
 // error when a request does not have the x-cluster-id header set.
 func WithDefaultProxy(p *proxy.Proxy) Option {
