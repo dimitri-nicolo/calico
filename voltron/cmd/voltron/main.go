@@ -301,7 +301,8 @@ func main() {
 	}
 
 	if cfg.CalicoCloudCorsHost != "" {
-		opts = append(opts, server.WithCalicoCloudCORS(cfg.CalicoCloudCorsHost))
+		// pass prometheus path as a path to ignore because prometheus already sets cors headers in responses.
+		opts = append(opts, server.WithCalicoCloudCORS(cfg.CalicoCloudCorsHost, cfg.PrometheusPath))
 	}
 
 	var jwtAuthOpts []auth.JWTAuthOption

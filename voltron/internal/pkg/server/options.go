@@ -264,12 +264,12 @@ func WithInternalMetricsEndpointEnabled(enabled bool) Option {
 	}
 }
 
-// WithCalicoCloudCORS enables calico cloud CORS handler
-func WithCalicoCloudCORS(expr string) Option {
+// WithCalicoCloudCORS enables calico cloud CORS handler for all paths except specified ignorePaths.
+func WithCalicoCloudCORS(expr string, ignorePaths ...string) Option {
 	return func(s *Server) error {
-		c, err := cors.New(expr)
+		c, err := cors.New(expr, ignorePaths...)
 		if err != nil {
-			return fmt.Errorf("failed to")
+			return fmt.Errorf("failed to initialize cors: %v", err)
 		}
 		s.cors = c
 		return nil
