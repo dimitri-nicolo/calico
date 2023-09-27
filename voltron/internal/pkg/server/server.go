@@ -82,7 +82,18 @@ type Server struct {
 	config        *rest.Config
 	authenticator auth.JWTAuth
 
-	defaultProxy               *proxy.Proxy
+	// defaultProxy handles requests received by voltron which are destined to the management cluster itself.
+	// this primarily serves requests made by the user's browser.
+	// when nil, the server will returns a 400 error for requests that do not have the x-cluster-id header set.
+	//
+	// defaultProxy has its own ServeMux, separate from proxyMux and internalMux.
+	defaultProxy *proxy.Proxy
+
+	// tunnelTargetWhitelist contains a list of url paths which are allowed to go down the tunnel to the managed cluster.
+	// requests that do not match this whitelist will be diverted to the management cluster even if the request has specified
+	// the x-cluster-id header.
+	//
+	// this can be used to move services to the management cluster without needing any update to the client making the request.
 	tunnelTargetWhitelist      []regexp.Regexp
 	kubernetesAPITargets       []regexp.Regexp
 	unauthenticatedTargetPaths []string

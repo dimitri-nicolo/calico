@@ -19,8 +19,8 @@ import (
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
-// Client is the voltron client. It accepts requests from voltron server
-// and redirects it to different parts in the cluster.
+// Client is the voltron client. It is used by Guardian to establish a secure tunnel connection to the Voltron server and
+// then enable managed cluster services and management cluster services to communicate with one another.
 type Client struct {
 	http      *http.Server
 	proxyMux  *http.ServeMux

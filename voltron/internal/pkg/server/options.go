@@ -138,7 +138,10 @@ func WithKeepAliveSettings(enable bool, intervalMs int) Option {
 	}
 }
 
-// WithDefaultProxy set the default proxy if no x-cluster-id header is present.
+// WithDefaultProxy sets the default proxy which is used for requests that do not specify an x-cluster-id header.
+// It primarily handles requests from the user's browser which are destined to the
+// management cluster (or standalone).
+//
 // it is optional. If this option is not set, then the server will returns a 400
 // error when a request does not have the x-cluster-id header set.
 func WithDefaultProxy(p *proxy.Proxy) Option {
@@ -261,12 +264,12 @@ func WithInternalMetricsEndpointEnabled(enabled bool) Option {
 	}
 }
 
-// WithCalicoCloudCORS enables calico cloud CORS handler
-func WithCalicoCloudCORS(expr string) Option {
+// WithCalicoCloudCORS enables calico cloud CORS handler for all paths except specified ignorePaths.
+func WithCalicoCloudCORS(expr string, ignorePaths ...string) Option {
 	return func(s *Server) error {
-		c, err := cors.New(expr)
+		c, err := cors.New(expr, ignorePaths...)
 		if err != nil {
-			return fmt.Errorf("failed to")
+			return fmt.Errorf("failed to initialize cors: %v", err)
 		}
 		s.cors = c
 		return nil
