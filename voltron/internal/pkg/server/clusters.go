@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -20,8 +21,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
@@ -32,12 +35,13 @@ import (
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 
-	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
 // managed cluster certificate that is allowed to initiate connections.
 const AnnotationActiveCertificateFingerprint = "certs.tigera.io/active-fingerprint"
+const contextTimeout = 30 * time.Second
 
 type cluster struct {
 	jclust.ManagedCluster
@@ -53,6 +57,8 @@ type cluster struct {
 	// Kubernetes client used for querying and watching ManagedCluster resources.
 	k8sCLI bootstrap.K8sClient
 
+	client ctrlclient.WithWatch
+
 	// tlsProxy is the proxy that handles incoming TLS connections from the managed cluster.
 	// These connections are routed via the server field in the TLS header. Connections via this proxy that
 	// target Voltron itself will be handled by the proxy's inner TLS server.
@@ -65,12 +71,20 @@ type cluster struct {
 // updateActiveFingerprint updates the active fingerprint annotation for a ManagedCluster resource
 // in the management cluster.
 func (c *cluster) updateActiveFingerprint(fingerprint string) error {
-	mc, err := c.k8sCLI.ManagedClusters().Get(context.Background(), c.ID, metav1.GetOptions{})
+
+	mc := &v3.ManagedCluster{}
+	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	defer cancel()
+
+	// Client Get act as single tenant when the TenantNamespace is empty
+	err := c.client.Get(ctx, types.NamespacedName{Name: c.ID, Namespace: c.voltronCfg.TenantNamespace}, mc)
 	if err != nil {
 		return err
 	}
+
 	mc.Annotations[AnnotationActiveCertificateFingerprint] = fingerprint
-	_, err = c.k8sCLI.ManagedClusters().Update(context.Background(), mc, metav1.UpdateOptions{})
+
+	err = c.client.Update(ctx, mc)
 	if err != nil {
 		return err
 	}
@@ -85,6 +99,7 @@ type clusters struct {
 	clusters        map[string]*cluster
 	sniServiceMap   map[string]string
 	k8sCLI          bootstrap.K8sClient
+	client          ctrlclient.WithWatch
 	fipsModeEnabled bool
 
 	// parameters for forwarding guardian requests to a default server
@@ -136,6 +151,7 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 		ManagedCluster: *mc,
 		tunnelManager:  tunnelmgr.NewManager(),
 		k8sCLI:         cs.k8sCLI,
+		client:         cs.client,
 		voltronCfg:     cs.voltronCfg,
 	}
 
@@ -283,9 +299,8 @@ func (cs *clusters) get(id string) *cluster {
 }
 
 func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last string) error {
-	watcher, err := cs.k8sCLI.ManagedClusters().Watch(context.Background(), metav1.ListOptions{
-		ResourceVersion: last,
-	})
+
+	watcher, err := cs.client.Watch(ctx, &v3.ManagedClusterList{}, &ctrlclient.ListOptions{Namespace: cs.voltronCfg.TenantNamespace})
 	if err != nil {
 		return errors.Errorf("failed to create k8s watch: %s", err)
 	}
@@ -296,8 +311,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			if !ok {
 				return errors.Errorf("watcher stopped unexpectedly")
 			}
-
-			mcResource, ok := r.Object.(*calicov3.ManagedCluster)
+			mcResource, ok := r.Object.(*v3.ManagedCluster)
 			if !ok {
 				log.Debugf("Unexpected object type %T", r.Object)
 				continue
@@ -340,7 +354,9 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 }
 
 func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string, error) {
-	list, err := cs.k8sCLI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+
+	list := &v3.ManagedClusterList{}
+	err := cs.client.List(ctx, list, &ctrlclient.ListOptions{Namespace: cs.voltronCfg.TenantNamespace})
 	if err != nil {
 		return "", errors.Errorf("failed to get k8s list: %s", err)
 	}
@@ -372,7 +388,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 				c.Lock()
 
 				// Just update the cluster status even if it's already set to false, we just do this on startup.
-				if err := c.setConnectedStatus(calicov3.ManagedClusterStatusValueFalse); err != nil {
+				if err := c.setConnectedStatus(v3.ManagedClusterStatusValueFalse); err != nil {
 					c.Unlock()
 					return "", errors.Errorf("failed to update the connection status for cluster %s during startup.", c.ID)
 				}
@@ -464,7 +480,7 @@ func (c *cluster) checkTunnelState() {
 		log.WithError(err).Error("an error occurred closing the tunnel")
 	}
 
-	if err := c.setConnectedStatus(calicov3.ManagedClusterStatusValueFalse); err != nil {
+	if err := c.setConnectedStatus(v3.ManagedClusterStatusValueFalse); err != nil {
 		log.WithError(err).Errorf("failed to update the connection status for cluster %s", c.ID)
 	}
 	log.Errorf("Cluster %s tunnel is broken (%s), deleted", c.ID, err)
@@ -542,7 +558,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 			log.Debugf("server has stopped listening for connections from %s", c.ID)
 		}()
 	}
-	if err := c.setConnectedStatus(calicov3.ManagedClusterStatusValueTrue); err != nil {
+	if err := c.setConnectedStatus(v3.ManagedClusterStatusValueTrue); err != nil {
 		log.WithError(err).Errorf("failed to update the connection status for cluster %s", c.ID)
 	}
 	// will clean up the tunnel if it breaks, will exit once the tunnel is gone
@@ -552,17 +568,21 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 }
 
 // setConnectedStatus updates the MangedClusterConnected condition of this cluster's ManagedCluster CR.
-func (c *cluster) setConnectedStatus(status calicov3.ManagedClusterStatusValue) error {
-	mc, err := c.k8sCLI.ManagedClusters().Get(context.Background(), c.ID, metav1.GetOptions{})
+func (c *cluster) setConnectedStatus(status v3.ManagedClusterStatusValue) error {
+
+	var mc = &v3.ManagedCluster{}
+	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	defer cancel()
+	err := c.client.Get(ctx, types.NamespacedName{Name: c.ID, Namespace: c.voltronCfg.TenantNamespace}, mc)
 	if err != nil {
 		return err
 	}
 
-	var updatedConditions []calicov3.ManagedClusterStatusCondition
+	var updatedConditions []v3.ManagedClusterStatusCondition
 
 	connectedConditionFound := false
 	for _, c := range mc.Status.Conditions {
-		if c.Type == calicov3.ManagedClusterStatusTypeConnected {
+		if c.Type == v3.ManagedClusterStatusTypeConnected {
 			c.Status = status
 			connectedConditionFound = true
 		}
@@ -570,15 +590,15 @@ func (c *cluster) setConnectedStatus(status calicov3.ManagedClusterStatusValue) 
 	}
 
 	if !connectedConditionFound {
-		updatedConditions = append(updatedConditions, calicov3.ManagedClusterStatusCondition{
-			Type:   calicov3.ManagedClusterStatusTypeConnected,
+		updatedConditions = append(updatedConditions, v3.ManagedClusterStatusCondition{
+			Type:   v3.ManagedClusterStatusTypeConnected,
 			Status: status,
 		})
 	}
 
 	mc.Status.Conditions = updatedConditions
 
-	_, err = c.k8sCLI.ManagedClusters().Update(context.Background(), mc, metav1.UpdateOptions{})
+	err = c.client.Update(ctx, mc)
 	if err != nil {
 		return err
 	}

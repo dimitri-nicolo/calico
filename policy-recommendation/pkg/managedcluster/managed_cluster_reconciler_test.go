@@ -3,22 +3,26 @@ package managedcluster
 import (
 	"context"
 
+	fakeK8s "k8s.io/client-go/kubernetes/fake"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	fakeK8s "k8s.io/client-go/kubernetes/fake"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	linseed "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controller"
 	controller_mocks "github.com/projectcalico/calico/policy-recommendation/pkg/controller/mocks"
+
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("ManagedCluster reconciler test", func() {
@@ -31,15 +35,21 @@ var _ = Describe("ManagedCluster reconciler test", func() {
 		testCancel context.CancelFunc
 		mr         managedClusterReconciler
 		calicoCLI  calicoclient.ProjectcalicoV3Interface
+		fakeClient client.WithWatch
 	)
 
 	BeforeEach(func() {
 		calicoCLI = fake.NewSimpleClientset().ProjectcalicoV3()
 		testCtx, testCancel = context.WithCancel(context.Background())
 
+		scheme := kscheme.Scheme
+		err := v3.AddToScheme(scheme)
+		Expect(err).NotTo(HaveOccurred())
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+
 		mr = managedClusterReconciler{
-			managementStandaloneCalico: calicoCLI,
-			cache:                      make(map[string]*managedClusterState),
+			client: fakeClient,
+			cache:  make(map[string]*managedClusterState),
 		}
 	})
 
@@ -116,26 +126,22 @@ var _ = Describe("ManagedCluster reconciler test", func() {
 			nil,
 		)
 
-		mr.clientFactory = &mockClientFactory
-		mr.linseed = linseed.NewMockClient("", rest.MockResult{})
+		mr.clientSetFactory = &mockClientFactory
+		mr.linseedClient = linseed.NewMockClient("", rest.MockResult{})
 
-		_, err := calicoCLI.ManagedClusters().Create(
-			testCtx,
-			&v3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: testResourceName,
-				},
-				Status: v3.ManagedClusterStatus{
-					Conditions: []v3.ManagedClusterStatusCondition{
-						{
-							Type:   v3.ManagedClusterStatusTypeConnected,
-							Status: v3.ManagedClusterStatusValueTrue,
-						},
+		err := mr.client.Create(testCtx, &v3.ManagedCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: testResourceName,
+			},
+			Status: v3.ManagedClusterStatus{
+				Conditions: []v3.ManagedClusterStatusCondition{
+					{
+						Type:   v3.ManagedClusterStatusTypeConnected,
+						Status: v3.ManagedClusterStatusValueTrue,
 					},
 				},
 			},
-			metav1.CreateOptions{},
-		)
+		})
 
 		Expect(err).To(BeNil())
 

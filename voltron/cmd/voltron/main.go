@@ -9,8 +9,11 @@ import (
 	"net"
 	"net/url"
 
-	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
@@ -25,9 +28,9 @@ import (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	cfg := config.Config{}
-	if err := envconfig.Process(config.EnvConfigPrefix, &cfg); err != nil {
-		log.Fatal(err)
+	cfg, err := config.Parse()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to load voltron configuration.")
 	}
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
@@ -85,6 +88,16 @@ func main() {
 	}
 
 	k8s := bootstrap.NewK8sClientWithConfig(k8sConfig)
+
+	var client ctrlclient.WithWatch
+	scheme := runtime.NewScheme()
+	if err = v3.AddToScheme(scheme); err != nil {
+		log.WithError(err).Fatal("Failed to configure controller runtime client")
+	}
+	client, err = ctrlclient.NewWithWatch(k8sConfig, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		log.WithError(err).Fatal("Failed to configure controller runtime client with watch")
+	}
 
 	if cfg.EnableMultiClusterManagement {
 		// the cert used to sign guardian certs is required no matter what to verify inbound connections
@@ -362,8 +375,9 @@ func main() {
 
 	srv, err := server.New(
 		k8s,
+		client,
 		k8sConfig,
-		cfg,
+		*cfg,
 		authn,
 		opts...,
 	)

@@ -11,6 +11,7 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/kubernetes"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
@@ -35,7 +36,7 @@ var (
 
 type adJobDetectionController struct {
 	ctx                         context.Context
-	k8sClient                   kubernetes.Interface
+	kubeClientSet               kubernetes.Interface
 	cancel                      context.CancelFunc
 	clusterName                 string
 	tenantID                    string
@@ -54,25 +55,27 @@ type DetectionCycleRequest struct {
 // for each GlobalAlert created for AnomalyDetection.  The ADJobDetectionController is referenced by GlobalAlertController
 // and ManagedClusterController - to handle GlobalAlert of typed AnomalyDetection in Standalone or Management clusters
 // through GlobalAlertController, and Managed Cluster through ManagedClusterController.
-func NewADJobDetectionController(ctx context.Context, k8sClient kubernetes.Interface, calicoCLI calicoclient.Interface,
-	podTemplateQuery podtemplate.ADPodTemplateQuery, namespace string, managementClusterName string, tenantID string) controller.AnomalyDetectionController {
+func NewADJobDetectionController(ctx context.Context, kubeClientSet kubernetes.Interface, calicoClientSet calicoclient.Interface, client ctrlclient.WithWatch,
+	podTemplateQuery podtemplate.ADPodTemplateQuery, namespace string, managementClusterName string, tenantID, tenantNamespace string) controller.AnomalyDetectionController {
 
 	adJobDetectionReconciler := &adDetectionReconciler{
-		calicoCLI:                 calicoCLI,
-		k8sClient:                 k8sClient,
+		calicoClientSet:           calicoClientSet,
+		kubeClientSet:             kubeClientSet,
+		client:                    client,
 		podTemplateQuery:          podTemplateQuery,
 		detectionADDetectorStates: make(map[string]detectionCycleState),
 		managementClusterName:     managementClusterName,
 		tenantID:                  tenantID,
 
-		namespace: namespace,
+		namespace:       namespace,
+		tenantNamespace: tenantNamespace,
 	}
 
 	adDetectionController := &adJobDetectionController{
 		ctx:                      ctx,
 		clusterName:              managementClusterName,
 		tenantID:                 tenantID,
-		k8sClient:                k8sClient,
+		kubeClientSet:            kubeClientSet,
 		adJobDetectionReconciler: adJobDetectionReconciler,
 	}
 

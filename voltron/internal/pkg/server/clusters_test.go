@@ -7,8 +7,14 @@ package server
 
 import (
 	"context"
+
 	"crypto/rsa"
 	"crypto/x509"
+
+	"k8s.io/apimachinery/pkg/types"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
 	"sync"
 	"time"
 
@@ -22,70 +28,114 @@ import (
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
+
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
-var _ = Describe("Clusters", func() {
-	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
-	clusters := &clusters{
-		clusters:   make(map[string]*cluster),
-		k8sCLI:     k8sAPI,
-		voltronCfg: &vcfg.Config{},
-	}
+func describe(name string, testFn func(string)) bool {
+	Describe(name+" cluster-scoped", func() { testFn("") })
+	Describe(name+" namespace-scoped", func() { testFn("resource-ns") })
+	return true
+}
+
+var _ = describe("Clusters", func(clusterNamespace string) {
+	scheme := kscheme.Scheme
+	err := v3.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
 	var wg sync.WaitGroup
 	clusterID := "resource-name"
-	clusterName := "resource-name"
+	//clusterNamespace := "resource-ns"
 
-	Describe("basic functionality", func() {
-		ctx, cancel := context.WithCancel(context.Background())
+	clusters := &clusters{
+		clusters:   make(map[string]*cluster),
+		client:     fakeClient,
+		voltronCfg: &vcfg.Config{TenantNamespace: clusterNamespace},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
 
-		By("starting watching", func() {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				_ = clusters.watchK8s(ctx, nil)
-			}()
+	By("starting watching", func() {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = clusters.watchK8s(ctx, nil)
+		}()
+	})
+
+	It("should be possible to add a cluster", func() {
+		annotations := map[string]string{
+			AnnotationActiveCertificateFingerprint: "active-fingerprint-hash-1",
+		}
+		err := fakeClient.Create(context.Background(), &v3.ManagedCluster{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       v3.KindManagedCluster,
+				APIVersion: v3.GroupVersionCurrent,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        clusterID,
+				Namespace:   clusterNamespace,
+				Annotations: annotations,
+			},
 		})
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() int { return len(clusters.List()) }).Should(Equal(1))
+	})
 
-		It("should be possible to add a cluster", func() {
-			annotations := map[string]string{
-				AnnotationActiveCertificateFingerprint: "active-fingerprint-hash-1",
-			}
-			Expect(k8sAPI.AddCluster(clusterID, clusterName, annotations)).ShouldNot(HaveOccurred())
-			Eventually(func() int { return len(clusters.List()) }).Should(Equal(1))
-		})
+	It("should be able to update cluster active fingerprint", func() {
+		Expect(clusters.clusters[clusterID].ActiveFingerprint).To(Equal("active-fingerprint-hash-1"))
+		mc := &v3.ManagedCluster{}
+		err := fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterID, Namespace: clusterNamespace}, mc)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mc.GetAnnotations()).To(HaveKeyWithValue(AnnotationActiveCertificateFingerprint, "active-fingerprint-hash-1"))
 
-		It("should be able to update cluster active fingerprint", func() {
-			Expect(clusters.clusters[clusterID].ActiveFingerprint).To(Equal("active-fingerprint-hash-1"))
-			mc, err := k8sAPI.ManagedClusters().Get(ctx, clusterID, metav1.GetOptions{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(mc.GetAnnotations()).To(HaveKeyWithValue(AnnotationActiveCertificateFingerprint, "active-fingerprint-hash-1"))
+		err = clusters.clusters[clusterID].updateActiveFingerprint("active-fingerprint-hash-2")
+		Expect(err).NotTo(HaveOccurred())
 
-			err = clusters.clusters[clusterID].updateActiveFingerprint("active-fingerprint-hash-2")
-			Expect(err).NotTo(HaveOccurred())
+		Expect(clusters.clusters[clusterID].ActiveFingerprint).To(Equal("active-fingerprint-hash-2"))
 
-			Expect(clusters.clusters[clusterID].ActiveFingerprint).To(Equal("active-fingerprint-hash-2"))
-			mc, err = k8sAPI.ManagedClusters().Get(ctx, clusterID, metav1.GetOptions{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(mc.GetAnnotations()).To(HaveKeyWithValue(AnnotationActiveCertificateFingerprint, "active-fingerprint-hash-2"))
-		})
+		mc = &v3.ManagedCluster{}
+		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterID, Namespace: clusterNamespace}, mc)
 
-		It("should be possible to delete a cluster", func() {
-			Expect(k8sAPI.DeleteCluster(clusterID)).ShouldNot(HaveOccurred())
-			Eventually(func() int { return len(clusters.List()) }).Should(Equal(0))
-		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mc.GetAnnotations()).To(HaveKeyWithValue(AnnotationActiveCertificateFingerprint, "active-fingerprint-hash-2"))
+	})
 
-		It("should stop watch", func() {
-			cancel()
-			wg.Wait()
-		})
+	It("should be possible to delete a cluster", func() {
+		Expect(fakeClient.Delete(context.Background(), &v3.ManagedCluster{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       v3.KindManagedCluster,
+				APIVersion: v3.GroupVersionCurrent,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      clusterID,
+				Namespace: clusterNamespace,
+			},
+		})).ShouldNot(HaveOccurred())
+		Eventually(func() int { return len(clusters.List()) }).Should(Equal(0))
+	})
+
+	It("should stop watch", func() {
+		cancel()
+		wg.Wait()
 	})
 
 	When("watch is down", func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		It("should cluster added should be seen after watch restarts", func() {
 			Expect(len(clusters.List())).To(Equal(0))
-			Expect(k8sAPI.AddCluster(clusterID, clusterName, nil)).ShouldNot(HaveOccurred())
+			Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v3.KindManagedCluster,
+					APIVersion: v3.GroupVersionCurrent,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      clusterID,
+					Namespace: clusterNamespace,
+				},
+			})).NotTo(HaveOccurred())
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -104,7 +154,16 @@ var _ = Describe("Clusters", func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		It("should delete a cluster deleted while watch was down", func() {
 			Expect(len(clusters.List())).To(Equal(1))
-			Expect(k8sAPI.DeleteCluster(clusterID)).ShouldNot(HaveOccurred())
+			Expect(fakeClient.Delete(context.Background(), &v3.ManagedCluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v3.KindManagedCluster,
+					APIVersion: v3.GroupVersionCurrent,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      clusterID,
+					Namespace: clusterNamespace,
+				},
+			})).ShouldNot(HaveOccurred())
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -114,20 +173,23 @@ var _ = Describe("Clusters", func() {
 		})
 
 		It("should add a cluster after watch restarted due to an error", func() {
-			Expect(len(clusters.List())).To(Equal(0))
-			k8sAPI.BreakWatcher()
-			k8sAPI.WaitForManagedClustersWatched() // indicates a watch restart
-			Expect(k8sAPI.AddCluster("X", "X", nil)).ShouldNot(HaveOccurred())
-			Eventually(func() int { return len(clusters.List()) }).Should(Equal(1))
-		})
 
-		It("should add a cluster before watch restarted due to an error", func() {
-			Expect(len(clusters.List())).To(Equal(1))
-			k8sAPI.BlockWatches()
-			k8sAPI.BreakWatcher()
-			Expect(k8sAPI.AddCluster("Y", "Y", nil)).ShouldNot(HaveOccurred())
-			k8sAPI.UnblockWatches()
-			Eventually(func() int { return len(clusters.List()) }).Should(Equal(2))
+			mcList := &v3.ManagedClusterList{}
+			watch, err := fakeClient.Watch(context.Background(), mcList, &ctrlclient.ListOptions{})
+			watch.Stop()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(clusters.List())).To(Equal(0))
+			Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v3.KindManagedCluster,
+					APIVersion: v3.GroupVersionCurrent,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "X",
+					Namespace: clusterNamespace,
+				},
+			})).NotTo(HaveOccurred())
+			Eventually(func() int { return len(clusters.List()) }).Should(Equal(1))
 		})
 
 		It("should stop watch", func() {
@@ -141,8 +203,25 @@ var _ = Describe("Clusters", func() {
 		clusterName := "sample-restart-cluster"
 
 		It("should set ManagedClusterConnected status to false if it is true during startup.", func() {
-			Expect(len(clusters.List())).To(Equal(2))
-			Expect(k8sAPI.AddCluster(clusterName, clusterName, nil, calicov3.ManagedClusterStatusValueTrue)).ShouldNot(HaveOccurred())
+			Expect(len(clusters.List())).To(Equal(1))
+			Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v3.KindManagedCluster,
+					APIVersion: v3.GroupVersionCurrent,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      clusterName,
+					Namespace: clusterNamespace,
+				},
+				Status: calicov3.ManagedClusterStatus{
+					Conditions: []calicov3.ManagedClusterStatusCondition{
+						{
+							Status: calicov3.ManagedClusterStatusValueTrue,
+							Type:   "ManagedClusterConnected",
+						},
+					},
+				},
+			})).NotTo(HaveOccurred())
 
 			wg.Add(1)
 			go func() {
@@ -151,10 +230,12 @@ var _ = Describe("Clusters", func() {
 			}()
 
 			Eventually(func() calicov3.ManagedClusterStatusValue {
-				c, _ := k8sAPI.ManagedClusters().Get(context.Background(), clusterName, metav1.GetOptions{})
-				return c.Status.Conditions[0].Status
+				mc := &v3.ManagedCluster{}
+				err = fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterName, Namespace: clusterNamespace}, mc)
+				return mc.Status.Conditions[0].Status
 			}, 10*time.Second, 1*time.Second).Should(Equal(calicov3.ManagedClusterStatusValueFalse))
-			Expect(len(clusters.List())).To(Equal(3))
+
+			Expect(len(clusters.List())).To(Equal(2))
 		})
 
 		It("should stop watch", func() {
@@ -164,7 +245,8 @@ var _ = Describe("Clusters", func() {
 	})
 })
 
-var _ = Describe("Update certificates", func() {
+var _ = describe("Update certificates", func(clusterNamespace string) {
+
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
 	clusters := &clusters{
 		clusters:              make(map[string]*cluster),

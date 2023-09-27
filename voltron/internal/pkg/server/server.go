@@ -19,6 +19,7 @@ import (
 	"time"
 
 	authnv1 "k8s.io/api/authentication/v1"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
@@ -136,7 +137,7 @@ type Server struct {
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
 // or not if they set its user and return an error if it is nil
-func New(k8s bootstrap.K8sClient, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, opts ...Option) (*Server, error) {
+func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, opts ...Option) (*Server, error) {
 	srv := &Server{
 		k8s:           k8s,
 		config:        config,
@@ -145,6 +146,7 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, vcfg config.Config, authe
 			clusters:   make(map[string]*cluster),
 			voltronCfg: &vcfg,
 			k8sCLI:     k8s,
+			client:     client,
 		},
 		tunnelEnableKeepAlive:   true,
 		tunnelKeepAliveInterval: 100 * time.Millisecond,

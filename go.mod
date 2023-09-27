@@ -152,7 +152,9 @@ require (
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	modernc.org/memory v1.7.1
 	sigs.k8s.io/kind v0.20.0
+	sigs.k8s.io/controller-runtime v0.14.6
 )
+
 
 require (
 	cloud.google.com/go/compute v1.19.1 // indirect
@@ -369,7 +371,6 @@ require (
 	k8s.io/mount-utils v0.26.8 // indirect
 	k8s.io/pod-security-admission v0.0.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.37 // indirect
-	sigs.k8s.io/controller-runtime v0.14.6 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect

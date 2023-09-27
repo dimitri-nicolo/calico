@@ -13,6 +13,11 @@ import (
 	"net/url"
 	"sync"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -34,7 +39,8 @@ import (
 
 var _ = Describe("Server supports unauthenticated targets", func() {
 	var (
-		k8sAPI bootstrap.K8sClient
+		k8sAPI     bootstrap.K8sClient
+		fakeClient ctrlclient.WithWatch
 
 		voltronExtHttpsCert    *x509.Certificate
 		voltronExtHttpsPrivKey *rsa.PrivateKey
@@ -50,6 +56,12 @@ var _ = Describe("Server supports unauthenticated targets", func() {
 			Interface:                k8sfake.NewSimpleClientset(),
 			ProjectcalicoV3Interface: fake.NewSimpleClientset().ProjectcalicoV3(),
 		}
+
+		scheme := kscheme.Scheme
+		err = v3.AddToScheme(scheme)
+		Expect(err).NotTo(HaveOccurred())
+
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
 		voltronExtHttpCertTemplate := test.CreateServerCertificateTemplate("localhost")
 		voltronExtHttpsPrivKey, voltronExtHttpsCert, err = test.CreateCertPair(voltronExtHttpCertTemplate, nil, nil)
@@ -109,9 +121,10 @@ var _ = Describe("Server supports unauthenticated targets", func() {
 			k8sTargets, err := regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			srv, httpsAddr, _, _, srvWg = createAndStartServer(k8sAPI,
+			srv, httpsAddr, _, _, srvWg = createAndStartServer(k8sAPI, fakeClient,
 				config,
 				mockAuthenticator,
+				"",
 				server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),
 				server.WithInternalCreds(test.CertToPemBytes(voltronIntHttpsCert), test.KeyToPemBytes(voltronIntHttpsPrivKey)),
 				server.WithDefaultProxy(defaultProxy),

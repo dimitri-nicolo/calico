@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"syscall"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"k8s.io/klog/v2"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync"
@@ -24,6 +26,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/rbac"
@@ -41,13 +47,11 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/version"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
-	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
-
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 const (
@@ -97,13 +101,23 @@ func main() {
 			panic(err.Error())
 		}
 	}
-	k8sClient, err := kubernetes.NewForConfig(k8sConfig)
+	kubeClientSet, err := kubernetes.NewForConfig(k8sConfig)
 	if err != nil {
-		panic(err.Error())
+		log.WithError(err).Fatal("Failed to create kubernetes client set")
 	}
-	calicoClient, err := calicoclient.NewForConfig(k8sConfig)
+	calicoClientSet, err := calicoclient.NewForConfig(k8sConfig)
 	if err != nil {
-		panic(err.Error())
+		log.WithError(err).Fatal("Failed to create calico client set")
+	}
+
+	scheme := runtime.NewScheme()
+	if err = v3.AddToScheme(scheme); err != nil {
+		log.WithError(err).Fatal("Failed to configure controller runtime client")
+	}
+
+	client, err := ctrlclient.NewWithWatch(k8sConfig, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		log.WithError(err).Fatal("Failed to configure controller runtime client with watch")
 	}
 
 	// This allows us to use "calico-monitoring" in helm if we want to
@@ -129,13 +143,13 @@ func main() {
 		ClientCertPath:  cfg.LinseedClientCert,
 		FIPSModeEnabled: cfg.FIPSMode,
 	}
-	linseed, err := lsclient.NewClient(cfg.TenantID, lsConfig, lsrest.WithTokenPath(cfg.LinseedToken))
+	linseedClient, err := lsclient.NewClient(cfg.TenantID, lsConfig, lsrest.WithTokenPath(cfg.LinseedToken))
 	if err != nil {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}
 
 	indexSettings := storage.IndexSettings{Replicas: envCfg.ElasticReplicas, Shards: envCfg.ElasticShards}
-	e := storage.NewService(lmaESClient, linseed, "", indexSettings)
+	e := storage.NewService(lmaESClient, linseedClient, "", indexSettings)
 	e.Run(ctx)
 	defer e.Close()
 
@@ -143,7 +157,7 @@ func main() {
 		log.WithError(err).Panic("Could not create anomalydetection service")
 	}
 
-	clientCalico, err := client.NewFromEnv()
+	clientCalico, err := clientv3.NewFromEnv()
 	if err != nil {
 		log.WithError(err).Fatal("Failed to build calico client")
 	}
@@ -174,18 +188,18 @@ func main() {
 		}
 	}()
 
-	gns := globalnetworksets.NewController(calicoClient.ProjectcalicoV3().GlobalNetworkSets())
+	gns := globalnetworksets.NewController(calicoClientSet.ProjectcalicoV3().GlobalNetworkSets())
 	eip := sync.NewIPSetController(e)
 	edn := sync.NewDomainNameSetController(e)
 	sIP := events.NewSuspiciousIP(e)
 	sDN := events.NewSuspiciousDomainNameSet(e)
 
 	s := feedsWatcher.NewWatcher(
-		k8sClient.CoreV1().ConfigMaps(configMapNamespace),
+		kubeClientSet.CoreV1().ConfigMaps(configMapNamespace),
 		rbac.RestrictedSecretsClient{
-			Client: k8sClient.CoreV1().Secrets(secretsNamespace),
+			Client: kubeClientSet.CoreV1().Secrets(secretsNamespace),
 		},
-		calicoClient.ProjectcalicoV3().GlobalThreatFeeds(),
+		calicoClientSet.ProjectcalicoV3().GlobalThreatFeeds(),
 		gns,
 		eip,
 		edn,
@@ -215,26 +229,26 @@ func main() {
 	if enableAlerts {
 
 		if enableAnomalyDetection {
-			podtemplateQuery = podtemplate.NewPodTemplateQuery(k8sClient)
+			podtemplateQuery = podtemplate.NewPodTemplateQuery(kubeClientSet)
 
 			// Initialize controllers to monitor cron jobs for training and detection for anomaly detection
-			anomalyTrainingController = anomalydetection.NewADJobTrainingController(k8sClient,
-				calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, "cluster", cfg.TenantID)
+			anomalyTrainingController = anomalydetection.NewADJobTrainingController(kubeClientSet,
+				calicoClientSet, client, podtemplateQuery, TigeraIntrusionDetectionNamespace, "cluster", cfg.TenantID, cfg.TenantNamespace)
 
 			// detection controller depends on GlobalAlert such removing the pinger as one might not be present at start
-			anomalyDetectionController = anomalydetection.NewADJobDetectionController(ctx, k8sClient,
-				calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, "cluster", cfg.TenantID)
+			anomalyDetectionController = anomalydetection.NewADJobDetectionController(ctx, kubeClientSet,
+				calicoClientSet, client, podtemplateQuery, TigeraIntrusionDetectionNamespace, "cluster", cfg.TenantID, cfg.TenantNamespace)
 		}
 
 		// This will manage global alerts and anomaly detection inside the management cluster
-		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, linseed, k8sClient, enableAnomalyDetection, anomalyDetectionController, anomalyTrainingController, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.FIPSMode)
+		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClientSet, linseedClient, kubeClientSet, enableAnomalyDetection, anomalyDetectionController, anomalyTrainingController, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.FIPSMode, cfg.TenantNamespace)
 		healthPingers = append(healthPingers, &alertHealthPinger)
 
 		// This will manage all waf logs inside the management cluster
-		wafEventController = waf.NewWafAlertController(linseed, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace)
+		wafEventController = waf.NewWafAlertController(linseedClient, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace)
 
 		// This controller will monitor managed cluster updated from K8S and create a NewGlobalAlertController per managed cluster
-		managedClusterController = managedcluster.NewManagedClusterController(calicoClient, linseed, k8sClient, enableAnomalyDetection, anomalyTrainingController, anomalyDetectionController, TigeraIntrusionDetectionNamespace, util.ManagedClusterClient(k8sConfig, cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA), cfg.FIPSMode, cfg.TenantID)
+		managedClusterController = managedcluster.NewManagedClusterController(calicoClientSet, linseedClient, kubeClientSet, client, enableAnomalyDetection, anomalyTrainingController, anomalyDetectionController, TigeraIntrusionDetectionNamespace, util.ManagedClusterClient(k8sConfig, cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA), cfg.FIPSMode, cfg.TenantID, cfg.TenantNamespace)
 	}
 
 	f := forwarder.NewEventForwarder("eventforwarder-1", e)

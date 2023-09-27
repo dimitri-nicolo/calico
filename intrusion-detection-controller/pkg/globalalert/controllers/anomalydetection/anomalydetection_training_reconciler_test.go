@@ -95,8 +95,8 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 		DescribeTable("does not create an initial training job, as training cycle found and detector present", func(tenant string) {
 			adJobTr := adJobTrainingReconciler{
 				managementClusterCtx:       ctx,
-				k8sClient:                  mockK8sClient,
-				calicoCLI:                  mockCalicoCLI,
+				kubeClientSet:              mockK8sClient,
+				calicoClientSet:            mockCalicoCLI,
 				podTemplateQuery:           mockPodTemplateQuery,
 				trainingCycleResourceCache: mockrc,
 
@@ -287,8 +287,8 @@ var _ = Describe("AnomalyDetection Training Reconciler", func() {
 		DescribeTable("create an initial training job for 'detector1'", func(tenant string, expectedJob batchv1.Job) {
 			adJobTr := adJobTrainingReconciler{
 				managementClusterCtx:       ctx,
-				k8sClient:                  mockK8sClient,
-				calicoCLI:                  mockCalicoCLI,
+				kubeClientSet:              mockK8sClient,
+				calicoClientSet:            mockCalicoCLI,
 				podTemplateQuery:           mockPodTemplateQuery,
 				trainingCycleResourceCache: mockrc,
 

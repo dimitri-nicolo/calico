@@ -21,7 +21,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
+	accesslogtest "github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog/test"
+
 	authnv1 "k8s.io/api/authentication/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,25 +39,30 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
-	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
-	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
-	accesslogtest "github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog/test"
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+
+	voltronconfig "github.com/projectcalico/calico/voltron/internal/pkg/config"
 )
 
 const (
@@ -84,22 +93,29 @@ type k8sClient struct {
 	clientv3.ProjectcalicoV3Interface
 }
 
-var _ = Describe("Server Proxy to tunnel", func() {
-	var (
-		fakeK8s *k8sfake.Clientset
-		k8sAPI  bootstrap.K8sClient
+var (
+	fakeK8s    *k8sfake.Clientset
+	k8sAPI     bootstrap.K8sClient
+	fakeClient ctrlclient.WithWatch
 
-		voltronTunnelCert      *x509.Certificate
-		voltronTunnelTLSCert   tls.Certificate
-		voltronTunnelPrivKey   *rsa.PrivateKey
-		voltronExtHttpsCert    *x509.Certificate
-		voltronExtHttpsPrivKey *rsa.PrivateKey
-		voltronIntHttpsCert    *x509.Certificate
-		voltronIntHttpsPrivKey *rsa.PrivateKey
-		voltronTunnelCAs       *x509.CertPool
-		voltronHttpsCAs        *x509.CertPool
-	)
+	voltronTunnelCert      *x509.Certificate
+	voltronTunnelTLSCert   tls.Certificate
+	voltronTunnelPrivKey   *rsa.PrivateKey
+	voltronExtHttpsCert    *x509.Certificate
+	voltronExtHttpsPrivKey *rsa.PrivateKey
+	voltronIntHttpsCert    *x509.Certificate
+	voltronIntHttpsPrivKey *rsa.PrivateKey
+	voltronTunnelCAs       *x509.CertPool
+	voltronHttpsCAs        *x509.CertPool
+)
 
+func describe(name string, testFn func(string)) bool {
+	Describe(name+" cluster-scoped", func() { testFn("") })
+	Describe(name+" namespace-scoped", func() { testFn("resource-ns") })
+	return true
+}
+
+var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 	BeforeEach(func() {
 		var err error
 
@@ -108,6 +124,11 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			Interface:                fakeK8s,
 			ProjectcalicoV3Interface: fake.NewSimpleClientset().ProjectcalicoV3(),
 		}
+
+		scheme := kscheme.Scheme
+		err = v3.AddToScheme(scheme)
+		Expect(err).NotTo(HaveOccurred())
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
 		voltronTunnelCertTemplate := test.CreateCACertificateTemplate("voltron")
 		voltronTunnelPrivKey, voltronTunnelCert, err = test.CreateCertPair(voltronTunnelCertTemplate, nil, nil)
@@ -134,11 +155,13 @@ var _ = Describe("Server Proxy to tunnel", func() {
 	})
 
 	It("should fail to start the server when the paths to the external credentials are invalid", func() {
+		vfg := &voltronconfig.Config{TenantNamespace: clusterNS}
 		mockAuthenticator := new(auth.MockJWTAuth)
 		_, err := server.New(
 			k8sAPI,
+			fakeClient,
 			config,
-			vcfg.Config{},
+			*vfg,
 			mockAuthenticator,
 			server.WithExternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
 			server.WithInternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
@@ -189,9 +212,11 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			k8sTargets, err := regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			srv, httpsAddr, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI,
+			watchSync = make(chan error)
+			srv, httpsAddr, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI, fakeClient,
 				config,
 				mockAuthenticator,
+				clusterNS,
 				server.WithTunnelSigningCreds(voltronTunnelCert),
 				server.WithTunnelCert(voltronTunnelTLSCert),
 				server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),
@@ -211,25 +236,36 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 		Context("Adding / removing managed clusters", func() {
 			It("should get an empty list if no managed clusters are registered", func() {
-				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				list := &v3.ManagedClusterList{}
+				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(0))
 			})
 
 			It("should be able to register multiple clusters", func() {
-				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
-					ObjectMeta: metav1.ObjectMeta{Name: clusterA},
-				}, metav1.CreateOptions{})
+				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       v3.KindManagedCluster,
+						APIVersion: v3.GroupVersionCurrent,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterA,
+						Namespace: clusterNS,
+					},
+				})).ShouldNot(HaveOccurred())
 
-				Expect(err).ShouldNot(HaveOccurred())
-				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
-					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
-				}, metav1.CreateOptions{})
+				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       v3.KindManagedCluster,
+						APIVersion: v3.GroupVersionCurrent,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterB,
+						Namespace: clusterNS,
+					},
+				})).ShouldNot(HaveOccurred())
 
-				Expect(err).ShouldNot(HaveOccurred())
-
-				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				list := &v3.ManagedClusterList{}
+				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(2))
 				Expect(list.Items[0].GetObjectMeta().GetName()).To(Equal("clusterA"))
 				Expect(list.Items[1].GetObjectMeta().GetName()).To(Equal("clusterB"))
@@ -237,49 +273,90 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 			It("should be able to list the remaining clusters after deleting one", func() {
 				By("adding two cluster")
-				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
-					ObjectMeta: metav1.ObjectMeta{Name: clusterA},
-				}, metav1.CreateOptions{})
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       v3.KindManagedCluster,
+						APIVersion: v3.GroupVersionCurrent,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterA,
+						Namespace: clusterNS,
+					},
+				})).ShouldNot(HaveOccurred())
+				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       v3.KindManagedCluster,
+						APIVersion: v3.GroupVersionCurrent,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterB,
+						Namespace: clusterNS,
+					},
+				})).ShouldNot(HaveOccurred())
 
-				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
-					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
-				}, metav1.CreateOptions{})
-				Expect(err).ShouldNot(HaveOccurred())
-
-				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				list := &v3.ManagedClusterList{}
+				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(2))
 				Expect(list.Items[0].GetObjectMeta().GetName()).To(Equal("clusterA"))
 				Expect(list.Items[1].GetObjectMeta().GetName()).To(Equal("clusterB"))
 
 				By("removing one cluster")
-				Expect(k8sAPI.ManagedClusters().Delete(context.Background(), clusterB, metav1.DeleteOptions{})).ShouldNot(HaveOccurred())
+				Expect(fakeClient.Delete(context.Background(), &v3.ManagedCluster{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       v3.KindManagedCluster,
+						APIVersion: v3.GroupVersionCurrent,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterB,
+						Namespace: clusterNS,
+					},
+				})).NotTo(HaveOccurred())
 
-				list, err = k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				list = &v3.ManagedClusterList{}
+				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(1))
 				Expect(list.Items[0].GetObjectMeta().GetName()).To(Equal("clusterA"))
 			})
 
 			It("should be able to register clusterB after it's been deleted again", func() {
-				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
-					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
-				}, metav1.CreateOptions{})
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(k8sAPI.ManagedClusters().Delete(context.Background(), clusterB, metav1.DeleteOptions{})).ShouldNot(HaveOccurred())
+				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       v3.KindManagedCluster,
+						APIVersion: v3.GroupVersionCurrent,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterB,
+						Namespace: clusterNS,
+					},
+				})).ShouldNot(HaveOccurred())
 
-				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeClient.Delete(context.Background(), &v3.ManagedCluster{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       v3.KindManagedCluster,
+						APIVersion: v3.GroupVersionCurrent,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterB,
+						Namespace: clusterNS,
+					},
+				})).NotTo(HaveOccurred())
+				list := &v3.ManagedClusterList{}
+				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(0))
 
-				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
-					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
-				}, metav1.CreateOptions{})
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       v3.KindManagedCluster,
+						APIVersion: v3.GroupVersionCurrent,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterB,
+						Namespace: clusterNS,
+					},
+				})).ShouldNot(HaveOccurred())
 
-				list, err = k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				list = &v3.ManagedClusterList{}
+				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(1))
 			})
 		})
@@ -318,16 +395,16 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			})
 
 			It("should not be able to proxy to a cluster without a tunnel", func() {
-				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+
+				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 					TypeMeta: metav1.TypeMeta{
-						Kind:       calicov3.KindManagedCluster,
-						APIVersion: calicov3.GroupVersionCurrent,
+						Kind:       v3.KindManagedCluster,
+						APIVersion: v3.GroupVersionCurrent,
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: clusterA,
 					},
-				}, metav1.CreateOptions{})
-				Expect(err).ShouldNot(HaveOccurred())
+				})).ShouldNot(HaveOccurred())
 				clientHelloReq(httpsAddr, clusterA, 400)
 			})
 
@@ -399,16 +476,17 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					clusterAPrivKey, clusterACert, err := test.CreateCertPair(clusterACertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
 					Expect(err).ShouldNot(HaveOccurred())
 
-					_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+					Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        clusterA,
+							Namespace:   clusterNS,
 							Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(clusterACert)},
 						},
-					}, metav1.CreateOptions{})
-					Expect(err).ShouldNot(HaveOccurred())
+					})).ShouldNot(HaveOccurred())
 
 					clusterATLSCert, err = test.X509CertToTLSCert(clusterACert, clusterAPrivKey)
 					Expect(err).NotTo(HaveOccurred())
+
 				})
 
 				It("can send requests from the server to the cluster", func() {
@@ -418,7 +496,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					}, 5*time.Second)
 					Expect(err).NotTo(HaveOccurred())
 
-					WaitForClusterToConnect(k8sAPI, clusterA)
+					WaitForClusterToConnect(fakeClient, clusterA, clusterNS)
 
 					cli := &http.Client{
 						Transport: &http2.Transport{
@@ -493,15 +571,18 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					BeforeEach(func() {
 						clusterBCertTemplate := test.CreateClientCertificateTemplate(clusterB, "localhost")
 						clusterBPrivKey, clusterBCert, err := test.CreateCertPair(clusterBCertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
-
-						Expect(err).NotTo(HaveOccurred())
-						_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+						Expect(err).ShouldNot(HaveOccurred())
+						err = fakeClient.Create(context.Background(), &v3.ManagedCluster{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:        clusterB,
+								Namespace:   clusterNS,
 								Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(clusterBCert)},
 							},
-						}, metav1.CreateOptions{})
+						})
 						Expect(err).ShouldNot(HaveOccurred())
+
+						// wait for one cycle of clusters.watchK8sFrom() to complete
+						Expect(<-watchSync).NotTo(HaveOccurred())
 
 						clusterBTLSCert, err = test.X509CertToTLSCert(clusterBCert, clusterBPrivKey)
 						Expect(err).NotTo(HaveOccurred())
@@ -514,7 +595,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						}, 5*time.Second)
 						Expect(err).NotTo(HaveOccurred())
 
-						WaitForClusterToConnect(k8sAPI, clusterB)
+						WaitForClusterToConnect(fakeClient, clusterB, clusterNS)
 
 						cli := &http.Client{
 							Transport: &http2.Transport{
@@ -594,18 +675,21 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						clusterCPrivKey, clusterCCert, err := test.CreateCertPair(clusterCCertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
 						Expect(err).NotTo(HaveOccurred())
 
-						_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+						Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 							ObjectMeta: metav1.ObjectMeta{
-								Name: clusterC,
+								Name:      clusterC,
+								Namespace: clusterNS,
 							},
 							Spec: calicov3.ManagedClusterSpec{
 								Certificate: test.CertToPemBytes(clusterCCert),
 							},
-						}, metav1.CreateOptions{})
-						Expect(err).ShouldNot(HaveOccurred())
+						})).NotTo(HaveOccurred())
 
 						clusterCTLSCert, err = test.X509CertToTLSCert(clusterCCert, clusterCPrivKey)
 						Expect(err).NotTo(HaveOccurred())
+
+						// wait for one cycle of clusters.watchK8sFrom() to complete
+						Expect(<-watchSync).NotTo(HaveOccurred())
 					})
 
 					It("can send requests from the server to the third cluster", func() {
@@ -615,7 +699,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						}, 5*time.Second)
 						Expect(err).NotTo(HaveOccurred())
 
-						WaitForClusterToConnect(k8sAPI, clusterC)
+						WaitForClusterToConnect(fakeClient, clusterC, clusterNS)
 
 						cli := &http.Client{
 							Transport: &http2.Transport{
@@ -676,6 +760,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 	})
 
 	Context("with logging, metrics & auth caching enabled", func() {
+
 		var (
 			cancelFunc    context.CancelFunc
 			srvWg         *sync.WaitGroup
@@ -766,9 +851,12 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			tunnelTargetWhitelist, err := regex.CompileRegexStrings([]string{`^/$`, `^/some/path$`})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			srv, httpsAddr, internalAddr, tunnelAddr, srvWg = createAndStartServer(k8sAPI,
+			watchSync = make(chan error)
+
+			srv, httpsAddr, internalAddr, tunnelAddr, srvWg = createAndStartServer(k8sAPI, fakeClient,
 				config,
 				authenticator,
+				clusterNS,
 				server.WithTunnelSigningCreds(voltronTunnelCert),
 				server.WithTunnelCert(voltronTunnelTLSCert),
 				server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),
@@ -825,7 +913,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			lines := strings.Split(string(respBody), "\n")
 			var result []string
 			for _, line := range lines {
-				if strings.HasPrefix(line, "tigera_cache") {
+				if strings.HasPrefix(line, "tigera_cache") && !strings.HasPrefix(line, "tigera_cache_size") {
 					result = append(result, line)
 				}
 			}
@@ -876,8 +964,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 		It("should cache token requests", func() {
 
-			closeCluster1 := createAndStartManagedCluster(managedCluster1, tunnelAddr, voltronTunnelCAs, voltronTunnelCert, voltronTunnelPrivKey, k8sAPI, newEchoHandler(managedCluster1))
-			closeCluster2 := createAndStartManagedCluster(managedCluster2, tunnelAddr, voltronTunnelCAs, voltronTunnelCert, voltronTunnelPrivKey, k8sAPI, newEchoHandler(managedCluster2))
+			closeCluster1 := createAndStartManagedCluster(managedCluster1, clusterNS, tunnelAddr, voltronTunnelCAs, voltronTunnelCert, voltronTunnelPrivKey, k8sAPI, fakeClient, newEchoHandler(managedCluster1))
+			closeCluster2 := createAndStartManagedCluster(managedCluster2, clusterNS, tunnelAddr, voltronTunnelCAs, voltronTunnelCert, voltronTunnelPrivKey, k8sAPI, fakeClient, newEchoHandler(managedCluster2))
 			defer closeCluster1()
 			defer closeCluster2()
 
@@ -1015,7 +1103,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = server.New(k8sAPI, config, vcfg.Config{}, authenticator,
+			vfg := &voltronconfig.Config{TenantNamespace: clusterNS}
+			_, err = server.New(k8sAPI, fakeClient, config, *vfg, authenticator,
 				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, 42*time.Second),
 			)
 			Expect(err).To(MatchError(MatchRegexp("configured cacheTTL of 42s exceeds maximum permitted of 20s")))
@@ -1068,9 +1157,10 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			watchSync = make(chan error)
-			srv, _, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI,
+			srv, _, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI, fakeClient,
 				config,
 				mockAuthenticator,
+				clusterNS,
 				server.WithTunnelSigningCreds(voltronTunnelCert),
 				server.WithTunnelCert(voltronTunnelTLSCert),
 				server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),
@@ -1093,17 +1183,17 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				privKey, cert, err := test.CreateCertPair(certTemplate, voltronTunnelCert, voltronTunnelPrivKey)
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: clusterA,
+						Name:      clusterA,
+						Namespace: clusterNS,
 						Annotations: map[string]string{
 							server.AnnotationActiveCertificateFingerprint: fmt.Sprintf("%x", md5.Sum(cert.Raw)), // old md5 sum
 						},
 					},
-				}, metav1.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
-				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				})).NotTo(HaveOccurred())
+				list := &v3.ManagedClusterList{}
+				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(1))
 
 				tlsCert, err := test.X509CertToTLSCert(cert, privKey)
@@ -1117,7 +1207,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(func() string {
-					mc, err := k8sAPI.ManagedClusters().Get(context.Background(), clusterA, metav1.GetOptions{})
+					mc := &v3.ManagedCluster{}
+					err := fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterA, Namespace: clusterNS}, mc)
 					Expect(err).NotTo(HaveOccurred())
 					return mc.Annotations[server.AnnotationActiveCertificateFingerprint]
 				}, 3*time.Second, 500*time.Millisecond).Should(Equal(utils.GenerateFingerprint(cert))) // new sha256 sum
@@ -1129,9 +1220,10 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		When("the connecting clusters fingerprint matches the md5 active fingerprint in FIPS mode", func() {
 			It("doesn't modify the existing md5 active fingerprint", func() {
 				// recreate server to enable fips mode
-				srv, _, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI,
+				srv, _, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI, fakeClient,
 					config,
 					mockAuthenticator,
+					clusterNS,
 					server.WithTunnelSigningCreds(voltronTunnelCert),
 					server.WithTunnelCert(voltronTunnelTLSCert),
 					server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),
@@ -1147,17 +1239,17 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				fingerprintMD5 := fmt.Sprintf("%x", md5.Sum(cert.Raw))
-				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: clusterA,
+						Name:      clusterA,
+						Namespace: clusterNS,
 						Annotations: map[string]string{
-							server.AnnotationActiveCertificateFingerprint: fingerprintMD5, // old md5 sum
+							server.AnnotationActiveCertificateFingerprint: fmt.Sprintf("%x", md5.Sum(cert.Raw)), // old md5 sum
 						},
 					},
-				}, metav1.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
-				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				})).NotTo(HaveOccurred())
+				list := &v3.ManagedClusterList{}
+				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(1))
 
 				tlsCert, err := test.X509CertToTLSCert(cert, privKey)
@@ -1173,8 +1265,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				// wait for one cycle of clusters.watchK8sFrom() to complete
 				Expect(<-watchSync).NotTo(HaveOccurred())
 
-				mc, err := k8sAPI.ManagedClusters().Get(context.Background(), clusterA, metav1.GetOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				mc := &v3.ManagedCluster{}
+				Expect(fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterA, Namespace: clusterNS}, mc)).NotTo(HaveOccurred())
 				Expect(mc.Annotations[server.AnnotationActiveCertificateFingerprint]).To(Equal(fingerprintMD5)) // old md5 sum
 
 				Expect(t.Close()).NotTo(HaveOccurred())
@@ -1187,17 +1279,17 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				privKey, cert, err := test.CreateCertPair(certTemplate, voltronTunnelCert, voltronTunnelPrivKey)
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: clusterB,
+						Name:      clusterB,
+						Namespace: clusterNS,
 						Annotations: map[string]string{
 							server.AnnotationActiveCertificateFingerprint: "md5-sum-can-not-be-matched",
 						},
 					},
-				}, metav1.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
-				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				})).NotTo(HaveOccurred())
+				list := &v3.ManagedClusterList{}
+				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
 				Expect(list.Items).To(HaveLen(1))
 
 				tlsCert, err := test.X509CertToTLSCert(cert, privKey)
@@ -1213,8 +1305,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				// wait for one cycle of clusters.watchK8sFrom() to complete
 				Expect(<-watchSync).NotTo(HaveOccurred())
 
-				mc, err := k8sAPI.ManagedClusters().Get(context.Background(), clusterB, metav1.GetOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				mc := &v3.ManagedCluster{}
+				Expect(fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterB, Namespace: clusterNS}, mc)).NotTo(HaveOccurred())
 				Expect(mc.Annotations[server.AnnotationActiveCertificateFingerprint]).To(Equal("md5-sum-can-not-be-matched"))
 
 				Expect(t.Close()).NotTo(HaveOccurred())
@@ -1271,8 +1363,10 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 			srv, _, _, tunnelAddr, wg = createAndStartServer(
 				k8sAPI,
+				fakeClient,
 				config,
 				mockAuthenticator,
+				clusterNS,
 				server.WithTunnelSigningCreds(voltronTunnelCert),
 				server.WithTunnelCert(voltronTunnelTLSCert),
 				server.WithDefaultProxy(defaultProxy),
@@ -1297,15 +1391,15 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			By("adding ClusterA")
-			_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+			Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        clusterA,
+					Namespace:   clusterNS,
 					Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(cert)},
 				},
-			}, metav1.CreateOptions{})
-			Expect(err).ShouldNot(HaveOccurred())
-			list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
-			Expect(err).ShouldNot(HaveOccurred())
+			})).NotTo(HaveOccurred())
+			list := &v3.ManagedClusterList{}
+			Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).ShouldNot(HaveOccurred())
 			Expect(list.Items).To(HaveLen(1))
 
 			// Try to connect clusterA to the new fake voltron, should fail
@@ -1356,10 +1450,12 @@ func clientHelloReq(addr string, target string, expectStatus int) (resp *http.Re
 	return
 }
 
-func createAndStartServer(k8sAPI bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAuth,
+func createAndStartServer(k8sAPI bootstrap.K8sClient, fakeClient ctrlclient.WithWatch, config *rest.Config, authenticator auth.JWTAuth, clusterNS string,
 	options ...server.Option,
 ) (*server.Server, string, string, string, *sync.WaitGroup) {
-	srv, err := server.New(k8sAPI, config, vcfg.Config{}, authenticator, options...)
+
+	vcfg := &voltronconfig.Config{TenantNamespace: clusterNS}
+	srv, err := server.New(k8sAPI, fakeClient, config, *vcfg, authenticator, options...)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	lisHTTPS, err := net.Listen("tcp", "localhost:0")
@@ -1395,9 +1491,10 @@ func createAndStartServer(k8sAPI bootstrap.K8sClient, config *rest.Config, authe
 	return srv, lisHTTPS.Addr().String(), lisInternalHTTPS.Addr().String(), lisTun.Addr().String(), &wg
 }
 
-func WaitForClusterToConnect(k8sAPI bootstrap.K8sClient, clusterName string) {
+func WaitForClusterToConnect(fakeClient ctrlclient.WithWatch, clusterName, clusterNS string) {
 	Eventually(func() calicov3.ManagedClusterStatus {
-		managedCluster, err := k8sAPI.ManagedClusters().Get(context.Background(), clusterName, metav1.GetOptions{})
+		managedCluster := &v3.ManagedCluster{}
+		err := fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterName, Namespace: clusterNS}, managedCluster)
 		Expect(err).ShouldNot(HaveOccurred())
 		return managedCluster.Status
 	}, 5*time.Second, 100*time.Millisecond).Should(Equal(calicov3.ManagedClusterStatus{
@@ -1408,12 +1505,13 @@ func WaitForClusterToConnect(k8sAPI bootstrap.K8sClient, clusterName string) {
 }
 
 func createAndStartManagedCluster(
-	clusterName string,
+	clusterName, clusterNS string,
 	tunnelAddr string,
 	tunnelCA *x509.CertPool,
 	voltronTunnelCert *x509.Certificate,
 	voltronTunnelPrivKey *rsa.PrivateKey,
 	k8sAPI bootstrap.K8sClient,
+	fakeClient ctrlclient.WithWatch,
 	handler http.Handler,
 ) (closer func()) {
 
@@ -1421,18 +1519,21 @@ func createAndStartManagedCluster(
 	clusterKey, clusterCert, err := test.CreateCertPair(certTemplate, voltronTunnelCert, voltronTunnelPrivKey)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+	Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        clusterName,
+			Namespace:   clusterNS,
 			Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(clusterCert)},
 		},
-	}, metav1.CreateOptions{})
-	Expect(err).ShouldNot(HaveOccurred())
+	})).ShouldNot(HaveOccurred())
 
 	time.Sleep(2 * time.Second)
 
 	tlsCert, err := test.X509CertToTLSCert(clusterCert, clusterKey)
 	Expect(err).NotTo(HaveOccurred())
+
+	// wait for one cycle of clusters.watchK8sFrom() to complete
+	Expect(<-watchSync).NotTo(HaveOccurred())
 
 	tun, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},
@@ -1440,7 +1541,7 @@ func createAndStartManagedCluster(
 	}, 5*time.Second)
 	Expect(err).NotTo(HaveOccurred())
 
-	WaitForClusterToConnect(k8sAPI, clusterName)
+	WaitForClusterToConnect(fakeClient, clusterName, clusterNS)
 
 	httpServer := &http.Server{
 		Handler: handler,

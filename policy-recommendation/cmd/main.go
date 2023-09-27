@@ -8,6 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
 	log "github.com/sirupsen/logrus"
 
 	v1 "k8s.io/api/core/v1"
@@ -41,7 +44,7 @@ func main() {
 	var err error
 	policyrecommendationConfig, err := config.LoadConfig()
 	if err != nil {
-		panic(err.Error())
+		log.WithError(err).Fatal("Failed to load  policy recommendation config")
 	}
 
 	policyrecommendationConfig.InitializeLogging()
@@ -59,20 +62,27 @@ func main() {
 		panic(err.Error())
 	}
 
-	prConfig, err := config.LoadConfig()
-	if err != nil {
-		log.WithError(err).Fatal("failed to load policy recommendation configurations")
-
+	restConfig := clientFactory.NewRestConfigForApplication(lmak8s.DefaultCluster)
+	scheme := runtime.NewScheme()
+	if err = v3.AddToScheme(scheme); err != nil {
+		log.WithError(err).Fatal("Failed to configure controller runtime client")
 	}
+
+	// client is used to get ManagedCluster resources in both single-tenant and multi-tenant modes.
+	client, err := ctrlclient.NewWithWatch(restConfig, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		log.WithError(err).Fatal("Failed to configure controller runtime client with watch")
+	}
+
 	// Create linseed Client.
 	lsConfig := lsrest.Config{
-		URL:             prConfig.LinseedURL,
-		CACertPath:      prConfig.LinseedCA,
-		ClientKeyPath:   prConfig.LinseedClientKey,
-		ClientCertPath:  prConfig.LinseedClientCert,
-		FIPSModeEnabled: prConfig.FIPSModeEnabled,
+		URL:             policyrecommendationConfig.LinseedURL,
+		CACertPath:      policyrecommendationConfig.LinseedCA,
+		ClientKeyPath:   policyrecommendationConfig.LinseedClientKey,
+		ClientCertPath:  policyrecommendationConfig.LinseedClientCert,
+		FIPSModeEnabled: policyrecommendationConfig.FIPSModeEnabled,
 	}
-	linseed, err := lsclient.NewClient(prConfig.TenantID, lsConfig, lsrest.WithTokenPath(prConfig.LinseedToken))
+	linseedClient, err := lsclient.NewClient(policyrecommendationConfig.TenantID, lsConfig, lsrest.WithTokenPath(policyrecommendationConfig.LinseedToken))
 	if err != nil {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}
@@ -148,17 +158,18 @@ func main() {
 	suffixGenerator := utils.SuffixGenerator
 	managementStandalonePolicyRecController := policyrecommendation.NewPolicyRecommendationController(
 		clientSet.ProjectcalicoV3(),
-		linseed,
+		linseedClient,
 		cacheSynchronizer,
 		caches,
 		lmak8s.DefaultCluster,
 		serviceNameSuffix,
 		&suffixGenerator,
 	)
-	managedclusterController := managedcluster.NewManagedClusterController(
-		clientSet.ProjectcalicoV3(),
+	managedclusterController := managedcluster.NewManagedClusterController(ctx,
+		client,
 		clientFactory,
-		linseed,
+		linseedClient,
+		policyrecommendationConfig.TenantNamespace,
 	)
 	stagednetworkpolicyController := stagednetworkpolicies.NewStagedNetworkPolicyController(
 		clientSet.ProjectcalicoV3(),

@@ -26,34 +26,36 @@ const (
 
 // globalAlertController is responsible for watching GlobalAlert resource in a cluster.
 type globalAlertController struct {
-	linseedClient client.Client
-	calicoCLI     calicoclient.Interface
-	k8sClient     kubernetes.Interface
-	clusterName   string
-	tenantID      string
-	namespace     string
-	cancel        context.CancelFunc
-	worker        worker.Worker
+	linseedClient   client.Client
+	calicoClientSet calicoclient.Interface
+	kubeClientSet   kubernetes.Interface
+	clusterName     string
+	tenantID        string
+	namespace       string
+	cancel          context.CancelFunc
+	worker          worker.Worker
+	tenantNamespace string
 }
 
 // NewGlobalAlertController returns a globalAlertController and for each object it watches,
 // a health.Pinger object is created returned for health check.
-func NewGlobalAlertController(calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, tenantID string, namespace string, fipsModeEnabled bool) (controller.Controller, []health.Pinger) {
+func NewGlobalAlertController(calicoClientSet calicoclient.Interface, linseedClient client.Client, kubeClientSet kubernetes.Interface, enableAnomalyDetection bool, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, tenantID string, namespace string, fipsModeEnabled bool, tenantNamespace string) (controller.Controller, []health.Pinger) {
 	c := &globalAlertController{
-		linseedClient: linseedClient,
-		calicoCLI:     calicoCLI,
-		k8sClient:     k8sClient,
-		clusterName:   clusterName,
-		tenantID:      tenantID,
-		namespace:     namespace,
+		linseedClient:   linseedClient,
+		calicoClientSet: calicoClientSet,
+		kubeClientSet:   kubeClientSet,
+		clusterName:     clusterName,
+		tenantID:        tenantID,
+		namespace:       namespace,
+		tenantNamespace: tenantNamespace,
 	}
 
 	// Create worker to watch GlobalAlert resource in the cluster
 	c.worker = worker.New(
 		&globalAlertReconciler{
 			linseedClient:          c.linseedClient,
-			calicoCLI:              c.calicoCLI,
-			k8sClient:              k8sClient,
+			calicoClientSet:        c.calicoClientSet,
+			kubeClientSet:          kubeClientSet,
 			adDetectionController:  adDetectionController,
 			adTrainingController:   adTrainingController,
 			alertNameToAlertState:  map[string]alertState{},
@@ -65,7 +67,7 @@ func NewGlobalAlertController(calicoCLI calicoclient.Interface, linseedClient cl
 		})
 
 	pinger := c.worker.AddWatch(
-		cache.NewListWatchFromClient(c.calicoCLI.ProjectcalicoV3().RESTClient(), GlobalAlertResourceName, "", fields.Everything()),
+		cache.NewListWatchFromClient(c.calicoClientSet.ProjectcalicoV3().RESTClient(), GlobalAlertResourceName, "", fields.Everything()),
 		&v3.GlobalAlert{})
 
 	return c, []health.Pinger{pinger}

@@ -117,6 +117,7 @@ type ManagedClusterControllerConfig struct {
 	ElasticConfig                  ElasticsearchCfgControllerCfg
 	LicenseConfig                  LicenseControllerCfg
 	ImageAssuranceConfig           ImageAssuranceConfig
+	TenantNamespace                string
 }
 
 type ImageAssuranceConfig struct {
@@ -444,6 +445,17 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 			log.WithError(err).Fatal("failed to build kubernetes client config")
 		}
 		rc.ManagedCluster.RESTConfig = restCfg
+
+		// Check Multitenant Mode.
+		if v, ok := envVars[EnvTenantID]; ok && len(v) > 0 && rc.ManagedCluster.TenantNamespace == "" {
+			envCfg.TenantID = v
+			// Get TenantNamespace in MultiTenant Mode.
+			ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+			if err != nil {
+				log.WithError(err).Fatal("unable to get the tenant namespace: %w", err)
+			}
+			rc.ManagedCluster.TenantNamespace = strings.TrimSpace(string(ns))
+		}
 	}
 	if rc.AuthorizationConfiguration != nil {
 		rc.AuthorizationConfiguration.NumberOfWorkers = envCfg.AuthorizationWorkers
@@ -624,7 +636,6 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 	s := ac.ServiceAccount
 	ns := ac.Namespace
 	f := ac.FederatedServices
-
 	v, p := envVars[EnvEnabledControllers]
 	if p {
 		status.EnvironmentVars[EnvEnabledControllers] = v
