@@ -318,6 +318,7 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 
 		guardian, err = client.New(
 			lisTun.Addr().String(),
+			"voltron",
 			client.WithTunnelCreds(certPemID1, keyPemID1),
 			client.WithTunnelRootCA(rootCAs),
 			client.WithProxyTargets(
@@ -343,6 +344,7 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 
 		guardian2, err = client.New(
 			lisTun.Addr().String(),
+			"voltron",
 			client.WithTunnelCreds(certPemID2, keyPemID2),
 			client.WithTunnelRootCA(rootCAs),
 			client.WithProxyTargets(
