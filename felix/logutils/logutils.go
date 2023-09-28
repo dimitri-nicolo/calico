@@ -182,6 +182,6 @@ func getScreenDestination(configParams *config.Config, logLevel log.Level) *logu
 // Tracef prints the debug log if display is true.
 func Tracef(display bool, format string, args ...interface{}) {
 	if display {
-		log.Debugf(format, args)
+		log.Debugf(format, args...)
 	}
 }
