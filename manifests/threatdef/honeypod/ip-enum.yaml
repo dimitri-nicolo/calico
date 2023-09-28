@@ -56,13 +56,7 @@ spec:
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
   aggregateBy:
-    [
-      source_namespace,
-      source_name_aggr,
-      dest_namespace,
-      dest_name_aggr,
-      host.keyword,
-    ]
+    [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host]
 ---
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
@@ -74,13 +68,7 @@ spec:
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
   aggregateBy:
-    [
-      source_namespace,
-      source_name_aggr,
-      dest_namespace,
-      dest_name_aggr,
-      host.keyword,
-    ]
+    [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host]
 ---
 # Global Alert Template and Global Alert for IP Enumeration
 apiVersion: projectcalico.org/v3
@@ -94,13 +82,7 @@ spec:
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
   aggregateBy:
-    [
-      source_namespace,
-      source_name_aggr,
-      dest_namespace,
-      dest_name_aggr,
-      host.keyword,
-    ]
+    [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host]
   metric: count
   condition: gte
   threshold: 4
@@ -115,13 +97,7 @@ spec:
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
   aggregateBy:
-    [
-      source_namespace,
-      source_name_aggr,
-      dest_namespace,
-      dest_name_aggr,
-      host.keyword,
-    ]
+    [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host]
   metric: count
   condition: gte
   threshold: 4
