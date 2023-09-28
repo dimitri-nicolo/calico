@@ -63,8 +63,8 @@ type endpointsCache struct {
 func newEndpointCache() *endpointCache {
 	return &endpointCache{
 		endpoints:            make(map[model.Key]*endpointData),
-		unprotectedEndpoints: set.NewBoxed[model.Key](),
-		failedEndpoints:      set.NewBoxed[model.Key](),
+		unprotectedEndpoints: set.New[model.Key](),
+		failedEndpoints:      set.New[model.Key](),
 	}
 }
 

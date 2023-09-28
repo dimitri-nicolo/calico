@@ -70,7 +70,7 @@ func newHostIPManagerWithShims(wlIfacesPrefixes []string,
 		ipsetsDataplane:     ipsets,
 		maxSize:             maxIPSetSize,
 		tunIPSetID:          tunIpSetID,
-		routesByDest:        set.NewBoxed[ip.CIDR](),
+		routesByDest:        set.New[ip.CIDR](),
 		routesDirty:         true,
 	}
 }

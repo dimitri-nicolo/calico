@@ -43,7 +43,7 @@ type L7WorkloadIPSetCalculator struct {
 
 	// WEPs/IPs that we've sent downstream.
 	wepsWithALP set.Set[model.WorkloadEndpointKey] // Recalculated on flush.
-	sentAddrs   set.Boxed[ip.Addr]
+	sentAddrs   set.Set[ip.Addr]
 
 	// dataplane callbacks
 	callbacks ipSetUpdateCallbacks
@@ -56,7 +56,7 @@ func NewL7WorkloadIPSetCalculator(callbacks ipSetUpdateCallbacks) *L7WorkloadIPS
 		policyKeyToMatchingWepKeys: map[model.PolicyKey]set.Set[model.WorkloadEndpointKey]{},
 		policiesWithALP:            set.New[model.PolicyKey](),
 		wepsWithALP:                set.New[model.WorkloadEndpointKey](),
-		sentAddrs:                  set.NewBoxed[ip.Addr](),
+		sentAddrs:                  set.New[ip.Addr](),
 		callbacks:                  callbacks,
 	}
 	w.InitializeIPSet()
@@ -218,7 +218,7 @@ func (w *L7WorkloadIPSetCalculator) handleWEPRemoval(k model.WorkloadEndpointKey
 }
 
 func (w *L7WorkloadIPSetCalculator) recalculateALPWorkloadIPs() set.Set[ip.Addr] {
-	res := set.NewBoxed[ip.Addr]()
+	res := set.New[ip.Addr]()
 	w.wepsWithALP.Iter(func(k model.WorkloadEndpointKey) error {
 		for _, ip4Net := range w.localWorkloadIPv4s[k] {
 			ip4 := ip.CIDRFromCalicoNet(ip4Net)

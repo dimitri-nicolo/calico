@@ -78,7 +78,7 @@ func (nc *NetworkSetLookupsCache) OnUpdate(nsUpdate api.Update) (_ bool) {
 					Key:        k,
 					Networkset: nsUpdate.Value,
 				},
-				cidrs:                set.FromArrayBoxed(ip.CIDRsFromCalicoNets(networkset.Nets)),
+				cidrs:                set.FromArray(ip.CIDRsFromCalicoNets(networkset.Nets)),
 				allowedEgressDomains: set.FromArray(networkset.AllowedEgressDomains),
 			})
 		}
@@ -102,13 +102,13 @@ func (nc *NetworkSetLookupsCache) addOrUpdateNetworkset(data *networkSetData) {
 	currentData, exists := nc.networkSets[data.endpointData.Key]
 	if currentData == nil {
 		currentData = &networkSetData{
-			cidrs:                set.NewBoxed[ip.CIDR](),
+			cidrs:                set.New[ip.CIDR](),
 			allowedEgressDomains: set.New[string](),
 		}
 	}
 	nc.networkSets[data.endpointData.Key] = data
 
-	set.IterDifferencesBoxed[ip.CIDR](data.cidrs, currentData.cidrs,
+	set.IterDifferences[ip.CIDR](data.cidrs, currentData.cidrs,
 		// In new, not current.  Add new entry to mappings.
 		func(newCIDR ip.CIDR) error {
 			nc.ipTree.InsertKey(newCIDR, data.endpointData.Key)
@@ -165,7 +165,7 @@ func (nc *NetworkSetLookupsCache) addDomainMapping(domain string, key model.Key)
 	// Add the networkset key to the set specific to this domain, creating a new set if this is the first.
 	current := nc.egressDomainToNetworkset[domain]
 	if current == nil {
-		current = set.NewBoxed[model.Key]()
+		current = set.New[model.Key]()
 		nc.egressDomainToNetworkset[domain] = current
 	}
 	current.Add(key)

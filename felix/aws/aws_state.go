@@ -89,7 +89,7 @@ func (s *awsState) OnSecondaryIPsAdded(eniID string, addrs []string) {
 }
 
 func (s *awsState) OnSecondaryIPsRemoved(eniID string, addrs []string) {
-	removedIPs := set.NewBoxed[ip.Addr]()
+	removedIPs := set.New[ip.Addr]()
 	for _, addrStr := range addrs {
 		addr := ip.FromString(addrStr)
 		if addr == nil {
