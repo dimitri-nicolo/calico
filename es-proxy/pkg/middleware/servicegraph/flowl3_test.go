@@ -117,7 +117,7 @@ func TestGetL3FlowData(t *testing.T) {
 					},
 					Processes: &svapi.GraphProcesses{
 						// We expect that process stat is extract from the flow reported at source
-						Source: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"/src/server": {
+						Source: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"frontend-8475b5657d-*:cartservice-5d844fc8b7-*:/src/server": {
 							Name:               "/src/server",
 							MinNumNamesPerFlow: 1,
 							MaxNumNamesPerFlow: 1,
@@ -225,7 +225,7 @@ func TestGetL3FlowData(t *testing.T) {
 					},
 					Processes: &svapi.GraphProcesses{
 						// We expect that process stat is extract from the flow reported at destination
-						Dest: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"/app/cartservice": {
+						Dest: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"frontend-8475b5657d-*:cartservice-5d844fc8b7-*:/app/cartservice": {
 							Name:               "/app/cartservice",
 							MinNumNamesPerFlow: 1,
 							MaxNumNamesPerFlow: 1,
@@ -336,15 +336,240 @@ func TestGetL3FlowData(t *testing.T) {
 					},
 					Processes: &svapi.GraphProcesses{
 						// We expect that process stat is extract from the flow reported at source
-						Source: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"/usr/local/bin/python": {
+						Source: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"recommendationservice-6ffb84bb94-*:productcatalogservice-5b9df8d49b-*:/usr/local/bin/python": {
 							Name:               "/usr/local/bin/python",
 							MinNumNamesPerFlow: 1,
 							MaxNumNamesPerFlow: 1,
 							MinNumIDsPerFlow:   1,
 							MaxNumIDsPerFlow:   1,
 						}}),
-						Dest: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"/src/server": {
+						Dest: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"recommendationservice-6ffb84bb94-*:productcatalogservice-5b9df8d49b-*:/src/server": {
 							Name:               "/src/server",
+							MinNumNamesPerFlow: 1,
+							MaxNumNamesPerFlow: 1,
+							MinNumIDsPerFlow:   1,
+							MaxNumIDsPerFlow:   1,
+						}}),
+					},
+				},
+			},
+		},
+		{
+			name: "Display process info for processes with the same name",
+			inputFlows: []lapi.L3Flow{
+				{
+					Key: lapi.L3FlowKey{
+						Action:   "allow",
+						Reporter: "src",
+						Protocol: "tcp",
+						Source: lapi.Endpoint{
+							Type:           "wep",
+							Name:           "",
+							AggregatedName: "checkoutservice-84cb944764-*",
+							Namespace:      "online-boutique",
+							Port:           0,
+						},
+						Destination: lapi.Endpoint{
+							Type:           "wep",
+							Name:           "",
+							AggregatedName: "paymentservice-866fd4b98-*",
+							Namespace:      "online-boutique",
+							Port:           50051,
+						},
+					},
+					Process: &lapi.Process{
+						Name: "/src/checkout",
+					},
+					ProcessStats: &lapi.ProcessStats{
+						MaxNumNamesPerFlow: 1,
+						MinNumNamesPerFlow: 1,
+						MaxNumIDsPerFlow:   1,
+						MinNumIDsPerFlow:   1,
+					},
+				},
+				{
+					Key: lapi.L3FlowKey{
+						Action:   "allow",
+						Reporter: "dst",
+						Protocol: "tcp",
+						Source: lapi.Endpoint{
+							Type:           "wep",
+							Name:           "",
+							AggregatedName: "checkoutservice-84cb944764-*",
+							Namespace:      "online-boutique",
+							Port:           0,
+						},
+						Destination: lapi.Endpoint{
+							Type:           "wep",
+							Name:           "",
+							AggregatedName: "paymentservice-866fd4b98-*",
+							Namespace:      "online-boutique",
+							Port:           50051,
+						},
+					},
+					Process: &lapi.Process{
+						Name: "/usr/local/bin/node",
+					},
+					ProcessStats: &lapi.ProcessStats{
+						MaxNumNamesPerFlow: 1,
+						MinNumNamesPerFlow: 1,
+						MaxNumIDsPerFlow:   1,
+						MinNumIDsPerFlow:   1,
+					},
+				},
+				{
+					Key: lapi.L3FlowKey{
+						Action:   "allow",
+						Reporter: "src",
+						Protocol: "tcp",
+						Source: lapi.Endpoint{
+							Type:           "wep",
+							Name:           "",
+							AggregatedName: "checkoutservice-84cb944764-*",
+							Namespace:      "online-boutique",
+							Port:           0,
+						},
+						Destination: lapi.Endpoint{
+							Type:           "wep",
+							Name:           "",
+							AggregatedName: "currencyservice-76f9b766b4-*",
+							Namespace:      "online-boutique",
+							Port:           7000,
+						},
+					},
+					Process: &lapi.Process{
+						Name: "/src/checkout",
+					},
+					ProcessStats: &lapi.ProcessStats{
+						MaxNumNamesPerFlow: 1,
+						MinNumNamesPerFlow: 1,
+						MaxNumIDsPerFlow:   1,
+						MinNumIDsPerFlow:   1,
+					},
+				},
+				{
+					Key: lapi.L3FlowKey{
+						Action:   "allow",
+						Reporter: "dst",
+						Protocol: "tcp",
+						Source: lapi.Endpoint{
+							Type:           "wep",
+							Name:           "",
+							AggregatedName: "checkoutservice-84cb944764-*",
+							Namespace:      "online-boutique",
+							Port:           0,
+						},
+						Destination: lapi.Endpoint{
+							Type:           "wep",
+							Name:           "",
+							AggregatedName: "currencyservice-76f9b766b4-*",
+							Namespace:      "online-boutique",
+							Port:           7000,
+						},
+					},
+					Process: &lapi.Process{
+						Name: "/usr/local/bin/node",
+					},
+					ProcessStats: &lapi.ProcessStats{
+						MaxNumNamesPerFlow: 1,
+						MinNumNamesPerFlow: 1,
+						MaxNumIDsPerFlow:   1,
+						MinNumIDsPerFlow:   1,
+					},
+				},
+			},
+			wantL3Flows: []L3Flow{
+				{
+					Edge: FlowEdge{
+						Source: FlowEndpoint{
+							Type:      "rep",
+							Namespace: "online-boutique",
+							Name:      "",
+							NameAggr:  "checkoutservice-84cb944764-*",
+							PortNum:   0,
+						},
+						Dest: FlowEndpoint{
+							Type:      "rep",
+							Namespace: "online-boutique",
+							Name:      "",
+							NameAggr:  "paymentservice-866fd4b98-*",
+							PortNum:   0,
+						},
+					},
+					AggregatedProtoPorts: &svapi.AggregatedProtoPorts{
+						ProtoPorts: []svapi.AggregatedPorts{
+							{PortRanges: []svapi.PortRange{{MinPort: 50051, MaxPort: 50051}}},
+						},
+						NumOtherProtocols: 0,
+					},
+					Stats: svapi.GraphL3Stats{
+						Allowed:        &svapi.GraphPacketStats{},
+						DeniedAtSource: nil,
+						DeniedAtDest:   nil,
+						Connections: svapi.GraphConnectionStats{
+							TotalPerSampleInterval: -9223372036854775808,
+						},
+						TCP: nil,
+					},
+					Processes: &svapi.GraphProcesses{
+						Source: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"checkoutservice-84cb944764-*:paymentservice-866fd4b98-*:/src/checkout": {
+							Name:               "/src/checkout",
+							MinNumNamesPerFlow: 1,
+							MaxNumNamesPerFlow: 1,
+							MinNumIDsPerFlow:   1,
+							MaxNumIDsPerFlow:   1,
+						}}),
+						Dest: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"checkoutservice-84cb944764-*:paymentservice-866fd4b98-*:/usr/local/bin/node": {
+							Name:               "/usr/local/bin/node",
+							MinNumNamesPerFlow: 1,
+							MaxNumNamesPerFlow: 1,
+							MinNumIDsPerFlow:   1,
+							MaxNumIDsPerFlow:   1,
+						}}),
+					},
+				},
+				{
+					Edge: FlowEdge{
+						Source: FlowEndpoint{
+							Type:      "rep",
+							Namespace: "online-boutique",
+							Name:      "",
+							NameAggr:  "checkoutservice-84cb944764-*",
+							PortNum:   0,
+						},
+						Dest: FlowEndpoint{
+							Type:      "rep",
+							Namespace: "online-boutique",
+							Name:      "",
+							NameAggr:  "currencyservice-76f9b766b4-*",
+							PortNum:   0,
+						},
+					},
+					AggregatedProtoPorts: &svapi.AggregatedProtoPorts{
+						ProtoPorts: []svapi.AggregatedPorts{
+							{PortRanges: []svapi.PortRange{{MinPort: 7000, MaxPort: 7000}}},
+						},
+						NumOtherProtocols: 0,
+					},
+					Stats: svapi.GraphL3Stats{
+						Allowed:        &svapi.GraphPacketStats{},
+						DeniedAtSource: nil,
+						DeniedAtDest:   nil,
+						Connections: svapi.GraphConnectionStats{
+							TotalPerSampleInterval: -9223372036854775808,
+						},
+						TCP: nil,
+					},
+					Processes: &svapi.GraphProcesses{
+						Source: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"checkoutservice-84cb944764-*:currencyservice-76f9b766b4-*:/src/checkout": {
+							Name:               "/src/checkout",
+							MinNumNamesPerFlow: 1,
+							MaxNumNamesPerFlow: 1,
+							MinNumIDsPerFlow:   1,
+							MaxNumIDsPerFlow:   1,
+						}}),
+						Dest: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"checkoutservice-84cb944764-*:currencyservice-76f9b766b4-*:/usr/local/bin/node": {
+							Name:               "/usr/local/bin/node",
 							MinNumNamesPerFlow: 1,
 							MaxNumNamesPerFlow: 1,
 							MinNumIDsPerFlow:   1,
@@ -368,7 +593,7 @@ func TestGetL3FlowData(t *testing.T) {
 			// mock linseed client
 			lsc := client.NewMockClient("", results...)
 
-			gotFs, err := GetL3FlowData(context.TODO(), lsc, "any", v1.TimeRange{}, &FlowConfig{}, &Config{})
+			gotFs, err := GetL3FlowData(context.TODO(), lsc, "any", v1.TimeRange{}, &FlowConfig{}, &Config{ServiceGraphCacheMaxAggregatedRecords: 5})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetL3FlowData() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -94,14 +94,16 @@ func (p GraphEndpointProcesses) Combine(p2 GraphEndpointProcesses) GraphEndpoint
 	// Take a copy of p.
 	p = p.Copy()
 
-	for _, gp := range p2 {
-		existing, ok := p[gp.Name]
+	for k, gp := range p2 {
+		existing, ok := p[k]
 		if !ok {
-			p[gp.Name] = gp
+			p[k] = gp
 			continue
 		}
-		p[gp.Name] = GraphEndpointProcess{
+		p[k] = GraphEndpointProcess{
 			Name:               gp.Name,
+			Source:             gp.Source,
+			Destination:        gp.Destination,
 			MinNumNamesPerFlow: math.MinIntGtZero(existing.MinNumNamesPerFlow, gp.MinNumNamesPerFlow),
 			MaxNumNamesPerFlow: math.MaxIntGtZero(existing.MaxNumNamesPerFlow, gp.MaxNumNamesPerFlow),
 			MinNumIDsPerFlow:   math.MinIntGtZero(existing.MinNumIDsPerFlow, gp.MinNumIDsPerFlow),
@@ -120,6 +122,10 @@ func (p GraphEndpointProcesses) Combine(p2 GraphEndpointProcesses) GraphEndpoint
 type GraphEndpointProcess struct {
 	// The process name. If aggregated it will be set to "*"
 	Name string `json:"name"`
+
+	Source string `json:"source"`
+
+	Destination string `json:"destination"`
 
 	// The minimum number of process names per flow.
 	MinNumNamesPerFlow int `json:"min_num_names_per_flow"`

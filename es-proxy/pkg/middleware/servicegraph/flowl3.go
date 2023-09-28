@@ -199,8 +199,10 @@ func GetL3FlowData(
 			var processes v1.GraphEndpointProcesses
 			if processName != "" && flow.ProcessStats != nil {
 				processes = v1.GraphEndpointProcesses{
-					processName: v1.GraphEndpointProcess{
+					fmt.Sprintf("%s:%s:%s", source.NameAggr, dest.NameAggr, processName): v1.GraphEndpointProcess{
 						Name:               processName,
+						Source:             source.NameAggr,
+						Destination:        dest.NameAggr,
 						MinNumNamesPerFlow: flow.ProcessStats.MinNumNamesPerFlow,
 						MaxNumNamesPerFlow: flow.ProcessStats.MaxNumNamesPerFlow,
 						MinNumIDsPerFlow:   flow.ProcessStats.MinNumIDsPerFlow,
@@ -664,6 +666,7 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 
 		// Determine graph processes.
 		var processes *v1.GraphProcesses
+
 		sourceProcesses := d.sourceReportedAllowed[svc].processes.
 			Combine(d.sourceReportedDenied[svc].processes)
 		destProcesses := d.destReportedAllowed[v1.ServicePort{Protocol: svc.Protocol}].processes.
