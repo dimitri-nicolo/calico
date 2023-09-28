@@ -75,8 +75,8 @@ type EventSequencer struct {
 	// updates and generate updates in dependency order.
 	pendingAddedIPSets            map[string]proto.IPSetUpdate_IPSetType
 	pendingRemovedIPSets          set.Set[string]
-	pendingAddedIPSetMembers     multidict.Multidict[string, labelindex.IPSetMember]
-	pendingRemovedIPSetMembers   multidict.Multidict[string, labelindex.IPSetMember]
+	pendingAddedIPSetMembers      multidict.Multidict[string, labelindex.IPSetMember]
+	pendingRemovedIPSetMembers    multidict.Multidict[string, labelindex.IPSetMember]
 	pendingPolicyUpdates          map[model.PolicyKey]*ParsedRules
 	pendingPolicyDeletes          set.Set[model.PolicyKey]
 	pendingProfileUpdates         map[model.ProfileRulesKey]*ParsedRules
