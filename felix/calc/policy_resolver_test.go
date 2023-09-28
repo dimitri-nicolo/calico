@@ -83,6 +83,7 @@ func TestPolicyResolver_OnPolicyMatch(t *testing.T) {
 	pr, recorder := createPolicyResolver()
 
 	polKey := model.PolicyKey{
+		Tier: "default",
 		Name: "test-policy",
 	}
 
@@ -130,7 +131,8 @@ func TestPolicyResolver_OnPolicyMatch(t *testing.T) {
 		Key:      endpointKey,
 		Endpoint: wep,
 		Tiers: []TierInfo{{
-			Name: "default",
+			Name:  "default",
+			Valid: true,
 			OrderedPolicies: []PolKV{
 				{
 					Key:   polKey,
@@ -148,6 +150,7 @@ func TestPolicyResolver_OnPolicyMatchStopped(t *testing.T) {
 	pr.OnDatamodelStatus(api.InSync)
 
 	polKey := model.PolicyKey{
+		Tier: "default",
 		Name: "test-policy",
 	}
 
