@@ -423,6 +423,13 @@ func (s *serviceGraphCache) updateEntry(e *cacheEntry) {
 			s.removeEntry(e)
 		}
 
+		// Discard the cache entry when flow logs are empty as ServiceGraph nodes and edges are calculated based on flows.
+		// It is less likely for a cluster to have no flows. It happens when the cluster is newly installed and logcollector
+		// haven't yet send logs to datastore or the entire cluster got stopped and restarted.
+		if len(e.data.l3) == 0 {
+			s.removeEntry(e)
+		}
+
 		// and tidy the cache to maintain cache size and age out old entries.
 		s.tidyCache()
 	}()
@@ -434,7 +441,7 @@ func (s *serviceGraphCache) updateEntry(e *cacheEntry) {
 //
 // Lock is held by caller.
 func (s *serviceGraphCache) tidyCache() {
-	// Aged out cutoff time for slow queries that have not compeleted based on last access.
+	// Aged out cutoff time for slow queries that have not completed based on last access.
 	cutoff := time.Now().Add(-s.cfg.ServiceGraphCacheSlowQueryEntryAgeOut)
 
 	// Remove any entries that have excessively slow queries and are no longer required by any user.
@@ -774,9 +781,9 @@ type cacheEntry struct {
 	// Requests waiting for this data. Incremented upon request and decremented when the request is fulfilled.
 	requests int
 
-	// The time this entry was last accessed and is updated upon returning the response. This is used to mainain the
+	// The time this entry was last accessed and is updated upon returning the response. This is used to maintain the
 	// cache entries based on time, in particular the tidyCache processing ages out the following:
-	// - relative time entries that have not been accessed for some amount of time arae removed so that we don't just
+	// - relative time entries that have not been accessed for some amount of time are removed so that we don't just
 	//   keep querying forever (*)
 	// - long-running queries that are no longer being requested by the client to avoid queries that the user has
 	//   effectively aborted.
@@ -850,10 +857,6 @@ func (e *cacheEntry) needsUpdating(createdCutoff, settleCutoff time.Time) bool {
 		// An update is already in progress.
 		return false
 	}
-	if e.next == nil && e.prev == nil {
-		// Entry is no longer in queue which means it must have been discarded.
-		return false
-	}
 
 	// No update is in progress. If the original request is not pending then check if the creation time indicates we
 	// should update.
@@ -907,7 +910,7 @@ func (q *cacheEntryQueue) add(d *cacheEntry) {
 	q.first.prev, q.first, d.next = d, d, q.first
 }
 
-// add removes the cached data from the queue. This may be called with data not in the queue.
+// remove removes the cached data from the queue. This may be called with data not in the queue.
 func (q *cacheEntryQueue) remove(d *cacheEntry) {
 	prev := d.prev
 	next := d.next
