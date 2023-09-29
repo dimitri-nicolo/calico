@@ -3,9 +3,13 @@
 package calico
 
 import (
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"fmt"
 	"reflect"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"golang.org/x/net/context"
 
@@ -58,8 +62,42 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 			return res, nil
 		}
 
+		var caCert *x509.Certificate
+		var caKey *rsa.PrivateKey
+
+		// Populate the installation manifest in the response
+		// - If the operatorNamespace is not set in the ManagedCluster resource, default to tigera-operator.
+		operatorNs := res.Spec.OperatorNamespace
+		if operatorNs == "" {
+			operatorNs = "tigera-operator"
+		}
+
+		// Determine which CA key / cert to use for signing the managed cluster's guardian certificate.
+		// By default, we use the cluster-scoped one provided by the caller. In multi-tenant mode, will instead use
+		// the per-tenant secret.
+		namespace := "tigera-system"
+		if MultiTenantEnabled {
+			namespace = res.Namespace
+		}
+
+		// Query the CA secret from the tenant's namespace or from tigera-system. Note that we use the same certificate as both the CA for signing guardian
+		// certificates, as well the Voltron tunnel server certificate.
+		secret, err := resources.K8sClient.CoreV1().Secrets(namespace).Get(ctx, resources.TunnelSecretName, metav1.GetOptions{})
+		if err != nil {
+			klog.Errorf("Cannot get CA secret (%s) in namespace %s due to %s", resources.TunnelSecretName, namespace, err)
+			return nil, err
+		}
+
+		// Parse the certificate data into an x509 certificate.
+		caCert, caKey, err = helpers.DecodeCertAndKey(secret.Data["tls.crt"], secret.Data["tls.key"])
+		if err != nil {
+			klog.Errorf("Cannot parse CA certificate due to %s", err)
+			return nil, err
+		}
+		klog.Infof("Using CA certificate with CN=%s", caCert.Subject.CommonName)
+
 		// Generate x509 certificate and private key for the managed cluster
-		certificate, privKey, err := helpers.Generate(resources.CACert, resources.CAKey, res.ObjectMeta.Name)
+		certificate, privKey, err := helpers.Generate(caCert, caKey, res.ObjectMeta.Name)
 		if err != nil {
 			klog.Errorf("Cannot generate managed cluster certificate and key due to %s", err)
 			return nil, cerrors.ErrorValidation{
@@ -83,13 +121,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 			return nil, err
 		}
 
-		// Populate the installation manifest in the response
-		// - If the operatorNamespace is not set in the ManagedCluster resource, default to tigera-operator.
-		operatorNs := res.Spec.OperatorNamespace
-		if operatorNs == "" {
-			operatorNs = "tigera-operator"
-		}
-		out.Spec.InstallationManifest = helpers.InstallationManifest(resources.CACert, certificate, privKey, resources.ManagementClusterAddr, resources.ManagementClusterCAType, operatorNs)
+		out.Spec.InstallationManifest = helpers.InstallationManifest(caCert, certificate, privKey, resources.ManagementClusterAddr, resources.ManagementClusterCAType, operatorNs)
 		return out, nil
 	}
 

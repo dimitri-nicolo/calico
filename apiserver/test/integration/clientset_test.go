@@ -30,6 +30,10 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/client-go/tools/clientcmd"
+
+	"k8s.io/client-go/kubernetes"
+
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -3119,13 +3123,14 @@ func TestManagedClusterClient(t *testing.T) {
 					return &v3.ManagedCluster{}
 				},
 				enableManagedClusterCreateAPI: true,
-				managedClustersCACertPath:     "../ca.crt",
-				managedClustersCAKeyPath:      "../ca.key",
 				managementClusterAddr:         "example.org:1234",
+				tunnelSecretName:              "tigera-management-cluster-connection",
 				applyTigeraLicense:            true,
 			}
 
-			client, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
+			client, _, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
+
+			createCASecret(t)
 
 			defer shutdownServer()
 			if err := testManagedClusterClient(client, name); err != nil {
@@ -3146,12 +3151,11 @@ func TestManagedClusterClient(t *testing.T) {
 				return &v3.ManagedCluster{}
 			},
 			enableManagedClusterCreateAPI: false,
-			managedClustersCACertPath:     "../ca.crt",
-			managedClustersCAKeyPath:      "../ca.key",
+			tunnelSecretName:              "tigera-management-cluster-connection",
 			applyTigeraLicense:            true,
 		}
 
-		client, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
+		client, _, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
 		defer shutdownServer()
 
 		managedClusterClient := client.ProjectcalicoV3().ManagedClusters()
@@ -3168,6 +3172,48 @@ func TestManagedClusterClient(t *testing.T) {
 			t.Fatalf("Expected API err to indicate that API is disabled. Received: %v", err)
 		}
 	})
+}
+
+func createCASecret(t *testing.T) {
+	kubeconfig := os.Getenv("KUBECONFIG")
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		t.Errorf("Failed to build K8S client configuration %s", err)
+		t.Fail()
+	}
+
+	k8sClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		t.Errorf("Cannot create k8s client due to %s", err)
+		t.Fail()
+	}
+
+	caPem, caKeyPem, err := CreateCAKeyPair("tigera-voltron", []string{"voltron"})
+	if err != nil {
+		t.Errorf("failed to create CA %s", err.Error())
+		t.Fail()
+	}
+	secret := ToSecret("tigera-management-cluster-connection", "tigera-system", caPem, caKeyPem)
+	namespace := &corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{Kind: "Namespace", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "tigera-system",
+		},
+	}
+
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelFunc()
+
+	_, err = k8sClient.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
+	if err != nil {
+		t.Errorf("Failed to create secrets %s", err)
+		t.Fail()
+	}
+	_, err = k8sClient.CoreV1().Secrets(namespace.Name).Create(ctx, secret, metav1.CreateOptions{})
+	if err != nil {
+		t.Errorf("Failed to create secrets %s", err)
+		t.Fail()
+	}
 }
 
 func testManagedClusterClient(client calicoclient.Interface, name string) error {

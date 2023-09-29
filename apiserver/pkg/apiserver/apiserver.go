@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/client-go/kubernetes"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/licensing/monitor"
@@ -26,7 +28,6 @@ import (
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/rest"
 
-	"github.com/projectcalico/calico/apiserver/pkg/helpers"
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	calicorest "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/rest"
 	"github.com/projectcalico/calico/apiserver/pkg/storage/calico"
@@ -63,11 +64,10 @@ func init() {
 
 type ExtraConfig struct {
 	// Place you custom config here.
-	ManagedClustersCACert          string
-	ManagedClustersCAKey           string
 	EnableManagedClustersCreateAPI bool
 	ManagementClusterAddr          string
 	ManagementClusterCAType        string
+	TunnelSecretName               string
 	KubernetesAPIServerConfig      *rest.Config
 	MinResourceRefreshInterval     time.Duration
 }
@@ -126,19 +126,15 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 
 	var res *calico.ManagedClusterResources
 	if c.ExtraConfig.EnableManagedClustersCreateAPI {
-		cert, key, err := helpers.ReadCredentials(c.ExtraConfig.ManagedClustersCACert, c.ExtraConfig.ManagedClustersCAKey)
-		if err != nil {
-			return nil, err
-		}
-		x509Cert, rsaKey, err := helpers.DecodeCertAndKey(cert, key)
+		k8sClient, err := kubernetes.NewForConfig(c.ExtraConfig.KubernetesAPIServerConfig)
 		if err != nil {
 			return nil, err
 		}
 		res = &calico.ManagedClusterResources{
-			CACert:                  x509Cert,
-			CAKey:                   rsaKey,
 			ManagementClusterAddr:   c.ExtraConfig.ManagementClusterAddr,
 			ManagementClusterCAType: c.ExtraConfig.ManagementClusterCAType,
+			TunnelSecretName:        c.ExtraConfig.TunnelSecretName,
+			K8sClient:               k8sClient,
 		}
 	}
 
