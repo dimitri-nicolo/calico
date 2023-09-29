@@ -6,31 +6,70 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func NewBenchmarksBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.BenchmarksBackend {
+func NewBenchmarksBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.BenchmarksBackend {
 	return &benchmarksBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
+		singleIndex:          false,
+		index:                index.ComplianceBenchmarkMultiIndex,
+		queryHelper:          lmaindex.MultiIndexBenchmarks(),
+	}
+}
+
+func NewSingleIndexBenchmarksBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.BenchmarksBackend {
+	return &benchmarksBackend{
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
+		singleIndex:          true,
+		index:                index.ComplianceBenchmarkIndex,
+		queryHelper:          lmaindex.SingleIndexBenchmarks(),
 	}
 }
 
 type benchmarksBackend struct {
 	client               *elastic.Client
-	templates            bapi.Cache
+	templates            bapi.IndexInitializer
 	lmaclient            lmaelastic.Client
 	deepPaginationCutOff int64
+	queryHelper          lmaindex.Helper
+	singleIndex          bool
+	index                api.Index
+}
+
+type benchmarkWithExtras struct {
+	v1.Benchmarks `json:",inline"`
+	Cluster       string `json:"cluster"`
+	Tenant        string `json:"tenant,omitempty"`
+}
+
+// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// the backend is configured to write to a single index.
+func (b *benchmarksBackend) prepareForWrite(i bapi.ClusterInfo, l v1.Benchmarks) interface{} {
+	if b.singleIndex {
+		return &benchmarkWithExtras{
+			Benchmarks: l,
+			Cluster:    i.Cluster,
+			Tenant:     i.Tenant,
+		}
+	}
+	return l
 }
 
 func (b *benchmarksBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.BenchmarksParams) (*v1.List[v1.Benchmarks], error) {
@@ -60,7 +99,7 @@ func (b *benchmarksBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *
 
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
 	if err != nil {
 		return nil, err
 	}
@@ -79,24 +118,23 @@ func (b *benchmarksBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []
 		return nil, err
 	}
 
-	err := b.templates.InitializeIfNeeded(ctx, bapi.Benchmarks, i)
+	err := b.templates.Initialize(ctx, b.index, i)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine the index to write to using an alias
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 	log.Infof("Writing benchmarks data in bulk to alias %s", alias)
 
 	// Build a bulk request using the provided logs.
 	bulk := b.client.Bulk()
 
 	for _, f := range l {
-		// Add this log to the bulk request. Use the given ID, but
-		// remove it from the document body.
+		// Add this log to the bulk request. Use the given ID, but remove it from the document body.
 		id := f.ID
 		f.ID = ""
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(f).Id(id)
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f)).Id(id)
 		bulk.Add(req)
 	}
 
@@ -125,7 +163,7 @@ func (b *benchmarksBackend) getSearch(i bapi.ClusterInfo, opts *v1.BenchmarksPar
 		return nil, 0, err
 	}
 
-	q, err := b.buildQuery(opts)
+	q, err := b.buildQuery(i, opts)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -137,7 +175,7 @@ func (b *benchmarksBackend) getSearch(i bapi.ClusterInfo, opts *v1.BenchmarksPar
 
 	// Configure pagination options
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -153,18 +191,11 @@ func (b *benchmarksBackend) getSearch(i bapi.ClusterInfo, opts *v1.BenchmarksPar
 	return query, startFrom, nil
 }
 
-func (b *benchmarksBackend) buildQuery(p *v1.BenchmarksParams) (elastic.Query, error) {
-	query := elastic.NewBoolQuery()
+func (b *benchmarksBackend) buildQuery(i bapi.ClusterInfo, p *v1.BenchmarksParams) (elastic.Query, error) {
+	query := b.queryHelper.BaseQuery(i)
+
 	if p.TimeRange != nil {
-		unset := time.Time{}
-		tr := elastic.NewRangeQuery("timestamp")
-		if p.TimeRange.From != unset {
-			tr.From(p.TimeRange.From)
-		}
-		if p.TimeRange.To != unset {
-			tr.To(p.TimeRange.To)
-		}
-		query.Must(tr)
+		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange.From, p.TimeRange.To))
 	}
 	if p.ID != "" {
 		query.Must(elastic.NewTermQuery("_id", p.ID))
@@ -186,24 +217,9 @@ func (b *benchmarksBackend) buildQuery(p *v1.BenchmarksParams) (elastic.Query, e
 			}
 			filterQueries = append(filterQueries, fq)
 		}
-		query.Should(filterQueries...)
+		query.Should(filterQueries...).MinimumNumberShouldMatch(1)
 	}
-
 	return query, nil
-}
-
-func (b *benchmarksBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_benchmark_results.%s.%s.*", i.Tenant, i.Cluster)
-	}
-	return fmt.Sprintf("tigera_secure_ee_benchmark_results.%s.*", i.Cluster)
-}
-
-func (b *benchmarksBackend) writeAlias(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_benchmark_results.%s.%s.", i.Tenant, i.Cluster)
-	}
-	return fmt.Sprintf("tigera_secure_ee_benchmark_results.%s.", i.Cluster)
 }
 
 // getAnyStringValueQuery calculates the query for a specific string field to match one of the supplied values.

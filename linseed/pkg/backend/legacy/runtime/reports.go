@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
@@ -18,6 +19,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -25,17 +27,55 @@ type runtimeReportBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
 
-	templates            bapi.Cache
+	templates            bapi.IndexInitializer
 	deepPaginationCutOff int64
+
+	queryHelper lmaindex.Helper
+	singleIndex bool
+	index       bapi.Index
 }
 
-func NewBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.RuntimeBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.RuntimeBackend {
 	return &runtimeReportBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
+		index:                index.RuntimeReportMultiIndex,
+		singleIndex:          false,
+		queryHelper:          lmaindex.MultiIndexRuntimeReports(),
 	}
+}
+
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.RuntimeBackend {
+	return &runtimeReportBackend{
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
+		index:                index.RuntimeReportIndex,
+		singleIndex:          true,
+		queryHelper:          lmaindex.SingleIndexRuntimeReports(),
+	}
+}
+
+type logWithExtras struct {
+	v1.Report `json:",inline"`
+	Cluster   string `json:"cluster"`
+	Tenant    string `json:"tenant,omitempty"`
+}
+
+// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// the backend is configured to write to a single index.
+func (b *runtimeReportBackend) prepareForWrite(i bapi.ClusterInfo, l v1.Report) interface{} {
+	if b.singleIndex {
+		return &logWithExtras{
+			Report:  l,
+			Cluster: i.Cluster,
+			Tenant:  i.Tenant,
+		}
+	}
+	return l
 }
 
 // Create the given reports in elasticsearch.
@@ -46,13 +86,13 @@ func (b *runtimeReportBackend) Create(ctx context.Context, i bapi.ClusterInfo, r
 		return nil, err
 	}
 
-	err := b.templates.InitializeIfNeeded(ctx, bapi.RuntimeReports, i)
+	err := b.templates.Initialize(ctx, b.index, i)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine the index to write to using an alias
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 	log.Debugf("Writing runtime reports in bulk to alias %s", alias)
 
 	// Build a bulk request using the provided reports.
@@ -81,7 +121,7 @@ func (b *runtimeReportBackend) Create(ctx context.Context, i bapi.ClusterInfo, r
 		// them here.  But currently there are not.
 
 		// Add this report to the bulk request.
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(f)
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f))
 		bulk.Add(req)
 	}
 
@@ -117,10 +157,12 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 	// Configure pagination options
 	var startFrom int
 	var err error
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.getIndex(i))
 	if err != nil {
 		return nil, err
 	}
+
+	log.WithField("INDEX", b.getIndex(i)).Info("Listing from index")
 
 	// Configure sorting.
 	if len(opts.GetSortBy()) != 0 {
@@ -138,23 +180,26 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 
 	reports := []v1.RuntimeReport{}
 	for _, h := range results.Hits.Hits {
-		l := v1.Report{}
+		l := logWithExtras{}
 		err = json.Unmarshal(h.Source, &l)
 		if err != nil {
 			log.WithError(err).Error("Error unmarshalling runtime report")
 			continue
 		}
-		// Populate the runtime report with the ID extracted from Elastic
-		id := h.Id
 
-		// Populate the runtime report with tenant and cluster extract from Elastic index
-		tenant, cluster := b.extractTenantAndCluster(h.Index)
-		reports = append(reports, v1.RuntimeReport{ID: id, Tenant: tenant, Cluster: cluster, Report: l})
+		// Populate the runtime report with tenant and cluster information. In single-index mode, this is stored
+		// directly in the document. In multi-index mode, we need to extract it from the index name.
+		cluster := l.Cluster
+		tenant := l.Tenant
+		if !b.singleIndex {
+			tenant, cluster = b.extractTenantAndCluster(h.Index)
+		}
+		reports = append(reports, v1.RuntimeReport{ID: h.Id, Tenant: tenant, Cluster: cluster, Report: l.Report})
 	}
 
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.getIndex(i), results, b.deepPaginationCutOff, log)
 	if err != nil {
 		return nil, err
 	}
@@ -168,6 +213,8 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 
 // buildQuery builds an elastic query using the given parameters.
 func (b *runtimeReportBackend) buildQuery(i bapi.ClusterInfo, opts *v1.RuntimeReportParams) elastic.Query {
+	baseQuery := b.queryHelper.BaseQuery(i)
+
 	start, _ := logtools.ExtractTimeRange(opts.GetTimeRange())
 	queryTimeRange := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("generated_time").From(start))
 
@@ -181,32 +228,17 @@ func (b *runtimeReportBackend) buildQuery(i bapi.ClusterInfo, opts *v1.RuntimeRe
 		generatedTimeQuery := elastic.NewExistsQuery("generated_time")
 
 		// combining all above queries into one ES query
-		return elastic.NewBoolQuery().Should(
+		return baseQuery.Should(
 			queryTimeRange.Must(generatedTimeQuery),
 			queryLegacy.MustNot(generatedTimeQuery)).MinimumShouldMatch("1")
 	}
 
-	return queryTimeRange
+	return baseQuery.Must(queryTimeRange)
 }
 
-func (b *runtimeReportBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		// If a tenant is provided, then we must include it in the index.
-		// Read all the clusters associated with a tenant
-		return fmt.Sprintf("tigera_secure_ee_runtime.%s.*", i.Tenant)
-	}
-
-	// Otherwise, this is a single-tenant cluster and we read data for all clusters
-	return "tigera_secure_ee_runtime.*"
-}
-
-func (b *runtimeReportBackend) writeAlias(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_runtime.%s.%s.", i.Tenant, i.Cluster)
-	}
-	return fmt.Sprintf("tigera_secure_ee_runtime.%s.", i.Cluster)
-}
-
+// extractTenantAndCluster extracts tenant and cluster from the given index name. This is needed in multi-index mode
+// where the documents themselves do not contain this information. For single index mode, the tenant and cluster are
+// already populated in the documents at write-time.
 func (b *runtimeReportBackend) extractTenantAndCluster(index string) (tenant string, cluster string) {
 	parts := strings.Split(index, ".")
 
@@ -223,4 +255,22 @@ func (b *runtimeReportBackend) extractTenantAndCluster(index string) (tenant str
 	}
 
 	return "", ""
+}
+
+func (b *runtimeReportBackend) getIndex(i bapi.ClusterInfo) string {
+	if b.singleIndex {
+		// Single index mode follows normal rules and can just defer to the Index implementation.
+		return b.index.Index(i)
+	}
+
+	// For multi-index mode, the runtime report backend behaves in a non-standard way. Namely, it ignores the Cluster field
+	// on incoming requests and only uses the Tenant field. So instead of using the api.Index helper, we have our own implementation here.
+	if i.Tenant != "" {
+		// If a tenant is provided, then we must include it in the index.
+		// Read all the clusters associated with a tenant
+		return fmt.Sprintf("tigera_secure_ee_runtime.%s.*", i.Tenant)
+	}
+
+	// Otherwise, this is a single-tenant cluster and we read data for all clusters
+	return "tigera_secure_ee_runtime.*"
 }

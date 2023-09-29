@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 )
@@ -28,7 +29,7 @@ var (
 	cluster string
 )
 
-func setupTest(t *testing.T, indices []string) func() {
+func setupTest(t *testing.T, indices ...bapi.Index) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -42,6 +43,7 @@ func setupTest(t *testing.T, indices []string) func() {
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
 	cluster = testutils.RandomClusterName()
+	info := bapi.ClusterInfo{Cluster: cluster}
 
 	// Each test should take less than 60 seconds.
 	var cancel context.CancelFunc
@@ -49,8 +51,10 @@ func setupTest(t *testing.T, indices []string) func() {
 
 	return func() {
 		// Cleanup after ourselves.
-		err = testutils.CleanupIndices(context.Background(), client, cluster)
-		require.NoError(t, err)
+		for _, idx := range indices {
+			err = testutils.CleanupIndices(context.Background(), client, idx.IsSingleIndex(), idx, info)
+			require.NoError(t, err)
+		}
 
 		// Cancel the context
 		cancel()
@@ -58,22 +62,131 @@ func setupTest(t *testing.T, indices []string) func() {
 	}
 }
 
-func TestBootstrapTemplate(t *testing.T) {
-	defer setupTest(t, []string{"tigera_secure_ee_flows"})()
+func TestBootstrapLegacyFlowTemplate(t *testing.T) {
+	defer setupTest(t, index.FlowLogMultiIndex)()
 
 	// Check that the template returned has the correct
 	// index_patterns, ILM policy, mappings and shards and replicas
-	templateConfig := templates.NewTemplateConfig(bapi.FlowLogs, bapi.ClusterInfo{Cluster: cluster})
+	templateConfig := templates.NewTemplateConfig(index.FlowLogMultiIndex, bapi.ClusterInfo{Cluster: cluster})
 
-	templ, err := templates.IndexBootstrapper(ctx, client, templateConfig)
+	templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
 	require.NoError(t, err)
 	require.NotNil(t, templ)
 	require.Len(t, templ.IndexPatterns, 1)
 
-	checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1, true)
+	checkMultiIndexTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1, true)
 }
 
-func checkTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster, indexNumber string, expectedNumberIndices int, templateNameEndsInDot bool) {
+func TestBootstrapFlowTemplate(t *testing.T) {
+	defer setupTest(t, index.FlowLogIndex)()
+
+	info := bapi.ClusterInfo{Cluster: cluster}
+	idx := index.FlowLogIndex
+
+	// Check that the template returned has the correct
+	// index_patterns, ILM policy, mappings and shards and replicas
+	templateConfig := templates.NewTemplateConfig(idx, info)
+	templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
+	require.NoError(t, err)
+	require.NotNil(t, templ)
+	require.Len(t, templ.IndexPatterns, 1)
+	checkSingleIndexTemplateBootstrapping(t, idx, info)
+}
+
+func TestBootstrapFlowTemplateAsync(t *testing.T) {
+	defer setupTest(t, index.FlowLogIndex)()
+
+	info := bapi.ClusterInfo{Cluster: cluster}
+	idx := index.FlowLogIndex
+
+	// Check that the template returned has the correct
+	// index_patterns, ILM policy, mappings and shards and replicas
+	templateConfig := templates.NewTemplateConfig(idx, info)
+	errs := make(chan error, 5)
+	templs := make(chan *templates.Template, 5)
+	numRoutines := 10
+	for i := 0; i < numRoutines; i++ {
+		go func() {
+			templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
+			if err != nil {
+				errs <- err
+			} else {
+				templs <- templ
+			}
+		}()
+	}
+
+	for i := 0; i < numRoutines; i++ {
+		select {
+		case err := <-errs:
+			require.NoError(t, err, "error received from DefaultBootstrapper")
+		case templ := <-templs:
+			require.NotNil(t, templ)
+			require.Len(t, templ.IndexPatterns, 1)
+		case <-time.After(10 * time.Second):
+			require.Fail(t, "timed out waiting for template")
+		}
+	}
+
+	// Check that the resulting template in ES is correct.
+	checkSingleIndexTemplateBootstrapping(t, idx, info)
+}
+
+func checkSingleIndexTemplateBootstrapping(t *testing.T, idx bapi.Index, i bapi.ClusterInfo) {
+	// Check that the template was created.
+	templateExists, err := client.IndexTemplateExists(idx.IndexTemplateName(i)).Do(ctx)
+	require.NoError(t, err)
+	require.True(t, templateExists)
+
+	// Check that the bootstrap index exists
+	indexExists, err := client.IndexExists(idx.BootstrapIndexName(i)).Do(ctx)
+	require.NoError(t, err)
+	require.True(t, indexExists, "index doesn't exist: %s", idx.BootstrapIndexName(i))
+
+	// Check that write alias exists.
+	index := fmt.Sprintf("%s.%s-%s-000001", idx.Name(i), "linseed", time.Now().UTC().Format("20060102"))
+	responseAlias, err := client.CatAliases().Do(ctx)
+	require.NoError(t, err)
+	require.Greater(t, len(responseAlias), 0)
+	hasAlias := false
+	numWriteIndex := 0
+	numNonWriteIndex := 0
+	for _, row := range responseAlias {
+		if row.Alias == idx.Alias(i) {
+			hasAlias = true
+			if row.IsWriteIndex == "true" {
+				require.Equal(t, index, row.Index)
+				numWriteIndex++
+			} else {
+				require.NotEqual(t, index, row.Index)
+				numNonWriteIndex++
+			}
+		}
+	}
+	require.True(t, hasAlias)
+	require.Equal(t, 1, numWriteIndex)
+
+	responseSettings, err := client.IndexGetSettings(index).Do(ctx)
+	require.NoError(t, err)
+	require.NotEmpty(t, responseSettings)
+	require.Contains(t, responseSettings, index)
+	require.NotEmpty(t, responseSettings[index].Settings)
+	require.Contains(t, responseSettings[index].Settings, "index")
+	settings, _ := responseSettings[index].Settings["index"].(map[string]interface{})
+	// Check lifecycle section
+	require.Contains(t, settings, "lifecycle")
+	lifecycle, _ := settings["lifecycle"].(map[string]interface{})
+	require.Contains(t, lifecycle, "name")
+	require.EqualValues(t, lifecycle["name"], idx.ILMPolicyName())
+	require.EqualValues(t, lifecycle["rollover_alias"], idx.Alias(i))
+	// Check shards and replicas
+	require.Contains(t, settings, "number_of_replicas")
+	require.EqualValues(t, settings["number_of_replicas"], "0")
+	require.Contains(t, settings, "number_of_shards")
+	require.EqualValues(t, settings["number_of_shards"], "1")
+}
+
+func checkMultiIndexTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster, indexNumber string, expectedNumberIndices int, templateNameEndsInDot bool) {
 	// Check that the template was created
 	templateName := fmt.Sprintf("%s.%s", indexPrefix, cluster)
 	// Some template names do not end with a dot, like the template name for events
@@ -140,29 +253,29 @@ func checkTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster,
 }
 
 func TestBootstrapAuditTemplates(t *testing.T) {
-	defer setupTest(t, []string{"tigera_secure_ee_audit_ee", "tigera_secure_ee_audit_kube"})()
+	defer setupTest(t, index.AuditLogEEMultiIndex, index.AuditLogKubeMultiIndex)()
 
-	auditKubeTemplateConfig := templates.NewTemplateConfig(bapi.AuditKubeLogs, bapi.ClusterInfo{Cluster: cluster})
-	auditEETemplateConfig := templates.NewTemplateConfig(bapi.AuditEELogs, bapi.ClusterInfo{Cluster: cluster})
+	auditKubeTemplateConfig := templates.NewTemplateConfig(index.AuditLogKubeMultiIndex, bapi.ClusterInfo{Cluster: cluster})
+	auditEETemplateConfig := templates.NewTemplateConfig(index.AuditLogEEMultiIndex, bapi.ClusterInfo{Cluster: cluster})
 
-	templKubeAudit, err := templates.IndexBootstrapper(ctx, client, auditKubeTemplateConfig)
+	templKubeAudit, err := templates.DefaultBootstrapper(ctx, client, auditKubeTemplateConfig)
 	require.NoError(t, err)
 	require.NotNil(t, templKubeAudit)
 	require.Len(t, templKubeAudit.IndexPatterns, 1)
 
-	templEEAudit, err := templates.IndexBootstrapper(ctx, client, auditEETemplateConfig)
+	templEEAudit, err := templates.DefaultBootstrapper(ctx, client, auditEETemplateConfig)
 	require.NoError(t, err)
 	require.NotNil(t, templEEAudit)
 	require.Len(t, templEEAudit.IndexPatterns, 1)
 
 	// Check that the template returned has the correct
 	// index_patterns, ILM policy, mappings and shards and replicas
-	checkTemplateBootstrapping(t, "tigera_secure_ee_audit_kube", "fluentd", cluster, "000001", 1, true)
-	checkTemplateBootstrapping(t, "tigera_secure_ee_audit_ee", "fluentd", cluster, "000001", 1, true)
+	checkMultiIndexTemplateBootstrapping(t, "tigera_secure_ee_audit_kube", "fluentd", cluster, "000001", 1, true)
+	checkMultiIndexTemplateBootstrapping(t, "tigera_secure_ee_audit_ee", "fluentd", cluster, "000001", 1, true)
 }
 
 func TestBootstrapEventsBackwardsCompatibility(t *testing.T) {
-	defer setupTest(t, []string{"tigera_secure_ee_events"})()
+	defer setupTest(t, index.EventsMultiIndex)()
 
 	// Create an old index that has the same name as the one defined in 3.16
 	oldIndexName := fmt.Sprintf("tigera_secure_ee_events.%s.lma", cluster)
@@ -176,31 +289,31 @@ func TestBootstrapEventsBackwardsCompatibility(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, resultAlias.Acknowledged)
 
-	eventsTemplateConfig := templates.NewTemplateConfig(bapi.Events, bapi.ClusterInfo{Cluster: cluster})
-	templEvents, err := templates.IndexBootstrapper(ctx, client, eventsTemplateConfig)
+	eventsTemplateConfig := templates.NewTemplateConfig(index.EventsMultiIndex, bapi.ClusterInfo{Cluster: cluster})
+	templEvents, err := templates.DefaultBootstrapper(ctx, client, eventsTemplateConfig)
 	require.NoError(t, err)
 	require.NotNil(t, templEvents)
 	require.Len(t, templEvents.IndexPatterns, 1)
 
 	// Check that the template returned has the correct
 	// index_patterns, ILM policy, mappings and shards and replicas
-	checkTemplateBootstrapping(t, "tigera_secure_ee_events", "lma", cluster, "000000", 2, false)
+	checkMultiIndexTemplateBootstrapping(t, "tigera_secure_ee_events", "lma", cluster, "000000", 2, false)
 }
 
 func TestBootstrapTemplateMultipleTimes(t *testing.T) {
-	defer setupTest(t, []string{"tigera_secure_ee_flows"})()
+	defer setupTest(t, index.FlowLogMultiIndex)()
 
-	templateConfig := templates.NewTemplateConfig(bapi.FlowLogs, bapi.ClusterInfo{Cluster: cluster})
+	templateConfig := templates.NewTemplateConfig(index.FlowLogMultiIndex, bapi.ClusterInfo{Cluster: cluster})
 
 	for i := 0; i < 10; i++ {
-		_, err := templates.IndexBootstrapper(ctx, client, templateConfig)
+		_, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
 		require.NoError(t, err)
-		checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1, true)
+		checkMultiIndexTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1, true)
 	}
 }
 
 func TestBootstrapTemplateNewMappings(t *testing.T) {
-	defer setupTest(t, []string{"tigera_secure_ee_flows"})()
+	defer setupTest(t, index.FlowLogMultiIndex)()
 
 	// Let's keep track of the original EventsMappings and restore them after this test
 	originalFlowLogMappings := templates.FlowLogMappings
@@ -225,25 +338,25 @@ func TestBootstrapTemplateNewMappings(t *testing.T) {
 
 	// Check that the template returned has the correct
 	// index_patterns, ILM policy, mappings and shards and replicas
-	templateConfig := templates.NewTemplateConfig(bapi.FlowLogs, bapi.ClusterInfo{Cluster: cluster})
+	templateConfig := templates.NewTemplateConfig(index.FlowLogMultiIndex, bapi.ClusterInfo{Cluster: cluster})
 
 	// Simulate 10 restarts and make sure we end up with 1 index (no rollover)
 	for i := 0; i < 10; i++ {
-		templ, err := templates.IndexBootstrapper(ctx, client, templateConfig)
+		templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
 		require.NoError(t, err)
 		require.NotNil(t, templ)
 		require.Len(t, templ.IndexPatterns, 1)
 
-		checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1, true)
+		checkMultiIndexTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1, true)
 	}
 
 	// We now have an older index (without "dest_domains")
 	is, err := client.IndexGet(templateConfig.Alias()).Do(ctx)
 	require.NoError(t, err)
 
-	index := fmt.Sprintf("%s.%s.%s-%s-%s", "tigera_secure_ee_flows", cluster, "fluentd", time.Now().UTC().Format("20060102"), "000001")
+	indexName := fmt.Sprintf("%s.%s.%s-%s-%s", "tigera_secure_ee_flows", cluster, "fluentd", time.Now().UTC().Format("20060102"), "000001")
 
-	indexData := is[index]
+	indexData := is[indexName]
 	require.NotNil(t, indexData)
 
 	indexMappings := indexData.Mappings
@@ -258,16 +371,16 @@ func TestBootstrapTemplateNewMappings(t *testing.T) {
 
 	// Let's update the mapping (to simulate a version change of Linseed)
 	templates.FlowLogMappings = originalFlowLogMappings
-	templateConfig = templates.NewTemplateConfig(bapi.FlowLogs, bapi.ClusterInfo{Cluster: cluster})
+	templateConfig = templates.NewTemplateConfig(index.FlowLogMultiIndex, bapi.ClusterInfo{Cluster: cluster})
 
 	// Simulate 10 restarts and make sure we end up with 2 indices (rolled-over only once)
 	for i := 0; i < 10; i++ {
-		templ, err := templates.IndexBootstrapper(ctx, client, templateConfig)
+		templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
 		require.NoError(t, err)
 		require.NotNil(t, templ)
 		require.Len(t, templ.IndexPatterns, 1)
 
-		checkTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000002", 2, true)
+		checkMultiIndexTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000002", 2, true)
 	}
 }
 
@@ -278,34 +391,29 @@ func TestBootstrapTemplateNewMappings(t *testing.T) {
 // While an incorrect type works (ES understands it), it messes up bootstrapping logic
 // that compares the mappings defined in the file vs the current mappings used by the index.
 func TestMappingsValidity(t *testing.T) {
-	logTypes := []bapi.DataType{
-		bapi.FlowLogs,
-		bapi.DNSLogs,
-		bapi.L7Logs,
-		bapi.AuditEELogs,
-		bapi.AuditKubeLogs,
-		bapi.BGPLogs,
-		bapi.Events,
-		bapi.WAFLogs,
-		bapi.ReportData,
-		bapi.Snapshots,
-		bapi.Benchmarks,
-		bapi.IPSet,
-		bapi.DomainNameSet,
+	indices := []bapi.Index{
+		index.FlowLogMultiIndex,
+		index.DNSLogMultiIndex,
+		index.L7LogMultiIndex,
+		index.AuditLogEEMultiIndex,
+		index.AuditLogKubeMultiIndex,
+		index.BGPLogMultiIndex,
+		index.EventsMultiIndex,
+		index.WAFLogMultiIndex,
+		index.ComplianceReportMultiIndex,
+		index.ComplianceSnapshotMultiIndex,
+		index.ComplianceBenchmarkMultiIndex,
+		index.ThreatfeedsIPSetMultiIndex,
+		index.ThreatfeedsDomainMultiIndex,
 	}
-	indices := []string{}
-	for _, logType := range logTypes {
-		indices = append(indices, templates.IndexPatternsPrefixLookup[logType])
-	}
+	defer setupTest(t, indices...)()
 
-	defer setupTest(t, indices)()
-
-	testMappingsValidity := func(t *testing.T, dataType bapi.DataType) {
-		t.Run(fmt.Sprintf("%s-%s", t.Name(), dataType), func(t *testing.T) {
+	testMappingsValidity := func(t *testing.T, idx bapi.Index) {
+		t.Run(fmt.Sprintf("%s-%s", t.Name(), idx.DataType()), func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 			// Create a template so that new index has the correct mappings
-			config := templates.NewTemplateConfig(dataType, clusterInfo)
+			config := templates.NewTemplateConfig(idx, clusterInfo)
 			template, err := config.Template()
 			require.NoError(t, err)
 
@@ -335,7 +443,7 @@ func TestMappingsValidity(t *testing.T) {
 		})
 	}
 
-	for _, logType := range logTypes {
-		testMappingsValidity(t, logType)
+	for _, idx := range indices {
+		testMappingsValidity(t, idx)
 	}
 }

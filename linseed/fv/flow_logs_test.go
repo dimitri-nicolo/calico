@@ -5,67 +5,41 @@
 package fv_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
-	elastic "github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-var (
-	cli       client.Client
-	ctx       context.Context
-	lmaClient lmaelastic.Client
-	cluster   string
-)
+// Run runs the given flow log test in all modes.
+func RunFlowLogTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
+	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		defer setupAndTeardown(t, args, index.FlowLogMultiIndex)()
+		testFn(t, index.FlowLogMultiIndex)
+	})
 
-func flowlogSetupAndTeardown(t *testing.T) func() {
-	// Hook logrus into testing.T
-	config.ConfigureLogging("DEBUG")
-	logCancel := logutils.RedirectLogrusToTestingT(t)
-
-	// Create an ES client.
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
-	require.NoError(t, err)
-	lmaClient = lmaelastic.NewWithClient(esClient)
-
-	// Instantiate a client.
-	cli, err = NewLinseedClient()
-	require.NoError(t, err)
-
-	// Create a random cluster name for each test to make sure we don't
-	// interfere between tests.
-	cluster = testutils.RandomClusterName()
-
-	// Set up context with a timeout.
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-
-	return func() {
-		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, cluster)
-		logCancel()
-		cancel()
-	}
+	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		args.Backend = config.BackendTypeSingleIndex
+		defer setupAndTeardown(t, args, index.FlowLogIndex)()
+		testFn(t, index.FlowLogIndex)
+	})
 }
 
 func TestFV_FlowLogs(t *testing.T) {
-	t.Run("should return an empty list if there are no flow logs", func(t *testing.T) {
-		defer flowlogSetupAndTeardown(t)()
-
+	RunFlowLogTest(t, "should return an empty list if there are no flow logs", func(t *testing.T, idx bapi.Index) {
 		params := v1.FlowLogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -81,9 +55,7 @@ func TestFV_FlowLogs(t *testing.T) {
 		require.Equal(t, []v1.FlowLog{}, logs.Items)
 	})
 
-	t.Run("should create and list flow logs", func(t *testing.T) {
-		defer flowlogSetupAndTeardown(t)()
-
+	RunFlowLogTest(t, "should create and list flow logs", func(t *testing.T, idx bapi.Index) {
 		// Create a basic flow log.
 		logs := []v1.FlowLog{
 			{
@@ -95,7 +67,8 @@ func TestFV_FlowLogs(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create flow log did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_flows*")
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Read it back.
 		params := v1.FlowLogParams{
@@ -111,9 +84,7 @@ func TestFV_FlowLogs(t *testing.T) {
 		require.Equal(t, logs, testutils.AssertLogIDAndCopyFlowLogsWithoutID(t, resp))
 	})
 
-	t.Run("should support pagination", func(t *testing.T) {
-		defer flowlogSetupAndTeardown(t)()
-
+	RunFlowLogTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
 		totalItems := 5
 
 		// Create 5 flow logs.
@@ -132,7 +103,8 @@ func TestFV_FlowLogs(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_flows*")
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
@@ -196,9 +168,7 @@ func TestFV_FlowLogs(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 
-	t.Run("should support pagination for items >= 10000 for flows", func(t *testing.T) {
-		defer flowlogSetupAndTeardown(t)()
-
+	RunFlowLogTest(t, "should support pagination for items >= 10000 for flows", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K logs.
 		logTime := time.Now().UTC().Unix()
@@ -216,7 +186,8 @@ func TestFV_FlowLogs(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create logs did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_flows*")
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Stream through all the items.
 		params := v1.FlowLogParams{
@@ -243,15 +214,14 @@ func TestFV_FlowLogs(t *testing.T) {
 
 		require.Equal(t, receivedItems, totalItems)
 	})
-
 }
 
 func TestFV_FlowLogsTenancy(t *testing.T) {
-	t.Run("should support tenancy restriction", func(t *testing.T) {
-		defer flowlogSetupAndTeardown(t)()
-
+	RunFlowLogTest(t, "should reject requests with a bad tenant ID", func(t *testing.T, idx bapi.Index) {
 		// Instantiate a client for an unexpected tenant.
-		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		args := DefaultLinseedArgs()
+		args.TenantID = "bad-tenant"
+		tenantCLI, err := NewLinseedClient(args)
 		require.NoError(t, err)
 
 		// Create a basic flow log. We expect this to fail, since we're using
@@ -277,6 +247,66 @@ func TestFV_FlowLogsTenancy(t *testing.T) {
 		resp, err := tenantCLI.FlowLogs(cluster).List(ctx, &params)
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, resp)
+	})
+
+	RunFlowLogTest(t, "should enforce tenancy boundaries with multiple linseed instances", func(t *testing.T, idx bapi.Index) {
+		// In this test, we run a second instance of linseed configured with the tenant ID "tenant-b",
+		// and then make sure that each instance only returns data for the tenant it is configured for.
+
+		// Create tenant-b Linseed instance, running on a different port.
+		tenantBArgs := DefaultLinseedArgs()
+		tenantBArgs.TenantID = "tenant-b"
+		tenantBArgs.Port = tenantBArgs.Port + 1
+		tenantBArgs.MetricsPort = 0
+		tenantBArgs.HealthPort = 0
+		lb := RunLinseed(t, tenantBArgs)
+		defer lb.Stop()
+
+		// Create a valid client for tenant-b.
+		tenantBCLI, err := NewLinseedClient(tenantBArgs)
+		require.NoError(t, err)
+
+		// Create a client that uses tenant-b, but is configured to talk to tenant-a's Linseed instance.
+		tenantBArgs.Port = DefaultLinseedArgs().Port
+		tenantBWrongCLI, err := NewLinseedClient(tenantBArgs)
+		require.NoError(t, err)
+
+		// Create a flow log in tenant-a.
+		logs := []v1.FlowLog{
+			{
+				EndTime: time.Now().Unix(), // TODO- more fields.
+			},
+		}
+		bulk, err := cli.FlowLogs(cluster).Create(ctx, logs)
+		require.NoError(t, err)
+		require.Equal(t, bulk.Succeeded, 1, "create flow log did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
+
+		// Try to read the flow log from tenant-b's Linseed instance. This should return successfully, but with no results.
+		params := v1.FlowLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Second),
+					To:   time.Now().Add(5 * time.Second),
+				},
+			},
+		}
+		resp, err := tenantBCLI.FlowLogs(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.Equal(t, len(resp.Items), 0, "expected no results")
+
+		// Now try to read it with the wrong tenant ID. This should return an error.
+		resp, err = tenantBWrongCLI.FlowLogs(cluster).List(ctx, &params)
+		require.ErrorContains(t, err, "Bad tenant identifier")
+		require.Nil(t, resp)
+
+		// Tenant A should be able to read its own logs though.
+		resp, err = cli.FlowLogs(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.Equal(t, len(resp.Items), 1, "expected one result")
 	})
 }
 
@@ -441,9 +471,7 @@ func TestFV_FlowLogsRBAC(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		t.Run(testcase.name, func(t *testing.T) {
-			defer flowlogSetupAndTeardown(t)()
-
+		RunFlowLogTest(t, testcase.name, func(t *testing.T, idx bapi.Index) {
 			// Create a flow log with the given parameters.
 			logs := []v1.FlowLog{
 				{
@@ -459,7 +487,8 @@ func TestFV_FlowLogsRBAC(t *testing.T) {
 			require.Equal(t, bulk.Succeeded, 1, "create flow log did not succeed")
 
 			// Refresh elasticsearch so that results appear.
-			testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_flows*")
+			err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			require.NoError(t, err)
 
 			// Perform a query using the testcase permissions.
 			params := v1.FlowLogParams{

@@ -6,31 +6,70 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func NewReportsBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.ReportsBackend {
+func NewReportsBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.ReportsBackend {
 	return &reportsBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
+		queryHelper:          lmaindex.MultiIndexComplianceReports(),
+		singleIndex:          false,
+		index:                index.ComplianceReportMultiIndex,
+	}
+}
+
+func NewSingleIndexReportsBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.ReportsBackend {
+	return &reportsBackend{
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
+		queryHelper:          lmaindex.SingleIndexComplianceReports(),
+		singleIndex:          true,
+		index:                index.ComplianceReportIndex,
 	}
 }
 
 type reportsBackend struct {
 	client               *elastic.Client
-	templates            bapi.Cache
+	templates            bapi.IndexInitializer
 	lmaclient            lmaelastic.Client
 	deepPaginationCutOff int64
+	queryHelper          lmaindex.Helper
+	singleIndex          bool
+	index                api.Index
+}
+
+type reportWithExtras struct {
+	v1.ReportData `json:",inline"`
+	Cluster       string `json:"cluster"`
+	Tenant        string `json:"tenant,omitempty"`
+}
+
+// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// the backend is configured to write to a single index.
+func (b *reportsBackend) prepareForWrite(i bapi.ClusterInfo, l v1.ReportData) interface{} {
+	if b.singleIndex {
+		return &reportWithExtras{
+			ReportData: l,
+			Cluster:    i.Cluster,
+			Tenant:     i.Tenant,
+		}
+	}
+	return l
 }
 
 func (b *reportsBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.ReportDataParams) (*v1.List[v1.ReportData], error) {
@@ -60,7 +99,7 @@ func (b *reportsBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
 	if err != nil {
 		return nil, err
 	}
@@ -79,13 +118,13 @@ func (b *reportsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v1.
 		return nil, err
 	}
 
-	err := b.templates.InitializeIfNeeded(ctx, bapi.ReportData, i)
+	err := b.templates.Initialize(ctx, b.index, i)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine the index to write to using an alias
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 	log.Infof("Writing report data in bulk to alias %s", alias)
 
 	// Build a bulk request using the provided logs.
@@ -96,7 +135,7 @@ func (b *reportsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v1.
 		// body of the document.
 		id := f.ID
 		f.ID = ""
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(f).Id(id)
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f)).Id(id)
 		bulk.Add(req)
 	}
 
@@ -125,7 +164,7 @@ func (b *reportsBackend) getSearch(i bapi.ClusterInfo, opts *v1.ReportDataParams
 		return nil, 0, err
 	}
 
-	q := b.buildQuery(opts)
+	q := b.buildQuery(i, opts)
 
 	// Build the query, sorting by time.
 	query := b.client.Search().
@@ -135,7 +174,7 @@ func (b *reportsBackend) getSearch(i bapi.ClusterInfo, opts *v1.ReportDataParams
 	// Configure pagination options
 	var startFrom int
 	var err error
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -151,24 +190,15 @@ func (b *reportsBackend) getSearch(i bapi.ClusterInfo, opts *v1.ReportDataParams
 	return query, startFrom, nil
 }
 
-func (b *reportsBackend) buildQuery(p *v1.ReportDataParams) elastic.Query {
-	query := elastic.NewBoolQuery()
+func (b *reportsBackend) buildQuery(i bapi.ClusterInfo, p *v1.ReportDataParams) elastic.Query {
+	query := b.queryHelper.BaseQuery(i)
 	if p.TimeRange != nil {
-		unset := time.Time{}
-		if p.TimeRange.From != unset && p.TimeRange.To != unset {
-			query.Must(elastic.NewBoolQuery().Should(
-				elastic.NewRangeQuery("startTime").From(p.TimeRange.From).To(p.TimeRange.To),
-				elastic.NewRangeQuery("endTime").From(p.TimeRange.From).To(p.TimeRange.To),
-			))
-		} else if p.TimeRange.From != unset && p.TimeRange.To == unset {
-			query.Must(elastic.NewRangeQuery("endTime").From(p.TimeRange.From))
-		} else if p.TimeRange.From == unset && p.TimeRange.To != unset {
-			query.Must(elastic.NewRangeQuery("startTime").To(p.TimeRange.To))
-		}
+		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange.From, p.TimeRange.To))
 	}
 	if p.ID != "" {
 		query.Must(elastic.NewTermQuery("_id", p.ID))
 	}
+
 	if len(p.ReportMatches) > 0 {
 		rqueries := []elastic.Query{}
 		for _, r := range p.ReportMatches {
@@ -190,18 +220,4 @@ func (b *reportsBackend) buildQuery(p *v1.ReportDataParams) elastic.Query {
 	}
 
 	return query
-}
-
-func (b *reportsBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_compliance_reports.%s.%s.*", i.Tenant, i.Cluster)
-	}
-	return fmt.Sprintf("tigera_secure_ee_compliance_reports.%s.*", i.Cluster)
-}
-
-func (b *reportsBackend) writeAlias(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_compliance_reports.%s.%s.", i.Tenant, i.Cluster)
-	}
-	return fmt.Sprintf("tigera_secure_ee_compliance_reports.%s.", i.Cluster)
 }

@@ -12,15 +12,23 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 // wafLogsIndexHelper implements the Helper interface for waf logs.
-type wafLogsIndexHelper struct{}
+type wafLogsIndexHelper struct {
+	singleIndex bool
+}
 
-// WAFLogs returns an instance of the waf logs index helper.
-func WAFLogs() Helper {
+// MultiIndexWAFLogs returns an instance of the waf logs index helper.
+func MultiIndexWAFLogs() Helper {
 	return wafLogsIndexHelper{}
+}
+
+// SingleIndexWAFLogs returns an instance of the waf logs index helper.
+func SingleIndexWAFLogs() Helper {
+	return wafLogsIndexHelper{singleIndex: true}
 }
 
 // NewWAFLogsConverter returns a Converter instance defined for waf logs.
@@ -43,6 +51,17 @@ func wafAtomToElastic(a *query.Atom) JsonObject {
 	}
 
 	return basicAtomToElastic(a)
+}
+
+func (h wafLogsIndexHelper) BaseQuery(i bapi.ClusterInfo) *elastic.BoolQuery {
+	q := elastic.NewBoolQuery()
+	if h.singleIndex {
+		q.Must(elastic.NewTermQuery("cluster", i.Cluster))
+		if i.Tenant != "" {
+			q.Must(elastic.NewTermQuery("tenant", i.Tenant))
+		}
+	}
+	return q
 }
 
 func (h wafLogsIndexHelper) NewSelectorQuery(selector string) (elastic.Query, error) {
@@ -76,8 +95,4 @@ func (h wafLogsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query 
 
 func (h wafLogsIndexHelper) GetTimeField() string {
 	return "@timestamp"
-}
-
-func (h wafLogsIndexHelper) GetIndex(cluster string) string {
-	panic("Not implemented!")
 }

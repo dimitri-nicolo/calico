@@ -166,11 +166,11 @@ type DomainNameSetBackend interface {
 	Delete(context.Context, ClusterInfo, []v1.DomainNameSetThreatFeed) (*v1.BulkResponse, error)
 }
 
-// DataType determines the type of logs supported
-// to be ingested via bulk APIs
+// DataType is a type of data that can be stored in the backend.
 type DataType string
 
 const (
+	// Each DataType's value is important - it is used for building legacy index names, aliases, and index patterns.
 	FlowLogs       DataType = "flows"
 	DNSLogs        DataType = "dns"
 	L7Logs         DataType = "l7"
@@ -187,15 +187,41 @@ const (
 	DomainNameSet  DataType = "threatfeeds_domainnameset"
 )
 
-// Cache is a cache for the templates in order
+type Index interface {
+	// Name returns the name of the index.
+	Name(ClusterInfo) string
+
+	// BootstrapIndexName returns the name of the iniitial index to use when bootstrapping the index.
+	// This is used when creating the index for the first time, and will serve as the basis
+	// for future names when ES rolls over the index.
+	BootstrapIndexName(ClusterInfo) string
+
+	// Index returns the index value to use when reading from the index.
+	Index(ClusterInfo) string
+
+	// Alias returns an alias to use when writing to the index, allowing for rotation of
+	// the underlying index in use without having to change the index name in the code.
+	Alias(ClusterInfo) string
+
+	// IndexTemplateName returns the name of the index template to use when creating the index.
+	IndexTemplateName(ClusterInfo) string
+
+	// IsSingleIndex returns true if the index is a singleton, housing multiple clusters and tenants worth of data.
+	IsSingleIndex() bool
+
+	// DataType returns the type of data that is stored in the index.
+	DataType() DataType
+
+	// ILMPolicyName returns the name of the ILM policy to use for this index.
+	ILMPolicyName() string
+}
+
+// IndexInitializer is a cache for the templates in order
 // to create mappings, write aliases and rollover
 // indices only once. It will store as key-value pair
 // a definition of the template. The key used
 // is composed of types of logs and cluster info
-type Cache interface {
-	// InitializeIfNeeded will retrieve the template from the cache. If not found,
-	// tt will proceed to store a template against the pairs of
-	// DataType and ClusterInfo. An error will be returned if template creation
-	// or index boostrap fails.
-	InitializeIfNeeded(context.Context, DataType, ClusterInfo) error
+type IndexInitializer interface {
+	// Initialize the given index.
+	Initialize(context.Context, Index, ClusterInfo) error
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
@@ -15,7 +16,7 @@ import (
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 )
 
-func TestBoostrapFlowsTemplate(t *testing.T) {
+func TestBootstrapFlowsTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateFlowsTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
@@ -37,7 +38,7 @@ func TestBoostrapFlowsTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.FlowLogs, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.FlowLogMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_flows.%s.", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -46,7 +47,6 @@ func TestBoostrapFlowsTemplate(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_flows.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_flows.%s.fluentd-{now/s{yyyyMMdd}}-000001>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
 }
@@ -59,7 +59,7 @@ func print(tenant, cluster string) string {
 	return fmt.Sprintf("%s.%s", tenant, cluster)
 }
 
-func TestBoostrapDNSTemplate(t *testing.T) {
+func TestBootstrapDNSTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateDNSTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
@@ -80,7 +80,7 @@ func TestBoostrapDNSTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.DNSLogs, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.DNSLogMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_dns.%s.", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -93,11 +93,10 @@ func TestBoostrapDNSTemplate(t *testing.T) {
 	}
 }
 
-func TestBoostrapEEAuditTemplate(t *testing.T) {
+func TestBootstrapEEAuditTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateEEAuditTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
-
 			cluster := backendutils.RandomClusterName()
 
 			settings := fmt.Sprintf(`{
@@ -116,7 +115,7 @@ func TestBoostrapEEAuditTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.AuditEELogs, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.AuditLogEEMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_audit_ee.%s.", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -125,16 +124,14 @@ func TestBoostrapEEAuditTemplate(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_audit_ee.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_audit_ee.%s.fluentd-{now/s{yyyyMMdd}}-000001>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
 }
 
-func TestBoostrapKUBEAuditTemplate(t *testing.T) {
+func TestBootstrapKUBEAuditTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateKubeAuditTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
-
 			cluster := backendutils.RandomClusterName()
 
 			settings := fmt.Sprintf(`{
@@ -153,7 +150,7 @@ func TestBoostrapKUBEAuditTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.AuditKubeLogs, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.AuditLogKubeMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_audit_kube.%s.", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -162,16 +159,14 @@ func TestBoostrapKUBEAuditTemplate(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_audit_kube.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_audit_kube.%s.fluentd-{now/s{yyyyMMdd}}-000001>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
 }
 
-func TestBoostrapBGPTemplate(t *testing.T) {
+func TestBootstrapBGPTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateBGPTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
-
 			cluster := backendutils.RandomClusterName()
 
 			settings := fmt.Sprintf(`{
@@ -190,7 +185,7 @@ func TestBoostrapBGPTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.BGPLogs, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.BGPLogMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_bgp.%s.", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -199,17 +194,14 @@ func TestBoostrapBGPTemplate(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_bgp.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_bgp.%s.fluentd-{now/s{yyyyMMdd}}-000001>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
-
 }
 
-func TestBoostrapL7Template(t *testing.T) {
+func TestBootstrapL7Template(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateL7Template (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
-
 			cluster := backendutils.RandomClusterName()
 
 			settings := fmt.Sprintf(`{
@@ -228,7 +220,7 @@ func TestBoostrapL7Template(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.L7Logs, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.L7LogMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_l7.%s.", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -237,16 +229,14 @@ func TestBoostrapL7Template(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_l7.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_l7.%s.fluentd-{now/s{yyyyMMdd}}-000001>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
 }
 
-func TestBoostrapWAFTemplate(t *testing.T) {
+func TestBootstrapWAFTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateWAFTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
-
 			cluster := backendutils.RandomClusterName()
 
 			settings := fmt.Sprintf(`{
@@ -265,7 +255,7 @@ func TestBoostrapWAFTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.WAFLogs, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.WAFLogMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_waf.%s.", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -274,16 +264,14 @@ func TestBoostrapWAFTemplate(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_waf.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_waf.%s.fluentd-{now/s{yyyyMMdd}}-000001>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
 }
 
-func TestBoostrapRuntimeReportsTemplate(t *testing.T) {
+func TestBootstrapRuntimeReportsTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateRuntimeReportsTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
-
 			cluster := backendutils.RandomClusterName()
 
 			settings := fmt.Sprintf(`{
@@ -302,7 +290,7 @@ func TestBoostrapRuntimeReportsTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.RuntimeReports, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.RuntimeReportMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_runtime.%s.", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -311,16 +299,14 @@ func TestBoostrapRuntimeReportsTemplate(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_runtime.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_runtime.%s.fluentd-{now/s{yyyyMMdd}}-000001>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
 }
 
-func TestBoostrapComplianceReportsTemplate(t *testing.T) {
+func TestBootstrapComplianceReportsTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateComplianceReportsTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
-
 			cluster := backendutils.RandomClusterName()
 
 			settings := fmt.Sprintf(`{
@@ -339,7 +325,7 @@ func TestBoostrapComplianceReportsTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.ReportData, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.ComplianceReportMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_compliance_reports.%s", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -348,16 +334,14 @@ func TestBoostrapComplianceReportsTemplate(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_compliance_reports.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_compliance_reports.%s.lma-{now/s{yyyyMMdd}}-000000>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
 }
 
-func TestBoostrapComplianceBenchmarksTemplate(t *testing.T) {
+func TestBootstrapComplianceBenchmarksTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateComplianceBenchmarksTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
-
 			cluster := backendutils.RandomClusterName()
 
 			settings := fmt.Sprintf(`{
@@ -376,7 +360,7 @@ func TestBoostrapComplianceBenchmarksTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.Benchmarks, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.ComplianceBenchmarkMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_benchmark_results.%s", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -385,16 +369,14 @@ func TestBoostrapComplianceBenchmarksTemplate(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_benchmark_results.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_benchmark_results.%s.lma-{now/s{yyyyMMdd}}-000000>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
 }
 
-func TestBoostrapComplianceSnapshotsTemplate(t *testing.T) {
+func TestBootstrapComplianceSnapshotsTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateComplianceSnapshotsTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
-
 			cluster := backendutils.RandomClusterName()
 
 			settings := fmt.Sprintf(`{
@@ -413,7 +395,7 @@ func TestBoostrapComplianceSnapshotsTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.Snapshots, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.ComplianceSnapshotMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_snapshots.%s", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -422,16 +404,14 @@ func TestBoostrapComplianceSnapshotsTemplate(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_snapshots.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_snapshots.%s.lma-{now/s{yyyyMMdd}}-000000>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
 }
 
-func TestBoostrapEventsTemplate(t *testing.T) {
+func TestBootstrapEventsTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateEventsTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
-
 			cluster := backendutils.RandomClusterName()
 
 			settings := fmt.Sprintf(`{
@@ -451,7 +431,7 @@ func TestBoostrapEventsTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.Events, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.EventsMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_events.%s", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -460,16 +440,14 @@ func TestBoostrapEventsTemplate(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_events.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_events.%s.lma-{now/s{yyyyMMdd}}-000000>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
 }
 
-func TestBoostrapIPSetTemplate(t *testing.T) {
+func TestBootstrapIPSetTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateIPSetTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
-
 			cluster := backendutils.RandomClusterName()
 
 			expectedTemplate := &Template{
@@ -481,7 +459,7 @@ func TestBoostrapIPSetTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.IPSet, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.ThreatfeedsIPSetMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_threatfeeds_ipset.%s", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -490,16 +468,14 @@ func TestBoostrapIPSetTemplate(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_threatfeeds_ipset.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_threatfeeds_ipset.%s.linseed-{now/s{yyyyMMdd}}-000001>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
 }
 
-func TestBoostrapDomainSetTemplate(t *testing.T) {
+func TestBootstrapDomainSetTemplate(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateDomainSetTemplate (tenant=%s)", tenant)
 		t.Run(name, func(t *testing.T) {
-
 			cluster := backendutils.RandomClusterName()
 
 			expectedTemplate := &Template{
@@ -511,7 +487,7 @@ func TestBoostrapDomainSetTemplate(t *testing.T) {
 			expectedTemplate.Settings["number_of_shards"] = 1
 			expectedTemplate.Settings["number_of_replicas"] = 0
 
-			config := NewTemplateConfig(bapi.DomainNameSet, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
+			config := NewTemplateConfig(index.ThreatfeedsDomainMultiIndex, bapi.ClusterInfo{Cluster: cluster, Tenant: tenant})
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_threatfeeds_domainnameset.%s", print(tenant, cluster)), config.TemplateName())
 			template, err := config.Template()
 			require.NoError(t, err)
@@ -520,7 +496,6 @@ func TestBoostrapDomainSetTemplate(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("tigera_secure_ee_threatfeeds_domainnameset.%s.", print(tenant, cluster)), config.Alias())
 			require.Equal(t, fmt.Sprintf("<tigera_secure_ee_threatfeeds_domainnameset.%s.linseed-{now/s{yyyyMMdd}}-000001>",
 				print(tenant, cluster)), config.BootstrapIndexName())
-
 		})
 	}
 }

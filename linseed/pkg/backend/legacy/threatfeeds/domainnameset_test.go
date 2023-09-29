@@ -17,9 +17,7 @@ import (
 )
 
 func TestDomainSetBasic(t *testing.T) {
-	t.Run("invalid ClusterInfo", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "invalid ClusterInfo", func(t *testing.T) {
 		f := v1.DomainNameSetThreatFeed{}
 		p := v1.DomainNameSetThreatFeedParams{}
 
@@ -41,8 +39,7 @@ func TestDomainSetBasic(t *testing.T) {
 	// Run each test with a tenant specified, and also without a tenant.
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("create and retrieve reports (tenant=%s)", tenant)
-		t.Run(name, func(t *testing.T) {
-			defer setupTest(t)()
+		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo.Tenant = tenant
 
 			// Create a dummy threat feed.
@@ -60,7 +57,7 @@ func TestDomainSetBasic(t *testing.T) {
 			require.Equal(t, []v1.BulkError(nil), response.Errors)
 			require.Equal(t, 0, response.Failed)
 
-			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_threatfeeds_domainnameset.*")
+			err = backendutils.RefreshIndex(ctx, client, domainsIndexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Read it back and check it matches.
@@ -71,6 +68,16 @@ func TestDomainSetBasic(t *testing.T) {
 			require.Equal(t, "my-threat-feed", resp.Items[0].ID)
 			require.Equal(t, feed, *resp.Items[0].Data)
 
+			// Attempt to delete it with an invalid tenant ID. It should fail.
+			badClusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: "bad-tenant"}
+			bulkResp, err := db.Delete(ctx, badClusterInfo, []v1.DomainNameSetThreatFeed{resp.Items[0]})
+			require.NoError(t, err)
+			if ipsetIndexGetter.IsSingleIndex() {
+				require.Len(t, bulkResp.Errors, 1)
+				require.Equal(t, bulkResp.Failed, 1)
+			}
+
+			// Delete it with the correct tenant ID and cluster.
 			delResp, err := db.Delete(ctx, clusterInfo, []v1.DomainNameSetThreatFeed{f})
 			require.NoError(t, err)
 			require.Equal(t, []v1.BulkError(nil), delResp.Errors)
@@ -143,8 +150,7 @@ func TestDomainSetFiltering(t *testing.T) {
 		// Run each test with a tenant specified, and also without a tenant.
 		for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
-			t.Run(name, func(t *testing.T) {
-				defer setupTest(t)()
+			RunAllModes(t, name, func(t *testing.T) {
 				clusterInfo.Tenant = tenant
 
 				f1 := v1.DomainNameSetThreatFeed{
@@ -167,7 +173,7 @@ func TestDomainSetFiltering(t *testing.T) {
 				require.Equal(t, []v1.BulkError(nil), response.Errors)
 				require.Equal(t, 0, response.Failed)
 
-				err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_threatfeeds_domainnameset.*")
+				err = backendutils.RefreshIndex(ctx, client, domainsIndexGetter.Index(clusterInfo))
 				require.NoError(t, err)
 
 				resp, err := db.List(ctx, clusterInfo, tc.Params)

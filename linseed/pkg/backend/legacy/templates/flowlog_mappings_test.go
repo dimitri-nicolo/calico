@@ -17,7 +17,6 @@ var excludeFlowLogsField = map[string]bool{
 }
 
 func TestCompareFlowLogsStructAndTemplate(t *testing.T) {
-
 	t.Run("Check for FlowLogs api and template matches", func(t *testing.T) {
 		flowlogMap := testutils.MustUnmarshalToMap(t, FlowLogMappings)
 		utils.IsDynamicMappingDisabled(t, flowlogMap)

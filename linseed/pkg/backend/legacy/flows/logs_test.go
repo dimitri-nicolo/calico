@@ -23,9 +23,7 @@ import (
 
 // TestFlowLogBasic includes basic read / write tests for flow logs.
 func TestFlowLogBasic(t *testing.T) {
-	t.Run("should create and retrieve a flow log", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "should create and retrieve a flow log", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{
 			Cluster: cluster,
 			Tenant:  backendutils.RandomTenantName(),
@@ -58,7 +56,7 @@ func TestFlowLogBasic(t *testing.T) {
 		require.Equal(t, []v1.BulkError(nil), response.Errors)
 		require.Equal(t, 0, response.Failed)
 
-		err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_flows.*")
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 		require.NoError(t, err)
 
 		// Read it back and make sure it matches.
@@ -79,9 +77,7 @@ func TestFlowLogBasic(t *testing.T) {
 		require.Len(t, resp.Items, 0)
 	})
 
-	t.Run("no cluster name given on request", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "no cluster name given on request", func(t *testing.T) {
 		// It should reject requests with no cluster name given.
 		clusterInfo := bapi.ClusterInfo{}
 		_, err := flb.Create(ctx, clusterInfo, []v1.FlowLog{})
@@ -93,9 +89,7 @@ func TestFlowLogBasic(t *testing.T) {
 		require.Nil(t, results)
 	})
 
-	t.Run("bad startFrom on request", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "bad startFrom on request", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 		params := &v1.FlowLogParams{
 			QueryParams: v1.QueryParams{
@@ -109,9 +103,7 @@ func TestFlowLogBasic(t *testing.T) {
 }
 
 func TestFlowSorting(t *testing.T) {
-	t.Run("should respect sorting", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "should respect sorting", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 		t1 := time.Unix(100, 0)
@@ -163,7 +155,7 @@ func TestFlowSorting(t *testing.T) {
 		require.Equal(t, []v1.BulkError(nil), response.Errors)
 		require.Equal(t, 0, response.Failed)
 
-		err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_flows.*")
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 		require.NoError(t, err)
 
 		// Query for flow logs without sorting.
@@ -354,9 +346,7 @@ func TestFlowLogFiltering(t *testing.T) {
 			// different filtering parameters provided in the params
 			// to query one or more flow logs.
 			name := fmt.Sprintf("%s (tenant=%s)", testcase.Name, tenant)
-			t.Run(name, func(t *testing.T) {
-				defer setupTest(t)()
-
+			RunAllModes(t, name, func(t *testing.T) {
 				clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 				// Set the time range for the test. We set this per-test
@@ -411,7 +401,7 @@ func TestFlowLogFiltering(t *testing.T) {
 				require.Equal(t, []v1.BulkError(nil), response.Errors)
 				require.Equal(t, 0, response.Failed)
 
-				err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_flows.*")
+				err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 				require.NoError(t, err)
 
 				// Query for flow logs.
@@ -449,8 +439,7 @@ func TestFlowLogFiltering(t *testing.T) {
 func TestAggregations(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
-		t.Run(fmt.Sprintf("should return time-series flow log aggregation results (tenant=%s)", tenant), func(t *testing.T) {
-			defer setupTest(t)()
+		RunAllModes(t, fmt.Sprintf("should return time-series flow log aggregation results (tenant=%s)", tenant), func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 			// Start the test numLogs minutes in the past.
@@ -480,11 +469,7 @@ func TestAggregations(t *testing.T) {
 			require.Empty(t, resp.Errors)
 
 			// Refresh.
-			index := fmt.Sprintf("tigera_secure_ee_flows.%s.", cluster)
-			if tenant != "" {
-				index = fmt.Sprintf("tigera_secure_ee_flows.%s.%s.", clusterInfo.Tenant, cluster)
-			}
-			err = backendutils.RefreshIndex(ctx, client, index)
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			params := v1.FlowLogAggregationParams{}
@@ -530,8 +515,7 @@ func TestAggregations(t *testing.T) {
 			}
 		})
 
-		t.Run(fmt.Sprintf("should return aggregate stats (tenant=%s)", tenant), func(t *testing.T) {
-			defer setupTest(t)()
+		RunAllModes(t, fmt.Sprintf("should return aggregate stats (tenant=%s)", tenant), func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 			// Start the test numLogs minutes in the past.
@@ -561,11 +545,7 @@ func TestAggregations(t *testing.T) {
 			require.Empty(t, resp.Errors)
 
 			// Refresh.
-			index := fmt.Sprintf("tigera_secure_ee_flows.%s.", cluster)
-			if tenant != "" {
-				index = fmt.Sprintf("tigera_secure_ee_flows.%s.%s.", clusterInfo.Tenant, cluster)
-			}
-			err = backendutils.RefreshIndex(ctx, client, index)
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			params := v1.FlowLogAggregationParams{}

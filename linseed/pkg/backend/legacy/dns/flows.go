@@ -3,7 +3,6 @@ package dns
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	elastic "github.com/olivere/elastic/v7"
@@ -12,6 +11,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -42,9 +42,20 @@ type dnsFlowBackend struct {
 	aggMaxs          []lmaelastic.AggMaxMinInfo
 	aggMeans         []lmaelastic.AggMeanInfo
 	aggNested        []lmaelastic.AggNestedTermInfo
+
+	queryHelper lmaindex.Helper
+	index       bapi.Index
 }
 
 func NewDNSFlowBackend(c lmaelastic.Client) bapi.DNSFlowBackend {
+	return newFlowBackend(c, false)
+}
+
+func NewSingleIndexDNSFlowBackend(c lmaelastic.Client) bapi.DNSFlowBackend {
+	return newFlowBackend(c, true)
+}
+
+func newFlowBackend(c lmaelastic.Client, singleIndex bool) bapi.DNSFlowBackend {
 	// These are the keys which define a DNS flow in ES, and will be used to create buckets in the ES result.
 	compositeSources := []lmaelastic.AggCompositeSourceInfo{
 		{Name: "client_namespace", Field: "client_namespace"},
@@ -66,6 +77,13 @@ func NewDNSFlowBackend(c lmaelastic.Client) bapi.DNSFlowBackend {
 		{Name: dnsAggMeanLatencyCount, Field: "latency_mean", WeightField: "latency_count"},
 	}
 
+	indexTemplate := index.DNSLogIndex
+	helper := lmaindex.SingleIndexDNSLogs()
+	if !singleIndex {
+		indexTemplate = index.DNSLogMultiIndex
+		helper = lmaindex.MultiIndexDNSLogs()
+	}
+
 	return &dnsFlowBackend{
 		lmaclient: c,
 		ft:        backend.NewFieldTracker(compositeSources),
@@ -76,6 +94,9 @@ func NewDNSFlowBackend(c lmaelastic.Client) bapi.DNSFlowBackend {
 		aggMins:          mins,
 		aggMaxs:          maxs,
 		aggMeans:         means,
+
+		queryHelper: helper,
+		index:       indexTemplate,
 	}
 }
 
@@ -89,7 +110,7 @@ func (b *dnsFlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 
 	// Build the aggregation request.
 	query := &lmaelastic.CompositeAggregationQuery{
-		DocumentIndex:           b.index(i),
+		DocumentIndex:           b.index.Index(i),
 		Query:                   b.buildQuery(i, opts),
 		Name:                    "buckets",
 		AggCompositeSourceInfos: b.compositeSources,
@@ -137,6 +158,8 @@ func (b *dnsFlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Com
 
 // buildQuery builds an elastic query using the given parameters.
 func (b *dnsFlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.DNSFlowParams) elastic.Query {
+	query := b.queryHelper.BaseQuery(i)
+
 	// Parse times from the request.
 	var start, end time.Time
 	if opts.TimeRange != nil {
@@ -147,16 +170,7 @@ func (b *dnsFlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.DNSFlowParams) 
 		start = time.Now().Add(-5 * time.Minute)
 		end = time.Now()
 	}
+	query.Filter(b.queryHelper.NewTimeRangeQuery(start, end))
 
-	return lmaindex.DnsLogs().NewTimeRangeQuery(start, end)
-}
-
-func (b *dnsFlowBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_dns.%s.%s.*", i.Tenant, i.Cluster)
-	}
-
-	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("tigera_secure_ee_dns.%s.*", i.Cluster)
+	return query
 }

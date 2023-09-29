@@ -15,7 +15,9 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -23,17 +25,55 @@ type bgpLogBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
 
-	templates            bapi.Cache
+	templates            bapi.IndexInitializer
 	deepPaginationCutOff int64
+
+	queryHelper lmaindex.Helper
+	singleIndex bool
+	index       bapi.Index
 }
 
-func NewBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.BGPBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.BGPBackend {
 	return &bgpLogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
+		queryHelper:          lmaindex.MultiIndexBGPLogs(),
+		singleIndex:          false,
+		index:                index.BGPLogMultiIndex,
 	}
+}
+
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.BGPBackend {
+	return &bgpLogBackend{
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
+		queryHelper:          lmaindex.SingleIndexBGPLogs(),
+		singleIndex:          true,
+		index:                index.BGPLogIndex,
+	}
+}
+
+type logWithExtras struct {
+	v1.BGPLog `json:",inline"`
+	Cluster   string `json:"cluster"`
+	Tenant    string `json:"tenant,omitempty"`
+}
+
+// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// the backend is configured to write to a single index.
+func (b *bgpLogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.BGPLog) interface{} {
+	if b.singleIndex {
+		return &logWithExtras{
+			BGPLog:  l,
+			Cluster: i.Cluster,
+			Tenant:  i.Tenant,
+		}
+	}
+	return l
 }
 
 // Create the given logs in elasticsearch.
@@ -44,21 +84,21 @@ func (b *bgpLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 		return nil, err
 	}
 
-	err := b.templates.InitializeIfNeeded(ctx, bapi.BGPLogs, i)
+	err := b.templates.Initialize(ctx, b.index, i)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine the index to write to using an alias
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 	log.Debugf("Writing BGP logs in bulk to alias %s", alias)
 
 	// Build a bulk request using the provided logs.
 	bulk := b.client.Bulk()
 
-	for _, f := range logs {
+	for _, l := range logs {
 		// Add this log to the bulk request.
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(f)
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, l))
 		bulk.Add(req)
 	}
 
@@ -98,7 +138,7 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 	// Configure pagination options
 	var startFrom int
 	var err error
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +163,7 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
 	if err != nil {
 		return nil, err
 	}
@@ -137,8 +177,10 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 
 // buildQuery builds an elastic query using the given parameters.
 func (b *bgpLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.BGPLogParams) elastic.Query {
-	// Parse times from the request. We default to a time-range query
-	// if no other search parameters are given.
+	// Start with the base query for this index.
+	query := b.queryHelper.BaseQuery(i)
+
+	// Add the time range to the query.
 	var start, end time.Time
 	if opts.QueryParams.TimeRange != nil {
 		start = opts.QueryParams.TimeRange.From
@@ -148,25 +190,7 @@ func (b *bgpLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.BGPLogParams) el
 		start = time.Now().Add(-5 * time.Minute)
 		end = time.Now()
 	}
-	return elastic.NewRangeQuery("logtime").
-		Gt(start.Format(v1.BGPLogTimeFormat)).
-		Lte(end.Format(v1.BGPLogTimeFormat))
-}
+	query.Filter(b.queryHelper.NewTimeRangeQuery(start, end))
 
-func (b *bgpLogBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_bgp.%s.%s.*", i.Tenant, i.Cluster)
-	}
-
-	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("tigera_secure_ee_bgp.%s.*", i.Cluster)
-}
-
-func (b *bgpLogBackend) writeAlias(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_bgp.%s.%s.", i.Tenant, i.Cluster)
-	}
-
-	return fmt.Sprintf("tigera_secure_ee_bgp.%s.", i.Cluster)
+	return query
 }

@@ -14,56 +14,51 @@ import (
 
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
-	elastic "github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/config"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-var anotherCluster string
+var (
+	anotherCluster     string
+	anotherClusterInfo bapi.ClusterInfo
+)
 
-func runtimeReportsSetupAndTeardown(t *testing.T) func() {
-	// Hook logrus into testing.T
-	config.ConfigureLogging("DEBUG")
-	logCancel := logutils.RedirectLogrusToTestingT(t)
+func RunRuntimeReportTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
+	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		defer setupAndTeardown(t, args, index.RuntimeReportMultiIndex)()
+		defer runtimeReportsSetupAndTeardown(t, args, index.RuntimeReportMultiIndex)()
+		testFn(t, index.RuntimeReportMultiIndex)
+	})
 
-	// Create an ES client.
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
-	require.NoError(t, err)
-	lmaClient = lmaelastic.NewWithClient(esClient)
+	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		args.Backend = config.BackendTypeSingleIndex
+		defer setupAndTeardown(t, args, index.RuntimeReportIndex)()
+		defer runtimeReportsSetupAndTeardown(t, args, index.RuntimeReportIndex)()
+		testFn(t, index.RuntimeReportIndex)
+	})
+}
 
-	// Instantiate a client.
-	cli, err = NewLinseedClient()
-	require.NoError(t, err)
-
-	// Create a random cluster name for each test to make sure we don't
-	// interfere between tests.
-	cluster = testutils.RandomClusterName()
+// runtimeReportsSetupAndTeardown performs additional setup and teardown for runtime reports tests.
+func runtimeReportsSetupAndTeardown(t *testing.T, args *RunLinseedArgs, idx bapi.Index) func() {
 	anotherCluster = testutils.RandomClusterName()
-
-	// Set up context with a timeout.
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	anotherClusterInfo = bapi.ClusterInfo{Cluster: anotherCluster, Tenant: args.TenantID}
 
 	return func() {
-		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, cluster)
-		testutils.CleanupIndices(context.Background(), esClient, anotherCluster)
-		logCancel()
-		cancel()
+		testutils.CleanupIndices(context.Background(), esClient, idx.IsSingleIndex(), idx, bapi.ClusterInfo{Cluster: anotherCluster})
 	}
 }
 
 func TestFV_RuntimeReports(t *testing.T) {
-	t.Run("should return an empty list if there are no runtime reports", func(t *testing.T) {
-		defer runtimeReportsSetupAndTeardown(t)()
-
+	RunRuntimeReportTest(t, "should return an empty list if there are no runtime reports", func(t *testing.T, idx bapi.Index) {
 		params := v1.RuntimeReportParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -79,9 +74,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 		require.Equal(t, []v1.RuntimeReport{}, runtimeReports.Items)
 	})
 
-	t.Run("should create and list runtime reports using generated time", func(t *testing.T) {
-		defer runtimeReportsSetupAndTeardown(t)()
-
+	RunRuntimeReportTest(t, "should create and list runtime reports using generated time", func(t *testing.T, idx bapi.Index) {
 		startTime := time.Unix(1, 0).UTC()
 		endTime := time.Unix(1, 0).UTC()
 		generatedTime := time.Unix(2, 2).UTC()
@@ -121,7 +114,10 @@ func TestFV_RuntimeReports(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create runtime reports did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_runtime*")
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(anotherClusterInfo))
+		require.NoError(t, err)
 
 		// Read it back.
 		params := v1.RuntimeReportParams{
@@ -150,7 +146,10 @@ func TestFV_RuntimeReports(t *testing.T) {
 	// read any pre-existing reports from ES that were ingested by an older Linseed version (or es-gateway) and that
 	// don't have GeneratedTime values.  In order to do that we use the LMA client to write legacy reports.
 	t.Run("should create and list runtime reports using legacy and generated start_time", func(t *testing.T) {
-		defer runtimeReportsSetupAndTeardown(t)()
+		// This test only runs against the legacy multi-index backend, since the single-index implementation post-dates
+		// the introduction of Linseed populating the GeneratedTime field. As such, all single-index reports will have
+		// a GeneratedTime value.
+		defer setupAndTeardown(t, DefaultLinseedArgs(), index.RuntimeReportMultiIndex)()
 
 		newRuntimeReport := func(startTime time.Time) v1.Report {
 			return v1.Report{
@@ -256,9 +255,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp))
 	})
 
-	t.Run("should support pagination", func(t *testing.T) {
-		defer runtimeReportsSetupAndTeardown(t)()
-
+	RunRuntimeReportTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
 		totalItems := 5
 
 		// Create 5 runtime reports.
@@ -275,7 +272,10 @@ func TestFV_RuntimeReports(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_runtime*")
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(anotherClusterInfo))
+		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
@@ -349,9 +349,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 
-	t.Run("should support pagination for items >= 10000 for runtime reports", func(t *testing.T) {
-		defer runtimeReportsSetupAndTeardown(t)()
-
+	RunRuntimeReportTest(t, "should support pagination for items >= 10000 for runtime reports", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K runtime reports.
 		referenceTime := time.Now().UTC()
@@ -367,7 +365,10 @@ func TestFV_RuntimeReports(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create reports did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_runtime*")
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(anotherClusterInfo))
+		require.NoError(t, err)
 
 		// Stream through all the items.
 		params := v1.RuntimeReportParams{
@@ -392,12 +393,10 @@ func TestFV_RuntimeReports(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		require.Equal(t, receivedItems, totalItems)
+		require.Equal(t, totalItems, receivedItems)
 	})
 
-	t.Run("should read data for multiple clusters", func(t *testing.T) {
-		defer runtimeReportsSetupAndTeardown(t)()
-
+	RunRuntimeReportTest(t, "should read data for multiple clusters", func(t *testing.T, idx bapi.Index) {
 		startTime := time.Unix(1, 0).UTC()
 		endTime := time.Unix(1, 0).UTC()
 
@@ -438,7 +437,10 @@ func TestFV_RuntimeReports(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create runtime reports did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_runtime*")
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(anotherClusterInfo))
+		require.NoError(t, err)
 
 		// Read it back.
 		params := v1.RuntimeReportParams{
@@ -451,7 +453,6 @@ func TestFV_RuntimeReports(t *testing.T) {
 		}
 		resp, err := cli.RuntimeReports("").List(ctx, &params)
 		require.NoError(t, err)
-
 		require.Len(t, resp.Items, 2)
 
 		// Validate that the received reports come from two clusters
@@ -474,27 +475,26 @@ func TestFV_RuntimeReports(t *testing.T) {
 }
 
 func TestFV_RuntimeReportTenancy(t *testing.T) {
-	t.Run("should support tenancy restriction", func(t *testing.T) {
-		defer runtimeReportsSetupAndTeardown(t)()
-
+	RunRuntimeReportTest(t, "should support tenancy restriction", func(t *testing.T, idx bapi.Index) {
 		// Instantiate a client for an unexpected tenant.
-		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		args := DefaultLinseedArgs()
+		args.TenantID = "bad-tenant"
+		tenantCLI, err := NewLinseedClient(args)
 		require.NoError(t, err)
 
 		// Create a basic entry. We expect this to fail, since we're using
 		// an unexpected tenant ID on the request.
 		startTime := time.Unix(1, 0).UTC()
 		endTime := time.Unix(1, 0).UTC()
-		generatedTime := time.Unix(2, 2).UTC()
+
 		// Create a basic runtime report
 		report := v1.Report{
-			GeneratedTime: &generatedTime,
-			StartTime:     startTime,
-			EndTime:       endTime,
-			Host:          "any-host",
-			Count:         1,
-			Type:          "ProcessStart",
-			ConfigName:    "malware-protection",
+			StartTime:  startTime,
+			EndTime:    endTime,
+			Host:       "any-host",
+			Count:      1,
+			Type:       "ProcessStart",
+			ConfigName: "malware-protection",
 			Pod: v1.PodInfo{
 				Name:          "app",
 				NameAggr:      "app-*",
@@ -523,7 +523,7 @@ func TestFV_RuntimeReportTenancy(t *testing.T) {
 		params := v1.RuntimeReportParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
-					From: generatedTime,
+					From: startTime,
 					To:   time.Now(),
 				},
 			},

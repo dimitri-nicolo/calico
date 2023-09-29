@@ -7,12 +7,14 @@ import (
 	"fmt"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -21,19 +23,56 @@ import (
 type eventsBackend struct {
 	client               *elastic.Client
 	lmaclient            lmaelastic.Client
-	templates            bapi.Cache
-	helper               lmaindex.Helper
+	templates            bapi.IndexInitializer
 	deepPaginationCutOff int64
+	queryHelper          lmaindex.Helper
+	singleIndex          bool
+	index                bapi.Index
 }
 
-func NewBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.EventsBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.EventsBackend {
 	return &eventsBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
-		helper:               lmaindex.Alerts(),
+		queryHelper:          lmaindex.MultiIndexAlerts(),
 		deepPaginationCutOff: deepPaginationCutOff,
+		index:                index.EventsMultiIndex,
 	}
+}
+
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.EventsBackend {
+	return &eventsBackend{
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		queryHelper:          lmaindex.SingleIndexAlerts(),
+		deepPaginationCutOff: deepPaginationCutOff,
+		index:                index.AlertsIndex,
+		singleIndex:          true,
+	}
+}
+
+type withExtras struct {
+	v1.Event `json:",inline"`
+	Cluster  string `json:"cluster"`
+	Tenant   string `json:"tenant,omitempty"`
+}
+
+// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// the backend is configured to write to a single index.
+func (b *eventsBackend) prepareForWrite(i bapi.ClusterInfo, l v1.Event) interface{} {
+	// We don't want to include the ID in the document ever.
+	l.ID = ""
+
+	if b.singleIndex {
+		return &withExtras{
+			Event:   l,
+			Cluster: i.Cluster,
+			Tenant:  i.Tenant,
+		}
+	}
+	return l
 }
 
 // Create the given events in elasticsearch.
@@ -44,13 +83,13 @@ func (b *eventsBackend) Create(ctx context.Context, i bapi.ClusterInfo, events [
 		return nil, err
 	}
 
-	err := b.templates.InitializeIfNeeded(ctx, bapi.Events, i)
+	err := b.templates.Initialize(ctx, b.index, i)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine the index to write to using an alias
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 	log.Debugf("Writing events in bulk to index %s", alias)
 
 	// Build a bulk request using the provided events.
@@ -58,14 +97,13 @@ func (b *eventsBackend) Create(ctx context.Context, i bapi.ClusterInfo, events [
 
 	for _, event := range events {
 		id := event.ID
-		event.ID = ""
-		eventJson, err := json.Marshal(event)
+		eventJSON, err := json.Marshal(b.prepareForWrite(i, event))
 		if err != nil {
 			log.WithError(err).Warningf("Failed to marshal event and add it to the request %+v", event)
 			continue
 		}
 
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(string(eventJson)).Id(id)
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(string(eventJSON)).Id(id)
 		bulk.Add(req)
 	}
 
@@ -93,9 +131,14 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 	}
 
 	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
-	q, err := logtools.BuildQuery(b.helper, i, opts, start, end)
+	q, err := logtools.BuildQuery(b.queryHelper, i, opts, start, end)
 	if err != nil {
 		return nil, err
+	}
+
+	// If an ID was given on the request, limit to just that ID.
+	if opts.ID != "" {
+		q.Must(elastic.NewTermQuery("_id", opts.ID))
 	}
 
 	// Build the query.
@@ -105,7 +148,7 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 
 	// Configure pagination options
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +159,7 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 			query.Sort(s.Field, !s.Descending)
 		}
 	} else {
-		query.SortBy(elastic.NewFieldSort(b.helper.GetTimeField()).Order(true))
+		query.SortBy(elastic.NewFieldSort(b.queryHelper.GetTimeField()).Order(true))
 	}
 
 	results, err := query.Do(ctx)
@@ -138,7 +181,7 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
 	if err != nil {
 		return nil, err
 	}
@@ -154,13 +197,31 @@ func (b *eventsBackend) UpdateDismissFlag(ctx context.Context, i api.ClusterInfo
 	if i.Cluster == "" {
 		return nil, fmt.Errorf("no cluster ID on request")
 	}
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 
 	// Build a bulk request using the provided events.
 	bulk := b.client.Bulk()
+	numToDismiss := 0
+	bulkErrs := []v1.BulkError{}
 	for _, event := range events {
+		if err := b.checkTenancy(ctx, i, &event); err != nil {
+			logrus.WithError(err).WithField("id", event.ID).Warn("Error checking tenancy for event")
+			bulkErrs = append(bulkErrs, v1.BulkError{Resource: event.ID, Type: "document_missing_exception", Reason: err.Error()})
+			continue
+		}
 		req := elastic.NewBulkUpdateRequest().Index(alias).Id(event.ID).Doc(map[string]bool{"dismissed": event.Dismissed})
 		bulk.Add(req)
+		numToDismiss++
+	}
+
+	if numToDismiss == 0 {
+		// If there are no events to dismiss, short-circuit and return an empty response.
+		return &v1.BulkResponse{
+			Total:     len(bulkErrs),
+			Succeeded: 0,
+			Failed:    len(bulkErrs),
+			Errors:    bulkErrs,
+		}, nil
 	}
 
 	// Send the bulk request. Wait for results to be refreshed before replying,
@@ -186,17 +247,56 @@ func (b *eventsBackend) UpdateDismissFlag(ctx context.Context, i api.ClusterInfo
 	}, nil
 }
 
+func (b *eventsBackend) checkTenancy(ctx context.Context, i api.ClusterInfo, event *v1.Event) error {
+	// If we're in single index mode, we need to check tenancy. Otherwise, we can skip this because
+	// the index name already contains the cluster and tenant ID.
+	if b.singleIndex {
+		// We need to protect against tenancy here. In single index mode without this check, any tenant could send a request which
+		// dismisses or deletes events for any other tenant if they guess the right ID.
+		// Query the event to compare the tenant and cluster to the request. If they don't match, skip.
+		// This is not a perfect solution, but it's better than nothing.
+		// By Listing with the given cluster info and ID, we can ensure that the event is visible to that tenant.
+		items, err := b.List(ctx, i, &v1.EventParams{ID: event.ID, QueryParams: v1.QueryParams{MaxPageSize: 1}})
+		if err != nil {
+			return err
+		}
+		if len(items.Items) == 0 {
+			return fmt.Errorf("event not found during tenancy check")
+		}
+	}
+	return nil
+}
+
 func (b *eventsBackend) Delete(ctx context.Context, i api.ClusterInfo, events []v1.Event) (*v1.BulkResponse, error) {
 	if i.Cluster == "" {
 		return nil, fmt.Errorf("no cluster ID on request")
 	}
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 
 	// Build a bulk request using the provided events.
 	bulk := b.client.Bulk()
+	numToDelete := 0
+	bulkErrs := []v1.BulkError{}
 	for _, event := range events {
+		if err := b.checkTenancy(ctx, i, &event); err != nil {
+			logrus.WithError(err).WithField("id", event.ID).Warn("Error checking tenancy for event")
+			bulkErrs = append(bulkErrs, v1.BulkError{Resource: event.ID, Type: "document_missing_exception", Reason: err.Error()})
+			continue
+		}
 		req := elastic.NewBulkDeleteRequest().Index(alias).Id(event.ID)
 		bulk.Add(req)
+		numToDelete++
+	}
+
+	if numToDelete == 0 {
+		// If there are no events to delete, short-circuit and return an empty response, including
+		// any errors that occurred during tenancy checks.
+		return &v1.BulkResponse{
+			Total:     len(bulkErrs),
+			Succeeded: 0,
+			Failed:    len(bulkErrs),
+			Errors:    bulkErrs,
+		}, nil
 	}
 
 	// Send the bulk request. Wait for results to be refreshed before replying,
@@ -220,22 +320,4 @@ func (b *eventsBackend) Delete(ctx context.Context, i api.ClusterInfo, events []
 		Errors:    v1.GetBulkErrors(resp),
 		Deleted:   del,
 	}, nil
-}
-
-func (b *eventsBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_events.%s.%s.*", i.Tenant, i.Cluster)
-	}
-
-	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("tigera_secure_ee_events.%s.*", i.Cluster)
-}
-
-func (b *eventsBackend) writeAlias(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_events.%s.%s.", i.Tenant, i.Cluster)
-	}
-
-	return fmt.Sprintf("tigera_secure_ee_events.%s.", i.Cluster)
 }

@@ -83,8 +83,7 @@ func TestCreateSnapshots(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		for _, tc := range testcases {
 			name := fmt.Sprintf("should write and read %s snapshots (tenant=%s)", tc.Name, tenant)
-			t.Run(name, func(t *testing.T) {
-				defer setupTest(t)()
+			RunAllModes(t, name, func(t *testing.T) {
 				clusterInfo.Tenant = tenant
 
 				trl := list.TimestampedResourceList{
@@ -101,7 +100,7 @@ func TestCreateSnapshots(t *testing.T) {
 				require.Equal(t, []v1.BulkError(nil), response.Errors)
 				require.Equal(t, 0, response.Failed)
 
-				err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_snapshots.*")
+				err = backendutils.RefreshIndex(ctx, client, sIndexGetter.Index(clusterInfo))
 				require.NoError(t, err)
 
 				// Read it back and check it matches.
@@ -130,9 +129,7 @@ func TestCreateSnapshots(t *testing.T) {
 		}
 	}
 
-	t.Run("invalid ClusterInfo", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "invalid ClusterInfo", func(t *testing.T) {
 		f := v1.Snapshot{}
 		p := v1.SnapshotParams{}
 
@@ -162,7 +159,7 @@ func TestSnapshotsFiltering(t *testing.T) {
 
 	testcases := []testcase{
 		{
-			Name: "should filter snapshots based timestamp",
+			Name: "should filter snapshots based on timestamp",
 			Params: &v1.SnapshotParams{
 				QueryParams: v1.QueryParams{
 					TimeRange: &lmav1.TimeRange{
@@ -180,8 +177,7 @@ func TestSnapshotsFiltering(t *testing.T) {
 		// Run each test with a tenant specified, and also without a tenant.
 		for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
-			t.Run(name, func(t *testing.T) {
-				defer setupTest(t)()
+			RunAllModes(t, name, func(t *testing.T) {
 				clusterInfo.Tenant = tenant
 
 				s1 := v1.Snapshot{
@@ -229,7 +225,7 @@ func TestSnapshotsFiltering(t *testing.T) {
 				require.Equal(t, []v1.BulkError(nil), response.Errors)
 				require.Equal(t, 0, response.Failed)
 
-				err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_snapshots.*")
+				err = backendutils.RefreshIndex(ctx, client, sIndexGetter.Index(clusterInfo))
 				require.NoError(t, err)
 
 				resp, err := sb.List(ctx, clusterInfo, tc.Params)

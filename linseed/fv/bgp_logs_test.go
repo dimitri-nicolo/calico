@@ -5,7 +5,6 @@
 package fv_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -14,52 +13,33 @@ import (
 
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
-	elastic "github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/config"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func bgpSetupAndTeardown(t *testing.T) func() {
-	// Hook logrus into testing.T
-	config.ConfigureLogging("DEBUG")
-	logCancel := logutils.RedirectLogrusToTestingT(t)
+func RunBGPLogTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
+	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		defer setupAndTeardown(t, args, index.BGPLogMultiIndex)()
+		testFn(t, index.BGPLogMultiIndex)
+	})
 
-	// Create an ES client.
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
-	require.NoError(t, err)
-	lmaClient = lmaelastic.NewWithClient(esClient)
-
-	// Instantiate a client.
-	cli, err = NewLinseedClient()
-	require.NoError(t, err)
-
-	// Create a random cluster name for each test to make sure we don't
-	// interfere between tests.
-	cluster = testutils.RandomClusterName()
-
-	// Set up context with a timeout.
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-
-	return func() {
-		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, cluster)
-		logCancel()
-		cancel()
-	}
+	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		args.Backend = config.BackendTypeSingleIndex
+		defer setupAndTeardown(t, args, index.BGPLogIndex)()
+		testFn(t, index.BGPLogIndex)
+	})
 }
 
 func TestFV_BGP(t *testing.T) {
-	t.Run("should return an empty list if there are no BGP logs", func(t *testing.T) {
-		defer bgpSetupAndTeardown(t)()
-
+	RunBGPLogTest(t, "should return an empty list if there are no BGP logs", func(t *testing.T, idx bapi.Index) {
 		params := v1.BGPLogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -75,9 +55,7 @@ func TestFV_BGP(t *testing.T) {
 		require.Equal(t, []v1.BGPLog{}, bgpLogs.Items)
 	})
 
-	t.Run("should create and list bgp logs", func(t *testing.T) {
-		defer bgpSetupAndTeardown(t)()
-
+	RunBGPLogTest(t, "should create and list bgp logs", func(t *testing.T, idx bapi.Index) {
 		reqTime := time.Unix(10, 0).UTC()
 		// Create a basic bgp log
 		bgpLogs := []v1.BGPLog{
@@ -90,7 +68,7 @@ func TestFV_BGP(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create bgp logs did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_bgp*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Read it back.
 		params := v1.BGPLogParams{
@@ -108,9 +86,7 @@ func TestFV_BGP(t *testing.T) {
 		require.Equal(t, bgpLogs, resp.Items)
 	})
 
-	t.Run("should support pagination", func(t *testing.T) {
-		defer bgpSetupAndTeardown(t)()
-
+	RunBGPLogTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
 		totalItems := 5
 
 		// Create 5 BGP logs.
@@ -128,7 +104,7 @@ func TestFV_BGP(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_bgp*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
@@ -190,9 +166,7 @@ func TestFV_BGP(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 
-	t.Run("should support pagination for items >= 10000 for BGP logs", func(t *testing.T) {
-		defer bgpSetupAndTeardown(t)()
-
+	RunBGPLogTest(t, "should support pagination for items >= 10000 for BGP logs", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K bgp logs.
 		logTime := time.Unix(100, 0).UTC()
@@ -209,7 +183,7 @@ func TestFV_BGP(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create bgp log did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_bgp*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Stream through all the items.
 		params := v1.BGPLogParams{
@@ -236,15 +210,14 @@ func TestFV_BGP(t *testing.T) {
 
 		require.Equal(t, receivedItems, totalItems)
 	})
-
 }
 
 func TestFV_BGPTenancy(t *testing.T) {
-	t.Run("should support tenancy restriction", func(t *testing.T) {
-		defer bgpSetupAndTeardown(t)()
-
+	RunBGPLogTest(t, "should support tenancy restriction", func(t *testing.T, idx bapi.Index) {
 		// Instantiate a client for an unexpected tenant.
-		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		args := DefaultLinseedArgs()
+		args.TenantID = "bad-tenant"
+		tenantCLI, err := NewLinseedClient(args)
 		require.NoError(t, err)
 
 		// Create a basic log. We expect this to fail, since we're using

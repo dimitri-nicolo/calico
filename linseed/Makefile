@@ -140,9 +140,9 @@ stop-image:
 
 ## Run the FVs
 WHAT=.
-fv: clean image run-image fv-fast
+fv: clean image run-elastic k8s-setup fv-fast
 fv-fast: build-tests
-	 $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd fv && ./fv.test -test.run $(WHAT)'
+	 cd fv && ./fv.test -test.run $(WHAT)
 
 ## Perform all the necessary setup for a local Kubernetes API server used in the Linseed FVs.
 k8s-setup: linseed-token-file fv-token-file auth

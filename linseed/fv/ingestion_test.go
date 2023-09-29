@@ -6,8 +6,6 @@ package fv_test
 
 import (
 	"bytes"
-	"context"
-	"fmt"
 	"math"
 	"net/http"
 	"os"
@@ -20,66 +18,34 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/linseed/pkg/config"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-
-	"github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 )
 
-var esClient *elastic.Client
-
-func ingestionSetupAndTeardown(t *testing.T, index string) func() {
-	// Hook logrus into testing.T
-	config.ConfigureLogging("DEBUG")
-	logCancel := logutils.RedirectLogrusToTestingT(t)
-
-	cluster = testutils.RandomClusterName()
-
-	// Create an ES client.
-	var err error
-	esClient, err = elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
-	require.NoError(t, err)
-	lmaClient = lmaelastic.NewWithClient(esClient)
-
-	// Instantiate a client.
-	cli, err = NewLinseedClient()
-	require.NoError(t, err)
-
+// ingestionSetupAndTeardown performs additional setup and teardown for ingestion tests.
+func ingestionSetupAndTeardown(t *testing.T, idx bapi.Index) func() {
 	// Get the token to use in HTTP authorization header.
+	var err error
 	token, err = os.ReadFile(TokenPath)
 	require.NoError(t, err)
-
-	// Set up context with a timeout.
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
-
 	return func() {
-		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, cluster)
-		logCancel()
-		cancel()
 	}
 }
 
 func TestFV_FlowIngestion(t *testing.T) {
-	addr := "https://localhost:8444/api/v1/flows/logs/bulk"
-	tenant := "tenant-a"
+	addr := "https://localhost:8443/api/v1/flows/logs/bulk"
 	expectedResponse := `{"failed":0, "succeeded":25, "total":25}`
-	indexPrefix := "tigera_secure_ee_flows.tenant-a."
 
-	t.Run("ingest flow logs via bulk API with production data", func(t *testing.T) {
-		defer ingestionSetupAndTeardown(t, indexPrefix)()
+	RunFlowLogTest(t, "ingest flow logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
+		defer ingestionSetupAndTeardown(t, idx)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(flowLogs))
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, []byte(flowLogs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -87,8 +53,7 @@ func TestFV_FlowIngestion(t *testing.T) {
 		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
 
 		// Force a refresh in order to read the newly ingested data
-		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
-		_, err := esClient.Refresh(index).Do(ctx)
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		require.NoError(t, err)
 
 		params := v1.FlowLogParams{
@@ -119,17 +84,15 @@ func TestFV_FlowIngestion(t *testing.T) {
 }
 
 func TestFV_DNSIngestion(t *testing.T) {
-	addr := "https://localhost:8444/api/v1/dns/logs/bulk"
-	tenant := "tenant-a"
+	addr := "https://localhost:8443/api/v1/dns/logs/bulk"
 	expectedResponse := `{"failed":0, "succeeded":11, "total":11}`
-	indexPrefix := "tigera_secure_ee_dns.tenant-a."
 
-	t.Run("ingest dns logs via bulk API with production data", func(t *testing.T) {
-		defer ingestionSetupAndTeardown(t, indexPrefix)()
+	RunDNSLogTest(t, "ingest dns logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
+		defer ingestionSetupAndTeardown(t, idx)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(dnsLogs))
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, []byte(dnsLogs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -137,8 +100,7 @@ func TestFV_DNSIngestion(t *testing.T) {
 		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
 
 		// Force a refresh in order to read the newly ingested data
-		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
-		_, err := esClient.Refresh(index).Do(ctx)
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		require.NoError(t, err)
 
 		endTime, err := time.Parse(time.RFC3339Nano, "2023-02-22T23:54:02.736970074Z")
@@ -174,17 +136,15 @@ func TestFV_DNSIngestion(t *testing.T) {
 }
 
 func TestFV_L7Ingestion(t *testing.T) {
-	addr := "https://localhost:8444/api/v1/l7/logs/bulk"
-	tenant := "tenant-a"
+	addr := "https://localhost:8443/api/v1/l7/logs/bulk"
 	expectedResponse := `{"failed":0, "succeeded":15, "total":15}`
-	indexPrefix := "tigera_secure_ee_l7.tenant-a."
 
-	t.Run("ingest l7 logs via bulk API with production data", func(t *testing.T) {
-		defer ingestionSetupAndTeardown(t, indexPrefix)()
+	RunL7LogTest(t, "ingest l7 logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
+		defer ingestionSetupAndTeardown(t, idx)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(l7Logs))
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, []byte(l7Logs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -192,8 +152,7 @@ func TestFV_L7Ingestion(t *testing.T) {
 		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
 
 		// Force a refresh in order to read the newly ingested data
-		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
-		_, err := esClient.Refresh(index).Do(ctx)
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		require.NoError(t, err)
 
 		params := v1.L7LogParams{
@@ -223,17 +182,15 @@ func TestFV_L7Ingestion(t *testing.T) {
 }
 
 func TestFV_KubeAuditIngestion(t *testing.T) {
-	addr := "https://localhost:8444/api/v1/audit/logs/kube/bulk"
-	tenant := "tenant-a"
+	addr := "https://localhost:8443/api/v1/audit/logs/kube/bulk"
 	expectedResponse := `{"failed":0, "succeeded":32, "total":32}`
-	indexPrefix := "tigera_secure_ee_audit_kube.tenant-a."
 
-	t.Run("ingest kube audit logs via bulk API with production data", func(t *testing.T) {
-		defer ingestionSetupAndTeardown(t, indexPrefix)()
+	RunAuditKubeTest(t, "ingest kube audit logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
+		defer ingestionSetupAndTeardown(t, idx)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(kubeAuditLogs))
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, []byte(kubeAuditLogs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -241,8 +198,7 @@ func TestFV_KubeAuditIngestion(t *testing.T) {
 		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
 
 		// Force a refresh in order to read the newly ingested data
-		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
-		_, err := esClient.Refresh(index).Do(ctx)
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		require.NoError(t, err)
 
 		startTime, err := time.Parse(time.RFC3339, "2023-02-10T01:15:20.855601Z")
@@ -277,17 +233,15 @@ func TestFV_KubeAuditIngestion(t *testing.T) {
 }
 
 func TestFV_EEAuditIngestion(t *testing.T) {
-	addr := "https://localhost:8444/api/v1/audit/logs/ee/bulk"
-	tenant := "tenant-a"
+	addr := "https://localhost:8443/api/v1/audit/logs/ee/bulk"
 	expectedResponse := `{"failed":0, "succeeded":35, "total":35}`
-	indexPrefix := "tigera_secure_ee_audit_ee.tenant-a."
 
-	t.Run("ingest ee audit logs via bulk API with production data", func(t *testing.T) {
-		defer ingestionSetupAndTeardown(t, indexPrefix)()
+	RunAuditEETest(t, "ingest ee audit logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
+		defer ingestionSetupAndTeardown(t, idx)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(eeAuditLogs))
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, []byte(eeAuditLogs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -295,8 +249,7 @@ func TestFV_EEAuditIngestion(t *testing.T) {
 		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
 
 		// Force a refresh in order to read the newly ingested data
-		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
-		_, err := esClient.Refresh(index).Do(ctx)
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		require.NoError(t, err)
 
 		startTime, err := time.Parse(time.RFC3339, "2023-02-10T21:40:58.476376Z")
@@ -331,17 +284,15 @@ func TestFV_EEAuditIngestion(t *testing.T) {
 }
 
 func TestFV_BGPIngestion(t *testing.T) {
-	addr := "https://localhost:8444/api/v1/bgp/logs/bulk"
-	tenant := "tenant-a"
+	addr := "https://localhost:8443/api/v1/bgp/logs/bulk"
 	expectedResponse := `{"failed":0, "succeeded":4, "total":4}`
-	indexPrefix := "tigera_secure_ee_bgp.tenant-a."
 
-	t.Run("ingest bgp logs via bulk API with production data", func(t *testing.T) {
-		defer ingestionSetupAndTeardown(t, indexPrefix)()
+	RunBGPLogTest(t, "ingest bgp logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
+		defer ingestionSetupAndTeardown(t, idx)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(bgpLogs))
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, []byte(bgpLogs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -349,8 +300,7 @@ func TestFV_BGPIngestion(t *testing.T) {
 		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
 
 		// Force a refresh in order to read the newly ingested data
-		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
-		_, err := esClient.Refresh(index).Do(ctx)
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		require.NoError(t, err)
 
 		startTime, err := time.Parse(v1.BGPLogTimeFormat, "2023-02-23T00:10:46")
@@ -387,17 +337,15 @@ func TestFV_BGPIngestion(t *testing.T) {
 }
 
 func TestFV_WAFIngestion(t *testing.T) {
-	addr := "https://localhost:8444/api/v1/waf/logs/bulk"
-	tenant := "tenant-a"
+	addr := "https://localhost:8443/api/v1/waf/logs/bulk"
 	expectedResponse := `{"failed":0, "succeeded":2, "total":2}`
-	indexPrefix := "tigera_secure_ee_waf.tenant-a."
 
-	t.Run("ingest waf logs via bulk API with production data", func(t *testing.T) {
-		defer ingestionSetupAndTeardown(t, indexPrefix)()
+	RunWAFTest(t, "ingest waf logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
+		defer ingestionSetupAndTeardown(t, idx)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(wafLogs))
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, []byte(wafLogs))
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -405,8 +353,7 @@ func TestFV_WAFIngestion(t *testing.T) {
 		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
 
 		// Force a refresh in order to read the newly ingested data
-		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
-		_, err := esClient.Refresh(index).Do(ctx)
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		require.NoError(t, err)
 
 		endTime, err := time.Parse(time.RFC3339Nano, "2023-06-22T23:59:59.999999999Z")
@@ -441,17 +388,15 @@ func TestFV_WAFIngestion(t *testing.T) {
 }
 
 func TestFV_RuntimeIngestion(t *testing.T) {
-	addr := "https://localhost:8444/api/v1/runtime/reports/bulk"
-	tenant := "tenant-a"
+	addr := "https://localhost:8443/api/v1/runtime/reports/bulk"
 	expectedResponse := `{"failed":0, "succeeded":29, "total":29}`
-	indexPrefix := "tigera_secure_ee_runtime.tenant-a."
 
-	t.Run("ingest runtime reports via bulk API with production data", func(t *testing.T) {
-		defer ingestionSetupAndTeardown(t, indexPrefix)()
+	RunRuntimeReportTest(t, "ingest runtime reports via bulk API with production data", func(t *testing.T, idx bapi.Index) {
+		defer ingestionSetupAndTeardown(t, idx)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(runtimeReports))
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, []byte(runtimeReports))
 
 		// make the request to ingest runtime reports
 		res, resBody := doRequest(t, httpClient, spec)
@@ -459,8 +404,7 @@ func TestFV_RuntimeIngestion(t *testing.T) {
 		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
 
 		// Force a refresh in order to read the newly ingested data
-		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
-		_, err := esClient.Refresh(index).Do(ctx)
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		require.NoError(t, err)
 
 		endTime, err := time.Parse(time.RFC3339Nano, "2023-03-14T01:40:59.401474246Z")
@@ -504,15 +448,13 @@ func TestFV_RuntimeIngestion(t *testing.T) {
 }
 
 func TestFV_Ingestion(t *testing.T) {
-	addr := "https://localhost:8444/api/v1/audit/logs/ee/bulk"
-	tenant := "tenant-a"
+	addr := "https://localhost:8443/api/v1/audit/logs/ee/bulk"
 	expectedResponse := `{"Msg":"http: request body too large", "Status":400}`
-	indexPrefix := "tigera_secure_ee_audit_ee.tenant-a."
 
-	t.Run("cannot ingest arequest bigger than 2Gb", func(t *testing.T) {
+	RunAuditEETest(t, "cannot ingest arequest bigger than 2Gb", func(t *testing.T, idx bapi.Index) {
 		t.Skip()
 
-		defer ingestionSetupAndTeardown(t, indexPrefix)()
+		defer ingestionSetupAndTeardown(t, idx)()
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
@@ -521,7 +463,7 @@ func TestFV_Ingestion(t *testing.T) {
 			largeBody = append(largeBody, []byte(eeAuditLogs)...)
 		}
 
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, largeBody)
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, largeBody)
 
 		// make the request to ingest flows
 		res, resBody := doRequest(t, httpClient, spec)
@@ -531,15 +473,13 @@ func TestFV_Ingestion(t *testing.T) {
 }
 
 func TestFV_AnomalyDetectionEventsIngestion(t *testing.T) {
-	addr := "https://localhost:8444/api/v1/events/bulk"
-	tenant := "tenant-a"
+	addr := "https://localhost:8443/api/v1/events/bulk"
 	expectedResponse := `{"failed":0, "succeeded":1, "total":1}`
-	indexPrefix := "tigera_secure_ee_events.tenant-a."
 
-	t.Run("ingest anomaly detection events via bulk API with production data", func(t *testing.T) {
-		defer ingestionSetupAndTeardown(t, indexPrefix)()
+	RunEventsTest(t, "ingest anomaly detection events via bulk API with production data", func(t *testing.T, idx bapi.Index) {
+		defer ingestionSetupAndTeardown(t, idx)()
 
-		spec := xndJSONPostHTTPReqSpec(addr, tenant, cluster, token, []byte(anomalyDetectionEvent))
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, []byte(anomalyDetectionEvent))
 		httpClient := mTLSClient(t)
 
 		// make the request to ingest anomaly detection alerts
@@ -548,8 +488,7 @@ func TestFV_AnomalyDetectionEventsIngestion(t *testing.T) {
 		require.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
 
 		// Force a refresh in order to read the newly ingested data
-		index := fmt.Sprintf("%s%s*", indexPrefix, cluster)
-		_, err := esClient.Refresh(index).Do(ctx)
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		require.NoError(t, err)
 
 		endTime, err := time.Parse(time.RFC3339, "2023-04-28T19:38:14+00:00")

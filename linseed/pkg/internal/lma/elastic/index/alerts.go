@@ -10,18 +10,23 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 )
 
 // alertsIndexHelper implements the Helper interface for events.
-type alertsIndexHelper struct{}
+type alertsIndexHelper struct {
+	singleIndex bool
+}
 
-// Alerts returns an instance of the alerts index helper.
-func Alerts() Helper {
+func MultiIndexAlerts() Helper {
 	return alertsIndexHelper{}
+}
+
+func SingleIndexAlerts() Helper {
+	return alertsIndexHelper{singleIndex: true}
 }
 
 // NewAlertsConverter returns a Converter instance defined for alerts.
@@ -30,6 +35,17 @@ func NewAlertsConverter() converter {
 }
 
 // Helper.
+
+func (h alertsIndexHelper) BaseQuery(i bapi.ClusterInfo) *elastic.BoolQuery {
+	q := elastic.NewBoolQuery()
+	if h.singleIndex {
+		q.Must(elastic.NewTermQuery("cluster", i.Cluster))
+		if i.Tenant != "" {
+			q.Must(elastic.NewTermQuery("tenant", i.Tenant))
+		}
+	}
+	return q
+}
 
 func (h alertsIndexHelper) NewSelectorQuery(selector string) (elastic.Query, error) {
 	q, err := query.ParseQuery(selector)
@@ -60,14 +76,4 @@ func (h alertsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query {
 
 func (h alertsIndexHelper) GetTimeField() string {
 	return "time"
-}
-
-// GetIndex returns generic name of events index that can be query from both older events index
-// In Calico Enterprise < 3.12, we use `tigera_secure_ee_events.<cluster>` as the events index pattern.
-// In Calico Enterprise >= 3.12, we use `tigera_secure_ee_events.<cluster>.lma` as the events index pattern.
-// Also, we create an alisa `tigera_secure_ee_events.<cluster>.` (notice the last dot) in Calico Enterprise >= 3.12 as:
-//  1. read/write alias for `tigera_secure_ee_events.<cluster>.lma`.
-//  2. read only alias for `tigera_secure_ee_events.<cluster>`.
-func (h alertsIndexHelper) GetIndex(cluster string) string {
-	return fmt.Sprintf("%s.%s.", lmaelastic.EventsIndex, cluster)
 }

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -21,6 +20,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 
@@ -29,23 +30,37 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var (
-	client  lmaelastic.Client
-	cache   bapi.Cache
-	fb      bapi.FlowBackend
-	flb     bapi.FlowLogBackend
-	ctx     context.Context
-	cluster string
+	client      lmaelastic.Client
+	cache       bapi.IndexInitializer
+	fb          bapi.FlowBackend
+	flb         bapi.FlowLogBackend
+	ctx         context.Context
+	cluster     string
+	indexGetter bapi.Index
 )
 
-// setupTest runs common logic before each test, and also returns a function to perform teardown
-// after each test.
-func setupTest(t *testing.T) func() {
+// RunAllModes runs the given test function twice, once using the single-index backend, and once using
+// the multi-index backend.
+func RunAllModes(t *testing.T, name string, testFn func(t *testing.T)) {
+	// Run using the multi-index backend.
+	t.Run(fmt.Sprintf("%s [legacy]", name), func(t *testing.T) {
+		defer setupTest(t, false)()
+		testFn(t)
+	})
+
+	// Run using the single-index backend.
+	t.Run(fmt.Sprintf("%s [singleindex]", name), func(t *testing.T) {
+		defer setupTest(t, true)()
+		testFn(t)
+	})
+}
+
+func setupTest(t *testing.T, singleIndex bool) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -55,11 +70,18 @@ func setupTest(t *testing.T) func() {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
-	cache = templates.NewTemplateCache(client, 1, 0)
+	cache = templates.NewCachedInitializer(client, 1, 0)
 
 	// Create backends to use.
-	fb = flows.NewFlowBackend(client)
-	flb = flows.NewFlowLogBackend(client, cache, 10000)
+	if singleIndex {
+		fb = flows.NewSingleIndexFlowBackend(client)
+		flb = flows.NewSingleIndexFlowLogBackend(client, cache, 10000)
+		indexGetter = index.FlowLogIndex
+	} else {
+		fb = flows.NewFlowBackend(client)
+		flb = flows.NewFlowLogBackend(client, cache, 10000)
+		indexGetter = index.FlowLogMultiIndex
+	}
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
@@ -74,8 +96,8 @@ func setupTest(t *testing.T) func() {
 		// Cancel the context.
 		cancel()
 
-		// Cleanup any data that might left over from a previous failed run.
-		err = backendutils.CleanupIndices(context.Background(), esClient, cluster)
+		// Cleanup any data that might left over from a previous run.
+		err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
 		require.NoError(t, err)
 
 		// Cancel logging
@@ -85,166 +107,166 @@ func setupTest(t *testing.T) func() {
 
 // TestListFlows tests running a real elasticsearch query to list flows.
 func TestListFlows(t *testing.T) {
-	defer setupTest(t)()
+	RunAllModes(t, "TestListFlows", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
-	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		// Put some data into ES so we can query it.
+		bld := backendutils.NewFlowLogBuilder()
+		bld.WithType("wep").
+			WithSourceNamespace("default").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("my-deployment").
+			WithSourceIP("192.168.1.1").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
+			WithPolicies("0|allow-tigera|tigera-system/allow-tigera.cnx-apiserver-access|allow|1").
+			WithProcessName("/usr/bin/curl")
+		expected := populateFlowData(t, ctx, bld, client, clusterInfo)
 
-	// Put some data into ES so we can query it.
-	bld := backendutils.NewFlowLogBuilder()
-	bld.WithType("wep").
-		WithSourceNamespace("default").
-		WithDestNamespace("kube-system").
-		WithDestName("kube-dns-*").
-		WithDestIP("10.0.0.10").
-		WithDestService("kube-dns", 53).
-		WithDestPort(53).
-		WithProtocol("udp").
-		WithSourceName("my-deployment").
-		WithSourceIP("192.168.1.1").
-		WithRandomFlowStats().WithRandomPacketStats().
-		WithReporter("src").WithAction("allowed").
-		WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
-		WithPolicies("0|allow-tigera|tigera-system/allow-tigera.cnx-apiserver-access|allow|1").
-		WithProcessName("/usr/bin/curl")
-	expected := populateFlowData(t, ctx, bld, client, clusterInfo)
+		// Set time range so that we capture all of the populated flow logs.
+		opts := v1.L3FlowParams{}
+		opts.TimeRange = &lmav1.TimeRange{}
+		opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+		opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
-	// Set time range so that we capture all of the populated flow logs.
-	opts := v1.L3FlowParams{}
-	opts.TimeRange = &lmav1.TimeRange{}
-	opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
-	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
+		// Query for flows. There should be a single flow from the populated data.
+		r, err := fb.List(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 1)
+		require.Nil(t, r.AfterKey)
 
-	// Query for flows. There should be a single flow from the populated data.
-	r, err := fb.List(ctx, clusterInfo, &opts)
-	require.NoError(t, err)
-	require.Len(t, r.Items, 1)
-	require.Nil(t, r.AfterKey)
-
-	// Assert that the flow data is populated correctly.
-	require.Equal(t, expected, r.Items[0])
+		// Assert that the flow data is populated correctly.
+		require.Equal(t, expected, r.Items[0])
+	})
 }
 
 // TestMultipleFlows tests that we return multiple flows properly.
 func TestMultipleFlows(t *testing.T) {
-	defer setupTest(t)()
+	RunAllModes(t, "TestMultipleFlows", func(t *testing.T) {
+		// Both flows use the same cluster information.
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
-	// Both flows use the same cluster information.
-	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		// Template for flow #1.
+		bld := backendutils.NewFlowLogBuilder()
+		bld.WithType("wep").
+			WithSourceNamespace("tigera-operator").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("tigera-operator").
+			WithSourceIP("34.15.66.3").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		exp1 := populateFlowData(t, ctx, bld, client, clusterInfo)
 
-	// Template for flow #1.
-	bld := backendutils.NewFlowLogBuilder()
-	bld.WithType("wep").
-		WithSourceNamespace("tigera-operator").
-		WithDestNamespace("kube-system").
-		WithDestName("kube-dns-*").
-		WithDestIP("10.0.0.10").
-		WithDestService("kube-dns", 53).
-		WithDestPort(53).
-		WithProtocol("udp").
-		WithSourceName("tigera-operator").
-		WithSourceIP("34.15.66.3").
-		WithRandomFlowStats().WithRandomPacketStats().
-		WithReporter("src").WithAction("allowed").
-		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
-	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo)
+		// Template for flow #2.
+		bld2 := backendutils.NewFlowLogBuilder()
+		bld2.WithType("wep").
+			WithSourceNamespace("default").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("my-deployment").
+			WithSourceIP("192.168.1.1").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo)
 
-	// Template for flow #2.
-	bld2 := backendutils.NewFlowLogBuilder()
-	bld2.WithType("wep").
-		WithSourceNamespace("default").
-		WithDestNamespace("kube-system").
-		WithDestName("kube-dns-*").
-		WithDestIP("10.0.0.10").
-		WithDestService("kube-dns", 53).
-		WithDestPort(53).
-		WithProtocol("udp").
-		WithSourceName("my-deployment").
-		WithSourceIP("192.168.1.1").
-		WithRandomFlowStats().WithRandomPacketStats().
-		WithReporter("src").WithAction("allowed").
-		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
-	exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo)
+		// Set time range so that we capture all of the populated flow logs.
+		opts := v1.L3FlowParams{}
+		opts.TimeRange = &lmav1.TimeRange{}
+		opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+		opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
-	// Set time range so that we capture all of the populated flow logs.
-	opts := v1.L3FlowParams{}
-	opts.TimeRange = &lmav1.TimeRange{}
-	opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
-	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
+		// Query for flows. There should be two flows from the populated data.
+		r, err := fb.List(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 2)
+		require.Nil(t, r.AfterKey)
 
-	// Query for flows. There should be two flows from the populated data.
-	r, err := fb.List(ctx, clusterInfo, &opts)
-	require.NoError(t, err)
-	require.Len(t, r.Items, 2)
-	require.Nil(t, r.AfterKey)
-
-	// Assert that the flow data is populated correctly.
-	require.Equal(t, exp1, r.Items[1])
-	require.Equal(t, exp2, r.Items[0])
+		// Assert that the flow data is populated correctly.
+		require.Equal(t, exp1, r.Items[1])
+		require.Equal(t, exp2, r.Items[0])
+	})
 }
 
 // TestFlowMultiplePolicies tests a flow that traverses multiple policies and ultimately
 // hits the default profile allow rule.
 func TestFlowMultiplePolicies(t *testing.T) {
-	defer setupTest(t)()
+	RunAllModes(t, "TestFlowMultiplePolicies", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
-	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		// Put some data into ES so we can query it.
+		bld := backendutils.NewFlowLogBuilder()
+		bld.WithType("wep").
+			WithSourceNamespace("default").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("tcp").
+			WithSourceName("my-deployment").
+			WithSourceIP("192.168.1.1").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
+			// Add in a couple of policies, as well as the default profile hit.
+			WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
+			WithPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0")
 
-	// Put some data into ES so we can query it.
-	bld := backendutils.NewFlowLogBuilder()
-	bld.WithType("wep").
-		WithSourceNamespace("default").
-		WithDestNamespace("kube-system").
-		WithDestName("kube-dns-*").
-		WithDestIP("10.0.0.10").
-		WithDestService("kube-dns", 53).
-		WithDestPort(53).
-		WithProtocol("tcp").
-		WithSourceName("my-deployment").
-		WithSourceIP("192.168.1.1").
-		WithRandomFlowStats().WithRandomPacketStats().
-		WithReporter("src").WithAction("allowed").
-		WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
-		// Add in a couple of policies, as well as the default profile hit.
-		WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
-		WithPolicy("1|__PROFILE__|__PROFILE__.kns.kube-system|allow|0")
+		expected := populateFlowData(t, ctx, bld, client, clusterInfo)
 
-	expected := populateFlowData(t, ctx, bld, client, clusterInfo)
+		// Add in the expected policies.
+		expected.Policies = []v1.Policy{
+			{
+				Tier:      "allow-tigera",
+				Name:      "cluster-dns",
+				Namespace: "kube-system",
+				Action:    "pass",
+				Count:     expected.LogStats.FlowLogCount,
+				RuleID:    testutils.IntPtr(1),
+			},
+			{
+				Tier:      "__PROFILE__",
+				Name:      "kns.kube-system",
+				Namespace: "",
+				Action:    "allow",
+				Count:     expected.LogStats.FlowLogCount,
+				RuleID:    testutils.IntPtr(0),
+				IsProfile: true,
+			},
+		}
 
-	// Add in the expected policies.
-	expected.Policies = []v1.Policy{
-		{
-			Tier:      "allow-tigera",
-			Name:      "cluster-dns",
-			Namespace: "kube-system",
-			Action:    "pass",
-			Count:     expected.LogStats.FlowLogCount,
-			RuleID:    testutils.IntPtr(1),
-		},
-		{
-			Tier:      "__PROFILE__",
-			Name:      "kns.kube-system",
-			Namespace: "",
-			Action:    "allow",
-			Count:     expected.LogStats.FlowLogCount,
-			RuleID:    testutils.IntPtr(0),
-			IsProfile: true,
-		},
-	}
+		// Set time range so that we capture all of the populated flow logs.
+		opts := v1.L3FlowParams{}
+		opts.TimeRange = &lmav1.TimeRange{}
+		opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+		opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
-	// Set time range so that we capture all of the populated flow logs.
-	opts := v1.L3FlowParams{}
-	opts.TimeRange = &lmav1.TimeRange{}
-	opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
-	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
+		// Query for flows. There should be a single flow from the populated data.
+		r, err := fb.List(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 1)
+		require.Nil(t, r.AfterKey)
 
-	// Query for flows. There should be a single flow from the populated data.
-	r, err := fb.List(ctx, clusterInfo, &opts)
-	require.NoError(t, err)
-	require.Len(t, r.Items, 1)
-	require.Nil(t, r.AfterKey)
-
-	// Assert that the flow data is populated correctly.
-	require.Equal(t, expected, r.Items[0])
+		// Assert that the flow data is populated correctly.
+		require.Equal(t, expected, r.Items[0])
+	})
 }
 
 func TestFlowFiltering(t *testing.T) {
@@ -718,9 +740,7 @@ func TestFlowFiltering(t *testing.T) {
 		// Each testcase creates multiple flows, and then uses
 		// different filtering parameters provided in the L3FlowParams
 		// to query one or more flows.
-		t.Run(testcase.Name, func(t *testing.T) {
-			defer setupTest(t)()
-
+		RunAllModes(t, testcase.Name, func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 			// Set the time range for the test. We set this per-test
@@ -803,71 +823,71 @@ func TestFlowFiltering(t *testing.T) {
 
 // TestPagination tests that we return multiple flows properly using pagination.
 func TestPagination(t *testing.T) {
-	defer setupTest(t)()
+	RunAllModes(t, "TestPagination", func(t *testing.T) {
+		// Both flows use the same cluster information.
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
-	// Both flows use the same cluster information.
-	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		// Template for flow #1.
+		bld := backendutils.NewFlowLogBuilder()
+		bld.WithType("wep").
+			WithSourceNamespace("tigera-operator").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("tigera-operator").
+			WithSourceIP("34.15.66.3").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
+			WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
+		exp1 := populateFlowData(t, ctx, bld, client, clusterInfo)
 
-	// Template for flow #1.
-	bld := backendutils.NewFlowLogBuilder()
-	bld.WithType("wep").
-		WithSourceNamespace("tigera-operator").
-		WithDestNamespace("kube-system").
-		WithDestName("kube-dns-*").
-		WithDestIP("10.0.0.10").
-		WithDestService("kube-dns", 53).
-		WithDestPort(53).
-		WithProtocol("udp").
-		WithSourceName("tigera-operator").
-		WithSourceIP("34.15.66.3").
-		WithRandomFlowStats().WithRandomPacketStats().
-		WithReporter("src").WithAction("allowed").
-		WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
-		WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
-	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo)
+		// Template for flow #2.
+		bld2 := backendutils.NewFlowLogBuilder()
+		bld2.WithType("wep").
+			WithSourceNamespace("default").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("my-deployment").
+			WithSourceIP("192.168.1.1").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
+			WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
+		exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo)
 
-	// Template for flow #2.
-	bld2 := backendutils.NewFlowLogBuilder()
-	bld2.WithType("wep").
-		WithSourceNamespace("default").
-		WithDestNamespace("kube-system").
-		WithDestName("kube-dns-*").
-		WithDestIP("10.0.0.10").
-		WithDestService("kube-dns", 53).
-		WithDestPort(53).
-		WithProtocol("udp").
-		WithSourceName("my-deployment").
-		WithSourceIP("192.168.1.1").
-		WithRandomFlowStats().WithRandomPacketStats().
-		WithReporter("src").WithAction("allowed").
-		WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
-		WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
-	exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo)
+		// Set time range so that we capture all of the populated flow logs.
+		opts := v1.L3FlowParams{}
+		opts.TimeRange = &lmav1.TimeRange{}
+		opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+		opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
-	// Set time range so that we capture all of the populated flow logs.
-	opts := v1.L3FlowParams{}
-	opts.TimeRange = &lmav1.TimeRange{}
-	opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
-	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
+		// Also set a max results of 1, so that we only get one flow at a time.
+		opts.MaxPageSize = 1
 
-	// Also set a max results of 1, so that we only get one flow at a time.
-	opts.MaxPageSize = 1
+		// Query for flows. There should be a single flow from the populated data.
+		r, err := fb.List(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 1)
+		require.NotNil(t, r.AfterKey)
+		require.Equal(t, exp2, r.Items[0])
 
-	// Query for flows. There should be a single flow from the populated data.
-	r, err := fb.List(ctx, clusterInfo, &opts)
-	require.NoError(t, err)
-	require.Len(t, r.Items, 1)
-	require.NotNil(t, r.AfterKey)
-	require.Equal(t, exp2, r.Items[0])
-
-	// Now, send another request. This time, passing in the pagination key
-	// returned from the first. We should get the second flow.
-	opts.AfterKey = r.AfterKey
-	r, err = fb.List(ctx, clusterInfo, &opts)
-	require.NoError(t, err)
-	require.Len(t, r.Items, 1)
-	require.NotNil(t, r.AfterKey)
-	require.Equal(t, exp1, r.Items[0])
+		// Now, send another request. This time, passing in the pagination key
+		// returned from the first. We should get the second flow.
+		opts.AfterKey = r.AfterKey
+		r, err = fb.List(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 1)
+		require.NotNil(t, r.AfterKey)
+		require.Equal(t, exp1, r.Items[0])
+	})
 }
 
 // Definitions for search results to be used in the tests below.
@@ -982,9 +1002,7 @@ func TestElasticResponses(t *testing.T) {
 
 // TestMultiTenancy creates data for multiple tenants and asserts that it is handled properly.
 func TestMultiTenancy(t *testing.T) {
-	t.Run("multiple tenants basic", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "multiple tenants basic", func(t *testing.T) {
 		// For this test, we will use two tenants with the same cluster ID, to be
 		// extra sneaky.
 		tenantA := "tenant-a"
@@ -1030,18 +1048,9 @@ func TestMultiTenancy(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, r.Items, 0)
 		require.Nil(t, r.AfterKey)
-
-		// Query for the flow without specifying a tenant - we should get no results.
-		noTenantInfo := bapi.ClusterInfo{Cluster: cluster}
-		r, err = fb.List(ctx, noTenantInfo, &opts)
-		require.NoError(t, err)
-		require.Len(t, r.Items, 0)
-		require.Nil(t, r.AfterKey)
 	})
 
-	t.Run("multiple tenants with similar names", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "multiple tenants with similar names", func(t *testing.T) {
 		// For this test, we use tenant IDs that are prefixes of each other.
 		tenantA := "shaz"
 		tenantB := "shazam"
@@ -1093,13 +1102,6 @@ func TestMultiTenancy(t *testing.T) {
 		require.Nil(t, r.AfterKey)
 		require.Equal(t, exp2, r.Items[0])
 
-		// Query for the flow without specifying a tenant - we should get no results.
-		noTenantInfo := bapi.ClusterInfo{Cluster: cluster}
-		r, err = fb.List(ctx, noTenantInfo, &opts)
-		require.NoError(t, err)
-		require.Len(t, r.Items, 0)
-		require.Nil(t, r.AfterKey)
-
 		// Query for the flow specifying a tenant with a wildcard in it - should get no results.
 		// It isn't actually possible for this codepath to be hit in a real system, since Linseed enforces
 		// an expected tenant ID on all requests. We test it here nonetheless.
@@ -1134,30 +1136,24 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *backendutils.FlowLo
 	}
 
 	// Create the batch.
+	// Creating the flow logs may fail due to conflicts with other tests modifying the same index.
+	// Since go test runs packages in parallel, we need to retry a few times to avoid flakiness.
+	// We could avoid this by creating a new ES instance per-test or per-package, but that would
+	// slow down the test and use more resources. This is a reasonable compromise, and what clients will need to do anyway.
+	attempts := 0
 	response, err := flb.Create(ctx, info, batch)
+	for err != nil && attempts < 5 {
+		logrus.WithError(err).Info("[TEST] Retrying flow log creation due to error")
+		attempts++
+		response, err = flb.Create(ctx, info, batch)
+	}
 	require.NoError(t, err)
 	require.Equal(t, []v1.BulkError(nil), response.Errors)
 	require.Equal(t, 0, response.Failed)
 
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
-	// for the refresh interval to occur. Lookup the actual index name that was created to
-	// perform the refresh.
-	indices, err := client.Backend().CatIndices().Do(ctx)
-	require.NoError(t, err)
-	prefix := fmt.Sprintf("tigera_secure_ee_flows.%s.", info.Cluster)
-	if info.Tenant != "" {
-		prefix = fmt.Sprintf("tigera_secure_ee_flows.%s.%s.", info.Tenant, info.Cluster)
-	}
-	var index string
-	for _, idx := range indices {
-		if strings.HasPrefix(idx.Index, prefix) {
-			// Match
-			index = idx.Index
-			break
-		}
-	}
-	require.NotEqual(t, "", index)
-	err = backendutils.RefreshIndex(ctx, client, index)
+	// for the refresh interval to occur.
+	err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(info))
 	require.NoError(t, err)
 
 	// Return the expected flow based on the batch of flows we created above.

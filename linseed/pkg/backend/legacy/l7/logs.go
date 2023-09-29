@@ -15,6 +15,7 @@ import (
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -23,20 +24,56 @@ import (
 type l7LogBackend struct {
 	client               *elastic.Client
 	lmaclient            lmaelastic.Client
-	helper               lmaindex.Helper
-	templates            bapi.Cache
+	templates            bapi.IndexInitializer
 	deepPaginationCutOff int64
+	queryHelper          lmaindex.Helper
+	singleIndex          bool
+	index                bapi.Index
 }
 
-func NewL7LogBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.L7LogBackend {
+func NewL7LogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.L7LogBackend {
 	b := &l7LogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
-		helper:               lmaindex.L7Logs(),
 		deepPaginationCutOff: deepPaginationCutOff,
+		queryHelper:          lmaindex.MultiIndexL7Logs(),
+		singleIndex:          false,
+		index:                index.L7LogMultiIndex,
 	}
 	return b
+}
+
+func NewSingleIndexL7LogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.L7LogBackend {
+	b := &l7LogBackend{
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
+		queryHelper:          lmaindex.SingleIndexL7Logs(),
+		singleIndex:          true,
+		index:                index.L7LogIndex,
+	}
+	return b
+}
+
+type logWithExtras struct {
+	v1.L7Log `json:",inline"`
+	Cluster  string `json:"cluster"`
+	Tenant   string `json:"tenant,omitempty"`
+}
+
+// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// the backend is configured to write to a single index.
+func (b *l7LogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.L7Log) interface{} {
+	if b.singleIndex {
+		return &logWithExtras{
+			L7Log:   l,
+			Cluster: i.Cluster,
+			Tenant:  i.Tenant,
+		}
+	}
+	return l
 }
 
 // Create the given log in elasticsearch.
@@ -47,13 +84,13 @@ func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1
 		return nil, err
 	}
 
-	err := b.templates.InitializeIfNeeded(ctx, bapi.L7Logs, i)
+	err := b.templates.Initialize(ctx, b.index, i)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine the index to write to using an alias
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 	log.Debugf("Writing L7 logs in bulk to alias %s", alias)
 
 	// Build a bulk request using the provided logs.
@@ -61,7 +98,7 @@ func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1
 
 	for _, f := range logs {
 		// Add this log to the bulk request.
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(f)
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f))
 		bulk.Add(req)
 	}
 
@@ -97,7 +134,7 @@ func (b *l7LogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts
 	if opts.NumBuckets > 0 {
 		// Time-series.
 		hist := elastic.NewAutoDateHistogramAggregation().
-			Field(b.helper.GetTimeField()).
+			Field(b.queryHelper.GetTimeField()).
 			Buckets(opts.NumBuckets)
 		for name, agg := range opts.Aggregations {
 			hist = hist.SubAggregation(name, logtools.RawAggregation{RawMessage: agg})
@@ -146,7 +183,7 @@ func (b *l7LogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.L7L
 
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +201,7 @@ func (b *l7LogBackend) getSearch(i bapi.ClusterInfo, opts *v1.L7LogParams) (*ela
 	}
 
 	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
-	q, err := logtools.BuildQuery(b.helper, i, opts, start, end)
+	q, err := logtools.BuildQuery(b.queryHelper, i, opts, start, end)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -176,7 +213,7 @@ func (b *l7LogBackend) getSearch(i bapi.ClusterInfo, opts *v1.L7LogParams) (*ela
 
 	// Configure pagination options
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -187,25 +224,7 @@ func (b *l7LogBackend) getSearch(i bapi.ClusterInfo, opts *v1.L7LogParams) (*ela
 			query.Sort(s.Field, !s.Descending)
 		}
 	} else {
-		query.Sort(b.helper.GetTimeField(), true)
+		query.Sort(b.queryHelper.GetTimeField(), true)
 	}
 	return query, startFrom, nil
-}
-
-func (b *l7LogBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_l7.%s.%s.*", i.Tenant, i.Cluster)
-	}
-
-	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("tigera_secure_ee_l7.%s.*", i.Cluster)
-}
-
-func (b *l7LogBackend) writeAlias(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_l7.%s.%s.", i.Tenant, i.Cluster)
-	}
-
-	return fmt.Sprintf("tigera_secure_ee_l7.%s.", i.Cluster)
 }

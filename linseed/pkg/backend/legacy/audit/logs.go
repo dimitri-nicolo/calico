@@ -3,10 +3,11 @@
 package audit
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
-	"github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
@@ -16,6 +17,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -23,19 +25,67 @@ import (
 type auditLogBackend struct {
 	client               *elastic.Client
 	lmaclient            lmaelastic.Client
-	helper               index.Helper
-	templates            bapi.Cache
+	queryHelper          lmaindex.Helper
+	templates            bapi.IndexInitializer
 	deepPaginationCutOff int64
+	singleIndex          bool
+	eeIndex              bapi.Index
+	kubeIndex            bapi.Index
+	anyIndex             bapi.Index
 }
 
-func NewBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.AuditBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.AuditBackend {
 	return &auditLogBackend{
 		client:               c.Backend(),
-		helper:               index.AuditLogs(),
+		queryHelper:          lmaindex.MultiIndexAuditLogs(),
 		lmaclient:            c,
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
+		singleIndex:          false,
+		eeIndex:              index.AuditLogEEMultiIndex,
+		kubeIndex:            index.AuditLogKubeMultiIndex,
+
+		// For multi-index, the log type is encoded into the index name, and so we need to return a wildcard index
+		// name that matches all audit log types.
+		anyIndex: index.NewMultiIndex("tigera_secure_ee_audit_*", bapi.DataType("any")),
 	}
+}
+
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.AuditBackend {
+	return &auditLogBackend{
+		client:               c.Backend(),
+		queryHelper:          lmaindex.SingleIndexAuditLogs(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
+		singleIndex:          true,
+
+		// For single-index, the log type is encoded into the document, and we use the same index for all log types.
+		eeIndex:   index.AuditLogIndex,
+		kubeIndex: index.AuditLogIndex,
+		anyIndex:  index.AuditLogIndex,
+	}
+}
+
+// prepareForWrite wraps a log in a document that includes other important metadata - like cluster and tenant - if
+// the backend is configured to write to a single index.
+func (b *auditLogBackend) prepareForWrite(i bapi.ClusterInfo, k v1.AuditLogType, l v1.AuditLog) (interface{}, error) {
+	// Audit logs have a special MarshalJSON implementation that we need to respect.
+	bs, err := l.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	if b.singleIndex {
+		// For single-index mode, we need to also include cluster and tenant in the document, as well
+		// as the log type (EE or Kube)
+		// AuditLogs have a custom JSON marshaler so we need to add this to the JSON directly.
+		buf := bytes.NewBuffer(bytes.TrimSuffix(bs, []byte("}")))
+		buf.WriteString(fmt.Sprintf(`,"cluster":"%s","tenant":"%s","audit_type":"%s"}`, i.Cluster, i.Tenant, k))
+		return buf.String(), nil
+	}
+
+	return string(bs), nil
 }
 
 // Create the given logs in elasticsearch.
@@ -46,19 +96,19 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 		return nil, err
 	}
 
-	var logType bapi.DataType
+	var idx bapi.Index
 	switch kind {
 	case v1.AuditLogTypeEE:
-		logType = bapi.AuditEELogs
+		idx = b.eeIndex
 	case v1.AuditLogTypeKube:
-		logType = bapi.AuditKubeLogs
+		idx = b.kubeIndex
 	case "":
 		return nil, fmt.Errorf("no audit log type provided on List request")
 	default:
 		return nil, fmt.Errorf("invalid audit log type: %s", kind)
 	}
 
-	err := b.templates.InitializeIfNeeded(ctx, logType, i)
+	err := b.templates.Initialize(ctx, idx, i)
 	if err != nil {
 		return nil, err
 	}
@@ -71,13 +121,14 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 	bulk := b.client.Bulk()
 
 	for _, f := range logs {
-		bs, err := f.MarshalJSON()
+		doc, err := b.prepareForWrite(i, kind, f)
 		if err != nil {
-			return nil, err
+			log.Errorf("Error preparing audit log for write: %s", err)
+			continue
 		}
 
 		// Add this log to the bulk request.
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(string(bs))
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(doc)
 		bulk.Add(req)
 	}
 
@@ -221,9 +272,14 @@ func (b *auditLogBackend) getSearch(i api.ClusterInfo, opts *v1.AuditLogParams) 
 func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams) (elastic.Query, error) {
 	// Start with the base flow log query using common fields.
 	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
-	query, err := logtools.BuildQuery(b.helper, i, opts, start, end)
+	query, err := logtools.BuildQuery(b.queryHelper, i, opts, start, end)
 	if err != nil {
 		return nil, err
+	}
+
+	// For single-index, we also need to filter based on type.
+	if b.singleIndex && opts.Type != v1.AuditLogTypeAny {
+		query.Filter(elastic.NewTermQuery("audit_type", opts.Type))
 	}
 
 	// Check if any resource kinds were specified.
@@ -323,24 +379,22 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 }
 
 func (b *auditLogBackend) index(kind v1.AuditLogType, i bapi.ClusterInfo) string {
-	base := fmt.Sprintf("tigera_secure_ee_audit_%s", kind)
-	if kind == v1.AuditLogTypeAny {
-		// Return both kube and EE logs.
-		base = "tigera_secure_ee_audit_*"
+	switch kind {
+	case v1.AuditLogTypeAny:
+		return b.anyIndex.Index(i)
+	case v1.AuditLogTypeKube:
+		return b.kubeIndex.Index(i)
+	case v1.AuditLogTypeEE:
+		return b.eeIndex.Index(i)
+	default:
+		logrus.Fatalf("Unknown audit log type: %s", kind)
 	}
-	if i.Tenant != "" {
-		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("%s.%s.%s.*", base, i.Tenant, i.Cluster)
-	}
-
-	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("%s.%s.*", base, i.Cluster)
+	return ""
 }
 
 func (b *auditLogBackend) writeAlias(kind v1.AuditLogType, i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.%s.", kind, i.Tenant, i.Cluster)
+	if kind == v1.AuditLogTypeEE {
+		return b.eeIndex.Alias(i)
 	}
-
-	return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.", kind, i.Cluster)
+	return b.kubeIndex.Alias(i)
 }
