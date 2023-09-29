@@ -78,7 +78,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ClusterInformationSpec":                   schema_pkg_apis_projectcalico_v3_ClusterInformationSpec(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.Community":                                schema_pkg_apis_projectcalico_v3_Community(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.CompletedReportJob":                       schema_pkg_apis_projectcalico_v3_CompletedReportJob(ref),
-		"github.com/tigera/api/pkg/apis/projectcalico/v3.ConfigMapKeySelector":                     schema_pkg_apis_projectcalico_v3_ConfigMapKeySelector(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ControllersConfig":                        schema_pkg_apis_projectcalico_v3_ControllersConfig(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DPIActive":                                schema_pkg_apis_projectcalico_v3_DPIActive(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DPIErrorCondition":                        schema_pkg_apis_projectcalico_v3_DPIErrorCondition(ref),
@@ -216,13 +215,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableRange":                          schema_pkg_apis_projectcalico_v3_RouteTableRange(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.Rule":                                     schema_pkg_apis_projectcalico_v3_Rule(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.RuleMetadata":                             schema_pkg_apis_projectcalico_v3_RuleMetadata(ref),
-		"github.com/tigera/api/pkg/apis/projectcalico/v3.SecretKeySelector":                        schema_pkg_apis_projectcalico_v3_SecretKeySelector(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhook":                     schema_pkg_apis_projectcalico_v3_SecurityEventWebhook(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookConfigVar":            schema_pkg_apis_projectcalico_v3_SecurityEventWebhookConfigVar(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookConfigVarSource":      schema_pkg_apis_projectcalico_v3_SecurityEventWebhookConfigVarSource(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookList":                 schema_pkg_apis_projectcalico_v3_SecurityEventWebhookList(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookSpec":                 schema_pkg_apis_projectcalico_v3_SecurityEventWebhookSpec(ref),
-		"github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookStatus":               schema_pkg_apis_projectcalico_v3_SecurityEventWebhookStatus(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ServiceAccountControllerConfig":           schema_pkg_apis_projectcalico_v3_ServiceAccountControllerConfig(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ServiceAccountMatch":                      schema_pkg_apis_projectcalico_v3_ServiceAccountMatch(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ServiceClusterIPBlock":                    schema_pkg_apis_projectcalico_v3_ServiceClusterIPBlock(ref),
@@ -3338,40 +3335,6 @@ func schema_pkg_apis_projectcalico_v3_CompletedReportJob(ref common.ReferenceCal
 	}
 }
 
-func schema_pkg_apis_projectcalico_v3_ConfigMapKeySelector(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"namespace": {
-						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
-						},
-					},
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
-						},
-					},
-					"key": {
-						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
-						},
-					},
-				},
-				Required: []string{"namespace", "name", "key"},
-			},
-		},
-	}
-}
-
 func schema_pkg_apis_projectcalico_v3_ControllersConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -5228,7 +5191,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"iptablesMarkMask": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IptablesMarkMask is the mask that Felix selects its IPTables Mark bits from. Should be a 32 bit hexadecimal number with at least 8 bits set, none of which clash with any other mark bits in use on the system. [Default: 0xff000000]",
+							Description: "IptablesMarkMask is the mask that Felix selects its IPTables Mark bits from. Should be a 32 bit hexadecimal number with at least 8 bits set, none of which clash with any other mark bits in use on the system. [Default: 0xffff0000]",
 							Type:        []string{"integer"},
 							Format:      "int64",
 						},
@@ -9178,6 +9141,13 @@ func schema_pkg_apis_projectcalico_v3_ManagedClusterSpec(ref common.ReferenceCal
 							Format:      "",
 						},
 					},
+					"certificate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The certificate used to authenticate the managed cluster to the management cluster.",
+							Type:        []string{"string"},
+							Format:      "byte",
+						},
+					},
 				},
 			},
 		},
@@ -11420,40 +11390,6 @@ func schema_pkg_apis_projectcalico_v3_RuleMetadata(ref common.ReferenceCallback)
 	}
 }
 
-func schema_pkg_apis_projectcalico_v3_SecretKeySelector(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"namespace": {
-						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
-						},
-					},
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
-						},
-					},
-					"key": {
-						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
-						},
-					},
-				},
-				Required: []string{"namespace", "name", "key"},
-			},
-		},
-	}
-}
-
 func schema_pkg_apis_projectcalico_v3_SecurityEventWebhook(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -11476,31 +11412,35 @@ func schema_pkg_apis_projectcalico_v3_SecurityEventWebhook(ref common.ReferenceC
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "standard object metadata",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
-					"Status": {
+					"status": {
 						SchemaProps: spec.SchemaProps{
-							Description: "status of the SecurityEventWebhook",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookStatus"),
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.Condition"),
+									},
+								},
+							},
 						},
 					},
-					"Spec": {
+					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "specification of the SecurityEventWebhook",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookSpec"),
 						},
 					},
 				},
-				Required: []string{"Status", "Spec"},
+				Required: []string{"spec"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookSpec", "github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.Condition", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -11545,19 +11485,19 @@ func schema_pkg_apis_projectcalico_v3_SecurityEventWebhookConfigVarSource(ref co
 				Properties: map[string]spec.Schema{
 					"configMapKeyRef": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/tigera/api/pkg/apis/projectcalico/v3.ConfigMapKeySelector"),
+							Ref: ref("k8s.io/api/core/v1.ConfigMapKeySelector"),
 						},
 					},
 					"secretKeyRef": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/tigera/api/pkg/apis/projectcalico/v3.SecretKeySelector"),
+							Ref: ref("k8s.io/api/core/v1.SecretKeySelector"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/tigera/api/pkg/apis/projectcalico/v3.ConfigMapKeySelector", "github.com/tigera/api/pkg/apis/projectcalico/v3.SecretKeySelector"},
+			"k8s.io/api/core/v1.ConfigMapKeySelector", "k8s.io/api/core/v1.SecretKeySelector"},
 	}
 }
 
@@ -11659,40 +11599,6 @@ func schema_pkg_apis_projectcalico_v3_SecurityEventWebhookSpec(ref common.Refere
 		},
 		Dependencies: []string{
 			"github.com/tigera/api/pkg/apis/projectcalico/v3.SecurityEventWebhookConfigVar"},
-	}
-}
-
-func schema_pkg_apis_projectcalico_v3_SecurityEventWebhookStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"lastTransitionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "last fetch operation time",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastTransitionCount": {
-						SchemaProps: spec.SchemaProps{
-							Description: "number of processed security events during the latest fetch operation",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"health": {
-						SchemaProps: spec.SchemaProps{
-							Description: "health of the webhook during the latest fetch operation",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

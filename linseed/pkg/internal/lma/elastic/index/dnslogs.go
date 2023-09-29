@@ -11,20 +11,35 @@ import (
 	"github.com/olivere/elastic/v7"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
-const esDnsLogsIndexPrefix = "tigera_secure_ee_dns"
-
 // dnsLogsIndexHelper implements the Helper interface for dns logs.
-type dnsLogsIndexHelper struct{}
+type dnsLogsIndexHelper struct {
+	singleIndex bool
+}
 
-// DnsLogs returns an instance of the dns logs index helper.
-func DnsLogs() Helper {
+func MultiIndexDNSLogs() Helper {
 	return dnsLogsIndexHelper{}
+}
+
+func SingleIndexDNSLogs() Helper {
+	return dnsLogsIndexHelper{singleIndex: true}
+}
+
+func (h dnsLogsIndexHelper) BaseQuery(i bapi.ClusterInfo) *elastic.BoolQuery {
+	q := elastic.NewBoolQuery()
+	if h.singleIndex {
+		q.Must(elastic.NewTermQuery("cluster", i.Cluster))
+		if i.Tenant != "" {
+			q.Must(elastic.NewTermQuery("tenant", i.Tenant))
+		}
+	}
+	return q
 }
 
 // NewDnsLogsConverter returns a Converter instance defined for dns logs.
@@ -131,8 +146,4 @@ func (h dnsLogsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query 
 
 func (h dnsLogsIndexHelper) GetTimeField() string {
 	return "end_time"
-}
-
-func (h dnsLogsIndexHelper) GetIndex(cluster string) string {
-	return fmt.Sprintf("%s.%s.*", esDnsLogsIndexPrefix, cluster)
 }

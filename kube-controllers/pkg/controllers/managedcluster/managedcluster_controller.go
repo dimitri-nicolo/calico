@@ -7,13 +7,17 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	"k8s.io/apimachinery/pkg/fields"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
@@ -45,17 +49,19 @@ type ControllerManager interface {
 // resource) and notifies the given ControllerManagers with that information.
 type managedClusterController struct {
 	createManagedK8sCLI func(string) (kubernetes.Interface, *tigeraapi.Clientset, error)
-	calicoCLI           *tigeraapi.Clientset
+	clientSetFactory    *tigeraapi.Clientset
+	client              ctrlclient.WithWatch
 	cfg                 config.ManagedClusterControllerConfig
-	managementK8sCLI    *kubernetes.Clientset
+	kubeClientSet       *kubernetes.Clientset
 	restartChan         chan<- string
 	controllers         []ControllerManager
 }
 
 func New(
 	createManagedK8sCLI func(string) (kubernetes.Interface, *tigeraapi.Clientset, error),
-	managementK8sCLI *kubernetes.Clientset,
-	calicok8sCLI *tigeraapi.Clientset,
+	kubeClientSet *kubernetes.Clientset,
+	clientSetFactory *tigeraapi.Clientset,
+	client ctrlclient.WithWatch,
 	cfg config.ManagedClusterControllerConfig,
 	restartChan chan<- string,
 	controllers []ControllerManager,
@@ -63,9 +69,10 @@ func New(
 
 	return &managedClusterController{
 		createManagedK8sCLI: createManagedK8sCLI,
-		calicoCLI:           calicok8sCLI,
+		clientSetFactory:    clientSetFactory,
+		client:              client,
 		cfg:                 cfg,
-		managementK8sCLI:    managementK8sCLI,
+		kubeClientSet:       kubeClientSet,
 		restartChan:         restartChan,
 		controllers:         controllers,
 	}
@@ -78,18 +85,17 @@ func (c *managedClusterController) fetchRegisteredManagedClustersNames(stop chan
 	waitTime := 5 * time.Second
 
 	var err error
-	var managedClusters *v3.ManagedClusterList
+	managedClusters := &v3.ManagedClusterList{}
 	for !success {
 		select {
 		case <-stop:
 			return nil
 		default:
-			if managedClusters, err = c.calicoCLI.ProjectcalicoV3().ManagedClusters().List(context.Background(), metav1.ListOptions{}); err != nil {
+			if err = c.client.List(context.Background(), managedClusters, &ctrlclient.ListOptions{Namespace: c.cfg.TenantNamespace}); err != nil {
 				log.WithError(err).Error("Failed to clean up Elasticsearch users")
 				time.Sleep(waitTime)
 				continue
 			}
-
 			success = true
 		}
 	}
@@ -110,21 +116,39 @@ func (c *managedClusterController) Run(stop chan struct{}) {
 
 	mcReconciler := &reconciler{
 		createManagedK8sCLI:      c.createManagedK8sCLI,
-		managementK8sCLI:         c.managementK8sCLI,
+		kubeClientSet:            c.kubeClientSet,
+		client:                   c.client,
 		managedClustersStopChans: make(map[string]chan struct{}),
 		restartChan:              c.restartChan,
-		calicoCLI:                c.calicoCLI,
+		clientSetFactory:         c.clientSetFactory,
 		controllers:              c.controllers,
+		TenantNamespace:          c.cfg.TenantNamespace,
 	}
+
+	listWatcher := newManagedClusterListWatcher(context.Background(), c.client, c.cfg.TenantNamespace)
 
 	// Watch the ManagedCluster resources for changes
 	managedClusterWorker := worker.New(mcReconciler)
-	managedClusterWorker.AddWatch(
-		cache.NewListWatchFromClient(c.calicoCLI.ProjectcalicoV3().RESTClient(), "managedclusters", "", fields.Everything()),
-		&v3.ManagedCluster{},
-	)
-
+	managedClusterWorker.AddWatch(listWatcher, &v3.ManagedCluster{})
 	go managedClusterWorker.Run(c.cfg.NumberOfWorkers, stop)
 
 	<-stop
+}
+
+// newManagedClusterListWatcher returns an implementation of the ListWatch interface capable of being used to
+// build an informer based on a controller-runtime client. Using the controller-runtime client allows us to build
+// an Informer that works for both namespaced and cluster-scoped ManagedCluster resources regardless of whether
+// it is a multi-tenant cluster or not.
+func newManagedClusterListWatcher(ctx context.Context, c ctrlclient.WithWatch, namespace string) *cache.ListWatch {
+	return &cache.ListWatch{
+		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+			list := &v3.ManagedClusterList{}
+			err := c.List(ctx, list, &ctrlclient.ListOptions{Raw: &options, Namespace: namespace})
+			return list, err
+		},
+		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+			list := &v3.ManagedClusterList{}
+			return c.Watch(ctx, list, &ctrlclient.ListOptions{Raw: &options, Namespace: namespace})
+		},
+	}
 }

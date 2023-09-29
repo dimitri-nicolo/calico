@@ -1,0 +1,234 @@
+// Copyright {{now | date "2006"}} Tigera. All rights reserved.
+
+package proxy
+
+import (
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/{{ lower .Name }}/pkg/config"
+	"github.com/projectcalico/calico/{{ lower .Name }}/pkg/testutils"
+)
+
+// setupTest runs common logic before each test, and also returns a function to perform teardown
+// after each test.
+func setupTest(t *testing.T) func() {
+	// Hook logrus into testing.T
+	config.ConfigureLogging("DEBUG")
+	logCancel := logutils.RedirectLogrusToTestingT(t)
+
+	// Function contains teardown logic.
+	return func() {
+		// Cancel logging
+		logCancel()
+	}
+}
+
+func TestProxy_ServeHTTP(t *testing.T) {
+	tests := []struct {
+		nameSuffix   string
+		method       string
+		query        string
+		body         []byte
+		responseCode int
+	}{
+		{
+			nameSuffix:   "GET method and no body - expect 200 OK",
+			method:       "GET",
+			query:        "query=a&size=10",
+			responseCode: http.StatusOK,
+		},
+		{
+			nameSuffix:   "GET method and no body - expect 302 Redirect",
+			method:       "GET",
+			query:        "query=a&size=10",
+			responseCode: http.StatusFound,
+		},
+		{
+			nameSuffix:   "GET method and no body - expect 400 Bad request",
+			method:       "GET",
+			query:        "query=a&size=10",
+			responseCode: http.StatusBadRequest,
+		},
+		{
+			nameSuffix:   "GET method and no body - expect 500 Internal Server Error",
+			method:       "GET",
+			query:        "query=a&size=10",
+			responseCode: http.StatusInternalServerError,
+		},
+		{
+			nameSuffix:   "GET method with body - expect 200 OK",
+			method:       "GET",
+			body:         []byte(`Marco`),
+			query:        "query=a&size=10",
+			responseCode: http.StatusOK,
+		},
+		{
+			nameSuffix:   "POST method and no body - expect 200 OK",
+			method:       "POST",
+			query:        "query=a&size=10",
+			responseCode: http.StatusOK,
+		},
+		{
+			nameSuffix:   "POST method with body - expect 200 OK",
+			method:       "POST",
+			body:         []byte(`Marco`),
+			query:        "query=a&size=10",
+			responseCode: http.StatusOK,
+		},
+		{
+			nameSuffix:   "DELETE method and no body - expect 200 OK",
+			method:       "DELETE",
+			query:        "query=a&size=10",
+			responseCode: http.StatusOK,
+		},
+		{
+			nameSuffix:   "DELETE method with body - expect 200 OK",
+			method:       "DELETE",
+			body:         []byte(`Marco`),
+			query:        "query=a&size=10",
+			responseCode: http.StatusOK,
+		},
+		{
+			nameSuffix:   "PUT method and no body - expect 200 OK",
+			method:       "PUT",
+			query:        "query=a&size=10",
+			responseCode: http.StatusOK,
+		},
+		{
+			nameSuffix:   "PUT method with body - expect 200 OK",
+			method:       "PUT",
+			body:         []byte(`Marco`),
+			query:        "/any/path",
+			responseCode: http.StatusOK,
+		},
+		{
+			nameSuffix:   "PATCH method and no body - expect 200 OK",
+			method:       "PATCH",
+			query:        "query=a&size=10",
+			responseCode: http.StatusOK,
+		},
+		{
+			nameSuffix:   "PATCH method with body - expect 200 OK",
+			method:       "PATCH",
+			body:         []byte(`Marco`),
+			query:        "query=a&size=10",
+			responseCode: http.StatusOK,
+		},
+	}
+	for _, tt := range tests {
+		testName := fmt.Sprintf("Forward request to tenant with mTLS connection using %s", tt.nameSuffix)
+		t.Run(testName, func(t *testing.T) {
+			defer setupTest(t)()
+
+			// Create the CA for the backend service for targetServer
+			ca, caKey := testutils.MustCreateCAKeyPair(t)
+			caBytes := testutils.SignAndEncodeCert(t, ca, caKey, ca, caKey)
+
+			// Create the server key pair for the tenant
+			serverCert, serverKey := testutils.MustCreateServerKeyPair(t)
+			serverCertBytes := testutils.SignAndEncodeCert(t, ca, caKey, serverCert, serverKey)
+			serverKeyBytes := testutils.EncodeKey(t, serverKey)
+			serverKeyPair, err := tls.X509KeyPair(serverCertBytes, serverKeyBytes)
+			require.NoError(t, err)
+
+			// Create the backend service for the tenant
+			targetServer := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// make sure we have all the headers
+				expectedHeaders := http.Header{
+					"User-Agent":      {"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:90.0) Gecko/20100101 Firefox/90.0"},
+					"Cookie":          {"chocolate+chip"},
+					"Accept":          {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+					"Accept-Encoding": {"gzip"},
+				}
+
+				if (tt.method != "GET" && tt.method != "DELETE") || len(tt.body) != 0 {
+					expectedHeaders.Add("Content-Length", strconv.Itoa(len(tt.body)))
+				}
+
+				require.Equal(t, r.Header, expectedHeaders)
+
+				// make sure we have the same method
+				require.Equal(t, r.Method, tt.method)
+
+				// make sure we have the same query parameters
+				require.Equal(t, r.URL.RawQuery, tt.query)
+
+				// make sure we have the same body
+				body, err := io.ReadAll(r.Body)
+				require.NoError(t, err)
+				require.Equal(t, string(body), string(tt.body))
+
+				if tt.responseCode == 302 {
+					http.Redirect(w, r, "https://thereisnoplace.like.home", http.StatusFound)
+				} else {
+					w.WriteHeader(tt.responseCode)
+					// Write a response back
+					_, err = w.Write([]byte("Polo"))
+					require.NoError(t, err)
+				}
+			}))
+
+			rootCertPool := x509.NewCertPool()
+			rootCertPool.AppendCertsFromPEM(caBytes)
+			targetServer.TLS = &tls.Config{
+				Certificates: []tls.Certificate{serverKeyPair},
+				ClientCAs:    rootCertPool,
+			}
+			targetServer.StartTLS()
+			defer targetServer.Close()
+
+			// Setup up the request and record the response
+			headers := map[string]string{
+				"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:90.0) Gecko/20100101 Firefox/90.0",
+				"Host":       "tenant.com",
+				"Cookie":     "chocolate+chip",
+				"Accept":     "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+			}
+
+			request := testutils.Request(tt.method, fmt.Sprintf("/any/path?%s", tt.query), headers, tt.body)
+			w := httptest.NewRecorder()
+
+			// Set up the proxy and call the handler
+			targetURL, err := url.Parse(targetServer.URL)
+			require.NoError(t, err)
+			tlsConfig := &tls.Config{}
+			caCertPool := x509.NewCertPool()
+			if ok := caCertPool.AppendCertsFromPEM(caBytes); !ok {
+				logrus.Fatal("Failed to append target CA to certificate pool")
+			}
+			tlsConfig.RootCAs = caCertPool
+			proxy := NewProxy(targetURL, tlsConfig)
+			proxy.ServeHTTP(w, request)
+
+			// Check the response
+			res := w.Result()
+			require.Equal(t, tt.responseCode, res.StatusCode)
+
+			if tt.responseCode == 302 {
+				require.Contains(t, res.Header, "Location")
+			} else {
+				defer func() {
+					err := res.Body.Close()
+					require.NoError(t, err)
+				}()
+				data, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				// We need to match the response send by the server
+				require.Equal(t, "Polo", strings.Trim(string(data), "\n"))
+			}
+		})
+	}
+}

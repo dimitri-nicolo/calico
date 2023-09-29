@@ -39,9 +39,13 @@ func (t Templates) Swap(i, j int) {
 }
 
 // LoadTemplates load templates from file system to memory in order
-// to render a project. Templates must be placed under a "templates"
+// to render a project. Templates must be placed under baseDirName
 // embedded directory
-func LoadTemplates(templates fs.FS) (Templates, error) {
+func LoadTemplates(templates fs.FS, baseDirName string) (Templates, error) {
+	if baseDirName == "" {
+		return nil, fmt.Errorf("baseDirName cannot be empty string")
+	}
+
 	var templateFiles []File
 
 	var err = fs.WalkDir(
@@ -58,11 +62,11 @@ func LoadTemplates(templates fs.FS) (Templates, error) {
 					return err
 				}
 
-				if !strings.Contains(path, "template") {
+				if !strings.Contains(path, baseDirName) {
 					return fmt.Errorf("Malformed template path")
 				}
 
-				appPath, err := filepath.Rel("template", path)
+				appPath, err := filepath.Rel(baseDirName, path)
 
 				if err != nil {
 					return err

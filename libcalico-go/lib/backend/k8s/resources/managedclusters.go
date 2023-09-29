@@ -10,6 +10,8 @@ import (
 	"k8s.io/client-go/rest"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 )
 
 const (
@@ -17,7 +19,7 @@ const (
 	ManagedClusterCRDName      = "managedclusters.crd.projectcalico.org"
 )
 
-func NewManagedClusterClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClient {
+func NewManagedClusterClient(cfg *apiconfig.CalicoAPIConfigSpec, c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClient {
 	return &customK8sResourceClient{
 		clientSet:       c,
 		restClient:      r,
@@ -31,6 +33,6 @@ func NewManagedClusterClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sRes
 		},
 		k8sListType:  reflect.TypeOf(apiv3.ManagedClusterList{}),
 		resourceKind: apiv3.KindManagedCluster,
-		namespaced:   false,
+		namespaced:   cfg.MultiTenantEnabled,
 	}
 }

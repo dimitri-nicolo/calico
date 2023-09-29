@@ -25,8 +25,8 @@ import (
 // If GlobalAlert resource is deleted or updated, cancel the current goroutine, and create a new one if resource is updated.
 type globalAlertReconciler struct {
 	linseedClient          client.Client
-	k8sClient              kubernetes.Interface
-	calicoCLI              calicoclient.Interface
+	kubeClientSet          kubernetes.Interface
+	calicoClientSet        calicoclient.Interface
 	adDetectionController  controller.AnomalyDetectionController
 	adTrainingController   controller.AnomalyDetectionController
 	alertNameToAlertState  map[string]alertState
@@ -48,7 +48,7 @@ type alertState struct {
 // For GlobalAlert with an existing goroutine if spec is same, do nothing, else cancel the existing goroutine and
 // recreate it with new specs from alert.
 func (r *globalAlertReconciler) Reconcile(namespacedName types.NamespacedName) error {
-	obj, err := r.calicoCLI.ProjectcalicoV3().GlobalAlerts().Get(context.Background(),
+	obj, err := r.calicoClientSet.ProjectcalicoV3().GlobalAlerts().Get(context.Background(),
 		namespacedName.Name, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return err
@@ -67,7 +67,7 @@ func (r *globalAlertReconciler) Reconcile(namespacedName types.NamespacedName) e
 		return nil
 	}
 
-	alert, err := alert.NewAlert(obj, r.calicoCLI, r.linseedClient, r.k8sClient, r.enableAnomalyDetection, r.adDetectionController, r.adTrainingController, r.clusterName, r.tenantID, r.namespace, r.fipsModeEnabled)
+	alert, err := alert.NewAlert(obj, r.calicoClientSet, r.linseedClient, r.kubeClientSet, r.enableAnomalyDetection, r.adDetectionController, r.adTrainingController, r.clusterName, r.tenantID, r.namespace, r.fipsModeEnabled)
 	if err != nil {
 		return err
 	}

@@ -20,7 +20,7 @@ import (
 
 // BuildQuery builds an elastic log query using the given parameters.
 func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams, start time.Time, end time.Time) (*elastic.BoolQuery, error) {
-	query := elastic.NewBoolQuery()
+	query := h.BaseQuery(i)
 
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
@@ -151,7 +151,8 @@ func NextStartFromAfterKey(opts v1.Params, numHits, prevStartFrom int, totalHits
 // results might be inconsistent. A point in time will preserve the current index state.
 // If an index has less than index.max_result_window setting, point in time will default an empty string.
 func NextPointInTime(ctx context.Context, client *elastic.Client, index string, results *elastic.SearchResult,
-	deepPaginationCutOff int64, log *logrus.Entry) (string, error) {
+	deepPaginationCutOff int64, log *logrus.Entry,
+) (string, error) {
 	var pitID string
 	// This is how we determine that an index has more items
 	// than index.max_result_window setting. TotalHits will

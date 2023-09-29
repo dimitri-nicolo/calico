@@ -32,12 +32,15 @@ import (
 	"go.etcd.io/etcd/client/pkg/v3/srv"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
+
+	crtlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/crypto/pkg/tls"
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
@@ -70,6 +73,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/calico/typha/pkg/cmdwrapper"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
@@ -144,6 +148,7 @@ func init() {
 }
 
 func main() {
+
 	flag.Parse()
 	if version {
 		fmt.Println(VERSION)
@@ -659,9 +664,19 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 			log.WithError(err).Fatal("failed to build elasticsearch rest client")
 		}
 
-		calicoV3Client, err := tigeraapi.NewForConfig(kubeconfig)
+		calicoClientSet, err := tigeraapi.NewForConfig(kubeconfig)
 		if err != nil {
 			log.WithError(err).Fatal("failed to build calico v3 clientset")
+		}
+
+		scheme := runtime.NewScheme()
+		if err = v3.AddToScheme(scheme); err != nil {
+			log.WithError(err).Fatal("failed to build controller runtime client set")
+		}
+
+		client, err := crtlclient.NewWithWatch(kubeconfig, crtlclient.Options{Scheme: scheme})
+		if err != nil {
+			log.WithError(err).Fatal("failed to build controller runtime client set with watch")
 		}
 
 		cc.controllerStates["ManagedCluster"] = &controllerState{
@@ -675,20 +690,21 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 							rt:      rt,
 						}
 					}
-					k8sCLI, err := kubernetes.NewForConfig(kubeconfig)
+					kubeClientSet, err := kubernetes.NewForConfig(kubeconfig)
 					if err != nil {
-						return k8sCLI, nil, err
+						return kubeClientSet, nil, err
 					}
 
-					calicoCLI, err := tigeraapi.NewForConfig(kubeconfig)
+					calicoClientSet, err := tigeraapi.NewForConfig(kubeconfig)
 					if err != nil {
-						return k8sCLI, calicoCLI, err
+						return kubeClientSet, calicoClientSet, err
 					}
 
-					return k8sCLI, calicoCLI, nil
+					return kubeClientSet, calicoClientSet, nil
 				},
 				k8sClientset,
-				calicoV3Client,
+				calicoClientSet,
+				client,
 				*cfg.Controllers.ManagedCluster,
 				cc.restartCntrlChan,
 				getCloudManagedClusterControllerManagers(esK8sREST, esClientBuilder, cfg),

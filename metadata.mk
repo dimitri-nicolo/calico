@@ -3,15 +3,15 @@
 #################################################################################################
 
 # The version of github.com/projectcalico/go-build to use.
-GO_BUILD_VER=v0.87
+GO_BUILD_VER=v0.88
 
 # Version of Kubernetes to use for tests, bitnami/kubectl, and kubectl binary release in
 # compliance benchmarker, confd, and kube-controllers.
-K8S_VERSION=v1.26.6
+K8S_VERSION=v1.26.8
 
 # Version of various tools used in the build and tests.
 COREDNS_VERSION=1.5.2
-ELASTIC_VERSION=7.17.11
+ELASTIC_VERSION=7.17.13
 ETCD_VERSION=v3.5.6
 # FIXME upgrading to kindest/node newer than v1.24.7 causes Node/kind-cluster and sig-network conformance
 # tests to timeout or fail.

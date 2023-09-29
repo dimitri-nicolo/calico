@@ -12,7 +12,7 @@ type RuntimeReport struct {
 	ID      string `json:"id,omitempty"`
 	Tenant  string `json:"tenant,omitempty"`
 	Cluster string `json:"cluster,omitempty"`
-	Report  Report
+	Report  Report `json:",inline"`
 }
 
 // Report is a copy of https://github.com/tigera/runtime-security/blob/master/pkg/api/report.go#L12-L30

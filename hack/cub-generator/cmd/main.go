@@ -22,6 +22,9 @@ type Options struct {
 
 	// Version of the project generator
 	Version func() `long:"version" description:"Version for cub-generator"`
+
+	// Type will generate a number of different project templates
+	Type string `long:"type" choice:"http-server" choice:"skeleton" choice:"proxy"`
 }
 
 var options Options
@@ -46,13 +49,27 @@ func main() {
 		}
 	}
 
-	tpl, err := template.LoadTemplates(app.AppTemplates)
-	if err != nil {
-		panic(err)
+	var projectType = app.SkeletonTemplates
+	switch options.Type {
+	case "http-server":
+		projectType = app.GoServerTemplates
+	case "proxy":
+		projectType = app.GoProxyTemplates
+	case "skeleton":
+		projectType = app.SkeletonTemplates
 	}
 
-	p := generator.NewProject(options.Location, options.Name, app.NewApp(tpl))
-	err = p.Render()
+	var templates template.Templates
+	for templateFS, baseDir := range projectType {
+		module, err := template.LoadTemplates(templateFS, baseDir)
+		if err != nil {
+			panic(err)
+		}
+		templates = append(templates, module...)
+	}
+
+	p := generator.NewProject(options.Location, options.Name, app.NewApp(templates))
+	err := p.Render()
 	if err != nil {
 		panic(err)
 	}

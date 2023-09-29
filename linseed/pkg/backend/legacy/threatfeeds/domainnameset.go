@@ -5,7 +5,6 @@ package threatfeeds
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/projectcalico/go-json/json"
@@ -13,24 +12,63 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func NewDomainNameSetBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.DomainNameSetBackend {
+func NewDomainNameSetBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.DomainNameSetBackend {
 	return &domainNameSetThreatFeedBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
+		singleIndex:          false,
+		index:                index.ThreatfeedsDomainMultiIndex,
+		queryHelper:          lmaindex.MultiIndexThreatfeedsDomainNameSet(),
+	}
+}
+
+func NewSingleIndexDomainNameSetBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.DomainNameSetBackend {
+	return &domainNameSetThreatFeedBackend{
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
+		singleIndex:          true,
+		index:                index.ThreatfeedsDomainIndex,
+		queryHelper:          lmaindex.SingleIndexThreatfeedsDomainNameSet(),
 	}
 }
 
 type domainNameSetThreatFeedBackend struct {
 	client               *elastic.Client
-	templates            bapi.Cache
+	templates            bapi.IndexInitializer
 	lmaclient            lmaelastic.Client
 	deepPaginationCutOff int64
+	queryHelper          lmaindex.Helper
+	singleIndex          bool
+	index                bapi.Index
+}
+
+type domainsetWithExtras struct {
+	v1.DomainNameSetThreatFeedData `json:",inline"`
+	Cluster                        string `json:"cluster"`
+	Tenant                         string `json:"tenant,omitempty"`
+}
+
+// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// the backend is configured to write to a single index.
+func (b *domainNameSetThreatFeedBackend) prepareForWrite(i bapi.ClusterInfo, l *v1.DomainNameSetThreatFeedData) interface{} {
+	if b.singleIndex {
+		return &domainsetWithExtras{
+			DomainNameSetThreatFeedData: *l,
+			Cluster:                     i.Cluster,
+			Tenant:                      i.Tenant,
+		}
+	}
+	return l
 }
 
 func (b *domainNameSetThreatFeedBackend) Create(ctx context.Context, i bapi.ClusterInfo, feeds []v1.DomainNameSetThreatFeed) (*v1.BulkResponse, error) {
@@ -40,20 +78,20 @@ func (b *domainNameSetThreatFeedBackend) Create(ctx context.Context, i bapi.Clus
 		return nil, err
 	}
 
-	err := b.templates.InitializeIfNeeded(ctx, bapi.DomainNameSet, i)
+	err := b.templates.Initialize(ctx, b.index, i)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine the index to write to using an alias
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 	log.Infof("Writing domain name set threat feeds data in bulk to alias %s", alias)
 
 	// Build a bulk request using the provided threat feeds.
 	bulk := b.client.Bulk()
 
 	for _, f := range feeds {
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(f.Data).Id(f.ID)
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f.Data)).Id(f.ID)
 		bulk.Add(req)
 	}
 
@@ -110,7 +148,7 @@ func (b *domainNameSetThreatFeedBackend) List(ctx context.Context, i bapi.Cluste
 
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
 	if err != nil {
 		return nil, err
 	}
@@ -127,8 +165,7 @@ func (b *domainNameSetThreatFeedBackend) getSearch(i bapi.ClusterInfo, p *v1.Dom
 		return nil, 0, err
 	}
 
-	// Get the startFrom param, if any.
-	q, err := b.buildQuery(p)
+	q, err := b.buildQuery(i, p)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -140,28 +177,21 @@ func (b *domainNameSetThreatFeedBackend) getSearch(i bapi.ClusterInfo, p *v1.Dom
 
 	// Configure pagination options
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, p, b.index(i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, p, b.index.Index(i))
 	if err != nil {
 		return nil, 0, err
 	}
 
-	query.Sort("created_at", true)
+	query.Sort(b.queryHelper.GetTimeField(), true)
 
 	return query, startFrom, nil
 }
 
-func (b *domainNameSetThreatFeedBackend) buildQuery(p *v1.DomainNameSetThreatFeedParams) (elastic.Query, error) {
-	query := elastic.NewBoolQuery()
+func (b *domainNameSetThreatFeedBackend) buildQuery(i bapi.ClusterInfo, p *v1.DomainNameSetThreatFeedParams) (elastic.Query, error) {
+	query := b.queryHelper.BaseQuery(i)
+
 	if p.TimeRange != nil {
-		unset := time.Time{}
-		tr := elastic.NewRangeQuery("created_at")
-		if p.TimeRange.From != unset {
-			tr.From(p.TimeRange.From)
-		}
-		if p.TimeRange.To != unset {
-			tr.To(p.TimeRange.To)
-		}
-		query.Must(tr)
+		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange.From, p.TimeRange.To))
 	}
 
 	if p.ID != "" {
@@ -176,13 +206,32 @@ func (b *domainNameSetThreatFeedBackend) Delete(ctx context.Context, i bapi.Clus
 		return nil, err
 	}
 
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 
 	// Build a bulk request using the provided feeds.
 	bulk := b.client.Bulk()
+	numToDelete := 0
+	bulkErrs := []v1.BulkError{}
 	for _, feed := range feeds {
+		if err := b.checkTenancy(ctx, i, &feed); err != nil {
+			logrus.WithError(err).WithField("id", feed.ID).Warn("Error checking tenancy for feed")
+			bulkErrs = append(bulkErrs, v1.BulkError{Resource: feed.ID, Type: "document_missing_exception", Reason: err.Error()})
+			continue
+		}
+
 		req := elastic.NewBulkDeleteRequest().Index(alias).Id(feed.ID)
 		bulk.Add(req)
+		numToDelete++
+	}
+
+	if numToDelete == 0 {
+		// If there are no feeds to delete, short-circuit and return an empty response.
+		return &v1.BulkResponse{
+			Total:     len(bulkErrs),
+			Succeeded: 0,
+			Failed:    len(bulkErrs),
+			Errors:    bulkErrs,
+		}, nil
 	}
 
 	// Send the bulk request. Wait for results to be refreshed before replying,
@@ -208,17 +257,22 @@ func (b *domainNameSetThreatFeedBackend) Delete(ctx context.Context, i bapi.Clus
 	}, nil
 }
 
-func (b *domainNameSetThreatFeedBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_threatfeeds_domainnameset.%s.%s.*", i.Tenant, i.Cluster)
+func (b *domainNameSetThreatFeedBackend) checkTenancy(ctx context.Context, i bapi.ClusterInfo, feed *v1.DomainNameSetThreatFeed) error {
+	// If we're in single index mode, we need to check tenancy. Otherwise, we can skip this because
+	// the index name already contains the cluster and tenant ID.
+	if b.singleIndex {
+		// We need to protect against tenancy here. In single index mode without this check, any tenant could send a request which
+		// dismisses or deletes a feed for any other tenant if they guess the right ID.
+		// Query the feed to compare the tenant and cluster to the request. If they don't match, skip.
+		// This is not a perfect solution, but it's better than nothing.
+		// By Listing with the given cluster info and ID, we can ensure that the feed is visible to that tenant.
+		items, err := b.List(ctx, i, &v1.DomainNameSetThreatFeedParams{ID: feed.ID, QueryParams: v1.QueryParams{MaxPageSize: 1}})
+		if err != nil {
+			return err
+		}
+		if len(items.Items) == 0 {
+			return fmt.Errorf("event not found during tenancy check")
+		}
 	}
-	return fmt.Sprintf("tigera_secure_ee_threatfeeds_domainnameset.%s.*", i.Cluster)
-}
-
-func (b *domainNameSetThreatFeedBackend) writeAlias(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_threatfeeds_domainnameset.%s.%s.", i.Tenant, i.Cluster)
-	}
-
-	return fmt.Sprintf("tigera_secure_ee_threatfeeds_domainnameset.%s.", i.Cluster)
+	return nil
 }

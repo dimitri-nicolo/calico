@@ -19,6 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 
@@ -41,15 +42,33 @@ import (
 )
 
 var (
-	client  lmaelastic.Client
-	b       bapi.AuditBackend
-	ctx     context.Context
-	cluster string
+	client          lmaelastic.Client
+	b               bapi.AuditBackend
+	ctx             context.Context
+	cluster         string
+	kubeIndexGetter bapi.Index
+	eeIndexGetter   bapi.Index
 )
+
+// RunAllModes runs the given test function twice, once using the single-index backend, and once using
+// the multi-index backend.
+func RunAllModes(t *testing.T, name string, testFn func(t *testing.T)) {
+	// Run using the multi-index backend.
+	t.Run(fmt.Sprintf("%s [legacy]", name), func(t *testing.T) {
+		defer setupTest(t, false)()
+		testFn(t)
+	})
+
+	// Run using the single-index backend.
+	t.Run(fmt.Sprintf("%s [singleindex]", name), func(t *testing.T) {
+		defer setupTest(t, true)()
+		testFn(t)
+	})
+}
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
-func setupTest(t *testing.T) func() {
+func setupTest(t *testing.T, singleIndex bool) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -59,10 +78,18 @@ func setupTest(t *testing.T) func() {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
-	cache := templates.NewTemplateCache(client, 1, 0)
+	cache := templates.NewCachedInitializer(client, 1, 0)
 
 	// Instantiate a backend.
-	b = audit.NewBackend(client, cache, 10000)
+	if singleIndex {
+		b = audit.NewSingleIndexBackend(client, cache, 10000)
+		kubeIndexGetter = index.AuditLogIndex
+		eeIndexGetter = index.AuditLogIndex
+	} else {
+		b = audit.NewBackend(client, cache, 10000)
+		kubeIndexGetter = index.AuditLogKubeMultiIndex
+		eeIndexGetter = index.AuditLogEEMultiIndex
+	}
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
@@ -73,8 +100,15 @@ func setupTest(t *testing.T) func() {
 
 	// Function contains teardown logic.
 	return func() {
-		err = backendutils.CleanupIndices(context.Background(), esClient, cluster)
-		require.NoError(t, err)
+		getters := []bapi.Index{kubeIndexGetter, eeIndexGetter}
+		if singleIndex {
+			// No need to duplicate since they are the same.
+			getters = []bapi.Index{kubeIndexGetter}
+		}
+		for _, indexGetter := range getters {
+			err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+			require.NoError(t, err)
+		}
 
 		// Cancel the context
 		cancel()
@@ -83,8 +117,7 @@ func setupTest(t *testing.T) func() {
 }
 
 func TestInvalidRequests(t *testing.T) {
-	t.Run("no log type specified", func(t *testing.T) {
-		defer setupTest(t)()
+	RunAllModes(t, "no log type specified", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 		_, err := b.Create(ctx, "", clusterInfo, []v1.AuditLog{})
 		require.Error(t, err)
@@ -93,8 +126,7 @@ func TestInvalidRequests(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("unsupported log type specified", func(t *testing.T) {
-		defer setupTest(t)()
+	RunAllModes(t, "unsupported log type specified", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 		_, err := b.Create(ctx, "NotARealType", clusterInfo, []v1.AuditLog{})
 		require.Error(t, err)
@@ -106,146 +138,148 @@ func TestInvalidRequests(t *testing.T) {
 
 // TestCreateKubeAuditLog tests running a real elasticsearch query to create a kube audit log.
 func TestCreateKubeAuditLog(t *testing.T) {
-	defer setupTest(t)()
+	RunAllModes(t, "TestCreateKubeAuditLog", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
-	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		// The DaemonSet that this audit log is for.
+		ds := apps.DaemonSet{
+			TypeMeta: metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
+		}
+		dsRaw, err := json.Marshal(ds)
+		require.NoError(t, err)
 
-	// The DaemonSet that this audit log is for.
-	ds := apps.DaemonSet{
-		TypeMeta: metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
-	}
-	dsRaw, err := json.Marshal(ds)
-	require.NoError(t, err)
-
-	f := v1.AuditLog{
-		Event: kaudit.Event{
-			TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
-			AuditID:    types.UID("some-uuid-most-likely"),
-			Stage:      kaudit.StageResponseComplete,
-			Level:      kaudit.LevelRequestResponse,
-			RequestURI: "/apis/v1/namespaces",
-			Verb:       "GET",
-			User: authnv1.UserInfo{
-				Username: "user",
-				UID:      "uid",
-				Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+		f := v1.AuditLog{
+			Event: kaudit.Event{
+				TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+				AuditID:    types.UID("some-uuid-most-likely"),
+				Stage:      kaudit.StageResponseComplete,
+				Level:      kaudit.LevelRequestResponse,
+				RequestURI: "/apis/v1/namespaces",
+				Verb:       "GET",
+				User: authnv1.UserInfo{
+					Username: "user",
+					UID:      "uid",
+					Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+				},
+				ImpersonatedUser: &authnv1.UserInfo{
+					Username: "impuser",
+					UID:      "impuid",
+					Groups:   []string{"g1"},
+				},
+				SourceIPs:      []string{"1.2.3.4"},
+				UserAgent:      "user-agent",
+				ObjectRef:      &kaudit.ObjectReference{},
+				ResponseStatus: &metav1.Status{},
+				RequestObject: &runtime.Unknown{
+					Raw:         dsRaw,
+					ContentType: runtime.ContentTypeJSON,
+				},
+				ResponseObject: &runtime.Unknown{
+					Raw:         dsRaw,
+					ContentType: runtime.ContentTypeJSON,
+				},
+				RequestReceivedTimestamp: metav1.NewMicroTime(time.Now().Add(-5 * time.Second)),
+				StageTimestamp:           metav1.NewMicroTime(time.Now()),
+				Annotations:              map[string]string{"brick": "red"},
 			},
-			ImpersonatedUser: &authnv1.UserInfo{
-				Username: "impuser",
-				UID:      "impuid",
-				Groups:   []string{"g1"},
-			},
-			SourceIPs:      []string{"1.2.3.4"},
-			UserAgent:      "user-agent",
-			ObjectRef:      &kaudit.ObjectReference{},
-			ResponseStatus: &metav1.Status{},
-			RequestObject: &runtime.Unknown{
-				Raw:         dsRaw,
-				ContentType: runtime.ContentTypeJSON,
-			},
-			ResponseObject: &runtime.Unknown{
-				Raw:         dsRaw,
-				ContentType: runtime.ContentTypeJSON,
-			},
-			RequestReceivedTimestamp: metav1.NewMicroTime(time.Now().Add(-5 * time.Second)),
-			StageTimestamp:           metav1.NewMicroTime(time.Now()),
-			Annotations:              map[string]string{"brick": "red"},
-		},
-		Name: testutils.StringPtr("any"),
-	}
+			Name: testutils.StringPtr("any"),
+		}
 
-	// Create the event in ES.
-	resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []v1.AuditLog{f})
-	require.NoError(t, err)
-	require.Equal(t, 0, len(resp.Errors))
+		// Create the event in ES.
+		resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []v1.AuditLog{f})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
 
-	// Refresh the index.
-	err = backendutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_audit_kube.%s.*", clusterInfo.Cluster))
-	require.NoError(t, err)
+		// Refresh the index.
+		err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
+		require.NoError(t, err)
 
-	// List the event, assert that it matches the one we just wrote.
-	results, err := b.List(ctx, clusterInfo, &v1.AuditLogParams{Type: v1.AuditLogTypeKube})
-	require.NoError(t, err)
-	require.Equal(t, 1, len(results.Items))
+		// List the event, assert that it matches the one we just wrote.
+		results, err := b.List(ctx, clusterInfo, &v1.AuditLogParams{Type: v1.AuditLogTypeKube})
+		require.NoError(t, err)
+		require.Equal(t, 1, len(results.Items))
 
-	// MicroTime doesn't JSON serialize and deserialize properly, so we need to force the results to
-	// match here. When you serialize and deserialize a MicroTime, the microsecond precision is lost
-	// and so the resulting objects do not match.
-	f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
-	f.StageTimestamp = results.Items[0].StageTimestamp
-	require.Equal(t, f, results.Items[0])
+		// MicroTime doesn't JSON serialize and deserialize properly, so we need to force the results to
+		// match here. When you serialize and deserialize a MicroTime, the microsecond precision is lost
+		// and so the resulting objects do not match.
+		f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
+		f.StageTimestamp = results.Items[0].StageTimestamp
+
+		// require.Equal(t, string(f.RequestObject.Raw), string(results.Items[0].RequestObject.Raw))
+		require.Equal(t, f, results.Items[0])
+	})
 }
 
 // TestCreateEEAuditLog tests running a real elasticsearch query to create a EE audit log.
 func TestCreateEEAuditLog(t *testing.T) {
-	defer setupTest(t)()
+	RunAllModes(t, "TestCreateEEAuditLog", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
-	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		// The NetworkSet that this audit log is for.
+		obj := v3.GlobalNetworkSet{
+			TypeMeta: metav1.TypeMeta{Kind: "GlobalNetworkSet", APIVersion: "projectcalico.org/v3"},
+		}
+		objRaw, err := json.Marshal(obj)
+		require.NoError(t, err)
 
-	// The NetworkSet that this audit log is for.
-	obj := v3.GlobalNetworkSet{
-		TypeMeta: metav1.TypeMeta{Kind: "GlobalNetworkSet", APIVersion: "projectcalico.org/v3"},
-	}
-	objRaw, err := json.Marshal(obj)
-	require.NoError(t, err)
-
-	f := v1.AuditLog{
-		Event: kaudit.Event{
-			TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
-			AuditID:    types.UID("some-uuid-most-likely"),
-			Stage:      kaudit.StageResponseComplete,
-			Level:      kaudit.LevelRequestResponse,
-			RequestURI: "/apis/v3/projectcalico.org",
-			Verb:       "PUT",
-			User: authnv1.UserInfo{
-				Username: "user",
-				UID:      "uid",
-				Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+		f := v1.AuditLog{
+			Event: kaudit.Event{
+				TypeMeta:   metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+				AuditID:    types.UID("some-uuid-most-likely"),
+				Stage:      kaudit.StageResponseComplete,
+				Level:      kaudit.LevelRequestResponse,
+				RequestURI: "/apis/v3/projectcalico.org",
+				Verb:       "PUT",
+				User: authnv1.UserInfo{
+					Username: "user",
+					UID:      "uid",
+					Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+				},
+				ImpersonatedUser: &authnv1.UserInfo{
+					Username: "impuser",
+					UID:      "impuid",
+					Groups:   []string{"g1"},
+				},
+				SourceIPs:      []string{"1.2.3.4"},
+				UserAgent:      "user-agent",
+				ObjectRef:      &kaudit.ObjectReference{},
+				ResponseStatus: &metav1.Status{},
+				RequestObject: &runtime.Unknown{
+					Raw:         objRaw,
+					ContentType: runtime.ContentTypeJSON,
+				},
+				ResponseObject: &runtime.Unknown{
+					Raw:         objRaw,
+					ContentType: runtime.ContentTypeJSON,
+				},
+				RequestReceivedTimestamp: metav1.NewMicroTime(time.Now().Add(-5 * time.Second)),
+				StageTimestamp:           metav1.NewMicroTime(time.Now()),
+				Annotations:              map[string]string{"brick": "red"},
 			},
-			ImpersonatedUser: &authnv1.UserInfo{
-				Username: "impuser",
-				UID:      "impuid",
-				Groups:   []string{"g1"},
-			},
-			SourceIPs:      []string{"1.2.3.4"},
-			UserAgent:      "user-agent",
-			ObjectRef:      &kaudit.ObjectReference{},
-			ResponseStatus: &metav1.Status{},
-			RequestObject: &runtime.Unknown{
-				Raw:         objRaw,
-				ContentType: runtime.ContentTypeJSON,
-			},
-			ResponseObject: &runtime.Unknown{
-				Raw:         objRaw,
-				ContentType: runtime.ContentTypeJSON,
-			},
-			RequestReceivedTimestamp: metav1.NewMicroTime(time.Now().Add(-5 * time.Second)),
-			StageTimestamp:           metav1.NewMicroTime(time.Now()),
-			Annotations:              map[string]string{"brick": "red"},
-		},
-		Name: testutils.StringPtr("ee-any"),
-	}
+			Name: testutils.StringPtr("ee-any"),
+		}
 
-	// Create the event in ES.
-	resp, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []v1.AuditLog{f})
-	require.NoError(t, err)
-	require.Equal(t, 0, len(resp.Errors))
+		// Create the event in ES.
+		resp, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []v1.AuditLog{f})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
 
-	// Refresh the index.
-	err = backendutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_audit_ee.%s.*", clusterInfo.Cluster))
-	require.NoError(t, err)
+		// Refresh the index.
+		err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
+		require.NoError(t, err)
 
-	// List the event, assert that it matches the one we just wrote.
-	results, err := b.List(ctx, clusterInfo, &v1.AuditLogParams{Type: v1.AuditLogTypeEE})
-	require.NoError(t, err)
-	require.Equal(t, 1, len(results.Items))
+		// List the event, assert that it matches the one we just wrote.
+		results, err := b.List(ctx, clusterInfo, &v1.AuditLogParams{Type: v1.AuditLogTypeEE})
+		require.NoError(t, err)
+		require.Equal(t, 1, len(results.Items))
 
-	// MicroTime doesn't JSON serialize and deserialize properly, so we need to force the results to
-	// match here. When you serialize and deserialize a MicroTime, the microsecond precision is lost
-	// and so the resulting objects do not match.
-	f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
-	f.StageTimestamp = results.Items[0].StageTimestamp
-	require.Equal(t, f, results.Items[0])
+		// MicroTime doesn't JSON serialize and deserialize properly, so we need to force the results to
+		// match here. When you serialize and deserialize a MicroTime, the microsecond precision is lost
+		// and so the resulting objects do not match.
+		f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
+		f.StageTimestamp = results.Items[0].StageTimestamp
+		require.Equal(t, f, results.Items[0])
+	})
 }
 
 func TestAuditLogFiltering(t *testing.T) {
@@ -434,7 +468,7 @@ func TestAuditLogFiltering(t *testing.T) {
 			ExpectKube: true,
 		},
 		{
-			Name: "should support queries that don't include a time range",
+			Name: "should support queries that have no time range",
 			Params: v1.AuditLogParams{
 				Type: v1.AuditLogTypeAny,
 			},
@@ -494,9 +528,7 @@ func TestAuditLogFiltering(t *testing.T) {
 			// different filtering parameters provided in the params
 			// to query one or more audit logs.
 			name := fmt.Sprintf("%s (tenant=%s)", testcase.Name, tenant)
-			t.Run(name, func(t *testing.T) {
-				defer setupTest(t)()
-
+			RunAllModes(t, name, func(t *testing.T) {
 				clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 				// Time that the logs occur.
@@ -675,7 +707,9 @@ func TestAuditLogFiltering(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, 0, len(resp.Errors))
 
-				err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_audit_*")
+				err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
+				require.NoError(t, err)
+				err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
 				require.NoError(t, err)
 
 				// Query for audit logs.
@@ -717,8 +751,7 @@ func TestAuditLogFiltering(t *testing.T) {
 func TestAggregations(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
-		t.Run(fmt.Sprintf("should return time-series audit log aggregation results (tenant=%s)", tenant), func(t *testing.T) {
-			defer setupTest(t)()
+		RunAllModes(t, fmt.Sprintf("should return time-series audit log aggregation results (tenant=%s)", tenant), func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 			// Start the test numLogs minutes in the past.
@@ -772,7 +805,9 @@ func TestAggregations(t *testing.T) {
 			require.Empty(t, resp.Errors)
 
 			// Refresh.
-			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_audit_*")
+			err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+			err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			params := v1.AuditLogAggregationParams{}
@@ -815,8 +850,7 @@ func TestAggregations(t *testing.T) {
 			}
 		})
 
-		t.Run(fmt.Sprintf("should return aggregate stats (tenant=%s)", tenant), func(t *testing.T) {
-			defer setupTest(t)()
+		RunAllModes(t, fmt.Sprintf("should return aggregate stats (tenant=%s)", tenant), func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 			// Start the test numLogs minutes in the past.
@@ -870,7 +904,9 @@ func TestAggregations(t *testing.T) {
 			require.Empty(t, resp.Errors)
 
 			// Refresh.
-			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_audit_*")
+			err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+			err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			params := v1.AuditLogAggregationParams{}
@@ -903,9 +939,7 @@ func TestAggregations(t *testing.T) {
 }
 
 func TestSorting(t *testing.T) {
-	t.Run("should respect sorting", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "should respect sorting", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 		t1 := time.Unix(100, 0)
@@ -975,8 +1009,9 @@ func TestSorting(t *testing.T) {
 		require.Equal(t, []v1.BulkError(nil), response.Errors)
 		require.Equal(t, 0, response.Failed)
 
-		index := "tigera_secure_ee_audit_*"
-		err = backendutils.RefreshIndex(ctx, client, index)
+		err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
+		require.NoError(t, err)
+		err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
 		require.NoError(t, err)
 
 		// Query for logs without sorting.

@@ -27,11 +27,12 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 	name1 := "cluster-1"
 	name2 := "cluster-2"
 	invalidClusterName := "cluster"
+	clusterNamespace := ""
 	spec1 := apiv3.ManagedClusterSpec{}
 	spec2 := apiv3.ManagedClusterSpec{}
 
 	DescribeTable("ManagedCluster e2e CRUD tests",
-		func(name1, name2 string, spec1, spec2 apiv3.ManagedClusterSpec) {
+		func(name1, name2, clusterNamespace string, spec1, spec2 apiv3.ManagedClusterSpec) {
 			c, err := clientv3.New(config)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -52,7 +53,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			// ----------------------------------------------------------------------------------------------------
 			By("Attempting to create a new ManagedCluster with name1/spec1 and a non-empty ResourceVersion")
 			_, outError = c.ManagedClusters().Create(ctx, &apiv3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "12345"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, Namespace: clusterNamespace, ResourceVersion: "12345"},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -61,11 +62,12 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			// ----------------------------------------------------------------------------------------------------
 			By("Creating a new ManagedCluster with name1/spec1")
 			res1, outError := c.ManagedClusters().Create(ctx, &apiv3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: name1},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, Namespace: clusterNamespace},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res1).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name1, spec1))
+			//fmt.Println("vakumar-res1 eq %s")
+			Expect(res1).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name1, spec1))
 
 			// Track the version of the original data for name1.
 			rv1_1 := res1.ResourceVersion
@@ -73,7 +75,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			// ----------------------------------------------------------------------------------------------------
 			By("Attempting to create the same ManagedCluster with name1 but with spec2")
 			_, outError = c.ManagedClusters().Create(ctx, &apiv3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: name1},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, Namespace: clusterNamespace},
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -81,14 +83,14 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Getting ManagedCluster (name1) and comparing the output against spec1")
-			res, outError := c.ManagedClusters().Get(ctx, name1, options.GetOptions{})
+			res, outError := c.ManagedClusters().Get(ctx, clusterNamespace, name1, options.GetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name1, spec1))
+			Expect(res).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name1, spec1))
 			Expect(res.ResourceVersion).To(Equal(res1.ResourceVersion))
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Getting ManagedCluster (name2) before it is created")
-			_, outError = c.ManagedClusters().Get(ctx, name2, options.GetOptions{})
+			_, outError = c.ManagedClusters().Get(ctx, clusterNamespace, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource does not exist: ManagedCluster(%s)", name2)))
 
@@ -102,7 +104,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			// ----------------------------------------------------------------------------------------------------
 			By("Creating a new ManagedCluster with name2/spec2")
 			res2, outError := c.ManagedClusters().Create(ctx, &apiv3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: name2},
+				ObjectMeta: metav1.ObjectMeta{Name: name2, Namespace: clusterNamespace},
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
@@ -110,30 +112,30 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Getting ManagedCluster (name2) and comparing the output against spec2")
-			res, outError = c.ManagedClusters().Get(ctx, name2, options.GetOptions{})
+			res, outError = c.ManagedClusters().Get(ctx, clusterNamespace, name2, options.GetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(res2).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name2, spec2))
 			Expect(res.ResourceVersion).To(Equal(res2.ResourceVersion))
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Listing all the ManagedClusters, expecting a two results with name1/spec1 and name2/spec2")
-			outList, outError = c.ManagedClusters().List(ctx, options.ListOptions{})
+			outList, outError = c.ManagedClusters().List(ctx, options.ListOptions{Namespace: clusterNamespace})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(2))
-			Expect(&outList.Items[0]).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name1, spec1))
-			Expect(&outList.Items[1]).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name2, spec2))
+			Expect(&outList.Items[0]).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name1, spec1))
+			Expect(&outList.Items[1]).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name2, spec2))
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Updating ManagedCluster name1 with spec2")
 			res1.Spec = spec2
 			res1, outError = c.ManagedClusters().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res1).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name1, spec2))
+			Expect(res1).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name1, spec2))
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Attempting to update the ManagedCluster without a Creation Timestamp")
 			res, outError = c.ManagedClusters().Update(ctx, &apiv3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: "test-fail-managedcluster"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, Namespace: clusterNamespace, ResourceVersion: "1234", UID: "test-fail-managedcluster"},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -143,7 +145,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			// ----------------------------------------------------------------------------------------------------
 			By("Attempting to update the ManagedCluster without a UID")
 			res, outError = c.ManagedClusters().Update(ctx, &apiv3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now()},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, Namespace: clusterNamespace, ResourceVersion: "1234", CreationTimestamp: metav1.Now()},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -173,17 +175,17 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Getting ManagedCluster (name1) with the original resource version and comparing the output against spec1")
-				res, outError = c.ManagedClusters().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_1})
+				res, outError = c.ManagedClusters().Get(ctx, clusterNamespace, name1, options.GetOptions{ResourceVersion: rv1_1})
 				Expect(outError).NotTo(HaveOccurred())
-				Expect(res).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name1, spec1))
+				Expect(res).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name1, spec1))
 				Expect(res.ResourceVersion).To(Equal(rv1_1))
 			}
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Getting ManagedCluster (name1) with the updated resource version and comparing the output against spec2")
-			res, outError = c.ManagedClusters().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_2})
+			res, outError = c.ManagedClusters().Get(ctx, clusterNamespace, name1, options.GetOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name1, spec2))
+			Expect(res).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name1, spec2))
 			Expect(res.ResourceVersion).To(Equal(rv1_2))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
@@ -191,51 +193,51 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 				outList, outError = c.ManagedClusters().List(ctx, options.ListOptions{ResourceVersion: rv1_1})
 				Expect(outError).NotTo(HaveOccurred())
 				Expect(outList.Items).To(HaveLen(1))
-				Expect(&outList.Items[0]).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name1, spec1))
+				Expect(&outList.Items[0]).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name1, spec1))
 			}
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Listing ManagedClusters with the latest resource version and checking for two results with name1/spec2 and name2/spec2")
-			outList, outError = c.ManagedClusters().List(ctx, options.ListOptions{})
+			outList, outError = c.ManagedClusters().List(ctx, options.ListOptions{Namespace: clusterNamespace})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(2))
-			Expect(&outList.Items[0]).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name1, spec2))
-			Expect(&outList.Items[1]).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name2, spec2))
+			Expect(&outList.Items[0]).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name1, spec2))
+			Expect(&outList.Items[1]).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name2, spec2))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Deleting ManagedCluster (name1) with the old resource version")
-				_, outError = c.ManagedClusters().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_1})
+				_, outError = c.ManagedClusters().Delete(ctx, clusterNamespace, name1, options.DeleteOptions{ResourceVersion: rv1_1})
 				Expect(outError).To(HaveOccurred())
 				Expect(outError.Error()).To(Equal("update conflict: ManagedCluster(" + name1 + ")"))
 			}
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Deleting ManagedCluster (name1) with the new resource version")
-			dres, outError := c.ManagedClusters().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
+			dres, outError := c.ManagedClusters().Delete(ctx, clusterNamespace, name1, options.DeleteOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(dres).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name1, spec2))
+			Expect(dres).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name1, spec2))
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Attempting to delete ManagedCluster (name2) again")
-			dres, outError = c.ManagedClusters().Delete(ctx, name2, options.DeleteOptions{})
+			dres, outError = c.ManagedClusters().Delete(ctx, clusterNamespace, name2, options.DeleteOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(dres).To(MatchResource(apiv3.KindManagedCluster, testutils.ExpectNoNamespace, name2, spec2))
+			Expect(dres).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name2, spec2))
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Listing all ManagedClusters and expecting no items")
-			outList, outError = c.ManagedClusters().List(ctx, options.ListOptions{})
+			outList, outError = c.ManagedClusters().List(ctx, options.ListOptions{Namespace: clusterNamespace})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(0))
 
 			// ----------------------------------------------------------------------------------------------------
 			By("Getting ManagedCluster (name2) and expecting an error")
-			_, outError = c.ManagedClusters().Get(ctx, name2, options.GetOptions{})
+			_, outError = c.ManagedClusters().Get(ctx, clusterNamespace, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(ContainSubstring("resource does not exist: ManagedCluster(" + name2 + ")"))
 		},
 
 		// Pass two fully populated ManagedClusterSpec instances and expect the series of operations to succeed
-		Entry("Fully populated ManagedClusterSpec instances", name1, name2, spec1, spec2),
+		Entry("Fully populated ManagedClusterSpec instances", name1, name2, "", spec1, spec2),
 	)
 
 	Describe("ManagedCluster Create/Update", func() {
@@ -244,7 +246,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			Expect(err).NotTo(HaveOccurred())
 
 			_, outError := c.ManagedClusters().Create(ctx, &apiv3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: invalidClusterName, ResourceVersion: "12345"},
+				ObjectMeta: metav1.ObjectMeta{Name: invalidClusterName, Namespace: clusterNamespace, ResourceVersion: "12345"},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -257,7 +259,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			Expect(err).NotTo(HaveOccurred())
 
 			_, outError := c.ManagedClusters().Create(ctx, &apiv3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "any"},
+				ObjectMeta: metav1.ObjectMeta{Name: "any", Namespace: clusterNamespace},
 				Spec: apiv3.ManagedClusterSpec{
 					InstallationManifest: "bogus",
 				},
@@ -271,12 +273,12 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			Expect(err).NotTo(HaveOccurred())
 
 			_, outError := c.ManagedClusters().Create(ctx, &apiv3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "any"},
+				ObjectMeta: metav1.ObjectMeta{Name: "any", Namespace: clusterNamespace},
 			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 
 			_, outError = c.ManagedClusters().Update(ctx, &apiv3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "any"},
+				ObjectMeta: metav1.ObjectMeta{Name: "any", Namespace: clusterNamespace},
 				Spec: apiv3.ManagedClusterSpec{
 					InstallationManifest: "bogus",
 				},
@@ -296,7 +298,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			be.Clean()
 
 			By("Listing ManagedClusters with the latest resource version before creating any instances")
-			outList, outError := c.ManagedClusters().List(ctx, options.ListOptions{})
+			outList, outError := c.ManagedClusters().List(ctx, options.ListOptions{Namespace: clusterNamespace})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(0))
 			rev0 := outList.ResourceVersion
@@ -305,7 +307,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			outRes1, err := c.ManagedClusters().Create(
 				ctx,
 				&apiv3.ManagedCluster{
-					ObjectMeta: metav1.ObjectMeta{Name: name1},
+					ObjectMeta: metav1.ObjectMeta{Name: name1, Namespace: clusterNamespace},
 					Spec:       spec1,
 				},
 				options.SetOptions{},
@@ -317,7 +319,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			outRes2, err := c.ManagedClusters().Create(
 				ctx,
 				&apiv3.ManagedCluster{
-					ObjectMeta: metav1.ObjectMeta{Name: name2},
+					ObjectMeta: metav1.ObjectMeta{Name: name2, Namespace: clusterNamespace},
 					Spec:       spec2,
 				},
 				options.SetOptions{},
@@ -331,7 +333,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			defer testWatcher1.Stop()
 
 			By("Deleting res1")
-			_, err = c.ManagedClusters().Delete(ctx, name1, options.DeleteOptions{})
+			_, err = c.ManagedClusters().Delete(ctx, clusterNamespace, name1, options.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Checking for two events, create res2 and delete re1")
@@ -392,7 +394,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			// Only etcdv3 supports watching a specific instance of a resource.
 			if config.Spec.DatastoreType == apiconfig.EtcdV3 {
 				By("Starting a watcher from rev0 watching name1 - this should get all events for name1")
-				w, err = c.ManagedClusters().Watch(ctx, options.ListOptions{Name: name1, ResourceVersion: rev0})
+				w, err = c.ManagedClusters().Watch(ctx, options.ListOptions{Name: name1, Namespace: clusterNamespace, ResourceVersion: rev0})
 				Expect(err).NotTo(HaveOccurred())
 				testWatcher2_1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 				defer testWatcher2_1.Stop()
@@ -426,14 +428,14 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			outRes1, err = c.ManagedClusters().Create(
 				ctx,
 				&apiv3.ManagedCluster{
-					ObjectMeta: metav1.ObjectMeta{Name: name1},
+					ObjectMeta: metav1.ObjectMeta{Name: name1, Namespace: clusterNamespace},
 					Spec:       spec1,
 				},
 				options.SetOptions{},
 			)
 
 			By("Starting a watcher not specifying a rev - expect the current snapshot")
-			w, err = c.ManagedClusters().Watch(ctx, options.ListOptions{})
+			w, err = c.ManagedClusters().Watch(ctx, options.ListOptions{Namespace: clusterNamespace})
 			Expect(err).NotTo(HaveOccurred())
 			testWatcher4 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher4.Stop()

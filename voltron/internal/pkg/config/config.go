@@ -6,7 +6,11 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/kelseyhightower/envconfig"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/voltron/pkg/version"
 )
@@ -138,6 +142,10 @@ type Config struct {
 	HTTPAccessLoggingIncludeAuthGroups bool `default:"false" split_words:"true"`
 
 	MetricsEnabled bool `default:"false" split_words:"true"`
+
+	// TenantNamespace is the namespace for the tenant specified in the TenantID field. If set, Voltron will use this namespace to query per-tenant
+	// information such as ManagedClusters. If unset, and a tenant ID is provided, it will be defaulted based on an auto-detected namespace.
+	TenantNamespace string `envconfig:"TENANT_NAMESPACE" default:""`
 }
 
 func (cfg Config) String() string {
@@ -155,4 +163,19 @@ func (cfg Config) String() string {
 		return "{}"
 	}
 	return string(data)
+}
+
+func Parse() (*Config, error) {
+	config := Config{}
+	if err := envconfig.Process(EnvConfigPrefix, &config); err != nil {
+		return nil, err
+	}
+	if len(config.TenantID) > 0 && config.TenantNamespace == "" {
+		ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+		if err != nil {
+			logrus.WithError(err).Fatal("unable to get the tenant namespace: %w", err)
+		}
+		config.TenantNamespace = strings.TrimSpace(string(ns))
+	}
+	return &config, nil
 }

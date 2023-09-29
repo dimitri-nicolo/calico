@@ -10,25 +10,42 @@ import (
 	"github.com/olivere/elastic/v7"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
-const esL7LogsIndexPrefix = "tigera_secure_ee_l7"
-
 // l7LogsIndexHelper implements the Helper interface for l7 logs.
-type l7LogsIndexHelper struct{}
+type l7LogsIndexHelper struct {
+	singleIndex bool
+}
 
-// L7Logs returns an instance of the l7 logs index helper.
-func L7Logs() Helper {
+func MultiIndexL7Logs() Helper {
 	return l7LogsIndexHelper{}
+}
+
+func SingleIndexL7Logs() Helper {
+	return l7LogsIndexHelper{
+		singleIndex: true,
+	}
 }
 
 // NewL7LogsConverter returns a Converter instance defined for l7 logs.
 func NewL7LogsConverter() converter {
 	return converter{basicAtomToElastic}
+}
+
+func (h l7LogsIndexHelper) BaseQuery(i bapi.ClusterInfo) *elastic.BoolQuery {
+	q := elastic.NewBoolQuery()
+	if h.singleIndex {
+		q.Must(elastic.NewTermQuery("cluster", i.Cluster))
+		if i.Tenant != "" {
+			q.Must(elastic.NewTermQuery("tenant", i.Tenant))
+		}
+	}
+	return q
 }
 
 func (h l7LogsIndexHelper) NewSelectorQuery(selector string) (elastic.Query, error) {
@@ -158,8 +175,4 @@ func (h l7LogsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query {
 
 func (h l7LogsIndexHelper) GetTimeField() string {
 	return "end_time"
-}
-
-func (h l7LogsIndexHelper) GetIndex(cluster string) string {
-	return fmt.Sprintf("%s.%s.*", esL7LogsIndexPrefix, cluster)
 }

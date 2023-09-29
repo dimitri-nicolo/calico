@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	log "github.com/sirupsen/logrus"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -16,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/maputil"
@@ -42,8 +45,11 @@ type adJobTrainingReconciler struct {
 	managementClusterName string
 	tenantID              string
 
-	k8sClient                  kubernetes.Interface
-	calicoCLI                  calicoclient.Interface
+	kubeClientSet   kubernetes.Interface
+	calicoClientSet calicoclient.Interface
+
+	client ctrlclient.WithWatch
+
 	podTemplateQuery           podtemplate.ADPodTemplateQuery
 	trainingCycleResourceCache rcache.ResourceCache
 
@@ -52,6 +58,7 @@ type adJobTrainingReconciler struct {
 	// key: tenant_id.cluster_name
 	trainingDetectorsPerCluster map[string]trainingCycleStatePerCluster
 	trainingJobsMutex           sync.Mutex
+	tenantNamespace             string
 }
 
 type trainingCycleStatePerCluster struct {
@@ -67,7 +74,7 @@ func (r *adJobTrainingReconciler) listTrainingCronJobs() (map[string]interface{}
 	trainingCronJobs := make(map[string]interface{})
 	trainingJobLabelByteStr := maputil.CreateLabelValuePairStr(TrainingCycleLabels())
 
-	trainingCronJobList, err := r.k8sClient.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx,
+	trainingCronJobList, err := r.kubeClientSet.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx,
 		metav1.ListOptions{
 			LabelSelector: trainingJobLabelByteStr,
 		})
@@ -138,7 +145,8 @@ func (r *adJobTrainingReconciler) reconcile() bool {
 	if trainingCronJobStaterForCluster.ClusterName != r.managementClusterName {
 		clusterNameToQuery := trainingCronJobStaterForCluster.ClusterName
 
-		managedCluster, err := r.calicoCLI.ProjectcalicoV3().ManagedClusters().Get(context.Background(), clusterNameToQuery, metav1.GetOptions{})
+		managedCluster := &v3.ManagedCluster{}
+		err := r.client.Get(context.Background(), types.NamespacedName{Name: clusterNameToQuery, Namespace: r.tenantNamespace}, managedCluster)
 		if err != nil && !k8serrors.IsNotFound(err) {
 			log.Errorf("unable to query for required managed cluster info for %s",
 				trainingCronJobNameKey)
@@ -160,7 +168,7 @@ func (r *adJobTrainingReconciler) reconcile() bool {
 		// reconciler's training state map
 		log.Infof("Deleting training cronJob job for %s", trainingCronJobNameKey)
 
-		err := util.DeleteCronJobWithRetry(r.managementClusterCtx, r.k8sClient, r.namespace,
+		err := util.DeleteCronJobWithRetry(r.managementClusterCtx, r.kubeClientSet, r.namespace,
 			trainingCronJobNameKey)
 
 		if err != nil && !k8serrors.IsNotFound(err) { // do not report error if it's not found as it is already deleted
@@ -179,7 +187,7 @@ func (r *adJobTrainingReconciler) reconcile() bool {
 		return true
 	}
 
-	deployedTrainingCronJob, err := r.k8sClient.BatchV1().CronJobs(trainingCronJobStaterForCluster.CronJob.Namespace).
+	deployedTrainingCronJob, err := r.kubeClientSet.BatchV1().CronJobs(trainingCronJobStaterForCluster.CronJob.Namespace).
 		Get(r.managementClusterCtx, trainingCronJobStaterForCluster.CronJob.Name, metav1.GetOptions{})
 
 	if err != nil && !k8serrors.IsNotFound(err) {
@@ -195,7 +203,7 @@ func (r *adJobTrainingReconciler) reconcile() bool {
 		util.EmptyCronJobResourceValues(trainingCronJobStaterForCluster.CronJob)
 
 		// restore deleted cronJob for the cluster
-		createdTrainingCycle, err := r.k8sClient.BatchV1().CronJobs(trainingCronJobStaterForCluster.CronJob.Namespace).
+		createdTrainingCycle, err := r.kubeClientSet.BatchV1().CronJobs(trainingCronJobStaterForCluster.CronJob.Namespace).
 			Create(r.managementClusterCtx,
 				trainingCronJobStaterForCluster.CronJob, metav1.CreateOptions{})
 
@@ -223,7 +231,7 @@ func (r *adJobTrainingReconciler) reconcile() bool {
 	log.Infof("Updating training cronJob job %s", trainingCronJobStaterForCluster.CronJob.Name)
 
 	// restore the altered cronjob for the cluster
-	updatedTrainingCronJob, err := r.k8sClient.BatchV1().CronJobs(trainingCronJobStaterForCluster.CronJob.Namespace).
+	updatedTrainingCronJob, err := r.kubeClientSet.BatchV1().CronJobs(trainingCronJobStaterForCluster.CronJob.Namespace).
 		Update(r.managementClusterCtx,
 			trainingCronJobStaterForCluster.CronJob, metav1.UpdateOptions{})
 
@@ -331,7 +339,7 @@ func (r *adJobTrainingReconciler) runInitialTrainingJob(mcs TrainingDetectorsReq
 		}
 
 		// Create an initial training job.
-		_, err = r.k8sClient.BatchV1().Jobs(r.namespace).
+		_, err = r.kubeClientSet.BatchV1().Jobs(r.namespace).
 			Create(r.managementClusterCtx, adInitialTrainingJob, metav1.CreateOptions{})
 		if err != nil {
 			log.WithError(err).
@@ -429,7 +437,7 @@ func (r *adJobTrainingReconciler) createInitialTrainingJobForCluster(
 	clusterName string, cronJobName string, adTrainingJobPT v1.PodTemplate,
 ) (*batchv1.Job, error) {
 	trainingLabels := TrainingJobLabels()
-	trainingLabels[ClusterKey] = util.Unify(r.tenantID, clusterName)
+	trainingLabels[clusterKey] = util.Unify(r.tenantID, clusterName)
 
 	// Restart policy set to 'Never' and a backoffLimit of zero means that in the event that it
 	// results in an error, the initial training job would not be put in a crashloop since we have the
@@ -441,7 +449,7 @@ func (r *adJobTrainingReconciler) createInitialTrainingJobForCluster(
 		cronJobName, r.namespace, trainingLabels, adTrainingJobPT, &backoffLimit)
 
 	// Attach this IDS controller as owner
-	intrusionDetectionDeployment, err := r.k8sClient.AppsV1().Deployments(r.namespace).
+	intrusionDetectionDeployment, err := r.kubeClientSet.AppsV1().Deployments(r.namespace).
 		Get(r.managementClusterCtx, ADJobOwnerLabelValue, metav1.GetOptions{})
 
 	if err != nil {
@@ -468,7 +476,7 @@ func (r *adJobTrainingReconciler) createTrainingCronJobForCluster(clusterName st
 		DefaultADDetectorTrainingSchedule, trainingCronLabels, adTrainingJobPT)
 
 	// attach this IDS controller as owner
-	intrusionDetectionDeployment, err := r.k8sClient.AppsV1().Deployments(r.namespace).Get(r.managementClusterCtx, ADJobOwnerLabelValue,
+	intrusionDetectionDeployment, err := r.kubeClientSet.AppsV1().Deployments(r.namespace).Get(r.managementClusterCtx, ADJobOwnerLabelValue,
 		metav1.GetOptions{})
 
 	if err != nil {

@@ -1,0 +1,18 @@
+// Copyright {{now | date "2006"}} Tigera. All rights reserved.
+
+package testutils
+
+import (
+	"bytes"
+	"net/http"
+)
+
+func Request(method string, url string, headers map[string]string, body []byte) *http.Request {
+	req, _ := http.NewRequest(method, url, bytes.NewReader(body))
+
+	for k, v := range headers {
+		req.Header.Add(k, v)
+	}
+
+	return req
+}

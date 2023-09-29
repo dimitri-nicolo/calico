@@ -173,9 +173,9 @@ define build_static_cgo_boring_binary
         sh -c '$(GIT_CONFIG_SSH) \
             GOEXPERIMENT=boringcrypto go build -o $(2)  \
             -tags fipsstrict,osusergo,netgo$(if $(BUILD_TAGS),$(comma)$(BUILD_TAGS)) -v -buildvcs=false \
-            -ldflags "$(LDFLAGS) -linkmode external -extldflags -static" \
+            -ldflags "$(LDFLAGS) -s -w -linkmode external -extldflags -static" \
             $(1) \
-            && go tool nm $(2) | grep '_Cfunc__goboringcrypto_' 1> /dev/null'
+            && strings $(2) | grep '_Cfunc__goboringcrypto_' 1>/dev/null'
 endef
 
 # Build a binary with boring crypto support.
@@ -194,9 +194,9 @@ define build_cgo_boring_binary
         sh -c '$(GIT_CONFIG_SSH) \
             GOEXPERIMENT=boringcrypto go build -o $(2)  \
             -tags fipsstrict$(if $(BUILD_TAGS),$(comma)$(BUILD_TAGS)) -v -buildvcs=false \
-            -ldflags "$(LDFLAGS)" \
+            -ldflags "$(LDFLAGS) -s -w" \
             $(1) \
-            && go tool nm $(2) | grep '_Cfunc__goboringcrypto_' 1> /dev/null'
+            && strings $(2) | grep '_Cfunc__goboringcrypto_' 1>/dev/null'
 endef
 
 # Use this when building binaries that need cgo, but have no crypto and therefore would not contain any boring symbols.
@@ -209,18 +209,20 @@ define build_cgo_binary
         sh -c '$(GIT_CONFIG_SSH) \
             go build -o $(2)  \
             -v -buildvcs=false \
-            -ldflags "$(LDFLAGS)" \
+            -ldflags "$(LDFLAGS) -s -w" \
             $(1)'
 endef
 
 # For binaries that do not require boring crypto.
 define build_binary
-	$(DOCKER_RUN) $(GO_BUILD_IMAGE):$(GO_BUILD_VER) \
-		sh -c '$(GIT_CONFIG_SSH) \
-		go build -o $(2)  \
-		-v -buildvcs=false \
-		-ldflags "$(LDFLAGS)" \
-		$(1)'
+    $(DOCKER_RUN) \
+        -e CGO_ENABLED=0 \
+        $(GO_BUILD_IMAGE):$(GO_BUILD_VER) \
+        sh -c '$(GIT_CONFIG_SSH) \
+            go build -o $(2)  \
+            -v -buildvcs=false \
+            -ldflags "$(LDFLAGS) -s -w" \
+            $(1)'
 endef
 
 # Images used in build / test across multiple directories.
@@ -321,6 +323,8 @@ DOCKER_RUN := mkdir -p ../.go-pkg-cache bin $(GOMOD_CACHE) && \
 		-e OS=$(BUILDOS) \
 		-e GOOS=$(BUILDOS) \
 		-e GOFLAGS=$(GOFLAGS) \
+		-e ACK_GINKGO_DEPRECATIONS=1.16.5 \
+		-e ACK_GINKGO_RC=true \
 		-v $(REPO_ROOT):/go/src/github.com/projectcalico/calico:rw \
 		-v $(REPO_ROOT)/.go-pkg-cache:/go-cache:rw \
 		-w /go/src/$(PACKAGE_NAME)
@@ -477,8 +481,13 @@ git-commit:
 # different implementation.
 ###############################################################################
 
+ifdef LOCAL_CRANE
+CRANE_CMD         = bash -c $(double_quote)crane
+else
 CRANE_CMD         = docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c \
                     $(double_quote)crane
+endif
+
 GIT_CMD           = git
 DOCKER_CMD        = docker
 

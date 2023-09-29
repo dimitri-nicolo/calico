@@ -5,15 +5,15 @@ package managedcluster
 import (
 	"context"
 
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
 	log "github.com/sirupsen/logrus"
 
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 
 	linseed "github.com/projectcalico/calico/linseed/pkg/client"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
@@ -27,10 +27,11 @@ import (
 )
 
 type managedClusterReconciler struct {
-	managementStandaloneCalico calicoclient.ProjectcalicoV3Interface
-	clientFactory              lmak8s.ClientSetFactory
-	linseed                    linseed.Client
-	cache                      map[string]*managedClusterState
+	client           ctrlclient.WithWatch
+	clientSetFactory lmak8s.ClientSetFactory
+	linseedClient    linseed.Client
+	cache            map[string]*managedClusterState
+	TenantNamespace  string
 }
 
 type managedClusterState struct {
@@ -44,11 +45,9 @@ type managedClusterState struct {
 // resources only on their assigned ManagedClusters.  All connections opened by the Controllers for the ManagedCluster
 // will go through the Voltron - Guardian tunnel.
 func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName) error {
-	mc, err := r.managementStandaloneCalico.ManagedClusters().Get(context.Background(), namespacedName.Name, metav1.GetOptions{})
-	if err != nil && !k8serrors.IsNotFound(err) {
-		return err
-	}
 
+	mc := &v3.ManagedCluster{}
+	err := r.client.Get(context.Background(), types.NamespacedName{Name: namespacedName.Name, Namespace: r.TenantNamespace}, mc)
 	if k8serrors.IsNotFound(err) || !r.isManagedClusterConnected(*mc) {
 		// we are done closing the goroutine, nothing more to do for deleted managed cluster
 		clusterState, ok := r.cache[namespacedName.Name]
@@ -75,7 +74,7 @@ func (r *managedClusterReconciler) startRecommendationPolicyControllerForManaged
 
 	ctx, cancel := context.WithCancel(context.Background())
 	clog.Info("Starting policy recommendation")
-	clientSetForCluster, err := r.clientFactory.NewClientSetForApplication(mc.Name)
+	clientSetForCluster, err := r.clientSetFactory.NewClientSetForApplication(mc.Name)
 	if err != nil {
 		clog.WithError(err).Errorf("failed to create Calico client for managed cluster %s", mc.Name)
 		cancel()
@@ -109,7 +108,7 @@ func (r *managedClusterReconciler) startRecommendationPolicyControllerForManaged
 	suffixGenerator := utils.SuffixGenerator
 	policyRecController := policyrecommendation.NewPolicyRecommendationController(
 		clientSetForCluster.ProjectcalicoV3(),
-		r.linseed,
+		r.linseedClient,
 		cacheSynchronizer,
 		caches,
 		mc.Name,

@@ -8,6 +8,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/net/context"
@@ -31,6 +32,14 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	calicowatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 )
+
+var MultiTenantEnabled bool
+
+func init() {
+	if env := os.Getenv("MULTI_TENANT_ENABLED"); strings.EqualFold(env, "true") {
+		MultiTenantEnabled = true
+	}
+}
 
 type resourceObject interface {
 	runtime.Object

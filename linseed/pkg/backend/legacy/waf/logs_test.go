@@ -12,6 +12,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
@@ -31,15 +32,32 @@ import (
 )
 
 var (
-	client  lmaelastic.Client
-	b       bapi.WAFBackend
-	ctx     context.Context
-	cluster string
+	client      lmaelastic.Client
+	b           bapi.WAFBackend
+	ctx         context.Context
+	cluster     string
+	indexGetter bapi.Index
 )
+
+// RunAllModes runs the given test function twice, once using the single-index backend, and once using
+// the multi-index backend.
+func RunAllModes(t *testing.T, name string, testFn func(t *testing.T)) {
+	// Run using the multi-index backend.
+	t.Run(fmt.Sprintf("%s [legacy]", name), func(t *testing.T) {
+		defer setupTest(t, false)()
+		testFn(t)
+	})
+
+	// Run using the single-index backend.
+	t.Run(fmt.Sprintf("%s [singleindex]", name), func(t *testing.T) {
+		defer setupTest(t, true)()
+		testFn(t)
+	})
+}
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
-func setupTest(t *testing.T) func() {
+func setupTest(t *testing.T, singleIndex bool) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -49,10 +67,16 @@ func setupTest(t *testing.T) func() {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
-	cache := templates.NewTemplateCache(client, 1, 0)
+	cache := templates.NewCachedInitializer(client, 1, 0)
 
 	// Instantiate a backend.
-	b = waf.NewBackend(client, cache, 10000)
+	if singleIndex {
+		b = waf.NewSingleIndexBackend(client, cache, 10000)
+		indexGetter = index.WAFLogIndex
+	} else {
+		b = waf.NewBackend(client, cache, 10000)
+		indexGetter = index.WAFLogMultiIndex
+	}
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
@@ -64,7 +88,7 @@ func setupTest(t *testing.T) func() {
 
 	// Function contains teardown logic.
 	return func() {
-		err = testutils.CleanupIndices(context.Background(), esClient, cluster)
+		err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
 		require.NoError(t, err)
 
 		// Cancel the context
@@ -77,9 +101,7 @@ func setupTest(t *testing.T) func() {
 func TestWAFLogBasic(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateWAFLog (tenant=%s)", tenant)
-		t.Run(name, func(t *testing.T) {
-			defer setupTest(t)()
-
+		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 			logTime := time.Now()
 			f := v1.WAFLog{
@@ -128,11 +150,7 @@ func TestWAFLogBasic(t *testing.T) {
 			require.Equal(t, 1, resp.Succeeded)
 
 			// Refresh the index.
-			index := fmt.Sprintf("tigera_secure_ee_waf.%s.*", cluster)
-			if tenant != "" {
-				index = fmt.Sprintf("tigera_secure_ee_waf.%s.%s.*", tenant, cluster)
-			}
-			err = backendutils.RefreshIndex(ctx, client, index)
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			params := &v1.WAFLogParams{
@@ -160,9 +178,7 @@ func TestWAFLogBasic(t *testing.T) {
 		})
 	}
 
-	t.Run("no cluster name given on request", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "no cluster name given on request", func(t *testing.T) {
 		// It should reject requests with no cluster name given.
 		clusterInfo := bapi.ClusterInfo{}
 		_, err := b.Create(ctx, clusterInfo, []v1.WAFLog{})
@@ -176,9 +192,7 @@ func TestWAFLogBasic(t *testing.T) {
 		require.ErrorContains(t, err, "no cluster ID")
 	})
 
-	t.Run("bad startFrom on request", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "bad startFrom on request", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 		params := &v1.WAFLogParams{
 			QueryParams: v1.QueryParams{
@@ -195,8 +209,7 @@ func TestWAFLogBasic(t *testing.T) {
 func TestAggregations(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
-		t.Run(fmt.Sprintf("should return time-series WAFA log aggregation results (tenant=%s)", tenant), func(t *testing.T) {
-			defer setupTest(t)()
+		RunAllModes(t, fmt.Sprintf("should return time-series WAF log aggregation results (tenant=%s)", tenant), func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 			numLogs := 5
@@ -256,11 +269,7 @@ func TestAggregations(t *testing.T) {
 			require.Empty(t, resp.Errors)
 
 			// Refresh.
-			index := fmt.Sprintf("tigera_secure_ee_waf.%s.*", cluster)
-			if tenant != "" {
-				index = fmt.Sprintf("tigera_secure_ee_waf.%s.%s.*", tenant, cluster)
-			}
-			err = backendutils.RefreshIndex(ctx, client, index)
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			params := v1.WAFLogAggregationParams{}
@@ -300,8 +309,7 @@ func TestAggregations(t *testing.T) {
 			}
 		})
 
-		t.Run(fmt.Sprintf("should return aggregate stats (tenant=%s)", tenant), func(t *testing.T) {
-			defer setupTest(t)()
+		RunAllModes(t, fmt.Sprintf("should return aggregate stats (tenant=%s)", tenant), func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 			// Start the test numLogs minutes in the past.
@@ -362,11 +370,7 @@ func TestAggregations(t *testing.T) {
 			require.Empty(t, resp.Errors)
 
 			// Refresh.
-			index := fmt.Sprintf("tigera_secure_ee_waf.%s.*", cluster)
-			if tenant != "" {
-				index = fmt.Sprintf("tigera_secure_ee_waf.%s.%s.*", tenant, cluster)
-			}
-			err = backendutils.RefreshIndex(ctx, client, index)
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			params := v1.WAFLogAggregationParams{}
@@ -397,9 +401,7 @@ func TestAggregations(t *testing.T) {
 }
 
 func TestSorting(t *testing.T) {
-	t.Run("should respect sorting", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "should respect sorting", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 		t1 := time.Unix(100, 0).UTC()
@@ -437,8 +439,7 @@ func TestSorting(t *testing.T) {
 		require.Equal(t, []v1.BulkError(nil), response.Errors)
 		require.Equal(t, 0, response.Failed)
 
-		index := fmt.Sprintf("tigera_secure_ee_waf.%s.*", cluster)
-		err = backendutils.RefreshIndex(ctx, client, index)
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 		require.NoError(t, err)
 
 		// Query for logs without sorting.
@@ -507,8 +508,7 @@ func TestWAFLogFiltering(t *testing.T) {
 			// different filtering parameters provided in the params
 			// to query one or more flow logs.
 			name := fmt.Sprintf("%s (tenant=%s)", testcase.Name, tenant)
-			t.Run(name, func(t *testing.T) {
-				defer setupTest(t)()
+			RunAllModes(t, name, func(t *testing.T) {
 				clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 				reqTime := time.Now()
@@ -537,18 +537,14 @@ func TestWAFLogFiltering(t *testing.T) {
 				require.Empty(t, resp.Errors)
 
 				// Refresh.
-				index := fmt.Sprintf("tigera_secure_ee_waf.%s.*", cluster)
-				if tenant != "" {
-					index = fmt.Sprintf("tigera_secure_ee_waf.%s.%s.*", tenant, cluster)
-				}
-				err = backendutils.RefreshIndex(ctx, client, index)
+				err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 				require.NoError(t, err)
 
 				result, err := b.List(ctx, clusterInfo, &testcase.Params)
 				require.NoError(t, err)
 
 				require.Len(t, result.Items, 1)
-				//Reset the time as it microseconds to not match perfectly
+				// Reset the time as it microseconds to not match perfectly
 				require.NotEqual(t, "", result.Items[0].Timestamp)
 				result.Items[0].Timestamp = reqTime
 

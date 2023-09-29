@@ -16,6 +16,7 @@ import (
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -24,19 +25,54 @@ import (
 type flowLogBackend struct {
 	client               *elastic.Client
 	lmaclient            lmaelastic.Client
-	helper               lmaindex.Helper
-	templates            bapi.Cache
+	queryHelper          lmaindex.Helper
+	initializer          bapi.IndexInitializer
 	deepPaginationCutOff int64
+	singleIndex          bool
+	index                bapi.Index
 }
 
-func NewFlowLogBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.FlowLogBackend {
+func NewFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.FlowLogBackend {
 	return &flowLogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
-		templates:            cache,
-		helper:               lmaindex.FlowLogs(),
+		initializer:          cache,
+		queryHelper:          lmaindex.MultiIndexFlowLogs(),
 		deepPaginationCutOff: deepPaginationCutOff,
+		index:                index.FlowLogMultiIndex,
 	}
+}
+
+// NewSingleIndexFlowLogBackend returns a new flow log backend that writes to a single index.
+func NewSingleIndexFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.FlowLogBackend {
+	return &flowLogBackend{
+		client:               c.Backend(),
+		lmaclient:            c,
+		initializer:          cache,
+		queryHelper:          lmaindex.SingleIndexFlowLogs(),
+		deepPaginationCutOff: deepPaginationCutOff,
+		singleIndex:          true,
+		index:                index.FlowLogIndex,
+	}
+}
+
+type flowLogWithExtras struct {
+	v1.FlowLog `json:",inline"`
+	Cluster    string `json:"cluster"`
+	Tenant     string `json:"tenant,omitempty"`
+}
+
+// prepareForWrite wraps a flow log in a document that includes the cluster and tenant if
+// the backend is configured to write to a single index.
+func (b *flowLogBackend) prepareForWrite(i bapi.ClusterInfo, f v1.FlowLog) interface{} {
+	if b.singleIndex {
+		return flowLogWithExtras{
+			FlowLog: f,
+			Cluster: i.Cluster,
+			Tenant:  i.Tenant,
+		}
+	}
+	return f
 }
 
 // Create the given flow log in elasticsearch.
@@ -47,13 +83,13 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 		return nil, err
 	}
 
-	err := b.templates.InitializeIfNeeded(ctx, bapi.FlowLogs, i)
+	err := b.initializer.Initialize(ctx, b.index, i)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine the index to write to using an alias
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 	log.Infof("Writing flow logs in bulk to alias %s", alias)
 
 	// Build a bulk request using the provided logs.
@@ -61,7 +97,7 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 
 	for _, f := range logs {
 		// Add this log to the bulk request.
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(f)
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f))
 		bulk.Add(req)
 	}
 
@@ -117,7 +153,7 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +177,7 @@ func (b *flowLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, op
 	if opts.NumBuckets > 0 {
 		// Time-series.
 		hist := elastic.NewAutoDateHistogramAggregation().
-			Field(b.helper.GetTimeField()).
+			Field(b.queryHelper.GetTimeField()).
 			Buckets(opts.NumBuckets)
 		for name, agg := range opts.Aggregations {
 			hist = hist.SubAggregation(name, logtools.RawAggregation{RawMessage: agg})
@@ -180,7 +216,7 @@ func (b *flowLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.FlowLogParams) (
 
 	// Configure pagination options
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -191,7 +227,7 @@ func (b *flowLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.FlowLogParams) (
 			query.Sort(s.Field, !s.Descending)
 		}
 	} else {
-		query.Sort(b.helper.GetTimeField(), true)
+		query.Sort(b.queryHelper.GetTimeField(), true)
 	}
 	return query, startFrom, nil
 }
@@ -200,7 +236,7 @@ func (b *flowLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.FlowLogParams) (
 func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.FlowLogParams) (elastic.Query, error) {
 	// Start with the base flow log query using common fields.
 	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
-	query, err := logtools.BuildQuery(b.helper, i, opts, start, end)
+	query, err := logtools.BuildQuery(b.queryHelper, i, opts, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -232,22 +268,4 @@ func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.FlowLogParams) 
 	}
 
 	return query, nil
-}
-
-func (b *flowLogBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_flows.%s.%s.*", i.Tenant, i.Cluster)
-	}
-
-	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("tigera_secure_ee_flows.%s.*", i.Cluster)
-}
-
-func (b *flowLogBackend) writeAlias(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_flows.%s.%s.", i.Tenant, i.Cluster)
-	}
-
-	return fmt.Sprintf("tigera_secure_ee_flows.%s.", i.Cluster)
 }

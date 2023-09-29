@@ -15,11 +15,11 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/reporting"
@@ -38,8 +38,7 @@ const (
 	numHashChars                    = 5
 	acceptableRFCGlobalAlertNameLen = maxCronJobNameLen - len(detectionCronJobSuffix) - numHashChars - 2
 
-	ClusterKey = "cluster"
-
+	clusterKey             = "cluster"
 	detectionCronJobSuffix = "detection"
 )
 
@@ -56,8 +55,10 @@ type adDetectionReconciler struct {
 	managementClusterName string
 	tenantID              string
 
-	k8sClient                   kubernetes.Interface
-	calicoCLI                   calicoclient.Interface
+	kubeClientSet   kubernetes.Interface
+	calicoClientSet calicoclient.Interface
+
+	client                      ctrlclient.WithWatch
 	podTemplateQuery            podtemplate.ADPodTemplateQuery
 	detectionCycleResourceCache rcache.ResourceCache
 
@@ -65,6 +66,7 @@ type adDetectionReconciler struct {
 
 	detectionJobsMutex        sync.Mutex
 	detectionADDetectorStates map[string]detectionCycleState
+	tenantNamespace           string
 }
 
 type detectionCycleState struct {
@@ -81,7 +83,7 @@ func (r *adDetectionReconciler) listDetectionCronJobs() (map[string]interface{},
 	detectionCronJobs := make(map[string]interface{})
 	detectionJobLabelByteStr := maputil.CreateLabelValuePairStr(DetectionJobLabels())
 
-	detectionCronJobList, err := r.k8sClient.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx,
+	detectionCronJobList, err := r.kubeClientSet.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx,
 		metav1.ListOptions{
 			LabelSelector: detectionJobLabelByteStr,
 		})
@@ -151,14 +153,16 @@ func (r *adDetectionReconciler) reconcile() bool {
 	forceDelete := false
 	// skip the check if it is an udpate to a detector for the management cluster
 	if detectionJobState.ClusterName != r.managementClusterName {
-		mc, err := r.calicoCLI.ProjectcalicoV3().ManagedClusters().Get(context.Background(), detectionJobState.ClusterName, metav1.GetOptions{})
-		if err != nil && !k8serrors.IsNotFound(err) {
+
+		mc := &v3.ManagedCluster{}
+		err := r.client.Get(context.Background(), types.NamespacedName{Name: detectionJobState.ClusterName, Namespace: r.tenantNamespace}, mc)
+		if err != nil && !errors.IsNotFound(err) {
 			log.Errorf("invalid state, received request to delete training cronjob %s, not marked for deletion",
 				detectionCronJobNameKey)
 			return true
 		}
 
-		forceDelete = k8serrors.IsNotFound(err) || !clusterConnected(mc)
+		forceDelete = errors.IsNotFound(err) || !clusterConnected(mc)
 	}
 
 	detectionCronJobToReconcileInterface, found := r.detectionCycleResourceCache.Get(detectionCronJobNameKey)
@@ -172,7 +176,7 @@ func (r *adDetectionReconciler) reconcile() bool {
 		log.Infof("Deleting detection cronJob job for %s", detectionCronJobNameKey)
 
 		// update status before deletion with Active == false
-		err := util.DeleteCronJobWithRetry(r.managementClusterCtx, r.k8sClient, r.namespace,
+		err := util.DeleteCronJobWithRetry(r.managementClusterCtx, r.kubeClientSet, r.namespace,
 			detectionCronJobNameKey)
 
 		if err != nil && !errors.IsNotFound(err) { // do not report error if it's not found as it is already deleted
@@ -191,7 +195,7 @@ func (r *adDetectionReconciler) reconcile() bool {
 		return true
 	}
 
-	k8sStoredDetectionCronJob, err := r.k8sClient.BatchV1().CronJobs(detectionJobState.CronJob.Namespace).Get(
+	k8sStoredDetectionCronJob, err := r.kubeClientSet.BatchV1().CronJobs(detectionJobState.CronJob.Namespace).Get(
 		r.managementClusterCtx, detectionJobState.CronJob.Name, metav1.GetOptions{})
 
 	if err != nil && !errors.IsNotFound(err) {
@@ -206,7 +210,7 @@ func (r *adDetectionReconciler) reconcile() bool {
 		// safety measures to set these to nil values before creating to avoid error
 		util.EmptyCronJobResourceValues(&detectionCronJobToReconcile)
 		// create / restore deleted managed cronJobs
-		createdDetectionCycle, err := r.k8sClient.BatchV1().CronJobs(detectionJobState.CronJob.Namespace).
+		createdDetectionCycle, err := r.kubeClientSet.BatchV1().CronJobs(detectionJobState.CronJob.Namespace).
 			Create(r.managementClusterCtx, detectionJobState.CronJob, metav1.CreateOptions{})
 		// update GlobalAlertStats with events for newly created CronJob
 		if err != nil {
@@ -237,7 +241,7 @@ func (r *adDetectionReconciler) reconcile() bool {
 	}
 
 	log.Infof("Updating detection cronJob %s", detectionJobState.GlobalAlert.Name)
-	updatedDetectionCronJob, err := r.k8sClient.BatchV1().CronJobs(detectionJobState.CronJob.Namespace).Update(r.managementClusterCtx,
+	updatedDetectionCronJob, err := r.kubeClientSet.BatchV1().CronJobs(detectionJobState.CronJob.Namespace).Update(r.managementClusterCtx,
 		&detectionCronJobToReconcile, metav1.UpdateOptions{})
 	// update GlobalAlertStats with events for newly created CronJob
 	if err != nil {
@@ -272,7 +276,7 @@ func (r *adDetectionReconciler) getLatestJobStatusOfCronJob(ctx context.Context,
 ) v3.GlobalAlertStatus {
 	resultantGlobalAlertStatus := reporting.GetGlobalAlertSuccessStatus()
 
-	childJobs, err := r.k8sClient.BatchV1().Jobs(cronjob.Namespace).List(ctx, metav1.ListOptions{
+	childJobs, err := r.kubeClientSet.BatchV1().Jobs(cronjob.Namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "owner=" + cronjob.Name,
 	})
 	if err != nil {
@@ -393,13 +397,13 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 
 	detectionCronJobName := r.getDetectionCycleCronJobNameForGlobaAlert(detectionResource.ClusterName, globalAlert.Name)
 	detectionLabels := DetectionJobLabels()
-	detectionLabels[ClusterKey] = util.Unify(detectionResource.TenantID, detectionResource.ClusterName)
+	detectionLabels[clusterKey] = util.Unify(detectionResource.TenantID, detectionResource.ClusterName)
 
 	detectionCycleCronJob := podtemplate.CreateCronJobFromPodTemplate(detectionCronJobName, r.namespace,
 		detectionSchedule, detectionLabels, *podTemplate)
 
 	// attach this IDS controller as owner
-	intrusionDetectionDeployment, err := r.k8sClient.AppsV1().Deployments(r.namespace).Get(r.managementClusterCtx, ADJobOwnerLabelValue,
+	intrusionDetectionDeployment, err := r.kubeClientSet.AppsV1().Deployments(r.namespace).Get(r.managementClusterCtx, ADJobOwnerLabelValue,
 		metav1.GetOptions{})
 	if err != nil {
 		log.WithError(err).Errorf("Unable to create detection cycles for cluster %s, error retriveing owner", detectionResource.ClusterName)
@@ -453,8 +457,9 @@ func (r *adDetectionReconciler) removeDetector(detectionState DetectionCycleRequ
 }
 
 func (r *adDetectionReconciler) stopAllDetectionCyclesForCluster(clusterName string) error {
-	cronJobList, err := r.k8sClient.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", ClusterKey, util.Unify(r.tenantID, clusterName)),
+
+	cronJobList, err := r.kubeClientSet.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", clusterKey, util.Unify(r.tenantID, clusterName)),
 	})
 
 	log.WithFields(log.Fields{"tenant": r.tenantID, "cluster": clusterName}).Info("removing all cronjobs for cluster")

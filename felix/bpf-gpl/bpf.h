@@ -247,6 +247,11 @@ static CALI_BPF_INLINE void ip_dec_ttl(struct iphdr *ip)
 extern const volatile struct cali_xdp_globals __globals;
 #define CALI_CONFIGURABLE(name) 1 /* any value will do, it is not configured */
 
+#elif CALI_F_STATS
+
+extern const volatile struct cali_stats_globals __globals;
+#define CALI_CONFIGURABLE(name)  __globals.name
+
 #elif (!CALI_F_CGROUP && !CALI_F_KPROBE && !CALI_F_STATS) || defined(UNITTEST)
 
 extern const volatile struct cali_tc_globals __globals;

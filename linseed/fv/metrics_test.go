@@ -5,7 +5,6 @@
 package fv_test
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	"github.com/google/gopacket/layers"
@@ -25,53 +25,23 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
-	elastic "github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/linseed/pkg/config"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
+// metricsSetupAndTeardown sets up additional test environment for the metrics tests.
 func metricsSetupAndTeardown(t *testing.T) func() {
-	// Hook logrus into testing.T
-	config.ConfigureLogging("DEBUG")
-	logCancel := logutils.RedirectLogrusToTestingT(t)
-
-	// Create an ES client.
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
-	require.NoError(t, err)
-	lmaClient = lmaelastic.NewWithClient(esClient)
-
-	// Instantiate a client.
-	cli, err = NewLinseedClient()
-	require.NoError(t, err)
-
 	// Get the token to use in HTTP authorization header.
+	var err error
 	token, err = os.ReadFile(TokenPath)
 	require.NoError(t, err)
-
-	// Create a random cluster name for each test to make sure we don't
-	// interfere between tests.
-	cluster = testutils.RandomClusterName()
-
-	// Set up context with a timeout.
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-
 	return func() {
-		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, cluster)
-		logCancel()
-		cancel()
 	}
 }
 
 func TestMetrics(t *testing.T) {
 	metricsAddr := "localhost:9095"
 
-	t.Run("should provide a metrics endpoint", func(t *testing.T) {
+	RunDNSLogTest(t, "should provide a metrics endpoint", func(t *testing.T, idx bapi.Index) {
 		defer metricsSetupAndTeardown(t)()
 
 		client := mTLSClient(t)
@@ -80,8 +50,9 @@ func TestMetrics(t *testing.T) {
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 	})
 
-	t.Run("should create metrics based on the requests made", func(t *testing.T) {
+	RunDNSLogTest(t, "should create metrics based on the requests made", func(t *testing.T, idx bapi.Index) {
 		defer metricsSetupAndTeardown(t)()
+
 		// Create a basic dns log.
 		logs := []v1.DNSLog{
 			{
@@ -98,7 +69,7 @@ func TestMetrics(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create dns log did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_dns*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Read it back.
 		params := v1.DNSLogParams{

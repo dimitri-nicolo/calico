@@ -40,7 +40,7 @@ T:
 			"no ipset members should return UNKNOWN",
 			nil,
 			[]checker.WAFCheckProviderOption{
-				checker.WithWAFCheckProviderCheckFn(func(req *envoyauthz.CheckRequest) (*envoyauthz.CheckResponse, error) {
+				checker.WithWAFCheckProviderCheckFn(func(ps *policystore.PolicyStore, req *envoyauthz.CheckRequest, src, dst []proto.WorkloadEndpointID) (*envoyauthz.CheckResponse, error) {
 					return &envoyauthz.CheckResponse{
 						Status: &status.Status{Code: checker.OK},
 					}, nil
@@ -52,10 +52,11 @@ T:
 		{
 			"if valid ipset member should return OK if check is OK",
 			[]*proto.ToDataplane{
+				wepUpdate("default/default", []string{"10.0.1.1"}, []string{"default"}),
 				ipsetUpdate(tproxydefs.ServiceIPsIPSet, []string{"10.0.1.1"}),
 			},
 			[]checker.WAFCheckProviderOption{
-				checker.WithWAFCheckProviderCheckFn(func(req *envoyauthz.CheckRequest) (*envoyauthz.CheckResponse, error) {
+				checker.WithWAFCheckProviderCheckFn(func(ps *policystore.PolicyStore, req *envoyauthz.CheckRequest, src, dst []proto.WorkloadEndpointID) (*envoyauthz.CheckResponse, error) {
 					return &envoyauthz.CheckResponse{
 						Status: &status.Status{Code: checker.OK},
 					}, nil
@@ -67,10 +68,11 @@ T:
 		{
 			"if valid ipset member should return PERMISSION_DENIED if check is PERMISSION_DENIED",
 			[]*proto.ToDataplane{
+				wepUpdate("default/default", []string{"10.0.1.1"}, []string{"default"}),
 				ipsetUpdate(tproxydefs.ServiceIPsIPSet, []string{"10.0.1.1"}),
 			},
 			[]checker.WAFCheckProviderOption{
-				checker.WithWAFCheckProviderCheckFn(func(req *envoyauthz.CheckRequest) (*envoyauthz.CheckResponse, error) {
+				checker.WithWAFCheckProviderCheckFn(func(ps *policystore.PolicyStore, req *envoyauthz.CheckRequest, src, dst []proto.WorkloadEndpointID) (*envoyauthz.CheckResponse, error) {
 					return &envoyauthz.CheckResponse{
 						Status: &status.Status{Code: checker.PERMISSION_DENIED},
 					}, nil
@@ -85,7 +87,7 @@ T:
 				ipsetUpdate(tproxydefs.ServiceIPsIPSet, []string{"10.0.1.1"}),
 			},
 			[]checker.WAFCheckProviderOption{
-				checker.WithWAFCheckProviderCheckFn(func(req *envoyauthz.CheckRequest) (*envoyauthz.CheckResponse, error) {
+				checker.WithWAFCheckProviderCheckFn(func(ps *policystore.PolicyStore, req *envoyauthz.CheckRequest, src, dst []proto.WorkloadEndpointID) (*envoyauthz.CheckResponse, error) {
 					return &envoyauthz.CheckResponse{
 						Status: &status.Status{Code: checker.OK},
 					}, nil
@@ -151,6 +153,7 @@ func TestWafProcessHttpRequestSQLIPassThrough(t *testing.T) {
 		"host",
 		map[string]string{},
 		"",
+		nil, nil,
 	)
 
 	Expect(err).NotTo(HaveOccurred())
@@ -177,6 +180,7 @@ func TestWafProcessHttpSimpleRequestWithCoreRules(t *testing.T) {
 		"host",
 		map[string]string{},
 		"",
+		nil, nil,
 	)
 
 	Expect(err).NotTo(HaveOccurred())
@@ -201,6 +205,7 @@ func TestWafProcessHttpSQLIRequestWithCoreRules(t *testing.T) {
 		"host",
 		map[string]string{},
 		"",
+		nil, nil,
 	)
 
 	Expect(err).NotTo(HaveOccurred())

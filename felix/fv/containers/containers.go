@@ -58,6 +58,7 @@ type Container struct {
 	logFinished      sync.WaitGroup
 	dropAllLogs      bool
 	ignoreEmptyLines bool
+	outputWriter     io.Writer
 }
 
 type watch struct {
@@ -187,6 +188,7 @@ type RunOpts struct {
 	SameNamespace    *Container
 	StopTimeoutSecs  int
 	StopSignal       string
+	OutputWriter     io.Writer
 }
 
 func NextContainerIndex() int {
@@ -209,6 +211,11 @@ func RunWithFixedName(name string, opts RunOpts, args ...string) (c *Container) 
 	c = &Container{
 		Name:             name,
 		ignoreEmptyLines: opts.IgnoreEmptyLines,
+		outputWriter:     ginkgo.GinkgoWriter,
+	}
+
+	if opts.OutputWriter != nil {
+		c.outputWriter = opts.OutputWriter
 	}
 
 	// Prep command to run the container.
@@ -341,7 +348,7 @@ func (c *Container) Remove() {
 func (c *Container) copyOutputToLog(streamName string, stream io.Reader, done *sync.WaitGroup, watches *[]*watch) {
 	defer done.Done()
 	scanner := bufio.NewScanner(stream)
-	scanner.Buffer(nil, 10*1024*1024) // Increase maximum buffer size (but don't pre-alloc).
+	scanner.Buffer(nil, 100*1024*1024) // Increase maximum buffer size (but don't pre-alloc).
 
 	// Felix is configured with the race detector enabled. When the race detector fires, we get output like this:
 	//
@@ -357,7 +364,7 @@ func (c *Container) copyOutputToLog(streamName string, stream io.Reader, done *s
 	// We do this for all containers because we already have the machinery here.
 	foundDataRace := false
 	dataRaceText := ""
-	dataRaceFile, err := os.OpenFile("data-races.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	dataRaceFile, err := os.OpenFile("data-races.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		log.WithError(err).Error("Failed to open data race log file.")
 	}
@@ -378,7 +385,7 @@ func (c *Container) copyOutputToLog(streamName string, stream io.Reader, done *s
 		droppingLogs := c.dropAllLogs
 		c.mutex.Unlock()
 		if !droppingLogs {
-			fmt.Fprintf(ginkgo.GinkgoWriter, "%v[%v] %v\n", c.Name, streamName, line)
+			fmt.Fprintf(c.outputWriter, "%v[%v] %v\n", c.Name, streamName, line)
 		}
 
 		// Capture data race warnings and log to file.

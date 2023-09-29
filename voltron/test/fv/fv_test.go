@@ -2,6 +2,7 @@
 package fv_test
 
 import (
+	"context"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -11,6 +12,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
+
 	"strings"
 	"sync"
 
@@ -24,6 +30,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/mock"
+
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/client"
 	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
@@ -126,7 +134,13 @@ func (s *testServer) handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, s.msg)
 }
 
-var _ = Describe("Voltron-Guardian interaction", func() {
+func describe(name string, testFn func(string)) bool {
+	Describe(name+" cluster-scoped", func() { testFn("") })
+	Describe(name+" namespace-scoped", func() { testFn("resource-ns") })
+	return true
+}
+
+var _ = describe("basic functionality", func(clusterNamespace string) {
 	var (
 		voltron   *server.Server
 		lisHTTP11 net.Listener
@@ -148,8 +162,14 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 	clusterID := "external-cluster"
 	clusterID2 := "other-cluster"
+	clusterNS := clusterNamespace
 
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
+	scheme := kscheme.Scheme
+	err := v3.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+
 	authenticator := new(auth.MockJWTAuth)
 	authenticator.On("Authenticate", mock.Anything).Return(&user.DefaultInfo{Name: "jane", Groups: []string{"developers"}}, 0, nil)
 	watchSync := make(chan error)
@@ -210,8 +230,9 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 		voltron, err = server.New(
 			k8sAPI,
+			fakeClient,
 			&rest.Config{BearerToken: "manager-token"},
-			vcfg.Config{},
+			vcfg.Config{TenantNamespace: clusterNS},
 			authenticator,
 			server.WithTunnelSigningCreds(tunnelCert),
 			server.WithTunnelCert(tunnelTLS),
@@ -252,28 +273,52 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 	It("should register 2 clusters", func() {
 		var fingerprintID1, fingerprintID2 string
-		k8sAPI.WaitForManagedClustersWatched()
+
 		var err error
 		certPemID1, keyPemID1, fingerprintID1, err = test.GenerateTestCredentials(clusterID, tunnelCert, tunnelPrivKey)
 		Expect(err).NotTo(HaveOccurred())
 		annotationsID1 := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintID1}
 
-		Expect(k8sAPI.AddCluster(clusterID, clusterID, annotationsID1)).ShouldNot(HaveOccurred())
+		err = fakeClient.Create(context.Background(), &v3.ManagedCluster{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       v3.KindManagedCluster,
+				APIVersion: v3.GroupVersionCurrent,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        clusterID,
+				Namespace:   clusterNS,
+				Annotations: annotationsID1,
+			},
+		})
+		Expect(err).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 
 		certPemID2, keyPemID2, fingerprintID2, err = test.GenerateTestCredentials(clusterID2, tunnelCert, tunnelPrivKey)
 		Expect(err).NotTo(HaveOccurred())
 		annotationsID2 := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintID2}
 
-		Expect(k8sAPI.AddCluster(clusterID2, clusterID2, annotationsID2)).ShouldNot(HaveOccurred())
+		err = fakeClient.Create(context.Background(), &v3.ManagedCluster{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       v3.KindManagedCluster,
+				APIVersion: v3.GroupVersionCurrent,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        clusterID2,
+				Namespace:   clusterNS,
+				Annotations: annotationsID2,
+			},
+		})
+		Expect(err).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 	})
 
 	It("should start guardian", func() {
+
 		var err error
 
 		guardian, err = client.New(
 			lisTun.Addr().String(),
+			"voltron",
 			client.WithTunnelCreds(certPemID1, keyPemID1),
 			client.WithTunnelRootCA(rootCAs),
 			client.WithProxyTargets(
@@ -294,10 +339,12 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	})
 
 	It("should start guardian2", func() {
+
 		var err error
 
 		guardian2, err = client.New(
 			lisTun.Addr().String(),
+			"voltron",
 			client.WithTunnelCreds(certPemID2, keyPemID2),
 			client.WithTunnelRootCA(rootCAs),
 			client.WithProxyTargets(

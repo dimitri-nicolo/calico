@@ -5,6 +5,7 @@ package main
 import (
 	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"net"
@@ -114,19 +115,25 @@ func main() {
 	}
 
 	var ca *x509.CertPool
+	var serverName string
 	if strings.ToLower(cfg.VoltronCAType) == "public" {
 		// leave the ca cert pool as a nil pointer which will cause the tls dialer to load certs from the system.
 		log.Info("using system certs")
+		// in this case, the serverName will match the remote address
+		// we need to strip the ports
+		serverName = strings.Split(cfg.VoltronURL, ":")[0]
 	} else {
 		serverCrt := fmt.Sprintf("%s/management-cluster.crt", cfg.CertPath)
 		pemServerCrt, err := os.ReadFile(serverCrt)
 		if err != nil {
 			log.WithError(err).Fatal("failed to read server cert")
 		}
+
 		ca = x509.NewCertPool()
 		if ok := ca.AppendCertsFromPEM(pemServerCrt); !ok {
 			log.Fatalf("Cannot append the certificate to ca pool")
 		}
+		serverName = extractServerName(pemServerCrt)
 	}
 
 	health, err := client.NewHealth()
@@ -173,13 +180,14 @@ func main() {
 			TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
 			CABundlePath: cfg.QueryserverCABundlePath,
 		},
-	}, cfg.FIPSModeEnabled, nil)
+	}, cfg.FIPSModeEnabled)
 	if err != nil {
 		log.Fatalf("Failed to parse default proxy targets: %s", err)
 	}
 
 	cli, err := client.New(
 		cfg.VoltronURL,
+		serverName,
 		client.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		client.WithProxyTargets(targets),
 		client.WithTunnelCreds(pemCert, pemKey),
@@ -232,4 +240,20 @@ func main() {
 	}
 
 	wg.Wait()
+}
+
+func extractServerName(pemServerCrt []byte) string {
+	var certDERBlock *pem.Block
+	certDERBlock, _ = pem.Decode(pemServerCrt)
+	if certDERBlock == nil || certDERBlock.Type != "CERTIFICATE" {
+		log.Fatalf("Cannot decode pem block for server certificate")
+	}
+	cert, err := x509.ParseCertificate(certDERBlock.Bytes)
+	if err != nil {
+		log.WithError(err).Fatalf("Cannot decode pem block for server certificate")
+	}
+	if len(cert.DNSNames) != 1 {
+		log.Fatalf("Expected a single DNS name registered on the certificate")
+	}
+	return cert.DNSNames[0]
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	"github.com/stretchr/testify/require"
@@ -27,9 +28,7 @@ func TestL7Logs(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateL7Log (tenant=%s)", tenant)
-		t.Run(name, func(t *testing.T) {
-			defer setupTest(t)()
-
+		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{
 				Cluster: cluster,
 				Tenant:  tenant,
@@ -55,12 +54,7 @@ func TestL7Logs(t *testing.T) {
 			require.Len(t, response.Errors, 0)
 
 			// Read it back and make sure it matches.
-			// Refresh.
-			index := fmt.Sprintf("tigera_secure_ee_l7.%s.", cluster)
-			if tenant != "" {
-				index = fmt.Sprintf("tigera_secure_ee_l7.%s.%s.", tenant, cluster)
-			}
-			err = backendutils.RefreshIndex(ctx, client, index)
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			params := &v1.L7LogParams{}
@@ -71,9 +65,7 @@ func TestL7Logs(t *testing.T) {
 		})
 	}
 
-	t.Run("no cluster name given on request", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "no cluster name given on request", func(t *testing.T) {
 		// It should reject requests with no cluster name given.
 		clusterInfo := bapi.ClusterInfo{}
 		_, err := lb.Create(ctx, clusterInfo, []v1.L7Log{})
@@ -85,9 +77,7 @@ func TestL7Logs(t *testing.T) {
 		require.Nil(t, results)
 	})
 
-	t.Run("bad startFrom on request", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "bad startFrom on request", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 		params := &v1.L7LogParams{
 			QueryParams: v1.QueryParams{
@@ -102,8 +92,7 @@ func TestL7Logs(t *testing.T) {
 
 // TestAggregations tests running a real elasticsearch query to get aggregations.
 func TestAggregations(t *testing.T) {
-	t.Run("should return time-series L7 log aggregation results", func(t *testing.T) {
-		defer setupTest(t)()
+	RunAllModes(t, "should return time-series L7 log aggregation results", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 		// Start the test numLogs minutes in the past.
@@ -140,8 +129,7 @@ func TestAggregations(t *testing.T) {
 		require.Empty(t, resp.Errors)
 
 		// Refresh.
-		index := fmt.Sprintf("tigera_secure_ee_l7.%s.", cluster)
-		err = backendutils.RefreshIndex(ctx, client, index)
+		err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 		require.NoError(t, err)
 
 		params := v1.L7AggregationParams{}
@@ -187,8 +175,7 @@ func TestAggregations(t *testing.T) {
 		}
 	})
 
-	t.Run("should return aggregate stats", func(t *testing.T) {
-		defer setupTest(t)()
+	RunAllModes(t, "should return aggregate stats", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 		// Start the test numLogs minutes in the past.
@@ -225,8 +212,7 @@ func TestAggregations(t *testing.T) {
 		require.Empty(t, resp.Errors)
 
 		// Refresh.
-		index := fmt.Sprintf("tigera_secure_ee_l7.%s.", cluster)
-		err = backendutils.RefreshIndex(ctx, client, index)
+		err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 		require.NoError(t, err)
 
 		params := v1.L7AggregationParams{}
@@ -246,6 +232,7 @@ func TestAggregations(t *testing.T) {
 		// Use the backend to perform a stats query.
 		result, err := lb.Aggregations(ctx, clusterInfo, &params)
 		require.NoError(t, err)
+		require.NotNil(t, result)
 
 		// We should get a sum aggregation with all 4 logs.
 		count, ok := result.ValueCount("count")

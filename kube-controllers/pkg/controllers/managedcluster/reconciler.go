@@ -7,26 +7,32 @@ import (
 	"fmt"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	log "github.com/sirupsen/logrus"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 type reconciler struct {
 	sync.Mutex
 	createManagedK8sCLI func(string) (kubernetes.Interface, *tigeraapi.Clientset, error)
-	managementK8sCLI    kubernetes.Interface
-	calicoCLI           tigeraapi.Interface
+	kubeClientSet       kubernetes.Interface
+	clientSetFactory    tigeraapi.Interface
+
+	client ctrlclient.WithWatch
+
 	// The only information we need for a ManagedCluster is the channel to stop it. The exists of this channel can tell
 	// us if we have a controller for a ManagedCluster and the only action we would want to take on one is to stop it.
 	managedClustersStopChans map[string]chan struct{}
 	restartChan              chan<- string
 
-	controllers []ControllerManager
+	controllers     []ControllerManager
+	TenantNamespace string
 }
 
 // Reconcile finds the ManagedCluster resource specified by the name and either passes the information to the underlying
@@ -37,7 +43,8 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 	reqLogger := log.WithField("request", name)
 	reqLogger.Info("Reconciling ManagedClusters")
 
-	mc, err := c.calicoCLI.ProjectcalicoV3().ManagedClusters().Get(context.Background(), name.Name, metav1.GetOptions{})
+	mc := &v3.ManagedCluster{}
+	err := c.client.Get(context.Background(), types.NamespacedName{Name: name.Name, Namespace: c.TenantNamespace}, mc)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			reqLogger.Info("ManagedCluster not found")
@@ -108,7 +115,7 @@ func (c *reconciler) addManagedClusterWatch(mc *v3.ManagedCluster, managedK8sCLI
 
 	stop := make(chan struct{})
 	for _, controller := range c.controllers {
-		controller := controller.CreateController(mc.Name, string(mc.UID), managedK8sCLI, c.managementK8sCLI, managedCalicoCLI, c.calicoCLI, c.restartChan)
+		controller := controller.CreateController(mc.Name, string(mc.UID), managedK8sCLI, c.kubeClientSet, managedCalicoCLI, c.clientSetFactory, c.restartChan)
 		go controller.Run(stop)
 	}
 

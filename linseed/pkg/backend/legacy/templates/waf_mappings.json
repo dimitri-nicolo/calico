@@ -17,6 +17,14 @@
         "hostname": {
           "type": "keyword",
           "null_value": ""
+        },
+        "namespace": {
+          "type": "keyword",
+          "null_value": ""
+        },
+        "name": {
+          "type": "keyword",
+          "null_value": ""
         }
       }
     },
@@ -31,6 +39,14 @@
           "null_value": 0
         },
         "hostname": {
+          "type": "keyword",
+          "null_value": ""
+        },
+        "namespace": {
+          "type": "keyword",
+          "null_value": ""
+        },
+        "name": {
           "type": "keyword",
           "null_value": ""
         }

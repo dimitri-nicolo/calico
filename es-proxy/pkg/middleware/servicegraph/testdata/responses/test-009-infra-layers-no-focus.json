@@ -635,54 +635,7 @@
         "dns_logs": "\"servers.namespace\" = \"tigera-compliance\" OR \"servers.namespace\" = \"tigera-eck-operator\" OR \"servers.namespace\" = \"tigera-elasticsearch\" OR \"servers.namespace\" = \"tigera-fluentd\" OR \"servers.namespace\" = \"tigera-intrusion-detection\" OR \"servers.namespace\" = \"tigera-kibana\" OR \"servers.namespace\" = \"tigera-manager\" OR \"servers.namespace\" = \"tigera-prometheus\" OR \"servers.namespace\" = \"tigera-system\" OR client_namespace = \"tigera-compliance\" OR client_namespace = \"tigera-eck-operator\" OR client_namespace = \"tigera-elasticsearch\" OR client_namespace = \"tigera-fluentd\" OR client_namespace = \"tigera-intrusion-detection\" OR client_namespace = \"tigera-kibana\" OR client_namespace = \"tigera-manager\" OR client_namespace = \"tigera-prometheus\" OR client_namespace = \"tigera-system\"",
         "alerts": "dest_namespace = \"tigera-compliance\" OR dest_namespace = \"tigera-eck-operator\" OR dest_namespace = \"tigera-elasticsearch\" OR dest_namespace = \"tigera-fluentd\" OR dest_namespace = \"tigera-intrusion-detection\" OR dest_namespace = \"tigera-kibana\" OR dest_namespace = \"tigera-manager\" OR dest_namespace = \"tigera-prometheus\" OR dest_namespace = \"tigera-system\" OR source_namespace = \"tigera-compliance\" OR source_namespace = \"tigera-eck-operator\" OR source_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-intrusion-detection\" OR source_namespace = \"tigera-kibana\" OR source_namespace = \"tigera-manager\" OR source_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-system\""
       },
-      "events": [
-        {
-          "id": {
-            "type": "alert",
-            "id": "fakeid",
-            "namespace": "tigera-fluentd",
-            "name": "fluentd-node-tt85d.168bbcfc40012fe3"
-          },
-          "description": "Readiness probe failed: ",
-          "time": "2021-06-25T20:51:06Z"
-        },
-        {
-          "id": {
-            "type": "kubernetes",
-            "namespace": "tigera-fluentd",
-            "name": "fluentd-node-k6wd2.168bbcfb0179cdd2"
-          },
-          "description": "Readiness probe failed: ",
-          "time": "2021-06-25T20:51:21Z"
-        },
-        {
-          "id": {
-            "type": "kubernetes",
-            "namespace": "tigera-fluentd",
-            "name": "fluentd-node-4cmmh.168bbcfa03153747"
-          },
-          "description": "Readiness probe failed: ",
-          "time": "2021-06-25T20:51:52Z"
-        },
-        {
-          "id": {
-            "type": "kubernetes",
-            "namespace": "tigera-fluentd",
-            "name": "fluentd-node-pq6cq.168bbcf9bd8f59be"
-          },
-          "description": "Readiness probe failed: ",
-          "time": "2021-06-25T20:51:56Z"
-        },
-        {
-          "id": {
-            "type": "kubernetes",
-            "namespace": "tigera-fluentd",
-            "name": "fluentd-node-bqk9p.168bbcf7731bff60"
-          },
-          "description": "Readiness probe failed: ",
-          "time": "2021-06-25T20:52:01Z"
-        }
-      ]
+      "events_count": 5
     },
     {
       "id": "namespace/storefront",

@@ -47,6 +47,17 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 			}
 		}
 
+		if len(res.Spec.Certificate) != 0 {
+			// Create the managed cluster resource. No need to generate a certificate, since one was
+			// provided.
+			_, err := c.ManagedClusters().Create(ctx, res, oso)
+			if err != nil {
+				return nil, err
+			}
+
+			return res, nil
+		}
+
 		// Generate x509 certificate and private key for the managed cluster
 		certificate, privKey, err := helpers.Generate(resources.CACert, resources.CAKey, res.ObjectMeta.Name)
 		if err != nil {
@@ -89,11 +100,11 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		ogo := opts.(options.GetOptions)
-		return c.ManagedClusters().Get(ctx, name, ogo)
+		return c.ManagedClusters().Get(ctx, ns, name, ogo)
 	}
 	deleteFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		odo := opts.(options.DeleteOptions)
-		return c.ManagedClusters().Delete(ctx, name, odo)
+		return c.ManagedClusters().Delete(ctx, ns, name, odo)
 	}
 	listFn := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (resourceListObject, error) {
 		olo := opts.(options.ListOptions)
@@ -114,7 +125,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		aapiListType:      reflect.TypeOf(v3.ManagedClusterList{}),
 		libCalicoType:     reflect.TypeOf(v3.ManagedCluster{}),
 		libCalicoListType: reflect.TypeOf(v3.ManagedClusterList{}),
-		isNamespaced:      false,
+		isNamespaced:      MultiTenantEnabled,
 		create:            createFn,
 		update:            updateFn,
 		get:               getFn,

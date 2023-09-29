@@ -9,6 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/client-go/informers"
+
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
+
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/SermoDigital/jose/jws"
@@ -33,6 +37,7 @@ import (
 const (
 	LinseedIssuer        string = "linseed.tigera.io"
 	defaultTokenLifetime        = 24 * time.Hour
+	allClustersRetryKey         = "all-clusters-retry-key"
 )
 
 type Controller interface {
@@ -48,10 +53,24 @@ func WithPrivateKey(k *rsa.PrivateKey) ControllerOption {
 	}
 }
 
-// WithClient configures the Calico client used to access managed cluster resources.
-func WithClient(cs calico.Interface) ControllerOption {
+// WithCalicoClient configures the Calico client used to access managed cluster resources.
+func WithCalicoClient(cs calico.Interface) ControllerOption {
 	return func(c *controller) error {
-		c.managementClient = cs
+		c.managementCalicoClient = cs
+		return nil
+	}
+}
+
+func WithK8sClient(kc kubernetes.Interface) ControllerOption {
+	return func(c *controller) error {
+		c.managementK8sClient = kc
+		return nil
+	}
+}
+
+func WithSecretsToCopy(secrets []corev1.Secret) ControllerOption {
+	return func(c *controller) error {
+		c.secretsToCopy = secrets
 		return nil
 	}
 }
@@ -59,6 +78,13 @@ func WithClient(cs calico.Interface) ControllerOption {
 func WithTenant(tenant string) ControllerOption {
 	return func(c *controller) error {
 		c.tenant = tenant
+		return nil
+	}
+}
+
+func WithImpersonation(info *user.DefaultInfo) ControllerOption {
+	return func(c *controller) error {
+		c.impersonationInfo = info
 		return nil
 	}
 }
@@ -126,9 +152,18 @@ func WithReconcilePeriod(t time.Duration) ControllerOption {
 	}
 }
 
-func WithRetryPeriod(t time.Duration) ControllerOption {
+// WithBaseRetryPeriod sets the base retry period for retrying failed operations.
+// The actual retry period is calculated as baseRetryPeriod * 2^retryCount.
+func WithBaseRetryPeriod(t time.Duration) ControllerOption {
 	return func(c *controller) error {
-		c.retryPeriod = &t
+		c.baseRetryPeriod = &t
+		return nil
+	}
+}
+
+func WithMaxRetries(n int) ControllerOption {
+	return func(c *controller) error {
+		c.maxRetries = &n
 		return nil
 	}
 }
@@ -136,6 +171,13 @@ func WithRetryPeriod(t time.Duration) ControllerOption {
 func WithHealthReport(reportHealth func(*health.HealthReport)) ControllerOption {
 	return func(c *controller) error {
 		c.reportHealth = reportHealth
+		return nil
+	}
+}
+
+func WithNamespace(ns string) ControllerOption {
+	return func(c *controller) error {
+		c.namespace = ns
 		return nil
 	}
 }
@@ -153,13 +195,17 @@ func NewController(opts ...ControllerOption) (Controller, error) {
 		d := 60 * time.Minute
 		c.reconcilePeriod = &d
 	}
-	if c.retryPeriod == nil {
-		d := 30 * time.Second
-		c.retryPeriod = &d
+	if c.baseRetryPeriod == nil {
+		d := 1 * time.Second
+		c.baseRetryPeriod = &d
+	}
+	if c.maxRetries == nil {
+		n := 20
+		c.maxRetries = &n
 	}
 
 	// Verify necessary options set.
-	if c.managementClient == nil {
+	if c.managementCalicoClient == nil {
 		return nil, fmt.Errorf("must provide a management cluster calico client")
 	}
 	if c.privateKey == nil {
@@ -177,24 +223,35 @@ func NewController(opts ...ControllerOption) (Controller, error) {
 	if c.factory == nil {
 		return nil, fmt.Errorf("must provide a clientset factory")
 	}
+	if c.managementK8sClient == nil {
+		return nil, fmt.Errorf("must provide a management Kubernetes client")
+	}
 	return c, nil
 }
 
 type controller struct {
 	// Input configuration.
-	privateKey       *rsa.PrivateKey
-	tenant           string
-	issuer           string
-	issuerName       string
-	managementClient calico.Interface
-	expiry           time.Duration
-	reconcilePeriod  *time.Duration
-	retryPeriod      *time.Duration
-	reportHealth     func(*health.HealthReport)
-	factory          k8s.ClientSetFactory
+	privateKey             *rsa.PrivateKey
+	tenant                 string
+	namespace              string
+	issuer                 string
+	issuerName             string
+	managementCalicoClient calico.Interface
+	managementK8sClient    kubernetes.Interface
+	secretsToCopy          []corev1.Secret
+	expiry                 time.Duration
+	reconcilePeriod        *time.Duration
+	baseRetryPeriod        *time.Duration
+	maxRetries             *int
+	reportHealth           func(*health.HealthReport)
+	factory                k8s.ClientSetFactory
 
 	// userInfos in the managed cluster that we should provision tokens for.
 	userInfos []UserInfo
+
+	// impersonationInfo contains the information necessary to populate the HTTP impersonation headers needed to perform
+	// certain actions on behalf of the managed cluster (eg. copying secrets)
+	impersonationInfo *user.DefaultInfo
 }
 
 func (c *controller) Run(stopCh <-chan struct{}) {
@@ -205,46 +262,92 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 	// we need to provision token secrets in that cluster.
 	logrus.Info("Starting token controller")
 
-	// Create an informer for watching managed clusters.
-	factory := externalversions.NewSharedInformerFactory(c.managementClient, 0)
-	managedClusterInformer := factory.Projectcalico().V3().ManagedClusters().Informer()
-
 	// Make channels for sending updates.
-	kickChan := make(chan string, 100)
-	defer close(kickChan)
+	mcChan := make(chan *v3.ManagedCluster, 100)
+	secretChan := make(chan *corev1.Secret, 100)
+	defer close(mcChan)
+	defer close(secretChan)
 
-	// Register handlers for events.
-	handler := cache.ResourceEventHandlerFuncs{
+	var mcFactory externalversions.SharedInformerFactory
+
+	// If we're running in multi-tenant mode then we only want our ManagedCluster informer to inform us of changes to
+	// resources in the same namespace as us
+	opts := []externalversions.SharedInformerOption{}
+	if c.namespace != "" {
+		opts = append(opts, externalversions.WithNamespace(c.namespace))
+	}
+	mcFactory = externalversions.NewSharedInformerFactoryWithOptions(c.managementCalicoClient, 0, opts...)
+
+	mcInformer := mcFactory.Projectcalico().V3().ManagedClusters().Informer()
+	managedClusterHandler := cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {},
 		AddFunc: func(obj interface{}) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok && isConnected(mc) {
-				kickChan <- mc.Name
+				mcChan <- mc
 			}
 		},
 		UpdateFunc: func(_, obj interface{}) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok && isConnected(mc) {
-				kickChan <- mc.Name
+				mcChan <- mc
 			}
 		},
 	}
-	_, err := managedClusterInformer.AddEventHandler(handler)
+	_, err := mcInformer.AddEventHandler(managedClusterHandler)
 	if err != nil {
-		logrus.WithError(err).Fatal("Failed to add event handler")
+		logrus.WithError(err).Fatal("Failed to add ManagedCluster event handler")
 	}
 
-	// Start the informer.
-	logrus.Info("Waiting for token controller to sync")
-	go managedClusterInformer.Run(stopCh)
-	for !managedClusterInformer.HasSynced() {
+	secretFactory := informers.NewSharedInformerFactory(c.managementK8sClient, 0)
+	secretInformer := secretFactory.Core().V1().Secrets().Informer()
+	secretHandler := cache.ResourceEventHandlerFuncs{
+		DeleteFunc: func(obj interface{}) {}, // TODO: Clean up deleted secrets in the managed cluster
+		AddFunc: func(obj interface{}) {
+			if s, ok := obj.(*corev1.Secret); ok {
+				for _, secret := range c.secretsToCopy {
+					if s.Name == secret.Name && s.Namespace == secret.Namespace {
+						secretChan <- s
+						break
+					}
+				}
+			}
+		},
+		UpdateFunc: func(_, obj interface{}) {
+			if s, ok := obj.(*corev1.Secret); ok {
+				for _, secret := range c.secretsToCopy {
+					if s.Name == secret.Name && s.Namespace == secret.Namespace {
+						secretChan <- s
+						break
+					}
+				}
+			}
+		},
+	}
+	_, err = secretInformer.AddEventHandler(secretHandler)
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to add Secret event handler")
+	}
+
+	go mcInformer.Run(stopCh)
+	go secretInformer.Run(stopCh)
+
+	logrus.Info("Waiting for token controller to sync with ManagedCluster informer")
+	for !mcInformer.HasSynced() {
 		time.Sleep(1 * time.Second)
 	}
-	logrus.Info("Token controller has synced with ManagedCluster API")
+	logrus.Info("Token controller has synced with ManagedCluster informer")
+
+	logrus.Info("Waiting for token controller to sync with Secret informer")
+	for !secretInformer.HasSynced() {
+		time.Sleep(1 * time.Second)
+	}
+	logrus.Info("Token controller has synced with Secret informer")
 
 	// Start the token manager.
 	c.ManageTokens(
 		stopCh,
-		kickChan,
-		v3listers.NewManagedClusterLister(managedClusterInformer.GetIndexer()),
+		mcChan,
+		secretChan,
+		v3listers.NewManagedClusterLister(mcInformer.GetIndexer()),
 	)
 }
 
@@ -258,31 +361,37 @@ func isConnected(mc *v3.ManagedCluster) bool {
 	return false
 }
 
-func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, lister v3listers.ManagedClusterLister) {
-	defer logrus.Info("Token manager shutting down")
+func retryUpdate[T corev1.Secret | v3.ManagedCluster](rc *retryCalculator, id string, obj T, objChan chan *T, stop <-chan struct{}) {
+	updateType := fmt.Sprintf("%T", obj)
+	log := logrus.WithField(updateType, id)
 
-	// Local helper function for reconciling.
-	reconcile := func(clusterName string) error {
-		if clusterName == "" {
-			logrus.Warn("No cluster name given")
-			return nil
-		}
-		logrus.WithField("cluster", clusterName).Info("Reconciling tokens for cluster")
-		client, err := c.factory.NewClientSetForApplication(clusterName)
-		if err != nil {
-			logrus.WithError(err).Warn("failed to get client for cluster")
-			return err
-		}
-		err = c.reconcileTokens(clusterName, client)
-		if err != nil {
-			logrus.WithError(err).Warn("Error reconciling tokens")
-			return err
-		}
-		logrus.WithField("cluster", clusterName).Debug("Token reconciliation complete")
-		return nil
+	// Check if we should retry this update.
+	retry, dur := rc.duration(id)
+	if !retry {
+		log.Warnf("Giving up on %s", updateType)
+		return
 	}
 
+	// Schedule a retry.
+	go func() {
+		log.WithField("wait", dur).Infof("Scheduling retry for failed sync after %.0f seconds", dur.Seconds())
+		time.Sleep(dur)
+
+		// Use select to prevent accidentally sending to a closed channel if the controller initiated a shut down
+		// while this routine was sleeping.
+		select {
+		case <-stop:
+		default:
+			objChan <- &obj
+		}
+	}()
+}
+
+func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *v3.ManagedCluster, secretChan chan *corev1.Secret, lister v3listers.ManagedClusterLister) {
+	defer logrus.Info("Token manager shutting down")
+
 	ticker := time.After(*c.reconcilePeriod)
+	rc := NewRetryCalculator(*c.baseRetryPeriod, *c.maxRetries)
 
 	// Main loop.
 	for {
@@ -290,52 +399,166 @@ func (c *controller) ManageTokens(stop <-chan struct{}, kickChan chan string, li
 		case <-stop:
 			return
 		case <-ticker:
-			logrus.Info("Reconciling all clusters tokens")
-
-			// Start a new ticker.
-			ticker = time.After(*c.reconcilePeriod)
+			logrus.Debug("Reconciling tokens and copying secrets for all clusters")
 
 			// Get all clusters.
-			items, err := lister.List(labels.Everything())
+			mcs, err := lister.List(labels.Everything())
 			if err != nil {
 				logrus.WithError(err).Error("Failed to list managed clusters")
 				continue
 			}
 
-			for _, mc := range items {
-				if isConnected(mc) {
-					if err = reconcile(mc.Name); err != nil {
-						logrus.WithError(err).WithField("cluster", mc.Name).Warn("Error reconciling cluster")
-					}
+			// Start a new ticker.
+			ticker = time.After(*c.reconcilePeriod)
+
+			for _, mc := range mcs {
+				log := c.loggerForManagedCluster(mc)
+
+				managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(mc.Name)
+				if err != nil {
+					log.WithError(err).Error("failed to get client for cluster")
+					continue
+				}
+
+				if err = c.reconcileTokensForCluster(mc, managedClient); err != nil {
+					log.WithError(err).Error("failed to reconcile tokens")
+				}
+
+				if err = c.reconcileSecretsForCluster(mc, c.secretsToCopy, managedClient); err != nil {
+					log.WithError(err).Error("failed to reconcile secrets")
 				}
 			}
+
 			if c.reportHealth != nil {
 				c.reportHealth(&health.HealthReport{Live: true, Ready: true})
 			}
-		case name := <-kickChan:
-			if name != "" {
-				if err := reconcile(name); err != nil {
-					// Schedule a retry.
-					go func(n string, ch chan string) {
-						logrus.WithError(err).WithField("cluster", name).Info("Scheduling retry for failed sync")
-						time.Sleep(*c.retryPeriod)
-						ch <- n
-					}(name, kickChan)
+		case mc := <-mcChan:
+			retry := retryUpdate[v3.ManagedCluster]
+
+			log := c.loggerForManagedCluster(mc)
+
+			managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(mc.Name)
+			if err != nil {
+				log.WithError(err).Error("failed to get client for cluster")
+				retry(rc, mc.Name, *mc, mcChan, stop)
+				continue
+			}
+
+			if err = c.reconcileTokensForCluster(mc, managedClient); err != nil {
+				retry(rc, mc.Name, *mc, mcChan, stop)
+			}
+
+			if err = c.reconcileSecretsForCluster(mc, c.secretsToCopy, managedClient); err != nil {
+				retry(rc, mc.Name, *mc, mcChan, stop)
+			}
+		case secret := <-secretChan:
+			retry := retryUpdate[corev1.Secret]
+
+			// Get all clusters.
+			mcs, err := lister.List(labels.Everything())
+			if err != nil {
+				logrus.WithError(err).Error("Failed to list managed clusters")
+				retry(rc, secret.String(), *secret, secretChan, stop)
+				continue
+			}
+
+			for _, mc := range mcs {
+				log := c.loggerForManagedCluster(mc)
+
+				managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(mc.Name)
+				if err != nil {
+					log.WithError(err).Error("failed to get client for cluster")
+					retry(rc, secret.String(), *secret, secretChan, stop)
+					continue
+				}
+
+				if err = c.reconcileSecretsForCluster(mc, []corev1.Secret{*secret}, managedClient); err != nil {
+					retry(rc, secret.String(), *secret, secretChan, stop)
 				}
 			}
 		}
 	}
 }
 
-// reconcileTokens reconciles tokens. This is a hack and should be moved to its own location.
-func (c *controller) reconcileTokens(cluster string, managedClient kubernetes.Interface) error {
-	for _, user := range c.userInfos {
-		f := logrus.Fields{
-			"cluster": cluster,
-			"tenant":  c.tenant,
-			"service": user.Name,
+func NewRetryCalculator(start time.Duration, maxRetries int) *retryCalculator {
+	return &retryCalculator{
+		startDuration:      start,
+		maxRetries:         maxRetries,
+		outstandingRetries: map[string]time.Duration{},
+		numRetries:         map[string]int{},
+	}
+}
+
+type retryCalculator struct {
+	startDuration      time.Duration
+	outstandingRetries map[string]time.Duration
+	numRetries         map[string]int
+	maxRetries         int
+}
+
+// duration returns the next duration to use when retrying the given key.
+// after a max number of retries, it will return (false, 0) to indicate that we should give up.
+func (r *retryCalculator) duration(key string) (bool, time.Duration) {
+	if r.numRetries[key] >= r.maxRetries {
+		// Give up.
+		delete(r.numRetries, key)
+		delete(r.outstandingRetries, key)
+		return false, 0 * time.Second
+	}
+	r.numRetries[key]++
+
+	if d, ok := r.outstandingRetries[key]; ok {
+		// Double the duration, up to a maximum of 1 minute.
+		d = d * 2
+		if d > 1*time.Minute {
+			d = 1 * time.Minute
 		}
-		log := logrus.WithFields(f)
+		r.outstandingRetries[key] = d
+		return true, d
+	} else {
+		// First time we've seen this key.
+		d = r.startDuration
+		r.outstandingRetries[key] = d
+		return true, d
+	}
+}
+
+func isValid(mc *v3.ManagedCluster) error {
+	if mc.Name == "" {
+		return fmt.Errorf("Empty cluster name given")
+	}
+
+	return nil
+}
+
+func (c *controller) loggerForManagedCluster(mc *v3.ManagedCluster) *logrus.Entry {
+	name := mc.Name
+	if mc.Namespace != "" {
+		name = fmt.Sprintf("%s/%s", mc.Namespace, mc.Name)
+	}
+
+	logger := logrus.WithField("cluster", name)
+
+	if c.tenant != "" {
+		logger = logger.WithField("tenant", c.tenant)
+	}
+
+	return logger
+}
+
+// reconcileTokens reconciles tokens. This is a hack and should be moved to its own location.
+func (c *controller) reconcileTokensForCluster(mc *v3.ManagedCluster, managedClient kubernetes.Interface) error {
+	log := c.loggerForManagedCluster(mc)
+
+	if err := isValid(mc); err != nil {
+		return err
+	} else if !isConnected(mc) {
+		log.Debug("ManagedCluster not connected, skipping")
+		return nil
+	}
+
+	for _, user := range c.userInfos {
+		log = log.WithField("service", user.Name)
 
 		// First, check if token exists. If it does, we don't need to do anything.
 		tokenName := c.tokenNameForService(user.Name)
@@ -348,7 +571,7 @@ func (c *controller) reconcileTokens(cluster string, managedClient kubernetes.In
 		}
 
 		// Token needs to be created or updated.
-		token, err := c.createToken(c.tenant, cluster, user)
+		token, err := c.createToken(c.tenant, mc.Name, user)
 		if err != nil {
 			return err
 		}
@@ -363,11 +586,50 @@ func (c *controller) reconcileTokens(cluster string, managedClient kubernetes.In
 			},
 		}
 
-		if err := resource.WriteSecretToK8s(managedClient, resource.CopySecret(&secret)); err != nil {
+		if err = resource.WriteSecretToK8s(managedClient, resource.CopySecret(&secret)); err != nil {
 			return err
 		}
 		log.WithField("name", secret.Name).Info("Created/updated token secret")
 	}
+
+	return nil
+}
+
+func (c *controller) reconcileSecretsForCluster(mc *v3.ManagedCluster, secretsToCopy []corev1.Secret, managedClient k8s.ClientSet) error {
+	log := c.loggerForManagedCluster(mc)
+
+	if err := isValid(mc); err != nil {
+		return err
+	} else if !isConnected(mc) {
+		log.Debug("ManagedCluster not connected, skipping")
+		return nil
+	}
+
+	for _, s := range secretsToCopy {
+		secret, err := c.managementK8sClient.CoreV1().Secrets(s.Namespace).Get(context.Background(), s.Name, metav1.GetOptions{})
+		if err != nil {
+			log.WithError(err).Errorf("Error retrieving secret %v in namespace %v", s.Name, s.Namespace)
+			return err
+		}
+
+		managedOperatorNS, err := utils.FetchOperatorNamespace(managedClient)
+		if err != nil {
+			log.WithError(err).Error("Unable to fetch managed cluster operator namespace")
+			return err
+		}
+
+		secret.ObjectMeta.Namespace = managedOperatorNS
+		if err = resource.WriteSecretToK8s(managedClient, resource.CopySecret(secret)); err != nil {
+			log.WithError(err).Error("Error writing secret to managed cluster")
+			return err
+		}
+		log.WithFields(logrus.Fields{
+			"name":      secret.Name,
+			"namespace": secret.Namespace,
+		}).Debug("Copied secret to managed cluster")
+	}
+	log.Debug("Successfully copied all secrets")
+
 	return nil
 }
 

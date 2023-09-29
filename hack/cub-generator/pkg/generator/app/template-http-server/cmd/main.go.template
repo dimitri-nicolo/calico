@@ -1,0 +1,108 @@
+// Copyright (c) {{now | date "2006"}} Tigera, Inc. All rights reserved.
+
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/kelseyhightower/envconfig"
+	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/{{ lower .Name }}/pkg/config"
+	"github.com/projectcalico/calico/{{ lower .Name }}/pkg/handler"
+	"github.com/projectcalico/calico/crypto/pkg/tls"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+)
+
+var (
+	versionFlag = flag.Bool("version", false, "Print version information")
+)
+
+func main() {
+	// Parse all command-line flags
+	flag.Parse()
+
+	// For --version use case
+	if *versionFlag {
+		config.Version()
+		os.Exit(0)
+	}
+
+	cfg := config.Config{}
+	if err := envconfig.Process(config.EnvConfigPrefix, &cfg); err != nil {
+		logrus.Fatal(err)
+	}
+
+	// Configure logging
+	config.ConfigureLogging(cfg.LogLevel)
+	logrus.Debugf("Starting with %#v", cfg)
+
+	// Register for termination signals
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Create a health aggregator and mark us as alive.
+	// For now, we don't do periodic updates to our health, so don't set a timeout.
+	const healthName = "{{ lower .Name }}"
+	healthAggregator := health.NewHealthAggregator()
+	healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true}, 0)
+
+	go func() {
+		// We only want the health aggregator to be accessible from within the container.
+		// Kubelet will use an exec probe to get status.
+		healthAggregator.ServeHTTP(true, "localhost", 8080)
+	}()
+
+	var addr = fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
+	logrus.Infof("Listening for HTTPS requests at %s", addr)
+
+	// Define handlers
+	http.Handle("/version", handler.VersionCheck())
+	http.Handle("/status", handler.Status())
+
+	// Start server
+	server := &http.Server{
+		Addr:      addr,
+		TLSConfig: tls.NewTLSConfig(cfg.FIPSModeEnabled),
+	}
+
+	go func() {
+		logrus.Infof("Listening for HTTPS requests at %s", addr)
+		if err := server.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey); err != nil && err != http.ErrServerClosed {
+			logrus.WithError(err).Fatal("Failed to listen for new requests for {{ .Name }} APIs")
+		}
+	}()
+
+	go func() {
+		metricsAddr := fmt.Sprintf("%v:%v", cfg.Host, cfg.MetricsPort)
+		http.Handle("/metrics", promhttp.Handler())
+		err := http.ListenAndServeTLS(metricsAddr, cfg.MetricsCert, cfg.MetricsKey, nil)
+		if err != nil {
+			logrus.WithError(err).Fatal("Failed to listen for new requests to query metrics")
+		}
+	}()
+
+	// Indicate that we're ready to serve requests.
+	healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
+
+	// Listen for termination signals
+	sig := <-signalChan
+	logrus.WithField("signal", sig).Info("Received shutdown signal")
+
+	// Graceful shutdown of the server
+	shutDownCtx, shutDownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutDownCancel()
+	if err := server.Shutdown(shutDownCtx); err != nil {
+		logrus.Fatalf("server shutdown failed: %+v", err)
+	}
+	logrus.Info("Server is shutting down")
+}

@@ -24,86 +24,84 @@ import (
 
 // TestCreateDNSLog tests running a real elasticsearch query to create a DNS log.
 func TestCreateDNSLog(t *testing.T) {
-	defer setupTest(t)()
+	RunAllModes(t, "TestCreateDNSLog", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
-	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		ip := net.ParseIP("10.0.1.1")
 
-	ip := net.ParseIP("10.0.1.1")
-
-	reqTime := time.Unix(0, 0)
-	// Create a dummy log.
-	f := v1.DNSLog{
-		StartTime:       reqTime,
-		EndTime:         reqTime,
-		Type:            v1.DNSLogTypeLog,
-		Count:           1,
-		ClientName:      "client-name",
-		ClientNameAggr:  "client-",
-		ClientNamespace: "default",
-		ClientIP:        &ip,
-		ClientLabels:    map[string]string{"pickles": "good"},
-		QName:           "qname",
-		QType:           v1.DNSType(layers.DNSTypeA),
-		QClass:          v1.DNSClass(layers.DNSClassIN),
-		RCode:           v1.DNSResponseCode(layers.DNSResponseCodeNoErr),
-		RRSets:          v1.DNSRRSets{},
-		Servers: []v1.DNSServer{
-			{
-				Endpoint: v1.Endpoint{
-					Name:           "kube-dns-one",
-					AggregatedName: "kube-dns",
-					Namespace:      "kube-system",
+		reqTime := time.Unix(0, 0)
+		// Create a dummy log.
+		f := v1.DNSLog{
+			StartTime:       reqTime,
+			EndTime:         reqTime,
+			Type:            v1.DNSLogTypeLog,
+			Count:           1,
+			ClientName:      "client-name",
+			ClientNameAggr:  "client-",
+			ClientNamespace: "default",
+			ClientIP:        &ip,
+			ClientLabels:    map[string]string{"pickles": "good"},
+			QName:           "qname",
+			QType:           v1.DNSType(layers.DNSTypeA),
+			QClass:          v1.DNSClass(layers.DNSClassIN),
+			RCode:           v1.DNSResponseCode(layers.DNSResponseCodeNoErr),
+			RRSets:          v1.DNSRRSets{},
+			Servers: []v1.DNSServer{
+				{
+					Endpoint: v1.Endpoint{
+						Name:           "kube-dns-one",
+						AggregatedName: "kube-dns",
+						Namespace:      "kube-system",
+					},
+					IP:     net.ParseIP("10.0.0.10"),
+					Labels: map[string]string{"app": "dns"},
 				},
-				IP:     net.ParseIP("10.0.0.10"),
-				Labels: map[string]string{"app": "dns"},
 			},
-		},
-		Latency: v1.DNSLatency{
-			Count: 15,
-			Mean:  5 * time.Second,
-			Max:   10 * time.Second,
-		},
-		LatencyCount: 100,
-		LatencyMean:  100,
-		LatencyMax:   100,
-	}
+			Latency: v1.DNSLatency{
+				Count: 15,
+				Mean:  5 * time.Second,
+				Max:   10 * time.Second,
+			},
+			LatencyCount: 100,
+			LatencyMean:  100,
+			LatencyMax:   100,
+		}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
 
-	resp, err := lb.Create(ctx, clusterInfo, []v1.DNSLog{f})
-	require.NoError(t, err)
-	require.Empty(t, resp.Errors)
+		resp, err := lb.Create(ctx, clusterInfo, []v1.DNSLog{f})
+		require.NoError(t, err)
+		require.Empty(t, resp.Errors)
 
-	// Refresh.
-	index := fmt.Sprintf("tigera_secure_ee_dns.%s.", cluster)
-	err = backendutils.RefreshIndex(ctx, client, index)
-	require.NoError(t, err)
+		// Refresh.
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		require.NoError(t, err)
 
-	// List out the log we just created.
-	params := v1.DNSLogParams{}
-	params.TimeRange = &lmav1.TimeRange{}
-	params.TimeRange.From = reqTime.Add(-20 * time.Minute)
-	params.TimeRange.To = reqTime.Add(1 * time.Minute)
+		// List out the log we just created.
+		params := v1.DNSLogParams{}
+		params.TimeRange = &lmav1.TimeRange{}
+		params.TimeRange.From = reqTime.Add(-20 * time.Minute)
+		params.TimeRange.To = reqTime.Add(1 * time.Minute)
 
-	listResp, err := lb.List(ctx, clusterInfo, &params)
-	require.NoError(t, err)
-	require.Len(t, listResp.Items, 1)
+		listResp, err := lb.List(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+		require.Len(t, listResp.Items, 1)
 
-	// Compare the result. Timestamps don't serialize well,
-	// so ignore them in the comparison.
-	actual := listResp.Items[0]
-	require.NotEqual(t, time.Time{}, actual.StartTime)
-	require.NotEqual(t, time.Time{}, actual.EndTime)
-	actual.StartTime = f.StartTime
-	actual.EndTime = f.EndTime
-	require.Equal(t, f, backendutils.AssertDNSLogIDAndReset(t, actual))
+		// Compare the result. Timestamps don't serialize well,
+		// so ignore them in the comparison.
+		actual := listResp.Items[0]
+		require.NotEqual(t, time.Time{}, actual.StartTime)
+		require.NotEqual(t, time.Time{}, actual.EndTime)
+		actual.StartTime = f.StartTime
+		actual.EndTime = f.EndTime
+		require.Equal(t, f, backendutils.AssertDNSLogIDAndReset(t, actual))
+	})
 }
 
 // TestAggregations tests running a real elasticsearch query to get aggregations.
 func TestAggregations(t *testing.T) {
-	t.Run("should return time-series DNS aggregation results", func(t *testing.T) {
-		defer setupTest(t)()
+	RunAllModes(t, "should return time-series DNS aggregation results", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 		ip := net.ParseIP("10.0.1.1")
 
@@ -164,8 +162,7 @@ func TestAggregations(t *testing.T) {
 		require.Empty(t, resp.Errors)
 
 		// Refresh.
-		index := fmt.Sprintf("tigera_secure_ee_dns.%s.", cluster)
-		err = backendutils.RefreshIndex(ctx, client, index)
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 		require.NoError(t, err)
 
 		params := v1.DNSAggregationParams{}
@@ -216,8 +213,7 @@ func TestAggregations(t *testing.T) {
 		}
 	})
 
-	t.Run("should return aggregate DNS stats", func(t *testing.T) {
-		defer setupTest(t)()
+	RunAllModes(t, "should return aggregate DNS stats", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 		ip := net.ParseIP("10.0.1.1")
 
@@ -278,8 +274,7 @@ func TestAggregations(t *testing.T) {
 		require.Empty(t, resp.Errors)
 
 		// Refresh.
-		index := fmt.Sprintf("tigera_secure_ee_dns.%s.", cluster)
-		err = backendutils.RefreshIndex(ctx, client, index)
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 		require.NoError(t, err)
 
 		params := v1.DNSAggregationParams{}

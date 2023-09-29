@@ -21,6 +21,15 @@ type Config struct {
 
 	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
 	FIPSModeEnabled bool `default:"false" split_words:"true"`
+
+	// Metrics configuration
+	MetricsPort int    `default:"9095" split_words:"true"`
+	MetricsCert string `default:"/certs/https/tls.crt" split_words:"true"`
+	MetricsKey  string `default:"/certs/https/tls.key" split_words:"true"`
+
+	// Target backend configuration
+	TargetURL    string `split_words:"true"`
+	TargetCAPath string `split_words:"true"`
 }
 
 // Return a string representation on the Config instance.

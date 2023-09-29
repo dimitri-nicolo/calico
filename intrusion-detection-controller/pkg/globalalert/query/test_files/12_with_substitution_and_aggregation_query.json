@@ -1,0 +1,31 @@
+{
+  "composite_aggs": {
+    "composite": {
+      "size": 500,
+      "sources": [
+        {
+          "qname": {
+            "terms": {
+              "field": "qname"
+            }
+          }
+        },
+        {
+          "client_name_aggr": {
+            "terms": {
+              "field": "client_name_aggr"
+            }
+          }
+        },
+        {
+          "client_namespace": {
+            "terms": {
+              "field": "client_namespace"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+

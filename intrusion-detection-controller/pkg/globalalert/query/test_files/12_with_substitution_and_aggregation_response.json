@@ -1,0 +1,16 @@
+{
+  "composite_aggs": {
+    "after_key": null,
+    "buckets": [
+      {
+        "key": {
+          "qname": "mycluster",
+          "client_namespace": "mynamespace",
+          "client_name_aggr": "myclient*"
+        },
+        "doc_count": 4
+      }
+    ]
+  }
+}
+

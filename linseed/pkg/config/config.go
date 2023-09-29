@@ -46,12 +46,17 @@ type Config struct {
 	// single-tenant environment
 	ExpectedTenantID string `default:"" split_words:"true"`
 
+	ManagementOperatorNamespace string `envconfig:"MANAGEMENT_OPERATOR_NS" default:""`
+
 	// Whether or not to run the token controller. This must be true for management clusters.
 	TokenControllerEnabled bool `envconfig:"TOKEN_CONTROLLER_ENABLED" default:"false"`
 
 	// Configuration for Voltron access.
 	MultiClusterForwardingEndpoint string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
 	MultiClusterForwardingCA       string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
+
+	// Configuration for health port.
+	HealthPort int `default:"8080" split_words:"true"`
 
 	// Elastic configuration
 	ElasticScheme               string `envconfig:"ELASTIC_SCHEME" default:"https"`
@@ -98,7 +103,20 @@ type Config struct {
 	// Replicas and flows for Runtime
 	ElasticRuntimeReplicas int `envconfig:"ELASTIC_RUNTIME_INDEX_REPLICAS" default:"0"`
 	ElasticRuntimeShards   int `envconfig:"ELASTIC_RUNTIME_INDEX_SHARDS" default:"1"`
+
+	// Configures which backend mode to use.
+	Backend BackendType `envconfig:"BACKEND" default:"elastic-multi-index"`
 }
+
+type BackendType string
+
+const (
+	// BackendTypeMultiIndex is the legacy backend that stores different cluster and tenant data in separate indices.
+	BackendTypeMultiIndex BackendType = "elastic-multi-index"
+
+	// BackendTypeSingleIndex is the backend that stores all cluster and tenant data in a single index.
+	BackendTypeSingleIndex BackendType = "elastic-single-index"
+)
 
 // Return a string representation on the Config instance.
 func (cfg *Config) String() string {

@@ -5,62 +5,46 @@
 package fv_test
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/linseed/pkg/client"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
-	elastic "github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func l7logSetupAndTeardown(t *testing.T) func() {
-	// Hook logrus into testing.T
-	config.ConfigureLogging("DEBUG")
-	logCancel := logutils.RedirectLogrusToTestingT(t)
+// Run runs the given test in all modes.
+func RunL7LogTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
+	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		defer setupAndTeardown(t, args, index.L7LogMultiIndex)()
+		testFn(t, index.L7LogMultiIndex)
+	})
 
-	// Create an ES client.
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
-	require.NoError(t, err)
-	lmaClient = lmaelastic.NewWithClient(esClient)
-
-	// Instantiate a client.
-	cli, err = NewLinseedClient()
-	require.NoError(t, err)
-
-	// Create a random cluster name for each test to make sure we don't
-	// interfere between tests.
-	cluster = testutils.RandomClusterName()
-
-	// Set up context with a timeout.
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-
-	return func() {
-		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, cluster)
-		logCancel()
-		cancel()
-	}
+	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		args.Backend = config.BackendTypeSingleIndex
+		defer setupAndTeardown(t, args, index.L7LogIndex)()
+		testFn(t, index.L7LogIndex)
+	})
 }
 
-func TestL7_FlowLogs(t *testing.T) {
-	t.Run("should return an empty list if there are no l7 logs", func(t *testing.T) {
-		defer l7logSetupAndTeardown(t)()
-
+func TestL7_L7Logs(t *testing.T) {
+	RunL7LogTest(t, "should return an empty list if there are no l7 logs", func(t *testing.T, idx bapi.Index) {
 		params := v1.L7LogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -76,9 +60,7 @@ func TestL7_FlowLogs(t *testing.T) {
 		require.Equal(t, []v1.L7Log{}, logs.Items)
 	})
 
-	t.Run("should create and list l7 logs", func(t *testing.T) {
-		defer l7logSetupAndTeardown(t)()
-
+	RunL7LogTest(t, "should create and list l7 logs", func(t *testing.T, idx bapi.Index) {
 		// Create a basic flow log.
 		logs := []v1.L7Log{
 			{
@@ -91,7 +73,7 @@ func TestL7_FlowLogs(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create l7 log did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_l7*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Read it back.
 		params := v1.L7LogParams{
@@ -107,9 +89,7 @@ func TestL7_FlowLogs(t *testing.T) {
 		require.Equal(t, logs, resp.Items)
 	})
 
-	t.Run("should return an empty aggregations if there are no l7 logs", func(t *testing.T) {
-		defer l7logSetupAndTeardown(t)()
-
+	RunL7LogTest(t, "should return an empty aggregations if there are no l7 logs", func(t *testing.T, idx bapi.Index) {
 		params := v1.L7AggregationParams{
 			L7LogParams: v1.L7LogParams{
 				QueryParams: v1.QueryParams{
@@ -125,18 +105,63 @@ func TestL7_FlowLogs(t *testing.T) {
 			NumBuckets: 3,
 		}
 
+		// Refresh to make sure we have the latest data.
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+
 		// Perform a query.
 		aggregations, err := cli.L7Logs(cluster).Aggregations(ctx, &params)
 		require.NoError(t, err)
-		require.Nil(t, aggregations)
+		require.Equal(t, 0, numBuckets(aggregations))
 	})
 
-	t.Run("should support pagination", func(t *testing.T) {
-		defer l7logSetupAndTeardown(t)()
+	RunL7LogTest(t, "should return aggregations if there are l7 logs", func(t *testing.T, idx bapi.Index) {
+		// Create 5 logs.
+		logTime := time.Now().UTC().Unix()
+		totalItems := 10
+		for i := 0; i < totalItems; i++ {
+			logs := []v1.L7Log{
+				{
+					StartTime: logTime,
+					EndTime:   logTime + int64(i), // Make sure logs are ordered.
+					Host:      fmt.Sprintf("%d", i),
+				},
+			}
+			bulk, err := cli.L7Logs(cluster).Create(ctx, logs)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create L7 log did not succeed")
+		}
 
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+
+		params := v1.L7AggregationParams{
+			L7LogParams: v1.L7LogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Now().Add(-10 * time.Second),
+						To:   time.Now().Add(10 * time.Second),
+					},
+				},
+			},
+			Aggregations: map[string]json.RawMessage{
+				"response_code": []byte(`{"filters":{"other_bucket_key":"other","filters":{"1xx":{"prefix":{"response_code":"1"}},"2xx":{"prefix":{"response_code":"2"}},"3xx":{"prefix":{"response_code":"3"}},"4xx":{"prefix":{"response_code":"4"}},"5xx":{"prefix":{"response_code":"5"}}}},"aggs":{"myDurationMeanHistogram":{"date_histogram":{"field":"start_time","fixed_interval":"60s"},"aggs":{"myDurationMeanAvg":{"avg":{"field":"duration_mean"}}}}}}`),
+			},
+			NumBuckets: 2,
+		}
+
+		// Perform a query.
+		aggregations, err := cli.L7Logs(cluster).Aggregations(ctx, &params)
+		require.NoError(t, err)
+		require.NotNil(t, aggregations)
+
+		// Expect it to have buckets.
+		require.Equal(t, 2, numBuckets(aggregations))
+	})
+
+	RunL7LogTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
 		totalItems := 5
 
-		// Create 5 flow logs.
+		// Create 5 logs.
 		logTime := time.Now().UTC().Unix()
 		for i := 0; i < totalItems; i++ {
 			logs := []v1.L7Log{
@@ -152,7 +177,7 @@ func TestL7_FlowLogs(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_l7*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
@@ -216,9 +241,7 @@ func TestL7_FlowLogs(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 
-	t.Run("should support pagination for items >= 10000 for l7 logs", func(t *testing.T) {
-		defer l7logSetupAndTeardown(t)()
-
+	RunL7LogTest(t, "should support pagination for items >= 10000 for l7 logs", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K logs.
 		logTime := time.Now().UTC().Unix()
@@ -236,7 +259,7 @@ func TestL7_FlowLogs(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create logs did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_l7*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Stream through all the items.
 		params := v1.L7LogParams{
@@ -263,15 +286,14 @@ func TestL7_FlowLogs(t *testing.T) {
 
 		require.Equal(t, receivedItems, totalItems)
 	})
-
 }
 
 func TestFV_L7LogsTenancy(t *testing.T) {
-	t.Run("should support tenancy restriction", func(t *testing.T) {
-		defer l7logSetupAndTeardown(t)()
-
+	RunL7LogTest(t, "should support tenancy restriction", func(t *testing.T, idx bapi.Index) {
 		// Instantiate a client for an unexpected tenant.
-		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		args := DefaultLinseedArgs()
+		args.TenantID = "bad-tenant"
+		tenantCLI, err := NewLinseedClient(args)
 		require.NoError(t, err)
 
 		// Create a basic log. We expect this to fail, since we're using
@@ -299,4 +321,28 @@ func TestFV_L7LogsTenancy(t *testing.T) {
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, resp)
 	})
+}
+
+// numBuckets returns the number of buckets in the aggregation response.
+func numBuckets(aggregations elastic.Aggregations) int {
+	if aggregations == nil {
+		return 0
+	}
+	tbJSON, ok := aggregations[v1.TimeSeriesBucketName]
+	if !ok {
+		logrus.Info("[TEST] tb key not found")
+		return 0
+	}
+	var tb map[string]interface{}
+	err := json.Unmarshal([]byte(tbJSON), &tb)
+	if err != nil {
+		logrus.WithError(err).Info("[TEST] failed to unmarshal tb")
+		return 0
+	}
+	buckets, ok := tb["buckets"].([]interface{})
+	if !ok {
+		logrus.Info("[TEST] buckets key not found")
+		return 0
+	}
+	return len(buckets)
 }

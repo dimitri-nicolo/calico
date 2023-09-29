@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
@@ -29,15 +30,32 @@ import (
 )
 
 var (
-	client  lmaelastic.Client
-	b       bapi.BGPBackend
-	ctx     context.Context
-	cluster string
+	client      lmaelastic.Client
+	b           bapi.BGPBackend
+	ctx         context.Context
+	cluster     string
+	indexGetter bapi.Index
 )
+
+// RunAllModes runs the given test function twice, once using the single-index backend, and once using
+// the multi-index backend.
+func RunAllModes(t *testing.T, name string, testFn func(t *testing.T)) {
+	// Run using the multi-index backend.
+	t.Run(fmt.Sprintf("%s [legacy]", name), func(t *testing.T) {
+		defer setupTest(t, false)()
+		testFn(t)
+	})
+
+	// Run using the single-index backend.
+	t.Run(fmt.Sprintf("%s [singleindex]", name), func(t *testing.T) {
+		defer setupTest(t, true)()
+		testFn(t)
+	})
+}
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
-func setupTest(t *testing.T) func() {
+func setupTest(t *testing.T, singleIndex bool) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -47,10 +65,16 @@ func setupTest(t *testing.T) func() {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
-	cache := templates.NewTemplateCache(client, 1, 0)
+	cache := templates.NewCachedInitializer(client, 1, 0)
 
 	// Instantiate a backend.
-	b = bgp.NewBackend(client, cache, 10000)
+	if singleIndex {
+		b = bgp.NewSingleIndexBackend(client, cache, 1000)
+		indexGetter = index.BGPLogIndex
+	} else {
+		b = bgp.NewBackend(client, cache, 10000)
+		indexGetter = index.BGPLogMultiIndex
+	}
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
@@ -62,7 +86,7 @@ func setupTest(t *testing.T) func() {
 
 	// Function contains teardown logic.
 	return func() {
-		err = testutils.CleanupIndices(context.Background(), esClient, cluster)
+		err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
 		require.NoError(t, err)
 
 		// Cancel the context
@@ -76,9 +100,7 @@ func TestCreateBGPLog(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateBGPLog (tenant=%s)", tenant)
-		t.Run(name, func(t *testing.T) {
-			defer setupTest(t)()
-
+		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 			f := v1.BGPLog{
@@ -97,11 +119,7 @@ func TestCreateBGPLog(t *testing.T) {
 			require.Equal(t, 1, resp.Succeeded)
 
 			// Refresh the index.
-			index := fmt.Sprintf("tigera_secure_ee_bgp.%s.*", cluster)
-			if tenant != "" {
-				index = fmt.Sprintf("tigera_secure_ee_bgp.%s.%s.*", tenant, cluster)
-			}
-			err = testutils.RefreshIndex(ctx, client, index)
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// List the log, assert that it matches the one we just wrote.
@@ -128,7 +146,7 @@ func TestCreateBGPLog(t *testing.T) {
 		})
 	}
 
-	t.Run("no cluster name given", func(t *testing.T) {
+	RunAllModes(t, "no cluster name given", func(t *testing.T) {
 		// It should reject requests with no cluster name given.
 		clusterInfo := bapi.ClusterInfo{}
 		f := v1.BGPLog{

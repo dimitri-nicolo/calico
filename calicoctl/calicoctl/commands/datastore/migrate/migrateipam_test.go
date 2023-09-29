@@ -365,6 +365,11 @@ func (c *MockIPAMClient) ExternalNetworks() client.ExternalNetworkInterface {
 	return nil
 }
 
+func (c *MockIPAMClient) SecurityEventWebhook() client.SecurityEventWebhookInterface {
+	// DO NOTHING
+	return nil
+}
+
 func (c *MockIPAMClient) EgressGatewayPolicy() client.EgressGatewayPolicyInterface {
 	// DO NOTHING
 	return nil

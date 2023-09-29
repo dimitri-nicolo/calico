@@ -19,6 +19,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/compliance"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
@@ -28,18 +29,39 @@ import (
 
 var (
 	client      lmaelastic.Client
-	cache       bapi.Cache
+	cache       bapi.IndexInitializer
 	rb          bapi.ReportsBackend
 	bb          bapi.BenchmarksBackend
 	sb          bapi.SnapshotsBackend
 	ctx         context.Context
 	cluster     string
 	clusterInfo bapi.ClusterInfo
+
+	// Report, benchmark, and snapshot indexes.
+	rIndexGetter bapi.Index
+	bIndexGetter bapi.Index
+	sIndexGetter bapi.Index
 )
+
+// RunAllModes runs the given test function twice, once using the single-index backend, and once using
+// the multi-index backend.
+func RunAllModes(t *testing.T, name string, testFn func(t *testing.T)) {
+	// Run using the multi-index backend.
+	t.Run(fmt.Sprintf("%s [legacy]", name), func(t *testing.T) {
+		defer setupTest(t, false)()
+		testFn(t)
+	})
+
+	// Run using the single-index backend.
+	t.Run(fmt.Sprintf("%s [singleindex]", name), func(t *testing.T) {
+		defer setupTest(t, true)()
+		testFn(t)
+	})
+}
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
-func setupTest(t *testing.T) func() {
+func setupTest(t *testing.T, singleIndex bool) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -49,12 +71,25 @@ func setupTest(t *testing.T) func() {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
-	cache = templates.NewTemplateCache(client, 1, 0)
+
+	cache = templates.NewCachedInitializer(client, 1, 0)
 
 	// Create backends to use.
-	rb = compliance.NewReportsBackend(client, cache, 10000)
-	bb = compliance.NewBenchmarksBackend(client, cache, 10000)
-	sb = compliance.NewSnapshotBackend(client, cache, 10000)
+	if singleIndex {
+		rb = compliance.NewSingleIndexReportsBackend(client, cache, 10000)
+		bb = compliance.NewSingleIndexBenchmarksBackend(client, cache, 10000)
+		sb = compliance.NewSingleIndexSnapshotBackend(client, cache, 10000)
+		rIndexGetter = index.ComplianceReportIndex
+		bIndexGetter = index.ComplianceBenchmarkIndex
+		sIndexGetter = index.ComplianceSnapshotIndex
+	} else {
+		rb = compliance.NewReportsBackend(client, cache, 10000)
+		bb = compliance.NewBenchmarksBackend(client, cache, 10000)
+		sb = compliance.NewSnapshotBackend(client, cache, 10000)
+		rIndexGetter = index.ComplianceReportMultiIndex
+		bIndexGetter = index.ComplianceBenchmarkMultiIndex
+		sIndexGetter = index.ComplianceSnapshotMultiIndex
+	}
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
@@ -70,9 +105,11 @@ func setupTest(t *testing.T) func() {
 		// Cancel the context.
 		cancel()
 
-		// Cleanup any data that might left over from a previous failed run.
-		err = backendutils.CleanupIndices(context.Background(), esClient, cluster)
-		require.NoError(t, err)
+		// Cleanup any data that might left over from a previous run.
+		for _, indexGetter := range []bapi.Index{rIndexGetter, bIndexGetter, sIndexGetter} {
+			err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+			require.NoError(t, err)
+		}
 
 		// Cancel logging
 		logCancel()
@@ -80,9 +117,7 @@ func setupTest(t *testing.T) func() {
 }
 
 func TestReportDataBasic(t *testing.T) {
-	t.Run("invalid ClusterInfo", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "invalid ClusterInfo", func(t *testing.T) {
 		f := v1.ReportData{}
 		p := v1.ReportDataParams{}
 
@@ -104,8 +139,7 @@ func TestReportDataBasic(t *testing.T) {
 	// Run each test with a tenant specified, and also without a tenant.
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("create and retrieve reports (tenant=%s)", tenant)
-		t.Run(name, func(t *testing.T) {
-			defer setupTest(t)()
+		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo.Tenant = tenant
 
 			// Create a dummy report.
@@ -123,7 +157,7 @@ func TestReportDataBasic(t *testing.T) {
 			require.Equal(t, []v1.BulkError(nil), response.Errors)
 			require.Equal(t, 0, response.Failed)
 
-			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_compliance_reports.*")
+			err = backendutils.RefreshIndex(ctx, client, rIndexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Read it back and check it matches.
@@ -249,8 +283,7 @@ func TestReportDataFiltering(t *testing.T) {
 		// Run each test with a tenant specified, and also without a tenant.
 		for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
-			t.Run(name, func(t *testing.T) {
-				defer setupTest(t)()
+			RunAllModes(t, name, func(t *testing.T) {
 				clusterInfo.Tenant = tenant
 
 				r1 := v1.ReportData{
@@ -279,7 +312,7 @@ func TestReportDataFiltering(t *testing.T) {
 				require.Equal(t, []v1.BulkError(nil), response.Errors)
 				require.Equal(t, 0, response.Failed)
 
-				err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_compliance_reports.*")
+				err = backendutils.RefreshIndex(ctx, client, rIndexGetter.Index(clusterInfo))
 				require.NoError(t, err)
 
 				resp, err := rb.List(ctx, clusterInfo, tc.Params)
@@ -301,9 +334,7 @@ func TestReportDataFiltering(t *testing.T) {
 }
 
 func TestReportDataSorting(t *testing.T) {
-	t.Run("should respect sorting", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "should respect sorting", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 		t1 := time.Unix(100, 0)
@@ -333,7 +364,7 @@ func TestReportDataSorting(t *testing.T) {
 		_, err := rb.Create(ctx, clusterInfo, []v1.ReportData{r1, r2})
 		require.NoError(t, err)
 
-		err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_compliance_reports.*")
+		err = backendutils.RefreshIndex(ctx, client, rIndexGetter.Index(clusterInfo))
 		require.NoError(t, err)
 
 		// Query for flow logs without sorting.

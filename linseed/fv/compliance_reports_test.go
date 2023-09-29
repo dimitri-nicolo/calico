@@ -5,64 +5,43 @@
 package fv_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/projectcalico/calico/linseed/pkg/client"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
-	elastic "github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func complianceSetupAndTeardown(t *testing.T) func() {
-	// Hook logrus into testing.T
-	config.ConfigureLogging("DEBUG")
-	logCancel := logutils.RedirectLogrusToTestingT(t)
+func RunComplianceReportTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
+	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		defer setupAndTeardown(t, args, index.ComplianceReportMultiIndex)()
+		testFn(t, index.ComplianceReportMultiIndex)
+	})
 
-	// Create an ES client.
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
-	require.NoError(t, err)
-	lmaClient = lmaelastic.NewWithClient(esClient)
-
-	// Instantiate a client.
-	cli, err = NewLinseedClient()
-	require.NoError(t, err)
-
-	// Create a random cluster name for each test to make sure we don't
-	// interfere between tests.
-	cluster = testutils.RandomClusterName()
-
-	// Set up context with a timeout.
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-
-	return func() {
-		// Cleanup indices created by the test.
-		err := testutils.CleanupIndices(context.Background(), esClient, cluster)
-		require.NoError(t, err)
-		logCancel()
-		cancel()
-	}
+	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		args.Backend = config.BackendTypeSingleIndex
+		defer setupAndTeardown(t, args, index.ComplianceReportIndex)()
+		testFn(t, index.ComplianceReportIndex)
+	})
 }
 
 func TestFV_ComplianceReports(t *testing.T) {
-	t.Run("should return an empty list if there are no reports", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceReportTest(t, "should return an empty list if there are no reports", func(t *testing.T, idx bapi.Index) {
 		params := v1.ReportDataParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -78,9 +57,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 		require.Equal(t, []v1.ReportData{}, reports.Items)
 	})
 
-	t.Run("should create and list reports", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceReportTest(t, "should create and list reports", func(t *testing.T, idx bapi.Index) {
 		// Create a basic report.
 		v3r := apiv3.ReportData{
 			ReportName:     "test-report",
@@ -96,7 +73,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_compliance_reports*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Read it back.
 		params := v1.ReportDataParams{
@@ -117,9 +94,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 		require.Equal(t, reports, resp.Items)
 	})
 
-	t.Run("should support pagination", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceReportTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
 		totalItems := 5
 
 		// Create 5 Snapshots.
@@ -142,7 +117,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_compliance_reports*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
@@ -214,9 +189,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 
-	t.Run("should support pagination for items >= 10000 for Reports", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceReportTest(t, "should support pagination for items >= 10000 for Reports", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K reports.
 		logTime := time.Unix(100, 0).UTC()
@@ -239,7 +212,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Succeeded, "create reports did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_compliance_reports*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Stream through all the items.
 		params := v1.ReportDataParams{
@@ -269,11 +242,11 @@ func TestFV_ComplianceReports(t *testing.T) {
 }
 
 func TestFV_ComplianceReportsTenancy(t *testing.T) {
-	t.Run("should support tenancy restriction", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceReportTest(t, "should support tenancy restriction", func(t *testing.T, idx bapi.Index) {
 		// Instantiate a client for an unexpected tenant.
-		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		args := DefaultLinseedArgs()
+		args.TenantID = "bad-tenant"
+		tenantCLI, err := NewLinseedClient(args)
 		require.NoError(t, err)
 
 		// Create a basic log. We expect this to fail, since we're using

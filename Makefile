@@ -218,7 +218,7 @@ endif
 		bash -c '/usr/local/bin/python hack/release/get-contributors.py >> /code/AUTHORS.md'
 
 hack/release/release:
-	go build -o ./hack/release/release ./hack/release/cmd/main.go
+	go build -ldflags "-s -w" -o ./hack/release/release ./hack/release/cmd/main.go
 
 bin/metadata.yaml: hack/release/release
 	mkdir -p bin

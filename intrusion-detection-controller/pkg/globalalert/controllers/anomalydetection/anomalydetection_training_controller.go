@@ -12,6 +12,7 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/kubernetes"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
@@ -47,7 +48,7 @@ var (
 
 type adJobTrainingController struct {
 	tenantID                   string
-	k8sClient                  kubernetes.Interface
+	kubeClientSet              kubernetes.Interface
 	cancel                     context.CancelFunc
 	namespace                  string
 	adTrainingReconciler       *adJobTrainingReconciler
@@ -63,23 +64,25 @@ type TrainingDetectorsRequest struct {
 
 // NewADJobTrainingController creates and reconciles cycles that train for all the AnomalyDetection models daily
 // In a MCM Architecture and Calico cloud it maintains a training cronjob per cluster
-func NewADJobTrainingController(k8sClient kubernetes.Interface,
-	calicoCLI calicoclient.Interface, podTemplateQuery podtemplate.ADPodTemplateQuery, namespace string,
-	managementClusterName string, tenantID string) controller.AnomalyDetectionController {
+func NewADJobTrainingController(kubeClientSet kubernetes.Interface,
+	calicoClientSet calicoclient.Interface, client ctrlclient.WithWatch, podTemplateQuery podtemplate.ADPodTemplateQuery, namespace string,
+	managementClusterName string, tenantID, tenantNamespace string) controller.AnomalyDetectionController {
 
 	adTrainingReconciler := &adJobTrainingReconciler{
 		managementClusterName:       managementClusterName,
 		tenantID:                    tenantID,
-		calicoCLI:                   calicoCLI,
-		k8sClient:                   k8sClient,
+		calicoClientSet:             calicoClientSet,
+		client:                      client,
+		kubeClientSet:               kubeClientSet,
 		podTemplateQuery:            podTemplateQuery,
 		namespace:                   namespace,
 		trainingDetectorsPerCluster: make(map[string]trainingCycleStatePerCluster),
+		tenantNamespace:             tenantNamespace,
 	}
 
 	adTrainingController := &adJobTrainingController{
 		tenantID:             tenantID,
-		k8sClient:            k8sClient,
+		kubeClientSet:        kubeClientSet,
 		namespace:            namespace,
 		adTrainingReconciler: adTrainingReconciler,
 	}

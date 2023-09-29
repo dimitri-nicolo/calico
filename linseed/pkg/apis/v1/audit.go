@@ -150,7 +150,7 @@ type internalEvent struct {
 	Annotations              map[string]string        `json:"annotations"`
 
 	// Additional field added by FluentD
-	Name *string `json:"name,,omitempty"`
+	Name *string `json:"name,omitempty"`
 }
 
 type internalObjectReference struct {

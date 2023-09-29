@@ -11,9 +11,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/alert"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
@@ -33,6 +33,7 @@ type managedClusterReconciler struct {
 	lsClient                        lsclient.Client
 	k8sClient                       kubernetes.Interface
 	managementCalicoCLI             calicoclient.Interface
+	client                          ctrlclient.WithWatch
 	createManagedCalicoCLI          func(string) (calicoclient.Interface, error)
 	alertNameToAlertControllerState map[string]alertControllerState
 
@@ -41,6 +42,7 @@ type managedClusterReconciler struct {
 
 	enableAnomalyDetection bool
 	fipsModeEnabled        bool
+	tenantNamespace        string
 }
 
 // alertControllerState has the Controller and cancel function to stop the Controller.
@@ -55,7 +57,13 @@ type alertControllerState struct {
 // managed cluster if the cluster is connected and adds it to the health.PingPongers to handle health checks,
 // else it cancels the existing GlobalAlertController for that ManagedCluster.
 func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName) error {
-	mc, err := r.managementCalicoCLI.ProjectcalicoV3().ManagedClusters().Get(context.Background(), namespacedName.Name, metav1.GetOptions{})
+
+	mc := &v3.ManagedCluster{}
+	err := r.client.Get(context.Background(), types.NamespacedName{Name: namespacedName.Name, Namespace: r.tenantNamespace}, mc)
+	if err != nil {
+		return err
+	}
+
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
 	}
@@ -111,7 +119,7 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 	// create the GlobalAlertController for the managed cluster - this controller will monitor all GlobalAlert operations
 	// of the assigned managedcluster
 	// This will create global alerts and anomaly detection services per managed cluster
-	alertController, _ := alert.NewGlobalAlertController(managedCLI, r.lsClient, r.k8sClient, r.enableAnomalyDetection, r.adDetectionController, r.adTrainingController, clusterName, r.tenantID, r.namespace, r.fipsModeEnabled)
+	alertController, _ := alert.NewGlobalAlertController(managedCLI, r.lsClient, r.k8sClient, r.enableAnomalyDetection, r.adDetectionController, r.adTrainingController, clusterName, r.tenantID, r.namespace, r.fipsModeEnabled, r.tenantNamespace)
 
 	r.alertNameToAlertControllerState[clusterName] = alertControllerState{
 		alertController: alertController,

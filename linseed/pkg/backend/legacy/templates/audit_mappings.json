@@ -1,5 +1,6 @@
 {
   "properties": {
+    "audit_type": {"type": "keyword"},
     "apiVersion": { "type": "keyword" },
     "auditID": { "type": "keyword" },
     "kind": { "type": "keyword" },

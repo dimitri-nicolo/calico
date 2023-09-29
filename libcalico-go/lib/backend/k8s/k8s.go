@@ -305,7 +305,7 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindManagedCluster,
-		resources.NewManagedClusterClient(cs, crdClientV1),
+		resources.NewManagedClusterClient(ca, cs, crdClientV1),
 	)
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
@@ -350,6 +350,13 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindEgressGatewayPolicy,
 		resources.NewEgressPolicyClient(cs, crdClientV1),
+	)
+
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindSecurityEventWebhook,
+		resources.NewSecurityEventWebhookClient(cs, crdClientV1),
 	)
 
 	if !ca.K8sUsePodCIDR {
@@ -651,6 +658,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindBGPFilter,
 		apiv3.KindExternalNetwork,
 		apiv3.KindEgressGatewayPolicy,
+		apiv3.KindSecurityEventWebhook,
 	}
 	ctx := context.Background()
 	for _, k := range kinds {
@@ -814,6 +822,8 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 					&apiv3.ExternalNetworkList{},
 					&apiv3.EgressGatewayPolicy{},
 					&apiv3.EgressGatewayPolicyList{},
+					&apiv3.SecurityEventWebhook{},
+					&apiv3.SecurityEventWebhookList{},
 				)
 				return nil
 			})

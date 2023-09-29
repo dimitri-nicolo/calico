@@ -1,7 +1,11 @@
 package config
 
 import (
+	"os"
+	"strings"
+
 	"github.com/kelseyhightower/envconfig"
+	log "github.com/sirupsen/logrus"
 )
 
 type Config struct {
@@ -29,12 +33,24 @@ type Config struct {
 	// MCM configuration
 	MultiClusterForwardingCA       string `envconfig:"MULTI_CLUSTER_FORWARDING_CA" default:"/manager-tls/cert"`
 	MultiClusterForwardingEndpoint string `envconfig:"MULTI_CLUSTER_FORWARDING_ENDPOINT" default:"https://tigera-manager.tigera-manager.svc:9443"`
+
+	// MultiTenant configuration
+	TenantNamespace string `envconfig:"TENANT_NAMESPACE" default:""`
 }
 
 func GetConfig() (*Config, error) {
 	cfg := &Config{}
 	if err := envconfig.Process("", cfg); err != nil {
 		return nil, err
+	}
+
+	// Get TenantNamespace in MultiTenant Mode.
+	if len(cfg.TenantID) > 0 && cfg.TenantNamespace == "" {
+		ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+		if err != nil {
+			log.WithError(err).Fatal("unable to get the tenant namespace: %w", err)
+		}
+		cfg.TenantNamespace = strings.TrimSpace(string(ns))
 	}
 	return cfg, nil
 }

@@ -103,16 +103,25 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 					"tigera-eks-log-forwarder-anyCluster-secure",
 					"tigera-fluentd-anyCluster-secure",
 				}, []string{
+					"audit_ee_viewer_anyCluster",
+					"audit_kube_viewer_anyCluster",
+					"audit_viewer_anyCluster",
+					"dns_viewer_anyCluster",
+					"events_viewer_anyCluster",
+					"flows_viewer_anyCluster",
+					"l7_viewer_anyCluster",
+					"runtime_viewer_anyCluster",
+					"tigera-ee-ad-job-anyCluster-secure",
 					"tigera-ee-compliance-benchmarker-anyCluster-secure",
 					"tigera-ee-compliance-controller-anyCluster-secure",
 					"tigera-ee-compliance-reporter-anyCluster-secure",
 					"tigera-ee-compliance-snapshotter-anyCluster-secure",
-					"tigera-ee-ad-job-anyCluster-secure",
 					"tigera-ee-performance-hotspots-anyCluster-secure",
 					"tigera-ee-policy-recommendation-anyCluster-secure",
 					"tigera-ee-intrusion-detection-anyCluster-secure",
 					"tigera-eks-log-forwarder-anyCluster-secure",
 					"tigera-fluentd-anyCluster-secure",
+					"waf_viewer_anyCluster",
 				})
 		})
 	})
@@ -129,16 +138,25 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 		"tigera-fluentd-old-cluster-secure",
 	}
 	expectedRolesOldCluster := []string{
+		"audit_ee_viewer_old-cluster",
+		"audit_kube_viewer_old-cluster",
+		"audit_viewer_old-cluster",
+		"dns_viewer_old-cluster",
+		"events_viewer_old-cluster",
+		"flows_viewer_old-cluster",
+		"l7_viewer_old-cluster",
+		"runtime_viewer_old-cluster",
+		"tigera-ee-ad-job-old-cluster-secure",
 		"tigera-ee-compliance-benchmarker-old-cluster-secure",
 		"tigera-ee-compliance-controller-old-cluster-secure",
 		"tigera-ee-compliance-reporter-old-cluster-secure",
 		"tigera-ee-compliance-snapshotter-old-cluster-secure",
-		"tigera-ee-ad-job-old-cluster-secure",
 		"tigera-ee-performance-hotspots-old-cluster-secure",
 		"tigera-ee-policy-recommendation-old-cluster-secure",
 		"tigera-ee-intrusion-detection-old-cluster-secure",
 		"tigera-eks-log-forwarder-old-cluster-secure",
 		"tigera-fluentd-old-cluster-secure",
+		"waf_viewer_old-cluster",
 	}
 
 	DescribeTable("DeleteUserAtStartUp",

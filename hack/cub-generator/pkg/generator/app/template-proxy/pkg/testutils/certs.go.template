@@ -1,0 +1,112 @@
+// Copyright {{now | date "2006"}} Tigera. All rights reserved.
+
+package testutils
+
+import (
+	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
+	"net"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+)
+
+func MustCreateCAKeyPair(t *testing.T) (*x509.Certificate, *rsa.PrivateKey) {
+	// Create a x509 template for the mustCreateCAKeyPair
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1658),
+		Subject: pkix.Name{
+			Organization: []string{"Tigera"},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().AddDate(10, 0, 0),
+		IsCA:                  true,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		BasicConstraintsValid: true,
+	}
+
+	// Generate a private key
+	key, err := rsa.GenerateKey(rand.Reader, 4096)
+	require.NoError(t, err)
+
+	return template, key
+}
+
+func MustCreateClientKeyPair(t *testing.T) (*x509.Certificate, *rsa.PrivateKey) {
+	// Create a x509 template for the ca
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1658),
+		Subject: pkix.Name{
+			Organization: []string{"Tigera"},
+		},
+		DNSNames:     []string{"localhost"},
+		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().AddDate(10, 0, 0),
+		SubjectKeyId: []byte{1, 2, 3, 4, 6},
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+	}
+
+	// Generate a private key
+	key, err := rsa.GenerateKey(rand.Reader, 4096)
+	require.NoError(t, err)
+
+	return template, key
+}
+
+func MustCreateServerKeyPair(t *testing.T) (*x509.Certificate, *rsa.PrivateKey) {
+	// Create a x509 template for the ca
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1658),
+		Subject: pkix.Name{
+			Organization: []string{"Tigera"},
+		},
+		DNSNames:     []string{"localhost"},
+		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().AddDate(10, 0, 0),
+		SubjectKeyId: []byte{1, 2, 3, 4, 6},
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+	}
+
+	// Generate a private key
+	key, err := rsa.GenerateKey(rand.Reader, 4096)
+	require.NoError(t, err)
+
+	return template, key
+}
+
+func SignAndEncodeCert(t *testing.T, ca *x509.Certificate, caPrivateKey *rsa.PrivateKey,
+	cert *x509.Certificate, key *rsa.PrivateKey,
+) []byte {
+	// Sign the certificate with the provided CA
+	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, &key.PublicKey, caPrivateKey)
+	require.NoError(t, err)
+
+	// Encode the certificate
+	certPEM := bytes.Buffer{}
+	err = pem.Encode(&certPEM, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+	require.NoError(t, err)
+
+	return certPEM.Bytes()
+}
+
+func EncodeKey(t *testing.T, key *rsa.PrivateKey) []byte {
+	// Encode the private key
+	keyPEM := bytes.Buffer{}
+	privateBytes, err := x509.MarshalPKCS8PrivateKey(key)
+	require.NoError(t, err)
+	err = pem.Encode(&keyPEM, &pem.Block{Type: "PRIVATE KEY", Bytes: privateBytes})
+	require.NoError(t, err)
+
+	return keyPEM.Bytes()
+}

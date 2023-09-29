@@ -44,7 +44,7 @@ endif
 windows-packaging/tigera-confd.exe: $(SRC_FILES)
 	@echo Building confd for Windows...
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		GOOS=windows go build -v -o $@ -buildvcs=false -v -ldflags $(LDFLAGS) "$(PACKAGE_NAME)" && \
+		GOOS=windows go build -v -o $@ -buildvcs=false -v -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME) && \
 		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
 

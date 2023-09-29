@@ -5,7 +5,6 @@
 package fv_test
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"testing"
@@ -13,53 +12,35 @@ import (
 
 	"github.com/projectcalico/calico/linseed/pkg/client"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
-	elastic "github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func eventsSetupAndTeardown(t *testing.T) func() {
-	// Hook logrus into testing.T
-	config.ConfigureLogging("DEBUG")
-	logCancel := logutils.RedirectLogrusToTestingT(t)
+func RunEventsTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
+	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		defer setupAndTeardown(t, args, index.EventsMultiIndex)()
+		testFn(t, index.EventsMultiIndex)
+	})
 
-	// Create an ES client.
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
-	require.NoError(t, err)
-	lmaClient = lmaelastic.NewWithClient(esClient)
-
-	// Instantiate a client.
-	cli, err = NewLinseedClient()
-	require.NoError(t, err)
-
-	// Create a random cluster name for each test to make sure we don't
-	// interfere between tests.
-	cluster = testutils.RandomClusterName()
-
-	// Set up context with a timeout.
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-
-	return func() {
-		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, cluster)
-		logCancel()
-		cancel()
-	}
+	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		args.Backend = config.BackendTypeSingleIndex
+		defer setupAndTeardown(t, args, index.AlertsIndex)()
+		testFn(t, index.AlertsIndex)
+	})
 }
 
 func TestFV_Events(t *testing.T) {
-	t.Run("should return an empty list if there are no events", func(t *testing.T) {
-		defer eventsSetupAndTeardown(t)()
-
+	RunEventsTest(t, "should return an empty list if there are no events", func(t *testing.T, idx bapi.Index) {
 		params := v1.EventParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -75,9 +56,7 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, []v1.Event{}, events.Items)
 	})
 
-	t.Run("should create and list events", func(t *testing.T) {
-		defer eventsSetupAndTeardown(t)()
-
+	RunEventsTest(t, "should create and list events", func(t *testing.T, idx bapi.Index) {
 		// Create a basic event.
 		events := []v1.Event{
 			{
@@ -93,7 +72,7 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create event did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Read it back.
 		params := v1.EventParams{
@@ -111,106 +90,7 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, events, testutils.AssertLogIDAndCopyEventsWithoutID(t, resp))
 	})
 
-	t.Run("should filter events with selector", func(t *testing.T) {
-		defer eventsSetupAndTeardown(t)()
-
-		ip := "172.17.0.1"
-
-		// Create some test events.
-		events := []v1.Event{
-			{
-				Time:        v1.NewEventTimestamp(time.Now().Unix()),
-				Description: "A rather uneventful evening",
-				Origin:      "TODO",
-				Severity:    1,
-				Type:        "TODO",
-			},
-			{
-				Time:            v1.NewEventTimestamp(time.Now().Unix()),
-				Description:     "A suspicious DNS query",
-				Origin:          "TODO",
-				Severity:        1,
-				Type:            "suspicious_dns_query",
-				SourceName:      "my-source-name-123",
-				SourceNamespace: "my-app-namespace",
-				SourceIP:        &ip,
-			},
-			{
-				Time:            v1.NewEventTimestamp(time.Now().Unix()),
-				Description:     "A NOT so suspicious DNS query",
-				Origin:          "TODO",
-				Severity:        1,
-				Type:            "suspicious_dns_query",
-				SourceName:      "my-source-name-456",
-				SourceNamespace: "my-app-namespace",
-				SourceIP:        &ip,
-			},
-		}
-		bulk, err := cli.Events(cluster).Create(ctx, events)
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 3, "create event did not succeed")
-
-		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
-
-		testEventsFiltering := func(selector string, expectedEvents []v1.Event) {
-			// Read it back.
-			params := v1.EventParams{
-				QueryParams: v1.QueryParams{
-					TimeRange: &lmav1.TimeRange{
-						From: time.Now().Add(-5 * time.Second),
-						To:   time.Now().Add(5 * time.Second),
-					},
-				},
-				LogSelectionParams: v1.LogSelectionParams{
-					Selector: selector,
-				},
-			}
-			resp, err := cli.Events(cluster).List(ctx, &params)
-			require.NoError(t, err)
-
-			// The ID should be set, but random, so we can't assert on its value.
-			require.Equal(t, expectedEvents, testutils.AssertLogIDAndCopyEventsWithoutID(t, resp))
-		}
-		tests := []struct {
-			selector       string
-			expectedEvents []v1.Event
-		}{
-			{
-				"type IN { suspicious_dns_query, gtf_suspicious_dns_query } " +
-					// `in` with a value allows us to use wildcards
-					"AND \"source_name\" in {\"*source-name-123\"} " +
-					// and here we're doing an exact match
-					"AND \"source_namespace\" = \"my-app-namespace\" " +
-					"AND 'source_ip' >= '172.16.0.0' AND source_ip <= '172.32.0.0'",
-				[]v1.Event{events[1]},
-			},
-			{
-				"NOT (type IN { suspicious_dns_query, gtf_suspicious_dns_query })",
-				[]v1.Event{events[0]},
-			},
-			{
-				"type IN { suspicious_dns_query, gtf_suspicious_dns_query } ",
-				[]v1.Event{events[1], events[2]},
-			},
-			{"source_namespace IN {'app'}", nil},
-			{"source_namespace IN {'*app*'}", []v1.Event{events[1], events[2]}},
-			{"source_name IN {'my-*-123'}", []v1.Event{events[1]}},
-			{"'source_ip' >= '172.16.0.0' AND source_ip <= '172.32.0.0'", []v1.Event{events[1], events[2]}},
-			{"'source_ip' >= '172.16.0.0' AND source_ip <= '172.17.0.0'", nil},
-		}
-
-		for _, tt := range tests {
-			name := fmt.Sprintf("filter events with selector: %s", tt.selector)
-			t.Run(name, func(t *testing.T) {
-				testEventsFiltering(tt.selector, tt.expectedEvents)
-			})
-		}
-	})
-
-	t.Run("should dismiss and delete events", func(t *testing.T) {
-		defer eventsSetupAndTeardown(t)()
-
+	RunEventsTest(t, "should dismiss and delete events", func(t *testing.T, idx bapi.Index) {
 		// Create a basic event.
 		events := []v1.Event{
 			{
@@ -227,7 +107,7 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create event did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Read it back.
 		params := v1.EventParams{
@@ -251,7 +131,7 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "dismiss event did not succeed")
 
 		// Reading it back should show the event as dismissed.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		resp, err = cli.Events(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 1)
@@ -263,15 +143,13 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "delete event did not succeed")
 
 		// Reading it back should show the no events.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		resp, err = cli.Events(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 0)
 	})
 
-	t.Run("should support pagination", func(t *testing.T) {
-		defer eventsSetupAndTeardown(t)()
-
+	RunEventsTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
 		totalItems := 5
 
 		// Create 5 events.
@@ -289,7 +167,7 @@ func TestFV_Events(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Read them back one at a time.
 		var afterKey map[string]interface{}
@@ -351,9 +229,7 @@ func TestFV_Events(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 
-	t.Run("should support pagination for items >= 10000 for events", func(t *testing.T) {
-		defer eventsSetupAndTeardown(t)()
-
+	RunEventsTest(t, "should support pagination for items >= 10000 for events", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K events.
 		logTime := time.Now().UTC()
@@ -373,7 +249,7 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create events did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Stream through all the items.
 		params := v1.EventParams{
@@ -402,9 +278,7 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, receivedItems, totalItems)
 	})
 
-	t.Run("should support pagination for items >= 10000 for events with timestamps in different formats", func(t *testing.T) {
-		defer eventsSetupAndTeardown(t)()
-
+	RunEventsTest(t, "should support pagination for items >= 10000 for events with timestamps in different formats", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K events.
 		logTime := time.Now().UTC()
@@ -434,7 +308,7 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create events did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Stream through all the items.
 		params := v1.EventParams{
@@ -464,12 +338,104 @@ func TestFV_Events(t *testing.T) {
 	})
 }
 
-func TestFV_EventsTenancy(t *testing.T) {
-	t.Run("should support tenancy restriction", func(t *testing.T) {
-		defer eventsSetupAndTeardown(t)()
+func TestFV_EventFiltering(t *testing.T) {
+	// Define events to be used in the test.
+	ip := "172.17.0.1"
+	startTime := time.Unix(1, 0)
+	eventTime := time.Unix(2, 0)
+	endTime := time.Unix(3, 0)
+	events := []v1.Event{
+		{
+			Time:        v1.NewEventTimestamp(eventTime.Unix()),
+			Description: "A rather uneventful evening",
+			Origin:      "TODO",
+			Severity:    1,
+			Type:        "TODO",
+		},
+		{
+			Time:            v1.NewEventTimestamp(eventTime.Unix()),
+			Description:     "A suspicious DNS query",
+			Origin:          "TODO",
+			Severity:        1,
+			Type:            "suspicious_dns_query",
+			SourceName:      "my-source-name-123",
+			SourceNamespace: "my-app-namespace",
+			SourceIP:        &ip,
+		},
+		{
+			Time:            v1.NewEventTimestamp(eventTime.Unix()),
+			Description:     "A NOT so suspicious DNS query",
+			Origin:          "TODO",
+			Severity:        1,
+			Type:            "suspicious_dns_query",
+			SourceName:      "my-source-name-456",
+			SourceNamespace: "my-app-namespace",
+			SourceIP:        &ip,
+		},
+	}
 
+	// Build up array of test cases.
+	type eventFilterTest struct {
+		selector       string
+		expectedEvents []v1.Event
+	}
+	tests := []eventFilterTest{
+		{
+			"type IN { suspicious_dns_query, gtf_suspicious_dns_query } " +
+				// `in` with a value allows us to use wildcards
+				"AND \"source_name\" in {\"*source-name-123\"} " +
+				// and here we're doing an exact match
+				"AND \"source_namespace\" = \"my-app-namespace\" " +
+				"AND 'source_ip' >= '172.16.0.0' AND source_ip <= '172.32.0.0'",
+			[]v1.Event{events[1]},
+		},
+		{
+			"NOT (type IN { suspicious_dns_query, gtf_suspicious_dns_query })",
+			[]v1.Event{events[0]},
+		},
+		{
+			"type IN { suspicious_dns_query, gtf_suspicious_dns_query } ",
+			[]v1.Event{events[1], events[2]},
+		},
+		{"source_namespace IN {'app'}", nil},
+		{"source_namespace IN {'*app*'}", []v1.Event{events[1], events[2]}},
+		{"source_name IN {'my-*-123'}", []v1.Event{events[1]}},
+		{"'source_ip' >= '172.16.0.0' AND source_ip <= '172.32.0.0'", []v1.Event{events[1], events[2]}},
+		{"'source_ip' >= '172.16.0.0' AND source_ip <= '172.17.0.0'", nil},
+	}
+
+	for _, tt := range tests {
+		name := fmt.Sprintf("filter events with selector: %s", tt.selector)
+		RunEventsTest(t, name, func(t *testing.T, idx bapi.Index) {
+			// Create all events.
+			bulk, err := cli.Events(cluster).Create(ctx, events)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 3, "create event did not succeed")
+
+			// Refresh elasticsearch so that results appear.
+			err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Read it back.
+			params := v1.EventParams{
+				QueryParams:        v1.QueryParams{TimeRange: &lmav1.TimeRange{From: startTime, To: endTime}},
+				LogSelectionParams: v1.LogSelectionParams{Selector: tt.selector},
+			}
+			resp, err := cli.Events(cluster).List(ctx, &params)
+			require.NoError(t, err)
+
+			// The ID should be set, but random, so we can't assert on its value.
+			require.Equal(t, tt.expectedEvents, testutils.AssertLogIDAndCopyEventsWithoutID(t, resp))
+		})
+	}
+}
+
+func TestFV_EventsTenancy(t *testing.T) {
+	RunEventsTest(t, "should support tenancy restriction", func(t *testing.T, idx bapi.Index) {
 		// Instantiate a client for an unexpected tenant.
-		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		args := DefaultLinseedArgs()
+		args.TenantID = "bad-tenant"
+		tenantCLI, err := NewLinseedClient(args)
 		require.NoError(t, err)
 
 		// Create a basic log. We expect this to fail, since we're using

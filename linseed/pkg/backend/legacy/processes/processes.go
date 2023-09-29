@@ -12,6 +12,7 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -29,12 +30,24 @@ const (
 // in elasticsearch in the legacy storage model.
 type processBackend struct {
 	// Elasticsearch client.
-	lmaclient lmaelastic.Client
+	lmaclient   lmaelastic.Client
+	index       bapi.Index
+	queryHelper lmaindex.Helper
 }
 
 func NewBackend(c lmaelastic.Client) bapi.ProcessBackend {
 	return &processBackend{
-		lmaclient: c,
+		lmaclient:   c,
+		index:       index.FlowLogMultiIndex,
+		queryHelper: lmaindex.MultiIndexFlowLogs(),
+	}
+}
+
+func NewSingleIndexBackend(c lmaelastic.Client) bapi.ProcessBackend {
+	return &processBackend{
+		lmaclient:   c,
+		index:       index.FlowLogIndex,
+		queryHelper: lmaindex.SingleIndexFlowLogs(),
 	}
 }
 
@@ -70,7 +83,7 @@ func (b *processBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 	}
 
 	// Perform the search.
-	search := b.lmaclient.Backend().Search(b.index(i)).
+	search := b.lmaclient.Backend().Search(b.index.Index(i)).
 		Query(query).
 		From(startFrom).
 		Aggregation(sourceNameAggrKey, aggregation).
@@ -163,7 +176,7 @@ func (b *processBackend) convertBucket(log *logrus.Entry, bucket *elastic.Aggreg
 func (b *processBackend) buildQuery(i bapi.ClusterInfo, opts *v1.ProcessParams) (elastic.Query, error) {
 	// Start with the base flow log query using common fields.
 	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
-	query, err := logtools.BuildQuery(lmaindex.FlowLogs(), i, opts, start, end)
+	query, err := logtools.BuildQuery(b.queryHelper, i, opts, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -224,14 +237,4 @@ func getAggregation(esClient *elastic.Client) (*elastic.TermsAggregation, error)
 	aggProcessName.SubAggregation(processIDKey, aggProcessID)
 
 	return aggSourceNameAggr, nil
-}
-
-func (b *processBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_flows.%s.%s.*", i.Tenant, i.Cluster)
-	}
-
-	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("tigera_secure_ee_flows.%s.*", i.Cluster)
 }

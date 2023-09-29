@@ -6,6 +6,8 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
@@ -24,6 +26,6 @@ type Helper interface {
 	// GetTimeField returns the time field used for the query.
 	GetTimeField() string
 
-	// GetIndex returns the document index for the specified cluster.
-	GetIndex(cluster string) string
+	// BaseQuery returns the base query for the index, to which additional query clauses can be added.
+	BaseQuery(i bapi.ClusterInfo) *elastic.BoolQuery
 }

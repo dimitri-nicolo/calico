@@ -20,6 +20,9 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	. "github.com/projectcalico/calico/es-proxy/pkg/middleware/servicegraph"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
@@ -159,11 +162,11 @@ func compareNodes(actual, expected v1.GraphNode) []string {
 			toJson(expected.Selectors)),
 		)
 	}
-	if !reflect.DeepEqual(actual.Events, expected.Events) {
+	if actual.EventsCount != expected.EventsCount {
 		errStrs = append(errStrs, fmt.Sprintf(
-			"  Events are not the same:\n    Actual:\n%v\n    Expected:\n%v",
-			toJson(actual.Events),
-			toJson(expected.Events)),
+			"  EventsCount are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.EventsCount),
+			toJson(expected.EventsCount)),
 		)
 	}
 	if len(errStrs) > 0 {
@@ -180,10 +183,16 @@ func compareNodes(actual, expected v1.GraphNode) []string {
 }
 
 var _ = Describe("Service graph data tests", func() {
+	var fakeClientSet datastore.ClientSet
+
 	// Track last handled response filename and expected data.
 	var expectDataFilename string
 	var actualDataFilename string
 	var actualData *v1.ServiceGraphResponse
+
+	BeforeEach(func() {
+		fakeClientSet = datastore.NewClientSet(nil, fake.NewSimpleClientset().ProjectcalicoV3())
+	})
 
 	AfterEach(func() {
 		// If the test failed then write out the actual contents of the file. We can verify the data by hand and if
@@ -228,7 +237,7 @@ var _ = Describe("Service graph data tests", func() {
 			// Create a service graph.
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			sg := NewServiceGraphHandlerWithBackend(ctx, mb, &Config{
+			sg := NewServiceGraphHandlerWithBackend(fakeClientSet, mb, &Config{
 				ServiceGraphCacheMaxEntries:        1,
 				ServiceGraphCachePolledEntryAgeOut: 5 * time.Minute,
 				ServiceGraphCachePollLoopInterval:  5 * time.Minute,
@@ -614,7 +623,7 @@ var _ = Describe("Service graph data tests", func() {
 			// Create a service graph.
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			sg := NewServiceGraphHandlerWithBackend(ctx, mb, &Config{
+			sg := NewServiceGraphHandlerWithBackend(fakeClientSet, mb, &Config{
 				ServiceGraphCacheMaxEntries:        1,
 				ServiceGraphCachePolledEntryAgeOut: 5 * time.Minute,
 				ServiceGraphCachePollLoopInterval:  5 * time.Minute,

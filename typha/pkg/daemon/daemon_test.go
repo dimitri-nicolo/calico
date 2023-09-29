@@ -463,6 +463,10 @@ func (b *mockDatastore) GlobalAlertTemplates() clientv3.GlobalAlertTemplateInter
 	panic("not implemented")
 }
 
+func (b *mockDatastore) SecurityEventWebhook() clientv3.SecurityEventWebhookInterface {
+	panic("not implemented")
+}
+
 func (b *mockDatastore) getNumInitCalls() int {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()

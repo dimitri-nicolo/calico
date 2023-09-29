@@ -1,11 +1,14 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package server
 
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -18,25 +21,27 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
-	"github.com/projectcalico/calico/voltron/internal/pkg/utils/cors"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 
-	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
 // managed cluster certificate that is allowed to initiate connections.
 const AnnotationActiveCertificateFingerprint = "certs.tigera.io/active-fingerprint"
+const contextTimeout = 30 * time.Second
 
 type cluster struct {
 	jclust.ManagedCluster
@@ -52,6 +57,8 @@ type cluster struct {
 	// Kubernetes client used for querying and watching ManagedCluster resources.
 	k8sCLI bootstrap.K8sClient
 
+	client ctrlclient.WithWatch
+
 	// tlsProxy is the proxy that handles incoming TLS connections from the managed cluster.
 	// These connections are routed via the server field in the TLS header. Connections via this proxy that
 	// target Voltron itself will be handled by the proxy's inner TLS server.
@@ -64,12 +71,20 @@ type cluster struct {
 // updateActiveFingerprint updates the active fingerprint annotation for a ManagedCluster resource
 // in the management cluster.
 func (c *cluster) updateActiveFingerprint(fingerprint string) error {
-	mc, err := c.k8sCLI.ManagedClusters().Get(context.Background(), c.ID, metav1.GetOptions{})
+
+	mc := &v3.ManagedCluster{}
+	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	defer cancel()
+
+	// Client Get act as single tenant when the TenantNamespace is empty
+	err := c.client.Get(ctx, types.NamespacedName{Name: c.ID, Namespace: c.voltronCfg.TenantNamespace}, mc)
 	if err != nil {
 		return err
 	}
+
 	mc.Annotations[AnnotationActiveCertificateFingerprint] = fingerprint
-	_, err = c.k8sCLI.ManagedClusters().Update(context.Background(), mc, metav1.UpdateOptions{})
+
+	err = c.client.Update(ctx, mc)
 	if err != nil {
 		return err
 	}
@@ -84,6 +99,7 @@ type clusters struct {
 	clusters        map[string]*cluster
 	sniServiceMap   map[string]string
 	k8sCLI          bootstrap.K8sClient
+	client          ctrlclient.WithWatch
 	fipsModeEnabled bool
 
 	// parameters for forwarding guardian requests to a default server
@@ -100,6 +116,9 @@ type clusters struct {
 
 	// Proxier to use for connections from managed clusters.
 	innerProxy *proxy.Proxy
+
+	// Pool used for client certificate verification.
+	clientCertificatePool *x509.CertPool
 }
 
 func (cs *clusters) makeInnerTLSConfig() error {
@@ -132,8 +151,13 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 		ManagedCluster: *mc,
 		tunnelManager:  tunnelmgr.NewManager(),
 		k8sCLI:         cs.k8sCLI,
+		client:         cs.client,
 		voltronCfg:     cs.voltronCfg,
 	}
+
+	// Append the new certificate to the client certificate pool.
+	cs.clientCertificatePool.AppendCertsFromPEM(mc.Certificate)
+	log.Infof("Appended certificate for cluster %s to client certificate pool", mc.ID)
 
 	// Create a proxy to use for connections received over the tunnel that aren't
 	// directed via SNI. This is just used for Linseed connections from managed clusters.
@@ -222,8 +246,19 @@ func (cs *clusters) updateLocked(mc *jclust.ManagedCluster, recovery bool) error
 	if c, ok := cs.clusters[mc.ID]; ok {
 		c.Lock()
 		log.Infof("Updating cluster ID: %q", c.ID)
+		// Update the certificate pool if the certificate has changed.
+		err, updated := cs.updateCertPool(mc.Certificate, c.Certificate)
+		if err != nil {
+			c.Unlock()
+			return err
+		}
 		c.ManagedCluster = *mc
 		log.Infof("New cluster ID: %q", c.ID)
+		if updated {
+			if err := c.tunnelManager.Close(); err != nil {
+				log.Error("failed to close tunnel")
+			}
+		}
 		c.Unlock()
 		return nil
 	}
@@ -264,9 +299,8 @@ func (cs *clusters) get(id string) *cluster {
 }
 
 func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last string) error {
-	watcher, err := cs.k8sCLI.ManagedClusters().Watch(context.Background(), metav1.ListOptions{
-		ResourceVersion: last,
-	})
+
+	watcher, err := cs.client.Watch(ctx, &v3.ManagedClusterList{}, &ctrlclient.ListOptions{Namespace: cs.voltronCfg.TenantNamespace})
 	if err != nil {
 		return errors.Errorf("failed to create k8s watch: %s", err)
 	}
@@ -277,8 +311,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			if !ok {
 				return errors.Errorf("watcher stopped unexpectedly")
 			}
-
-			mcResource, ok := r.Object.(*calicov3.ManagedCluster)
+			mcResource, ok := r.Object.(*v3.ManagedCluster)
 			if !ok {
 				log.Debugf("Unexpected object type %T", r.Object)
 				continue
@@ -287,6 +320,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			mc := &jclust.ManagedCluster{
 				ID:                mcResource.ObjectMeta.Name,
 				ActiveFingerprint: mcResource.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
+				Certificate:       mcResource.Spec.Certificate,
 				FIPSModeEnabled:   cs.fipsModeEnabled,
 			}
 
@@ -320,7 +354,9 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 }
 
 func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string, error) {
-	list, err := cs.k8sCLI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+
+	list := &v3.ManagedClusterList{}
+	err := cs.client.List(ctx, list, &ctrlclient.ListOptions{Namespace: cs.voltronCfg.TenantNamespace})
 	if err != nil {
 		return "", errors.Errorf("failed to get k8s list: %s", err)
 	}
@@ -336,6 +372,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 		mc := &jclust.ManagedCluster{
 			ID:                id,
 			ActiveFingerprint: mc.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
+			Certificate:       mc.Spec.Certificate,
 		}
 
 		known[id] = struct{}{}
@@ -351,7 +388,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 				c.Lock()
 
 				// Just update the cluster status even if it's already set to false, we just do this on startup.
-				if err := c.setConnectedStatus(calicov3.ManagedClusterStatusValueFalse); err != nil {
+				if err := c.setConnectedStatus(v3.ManagedClusterStatusValueFalse); err != nil {
 					c.Unlock()
 					return "", errors.Errorf("failed to update the connection status for cluster %s during startup.", c.ID)
 				}
@@ -397,6 +434,41 @@ func (cs *clusters) watchK8s(ctx context.Context, syncC chan<- error) error {
 	}
 }
 
+// updateCertPool updates the client cert pool if the new (non-empty) certificate is different from
+// the old one.
+func (cs *clusters) updateCertPool(newCertPEM, oldCertPEM []byte) (error, bool) {
+	updated := false
+	if len(newCertPEM) == 0 {
+		// No pool update necessary for an empty certificate.
+		log.Debugf("No pool update necessary for an empty certificate.")
+		return nil, updated
+	}
+
+	newCert, err := parseCertificatePEMBlock(newCertPEM)
+	if err != nil {
+		return err, updated
+	}
+
+	if len(oldCertPEM) != 0 {
+		oldCert, err := parseCertificatePEMBlock(oldCertPEM)
+		if err != nil {
+			return err, updated
+		}
+
+		if oldCert.Equal(newCert) {
+			// No pool update necessary if the certificates are the same.
+			log.Debugf("No pool update necessary if the certificates are the same.")
+			return nil, updated
+		}
+	}
+
+	cs.clientCertificatePool.AddCert(newCert)
+	updated = true
+	log.Infof("Updated client cert pool with new value.")
+
+	return nil, updated
+}
+
 func (c *cluster) checkTunnelState() {
 	err := <-c.tunnelManager.ListenForErrors()
 
@@ -408,7 +480,7 @@ func (c *cluster) checkTunnelState() {
 		log.WithError(err).Error("an error occurred closing the tunnel")
 	}
 
-	if err := c.setConnectedStatus(calicov3.ManagedClusterStatusValueFalse); err != nil {
+	if err := c.setConnectedStatus(v3.ManagedClusterStatusValueFalse); err != nil {
 		log.WithError(err).Errorf("failed to update the connection status for cluster %s", c.ID)
 	}
 	log.Errorf("Cluster %s tunnel is broken (%s), deleted", c.ID, err)
@@ -436,7 +508,7 @@ func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	proxy.ServeHTTP(w, r)
 }
 
-func (c *cluster) assignTunnel(t *tunnel.Tunnel, modifyResponse cors.ModifyResponse) error {
+func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 	// called with RLock held
 	if err := c.tunnelManager.SetTunnel(t); err != nil {
 		return err
@@ -453,7 +525,6 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel, modifyResponse cors.ModifyRespo
 			TLSClientConfig: tlsConfig,
 			AllowHTTP:       true,
 		},
-		ModifyResponse: modifyResponse,
 	}
 
 	if c.tlsProxy != nil {
@@ -487,7 +558,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel, modifyResponse cors.ModifyRespo
 			log.Debugf("server has stopped listening for connections from %s", c.ID)
 		}()
 	}
-	if err := c.setConnectedStatus(calicov3.ManagedClusterStatusValueTrue); err != nil {
+	if err := c.setConnectedStatus(v3.ManagedClusterStatusValueTrue); err != nil {
 		log.WithError(err).Errorf("failed to update the connection status for cluster %s", c.ID)
 	}
 	// will clean up the tunnel if it breaks, will exit once the tunnel is gone
@@ -497,17 +568,21 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel, modifyResponse cors.ModifyRespo
 }
 
 // setConnectedStatus updates the MangedClusterConnected condition of this cluster's ManagedCluster CR.
-func (c *cluster) setConnectedStatus(status calicov3.ManagedClusterStatusValue) error {
-	mc, err := c.k8sCLI.ManagedClusters().Get(context.Background(), c.ID, metav1.GetOptions{})
+func (c *cluster) setConnectedStatus(status v3.ManagedClusterStatusValue) error {
+
+	var mc = &v3.ManagedCluster{}
+	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	defer cancel()
+	err := c.client.Get(ctx, types.NamespacedName{Name: c.ID, Namespace: c.voltronCfg.TenantNamespace}, mc)
 	if err != nil {
 		return err
 	}
 
-	var updatedConditions []calicov3.ManagedClusterStatusCondition
+	var updatedConditions []v3.ManagedClusterStatusCondition
 
 	connectedConditionFound := false
 	for _, c := range mc.Status.Conditions {
-		if c.Type == calicov3.ManagedClusterStatusTypeConnected {
+		if c.Type == v3.ManagedClusterStatusTypeConnected {
 			c.Status = status
 			connectedConditionFound = true
 		}
@@ -515,15 +590,15 @@ func (c *cluster) setConnectedStatus(status calicov3.ManagedClusterStatusValue) 
 	}
 
 	if !connectedConditionFound {
-		updatedConditions = append(updatedConditions, calicov3.ManagedClusterStatusCondition{
-			Type:   calicov3.ManagedClusterStatusTypeConnected,
+		updatedConditions = append(updatedConditions, v3.ManagedClusterStatusCondition{
+			Type:   v3.ManagedClusterStatusTypeConnected,
 			Status: status,
 		})
 	}
 
 	mc.Status.Conditions = updatedConditions
 
-	_, err = c.k8sCLI.ManagedClusters().Update(context.Background(), mc, metav1.UpdateOptions{})
+	err = c.client.Update(ctx, mc)
 	if err != nil {
 		return err
 	}
@@ -546,4 +621,19 @@ func (c *cluster) stop() {
 func proxyVoidDirector(*http.Request) {
 	// do nothing with the request, we pass it forward as is, the other side of
 	// the tunnel should do whatever it needs to proxy it further
+}
+
+// parseCertificatePEMBlock decodes a PEM encoded certificate and returns the parsed x509 certificate.
+// The PEM cert is assumed to be a single block.
+func parseCertificatePEMBlock(certPEM []byte) (*x509.Certificate, error) {
+	// Decode PEM content
+	block, _ := pem.Decode(certPEM)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, errors.New("failed to decode PEM block containing certificate")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	return cert, nil
 }

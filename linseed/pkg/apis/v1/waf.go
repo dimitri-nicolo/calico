@@ -55,9 +55,11 @@ type WAFLog struct {
 }
 
 type WAFEndpoint struct {
-	Hostname string `json:"hostname"`
-	IP       string `json:"ip"`
-	PortNum  int32  `json:"port_num"`
+	Hostname     string `json:"hostname"`
+	IP           string `json:"ip"`
+	PortNum      int32  `json:"port_num"`
+	PodName      string `json:"name,omitempty"`
+	PodNameSpace string `json:"namespace,omitempty"`
 }
 
 type WAFRuleHit struct {

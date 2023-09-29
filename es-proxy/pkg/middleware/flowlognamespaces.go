@@ -156,7 +156,7 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 
 	// Check whether the params are provided in the request and set default values if not
 	if params.ClusterName == "" {
-		params.ClusterName = "cluster"
+		params.ClusterName = MaybeParseClusterNameFromRequest(req)
 	}
 	valid := validateActions(params.Actions)
 	if !valid {

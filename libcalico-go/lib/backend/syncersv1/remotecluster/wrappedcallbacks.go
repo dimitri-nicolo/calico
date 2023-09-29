@@ -40,6 +40,16 @@ var (
 	}
 )
 
+var (
+	statusGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "remote_cluster_connection_status",
+		Help: "0-NotConnecting ,1-Connecting, 2-InSync, 3-ReSyncInProgress, 4-ConfigChangeRestartRequired, 5-ConfigInComplete.",
+	}, []string{"remote_cluster_name"})
+
+	// prometheusRegisterOnce ensures New gauge vector is registered once.
+	prometheusRegisterOnce sync.Once
+)
+
 // RemoteClusterInterface provides appropriate hooks for the syncer to:
 //   - get the Calico API config from the RemoteClusterConfig, returning nil if the RemoteClusterConfig
 //     is not valid for this syncer
@@ -59,9 +69,13 @@ type RemoteClusterClientInterface interface {
 	CreateClient(config apiconfig.CalicoAPIConfig) (api.Client, error)
 }
 
-func NewWrappedCallbacks(callbacks api.SyncerCallbacks, k8sClientset *kubernetes.Clientset, rci RemoteClusterInterface, statusGauge *prometheus.GaugeVec) api.SyncerCallbacks {
+func NewWrappedCallbacks(callbacks api.SyncerCallbacks, k8sClientset *kubernetes.Clientset, rci RemoteClusterInterface) api.SyncerCallbacks {
 	// Store remotes as they are created so that they can be stopped.
 	// A non-thread safe map is fine, because a mutex is used when it's accessed.
+
+	prometheusRegisterOnce.Do(func() {
+		prometheus.MustRegister(statusGauge)
+	})
 	remotes := make(map[model.ResourceKey]*RemoteSyncer)
 	wcb := wrappedCallbacks{callbacks: callbacks, remotes: remotes, rci: rci, statusGauge: statusGauge}
 	sw := NewSecretWatcher(&wcb, k8sClientset)
@@ -257,6 +271,19 @@ func (a *wrappedCallbacks) updateRCC(key model.ResourceKey, newRCC *apiv3.Remote
 			UpdateType: api.UpdateTypeKVUpdated,
 		}})
 		a.reportRemoteClusterStatus(key.Name, model.RemoteClusterConfigIncomplete)
+	} else if err == nil && datastoreConfig == nil {
+		a.reportRemoteClusterStatus(key.Name, model.RemoteClusterConfigIncomplete)
+		log.Warnf("Received %s. Cluster access secret was not found or the inline datastore config was invalid", updateSrc)
+		log.Debugf("Callback update for %s: %s", key, updateTypeToString(api.UpdateTypeKVUpdated))
+		a.callbacks.OnUpdates([]api.Update{{
+			KVPair: model.KVPair{
+				Key: model.RemoteClusterStatusKey{Name: key.Name},
+				Value: &model.RemoteClusterStatus{
+					Status: model.RemoteClusterConfigIncomplete,
+				},
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		}})
 	}
 
 	isValid := datastoreConfig != nil

@@ -90,13 +90,7 @@ spec:
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-dashboard" AND dest_port="8080" AND reporter="dst"'
   aggregateBy:
-    [
-      source_namespace,
-      source_name_aggr,
-      dest_namespace,
-      dest_name_aggr,
-      host.keyword,
-    ]
+    [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host]
 ---
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
@@ -108,10 +102,4 @@ spec:
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-dashboard" AND dest_port="8080" AND reporter="dst"'
   aggregateBy:
-    [
-      source_namespace,
-      source_name_aggr,
-      dest_namespace,
-      dest_name_aggr,
-      host.keyword,
-    ]
+    [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host]

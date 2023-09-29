@@ -15,6 +15,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -67,6 +68,9 @@ type flowBackend struct {
 	aggMeans         []lmaelastic.AggMeanInfo
 	aggNested        []lmaelastic.AggNestedTermInfo
 	aggTerms         []lmaelastic.AggTermInfo
+
+	queryHelper lmaindex.Helper
+	index       bapi.Index
 }
 
 // BucketConverter is a helper interface used as part of the cmd/converter tooling to convert
@@ -82,6 +86,14 @@ func NewBucketConverter() BucketConverter {
 }
 
 func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
+	return newFlowBackend(c, false)
+}
+
+func NewSingleIndexFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
+	return newFlowBackend(c, true)
+}
+
+func newFlowBackend(c lmaelastic.Client, singleIndex bool) bapi.FlowBackend {
 	// These are the keys which define a flow in ES, and will be used to create buckets in the ES result.
 	compositeSources := []lmaelastic.AggCompositeSourceInfo{
 		{Name: "dest_type", Field: "dest_type"},
@@ -167,9 +179,18 @@ func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
 		{Name: "dest_domains"},
 	}
 
+	indexTemplate := index.FlowLogIndex
+	helper := lmaindex.SingleIndexFlowLogs()
+	if !singleIndex {
+		indexTemplate = index.FlowLogMultiIndex
+		helper = lmaindex.MultiIndexFlowLogs()
+	}
+
 	return &flowBackend{
-		lmaclient: c,
-		ft:        backend.NewFieldTracker(compositeSources),
+		lmaclient:   c,
+		ft:          backend.NewFieldTracker(compositeSources),
+		index:       indexTemplate,
+		queryHelper: helper,
 
 		// Configuration for the aggregation queries we make against ES.
 		compositeSources: compositeSources,
@@ -206,7 +227,7 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.L3F
 	// Build the aggregation request.
 	query := b.BaseQuery()
 	query.Query = b.buildQuery(i, opts)
-	query.DocumentIndex = b.index(i)
+	query.DocumentIndex = b.index.Index(i)
 	query.MaxBucketsPerQuery = opts.GetMaxPageSize()
 	log.Debugf("Listing flows from index %s", query.DocumentIndex)
 
@@ -310,7 +331,9 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 
 // buildQuery builds an elastic query using the given parameters.
 func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) elastic.Query {
-	// Start with a time-based constraint.
+	query := b.queryHelper.BaseQuery(i)
+
+	// Every request has at least a time-range limitation.
 	var start, end time.Time
 	if opts.TimeRange != nil {
 		start = opts.TimeRange.From
@@ -320,10 +343,7 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) elas
 		start = time.Now().Add(-5 * time.Minute)
 		end = time.Now()
 	}
-
-	// Every request has at least a time-range limitation.
-	query := elastic.NewBoolQuery()
-	query.Filter(lmaindex.FlowLogs().NewTimeRangeQuery(start, end))
+	query.Filter(b.queryHelper.NewTimeRangeQuery(start, end))
 
 	if len(opts.Actions) > 0 {
 		// Filter-in any flows with one of the given actions.
@@ -502,16 +522,6 @@ func buildLabelSelectorFilter(labelSelectors []v1.LabelSelector, path string) *e
 		}
 	}
 	return elastic.NewNestedQuery(path, elastic.NewBoolQuery().Filter(selectorQueries...))
-}
-
-func (b *flowBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_flows.%s.%s.*", i.Tenant, i.Cluster)
-	}
-
-	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("tigera_secure_ee_flows.%s.*", i.Cluster)
 }
 
 // getLabelsFromLabelAggregation parses the labels out from the given aggregation and puts them into a map map[string][]FlowResponseLabels

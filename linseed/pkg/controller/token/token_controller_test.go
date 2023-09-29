@@ -7,27 +7,36 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
+	"os"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"k8s.io/apiserver/pkg/authentication/user"
+	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
+	k8stesting "k8s.io/client-go/testing"
+
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
+
+	"github.com/projectcalico/calico/linseed/pkg/controller/token"
 
 	"github.com/stretchr/testify/require"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	projectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
-	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
-	"github.com/projectcalico/calico/linseed/pkg/controller/token"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
@@ -38,6 +47,10 @@ var (
 	factory       *k8s.MockClientSetFactory
 	mockK8sClient *k8sfake.Clientset
 	mockClientSet clientSetSet
+
+	tenantName string
+
+	nilUserPtr *user.DefaultInfo
 
 	// Default values for tokens to be created in the tests.
 	issuer             string = "testissuer"
@@ -67,6 +80,10 @@ func setup(t *testing.T) func() {
 	mockK8sClient = k8sfake.NewSimpleClientset()
 	mockClientSet = clientSetSet{mockK8sClient, cs}
 
+	tenantName = "bogustenant"
+
+	nilUserPtr = nil
+
 	// Set up a mock client set factory for the tests.
 	factory = k8s.NewMockClientSetFactory(t)
 
@@ -78,8 +95,6 @@ func setup(t *testing.T) func() {
 
 func TestOptions(t *testing.T) {
 	t.Run("Should reject invalid user info with no name", func(t *testing.T) {
-		defer setup(t)()
-
 		uis := []token.UserInfo{{Name: "", Namespace: defaultNamespace}}
 		opt := token.WithUserInfos(uis)
 		err := opt(nil)
@@ -87,8 +102,6 @@ func TestOptions(t *testing.T) {
 	})
 
 	t.Run("Should reject invalid user info with no namespace", func(t *testing.T) {
-		defer setup(t)()
-
 		uis := []token.UserInfo{{Name: "service", Namespace: ""}}
 		opt := token.WithUserInfos(uis)
 		err := opt(nil)
@@ -97,14 +110,14 @@ func TestOptions(t *testing.T) {
 
 	t.Run("Should make a new controller when correct options are given", func(t *testing.T) {
 		defer setup(t)()
-
 		opts := []token.ControllerOption{
-			token.WithClient(cs),
+			token.WithCalicoClient(cs),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
 			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
 			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -130,12 +143,13 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithClient(cs),
+			token.WithCalicoClient(cs),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
 			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
 			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -143,6 +157,7 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Set the mock client set as the return value for the factory.
 		factory.On("NewClientSetForApplication", mc.Name).Return(&mockClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
 
 		// Reconcile.
 		stopCh := make(chan struct{})
@@ -179,12 +194,13 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithClient(cs),
+			token.WithCalicoClient(cs),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
 			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
 			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -192,6 +208,7 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Set the mock client set as the return value for the factory.
 		factory.On("NewClientSetForApplication", mc.Name).Return(&mockClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
 
 		// Reconcile.
 		stopCh := make(chan struct{})
@@ -236,12 +253,13 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithClient(cs),
+			token.WithCalicoClient(cs),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
 			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
 			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
 
 			// Reconcile quickly, so that we can verify the secret isn't updated
 			// across several reconciles.
@@ -253,6 +271,7 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Set the mock client set as the return value for the factory.
 		factory.On("NewClientSetForApplication", mc.Name).Return(&mockClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
 
 		// Reconcile.
 		stopCh := make(chan struct{})
@@ -298,12 +317,13 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithClient(cs),
+			token.WithCalicoClient(cs),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
 			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
 			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
 
 			// Set the reconcile period to be very small so that the controller can reconcile
 			// the changes we make to the token. Ideally, the controller would be watching
@@ -316,6 +336,7 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Set the mock client set as the return value for the factory.
 		factory.On("NewClientSetForApplication", mc.Name).Return(&mockClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
 
 		// Reconcile.
 		stopCh := make(chan struct{})
@@ -371,12 +392,13 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithClient(cs),
+			token.WithCalicoClient(cs),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
 			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
 			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
 
 			// Configure tokens to expire after 50ms. This means we should see several updates
 			// over the course of this test.
@@ -392,6 +414,7 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Set the mock client set as the return value for the factory.
 		factory.On("NewClientSetForApplication", mc.Name).Return(&mockClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
 
 		// Reconcile.
 		stopCh := make(chan struct{})
@@ -421,6 +444,80 @@ func TestMainlineFunction(t *testing.T) {
 			return true
 		}
 		require.Eventually(t, secretUpdated, 5*time.Second, 50*time.Millisecond)
+	})
+
+	t.Run("should not retry indefinitely", func(t *testing.T) {
+		// If the controller fails to create a secret, it should retry a few times and then give up.
+		defer setup(t)()
+
+		// Add a managed cluster.
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		require.NoError(t, err)
+
+		// Configure the mock client to fail to create secrets, and keep track of the number of attempts.
+		mu := sync.Mutex{}
+		count := 0
+		increment := func() {
+			mu.Lock()
+			defer mu.Unlock()
+			count += 1
+		}
+		callsEqual := func(expected int) bool {
+			mu.Lock()
+			defer mu.Unlock()
+			return count == expected
+		}
+
+		mockK8sClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			increment()
+			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
+		})
+
+		// Make a new controller.
+		opts := []token.ControllerOption{
+			token.WithCalicoClient(cs),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
+			token.WithFactory(factory),
+			token.WithExpiry(30 * time.Minute),
+			token.WithReconcilePeriod(1 * time.Minute),
+			token.WithK8sClient(mockK8sClient),
+
+			// Set a small initial retry period so that we exaust the retries quickly.
+			token.WithBaseRetryPeriod(1 * time.Millisecond),
+			token.WithMaxRetries(5),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		// Set the mock client set as the return value for the factory. We have one clientset for each managed cluster.
+		factory.On("NewClientSetForApplication", mc.Name).Return(&mockClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
+
+		// Reconcile.
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go controller.Run(stopCh)
+
+		// We should expect 6 total attempts - 5 retries and 1 initial attempt.
+		require.Eventually(t, func() bool {
+			return callsEqual(6)
+		}, 5*time.Second, 10*time.Millisecond)
+		for i := 0; i < 5; i++ {
+			require.True(t, callsEqual(6))
+			time.Sleep(250 * time.Millisecond)
+		}
 	})
 
 	t.Run("handle simultaneous periodic and triggered reconciles", func(t *testing.T) {
@@ -459,12 +556,13 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithClient(cs),
+			token.WithCalicoClient(cs),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
 			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
 			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
 
 			// Configure tokens to expire after 500ms. This means we should see several updates
 			// over the course of this test.
@@ -476,7 +574,7 @@ func TestMainlineFunction(t *testing.T) {
 
 			// Set the retry period to be smaller than either, so that we are constantly triggering
 			// the kick channel.
-			token.WithRetryPeriod(50 * time.Millisecond),
+			token.WithBaseRetryPeriod(50 * time.Millisecond),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -485,6 +583,7 @@ func TestMainlineFunction(t *testing.T) {
 		// Set the mock client set as the return value for the factory. We have one clientset for each managed cluster.
 		factory.On("NewClientSetForApplication", mc.Name).Return(&mockClientSet, nil)
 		factory.On("NewClientSetForApplication", mc2.Name).Return(&mockClientSet2, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
 
 		// Reconcile.
 		stopCh := make(chan struct{})
@@ -514,6 +613,230 @@ func TestMainlineFunction(t *testing.T) {
 			return true
 		}
 		require.Eventually(t, secretUpdated, 5*time.Second, 50*time.Millisecond)
+	})
+
+	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to periodic update", func(t *testing.T) {
+		defer setup(t)()
+
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		require.NoError(t, err)
+
+		operatorNS := "test-operator-ns"
+		err = os.Setenv("MANAGEMENT_OPERATOR_NS", operatorNS)
+		require.NoError(t, err)
+
+		voltronLinseedSecret := corev1.Secret{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      resource.VoltronLinseedPublicCert,
+				Namespace: operatorNS,
+			},
+		}
+		secretsToCopy := []corev1.Secret{
+			voltronLinseedSecret,
+		}
+
+		opts := []token.ControllerOption{
+			token.WithCalicoClient(cs),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
+			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
+			token.WithReconcilePeriod(1 * time.Second),
+			token.WithSecretsToCopy(secretsToCopy),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		managedClientSet := clientSetSet{
+			k8sfake.NewSimpleClientset(),
+			fake.NewSimpleClientset(),
+		}
+
+		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
+
+		createdSecret, err := mockK8sClient.CoreV1().Secrets(operatorNS).Create(ctx, &voltronLinseedSecret, v1.CreateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, createdSecret)
+
+		// Reconcile
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go controller.Run(stopCh)
+
+		managedOperatorNS, err := utils.FetchOperatorNamespace(managedClientSet)
+		require.NoError(t, err)
+
+		secretCreated := func() bool {
+			_, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.VoltronLinseedPublicCert, v1.GetOptions{})
+			return err == nil
+		}
+		require.Eventually(t, secretCreated, 5*time.Second, 100*time.Millisecond)
+	})
+
+	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to secret update", func(t *testing.T) {
+		defer setup(t)()
+
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		require.NoError(t, err)
+
+		operatorNS := "test-operator-ns"
+		err = os.Setenv("MANAGEMENT_OPERATOR_NS", operatorNS)
+		require.NoError(t, err)
+
+		voltronLinseedSecret := corev1.Secret{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      resource.VoltronLinseedPublicCert,
+				Namespace: operatorNS,
+			},
+			StringData: map[string]string{
+				"key": "original-data",
+			},
+		}
+		secretsToCopy := []corev1.Secret{
+			voltronLinseedSecret,
+		}
+
+		opts := []token.ControllerOption{
+			token.WithCalicoClient(cs),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
+			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
+			token.WithReconcilePeriod(24 * time.Hour), // Make update period long enough that we're guaranteed not to trigger it during test
+			token.WithSecretsToCopy(secretsToCopy),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		managedClientSet := clientSetSet{
+			k8sfake.NewSimpleClientset(),
+			fake.NewSimpleClientset(),
+		}
+
+		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
+
+		createdSecret, err := mockK8sClient.CoreV1().Secrets(operatorNS).Create(ctx, &voltronLinseedSecret, v1.CreateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, createdSecret)
+
+		// Reconcile.
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go controller.Run(stopCh)
+
+		managedOperatorNS, err := utils.FetchOperatorNamespace(managedClientSet)
+		require.NoError(t, err)
+
+		// The controller will eventually cause the VoltronLinseedPublicCert to get copied into the managed cluster by
+		// way of the ManagedCluster creation update. Wait for this to occur then update the data in the secret to make
+		// sure we update correctly based on changes to the secret itself.
+		originalSecretCreated := func() bool {
+			_, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.VoltronLinseedPublicCert, v1.GetOptions{})
+			return err == nil
+		}
+		require.Eventually(t, originalSecretCreated, 5*time.Second, 100*time.Millisecond)
+
+		// Update voltronLinseedSecret to trigger copy process
+		updatedVoltronLinseedSecretData := "updated-data"
+		updatedVoltronLinseedSecret := voltronLinseedSecret.DeepCopy()
+		updatedVoltronLinseedSecret.StringData["key"] = updatedVoltronLinseedSecretData
+		updatedSecret, err := mockK8sClient.CoreV1().Secrets(operatorNS).Update(ctx, updatedVoltronLinseedSecret, v1.UpdateOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, updatedSecret)
+
+		// Now verify that voltronLinseedSecret has been copied with updated data
+		secretUpdated := func() bool {
+			updatedSecret, err = managedClientSet.CoreV1().Secrets(managedOperatorNS).Get(ctx, resource.VoltronLinseedPublicCert, v1.GetOptions{})
+			return updatedSecret.StringData["key"] == updatedVoltronLinseedSecretData
+		}
+		require.Eventually(t, secretUpdated, 5*time.Second, 100*time.Millisecond)
+	})
+}
+
+func TestMultiTenant(t *testing.T) {
+	t.Run("verify Impersonation headers are added", func(t *testing.T) {
+		defer setup(t)()
+
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		require.NoError(t, err)
+
+		impersonationInfo := user.DefaultInfo{
+			Name: tenantName,
+			Groups: []string{
+				serviceaccount.AllServiceAccountsGroup,
+				"system:authenticated",
+				fmt.Sprintf("%s%s", serviceaccount.ServiceAccountGroupPrefix, "tigera-elasticsearch"),
+			},
+		}
+
+		operatorNS := "test-operator-ns"
+		err = os.Setenv("MANAGEMENT_OPERATOR_NS", operatorNS)
+		require.NoError(t, err)
+
+		opts := []token.ControllerOption{
+			token.WithCalicoClient(cs),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
+			token.WithFactory(factory),
+			token.WithTenant(tenantName),
+			token.WithK8sClient(mockK8sClient),
+			token.WithImpersonation(&impersonationInfo),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		managedClientSet := clientSetSet{
+			k8sfake.NewSimpleClientset(),
+			fake.NewSimpleClientset(),
+		}
+
+		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
+		factory.On("Impersonate", &impersonationInfo).Return(factory)
+
+		// Reconcile.
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go controller.Run(stopCh)
+
+		time.Sleep(5 * time.Second)
+		// Verify that "NewClientSetForApplication" and "Impersonate" have been called at least once. We only really
+		// care about "Impersonate" for the purposes of this particular test.
+		factory.AssertExpectations(t)
 	})
 }
 

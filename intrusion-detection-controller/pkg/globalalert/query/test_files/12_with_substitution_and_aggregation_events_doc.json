@@ -1,0 +1,2 @@
+{"description":"test alert: sample-test","origin":"sample-test","severity":100,"time":1615857005,"type":"global_alert","source_name_aggr":"myclient*","source_namespace":"mynamespace","record":{"client_name_aggr":"myclient*","client_namespace":"mynamespace","qname":"mycluster"}}
+

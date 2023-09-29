@@ -78,7 +78,7 @@ func parseAndValidateFlowRequest(req *http.Request) (*flowRequestParams, error) 
 	}
 
 	if flowParams.clusterName == "" {
-		flowParams.clusterName = datastore.DefaultCluster
+		flowParams.clusterName = MaybeParseClusterNameFromRequest(req)
 	}
 
 	if flowParams.srcType == api.EndpointTypeInvalid {

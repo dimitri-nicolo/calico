@@ -18,6 +18,8 @@ import (
 	"os"
 	"time"
 
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -42,7 +44,8 @@ func init() {
 
 var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 	var (
-		k8sAPI bootstrap.K8sClient
+		k8sAPI     bootstrap.K8sClient
+		fakeClient ctrlclient.WithWatch
 
 		mockAuthenticator  *auth.MockJWTAuth
 		srv                *server.Server
@@ -107,6 +110,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 
 		srv, err = server.New(
 			k8sAPI,
+			fakeClient,
 			config,
 			voltronConfig,
 			mockAuthenticator,

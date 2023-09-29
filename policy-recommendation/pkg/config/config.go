@@ -3,6 +3,9 @@
 package config
 
 import (
+	"os"
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/kelseyhightower/envconfig"
@@ -30,6 +33,8 @@ type Config struct {
 	EnableMultiClusterClient       bool   `envconfig:"ENABLE_MULTI_CLUSTER_CLIENT" default:"false"`
 	MultiClusterForwardingCA       string `envconfig:"MULTI_CLUSTER_FORWARDING_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
 	MultiClusterForwardingEndpoint string `envconfig:"MULTI_CLUSTER_FORWARDING_ENDPOINT" default:"https://tigera-manager.tigera-manager.svc:9443"`
+
+	TenantNamespace string `envconfig:"TENANT_NAMESPACE" default:""`
 }
 
 func LoadConfig() (*Config, error) {
@@ -40,6 +45,14 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
+	// Get TenantNamespace in MultiTenant Mode.
+	if len(config.TenantID) > 0 && config.TenantNamespace == "" {
+		ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+		if err != nil {
+			log.WithError(err).Fatal("unable to get the tenant namespace: %w", err)
+		}
+		config.TenantNamespace = strings.TrimSpace(string(ns))
+	}
 	return config, nil
 }
 
