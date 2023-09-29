@@ -38,6 +38,8 @@ const (
 type dataplaneMetadata struct {
 	Type         IPSetType
 	MaxSize      int
+	RangeMin     int
+	RangeMax     int
 	DeleteFailed bool
 }
 
@@ -161,8 +163,10 @@ func (s *IPSets) AddOrReplaceIPSet(setMetadata IPSetMetadata, members []string) 
 	// DeltaTracker will catch that and mark it for recreation.
 	mainIPSetName := s.IPVersionConfig.NameForMainIPSet(setID)
 	dpMeta := dataplaneMetadata{
-		Type:    setMetadata.Type,
-		MaxSize: setMetadata.MaxSize,
+		Type:     setMetadata.Type,
+		MaxSize:  setMetadata.MaxSize,
+		RangeMin: setMetadata.RangeMin,
+		RangeMax: setMetadata.RangeMax,
 	}
 	s.setNameToAllMetadata[mainIPSetName] = dpMeta
 	if s.ipSetNeeded(mainIPSetName) {
@@ -471,6 +475,11 @@ func (s *IPSets) tryResync() (err error) {
 			parts := strings.Split(line, " ")
 			for idx, p := range parts {
 				if p == "maxelem" {
+					if idx+1 >= len(parts) {
+						log.WithField("line", line).Error(
+							"Failed to parse ipset list Header line, nothing after 'maxelem'.")
+						break
+					}
 					maxElem, err := strconv.Atoi(parts[idx+1])
 					if err != nil {
 						log.WithError(err).WithField("line", line).Error(
@@ -480,6 +489,27 @@ func (s *IPSets) tryResync() (err error) {
 					meta := dataplaneMetadata{
 						Type:    ipSetType,
 						MaxSize: maxElem,
+					}
+					s.setNameToProgrammedMetadata.Dataplane().Set(ipSetName, meta)
+					break
+				}
+				if p == "range" {
+					if idx+1 >= len(parts) {
+						log.WithField("line", line).Error(
+							"Failed to parse ipset list Header line, nothing after 'range'.")
+						break
+					}
+					// For bitmaps, we see "range 123-456"
+					rMin, rMAx, err := parseRange(parts[idx+1])
+					if err != nil {
+						log.WithError(err).WithField("line", line).Error(
+							"Failed to parse ipset list Header line.")
+						break
+					}
+					meta := dataplaneMetadata{
+						Type:     ipSetType,
+						RangeMin: rMin,
+						RangeMax: rMAx,
 					}
 					s.setNameToProgrammedMetadata.Dataplane().Set(ipSetName, meta)
 					break
@@ -601,6 +631,22 @@ func (s *IPSets) tryResync() (err error) {
 		members.Dataplane().DeleteAll()
 	}
 
+	return
+}
+
+func parseRange(s string) (min int, max int, err error) {
+	parts := strings.Split(s, "-")
+	if len(parts) != 2 {
+		err = fmt.Errorf("failed to parse range %q", s)
+	}
+	if min, err = strconv.Atoi(parts[0]); err != nil {
+		err = fmt.Errorf("failed to parse range %q (%w)", s, err)
+		return
+	}
+	if max, err = strconv.Atoi(parts[1]); err != nil {
+		err = fmt.Errorf("failed to parse range %q (%w)", s, err)
+		return
+	}
 	return
 }
 
@@ -765,8 +811,16 @@ func (s *IPSets) writeUpdates(setName string, w io.Writer, programmedIPs set.Set
 	}
 	if needCreate || needTempIPSet {
 		logCxt.WithField("ipSetToCreate", targetSet).Debug("Creating IP set")
-		writeLine("create %s %s family %s maxelem %d",
-			targetSet, desiredMeta.Type, s.IPVersionConfig.Family, desiredMeta.MaxSize)
+
+		switch desiredMeta.Type {
+		case IPSetTypeBitmapPort:
+			writeLine("create %s %s range %d-%d",
+				targetSet, desiredMeta.Type, desiredMeta.RangeMin, desiredMeta.RangeMax)
+		default:
+			writeLine("create %s %s family %s maxelem %d",
+				targetSet, desiredMeta.Type, s.IPVersionConfig.Family, desiredMeta.MaxSize)
+		}
+
 	}
 	if err != nil {
 		return

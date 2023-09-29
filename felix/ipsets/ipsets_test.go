@@ -133,6 +133,21 @@ var _ = Describe("IPSetTypeHashIP", func() {
 	})
 })
 
+var _ = Describe("IPSetTypeHashIP", func() {
+	It("should canonicalise a raw port", func() {
+		Expect(IPSetTypeBitmapPort.CanonicaliseMember("10")).
+			To(Equal(Port(10)))
+	})
+	It("should canonicalise an IPv4 port", func() {
+		Expect(IPSetTypeBitmapPort.CanonicaliseMember("v4,10")).
+			To(Equal(Port(10)))
+	})
+	It("should canonicalise an IPv6 port", func() {
+		Expect(IPSetTypeBitmapPort.CanonicaliseMember("v6,10")).
+			To(Equal(Port(10)))
+	})
+})
+
 var _ = Describe("IPSetTypeHashNet", func() {
 	It("should canonicalise an IPv4 CIDR", func() {
 		Expect(IPSetTypeHashNet.CanonicaliseMember("10.0.0.1/24")).
