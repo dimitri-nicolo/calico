@@ -654,7 +654,7 @@ func (c *cachedQuery) queryPoliciesByLabel(labels map[string]string, profiles []
 	policies := c.policyEndpointLabelHandler.QueryPolicies(labels, profiles)
 
 	// Filter out the rule matches, and only filter in those in the supplied set (if supplied).
-	results := set.NewBoxed[model.Key]()
+	results := set.New[model.Key]()
 	for _, p := range policies {
 		if filterIn != nil && !filterIn.Contains(p) {
 			continue
@@ -669,7 +669,7 @@ func (c *cachedQuery) queryPoliciesByLabelMatchingRule(labels map[string]string,
 	selectors := c.policyEndpointLabelHandler.QueryRuleSelectors(labels, profiles)
 
 	// Convert the selectors to a set of the policy matches.
-	results := set.NewBoxed[model.Key]()
+	results := set.New[model.Key]()
 
 	// Iterate over all the selectors and join the sets
 	for _, selector := range selectors {

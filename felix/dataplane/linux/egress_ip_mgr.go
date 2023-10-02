@@ -1348,7 +1348,7 @@ func updateEgressTableRoutes(eTable *egressTable, targets []routetable.Target) {
 		case routetable.TargetTypeVXLAN:
 			if t.GW != nil {
 				eTable.routes[t.CIDR] = egressRoute{
-					nextHops: set.FromArrayBoxed([]ip.Addr{t.GW}),
+					nextHops: set.FromArray([]ip.Addr{t.GW}),
 				}
 			} else {
 				hopIPs := []ip.Addr{}
@@ -1356,7 +1356,7 @@ func updateEgressTableRoutes(eTable *egressTable, targets []routetable.Target) {
 					hopIPs = append(hopIPs, hop.Gw)
 				}
 				eTable.routes[t.CIDR] = egressRoute{
-					nextHops: set.FromArrayBoxed(hopIPs),
+					nextHops: set.FromArray(hopIPs),
 				}
 			}
 		}
@@ -1549,7 +1549,7 @@ func (m *egressIPManager) determineRouteNextHops(workloadID proto.WorkloadEndpoi
 	members, exists := m.egwTracker.GatewaysByID(ipSetID)
 	if !exists {
 		log.Infof("Workload with ID: %s references an empty set of gateways: %s. Setting its next hops to none.", workloadID, ipSetID)
-		return set.NewBoxed[ip.Addr](), nil
+		return set.New[ip.Addr](), nil
 	}
 	activeGatewayIPs := m.getActiveGateways(members, preferLocalEGW).allIPs()
 	usage := usageMap(workloadID, activeGatewayIPs, m.tableIndexToEgressTable)
@@ -1570,7 +1570,7 @@ func (m *egressIPManager) determineRouteNextHops(workloadID proto.WorkloadEndpoi
 	if len(hops) < numHops {
 		index = len(hops)
 	}
-	return set.FromArrayBoxed(hops[:index]), nil
+	return set.FromArray(hops[:index]), nil
 }
 
 // reserveFromInitialState searches the rules and tables found from the kernel, and looks for route rules for all the

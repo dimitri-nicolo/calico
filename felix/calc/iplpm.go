@@ -40,7 +40,7 @@ type IpTrie struct {
 func NewIpTrie() *IpTrie {
 	return &IpTrie{
 		lpmCache:      patricia.NewTrie(),
-		existingCidrs: set.NewBoxed[ip.CIDR](),
+		existingCidrs: set.New[ip.CIDR](),
 	}
 }
 

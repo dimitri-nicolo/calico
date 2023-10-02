@@ -50,7 +50,7 @@ func NewSelectorAndLabelCache(onMatchStarted, onMatchStopped MatchCallback) Sele
 		OnMatchStarted: onMatchStarted,
 		OnMatchStopped: onMatchStopped,
 
-		dirtyWEPKeys: set.NewBoxed[interface{}](),
+		dirtyWEPKeys: set.New[interface{}](),
 	}
 }
 
@@ -171,7 +171,7 @@ func (cache *selectorAndLabelCache) updateMatches(dpiKey interface{}, sel select
 func (cache *selectorAndLabelCache) storeMatch(dpiKey, wepKey interface{}) {
 	wepKeys := cache.wepKeysByDPIKey[dpiKey]
 	if wepKeys == nil {
-		wepKeys = set.NewBoxed[interface{}]()
+		wepKeys = set.New[interface{}]()
 		cache.wepKeysByDPIKey[dpiKey] = wepKeys
 	}
 	previouslyMatched := wepKeys.Contains(wepKey)
@@ -182,7 +182,7 @@ func (cache *selectorAndLabelCache) storeMatch(dpiKey, wepKey interface{}) {
 
 		dpiKeys, ok := cache.dpiKeysByWEPKey[wepKey]
 		if !ok {
-			dpiKeys = set.NewBoxed[interface{}]()
+			dpiKeys = set.New[interface{}]()
 			cache.dpiKeysByWEPKey[wepKey] = dpiKeys
 		}
 		dpiKeys.Add(dpiKey)

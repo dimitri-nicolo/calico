@@ -901,7 +901,7 @@ func (m *SecondaryIfaceProvisioner) loadAWSENIsState() (s *awsState, err error) 
 
 // findUnusedAWSSecondaryIPs scans the AWS state for secondary IPs that are not assigned in Calico IPAM.
 func (m *SecondaryIfaceProvisioner) findUnusedAWSSecondaryIPs(awsState *awsState) set.Set[ip.Addr] {
-	awsIPsToRelease := set.NewBoxed[ip.Addr]()
+	awsIPsToRelease := set.New[ip.Addr]()
 	summary := map[string][]string{}
 	for addr, eniID := range awsState.eniIDBySecondaryIP {
 		release := false
@@ -1737,7 +1737,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(awsState *awsSta
 	// Figure out which IPs already have an elastic IP attached.
 	logrus.Debug("Checking if we need to associate any elastic IPs.")
 	privIPToElasticIPID := map[ip.Addr]string{}
-	inUseElasticIPs := set.NewBoxed[ip.Addr]()
+	inUseElasticIPs := set.New[ip.Addr]()
 	for eniID, eni := range awsState.calicoOwnedENIsByID {
 		for _, privIP := range eni.IPAddresses {
 			if privIP.Association != nil {
@@ -1758,7 +1758,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(awsState *awsSta
 
 	// Collect all the elastic IP IDs that we _may_ want to attach.
 	eipToCandidatePrivIPs := map[ip.Addr][]ip.Addr{}
-	privIPsToDo := set.NewBoxed[ip.Addr]()
+	privIPsToDo := set.New[ip.Addr]()
 	for _, addrInfo := range m.ds.LocalAWSAddrsByDst {
 		privIPAddr := ip.MustParseCIDROrIP(addrInfo.Dst).Addr()
 		if _, ok := privIPToElasticIPID[privIPAddr]; ok {
@@ -1911,7 +1911,7 @@ func (m *SecondaryIfaceProvisioner) ensureIPAMLoaded() error {
 	logrus.Debug("Refreshing cache of host IPs from Calico IPAM.")
 	m.ourHostIPs = nil // Make sure we retry after a failure.
 
-	hostIPs := set.NewBoxed[ip.Addr]()
+	hostIPs := set.New[ip.Addr]()
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ourIPs, err := m.ipamClient.IPsByHandle(ctx, m.hostPrimaryIPIPAMHandle())

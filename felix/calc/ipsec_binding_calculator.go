@@ -296,8 +296,8 @@ func (c *IPSecBindingCalculator) OnEndpointUpdate(update api.Update) (_ bool) {
 		c.activateBindingsForNode(otherNode, nodeIP)
 	}
 
-	removedIPs := set.FromArrayBoxed(oldIPs)
-	addedIPs := set.NewBoxed[ip.Addr]()
+	removedIPs := set.FromArray(oldIPs)
+	addedIPs := set.New[ip.Addr]()
 	for _, addr := range newIPs {
 		if removedIPs.Contains(addr) {
 			removedIPs.Discard(addr)

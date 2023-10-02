@@ -141,7 +141,7 @@ type EndpointLookupsCache struct {
 	endpointDeletionTimers map[model.Key]*time.Timer
 
 	// Node relationship data.
-	//TODO(rlb): We should just treat this as an endpoint
+	// TODO(rlb): We should just treat this as an endpoint
 	nodes         map[string]v3.NodeSpec
 	nodeIPToNames map[[16]byte][]string
 }
@@ -350,7 +350,7 @@ func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, incomingEndpo
 	// If the endpoint exists, and it was updated, then we might have to add or
 	// remove IPs.
 	// First up, get all current ip addresses.
-	var ipsToRemove set.Set[[16]byte] = set.NewBoxed[[16]byte]()
+	var ipsToRemove set.Set[[16]byte] = set.New[[16]byte]()
 
 	currentEndpoint, endpointAlreadyExists := ec.endpointData[key]
 	// Create a copy so that we can figure out which IPs to keep and
@@ -367,7 +367,7 @@ func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, incomingEndpo
 
 	// Collect all IPs that correspond to this endpoint and mark
 	// any IP that shouldn't be discarded.
-	ipsToUpdate := set.NewBoxed[[16]byte]()
+	ipsToUpdate := set.New[[16]byte]()
 	for _, ip := range ipsOfIncomingEndpoint {
 		// If this is an already existing IP, then remove it,
 		if ipsToRemove.Contains(ip) {
@@ -496,7 +496,7 @@ func (ec *EndpointLookupsCache) removeEndpoint(key model.Key) {
 		return
 	}
 
-	ipsMarkedAsDeleted := set.NewBoxed[[16]byte]()
+	ipsMarkedAsDeleted := set.New[[16]byte]()
 
 	// if the endpoint has not been marked for deletion ignore it as it may have been
 	// updated before the deletion timer has been triggered
@@ -695,7 +695,7 @@ func (ec *EndpointLookupsCache) DumpEndpoints() string {
 
 	for key, endpointData := range ec.endpointData {
 		ipStr := []string{}
-		ips := set.NewBoxed[[16]byte]()
+		ips := set.New[[16]byte]()
 
 		if !endpointData.markedToBeDeleted {
 			switch endpointData.Key.(type) {
