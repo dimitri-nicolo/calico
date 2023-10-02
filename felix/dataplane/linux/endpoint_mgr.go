@@ -316,7 +316,7 @@ func newEndpointManagerWithShims(
 
 		wlIfaceNamesToReconfigure: set.New[string](),
 
-		epIDsToUpdateStatus: set.NewBoxed[any](),
+		epIDsToUpdateStatus: set.New[any](),
 
 		sourceSpoofingConfig: map[string][]string{},
 		rpfSkipChainDirty:    true,

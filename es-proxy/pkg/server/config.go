@@ -93,8 +93,8 @@ type Config struct {
 	ServiceGraphCacheMaxAggregatedRecords int           `envconfig:"SERVICE_GRAPH_CACHE_MAX_AGGREGATED_RECORDS" default:"100000"`
 	ServiceGraphCachePolledEntryAgeOut    time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLLED_ENTRY_AGE_OUT" default:"1h"`
 	ServiceGraphCacheSlowQueryEntryAgeOut time.Duration `envconfig:"SERVICE_GRAPH_CACHE_SLOW_QUERY_ENTRY_AGE_OUT" default:"5m"`
-	ServiceGraphCachePollLoopInterval     time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLL_LOOP_INTERVAL" default:"2m"`
-	ServiceGraphCachePollQueryInterval    time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLL_QUERY_INTERVAL" default:"2s"`
+	ServiceGraphCachePollLoopInterval     time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLL_LOOP_INTERVAL" default:"5m"`
+	ServiceGraphCachePollQueryInterval    time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLL_QUERY_INTERVAL" default:"3s"`
 	ServiceGraphCacheDataSettleTime       time.Duration `envconfig:"SERVICE_GRAPH_CACHE_DATA_SETTLE_TIME" default:"15m"`
 	ServiceGraphCacheDataPrefetch         bool          `envconfig:"SERVICE_GRAPH_CACHE_DATA_PREFETCH" default:"true"`
 

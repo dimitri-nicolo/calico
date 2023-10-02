@@ -29,7 +29,7 @@ type PacketCaptureCalculator struct {
 	allPacketCaptures map[model.ResourceKey]*v3.PacketCapture
 
 	// Cache matching between a packet capture and workload endpoints
-	packetCapturesToWorkloadEndpoints multidict.IfaceToIface
+	packetCapturesToWorkloadEndpoints multidict.Multidict[any, any]
 
 	// Label index, matching packet capture selectors against local endpoints.
 	labelIndex *labelindex.InheritIndex
@@ -43,7 +43,7 @@ type PacketCaptureCalculator struct {
 func NewPacketCaptureCalculator(callbacks packetCaptureCallbacks) *PacketCaptureCalculator {
 	pcc := &PacketCaptureCalculator{}
 	pcc.allPacketCaptures = make(map[model.ResourceKey]*v3.PacketCapture)
-	pcc.packetCapturesToWorkloadEndpoints = multidict.NewIfaceToIface()
+	pcc.packetCapturesToWorkloadEndpoints = multidict.New[any, any]()
 	pcc.labelIndex = labelindex.NewInheritIndex(pcc.onMatchStarted, pcc.onMatchStopped)
 	pcc.packetCaptureCallbacks = callbacks
 	return pcc

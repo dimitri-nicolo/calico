@@ -61,7 +61,7 @@ type policyCache struct {
 func newPolicyCache() *policyCache {
 	return &policyCache{
 		policies:          make(map[model.Key]*policyData),
-		unmatchedPolicies: set.NewBoxed[model.Key](),
+		unmatchedPolicies: set.New[model.Key](),
 	}
 }
 
@@ -135,7 +135,7 @@ func (c *policiesCache) GetPolicyKeySetByRuleSelector(selector string) set.Set[m
 	if rs := c.ruleSelectors[selector]; rs != nil {
 		return rs.policies
 	}
-	return set.NewBoxed[model.Key]()
+	return set.New[model.Key]()
 }
 
 func (c *policiesCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
@@ -307,7 +307,7 @@ func (c *policiesCache) addPolicyRuleSelectors(p *model.Policy, polKey model.Key
 		rsi := c.ruleSelectors[s]
 		if rsi == nil {
 			rsi = &ruleSelectorInfo{
-				policies: set.NewBoxed[model.Key](),
+				policies: set.New[model.Key](),
 			}
 			c.ruleSelectors[s] = rsi
 		}

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import (
 
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/labelindex"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 var (
@@ -69,6 +68,8 @@ func init() {
 
 const MaxIPSetNameLength = 31
 
+const IPSetNamePrefix = "cali"
+
 // IPSetType constants for the different kinds of IP set.
 type IPSetType string
 
@@ -79,6 +80,14 @@ const (
 	IPSetTypeBitmapPort IPSetType = "bitmap:port"
 	IPSetTypeHashNetNet IPSetType = "hash:net,net"
 )
+
+var AllIPSetTypes = []IPSetType{
+	IPSetTypeHashIP,
+	IPSetTypeHashIPPort,
+	IPSetTypeHashNet,
+	IPSetTypeBitmapPort,
+	IPSetTypeHashNetNet,
+}
 
 func (t IPSetType) SetType() string {
 	return string(t)
@@ -220,6 +229,12 @@ func (t IPSetType) CanonicaliseMember(member string) IPSetMember {
 	return nil
 }
 
+type rawIPSetMember string
+
+func (r rawIPSetMember) String() string {
+	return string(r)
+}
+
 type IPSetMember interface {
 	String() string
 }
@@ -234,13 +249,13 @@ func (nn netNet) String() string {
 
 func (t IPSetType) IsValid() bool {
 	switch t {
-	case IPSetTypeHashIP, IPSetTypeHashNet, IPSetTypeHashIPPort, IPSetTypeHashNetNet:
+	case IPSetTypeHashIP, IPSetTypeHashNet, IPSetTypeHashIPPort, IPSetTypeHashNetNet, IPSetTypeBitmapPort:
 		return true
 	}
 	return false
 }
 
-// IPSetType constants for the names that the ipset command uses for the IP versions.
+// IPFamily constants for the names that the ipset command uses for the IP versions.
 type IPFamily string
 
 const (
@@ -272,29 +287,6 @@ type IPSetMetadata struct {
 	MaxSize  int
 	RangeMin int
 	RangeMax int
-}
-
-// ipSet holds the state for a particular IP set.
-type ipSet struct {
-	IPSetMetadata
-
-	MainIPSetName string
-
-	// members either contains the members that we've programmed or is nil, indicating that
-	// we're out of sync.
-	members set.Set[IPSetMember]
-
-	// pendingReplace is either nil to indicate that there is no pending replace or a set
-	// containing all the entries that we want to write.
-	pendingReplace set.Set[IPSetMember]
-	// pendingAdds contains members that are queued up to add to the IP set.  If pendingReplace
-	// is non-nil then pendingAdds is empty (and we add members directly to pendingReplace
-	// instead).
-	pendingAdds set.Set[IPSetMember]
-	// pendingDeletions contains members that are queued up for deletion.  If pendingReplace
-	// is non-nil then pendingDeletions is empty (and we delete members directly from
-	// pendingReplace instead).
-	pendingDeletions set.Set[IPSetMember]
 }
 
 // IPVersionConfig wraps up the metadata for a particular IP version.  It can be used by
@@ -390,4 +382,12 @@ func combineAndTrunc(prefix, suffix string, maxLength int) string {
 	} else {
 		return combined
 	}
+}
+
+func StripIPSetNamePrefix(ipSetName string) string {
+	prefixLen := len(IPSetNamePrefix) + 2 // "cali40"
+	if len(ipSetName) < prefixLen {
+		return ""
+	}
+	return ipSetName[prefixLen:]
 }

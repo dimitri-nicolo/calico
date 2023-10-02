@@ -3,8 +3,7 @@
 package calico
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/licensing/monitor"
 
@@ -18,12 +17,12 @@ const (
 
 // ManagedClusterResources contains resources needed by the managed cluster API
 // to generate a fully populated manifest. The CA certificate and private key
-// will be read from a local volume mounted using a K8S secret
+// will be read from a K8S secret
 type ManagedClusterResources struct {
-	CACert                  *x509.Certificate
-	CAKey                   *rsa.PrivateKey
 	ManagementClusterAddr   string
 	ManagementClusterCAType string
+	TunnelSecretName        string
+	K8sClient               kubernetes.Interface
 }
 
 type Options struct {

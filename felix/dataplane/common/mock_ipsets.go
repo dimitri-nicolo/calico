@@ -79,7 +79,7 @@ func (s *MockIPSets) GetIPFamily() ipsets.IPFamily {
 	return ipsets.IPFamilyV4
 }
 
-func (s *MockIPSets) GetMembers(setID string) (set.Set[string], error) {
+func (s *MockIPSets) GetDesiredMembers(setID string) (set.Set[string], error) {
 	return s.Members[setID], nil
 }
 
@@ -96,8 +96,9 @@ func (s *MockIPSets) ApplyUpdates(ipsetFilter func(ipSetName string) bool) set.S
 	return nil
 }
 
-func (s *MockIPSets) ApplyDeletions() {
+func (s *MockIPSets) ApplyDeletions() bool {
 	// Not implemented for UT.
+	return false
 }
 
 func (s *MockIPSets) SetFilter(ipSetNames set.Set[string]) {

@@ -24,6 +24,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -2872,15 +2873,24 @@ func (d *InternalDataplane) apply() {
 	ipSetsWG.Wait()
 
 	// Now clean up any left-over IP sets.
+	var ipSetsNeedsReschedule atomic.Bool
 	for _, ipSets := range d.ipSets {
 		ipSetsWG.Add(1)
 		go func(s common.IPSetsDataplane) {
-			s.ApplyDeletions()
+			defer ipSetsWG.Done()
+			reschedule := s.ApplyDeletions()
+			if reschedule {
+				ipSetsNeedsReschedule.Store(true)
+			}
 			d.reportHealth()
-			ipSetsWG.Done()
 		}(ipSets)
 	}
 	ipSetsWG.Wait()
+	if ipSetsNeedsReschedule.Load() {
+		if reschedDelay == 0 || reschedDelay > 100*time.Millisecond {
+			reschedDelay = 100 * time.Millisecond
+		}
+	}
 
 	// Wait for the route updates to finish.
 	routesWG.Wait()
@@ -2946,7 +2956,8 @@ func (d *InternalDataplane) applyIPSetsAndNotifyDomainInfoStore() {
 			// been modified will be updated.
 			programmedIPs := ipSets.ApplyUpdates(func(ipSetName string) bool {
 				// Collect only Domain IP set updates so we don't overload the packet processor with irrelevant ips.
-				return ipSetName[0:2] == "d:"
+				ipSetID := ipsets.StripIPSetNamePrefix(ipSetName)
+				return strings.HasPrefix(ipSetID, "d:")
 			})
 
 			d.reportHealth()

@@ -54,9 +54,8 @@ type TestServerConfig struct {
 	etcdServerList                []string
 	emptyObjFunc                  func() runtime.Object
 	enableManagedClusterCreateAPI bool
-	managedClustersCACertPath     string
-	managedClustersCAKeyPath      string
 	managementClusterAddr         string
+	tunnelSecretName              string
 	applyTigeraLicense            bool
 }
 
@@ -98,9 +97,8 @@ func withConfigGetFreshApiserverServerAndClient(
 	options.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = os.Getenv("KUBECONFIG")
 
 	options.EnableManagedClustersCreateAPI = serverConfig.enableManagedClusterCreateAPI
-	options.ManagedClustersCACertPath = serverConfig.managedClustersCACertPath
-	options.ManagedClustersCAKeyPath = serverConfig.managedClustersCAKeyPath
 	options.ManagementClusterAddr = serverConfig.managementClusterAddr
+	options.TunnelSecretName = serverConfig.tunnelSecretName
 
 	var err error
 	pcs, err := server.PrepareServer(options)
@@ -176,9 +174,9 @@ func getFreshApiserverAndClient(
 func customizeFreshApiserverAndClient(
 	t *testing.T,
 	serverConfig *TestServerConfig,
-) (calicoclient.Interface, func()) {
-	_, client, _, shutdownFunc := withConfigGetFreshApiserverServerAndClient(t, serverConfig)
-	return client, shutdownFunc
+) (calicoclient.Interface, *restclient.Config, func()) {
+	_, client, restConfig, shutdownFunc := withConfigGetFreshApiserverServerAndClient(t, serverConfig)
+	return client, restConfig, shutdownFunc
 }
 
 func waitForApiserverUp(serverURL string, stopCh <-chan struct{}) error {

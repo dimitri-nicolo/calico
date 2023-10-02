@@ -30,7 +30,7 @@ type captureManager struct {
 	// pending updates for packet captures
 	pendingPacketCaptures map[capture.Key]*protoPacketCaptureUpdate
 	// reverse mapping interface name -> capture
-	interfaceToPacketCapture multidict.StringToIface
+	interfaceToPacketCapture multidict.Multidict[string, captureTuple]
 	// active packet captures
 	activePacketCaptures capture.ActiveCaptures
 }
@@ -57,7 +57,7 @@ func newCaptureManager(captures capture.ActiveCaptures, wlInterfacePrefixes []st
 	captureManager.pendingWlEpUpdates = make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint)
 	captureManager.activePacketCaptures = captures
 	captureManager.pendingPacketCaptures = make(map[capture.Key]*protoPacketCaptureUpdate)
-	captureManager.interfaceToPacketCapture = multidict.NewStringToIface()
+	captureManager.interfaceToPacketCapture = multidict.New[string, captureTuple]()
 
 	return &captureManager
 }
@@ -175,24 +175,22 @@ func (c *captureManager) CompleteDeferredWork() error {
 		if c.wlInterfaceRegexp.MatchString(ifaceName) {
 			switch state {
 			case ifacemonitor.StateUp:
-				c.interfaceToPacketCapture.Iter(ifaceName, func(value interface{}) {
+				c.interfaceToPacketCapture.Iter(ifaceName, func(tuple captureTuple) {
 					// In case the capture was already started, Add will
 					// return an error. In case an interface went up after
 					// being marked as down and the capture was not deleted,
 					// it will start the capture
-					var tuple = value.(captureTuple)
 					var err = c.activePacketCaptures.Add(tuple.key, tuple.specification)
 					if err != nil && err != capture.ErrDuplicate {
-						log.WithField("CAPTURE", value.(capture.Key).CaptureName).WithError(err).Error("Failed to start capture")
+						log.WithField("CAPTURE", tuple.key.CaptureName).WithError(err).Error("Failed to start capture")
 					}
 				})
 			default: /* StateDown or StateNotPresent */
-				c.interfaceToPacketCapture.Iter(ifaceName, func(value interface{}) {
+				c.interfaceToPacketCapture.Iter(ifaceName, func(tuple captureTuple) {
 					// In case the capture was already stopped, nothing will happen
 					// In case an interface went down after
 					// being marked as up and the capture was not deleted,
 					// it will stop the capture
-					var tuple = value.(captureTuple)
 					_ = c.activePacketCaptures.Remove(tuple.key)
 				})
 			}

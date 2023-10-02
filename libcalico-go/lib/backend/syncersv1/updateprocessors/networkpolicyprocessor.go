@@ -87,13 +87,14 @@ func ConvertNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error) {
 	selector = prefixAndAppendSelector(selector, spec.ServiceAccountSelector, conversion.ServiceAccountLabelPrefix)
 
 	v1value := &model.Policy{
-		Namespace:      v3res.Namespace,
-		Order:          spec.Order,
-		InboundRules:   RulesAPIV2ToBackend(spec.Ingress, v3res.Namespace, matchSGs),
-		OutboundRules:  RulesAPIV2ToBackend(spec.Egress, v3res.Namespace, matchSGs),
-		Selector:       selector,
-		Types:          policyTypesAPIV2ToBackend(spec.Types),
-		ApplyOnForward: false,
+		Namespace:        v3res.Namespace,
+		Order:            spec.Order,
+		InboundRules:     RulesAPIV2ToBackend(spec.Ingress, v3res.Namespace, matchSGs),
+		OutboundRules:    RulesAPIV2ToBackend(spec.Egress, v3res.Namespace, matchSGs),
+		Selector:         selector,
+		Types:            policyTypesAPIV2ToBackend(spec.Types),
+		ApplyOnForward:   false,
+		PerformanceHints: v3res.Spec.PerformanceHints,
 	}
 
 	return v1value, nil

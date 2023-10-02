@@ -88,7 +88,7 @@ func TestEgressHealthMainline(t *testing.T) {
 	Expect(gw2.addr).To(Equal(h[1].IP))
 	Expect(gw2.healthStatus).To(Equal(EGWHealthUp))
 	Expect(gws.failedGateways()).To(BeEmpty())
-	Expect(gws.allIPs()).To(Equal(set.FromBoxed(h[0].IP, h[1].IP)))
+	Expect(gws.allIPs()).To(Equal(set.From(h[0].IP, h[1].IP)))
 	Expect(gws.activeGateways()).To(HaveLen(2))
 
 	// Pollers shouldn't return any more reports after the initial one.  They only send reports when something

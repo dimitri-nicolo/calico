@@ -2339,7 +2339,7 @@ func (m *bpfEndpointManager) addPolicyToEPMappings(tier string, polNames []strin
 	for _, pol := range polNames {
 		polID := proto.PolicyID{Tier: tier, Name: pol}
 		if m.policiesToWorkloads[polID] == nil {
-			m.policiesToWorkloads[polID] = set.NewBoxed[any]()
+			m.policiesToWorkloads[polID] = set.New[any]()
 		}
 		m.policiesToWorkloads[polID].Add(id)
 	}
@@ -2350,7 +2350,7 @@ func (m *bpfEndpointManager) addProfileToEPMappings(profileIds []string, id inte
 		profID := proto.ProfileID{Name: profName}
 		profSet := m.profilesToWorkloads[profID]
 		if profSet == nil {
-			profSet = set.NewBoxed[any]()
+			profSet = set.New[any]()
 			m.profilesToWorkloads[profID] = profSet
 		}
 		profSet.Add(id)

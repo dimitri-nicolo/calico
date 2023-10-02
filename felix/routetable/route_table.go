@@ -723,7 +723,7 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool, firstTry
 
 	// Any deleted route that is not being replaced by a route with the same CIDR should have the corresponding
 	// conntrack entry removed.
-	deletedConnCIDRs := set.NewBoxed[ip.CIDR]()
+	deletedConnCIDRs := set.New[ip.CIDR]()
 	defer func() {
 		cidrsToTarget := r.ifaceNameToTargets[ifaceName]
 		deletedConnCIDRs.Iter(func(cidr ip.CIDR) error {
@@ -961,7 +961,7 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 		pendingDeltaTargets = map[ip.CIDR]*Target{}
 		r.pendingIfaceNameToDeltaTargets[ifaceName] = pendingDeltaTargets
 	}
-	alreadyCorrectCIDRs := set.NewBoxed[ip.CIDR]()
+	alreadyCorrectCIDRs := set.New[ip.CIDR]()
 	leaveDirty := false
 	for _, route := range programmedRoutes {
 		logCxt.WithField("route", route).Debug("Processing route")
