@@ -41,13 +41,14 @@ const (
 	policyRecommendationTimeFormat = time.RFC3339
 	namespaceScope                 = "namespace"
 
-	LastUpdatedKey  = PolicyRecKeyName + "/lastUpdated"
-	NameKey         = PolicyRecKeyName + "/name"
-	NamespaceKey    = PolicyRecKeyName + "/namespace"
-	ScopeKey        = PolicyRecKeyName + "/scope"
-	StagedActionKey = projectCalicoKeyName + "/spec.stagedAction"
-	StatusKey       = PolicyRecKeyName + "/status"
-	TierKey         = projectCalicoKeyName + "/tier"
+	LastUpdatedKey        = PolicyRecKeyName + "/lastUpdated"
+	NameKey               = PolicyRecKeyName + "/name"
+	NamespaceKey          = PolicyRecKeyName + "/namespace"
+	ScopeKey              = PolicyRecKeyName + "/scope"
+	StagedActionKey       = projectCalicoKeyName + "/spec.stagedAction"
+	StatusKey             = PolicyRecKeyName + "/status"
+	OwnerReferenceKindKey = projectCalicoKeyName + "/ownerReference.kind"
+	TierKey               = projectCalicoKeyName + "/tier"
 
 	LearningStatus    = "Learning"
 	NoDataStatus      = "NoData"

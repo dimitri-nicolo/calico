@@ -1,6 +1,10 @@
 package policyrecommendation
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -9,11 +13,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 
+	"github.com/projectcalico/calico/policy-recommendation/pkg/cache"
+	calicores "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 	calres "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
+	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
 )
 
 //TODO(dimitrin): [EV-3439] Re-write tests and add back
@@ -334,3 +344,773 @@ var _ = Describe("updateStatusAnnotation", func() {
 		),
 	)
 })
+
+var _ = Describe("policyRecommendationReconciler", func() {
+	var (
+		ctx    context.Context
+		pr     *policyRecommendationReconciler
+		client calicoclient.ProjectcalicoV3Interface
+	)
+
+	var (
+		labelSelector = strings.Join(
+			[]string{
+				fmt.Sprintf("%s=%s", calicores.TierKey, "namespace-isolation"),
+				fmt.Sprintf("%s=%s", calicores.OwnerReferenceKindKey, v3.KindPolicyRecommendationScope),
+			}, ",",
+		)
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		client = fake.NewSimpleClientset().ProjectcalicoV3()
+		pr = &policyRecommendationReconciler{
+			calico: client,
+			caches: &syncer.CacheSet{
+				StagedNetworkPolicies: cache.NewSynchronizedObjectCache[*v3.StagedNetworkPolicy](),
+			},
+			state: &policyRecommendationScopeState{
+				object: v3.PolicyRecommendationScope{
+					Spec: v3.PolicyRecommendationScopeSpec{
+						NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
+							TierName: "namespace-isolation",
+						},
+					},
+				},
+			},
+		}
+	})
+
+	DescribeTable("getRecommendation",
+		func(name, namespace string, store []v3.StagedNetworkPolicy, expected *v3.StagedNetworkPolicy, expectedErr error) {
+
+			// Add the objects to the datastore
+			addObjects(ctx, client, pr, store)
+
+			actual, err := pr.getRecFromStore(ctx, name, namespace)
+			if expectedErr != nil {
+				Expect(err).To(Equal(expectedErr))
+			} else {
+				Expect(*actual).To(Equal(*expected))
+				Expect(err).NotTo(HaveOccurred())
+			}
+		},
+		Entry("Recommendation exists",
+			"test-snp",
+			"test-ns",
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						Annotations: map[string]string{},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Egress:  []v3.Rule{},
+						Ingress: []v3.Rule{},
+						Types:   []v3.PolicyType{},
+					},
+				},
+			},
+			&v3.StagedNetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-snp",
+					Namespace: "test-ns",
+					Labels: map[string]string{
+						calicores.TierKey:                       "namespace-isolation",
+						"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					},
+					Annotations: map[string]string{},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion:         "projectcalico.org/v3",
+							Kind:               "PolicyRecommendationScope",
+							Controller:         &[]bool{true}[0],
+							BlockOwnerDeletion: &[]bool{false}[0],
+						},
+					},
+				},
+				Spec: v3.StagedNetworkPolicySpec{
+					Egress:  []v3.Rule{},
+					Ingress: []v3.Rule{},
+					Types:   []v3.PolicyType{},
+				},
+			},
+			nil,
+		),
+		Entry("Recommendation does not exist",
+			"test-snp",
+			"test-ns",
+			[]v3.StagedNetworkPolicy{},
+			&v3.StagedNetworkPolicy{},
+			k8serrors.NewNotFound(v3.Resource("stagednetworkpolicies"), "test-snp"),
+		),
+		Entry("Another recommendation exists",
+			"test-sn1",
+			"test-ns",
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp-2",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						Annotations: map[string]string{},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Egress:  []v3.Rule{},
+						Ingress: []v3.Rule{},
+						Types:   []v3.PolicyType{},
+					},
+				},
+			},
+			&v3.StagedNetworkPolicy{},
+			fmt.Errorf("recommendation name test-snp-2 differs from test-sn1, in namespace: test-ns"),
+		),
+		Entry("Multiple recommendations exist",
+			"test-snp1",
+			"test-ns",
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp-1",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						Annotations: map[string]string{},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Egress:  []v3.Rule{},
+						Ingress: []v3.Rule{},
+						Types:   []v3.PolicyType{},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp-2",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						Annotations: map[string]string{},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Egress:  []v3.Rule{},
+						Ingress: []v3.Rule{},
+						Types:   []v3.PolicyType{},
+					},
+				},
+			},
+			&v3.StagedNetworkPolicy{},
+			fmt.Errorf("more than one recommendation in namespace: test-ns"),
+		),
+	)
+
+	DescribeTable("syncToDatastore",
+		func(key, namespace string, cache *v3.StagedNetworkPolicy, store, expected []v3.StagedNetworkPolicy, expectedErr error) {
+			// Add the objects to the datastore
+			addObjects(ctx, client, pr, store)
+
+			// Call the syncToDatastore function
+			err := pr.syncToDatastore(ctx, key, namespace, cache)
+
+			// Check the results
+			if expectedErr != nil {
+				Expect(err).To(MatchError(expectedErr))
+			} else {
+
+				actual, err := pr.calico.StagedNetworkPolicies(namespace).List(ctx, metav1.ListOptions{
+					LabelSelector: labelSelector,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual.Items).To(Equal(expected))
+			}
+		},
+		Entry("Cache is nil, datastore policy exists and is learning",
+			"test-snp",
+			"test-ns",
+			nil,
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier:         "namespace-isolation",
+						StagedAction: v3.StagedActionLearn,
+					},
+				},
+			},
+			nil,
+			nil,
+		),
+		Entry("Cache is nil, datastore policy exists and is not learning",
+			"test-snp",
+			"test-ns",
+			nil,
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier:         "namespace-isolation",
+						StagedAction: v3.StagedActionDelete,
+					},
+				},
+			},
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier:         "namespace-isolation",
+						StagedAction: v3.StagedActionDelete,
+					},
+				},
+			},
+			errors.New("can only delete a learning policy"),
+		),
+		Entry("Cache is nil, datastore policy does not exist",
+			"test-snp",
+			"test-ns",
+			nil,
+			[]v3.StagedNetworkPolicy{},
+			[]v3.StagedNetworkPolicy{},
+			k8serrors.NewNotFound(v3.Resource("stagednetworkpolicies"), "test-snp"),
+		),
+		Entry("Cache is not nil, datastore policy exists and is learning",
+			"test-snp",
+			"test-ns",
+			&v3.StagedNetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-snp",
+					Namespace: "test-ns",
+					Labels: map[string]string{
+						calicores.TierKey:                       "namespace-isolation",
+						"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					},
+				},
+				Spec: v3.StagedNetworkPolicySpec{
+					Tier:         "namespace-isolation",
+					StagedAction: v3.StagedActionLearn,
+				},
+			},
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier:         "namespace-isolation",
+						StagedAction: v3.StagedActionLearn,
+					},
+				},
+			},
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion:         "projectcalico.org/v3",
+								Kind:               "PolicyRecommendationScope",
+								Controller:         &[]bool{true}[0],
+								BlockOwnerDeletion: &[]bool{false}[0],
+							},
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier:         "namespace-isolation",
+						StagedAction: v3.StagedActionLearn,
+					},
+				},
+			},
+			nil,
+		),
+		Entry("Cache is not nil, and its rules are empty",
+			"test-snp",
+			"test-ns",
+			&v3.StagedNetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-snp",
+					Namespace: "test-ns",
+					Labels: map[string]string{
+						calicores.TierKey:                       "namespace-isolation",
+						"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					},
+					Annotations: map[string]string{},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion:         "projectcalico.org/v3",
+							Kind:               "PolicyRecommendationScope",
+							Controller:         &[]bool{true}[0],
+							BlockOwnerDeletion: &[]bool{false}[0],
+						},
+					},
+				},
+				Spec: v3.StagedNetworkPolicySpec{
+					Tier:    "namespace-isolation",
+					Egress:  []v3.Rule{},
+					Ingress: []v3.Rule{},
+					Types:   []v3.PolicyType{},
+				},
+			},
+			[]v3.StagedNetworkPolicy{},
+			nil,
+			nil,
+		),
+		Entry("Cache is not nil, datastore contains a different policy",
+			"test-snp1",
+			"test-ns",
+			&v3.StagedNetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-snp1",
+					Namespace: "test-ns",
+					Labels: map[string]string{
+						calicores.TierKey:                       "namespace-isolation",
+						"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					},
+					Annotations: map[string]string{},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion:         "projectcalico.org/v3",
+							Kind:               "PolicyRecommendationScope",
+							Controller:         &[]bool{true}[0],
+							BlockOwnerDeletion: &[]bool{false}[0],
+						},
+					},
+				},
+				Spec: v3.StagedNetworkPolicySpec{
+					Tier: "namespace-isolation",
+					Egress: []v3.Rule{
+						{
+							Action: "Allow",
+						},
+					},
+					Ingress: []v3.Rule{},
+					Types:   []v3.PolicyType{"Egress"},
+				},
+			},
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp2",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						Annotations: map[string]string{},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion:         "projectcalico.org/v3",
+								Kind:               "PolicyRecommendationScope",
+								Controller:         &[]bool{true}[0],
+								BlockOwnerDeletion: &[]bool{false}[0],
+							},
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier: "namespace-isolation",
+						Egress: []v3.Rule{
+							{
+								Action: "Allow",
+							},
+						},
+						Ingress: []v3.Rule{},
+						Types:   []v3.PolicyType{"Egress"},
+					},
+				},
+			},
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp2",
+						Namespace: "test-ns2",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						Annotations: map[string]string{},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion:         "projectcalico.org/v3",
+								Kind:               "PolicyRecommendationScope",
+								Controller:         &[]bool{true}[0],
+								BlockOwnerDeletion: &[]bool{false}[0],
+							},
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier: "namespace-isolation",
+						Egress: []v3.Rule{
+							{
+								Action: "Allow",
+							},
+						},
+						Ingress: []v3.Rule{},
+						Types:   []v3.PolicyType{"Egress"},
+					},
+				},
+			},
+			fmt.Errorf("recommendation name test-snp2 differs from test-snp1, in namespace: %s", "test-ns"),
+		),
+
+		Entry("Cache is not nil, datastore policy exists and is learning, cache and store items are equal",
+			"test-snp",
+			"test-ns",
+			&v3.StagedNetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-snp",
+					Namespace: "test-ns",
+					Labels: map[string]string{
+						calicores.TierKey:                       "namespace-isolation",
+						"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					},
+					Annotations: map[string]string{},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion:         "projectcalico.org/v3",
+							Kind:               "PolicyRecommendationScope",
+							Controller:         &[]bool{true}[0],
+							BlockOwnerDeletion: &[]bool{false}[0],
+						},
+					},
+				},
+				Spec: v3.StagedNetworkPolicySpec{
+					Tier: "namespace-isolation",
+					Egress: []v3.Rule{
+						{
+							Action: "Allow",
+						},
+					},
+					Ingress: []v3.Rule{},
+					Types:   []v3.PolicyType{"Egress"},
+				},
+			},
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						Annotations: map[string]string{},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion:         "projectcalico.org/v3",
+								Kind:               "PolicyRecommendationScope",
+								Controller:         &[]bool{true}[0],
+								BlockOwnerDeletion: &[]bool{false}[0],
+							},
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier:         "namespace-isolation",
+						StagedAction: v3.StagedActionSet,
+						Egress: []v3.Rule{
+							{
+								Action: "Allow",
+							},
+						},
+						Ingress: []v3.Rule{},
+						Types:   []v3.PolicyType{"Egress"},
+					},
+				},
+			},
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						Annotations: map[string]string{},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion:         "projectcalico.org/v3",
+								Kind:               "PolicyRecommendationScope",
+								Controller:         &[]bool{true}[0],
+								BlockOwnerDeletion: &[]bool{false}[0],
+							},
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier:         "namespace-isolation",
+						StagedAction: v3.StagedActionSet,
+						Egress: []v3.Rule{
+							{
+								Action: "Allow",
+							},
+						},
+						Ingress: []v3.Rule{},
+						Types:   []v3.PolicyType{"Egress"},
+					},
+				},
+			},
+			nil,
+		),
+
+		Entry("Cache is not nil, datastore policy exists and is not learning",
+			"test-snp",
+			"test-ns",
+			&v3.StagedNetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-snp",
+					Namespace: "test-ns",
+					Labels: map[string]string{
+						calicores.TierKey:                       "namespace-isolation",
+						"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					},
+					Annotations: map[string]string{},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion:         "projectcalico.org/v3",
+							Kind:               "PolicyRecommendationScope",
+							Controller:         &[]bool{true}[0],
+							BlockOwnerDeletion: &[]bool{false}[0],
+						},
+					},
+				},
+				Spec: v3.StagedNetworkPolicySpec{
+					Tier: "namespace-isolation",
+					Egress: []v3.Rule{
+						{
+							Action: "Allow",
+						},
+					},
+					Ingress: []v3.Rule{},
+					Types:   []v3.PolicyType{"Egress"},
+				},
+			},
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						Annotations: map[string]string{},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion:         "projectcalico.org/v3",
+								Kind:               "PolicyRecommendationScope",
+								Controller:         &[]bool{true}[0],
+								BlockOwnerDeletion: &[]bool{false}[0],
+							},
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier:         "namespace-isolation",
+						StagedAction: v3.StagedActionSet,
+						Egress:       []v3.Rule{},
+						Ingress: []v3.Rule{
+							{
+								Action: "Allow",
+							},
+						},
+						Types: []v3.PolicyType{"Ingress"},
+					},
+				},
+			},
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						Annotations: map[string]string{},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion:         "projectcalico.org/v3",
+								Kind:               "PolicyRecommendationScope",
+								Controller:         &[]bool{true}[0],
+								BlockOwnerDeletion: &[]bool{false}[0],
+							},
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier:         "namespace-isolation",
+						StagedAction: v3.StagedActionSet,
+						Egress:       []v3.Rule{},
+						Ingress: []v3.Rule{
+							{
+								Action: "Allow",
+							},
+						},
+						Types: []v3.PolicyType{"Ingress"},
+					},
+				},
+			},
+			nil,
+		),
+		Entry("Cache is not nil, datastore policy does not exist",
+			"test-snp1",
+			"test-ns1",
+			&v3.StagedNetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-snp1",
+					Namespace: "test-ns1",
+					Labels: map[string]string{
+						calicores.TierKey:                       "namespace-isolation",
+						"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+					},
+					Annotations: map[string]string{},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion:         "projectcalico.org/v3",
+							Kind:               "PolicyRecommendationScope",
+							Controller:         &[]bool{true}[0],
+							BlockOwnerDeletion: &[]bool{false}[0],
+						},
+					},
+				},
+				Spec: v3.StagedNetworkPolicySpec{
+					Tier:         "namespace-isolation",
+					StagedAction: v3.StagedActionLearn,
+					Egress: []v3.Rule{
+						{
+							Action: "Allow",
+						},
+					},
+					Ingress: []v3.Rule{},
+					Types:   []v3.PolicyType{"Egress"},
+				},
+			},
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp2",
+						Namespace: "test-ns2",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						Annotations: map[string]string{},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion:         "projectcalico.org/v3",
+								Kind:               "PolicyRecommendationScope",
+								Controller:         &[]bool{true}[0],
+								BlockOwnerDeletion: &[]bool{false}[0],
+							},
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier:         "namespace-isolation",
+						StagedAction: v3.StagedActionLearn,
+						Egress: []v3.Rule{
+							{
+								Action: "Allow",
+							},
+						},
+						Ingress: []v3.Rule{},
+						Types:   []v3.PolicyType{"Egress"},
+					},
+				},
+			},
+			[]v3.StagedNetworkPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-snp1",
+						Namespace: "test-ns1",
+						Labels: map[string]string{
+							calicores.TierKey:                       "namespace-isolation",
+							"projectcalico.org/ownerReference.kind": "PolicyRecommendationScope",
+						},
+						Annotations: map[string]string{},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion:         "projectcalico.org/v3",
+								Kind:               "PolicyRecommendationScope",
+								Controller:         &[]bool{true}[0],
+								BlockOwnerDeletion: &[]bool{false}[0],
+							},
+						},
+					},
+					Spec: v3.StagedNetworkPolicySpec{
+						Tier:         "namespace-isolation",
+						StagedAction: v3.StagedActionLearn,
+						Egress: []v3.Rule{
+							{
+								Action: "Allow",
+							},
+						},
+						Ingress: []v3.Rule{},
+						Types:   []v3.PolicyType{"Egress"},
+					},
+				},
+			},
+			nil,
+		),
+	)
+})
+
+// addObjects adds the given objects to the cache and datastore. It attaches a recommendation owner
+// reference to each policy.
+func addObjects(ctx context.Context, client calicoclient.ProjectcalicoV3Interface, pr *policyRecommendationReconciler, snps []v3.StagedNetworkPolicy) {
+	// Add owner references to each store entry
+	for i := range snps {
+		snps[i].OwnerReferences = []metav1.OwnerReference{
+			{
+				APIVersion:         "projectcalico.org/v3",
+				Kind:               "PolicyRecommendationScope",
+				Controller:         &[]bool{true}[0],
+				BlockOwnerDeletion: &[]bool{false}[0],
+			},
+		}
+	}
+
+	for _, snp := range snps {
+		// Add the object to the cache
+		pr.caches.StagedNetworkPolicies.Set(snp.Namespace, &snp)
+		// Add the object to the datastore
+		_, err := client.StagedNetworkPolicies(snp.Namespace).Create(ctx, &snp, metav1.CreateOptions{})
+		Expect(err).To(BeNil())
+	}
+}

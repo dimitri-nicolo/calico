@@ -26,8 +26,7 @@ import (
 )
 
 const (
-	selectorNamespaceKey            = "projectcalico.org/name"
-	ownerReferenceKindLabelSelector = "projectcalico.org/ownerReference.kind=PolicyRecommendationScope"
+	selectorNamespaceKey = "projectcalico.org/name"
 )
 
 // NewCacheSynchronizer creates the QueryInterface instance
@@ -242,8 +241,8 @@ func (s *synchronizer) addRecommendationToCache(ctx context.Context, namespace v
 	log.Debugf("Get staged network policy list for namespace: %s", namespace.Name)
 
 	labelSelector := strings.Join([]string{
-		fmt.Sprintf("%s=%s", calicores.TierKey, tier), // projectcalico.org/tier=<TIER_NAME>
-		ownerReferenceKindLabelSelector,
+		fmt.Sprintf("%s=%s", calicores.TierKey, tier),
+		fmt.Sprintf("%s=%s", calicores.OwnerReferenceKindKey, v3.KindPolicyRecommendationScope),
 	}, ",")
 
 	if storeSnps, err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace.Name).List(ctx, metav1.ListOptions{
@@ -264,7 +263,6 @@ func (s *synchronizer) addRecommendationToCache(ctx context.Context, namespace v
 
 			return snp
 		}
-
 	}
 
 	if s.cacheSet.StagedNetworkPolicies.Get(namespace.Name) == nil {

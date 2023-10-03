@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -211,40 +212,38 @@ func (pr *policyRecommendationReconciler) continuousRecommend(ctx context.Contex
 
 	currEnabled := pr.state.object.Spec.NamespaceSpec.RecStatus == v3.Enabled
 	prevEnabled := !currEnabled
-	go func() {
-		for {
-			pr.stateLock.Lock()
-			select {
-			case <-pr.ticker.C:
-				{
-					if currEnabled != prevEnabled {
-						// Print the status once, after the state changes
-						logRecommendationStatus(currEnabled)
-						prevEnabled = currEnabled
-					}
+	for {
+		pr.stateLock.Lock()
+		select {
+		case <-pr.ticker.C:
+			{
+				if currEnabled != prevEnabled {
+					// Print the status once, after the state changes
+					logRecommendationStatus(currEnabled)
+					prevEnabled = currEnabled
+				}
 
-					if pr.state != nil {
-						currEnabled = pr.state.object.Spec.NamespaceSpec.RecStatus == v3.Enabled
+				if pr.state != nil {
+					currEnabled = pr.state.object.Spec.NamespaceSpec.RecStatus == v3.Enabled
 
-						if currEnabled {
-							// Generate new recommendations, and sync with datastore
-							snps := pr.caches.StagedNetworkPolicies.GetAll()
-							for _, snp := range snps {
-								pr.RecommendSnp(ctx, pr.clock, snp)
-							}
-
+					if currEnabled {
+						// Generate new recommendations, and sync with datastore
+						snps := pr.caches.StagedNetworkPolicies.GetAll()
+						for _, snp := range snps {
+							pr.RecommendSnp(ctx, pr.clock, snp)
 						}
+
 					}
 				}
-			case <-ctx.Done():
-				pr.ticker.Stop()
-				return
 			}
-			// Do not use a deferral, as this is in an infinite for loop and we want to unlock the state
-			// per for-loop cycle
-			pr.stateLock.Unlock()
+		case <-ctx.Done():
+			pr.ticker.Stop()
+			return
 		}
-	}()
+		// Do not use a deferral, as this is in an infinite for loop and we want to unlock the state
+		// per for-loop cycle
+		pr.stateLock.Unlock()
+	}
 }
 
 // getDurationUntilNextIteration returns the duration until the next engine reconciliation. If the
@@ -337,6 +336,45 @@ func (pr *policyRecommendationReconciler) getPolicyCopyWithNewSuffix(snp v3.Stag
 	return snp
 }
 
+// getRecFromStore returns the recommendation from the datastore in a given namespace. Returns an
+// error if the recommendation does not exist, or if another recommendation already exists in that
+// namespace.
+func (pr *policyRecommendationReconciler) getRecFromStore(ctx context.Context, name, namespace string) (*v3.StagedNetworkPolicy, error) {
+	labelSelector := strings.Join(
+		[]string{
+			fmt.Sprintf("%s=%s", calicores.TierKey, pr.state.object.Spec.NamespaceSpec.TierName),
+			fmt.Sprintf("%s=%s", calicores.OwnerReferenceKindKey, v3.KindPolicyRecommendationScope),
+		}, ",",
+	)
+
+	store, err := pr.calico.StagedNetworkPolicies(namespace).List(ctx,
+		metav1.ListOptions{
+			LabelSelector: labelSelector,
+		},
+	)
+	if len(store.Items) == 0 {
+		return nil, k8serrors.NewNotFound(v3.Resource("stagednetworkpolicies"), name)
+	} else if len(store.Items) > 1 {
+		// There is more than one recommendation in the namespace
+		return nil, fmt.Errorf("more than one recommendation in namespace: %s", namespace)
+	}
+
+	if err == nil {
+		item := store.Items[0]
+		if item.Name != name {
+			// The recommendation has a different name
+			return nil, fmt.Errorf("recommendation name %s differs from %s, in namespace: %s", item.Name, name, namespace)
+		}
+
+		snp := &v3.StagedNetworkPolicy{}
+		utils.CopyStagedNetworkPolicy(snp, item)
+
+		return snp, nil
+	}
+
+	return nil, err
+}
+
 // reconcileCacheMeta reconciles the staged action metadata of the cache, if the datastore values
 // have been updated. This should have been done by the StagedNetworkPolicy reconciler, making sure
 // in case that hasn't occurred.
@@ -401,13 +439,14 @@ func (pr *policyRecommendationReconciler) replaceRecommendation(ctx context.Cont
 	}
 	// Add the new recommendation to the store. This will be the stable version of the old policy
 	newSnp := pr.getPolicyCopyWithNewSuffix(*snp)
+	// Update the cache with the new recommendation
+	pr.caches.StagedNetworkPolicies.Set(namespace, &newSnp)
+
 	newKey := newSnp.Name
 	if err := pr.syncToDatastore(ctx, newKey, namespace, &newSnp); err != nil {
 		log.WithField("key", newKey).Debug("Could not create policy")
 		return
 	}
-	// Update the cache after a successful replacement
-	pr.caches.StagedNetworkPolicies.Set(namespace, &newSnp)
 	log.WithField("key", newSnp.Name).Debug("Added item to cache")
 
 	log.Infof("Replaced %s with stable recommendation %s", oldKey, newKey)
@@ -416,12 +455,12 @@ func (pr *policyRecommendationReconciler) replaceRecommendation(ctx context.Cont
 // syncToDatastore syncs staged network policy item in the cache with the Calico datastore. Updates
 // the datastore only if there are rules associated with the cached policy, otherwise returns
 // without error.
-func (pr *policyRecommendationReconciler) syncToDatastore(ctx context.Context, cacheKey, namespace string, cacheItem *v3.StagedNetworkPolicy) error {
+func (pr *policyRecommendationReconciler) syncToDatastore(ctx context.Context, cacheKey, namespace string, cacheSnp *v3.StagedNetworkPolicy) error {
 	clog := log.WithField("key", cacheKey)
 	key := cacheKey
 	clog.Debug("Synching to datastore")
 
-	if cacheItem == nil {
+	if cacheSnp == nil {
 		datastoreSnp, err := pr.calico.StagedNetworkPolicies(namespace).Get(ctx, key, metav1.GetOptions{})
 		if err == nil {
 			if datastoreSnp != nil && pr.isLearning(datastoreSnp) {
@@ -433,22 +472,23 @@ func (pr *policyRecommendationReconciler) syncToDatastore(ctx context.Context, c
 					return err
 				}
 				clog.Info("Deleted StagedNetworkPolicy from datastore")
+				pr.caches.StagedNetworkPolicies.Delete(namespace)
 				return nil
 			}
 
-			return errors.New("cannot delete an active policy")
+			return errors.New("can only delete a learning policy")
 		}
 
 		return err
 	}
 
-	if skipUpdate(cacheItem) {
+	if skipUpdate(cacheSnp) {
 		// Cached item does not contain rules, return without error
 		clog.Debugf("Skipping StagedNetworkPolicy update, cached item doesn't contain rules")
 		return nil
 	}
 
-	datastoreSnp, err := pr.calico.StagedNetworkPolicies(namespace).Get(ctx, key, metav1.GetOptions{})
+	storeSnp, err := pr.getRecFromStore(ctx, key, namespace)
 	if err != nil {
 		if !k8serrors.IsNotFound(err) {
 			clog.WithError(err).Error("failed to create StagedNetworkPolicy in datastore")
@@ -463,7 +503,7 @@ func (pr *policyRecommendationReconciler) syncToDatastore(ctx context.Context, c
 		}
 
 		// Item does not exist in the datastore - create a new StagedNetworkPolicy
-		if _, err = pr.calico.StagedNetworkPolicies(namespace).Create(ctx, cacheItem, metav1.CreateOptions{}); err != nil {
+		if _, err = pr.calico.StagedNetworkPolicies(namespace).Create(ctx, cacheSnp, metav1.CreateOptions{}); err != nil {
 			clog.WithError(err).Error("failed to create StagedNetworkPolicy in datastore")
 			return err
 		}
@@ -473,13 +513,13 @@ func (pr *policyRecommendationReconciler) syncToDatastore(ctx context.Context, c
 	}
 
 	// Updates to the store value's stagedAction should be synced with the cache item
-	pr.reconcileCacheMeta(cacheItem, datastoreSnp)
+	pr.reconcileCacheMeta(cacheSnp, storeSnp)
 
-	if pr.isLearning(datastoreSnp) && !equalSnps(datastoreSnp, cacheItem) {
+	if pr.isLearning(storeSnp) && !equalSnps(storeSnp, cacheSnp) {
 		// Update a store to reflect the update to the cache
-		utils.CopyStagedNetworkPolicy(datastoreSnp, *cacheItem)
+		utils.CopyStagedNetworkPolicy(storeSnp, *cacheSnp)
 
-		if _, err = pr.calico.StagedNetworkPolicies(namespace).Update(ctx, datastoreSnp, metav1.UpdateOptions{}); err != nil {
+		if _, err = pr.calico.StagedNetworkPolicies(namespace).Update(ctx, storeSnp, metav1.UpdateOptions{}); err != nil {
 			clog.WithError(err).Error("failed to update StagedNetworkPolicy in datastore")
 			return err
 		}
