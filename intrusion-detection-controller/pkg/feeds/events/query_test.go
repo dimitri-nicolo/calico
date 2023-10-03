@@ -68,8 +68,13 @@ func TestSuspiciousIP_Success(t *testing.T) {
 			Record: v1.SuspiciousIPEventRecord{
 				Feeds: []string{"test"},
 			},
-			DestPort:   util.I64ptr(333),
-			SourcePort: util.I64ptr(333),
+			DestPort:     util.I64ptr(333),
+			SourcePort:   util.I64ptr(333),
+			Name:         "test",
+			AttackVector: "Network",
+			MitreIDs:     &[]string{"T1190"},
+			Mitigations:  &[]string{"Network policies working as expected"},
+			MitreTactic:  "Initial Access",
 		},
 		{
 			ID:              "test_0__5.6.7.8_333_2.3.4.5_333",
@@ -88,6 +93,11 @@ func TestSuspiciousIP_Success(t *testing.T) {
 			Record: v1.SuspiciousIPEventRecord{
 				Feeds: []string{"test"},
 			},
+			Name:         "test",
+			AttackVector: "Network",
+			MitreIDs:     &[]string{"T1190"},
+			Mitigations:  &[]string{"Network policies working as expected"},
+			MitreTactic:  "Initial Access",
 		},
 	}
 

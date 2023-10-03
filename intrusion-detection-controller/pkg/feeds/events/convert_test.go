@@ -82,6 +82,12 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		DestName:        "dest-foo",
 		DestNameAggr:    "dest",
 		Record:          record,
+
+		Name:         "testfeed",
+		AttackVector: "Network",
+		MitreIDs:     &[]string{"T1190"},
+		Mitigations:  &[]string{"Network policies working as expected"},
+		MitreTactic:  "Initial Access",
 	}
 
 	actual := ConvertFlowLog(tc, storage.QueryKeyFlowLogSourceIP, record.Feeds...)
@@ -155,6 +161,11 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		DestName:        "dest-foo",
 		DestNameAggr:    "dest",
 		Record:          record,
+		Name:            "testfeed",
+		AttackVector:    "Network",
+		MitreIDs:        &[]string{"T1190"},
+		Mitigations:     &[]string{"Network policies working as expected"},
+		MitreTactic:     "Initial Access",
 	}
 
 	actual := ConvertFlowLog(tc, storage.QueryKeyFlowLogDestIP, record.Feeds...)
@@ -228,6 +239,11 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		DestName:        "dest-foo",
 		DestNameAggr:    "dest",
 		Record:          record,
+		Name:            "testfeed",
+		AttackVector:    "Network",
+		MitreIDs:        &[]string{"T1190"},
+		Mitigations:     &[]string{"Network policies working as expected"},
+		MitreTactic:     "Initial Access",
 	}
 
 	actual := ConvertFlowLog(tc, storage.QueryKeyUnknown, record.Feeds...)
@@ -289,6 +305,11 @@ func TestConvertDNSLog_QName(t *testing.T) {
 			Feeds:             []string{"test-feed"},
 			SuspiciousDomains: []string{"www.badguys.co.uk"},
 		},
+		Name:         "test-feed",
+		AttackVector: "Network",
+		MitreIDs:     &[]string{"T1190"},
+		Mitigations:  &[]string{"Network policies working as expected"},
+		MitreTactic:  "Initial Access",
 	}
 	actual := ConvertDNSLog(tc, storage.QueryKeyDNSLogQName, map[string]struct{}{"www.badguys.co.uk": {}}, "test-feed")
 	g.Expect(actual).To(Equal(expected))
@@ -357,6 +378,11 @@ func TestConvertDNSLog_RRSetName(t *testing.T) {
 		SourceNameAggr:  "client-8888-*",
 		Host:            "",
 		Record:          record,
+		Name:            "test-feed",
+		AttackVector:    "Network",
+		MitreIDs:        &[]string{"T1190"},
+		Mitigations:     &[]string{"Network policies working as expected"},
+		MitreTactic:     "Initial Access",
 	}
 
 	domains := map[string]struct{}{
@@ -445,6 +471,11 @@ func TestConvertDNSLog_RRSetRData(t *testing.T) {
 		SourceNameAggr:  "client-8888-*",
 		Host:            "",
 		Record:          record,
+		Name:            "test-feed",
+		AttackVector:    "Network",
+		MitreIDs:        &[]string{"T1190"},
+		Mitigations:     &[]string{"Network policies working as expected"},
+		MitreTactic:     "Initial Access",
 	}
 
 	domains := map[string]struct{}{

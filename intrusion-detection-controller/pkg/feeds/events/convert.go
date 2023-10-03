@@ -58,6 +58,12 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 		DestName:        flowLog.DestName,
 		DestNameAggr:    flowLog.DestNameAggr,
 		Record:          record,
+
+		Name:         feeds[0],
+		AttackVector: "Network",
+		MitreIDs:     &[]string{"T1190"},
+		Mitigations:  &[]string{"Network policies working as expected"},
+		MitreTactic:  "Initial Access",
 	}
 }
 
@@ -167,6 +173,12 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		SourceName:      l.ClientName,
 		SourceNameAggr:  l.ClientNameAggr,
 		Record:          record,
+
+		Name:         feeds[0],
+		AttackVector: "Network",
+		MitreIDs:     &[]string{"T1190"},
+		Mitigations:  &[]string{"Network policies working as expected"},
+		MitreTactic:  "Initial Access",
 	}
 }
 
