@@ -218,14 +218,14 @@ func main() {
 	enableAnomalyDetection := os.Getenv("DISABLE_ANOMALY_DETECTION") != "yes"
 
 	// anomaly detection cleanup controllers
-	var anomalyTrainingController, anomalyDetectionController controller.AnomalyDetectionController
+	var anomalyTrainingController, anomalyDetectionController controller.Controller
 
 	if enableAlerts {
 
 		if enableAnomalyDetection {
 			// Initialize controllers to clean up cron jobs for anomaly detection
 			anomalyTrainingController = anomalydetection.NewADJobTrainingController(kubeClientSet, TigeraIntrusionDetectionNamespace)
-			anomalyDetectionController = anomalydetection.NewADJobDetectionController(ctx, kubeClientSet, TigeraIntrusionDetectionNamespace)
+			anomalyDetectionController = anomalydetection.NewADJobDetectionController(kubeClientSet, TigeraIntrusionDetectionNamespace)
 		}
 
 		// This will manage global alerts inside the management cluster

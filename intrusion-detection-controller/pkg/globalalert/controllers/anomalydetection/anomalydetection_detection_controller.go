@@ -24,17 +24,17 @@ var (
 )
 
 type adJobDetectionController struct {
-	ctx           context.Context
 	kubeClientSet kubernetes.Interface
-	cancel        context.CancelFunc
 	namespace     string
+	ctx           context.Context
+	cancel        context.CancelFunc
 }
 
 // NewADJobDetectionController creates a controller that cleans up any AD detection cron jobs.
-func NewADJobDetectionController(ctx context.Context, kubeClientSet kubernetes.Interface, namespace string) controller.AnomalyDetectionController {
+func NewADJobDetectionController(kubeClientSet kubernetes.Interface, namespace string) controller.Controller {
 	c := &adJobDetectionController{
-		namespace:     namespace,
 		kubeClientSet: kubeClientSet,
+		namespace:     namespace,
 	}
 	return c
 }
@@ -48,7 +48,9 @@ func (c *adJobDetectionController) Run(parentCtx context.Context) {
 }
 
 func (c *adJobDetectionController) Close() {
-	c.cancel()
+	if c.ctx != nil {
+		c.cancel()
+	}
 }
 
 // Cleanup AD detection cron jobs.

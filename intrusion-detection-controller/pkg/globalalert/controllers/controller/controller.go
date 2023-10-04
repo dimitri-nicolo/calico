@@ -15,7 +15,3 @@ type Controller interface {
 	// Close cancel the context created by the Run function and all the internal goroutines.
 	Close()
 }
-
-type AnomalyDetectionController interface {
-	Controller
-}

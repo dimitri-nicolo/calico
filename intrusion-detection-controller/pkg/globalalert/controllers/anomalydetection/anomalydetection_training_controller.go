@@ -24,14 +24,14 @@ var (
 )
 
 type adJobTrainingController struct {
-	ctx           context.Context
 	kubeClientSet kubernetes.Interface
-	cancel        context.CancelFunc
 	namespace     string
+	ctx           context.Context
+	cancel        context.CancelFunc
 }
 
 // NewADJobTrainingController creates a controller that cleans up any AD training cron jobs.
-func NewADJobTrainingController(kubeClientSet kubernetes.Interface, namespace string) controller.AnomalyDetectionController {
+func NewADJobTrainingController(kubeClientSet kubernetes.Interface, namespace string) controller.Controller {
 	c := &adJobTrainingController{
 		kubeClientSet: kubeClientSet,
 		namespace:     namespace,
@@ -48,7 +48,9 @@ func (c *adJobTrainingController) Run(parentCtx context.Context) {
 }
 
 func (c *adJobTrainingController) Close() {
-	c.cancel()
+	if c.ctx != nil {
+		c.cancel()
+	}
 }
 
 // Cleanup AD training cron jobs.
