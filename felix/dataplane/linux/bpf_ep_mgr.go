@@ -1822,7 +1822,7 @@ func isLinkNotFoundError(err error) bool {
 var calicoRouterIP = net.IPv4(169, 254, 1, 1).To4()
 
 func (m *bpfEndpointManager) wepTCAttachPoint(ifaceName string, policyIdx, filterIdx int,
-	polDirection PolDirection) *tc.AttachPoint {
+	polDirection PolDirection, endpoint *proto.WorkloadEndpoint) *tc.AttachPoint {
 
 	ap := m.calculateTCAttachPoint(polDirection, ifaceName)
 	ap.HostIP = m.hostIP
@@ -1837,6 +1837,11 @@ func (m *bpfEndpointManager) wepTCAttachPoint(ifaceName string, policyIdx, filte
 	ap.EnableTCPStats = m.enableTcpStats
 	ap.EGWVxlanPort = m.egwVxlanPort
 	ap.EgressIPEnabled = m.egIPEnabled
+	if endpoint != nil {
+		ap.IsEgressGateway = endpoint.IsEgressGateway
+		ap.IsEgressClient = len(endpoint.EgressGatewayRules) > 0
+		ap.EgressGatewayHealthPort = uint16(endpoint.EgressGatewayHealthPort)
+	}
 	if !m.isEgressProgrammingCorrect(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient) {
 		log.WithField("iface", ap.Iface).Infof(
 			"Will reapply BPF program because egress gateway state has changed (client %v gateway %v)",
@@ -1858,7 +1863,7 @@ func (m *bpfEndpointManager) wepApplyPolicyToDirection(readiness ifaceReadiness,
 		return qdisc, fmt.Errorf("unknown host IP")
 	}
 
-	ap := m.wepTCAttachPoint(ifaceName, policyIdx, filterIdx, polDirection)
+	ap := m.wepTCAttachPoint(ifaceName, policyIdx, filterIdx, polDirection, endpoint)
 
 	log.WithField("iface", ifaceName).Debugf("readiness: %d", readiness)
 	if readiness != ifaceIsReady {
