@@ -278,11 +278,6 @@ func (p *proxy) OnServiceSynced() {
 	p.forceSyncDP()
 }
 
-func (p *proxy) OnEndpointsSynced() {
-	p.setEpsSynced()
-	p.forceSyncDP()
-}
-
 func (p *proxy) OnEndpointSliceAdd(eps *discovery.EndpointSlice) {
 	if p.epsChanges.EndpointSliceUpdate(eps, false) && p.isInitialized() {
 		p.syncDP()
