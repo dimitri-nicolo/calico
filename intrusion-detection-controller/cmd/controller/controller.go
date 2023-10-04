@@ -215,18 +215,15 @@ func main() {
 	var alertHealthPinger health.Pingers
 
 	enableAlerts := os.Getenv("DISABLE_ALERTS") != "yes"
-	enableAnomalyDetection := os.Getenv("DISABLE_ANOMALY_DETECTION") != "yes"
 
 	// anomaly detection cleanup controllers
 	var anomalyTrainingController, anomalyDetectionController controller.Controller
 
 	if enableAlerts {
 
-		if enableAnomalyDetection {
-			// Initialize controllers to clean up cron jobs for anomaly detection
-			anomalyTrainingController = anomalydetection.NewADJobTrainingController(kubeClientSet, TigeraIntrusionDetectionNamespace)
-			anomalyDetectionController = anomalydetection.NewADJobDetectionController(kubeClientSet, TigeraIntrusionDetectionNamespace)
-		}
+		// Initialize controllers to clean up cron jobs for anomaly detection
+		anomalyTrainingController = anomalydetection.NewADJobTrainingController(kubeClientSet, TigeraIntrusionDetectionNamespace)
+		anomalyDetectionController = anomalydetection.NewADJobDetectionController(kubeClientSet, TigeraIntrusionDetectionNamespace)
 
 		// This will manage global alerts inside the management cluster
 		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClientSet, linseedClient, kubeClientSet, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.FIPSMode, cfg.TenantNamespace)
@@ -262,12 +259,10 @@ func main() {
 			}
 
 			if enableAlerts {
-				if enableAnomalyDetection {
-					anomalyTrainingController.Run(ctx)
-					defer anomalyTrainingController.Close()
-					anomalyDetectionController.Run(ctx)
-					defer anomalyDetectionController.Close()
-				}
+				anomalyTrainingController.Run(ctx)
+				defer anomalyTrainingController.Close()
+				anomalyDetectionController.Run(ctx)
+				defer anomalyDetectionController.Close()
 
 				managedClusterController.Run(ctx)
 				defer managedClusterController.Close()
