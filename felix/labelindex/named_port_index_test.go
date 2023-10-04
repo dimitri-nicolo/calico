@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -978,18 +979,19 @@ type namedPortState struct {
 func (s namedPortState) CheckRecordedState(t *testing.T, rec *testRecorder) {
 	t.Helper()
 	for setName, expected := range s.ExpectedIPSetOutputs {
+		setName := "s:" + setName
 		memberStrings := set.New[string]()
 		for m := range rec.ipsets[setName] {
 			memberStrings.Add(memberToProto(m))
 		}
 		ExpectWithOffset(1, memberStrings).To(Equal(set.FromArray(expected)),
-			fmt.Sprintf("%s: expected IP set %s to have entries: %v, not %v", s.Name, setName, expected, memberStrings.Slice()))
+			fmt.Sprintf("%s: expected IP set %s to have entries: %v, not %v, all: %v", s.Name, setName, expected, memberStrings.Slice(), rec.ipsets))
 	}
 	for setName, members := range rec.ipsets {
-		if _, ok := s.ExpectedIPSetOutputs[setName]; ok {
+		if _, ok := s.ExpectedIPSetOutputs[strings.TrimPrefix(setName, "s:")]; ok {
 			continue
 		}
-		ExpectWithOffset(1, members).To(HaveLen(0), "Unexpected IP set")
+		ExpectWithOffset(1, members).To(HaveLen(0), "Unexpected IP set: "+setName)
 	}
 }
 
@@ -1064,7 +1066,7 @@ func applyStateTransition(idx *SelectorAndNamedPortIndex, rec *testRecorder, s1,
 		k := k
 		ep := ep
 		ops = append(ops, func() {
-			idx.UpdateEndpointOrSet(k, ep.Labels, ep.CIDRs(), ep.Ports, ep.Parents)
+			idx.UpdateEndpointOrSet(k, ep.Labels, ep.CIDRs(), ep.Ports, ep.Parents, nil, time.Time{}, 0)
 		})
 	}
 	for k := range s1.Endpoints {
@@ -1115,14 +1117,14 @@ func applyStateTransition(idx *SelectorAndNamedPortIndex, rec *testRecorder, s1,
 		}
 		k := k
 		s := s
-
+		ipSetID := "s:" + k
 		ops = append(ops, func() {
-			idx.UpdateIPSet(k, s.ParsedSelector(), s.Protocol, s.Port)
+			idx.UpdateIPSet(ipSetID, s.ParsedSelector(), s.Protocol, s.Port)
 		})
 		if !dupeDone {
 			// For coverage of "unchanged IP set" case.
 			ops = append(ops, func() {
-				idx.UpdateIPSet(k, s.ParsedSelector(), s.Protocol, s.Port)
+				idx.UpdateIPSet(ipSetID, s.ParsedSelector(), s.Protocol, s.Port)
 			})
 			dupeDone = true
 		}
@@ -1133,13 +1135,13 @@ func applyStateTransition(idx *SelectorAndNamedPortIndex, rec *testRecorder, s1,
 			continue
 		}
 		k := k
-
+		ipSetID := "s:" + k
 		ops = append(ops, func() {
-			idx.DeleteIPSet(k)
+			idx.DeleteIPSet(ipSetID)
 		})
 		if !dupeDone {
 			ops = append(ops, func() {
-				idx.DeleteIPSet(k)
+				idx.DeleteIPSet(ipSetID)
 			})
 			dupeDone = true
 		}
@@ -1163,7 +1165,8 @@ func applyStateTransition(idx *SelectorAndNamedPortIndex, rec *testRecorder, s1,
 		if _, ok := s2.IPSets[k]; ok {
 			continue
 		}
-		delete(rec.ipsets, k)
+		ipSetID := "s:" + k
+		delete(rec.ipsets, ipSetID)
 	}
 }
 
