@@ -41,7 +41,6 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/managedcluster"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/waf"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
@@ -153,10 +152,6 @@ func main() {
 	e.Run(ctx)
 	defer e.Close()
 
-	if err != nil {
-		log.WithError(err).Panic("Could not create anomalydetection service")
-	}
-
 	clientCalico, err := clientv3.NewFromEnv()
 	if err != nil {
 		log.WithError(err).Fatal("Failed to build calico client")
@@ -222,33 +217,26 @@ func main() {
 	enableAlerts := os.Getenv("DISABLE_ALERTS") != "yes"
 	enableAnomalyDetection := os.Getenv("DISABLE_ANOMALY_DETECTION") != "yes"
 
-	// anomaly detection controllers
-	var podtemplateQuery podtemplate.ADPodTemplateQuery
+	// anomaly detection cleanup controllers
 	var anomalyTrainingController, anomalyDetectionController controller.AnomalyDetectionController
 
 	if enableAlerts {
 
 		if enableAnomalyDetection {
-			podtemplateQuery = podtemplate.NewPodTemplateQuery(kubeClientSet)
-
-			// Initialize controllers to monitor cron jobs for training and detection for anomaly detection
-			anomalyTrainingController = anomalydetection.NewADJobTrainingController(kubeClientSet,
-				calicoClientSet, client, podtemplateQuery, TigeraIntrusionDetectionNamespace, "cluster", cfg.TenantID, cfg.TenantNamespace)
-
-			// detection controller depends on GlobalAlert such removing the pinger as one might not be present at start
-			anomalyDetectionController = anomalydetection.NewADJobDetectionController(ctx, kubeClientSet,
-				calicoClientSet, client, podtemplateQuery, TigeraIntrusionDetectionNamespace, "cluster", cfg.TenantID, cfg.TenantNamespace)
+			// Initialize controllers to clean up cron jobs for anomaly detection
+			anomalyTrainingController = anomalydetection.NewADJobTrainingController(kubeClientSet, TigeraIntrusionDetectionNamespace)
+			anomalyDetectionController = anomalydetection.NewADJobDetectionController(ctx, kubeClientSet, TigeraIntrusionDetectionNamespace)
 		}
 
-		// This will manage global alerts and anomaly detection inside the management cluster
-		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClientSet, linseedClient, kubeClientSet, enableAnomalyDetection, anomalyDetectionController, anomalyTrainingController, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.FIPSMode, cfg.TenantNamespace)
+		// This will manage global alerts inside the management cluster
+		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClientSet, linseedClient, kubeClientSet, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.FIPSMode, cfg.TenantNamespace)
 		healthPingers = append(healthPingers, &alertHealthPinger)
 
 		// This will manage all waf logs inside the management cluster
 		wafEventController = waf.NewWafAlertController(linseedClient, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace)
 
 		// This controller will monitor managed cluster updated from K8S and create a NewGlobalAlertController per managed cluster
-		managedClusterController = managedcluster.NewManagedClusterController(calicoClientSet, linseedClient, kubeClientSet, client, enableAnomalyDetection, anomalyTrainingController, anomalyDetectionController, TigeraIntrusionDetectionNamespace, util.ManagedClusterClient(k8sConfig, cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA), cfg.FIPSMode, cfg.TenantID, cfg.TenantNamespace)
+		managedClusterController = managedcluster.NewManagedClusterController(calicoClientSet, linseedClient, kubeClientSet, client, TigeraIntrusionDetectionNamespace, util.ManagedClusterClient(k8sConfig, cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA), cfg.FIPSMode, cfg.TenantID, cfg.TenantNamespace)
 	}
 
 	f := forwarder.NewEventForwarder("eventforwarder-1", e)

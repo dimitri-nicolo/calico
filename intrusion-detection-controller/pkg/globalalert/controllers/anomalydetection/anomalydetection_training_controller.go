@@ -3,42 +3,19 @@ package anomalydetection
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"reflect"
-	"time"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/errors"
 
-	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
-	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-)
-
-const (
-	ADTrainingJobTemplateName         = "tigera.io.detectors.training"
-	DefaultADDetectorTrainingSchedule = 1 * time.Hour
-
-	initialTrainingJobSuffix = "initial-training"
-	trainingCycleSuffix      = "training"
-
-	ADJobOwnerLabelValue = "intrusion-detection-controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/maputil"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 )
 
 var (
-	TrainingJobLabels = func() map[string]string {
-		return map[string]string{
-			"tigera.io.detector-cycle": "training",
-		}
-	}
-
 	TrainingCycleLabels = func() map[string]string {
 		return map[string]string{
 			"tigera.io.detector-cycle": "training",
@@ -47,132 +24,63 @@ var (
 )
 
 type adJobTrainingController struct {
-	tenantID                   string
-	kubeClientSet              kubernetes.Interface
-	cancel                     context.CancelFunc
-	namespace                  string
-	adTrainingReconciler       *adJobTrainingReconciler
-	trainingCycleResourceCache rcache.ResourceCache
+	ctx           context.Context
+	kubeClientSet kubernetes.Interface
+	cancel        context.CancelFunc
+	namespace     string
 }
 
-type TrainingDetectorsRequest struct {
-	ClusterName      string
-	TenantID         string
-	IsManagedCluster bool
-	GlobalAlert      *v3.GlobalAlert
+// NewADJobTrainingController creates a controller that cleans up any AD training cron jobs.
+func NewADJobTrainingController(kubeClientSet kubernetes.Interface, namespace string) controller.AnomalyDetectionController {
+	c := &adJobTrainingController{
+		kubeClientSet: kubeClientSet,
+		namespace:     namespace,
+	}
+	return c
 }
 
-// NewADJobTrainingController creates and reconciles cycles that train for all the AnomalyDetection models daily
-// In a MCM Architecture and Calico cloud it maintains a training cronjob per cluster
-func NewADJobTrainingController(kubeClientSet kubernetes.Interface,
-	calicoClientSet calicoclient.Interface, client ctrlclient.WithWatch, podTemplateQuery podtemplate.ADPodTemplateQuery, namespace string,
-	managementClusterName string, tenantID, tenantNamespace string) controller.AnomalyDetectionController {
-
-	adTrainingReconciler := &adJobTrainingReconciler{
-		managementClusterName:       managementClusterName,
-		tenantID:                    tenantID,
-		calicoClientSet:             calicoClientSet,
-		client:                      client,
-		kubeClientSet:               kubeClientSet,
-		podTemplateQuery:            podTemplateQuery,
-		namespace:                   namespace,
-		trainingDetectorsPerCluster: make(map[string]trainingCycleStatePerCluster),
-		tenantNamespace:             tenantNamespace,
-	}
-
-	adTrainingController := &adJobTrainingController{
-		tenantID:             tenantID,
-		kubeClientSet:        kubeClientSet,
-		namespace:            namespace,
-		adTrainingReconciler: adTrainingReconciler,
-	}
-
-	rcacheArgs := rcache.ResourceCacheArgs{
-		ListFunc:    adTrainingReconciler.listTrainingCronJobs,
-		ObjectType:  reflect.TypeOf(batchv1.CronJob{}),
-		LogTypeDesc: "States of the deployed training CronJob for the multiple GlobalAlerts assosciated with the cluster.",
-	}
-	trainingCycleResourceCache := rcache.NewResourceCache(rcacheArgs)
-
-	adTrainingController.trainingCycleResourceCache = trainingCycleResourceCache
-	adTrainingReconciler.trainingCycleResourceCache = trainingCycleResourceCache
-
-	return adTrainingController
-}
-
-// Run intializes the ADJobTrainingController monitoring routine. Initially runs one job that trains all
-// AnomalyDetection Jobs and schediles a Training CronJob for training all models that run daily
 func (c *adJobTrainingController) Run(parentCtx context.Context) {
-	var ctx context.Context
-	ctx, c.cancel = context.WithCancel(parentCtx)
-	c.adTrainingReconciler.managementClusterCtx = ctx
+	c.ctx, c.cancel = context.WithCancel(parentCtx)
 
-	log.WithFields(log.Fields{"tenant": c.tenantID}).Info("Starting AD Training controller on cluster")
+	log.Info("Starting AD training controller")
 
-	c.trainingCycleResourceCache.Run(detectionCycleResourceCachePeriod.String())
-
-	go c.adTrainingReconciler.Run(ctx.Done())
+	go c.cleanup()
 }
 
-// AddDetector adds to the list of detectors managed by the training controller.
-// The managed list is declared in the reconciler.
-func (c *adJobTrainingController) AddDetector(resource interface{}) error {
-	trainingDetectorStateForCluster, ok := resource.(TrainingDetectorsRequest)
-
-	if !ok {
-		return fmt.Errorf("unexpected type for an ADJob Training resource")
-	}
-
-	// Kicks-off an initial training job if the training cycle isn't found or for a first time
-	// detector, otherwise returns.
-	log.Infof("Run initial training job for cluster: %s.%s",
-		trainingDetectorStateForCluster.TenantID, trainingDetectorStateForCluster.ClusterName)
-	err := c.adTrainingReconciler.runInitialTrainingJob(trainingDetectorStateForCluster)
-	if err != nil {
-		// No need to continue with training cycles, as the pod template will not available for cronJobs
-		// as well.
-		var podTemplateError *PodTemplateError
-		if errors.As(err, &podTemplateError) {
-			log.Error(err)
-			return err
-		}
-		log.Warn("Initial training job cannot complete rely on training model fallbacks")
-	}
-
-	log.Infof("Add a training cycle cronJob for cluster: %s.%s",
-		trainingDetectorStateForCluster.TenantID, trainingDetectorStateForCluster.ClusterName)
-	err = c.adTrainingReconciler.addTrainingCycle(trainingDetectorStateForCluster)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// RemoveDetector removes from the list of jobs managed by the training controller.
-// Usually called when a Done() signal is received from the parent context
-func (c *adJobTrainingController) RemoveDetector(resource interface{}) error {
-	trainingDetectorStateForCluster, ok := resource.(TrainingDetectorsRequest)
-
-	if !ok {
-		return errors.New("unexpected type for an ADJob Training resource")
-	}
-
-	if err := c.adTrainingReconciler.removeTrainingCycles(trainingDetectorStateForCluster); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *adJobTrainingController) StopADForCluster(clusterName string) {
-	_ = c.adTrainingReconciler.stopTrainigCycleForCluster(clusterName)
-}
-
-// Close cancels the ADJobController worker context and removes health check for all
-//
-//	the objects that worker watches.
 func (c *adJobTrainingController) Close() {
-	c.adTrainingReconciler.Close()
 	c.cancel()
+}
+
+// Cleanup AD training cron jobs.
+func (c *adJobTrainingController) cleanup() {
+
+	// List all Tigera-created AD detection cron jobs.
+	trainingCycleLabelByteStr := maputil.CreateLabelValuePairStr(TrainingCycleLabels())
+	trainingCronJobList, err := c.kubeClientSet.BatchV1().CronJobs(c.namespace).List(c.ctx,
+		metav1.ListOptions{
+			LabelSelector: trainingCycleLabelByteStr,
+		})
+	if err != nil {
+		log.WithError(err).Errorf("failed to list training cronjobs")
+		return
+	}
+
+	for _, trainingCronJob := range trainingCronJobList.Items {
+		// Check in case context has been cancelled.
+		if c.ctx.Err() != nil {
+			break
+		}
+
+		// Delete next cron job in the list.
+		log.Infof("Deleting AD training cronJob job %s", trainingCronJob.Name)
+		util.EmptyCronJobResourceValues(&trainingCronJob)
+
+		err := util.DeleteCronJobWithRetry(c.ctx, c.kubeClientSet, c.namespace, trainingCronJob.Name)
+		if err != nil && !errors.IsNotFound(err) {
+			log.WithError(err).Errorf("Unable to delete stored training CronJob %s", trainingCronJob.Name)
+		}
+	}
+
+	// Wait for context to be cancelled before returning.
+	<-c.ctx.Done()
 }

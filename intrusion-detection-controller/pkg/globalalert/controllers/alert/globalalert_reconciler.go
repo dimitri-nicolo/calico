@@ -15,7 +15,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/alert"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
@@ -24,17 +23,14 @@ import (
 // processes, transforms the result and creates an event via Linseed and updates GlobalAlert status.
 // If GlobalAlert resource is deleted or updated, cancel the current goroutine, and create a new one if resource is updated.
 type globalAlertReconciler struct {
-	linseedClient          client.Client
-	kubeClientSet          kubernetes.Interface
-	calicoClientSet        calicoclient.Interface
-	adDetectionController  controller.AnomalyDetectionController
-	adTrainingController   controller.AnomalyDetectionController
-	alertNameToAlertState  map[string]alertState
-	clusterName            string
-	tenantID               string
-	namespace              string
-	enableAnomalyDetection bool
-	fipsModeEnabled        bool
+	linseedClient         client.Client
+	kubeClientSet         kubernetes.Interface
+	calicoClientSet       calicoclient.Interface
+	alertNameToAlertState map[string]alertState
+	clusterName           string
+	tenantID              string
+	namespace             string
+	fipsModeEnabled       bool
 }
 
 // alertState has the alert and cancel function to stop the alert routine.
@@ -67,7 +63,7 @@ func (r *globalAlertReconciler) Reconcile(namespacedName types.NamespacedName) e
 		return nil
 	}
 
-	alert, err := alert.NewAlert(obj, r.calicoClientSet, r.linseedClient, r.kubeClientSet, r.enableAnomalyDetection, r.adDetectionController, r.adTrainingController, r.clusterName, r.tenantID, r.namespace, r.fipsModeEnabled)
+	alert, err := alert.NewAlert(obj, r.calicoClientSet, r.linseedClient, r.kubeClientSet, r.clusterName, r.tenantID, r.namespace, r.fipsModeEnabled)
 	if err != nil {
 		return err
 	}
