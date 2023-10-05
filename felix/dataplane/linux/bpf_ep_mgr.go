@@ -1865,8 +1865,10 @@ func (m *bpfEndpointManager) wepApplyPolicyToDirection(readiness ifaceReadiness,
 
 	ap := m.wepTCAttachPoint(ifaceName, policyIdx, filterIdx, polDirection, endpoint)
 
-	log.WithField("iface", ifaceName).Debugf("readiness: %d", readiness)
-	if readiness != ifaceIsReady {
+	// AttachPoint config can change even without reload. Hence we need to re attach the program if ForceReattach is
+	// true.
+	log.WithField("iface", ifaceName).Debugf("readiness: %d, ForceReattach: %v", readiness, ap.ForceReattach)
+	if (readiness != ifaceIsReady) || ap.ForceReattach {
 		res, err := m.wepAttachProgram(ap)
 		if err != nil {
 			return qdisc, fmt.Errorf("attaching program to wep: %w", err)
