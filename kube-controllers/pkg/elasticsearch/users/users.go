@@ -21,7 +21,6 @@ const (
 	ElasticsearchUserNameComplianceSnapshotter ElasticsearchUserName = "tigera-ee-compliance-snapshotter"
 	ElasticsearchUserNameComplianceServer      ElasticsearchUserName = "tigera-ee-compliance-server"
 	ElasticsearchUserNameIntrusionDetection    ElasticsearchUserName = "tigera-ee-intrusion-detection"
-	ElasticsearchUserNameADJob                 ElasticsearchUserName = "tigera-ee-ad-job"
 	ElasticsearchUserNameSasha                 ElasticsearchUserName = "tigera-ee-sasha"
 	ElasticsearchUserNamePerformanceHotspots   ElasticsearchUserName = "tigera-ee-performance-hotspots"
 	ElasticsearchUserNamePolicyRecommendation  ElasticsearchUserName = "tigera-ee-policy-recommendation"
@@ -227,9 +226,6 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 		},
 		ElasticsearchUserNameIntrusionDetection: {
 			Username: formatName(ElasticsearchUserNameIntrusionDetection, clusterName, management, false),
-		},
-		ElasticsearchUserNameADJob: {
-			Username: formatName(ElasticsearchUserNameADJob, clusterName, management, false),
 		},
 		ElasticsearchUserNamePerformanceHotspots: {
 			Username: formatName(ElasticsearchUserNamePerformanceHotspots, clusterName, management, false),

@@ -850,7 +850,7 @@ func assertManagementConfiguration(managementK8sCli kubernetes.Interface, operat
 		userName := userSecret.Labels[ElasticsearchUserNameLabel]
 		user, exists := privateUserMap[esusers.ElasticsearchUserName(userName)]
 
-		Expect(exists).Should(BeTrue())
+		Expect(exists).Should(BeTrue(), fmt.Sprintf("missing privateUserMap for %v (%v)", esusers.ElasticsearchUserName(userName), userName))
 		if strings.HasSuffix(userSecret.Name, esusers.ElasticsearchSecureUserSuffix) {
 			Expect(user.Username).Should(Equal(string(userSecret.Data["username"])))
 		}
@@ -922,7 +922,7 @@ func assertManagedConfiguration(managedk8sCli, managementK8sCli kubernetes.Inter
 		userName := userSecret.Labels[ElasticsearchUserNameLabel]
 		user, exists := privateUserMap[esusers.ElasticsearchUserName(userName)]
 
-		Expect(exists).Should(BeTrue())
+		Expect(exists).Should(BeTrue(), fmt.Sprintf("missing privateUserMap for %v (%v)", esusers.ElasticsearchUserName(userName), userName))
 		if strings.HasSuffix(userSecret.Name, esusers.ElasticsearchSecureUserSuffix) {
 			Expect(user.Username).Should(Equal(string(userSecret.Data["username"])))
 		}
