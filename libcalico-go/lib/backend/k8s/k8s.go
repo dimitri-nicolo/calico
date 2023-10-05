@@ -46,6 +46,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
 )
 
 var (
@@ -464,6 +465,11 @@ func CreateKubernetesClientset(ca *apiconfig.CalicoAPIConfigSpec) (*rest.Config,
 			return nil, nil, resources.K8sErrorToCalico(err, nil)
 		}
 		config, err = clientConfig.ClientConfig()
+	} else if winutils.InHostProcessContainer() {
+		// ClientConfig() calls InClusterConfig() at some point, which doesn't work
+		// on Windows HPC. Use winutils.GetInClusterConfig() instead in this case.
+		// FIXME: this will no longer be needed when containerd v1.6 is EOL'd
+		config, err = winutils.GetInClusterConfig()
 	} else {
 		config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 			&loadingRules, configOverrides).ClientConfig()
@@ -547,12 +553,20 @@ func BestEffortGetKubernetesClientSet(calicoClient api.Client, ca *apiconfig.Cal
 
 	// Try to get the kubernetes config either from environments or in-cluster.
 	cfgFile := os.Getenv("KUBECONFIG")
+	// Host env vars may override the container on Windows HPC, so $env:KUBECONFIG cannot
+	// be trusted in this case
+	// FIXME: this will no longer be needed when containerd v1.6 is EOL'd
+	if winutils.InHostProcessContainer() {
+		cfgFile = ""
+	}
 	master := os.Getenv("KUBERNETES_MASTER")
-	cfg, err := clientcmd.BuildConfigFromFlags(master, cfgFile)
+	// FIXME: get rid of this and call clientcmd.BuildConfigFromFlags() directly when containerd v1.6 is EOL'd
+	cfg, err := winutils.BuildConfigFromFlags(master, cfgFile)
 	if err != nil {
 		log.WithError(err).Info("KUBECONFIG environment variable not found, attempting in-cluster")
 		// Attempt in cluster config
-		if cfg, err = rest.InClusterConfig(); err != nil {
+		// FIXME: get rid of this and call rest.InClusterConfig() directly when containerd v1.6 is EOL'd
+		if cfg, err = winutils.GetInClusterConfig(); err != nil {
 			return nil
 		}
 	}

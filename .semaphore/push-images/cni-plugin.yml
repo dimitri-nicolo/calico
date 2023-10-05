@@ -37,9 +37,15 @@ blocks:
       - name: docker
       - name: google-service-account-for-gcr
       jobs:
-      - name: "cni-plugin"
+      - name: "linux"
         env_vars:
         - name: DEV_REGISTRIES
           value: gcr.io/unique-caldron-775/cnx/tigera
         commands:
         - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C cni-plugin image-all cd CONFIRM=true; fi
+      - name: "windows"
+        env_vars:
+        - name: DEV_REGISTRIES
+          value: gcr.io/unique-caldron-775/cnx/tigera
+        commands:
+        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C cni-plugin release-windows CONFIRM=true; fi

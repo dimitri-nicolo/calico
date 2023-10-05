@@ -567,6 +567,9 @@ blocks:
     - name: "Build Windows archive"
       commands:
       - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
+    - name: "Build Windows image"
+      commands:
+      - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
 
 - name: "e2e tests"
   run:
@@ -735,6 +738,9 @@ blocks:
     - name: "cni-plugin tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
+    - name: "build windows cni-plugin images"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make image-windows
 
 - name: 'calicoq'
   run:

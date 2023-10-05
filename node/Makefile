@@ -7,20 +7,15 @@ PACKAGE_NAME = github.com/projectcalico/calico/node
 NODE_IMAGE            ?=cnx-node
 # Name of the Enterprise windows image
 # The windows image names are:
-# - OS: calico/windows
-# - EE: tigera/calico-windows
-WINDOWS_IMAGE         ?=calico-windows
-# Name of the Enterprise windows upgrade image
-# The windows upgrade image names are:
-# - OS: calico/windows-upgrade
-# - EE: tigera/calico-windows-upgrade
-WINDOWS_UPGRADE_IMAGE ?=calico-windows-upgrade
+# - OS: calico/node-windows
+# - EE: tigera/cnx-node-windows
+WINDOWS_IMAGE         ?=cnx-node-windows
 
 # If this is a windows release build the windows upgrade image.
 # ARCHES will contain the values in WINDOWS_VERSIONS, prefixed with "windows-".
 WINDOWS_VERSIONS      ?=1809 2004 20H2 ltsc2022
 ifdef WINDOWS_RELEASE
-BUILD_IMAGES          ?=$(WINDOWS_IMAGE) $(WINDOWS_UPGRADE_IMAGE)
+BUILD_IMAGES          ?=$(WINDOWS_IMAGE)
 ARCHES                ?= $(patsubst %,windows-%,$(WINDOWS_VERSIONS))
 else
 BUILD_IMAGES          ?=$(NODE_IMAGE)
@@ -135,29 +130,6 @@ WINDOWS_ARCHIVE_FILES := \
 MICROSOFT_SDN_VERSION := 0d7593e5c8d4c2347079a7a6dbd9eb034ae19a44
 MICROSOFT_SDN_GITHUB_RAW_URL := https://raw.githubusercontent.com/microsoft/SDN/$(MICROSOFT_SDN_VERSION)
 
-WINDOWS_UPGRADE_ROOT         ?= windows-upgrade
-WINDOWS_UPGRADE_DIST          = dist/windows-upgrade
-
-# The directory for temporary files used to build the windows upgrade zip archive.
-WINDOWS_UPGRADE_DIST_STAGE    = $(WINDOWS_UPGRADE_DIST)/stage
-
-# Windows upgrade archive components.
-WINDOWS_UPGRADE_INSTALL_FILE ?= $(WINDOWS_UPGRADE_DIST_STAGE)/install-calico-windows.ps1
-WINDOWS_UPGRADE_INSTALL_ZIP  ?= $(WINDOWS_UPGRADE_DIST_STAGE)/calico-windows-$(WINDOWS_ARCHIVE_TAG).zip
-WINDOWS_UPGRADE_SCRIPT       ?= $(WINDOWS_UPGRADE_DIST_STAGE)/calico-upgrade.ps1
-
-# The directory for the upgrade image docker build context.
-WINDOWS_UPGRADE_BUILD        ?= $(WINDOWS_UPGRADE_ROOT)/build
-
-# The final zip archive used in the upgrade image.
-WINDOWS_UPGRADE_ARCHIVE      ?= $(WINDOWS_UPGRADE_BUILD)/calico-windows-upgrade.zip
-
-# The directory for windows image tarball
-WINDOWS_DIST        = dist/windows
-
-# The directory for temporary files used to build the windows image
-WINDOWS_DIST_STAGE  = $(WINDOWS_DIST)/stage
-
 # Variables used by the tests
 ST_TO_RUN?=tests/st/
 
@@ -207,18 +179,17 @@ clean: clean-windows
 	# Delete images that we built in this repo
 	docker rmi $(NODE_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
-	docker rmi $(addprefix $(WINDOWS_UPGRADE_IMAGE):latest-,$(WINDOWS_VERSIONS)) || true
 
-clean-windows:
+clean-windows: clean-windows-builder
 	-rm -f $(WINDOWS_ARCHIVE) $(WINDOWS_ARCHIVE_BINARY) $(WINDOWS_BINARY)
 	-rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1
 	-rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt
 	-rm -f $(WINDOWS_ARCHIVE_ROOT)/cni/*.exe
 	-rm -f $(WINDOWS_ARCHIVE_ROOT)/../nssm.zip
+	-rm -f $(WINDOWS_ARCHIVE_ROOT)/../nssm.exe
 	-rm -f $(WINDOWS_INSTALL_SCRIPT)
 	-rm -rf "$(WINDOWS_DIST)"
-	-rm -rf "$(WINDOWS_UPGRADE_DIST)"
-	-rm -rf "$(WINDOWS_UPGRADE_BUILD)"
+	-docker rmi $(addprefix $(WINDOWS_IMAGE):latest-,$(WINDOWS_VERSIONS))
 
 ###############################################################################
 # Building the binary
@@ -285,7 +256,7 @@ $(TOOLS_MOUNTNS_BINARY):
 # Building the image
 ###############################################################################
 ## Create the images for all supported ARCHes
-image-all: $(addprefix sub-image-,$(VALIDARCHES))
+image-all: $(addprefix sub-image-,$(VALIDARCHES)) image-windows
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
@@ -589,10 +560,10 @@ st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: static-checks ut image-all build-windows-upgrade-archive image-tar-windows-all st
+ci: static-checks ut image-all st
 
 ## Deploys images to registry
-cd: cd-common cd-windows-all
+cd: cd-common release-windows
 
 .PHONY: node-test-at
 # Run docker-image acceptance tests
@@ -637,7 +608,17 @@ $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt:
 windows-packaging/nssm.zip:
 	wget -O windows-packaging/nssm.zip https://nssm.cc/ci/nssm-$(WINDOWS_NSSM_VERSION).zip
 
-build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm.zip
+windows-packaging/nssm.exe: windows-packaging/nssm.zip
+	cd windows-packaging && \
+	sha256sum --check nssm.sha256sum && \
+	unzip -o nssm.zip 'nssm-$(WINDOWS_NSSM_VERSION)/win64/nssm.exe' && \
+	mv nssm-$(WINDOWS_NSSM_VERSION)/win64/nssm.exe nssm.exe && \
+	rm -rf nssm-$(WINDOWS_NSSM_VERSION)/
+
+$(WINDOWS_ARCHIVE): build-windows-archive
+
+.PHONY: build-windows-archive
+build-windows-archive: build $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm.zip
 	# To be as atomic as possible, we re-do work like unpacking NSSM here.
 	-rm -f "$(WINDOWS_ARCHIVE)"
 	-rm -rf $(WINDOWS_ARCHIVE_ROOT)/nssm
@@ -693,163 +674,24 @@ $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
 release-windows-archive $(WINDOWS_ARCHIVE): var-require-all-VERSION
 	$(MAKE) build-windows-archive WINDOWS_ARCHIVE_TAG=$(VERSION)
 
-# Ensure the upgrade image docker build folder exists.
-$(WINDOWS_UPGRADE_BUILD):
-	-mkdir -p $(WINDOWS_UPGRADE_BUILD)
-
-# Ensure the directory for temporary files used to build the windows upgrade zip
-# archive exists.
-$(WINDOWS_UPGRADE_DIST_STAGE):
-	-mkdir -p $(WINDOWS_UPGRADE_DIST_STAGE)
-
-# Copy the upgrade script to the temporary directory where we build the windows
-# upgrade zip file.
-$(WINDOWS_UPGRADE_SCRIPT): $(WINDOWS_UPGRADE_DIST_STAGE)
-	cp $(WINDOWS_UPGRADE_ROOT)/calico-upgrade.ps1 $@
-
-# Copy the install zip archive to the temporary directory where we build the windows
-# upgrade zip file.
-$(WINDOWS_UPGRADE_INSTALL_ZIP): build-windows-archive $(WINDOWS_UPGRADE_DIST_STAGE)
-	cp $(WINDOWS_ARCHIVE) $@
-
 # Build the docs site and copy over the install-calico-windows.ps1 script.
 $(WINDOWS_INSTALL_SCRIPT):
 	-mkdir -p dist
 	cp $(CURDIR)/windows-packaging/install-calico-windows.ps1 $@
 	sed -i s/VERSION/$(GIT_VERSION)/g $@
 
-# Copy the install-calico-windows.ps1 script to the temporary directory where we
-# build the windows upgrade zip file.
-$(WINDOWS_UPGRADE_INSTALL_FILE): $(WINDOWS_UPGRADE_DIST_STAGE) $(WINDOWS_INSTALL_SCRIPT)
-	cp $(WINDOWS_INSTALL_SCRIPT) $@
-
-# Produces the Windows upgrade ZIP archive for the release.
-release-windows-upgrade-archive: release-prereqs
-	$(MAKE) build-windows-upgrade-archive WINDOWS_ARCHIVE_TAG=$(VERSION)
-
-# Build the Windows upgrade zip archive, which also builds the windows archive.
-build-windows-upgrade-archive: clean-windows $(WINDOWS_UPGRADE_INSTALL_ZIP) $(WINDOWS_UPGRADE_INSTALL_FILE) $(WINDOWS_UPGRADE_SCRIPT) $(WINDOWS_UPGRADE_BUILD)
-	rm $(WINDOWS_UPGRADE_ARCHIVE) || true
-	cd $(WINDOWS_UPGRADE_DIST_STAGE) && zip -r "$(CURDIR)/$(WINDOWS_UPGRADE_ARCHIVE)" *.zip *.ps1
-
-# Sets up the docker builder used to create Windows image tarballs.
-setup-windows-builder:
-	-docker buildx rm calico-windows-builder
-	docker buildx create --name=calico-windows-builder --use --platform windows/amd64
-
-# Builds all the Windows image tarballs for each version in WINDOWS_VERSIONS
-image-tar-windows-all: setup-windows-builder $(addprefix sub-image-tar-windows-,$(WINDOWS_VERSIONS)) $(addprefix sub-image-tar-windows-upgrade-,$(WINDOWS_VERSIONS))
-
-CRANE_BINDMOUNT_CMD := \
-	docker run --rm \
-		--net=host \
-		--init \
-		--entrypoint /bin/sh \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		-v $(DOCKER_CONFIG):/root/.docker/config.json \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) -c $(double_quote)crane
-
-DOCKER_MANIFEST_CMD := docker manifest
-
-ifdef CONFIRM
-CRANE_BINDMOUNT = $(CRANE_BINDMOUNT_CMD)
-DOCKER_MANIFEST = $(DOCKER_MANIFEST_CMD)
-else
-CRANE_BINDMOUNT = echo [DRY RUN] $(CRANE_BINDMOUNT_CMD)
-DOCKER_MANIFEST = echo [DRY RUN] $(DOCKER_MANIFEST_CMD)
-endif
-
-# Uses the docker builder to create a Windows image tarball for a single Windows version.
-sub-image-tar-windows-%:
-	# ensure dir for windows image tars
-	-mkdir -p $(WINDOWS_DIST)
-	# ensure docker build dir exists
-	-mkdir -p $(WINDOWS_DIST_STAGE)
-	# copy dockerfile to staging dir
-	cp $(WINDOWS_PACKAGING_ROOT)/Dockerfile $(WINDOWS_DIST_STAGE)
-	# copy install entrypoint script to staging dir
-	cp $(WINDOWS_PACKAGING_ROOT)/host-process-install.ps1 $(WINDOWS_DIST_STAGE)
-	# build and copy install script to staging dir
-	cp $(WINDOWS_INSTALL_SCRIPT) $(WINDOWS_DIST_STAGE)
-	# copy calico install zip file to staging dir
-	cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip $(WINDOWS_DIST_STAGE)/calico-windows.zip
-	cd $(WINDOWS_DIST_STAGE) && \
-	docker buildx build \
-		--platform windows/amd64 \
-		--output=type=docker,dest=$(CURDIR)/$(WINDOWS_DIST)/image-$(NODE_GIT_VERSION)-$*.tar \
-		--pull \
-		--build-arg=WINDOWS_VERSION=$* .
-
-# Uses the docker builder to create a Windows upgrade image tarball for a single Windows version.
-sub-image-tar-windows-upgrade-%:
-	-mkdir -p $(WINDOWS_UPGRADE_DIST)
-	cd $(WINDOWS_UPGRADE_ROOT) && \
-		docker buildx build \
-			--platform windows/amd64 \
-			--output=type=docker,dest=$(CURDIR)/$(WINDOWS_UPGRADE_DIST)/image-$(NODE_GIT_VERSION)-$*.tar \
-			--pull \
-			--no-cache \
-			--build-arg=WINDOWS_VERSION=$* .
-
-# For EE, the images are:
-# - calico-windows
-# - calico-windows-upgrade
-#
-# The windows-upgrade image, for dev only, is also copied to the release tag version.
-# The windows-upgrade procedure compares calico-node.exe's CNXRELEASEVERSION to the operator's windows-upgrade component image tag.
-# That means the EE hash release must use a windows-upgrade image tag equal to the release version.
-cd-windows-all:
-	$(MAKE) cd-windows-calico-windows WINDOWS_IMAGE_TAR_ROOT=$(WINDOWS_DIST)
-	$(MAKE) cd-windows-calico-windows-upgrade WINDOWS_IMAGE_TAR_ROOT=$(WINDOWS_UPGRADE_DIST)
-	if [ "$(DEV_REGISTRIES)" = "gcr.io/unique-caldron-775/cnx/tigera" ]; then \
-		dev_tag="gcr.io/unique-caldron-775/cnx/tigera/calico-windows-upgrade:$(NODE_GIT_VERSION)"; \
-		dev_rel_tag="gcr.io/unique-caldron-775/cnx/tigera/calico-windows-upgrade:$(NODE_RELEASE_VERSION)"; \
-		$(CRANE_BINDMOUNT) cp $${dev_tag} $${dev_rel_tag}$(double_quote) & \
-	fi;
-
-# Windows image pushing is different because we do not build docker images directly.
-# Since the build machine is linux, we output the images to a tarball. (We can
-# produce images but there will be no output because docker images
-# built for Windows cannot be loaded on linux.)
-#
-# The resulting image tarball is then pushed to registries during cd/release.
-# The image tarballs are located in WINDOWS_IMAGE_TAR_ROOT and have files names
-# with the format 'image-v3.21.0-2-abcdef-20H2.tar'.
-#
-# In addition to pushing the individual images, we also create the manifest
-# directly using 'docker manifest'. This is possible because Semaphore is using
-# a recent enough docker CLI version (20.10.0)
-#
-# - Create the manifest with 'docker manifest create' using the list of all images.
-# - For each windows version, 'docker manifest annotate' its image with "os.image: <windows_version>".
-#   <windows_version> is the version string that looks like, e.g. 10.0.19041.1288.
-#   Setting os.image in the manifest is required for Windows hosts to load the
-#   correct image in manifest.
-# - Finally we push the manifest, "purging" the local manifest.
-cd-windows-%:
-# WINDOWS_IMAGE_TAR_ROOT is the dir containing image tarballs to push.
-ifndef WINDOWS_IMAGE_TAR_ROOT
-	$(error WINDOWS_IMAGE_TAR_ROOT is not set)
-endif
-	for registry in $(DEV_REGISTRIES); do \
-		echo Pushing Windows images to $${registry}; \
-		all_images=""; \
-		manifest_image="$${registry}/$*:$(NODE_GIT_VERSION)"; \
-		for win_ver in $(WINDOWS_VERSIONS); do \
-			image_tar="$(WINDOWS_IMAGE_TAR_ROOT)/image-$(NODE_GIT_VERSION)-$${win_ver}.tar"; \
-			image="$${registry}/$*:$(NODE_GIT_VERSION)-windows-$${win_ver}"; \
-			echo Pushing image $${image} ...; \
-			$(CRANE_BINDMOUNT) push $${image_tar} $${image}$(double_quote) & \
-			all_images="$${all_images} $${image}"; \
-		done; \
-		wait; \
-		$(DOCKER_MANIFEST) create --amend $${manifest_image} $${all_images}; \
-		for win_ver in $(WINDOWS_VERSIONS); do \
-			version=$$(docker manifest inspect mcr.microsoft.com/windows/nanoserver:$${win_ver} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'); \
-			image="$${registry}/$*:$(NODE_GIT_VERSION)-windows-$${win_ver}"; \
-			$(DOCKER_MANIFEST) annotate --os windows --arch amd64 --os-version $${version} $${manifest_image} $${image}; \
-		done; \
-		$(DOCKER_MANIFEST) push --purge $${manifest_image}; \
-	done ;
+# NOTE: WINDOWS_IMAGE_REQS must be defined with the requirements to build the windows
+# image. These must be added as reqs to 'image-windows' (originally defined in
+# lib.Makefile) on the specific package Makefile otherwise they are not correctly
+# recognized.
+WINDOWS_IMAGE_REQS := \
+	Dockerfile-windows \
+	$(WINDOWS_BINARY) \
+	$(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1 \
+	$(WINDOWS_ARCHIVE_ROOT)/libs/calico/calico.psm1 \
+	$(WINDOWS_ARCHIVE_ROOT)/config-hpc.ps1 \
+	$(WINDOWS_ARCHIVE_ROOT)/felix/felix-service.ps1 \
+	$(WINDOWS_ARCHIVE_ROOT)/node/node-service.ps1 \
+	$(WINDOWS_ARCHIVE_ROOT)/uninstall-calico-hpc.ps1 \
+	windows-packaging/nssm.exe
+image-windows: $(WINDOWS_IMAGE_REQS)
