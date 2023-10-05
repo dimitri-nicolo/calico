@@ -63,10 +63,6 @@ promotions:
   pipeline_file: push-images/mock-node.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
-- name: Push anomaly-detection-api images
-  pipeline_file: push-images/anomaly-detection-api.yml
-  auto_promote:
-    when: "branch =~ 'master|release-'"
 - name: Push compliance images
   pipeline_file: push-images/compliance.yml
   auto_promote:
@@ -746,21 +742,6 @@ blocks:
     prologue:
       commands:
       - cd calicoq
-    jobs:
-    - name: "make ci"
-      commands:
-      - ../.semaphore/run-and-monitor ci.log make ci
-
-- name: 'anomaly-detection-api'
-  run:
-    when: "change_in(['/*', '/anomaly-detection-api/', '/crypto/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Prerequisites"]
-  task:
-    secrets:
-    - name: test-customer-license
-    prologue:
-      commands:
-      - cd anomaly-detection-api
     jobs:
     - name: "make ci"
       commands:

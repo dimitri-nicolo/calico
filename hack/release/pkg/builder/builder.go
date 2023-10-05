@@ -93,8 +93,6 @@ func releaseImages(version, operatorVersion, registry string, overrides []string
 		fmt.Sprintf("%shoneypod:%s", registry, version),
 		fmt.Sprintf("%shoneypod-exp-service:%s", registry, version),
 		fmt.Sprintf("%shoneypod-controller:%s", registry, version),
-		fmt.Sprintf("%sanomaly_detection_jobs:%s", registry, version),
-		fmt.Sprintf("%sanomaly-detection-api:%s", registry, version),
 		fmt.Sprintf("%selasticsearch-metrics:%s", registry, version),
 		fmt.Sprintf("%spacketcapture:%s", registry, version),
 		fmt.Sprintf("%sprometheus:%s", registry, version),

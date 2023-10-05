@@ -325,22 +325,6 @@ func (_m *MockClient) PutSecurityEventWithID(ctx context.Context, data api.Event
 	return r0, r1
 }
 
-// SearchADLogs provides a mock function with given fields: ctx, filter, start, end
-func (_m *MockClient) SearchADLogs(ctx context.Context, filter *api.ADLogsSelection, start *time.Time, end *time.Time) <-chan *api.ADResult {
-	ret := _m.Called(ctx, filter, start, end)
-
-	var r0 <-chan *api.ADResult
-	if rf, ok := ret.Get(0).(func(context.Context, *api.ADLogsSelection, *time.Time, *time.Time) <-chan *api.ADResult); ok {
-		r0 = rf(ctx, filter, start, end)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(<-chan *api.ADResult)
-		}
-	}
-
-	return r0
-}
-
 // SearchCompositeAggregations provides a mock function with given fields: _a0, _a1, _a2
 func (_m *MockClient) SearchCompositeAggregations(_a0 context.Context, _a1 *CompositeAggregationQuery, _a2 CompositeAggregationKey) (<-chan *CompositeAggregationBucket, <-chan error) {
 	ret := _m.Called(_a0, _a1, _a2)
