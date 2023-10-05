@@ -201,11 +201,6 @@ func (er *engineRules) addFlowToEgressToServiceRules(direction calicores.Directi
 // new namespaceRule for flows where the remote is a pod. The rule simply selects the pod's
 // namespace.
 func (er *engineRules) addFlowToNamespaceRules(direction calicores.DirectionType, flow api.Flow, pass bool, clock Clock) {
-	if ingressIntraNamespaceFlow(direction, flow) {
-		// Avoid adding duplicate rules by skipping ingress rules for intra-namespace flows
-		return
-	}
-
 	port, protocol := getPortAndProtocol(flow.Destination.Port, flow.Proto)
 	if protocol == nil {
 		// No need to add an empty protocol
@@ -253,11 +248,6 @@ func (er *engineRules) addFlowToNamespaceRules(direction calicores.DirectionType
 // A rule will be added to select the NetworkSet by name - this ensures we don’t require label
 // schema knowledge.
 func (er *engineRules) addFlowToNetworkSetRules(direction calicores.DirectionType, flow api.Flow, pass bool, clock Clock) {
-	if ingressIntraNamespaceFlow(direction, flow) {
-		// Avoid adding duplicate rules by skipping ingress rules for intra-namespace flows
-		return
-	}
-
 	port, protocol := getPortAndProtocol(flow.Destination.Port, flow.Proto)
 	if protocol == nil {
 		// No need to add an empty protocol
@@ -526,15 +516,4 @@ func localDomains(domains, serviceNameSuffix string) bool {
 	}
 
 	return len(filtered) == 0
-}
-
-// ingressIntraNamespaceFlow returns false if the flow is intra-namespace.
-func ingressIntraNamespaceFlow(direction calicores.DirectionType, flow api.Flow) bool {
-	srcNamespace := flow.Source.Namespace
-	destNamespace := flow.Destination.Namespace
-	if direction == calicores.IngressTraffic && (srcNamespace != "" && destNamespace != "") && (srcNamespace == destNamespace) {
-		return true
-	}
-
-	return false
 }

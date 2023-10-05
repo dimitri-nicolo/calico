@@ -307,7 +307,21 @@ var _ = DescribeTable("processFlow",
 			},
 			size: 1,
 		},
-		engineRules{},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace1",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Name:      "",
+					Namespace: "namespace1",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 80}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+		},
 	),
 	Entry("egress-to-intra-namespace-pass",
 		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
@@ -552,7 +566,7 @@ var _ = DescribeTable("processFlow",
 			size: 1,
 		},
 	),
-	Entry("ingress-from-intra-namespace-pass",
+	Entry("ingress-from-intra-namespace-allow",
 		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), false, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
 		&api.Flow{
 			Reporter: "dst",
@@ -571,7 +585,21 @@ var _ = DescribeTable("processFlow",
 			Proto:      getPtrUint8(6),
 		},
 		engineRules{},
-		engineRules{},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace1",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Allow,
+					Namespace: "namespace1",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
 	),
 	Entry("ingress-from-intra-namespace-pass",
 		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
@@ -592,7 +620,21 @@ var _ = DescribeTable("processFlow",
 			Proto:      getPtrUint8(6),
 		},
 		engineRules{},
-		engineRules{},
+		engineRules{
+			namespaceRules: map[engineRuleKey]*types.FlowLogData{
+				{
+					namespace: "namespace1",
+					protocol:  protocolTCP,
+				}: {
+					Action:    v3.Pass,
+					Namespace: "namespace1",
+					Protocol:  protocolTCP,
+					Ports:     []numorstring.Port{{MinPort: 8081, MaxPort: 8081}},
+					Timestamp: "2022-11-30T09:01:38Z",
+				},
+			},
+			size: 1,
+		},
 	),
 	Entry("ingress-from-networkset",
 		newRecommendationEngine("", "namespace1", "", nil, mrc, time.Duration(0), time.Duration(0), true, "svc.cluster.local", *log.WithField("cluster", "my-cluster")),
@@ -1471,7 +1513,9 @@ var _ = Describe("processFlow", func() {
 		Expect(eng.egress.namespaceRules[engineRuleKey{namespace: "namespace2", protocol: protocolTCP}]).
 			To(Equal(&types.FlowLogData{Action: v3.Allow, Namespace: "namespace2", Protocol: protocolTCP, Ports: ports2, Timestamp: "2022-11-30T09:01:38Z"}))
 
-		Expect(len(eng.ingress.namespaceRules)).To(Equal(1))
+		Expect(len(eng.ingress.namespaceRules)).To(Equal(2))
+		Expect(eng.ingress.namespaceRules[engineRuleKey{namespace: "namespace1", protocol: protocolTCP}]).
+			To(Equal(&types.FlowLogData{Action: v3.Allow, Namespace: "namespace1", Protocol: protocolTCP, Ports: ports1, Timestamp: "2022-11-30T09:01:38Z"}))
 		Expect(eng.ingress.namespaceRules[engineRuleKey{namespace: "namespace2", protocol: protocolTCP}]).
 			To(Equal(&types.FlowLogData{Action: v3.Allow, Namespace: "namespace2", Protocol: protocolTCP, Ports: ports1, Timestamp: "2022-11-30T09:01:38Z"}))
 	})
