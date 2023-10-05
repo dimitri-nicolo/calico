@@ -155,7 +155,6 @@ require (
 	sigs.k8s.io/controller-runtime v0.14.6
 )
 
-
 require (
 	cloud.google.com/go/compute v1.19.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
@@ -199,6 +198,7 @@ require (
 	github.com/checkpoint-restore/go-criu/v5 v5.3.0 // indirect
 	github.com/cilium/ebpf v0.7.0 // indirect
 	github.com/cncf/xds/go v0.0.0-20230607035331-e9ce68804cb4 // indirect
+	github.com/cnf/structhash v0.0.0-20201127153200-e1b16c1ebc08
 	github.com/containerd/cgroups v1.0.1 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/containerd/ttrpc v1.1.0 // indirect

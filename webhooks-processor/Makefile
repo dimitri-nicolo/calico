@@ -62,7 +62,11 @@ $(WEBHOOKS_PROCESSOR_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/web
 	$(DOCKER_BUILD) -t $(WEBHOOKS_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
-	
+
+.PHONY: fv
+fv:
+	@echo "TBD"
+
 .PHONY: ut
 ut:
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./pkg/... -cover -count 1'
