@@ -453,7 +453,7 @@ syn_force_policy:
 	// Auto allow VXLAN packets to egress gateways to leave the client's host
 	if (CALI_F_HEP && EGRESS_IP_ENABLED &&
 			!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
-			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+			is_vxlan_tunnel(ctx, EGW_VXLAN_PORT)) {
 		ipv46_addr_t ip_addr = CALI_F_FROM_HOST ? ctx->state->ip_src : ctx->state->ip_dst;
 		if (ip_equal(ip_addr, HOST_IP)) {
 			if (CALI_F_FROM_HOST) {
@@ -469,7 +469,7 @@ syn_force_policy:
 	// Auto-allow VXLAN packets from/to egress gateway pod
 	if (CALI_F_WEP && EGRESS_GATEWAY) {
 		if (!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
-				is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+				is_vxlan_tunnel(ctx, EGW_VXLAN_PORT)) {
 			ipv46_addr_t ip_addr = CALI_F_FROM_WEP ? ctx->state->ip_dst : ctx->state->ip_src;
 			__be32 flags = cali_rt_lookup_flags(&ip_addr);
 			if (cali_rt_flags_host(flags)) {

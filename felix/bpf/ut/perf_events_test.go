@@ -35,6 +35,7 @@ const (
 
 func TestPerfBasic(t *testing.T) {
 	RegisterTestingT(t)
+	hostIP = node1ip
 
 	_, ipv4, l4, _, pktBytes, err := testPacketUDPDefault()
 	Expect(err).NotTo(HaveOccurred())

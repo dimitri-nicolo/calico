@@ -21,7 +21,7 @@ const volatile struct cali_stats_globals __globals;
 SEC("tc")
 int calico_tcp_stats(struct __sk_buff *skb)
 {
-	__u8 scratch[] = { /* zero it to shut up verifier */ };
+	__u8 scratch[20] = { /* zero it to shut up verifier */ };
 	struct cali_tc_state state;
 
 	struct cali_tc_ctx ctx = {
