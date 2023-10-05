@@ -1,4 +1,4 @@
-// Copyright (c) 2019,2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package v3
 
@@ -16,59 +16,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 )
 
-const (
-	GlobalAlertDetectorTemplateNamePrefix = "tigera.io.detector."
-)
-
-var (
-	ADDetectorsGlobalAlertTemplateNameSet = func() map[string]bool {
-		return map[string]bool{
-			GlobalAlertDetectorTemplateNamePrefix + "dga":                   true,
-			GlobalAlertDetectorTemplateNamePrefix + "http-connection-spike": true,
-			GlobalAlertDetectorTemplateNamePrefix + "http-response-codes":   true,
-			GlobalAlertDetectorTemplateNamePrefix + "http-verbs":            true,
-			GlobalAlertDetectorTemplateNamePrefix + "port-scan":             true,
-			GlobalAlertDetectorTemplateNamePrefix + "generic-dns":           true,
-			GlobalAlertDetectorTemplateNamePrefix + "generic-flows":         true,
-			GlobalAlertDetectorTemplateNamePrefix + "multivariable-flow":    true,
-			GlobalAlertDetectorTemplateNamePrefix + "generic-l7":            true,
-			GlobalAlertDetectorTemplateNamePrefix + "dns-latency":           true,
-			GlobalAlertDetectorTemplateNamePrefix + "dns-tunnel":            true,
-			GlobalAlertDetectorTemplateNamePrefix + "l7-bytes":              true,
-			GlobalAlertDetectorTemplateNamePrefix + "l7-latency":            true,
-			GlobalAlertDetectorTemplateNamePrefix + "bytes-in":              true,
-			GlobalAlertDetectorTemplateNamePrefix + "bytes-out":             true,
-			GlobalAlertDetectorTemplateNamePrefix + "process-bytes":         true,
-			GlobalAlertDetectorTemplateNamePrefix + "process-restarts":      true,
-		}
-	}
-
-	ADDetectorsSet = func() map[string]bool {
-		return map[string]bool{
-			"dga":                   true,
-			"http_connection_spike": true,
-			"http_response_codes":   true,
-			"http_verbs":            true,
-			"port_scan":             true,
-			"generic_dns":           true,
-			"generic_flows":         true,
-			"multivariable_flow":    true,
-			"generic_l7":            true,
-			"dns_latency":           true,
-			"dns_tunnel":            true,
-			"l7_bytes":              true,
-			"l7_latency":            true,
-			"bytes_in":              true,
-			"bytes_out":             true,
-			"process_bytes":         true,
-			"process_restarts":      true,
-		}
-	}
-)
-
 func validateGlobalAlert(structLevel validator.StructLevel) {
-	validateGlobalAlertName(structLevel)
-
 	globalAlert := getGlobalAlert(structLevel)
 	validateGlobalAlertSpec(structLevel, globalAlert.Name, globalAlert.Spec)
 }
@@ -81,74 +29,10 @@ func validateGlobalAlertSpec(structLevel validator.StructLevel, globalAlertName 
 	validateGlobalAlertDescriptionAndSummary(structLevel, globalAlertSpec)
 	validateGlobalAlertAggregateBy(structLevel, globalAlertSpec)
 	validateGlobalAlertMetric(structLevel, globalAlertSpec)
-	validateGlobalAlertAnomalyDetectionSpecs(structLevel, globalAlertName, globalAlertSpec)
 }
 
 func getGlobalAlert(structLevel validator.StructLevel) api.GlobalAlert {
 	return structLevel.Current().Interface().(api.GlobalAlert)
-}
-
-func validateGlobalAlertName(structLevel validator.StructLevel) {
-	globalAlert := getGlobalAlert(structLevel)
-	s := globalAlert.Spec
-	if len(s.Type) != 0 && s.Type == api.GlobalAlertTypeAnomalyDetection {
-		_, ok := ADDetectorsGlobalAlertTemplateNameSet()[globalAlert.Name]
-		if !ok {
-			structLevel.ReportError(
-				reflect.ValueOf(globalAlert.Name),
-				"Name",
-				"",
-				reason(fmt.Sprintf("name must match an existing GlobalAlertTemplate for GlobalAlert of Type %s", api.GlobalAlertTypeAnomalyDetection)),
-				"",
-			)
-
-			return
-		}
-	}
-}
-
-func validateGlobalAlertAnomalyDetectionSpecs(structLevel validator.StructLevel, globalAlertName string, s api.GlobalAlertSpec) {
-	if len(s.Type) != 0 && s.Type == api.GlobalAlertTypeAnomalyDetection {
-		if s.Detector == nil {
-			structLevel.ReportError(
-				reflect.ValueOf(s.Detector),
-				"Detector",
-				"",
-				reason(fmt.Sprintf("empty Detector Params for GlobalAlert of Type %s", api.GlobalAlertTypeAnomalyDetection)),
-				"",
-			)
-		} else {
-			validateGlobalAlertDetector(structLevel, globalAlertName, *s.Detector)
-		}
-
-	}
-}
-
-func validateGlobalAlertDetector(structLevel validator.StructLevel, globalAlertName string, ad api.DetectorParams) {
-	// also validates that there can be only one unique detector per cluster as a side effect once deployed with apiserver
-	_, isValidJob := ADDetectorsSet()[ad.Name]
-	if !isValidJob {
-		structLevel.ReportError(
-			reflect.ValueOf(ad.Name),
-			"Detector.Name",
-			"",
-			reason(fmt.Sprintf("unaccepted Detector for GlobalAlert of Type %s", api.GlobalAlertTypeAnomalyDetection)),
-			"",
-		)
-		return
-	}
-
-	detectorInName := globalAlertName[strings.LastIndex(globalAlertName, ".")+1:]
-	detectorName := strings.ReplaceAll(detectorInName, "-", "_")
-	if ad.Name != detectorName {
-		structLevel.ReportError(
-			reflect.ValueOf(ad.Name),
-			"Detector.Name",
-			"",
-			reason(fmt.Sprintf("detector name must match the GlobalAlert Name for GlobalAlert of Type %s", api.GlobalAlertTypeAnomalyDetection)),
-			"",
-		)
-	}
 }
 
 func validateGlobalAlertDataSet(structLevel validator.StructLevel, s api.GlobalAlertSpec) {

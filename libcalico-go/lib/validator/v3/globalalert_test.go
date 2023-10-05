@@ -1,4 +1,4 @@
-// Copyright (c) 2019,2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package v3
 
@@ -865,36 +865,9 @@ var _ = DescribeTable("GlobalAlert Validator",
 		},
 		true,
 	),
-	Entry("invalid AnomalyDetection template require Detector field",
+	Entry("GlobalAlert with AnomalyDetection type - no longer valid",
 		&api.GlobalAlert{
-			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
-			Spec: api.GlobalAlertSpec{
-				Type:        api.GlobalAlertTypeAnomalyDetection,
-				Summary:     "foo",
-				Description: "test",
-				Severity:    100,
-			},
-		},
-		false,
-	),
-	Entry("invalid AnomalyDetection template with unaccepted Detector field",
-		&api.GlobalAlert{
-			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
-			Spec: api.GlobalAlertSpec{
-				Type: api.GlobalAlertTypeAnomalyDetection,
-				Detector: &api.DetectorParams{
-					Name: "bad_adjob",
-				},
-				Summary:     "foo",
-				Description: "test",
-				Severity:    100,
-			},
-		},
-		false,
-	),
-	Entry("invalid AnomalyDetection template with non matching name to a globalalerttemplate",
-		&api.GlobalAlert{
-			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			ObjectMeta: v1.ObjectMeta{Name: "tigera.io.detector.port-scan"},
 			Spec: api.GlobalAlertSpec{
 				Type: api.GlobalAlertTypeAnomalyDetection,
 				Detector: &api.DetectorParams{
@@ -906,36 +879,6 @@ var _ = DescribeTable("GlobalAlert Validator",
 			},
 		},
 		false,
-	),
-	Entry("invalid AnomalyDetection template with non matching detector.name and name",
-		&api.GlobalAlert{
-			ObjectMeta: v1.ObjectMeta{Name: GlobalAlertDetectorTemplateNamePrefix + "bytes-in"},
-			Spec: api.GlobalAlertSpec{
-				Type: api.GlobalAlertTypeAnomalyDetection,
-				Detector: &api.DetectorParams{
-					Name: "port_scan",
-				},
-				Summary:     "foo",
-				Description: "test",
-				Severity:    100,
-			},
-		},
-		false,
-	),
-	Entry("valid AnomalyDetection template with accepted Job field",
-		&api.GlobalAlert{
-			ObjectMeta: v1.ObjectMeta{Name: GlobalAlertDetectorTemplateNamePrefix + "port-scan"},
-			Spec: api.GlobalAlertSpec{
-				Type: api.GlobalAlertTypeAnomalyDetection,
-				Detector: &api.DetectorParams{
-					Name: "port_scan",
-				},
-				Summary:     "foo",
-				Description: "test",
-				Severity:    100,
-			},
-		},
-		true,
 	),
 )
 
