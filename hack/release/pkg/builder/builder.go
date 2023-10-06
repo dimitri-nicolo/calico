@@ -90,6 +90,8 @@ func releaseImages(version, operatorVersion, registry string, overrides []string
 		fmt.Sprintf("%scni:%s", registry, version),
 		fmt.Sprintf("%sfirewall-integration:%s", registry, version),
 		fmt.Sprintf("%segress-gateway:%s", registry, version),
+		fmt.Sprintf("%slinseed:%s", registry, version),
+		fmt.Sprintf("%spolicy-recommendation:%s", registry, version),
 		fmt.Sprintf("%shoneypod:%s", registry, version),
 		fmt.Sprintf("%shoneypod-exp-service:%s", registry, version),
 		fmt.Sprintf("%shoneypod-controller:%s", registry, version),

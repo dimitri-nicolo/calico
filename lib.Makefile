@@ -1439,7 +1439,9 @@ stop-elastic:
 ###############################################################################
 
 # This needs the $(WINDOWS_DIST)/bin/docker-credential-gcr binary in $PATH
-# and also the local ~/.config/gcloud dir to be able to push to gcr.io
+# and also the local ~/.config/gcloud dir to be able to push to gcr.io. It
+# mounts $(DOCKER_CONFIG) and copies it so that it can be written to on the
+# container, but not have any effect on the host config.
 CRANE_BINDMOUNT_CMD := \
 	docker run --rm \
 		--net=host \
@@ -1447,12 +1449,11 @@ CRANE_BINDMOUNT_CMD := \
 		--entrypoint /bin/sh \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		-v $(DOCKER_CONFIG):/root/.docker/config.json \
-		-v ./$(WINDOWS_DIST)/bin:/tmp/bin \
-		-e PATH=$${PATH}:/tmp/bin \
+		-v $(DOCKER_CONFIG):/root/.docker/config.json_host:ro \
+		-e PATH=$${PATH}:/go/src/$(PACKAGE_NAME)/$(WINDOWS_DIST)/bin \
 		-v $(HOME)/.config/gcloud:/root/.config/gcloud \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) -c $(double_quote)crane
+		$(CALICO_BUILD) -c $(double_quote)cp /root/.docker/config.json_host /root/.docker/config.json && docker-credential-gcr configure-docker && crane
 
 DOCKER_MANIFEST_CMD := docker manifest
 
