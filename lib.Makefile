@@ -1439,10 +1439,19 @@ stop-elastic:
 # Common functions for building windows images.
 ###############################################################################
 
-# This needs the $(WINDOWS_DIST)/bin/docker-credential-gcr binary in $PATH
-# and also the local ~/.config/gcloud dir to be able to push to gcr.io. It
-# mounts $(DOCKER_CONFIG) and copies it so that it can be written to on the
-# container, but not have any effect on the host config.
+# When running on semaphore, just copy the docker config, otherwise run
+# 'docker-credential-gcr configure-docker' as well.
+ifdef SEMAPHORE
+DOCKER_CREDENTIAL_CMD = cp /root/.docker/config.json_host /root/.docker/config.json
+else
+DOCKER_CREDENTIAL_CMD = cp /root/.docker/config.json_host /root/.docker/config.json && \
+						docker-credential-gcr configure-docker
+endif
+
+# This needs the $(WINDOWS_DIST)/bin/docker-credential-gcr binary in $PATH and
+# also the local ~/.config/gcloud dir to be able to push to gcr.io.  It mounts
+# $(DOCKER_CONFIG) and copies it so that it can be written to on the container,
+# but not have any effect on the host config.
 CRANE_BINDMOUNT_CMD := \
 	docker run --rm \
 		--net=host \
@@ -1454,7 +1463,7 @@ CRANE_BINDMOUNT_CMD := \
 		-e PATH=$${PATH}:/go/src/$(PACKAGE_NAME)/$(WINDOWS_DIST)/bin \
 		-v $(HOME)/.config/gcloud:/root/.config/gcloud \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) -c $(double_quote)cp /root/.docker/config.json_host /root/.docker/config.json && docker-credential-gcr configure-docker && crane
+		$(CALICO_BUILD) -c $(double_quote)$(DOCKER_CREDENTIAL_CMD) && crane
 
 DOCKER_MANIFEST_CMD := docker manifest
 
