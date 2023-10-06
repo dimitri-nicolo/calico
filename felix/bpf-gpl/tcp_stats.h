@@ -5,7 +5,9 @@
 #ifndef __CALI_TCPSTATS_H__
 #define __CALI_TCPSTATS_H__
 
+#include "types.h"
 #include "sstats.h"
+#include "log.h"
 
 #define SEND_TCP_STATS_INTERVAL 5000000000
 
@@ -56,7 +58,7 @@ static CALI_BPF_INLINE void send_tcp_stats(struct bpf_sock *sk, struct bpf_tcp_s
 		__builtin_memcpy(event.saddr, &key.saddr, 16);
 		__builtin_memcpy(event.daddr, &key.daddr, 16);
 		CALI_DEBUG("TCP stats: event sent for SIP: 0x%x DIP: 0x%x", event.saddr, event.daddr);
-		event_tcp_stats(ctx->skb, &event);
+		event_tcp_stats(ctx, &event);
 	}
 }
 

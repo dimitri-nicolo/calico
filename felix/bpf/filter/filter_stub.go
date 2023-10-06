@@ -1,5 +1,5 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
-
+// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resources
+//go:build !cgo
+
+package filter
 
 import (
-	"testing"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/projectcalico/calico/felix/bpf/asm"
+	"github.com/projectcalico/calico/felix/bpf/maps"
+	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 )
 
-func TestResourceTypes(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Resources Suite")
+func New(_ tcdefs.EndpointType, _ int, _ string, _ maps.FD) (asm.Insns, error) {
+	panic("this is stub only")
 }

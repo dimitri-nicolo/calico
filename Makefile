@@ -35,7 +35,6 @@ clean:
 	$(MAKE) -C node clean
 	$(MAKE) -C pod2daemon clean
 	$(MAKE) -C typha clean
-	$(MAKE) -C calico clean
 	rm -rf ./bin
 	rm -f $(SUB_CHARTS)
 
@@ -73,6 +72,13 @@ gen-manifests: bin/helm bin/yq
 	# mess up manifest generation if they are present.
 	rm -f $(SUB_CHARTS)
 	cd ./manifests && ./generate.sh
+
+# Get operator CRDs from the operator repo, OPERATOR_BRANCH_NAME must be set
+get-operator-crds: var-require-all-OPERATOR_BRANCH_NAME
+	cd ./charts/tigera-operator/crds/ && \
+	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH_NAME)/pkg/crds/operator/$${file} -o $${file}; done
+	cd ./manifests/ocp/ && \
+	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH_NAME)/pkg/crds/operator/$${file} -o $${file}; done
 
 gen-semaphore-yaml:
 	cd .semaphore && ./generate-semaphore-yaml.sh

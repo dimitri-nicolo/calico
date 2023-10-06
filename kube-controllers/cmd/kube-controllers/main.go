@@ -37,7 +37,6 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
 	crtlclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -63,6 +62,7 @@ import (
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
+	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
@@ -483,7 +483,7 @@ func getClients(kubeconfig string) (*kubernetes.Clientset, client.Interface, err
 
 	// Now build the Kubernetes client, we support in-cluster config and kubeconfig
 	// as means of configuring the client.
-	k8sconfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	k8sconfig, err := winutils.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build kubernetes client config: %s", err)
 	}

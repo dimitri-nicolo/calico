@@ -95,7 +95,7 @@ func makeK8sNode(ipv4 string, ipv6 string) *v1.Node {
 }
 
 var _ = DescribeTable("Node IP detection failure cases",
-	func(networkingBackend string, expectedExitCode int, rrCId string) {
+	func(networkingBackend string, expectedExitCode int, rrCId string, expectedUpdate bool) {
 		os.Setenv("CALICO_NETWORKING_BACKEND", networkingBackend)
 		os.Setenv("IP", "none")
 		os.Setenv("IP6", "")
@@ -113,20 +113,24 @@ var _ = DescribeTable("Node IP detection failure cases",
 		Expect(err).NotTo(HaveOccurred())
 
 		node := libapi.Node{}
-		if rrCId != "" {
+		if networkingBackend != "none" && rrCId != "" {
 			node.Spec.BGP = &libapi.NodeBGPSpec{RouteReflectorClusterID: rrCId}
 		}
 
-		_ = configureAndCheckIPAddressSubnets(context.Background(), c, &node, &v1.Node{})
+		updated := configureAndCheckIPAddressSubnets(context.Background(), c, &node, &v1.Node{})
+		Expect(updated).To(Equal(expectedUpdate))
 		Expect(my_ec).To(Equal(expectedExitCode))
-		if rrCId != "" {
+		if networkingBackend != "none" && rrCId != "" {
 			Expect(node.Spec.BGP).NotTo(BeNil())
+		}
+		if networkingBackend == "none" {
+			Expect(node.Spec.BGP).To(BeNil())
 		}
 	},
 
-	Entry("startup should terminate if IP is set to none and Calico is used for networking", "bird", 1, ""),
-	Entry("startup should NOT terminate if IP is set to none and Calico is policy-only", "none", 0, ""),
-	Entry("startup should NOT terminate and BGPSpec shouldn't be set to nil", "none", 0, "rrClusterID"),
+	Entry("startup should terminate if IP is set to none and Calico is used for networking", "bird", 1, "", false),
+	Entry("startup should NOT terminate if IP is set to none and Calico is policy-only", "none", 0, "", false),
+	Entry("startup should NOT terminate and BGPSpec shouldn't be set to nil", "none", 0, "rrClusterID", false),
 )
 
 var _ = Describe("Default IPv4 pool CIDR", func() {
@@ -880,7 +884,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 					os.Setenv(env.key, env.value)
 				}
 
-				configureNodeRef(node)
+				Expect(configureNodeRef(node)).To(Equal(true))
 				// If we receive an invalid env var then none will be set.
 				if len(node.Spec.OrchRefs) > 0 {
 					ref := node.Spec.OrchRefs[0]
@@ -897,7 +901,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 				os.Setenv("CALICO_UNKNOWN_NODE_REF", "node1")
 
 				node := &libapi.Node{}
-				configureNodeRef(node)
+				Expect(configureNodeRef(node)).To(Equal(false))
 
 				Expect(node.Spec.OrchRefs).To(HaveLen(0))
 			})
@@ -906,7 +910,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 
 				node := &libapi.Node{}
 				node.Spec.OrchRefs = append(node.Spec.OrchRefs, libapi.OrchRef{"node1", "k8s"}) // nolint: vet
-				configureNodeRef(node)
+				Expect(configureNodeRef(node)).To(Equal(true))
 
 				Expect(node.Spec.OrchRefs).To(HaveLen(1))
 			})
@@ -1136,7 +1140,7 @@ var _ = Describe("UT for cloud orchestrator refs", func() {
 					ref: libapi.OrchRef{Orchestrator: "cloudo", NodeName: "cloudo-001"},
 				},
 			}
-			configureCloudOrchRef(&node)
+			Expect(configureCloudOrchRef(&node)).To(Equal(true))
 		})
 
 		It("should add the OrchRef", func() {
@@ -1154,7 +1158,7 @@ var _ = Describe("UT for cloud orchestrator refs", func() {
 					err: errors.New("failed"),
 				},
 			}
-			configureCloudOrchRef(&node)
+			Expect(configureCloudOrchRef(&node)).To(Equal(false))
 		})
 
 		It("should leave OrchRef unchanged", func() {
@@ -1293,7 +1297,8 @@ var _ = Describe("BGP layout tests", func() {
 	})
 
 	It("does nothing if CALICO_EARLY_NETWORKING not set", func() {
-		err := configureBGPLayout(node)
+		changed, err := configureBGPLayout(node)
+		Expect(changed).To(Equal(false))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(*node).To(Equal(*nodeCopy))
 	})
@@ -1316,14 +1321,15 @@ var _ = Describe("BGP layout tests", func() {
 		})
 
 		It("reports error if CALICO_EARLY_NETWORKING set but does not exist", func() {
-			err := configureBGPLayout(node)
+			changed, err := configureBGPLayout(node)
+			Expect(changed).To(Equal(false))
 			Expect(err).To(HaveOccurred())
 		})
 
-		noChange := func(node *libapi.Node) {}
+		noChange := func(node *libapi.Node) bool { return false }
 
 		DescribeTable("with EarlyNetworkConfiguration",
-			func(enc string, expectError bool, expectNodeChange func(*libapi.Node)) {
+			func(enc string, expectError bool, expectNodeChange func(*libapi.Node) bool) {
 				// Write EarlyNetworkConfiguration to file.
 				file, err := os.Create(encFileName)
 				Expect(err).NotTo(HaveOccurred())
@@ -1332,12 +1338,12 @@ var _ = Describe("BGP layout tests", func() {
 				file.Close()
 
 				// Call configuration function.
-				err = configureBGPLayout(node)
+				changed, err := configureBGPLayout(node)
 				if expectError {
 					Expect(err).To(HaveOccurred())
 				} else {
 					Expect(err).NotTo(HaveOccurred())
-					expectNodeChange(nodeCopy)
+					Expect(expectNodeChange(nodeCopy)).To(Equal(changed))
 				}
 				Expect(*node).To(Equal(*nodeCopy))
 			},
@@ -1402,13 +1408,14 @@ spec:
         - peerIP: 172.31.22.100
       labels:
         rack: rb
-`, false, func(node *libapi.Node) {
+`, false, func(node *libapi.Node) bool {
 				if node.Labels == nil {
 					node.Labels = make(map[string]string)
 				}
 				node.Labels["rack"] = "rb"
 				asNumber := numorstring.ASNumber(65002)
 				node.Spec.BGP.ASNumber = &asNumber
+				return true
 			}),
 			Entry("ENC entry matches by stable address", `
 apiVersion: projectcalico.org/v3
@@ -1439,13 +1446,14 @@ spec:
         - peerIP: 172.31.22.100
       labels:
         rack: rb
-`, false, func(node *libapi.Node) {
+`, false, func(node *libapi.Node) bool {
 				if node.Labels == nil {
 					node.Labels = make(map[string]string)
 				}
 				node.Labels["rack"] = "rb"
 				asNumber := numorstring.ASNumber(65002)
 				node.Spec.BGP.ASNumber = &asNumber
+				return true
 			}),
 		)
 	})

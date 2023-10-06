@@ -91,9 +91,9 @@ var MapParams = curVer.MapParams
 
 func Map() maps.Map {
 	b := maps.NewPinnedMap(MapParams)
-	b.(*maps.PinnedMap).UpgradeFn = maps.Upgrade
-	b.(*maps.PinnedMap).GetMapParams = GetMapParams
-	b.(*maps.PinnedMap).KVasUpgradable = GetKeyValueTypeFromVersion
+	b.UpgradeFn = maps.Upgrade
+	b.GetMapParams = GetMapParams
+	b.KVasUpgradable = GetKeyValueTypeFromVersion
 	return b
 }
 

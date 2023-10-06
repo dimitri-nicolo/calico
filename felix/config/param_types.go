@@ -28,14 +28,11 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/client-go/rest"
-
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/kardianos/osext"
 	log "github.com/sirupsen/logrus"
@@ -45,6 +42,7 @@ import (
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/stringutils"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
 	"github.com/projectcalico/calico/node/pkg/lifecycle/utils"
 )
 
@@ -305,6 +303,11 @@ type FileParam struct {
 }
 
 func (p *FileParam) Parse(raw string) (interface{}, error) {
+	// Use GetHostPath to use/resolve the CONTAINER_SANDBOX_MOUNT_POINT env var
+	// if running on Windows HPC.
+	// FIXME: this will no longer be needed when containerd v1.6 is EOL'd
+	raw = winutils.GetHostPath(raw)
+
 	if p.Executable {
 		// Special case: for executable files, we search our directory
 		// and the system path.
@@ -690,13 +693,21 @@ func realGetKubernetesService(namespace, svcName string) (*v1.Service, error) {
 	// Try to get the kubernetes config either from environments or in-cluster.
 	// Note: Felix on Windows does not run as a Pod hence no in-cluster config is available.
 	// Attempt in-cluster config first.
-	k8scfg, err := rest.InClusterConfig()
+	// FIXME: get rid of this and call rest.InClusterConfig() directly when containerd v1.6 is EOL'd
+	k8scfg, err := winutils.GetInClusterConfig()
 	if err != nil {
 		log.WithError(err).Info("Unable to create in-cluster Kubernetes config, attemping environments instead")
 
 		cfgFile := os.Getenv("KUBECONFIG")
+		// Host env vars may override the container on Windows HPC, so $env:KUBECONFIG cannot
+		// be trusted in this case
+		// FIXME: this will no longer be needed when containerd v1.6 is EOL'd
+		if winutils.InHostProcessContainer() {
+			cfgFile = ""
+		}
 		master := os.Getenv("KUBERNETES_MASTER")
-		k8scfg, err = clientcmd.BuildConfigFromFlags(master, cfgFile)
+		// FIXME: get rid of this and call clientcmd.BuildConfigFromFlags() directly when containerd v1.6 is EOL'd
+		k8scfg, err = winutils.BuildConfigFromFlags(master, cfgFile)
 		if err != nil {
 			log.WithError(err).Errorf("Unable to create Kubernetes config.")
 			return nil, err
@@ -848,4 +859,36 @@ type KeyDurationListParam struct {
 func (p *KeyDurationListParam) Parse(raw string) (result interface{}, err error) {
 	result, err = stringutils.ParseKeyDurationList(raw)
 	return
+}
+
+type StringSliceParam struct {
+	Metadata
+	ValidationRegex *regexp.Regexp
+}
+
+func (p *StringSliceParam) Parse(raw string) (result interface{}, err error) {
+	log.WithField("StringSliceParam raw", raw).Info("StringSliceParam")
+	values := strings.Split(raw, ",")
+
+	resultSlice := []string{}
+	for _, in := range values {
+		val := strings.Trim(in, " ")
+		if len(val) == 0 {
+			continue
+		}
+
+		// Validate string slice entry as necessary.
+		if p.ValidationRegex != nil {
+			match := p.ValidationRegex.MatchString(val)
+			if !match {
+				err = p.parseFailed(raw,
+					fmt.Sprintf("invalid entry does not match regex %s", p.ValidationRegex.String()))
+				return
+			}
+		}
+
+		resultSlice = append(resultSlice, val)
+	}
+
+	return resultSlice, nil
 }

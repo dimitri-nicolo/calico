@@ -97,12 +97,14 @@ func ipv6Supported() bool {
 
 // configureCloudOrchRef attempts to connect to a cloud provider metadata service to discover
 // the instance ID and add this to the OrchRefs on the node.
-func configureCloudOrchRef(node *api.Node) {
+// Returns true if the node object needs to be updated.
+func configureCloudOrchRef(node *api.Node) bool {
 	ref, err := autodetection.GetCloudOrchRef()
 	if err != nil {
-		return
+		return false
 	}
 	node.Spec.OrchRefs = append(node.Spec.OrchRefs, ref)
+	return true
 }
 
 func ensureNetworkForOS(ctx context.Context, client client.Interface, nodeName string) error {

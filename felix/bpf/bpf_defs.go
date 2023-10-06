@@ -33,6 +33,10 @@ func (f ProgFD) Close() error {
 	return unix.Close(int(f))
 }
 
+func (f ProgFD) FD() uint32 {
+	return uint32(f)
+}
+
 type ProgResult struct {
 	RC       int32
 	Duration time.Duration
@@ -48,7 +52,6 @@ type PolicyDebugInfo struct {
 }
 
 const (
-	ObjectDir      = "/usr/lib/calico/bpf"
 	RuntimeProgDir = "/var/run/calico/bpf/prog"
 	RuntimePolDir  = "/var/run/calico/bpf/policy"
 )

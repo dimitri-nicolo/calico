@@ -48,11 +48,9 @@ union ip4_set_lpm_key {
 };
 CALI_MAP_V1(cali_v4_ip_sets, BPF_MAP_TYPE_LPM_TRIE, union ip4_set_lpm_key, __u32, 1024*1024, BPF_F_NO_PREALLOC)
 
-#define RULE_START(id) \
-	CALI_DEBUG("Rule " #id " \n");
+#define RULE_START(id)
 
 #define RULE_END(id, action) \
-	CALI_DEBUG("  MATCH -> " #action "\n"); \
 	goto action; /* Reach here if the rule matched. */ \
 	rule_no_match_ ## id: do {;} while (false)
 

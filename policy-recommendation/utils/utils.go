@@ -13,19 +13,15 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 )
 
-// copyStagedNetworkPolicy copies the StagedNetworkPolicy context relevant to the recommendation
-// engine from a source to a destination.
-// Copy:
-// - Metadata:
-// -   Name, Namespace, OwnerReference, Annotations, Labels
-// - Spec:
-// -   Selector, StagedAction, Tier
-// -   Egress, Ingress rules, and PolicyTypes
-func CopyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkPolicy) {
+// CopyNewStagedNetworkPolicy copies context relevant to policy recommendation where from source
+// StagedNetworkPolicy to destination where the destination is assumed to be a new item in the
+// data-store.
+func CopyNewStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkPolicy) {
 	// Metadata
 	dest.ObjectMeta.Name = src.GetObjectMeta().GetName()
 	dest.ObjectMeta.Namespace = src.GetObjectMeta().GetNamespace()
 	dest.ObjectMeta.OwnerReferences = src.GetObjectMeta().GetOwnerReferences()
+
 	dest.ObjectMeta.Annotations = make(map[string]string)
 	for key, annotation := range src.GetObjectMeta().GetAnnotations() {
 		dest.ObjectMeta.Annotations[key] = annotation
@@ -45,6 +41,15 @@ func CopyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkP
 	copy(dest.Spec.Ingress, src.Spec.Ingress)
 	dest.Spec.Types = make([]v3.PolicyType, len(src.Spec.Types))
 	copy(dest.Spec.Types, src.Spec.Types)
+}
+
+// CopyStagedNetworkPolicy copies context relevant to policy recommendation from source
+// StagedNetworkPolicy to destination.
+func CopyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkPolicy) {
+	CopyNewStagedNetworkPolicy(dest, src)
+
+	dest.ObjectMeta.ResourceVersion = src.ObjectMeta.ResourceVersion
+	dest.ObjectMeta.UID = src.ObjectMeta.UID
 }
 
 // GetPolicyName returns a policy name with tier prefix and 5 char hash suffix. If there is an
