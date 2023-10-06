@@ -39966,6 +39966,7 @@ rules:
     resources:
       - globalreporttypes
       - licensekeys
+      - globalalerts
       - globalalerttemplates
       - uisettingsgroups
       - uisettingsgroups/data
