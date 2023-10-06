@@ -252,6 +252,7 @@ protobuf proto/felixbackend.pb.go: proto/felixbackend.proto
 
 # We pre-build lots of different variants of the TC programs, defer to the script.
 BPF_GPL_O_FILES:=$(addprefix bpf-gpl/,$(shell bpf-gpl/list-objs))
+BPF_GPL_O_FILES+=bpf-gpl/bin/tc_preamble.o bpf-gpl/bin/xdp_preamble.o bpf-gpl/bin/policy_default.o
 
 # There's a one-to-one mapping from UT C files to objects and the same for the apache programs..
 BPF_GPL_UT_O_FILES:=$(BPF_GPL_UT_C_FILES:.c=.o) $(addprefix bpf-gpl/,$(shell bpf-gpl/list-ut-objs))
@@ -610,16 +611,16 @@ ut-watch: $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) ginkgo watch -r -skipPackage $(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)
 
 .PHONY: bin/bpf.test
-bin/bpf.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go')
+bin/bpf.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go') mod-download
 	$(DOCKER_GO_BUILD_CGO) go test $(BUILD_FLAGS) ./bpf/ -c -o $@
 
 .PHONY: bin/bpf_ut.test
-bin/bpf_ut.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go')
+bin/bpf_ut.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go') mod-download
 	$(DOCKER_GO_BUILD_CGO) go test $(BUILD_FLAGS) ./bpf/ut -c -o $@
 
 # Build debug version of bpf.test for use with the delve debugger.
 .PHONY: bin/bpf_debug.test
-bin/bpf_debug.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go')
+bin/bpf_debug.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go') mod-download
 	$(DOCKER_GO_BUILD_CGO) go test $(BUILD_FLAGS) ./bpf/ut -c -gcflags="-N -l" -o $@
 
 .PHONY: ut-bpf
@@ -640,6 +641,18 @@ ut-bpf: $(LIBBPF_A) bin/bpf_ut.test bin/bpf.test build-bpf
 		mount bpffs /sys/fs/bpf -t bpf && \
 		cd /go/src/$(PACKAGE_NAME)/bpf/ut && \
 		../../bin/bpf_ut.test -test.v -test.run "$(FOCUS)"'
+
+.PHONY: bench-bpf
+bench-bpf: $(LIBBPF_A) bin/bpf_ut.test bin/bpf.test build-bpf
+	$(DOCKER_RUN) \
+		--privileged \
+		-e RUN_AS_ROOT=true \
+		-v `pwd`:/code \
+		-v `pwd`/bpf-gpl/bin:/usr/lib/calico/bpf \
+		$(CALICO_BUILD) sh -c ' \
+		mount bpffs /sys/fs/bpf -t bpf && \
+		cd /go/src/$(PACKAGE_NAME)/bpf/ut && \
+		../../bin/bpf_ut.test -test.v -test.bench="$(FOCUS)" -test.run "$(FOCUS)"'
 
 ## Launch a browser with Go coverage stats for the whole project.
 .PHONY: cover-browser

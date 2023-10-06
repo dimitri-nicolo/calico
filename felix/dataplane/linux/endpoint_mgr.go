@@ -127,9 +127,9 @@ type endpointManager struct {
 	floatingIPsEnabled     bool
 
 	// Our dependencies.
-	rawTable     iptablesTable
-	mangleTable  iptablesTable
-	filterTable  iptablesTable
+	rawTable     IptablesTable
+	mangleTable  IptablesTable
+	filterTable  IptablesTable
 	ruleRenderer rules.RuleRenderer
 	routeTable   routetable.RouteTableInterface
 	writeProcSys procSysWriter
@@ -215,9 +215,9 @@ type EndpointStatusUpdateCallback func(ipVersion uint8, id interface{}, status s
 type procSysWriter func(path, value string) error
 
 func newEndpointManager(
-	rawTable iptablesTable,
-	mangleTable iptablesTable,
-	filterTable iptablesTable,
+	rawTable IptablesTable,
+	mangleTable IptablesTable,
+	filterTable IptablesTable,
 	ruleRenderer rules.RuleRenderer,
 	routeTable routetable.RouteTableInterface,
 	ipVersion uint8,
@@ -260,9 +260,9 @@ func newEndpointManager(
 }
 
 func newEndpointManagerWithShims(
-	rawTable iptablesTable,
-	mangleTable iptablesTable,
-	filterTable iptablesTable,
+	rawTable IptablesTable,
+	mangleTable IptablesTable,
+	filterTable IptablesTable,
 	ruleRenderer rules.RuleRenderer,
 	routeTable routetable.RouteTableInterface,
 	ipVersion uint8,
@@ -1214,7 +1214,7 @@ func (m *endpointManager) updateHostEndpoints() {
 func (m *endpointManager) updateDispatchChains(
 	activeChains map[string]*iptables.Chain,
 	newChains []*iptables.Chain,
-	table iptablesTable,
+	table IptablesTable,
 ) {
 	seenChains := set.New[string]()
 	for _, newChain := range newChains {

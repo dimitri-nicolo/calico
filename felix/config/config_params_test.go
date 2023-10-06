@@ -673,6 +673,13 @@ var _ = DescribeTable("Config parsing with Kubernetes service lookup",
 	Entry("OpenShift settings",
 		"DNSTrustedServers", "k8s-service:openshift-dns/openshift-dns",
 		[]config.ServerPort{{IP: "10.96.0.12", Port: 546}}),
+	Entry("BPFForceTrackPacketsFromIfaces Empty", "BPFForceTrackPacketsFromIfaces", "", []string{"docker+"}),
+	Entry("BPFForceTrackPacketsFromIfaces Single valid entry", "BPFForceTrackPacketsFromIfaces", "docker0", []string{"docker0"}),
+	Entry("BPFForceTrackPacketsFromIfaces Single valid entry", "BPFForceTrackPacketsFromIfaces", "cali-123", []string{"cali-123"}),
+	Entry("BPFForceTrackPacketsFromIfaces Single valid wildcard", "BPFForceTrackPacketsFromIfaces", "docker+", []string{"docker+"}),
+	Entry("BPFForceTrackPacketsFromIfaces Multiple valid entries", "BPFForceTrackPacketsFromIfaces", "docker0,docker1", []string{"docker0", "docker1"}),
+	Entry("BPFForceTrackPacketsFromIfaces Single invalid entry", "BPFForceTrackPacketsFromIfaces", "cali@123", []string{"docker+"}),
+	Entry("BPFForceTrackPacketsFromIfaces Multiple invalid entries", "BPFForceTrackPacketsFromIfaces", "cali-123,cali@123", []string{"docker+"}),
 )
 
 var _ = DescribeTable("OpenStack heuristic tests",

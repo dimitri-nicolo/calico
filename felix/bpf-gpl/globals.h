@@ -22,6 +22,8 @@ struct cali_tc_globals {
 	__u8 iface_name[16];
 	__be16 egw_vxlan_port;
 	__be16 egw_health_port;
+	__u32 log_filter_jmp;
+	__u32 jumps[32];
 };
 
 enum cali_globals_flags {
@@ -43,6 +45,7 @@ struct cali_ctlb_globals {
 
 struct cali_xdp_globals {
 	__u8 iface_name[16];
+	__u32 jumps[16];
 };
 
 struct cali_stats_globals {

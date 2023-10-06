@@ -21,6 +21,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
 	"github.com/projectcalico/calico/felix/bpf/maps"
@@ -111,7 +112,7 @@ func (k *bpfKprobe) AttachSyscall() error {
 }
 
 func (k *bpfKprobe) installKprobe(typ string, fns []string) error {
-	filename := path.Join(bpf.ObjectDir, progFileName(typ, k.logLevel))
+	filename := path.Join(bpfdefs.ObjectDir, progFileName(typ, k.logLevel))
 	obj, err := libbpf.OpenObject(filename)
 	if err != nil {
 		return fmt.Errorf("error loading kprobe program %s: %w", filename, err)
