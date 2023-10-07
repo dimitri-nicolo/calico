@@ -256,7 +256,7 @@ func (s *synchronizer) addRecommendationToCache(ctx context.Context, namespace v
 			snp := &v3.StagedNetworkPolicy{}
 
 			// There should only exist one recommendation within this namespace
-			utils.CopyNewStagedNetworkPolicy(snp, storeSnps.Items[0])
+			utils.CopyStagedNetworkPolicy(snp, storeSnps.Items[0])
 
 			log.WithField("key", snp).Debug("Adding recommendation to cache")
 			s.cacheSet.StagedNetworkPolicies.Set(namespace.Name, snp)
