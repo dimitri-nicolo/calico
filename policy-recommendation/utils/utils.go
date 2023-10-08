@@ -13,10 +13,9 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 )
 
-// CopyNewStagedNetworkPolicy copies context relevant to policy recommendation where from source
-// StagedNetworkPolicy to destination where the destination is assumed to be a new item in the
-// data-store.
-func CopyNewStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkPolicy) {
+// CopyStagedNetworkPolicy copies context relevant to policy recommendation where from source
+// StagedNetworkPolicy to destination.
+func CopyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkPolicy) {
 	// Metadata
 	dest.ObjectMeta.Name = src.GetObjectMeta().GetName()
 	dest.ObjectMeta.Namespace = src.GetObjectMeta().GetNamespace()
@@ -41,15 +40,6 @@ func CopyNewStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetwo
 	copy(dest.Spec.Ingress, src.Spec.Ingress)
 	dest.Spec.Types = make([]v3.PolicyType, len(src.Spec.Types))
 	copy(dest.Spec.Types, src.Spec.Types)
-}
-
-// CopyStagedNetworkPolicy copies context relevant to policy recommendation from source
-// StagedNetworkPolicy to destination.
-func CopyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkPolicy) {
-	CopyNewStagedNetworkPolicy(dest, src)
-
-	dest.ObjectMeta.ResourceVersion = src.ObjectMeta.ResourceVersion
-	dest.ObjectMeta.UID = src.ObjectMeta.UID
 }
 
 // GetPolicyName returns a policy name with tier prefix and 5 char hash suffix. If there is an

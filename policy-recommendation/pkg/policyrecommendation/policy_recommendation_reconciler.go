@@ -366,8 +366,7 @@ func (pr *policyRecommendationReconciler) getRecFromStore(ctx context.Context, n
 			return nil, fmt.Errorf("recommendation name %s differs from %s, in namespace: %s", item.Name, name, namespace)
 		}
 
-		snp := &v3.StagedNetworkPolicy{}
-		utils.CopyStagedNetworkPolicy(snp, item)
+		snp := item.DeepCopy()
 
 		return snp, nil
 	}
