@@ -1,29 +1,18 @@
-// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
 package anomalydetection
 
 import (
 	"context"
-	"errors"
-	"reflect"
-	"time"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/errors"
 
-	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
-	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-)
-
-const (
-	// setting as same period as /pkg/alert/worker
-	detectionCycleResourceCachePeriod = time.Second
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/maputil"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 )
 
 var (
@@ -35,110 +24,65 @@ var (
 )
 
 type adJobDetectionController struct {
-	ctx                         context.Context
-	kubeClientSet               kubernetes.Interface
-	cancel                      context.CancelFunc
-	clusterName                 string
-	tenantID                    string
-	adJobDetectionReconciler    *adDetectionReconciler
-	detectionCycleResourceCache rcache.ResourceCache
+	kubeClientSet kubernetes.Interface
+	namespace     string
+	ctx           context.Context
+	cancel        context.CancelFunc
 }
 
-type DetectionCycleRequest struct {
-	ClusterName string
-	TenantID    string
-	GlobalAlert *v3.GlobalAlert
-	CalicoCLI   calicoclient.Interface
+// NewADJobDetectionController creates a controller that cleans up any AD detection cron jobs.
+func NewADJobDetectionController(kubeClientSet kubernetes.Interface, namespace string) controller.Controller {
+	c := &adJobDetectionController{
+		kubeClientSet: kubeClientSet,
+		namespace:     namespace,
+	}
+	return c
 }
 
-// NewADJobDetectionController creates a controller that manages and reconciles the Detection Cronjobs that are created
-// for each GlobalAlert created for AnomalyDetection.  The ADJobDetectionController is referenced by GlobalAlertController
-// and ManagedClusterController - to handle GlobalAlert of typed AnomalyDetection in Standalone or Management clusters
-// through GlobalAlertController, and Managed Cluster through ManagedClusterController.
-func NewADJobDetectionController(ctx context.Context, kubeClientSet kubernetes.Interface, calicoClientSet calicoclient.Interface, client ctrlclient.WithWatch,
-	podTemplateQuery podtemplate.ADPodTemplateQuery, namespace string, managementClusterName string, tenantID, tenantNamespace string) controller.AnomalyDetectionController {
-
-	adJobDetectionReconciler := &adDetectionReconciler{
-		calicoClientSet:           calicoClientSet,
-		kubeClientSet:             kubeClientSet,
-		client:                    client,
-		podTemplateQuery:          podTemplateQuery,
-		detectionADDetectorStates: make(map[string]detectionCycleState),
-		managementClusterName:     managementClusterName,
-		tenantID:                  tenantID,
-
-		namespace:       namespace,
-		tenantNamespace: tenantNamespace,
-	}
-
-	adDetectionController := &adJobDetectionController{
-		ctx:                      ctx,
-		clusterName:              managementClusterName,
-		tenantID:                 tenantID,
-		kubeClientSet:            kubeClientSet,
-		adJobDetectionReconciler: adJobDetectionReconciler,
-	}
-
-	rcacheArgs := rcache.ResourceCacheArgs{
-		ListFunc:    adJobDetectionReconciler.listDetectionCronJobs,
-		ObjectType:  reflect.TypeOf(batchv1.CronJob{}),
-		LogTypeDesc: "States of the deployed detection CronJob assosciated with the GlobalAlert.",
-	}
-	detectionCycleResourceCache := rcache.NewResourceCache(rcacheArgs)
-
-	adDetectionController.detectionCycleResourceCache = detectionCycleResourceCache
-	adJobDetectionReconciler.detectionCycleResourceCache = detectionCycleResourceCache
-	adDetectionController.adJobDetectionReconciler = adJobDetectionReconciler
-
-	return adDetectionController
-}
-
-// Run starts the ADJobDetectionController monitoring routine.
 func (c *adJobDetectionController) Run(parentCtx context.Context) {
-	var ctx context.Context
-	ctx, c.cancel = context.WithCancel(parentCtx)
-	c.adJobDetectionReconciler.managementClusterCtx = ctx
+	c.ctx, c.cancel = context.WithCancel(parentCtx)
 
-	log.WithFields(log.Fields{"tenant": c.tenantID, "cluster": c.clusterName}).Info("Starting AD Detection controller on cluster")
+	log.Info("Starting AD detection controller")
 
-	c.detectionCycleResourceCache.Run(detectionCycleResourceCachePeriod.String())
-
-	go c.adJobDetectionReconciler.Run(ctx.Done())
+	go c.cleanup()
 }
 
-// Close cancels the ADJobController worker context and removes health check for all the objects that worker watches.
 func (c *adJobDetectionController) Close() {
-	c.adJobDetectionReconciler.Close()
-	c.cancel()
+	if c.ctx != nil {
+		c.cancel()
+	}
 }
 
-// AddDetector adds to the list of jobs managed by the detection controller
-func (c *adJobDetectionController) AddDetector(resource interface{}) error {
-	managedResource, ok := resource.(DetectionCycleRequest)
-	if !ok {
-		return errors.New("unexpected managed type for an ADJob Detection resource")
-	}
-	err := c.adJobDetectionReconciler.addDetector(managedResource)
+// Cleanup AD detection cron jobs.
+func (c *adJobDetectionController) cleanup() {
 
+	// List all Tigera-created AD detection cron jobs.
+	detectionJobLabelByteStr := maputil.CreateLabelValuePairStr(DetectionJobLabels())
+	detectionCronJobList, err := c.kubeClientSet.BatchV1().CronJobs(c.namespace).List(c.ctx,
+		metav1.ListOptions{
+			LabelSelector: detectionJobLabelByteStr,
+		})
 	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *adJobDetectionController) StopADForCluster(clusterName string) {
-	_ = c.adJobDetectionReconciler.stopAllDetectionCyclesForCluster(clusterName)
-}
-
-// RemoveDetector removes from the list of jobs managed by the detection controller.
-// Usually called when a Done() signal is received from the parent context
-func (c *adJobDetectionController) RemoveDetector(resource interface{}) error {
-	detectionCycle, ok := resource.(DetectionCycleRequest)
-	if !ok {
-		return errors.New("unexpected type for an ADJob Ddetection resource")
+		log.WithError(err).Errorf("failed to list detection cronjobs")
+		return
 	}
 
-	c.adJobDetectionReconciler.removeDetector(detectionCycle)
+	for _, detectionCronJob := range detectionCronJobList.Items {
+		// Check in case context has been cancelled.
+		if c.ctx.Err() != nil {
+			break
+		}
 
-	return nil
+		// Delete next cron job in the list.
+		log.Infof("Deleting AD detection cronJob job %s", detectionCronJob.Name)
+		util.EmptyCronJobResourceValues(&detectionCronJob)
+
+		err := util.DeleteCronJobWithRetry(c.ctx, c.kubeClientSet, c.namespace, detectionCronJob.Name)
+		if err != nil && !errors.IsNotFound(err) {
+			log.WithError(err).Errorf("Unable to delete stored detection CronJob %s", detectionCronJob.Name)
+		}
+	}
+
+	// Wait for context to be cancelled before returning.
+	<-c.ctx.Done()
 }

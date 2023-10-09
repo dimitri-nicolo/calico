@@ -17,8 +17,6 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-
-	adj "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/anomalydetection"
 )
 
 const (
@@ -57,12 +55,10 @@ var _ = Describe("GlobalAlert", func() {
 
 			fakeClient := fake.NewSimpleClientset(globalAlert)
 			mockSvc := &query.MockService{}
-			mockADJSvc := &adj.MockService{}
 			a := &Alert{
 				alert:       globalAlert,
 				clusterName: "test-cluster",
 				service:     mockSvc,
-				adj:         mockADJSvc,
 				calicoCLI:   fakeClient,
 			}
 
@@ -127,14 +123,12 @@ var _ = Describe("GlobalAlert", func() {
 
 			fakeClient := fake.NewSimpleClientset(globalAlert)
 			mockSvc := &query.MockService{}
-			mockADJSvc := &adj.MockService{}
 
 			a := &Alert{
 				alert:       globalAlert,
 				clusterName: "test-cluster",
 				calicoCLI:   fakeClient,
 				service:     mockSvc,
-				adj:         mockADJSvc,
 			}
 
 			var wg sync.WaitGroup
@@ -172,67 +166,6 @@ var _ = Describe("GlobalAlert", func() {
 			wg.Wait()
 			updatedAlert, err := fakeClient.ProjectcalicoV3().GlobalAlerts().Get(ctx, a.alert.Name, metav1.GetOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(updatedAlert.Status.LastExecuted.UnixNano()).To(BeNumerically(">", lastExecutedTime.UnixNano()))
-		})
-
-		It("on type AnomalyDetection should starts the anomaly detection service at time of alert", func() {
-			now := time.Now()
-			lastExecutedTime := now.Add(-2 * time.Second)
-
-			globalAlert := &v3.GlobalAlert{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: alertName,
-				},
-				Spec: v3.GlobalAlertSpec{
-					Type: v3.GlobalAlertTypeAnomalyDetection,
-					Detector: &v3.DetectorParams{
-						Name: "port-scan",
-					},
-					Description: fmt.Sprintf("test anomalyDetection alert: %s", alertName),
-					Severity:    100,
-					Period:      &metav1.Duration{Duration: 5 * time.Second},
-					Lookback:    &metav1.Duration{Duration: 1 * time.Second},
-				},
-				Status: v3.GlobalAlertStatus{
-					LastUpdate:   &metav1.Time{Time: now},
-					Active:       false,
-					Healthy:      true,
-					LastExecuted: &metav1.Time{Time: lastExecutedTime},
-				},
-			}
-
-			fakeClient := fake.NewSimpleClientset(globalAlert)
-			mockSvc := &query.MockService{}
-			mockADJSvc := &adj.MockService{}
-			a := &Alert{
-				alert:                  globalAlert,
-				clusterName:            "test-cluster",
-				service:                mockSvc,
-				adj:                    mockADJSvc,
-				calicoCLI:              fakeClient,
-				enableAnomalyDetection: true,
-			}
-
-			ctx, cancel := context.WithCancel(context.Background())
-
-			mockADJSvc.On("Start", mock.Anything, mock.Anything).Return(
-				v3.GlobalAlertStatus{
-					LastUpdate:   &metav1.Time{Time: now.Add(2 * time.Second)},
-					Active:       true,
-					Healthy:      true,
-					LastExecuted: &metav1.Time{Time: now.Add(2 * time.Second)},
-				},
-			)
-
-			go a.Execute(ctx)
-
-			// wait until ExecuteAlert calls Start and returns mock status
-			time.Sleep(500 * time.Millisecond)
-
-			updatedAlert, err := fakeClient.ProjectcalicoV3().GlobalAlerts().Get(ctx, a.alert.Name, metav1.GetOptions{})
-			cancel()
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(updatedAlert.Status.Active).To(BeTrue())
 			Expect(updatedAlert.Status.LastExecuted.UnixNano()).To(BeNumerically(">", lastExecutedTime.UnixNano()))
 		})
 	})

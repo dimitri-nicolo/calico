@@ -170,7 +170,7 @@ var (
 	RestartModeRegex          = regexp.MustCompile("^(GracefulRestart|LongLivedGracefulRestart)$")
 	BIRDGatewayModeRegex      = regexp.MustCompile("^(Recursive|DirectIfDirectlyConnected)$")
 
-	GlobalAlertTypeRegex = regexp.MustCompile("^(RuleBased|AnomalyDetection)$")
+	GlobalAlertTypeRegex = regexp.MustCompile("^(RuleBased)$")
 
 	filterActionRegex  = regexp.MustCompile("^(Accept|Reject)$")
 	matchOperatorRegex = regexp.MustCompile("^(Equal|In|NotEqual|NotIn)$")

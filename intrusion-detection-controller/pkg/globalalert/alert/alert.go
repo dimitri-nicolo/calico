@@ -4,6 +4,7 @@ package alert
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"time"
 
@@ -19,8 +20,6 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
-	ad "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/anomalydetection"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/reporting"
 )
 
@@ -32,17 +31,15 @@ const (
 )
 
 type Alert struct {
-	alert                  *v3.GlobalAlert
-	calicoCLI              calicoclient.Interface
-	service                query.Service
-	adj                    ad.ADService
-	clusterName            string
-	tenantID               string
-	enableAnomalyDetection bool
+	alert       *v3.GlobalAlert
+	calicoCLI   calicoclient.Interface
+	service     query.Service
+	clusterName string
+	tenantID    string
 }
 
 // NewAlert sets and returns an Alert, builds Linseed query that will be used periodically to query Elasticsearch data.
-func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, enableAnomalyDetection bool, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, tenantID string, namespace string, fipsModeEnabled bool) (*Alert, error) {
+func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, clusterName string, tenantID string, namespace string, fipsModeEnabled bool) (*Alert, error) {
 	globalAlert.Status.Active = true
 	globalAlert.Status.LastUpdate = &metav1.Time{Time: time.Now()}
 
@@ -52,11 +49,10 @@ func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lin
 	globalAlertType, ok := globalAlertSpec.FieldByName(GlobalAlertSpecTypeFieldName).Interface().(v3.GlobalAlertType)
 
 	alert := &Alert{
-		alert:                  globalAlert,
-		calicoCLI:              calicoCLI,
-		clusterName:            clusterName,
-		tenantID:               tenantID,
-		enableAnomalyDetection: enableAnomalyDetection,
+		alert:       globalAlert,
+		calicoCLI:   calicoCLI,
+		clusterName: clusterName,
+		tenantID:    tenantID,
 	}
 
 	if !ok || globalAlertType != v3.GlobalAlertTypeAnomalyDetection {
@@ -68,12 +64,7 @@ func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lin
 		alert.service = service
 
 	} else {
-		adj, err := ad.NewService(calicoCLI, k8sClient, adDetectionController, adTrainingController, clusterName, tenantID, namespace, globalAlert)
-		if err != nil {
-			return nil, err
-		}
-
-		alert.adj = adj
+		return nil, errors.New("GlobalAlert for Anomaly Detection is no longer supported")
 	}
 
 	return alert, nil
@@ -89,34 +80,7 @@ func (a *Alert) Execute(ctx context.Context) {
 
 	if !ok || globalAlertType != v3.GlobalAlertTypeAnomalyDetection {
 		a.ExecuteQuery(ctx)
-	} else {
-		a.ExecuteAnomalyDetection(ctx)
 	}
-}
-
-// ExecuteAnomalyDetection starts the service for GlobalAlerts specified for anomaly detection if enableAnomalyDetection is True.
-// The scheduling of training and anomaly detection of the jobs are done in the service itself.
-func (a *Alert) ExecuteAnomalyDetection(ctx context.Context) {
-	if !a.enableAnomalyDetection {
-		log.Debugf("AnomalyDetection disabled, ignoring GlobalAlert %s", a.alert.Name)
-		return
-	}
-
-	a.alert.Status = a.adj.Start()
-	if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx); err != nil {
-		log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing anomaly detection`, a.alert.Name)
-	}
-
-	for {
-		<-ctx.Done()
-		a.stopAnomalyDetectionService(ctx)
-		return
-	}
-}
-
-func (a *Alert) stopAnomalyDetectionService(ctx context.Context) {
-	a.alert.Status.Active = false
-	a.alert.Status = a.adj.Stop()
 }
 
 // ExecuteQuery periodically queries Linseed, updates GlobalAlert status

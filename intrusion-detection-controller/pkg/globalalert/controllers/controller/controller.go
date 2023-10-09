@@ -15,16 +15,3 @@ type Controller interface {
 	// Close cancel the context created by the Run function and all the internal goroutines.
 	Close()
 }
-
-type AnomalyDetectionController interface {
-	Controller
-
-	// AddDetector adds to the list of detectors managed by the ADDetectorController
-	AddDetector(resource interface{}) error
-
-	// RemoveManagedJob removes from the list of jobs managed by the ADDetectorController.
-	// Usually called when a Done() signal is received from the parent context
-	RemoveDetector(resource interface{}) error
-
-	StopADForCluster(clusterName string)
-}

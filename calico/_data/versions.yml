@@ -131,12 +131,6 @@
       image: tigera/key-cert-provisioner
       version: master
       registry: quay.io
-    anomaly_detection_jobs:
-      image: tigera/anomaly_detection_jobs
-      version: master
-    anomaly-detection-api:
-      image: tigera/anomaly-detection-api
-      version: master
     elasticsearch-metrics:
       image: tigera/elasticsearch-metrics
       version: master

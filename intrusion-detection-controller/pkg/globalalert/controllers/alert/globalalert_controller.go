@@ -39,7 +39,7 @@ type globalAlertController struct {
 
 // NewGlobalAlertController returns a globalAlertController and for each object it watches,
 // a health.Pinger object is created returned for health check.
-func NewGlobalAlertController(calicoClientSet calicoclient.Interface, linseedClient client.Client, kubeClientSet kubernetes.Interface, enableAnomalyDetection bool, adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController, clusterName string, tenantID string, namespace string, fipsModeEnabled bool, tenantNamespace string) (controller.Controller, []health.Pinger) {
+func NewGlobalAlertController(calicoClientSet calicoclient.Interface, linseedClient client.Client, kubeClientSet kubernetes.Interface, clusterName string, tenantID string, namespace string, fipsModeEnabled bool, tenantNamespace string) (controller.Controller, []health.Pinger) {
 	c := &globalAlertController{
 		linseedClient:   linseedClient,
 		calicoClientSet: calicoClientSet,
@@ -53,17 +53,14 @@ func NewGlobalAlertController(calicoClientSet calicoclient.Interface, linseedCli
 	// Create worker to watch GlobalAlert resource in the cluster
 	c.worker = worker.New(
 		&globalAlertReconciler{
-			linseedClient:          c.linseedClient,
-			calicoClientSet:        c.calicoClientSet,
-			kubeClientSet:          kubeClientSet,
-			adDetectionController:  adDetectionController,
-			adTrainingController:   adTrainingController,
-			alertNameToAlertState:  map[string]alertState{},
-			clusterName:            c.clusterName,
-			tenantID:               c.tenantID,
-			namespace:              namespace,
-			enableAnomalyDetection: enableAnomalyDetection,
-			fipsModeEnabled:        fipsModeEnabled,
+			linseedClient:         c.linseedClient,
+			calicoClientSet:       c.calicoClientSet,
+			kubeClientSet:         kubeClientSet,
+			alertNameToAlertState: map[string]alertState{},
+			clusterName:           c.clusterName,
+			tenantID:              c.tenantID,
+			namespace:             namespace,
+			fipsModeEnabled:       fipsModeEnabled,
 		})
 
 	pinger := c.worker.AddWatch(

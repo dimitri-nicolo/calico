@@ -96,7 +96,6 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 					"tigera-ee-compliance-controller-anyCluster-secure",
 					"tigera-ee-compliance-reporter-anyCluster-secure",
 					"tigera-ee-compliance-snapshotter-anyCluster-secure",
-					"tigera-ee-ad-job-anyCluster-secure",
 					"tigera-ee-performance-hotspots-anyCluster-secure",
 					"tigera-ee-policy-recommendation-anyCluster-secure",
 					"tigera-ee-intrusion-detection-anyCluster-secure",
@@ -111,7 +110,6 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 					"flows_viewer_anyCluster",
 					"l7_viewer_anyCluster",
 					"runtime_viewer_anyCluster",
-					"tigera-ee-ad-job-anyCluster-secure",
 					"tigera-ee-compliance-benchmarker-anyCluster-secure",
 					"tigera-ee-compliance-controller-anyCluster-secure",
 					"tigera-ee-compliance-reporter-anyCluster-secure",
@@ -130,7 +128,6 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 		"tigera-ee-compliance-controller-old-cluster-secure",
 		"tigera-ee-compliance-reporter-old-cluster-secure",
 		"tigera-ee-compliance-snapshotter-old-cluster-secure",
-		"tigera-ee-ad-job-old-cluster-secure",
 		"tigera-ee-performance-hotspots-old-cluster-secure",
 		"tigera-ee-policy-recommendation-old-cluster-secure",
 		"tigera-ee-intrusion-detection-old-cluster-secure",
@@ -146,7 +143,6 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 		"flows_viewer_old-cluster",
 		"l7_viewer_old-cluster",
 		"runtime_viewer_old-cluster",
-		"tigera-ee-ad-job-old-cluster-secure",
 		"tigera-ee-compliance-benchmarker-old-cluster-secure",
 		"tigera-ee-compliance-controller-old-cluster-secure",
 		"tigera-ee-compliance-reporter-old-cluster-secure",
@@ -179,12 +175,12 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 			map[string]bool{"new-cluster": true},
 			[]es.User{
 				{
-					Username: "tigera-ee-ad-job-old-cluster-secure",
-					Roles:    roles("tigera-ee-ad-job-role-old-cluster-secure"),
+					Username: "tigera-ee-intrusion-detection-old-cluster-secure",
+					Roles:    roles("tigera-ee-intrusion-detection-role-old-cluster-secure"),
 				},
 				{
-					Username: "tigera-ee-ad-job-secure",
-					Roles:    roles("tigera-ee-ad-job-role-secure"),
+					Username: "tigera-ee-intrusion-detection-secure",
+					Roles:    roles("tigera-ee-intrusion-detection-role-secure"),
 				},
 			},
 			expectedUsersOldCluster,
@@ -193,12 +189,12 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 			map[string]bool{"new-cluster": true},
 			[]es.User{
 				{
-					Username: "tigera-ee-ad-job-new-cluster-secure",
-					Roles:    roles("tigera-ee-ad-job-role-new-cluster-secure"),
+					Username: "tigera-ee-intrusion-detection-new-cluster-secure",
+					Roles:    roles("tigera-ee-intrusion-detection-role-new-cluster-secure"),
 				},
 				{
-					Username: "tigera-ee-ad-job-secure",
-					Roles:    roles("tigera-ee-ad-job-role-secure"),
+					Username: "tigera-ee-intrusion-detection-secure",
+					Roles:    roles("tigera-ee-intrusion-detection-role-secure"),
 				},
 			},
 			nil,
@@ -212,12 +208,12 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 			map[string]bool{},
 			[]es.User{
 				{
-					Username: "tigera-ee-ad-job-old-cluster-secure",
-					Roles:    roles("tigera-ee-ad-job-role-old-cluster-secure"),
+					Username: "tigera-ee-intrusion-detection-old-cluster-secure",
+					Roles:    roles("tigera-ee-intrusion-detection-role-old-cluster-secure"),
 				},
 				{
-					Username: "tigera-ee-ad-job-secure",
-					Roles:    roles("tigera-ee-ad-job-role-secure"),
+					Username: "tigera-ee-intrusion-detection-secure",
+					Roles:    roles("tigera-ee-intrusion-detection-role-secure"),
 				},
 			},
 			expectedUsersOldCluster,
@@ -236,11 +232,11 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 			map[string]bool{"new-cluster": true},
 			[]es.User{
 				{
-					Username: "tigera-ee-ad-job-old-cluster-secure",
+					Username: "tigera-ee-intrusion-detection-old-cluster-secure",
 					Roles:    roles("watcher_admin"),
 				},
 				{
-					Username: "tigera-ee-ad-job-secure",
+					Username: "tigera-ee-intrusion-detection-secure",
 					Roles:    roles("watcher_admin"),
 				},
 			},

@@ -34,7 +34,7 @@ type managedClusterController struct {
 
 // NewManagedClusterController returns a managedClusterController and returns health.Pinger for resources it watches and also
 // returns another health.Pinger that monitors health of GlobalAlertController in each of the managed cluster.
-func NewManagedClusterController(calicoCLI calicoclient.Interface, lsClient client.Client, k8sClient kubernetes.Interface, client ctrlclient.WithWatch, enableAnomalyDetection bool, anomalyTrainingController controller.AnomalyDetectionController, anomalyDetectionController controller.AnomalyDetectionController, namespace string, createManagedCalicoCLI func(string) (calicoclient.Interface, error), fipsModeEnabled bool, tenantID, tenantNamespace string) controller.Controller {
+func NewManagedClusterController(calicoCLI calicoclient.Interface, lsClient client.Client, k8sClient kubernetes.Interface, client ctrlclient.WithWatch, namespace string, createManagedCalicoCLI func(string) (calicoclient.Interface, error), fipsModeEnabled bool, tenantID, tenantNamespace string) controller.Controller {
 	m := &managedClusterController{
 		lsClient:               lsClient,
 		calicoCLI:              calicoCLI,
@@ -50,10 +50,7 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, lsClient clie
 		managementCalicoCLI:             m.calicoCLI,
 		client:                          client,
 		k8sClient:                       k8sClient,
-		adTrainingController:            anomalyTrainingController,
-		adDetectionController:           anomalyDetectionController,
 		alertNameToAlertControllerState: map[string]alertControllerState{},
-		enableAnomalyDetection:          enableAnomalyDetection,
 		fipsModeEnabled:                 fipsModeEnabled,
 		tenantID:                        tenantID,
 		tenantNamespace:                 tenantNamespace,
