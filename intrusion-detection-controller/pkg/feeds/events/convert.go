@@ -40,6 +40,23 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 		SuspiciousPrefix: nil,
 	}
 
+	var mitreID []string
+	var mitreTactic string
+	if flowLog.Reporter == "dst" {
+		mitreID = []string{"T1090"}
+		mitreTactic = "Command and Control"
+	} else {
+		mitreID = []string{"T1041"}
+		mitreTactic = "Exfiltration"
+	}
+
+	var mitigations []string
+	if record.FlowAction == "deny" {
+		mitigations = []string{"No mitigation needed. This network traffic was blocked by Calico"}
+	} else {
+		mitigations = []string{"Create a global network policy to prevent traffic {to, from} this IP address"}
+	}
+
 	return v1.Event{
 		ID:              generateSuspicousIPSetID(flowLog.StartTime, flowLog.SourceIP, flowLog.SourcePort, flowLog.DestIP, flowLog.DestPort, record),
 		Time:            v1.NewEventTimestamp(flowLog.StartTime),
@@ -61,9 +78,9 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 
 		Name:         feeds[0],
 		AttackVector: "Network",
-		MitreIDs:     &[]string{"T1190"},
-		Mitigations:  &[]string{"Network policies working as expected"},
-		MitreTactic:  "Initial Access",
+		MitreIDs:     &mitreID,
+		Mitigations:  &mitigations,
+		MitreTactic:  mitreTactic,
 	}
 }
 
@@ -160,6 +177,11 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		Feeds:             feeds,
 		SuspiciousDomains: sDomains,
 	}
+
+	mitreID := []string{"T1041"}
+	mitreTactic := "Exfiltration"
+	mitigations := []string{"Create a global network policy to prevent traffic {to, from} this IP address"}
+
 	startTime := l.StartTime.Unix()
 	return v1.Event{
 		ID:              generateSuspiciousDNSDomainID(startTime, util.StrPtr(l.ClientIP), record),
@@ -176,9 +198,9 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 
 		Name:         feeds[0],
 		AttackVector: "Network",
-		MitreIDs:     &[]string{"T1190"},
-		Mitigations:  &[]string{"Network policies working as expected"},
-		MitreTactic:  "Initial Access",
+		MitreIDs:     &mitreID,
+		Mitigations:  &mitigations,
+		MitreTactic:  mitreTactic,
 	}
 }
 

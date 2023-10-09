@@ -43,7 +43,7 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		},
 		Protocol: "tcp",
 		Action:   "allow",
-		Reporter: "felix",
+		Reporter: "src",
 		Policies: &v1.FlowLogPolicy{
 			AllPolicies: []string{"a policy"},
 		},
@@ -85,9 +85,9 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 
 		Name:         "testfeed",
 		AttackVector: "Network",
-		MitreIDs:     &[]string{"T1190"},
-		Mitigations:  &[]string{"Network policies working as expected"},
-		MitreTactic:  "Initial Access",
+		MitreIDs:     &[]string{"T1041"},
+		Mitigations:  &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+		MitreTactic:  "Exfiltration",
 	}
 
 	actual := ConvertFlowLog(tc, storage.QueryKeyFlowLogSourceIP, record.Feeds...)
@@ -122,7 +122,7 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		},
 		Protocol: "tcp",
 		Action:   "allow",
-		Reporter: "felix",
+		Reporter: "dst",
 		Policies: &v1.FlowLogPolicy{
 			AllPolicies: []string{"a policy"},
 		},
@@ -163,9 +163,9 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		Record:          record,
 		Name:            "testfeed",
 		AttackVector:    "Network",
-		MitreIDs:        &[]string{"T1190"},
-		Mitigations:     &[]string{"Network policies working as expected"},
-		MitreTactic:     "Initial Access",
+		MitreIDs:        &[]string{"T1090"},
+		Mitigations:     &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+		MitreTactic:     "Command and Control",
 	}
 
 	actual := ConvertFlowLog(tc, storage.QueryKeyFlowLogDestIP, record.Feeds...)
@@ -200,7 +200,7 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		},
 		Protocol: "tcp",
 		Action:   "allow",
-		Reporter: "felix",
+		Reporter: "src",
 		Policies: &v1.FlowLogPolicy{
 			AllPolicies: []string{"a policy"},
 		},
@@ -241,9 +241,9 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		Record:          record,
 		Name:            "testfeed",
 		AttackVector:    "Network",
-		MitreIDs:        &[]string{"T1190"},
-		Mitigations:     &[]string{"Network policies working as expected"},
-		MitreTactic:     "Initial Access",
+		MitreIDs:        &[]string{"T1041"},
+		Mitigations:     &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+		MitreTactic:     "Exfiltration",
 	}
 
 	actual := ConvertFlowLog(tc, storage.QueryKeyUnknown, record.Feeds...)
@@ -307,9 +307,9 @@ func TestConvertDNSLog_QName(t *testing.T) {
 		},
 		Name:         "test-feed",
 		AttackVector: "Network",
-		MitreIDs:     &[]string{"T1190"},
-		Mitigations:  &[]string{"Network policies working as expected"},
-		MitreTactic:  "Initial Access",
+		MitreIDs:     &[]string{"T1041"},
+		Mitigations:  &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+		MitreTactic:  "Exfiltration",
 	}
 	actual := ConvertDNSLog(tc, storage.QueryKeyDNSLogQName, map[string]struct{}{"www.badguys.co.uk": {}}, "test-feed")
 	g.Expect(actual).To(Equal(expected))
@@ -380,9 +380,9 @@ func TestConvertDNSLog_RRSetName(t *testing.T) {
 		Record:          record,
 		Name:            "test-feed",
 		AttackVector:    "Network",
-		MitreIDs:        &[]string{"T1190"},
-		Mitigations:     &[]string{"Network policies working as expected"},
-		MitreTactic:     "Initial Access",
+		MitreIDs:        &[]string{"T1041"},
+		Mitigations:     &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+		MitreTactic:     "Exfiltration",
 	}
 
 	domains := map[string]struct{}{
@@ -473,9 +473,9 @@ func TestConvertDNSLog_RRSetRData(t *testing.T) {
 		Record:          record,
 		Name:            "test-feed",
 		AttackVector:    "Network",
-		MitreIDs:        &[]string{"T1190"},
-		Mitigations:     &[]string{"Network policies working as expected"},
-		MitreTactic:     "Initial Access",
+		MitreIDs:        &[]string{"T1041"},
+		Mitigations:     &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+		MitreTactic:     "Exfiltration",
 	}
 
 	domains := map[string]struct{}{

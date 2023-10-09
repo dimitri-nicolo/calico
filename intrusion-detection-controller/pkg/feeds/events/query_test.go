@@ -72,9 +72,9 @@ func TestSuspiciousIP_Success(t *testing.T) {
 			SourcePort:   util.I64ptr(333),
 			Name:         "test",
 			AttackVector: "Network",
-			MitreIDs:     &[]string{"T1190"},
-			Mitigations:  &[]string{"Network policies working as expected"},
-			MitreTactic:  "Initial Access",
+			MitreIDs:     &[]string{"T1041"},
+			Mitigations:  &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+			MitreTactic:  "Exfiltration",
 		},
 		{
 			ID:              "test_0__5.6.7.8_333_2.3.4.5_333",
@@ -95,9 +95,9 @@ func TestSuspiciousIP_Success(t *testing.T) {
 			},
 			Name:         "test",
 			AttackVector: "Network",
-			MitreIDs:     &[]string{"T1190"},
-			Mitigations:  &[]string{"Network policies working as expected"},
-			MitreTactic:  "Initial Access",
+			MitreIDs:     &[]string{"T1041"},
+			Mitigations:  &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+			MitreTactic:  "Exfiltration",
 		},
 	}
 
