@@ -98,10 +98,10 @@ struct cali_tc_state {
 	/* We must not scatter the above ^^^ to copy it in a single memcpy */
 
 	/* Result of the conntrack lookup. */
-	struct calico_ct_result ct_result; /* 40 bytes */
+	struct calico_ct_result ct_result; /* 40 (v4) 72 (v6) bytes */
 
 	/* Result of the NAT calculation.  Zeroed if there is no DNAT. */
-	struct calico_nat_dest nat_dest; /* 8 bytes */
+	struct calico_nat_dest nat_dest; /* 8 bytes for v4 and 20 for v6 */
 	__u64 prog_start_time;
 	__u64 flags;
 #ifndef IPVER6

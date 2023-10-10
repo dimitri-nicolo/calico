@@ -772,6 +772,7 @@ func objLoad(fname, bpfFsDir, ipFamily string, topts testOpts, polProg, hasHostC
 		out, _ := cmd.Output()
 		log.WithField("output", string(out)).Debug("map")
 		log.WithField("size", m.MaxEntries()).Debug("libbpf map")
+		log.WithField("entry size", m.ValueSize()).Debug("libbpf map")
 		if err := m.SetPinPath(pin); err != nil {
 			obj.Close()
 			return nil, fmt.Errorf("error pinning map %s: %w", m.Name(), err)

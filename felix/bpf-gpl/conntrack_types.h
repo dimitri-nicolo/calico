@@ -230,7 +230,9 @@ struct calico_ct_result {
 				* ingress interface index.  For a CT state created by a
 				* packet _from_ the host, it's CT_INVALID_IFINDEX (0).
 				*/
-	__u32 __pad;
+#ifndef IPVER6
+	__u32 __pad; /* ipv4 requires aligment to 8 bytes, ipv6 is aligned already */
+#endif
 	__u64 prev_ts; /* This is the previous packet's timestamp for the CT entry */
 };
 
