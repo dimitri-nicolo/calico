@@ -29,16 +29,6 @@ func (r *REST) Destroy() {
 
 }
 
-// NewList returns a new shell of a binding list
-func NewList() runtime.Object {
-	return &v3.AuthorizationReviewList{}
-}
-
-// NewREST returns a RESTStorage object that will work against API services.
-func NewREST(calculator rbac.Calculator) *REST {
-	return &REST{calculator: calculator}
-}
-
 // Takes the userinfo that the authn delegate has put into the context and returns it.
 func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateObjectFunc, _ *metav1.CreateOptions) (runtime.Object, error) {
 	in := obj.(*v3.AuthorizationReview)
@@ -153,6 +143,20 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateOb
 	return out, nil
 }
 
+func (r *REST) GetSingularName() string {
+	return "authorizationreview"
+}
+
 func (r *REST) NamespaceScoped() bool {
 	return false
+}
+
+// NewList returns a new shell of a binding list
+func NewList() runtime.Object {
+	return &v3.AuthorizationReviewList{}
+}
+
+// NewREST returns a RESTStorage object that will work against API services.
+func NewREST(calculator rbac.Calculator) *REST {
+	return &REST{calculator: calculator}
 }

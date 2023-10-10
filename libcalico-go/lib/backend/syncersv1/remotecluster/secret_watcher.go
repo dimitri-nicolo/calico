@@ -174,7 +174,7 @@ func (sw *secretWatcher) SweepStale() {
 	}
 }
 
-func (sw *secretWatcher) OnAdd(obj interface{}) {
+func (sw *secretWatcher) OnAdd(obj interface{}, isInInitialList bool) {
 	log.Debug("Secret added")
 	s := obj.(*v1.Secret)
 	sw.updateSecret(s)
