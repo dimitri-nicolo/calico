@@ -72,9 +72,10 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 			WithField("response", responseText).
 			Info("HTTP request processed")
 
-		if response.StatusCode == 200 {
+		if response.StatusCode/100 == 2 { // any 2xx response code is alright
 			return
 		}
+
 		return fmt.Errorf("unexpected response [%d]:%s", response.StatusCode, responseText)
 	}
 
