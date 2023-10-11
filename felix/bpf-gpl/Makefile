@@ -47,7 +47,7 @@ ifeq ($(ARCH),amd64)
 	CFLAGS += -D__TARGET_ARCH_x86
 endif
 CC := clang-15
-LD := llc-15
+LD := llc
 
 UT_C_FILES:=$(shell find ut -name '*.c')
 UT_OBJS:=$(UT_C_FILES:.c=.o) $(shell ./list-ut-objs)
