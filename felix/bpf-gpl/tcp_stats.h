@@ -16,7 +16,6 @@ static CALI_BPF_INLINE void send_tcp_stats(struct bpf_sock *sk, struct bpf_tcp_s
 	struct calico_socket_stats_value *val = NULL;
 	struct calico_socket_stats_value value = {};
 	__u64 ts = 0;
-	int ret = 0;
 
 	if (tsk) {
 		if (BPF_TCP_ESTABLISHED == sk->state) {
@@ -34,7 +33,7 @@ static CALI_BPF_INLINE void send_tcp_stats(struct bpf_sock *sk, struct bpf_tcp_s
 			val = cali_sstats_lookup_elem(&key);
 			if (val == NULL) {
 				value.timestamp = ts;
-				ret = cali_sstats_update_elem(&key, &value, 0);
+				cali_sstats_update_elem(&key, &value, 0);
 			} else {
 				if (ts - val->timestamp <= SEND_TCP_STATS_INTERVAL) {
 					return;
