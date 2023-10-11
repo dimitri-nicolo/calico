@@ -1642,7 +1642,8 @@ func nextHdrIPProto(nh gopacket.Layer) layers.IPProtocol {
 }
 
 func (pkt *Packet) handleL3() error {
-	if reflect.ValueOf(pkt.l3).IsNil() {
+	v := reflect.ValueOf(pkt.l3)
+	if !v.IsValid() || v.IsNil() {
 		if pkt.family == 4 {
 			pkt.l3 = ipv4Default
 		} else {

@@ -2904,8 +2904,10 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 		denyIdx = tcdefs.ProgIndexV6Drop
 	}
 
+	polprogOpts = append(polprogOpts, polprog.WithAllowDenyJumps(allowIdx, denyIdx))
+
 	pg := polprog.NewBuilder(forceAlloc, ipsMap.MapFD(), testStateMap.MapFD(), jumpMap.MapFD(),
-		polprog.WithAllowDenyJumps(allowIdx, denyIdx))
+		polprogOpts...)
 	if tp.ForIPv6() {
 		pg.EnableIPv6Mode()
 	}
