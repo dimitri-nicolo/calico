@@ -66,9 +66,7 @@ func (m *allHostsIpsetManager) CompleteDeferredWork() error {
 		for _, ip := range m.activeHostnameToIP {
 			members = append(members, ip)
 		}
-		for _, ip := range m.externalNodeCIDRs {
-			members = append(members, ip)
-		}
+		members = append(members, m.externalNodeCIDRs...)
 		m.ipsetsDataplane.AddOrReplaceIPSet(m.ipSetMetadata, members)
 		m.ipSetInSync = true
 	}

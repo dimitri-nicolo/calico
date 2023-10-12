@@ -663,7 +663,7 @@ func (b *PinnedMap) EnsureExists() error {
 		"name", b.VersionedName(),
 		"flags", fmt.Sprint(b.Flags),
 	)
-	out, err := cmd.CombinedOutput()
+	_, err := cmd.CombinedOutput()
 	if err != nil {
 		// In older kernels, map create returns EINVAL when we specify the
 		// "name" argument. Retry with empty map name.
@@ -676,7 +676,7 @@ func (b *PinnedMap) EnsureExists() error {
 			"name", "",
 			"flags", fmt.Sprint(b.Flags),
 		)
-		out, err = cmd.CombinedOutput()
+		out, err := cmd.CombinedOutput()
 		if err != nil {
 			logrus.WithField("out", string(out)).Error("Failed to run bpftool")
 			return err

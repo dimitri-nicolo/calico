@@ -159,11 +159,6 @@ type eventHdr struct {
 	Len  uint32
 }
 
-type eventTimestampHdr struct {
-	eventHdr
-	TimestampNS uint64
-}
-
 func parseEvent(raw eventRaw) (Event, error) {
 
 	var hdr eventHdr
@@ -232,7 +227,7 @@ type PolicyVerdict struct {
 	DstPort        uint16
 	PostNATDstPort uint16
 	IPProto        uint8
-	pad8           uint8
+	pad8           uint8 //nolint:unused // Ignore U1000 unused
 	IPSize         uint16
 	RulesHit       uint32
 	RuleIDs        [state.MaxRuleIDs]uint64

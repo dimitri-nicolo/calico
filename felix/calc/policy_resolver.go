@@ -94,7 +94,6 @@ func (pr *PolicyResolver) RegisterCallback(cb PolicyResolverCallbacks) {
 }
 
 func (pr *PolicyResolver) OnUpdate(update api.Update) (filterOut bool) {
-	policiesDirty := false
 	switch key := update.Key.(type) {
 	case model.WorkloadEndpointKey, model.HostEndpointKey:
 		if update.Value != nil {
@@ -118,13 +117,13 @@ func (pr *PolicyResolver) OnUpdate(update api.Update) (filterOut bool) {
 		if !pr.policyIDToEndpointIDs.ContainsKey(key) {
 			return
 		}
-		policiesDirty = pr.policySorter.OnUpdate(update)
+		policiesDirty := pr.policySorter.OnUpdate(update)
 		if policiesDirty {
 			pr.markEndpointsMatchingPolicyDirty(key)
 		}
 	case model.TierKey:
 		log.Debugf("Tier update: %v", key)
-		policiesDirty = pr.policySorter.OnUpdate(update)
+		pr.policySorter.OnUpdate(update)
 		pr.markAllEndpointsDirty()
 	}
 	gaugeNumActivePolicies.Set(float64(pr.policyIDToEndpointIDs.Len()))

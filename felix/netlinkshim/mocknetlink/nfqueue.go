@@ -72,13 +72,12 @@ type MockNfQueue struct {
 	SetVerdictErrs []error
 	Closed         bool
 
-	lock         sync.Mutex
-	packetID     uint32
-	allPacketIDs []uint32
-	closeErr     error
-	registerErr  error
-	hookFunc     gonfqueue.HookFunc
-	errFunc      gonfqueue.ErrorFunc
+	lock        sync.Mutex
+	packetID    uint32
+	closeErr    error
+	registerErr error
+	hookFunc    gonfqueue.HookFunc
+	errFunc     gonfqueue.ErrorFunc
 }
 
 func (m *MockNfQueue) IsRegistered() bool {

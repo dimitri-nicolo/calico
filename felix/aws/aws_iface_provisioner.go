@@ -451,6 +451,7 @@ func (m *SecondaryIfaceProvisioner) newBackoffManager() wait.BackoffManager {
 		backoffFactor = 2.0
 		jitter        = 0.1
 	)
+	//nolint:staticcheck // Ignore SA1019 deprecated
 	backoffMgr := wait.NewExponentialBackoffManager(initBackoff, maxBackoff, resetDuration, backoffFactor, jitter, m.backoffClock)
 	return backoffMgr
 }
@@ -1255,16 +1256,14 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(awsState *awsState, bestSub
 				"Found unattached Calico ENI with no private IP?  Remove.")
 			deleteENI = true
 		} else if m.mode == v3.AWSSecondaryIPEnabled {
-			var primaryIP ip.Addr
-			primaryIP = ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
+			primaryIP := ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
 			if !m.ourHostIPs.Contains(primaryIP) {
 				logrus.WithField("eniID", eniID).Info(
 					"Found unattached Calico ENI with no corresponding IPAM entry.  Remove.")
 				deleteENI = true
 			}
 		} else if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
-			var primaryIP ip.Addr
-			primaryIP = ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
+			primaryIP := ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
 			if _, ok := m.ds.LocalAWSAddrsByDst[primaryIP]; !ok {
 				logrus.WithField("eniID", eniID).Info(
 					"Found unattached Calico ENI that no longer matches a workload.  Remove.")

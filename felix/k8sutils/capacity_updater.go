@@ -30,7 +30,6 @@ type CapacityUpdater struct {
 	clock     clock.Clock
 
 	lastCapacityUpdate *aws.SecondaryIfaceCapacities
-	resyncNeeded       bool
 }
 
 const (
@@ -223,6 +222,7 @@ func (u *CapacityUpdater) newBackoffManager() wait.BackoffManager {
 		backoffFactor = 2.0
 		jitter        = 0.1
 	)
+	//nolint:staticcheck // Ignore SA1019 deprecated
 	backoffMgr := wait.NewExponentialBackoffManager(initBackoff, maxBackoff, resetDuration, backoffFactor, jitter, u.clock)
 	return backoffMgr
 }

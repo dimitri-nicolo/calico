@@ -104,12 +104,16 @@ var withDNSPolicy = initialisedStore.withKVUpdates(
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.ext-service"}, Value: &policyDNSExternal},
 ).withActivePolicies(
-	proto.PolicyID{"default", "default.dns-basic"},
-	proto.PolicyID{"default", "default.ext-service"},
+	proto.PolicyID{Tier: "default", Name: "default.dns-basic"},
+	proto.PolicyID{Tier: "default", Name: "default.ext-service"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
-		{"default", nil, []string{"default.ext-service", "default.dns-basic"}},
+		{
+			Name:               "default",
+			IngressPolicyNames: nil,
+			EgressPolicyNames:  []string{"default.ext-service", "default.dns-basic"},
+		},
 	},
 ).withIPSet(allSelectorId, []string{
 	"fc00:fe11::1/128",
@@ -138,12 +142,16 @@ var withDNSPolicy2 = initialisedStore.withKVUpdates(
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.ext-service-2"}, Value: &policyDNSExternal2},
 ).withActivePolicies(
-	proto.PolicyID{"default", "default.dns-basic"},
-	proto.PolicyID{"default", "default.ext-service-2"},
+	proto.PolicyID{Tier: "default", Name: "default.dns-basic"},
+	proto.PolicyID{Tier: "default", Name: "default.ext-service-2"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
-		{"default", nil, []string{"default.ext-service-2", "default.dns-basic"}},
+		{
+			Name:               "default",
+			IngressPolicyNames: nil,
+			EgressPolicyNames:  []string{"default.ext-service-2", "default.dns-basic"},
+		},
 	},
 ).withIPSet(allSelectorId, []string{
 	"fc00:fe11::1/128",
@@ -166,12 +174,16 @@ var withDNSPolicy3 = initialisedStore.withKVUpdates(
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.destination-domains"}, Value: &policyDNSExternal3},
 ).withActivePolicies(
-	proto.PolicyID{"default", "default.dns-basic"},
-	proto.PolicyID{"default", "default.destination-domains"},
+	proto.PolicyID{Tier: "default", Name: "default.dns-basic"},
+	proto.PolicyID{Tier: "default", Name: "default.destination-domains"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
-		{"default", nil, []string{"default.destination-domains", "default.dns-basic"}},
+		{
+			Name:               "default",
+			IngressPolicyNames: nil,
+			EgressPolicyNames:  []string{"default.destination-domains", "default.dns-basic"},
+		},
 	},
 ).withIPSet(allSelectorId, []string{
 	"fc00:fe11::1/128",

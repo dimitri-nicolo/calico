@@ -54,7 +54,7 @@ var _ = Describe("FelixDaemon license checks", func() {
 	BeforeEach(func() {
 		// Create a config resource with all of the licensed features.
 		cfg = config.New()
-		cfg.UpdateFrom(map[string]string{
+		_, err := cfg.UpdateFrom(map[string]string{
 			"IPSecMode":                  "PSK",
 			"IPSecAllowUnsecuredTraffic": "false",
 			"PrometheusReporterEnabled":  "true",
@@ -62,6 +62,7 @@ var _ = Describe("FelixDaemon license checks", func() {
 			"FlowLogsFileEnabled":        "true",
 			"EgressIPSupport":            "EnabledPerNamespace",
 		}, config.DatastoreGlobal)
+		Expect(err).NotTo(HaveOccurred())
 
 		Expect(cfg.IPSecMode).To(Equal("PSK"))
 		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeFalse())

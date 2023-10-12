@@ -1276,7 +1276,7 @@ func (m *egressIPManager) deleteRouteTable(index int) {
 		log.WithField("tableIndex", index).Debug("Cannot delete routing table, it does not exist.")
 		return
 	}
-	for dst, _ := range m.tableIndexToEgressTable[index].routes {
+	for dst := range m.tableIndexToEgressTable[index].routes {
 		log.WithFields(log.Fields{
 			"index":       index,
 			"destination": dst,

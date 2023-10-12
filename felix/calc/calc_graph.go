@@ -140,11 +140,6 @@ type PipelineCallbacks interface {
 	packetCaptureCallbacks
 }
 
-type endpointPolicyCache interface {
-	endpointCallbacks
-	ruleScanner
-}
-
 type CalcGraph struct {
 	// AllUpdDispatcher is the input node to the calculation graph.
 	AllUpdDispatcher *dispatcher.Dispatcher

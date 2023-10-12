@@ -121,25 +121,25 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 		labelsExpected := t.options.ExpectLabels
 		if labelsExpected {
 			if fl.FlowLabels.SrcLabels == nil {
-				return errors.New(fmt.Sprintf("Missing src Labels in %v: Meta %v", fl.FlowLabels, fl.FlowMeta))
+				return fmt.Errorf("missing src Labels in %v: Meta %v", fl.FlowLabels, fl.FlowMeta)
 			}
 			if fl.FlowLabels.DstLabels == nil {
-				return errors.New(fmt.Sprintf("Missing dst Labels in %v", fl.FlowLabels))
+				return fmt.Errorf("missing dst Labels in %v", fl.FlowLabels)
 			}
 		} else {
 			if fl.FlowLabels.SrcLabels != nil {
-				return errors.New(fmt.Sprintf("Unexpected src Labels in %v", fl.FlowLabels))
+				return fmt.Errorf("unexpected src Labels in %v", fl.FlowLabels)
 			}
 			if fl.FlowLabels.DstLabels != nil {
-				return errors.New(fmt.Sprintf("Unexpected dst Labels in %v", fl.FlowLabels))
+				return fmt.Errorf("unexpected dst Labels in %v", fl.FlowLabels)
 			}
 		}
 		if t.options.ExpectPolicies {
 			if len(fl.FlowPolicies) == 0 {
-				return errors.New(fmt.Sprintf("Missing Policies in %v", fl.FlowMeta))
+				return fmt.Errorf("missing Policies in %v", fl.FlowMeta)
 			}
 		} else if len(fl.FlowPolicies) != 0 {
-			return errors.New(fmt.Sprintf("Unexpected Policies %v in %v", fl.FlowPolicies, fl.FlowMeta))
+			return fmt.Errorf("unexpected Policies %v in %v", fl.FlowPolicies, fl.FlowMeta)
 		}
 
 		// Never include source port as it is usually ephemeral and difficult to test for.  Instead if the source port
@@ -170,8 +170,8 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 		// For each distinct FlowMeta, the counts of flows started and completed should be the same.
 		for fm, fl := range t.flows {
 			if fl.FlowReportedStats.NumFlowsStarted != fl.FlowReportedStats.NumFlowsCompleted {
-				return errors.New(fmt.Sprintf("Flow started/completed counts do not match (%d != %d): %#v",
-					fl.FlowReportedStats.NumFlowsStarted, fl.FlowReportedStats.NumFlowsCompleted, fm))
+				return fmt.Errorf("flow started/completed counts do not match (%d != %d): %#v",
+					fl.FlowReportedStats.NumFlowsStarted, fl.FlowReportedStats.NumFlowsCompleted, fm)
 			}
 		}
 	}
@@ -179,7 +179,7 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 	// Check that we have non-zero packets for each flow.
 	for fm, fl := range t.flows {
 		if fl.FlowReportedStats.PacketsOut+fl.FlowReportedStats.PacketsIn == 0 {
-			return errors.New(fmt.Sprintf("Flow has no packets: %#v", fm))
+			return fmt.Errorf("flow has no packets: %#v", fm)
 		}
 	}
 

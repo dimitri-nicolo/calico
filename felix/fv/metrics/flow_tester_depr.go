@@ -79,17 +79,17 @@ func (t *FlowTesterDeprecated) PopulateFromFlowLogs(flowLogsOutput string) error
 			labelsExpected := t.expectLabels
 			if labelsExpected {
 				if fl.FlowLabels.SrcLabels == nil {
-					return errors.New(fmt.Sprintf("Missing src Labels in %v: Meta %v", fl.FlowLabels, fl.FlowMeta))
+					return fmt.Errorf("missing src Labels in %v: Meta %v", fl.FlowLabels, fl.FlowMeta)
 				}
 				if fl.FlowLabels.DstLabels == nil {
-					return errors.New(fmt.Sprintf("Missing dst Labels in %v", fl.FlowLabels))
+					return fmt.Errorf("missing dst Labels in %v", fl.FlowLabels)
 				}
 			} else {
 				if fl.FlowLabels.SrcLabels != nil {
-					return errors.New(fmt.Sprintf("Unexpected src Labels in %v", fl.FlowLabels))
+					return fmt.Errorf("unexpected src Labels in %v", fl.FlowLabels)
 				}
 				if fl.FlowLabels.DstLabels != nil {
-					return errors.New(fmt.Sprintf("Unexpected dst Labels in %v", fl.FlowLabels))
+					return fmt.Errorf("unexpected dst Labels in %v", fl.FlowLabels)
 				}
 			}
 
@@ -100,7 +100,7 @@ func (t *FlowTesterDeprecated) PopulateFromFlowLogs(flowLogsOutput string) error
 
 			if t.expectPolicies {
 				if len(fl.FlowPolicies) == 0 {
-					return errors.New(fmt.Sprintf("Missing Policies in %v", fl.FlowMeta))
+					return fmt.Errorf("missing Policies in %v", fl.FlowMeta)
 				}
 				pols := []string{}
 				for p := range fl.FlowPolicies {
@@ -108,7 +108,7 @@ func (t *FlowTesterDeprecated) PopulateFromFlowLogs(flowLogsOutput string) error
 				}
 				t.policies[ii][fl.FlowMeta] = pols
 			} else if len(fl.FlowPolicies) != 0 {
-				return errors.New(fmt.Sprintf("Unexpected Policies %v in %v", fl.FlowPolicies, fl.FlowMeta))
+				return fmt.Errorf("unexpected Policies %v in %v", fl.FlowPolicies, fl.FlowMeta)
 			}
 
 			// Accumulate flow and packet counts for this FlowMeta.
@@ -132,8 +132,8 @@ func (t *FlowTesterDeprecated) PopulateFromFlowLogs(flowLogsOutput string) error
 			// and completed should be the same.
 			for meta, count := range t.flowsCompleted[ii] {
 				if count != t.flowsStarted[ii][meta] {
-					return errors.New(fmt.Sprintf("Wrong started count (%d != %d) for %v",
-						t.flowsStarted[ii][meta], count, meta))
+					return fmt.Errorf("wrong started count (%d != %d) for %v",
+						t.flowsStarted[ii][meta], count, meta)
 				}
 			}
 		}
@@ -141,7 +141,7 @@ func (t *FlowTesterDeprecated) PopulateFromFlowLogs(flowLogsOutput string) error
 		// Check that we have non-zero packets for each flow.
 		for meta, count := range t.packets[ii] {
 			if count == 0 {
-				return errors.New(fmt.Sprintf("No packets for %v", meta))
+				return fmt.Errorf("no packets for %v", meta)
 			}
 		}
 	}

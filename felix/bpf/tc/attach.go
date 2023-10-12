@@ -340,21 +340,6 @@ func (ap *AttachPoint) listAttachedPrograms(includeLegacy bool) ([]attachedProg,
 	return progsToClean, nil
 }
 
-func patchVethNs(nsId uint16, ifile, ofile string) error {
-	b, err := bpf.BinaryFromFile(ifile)
-	if err != nil {
-		return fmt.Errorf("failed to read pre-compiled BPF binary: %w", err)
-	}
-
-	b.PatchIfNS(nsId)
-	err = b.WriteToFile(ofile)
-	if err != nil {
-		return fmt.Errorf("failed to write pre-compiled BPF binary: %w", err)
-	}
-
-	return nil
-}
-
 // ProgramName returns the name of the program associated with this AttachPoint
 func (ap *AttachPoint) ProgramName() string {
 	return tcdefs.SectionName(ap.Type, ap.ToOrFrom)
@@ -367,7 +352,7 @@ var ErrNoTC = errors.New("no TC program attached")
 func (ap *AttachPoint) ProgramID() (int, error) {
 	out, err := ExecTC("filter", "show", "dev", ap.IfaceName(), ap.Hook.String())
 	if err != nil {
-		return -1, fmt.Errorf("Failed to check interface %s program ID: %w", ap.Iface, err)
+		return -1, fmt.Errorf("failed to check interface %s program ID: %w", ap.Iface, err)
 	}
 
 	s := strings.Fields(string(out))
@@ -379,13 +364,13 @@ func (ap *AttachPoint) ProgramID() (int, error) {
 		if s[i] == "id" && len(s) > i+1 {
 			progID, err := strconv.Atoi(s[i+1])
 			if err != nil {
-				return -1, fmt.Errorf("Couldn't parse ID in 'tc filter' command err=%w out=\n%v", err, string(out))
+				return -1, fmt.Errorf("couldn't parse ID in 'tc filter' command err=%w out=\n%v", err, string(out))
 			}
 
 			return progID, nil
 		}
 	}
-	return -1, fmt.Errorf("Couldn't find 'id <ID> in 'tc filter' command out=\n%v err=%w", string(out), ErrNoTC)
+	return -1, fmt.Errorf("couldn't find 'id <ID> in 'tc filter' command out=\n%v err=%w", string(out), ErrNoTC)
 }
 
 func (ap *AttachPoint) IsAttached() (bool, error) {
@@ -439,10 +424,10 @@ func RemoveQdisc(ifaceName string) error {
 
 	// Remove the json files of the programs attached to the interface for both directions
 	if err = bpf.ForgetAttachedProg(ifaceName, hook.Ingress); err != nil {
-		return fmt.Errorf("Failed to remove runtime json file of ingress direction: %w", err)
+		return fmt.Errorf("failed to remove runtime json file of ingress direction: %w", err)
 	}
 	if err = bpf.ForgetAttachedProg(ifaceName, hook.Egress); err != nil {
-		return fmt.Errorf("Failed to remove runtime json file of egress direction: %w", err)
+		return fmt.Errorf("failed to remove runtime json file of egress direction: %w", err)
 	}
 
 	return libbpf.RemoveQDisc(ifaceName)

@@ -1377,7 +1377,7 @@ func FromConfigUpdate(msg *proto.ConfigUpdate) *Config {
 	// config object, but we use DatastorePerHost here, as the
 	// source, because proto.ConfigUpdate is formed by merging
 	// global and per-host datastore configuration fields.
-	p.UpdateFrom(msg.Config, DatastorePerHost)
+	_, _ = p.UpdateFrom(msg.Config, DatastorePerHost)
 	return p
 }
 

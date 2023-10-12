@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	//nolint:staticcheck // Ignore SA1019 deprecated
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 

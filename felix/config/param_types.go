@@ -199,7 +199,6 @@ func (p *SecondsParam) Parse(raw string) (result interface{}, err error) {
 		err = p.parseFailed(raw, fmt.Sprintf("value must be at most %v", p.Max))
 	}
 	return result, err
-	return
 }
 
 type MillisParam struct {

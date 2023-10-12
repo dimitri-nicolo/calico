@@ -896,10 +896,10 @@ func (a *awsIPManager) updateRouteRules(activeRuleKeys set.Set[awsRuleKey]) {
 }
 
 func (a *awsIPManager) getOrAllocRoutingTable(ifaceName string) routetable.RouteTableInterface {
-	if rt, ok := a.routeTablesByIfaceName[ifaceName]; !ok {
+	if _, ok := a.routeTablesByIfaceName[ifaceName]; !ok {
 		logrus.WithField("ifaceName", ifaceName).Info("Making routing table for AWS interface.")
 		tableIndex := a.claimTableID()
-		rt = a.newRouteTable(
+		rt := a.newRouteTable(
 			[]string{"^" + regexp.QuoteMeta(ifaceName) + "$", routetable.InterfaceNone},
 			4,
 			false,

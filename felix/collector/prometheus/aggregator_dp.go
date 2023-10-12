@@ -150,7 +150,6 @@ func (dp *DeniedPacketsAggregator) reportMetric(mu metric.Update) {
 		return
 	}
 	dp.aggStats[key] = value
-	return
 }
 
 func (dp *DeniedPacketsAggregator) expireMetric(mu metric.Update) {
@@ -191,7 +190,6 @@ func (dp *DeniedPacketsAggregator) expireMetric(mu metric.Update) {
 	if value.refs.Len() == 0 {
 		dp.markForDeletion(key)
 	}
-	return
 }
 
 func (dp *DeniedPacketsAggregator) markForDeletion(key DeniedPacketsAggregateKey) {

@@ -172,7 +172,9 @@ func (c *FlowLogReporter) Report(u interface{}) error {
 	}
 
 	for _, agg := range c.aggregators {
-		agg.a.FeedUpdate(&mu)
+		if err := agg.a.FeedUpdate(&mu); err != nil {
+			log.WithError(err).Debug("failed to feed metric update")
+		}
 	}
 	return nil
 }
@@ -211,7 +213,9 @@ func (fr *FlowLogReporter) run() {
 							"size":       len(fl),
 							"dispatcher": d,
 						}).Debug("Dispatching log buffer")
-						d.Report(fl)
+						if err := d.Report(fl); err != nil {
+							log.WithError(err).Debug("failed to dispatch flow log")
+						}
 					}
 				}
 			}

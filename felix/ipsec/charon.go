@@ -162,11 +162,15 @@ func (charon *CharonIKEDaemon) Start(ctx context.Context, doneWG *sync.WaitGroup
 		select {
 		case <-ctx.Done():
 			log.Info("Context finished, shutting down charon.")
-			cmd.Signal(syscall.SIGTERM)
+			if err := cmd.Signal(syscall.SIGTERM); err != nil {
+				log.WithError(err).Error("failed to send SIGTERM signal")
+			}
 			select {
 			case <-charon.after(5 * time.Second):
 				log.Error("charon didn't exit, killing it")
-				cmd.Kill()
+				if err := cmd.Kill(); err != nil {
+					log.WithError(err).Error("failed to kill charon")
+				}
 			case <-processExited:
 				log.Info("Charon exited.")
 			}

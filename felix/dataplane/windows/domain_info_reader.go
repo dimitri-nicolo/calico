@@ -76,7 +76,9 @@ func (r *domainInfoReader) Start(msgChan chan<- common.DataWithTimestamp) {
 
 	r.storeMsgChannel = msgChan
 
-	r.etwOps.SubscribeToPktMon(r.msgChannel, r.stopChannel, r.trustedServers, true, r.pktMonStartArgs)
+	if err := r.etwOps.SubscribeToPktMon(r.msgChannel, r.stopChannel, r.trustedServers, true, r.pktMonStartArgs); err != nil {
+		log.WithError(err).Error("failed to subscribe to pktmon")
+	}
 
 	go r.loop()
 }

@@ -352,7 +352,7 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domain
 
 func (m *IPSetsManager) removeDomainIPSetTracking(ipSetId string) {
 	log.Infof("Domain set removed: id=%v", ipSetId)
-	for domain, _ := range m.domainSetIds {
+	for domain := range m.domainSetIds {
 		m.domainRemovedFromSet(domain, ipSetId)
 	}
 	delete(m.domainSetProgramming, ipSetId)

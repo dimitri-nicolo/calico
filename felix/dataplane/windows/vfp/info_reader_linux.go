@@ -20,7 +20,6 @@ func (r *InfoReader) Start() error {
 }
 
 func (r *InfoReader) Stop() {
-	return
 }
 
 // PacketInfoChan returns the channel with converted PacketInfo.
@@ -40,10 +39,8 @@ func (r *InfoReader) EndpointEventHandler() *InfoReader {
 
 // Cache endpoint updates.
 func (r *InfoReader) HandleEndpointsUpdate(ids []string) {
-	return
 }
 
 // Cache policy updates.
 func (r *InfoReader) HandlePolicyUpdate(id string) {
-	return
 }

@@ -4,7 +4,6 @@ package flowlog
 
 import (
 	"fmt"
-	"net"
 	"strings"
 
 	"github.com/projectcalico/calico/felix/calc"
@@ -75,26 +74,6 @@ func stringToLabels(labelStr string) map[string]string {
 	}
 	labels := strings.Split(labelStr[1:len(labelStr)-1], ",")
 	return unflattenLabels(labels)
-}
-
-func flattenIPSlice(ips []net.IP) []string {
-	ipSlice := []string{}
-	for _, ip := range ips {
-		ipSlice = append(ipSlice, ip.String())
-	}
-	return ipSlice
-}
-
-func unflattenIPSlice(ipSlice []string) []net.IP {
-	ips := []net.IP{}
-	for _, ipStr := range ipSlice {
-		ip := net.ParseIP(ipStr)
-		if ip == nil {
-			continue
-		}
-		ips = append(ips, ip)
-	}
-	return ips
 }
 
 func getService(svc metric.ServiceInfo) FlowService {

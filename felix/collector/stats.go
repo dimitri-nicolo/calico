@@ -348,9 +348,6 @@ type Data struct {
 	// Indicates if this is a connection
 	IsConnection bool
 
-	// Connection mark, 0 if connection is not marked
-	mark int
-
 	// Indicates if this connection is proxied or not
 	IsProxied bool
 
@@ -734,8 +731,8 @@ func (d *Data) PreDNATTuple() (tuple.Tuple, error) {
 // metricUpdateIngressConn creates a metric update for Inbound connection traffic
 func (d *Data) MetricUpdateIngressConn(ut metric.UpdateType) metric.Update {
 	metricDstServiceInfo := metric.ServiceInfo{
-		d.DstSvc,
-		d.PreDNATPort,
+		ServicePortName: d.DstSvc,
+		PortNum:         d.PreDNATPort,
 	}
 
 	metricUpdate := metric.Update{
@@ -779,8 +776,8 @@ func (d *Data) MetricUpdateIngressConn(ut metric.UpdateType) metric.Update {
 // MetricUpdateEgressConn creates a metric update for Outbound connection traffic
 func (d *Data) MetricUpdateEgressConn(ut metric.UpdateType) metric.Update {
 	metricDstServiceInfo := metric.ServiceInfo{
-		d.DstSvc,
-		d.PreDNATPort,
+		ServicePortName: d.DstSvc,
+		PortNum:         d.PreDNATPort,
 	}
 
 	metricUpdate := metric.Update{
@@ -824,8 +821,8 @@ func (d *Data) MetricUpdateEgressConn(ut metric.UpdateType) metric.Update {
 // metricUpdateIngressNoConn creates a metric update for Inbound non-connection traffic
 func (d *Data) MetricUpdateIngressNoConn(ut metric.UpdateType) metric.Update {
 	metricDstServiceInfo := metric.ServiceInfo{
-		d.DstSvc,
-		d.PreDNATPort,
+		ServicePortName: d.DstSvc,
+		PortNum:         d.PreDNATPort,
 	}
 
 	metricUpdate := metric.Update{
@@ -864,8 +861,8 @@ func (d *Data) MetricUpdateIngressNoConn(ut metric.UpdateType) metric.Update {
 // metricUpdateEgressNoConn creates a metric update for Outbound non-connection traffic
 func (d *Data) MetricUpdateEgressNoConn(ut metric.UpdateType) metric.Update {
 	metricDstServiceInfo := metric.ServiceInfo{
-		d.DstSvc,
-		d.PreDNATPort,
+		ServicePortName: d.DstSvc,
+		PortNum:         d.PreDNATPort,
 	}
 
 	metricUpdate := metric.Update{
@@ -914,8 +911,8 @@ func (d *Data) MetricUpdateOrigSourceIPs(ut metric.UpdateType) metric.Update {
 	}
 
 	metricDstServiceInfo := metric.ServiceInfo{
-		d.DstSvc,
-		d.PreDNATPort,
+		ServicePortName: d.DstSvc,
+		PortNum:         d.PreDNATPort,
 	}
 
 	mu := metric.Update{
