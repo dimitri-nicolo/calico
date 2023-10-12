@@ -54,7 +54,11 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 	if record.FlowAction == "deny" {
 		mitigations = []string{"No mitigation needed. This network traffic was blocked by Calico"}
 	} else {
-		mitigations = []string{"Create a global network policy to prevent traffic {to, from} this IP address"}
+		if flowLog.Reporter == "dst" {
+			mitigations = []string{"Create a global network policy to prevent traffic to this IP address"}
+		} else {
+			mitigations = []string{"Create a global network policy to prevent traffic from this IP address"}
+		}
 	}
 
 	return v1.Event{
@@ -178,10 +182,6 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		SuspiciousDomains: sDomains,
 	}
 
-	mitreID := []string{"T1041"}
-	mitreTactic := "Exfiltration"
-	mitigations := []string{"Create a global network policy to prevent traffic {to, from} this IP address"}
-
 	startTime := l.StartTime.Unix()
 	return v1.Event{
 		ID:              generateSuspiciousDNSDomainID(startTime, util.StrPtr(l.ClientIP), record),
@@ -198,9 +198,9 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 
 		Name:         feeds[0],
 		AttackVector: "Network",
-		MitreIDs:     &mitreID,
-		Mitigations:  &mitigations,
-		MitreTactic:  mitreTactic,
+		MitreIDs:     &[]string{"T1041"},
+		Mitigations:  &[]string{"Create a global network policy to prevent traffic from this IP address"},
+		MitreTactic:  "Exfiltration",
 	}
 }
 
