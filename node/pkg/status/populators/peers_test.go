@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
@@ -252,7 +253,7 @@ BGP state:          Established
 			},
 			v3.CalicoNodePeer{
 				PeerIP: "2001:20::8",
-				Type:   v3.RouteSourceTypeNodeMesh,
+				Type:   v3.BGPPeerTypeNodeMesh,
 				State:  v3.BGPSessionStateEstablished,
 				Since:  "2016-11-21",
 			},
