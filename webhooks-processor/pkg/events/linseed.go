@@ -67,7 +67,7 @@ func FetchSecurityEventsFunc(ctx context.Context, query *query.Query, fromStamp 
 
 	events, err := securityEventsClient.List(ctx, &queryParameters)
 	if err != nil {
-		logrus.Error("Linseed error occured when fetching events")
+		logrus.WithError(err).Error("Linseed error occured when fetching events")
 		return []lsApi.Event{}
 	}
 
