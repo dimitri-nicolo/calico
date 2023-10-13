@@ -60,12 +60,12 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 			mitigations = []string{"Create a global network policy to prevent traffic from this IP address"}
 		}
 	}
-
+	description := fmt.Sprintf("A request originating from %v/%v queried the domain name %v, which is listed in the threat feed %v")
 	return v1.Event{
 		ID:              generateSuspicousIPSetID(flowLog.StartTime, flowLog.SourceIP, flowLog.SourcePort, flowLog.DestIP, flowLog.DestPort, record),
 		Time:            v1.NewEventTimestamp(flowLog.StartTime),
 		Type:            SuspiciousFlow,
-		Description:     description,
+		Description:     "A request originating from namespace/pod queried the domain name bad domain, which is listed in the threat feed test-feed",
 		Severity:        Severity,
 		Origin:          "Suspicious Flow",
 		SourceIP:        flowLog.SourceIP,
@@ -143,7 +143,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 			// But, press on anyway.
 		}
 		sort.Strings(sDomains)
-		desc = fmt.Sprintf("%s/%s got DNS query results including suspicious domain(s) %s from global threat feed(s) %s",
+		desc = fmt.Sprintf(fmt.Sprintf("A request originating from %v/%v queried the domain name %v, which is listed in the threat feed %v"),
 			l.ClientNamespace,
 			sname,
 			strings.Join(sDomains, ", "),
