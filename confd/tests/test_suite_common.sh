@@ -1742,29 +1742,45 @@ spec:
       matchOperator: In
       cidr: 77.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 77.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV4:
     - action: Accept
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 9000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -1854,29 +1870,45 @@ spec:
       matchOperator: In
       cidr: 77.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 77.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV4:
     - action: Accept
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 9000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPFilter
 apiVersion: projectcalico.org/v3
@@ -1888,29 +1920,45 @@ spec:
       matchOperator: In
       cidr: 77.2.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 77.3.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV4:
     - action: Accept
       matchOperator: In
       cidr: 44.2.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.3.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 9000:2::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:3::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000:2::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:3::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -2045,29 +2093,45 @@ spec:
       matchOperator: In
       cidr: 77.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 77.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV4:
     - action: Accept
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 9000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPFilter
 apiVersion: projectcalico.org/v3
@@ -2079,29 +2143,45 @@ spec:
       matchOperator: In
       cidr: 77.2.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 77.3.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV4:
     - action: Accept
       matchOperator: In
       cidr: 44.2.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.3.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 9000:2::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:3::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000:2::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:3::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -2194,29 +2274,45 @@ spec:
       matchOperator: In
       cidr: 77.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 77.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV4:
     - action: Accept
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 9000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPFilter
 apiVersion: projectcalico.org/v3
@@ -2228,29 +2324,45 @@ spec:
       matchOperator: In
       cidr: 77.2.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 77.3.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV4:
     - action: Accept
       matchOperator: In
       cidr: 44.2.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.3.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 9000:2::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:3::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000:2::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:3::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -2379,29 +2491,45 @@ spec:
       matchOperator: In
       cidr: 77.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 77.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV4:
     - action: Accept
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 9000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 EOF
 
     test_confd_templates bgpfilter/node_mesh
@@ -2484,29 +2612,45 @@ spec:
       matchOperator: In
       cidr: 77.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 77.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV4:
     - action: Accept
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 9000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -2604,6 +2748,7 @@ metadata:
 spec:
   exportV4:
     - action: Accept
+      source: RemotePeers
       matchOperator: In
       cidr: 77.0.0.0/16
     - action: Reject
@@ -2617,6 +2762,7 @@ spec:
       cidr: 77.3.0.0/16
   importV4:
     - action: Accept
+      source: RemotePeers
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
@@ -2630,6 +2776,7 @@ spec:
       cidr: 44.3.0.0/16
   exportV6:
     - action: Accept
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:0::0/64
     - action: Reject
@@ -2643,6 +2790,7 @@ spec:
       cidr: 9000:3::0/64
   importV6:
     - action: Accept
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:0::0/64
     - action: Reject
@@ -2936,15 +3084,23 @@ spec:
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPFilter
 apiVersion: projectcalico.org/v3
@@ -2956,15 +3112,23 @@ spec:
       matchOperator: In
       cidr: 44.2.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.3.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000:2::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:3::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -3099,15 +3263,23 @@ spec:
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -3197,15 +3369,23 @@ spec:
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPFilter
 apiVersion: projectcalico.org/v3
@@ -3217,15 +3397,23 @@ spec:
       matchOperator: In
       cidr: 44.2.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.3.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 5000:2::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:3::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -3360,15 +3548,23 @@ spec:
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -3458,15 +3654,23 @@ spec:
       matchOperator: In
       cidr: 77.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 77.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV4:
     - action: Accept
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPFilter
 apiVersion: projectcalico.org/v3
@@ -3478,15 +3682,23 @@ spec:
       matchOperator: In
       cidr: 77.2.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 77.3.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV4:
     - action: Accept
       matchOperator: In
       cidr: 44.2.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.3.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -3617,15 +3829,23 @@ spec:
       matchOperator: In
       cidr: 77.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 77.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV4:
     - action: Accept
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -3715,15 +3935,23 @@ spec:
       matchOperator: In
       cidr: 9000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPFilter
 apiVersion: projectcalico.org/v3
@@ -3735,15 +3963,23 @@ spec:
       matchOperator: In
       cidr: 9000:2::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:3::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000:2::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:3::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -3874,15 +4110,23 @@ spec:
       matchOperator: In
       cidr: 9000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 9000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3

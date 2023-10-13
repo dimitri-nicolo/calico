@@ -172,8 +172,9 @@ var (
 
 	GlobalAlertTypeRegex = regexp.MustCompile("^(RuleBased)$")
 
-	filterActionRegex  = regexp.MustCompile("^(Accept|Reject)$")
-	matchOperatorRegex = regexp.MustCompile("^(Equal|In|NotEqual|NotIn)$")
+	filterActionRegex         = regexp.MustCompile("^(Accept|Reject)$")
+	matchOperatorRegex        = regexp.MustCompile("^(Equal|In|NotEqual|NotIn)$")
+	bgpFilterMatchSourceRegex = regexp.MustCompile("^(RemotePeers)$")
 
 	minAggregationKindValue    = 0
 	maxAggregationKindValue    = 2
@@ -304,6 +305,7 @@ func init() {
 	// Register filter action and match operator validators (used in BGPFilter)
 	registerFieldValidator("filterAction", RegexValidator("FilterAction", filterActionRegex))
 	registerFieldValidator("matchOperator", RegexValidator("MatchOperator", matchOperatorRegex))
+	registerFieldValidator("bgpFilterMatchSource", RegexValidator("Source", bgpFilterMatchSourceRegex))
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).
@@ -356,6 +358,8 @@ func init() {
 	registerStructValidator(validate, validateEntityRule, api.EntityRule{})
 	registerStructValidator(validate, validateRemoteClusterConfigSpec, api.RemoteClusterConfigurationSpec{})
 	registerStructValidator(validate, validateBGPPeerSpec, api.BGPPeerSpec{})
+	registerStructValidator(validate, validateBGPFilterRuleV4, api.BGPFilterRuleV4{})
+	registerStructValidator(validate, validateBGPFilterRuleV6, api.BGPFilterRuleV6{})
 	registerStructValidator(validate, validateNetworkPolicy, api.NetworkPolicy{})
 	registerStructValidator(validate, validateGlobalNetworkPolicy, api.GlobalNetworkPolicy{})
 	registerStructValidator(validate, validateStagedNetworkPolicy, api.StagedNetworkPolicy{})
@@ -1880,6 +1884,27 @@ func validateReachableByField(fl validator.FieldLevel) bool {
 		}
 	}
 	return true
+}
+
+func validateBGPFilterRuleV4(structLevel validator.StructLevel) {
+	fs := structLevel.Current().Interface().(api.BGPFilterRuleV4)
+	validateBGPFilterRule(structLevel, fs.CIDR, fs.MatchOperator)
+}
+
+func validateBGPFilterRuleV6(structLevel validator.StructLevel) {
+	fs := structLevel.Current().Interface().(api.BGPFilterRuleV6)
+	validateBGPFilterRule(structLevel, fs.CIDR, fs.MatchOperator)
+}
+
+func validateBGPFilterRule(structLevel validator.StructLevel, cidr string, op api.BGPFilterMatchOperator) {
+	if cidr != "" && op == "" {
+		structLevel.ReportError(cidr, "CIDR", "",
+			reason("MatchOperator cannot be empty when CIDR is not"), "")
+	}
+	if cidr == "" && op != "" {
+		structLevel.ReportError(op, "MatchOperator", "",
+			reason("CIDR cannot be empty when MatchOperator is not"), "")
+	}
 }
 
 // validateEgressGatewayPolicy validates an egress gateway policy.

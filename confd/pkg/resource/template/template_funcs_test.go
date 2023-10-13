@@ -59,33 +59,57 @@ func Test_EmitBIRDBGPFilterFuncs(t *testing.T) {
 	testFilter.Spec = v3.BGPFilterSpec{
 		ImportV4: []v3.BGPFilterRuleV4{
 			{Action: "reject", MatchOperator: "Equal", CIDR: "44.4.0.0/16"},
+			{Action: "reject", Source: "RemotePeers", MatchOperator: "NotIn", CIDR: "55.4.0.0/16"},
+			{Action: "accept", Source: "RemotePeers"},
+			{Action: "reject"},
 		},
 		ExportV4: []v3.BGPFilterRuleV4{
 			{Action: "accept", MatchOperator: "In", CIDR: "77.7.0.0/16"},
+			{Action: "reject", Source: "RemotePeers", MatchOperator: "NotIn", CIDR: "88.7.0.0/16"},
+			{Action: "accept", Source: "RemotePeers"},
+			{Action: "reject"},
 		},
 		ImportV6: []v3.BGPFilterRuleV6{
-			{Action: "reject", MatchOperator: "NotEqual", CIDR: "7000:1::0/64"},
+			{Action: "accept", MatchOperator: "NotEqual", CIDR: "7000:1::0/64"},
+			{Action: "reject", Source: "RemotePeers", MatchOperator: "NotEqual", CIDR: "8000:1::0/64"},
+			{Action: "accept", Source: "RemotePeers"},
+			{Action: "reject"},
 		},
 		ExportV6: []v3.BGPFilterRuleV6{
 			{Action: "accept", MatchOperator: "NotIn", CIDR: "9000:1::0/64"},
+			{Action: "reject", Source: "RemotePeers", MatchOperator: "NotIn", CIDR: "a000:1::0/64"},
+			{Action: "accept", Source: "RemotePeers"},
+			{Action: "reject"},
 		},
 	}
 	expectedBIRDCfgStrV4 := []string{
 		"# v4 BGPFilter test-bgpfilter",
 		"function 'bgp_test-bgpfilter_importFilterV4'() {",
-		"  if ( net = 44.4.0.0/16 ) then { reject; }",
+		"  if ((net = 44.4.0.0/16)) then { reject; }",
+		"  if ((net !~ 55.4.0.0/16) && ((defined(source)) && (source ~ [ RTS_BGP ]))) then { reject; }",
+		"  if (((defined(source)) && (source ~ [ RTS_BGP ]))) then { accept; }",
+		"  reject;",
 		"}",
 		"function 'bgp_test-bgpfilter_exportFilterV4'() {",
-		"  if ( net ~ 77.7.0.0/16 ) then { accept; }",
+		"  if ((net ~ 77.7.0.0/16)) then { accept; }",
+		"  if ((net !~ 88.7.0.0/16) && ((defined(source)) && (source ~ [ RTS_BGP ]))) then { reject; }",
+		"  if (((defined(source)) && (source ~ [ RTS_BGP ]))) then { accept; }",
+		"  reject;",
 		"}",
 	}
 	expectedBIRDCfgStrV6 := []string{
 		"# v6 BGPFilter test-bgpfilter",
 		"function 'bgp_test-bgpfilter_importFilterV6'() {",
-		"  if ( net != 7000:1::0/64 ) then { reject; }",
+		"  if ((net != 7000:1::0/64)) then { accept; }",
+		"  if ((net != 8000:1::0/64) && ((defined(source)) && (source ~ [ RTS_BGP ]))) then { reject; }",
+		"  if (((defined(source)) && (source ~ [ RTS_BGP ]))) then { accept; }",
+		"  reject;",
 		"}",
 		"function 'bgp_test-bgpfilter_exportFilterV6'() {",
-		"  if ( net !~ 9000:1::0/64 ) then { accept; }",
+		"  if ((net !~ 9000:1::0/64)) then { accept; }",
+		"  if ((net !~ a000:1::0/64) && ((defined(source)) && (source ~ [ RTS_BGP ]))) then { reject; }",
+		"  if (((defined(source)) && (source ~ [ RTS_BGP ]))) then { accept; }",
+		"  reject;",
 		"}",
 	}
 
@@ -102,7 +126,7 @@ func Test_EmitBIRDBGPFilterFuncs(t *testing.T) {
 		t.Errorf("Unexpected error while generating v4 BIRD BGPFilter functions: %s", err)
 	}
 	if !reflect.DeepEqual(v4BIRDCfgResult, expectedBIRDCfgStrV4) {
-		t.Errorf("Generated v4 BIRD config differs from expectation: Generated = %s, Expected = %s",
+		t.Errorf("Generated v4 BIRD config differs from expectation:\n Generated = %s,\n Expected = %s",
 			v4BIRDCfgResult, expectedBIRDCfgStrV4)
 	}
 

@@ -73,22 +73,72 @@ func EmitExternalNetworkTableName(name string) (string, error) {
 
 // emitBGPFilterStatement produces a single comparison expression to be used within a multi-statement BIRD filter
 // function.
-// e.g input of ("In", "77.0.0.1/16", "accept") produces output of "if ( net ~ 77.0.0.1/16 ) then { accept; }"
-func emitBGPFilterStatement(matchOperator, cidr, action string) (string, error) {
-	matchOperatorLUT := map[string]string{
+// e.g input of ("In", "77.0.0.1/16", "accept") produces output of "if ((net ~ 77.0.0.1/16)) then { accept; }"
+func emitBGPFilterStatement(matchOperator, cidr, source, mAction string) (string, error) {
+	actionStatement, err := emitFilterAction(mAction)
+	if err != nil {
+		return "", err
+	}
+
+	var filterStatement string
+	if cidr != "" {
+		if matchOperator == "" {
+			return "", fmt.Errorf("Operator not included in BGPFilter")
+		}
+		matchCIDRStatement, err := emitFilterMatchCIDR(cidr, matchOperator)
+		if err != nil {
+			return "", err
+		}
+		filterStatement = fmt.Sprintf("if (%s", matchCIDRStatement)
+	}
+
+	if source != "" {
+		matchTypeStatment, err := emitFilterMatchSource(source)
+		if err != nil {
+			return "", nil
+		}
+		if filterStatement != "" {
+			filterStatement = fmt.Sprintf("%s && %s", filterStatement, matchTypeStatment)
+		} else {
+			filterStatement = fmt.Sprintf("if (%s", matchTypeStatment)
+		}
+	}
+
+	if filterStatement != "" {
+		filterStatement = fmt.Sprintf("%s) then { %s }", filterStatement, actionStatement)
+	} else {
+		filterStatement = actionStatement
+	}
+	return filterStatement, nil
+}
+
+func emitFilterAction(mAction string) (string, error) {
+	action := strings.ToLower(mAction)
+	if action != "accept" && action != "reject" {
+		return "", fmt.Errorf("Unexpected action found in BGPFilter: %s", mAction)
+	}
+	return fmt.Sprintf("%s;", action), nil
+}
+
+func emitFilterMatchCIDR(cidr, operator string) (string, error) {
+	operatorLUT := map[string]string{
 		string(v3.Equal): "=",
 		v3.NotEqual:      "!=",
 		v3.In:            "~",
 		v3.NotIn:         "!~",
 	}
-
-	op, ok := matchOperatorLUT[matchOperator]
+	op, ok := operatorLUT[operator]
 	if !ok {
-		err := fmt.Errorf("Unexpected operator found in BGPFilter: %s", matchOperator)
-		return "", err
+		return "", fmt.Errorf("Unexpected operator found in BGPFilter: %s", operator)
 	}
+	return fmt.Sprintf("(net %s %s)", op, cidr), nil
+}
 
-	return fmt.Sprintf("if ( net %s %s ) then { %s; }", op, cidr, strings.ToLower(action)), nil
+func emitFilterMatchSource(source string) (string, error) {
+	if source != "RemotePeers" {
+		return "", fmt.Errorf("Unexpected source found in BGPFilter: %s", source)
+	}
+	return "((defined(source)) && (source ~ [ RTS_BGP ]))", nil
 }
 
 // EmitBGPFilterFunctionName returns a formatted name for use as a BIRD function, truncating and hashing if the provided
@@ -96,10 +146,7 @@ func emitBGPFilterStatement(matchOperator, cidr, action string) (string, error) 
 // e.g. input of ("my-bgp-filter", "import", "4") would result in output of "'bgp_my-bpg-filter_importFilterV4'"
 func EmitBGPFilterFunctionName(filterName, direction, version string) (string, error) {
 	normalizedDirection := strings.ToLower(direction)
-	switch normalizedDirection {
-	case "import":
-	case "export":
-	default:
+	if normalizedDirection != "import" && normalizedDirection != "export" {
 		return "", fmt.Errorf("Provided direction '%s' does not map to either 'import' or 'export'", direction)
 	}
 	pieces := []string{"bgp_", "", "_", normalizedDirection, "FilterV", version}
@@ -305,12 +352,12 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 //	[]string{
 //	  "# v4 BGPFilter test-bgpfilter",
 //	  "function 'bgp_test-bgpfilter_importFilterV4'() {",
-//	  "  if ( net ~ 44.0.0.0/16 ) then { accept; }",
-//	  "  if ( net ~ 44.1.0.0/16 ) then { reject; }",
+//	  "  if ((net ~ 44.0.0.0/16)) then { accept; }",
+//	  "  if ((net ~ 44.1.0.0/16)) then { reject; }",
 //	  "}",
 //	  "function 'bgp_test-bgpfilter_exportFilterV4'() {",
-//	  "  if ( net ~ 77.0.0.0/16 ) then { accept; }",
-//	  "  if ( net ~ 77.1.0.0/16 ) then { reject; }",
+//	  "  if ((net ~ 77.0.0.0/16)) then { accept; }",
+//	  "  if ((net ~ 77.1.0.0/16)) then { reject; }",
 //	  "}",
 //	 }
 func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) {
@@ -318,12 +365,9 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 	var line string
 	var versionStr string
 
-	switch version {
-	case 4:
-		fallthrough
-	case 6:
+	if version == 4 || version == 6 {
 		versionStr = fmt.Sprintf("%d", version)
-	default:
+	} else {
 		return []string{}, fmt.Errorf("Version must be either 4 or 6")
 	}
 
@@ -373,17 +417,17 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 			if v4Selected {
 				for _, importV4 := range importFiltersV4 {
 					ruleFields = append(ruleFields, []string{string(importV4.MatchOperator), importV4.CIDR,
-						string(importV4.Action)})
+						string(importV4.Source), string(importV4.Action)})
 				}
 			} else {
 				for _, importV6 := range importFiltersV6 {
 					ruleFields = append(ruleFields, []string{string(importV6.MatchOperator), importV6.CIDR,
-						string(importV6.Action)})
+						string(importV6.Source), string(importV6.Action)})
 				}
 			}
 
 			for _, fields := range ruleFields {
-				filterRule, err = emitBGPFilterStatement(fields[0], fields[1], fields[2])
+				filterRule, err = emitBGPFilterStatement(fields[0], fields[1], fields[2], fields[3])
 				if err != nil {
 					return []string{}, err
 				}
@@ -408,17 +452,17 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 			if v4Selected {
 				for _, exportV4 := range exportFiltersV4 {
 					ruleFields = append(ruleFields, []string{string(exportV4.MatchOperator), exportV4.CIDR,
-						string(exportV4.Action)})
+						string(exportV4.Source), string(exportV4.Action)})
 				}
 			} else {
 				for _, exportV6 := range exportFiltersV6 {
 					ruleFields = append(ruleFields, []string{string(exportV6.MatchOperator), exportV6.CIDR,
-						string(exportV6.Action)})
+						string(exportV6.Source), string(exportV6.Action)})
 				}
 			}
 
 			for _, fields := range ruleFields {
-				filterRule, err = emitBGPFilterStatement(fields[0], fields[1], fields[2])
+				filterRule, err = emitBGPFilterStatement(fields[0], fields[1], fields[2], fields[3])
 				if err != nil {
 					return []string{}, err
 				}
