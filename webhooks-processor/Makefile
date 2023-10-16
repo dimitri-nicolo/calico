@@ -76,3 +76,11 @@ clean:
 	-rm -f ./bin/*
 	-rm -f $(WEBHOOKS_PROCESSOR_CONTAINER_CREATED)
 	-docker rmi -f $$(docker images -aq $(WEBHOOKS_IMAGE))
+
+###############################################################################
+# SEMAPHORE
+###############################################################################
+sem-build: static-checks build
+	$(MAKE) push-ci-images
+
+sem-fv: pull-ci-images fv
