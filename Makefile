@@ -75,9 +75,14 @@ MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANC
 Makefile.common: Makefile.common.$(MAKE_BRANCH)
 	cp "$<" "$@"
 Makefile.common.$(MAKE_BRANCH):
+ifeq ($(OS),Windows_NT)
+	rm -force Makefile.common.*
+	curl -usebasicparsing -uri $(MAKE_REPO)/Makefile.common -outfile "$@"
+else
 	# Clean up any files downloaded from other branches so they don't accumulate.
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+endif
 
 include Makefile.common
 

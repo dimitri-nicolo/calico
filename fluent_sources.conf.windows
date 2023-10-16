@@ -39,3 +39,37 @@
   time_key time
   time_format %Y-%m-%dT%H:%M:%S.%N%z
 </source>
+
+<source>
+  @type prometheus
+  bind 0.0.0.0
+  port 9081
+  metrics_path /metrics
+  <transport tls>
+    cert_path "#{ENV['TLS_CRT_PATH']}"
+    private_key_path "#{ENV['TLS_KEY_PATH']}"
+    ca_path "#{ENV['CA_CRT_PATH']}"
+    client_cert_auth true
+  </transport>
+</source>
+
+<source>
+  @type prometheus_monitor
+  <labels>
+    hostname ${hostname}
+  </labels>
+</source>
+
+<source>
+  @type prometheus_output_monitor
+  <labels>
+    hostname ${hostname}
+  </labels>
+</source>
+
+<source>
+  @type prometheus_tail_monitor
+  <labels>
+    hostname ${hostname}
+  </labels>
+</source>

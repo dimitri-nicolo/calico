@@ -95,6 +95,11 @@ ENV L7_LOG_FILE=${ROOT_DIR}/var/log/calico/l7logs/l7.log
 ENV EE_AUDIT_LOG_FILE=${ROOT_DIR}/var/log/calico/audit/tsee-audit.log
 ENV RUNTIME_LOG_FILE=${ROOT_DIR}/var/log/calico/runtime-security/report.log
 
+# TLS Settings
+ENV TLS_KEY_PATH=${ROOT_DIR}/tls/tls.key
+ENV TLS_CRT_PATH=${ROOT_DIR}/tls/tls.crt
+ENV CA_CRT_PATH=${ROOT_DIR}/etc/pki/tigera/tigera-ca-bundle.crt
+
 ENV ELASTIC_HOST=elasticsearch
 ENV ELASTIC_PORT=9200
 ENV ELASTIC_FLUSH_INTERVAL=5s
@@ -159,7 +164,7 @@ RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_flows" \
 EXPOSE 24284
 
 ENTRYPOINT []
-# The inner command run by bash.exe is the actual ruby path (c:/ruby27).
+# The inner command run by bash.exe is the actual ruby path (c:/ruby31).
 # Using the symlinked path (c:/ruby) fails at runtime:
 # c:/ruby/bin/fluentd: Invalid argument @ rb_readlink - c:/ruby (Errno::EINVAL)
 #
