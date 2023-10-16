@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/config"
+
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
@@ -18,7 +20,6 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
@@ -33,8 +34,8 @@ func RunFlowLogTest(t *testing.T, name string, testFn func(*testing.T, bapi.Inde
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.FlowLogIndex)()
-		testFn(t, index.FlowLogIndex)
+		defer setupAndTeardown(t, args, index.FlowLogIndex())()
+		testFn(t, index.FlowLogIndex())
 	})
 }
 

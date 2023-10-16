@@ -33,8 +33,8 @@ func RunBGPLogTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.BGPLogIndex)()
-		testFn(t, index.BGPLogIndex)
+		defer setupAndTeardown(t, args, index.BGPLogIndex())()
+		testFn(t, index.BGPLogIndex())
 	})
 }
 

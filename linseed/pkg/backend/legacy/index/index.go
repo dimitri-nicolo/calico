@@ -28,30 +28,157 @@ var (
 )
 
 // Single index - these all use a single index for all clusters and tenants.
-var (
-	FlowLogIndex             bapi.Index = singleIndex{name: "calico_flowlogs", dataType: bapi.FlowLogs}
-	BGPLogIndex              bapi.Index = singleIndex{name: "calico_bgplogs", dataType: bapi.BGPLogs}
-	ComplianceSnapshotIndex  bapi.Index = singleIndex{name: "calico_compliance_snapshots", dataType: bapi.Snapshots}
-	ComplianceBenchmarkIndex bapi.Index = singleIndex{name: "calico_compliance_benchmark_results", dataType: bapi.Benchmarks}
-	ComplianceReportIndex    bapi.Index = singleIndex{name: "calico_compliance_reports", dataType: bapi.ReportData}
-	DNSLogIndex              bapi.Index = singleIndex{name: "calico_dnslogs", dataType: bapi.DNSLogs}
-	AlertsIndex              bapi.Index = singleIndex{name: "calico_alerts", dataType: bapi.Events}
-	L7LogIndex               bapi.Index = singleIndex{name: "calico_l7logs", dataType: bapi.L7Logs}
-	RuntimeReportIndex       bapi.Index = singleIndex{name: "calico_runtime_reports", dataType: bapi.RuntimeReports}
-	ThreatfeedsDomainIndex   bapi.Index = singleIndex{name: "calico_threatfeeds_domainnameset", dataType: bapi.DomainNameSet}
-	ThreatfeedsIPSetIndex    bapi.Index = singleIndex{name: "calico_threatfeeds_ipset", dataType: bapi.IPSet}
-	WAFLogIndex              bapi.Index = singleIndex{name: "calico_waf", dataType: bapi.WAFLogs}
 
+type Option func(index bapi.Index)
+
+func WithIndexName(name string) Option {
+	return func(index bapi.Index) {
+		//index.SetName(name)
+	}
+}
+
+func WithPolicyName(name string) Option {
+	return func(index bapi.Index) {
+		//index.SetPolicyName(name)
+	}
+}
+
+func AlertsIndex(options ...Option) bapi.Index {
+	index := singleIndex{name: "calico_alerts", policyName: "tigera_secure_ee_events_policy", dataType: bapi.Events}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
+
+func AuditLogIndex(options ...Option) bapi.Index {
 	// The AuditLogIndex uses data type AuditEELogs, but it's actually used for both AuditEELogs and AuditKubeLogs.
 	// This is OK because our code for initializing indicies treats these the same anyway.
-	AuditLogIndex bapi.Index = singleIndex{name: "calico_auditlogs", dataType: bapi.AuditEELogs}
-)
+	index := singleIndex{name: "calico_auditlogs", policyName: "tigera_secure_ee_audit_ee_policy", dataType: bapi.AuditEELogs}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
+
+func BGPLogIndex(options ...Option) bapi.Index {
+	index := singleIndex{name: "calico_bgplogs", policyName: "tigera_secure_ee_bgp_policy", dataType: bapi.BGPLogs}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
+
+func ComplianceBenchmarksIndex(options ...Option) bapi.Index {
+	index := singleIndex{name: "calico_compliance_benchmark_results", policyName: "tigera_secure_ee_benchmark_results_policy", dataType: bapi.Benchmarks}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
+
+func ComplianceReportsIndex(options ...Option) bapi.Index {
+	index := singleIndex{name: "calico_compliance_reports", policyName: "tigera_secure_ee_compliance_reports_policy", dataType: bapi.ReportData}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
+
+func ComplianceSnapshotsIndex(options ...Option) bapi.Index {
+	index := singleIndex{name: "calico_compliance_snapshots", policyName: "tigera_secure_ee_snapshots_policy", dataType: bapi.Snapshots}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
+func DNSLogIndex(options ...Option) bapi.Index {
+	index := singleIndex{name: "calico_dnslogs", policyName: "tigera_secure_ee_dns_policy", dataType: bapi.DNSLogs}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
+
+func FlowLogIndex(options ...Option) bapi.Index {
+	index := singleIndex{name: "calico_flowlogs", policyName: "tigera_secure_ee_flows_policy", dataType: bapi.FlowLogs}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
+
+func L7LogIndex(options ...Option) bapi.Index {
+	index := singleIndex{name: "calico_l7logs", policyName: "tigera_secure_ee_l7_policy", dataType: bapi.L7Logs}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
+
+func RuntimeReportsIndex(options ...Option) bapi.Index {
+	index := singleIndex{name: "calico_runtime_reports", policyName: "tigera_secure_ee_runtime_policy", dataType: bapi.RuntimeReports}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
+
+func ThreatFeedsIPSetIndex(options ...Option) bapi.Index {
+	index := singleIndex{name: "calico_threatfeeds_ipset", dataType: bapi.IPSet}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
+
+func ThreatFeedsDomainSetIndex(options ...Option) bapi.Index {
+	index := singleIndex{name: "calico_threatfeeds_domainnameset", dataType: bapi.DomainNameSet}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
+func WAFLogIndex(options ...Option) bapi.Index {
+	index := singleIndex{name: "calico_waf", policyName: "tigera_secure_ee_waf_policy", dataType: bapi.WAFLogs}
+
+	for _, opt := range options {
+		opt(index)
+	}
+
+	return &index
+}
 
 // singleIndex implements the Index interface for an index mode that uses a single index
 // to store data for multiple clusters and tenants.
 type singleIndex struct {
-	name     string
-	dataType bapi.DataType
+	name       string
+	policyName string
+	dataType   bapi.DataType
 }
 
 func (i singleIndex) Name(info bapi.ClusterInfo) string {
@@ -84,9 +211,7 @@ func (i singleIndex) DataType() bapi.DataType {
 }
 
 func (i singleIndex) ILMPolicyName() string {
-	// TODO: This uses the old polciy name until we implement ILM policies for the new indicies.
-	// This allows the new indicies to be compatible with ILM policies already being provisioned by the operator.
-	return fmt.Sprintf("tigera_secure_ee_%s_policy", i.DataType())
+	return i.policyName
 }
 
 func NewMultiIndex(baseName string, dataType bapi.DataType) bapi.Index {

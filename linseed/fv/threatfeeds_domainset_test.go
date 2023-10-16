@@ -34,8 +34,8 @@ func RunThreatfeedsDomainTest(t *testing.T, name string, testFn func(*testing.T,
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.ThreatfeedsDomainIndex)()
-		testFn(t, index.ThreatfeedsDomainIndex)
+		defer setupAndTeardown(t, args, index.ThreatFeedsDomainSetIndex())()
+		testFn(t, index.ThreatFeedsDomainSetIndex())
 	})
 }
 

@@ -41,9 +41,9 @@ func RunRuntimeReportTest(t *testing.T, name string, testFn func(*testing.T, bap
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.RuntimeReportIndex)()
-		defer runtimeReportsSetupAndTeardown(t, args, index.RuntimeReportIndex)()
-		testFn(t, index.RuntimeReportIndex)
+		defer setupAndTeardown(t, args, index.RuntimeReportsIndex())()
+		defer runtimeReportsSetupAndTeardown(t, args, index.RuntimeReportsIndex())()
+		testFn(t, index.RuntimeReportsIndex())
 	})
 }
 

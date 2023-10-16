@@ -43,7 +43,7 @@ func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagination
 	}
 }
 
-func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.WAFBackend {
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.WAFBackend {
 	return &wafLogBackend{
 		client:               c.Backend(),
 		queryHelper:          lmaindex.SingleIndexWAFLogs(),
@@ -51,7 +51,7 @@ func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, dee
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
 		singleIndex:          true,
-		index:                index.WAFLogIndex,
+		index:                index.WAFLogIndex(options...),
 	}
 }
 
@@ -63,7 +63,7 @@ type logWithExtras struct {
 
 // prepareForWrite wraps a log in a document that includes the cluster and tenant if
 // the backend is configured to write to a single index.
-func (b *wafLogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.WAFLog) interface{} {
+func (b wafLogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.WAFLog) interface{} {
 	if b.singleIndex {
 		return &logWithExtras{
 			WAFLog:  l,
@@ -75,7 +75,7 @@ func (b *wafLogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.WAFLog) interfa
 }
 
 // Create the given logs in elasticsearch.
-func (b *wafLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1.WAFLog) (*v1.BulkResponse, error) {
+func (b wafLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1.WAFLog) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
 	if err := i.Valid(); err != nil {
@@ -121,7 +121,7 @@ func (b *wafLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 }
 
 // List lists logs that match the given parameters.
-func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogParams) (*v1.List[v1.WAFLog], error) {
+func (b wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogParams) (*v1.List[v1.WAFLog], error) {
 	log := bapi.ContextLogger(i)
 
 	// Get the base query.
@@ -160,7 +160,7 @@ func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WA
 	}, nil
 }
 
-func (b *wafLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogAggregationParams) (*elastic.Aggregations, error) {
+func (b wafLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogAggregationParams) (*elastic.Aggregations, error) {
 	// Get the base query.
 	search, _, err := b.getSearch(i, &opts.WAFLogParams)
 	if err != nil {
@@ -194,7 +194,7 @@ func (b *wafLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opt
 	return &results.Aggregations, nil
 }
 
-func (b *wafLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.WAFLogParams) (*elastic.SearchService, int, error) {
+func (b wafLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.WAFLogParams) (*elastic.SearchService, int, error) {
 	if err := i.Valid(); err != nil {
 		return nil, 0, err
 	}
@@ -227,7 +227,7 @@ func (b *wafLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.WAFLogParams) (*e
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *wafLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.WAFLogParams) (elastic.Query, error) {
+func (b wafLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.WAFLogParams) (elastic.Query, error) {
 	// Start with the base flow log query using common fields.
 	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
 	query, err := logtools.BuildQuery(b.queryHelper, i, opts, start, end)

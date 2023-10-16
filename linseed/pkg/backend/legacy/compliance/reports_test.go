@@ -76,12 +76,12 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create backends to use.
 	if singleIndex {
+		rIndexGetter = index.ComplianceReportsIndex()
+		bIndexGetter = index.ComplianceBenchmarksIndex()
+		sIndexGetter = index.ComplianceSnapshotsIndex()
 		rb = compliance.NewSingleIndexReportsBackend(client, cache, 10000)
 		bb = compliance.NewSingleIndexBenchmarksBackend(client, cache, 10000)
 		sb = compliance.NewSingleIndexSnapshotBackend(client, cache, 10000)
-		rIndexGetter = index.ComplianceReportIndex
-		bIndexGetter = index.ComplianceBenchmarkIndex
-		sIndexGetter = index.ComplianceSnapshotIndex
 	} else {
 		rb = compliance.NewReportsBackend(client, cache, 10000)
 		bb = compliance.NewBenchmarksBackend(client, cache, 10000)

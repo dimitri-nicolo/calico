@@ -100,3 +100,55 @@ func RunLinseed(t *testing.T, args *RunLinseedArgs) *containers.Container {
 	c.StopLogs()
 	return c
 }
+
+type RunConfigureElasticArgs struct {
+	AlertIndexName                 string
+	AlertPolicyName                string
+	AuditIndexName                 string
+	AuditPolicyName                string
+	BGPIndexName                   string
+	BGPPolicyName                  string
+	ComplianceBenchmarksIndexName  string
+	ComplianceBenchmarksPolicyName string
+	ComplianceReportsIndexName     string
+	ComplianceReportsPolicyName    string
+	ComplianceSnapshotsIndexName   string
+	ComplianceSnapshotsPolicyName  string
+	DNSIndexName                   string
+	DNSPolicyName                  string
+	FlowIndexName                  string
+	FlowPolicyName                 string
+	L7IndexName                    string
+	L7PolicyName                   string
+	RuntimeReportsIndexName        string
+	RuntimeReportsPolicyName       string
+	ThreatFeedsIPSetIndexName      string
+	ThreatFeedsIPSetPolicyName     string
+	ThreatFeedsDomainSetIndexName  string
+	ThreatFeedsDomainSetPolicyName string
+	WAFIndexName                   string
+	WAFPolicyName                  string
+}
+
+func RunConfigureElasticLinseed(t *testing.T, args *RunConfigureElasticArgs) *containers.Container {
+	// The container library uses gomega, so we need to connect our testing.T to it.
+	gomega.RegisterTestingT(t)
+
+	dockerArgs := []string{
+		"--net=host",
+		"-e", "ELASTIC_HOST=localhost",
+		"-e", "ELASTIC_SCHEME=http",
+		"-e", "LINSEED_LOG_LEVEL=debug",
+		"-e", fmt.Sprintf("LINSEED_BACKEND=%s", config.BackendTypeSingleIndex),
+		"-e", fmt.Sprintf("ELASTIC_FLOW_INDEX_NAME=%s", args.FlowIndexName),
+		"-e", fmt.Sprintf("ELASTIC_FLOW_POLICY_NAME=%s", args.FlowPolicyName),
+		"tigera/linseed:latest",
+		"-configure-elastic-indices",
+	}
+
+	name := "tigera-configure-elastic-linseed-fv"
+
+	c := containers.Run(name, containers.RunOpts{RunAndExit: true, AutoRemove: true, OutputWriter: logutils.TestingTWriter{t}}, dockerArgs...)
+	c.StopLogs()
+	return c
+}

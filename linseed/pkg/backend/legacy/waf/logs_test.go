@@ -71,8 +71,8 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Instantiate a backend.
 	if singleIndex {
+		indexGetter = index.WAFLogIndex()
 		b = waf.NewSingleIndexBackend(client, cache, 10000)
-		indexGetter = index.WAFLogIndex
 	} else {
 		b = waf.NewBackend(client, cache, 10000)
 		indexGetter = index.WAFLogMultiIndex

@@ -51,7 +51,7 @@ func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagination
 	}
 }
 
-func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.AuditBackend {
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.AuditBackend {
 	return &auditLogBackend{
 		client:               c.Backend(),
 		queryHelper:          lmaindex.SingleIndexAuditLogs(),
@@ -61,9 +61,9 @@ func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, dee
 		singleIndex:          true,
 
 		// For single-index, the log type is encoded into the document, and we use the same index for all log types.
-		eeIndex:   index.AuditLogIndex,
-		kubeIndex: index.AuditLogIndex,
-		anyIndex:  index.AuditLogIndex,
+		eeIndex:   index.AuditLogIndex(options...),
+		kubeIndex: index.AuditLogIndex(options...),
+		anyIndex:  index.AuditLogIndex(options...),
 	}
 }
 

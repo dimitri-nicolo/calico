@@ -51,11 +51,11 @@ func NewDNSFlowBackend(c lmaelastic.Client) bapi.DNSFlowBackend {
 	return newFlowBackend(c, false)
 }
 
-func NewSingleIndexDNSFlowBackend(c lmaelastic.Client) bapi.DNSFlowBackend {
-	return newFlowBackend(c, true)
+func NewSingleIndexDNSFlowBackend(c lmaelastic.Client, options ...index.Option) bapi.DNSFlowBackend {
+	return newFlowBackend(c, true, options...)
 }
 
-func newFlowBackend(c lmaelastic.Client, singleIndex bool) bapi.DNSFlowBackend {
+func newFlowBackend(c lmaelastic.Client, singleIndex bool, options ...index.Option) bapi.DNSFlowBackend {
 	// These are the keys which define a DNS flow in ES, and will be used to create buckets in the ES result.
 	compositeSources := []lmaelastic.AggCompositeSourceInfo{
 		{Name: "client_namespace", Field: "client_namespace"},
@@ -77,7 +77,7 @@ func newFlowBackend(c lmaelastic.Client, singleIndex bool) bapi.DNSFlowBackend {
 		{Name: dnsAggMeanLatencyCount, Field: "latency_mean", WeightField: "latency_count"},
 	}
 
-	indexTemplate := index.DNSLogIndex
+	indexTemplate := index.DNSLogIndex(options...)
 	helper := lmaindex.SingleIndexDNSLogs()
 	if !singleIndex {
 		indexTemplate = index.DNSLogMultiIndex

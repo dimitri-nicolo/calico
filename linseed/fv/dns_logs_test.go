@@ -35,8 +35,8 @@ func RunDNSLogTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.DNSLogIndex)()
-		testFn(t, index.DNSLogIndex)
+		defer setupAndTeardown(t, args, index.DNSLogIndex())()
+		testFn(t, index.DNSLogIndex())
 	})
 }
 

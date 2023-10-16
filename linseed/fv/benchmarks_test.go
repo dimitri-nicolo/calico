@@ -34,8 +34,8 @@ func RunComplianceBenchmarkTest(t *testing.T, name string, testFn func(*testing.
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.ComplianceBenchmarkIndex)()
-		testFn(t, index.ComplianceBenchmarkIndex)
+		defer setupAndTeardown(t, args, index.ComplianceBenchmarksIndex())()
+		testFn(t, index.ComplianceBenchmarksIndex())
 	})
 }
 

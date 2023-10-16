@@ -34,8 +34,8 @@ func RunWAFTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.WAFLogIndex)()
-		testFn(t, index.WAFLogIndex)
+		defer setupAndTeardown(t, args, index.WAFLogIndex())()
+		testFn(t, index.WAFLogIndex())
 	})
 }
 

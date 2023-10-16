@@ -111,9 +111,41 @@ type Config struct {
 	ElasticRuntimeShards   int `envconfig:"ELASTIC_RUNTIME_INDEX_SHARDS" default:"1"`
 
 	// Configures which backend mode to use.
-	Backend BackendType `envconfig:"BACKEND" default:"elastic-multi-index"`
+	Backend         BackendType `envconfig:"BACKEND" default:"elastic-multi-index"`
+	TenantNamespace string      `envconfig:"TENANT_NAMESPACE" default:""`
 
-	TenantNamespace string `envconfig:"TENANT_NAMESPACE" default:""`
+	// ElasticDynamicIndexCreationEnabled will configure index templates, write aliases and
+	// create boostrap indices at runtime from the request received
+	ElasticDynamicIndexCreationEnabled bool `envconfig:"ELASTIC_DYNAMIC_INDEX_CREATION_ENABLED"`
+
+	// These environment variables allow overriding the index names to use for this Linseed.
+	// They are only supported when running in single-index mode. If unset, defaults will be used instead
+	ElasticAlertsIndexName                    string `envconfig:"ELASTIC_ALERTS_INDEX_NAME" default:"calico_alerts"`
+	ElasticAlertsPolicyName                   string `envconfig:"ELASTIC_ALERTS_POLICY_NAME" default:"tigera_secure_ee_events_policy"`
+	ElasticAuditLogsIndexName                 string `envconfig:"ELASTIC_AUDIT_LOGS_INDEX_NAME" default:"calico_auditlogs"`
+	ElasticAuditLogsPolicyName                string `envconfig:"ELASTIC_AUDIT_LOGS_POLICY_NAME" default:"tigera_secure_ee_audit_ee_policy"`
+	ElasticBGPLogsIndexName                   string `envconfig:"ELASTIC_BGP_LOGS_INDEX_NAME" default:"calico_bgplogs"`
+	ElasticBGPLogsPolicyName                  string `envconfig:"ELASTIC_BGP_LOGS_POLICY_NAME" default:"tigera_secure_ee_bgp_policy"`
+	ElasticComplianceBenchmarksIndexName      string `envconfig:"ELASTIC_COMPLIANCE_BENCHMARKS_INDEX_NAME" default:"calico_compliance_benchmark_results"`
+	ElasticComplianceBenchmarksPolicyName     string `envconfig:"ELASTIC_COMPLIANCE_BENCHMARKS_POLICY_NAME" default:"tigera_secure_ee_benchmark_results_policy"`
+	ElasticComplianceReportsIndexName         string `envconfig:"ELASTIC_COMPLIANCE_REPORTS_INDEX_NAME" default:"calico_compliance_reports"`
+	ElasticComplianceReportsPolicyName        string `envconfig:"ELASTIC_COMPLIANCE_REPORTS_POLICY_NAME" default:"tigera_secure_ee_compliance_reports_policy"`
+	ElasticComplianceSnapshotsIndexName       string `envconfig:"ELASTIC_COMPLIANCE_SNAPSHOTS_INDEX_NAME" default:"calico_compliance_snapshots"`
+	ElasticComplianceSnapshotsPolicyName      string `envconfig:"ELASTIC_COMPLIANCE_SNAPSHOTS_POLICY_NAME" default:"tigera_secure_ee_compliance_snapshots_policy"`
+	ElasticDNSLogsIndexName                   string `envconfig:"ELASTIC_DNS_LOGS_INDEX_NAME" default:"calico_dnslogs"`
+	ElasticDNSLogsPolicyName                  string `envconfig:"ELASTIC_DNS_LOGS_POLICY_NAME" default:"tigera_secure_ee_dns_policy"`
+	ElasticFlowLogsIndexName                  string `envconfig:"ELASTIC_FLOW_LOGS_INDEX_NAME" default:"calico_flowlogs"`
+	ElasticFlowLogsPolicyName                 string `envconfig:"ELASTIC_FLOW_LOGS_POLICY_NAME" default:"tigera_secure_ee_flow_policy"`
+	ElasticL7LogsIndexName                    string `envconfig:"ELASTIC_L7_LOGS_INDEX_NAME" default:"calico_l7logs"`
+	ElasticL7LogsPolicyName                   string `envconfig:"ELASTIC_L7_LOGS_POLICY_NAME" default:"tigera_secure_ee_l7_policy"`
+	ElasticRuntimeReportsIndexName            string `envconfig:"ELASTIC_RUNTIME_REPORTS_INDEX_NAME" default:"calico_runtime_reports"`
+	ElasticRuntimeReportsPolicyName           string `envconfig:"ELASTIC_RUNTIME_REPORTS_POLICY_NAME" default:"tigera_secure_ee_runtime_policy"`
+	ElasticThreatFeedsDomainNameSetIndexName  string `envconfig:"ELASTIC_THREAT_FEEDS_DOMAIN_SET_INDEX_NAME" default:"calico_threatfeeds_domainnameset"`
+	ElasticThreatFeedsDomainNameSetPolicyName string `envconfig:"ELASTIC_THREAT_FEEDS_DOMAIN_SET_POLICY_NAME" default:"tigera_secure_ee_threatfeeds_domainnameset_policy"`
+	ElasticThreatFeedsIPSetIndexName          string `envconfig:"ELASTIC_THREAT_FEEDS_IP_SET_INDEX_NAME" default:"calico_threatfeeds_ipset"`
+	ElasticThreatFeedsIPSetIPolicyName        string `envconfig:"ELASTIC_THREAT_FEEDS_IP_SET_POLICY_NAME" default:"tigera_secure_ee_threatfeeds_domainnameset_policy"`
+	ElasticWAFLogsIndexName                   string `envconfig:"ELASTIC_WAF_LOGS_INDEX_NAME" default:"calico_waf"`
+	ElasticWAFLogsPolicyName                  string `envconfig:"ELASTIC_WAF_LOGS_POLICY_NAME" default:"tigera_secure_ee_waf_policy"`
 }
 
 type BackendType string

@@ -30,14 +30,14 @@ func NewIPSetBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagin
 	}
 }
 
-func NewSingleIndexIPSetBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.IPSetBackend {
+func NewSingleIndexIPSetBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.IPSetBackend {
 	return &ipSetThreatFeedBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
 		singleIndex:          true,
-		index:                index.ThreatfeedsIPSetIndex,
+		index:                index.ThreatFeedsIPSetIndex(options...),
 		queryHelper:          lmaindex.SingleIndexThreatfeedsIPSet(),
 	}
 }

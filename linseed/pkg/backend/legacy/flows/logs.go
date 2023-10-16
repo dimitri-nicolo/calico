@@ -44,7 +44,7 @@ func NewFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPag
 }
 
 // NewSingleIndexFlowLogBackend returns a new flow log backend that writes to a single index.
-func NewSingleIndexFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.FlowLogBackend {
+func NewSingleIndexFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.FlowLogBackend {
 	return &flowLogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -52,7 +52,7 @@ func NewSingleIndexFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializ
 		queryHelper:          lmaindex.SingleIndexFlowLogs(),
 		deepPaginationCutOff: deepPaginationCutOff,
 		singleIndex:          true,
-		index:                index.FlowLogIndex,
+		index:                index.FlowLogIndex(options...),
 	}
 }
 

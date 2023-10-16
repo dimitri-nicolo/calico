@@ -70,8 +70,8 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Instantiate a backend.
 	if singleIndex {
+		indexGetter = index.RuntimeReportsIndex()
 		b = runtime.NewSingleIndexBackend(client, cache, 10000)
-		indexGetter = index.RuntimeReportIndex
 	} else {
 		b = runtime.NewBackend(client, cache, 10000)
 		indexGetter = index.RuntimeReportMultiIndex

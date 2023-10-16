@@ -39,7 +39,7 @@ func TestIndex(t *testing.T) {
 			expectedILM:        "tigera_secure_ee_flows_policy",
 		},
 		{
-			idx:                index.FlowLogIndex,
+			idx:                index.FlowLogIndex(),
 			info:               bapi.ClusterInfo{Cluster: "cluster1"},
 			expectedName:       "calico_flowlogs",
 			expectedIndex:      "calico_flowlogs.*",
@@ -47,7 +47,7 @@ func TestIndex(t *testing.T) {
 			expectedILM:        "tigera_secure_ee_flows_policy",
 		},
 		{
-			idx:                index.FlowLogIndex,
+			idx:                index.FlowLogIndex(),
 			info:               bapi.ClusterInfo{Cluster: "cluster1", Tenant: "tenant1"},
 			expectedName:       "calico_flowlogs",
 			expectedIndex:      "calico_flowlogs.*",
@@ -87,7 +87,7 @@ func TestIndex(t *testing.T) {
 			expectedILM:        "tigera_secure_ee_audit_kube_policy",
 		},
 		{
-			idx:                index.AuditLogIndex,
+			idx:                index.AuditLogIndex(),
 			info:               bapi.ClusterInfo{Cluster: "cluster1", Tenant: "tenant1"},
 			expectedName:       "calico_auditlogs",
 			expectedIndex:      "calico_auditlogs.*",

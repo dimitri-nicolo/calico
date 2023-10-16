@@ -39,8 +39,8 @@ func RunAuditEETest(t *testing.T, name string, testFn func(*testing.T, bapi.Inde
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.AuditLogIndex)()
-		testFn(t, index.AuditLogIndex)
+		defer setupAndTeardown(t, args, index.AuditLogIndex())()
+		testFn(t, index.AuditLogIndex())
 	})
 }
 
@@ -54,8 +54,8 @@ func RunAuditKubeTest(t *testing.T, name string, testFn func(*testing.T, bapi.In
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.AuditLogIndex)()
-		testFn(t, index.AuditLogIndex)
+		defer setupAndTeardown(t, args, index.AuditLogIndex())()
+		testFn(t, index.AuditLogIndex())
 	})
 }
 

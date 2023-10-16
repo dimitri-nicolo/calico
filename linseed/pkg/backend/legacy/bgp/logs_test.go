@@ -69,8 +69,8 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Instantiate a backend.
 	if singleIndex {
+		indexGetter = index.BGPLogIndex()
 		b = bgp.NewSingleIndexBackend(client, cache, 1000)
-		indexGetter = index.BGPLogIndex
 	} else {
 		b = bgp.NewBackend(client, cache, 10000)
 		indexGetter = index.BGPLogMultiIndex

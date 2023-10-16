@@ -41,6 +41,13 @@ func NewCachedInitializer(c lmaelastic.Client, shards, replicas int) bapi.IndexI
 	}
 }
 
+func NewNoOpInitializer() bapi.IndexInitializer {
+	return &cachedInitializer{
+		cache:     make(map[string]*Template),
+		bootstrap: NoopBootstrapper,
+	}
+}
+
 func (i *cachedInitializer) Initialize(ctx context.Context, index bapi.Index, info bapi.ClusterInfo) error {
 	if !i.exists(index, info) {
 		return i.initialize(ctx, index, info)
@@ -48,7 +55,7 @@ func (i *cachedInitializer) Initialize(ctx context.Context, index bapi.Index, in
 	return nil
 }
 
-// exists returns whether or not the index exists in the cache.
+// exists returns whether the index exists in the cache.
 func (i *cachedInitializer) exists(index bapi.Index, info bapi.ClusterInfo) bool {
 	i.RLock()
 	defer i.RUnlock()

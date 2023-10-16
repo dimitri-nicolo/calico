@@ -31,14 +31,14 @@ func NewBenchmarksBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deep
 	}
 }
 
-func NewSingleIndexBenchmarksBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.BenchmarksBackend {
+func NewSingleIndexBenchmarksBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.BenchmarksBackend {
 	return &benchmarksBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
 		singleIndex:          true,
-		index:                index.ComplianceBenchmarkIndex,
+		index:                index.ComplianceBenchmarksIndex(options...),
 		queryHelper:          lmaindex.SingleIndexBenchmarks(),
 	}
 }

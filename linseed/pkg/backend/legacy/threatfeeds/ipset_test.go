@@ -69,10 +69,10 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create backends to use.
 	if singleIndex {
+		ipsetIndexGetter = index.ThreatFeedsIPSetIndex()
+		domainsIndexGetter = index.ThreatFeedsDomainSetIndex()
 		ib = threatfeeds.NewSingleIndexIPSetBackend(client, cache, 10000)
 		db = threatfeeds.NewSingleIndexDomainNameSetBackend(client, cache, 10000)
-		ipsetIndexGetter = index.ThreatfeedsIPSetIndex
-		domainsIndexGetter = index.ThreatfeedsDomainIndex
 	} else {
 		ib = threatfeeds.NewIPSetBackend(client, cache, 10000)
 		db = threatfeeds.NewDomainNameSetBackend(client, cache, 10000)

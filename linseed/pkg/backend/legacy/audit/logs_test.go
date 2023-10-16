@@ -82,9 +82,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Instantiate a backend.
 	if singleIndex {
+		kubeIndexGetter = index.AuditLogIndex()
+		eeIndexGetter = index.AuditLogIndex()
 		b = audit.NewSingleIndexBackend(client, cache, 10000)
-		kubeIndexGetter = index.AuditLogIndex
-		eeIndexGetter = index.AuditLogIndex
 	} else {
 		b = audit.NewBackend(client, cache, 10000)
 		kubeIndexGetter = index.AuditLogKubeMultiIndex

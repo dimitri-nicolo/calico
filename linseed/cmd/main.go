@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientruntime "k8s.io/apimachinery/pkg/runtime"
@@ -69,13 +71,15 @@ import (
 )
 
 var (
-	ready bool
-	live  bool
+	ready                   bool
+	live                    bool
+	configureElasticIndices bool
 )
 
 func init() {
 	flag.BoolVar(&ready, "ready", false, "Set to get readiness information")
 	flag.BoolVar(&live, "live", false, "Set to get liveness information")
+	flag.BoolVar(&configureElasticIndices, "configure-elastic-indices", false, "Configure Elastic indices")
 }
 
 func main() {
@@ -91,6 +95,8 @@ func main() {
 		doHealthCheck("readiness", cfg.HealthPort)
 	} else if live {
 		doHealthCheck("liveness", cfg.HealthPort)
+	} else if configureElasticIndices {
+		configureElasticIndicies()
 	} else {
 		// Just run the server.
 		run()
@@ -120,13 +126,31 @@ func run() {
 
 	esClient := backend.MustGetElasticClient(*cfg)
 
-	// Create template caches for indices with special shards / replicas configuration
-	defaultCache := templates.NewCachedInitializer(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
-	flowCache := templates.NewCachedInitializer(esClient, cfg.ElasticFlowShards, cfg.ElasticFlowReplicas)
-	dnsCache := templates.NewCachedInitializer(esClient, cfg.ElasticDNSShards, cfg.ElasticDNSReplicas)
-	l7Cache := templates.NewCachedInitializer(esClient, cfg.ElasticL7Shards, cfg.ElasticL7Replicas)
-	auditCache := templates.NewCachedInitializer(esClient, cfg.ElasticAuditShards, cfg.ElasticAuditReplicas)
-	bgpCache := templates.NewCachedInitializer(esClient, cfg.ElasticBGPShards, cfg.ElasticBGPReplicas)
+	var auditInitializer api.IndexInitializer
+	var bgpInitializer api.IndexInitializer
+	var defaultInitializer api.IndexInitializer
+	var dnsInitializer api.IndexInitializer
+	var flowInitializer api.IndexInitializer
+	var l7Initializer api.IndexInitializer
+
+	if shouldCreateIndicesDynamically(cfg) {
+		// Create template caches for indices with special shards / replicas configuration
+		defaultInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
+		flowInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticFlowShards, cfg.ElasticFlowReplicas)
+		dnsInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticDNSShards, cfg.ElasticDNSReplicas)
+		l7Initializer = templates.NewCachedInitializer(esClient, cfg.ElasticL7Shards, cfg.ElasticL7Replicas)
+		auditInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticAuditShards, cfg.ElasticAuditReplicas)
+		bgpInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticBGPShards, cfg.ElasticBGPReplicas)
+
+	} else {
+		// Create a no op template caches for indices
+		defaultInitializer = templates.NewNoOpInitializer()
+		flowInitializer = templates.NewNoOpInitializer()
+		dnsInitializer = templates.NewNoOpInitializer()
+		l7Initializer = templates.NewNoOpInitializer()
+		auditInitializer = templates.NewNoOpInitializer()
+		bgpInitializer = templates.NewNoOpInitializer()
+	}
 
 	// Create all the necessary backends.
 	var flowLogBackend api.FlowLogBackend
@@ -149,46 +173,46 @@ func run() {
 
 	switch cfg.Backend {
 	case config.BackendTypeMultiIndex:
-		flowLogBackend = flowbackend.NewFlowLogBackend(esClient, flowCache, cfg.ElasticIndexMaxResultWindow)
+		flowLogBackend = flowbackend.NewFlowLogBackend(esClient, flowInitializer, cfg.ElasticIndexMaxResultWindow)
 		flowBackend = flowbackend.NewFlowBackend(esClient)
-		auditBackend = auditbackend.NewBackend(esClient, auditCache, cfg.ElasticIndexMaxResultWindow)
-		bgpBackend = bgpbackend.NewBackend(esClient, bgpCache, cfg.ElasticIndexMaxResultWindow)
-		reportsBackend = compliancebackend.NewReportsBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		snapshotsBackend = compliancebackend.NewSnapshotBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		benchmarksBackend = compliancebackend.NewBenchmarksBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		auditBackend = auditbackend.NewBackend(esClient, auditInitializer, cfg.ElasticIndexMaxResultWindow)
+		bgpBackend = bgpbackend.NewBackend(esClient, bgpInitializer, cfg.ElasticIndexMaxResultWindow)
+		reportsBackend = compliancebackend.NewReportsBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow)
+		snapshotsBackend = compliancebackend.NewSnapshotBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow)
+		benchmarksBackend = compliancebackend.NewBenchmarksBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow)
 		dnsFlowBackend = dnsbackend.NewDNSFlowBackend(esClient)
-		dnsLogBackend = dnsbackend.NewDNSLogBackend(esClient, dnsCache, cfg.ElasticIndexMaxResultWindow)
+		dnsLogBackend = dnsbackend.NewDNSLogBackend(esClient, dnsInitializer, cfg.ElasticIndexMaxResultWindow)
 		l7FlowBackend = l7backend.NewL7FlowBackend(esClient)
-		l7LogBackend = l7backend.NewL7LogBackend(esClient, l7Cache, cfg.ElasticIndexMaxResultWindow)
+		l7LogBackend = l7backend.NewL7LogBackend(esClient, l7Initializer, cfg.ElasticIndexMaxResultWindow)
 		procBackend = procbackend.NewBackend(esClient)
-		runtimeBackend = runtimebackend.NewBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		eventBackend = eventbackend.NewBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		wafBackend = wafbackend.NewBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		ipSetBackend = threatfeedsbackend.NewIPSetBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		domainNameSetBackend = threatfeedsbackend.NewDomainNameSetBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		runtimeBackend = runtimebackend.NewBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow)
+		eventBackend = eventbackend.NewBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow)
+		wafBackend = wafbackend.NewBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow)
+		ipSetBackend = threatfeedsbackend.NewIPSetBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow)
+		domainNameSetBackend = threatfeedsbackend.NewDomainNameSetBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow)
 	case config.BackendTypeSingleIndex:
-		flowLogBackend = flowbackend.NewSingleIndexFlowLogBackend(esClient, flowCache, cfg.ElasticIndexMaxResultWindow)
-		flowBackend = flowbackend.NewSingleIndexFlowBackend(esClient)
-		auditBackend = auditbackend.NewSingleIndexBackend(esClient, auditCache, cfg.ElasticIndexMaxResultWindow)
-		bgpBackend = bgpbackend.NewSingleIndexBackend(esClient, bgpCache, cfg.ElasticIndexMaxResultWindow)
-		reportsBackend = compliancebackend.NewSingleIndexReportsBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		snapshotsBackend = compliancebackend.NewSingleIndexSnapshotBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		benchmarksBackend = compliancebackend.NewSingleIndexBenchmarksBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		dnsFlowBackend = dnsbackend.NewSingleIndexDNSFlowBackend(esClient)
-		dnsLogBackend = dnsbackend.NewSingleIndexDNSLogBackend(esClient, dnsCache, cfg.ElasticIndexMaxResultWindow)
-		l7FlowBackend = l7backend.NewSingleIndexL7FlowBackend(esClient)
-		l7LogBackend = l7backend.NewSingleIndexL7LogBackend(esClient, l7Cache, cfg.ElasticIndexMaxResultWindow)
-		procBackend = procbackend.NewSingleIndexBackend(esClient)
-		runtimeBackend = runtimebackend.NewSingleIndexBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		eventBackend = eventbackend.NewSingleIndexBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		wafBackend = wafbackend.NewSingleIndexBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		ipSetBackend = threatfeedsbackend.NewSingleIndexIPSetBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-		domainNameSetBackend = threatfeedsbackend.NewSingleIndexDomainNameSetBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		flowLogBackend = flowbackend.NewSingleIndexFlowLogBackend(esClient, flowInitializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticFlowLogsIndexName))
+		flowBackend = flowbackend.NewSingleIndexFlowBackend(esClient, index.WithIndexName(cfg.ElasticFlowLogsIndexName))
+		auditBackend = auditbackend.NewSingleIndexBackend(esClient, auditInitializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticAuditLogsIndexName))
+		bgpBackend = bgpbackend.NewSingleIndexBackend(esClient, bgpInitializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticBGPLogsIndexName))
+		reportsBackend = compliancebackend.NewSingleIndexReportsBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticComplianceReportsIndexName))
+		snapshotsBackend = compliancebackend.NewSingleIndexSnapshotBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticComplianceSnapshotsIndexName))
+		benchmarksBackend = compliancebackend.NewSingleIndexBenchmarksBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticComplianceBenchmarksIndexName))
+		dnsFlowBackend = dnsbackend.NewSingleIndexDNSFlowBackend(esClient, index.WithIndexName(cfg.ElasticDNSLogsIndexName))
+		dnsLogBackend = dnsbackend.NewSingleIndexDNSLogBackend(esClient, dnsInitializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticDNSLogsIndexName))
+		l7FlowBackend = l7backend.NewSingleIndexL7FlowBackend(esClient, index.WithIndexName(cfg.ElasticL7LogsIndexName))
+		l7LogBackend = l7backend.NewSingleIndexL7LogBackend(esClient, l7Initializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticL7LogsIndexName))
+		procBackend = procbackend.NewSingleIndexBackend(esClient, index.WithIndexName(cfg.ElasticFlowLogsIndexName))
+		runtimeBackend = runtimebackend.NewSingleIndexBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticRuntimeReportsIndexName))
+		eventBackend = eventbackend.NewSingleIndexBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticAlertsIndexName))
+		wafBackend = wafbackend.NewSingleIndexBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticWAFLogsIndexName))
+		ipSetBackend = threatfeedsbackend.NewSingleIndexIPSetBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticThreatFeedsIPSetIndexName))
+		domainNameSetBackend = threatfeedsbackend.NewSingleIndexDomainNameSetBackend(esClient, defaultInitializer, cfg.ElasticIndexMaxResultWindow, index.WithIndexName(cfg.ElasticThreatFeedsDomainNameSetIndexName))
 	default:
 		logrus.Fatalf("Invalid backend type: %s", cfg.Backend)
 	}
 
-	// Create a Kuberentes client to use for authorization.
+	// Create a Kubernetes client to use for authorization.
 	var kc *rest.Config
 	if cfg.Kubeconfig == "" {
 		// creates the in-cluster k8sConfig
@@ -405,6 +429,10 @@ func run() {
 		logrus.Fatalf("server shutdown failed: %+v", err)
 	}
 	logrus.Info("Server is shutting down")
+}
+
+func shouldCreateIndicesDynamically(cfg *config.Config) bool {
+	return cfg.Backend == config.BackendTypeMultiIndex || (cfg.Backend == config.BackendTypeSingleIndex && !cfg.ElasticDynamicIndexCreationEnabled)
 }
 
 // doHealthCheck checks the local readiness or liveness endpoint and prints its status.

@@ -30,14 +30,14 @@ func NewDomainNameSetBackend(c lmaelastic.Client, cache bapi.IndexInitializer, d
 	}
 }
 
-func NewSingleIndexDomainNameSetBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.DomainNameSetBackend {
+func NewSingleIndexDomainNameSetBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.DomainNameSetBackend {
 	return &domainNameSetThreatFeedBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
 		singleIndex:          true,
-		index:                index.ThreatfeedsDomainIndex,
+		index:                index.ThreatFeedsDomainSetIndex(options...),
 		queryHelper:          lmaindex.SingleIndexThreatfeedsDomainNameSet(),
 	}
 }

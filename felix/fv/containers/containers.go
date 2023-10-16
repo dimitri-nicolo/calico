@@ -16,6 +16,7 @@ package containers
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -189,6 +190,7 @@ type RunOpts struct {
 	StopTimeoutSecs  int
 	StopSignal       string
 	OutputWriter     io.Writer
+	RunAndExit       bool
 }
 
 func NextContainerIndex() int {
@@ -262,9 +264,32 @@ func RunWithFixedName(name string, opts RunOpts, args ...string) (c *Container) 
 	go c.copyOutputToLog("stdout", stdout, &c.logFinished, &c.stdoutWatches)
 	go c.copyOutputToLog("stderr", stderr, &c.logFinished, &c.stderrWatches)
 
-	// Note: it might take a long time for the container to start running, e.g. if the image
-	// needs to be downloaded.
-	c.WaitUntilRunning()
+	if opts.RunAndExit {
+		ch := make(chan error, 1)
+		ctxTimeout, cancel := context.WithTimeout(context.Background(), time.Minute*1)
+		defer cancel()
+
+		go func() {
+			log.WithField("container", c).Info("Waiting for container to finish its run")
+			err = c.runCmd.Wait()
+			log.WithField("container", c).WithError(err).Info("Container finished run")
+			ch <- err
+		}()
+
+		select {
+		case <-ctxTimeout.Done():
+			log.WithField("container", c).Info("Container did not finished its run in 1 minute")
+			Expect(ctxTimeout.Err()).NotTo(HaveOccurred())
+		case err := <-ch:
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		return c
+	} else {
+		// Note: it might take a long time for the container to start running, e.g. if the image
+		// needs to be downloaded.
+		c.WaitUntilRunning()
+	}
 
 	// Fill in rest of container struct.
 	c.IP = c.GetIP()

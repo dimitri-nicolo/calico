@@ -45,7 +45,7 @@ func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagination
 	}
 }
 
-func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.BGPBackend {
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.BGPBackend {
 	return &bgpLogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -53,7 +53,7 @@ func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, dee
 		deepPaginationCutOff: deepPaginationCutOff,
 		queryHelper:          lmaindex.SingleIndexBGPLogs(),
 		singleIndex:          true,
-		index:                index.BGPLogIndex,
+		index:                index.BGPLogIndex(options...),
 	}
 }
 

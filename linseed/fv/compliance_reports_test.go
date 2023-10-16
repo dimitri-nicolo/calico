@@ -35,8 +35,8 @@ func RunComplianceReportTest(t *testing.T, name string, testFn func(*testing.T, 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.ComplianceReportIndex)()
-		testFn(t, index.ComplianceReportIndex)
+		defer setupAndTeardown(t, args, index.ComplianceReportsIndex())()
+		testFn(t, index.ComplianceReportsIndex())
 	})
 }
 

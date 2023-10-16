@@ -70,9 +70,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create backends to use.
 	if singleIndex {
+		indexGetter = index.L7LogIndex()
 		b = l7.NewSingleIndexL7FlowBackend(client)
 		lb = l7.NewSingleIndexL7LogBackend(client, cache, 10000)
-		indexGetter = index.L7LogIndex
 	} else {
 		b = l7.NewL7FlowBackend(client)
 		lb = l7.NewL7LogBackend(client, cache, 10000)
