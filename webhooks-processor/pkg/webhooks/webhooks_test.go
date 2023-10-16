@@ -17,20 +17,12 @@ import (
 	"github.com/stretchr/testify/require"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/testutils"
 )
-
-const (
-	testUrl = "https://test-hook"
-)
-
-// This file contains tests that combine the webhooks building blocks as a cohesive unit
-// and assert that all work together as expected to implement the desired behavior.
 
 func TestWebhooksProcessorExitsOnCancel(t *testing.T) {
 	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
@@ -56,7 +48,7 @@ func TestWebhookHealthy(t *testing.T) {
 	startTime := time.Now()
 
 	// New webhook has no status
-	wh := newTestWebhook("test-wh")
+	wh := testutils.NewTestWebhook("test-wh")
 	require.Nil(t, wh.Status)
 
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
@@ -81,7 +73,7 @@ func TestFailedWebhookProviderValidationReportedNotHealthy(t *testing.T) {
 
 	SetupWithTestState(t, testState)
 
-	wh := newTestWebhook("test-invalid-generic-webhook")
+	wh := testutils.NewTestWebhook("test-invalid-generic-webhook")
 	wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
 	wh.Spec.Config = []api.SecurityEventWebhookConfigVar{}
 
@@ -114,12 +106,13 @@ func TestWebhookSent(t *testing.T) {
 		return []lsApi.Event{testEvent}
 	})
 
-	wh := newTestWebhook("test-wh")
+	wh := testutils.NewTestWebhook("test-wh")
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
 	// Make sure the webhook eventually hits the test provider
 	require.Eventually(t, hasOneRequest(testState.TestSlackProvider()), testState.FetchingInterval*4, 10*time.Millisecond)
-	require.Equal(t, testUrl, testState.TestSlackProvider().Requests[0].Config["url"])
+	require.Equal(t, wh.Spec.Config[0].Name, "url")
+	require.Equal(t, wh.Spec.Config[0].Value, testState.TestSlackProvider().Requests[0].Config["url"])
 	require.Equal(t, testEvent, testState.TestSlackProvider().Requests[0].Event)
 }
 
@@ -144,7 +137,7 @@ func TestSendsOneWebhookPerEvent(t *testing.T) {
 		return []lsApi.Event{testEvent1, testEvent2}
 	})
 
-	wh := newTestWebhook("test-wh")
+	wh := testutils.NewTestWebhook("test-wh")
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
 	// Make sure the webhook eventually hits the test provider
@@ -168,7 +161,7 @@ func TestEventsFetchedUsingNonOverlappingIntervals(t *testing.T) {
 		return []lsApi.Event{}
 	})
 
-	wh := newTestWebhook("test-wh")
+	wh := testutils.NewTestWebhook("test-wh")
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
 	// Wait that we get a few fetch requests
@@ -199,7 +192,7 @@ func TestTooManyEventsAreRateLimited(t *testing.T) {
 
 	// TODO: Add a check to test that the rate limiter is set to less than len(fetchedEvents)
 	// Right now it's hardcoded to 5 in the test setup (but that could and likely will change)
-	wh := newTestWebhook("test-wh")
+	wh := testutils.NewTestWebhook("test-wh")
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
 	// Make sure the webhook eventually hits the test server
@@ -246,7 +239,7 @@ func TestGenericProvider(t *testing.T) {
 	SetupWithTestState(t, testState)
 
 	whUrl := fmt.Sprintf("%s/test-hook", ts.URL)
-	wh := newTestWebhook("test-generic-webhook")
+	wh := testutils.NewTestWebhook("test-generic-webhook")
 	wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
 	// Making sure we'll update the right config...
 	require.Equal(t, wh.Spec.Config[0].Name, "url")
@@ -295,7 +288,7 @@ func TestBackoffOnInitialFailure(t *testing.T) {
 	SetupWithTestState(t, testState)
 
 	whUrl := fmt.Sprintf("%s/test-hook", ts.URL)
-	wh := newTestWebhook("test-generic-webhook")
+	wh := testutils.NewTestWebhook("test-generic-webhook")
 	wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
 	// Making sure we'll update the right config...
 	require.Equal(t, wh.Spec.Config[0].Name, "url")
@@ -336,20 +329,6 @@ func newEvent(n int) lsApi.Event {
 		Time:        lsApi.NewEventTimestamp(time.Now().Unix()),
 		Type:        "runtime_security",
 	}
-}
-
-func newTestWebhook(name string) *api.SecurityEventWebhook {
-	wh := api.NewSecurityEventWebhook()
-	wh.Name = name
-	wh.Spec.Consumer = api.SecurityEventWebhookConsumerSlack
-	wh.Spec.State = api.SecurityEventWebhookStateEnabled
-	wh.Spec.Query = "type = runtime_security"
-	wh.Spec.Config = []api.SecurityEventWebhookConfigVar{{
-		Name:  "url",
-		Value: testUrl,
-	}}
-	wh.UID = types.UID(fmt.Sprintf("%s-uid", name))
-	return wh
 }
 
 func isHealthy(webhook *api.SecurityEventWebhook) func() bool {
