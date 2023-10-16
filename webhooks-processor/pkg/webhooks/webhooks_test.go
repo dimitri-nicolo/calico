@@ -208,18 +208,11 @@ func TestTooManyEventsAreRateLimited(t *testing.T) {
 	require.Eventually(t, hasNRequest(testProvider, numEventsAllowed), 15*time.Second, 10*time.Millisecond)
 }
 
-type HttpRequest struct {
-	Method string
-	URL    string
-	Header http.Header
-	Body   []byte
-}
-
 func TestGenericProvider(t *testing.T) {
-	requests := []HttpRequest{}
+	requests := []testutils.HttpRequest{}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Does anyone read this?")
-		request := HttpRequest{
+		request := testutils.HttpRequest{
 			Method: r.Method,
 			URL:    r.URL.String(),
 			Header: r.Header,
@@ -261,14 +254,14 @@ func TestGenericProvider(t *testing.T) {
 }
 
 func TestBackoffOnInitialFailure(t *testing.T) {
-	requests := []HttpRequest{}
+	requests := []testutils.HttpRequest{}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Let's make the first request fail
 		if len(requests) == 0 {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 		fmt.Fprintln(w, "Does anyone read this?")
-		request := HttpRequest{
+		request := testutils.HttpRequest{
 			Method: r.Method,
 			URL:    r.URL.String(),
 			Header: r.Header,

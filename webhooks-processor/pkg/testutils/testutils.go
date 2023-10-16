@@ -4,6 +4,7 @@ package testutils
 
 import (
 	"fmt"
+	"net/http"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/types"
@@ -25,4 +26,11 @@ func NewTestWebhook(name string) *api.SecurityEventWebhook {
 	}}
 	wh.UID = types.UID(fmt.Sprintf("%s-uid", name))
 	return wh
+}
+
+type HttpRequest struct {
+	Method string
+	URL    string
+	Header http.Header
+	Body   []byte
 }
