@@ -4,14 +4,11 @@ package testutils
 
 import (
 	"context"
-	"errors"
 
-	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
-	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 // My typical approach is to use simple solutions while acceptable and reach for proper mocking tools
@@ -62,29 +59,4 @@ func (w *FakeSecurityEventWebhook) Get(ctx context.Context, name string, opts op
 }
 func (w *FakeSecurityEventWebhook) List(ctx context.Context, opts options.ListOptions) (*api.SecurityEventWebhookList, error) {
 	return nil, nil
-}
-
-type Request struct {
-	Config map[string]string
-	Event  lsApi.Event
-}
-type TestProvider struct {
-	Requests []Request
-}
-
-func (p *TestProvider) Validate(config map[string]string) error {
-	if _, urlPresent := config["url"]; !urlPresent {
-		return errors.New("url field is not present in webhook configuration")
-	}
-	return nil
-}
-
-func (p *TestProvider) Process(ctx context.Context, config map[string]string, event *lsApi.Event) (err error) {
-	logrus.Infof("Processing event %s", event.ID)
-	p.Requests = append(p.Requests, Request{
-		Config: config,
-		Event:  *event,
-	})
-
-	return nil
 }

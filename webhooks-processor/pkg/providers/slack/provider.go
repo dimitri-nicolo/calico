@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
-	"github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -25,11 +25,24 @@ const (
 	RetryTimes     = 5
 )
 
-type Slack struct {
+type SlackProviderConfiguration struct {
+	RateLimiterDuration time.Duration `envconfig:"WEBHOOKS_SLACK_RATE_LIMITER_DURATION" default:"5m"`
+	RateLimiterCount    uint          `envconfig:"WEBHOOKS_SLACK_RATE_LIMITER_COUNT" default:"3"`
+	RequestTimeout      time.Duration `envconfig:"WEBHOOKS_SLACK_REQUEST_TIMEOUT" default:"5s"`
+	RetryDuration       time.Duration `envconfig:"WEBHOOKS_SLACK_RETRY_DURATION" default:"2s"`
+	RetryTimes          uint          `envconfig:"WEBHOOKS_SLACK_RETRY_TIMES" default:"5"`
 }
 
-func NewProvider() *Slack {
-	return &Slack{}
+type Slack struct {
+	Config *SlackProviderConfiguration
+}
+
+func NewProvider() providers.Provider {
+	config := new(SlackProviderConfiguration)
+	envconfig.MustProcess("webhooks", config)
+	return &Slack{
+		Config: config,
+	}
 }
 
 func (p *Slack) Validate(config map[string]string) error {
@@ -47,8 +60,8 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, event *ls
 		return
 	}
 
-	retryFunc := func() (err error) {
-		requestCtx, requestCtxCancel := context.WithTimeout(ctx, RequestTimeout)
+	retryFunc := func(requestTimeout time.Duration) (err error) {
+		requestCtx, requestCtxCancel := context.WithTimeout(ctx, requestTimeout)
 		defer requestCtxCancel()
 
 		request, err := http.NewRequestWithContext(requestCtx, "POST", config["url"], bytes.NewReader(payload))
@@ -85,7 +98,7 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, event *ls
 		}
 	}
 
-	return helpers.RetryWithLinearBackOff(retryFunc, RetryDuration, RetryTimes, config["url"])
+	return helpers.RetryWithLinearBackOff(retryFunc, p.RetryConfig(), config["url"])
 }
 
 func (p *Slack) message(event *lsApi.Event) *SlackMessage {
@@ -103,4 +116,19 @@ func (p *Slack) message(event *lsApi.Event) *SlackMessage {
 	)
 
 	return message
+}
+
+func (p *Slack) RetryConfig() providers.RetryConfig {
+	return providers.RetryConfig{
+		RequestTimeout: p.Config.RequestTimeout,
+		RetryDuration:  p.Config.RetryDuration,
+		RetryTimes:     p.Config.RetryTimes,
+	}
+}
+
+func (p *Slack) RateLimiterConfig() providers.RateLimiterConfig {
+	return providers.RateLimiterConfig{
+		RateLimiterDuration: p.Config.RateLimiterDuration,
+		RateLimiterCount:    p.Config.RateLimiterCount,
+	}
 }

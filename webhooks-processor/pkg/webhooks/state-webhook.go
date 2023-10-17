@@ -13,13 +13,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 )
 
 func (s *ControllerState) webhookGoroutine(
 	ctx context.Context, // context for the goroutine
 	config map[string]string, // configuration for the webhook
 	selector *query.Query, // Security Events selector
-	processFunc ProcessFunc, // Security Events processing function
+	provider providers.Provider, // Security Events provider
 	inUpdatesChan chan *api.SecurityEventWebhook, // incoming updates for webhookRef
 	webhookRef *api.SecurityEventWebhook, // SecurityEventWebhook from k8s store
 	rateLimiter RateLimiterInterface, // RateLimiter for this goroutine
@@ -52,7 +53,7 @@ func (s *ControllerState) webhookGoroutine(
 			if err = rateLimiter.Event(); err != nil {
 				break
 			}
-			if err = processFunc(ctx, config, &event); err != nil {
+			if err = provider.Process(ctx, config, &event); err != nil {
 				break
 			}
 		}

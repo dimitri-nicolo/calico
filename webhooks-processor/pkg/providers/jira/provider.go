@@ -12,23 +12,40 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 )
 
-const (
-	RequestTimeout = 5 * time.Second
-	RetryDuration  = 2 * time.Second
-	RetryTimes     = 5
-)
+// const (
+//
+//	RequestTimeout = 5 * time.Second
+//	RetryDuration  = 2 * time.Second
+//	RetryTimes     = 5
+//
+// )
 
-type Jira struct {
+type JiraProviderConfiguration struct {
+	RateLimiterDuration time.Duration `envconfig:"WEBHOOKS_JIRA_RATE_LIMITER_DURATION" default:"60m"`
+	RateLimiterCount    uint          `envconfig:"WEBHOOKS_JIRA_RATE_LIMITER_COUNT" default:"1"`
+	RequestTimeout      time.Duration `envconfig:"WEBHOOKS_JIRA_REQUEST_TIMEOUT" default:"5s"`
+	RetryDuration       time.Duration `envconfig:"WEBHOOKS_JIRA_RETRY_DURATION" default:"2s"`
+	RetryTimes          uint          `envconfig:"WEBHOOKS_JIRA_RETRY_TIMES" default:"5"`
 }
 
-func NewProvider() *Jira {
-	return &Jira{}
+type Jira struct {
+	Config *JiraProviderConfiguration
+}
+
+func NewProvider() providers.Provider {
+	config := new(JiraProviderConfiguration)
+	envconfig.MustProcess("webhooks", config)
+	return &Jira{
+		Config: config,
+	}
 }
 
 func (p *Jira) Validate(config map[string]string) error {
@@ -66,8 +83,8 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, event *lsA
 		return
 	}
 
-	retryFunc := func() (err error) {
-		requestCtx, requestCtxCancel := context.WithTimeout(ctx, RequestTimeout)
+	retryFunc := func(requestTimeout time.Duration) (err error) {
+		requestCtx, requestCtxCancel := context.WithTimeout(ctx, requestTimeout)
 		defer requestCtxCancel()
 
 		request, err := http.NewRequestWithContext(requestCtx, "POST", config["url"], bytes.NewReader(payloadBytes))
@@ -101,5 +118,20 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, event *lsA
 		return fmt.Errorf("unexpected Jira response [%d]:%s", response.StatusCode, responseText)
 	}
 
-	return helpers.RetryWithLinearBackOff(retryFunc, RetryDuration, RetryTimes, config["url"])
+	return helpers.RetryWithLinearBackOff(retryFunc, p.RetryConfig(), config["url"])
+}
+
+func (p *Jira) RetryConfig() providers.RetryConfig {
+	return providers.RetryConfig{
+		RequestTimeout: p.Config.RequestTimeout,
+		RetryDuration:  p.Config.RetryDuration,
+		RetryTimes:     p.Config.RetryTimes,
+	}
+}
+
+func (p *Jira) RateLimiterConfig() providers.RateLimiterConfig {
+	return providers.RateLimiterConfig{
+		RateLimiterDuration: p.Config.RateLimiterDuration,
+		RateLimiterCount:    p.Config.RateLimiterCount,
+	}
 }

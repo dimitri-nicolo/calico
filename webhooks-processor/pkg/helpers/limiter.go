@@ -5,6 +5,8 @@ package helpers
 import (
 	"fmt"
 	"time"
+
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 )
 
 type RateLimiter struct {
@@ -12,10 +14,10 @@ type RateLimiter struct {
 	duration time.Duration
 }
 
-func NewRateLimiter(duration time.Duration, times uint) (rateLimiter *RateLimiter) {
+func NewRateLimiter(config providers.RateLimiterConfig) (rateLimiter *RateLimiter) {
 	rateLimiter = &RateLimiter{
-		events:   make(chan bool, times),
-		duration: duration,
+		events:   make(chan bool, config.RateLimiterCount),
+		duration: config.RateLimiterDuration,
 	}
 	return
 }

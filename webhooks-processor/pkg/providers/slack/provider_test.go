@@ -13,6 +13,7 @@ import (
 	"time"
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -48,36 +49,47 @@ func TestSlackProviderValidation(t *testing.T) {
 }
 
 func TestSlackProviderProcessing(t *testing.T) {
-	requests := []testutils.HttpRequest{}
-	shouldFail := false
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Let's make requests fail on demand
-		if shouldFail {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		fmt.Fprintln(w, "Does anyone read this?")
-		request := testutils.HttpRequest{
-			Method: r.Method,
-			URL:    r.URL.String(),
-			Header: r.Header,
-		}
-		var err error
-		request.Body, err = io.ReadAll(r.Body)
-		require.NoError(t, err)
-		requests = append(requests, request)
-	}))
-	defer ts.Close()
+	var requests []testutils.HttpRequest
+	var shouldFail bool
+	var ts *httptest.Server
+	var ctx context.Context
+	var p providers.Provider
+	var event *lsApi.Event
+	setup := func(t *testing.T) {
+		requests = []testutils.HttpRequest{}
+		shouldFail = false
+		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Let's make requests fail on demand
+			if shouldFail {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+			fmt.Fprintln(w, "Does anyone read this?")
+			request := testutils.HttpRequest{
+				Method: r.Method,
+				URL:    r.URL.String(),
+				Header: r.Header,
+			}
+			var err error
+			request.Body, err = io.ReadAll(r.Body)
+			require.NoError(t, err)
+			requests = append(requests, request)
+		}))
+		t.Cleanup(func() {
+			ts.Close()
+		})
 
-	ctx := context.Background()
-	p := Slack{}
-	event := &lsApi.Event{
-		ID:          "testid",
-		Description: "This is an event",
-		Severity:    3,
-		Time:        lsApi.NewEventTimestamp(time.Now().Unix()),
-		Type:        "runtime_security",
+		ctx = context.Background()
+		p = NewProvider()
+		event = &lsApi.Event{
+			ID:          "testid",
+			Description: "This is an event",
+			Severity:    3,
+			Time:        lsApi.NewEventTimestamp(time.Now().Unix()),
+			Type:        "runtime_security",
+		}
 	}
 	t.Run("success", func(t *testing.T) {
+		setup(t)
 		c := sampleValidConfig()
 		c["url"] = fmt.Sprintf("%s/test", ts.URL)
 

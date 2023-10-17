@@ -5,6 +5,7 @@ package webhooks
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,6 +22,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/slack"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/testutils"
 )
 
@@ -198,7 +201,7 @@ func TestTooManyEventsAreRateLimited(t *testing.T) {
 	// Make sure the webhook eventually hits the test server
 	testProvider := testState.TestSlackProvider()
 	// Make sure the test is valid (we're providing more events than allowed)
-	numEventsAllowed := int(testState.Providers[api.SecurityEventWebhookConsumerSlack].RateLimiterCount)
+	numEventsAllowed := int(testState.Providers[api.SecurityEventWebhookConsumerSlack].RateLimiterConfig().RateLimiterCount)
 	require.Less(t, numEventsAllowed, len(fetchedEvents))
 	require.Eventually(t, hasNRequest(testProvider, numEventsAllowed), 15*time.Second, 10*time.Millisecond)
 
@@ -334,11 +337,11 @@ func isHealthy(webhook *api.SecurityEventWebhook) func() bool {
 	}
 }
 
-func hasOneRequest(provider *testutils.TestProvider) func() bool {
+func hasOneRequest(provider *TestProvider) func() bool {
 	return hasNRequest(provider, 1)
 }
 
-func hasNRequest(provider *testutils.TestProvider, n int) func() bool {
+func hasNRequest(provider *TestProvider, n int) func() bool {
 	return func() bool {
 		return len(provider.Requests) == n
 	}
@@ -349,11 +352,11 @@ type TestState struct {
 	Stop             func()
 	WebHooksAPI      *testutils.FakeSecurityEventWebhook
 	GetEvents        func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event
-	Providers        map[api.SecurityEventWebhookConsumer]*ProviderConfiguration
+	Providers        map[api.SecurityEventWebhookConsumer]providers.Provider
 	FetchingInterval time.Duration
 }
 
-func NewTestState(getEvents func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event, providers map[api.SecurityEventWebhookConsumer]*ProviderConfiguration) *TestState {
+func NewTestState(getEvents func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event, providers map[api.SecurityEventWebhookConsumer]providers.Provider) *TestState {
 	testState := &TestState{}
 	testState.WebHooksAPI = &testutils.FakeSecurityEventWebhook{}
 	testState.GetEvents = getEvents
@@ -364,18 +367,16 @@ func NewTestState(getEvents func(context.Context, *query.Query, time.Time, time.
 	return testState
 }
 
-func (t *TestState) TestSlackProvider() *testutils.TestProvider {
-	return t.Providers[api.SecurityEventWebhookConsumerSlack].Provider.(*testutils.TestProvider)
+func (t *TestState) TestSlackProvider() *TestProvider {
+	return t.Providers[api.SecurityEventWebhookConsumerSlack].(*TestProvider)
 }
 
 func Setup(t *testing.T, getEvents func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event) *TestState {
-	providers := make(map[api.SecurityEventWebhookConsumer]*ProviderConfiguration)
-	providers[api.SecurityEventWebhookConsumerSlack] = &ProviderConfiguration{
-		Provider:            &testutils.TestProvider{},
-		RateLimiterDuration: 5 * time.Second,
-		RateLimiterCount:    3,
-	}
-	testState := NewTestState(getEvents, providers)
+	testProviders := make(map[api.SecurityEventWebhookConsumer]providers.Provider)
+	testProviders[api.SecurityEventWebhookConsumerSlack] = NewTestProvider()
+
+	require.NotZero(t, testProviders[api.SecurityEventWebhookConsumerSlack].RateLimiterConfig().RateLimiterCount)
+	testState := NewTestState(getEvents, testProviders)
 
 	return SetupWithTestState(t, testState)
 }
@@ -421,4 +422,45 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 	})
 
 	return testState
+}
+
+type Request struct {
+	Config map[string]string
+	Event  lsApi.Event
+}
+
+type SlackProvider = slack.Slack
+type TestProvider struct {
+	SlackProvider
+	Requests []Request
+}
+
+func NewTestProvider() providers.Provider {
+	return &TestProvider{
+		SlackProvider: *slack.NewProvider().(*slack.Slack),
+	}
+}
+func (p *TestProvider) Validate(config map[string]string) error {
+	if _, urlPresent := config["url"]; !urlPresent {
+		return errors.New("url field is not present in webhook configuration")
+	}
+	return nil
+}
+
+func (p *TestProvider) Process(ctx context.Context, config map[string]string, event *lsApi.Event) (err error) {
+	logrus.Infof("Processing event %s", event.ID)
+	p.Requests = append(p.Requests, Request{
+		Config: config,
+		Event:  *event,
+	})
+
+	return nil
+}
+
+func (p *TestProvider) RetryConfig() providers.RetryConfig {
+	return p.SlackProvider.RetryConfig()
+}
+
+func (p *TestProvider) RateLimiterConfig() providers.RateLimiterConfig {
+	return p.SlackProvider.RateLimiterConfig()
 }

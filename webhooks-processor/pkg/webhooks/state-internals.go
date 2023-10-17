@@ -17,8 +17,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
-	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 )
 
 const (
@@ -49,24 +49,20 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 		s.updateWebhookHealth(webhook, "ConfigurationParsing", time.Now(), err)
 		return
 	}
-	providerConfig, ok := s.config.Providers[webhook.Spec.Consumer]
+	provider, ok := s.config.Providers[webhook.Spec.Consumer]
 	if !ok {
 		s.preventRestarts[webhook.UID] = true
 		s.updateWebhookHealth(webhook, "ConsumerDiscovery", time.Now(), fmt.Errorf("unknown consumer: %s", webhook.Spec.Consumer))
 		return
 	}
-	if err = providerConfig.Provider.Validate(config); err != nil {
+	if err = provider.Validate(config); err != nil {
 		s.preventRestarts[webhook.UID] = true
 		s.updateWebhookHealth(webhook, "ConsumerConfigurationValidation", time.Now(), err)
 		return
 	}
 
-	processFunc := providerConfig.Provider.Process
 	if webhook.Spec.State == api.SecurityEventWebhookStateDebug {
-		processFunc = func(context.Context, map[string]string, *lsApi.Event) error {
-			logrus.WithField("uid", webhook.UID).Info("Processing Security Events for a webhook in 'Debug' state")
-			return nil
-		}
+		provider = providers.NewDebugProvider(string(webhook.UID))
 	}
 	webhookCtx, cancelFunc := context.WithCancel(ctx)
 	webhookUpdateChan := make(chan *api.SecurityEventWebhook)
@@ -78,10 +74,10 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 		webhookUpdates: webhookUpdateChan,
 	}
 
-	rateLimiter := helpers.NewRateLimiter(providerConfig.RateLimiterDuration, providerConfig.RateLimiterCount)
+	rateLimiter := helpers.NewRateLimiter(provider.RateLimiterConfig())
 
 	s.wg.Add(1)
-	go s.webhookGoroutine(webhookCtx, config, parsedQuery, processFunc, webhookUpdateChan, webhook, rateLimiter)
+	go s.webhookGoroutine(webhookCtx, config, parsedQuery, provider, webhookUpdateChan, webhook, rateLimiter)
 	s.updateWebhookHealth(webhook, "WebhookValidation", time.Now(), nil)
 
 	logrus.WithField("uid", webhook.UID).Info("Webhook validated and registered")

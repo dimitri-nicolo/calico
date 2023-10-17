@@ -9,6 +9,7 @@ import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 )
 
 // The ControllerConfig captures various dependencies that provide IO capabilities
@@ -23,11 +24,11 @@ import (
 type ControllerConfig struct {
 	ClientV3            clientv3.SecurityEventWebhookInterface
 	EventsFetchFunction EventsFetchFunc
-	Providers           map[api.SecurityEventWebhookConsumer]*ProviderConfiguration
+	Providers           map[api.SecurityEventWebhookConsumer]providers.Provider
 	FetchingInterval    time.Duration `envconfig:"WEBHOOKS_FETCHING_INTERVAL" default:"10s"`
 }
 
-func NewControllerConfig(clientV3 clientv3.SecurityEventWebhookInterface, providers map[api.SecurityEventWebhookConsumer]*ProviderConfiguration, getEvents EventsFetchFunc) *ControllerConfig {
+func NewControllerConfig(clientV3 clientv3.SecurityEventWebhookInterface, providers map[api.SecurityEventWebhookConsumer]providers.Provider, getEvents EventsFetchFunc) *ControllerConfig {
 	config := new(ControllerConfig)
 	envconfig.MustProcess("webhooks", config)
 
