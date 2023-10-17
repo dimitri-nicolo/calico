@@ -120,4 +120,30 @@ func TestSlackProviderProcessing(t *testing.T) {
 		require.Contains(t, messageJson, fmt.Sprint(event.Severity))
 		require.Contains(t, messageJson, event.Description)
 	})
+
+	t.Run("slack failure", func(t *testing.T) {
+		setup(t)
+		c := sampleValidConfig()
+		c["url"] = fmt.Sprintf("%s/test", ts.URL)
+
+		// Override default parameters to make sure we retry quickly and get to a failure state quicker
+		slackProvider := p.(*Slack)
+		slackProvider.Config.RetryTimes = 2
+		slackProvider.Config.RetryDuration = 1 * time.Millisecond
+		slackProvider.Config.RequestTimeout = 1 * time.Millisecond
+
+		shouldFail = true
+		// This will take a while and only return once finished
+		err := p.Process(ctx, c, event)
+		require.Error(t, err)
+
+		// At this stage all the retries and errors have gone through, no need to wait further...
+		require.GreaterOrEqual(t, len(requests), 2)
+
+		// This works as designed, and the error eventually coming up from p.Process()
+		// will be logged but there will be no other traces of the failure.
+		// Should we consider handling this differently?
+		// Should we update the health of the webhook while retrying?
+		// Ultimately we may never recover from failed webhook and a user ought to know somehow...
+	})
 }
