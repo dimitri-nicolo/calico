@@ -142,7 +142,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 			// But, press on anyway.
 		}
 		sort.Strings(sDomains)
-		desc = fmt.Sprintf(fmt.Sprintf("A request originating from %v/%v queried the domain name %v, which is listed in the threat feed %v"),
+		desc = fmt.Sprintf("A request originating from %v/%v queried the domain name %v, which is listed in the threat feed %v",
 			l.ClientNamespace,
 			sname,
 			strings.Join(sDomains, ", "),
