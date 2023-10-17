@@ -25,9 +25,9 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 	var description string
 	switch key {
 	case storage.QueryKeyFlowLogSourceIP:
-		description = fmt.Sprintf("suspicious IP %s from list %s connected to %s %s/%s", util.StringPtrWrapper{S: flowLog.SourceIP}, strings.Join(feeds, ", "), flowLog.DestType, flowLog.DestNamespace, flowLog.DestName)
+		description = fmt.Sprintf("suspicious IP %s, listed in Global Threat Feed %s, connected to %s/%s", util.StringPtrWrapper{S: flowLog.SourceIP}, strings.Join(feeds, ", "), flowLog.DestNamespace, flowLog.DestName)
 	case storage.QueryKeyFlowLogDestIP:
-		description = fmt.Sprintf("%s %s/%s connected to suspicious IP %s from list %s", flowLog.SourceType, flowLog.SourceNamespace, flowLog.SourceName, util.StringPtrWrapper{S: flowLog.DestIP}, strings.Join(feeds, ", "))
+		description = fmt.Sprintf("pod %s/%s connected to suspicious IP %s which is listed in Global Threat Feed %s", flowLog.SourceNamespace, flowLog.SourceName, util.StringPtrWrapper{S: flowLog.DestIP}, strings.Join(feeds, ", "))
 	default:
 		description = fmt.Sprintf("%s %s connected to %s %s", flowLog.SourceType, util.StringPtrWrapper{S: flowLog.SourceIP}, flowLog.DestType, util.StringPtrWrapper{S: flowLog.DestIP})
 	}
@@ -60,12 +60,11 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 			mitigations = []string{"Create a global network policy to prevent traffic from this IP address"}
 		}
 	}
-	description := fmt.Sprintf("A request originating from %v/%v queried the domain name %v, which is listed in the threat feed %v")
 	return v1.Event{
 		ID:              generateSuspicousIPSetID(flowLog.StartTime, flowLog.SourceIP, flowLog.SourcePort, flowLog.DestIP, flowLog.DestPort, record),
 		Time:            v1.NewEventTimestamp(flowLog.StartTime),
 		Type:            SuspiciousFlow,
-		Description:     "A request originating from namespace/pod queried the domain name bad domain, which is listed in the threat feed test-feed",
+		Description:     description,
 		Severity:        Severity,
 		Origin:          "Suspicious Flow",
 		SourceIP:        flowLog.SourceIP,
