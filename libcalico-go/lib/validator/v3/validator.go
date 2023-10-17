@@ -172,9 +172,8 @@ var (
 
 	GlobalAlertTypeRegex = regexp.MustCompile("^(RuleBased)$")
 
-	filterActionRegex         = regexp.MustCompile("^(Accept|Reject)$")
-	matchOperatorRegex        = regexp.MustCompile("^(Equal|In|NotEqual|NotIn)$")
-	bgpFilterMatchSourceRegex = regexp.MustCompile("^(RemotePeers)$")
+	filterActionRegex  = regexp.MustCompile("^(Accept|Reject)$")
+	matchOperatorRegex = regexp.MustCompile("^(Equal|In|NotEqual|NotIn)$")
 
 	minAggregationKindValue    = 0
 	maxAggregationKindValue    = 2
@@ -305,7 +304,6 @@ func init() {
 	// Register filter action and match operator validators (used in BGPFilter)
 	registerFieldValidator("filterAction", RegexValidator("FilterAction", filterActionRegex))
 	registerFieldValidator("matchOperator", RegexValidator("MatchOperator", matchOperatorRegex))
-	registerFieldValidator("bgpFilterMatchSource", RegexValidator("Source", bgpFilterMatchSourceRegex))
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).

@@ -2098,6 +2098,14 @@ func init() {
 			CIDR:   "ffff::/128",
 			Action: "Reject",
 		}, false),
+		Entry("should reject BGPFilter rule with no action - 1", api.BGPFilterRuleV4{
+			MatchOperator: "NotEqual",
+			CIDR:          "10.0.10.0/32",
+		}, false),
+		Entry("should reject BGPFilter rule with no action - 2", api.BGPFilterRuleV6{
+			MatchOperator: "NotEqual",
+			CIDR:          "ffff::/128",
+		}, false),
 		Entry("should accept BGPFilter rule with only source set - 1", api.BGPFilterRuleV4{
 			Source: "RemotePeers",
 			Action: "Reject",

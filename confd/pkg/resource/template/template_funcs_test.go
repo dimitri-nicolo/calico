@@ -29,71 +29,71 @@ const (
 	v6ExplicitPeerIP3Str = "4400::3"
 )
 
-func Test_EmitBGPFilterFunctionName(t *testing.T) {
+func Test_bgpFilterFunctionName(t *testing.T) {
 	str := "should-not-be-truncated"
 	direction := "import"
 	version := "4"
-	output, err := EmitBGPFilterFunctionName(str, direction, version)
+	output, err := BGPFilterFunctionName(str, direction, version)
 	if err != nil {
-		t.Errorf("Unexpected error calling EmitFunctionName(%s, %s, %s): %s", str, direction, version, err)
+		t.Errorf("Unexpected error calling BGPFilterFunctionName(%s, %s, %s): %s", str, direction, version, err)
 	}
 	if len(output) > maxFuncNameLen {
-		t.Errorf(`EmitFunctionName(%s, %s, %s) has length %d which is greater than the maximum allowed of %d`,
+		t.Errorf(`BGPFilterFunctionName(%s, %s, %s) has length %d which is greater than the maximum allowed of %d`,
 			str, direction, version, len(output), maxFuncNameLen)
 	}
 
 	str = "very-long-name-that-should-be-truncated-because-it-is-longer-than-the-max-bird-symbol-length-of-64-chars"
-	output, err = EmitBGPFilterFunctionName(str, direction, version)
+	output, err = BGPFilterFunctionName(str, direction, version)
 	if err != nil {
-		t.Errorf("Unexpected error calling EmitFunctionName(%s, %s, %s): %s", str, direction, version, err)
+		t.Errorf("Unexpected error calling BGPFilterFunctionName(%s, %s, %s): %s", str, direction, version, err)
 	}
 	if len(output) > maxFuncNameLen {
-		t.Errorf(`EmitFunctionName(%s, %s, %s) has length %d which is greater than the maximum allowed of %d`,
+		t.Errorf(`BGPFilterFunctionName(%s, %s, %s) has length %d which is greater than the maximum allowed of %d`,
 			str, direction, version, len(output), maxFuncNameLen)
 	}
 }
 
-func Test_EmitBIRDBGPFilterFuncs(t *testing.T) {
+func Test_BGPFilterBIRDFuncs(t *testing.T) {
 	testFilter := v3.BGPFilter{}
 	testFilter.ObjectMeta.Name = "test-bgpfilter"
 	testFilter.Spec = v3.BGPFilterSpec{
 		ImportV4: []v3.BGPFilterRuleV4{
-			{Action: "reject", MatchOperator: "Equal", CIDR: "44.4.0.0/16"},
-			{Action: "reject", Source: "RemotePeers", MatchOperator: "NotIn", CIDR: "55.4.0.0/16"},
-			{Action: "accept", Source: "RemotePeers"},
-			{Action: "reject"},
+			{Action: "Reject", MatchOperator: "Equal", CIDR: "44.4.0.0/16"},
+			{Action: "Reject", Source: "RemotePeers", MatchOperator: "NotIn", CIDR: "55.4.0.0/16"},
+			{Action: "Accept", Source: "RemotePeers"},
+			{Action: "Reject"},
 		},
 		ExportV4: []v3.BGPFilterRuleV4{
-			{Action: "accept", MatchOperator: "In", CIDR: "77.7.0.0/16"},
-			{Action: "reject", Source: "RemotePeers", MatchOperator: "NotIn", CIDR: "88.7.0.0/16"},
-			{Action: "accept", Source: "RemotePeers"},
-			{Action: "reject"},
+			{Action: "Accept", MatchOperator: "In", CIDR: "77.7.0.0/16"},
+			{Action: "Reject", Source: "RemotePeers", MatchOperator: "NotIn", CIDR: "88.7.0.0/16"},
+			{Action: "Accept", Source: "RemotePeers"},
+			{Action: "Reject"},
 		},
 		ImportV6: []v3.BGPFilterRuleV6{
-			{Action: "accept", MatchOperator: "NotEqual", CIDR: "7000:1::0/64"},
-			{Action: "reject", Source: "RemotePeers", MatchOperator: "NotEqual", CIDR: "8000:1::0/64"},
-			{Action: "accept", Source: "RemotePeers"},
-			{Action: "reject"},
+			{Action: "Accept", MatchOperator: "NotEqual", CIDR: "7000:1::0/64"},
+			{Action: "Reject", Source: "RemotePeers", MatchOperator: "NotEqual", CIDR: "8000:1::0/64"},
+			{Action: "Accept", Source: "RemotePeers"},
+			{Action: "Reject"},
 		},
 		ExportV6: []v3.BGPFilterRuleV6{
-			{Action: "accept", MatchOperator: "NotIn", CIDR: "9000:1::0/64"},
-			{Action: "reject", Source: "RemotePeers", MatchOperator: "NotIn", CIDR: "a000:1::0/64"},
-			{Action: "accept", Source: "RemotePeers"},
-			{Action: "reject"},
+			{Action: "Accept", MatchOperator: "NotIn", CIDR: "9000:1::0/64"},
+			{Action: "Reject", Source: "RemotePeers", MatchOperator: "NotIn", CIDR: "a000:1::0/64"},
+			{Action: "Accept", Source: "RemotePeers"},
+			{Action: "Reject"},
 		},
 	}
 	expectedBIRDCfgStrV4 := []string{
 		"# v4 BGPFilter test-bgpfilter",
 		"function 'bgp_test-bgpfilter_importFilterV4'() {",
 		"  if ((net = 44.4.0.0/16)) then { reject; }",
-		"  if ((net !~ 55.4.0.0/16) && ((defined(source)) && (source ~ [ RTS_BGP ]))) then { reject; }",
-		"  if (((defined(source)) && (source ~ [ RTS_BGP ]))) then { accept; }",
+		"  if ((net !~ 55.4.0.0/16)&&((defined(source))&&(source ~ [ RTS_BGP ]))) then { reject; }",
+		"  if (((defined(source))&&(source ~ [ RTS_BGP ]))) then { accept; }",
 		"  reject;",
 		"}",
 		"function 'bgp_test-bgpfilter_exportFilterV4'() {",
 		"  if ((net ~ 77.7.0.0/16)) then { accept; }",
-		"  if ((net !~ 88.7.0.0/16) && ((defined(source)) && (source ~ [ RTS_BGP ]))) then { reject; }",
-		"  if (((defined(source)) && (source ~ [ RTS_BGP ]))) then { accept; }",
+		"  if ((net !~ 88.7.0.0/16)&&((defined(source))&&(source ~ [ RTS_BGP ]))) then { reject; }",
+		"  if (((defined(source))&&(source ~ [ RTS_BGP ]))) then { accept; }",
 		"  reject;",
 		"}",
 	}
@@ -101,14 +101,14 @@ func Test_EmitBIRDBGPFilterFuncs(t *testing.T) {
 		"# v6 BGPFilter test-bgpfilter",
 		"function 'bgp_test-bgpfilter_importFilterV6'() {",
 		"  if ((net != 7000:1::0/64)) then { accept; }",
-		"  if ((net != 8000:1::0/64) && ((defined(source)) && (source ~ [ RTS_BGP ]))) then { reject; }",
-		"  if (((defined(source)) && (source ~ [ RTS_BGP ]))) then { accept; }",
+		"  if ((net != 8000:1::0/64)&&((defined(source))&&(source ~ [ RTS_BGP ]))) then { reject; }",
+		"  if (((defined(source))&&(source ~ [ RTS_BGP ]))) then { accept; }",
 		"  reject;",
 		"}",
 		"function 'bgp_test-bgpfilter_exportFilterV6'() {",
 		"  if ((net !~ 9000:1::0/64)) then { accept; }",
-		"  if ((net !~ a000:1::0/64) && ((defined(source)) && (source ~ [ RTS_BGP ]))) then { reject; }",
-		"  if (((defined(source)) && (source ~ [ RTS_BGP ]))) then { accept; }",
+		"  if ((net !~ a000:1::0/64)&&((defined(source))&&(source ~ [ RTS_BGP ]))) then { reject; }",
+		"  if (((defined(source))&&(source ~ [ RTS_BGP ]))) then { accept; }",
 		"  reject;",
 		"}",
 	}
@@ -121,7 +121,7 @@ func Test_EmitBIRDBGPFilterFuncs(t *testing.T) {
 		{Key: "test-bgpfilter", Value: string(jsonFilter)},
 	}
 
-	v4BIRDCfgResult, err := EmitBIRDBGPFilterFuncs(kvps, 4)
+	v4BIRDCfgResult, err := BGPFilterBIRDFuncs(kvps, 4)
 	if err != nil {
 		t.Errorf("Unexpected error while generating v4 BIRD BGPFilter functions: %s", err)
 	}
@@ -130,18 +130,18 @@ func Test_EmitBIRDBGPFilterFuncs(t *testing.T) {
 			v4BIRDCfgResult, expectedBIRDCfgStrV4)
 	}
 
-	v6BIRDCfgResult, err := EmitBIRDBGPFilterFuncs(kvps, 6)
+	v6BIRDCfgResult, err := BGPFilterBIRDFuncs(kvps, 6)
 	if err != nil {
 		t.Errorf("Unexpected error while generating v6 BIRD BGPFilter functions: %s", err)
 	}
 	if !reflect.DeepEqual(v6BIRDCfgResult, expectedBIRDCfgStrV6) {
-		t.Errorf("Generated v6 BIRD config differs from expectation: Generated = %s, Expected = %s",
+		t.Errorf("Generated v6 BIRD config differs from expectation:\n Generated = %s,\n Expected = %s",
 			v6BIRDCfgResult, expectedBIRDCfgStrV6)
 	}
 }
 
-func resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworksKVP, globalPeersKVP, explicitPeersKVP memkv.KVPairs, expected []string, t *testing.T) {
-	result, err := EmitBIRDExternalNetworkConfig("dontcare", externalNetworksKVP, globalPeersKVP, explicitPeersKVP)
+func resultCheckerForExternalNetworkBIRDConfig(externalNetworksKVP, globalPeersKVP, explicitPeersKVP memkv.KVPairs, expected []string, t *testing.T) {
+	result, err := ExternalNetworkBIRDConfig("dontcare", externalNetworksKVP, globalPeersKVP, explicitPeersKVP)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -195,16 +195,16 @@ func constructBGPPeerKVPs(peerIPStrs []string, enet string, port uint16, t *test
 	return kvps
 }
 
-func Test_BIRDExternalNetworkConfig_NoExternalNetworks(t *testing.T) {
+func Test_ExternalNetworkBIRDConfig_NoExternalNetworks(t *testing.T) {
 	expectedEmptyBIRDCfgStr := []string{
 		"# No ExternalNetworks configured",
 	}
 
-	resultCheckerForEmitBIRDExternalNetworkConfig(memkv.KVPairs{}, memkv.KVPairs{}, memkv.KVPairs{},
+	resultCheckerForExternalNetworkBIRDConfig(memkv.KVPairs{}, memkv.KVPairs{}, memkv.KVPairs{},
 		expectedEmptyBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetworkConfig_EmptyAllPeers(t *testing.T) {
+func Test_ExternalNetworkBIRDConfig_EmptyAllPeers(t *testing.T) {
 	routeTableIdxs := []uint32{7}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
@@ -212,11 +212,11 @@ func Test_EmitBIRDExternalNetworkConfig_EmptyAllPeers(t *testing.T) {
 		"# No ExternalNetworks configured for any of this node's BGP peers",
 	}
 
-	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, memkv.KVPairs{}, memkv.KVPairs{},
+	resultCheckerForExternalNetworkBIRDConfig(externalNetworkKVPs, memkv.KVPairs{}, memkv.KVPairs{},
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetworkConfig_MultiplePeersSomeWithExternalNetworksSomeWithout(t *testing.T) {
+func Test_ExternalNetworkBIRDConfig_MultiplePeersSomeWithExternalNetworksSomeWithout(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdx2 := uint32(4)
 	routeTableIdxs := []uint32{routeTableIdx1, routeTableIdx2}
@@ -285,11 +285,11 @@ func Test_EmitBIRDExternalNetworkConfig_MultiplePeersSomeWithExternalNetworksSom
 		"}",
 	}
 
-	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, explicitPeersKVPs,
+	resultCheckerForExternalNetworkBIRDConfig(externalNetworkKVPs, globalPeersKVPs, explicitPeersKVPs,
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetworkConfig_PeersWithPorts(t *testing.T) {
+func Test_ExternalNetworkBIRDConfig_PeersWithPorts(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdxs := []uint32{routeTableIdx1}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
@@ -324,18 +324,18 @@ func Test_EmitBIRDExternalNetworkConfig_PeersWithPorts(t *testing.T) {
 		"}",
 	}
 
-	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, explicitPeersKVPs,
+	resultCheckerForExternalNetworkBIRDConfig(externalNetworkKVPs, globalPeersKVPs, explicitPeersKVPs,
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitExternalNetworkTableName(t *testing.T) {
+func Test_ExternalNetworkTableName(t *testing.T) {
 	str := "should-not-be-truncated"
-	output, err := EmitExternalNetworkTableName(str)
+	output, err := ExternalNetworkTableName(str)
 	if err != nil {
-		t.Errorf("Unexpected error calling EmitExternalNetworkTableName(%s): %s", str, err)
+		t.Errorf("Unexpected error calling ExternalNetworkTableName(%s): %s", str, err)
 	}
 	if len(output) > maxFuncNameLen {
-		t.Errorf(`EmitExternalNetworkTableName(%s) has length %d which is greater than the maximum allowed of %d`,
+		t.Errorf(`ExternalNetworkTableName(%s) has length %d which is greater than the maximum allowed of %d`,
 			str, len(output), maxFuncNameLen)
 	}
 	expectedName := "'T_should-not-be-truncated'"
@@ -344,12 +344,12 @@ func Test_EmitExternalNetworkTableName(t *testing.T) {
 	}
 
 	str = "very-long-name-that-should-be-truncated-because-it-is-longer-than-the-max-bird-symbol-length-of-64-chars"
-	output, err = EmitExternalNetworkTableName(str)
+	output, err = ExternalNetworkTableName(str)
 	if err != nil {
-		t.Errorf("Unexpected error calling EmitExternalNetworkTableName(%s): %s", str, err)
+		t.Errorf("Unexpected error calling ExternalNetworkTableName(%s): %s", str, err)
 	}
 	if len(output) > maxFuncNameLen {
-		t.Errorf(`EmitExternalNetworkTableName(%s) has length %d which is greater than the maximum allowed of %d`,
+		t.Errorf(`ExternalNetworkTableName(%s) has length %d which is greater than the maximum allowed of %d`,
 			str, len(output), maxFuncNameLen)
 	}
 }

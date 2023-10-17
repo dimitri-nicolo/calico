@@ -64,7 +64,7 @@ type BGPFilterSpec struct {
 type BGPFilterRuleV4 struct {
 	CIDR string `json:"cidr,omitempty" validate:"omitempty,netv4"`
 
-	Source BGPFilterMatchSource `json:"source,omitempty" validate:"omitempty,bgpFilterMatchSource"`
+	Source BGPFilterMatchSource `json:"source,omitempty" validate:"omitempty,oneof=RemotePeers"`
 
 	MatchOperator BGPFilterMatchOperator `json:"matchOperator,omitempty" validate:"omitempty,matchOperator"`
 
@@ -75,7 +75,7 @@ type BGPFilterRuleV4 struct {
 type BGPFilterRuleV6 struct {
 	CIDR string `json:"cidr,omitempty" validate:"omitempty,netv6"`
 
-	Source BGPFilterMatchSource `json:"source,omitempty" validate:"omitempty,bgpFilterMatchSource"`
+	Source BGPFilterMatchSource `json:"source,omitempty" validate:"omitempty,oneof=RemotePeers"`
 
 	MatchOperator BGPFilterMatchOperator `json:"matchOperator,omitempty" validate:"omitempty,matchOperator"`
 
