@@ -11,7 +11,7 @@ function reject_disabled_pools ()
 function reject_tunnel_routes () {
   # Don't export vxlan routes to other nodes, Felix programs them.
   # IPIP routes are handled by Bird, and it would not re-advertise them.
-  if ((defined(ifname)) && (ifname="*.calico")) then {
+  if ((defined(ifname)) && (ifname="vxlan.calico")) then {
     reject;
   }
 }
