@@ -5,9 +5,10 @@ package webhooks
 import (
 	"time"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/jira"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/slack"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type ProviderConfiguration struct {
