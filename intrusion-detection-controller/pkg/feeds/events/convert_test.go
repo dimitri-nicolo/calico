@@ -463,7 +463,7 @@ func TestConvertDNSLog_RRSetRData(t *testing.T) {
 		Type:            SuspiciousDNSQuery,
 		Description:     "default/client-8888-* got DNS query results including suspicious domain(s) uef0.malh0st.io from global threat feed(s) test-feed",
 		Severity:        Severity,
-		Origin:         "Suspicious DNS Query",
+		Origin:          "Suspicious DNS Query",
 		SourceIP:        util.Sptr("20.21.22.23"),
 		SourceNamespace: "default",
 		SourceName:      "-",

@@ -16,11 +16,11 @@ import (
 )
 
 const (
-	SuspiciousFlow     = "gtf_suspicious_flow"
-	SuspiciousDNSQuery = "gtf_suspicious_dns_query"
-	SuspiciousFlowName = "Suspicious Flow"
+	SuspiciousFlow         = "gtf_suspicious_flow"
+	SuspiciousDNSQuery     = "gtf_suspicious_dns_query"
+	SuspiciousFlowName     = "Suspicious Flow"
 	SuspiciousDnsQueryName = "Suspicious DNS Query"
-	Severity           = 100
+	Severity               = 100
 )
 
 func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v1.Event {
