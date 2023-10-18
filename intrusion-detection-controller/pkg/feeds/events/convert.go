@@ -18,6 +18,8 @@ import (
 const (
 	SuspiciousFlow     = "gtf_suspicious_flow"
 	SuspiciousDNSQuery = "gtf_suspicious_dns_query"
+	SuspiciousFlowName = "Suspicious Flow"
+	SuspiciousDnsQueryName = "Suspicious DNS Query"
 	Severity           = 100
 )
 
@@ -66,7 +68,7 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 		Type:            SuspiciousFlow,
 		Description:     description,
 		Severity:        Severity,
-		Origin:          "Suspicious Flow",
+		Origin:          SuspiciousFlowName,
 		SourceIP:        flowLog.SourceIP,
 		SourcePort:      flowLog.SourcePort,
 		SourceNamespace: flowLog.SourceNamespace,
@@ -79,7 +81,7 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 		DestNameAggr:    flowLog.DestNameAggr,
 		Record:          record,
 
-		Name:         "Suspicious Flows",
+		Name:         SuspiciousFlowName,
 		AttackVector: "Network",
 		MitreIDs:     &mitreID,
 		Mitigations:  &mitigations,
@@ -188,14 +190,14 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		Type:            SuspiciousDNSQuery,
 		Description:     desc,
 		Severity:        Severity,
-		Origin:          "Suspicious DNS Query",
+		Origin:          SuspiciousDnsQueryName,
 		SourceIP:        util.StrPtr(l.ClientIP),
 		SourceNamespace: l.ClientNamespace,
 		SourceName:      l.ClientName,
 		SourceNameAggr:  l.ClientNameAggr,
 		Record:          record,
 
-		Name:         "Suspicious DNS Query",
+		Name:         SuspiciousDnsQueryName,
 		AttackVector: "Network",
 		MitreIDs:     &[]string{"T1041"},
 		Mitigations:  &[]string{"Create a global network policy to prevent traffic from this IP address"},

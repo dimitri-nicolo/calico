@@ -68,9 +68,9 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		ID:              "testfeed_123_tcp_1.2.3.4_443_2.3.4.5_80",
 		Time:            v1.NewEventTimestamp(123),
 		Type:            SuspiciousFlow,
-		Description:     "suspicious IP 1.2.3.4 from list testfeed connected to net internet/dest-foo",
+		Description:     "suspicious IP 1.2.3.4, listed in Global Threat Feed testfeed, connected to internet/dest-foo",
 		Severity:        Severity,
-		Origin:          "testfeed",
+		Origin:          "Suspicious Flow",
 		SourceIP:        util.Sptr("1.2.3.4"),
 		SourcePort:      util.I64ptr(443),
 		SourceNamespace: "mock",
@@ -83,10 +83,10 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		DestNameAggr:    "dest",
 		Record:          record,
 
-		Name:         "testfeed",
+		Name:         "Suspicious Flow",
 		AttackVector: "Network",
 		MitreIDs:     &[]string{"T1041"},
-		Mitigations:  &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+		Mitigations:  &[]string{"Create a global network policy to prevent traffic from this IP address"},
 		MitreTactic:  "Exfiltration",
 	}
 
@@ -147,9 +147,9 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		ID:              "testfeed_123_tcp_1.2.3.4_443_2.3.4.5_80",
 		Time:            v1.NewEventTimestamp(123),
 		Type:            SuspiciousFlow,
-		Description:     "wep mock/source-foo connected to suspicious IP 2.3.4.5 from list testfeed",
+		Description:     "pod mock/source-foo connected to suspicious IP 2.3.4.5 which is listed in Global Threat Feed testfeed",
 		Severity:        Severity,
-		Origin:          "testfeed",
+		Origin:          "Suspicious Flow",
 		SourceIP:        util.Sptr("1.2.3.4"),
 		SourcePort:      util.I64ptr(443),
 		SourceNamespace: "mock",
@@ -161,10 +161,10 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		DestName:        "dest-foo",
 		DestNameAggr:    "dest",
 		Record:          record,
-		Name:            "testfeed",
+		Name:            "Suspicious Flow",
 		AttackVector:    "Network",
 		MitreIDs:        &[]string{"T1090"},
-		Mitigations:     &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+		Mitigations:     &[]string{"Create a global network policy to prevent traffic to this IP address"},
 		MitreTactic:     "Command and Control",
 	}
 
@@ -227,7 +227,7 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		Type:            SuspiciousFlow,
 		Description:     "hep 1.2.3.4 connected to ns 2.3.4.5",
 		Severity:        Severity,
-		Origin:          "testfeed",
+		Origin:          "Suspicious Flow",
 		SourceIP:        util.Sptr("1.2.3.4"),
 		SourcePort:      util.I64ptr(443),
 		SourceNamespace: "mock",
@@ -239,10 +239,10 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		DestName:        "dest-foo",
 		DestNameAggr:    "dest",
 		Record:          record,
-		Name:            "testfeed",
+		Name:            "Suspicious Flow",
 		AttackVector:    "Network",
 		MitreIDs:        &[]string{"T1041"},
-		Mitigations:     &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+		Mitigations:     &[]string{"Create a global network policy to prevent traffic from this IP address"},
 		MitreTactic:     "Exfiltration",
 	}
 
@@ -294,7 +294,7 @@ func TestConvertDNSLog_QName(t *testing.T) {
 		Type:            SuspiciousDNSQuery,
 		Description:     "default/client-8888-34 queried the domain name www.badguys.co.uk from global threat feed(s) test-feed",
 		Severity:        Severity,
-		Origin:          "test-feed",
+		Origin:          "Suspicious DNS Query",
 		SourceIP:        util.Sptr("20.21.22.23"),
 		SourceNamespace: "default",
 		SourceName:      "client-8888-34",
@@ -305,10 +305,10 @@ func TestConvertDNSLog_QName(t *testing.T) {
 			Feeds:             []string{"test-feed"},
 			SuspiciousDomains: []string{"www.badguys.co.uk"},
 		},
-		Name:         "test-feed",
+		Name:         "Suspicious DNS Query",
 		AttackVector: "Network",
 		MitreIDs:     &[]string{"T1041"},
-		Mitigations:  &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+		Mitigations:  &[]string{"Create a global network policy to prevent traffic from this IP address"},
 		MitreTactic:  "Exfiltration",
 	}
 	actual := ConvertDNSLog(tc, storage.QueryKeyDNSLogQName, map[string]struct{}{"www.badguys.co.uk": {}}, "test-feed")
@@ -369,22 +369,21 @@ func TestConvertDNSLog_RRSetName(t *testing.T) {
 		ID:              "test-feed~my-feed_1_20.21.22.23_www1.badguys-backend.co.uk",
 		Time:            v1.NewEventTimestamp(1),
 		Type:            SuspiciousDNSQuery,
-		Description:     "default/client-8888-* got DNS query results including suspicious domain(s) www1.badguys-backend.co.uk from global threat feed(s) test-feed, my-feed",
+		Description:     "A request originating from default/client-8888-* queried the domain name www1.badguys-backend.co.uk, which is listed in the threat feed test-feed, my-feed",
 		Severity:        Severity,
-		Origin:          "test-feed",
+		Origin:          "Suspicious DNS Query",
 		SourceIP:        util.Sptr("20.21.22.23"),
 		SourceNamespace: "default",
 		SourceName:      "-",
 		SourceNameAggr:  "client-8888-*",
 		Host:            "",
 		Record:          record,
-		Name:            "test-feed",
+		Name:            "Suspicious DNS Query",
 		AttackVector:    "Network",
 		MitreIDs:        &[]string{"T1041"},
-		Mitigations:     &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+		Mitigations:     &[]string{"Create a global network policy to prevent traffic from this IP address"},
 		MitreTactic:     "Exfiltration",
 	}
-
 	domains := map[string]struct{}{
 		"www1.badguys-backend.co.uk": {},
 	}
@@ -393,7 +392,7 @@ func TestConvertDNSLog_RRSetName(t *testing.T) {
 
 	// Multiple matched domains
 	expected.ID = "test-feed~my-feed_1_20.21.22.23_www.badguys.co.uk~www1.badguys-backend.co.uk"
-	expected.Description = "default/client-8888-* got DNS query results including suspicious domain(s) www.badguys.co.uk, www1.badguys-backend.co.uk from global threat feed(s) test-feed, my-feed"
+	expected.Description = "A request originating from default/client-8888-* queried the domain name www.badguys.co.uk, www1.badguys-backend.co.uk, which is listed in the threat feed test-feed, my-feed"
 	record.SuspiciousDomains = []string{"www.badguys.co.uk", "www1.badguys-backend.co.uk"}
 	expected.Record = record
 	domains["www.badguys.co.uk"] = struct{}{}
@@ -402,7 +401,7 @@ func TestConvertDNSLog_RRSetName(t *testing.T) {
 
 	// No matched domains
 	expected.ID = "test-feed~my-feed_1_20.21.22.23_unknown"
-	expected.Description = "default/client-8888-* got DNS query results including suspicious domain(s)  from global threat feed(s) test-feed, my-feed"
+	expected.Description = "A request originating from default/client-8888-* queried the domain name , which is listed in the threat feed test-feed, my-feed"
 	record.SuspiciousDomains = nil
 	expected.Record = record
 	actual = ConvertDNSLog(tc, storage.QueryKeyDNSLogRRSetsName, map[string]struct{}{}, "test-feed", "my-feed")
@@ -464,17 +463,17 @@ func TestConvertDNSLog_RRSetRData(t *testing.T) {
 		Type:            SuspiciousDNSQuery,
 		Description:     "default/client-8888-* got DNS query results including suspicious domain(s) uef0.malh0st.io from global threat feed(s) test-feed",
 		Severity:        Severity,
-		Origin:          "test-feed",
+		Origin:         "Suspicious DNS Query",
 		SourceIP:        util.Sptr("20.21.22.23"),
 		SourceNamespace: "default",
 		SourceName:      "-",
 		SourceNameAggr:  "client-8888-*",
 		Host:            "",
 		Record:          record,
-		Name:            "test-feed",
+		Name:            "Suspicious DNS Query",
 		AttackVector:    "Network",
 		MitreIDs:        &[]string{"T1041"},
-		Mitigations:     &[]string{"Create a global network policy to prevent traffic {to, from} this IP address"},
+		Mitigations:     &[]string{"Create a global network policy to prevent traffic from this IP address"},
 		MitreTactic:     "Exfiltration",
 	}
 
