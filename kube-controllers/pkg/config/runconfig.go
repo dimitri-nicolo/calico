@@ -412,32 +412,11 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		}
 		rc.ElasticsearchConfiguration.RESTConfig = restCfg
 	}
-	if rc.ImageAssurance != nil {
-		rc.ImageAssurance.NumberOfWorkers = envCfg.ImageAssuranceWorkers
-		rc.ImageAssurance.IntrusionDetectionControllerClusterRoleName = envCfg.ImageAssuranceIntrusionDetectionControllerClusterRoleName
-		rc.ImageAssurance.AdmissionControllerClusterRoleName = envCfg.ImageAssuranceAdmissionControllerClusterRoleName
-		rc.ImageAssurance.CRAdaptorClusterRoleName = envCfg.ImageAssuranceCRAdaptorClusterRoleName
-		rc.ImageAssurance.ScannerClusterRoleName = envCfg.ImageAssuranceScannerClusterRoleName
-		rc.ImageAssurance.ScannerCLITokenSecretName = envCfg.ImageAssuranceScannerCLITokenSecretName
-		rc.ImageAssurance.ScannerCLIClusterRoleName = envCfg.ImageAssuranceScannerCLIClusterRoleName
-		rc.ImageAssurance.OperatorCloudClusterRoleName = envCfg.ImageAssuranceOperatorClusterRoleName
-		rc.ImageAssurance.RuntimeCleanerClusterRoleName = envCfg.ImageAssuranceRuntimeCleanerClusterRoleName
-		rc.ImageAssurance.ClusterScannerClusterRoleName = envCfg.ImageAssuranceClusterScannerClusterRoleName
-	}
+
 	if rc.ManagedCluster != nil {
 		rc.ManagedCluster.NumberOfWorkers = envCfg.ManagedClusterWorkers
 		rc.ManagedCluster.ElasticConfig.NumberOfWorkers = envCfg.ManagedClusterElasticsearchConfigurationWorkers
 		rc.ManagedCluster.LicenseConfig.NumberOfWorkers = envCfg.ManagedClusterLicenseConfigurationWorkers
-		rc.ManagedCluster.ImageAssuranceConfig.NumberOfWorkers = envCfg.ManagedClusterImageAssuranceConfigurationWorkers
-		rc.ManagedCluster.ImageAssuranceConfig.IntrusionDetectionControllerClusterRoleName = envCfg.ImageAssuranceIntrusionDetectionControllerClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.ScannerClusterRoleName = envCfg.ImageAssuranceScannerClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.ScannerCLIClusterRoleName = envCfg.ImageAssuranceScannerCLIClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.ScannerCLITokenSecretName = envCfg.ImageAssuranceScannerCLITokenSecretName
-		rc.ManagedCluster.ImageAssuranceConfig.OperatorCloudClusterRoleName = envCfg.ImageAssuranceOperatorClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.AdmissionControllerClusterRoleName = envCfg.ImageAssuranceAdmissionControllerClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.CRAdaptorClusterRoleName = envCfg.ImageAssuranceCRAdaptorClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.RuntimeCleanerClusterRoleName = envCfg.ImageAssuranceRuntimeCleanerClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.ClusterScannerClusterRoleName = envCfg.ImageAssuranceClusterScannerClusterRoleName
 		rc.ManagedCluster.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
 		rc.ManagedCluster.MultiClusterForwardingCA = envCfg.MultiClusterForwardingCA
 		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
