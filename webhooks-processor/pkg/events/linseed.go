@@ -7,12 +7,13 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsClient "github.com/projectcalico/calico/linseed/pkg/client"
 	lsRest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmaV1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	"github.com/sirupsen/logrus"
 )
 
 var securityEventsClient lsClient.EventsInterface

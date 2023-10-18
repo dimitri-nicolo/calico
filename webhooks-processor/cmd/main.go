@@ -9,10 +9,11 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/events"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/webhooks"
-	"github.com/sirupsen/logrus"
 )
 
 func main() {

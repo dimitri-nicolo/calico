@@ -10,14 +10,15 @@ import (
 	"time"
 
 	"github.com/cnf/structhash"
-	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
-	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
+	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 )
 
 const (

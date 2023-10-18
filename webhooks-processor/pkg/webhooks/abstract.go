@@ -6,10 +6,11 @@ import (
 	"context"
 	"time"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type ProcessFunc func(context.Context, map[string]string, *lsApi.Event) error

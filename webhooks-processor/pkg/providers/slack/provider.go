@@ -14,8 +14,9 @@ import (
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
-	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 )
 
 const (
