@@ -88,7 +88,7 @@ func TestSlackProviderProcessing(t *testing.T) {
 			Type:        "runtime_security",
 		}
 	}
-	t.Run("success", func(t *testing.T) {
+	t.Run("slack success", func(t *testing.T) {
 		setup(t)
 		c := sampleValidConfig()
 		c["url"] = fmt.Sprintf("%s/test", ts.URL)
