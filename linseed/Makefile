@@ -124,6 +124,7 @@ run-image: stop-image run-elastic k8s-setup
 		-v $(REPO_ROOT)/linseed/fv/cert/RootCA.crt:/certs/https/client.crt \
 		-v $(CERTS_PATH)/ca.pem:/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
 		-v $(REPO_ROOT)/linseed/fv/linseed-token:/var/run/secrets/kubernetes.io/serviceaccount/token \
+		-v $(REPO_ROOT)/linseed/fv/tenant-namespace:/var/run/secrets/kubernetes.io/serviceaccount/namespace \
 		-e KUBERNETES_SERVICE_HOST=127.0.0.1 \
 		-e KUBERNETES_SERVICE_PORT=6443 \
 		-e ELASTIC_HOST="localhost" \

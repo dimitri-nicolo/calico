@@ -3,6 +3,12 @@
 package config
 
 import (
+	"os"
+	"strings"
+
+	"github.com/kelseyhightower/envconfig"
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
@@ -106,6 +112,8 @@ type Config struct {
 
 	// Configures which backend mode to use.
 	Backend BackendType `envconfig:"BACKEND" default:"elastic-multi-index"`
+
+	TenantNamespace string `envconfig:"TENANT_NAMESPACE" default:""`
 }
 
 type BackendType string
@@ -125,4 +133,22 @@ func (cfg *Config) String() string {
 		return "{}"
 	}
 	return string(data)
+}
+
+func LoadConfig() (*Config, error) {
+	var err error
+	config := &Config{}
+	if err = envconfig.Process(EnvConfigPrefix, config); err != nil {
+		logrus.WithError(err).Fatal("Unable to load envconfig %w", err)
+	}
+
+	// Get TenantNamespace in MultiTenant Mode.
+	if len(config.ExpectedTenantID) > 0 && config.TenantNamespace == "" {
+		ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+		if err != nil {
+			logrus.WithError(err).Fatal("unable to get the tenant namespace: %w", err)
+		}
+		config.TenantNamespace = strings.TrimSpace(string(ns))
+	}
+	return config, nil
 }

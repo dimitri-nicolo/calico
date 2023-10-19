@@ -9,6 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
 	"k8s.io/client-go/informers"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
@@ -19,13 +23,9 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calico "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	"github.com/tigera/api/pkg/client/informers_generated/externalversions"
-	v3listers "github.com/tigera/api/pkg/client/listers_generated/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
@@ -53,10 +53,10 @@ func WithPrivateKey(k *rsa.PrivateKey) ControllerOption {
 	}
 }
 
-// WithCalicoClient configures the Calico client used to access managed cluster resources.
-func WithCalicoClient(cs calico.Interface) ControllerOption {
+// WithControllerRuntimeClient configures the controller runtime client used to access managed cluster resources.
+func WithControllerRuntimeClient(client ctrlclient.WithWatch) ControllerOption {
 	return func(c *controller) error {
-		c.managementCalicoClient = cs
+		c.client = client
 		return nil
 	}
 }
@@ -205,8 +205,8 @@ func NewController(opts ...ControllerOption) (Controller, error) {
 	}
 
 	// Verify necessary options set.
-	if c.managementCalicoClient == nil {
-		return nil, fmt.Errorf("must provide a management cluster calico client")
+	if c.client == nil {
+		return nil, fmt.Errorf("must provide a management cluster controller runtime client")
 	}
 	if c.privateKey == nil {
 		return nil, fmt.Errorf("must provide a private key")
@@ -231,20 +231,20 @@ func NewController(opts ...ControllerOption) (Controller, error) {
 
 type controller struct {
 	// Input configuration.
-	privateKey             *rsa.PrivateKey
-	tenant                 string
-	namespace              string
-	issuer                 string
-	issuerName             string
-	managementCalicoClient calico.Interface
-	managementK8sClient    kubernetes.Interface
-	secretsToCopy          []corev1.Secret
-	expiry                 time.Duration
-	reconcilePeriod        *time.Duration
-	baseRetryPeriod        *time.Duration
-	maxRetries             *int
-	reportHealth           func(*health.HealthReport)
-	factory                k8s.ClientSetFactory
+	privateKey          *rsa.PrivateKey
+	tenant              string
+	namespace           string
+	issuer              string
+	issuerName          string
+	client              ctrlclient.WithWatch
+	managementK8sClient kubernetes.Interface
+	secretsToCopy       []corev1.Secret
+	expiry              time.Duration
+	reconcilePeriod     *time.Duration
+	baseRetryPeriod     *time.Duration
+	maxRetries          *int
+	reportHealth        func(*health.HealthReport)
+	factory             k8s.ClientSetFactory
 
 	// userInfos in the managed cluster that we should provision tokens for.
 	userInfos []UserInfo
@@ -268,17 +268,6 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 	defer close(mcChan)
 	defer close(secretChan)
 
-	var mcFactory externalversions.SharedInformerFactory
-
-	// If we're running in multi-tenant mode then we only want our ManagedCluster informer to inform us of changes to
-	// resources in the same namespace as us
-	opts := []externalversions.SharedInformerOption{}
-	if c.namespace != "" {
-		opts = append(opts, externalversions.WithNamespace(c.namespace))
-	}
-	mcFactory = externalversions.NewSharedInformerFactoryWithOptions(c.managementCalicoClient, 0, opts...)
-
-	mcInformer := mcFactory.Projectcalico().V3().ManagedClusters().Informer()
 	managedClusterHandler := cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {},
 		AddFunc: func(obj interface{}) {
@@ -292,6 +281,12 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 			}
 		},
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	listWatcher := newManagedClusterListWatcher(ctx, c.client, c.namespace)
+	mcInformer := cache.NewSharedIndexInformer(listWatcher, &v3.ManagedCluster{}, 0, cache.Indexers{})
 	_, err := mcInformer.AddEventHandler(managedClusterHandler)
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to add ManagedCluster event handler")
@@ -347,8 +342,9 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 		stopCh,
 		mcChan,
 		secretChan,
-		v3listers.NewManagedClusterLister(mcInformer.GetIndexer()),
+		mcInformer,
 	)
+
 }
 
 func isConnected(mc *v3.ManagedCluster) bool {
@@ -387,7 +383,7 @@ func retryUpdate[T corev1.Secret | v3.ManagedCluster](rc *retryCalculator, id st
 	}()
 }
 
-func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *v3.ManagedCluster, secretChan chan *corev1.Secret, lister v3listers.ManagedClusterLister) {
+func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *v3.ManagedCluster, secretChan chan *corev1.Secret, mcInformer cache.SharedIndexInformer) {
 	defer logrus.Info("Token manager shutting down")
 
 	ticker := time.After(*c.reconcilePeriod)
@@ -402,18 +398,18 @@ func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *v3.ManagedC
 			logrus.Debug("Reconciling tokens and copying secrets for all clusters")
 
 			// Get all clusters.
-			mcs, err := lister.List(labels.Everything())
-			if err != nil {
-				logrus.WithError(err).Error("Failed to list managed clusters")
-				continue
-			}
+			mcs := mcInformer.GetStore().List()
 
 			// Start a new ticker.
 			ticker = time.After(*c.reconcilePeriod)
 
-			for _, mc := range mcs {
+			for _, obj := range mcs {
+				mc, ok := obj.(*v3.ManagedCluster)
+				if !ok {
+					logrus.Warnf("Received unexpected type %T", obj)
+					continue
+				}
 				log := c.loggerForManagedCluster(mc)
-
 				managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(mc.Name)
 				if err != nil {
 					log.WithError(err).Error("failed to get client for cluster")
@@ -455,14 +451,14 @@ func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *v3.ManagedC
 			retry := retryUpdate[corev1.Secret]
 
 			// Get all clusters.
-			mcs, err := lister.List(labels.Everything())
-			if err != nil {
-				logrus.WithError(err).Error("Failed to list managed clusters")
-				retry(rc, secret.String(), *secret, secretChan, stop)
-				continue
-			}
+			mcs := mcInformer.GetStore().List()
 
-			for _, mc := range mcs {
+			for _, obj := range mcs {
+				mc, ok := obj.(*v3.ManagedCluster)
+				if !ok {
+					logrus.Warnf("Received unexpected type %T", obj)
+					continue
+				}
 				log := c.loggerForManagedCluster(mc)
 
 				managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(mc.Name)
@@ -734,4 +730,22 @@ func ParseClaimsLinseed(claims jwt.Claims) (*user.DefaultInfo, error) {
 		return nil, err
 	}
 	return &user.DefaultInfo{Name: fmt.Sprintf("system:serviceaccount:%s:%s", namespace, name)}, nil
+}
+
+// newManagedClusterListWatcher returns an implementation of the ListWatch interface capable of being used to
+// build an informer based on a controller-runtime client. Using the controller-runtime client allows us to build
+// an Informer that works for both namespaced and cluster-scoped ManagedCluster resources regardless of whether
+// it is a multi-tenant cluster or not.
+func newManagedClusterListWatcher(ctx context.Context, c ctrlclient.WithWatch, namespace string) *cache.ListWatch {
+	return &cache.ListWatch{
+		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+			list := &v3.ManagedClusterList{}
+			err := c.List(ctx, list, &ctrlclient.ListOptions{Raw: &options, Namespace: namespace})
+			return list, err
+		},
+		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+			list := &v3.ManagedClusterList{}
+			return c.Watch(ctx, list, &ctrlclient.ListOptions{Raw: &options, Namespace: namespace})
+		},
+	}
 }

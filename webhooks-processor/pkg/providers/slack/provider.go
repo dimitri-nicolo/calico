@@ -14,8 +14,9 @@ import (
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
-	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 )
 
 const (
@@ -93,25 +94,13 @@ func (p *Slack) message(event *lsApi.Event) *SlackMessage {
 		NewDivider(),
 		NewBlock(
 			"section", nil,
-			NewMrkdwnField("⚠️ Alert type:", event.Type),
+			NewMrkdwnField("⚠️ Alert Type:", event.Type),
 			NewMrkdwnField("📟 Origin:", event.Origin),
-			// NewMrkdwnField("⏱️ Time:", event.Time), // TODO: can't use event.Time
-			NewMrkdwnField("🔥Severity:", fmt.Sprint(event.Severity)),
+			NewMrkdwnField("⏱️ Time:", event.Time.GetTime().String()),
+			NewMrkdwnField("🔥 Severity:", fmt.Sprint(event.Severity)),
 		),
 		NewBlock("section", NewMrkdwnField("🗎 Description:", event.Description)),
-		NewDivider(),
-		NewBlock("section", NewMrkdwnHeader("📌 Detailed information:")),
 	)
-
-	// TODO: fix this also
-	// for info, value := range event.Record {
-	// 	if value == "" {
-	// 		value = "n/a"
-	// 	}
-	// 	message.AddBlocks(
-	// 		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*%s:* `%s`", info, value))),
-	// 	)
-	// }
 
 	return message
 }

@@ -6,9 +6,10 @@ import (
 	"context"
 	"sync"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 )
 
 type WebhookController struct {

@@ -75,6 +75,7 @@ func RunLinseed(t *testing.T, args *RunLinseedArgs) *containers.Container {
 		"-v", fmt.Sprintf("%s/cert/localhost.key:/certs/https/tls.key", cwd),
 		"-v", fmt.Sprintf("%s/cert/RootCA.crt:/certs/https/client.crt", cwd),
 		"-v", fmt.Sprintf("%s/linseed-token:/var/run/secrets/kubernetes.io/serviceaccount/token", cwd),
+		"-v", fmt.Sprintf("%s/tenant-namespace:/var/run/secrets/kubernetes.io/serviceaccount/namespace", cwd),
 		"-v", fmt.Sprintf("%s/ca.pem:/var/run/secrets/kubernetes.io/serviceaccount/ca.crt", certsPath),
 		"-e", "KUBERNETES_SERVICE_HOST=127.0.0.1",
 		"-e", "KUBERNETES_SERVICE_PORT=6443",

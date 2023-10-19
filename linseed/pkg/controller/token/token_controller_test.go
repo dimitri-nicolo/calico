@@ -13,13 +13,20 @@ import (
 	"testing"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
+
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	k8stesting "k8s.io/client-go/testing"
+
+	kscheme "k8s.io/client-go/kubernetes/scheme"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
@@ -31,7 +38,6 @@ import (
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	projectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 
@@ -47,6 +53,7 @@ var (
 	factory       *k8s.MockClientSetFactory
 	mockK8sClient *k8sfake.Clientset
 	mockClientSet clientSetSet
+	fakeClient    ctrlclient.WithWatch
 
 	tenantName string
 
@@ -80,6 +87,11 @@ func setup(t *testing.T) func() {
 	mockK8sClient = k8sfake.NewSimpleClientset()
 	mockClientSet = clientSetSet{mockK8sClient, cs}
 
+	scheme := kscheme.Scheme
+	err = v3.AddToScheme(scheme)
+	require.NoError(t, err)
+	fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+
 	tenantName = "bogustenant"
 
 	nilUserPtr = nil
@@ -111,7 +123,7 @@ func TestOptions(t *testing.T) {
 	t.Run("Should make a new controller when correct options are given", func(t *testing.T) {
 		defer setup(t)()
 		opts := []token.ControllerOption{
-			token.WithCalicoClient(cs),
+			token.WithControllerRuntimeClient(fakeClient),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
@@ -126,30 +138,44 @@ func TestOptions(t *testing.T) {
 }
 
 func TestMainlineFunction(t *testing.T) {
-	t.Run("provision a secret for a service in a connected managed cluster", func(t *testing.T) {
+	var testCases = []struct {
+		tenantNamespace string
+		tenantMode      string
+	}{{"", "single tenant"},
+		{"tenant-a", "multi tenant"},
+	}
+	for _, tc := range testCases {
+		testMainlineFunction(t, tc.tenantNamespace, tc.tenantMode)
+	}
+}
+
+var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantMode string) {
+	t.Run("provision a secret for a service in a connected managed cluster in"+tenantMode, func(t *testing.T) {
 		defer setup(t)()
 
 		// Add a managed cluster.
 		mc := v3.ManagedCluster{}
 		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
 		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
 			{
 				Type:   v3.ManagedClusterStatusTypeConnected,
 				Status: v3.ManagedClusterStatusValueTrue,
 			},
 		}
-		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		err := fakeClient.Create(context.Background(), &mc)
 		require.NoError(t, err)
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithCalicoClient(cs),
+			token.WithControllerRuntimeClient(fakeClient),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
 			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
 			token.WithFactory(factory),
 			token.WithK8sClient(mockK8sClient),
+			token.WithNamespace(tenantNamespace),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -176,31 +202,33 @@ func TestMainlineFunction(t *testing.T) {
 		require.Equal(t, defaultNamespace, secret.Namespace)
 	})
 
-	t.Run("provision a secret for a service when a managed cluster becomes connected", func(t *testing.T) {
+	t.Run("provision a secret for a service when a managed cluster becomes connected in "+tenantMode, func(t *testing.T) {
 		defer setup(t)()
 
 		// Add a managed cluster - start it off as not connected. We will expect no secret
 		// in this case. Then, we'll connect the cluster and make sure a secret is created.
 		mc := v3.ManagedCluster{}
 		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
 		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
 			{
 				Type:   v3.ManagedClusterStatusTypeConnected,
 				Status: v3.ManagedClusterStatusValueFalse,
 			},
 		}
-		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		err := fakeClient.Create(context.Background(), &mc)
 		require.NoError(t, err)
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithCalicoClient(cs),
+			token.WithControllerRuntimeClient(fakeClient),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
 			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
 			token.WithFactory(factory),
 			token.WithK8sClient(mockK8sClient),
+			token.WithNamespace(tenantNamespace),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -229,31 +257,33 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Mark the cluster as connected. This should eventually trigger creation of the secret.
 		mc.Status.Conditions[0].Status = v3.ManagedClusterStatusValueTrue
-		_, err = cs.ProjectcalicoV3().ManagedClusters().Update(ctx, &mc, v1.UpdateOptions{})
+		err = fakeClient.Update(context.Background(), &mc)
+
 		require.NoError(t, err)
 		require.Eventually(t, secretCreated, 5*time.Second, 100*time.Millisecond)
 		require.Equal(t, tokenName, secret.Name)
 		require.Equal(t, defaultNamespace, secret.Namespace)
 	})
 
-	t.Run("skip updating an already valid token", func(t *testing.T) {
+	t.Run("skip updating an already valid token in "+tenantMode, func(t *testing.T) {
 		defer setup(t)()
 
 		// Add a managed cluster.
 		mc := v3.ManagedCluster{}
 		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
 		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
 			{
 				Type:   v3.ManagedClusterStatusTypeConnected,
 				Status: v3.ManagedClusterStatusValueTrue,
 			},
 		}
-		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		err := fakeClient.Create(ctx, &mc)
 		require.NoError(t, err)
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithCalicoClient(cs),
+			token.WithControllerRuntimeClient(fakeClient),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
@@ -264,6 +294,7 @@ func TestMainlineFunction(t *testing.T) {
 			// Reconcile quickly, so that we can verify the secret isn't updated
 			// across several reconciles.
 			token.WithReconcilePeriod(50 * time.Millisecond),
+			token.WithNamespace(tenantNamespace),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -300,24 +331,25 @@ func TestMainlineFunction(t *testing.T) {
 		}
 	})
 
-	t.Run("update an existing token that isn't valid", func(t *testing.T) {
+	t.Run("update an existing token that isn't valid in "+tenantMode, func(t *testing.T) {
 		defer setup(t)()
 
 		// Add a managed cluster.
 		mc := v3.ManagedCluster{}
 		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
 		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
 			{
 				Type:   v3.ManagedClusterStatusTypeConnected,
 				Status: v3.ManagedClusterStatusValueTrue,
 			},
 		}
-		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		err := fakeClient.Create(ctx, &mc)
 		require.NoError(t, err)
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithCalicoClient(cs),
+			token.WithControllerRuntimeClient(fakeClient),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
@@ -329,6 +361,7 @@ func TestMainlineFunction(t *testing.T) {
 			// the changes we make to the token. Ideally, the controller would be watching
 			// the secret and we wouldn't need this.
 			token.WithReconcilePeriod(10 * time.Millisecond),
+			token.WithNamespace(tenantNamespace),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -375,24 +408,25 @@ func TestMainlineFunction(t *testing.T) {
 		require.Eventually(t, secretUpdated, 5*time.Second, 100*time.Millisecond)
 	})
 
-	t.Run("update secrets before they expire", func(t *testing.T) {
+	t.Run("update secrets before they expire in "+tenantMode, func(t *testing.T) {
 		defer setup(t)()
 
 		// Add a managed cluster.
 		mc := v3.ManagedCluster{}
 		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
 		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
 			{
 				Type:   v3.ManagedClusterStatusTypeConnected,
 				Status: v3.ManagedClusterStatusValueTrue,
 			},
 		}
-		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		err := fakeClient.Create(ctx, &mc)
 		require.NoError(t, err)
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithCalicoClient(cs),
+			token.WithControllerRuntimeClient(fakeClient),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
@@ -407,6 +441,7 @@ func TestMainlineFunction(t *testing.T) {
 			// Set the reconcile period to be very small so that the controller acts faster than
 			// the expiry time of the tokens it creates.
 			token.WithReconcilePeriod(10 * time.Millisecond),
+			token.WithNamespace(tenantNamespace),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -446,20 +481,21 @@ func TestMainlineFunction(t *testing.T) {
 		require.Eventually(t, secretUpdated, 5*time.Second, 50*time.Millisecond)
 	})
 
-	t.Run("should not retry indefinitely", func(t *testing.T) {
+	t.Run("should not retry indefinitely in "+tenantMode, func(t *testing.T) {
 		// If the controller fails to create a secret, it should retry a few times and then give up.
 		defer setup(t)()
 
 		// Add a managed cluster.
 		mc := v3.ManagedCluster{}
 		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
 		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
 			{
 				Type:   v3.ManagedClusterStatusTypeConnected,
 				Status: v3.ManagedClusterStatusValueTrue,
 			},
 		}
-		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		err := fakeClient.Create(ctx, &mc)
 		require.NoError(t, err)
 
 		// Configure the mock client to fail to create secrets, and keep track of the number of attempts.
@@ -483,7 +519,7 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithCalicoClient(cs),
+			token.WithControllerRuntimeClient(fakeClient),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
@@ -496,6 +532,7 @@ func TestMainlineFunction(t *testing.T) {
 			// Set a small initial retry period so that we exaust the retries quickly.
 			token.WithBaseRetryPeriod(1 * time.Millisecond),
 			token.WithMaxRetries(5),
+			token.WithNamespace(tenantNamespace),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -520,30 +557,32 @@ func TestMainlineFunction(t *testing.T) {
 		}
 	})
 
-	t.Run("handle simultaneous periodic and triggered reconciles", func(t *testing.T) {
+	t.Run("handle simultaneous periodic and triggered reconciles in "+tenantMode, func(t *testing.T) {
 		defer setup(t)()
 
 		// Add two managed clusters.
 		mc := v3.ManagedCluster{}
 		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
 		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
 			{
 				Type:   v3.ManagedClusterStatusTypeConnected,
 				Status: v3.ManagedClusterStatusValueTrue,
 			},
 		}
-		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		err := fakeClient.Create(ctx, &mc)
 		require.NoError(t, err)
 
 		mc2 := v3.ManagedCluster{}
 		mc2.Name = "test-managed-cluster-2"
+		mc2.Namespace = tenantNamespace
 		mc2.Status.Conditions = []v3.ManagedClusterStatusCondition{
 			{
 				Type:   v3.ManagedClusterStatusTypeConnected,
 				Status: v3.ManagedClusterStatusValueTrue,
 			},
 		}
-		_, err = cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc2, v1.CreateOptions{})
+		err = fakeClient.Create(ctx, &mc2)
 		require.NoError(t, err)
 
 		// Configure the client to error on attempts to create secrets in the second managed cluster. Because this is constantly erroring,
@@ -556,7 +595,7 @@ func TestMainlineFunction(t *testing.T) {
 
 		// Make a new controller.
 		opts := []token.ControllerOption{
-			token.WithCalicoClient(cs),
+			token.WithControllerRuntimeClient(fakeClient),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
@@ -575,6 +614,7 @@ func TestMainlineFunction(t *testing.T) {
 			// Set the retry period to be smaller than either, so that we are constantly triggering
 			// the kick channel.
 			token.WithBaseRetryPeriod(50 * time.Millisecond),
+			token.WithNamespace(tenantNamespace),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -615,18 +655,19 @@ func TestMainlineFunction(t *testing.T) {
 		require.Eventually(t, secretUpdated, 5*time.Second, 50*time.Millisecond)
 	})
 
-	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to periodic update", func(t *testing.T) {
+	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to periodic update in "+tenantMode, func(t *testing.T) {
 		defer setup(t)()
 
 		mc := v3.ManagedCluster{}
 		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
 		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
 			{
 				Type:   v3.ManagedClusterStatusTypeConnected,
 				Status: v3.ManagedClusterStatusValueTrue,
 			},
 		}
-		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		err := fakeClient.Create(ctx, &mc)
 		require.NoError(t, err)
 
 		operatorNS := "test-operator-ns"
@@ -644,7 +685,7 @@ func TestMainlineFunction(t *testing.T) {
 		}
 
 		opts := []token.ControllerOption{
-			token.WithCalicoClient(cs),
+			token.WithControllerRuntimeClient(fakeClient),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
@@ -653,6 +694,7 @@ func TestMainlineFunction(t *testing.T) {
 			token.WithK8sClient(mockK8sClient),
 			token.WithReconcilePeriod(1 * time.Second),
 			token.WithSecretsToCopy(secretsToCopy),
+			token.WithNamespace(tenantNamespace),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -685,18 +727,19 @@ func TestMainlineFunction(t *testing.T) {
 		require.Eventually(t, secretCreated, 5*time.Second, 100*time.Millisecond)
 	})
 
-	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to secret update", func(t *testing.T) {
+	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to secret update in "+tenantMode, func(t *testing.T) {
 		defer setup(t)()
 
 		mc := v3.ManagedCluster{}
 		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
 		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
 			{
 				Type:   v3.ManagedClusterStatusTypeConnected,
 				Status: v3.ManagedClusterStatusValueTrue,
 			},
 		}
-		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		err := fakeClient.Create(ctx, &mc)
 		require.NoError(t, err)
 
 		operatorNS := "test-operator-ns"
@@ -717,7 +760,7 @@ func TestMainlineFunction(t *testing.T) {
 		}
 
 		opts := []token.ControllerOption{
-			token.WithCalicoClient(cs),
+			token.WithControllerRuntimeClient(fakeClient),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
@@ -726,6 +769,7 @@ func TestMainlineFunction(t *testing.T) {
 			token.WithK8sClient(mockK8sClient),
 			token.WithReconcilePeriod(24 * time.Hour), // Make update period long enough that we're guaranteed not to trigger it during test
 			token.WithSecretsToCopy(secretsToCopy),
+			token.WithNamespace(tenantNamespace),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -775,6 +819,7 @@ func TestMainlineFunction(t *testing.T) {
 		}
 		require.Eventually(t, secretUpdated, 5*time.Second, 100*time.Millisecond)
 	})
+
 }
 
 func TestMultiTenant(t *testing.T) {
@@ -783,13 +828,14 @@ func TestMultiTenant(t *testing.T) {
 
 		mc := v3.ManagedCluster{}
 		mc.Name = "test-managed-cluster"
+		mc.Namespace = "tenant-a"
 		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
 			{
 				Type:   v3.ManagedClusterStatusTypeConnected,
 				Status: v3.ManagedClusterStatusValueTrue,
 			},
 		}
-		_, err := cs.ProjectcalicoV3().ManagedClusters().Create(ctx, &mc, v1.CreateOptions{})
+		err := fakeClient.Create(ctx, &mc)
 		require.NoError(t, err)
 
 		impersonationInfo := user.DefaultInfo{
@@ -806,7 +852,7 @@ func TestMultiTenant(t *testing.T) {
 		require.NoError(t, err)
 
 		opts := []token.ControllerOption{
-			token.WithCalicoClient(cs),
+			token.WithControllerRuntimeClient(fakeClient),
 			token.WithPrivateKey(privateKey),
 			token.WithIssuer(issuer),
 			token.WithIssuerName(issuer),
@@ -815,6 +861,7 @@ func TestMultiTenant(t *testing.T) {
 			token.WithTenant(tenantName),
 			token.WithK8sClient(mockK8sClient),
 			token.WithImpersonation(&impersonationInfo),
+			token.WithNamespace("tenant-a"),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)

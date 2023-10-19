@@ -15,9 +15,10 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/memkv"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/confd/pkg/backends"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (
@@ -206,7 +207,7 @@ func ExternalNetworkBIRDConfig(selfIP string, externalNetworkKVPs memkv.KVPairs,
 			var backendPeer backends.BGPPeer
 			err := json.Unmarshal([]byte(peer.Value), &backendPeer)
 			if err != nil {
-				return map[string][]string{}, fmt.Errorf("Error unmarshalling JSON into backend BGPPeer: %s", err)
+				return map[string][]string{}, fmt.Errorf("error unmarshalling JSON into backend BGPPeer: %s", err)
 			}
 			if backendPeer.PeerIP.String() == selfIP || backendPeer.ExternalNetwork == "" {
 				continue // Skip ourselves because we don't generate a protocol definition for ourselves
@@ -256,7 +257,7 @@ func ExternalNetworkBIRDConfig(selfIP string, externalNetworkKVPs memkv.KVPairs,
 		var externalNetwork v3.ExternalNetwork
 		err := json.Unmarshal([]byte(kvp.Value), &externalNetwork)
 		if err != nil {
-			return []string{}, fmt.Errorf("Error unmarshalling JSON into ExternalNetwork: %s", err)
+			return []string{}, fmt.Errorf("error unmarshalling JSON into ExternalNetwork: %s", err)
 		}
 		externalNetworkName := path.Base(kvp.Key)
 		peerStatements, ok := peerReferencedExternalNetworks[externalNetworkName]
@@ -381,7 +382,7 @@ func BGPFilterBIRDFuncs(pairs memkv.KVPairs, version int) ([]string, error) {
 		var filter v3.BGPFilter
 		err := json.Unmarshal([]byte(kvp.Value), &filter)
 		if err != nil {
-			return []string{}, fmt.Errorf("Error unmarshalling JSON: %s", err)
+			return []string{}, fmt.Errorf("error unmarshalling JSON: %s", err)
 		}
 
 		importFiltersV4 := filter.Spec.ImportV4
@@ -515,7 +516,7 @@ func truncateAndHashName(name string, maxLen int) (string, error) {
 	// Account for underscore we insert between truncated name and hash string
 	hashStrSize := hashCharsToUse + 1
 	if maxLen <= hashStrSize {
-		return "", fmt.Errorf("Max truncated string length must be greater than the mininum size of %d",
+		return "", fmt.Errorf("max truncated string length must be greater than the mininum size of %d",
 			hashStrSize)
 	}
 	hash := sha256.New()

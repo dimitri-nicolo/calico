@@ -28,7 +28,6 @@ type jiraIssueType struct {
 	Name string `json:"name"`
 }
 
-// TODO: fix .Time and .Record
 var descriptionTemplate = template.Must(template.New("description").Parse(`
 *Alert type:* {{.Type}}
 *Time:* {{.Time}}
@@ -36,12 +35,6 @@ var descriptionTemplate = template.Must(template.New("description").Parse(`
 *Severity:* {{.Severity}}
 
 {{.Description}}
-
-Detailed information:
-
-{{ range $info, $value := .Record }}
-*{{$info}}:* {{$value}}
-{{ end }}
 `))
 
 func buildSummary(event *lsApi.Event) (string, error) {
@@ -50,6 +43,19 @@ func buildSummary(event *lsApi.Event) (string, error) {
 
 func buildDescription(event *lsApi.Event) (string, error) {
 	buffer := new(bytes.Buffer)
-	err := descriptionTemplate.Execute(buffer, event)
+	templateData := struct {
+		Type        string
+		Time        string
+		Origin      string
+		Severity    int
+		Description string
+	}{
+		Type:        event.Type,
+		Time:        event.Time.GetTime().String(),
+		Origin:      event.Origin,
+		Severity:    event.Severity,
+		Description: event.Description,
+	}
+	err := descriptionTemplate.Execute(buffer, templateData)
 	return buffer.String(), err
 }
