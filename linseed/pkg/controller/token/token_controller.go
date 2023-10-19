@@ -441,10 +441,12 @@ func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *v3.ManagedC
 			}
 
 			if err = c.reconcileTokensForCluster(mc, managedClient); err != nil {
+				log.WithError(err).Error("failed to reconcile tokens for cluster")
 				retry(rc, mc.Name, *mc, mcChan, stop)
 			}
 
 			if err = c.reconcileSecretsForCluster(mc, c.secretsToCopy, managedClient); err != nil {
+				log.WithError(err).Error("failed to reconcile secrets for cluster")
 				retry(rc, mc.Name, *mc, mcChan, stop)
 			}
 		case secret := <-secretChan:
@@ -469,6 +471,7 @@ func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *v3.ManagedC
 				}
 
 				if err = c.reconcileSecretsForCluster(mc, []corev1.Secret{*secret}, managedClient); err != nil {
+					log.WithError(err).Error("failed to reconcile secrets for cluster")
 					retry(rc, secret.String(), *secret, secretChan, stop)
 				}
 			}

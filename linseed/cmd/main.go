@@ -255,11 +255,15 @@ func run() {
 
 		factory := k8s.NewClientSetFactory(cfg.MultiClusterForwardingCA, cfg.MultiClusterForwardingEndpoint)
 
+		secretsNamespace := cfg.ManagementOperatorNamespace
+		if len(cfg.ExpectedTenantID) > 0 {
+			secretsNamespace = cfg.TenantNamespace
+		}
 		secretsToCopy := []corev1.Secret{
 			{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      resource.VoltronLinseedPublicCert,
-					Namespace: cfg.ManagementOperatorNamespace,
+					Namespace: secretsNamespace,
 				},
 			},
 		}
@@ -281,7 +285,7 @@ func run() {
 
 		if cfg.ExpectedTenantID != "" {
 			impersonationInfo := user.DefaultInfo{
-				Name: "tigera-linseed",
+				Name: "system:serviceaccount:tigera-elasticsearch:tigera-linseed",
 				Groups: []string{
 					serviceaccount.AllServiceAccountsGroup,
 					"system:authenticated",
