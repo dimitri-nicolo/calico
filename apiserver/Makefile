@@ -191,13 +191,6 @@ clean-hack-lib:
 	rm -rf hack/lib/
 
 ###############################################################################
-# Static checks
-###############################################################################
-## Perform static checks on the code.
-# TODO: re-enable these linters !
-LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck --timeout 5m
-
-###############################################################################
 # CI/CD
 ###############################################################################
 .PHONY: ci

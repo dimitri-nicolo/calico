@@ -30,26 +30,18 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/client-go/tools/clientcmd"
-
-	"k8s.io/client-go/kubernetes"
-
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	"github.com/tigera/api/pkg/lib/numorstring"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authenticationreview"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	libclient "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -57,6 +49,10 @@ import (
 	licclient "github.com/projectcalico/calico/licensing/client"
 	licFeatures "github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/utils"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 // TestGroupVersion is trivial.
@@ -100,7 +96,7 @@ func TestEtcdHealthCheckerSuccess(t *testing.T) {
 	retryInterval := 500 * time.Millisecond
 	for i := 0; i < 5; i++ {
 		resp, err = c.Get(clientconfig.Host + "/healthz")
-		if nil != err || http.StatusOK != resp.StatusCode {
+		if err != nil || http.StatusOK != resp.StatusCode {
 			success = false
 			time.Sleep(retryInterval)
 		} else {
@@ -197,7 +193,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	}
 
 	policyServer, err := policyClient.Create(ctx, policy, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
 	}
 	if defaultTierPolicyName != policyServer.Name {
@@ -207,7 +203,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	updatedPolicy := policyServer
 	updatedPolicy.Labels = map[string]string{"foo": "bar"}
 	policyServer, err = policyClient.Update(ctx, updatedPolicy, metav1.UpdateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
 	}
 	if defaultTierPolicyName != policyServer.Name {
@@ -220,15 +216,17 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
 
-	tierClient.Create(ctx, tier, metav1.CreateOptions{})
+	if _, err := tierClient.Create(ctx, tier, metav1.CreateOptions{}); err != nil {
+		return fmt.Errorf("error creating tier '%v' (%v)", tier, err)
+	}
 	defer func() {
-		tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
+		_ = tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
-	netSecPolicy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.NetworkPolicySpec{Tier: "net-sec"}}
+	netSecPolicy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: v3.NetworkPolicySpec{Tier: "net-sec"}}
 	policyServer, err = policyClient.Create(ctx, netSecPolicy, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
 	}
 	if netSecPolicyName != policyServer.Name {
@@ -240,7 +238,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
-	if 1 != len(policies.Items) {
+	if len(policies.Items) != 1 {
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(policies.Items))
 	}
 
@@ -249,7 +247,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
-	if 1 != len(policies.Items) {
+	if len(policies.Items) != 1 {
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(policies.Items))
 	}
 
@@ -273,14 +271,14 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		)
 	}*/
 	// Watch Test:
-	opts := v1.ListOptions{Watch: true}
+	opts := metav1.ListOptions{Watch: true}
 	wIface, err := policyClient.Watch(ctx, opts)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
@@ -289,12 +287,12 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	}()
 
 	err = policyClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
 
 	err = policyClient.Delete(ctx, netSecPolicyName, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
 
@@ -328,7 +326,7 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	policyClient := client.ProjectcalicoV3().StagedNetworkPolicies(ns)
 	policy := &v3.StagedNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName},
-		Spec:       calico.StagedNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\""},
+		Spec:       v3.StagedNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\""},
 	}
 	ctx := context.Background()
 
@@ -345,7 +343,7 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}
 
 	policyServer, err := policyClient.Create(ctx, policy, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
 	}
 	if defaultTierPolicyName != policyServer.Name {
@@ -355,7 +353,7 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	updatedPolicy := policyServer
 	updatedPolicy.Labels = map[string]string{"foo": "bar"}
 	policyServer, err = policyClient.Update(ctx, updatedPolicy, metav1.UpdateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
 	}
 	if defaultTierPolicyName != policyServer.Name {
@@ -368,15 +366,17 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
 
-	tierClient.Create(ctx, tier, metav1.CreateOptions{})
+	if _, err := tierClient.Create(ctx, tier, metav1.CreateOptions{}); err != nil {
+		return fmt.Errorf("error creating tier '%v' (%v)", tier, err)
+	}
 	defer func() {
-		tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
+		_ = tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
-	netSecPolicy := &v3.StagedNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.StagedNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\"", Tier: "net-sec"}}
+	netSecPolicy := &v3.StagedNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: v3.StagedNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\"", Tier: "net-sec"}}
 	policyServer, err = policyClient.Create(ctx, netSecPolicy, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
 	}
 	if netSecPolicyName != policyServer.Name {
@@ -388,7 +388,7 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
-	if 1 != len(policies.Items) {
+	if len(policies.Items) != 1 {
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(policies.Items))
 	}
 
@@ -397,7 +397,7 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
-	if 1 != len(policies.Items) {
+	if len(policies.Items) != 1 {
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(policies.Items))
 	}
 
@@ -411,14 +411,14 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}
 
 	// Watch Test:
-	opts := v1.ListOptions{Watch: true}
+	opts := metav1.ListOptions{Watch: true}
 	wIface, err := policyClient.Watch(ctx, opts)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
@@ -427,12 +427,12 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}()
 
 	err = policyClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
 
 	err = policyClient.Delete(ctx, netSecPolicyName, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
 
@@ -467,7 +467,7 @@ func testPolicyRecommendationScopeClient(client calicoclient.Interface, name str
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: calico.PolicyRecommendationScopeSpec{
+		Spec: v3.PolicyRecommendationScopeSpec{
 			MaxRules:               &defaultValue,
 			PoliciesLearningCutOff: &defaultValue,
 			NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
@@ -475,8 +475,8 @@ func testPolicyRecommendationScopeClient(client calicoclient.Interface, name str
 				Selector:  "foo == \"bar\"",
 			},
 		},
-		Status: calico.PolicyRecommendationScopeStatus{
-			Conditions: []calico.PolicyRecommendationScopeStatusCondition{
+		Status: v3.PolicyRecommendationScopeStatus{
+			Conditions: []v3.PolicyRecommendationScopeStatusCondition{
 				{
 					Message: "0",
 					Reason:  "0",
@@ -499,13 +499,13 @@ func testPolicyRecommendationScopeClient(client calicoclient.Interface, name str
 	}
 
 	policyrecommendationscopeOnServer, err := policyrecommendationscopeClient.Create(ctx, policyrecommendationscope, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the policyrecommendationscope '%v' (%v)", policyrecommendationscopeOnServer, err)
 	}
 	if name != policyrecommendationscopeOnServer.Name {
 		return fmt.Errorf("didn't get the same policyrecommendationscope back from the server \n%+v\n%+v", policyrecommendationscopes, policyrecommendationscopeOnServer)
 	}
-	if !reflect.DeepEqual(policyrecommendationscopeOnServer.Status, calico.PolicyRecommendationScopeStatus{}) {
+	if !reflect.DeepEqual(policyrecommendationscopeOnServer.Status, v3.PolicyRecommendationScopeStatus{}) {
 		return fmt.Errorf("status was set on create to %#v", policyrecommendationscopeOnServer.Status)
 	}
 
@@ -584,12 +584,12 @@ func testPolicyRecommendationScopeClient(client calicoclient.Interface, name str
 	}
 
 	err = policyrecommendationscopeClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("policyrecommendationscope should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().PolicyRecommendationScopes().Watch(ctx, v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().PolicyRecommendationScopes().Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching PolicyRecommendationScope (%s)", err)
 	}
@@ -616,7 +616,7 @@ func testPolicyRecommendationScopeClient(client calicoclient.Interface, name str
 	for i := 0; i < 2; i++ {
 		ga := &v3.PolicyRecommendationScope{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
-			Spec: calico.PolicyRecommendationScopeSpec{
+			Spec: v3.PolicyRecommendationScopeSpec{
 				MaxRules:               &defaultValue,
 				PoliciesLearningCutOff: &defaultValue,
 				NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
@@ -683,14 +683,14 @@ func testTierClient(client calicoclient.Interface, name string) error {
 	}
 
 	tierServer, err := tierClient.Create(ctx, tier, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the tier '%v' (%v)", tier, err)
 	}
 	if name != tierServer.Name {
 		return fmt.Errorf("didn't get the same tier back from the server \n%+v\n%+v", tier, tierServer)
 	}
 
-	tiers, err = tierClient.List(ctx, metav1.ListOptions{})
+	_, err = tierClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing tiers (%s)", err)
 	}
@@ -705,7 +705,7 @@ func testTierClient(client calicoclient.Interface, name string) error {
 	}
 
 	err = tierClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("tier should be deleted (%s)", err)
 	}
 
@@ -748,7 +748,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}
 
 	globalNetworkPolicyServer, err := globalNetworkPolicyClient.Create(ctx, globalNetworkPolicy, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the globalNetworkPolicy '%v' (%v)", globalNetworkPolicy, err)
 	}
 	if defaultTierPolicyName != globalNetworkPolicyServer.Name {
@@ -761,15 +761,17 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
 
-	tierClient.Create(ctx, tier, metav1.CreateOptions{})
+	if _, err := tierClient.Create(ctx, tier, metav1.CreateOptions{}); err != nil {
+		return fmt.Errorf("error creating tier '%v' (%v)", tier, err)
+	}
 	defer func() {
-		tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
+		_ = tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
-	netSecPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.GlobalNetworkPolicySpec{Tier: "net-sec"}}
+	netSecPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: v3.GlobalNetworkPolicySpec{Tier: "net-sec"}}
 	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Create(ctx, netSecPolicy, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
 	}
 	if netSecPolicyName != globalNetworkPolicyServer.Name {
@@ -781,7 +783,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	if err != nil {
 		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
 	}
-	if 1 != len(globalNetworkPolicies.Items) {
+	if len(globalNetworkPolicies.Items) != 1 {
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(globalNetworkPolicies.Items))
 	}
 
@@ -790,7 +792,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	if err != nil {
 		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
 	}
-	if 1 != len(globalNetworkPolicies.Items) {
+	if len(globalNetworkPolicies.Items) != 1 {
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(globalNetworkPolicies.Items))
 	}
 
@@ -804,12 +806,12 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}
 
 	err = globalNetworkPolicyClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("globalNetworkPolicy should be deleted (%s)", err)
 	}
 
 	err = globalNetworkPolicyClient.Delete(ctx, netSecPolicyName, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
 
@@ -841,7 +843,7 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 	defaultTierPolicyName := "default" + "." + name
 	stagedGlobalNetworkPolicy := &v3.StagedGlobalNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName},
-		Spec:       calico.StagedGlobalNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\""},
+		Spec:       v3.StagedGlobalNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\""},
 	}
 	ctx := context.Background()
 
@@ -855,7 +857,7 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 	}
 
 	stagedGlobalNetworkPolicyServer, err := stagedGlobalNetworkPolicyClient.Create(ctx, stagedGlobalNetworkPolicy, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the stagedGlobalNetworkPolicy '%v' (%v)", stagedGlobalNetworkPolicy, err)
 	}
 	if defaultTierPolicyName != stagedGlobalNetworkPolicyServer.Name {
@@ -868,15 +870,17 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
 
-	tierClient.Create(ctx, tier, metav1.CreateOptions{})
+	if _, err := tierClient.Create(ctx, tier, metav1.CreateOptions{}); err != nil {
+		return fmt.Errorf("error creating tier '%v' (%v)", tier, err)
+	}
 	defer func() {
-		tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
+		_ = tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
-	netSecPolicy := &v3.StagedGlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.StagedGlobalNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\"", Tier: "net-sec"}}
+	netSecPolicy := &v3.StagedGlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: v3.StagedGlobalNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\"", Tier: "net-sec"}}
 	stagedGlobalNetworkPolicyServer, err = stagedGlobalNetworkPolicyClient.Create(ctx, netSecPolicy, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
 	}
 	if netSecPolicyName != stagedGlobalNetworkPolicyServer.Name {
@@ -888,7 +892,7 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 	if err != nil {
 		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
 	}
-	if 1 != len(stagedGlobalNetworkPolicies.Items) {
+	if len(stagedGlobalNetworkPolicies.Items) != 1 {
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(stagedGlobalNetworkPolicies.Items))
 	}
 
@@ -897,7 +901,7 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 	if err != nil {
 		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
 	}
-	if 1 != len(stagedGlobalNetworkPolicies.Items) {
+	if len(stagedGlobalNetworkPolicies.Items) != 1 {
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(stagedGlobalNetworkPolicies.Items))
 	}
 
@@ -911,12 +915,12 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 	}
 
 	err = stagedGlobalNetworkPolicyClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("stagedGlobalNetworkPolicy should be deleted (%s)", err)
 	}
 
 	err = stagedGlobalNetworkPolicyClient.Delete(ctx, netSecPolicyName, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
 
@@ -960,14 +964,14 @@ func testGlobalNetworkSetClient(client calicoclient.Interface, name string) erro
 	}
 
 	globalNetworkSetServer, err := globalNetworkSetClient.Create(ctx, globalNetworkSet, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the globalNetworkSet '%v' (%v)", globalNetworkSet, err)
 	}
 	if name != globalNetworkSetServer.Name {
 		return fmt.Errorf("didn't get the same globalNetworkSet back from the server \n%+v\n%+v", globalNetworkSet, globalNetworkSetServer)
 	}
 
-	globalNetworkSets, err = globalNetworkSetClient.List(ctx, metav1.ListOptions{})
+	_, err = globalNetworkSetClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalNetworkSets (%s)", err)
 	}
@@ -982,7 +986,7 @@ func testGlobalNetworkSetClient(client calicoclient.Interface, name string) erro
 	}
 
 	err = globalNetworkSetClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("globalNetworkSet should be deleted (%s)", err)
 	}
 
@@ -1028,14 +1032,14 @@ func testNetworkSetClient(client calicoclient.Interface, name string) error {
 	}
 
 	networkSetServer, err := networkSetClient.Create(ctx, networkSet, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the networkSet '%v' (%v)", networkSet, err)
 	}
 
 	updatedNetworkSet := networkSetServer
 	updatedNetworkSet.Labels = map[string]string{"foo": "bar"}
-	networkSetServer, err = networkSetClient.Update(ctx, updatedNetworkSet, metav1.UpdateOptions{})
-	if nil != err {
+	_, err = networkSetClient.Update(ctx, updatedNetworkSet, metav1.UpdateOptions{})
+	if err != nil {
 		return fmt.Errorf("error updating the networkSet '%v' (%v)", networkSet, err)
 	}
 
@@ -1044,7 +1048,7 @@ func testNetworkSetClient(client calicoclient.Interface, name string) error {
 	if err != nil {
 		return fmt.Errorf("error listing networkSets (%s)", err)
 	}
-	if 1 != len(networkSets.Items) {
+	if len(networkSets.Items) != 1 {
 		return fmt.Errorf("should have exactly one networkSet, had %v networkSets", len(networkSets.Items))
 	}
 
@@ -1058,14 +1062,14 @@ func testNetworkSetClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Watch Test:
-	opts := v1.ListOptions{Watch: true}
+	opts := metav1.ListOptions{Watch: true}
 	wIface, err := networkSetClient.Watch(ctx, opts)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
@@ -1074,7 +1078,7 @@ func testNetworkSetClient(client calicoclient.Interface, name string) error {
 	}()
 
 	err = networkSetClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("networkSet should be deleted (%s)", err)
 	}
 
@@ -1169,7 +1173,7 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 
 	// Valid CloudPro License with Maximum supported Nodes 100
 	cloudProLicenseKey := utils.ValidCloudProTestLicense()
-	licenseKeyClient.Delete(ctx, "default", metav1.DeleteOptions{})
+	err = licenseKeyClient.Delete(ctx, "default", metav1.DeleteOptions{})
 	if err != nil {
 		fmt.Printf("Could not delete license %v\n", err)
 		return err
@@ -1244,12 +1248,12 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 	alertExceptionClient := client.ProjectcalicoV3().AlertExceptions()
 	alertException := &v3.AlertException{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: calico.AlertExceptionSpec{
+		Spec: v3.AlertExceptionSpec{
 			Description: "alert exception description",
 			Selector:    "origin=someorigin",
 			StartTime:   metav1.Time{Time: time.Now()},
 		},
-		Status: calico.AlertExceptionStatus{},
+		Status: v3.AlertExceptionStatus{},
 	}
 	ctx := context.Background()
 
@@ -1263,13 +1267,13 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 	}
 
 	alertExceptionServer, err := alertExceptionClient.Create(ctx, alertException, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the alertException '%v' (%v)", alertException, err)
 	}
 	if name != alertExceptionServer.Name {
 		return fmt.Errorf("didn't get the same alertException back from the server \n%+v\n%+v", alertException, alertExceptionServer)
 	}
-	if !reflect.DeepEqual(alertExceptionServer.Status, calico.AlertExceptionStatus{}) {
+	if !reflect.DeepEqual(alertExceptionServer.Status, v3.AlertExceptionStatus{}) {
 		return fmt.Errorf("status was set on create to %#v", alertException.Status)
 	}
 
@@ -1316,12 +1320,12 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 	}
 
 	err = alertExceptionClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("alertException should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().AlertExceptions().Watch(ctx, v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().AlertExceptions().Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching AlertExceptions (%s)", err)
 	}
@@ -1342,14 +1346,13 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 				return
 			}
 		}
-		return
 	}()
 
 	// Create two AlertExceptions
 	for i := 0; i < 2; i++ {
 		ae := &v3.AlertException{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ae%d", i)},
-			Spec: calico.AlertExceptionSpec{
+			Spec: v3.AlertExceptionSpec{
 				Description: "test",
 				Selector:    "origin=someorigin",
 				StartTime:   metav1.Time{Time: time.Now()},
@@ -1395,7 +1398,7 @@ func testSecurityEventWebhookClient(client calicoclient.Interface, name string) 
 	SEWClient := client.ProjectcalicoV3().SecurityEventWebhooks()
 	securityEventWebhook := &v3.SecurityEventWebhook{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: calico.SecurityEventWebhookSpec{
+		Spec: v3.SecurityEventWebhookSpec{
 			Consumer: "Slack",
 			State:    "Enabled",
 			Query:    "selector-1",
@@ -1414,7 +1417,7 @@ func testSecurityEventWebhookClient(client calicoclient.Interface, name string) 
 	}
 
 	securityEventWebhookServer, err := SEWClient.Create(ctx, securityEventWebhook, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the SecurityEventWebhook '%v' (%v)", securityEventWebhook, err)
 	}
 	if name != securityEventWebhookServer.Name {
@@ -1438,12 +1441,12 @@ func testSecurityEventWebhookClient(client calicoclient.Interface, name string) 
 	}
 
 	err = SEWClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("SecurityEventWebhook should be deleted (%s)", err)
 	}
 
 	// Test SecurityEventWebhooks watch
-	w, err := client.ProjectcalicoV3().SecurityEventWebhooks().Watch(ctx, v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().SecurityEventWebhooks().Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching SecurityEventWebhooks (%s)", err)
 	}
@@ -1472,7 +1475,7 @@ func testSecurityEventWebhookClient(client calicoclient.Interface, name string) 
 	for i := 0; i < 2; i++ {
 		ga := &v3.SecurityEventWebhook{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
-			Spec: calico.SecurityEventWebhookSpec{
+			Spec: v3.SecurityEventWebhookSpec{
 				Consumer: "Jira",
 				State:    "Debug",
 				Query:    "selector-2",
@@ -1522,18 +1525,18 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	globalAlertClient := client.ProjectcalicoV3().GlobalAlerts()
 	globalAlert := &v3.GlobalAlert{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: calico.GlobalAlertSpec{
+		Spec: v3.GlobalAlertSpec{
 			DataSet:     "dns",
 			Description: "test",
 			Severity:    100,
 		},
-		Status: calico.GlobalAlertStatus{
-			LastUpdate:   &v1.Time{Time: time.Now()},
+		Status: v3.GlobalAlertStatus{
+			LastUpdate:   &metav1.Time{Time: time.Now()},
 			Active:       false,
 			Healthy:      false,
-			LastExecuted: &v1.Time{Time: time.Now()},
-			LastEvent:    &v1.Time{Time: time.Now()},
-			ErrorConditions: []calico.ErrorCondition{
+			LastExecuted: &metav1.Time{Time: time.Now()},
+			LastEvent:    &metav1.Time{Time: time.Now()},
+			ErrorConditions: []v3.ErrorCondition{
 				{Type: "foo", Message: "bar"},
 			},
 		},
@@ -1550,13 +1553,13 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	}
 
 	globalAlertServer, err := globalAlertClient.Create(ctx, globalAlert, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the globalAlert '%v' (%v)", globalAlert, err)
 	}
 	if name != globalAlertServer.Name {
 		return fmt.Errorf("didn't get the same globalAlert back from the server \n%+v\n%+v", globalAlert, globalAlertServer)
 	}
-	if !reflect.DeepEqual(globalAlertServer.Status, calico.GlobalAlertStatus{}) {
+	if !reflect.DeepEqual(globalAlertServer.Status, v3.GlobalAlertStatus{}) {
 		return fmt.Errorf("status was set on create to %#v", globalAlertServer.Status)
 	}
 
@@ -1579,7 +1582,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 
 	globalAlertUpdate := globalAlertServer.DeepCopy()
 	globalAlertUpdate.Spec.Description += "-updated"
-	globalAlertUpdate.Status.LastUpdate = &v1.Time{Time: time.Now()}
+	globalAlertUpdate.Status.LastUpdate = &metav1.Time{Time: time.Now()}
 	globalAlertServer, err = globalAlertClient.Update(ctx, globalAlertUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating globalAlert %s (%s)", name, err)
@@ -1592,7 +1595,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	}
 
 	globalAlertUpdate = globalAlertServer.DeepCopy()
-	globalAlertUpdate.Status.LastUpdate = &v1.Time{Time: time.Now()}
+	globalAlertUpdate.Status.LastUpdate = &metav1.Time{Time: time.Now()}
 	globalAlertUpdate.Labels = map[string]string{"foo": "bar"}
 	statusDescription := "status"
 	globalAlertUpdate.Spec.Description = statusDescription
@@ -1611,12 +1614,12 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	}
 
 	err = globalAlertClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("globalAlert should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().GlobalAlerts().Watch(ctx, v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().GlobalAlerts().Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching GlobalAlerts (%s)", err)
 	}
@@ -1637,14 +1640,13 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 				return
 			}
 		}
-		return
 	}()
 
 	// Create two GlobalAlerts
 	for i := 0; i < 2; i++ {
 		ga := &v3.GlobalAlert{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
-			Spec: calico.GlobalAlertSpec{
+			Spec: v3.GlobalAlertSpec{
 				Description: "test",
 				Severity:    100,
 				DataSet:     "dns",
@@ -1690,7 +1692,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 	globalAlertClient := client.ProjectcalicoV3().GlobalAlertTemplates()
 	globalAlert := &v3.GlobalAlertTemplate{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: calico.GlobalAlertSpec{
+		Spec: v3.GlobalAlertSpec{
 			Summary:     "foo",
 			DataSet:     "dns",
 			Description: "test",
@@ -1709,7 +1711,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 	}
 
 	globalAlertServer, err := globalAlertClient.Create(ctx, globalAlert, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the globalAlertTemplate '%v' (%v)", globalAlert, err)
 	}
 	if name != globalAlertServer.Name {
@@ -1744,12 +1746,12 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 	}
 
 	err = globalAlertClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("globalAlertTemplate should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().GlobalAlertTemplates().Watch(ctx, v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().GlobalAlertTemplates().Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching GlobalAlertTemplates (%s)", err)
 	}
@@ -1770,14 +1772,13 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 				return
 			}
 		}
-		return
 	}()
 
 	// Create two GlobalAlertTemplates
 	for i := 0; i < 2; i++ {
 		ga := &v3.GlobalAlertTemplate{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
-			Spec: calico.GlobalAlertSpec{
+			Spec: v3.GlobalAlertSpec{
 				Summary:     "bar",
 				Description: "test",
 				Severity:    100,
@@ -1803,16 +1804,14 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 // TestGlobalThreatFeedClient exercises the GlobalThreatFeed client.
 func TestGlobalThreatFeedClient(t *testing.T) {
 	const name = "test-globalthreatfeed"
-	var mode *v3.ThreatFeedMode
-	mode = new(v3.ThreatFeedMode)
-	*mode = v3.ThreatFeedModeEnabled
+	mode := v3.ThreatFeedModeEnabled
 
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &v3.GlobalThreatFeed{
 					Spec: v3.GlobalThreatFeedSpec{
-						Mode:        mode,
+						Mode:        &mode,
 						Description: "test",
 					},
 				}
@@ -1869,14 +1868,14 @@ func testIPReservationClient(client calicoclient.Interface, name string) error {
 	}
 
 	ipreservationServer, err := ipreservationClient.Create(ctx, ipreservation, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the ipreservation '%v' (%v)", ipreservation, err)
 	}
 	if name != ipreservationServer.Name {
 		return fmt.Errorf("didn't get the same ipreservation back from the server \n%+v\n%+v", ipreservation, ipreservationServer)
 	}
 
-	ipreservations, err = ipreservationClient.List(ctx, metav1.ListOptions{})
+	_, err = ipreservationClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing ipreservations (%s)", err)
 	}
@@ -1891,7 +1890,7 @@ func testIPReservationClient(client calicoclient.Interface, name string) error {
 	}
 
 	err = ipreservationClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("ipreservation should be deleted (%s)", err)
 	}
 
@@ -1899,21 +1898,19 @@ func testIPReservationClient(client calicoclient.Interface, name string) error {
 }
 
 func testGlobalThreatFeedClient(client calicoclient.Interface, name string) error {
-	var mode *v3.ThreatFeedMode
-	mode = new(v3.ThreatFeedMode)
-	*mode = v3.ThreatFeedModeEnabled
+	mode := v3.ThreatFeedModeEnabled
 
 	globalThreatFeedClient := client.ProjectcalicoV3().GlobalThreatFeeds()
 	globalThreatFeed := &v3.GlobalThreatFeed{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: calico.GlobalThreatFeedSpec{
-			Mode:        mode,
+		Spec: v3.GlobalThreatFeedSpec{
+			Mode:        &mode,
 			Description: "test",
 		},
-		Status: calico.GlobalThreatFeedStatus{
+		Status: v3.GlobalThreatFeedStatus{
 			LastSuccessfulSync:   &metav1.Time{Time: time.Now()},
 			LastSuccessfulSearch: &metav1.Time{Time: time.Now()},
-			ErrorConditions: []calico.ErrorCondition{
+			ErrorConditions: []v3.ErrorCondition{
 				{
 					Type:    "foo",
 					Message: "bar",
@@ -1933,13 +1930,13 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	}
 
 	globalThreatFeedServer, err := globalThreatFeedClient.Create(ctx, globalThreatFeed, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the globalThreatFeed '%v' (%v)", globalThreatFeed, err)
 	}
 	if name != globalThreatFeedServer.Name {
 		return fmt.Errorf("didn't get the same globalThreatFeed back from the server \n%+v\n%+v", globalThreatFeed, globalThreatFeedServer)
 	}
-	if !reflect.DeepEqual(globalThreatFeedServer.Status, calico.GlobalThreatFeedStatus{}) {
+	if !reflect.DeepEqual(globalThreatFeedServer.Status, v3.GlobalThreatFeedStatus{}) {
 		return fmt.Errorf("status was set on create to %#v", globalThreatFeedServer.Status)
 	}
 
@@ -1962,9 +1959,9 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 
 	globalThreatFeedUpdate := globalThreatFeedServer.DeepCopy()
 	globalThreatFeedUpdate.Spec.Content = "IPSet"
-	globalThreatFeedUpdate.Spec.Mode = mode
+	globalThreatFeedUpdate.Spec.Mode = &mode
 	globalThreatFeedUpdate.Spec.Description = "test"
-	globalThreatFeedUpdate.Status.LastSuccessfulSync = &v1.Time{Time: time.Now()}
+	globalThreatFeedUpdate.Status.LastSuccessfulSync = &metav1.Time{Time: time.Now()}
 	globalThreatFeedServer, err = globalThreatFeedClient.Update(ctx, globalThreatFeedUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating globalThreatFeed %s (%s)", name, err)
@@ -1980,7 +1977,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	// is set as a subresource and the apiserver doesn't handle subresource yet. Uncomment this when this is dealt with.
 
 	globalThreatFeedUpdate = globalThreatFeedServer.DeepCopy()
-	globalThreatFeedUpdate.Status.LastSuccessfulSync = &v1.Time{Time: time.Now()}
+	globalThreatFeedUpdate.Status.LastSuccessfulSync = &metav1.Time{Time: time.Now()}
 	globalThreatFeedUpdate.Labels = map[string]string{"foo": "bar"}
 	globalThreatFeedUpdate.Spec.Content = ""
 	globalThreatFeedServer, err = globalThreatFeedClient.UpdateStatus(ctx, globalThreatFeedUpdate, metav1.UpdateOptions{})
@@ -1998,12 +1995,12 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	}
 
 	err = globalThreatFeedClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("globalThreatFeed should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().GlobalThreatFeeds().Watch(ctx, v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().GlobalThreatFeeds().Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching GlobalThreatFeeds (%s)", err)
 	}
@@ -2024,7 +2021,6 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 				return
 			}
 		}
-		return
 	}()
 
 	// Create two GlobalThreatFeeds
@@ -2032,7 +2028,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 		gtf := &v3.GlobalThreatFeed{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gtf%d", i)},
 			Spec: v3.GlobalThreatFeedSpec{
-				Mode:        mode,
+				Mode:        &mode,
 				Description: "test",
 			},
 		}
@@ -2068,7 +2064,9 @@ func TestHostEndpointClient(t *testing.T) {
 		return &v3.HostEndpoint{}
 	}, true)
 	defer shutdownServer()
-	defer deleteHostEndpointClient(client, name)
+	defer func() {
+		_ = deleteHostEndpointClient(client, name)
+	}()
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
@@ -2100,7 +2098,7 @@ func deleteHostEndpointClient(client calicoclient.Interface, name string) error 
 	hostEndpointClient := client.ProjectcalicoV3().HostEndpoints()
 	ctx := context.Background()
 
-	return hostEndpointClient.Delete(ctx, name, v1.DeleteOptions{})
+	return hostEndpointClient.Delete(ctx, name, metav1.DeleteOptions{})
 }
 
 func testHostEndpointClient(client calicoclient.Interface, name string) error {
@@ -2119,7 +2117,7 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 	}
 
 	hostEndpointServer, err := hostEndpointClient.Create(ctx, hostEndpoint, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the hostEndpoint '%v' (%v)", hostEndpoint, err)
 	}
 	if name != hostEndpointServer.Name {
@@ -2144,12 +2142,12 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 	}
 
 	err = hostEndpointClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("hostEndpoint should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().HostEndpoints().Watch(ctx, v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().HostEndpoints().Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching HostEndpoints (%s)", err)
 	}
@@ -2170,7 +2168,6 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 				return
 			}
 		}
-		return
 	}()
 
 	// Create two HostEndpoints
@@ -2218,13 +2215,13 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	globalReportClient := client.ProjectcalicoV3().GlobalReports()
 	globalReport := &v3.GlobalReport{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: calico.ReportSpec{
+		Spec: v3.ReportSpec{
 			ReportType: globalReportTypeName,
 		},
-		Status: calico.ReportStatus{
-			LastSuccessfulReportJobs: []calico.CompletedReportJob{
+		Status: v3.ReportStatus{
+			LastSuccessfulReportJobs: []v3.CompletedReportJob{
 				{
-					ReportJob: calico.ReportJob{
+					ReportJob: v3.ReportJob{
 						Start: metav1.Time{Time: time.Now()},
 						End:   metav1.Time{Time: time.Now()},
 						Job: &corev1.ObjectReference{
@@ -2236,9 +2233,9 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 					JobCompletionTime: &metav1.Time{Time: time.Now()},
 				},
 			},
-			LastFailedReportJobs: []calico.CompletedReportJob{
+			LastFailedReportJobs: []v3.CompletedReportJob{
 				{
-					ReportJob: calico.ReportJob{
+					ReportJob: v3.ReportJob{
 						Start: metav1.Time{Time: time.Now()},
 						End:   metav1.Time{Time: time.Now()},
 						Job: &corev1.ObjectReference{
@@ -2250,7 +2247,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 					JobCompletionTime: &metav1.Time{Time: time.Now()},
 				},
 			},
-			ActiveReportJobs: []calico.ReportJob{
+			ActiveReportJobs: []v3.ReportJob{
 				{
 					Start: metav1.Time{Time: time.Now()},
 					End:   metav1.Time{Time: time.Now()},
@@ -2261,7 +2258,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 					},
 				},
 			},
-			LastScheduledReportJob: &calico.ReportJob{
+			LastScheduledReportJob: &v3.ReportJob{
 				Start: metav1.Time{Time: time.Now()},
 				End:   metav1.Time{Time: time.Now()},
 				Job: &corev1.ObjectReference{
@@ -2289,26 +2286,26 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	globalReportTypeClient := client.ProjectcalicoV3().GlobalReportTypes()
 	globalReportType := &v3.GlobalReportType{
 		ObjectMeta: metav1.ObjectMeta{Name: globalReportTypeName},
-		Spec: calico.ReportTypeSpec{
-			UISummaryTemplate: calico.ReportTemplate{
+		Spec: v3.ReportTypeSpec{
+			UISummaryTemplate: v3.ReportTemplate{
 				Name:     "uist",
 				Template: "Report Name: {{ .ReportName }}",
 			},
 		},
 	}
 	_, err = globalReportTypeClient.Create(ctx, globalReportType, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the pre-requisite globalReportType '%v' (%v)", globalReportType, err)
 	}
 
 	globalReportServer, err := globalReportClient.Create(ctx, globalReport, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the globalReport '%v' (%v)", globalReport, err)
 	}
 	if name != globalReportServer.Name {
 		return fmt.Errorf("didn't get the same globalReport back from the server \n%+v\n%+v", globalReport, globalReportServer)
 	}
-	if !reflect.DeepEqual(globalReportServer.Status, calico.ReportStatus{}) {
+	if !reflect.DeepEqual(globalReportServer.Status, v3.ReportStatus{}) {
 		return fmt.Errorf("status was set on create to %#v", globalReportServer.Status)
 	}
 
@@ -2333,8 +2330,8 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	// Verify that Update() modifies GlobalReport only.
 	globalReportUpdate := globalReportServer.DeepCopy()
 	globalReportUpdate.Spec.Schedule = "1 * * * *"
-	globalReportUpdate.Status.LastSuccessfulReportJobs = []calico.CompletedReportJob{
-		{JobCompletionTime: &v1.Time{Time: time.Now()}},
+	globalReportUpdate.Status.LastSuccessfulReportJobs = []v3.CompletedReportJob{
+		{JobCompletionTime: &metav1.Time{Time: time.Now()}},
 	}
 
 	globalReportServer, err = globalReportClient.Update(ctx, globalReportUpdate, metav1.UpdateOptions{})
@@ -2351,12 +2348,12 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	// Pupulate both GlobalReport and ReportStatus.
 	// Verify that UpdateStatus() modifies ReportStatus only.
 	globalReportUpdate = globalReportServer.DeepCopy()
-	globalReportUpdate.Status.LastSuccessfulReportJobs = []calico.CompletedReportJob{
-		{ReportJob: calico.ReportJob{
-			Start: v1.Time{Time: time.Now()},
-			End:   v1.Time{Time: time.Now()},
+	globalReportUpdate.Status.LastSuccessfulReportJobs = []v3.CompletedReportJob{
+		{ReportJob: v3.ReportJob{
+			Start: metav1.Time{Time: time.Now()},
+			End:   metav1.Time{Time: time.Now()},
 			Job:   &corev1.ObjectReference{},
-		}, JobCompletionTime: &v1.Time{Time: time.Now()}},
+		}, JobCompletionTime: &metav1.Time{Time: time.Now()}},
 	}
 	globalReportUpdate.Labels = map[string]string{"foo": "bar"}
 	globalReportServer, err = globalReportClient.UpdateStatus(ctx, globalReportUpdate, metav1.UpdateOptions{})
@@ -2373,12 +2370,12 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	}
 
 	err = globalReportClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("globalReport should be deleted (%s)", err)
 	}
 
 	// Check list-ing GlobalReport resource works with watch option.
-	w, err := client.ProjectcalicoV3().GlobalReports().Watch(ctx, v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().GlobalReports().Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching GlobalReports (%s)", err)
 	}
@@ -2399,14 +2396,13 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 				return
 			}
 		}
-		return
 	}()
 
 	// Create two GlobalReports
 	for i := 0; i < 2; i++ {
 		gr := &v3.GlobalReport{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gr%d", i)},
-			Spec:       calico.ReportSpec{ReportType: "inventory"},
+			Spec:       v3.ReportSpec{ReportType: "inventory"},
 		}
 		_, err = globalReportClient.Create(ctx, gr, metav1.CreateOptions{})
 		if err != nil {
@@ -2424,7 +2420,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 
 	// Undo pre-requisite creating GlobalReportType.
 	err = globalReportTypeClient.Delete(ctx, globalReportTypeName, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error deleting the pre-requisite globalReportType '%v' (%v)", globalReportType, err)
 	}
 
@@ -2455,8 +2451,8 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 	globalReportTypeClient := client.ProjectcalicoV3().GlobalReportTypes()
 	globalReportType := &v3.GlobalReportType{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: calico.ReportTypeSpec{
-			UISummaryTemplate: calico.ReportTemplate{
+		Spec: v3.ReportTypeSpec{
+			UISummaryTemplate: v3.ReportTemplate{
 				Name:     "uist",
 				Template: "Report Name: {{ .ReportName }}",
 			},
@@ -2475,7 +2471,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 
 	// Create/List/Get/Delete tests.
 	globalReportTypeServer, err := globalReportTypeClient.Create(ctx, globalReportType, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the globalReportType '%v' (%v)", globalReportType, err)
 	}
 	if name != globalReportTypeServer.Name {
@@ -2500,12 +2496,12 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 	}
 
 	err = globalReportTypeClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("globalReportType should be deleted (%s)", err)
 	}
 
 	// Check list-ing GlobalReportType resource works with watch option.
-	w, err := client.ProjectcalicoV3().GlobalReportTypes().Watch(ctx, v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().GlobalReportTypes().Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching GlobalReportTypes (%s)", err)
 	}
@@ -2526,15 +2522,14 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 				return
 			}
 		}
-		return
 	}()
 
 	// Create two GlobalReports
 	for i := 0; i < 2; i++ {
 		grt := &v3.GlobalReportType{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("grt%d", i)},
-			Spec: calico.ReportTypeSpec{
-				UISummaryTemplate: calico.ReportTemplate{
+			Spec: v3.ReportTypeSpec{
+				UISummaryTemplate: v3.ReportTemplate{
 					Name:     fmt.Sprintf("uist%d", i),
 					Template: "Report Name: {{ .ReportName }}",
 				},
@@ -2581,7 +2576,7 @@ func testIPPoolClient(client calicoclient.Interface, name string) error {
 	ippoolClient := client.ProjectcalicoV3().IPPools()
 	ippool := &v3.IPPool{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: calico.IPPoolSpec{
+		Spec: v3.IPPoolSpec{
 			CIDR: "192.168.0.0/16",
 		},
 	}
@@ -2597,14 +2592,14 @@ func testIPPoolClient(client calicoclient.Interface, name string) error {
 	}
 
 	ippoolServer, err := ippoolClient.Create(ctx, ippool, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the ippool '%v' (%v)", ippool, err)
 	}
 	if name != ippoolServer.Name {
 		return fmt.Errorf("didn't get the same ippool back from the server \n%+v\n%+v", ippool, ippoolServer)
 	}
 
-	ippools, err = ippoolClient.List(ctx, metav1.ListOptions{})
+	_, err = ippoolClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing ippools (%s)", err)
 	}
@@ -2619,7 +2614,7 @@ func testIPPoolClient(client calicoclient.Interface, name string) error {
 	}
 
 	err = ippoolClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("ippool should be deleted (%s)", err)
 	}
 
@@ -2651,7 +2646,7 @@ func testBGPConfigurationClient(client calicoclient.Interface, name string) erro
 	resName := "bgpconfig-test"
 	bgpConfig := &v3.BGPConfiguration{
 		ObjectMeta: metav1.ObjectMeta{Name: resName},
-		Spec: calico.BGPConfigurationSpec{
+		Spec: v3.BGPConfigurationSpec{
 			LogSeverityScreen: "Info",
 		},
 	}
@@ -2667,20 +2662,20 @@ func testBGPConfigurationClient(client calicoclient.Interface, name string) erro
 	}
 
 	bgpRes, err := bgpConfigClient.Create(ctx, bgpConfig, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the bgpConfiguration '%v' (%v)", bgpConfig, err)
 	}
 	if resName != bgpRes.Name {
 		return fmt.Errorf("didn't get the same bgpConfig back from server\n%+v\n%+v", bgpConfig, bgpRes)
 	}
 
-	bgpRes, err = bgpConfigClient.Get(ctx, resName, metav1.GetOptions{})
+	_, err = bgpConfigClient.Get(ctx, resName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting bgpConfiguration %s (%s)", resName, err)
 	}
 
 	err = bgpConfigClient.Delete(ctx, resName, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("BGPConfiguration should be deleted (%s)", err)
 	}
 
@@ -2712,7 +2707,7 @@ func testBGPPeerClient(client calicoclient.Interface, name string) error {
 	resName := "bgppeer-test"
 	bgpPeer := &v3.BGPPeer{
 		ObjectMeta: metav1.ObjectMeta{Name: resName},
-		Spec: calico.BGPPeerSpec{
+		Spec: v3.BGPPeerSpec{
 			Node:     "node1",
 			PeerIP:   "10.0.0.1",
 			ASNumber: numorstring.ASNumber(6512),
@@ -2730,20 +2725,20 @@ func testBGPPeerClient(client calicoclient.Interface, name string) error {
 	}
 
 	bgpRes, err := bgpPeerClient.Create(ctx, bgpPeer, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the bgpPeer '%v' (%v)", bgpPeer, err)
 	}
 	if resName != bgpRes.Name {
 		return fmt.Errorf("didn't get the same bgpPeer back from server\n%+v\n%+v", bgpPeer, bgpRes)
 	}
 
-	bgpRes, err = bgpPeerClient.Get(ctx, resName, metav1.GetOptions{})
+	_, err = bgpPeerClient.Get(ctx, resName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting bgpPeer %s (%s)", resName, err)
 	}
 
 	err = bgpPeerClient.Delete(ctx, resName, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("BGPPeer should be deleted (%s)", err)
 	}
 
@@ -2776,7 +2771,7 @@ func testProfileClient(client calicoclient.Interface, name string) error {
 	profileClient := client.ProjectcalicoV3().Profiles()
 	profile := &v3.Profile{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: calico.ProfileSpec{
+		Spec: v3.ProfileSpec{
 			LabelsToApply: map[string]string{
 				"aa": "bb",
 			},
@@ -2842,9 +2837,9 @@ func testRemoteClusterConfigurationClient(client calicoclient.Interface, name st
 	resName := "rcc-test"
 	rcc := &v3.RemoteClusterConfiguration{
 		ObjectMeta: metav1.ObjectMeta{Name: resName},
-		Spec: calico.RemoteClusterConfigurationSpec{
+		Spec: v3.RemoteClusterConfigurationSpec{
 			DatastoreType: "etcdv3",
-			EtcdConfig: calico.EtcdConfig{
+			EtcdConfig: v3.EtcdConfig{
 				EtcdEndpoints: "https://127.0.0.1:999",
 				EtcdUsername:  "user",
 				EtcdPassword:  "abc123",
@@ -2863,20 +2858,20 @@ func testRemoteClusterConfigurationClient(client calicoclient.Interface, name st
 	}
 
 	rccRes, err := rccClient.Create(ctx, rcc, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the remoteClusterConfiguration '%v' (%v)", rcc, err)
 	}
 	if resName != rccRes.Name {
 		return fmt.Errorf("didn't get the same remoteClusterConfiguration back from server\n%+v\n%+v", rcc, rccRes)
 	}
 
-	rccRes, err = rccClient.Get(ctx, resName, metav1.GetOptions{})
+	_, err = rccClient.Get(ctx, resName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting remoteClusterConfiguration %s (%s)", resName, err)
 	}
 
 	err = rccClient.Delete(ctx, resName, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("RemoteClusterConfiguration should be deleted (%s)", err)
 	}
 
@@ -2909,7 +2904,7 @@ func testFelixConfigurationClient(client calicoclient.Interface, name string) er
 	ptrInt := 1432
 	felixConfig := &v3.FelixConfiguration{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: calico.FelixConfigurationSpec{
+		Spec: v3.FelixConfigurationSpec{
 			UseInternalDataplaneDriver: &ptrTrue,
 			DataplaneDriver:            "test-dataplane-driver",
 			MetadataPort:               &ptrInt,
@@ -2927,14 +2922,14 @@ func testFelixConfigurationClient(client calicoclient.Interface, name string) er
 	}
 
 	felixConfigServer, err := felixConfigClient.Create(ctx, felixConfig, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the felixConfig '%v' (%v)", felixConfig, err)
 	}
 	if name != felixConfigServer.Name {
 		return fmt.Errorf("didn't get the same felixConfig back from the server \n%+v\n%+v", felixConfig, felixConfigServer)
 	}
 
-	felixConfigs, err = felixConfigClient.List(ctx, metav1.ListOptions{})
+	_, err = felixConfigClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing felixConfigs (%s)", err)
 	}
@@ -2949,7 +2944,7 @@ func testFelixConfigurationClient(client calicoclient.Interface, name string) er
 	}
 
 	err = felixConfigClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("felixConfig should be deleted (%s)", err)
 	}
 
@@ -2980,11 +2975,11 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 	kubeControllersConfigClient := client.ProjectcalicoV3().KubeControllersConfigurations()
 	kubeControllersConfig := &v3.KubeControllersConfiguration{
 		ObjectMeta: metav1.ObjectMeta{Name: "default"},
-		Status: calico.KubeControllersConfigurationStatus{
-			RunningConfig: calico.KubeControllersConfigurationSpec{
-				Controllers: calico.ControllersConfig{
-					Node: &calico.NodeControllerConfig{
-						SyncLabels: calico.Enabled,
+		Status: v3.KubeControllersConfigurationStatus{
+			RunningConfig: v3.KubeControllersConfigurationSpec{
+				Controllers: v3.ControllersConfig{
+					Node: &v3.NodeControllerConfig{
+						SyncLabels: v3.Enabled,
 					},
 				},
 			},
@@ -3002,13 +2997,13 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 	}
 
 	kubeControllersConfigServer, err := kubeControllersConfigClient.Create(ctx, kubeControllersConfig, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the kubeControllersConfig '%v' (%v)", kubeControllersConfig, err)
 	}
 	if kubeControllersConfigServer.Name != "default" {
 		return fmt.Errorf("didn't get the same kubeControllersConfig back from the server \n%+v\n%+v", kubeControllersConfig, kubeControllersConfigServer)
 	}
-	if !reflect.DeepEqual(kubeControllersConfigServer.Status, calico.KubeControllersConfigurationStatus{}) {
+	if !reflect.DeepEqual(kubeControllersConfigServer.Status, v3.KubeControllersConfigurationStatus{}) {
 		return fmt.Errorf("status was set on create to %#v", kubeControllersConfigServer.Status)
 	}
 
@@ -3030,7 +3025,7 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 	}
 
 	kubeControllersConfigUpdate := kubeControllersConfigServer.DeepCopy()
-	kubeControllersConfigUpdate.Spec.HealthChecks = calico.Enabled
+	kubeControllersConfigUpdate.Spec.HealthChecks = v3.Enabled
 	kubeControllersConfigUpdate.Status.EnvironmentVars = map[string]string{"FOO": "bar"}
 	kubeControllersConfigServer, err = kubeControllersConfigClient.Update(ctx, kubeControllersConfigUpdate, metav1.UpdateOptions{})
 	if err != nil {
@@ -3062,12 +3057,12 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 	}
 
 	err = kubeControllersConfigClient.Delete(ctx, "default", metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("kubeControllersConfig should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().KubeControllersConfigurations().Watch(ctx, v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().KubeControllersConfigurations().Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching KubeControllersConfigurations (%s)", err)
 	}
@@ -3088,16 +3083,15 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 				return
 			}
 		}
-		return
 	}()
 
 	// Create, then delete KubeControllersConfigurations
-	kubeControllersConfigServer, err = kubeControllersConfigClient.Create(ctx, kubeControllersConfig, metav1.CreateOptions{})
-	if nil != err {
+	_, err = kubeControllersConfigClient.Create(ctx, kubeControllersConfig, metav1.CreateOptions{})
+	if err != nil {
 		return fmt.Errorf("error creating the kubeControllersConfig '%v' (%v)", kubeControllersConfig, err)
 	}
 	err = kubeControllersConfigClient.Delete(ctx, "default", metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("kubeControllersConfig should be deleted (%s)", err)
 	}
 
@@ -3161,7 +3155,7 @@ func TestManagedClusterClient(t *testing.T) {
 		managedClusterClient := client.ProjectcalicoV3().ManagedClusters()
 		managedCluster := &v3.ManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{Name: name},
-			Spec:       calico.ManagedClusterSpec{},
+			Spec:       v3.ManagedClusterSpec{},
 		}
 		_, err := managedClusterClient.Create(ctx, managedCluster, metav1.CreateOptions{})
 
@@ -3220,14 +3214,14 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	managedClusterClient := client.ProjectcalicoV3().ManagedClusters()
 	managedCluster := &v3.ManagedCluster{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec:       calico.ManagedClusterSpec{},
+		Spec:       v3.ManagedClusterSpec{},
 	}
 
-	expectedInitialStatus := calico.ManagedClusterStatus{
-		Conditions: []calico.ManagedClusterStatusCondition{
+	expectedInitialStatus := v3.ManagedClusterStatus{
+		Conditions: []v3.ManagedClusterStatusCondition{
 			{
-				Status: calico.ManagedClusterStatusValueUnknown,
-				Type:   calico.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueUnknown,
+				Type:   v3.ManagedClusterStatusTypeConnected,
 			},
 		},
 	}
@@ -3244,16 +3238,16 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 
 	// ------------------------------------------------------------------------------------------
 	managedClusterServer, err := managedClusterClient.Create(ctx, managedCluster, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the managedCluster '%v' (%v)", managedCluster, err)
 	}
 	if name != managedClusterServer.Name {
 		return fmt.Errorf("didn't get the same managedCluster back from the server \n%+v\n%+v", managedCluster, managedClusterServer)
 	}
 	endpoint := regexp.MustCompile("managementClusterAddr:\\s\"example.org:1234\"")
-	ca := regexp.MustCompile("management-cluster\\.crt:\\s\\w+")
-	cert := regexp.MustCompile("managed-cluster\\.crt:\\s\\w+")
-	key := regexp.MustCompile("managed-cluster\\.key:\\s\\w+")
+	ca := regexp.MustCompile(`management-cluster\.crt:\s\w+`)
+	cert := regexp.MustCompile(`managed-cluster\.crt:\s\w+`)
+	key := regexp.MustCompile(`managed-cluster\.key:\s\w+`)
 
 	if len(managedClusterServer.Spec.InstallationManifest) == 0 {
 		return fmt.Errorf("expected installationManifest to be populated when creating "+
@@ -3312,12 +3306,12 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	}
 	// ------------------------------------------------------------------------------------------
 	managedClusterUpdate := managedClusterServer.DeepCopy()
-	managedClusterUpdate.Status.Conditions = []calico.ManagedClusterStatusCondition{
+	managedClusterUpdate.Status.Conditions = []v3.ManagedClusterStatusCondition{
 		{
 			Message: "Connected to Managed Cluster",
 			Reason:  "ConnectionSuccessful",
-			Status:  calico.ManagedClusterStatusValueTrue,
-			Type:    calico.ManagedClusterStatusTypeConnected,
+			Status:  v3.ManagedClusterStatusValueTrue,
+			Type:    v3.ManagedClusterStatusTypeConnected,
 		},
 	}
 	managedClusterServer, err = managedClusterClient.Update(ctx, managedClusterUpdate, metav1.UpdateOptions{})
@@ -3329,12 +3323,12 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	}
 	// ------------------------------------------------------------------------------------------
 	err = managedClusterClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("managedCluster should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().ManagedClusters().Watch(ctx, v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().ManagedClusters().Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching ManagedClusters (%s)", err)
 	}
@@ -3355,7 +3349,6 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 				return
 			}
 		}
-		return
 	}()
 
 	// Create two ManagedClusters
@@ -3658,20 +3651,20 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 	}
 
 	packetCaptureServer, err := packetCaptureClient.Create(ctx, packetCapture, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the packetCapture '%v' (%v)", packetCapture, err)
 	}
 
 	updatedPacketCapture := packetCaptureServer.DeepCopy()
 	updatedPacketCapture.Labels = map[string]string{"foo": "bar"}
 	packetCaptureServer, err = packetCaptureClient.Update(ctx, updatedPacketCapture, metav1.UpdateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error in updating the packetCapture '%v' (%v)", packetCapture, err)
 	}
 
 	updatedPacketCaptureWithStatus := packetCaptureServer.DeepCopy()
-	updatedPacketCaptureWithStatus.Status = calico.PacketCaptureStatus{
-		Files: []calico.PacketCaptureFile{
+	updatedPacketCaptureWithStatus.Status = v3.PacketCaptureStatus{
+		Files: []v3.PacketCaptureFile{
 			{
 				Node:      "node",
 				FileNames: []string{"file1", "file2"},
@@ -3680,7 +3673,7 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 	}
 
 	packetCaptureServer, err = packetCaptureClient.UpdateStatus(ctx, updatedPacketCaptureWithStatus, metav1.UpdateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error updating the packetCapture '%v' (%v)", packetCaptureServer, err)
 	}
 	if !reflect.DeepEqual(packetCaptureServer.Status, updatedPacketCaptureWithStatus.Status) {
@@ -3693,7 +3686,7 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 	if err != nil {
 		return fmt.Errorf("error listing packetCaptures (%s)", err)
 	}
-	if 1 != len(packetCaptures.Items) {
+	if len(packetCaptures.Items) != 1 {
 		return fmt.Errorf("should have exactly one packetCapture, had %v packetCaptures", len(packetCaptures.Items))
 	}
 
@@ -3707,14 +3700,14 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 	}
 
 	// Watch Test:
-	opts := v1.ListOptions{Watch: true}
+	opts := metav1.ListOptions{Watch: true}
 	wIface, err := packetCaptureClient.Watch(ctx, opts)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
@@ -3723,7 +3716,7 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 	}()
 
 	err = packetCaptureClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("packetCapture should be deleted (%s)", err)
 	}
 
@@ -3775,15 +3768,15 @@ func testDeepPacketInspectionClient(client calicoclient.Interface, name string) 
 	}
 
 	deepPacketInspectionServer, err := deepPacketInspectionClient.Create(ctx, deepPacketInspection, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the deepPacketInspection '%v' (%v)", deepPacketInspection, err)
 	}
 
 	updatedDeepPacketInspection := deepPacketInspectionServer.DeepCopy()
 	updatedDeepPacketInspection.Labels = map[string]string{"foo": "bar"}
-	updatedDeepPacketInspection.Spec = calico.DeepPacketInspectionSpec{Selector: "k8s-app == 'sample-app'"}
+	updatedDeepPacketInspection.Spec = v3.DeepPacketInspectionSpec{Selector: "k8s-app == 'sample-app'"}
 	deepPacketInspectionServer, err = deepPacketInspectionClient.Update(ctx, updatedDeepPacketInspection, metav1.UpdateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error in updating the deepPacketInspection '%v' (%v)", deepPacketInspection, err)
 	}
 	if !reflect.DeepEqual(deepPacketInspectionServer.Labels, updatedDeepPacketInspection.Labels) {
@@ -3798,7 +3791,7 @@ func testDeepPacketInspectionClient(client calicoclient.Interface, name string) 
 	if err != nil {
 		return fmt.Errorf("error listing deepPacketInspections (%s)", err)
 	}
-	if 1 != len(deepPacketInspections.Items) {
+	if len(deepPacketInspections.Items) != 1 {
 		return fmt.Errorf("should have exactly one deepPacketInspection, had %v deepPacketInspections", len(deepPacketInspections.Items))
 	}
 
@@ -3812,14 +3805,14 @@ func testDeepPacketInspectionClient(client calicoclient.Interface, name string) 
 	}
 
 	// Watch Test:
-	opts := v1.ListOptions{Watch: true}
+	opts := metav1.ListOptions{Watch: true}
 	wIface, err := deepPacketInspectionClient.Watch(ctx, opts)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
@@ -3828,7 +3821,7 @@ func testDeepPacketInspectionClient(client calicoclient.Interface, name string) 
 	}()
 
 	err = deepPacketInspectionClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("deepPacketInspection should be deleted (%s)", err)
 	}
 
@@ -3884,7 +3877,7 @@ func testUISettingsGroupClient(client calicoclient.Interface, name string) error
 	}
 
 	uiSettingsGroupServer, err := uiSettingsGroupClient.Create(ctx, uiSettingsGroup, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the uiSettingsGroup '%v' (%v)", uiSettingsGroup, err)
 	}
 
@@ -3892,7 +3885,7 @@ func testUISettingsGroupClient(client calicoclient.Interface, name string) error
 	updatedUISettingsGroup.Labels = map[string]string{"foo": "bar"}
 	updatedUISettingsGroup.Spec.Description = "updated description"
 	uiSettingsGroupServer, err = uiSettingsGroupClient.Update(ctx, updatedUISettingsGroup, metav1.UpdateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error in updating the uiSettingsGroup '%v' (%v)", uiSettingsGroup, err)
 	}
 	if !reflect.DeepEqual(uiSettingsGroupServer.Labels, updatedUISettingsGroup.Labels) {
@@ -3921,14 +3914,14 @@ func testUISettingsGroupClient(client calicoclient.Interface, name string) error
 	}
 
 	// Watch Test:
-	opts := v1.ListOptions{Watch: true}
+	opts := metav1.ListOptions{Watch: true}
 	wIface, err := uiSettingsGroupClient.Watch(ctx, opts)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("Error on watch")
 	}
 
 	err = uiSettingsGroupClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("uiSettingsGroup should be deleted (%s)", err)
 	}
 
@@ -3980,7 +3973,7 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 	uiSettings := &v3.UISettings{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
-			OwnerReferences: []v1.OwnerReference{},
+			OwnerReferences: []metav1.OwnerReference{},
 		},
 		Spec: v3.UISettingsSpec{
 			Group:       groupName,
@@ -4019,7 +4012,7 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Listing with the group name will fail because the group does not exist.
-	uiSettingsList, err = uiSettingsClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.group=" + groupName})
+	_, err = uiSettingsClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.group=" + groupName})
 	if err == nil {
 		return fmt.Errorf("expected error listing the uiSettings with group when group does not exist")
 	}
@@ -4036,7 +4029,7 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("error creating the uiSettingsGroup '%v' (%v)", uiSettingsGroup, err)
 	}
 	defer func() {
-		uiSettingsGroupClient.Delete(ctx, groupName, metav1.DeleteOptions{})
+		_ = uiSettingsGroupClient.Delete(ctx, groupName, metav1.DeleteOptions{})
 	}()
 
 	uiSettingsServer, err := uiSettingsClient.Create(ctx, uiSettings, metav1.CreateOptions{})
@@ -4044,7 +4037,7 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("error creating the uiSettings '%v' (%v)", uiSettings, err)
 	}
 	defer func() {
-		uiSettingsClient.Delete(ctx, name, metav1.DeleteOptions{})
+		_ = uiSettingsClient.Delete(ctx, name, metav1.DeleteOptions{})
 	}()
 	if len(uiSettingsServer.OwnerReferences) != 1 {
 		return fmt.Errorf("expecting OwnerReferences to contain a single entry after create '%v'", uiSettingsServer.OwnerReferences)
@@ -4120,7 +4113,7 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 
 	// Modify the group to have the user filter.
 	uiSettingsGroupServer.Spec.FilterType = "User"
-	uiSettingsGroupServer, err = uiSettingsGroupClient.Update(ctx, uiSettingsGroupServer, metav1.UpdateOptions{})
+	_, err = uiSettingsGroupClient.Update(ctx, uiSettingsGroupServer, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating the uiSettingsGroup '%v' (%v)", uiSettingsGroup, err)
 	}
@@ -4132,7 +4125,7 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("error creating the second uiSettings '%v' (%v)", uiSettings, err)
 	}
 	defer func() {
-		uiSettingsClient.Delete(ctx, name2, metav1.DeleteOptions{})
+		_ = uiSettingsClient.Delete(ctx, name2, metav1.DeleteOptions{})
 	}()
 	if len(uiSettingsServer2.Spec.User) == 0 {
 		return fmt.Errorf("expecting User field to be filled in")
@@ -4160,7 +4153,7 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Watch Test. Deleting the second should work.
-	opts := v1.ListOptions{Watch: true, FieldSelector: "spec.group=" + groupName}
+	opts := metav1.ListOptions{Watch: true, FieldSelector: "spec.group=" + groupName}
 	wIface, err := uiSettingsClient.Watch(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("Error on watch")
@@ -4229,20 +4222,20 @@ func testCalicoNodeStatusClient(client calicoclient.Interface, name string) erro
 	}
 
 	caliconodestatusNew, err := caliconodestatusClient.Create(ctx, caliconodestatus, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the object '%v' (%v)", caliconodestatus, err)
 	}
 	if name != caliconodestatusNew.Name {
 		return fmt.Errorf("didn't get the same object back from the server \n%+v\n%+v", caliconodestatus, caliconodestatusNew)
 	}
 
-	caliconodestatusNew, err = caliconodestatusClient.Get(ctx, name, metav1.GetOptions{})
+	_, err = caliconodestatusClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting object %s (%s)", name, err)
 	}
 
 	err = caliconodestatusClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("object should be deleted (%s)", err)
 	}
 
@@ -4286,13 +4279,13 @@ func testIPAMConfigClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("error listing IPAMConfigurations: %s", err)
 	}
 
-	ipamConfigNew, err := ipamConfigClient.Create(ctx, ipamConfig, metav1.CreateOptions{})
+	_, err = ipamConfigClient.Create(ctx, ipamConfig, metav1.CreateOptions{})
 	if err == nil {
 		return fmt.Errorf("should not be able to create ipam config %s ", ipamConfig.Name)
 	}
 
 	ipamConfig.Name = "default"
-	ipamConfigNew, err = ipamConfigClient.Create(ctx, ipamConfig, metav1.CreateOptions{})
+	ipamConfigNew, err := ipamConfigClient.Create(ctx, ipamConfig, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("error creating the object '%v' (%v)", ipamConfig, err)
 	}
@@ -4434,7 +4427,7 @@ func testBlockAffinityClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Test watch
-	w, err := blockAffinityClient.Watch(ctx, v1.ListOptions{})
+	w, err := blockAffinityClient.Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching block affinities (%s)", err)
 	}

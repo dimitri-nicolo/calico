@@ -82,7 +82,7 @@ func TestAuthenticateRequest(t *testing.T) {
 	req = &http.Request{Header: http.Header{}}
 	req.Header.Set(authentication.AuthorizationHeader, invalidHeader)
 	req, statusCode, err = authentication.AuthenticateRequest(authenticator, req)
-	info, ok = request.UserFrom(req.Context())
+	info, _ = request.UserFrom(req.Context())
 	if info != nil || err == nil || statusCode != http.StatusUnauthorized {
 		t.Fatalf("test failure for header: %s. statusCode=%d, userInfo=%v",
 			invalidHeader, statusCode, info)
@@ -93,7 +93,7 @@ func TestAuthenticateRequest(t *testing.T) {
 	req = &http.Request{Header: http.Header{}}
 	req.Header.Set(authentication.AuthorizationHeader, unauthorizedHeader)
 	req, statusCode, err = authentication.AuthenticateRequest(authenticator, req)
-	info, ok = request.UserFrom(req.Context())
+	info, _ = request.UserFrom(req.Context())
 	if info != nil || err == nil || statusCode != http.StatusForbidden {
 		t.Fatalf("test failure for header: %s. statusCode=%d, userInfo=%v",
 			unauthorizedHeader, statusCode, info)
@@ -104,7 +104,7 @@ func TestAuthenticateRequest(t *testing.T) {
 	req = &http.Request{Header: http.Header{}}
 	req.Header.Set(authentication.AuthorizationHeader, trigger500Header)
 	req, statusCode, err = authentication.AuthenticateRequest(authenticator, req)
-	info, ok = request.UserFrom(req.Context())
+	info, _ = request.UserFrom(req.Context())
 	if info != nil || err == nil || statusCode != http.StatusInternalServerError {
 		t.Fatalf("test failure for header: %s. statusCode=%d, userInfo=%v",
 			trigger500Header, statusCode, info)

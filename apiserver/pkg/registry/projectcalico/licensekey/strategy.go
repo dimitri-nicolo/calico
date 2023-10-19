@@ -66,7 +66,7 @@ func (a apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Obj
 	if licClaims.Validate() == licClient.Valid {
 		aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-			MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(*&licClaims.Features),
+			MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(licClaims.Features),
 		}
 	}
 }
@@ -83,8 +83,8 @@ func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.
 		newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 			MaxNodes: *licClaims.Nodes,
-			Package:  helpers.ConvertToPackageType(*&licClaims.Features),
-			Features: helpers.ExpandFeatureNames(*&licClaims.Features),
+			Package:  helpers.ConvertToPackageType(licClaims.Features),
+			Features: helpers.ExpandFeatureNames(licClaims.Features),
 		}
 	}
 }
@@ -134,8 +134,8 @@ func (apiServerStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old ru
 	newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 		Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 		MaxNodes: *licClaims.Nodes,
-		Package:  helpers.ConvertToPackageType(*&licClaims.Features),
-		Features: helpers.ExpandFeatureNames(*&licClaims.Features),
+		Package:  helpers.ConvertToPackageType(licClaims.Features),
+		Features: helpers.ExpandFeatureNames(licClaims.Features),
 	}
 }
 
