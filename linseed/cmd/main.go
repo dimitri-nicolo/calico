@@ -17,16 +17,19 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
@@ -96,8 +99,8 @@ func main() {
 
 func run() {
 	// Read and reconcile configuration
-	cfg := config.Config{}
-	if err := envconfig.Process(config.EnvConfigPrefix, &cfg); err != nil {
+	cfg, err := config.LoadConfig()
+	if err != nil {
 		panic(err)
 	}
 
@@ -115,7 +118,7 @@ func run() {
 	healthAggregator := health.NewHealthAggregator()
 	healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true}, 0)
 
-	esClient := backend.MustGetElasticClient(cfg)
+	esClient := backend.MustGetElasticClient(*cfg)
 
 	// Create template caches for indices with special shards / replicas configuration
 	defaultCache := templates.NewCachedInitializer(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
@@ -187,7 +190,6 @@ func run() {
 
 	// Create a Kuberentes client to use for authorization.
 	var kc *rest.Config
-	var err error
 	if cfg.Kubeconfig == "" {
 		// creates the in-cluster k8sConfig
 		kc, err = rest.InClusterConfig()
@@ -205,15 +207,21 @@ func run() {
 	if err != nil {
 		logrus.WithError(err).Fatal("Unable to create Kubernetes client")
 	}
-	pc, err := clientset.NewForConfig(kc)
+	scheme := clientruntime.NewScheme()
+	if err = v3.AddToScheme(scheme); err != nil {
+		logrus.WithError(err).Fatal("Failed to configure controller runtime client")
+	}
+
+	// client is used to get ManagedCluster resources in both single-tenant and multi-tenant modes.
+	client, err := ctrlclient.NewWithWatch(kc, ctrlclient.Options{Scheme: scheme})
 	if err != nil {
-		logrus.WithError(err).Fatal("Unable to create Calico client")
+		logrus.WithError(err).Fatal("Failed to configure client")
 	}
 
 	authOpts := []auth.JWTAuthOption{}
 	if cfg.TokenControllerEnabled {
 		// Get our token signing key.
-		key, err := tokenCredentials(cfg)
+		key, err := tokenCredentials(*cfg)
 		if err != nil {
 			logrus.WithError(err).Fatal("Unable to acquire token signing key")
 		}
@@ -262,7 +270,7 @@ func run() {
 			token.WithUserInfos(users),
 			token.WithReconcilePeriod(tokenReconcilePeriod),
 			token.WithExpiry(tokenExpiry),
-			token.WithCalicoClient(pc),
+			token.WithControllerRuntimeClient(client),
 			token.WithK8sClient(k),
 			token.WithPrivateKey(key),
 			token.WithFactory(factory),
@@ -281,12 +289,7 @@ func run() {
 				},
 			}
 			opts = append(opts, token.WithImpersonation(&impersonationInfo))
-
-			nsBytes, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-			if err != nil {
-				logrus.WithError(err).Fatal()
-			}
-			opts = append(opts, token.WithNamespace(string(nsBytes)))
+			opts = append(opts, token.WithNamespace(cfg.TenantNamespace))
 		}
 
 		tokenController, err := token.NewController(opts...)
@@ -332,7 +335,7 @@ func run() {
 
 	// Configure options used to launch the server.
 	opts := []server.Option{
-		server.WithMiddlewares(server.Middlewares(cfg, authn, authzHelper)),
+		server.WithMiddlewares(server.Middlewares(*cfg, authn, authzHelper)),
 		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(handlers...)...),
 		server.WithRoutes(server.UtilityRoutes()...),
 	}
