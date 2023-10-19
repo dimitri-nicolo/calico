@@ -15,9 +15,10 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/memkv"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/confd/pkg/backends"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (
@@ -76,15 +77,15 @@ func EmitExternalNetworkTableName(name string) (string, error) {
 // e.g input of ("In", "77.0.0.1/16", "accept") produces output of "if ( net ~ 77.0.0.1/16 ) then { accept; }"
 func emitBGPFilterStatement(matchOperator, cidr, action string) (string, error) {
 	matchOperatorLUT := map[string]string{
-		string(v3.Equal): "=",
-		v3.NotEqual:      "!=",
-		v3.In:            "~",
-		v3.NotIn:         "!~",
+		string(v3.Equal):    "=",
+		string(v3.NotEqual): "!=",
+		string(v3.In):       "~",
+		string(v3.NotIn):    "!~",
 	}
 
 	op, ok := matchOperatorLUT[matchOperator]
 	if !ok {
-		err := fmt.Errorf("Unexpected operator found in BGPFilter: %s", matchOperator)
+		err := fmt.Errorf("unexpected operator found in BGPFilter: %s", matchOperator)
 		return "", err
 	}
 
@@ -100,7 +101,7 @@ func EmitBGPFilterFunctionName(filterName, direction, version string) (string, e
 	case "import":
 	case "export":
 	default:
-		return "", fmt.Errorf("Provided direction '%s' does not map to either 'import' or 'export'", direction)
+		return "", fmt.Errorf("provided direction '%s' does not map to either 'import' or 'export'", direction)
 	}
 	pieces := []string{"bgp_", "", "_", normalizedDirection, "FilterV", version}
 	resizedName, err := truncateAndHashName(filterName, maxBIRDSymLen-len(strings.Join(pieces, "")))
@@ -160,7 +161,7 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 			var backendPeer backends.BGPPeer
 			err := json.Unmarshal([]byte(peer.Value), &backendPeer)
 			if err != nil {
-				return map[string][]string{}, fmt.Errorf("Error unmarshalling JSON into backend BGPPeer: %s", err)
+				return map[string][]string{}, fmt.Errorf("error unmarshalling JSON into backend BGPPeer: %s", err)
 			}
 			if backendPeer.PeerIP.String() == selfIP || backendPeer.ExternalNetwork == "" {
 				continue // Skip ourselves because we don't generate a protocol definition for ourselves
@@ -210,7 +211,7 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 		var externalNetwork v3.ExternalNetwork
 		err := json.Unmarshal([]byte(kvp.Value), &externalNetwork)
 		if err != nil {
-			return []string{}, fmt.Errorf("Error unmarshalling JSON into ExternalNetwork: %s", err)
+			return []string{}, fmt.Errorf("error unmarshalling JSON into ExternalNetwork: %s", err)
 		}
 		externalNetworkName := path.Base(kvp.Key)
 		peerStatements, ok := peerReferencedExternalNetworks[externalNetworkName]
@@ -324,14 +325,14 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 	case 6:
 		versionStr = fmt.Sprintf("%d", version)
 	default:
-		return []string{}, fmt.Errorf("Version must be either 4 or 6")
+		return []string{}, fmt.Errorf("version must be either 4 or 6")
 	}
 
 	for _, kvp := range pairs {
 		var filter v3.BGPFilter
 		err := json.Unmarshal([]byte(kvp.Value), &filter)
 		if err != nil {
-			return []string{}, fmt.Errorf("Error unmarshalling JSON: %s", err)
+			return []string{}, fmt.Errorf("error unmarshalling JSON: %s", err)
 		}
 
 		importFiltersV4 := filter.Spec.ImportV4
@@ -449,7 +450,7 @@ func truncateAndHashName(name string, maxLen int) (string, error) {
 	// Account for underscore we insert between truncated name and hash string
 	hashStrSize := hashCharsToUse + 1
 	if maxLen <= hashStrSize {
-		return "", fmt.Errorf("Max truncated string length must be greater than the mininum size of %d",
+		return "", fmt.Errorf("max truncated string length must be greater than the mininum size of %d",
 			hashStrSize)
 	}
 	hash := sha256.New()
