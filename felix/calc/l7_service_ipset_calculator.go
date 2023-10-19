@@ -203,7 +203,7 @@ func (c *L7ServiceIPSetsCalculator) resolveRegularEndpoints() (added []ipPortPro
 	})
 
 	// add new items to tproxy from updated list of annotated endpoints
-	for ipPortProto, _ := range c.sai.ipPortProtoToServices {
+	for ipPortProto := range c.sai.ipPortProtoToServices {
 		// if it already exists in active endpoints skip it
 		if c.activeEndpoints.Contains(ipPortProto) {
 			continue

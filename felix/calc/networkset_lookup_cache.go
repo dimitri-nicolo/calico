@@ -40,7 +40,6 @@ type NetworkSetLookupsCache struct {
 	nsMutex                  sync.RWMutex
 	networkSets              map[model.Key]*networkSetData
 	ipTree                   *IpTrie
-	networksetToEgressDomain map[string]set.Set[string]
 	egressDomainToNetworkset map[string]set.Set[model.Key]
 }
 
@@ -227,8 +226,7 @@ func (nc *NetworkSetLookupsCache) GetNetworkSetFromEgressDomain(domain string) (
 func (nc *NetworkSetLookupsCache) DumpNetworksets() string {
 	nc.nsMutex.RLock()
 	defer nc.nsMutex.RUnlock()
-	lines := []string{}
-	lines = nc.ipTree.DumpCIDRKeys()
+	lines := nc.ipTree.DumpCIDRKeys()
 	lines = append(lines, "-------")
 	for key, ns := range nc.networkSets {
 		cidrStr := []string{}

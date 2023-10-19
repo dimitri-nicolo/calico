@@ -526,11 +526,13 @@ var _ = Describe("NFLOG Datasource", func() {
 
 			lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
 			nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
-			nflogReader.Start()
+			Expect(nflogReader.Start()).NotTo(HaveOccurred())
 			c = newCollector(lm, conf).(*collector)
 			c.SetPacketInfoReader(nflogReader)
 			c.SetConntrackInfoReader(dummyConntrackInfoReader{})
-			go c.Start()
+			go func() {
+				Expect(c.Start()).NotTo(HaveOccurred())
+			}()
 		})
 		AfterEach(func() {
 			nflogReader.Stop()
@@ -671,7 +673,7 @@ var inALPEntry = proto.DataplaneStats{
 	SrcPort: int32(srcPort),
 	DstPort: int32(dstPort),
 	Protocol: &proto.Protocol{
-		NumberOrName: &proto.Protocol_Number{proto_tcp},
+		NumberOrName: &proto.Protocol_Number{Number: proto_tcp},
 	},
 	Stats: []*proto.Statistic{
 		{
@@ -698,7 +700,7 @@ var dpStatsEntryWithFwdFor = proto.DataplaneStats{
 	SrcPort: int32(srcPort),
 	DstPort: int32(dstPort),
 	Protocol: &proto.Protocol{
-		NumberOrName: &proto.Protocol_Number{proto_tcp},
+		NumberOrName: &proto.Protocol_Number{Number: proto_tcp},
 	},
 	Stats: []*proto.Statistic{
 		{
@@ -928,7 +930,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			MockSenderChannel: ciReaderSenderChan,
 		})
 
-		c.Start()
+		Expect(c.Start()).NotTo(HaveOccurred())
 	})
 
 	Describe("Test local destination", func() {
@@ -1786,7 +1788,7 @@ var _ = Describe("Reporting Metrics", func() {
 		lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
 		mockReporter = newMockReporter()
 		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
-		nflogReader.Start()
+		Expect(nflogReader.Start()).NotTo(HaveOccurred())
 		c = newCollector(lm, conf).(*collector)
 		c.RegisterMetricsReporter(mockReporter)
 		c.SetPacketInfoReader(nflogReader)
@@ -1797,7 +1799,9 @@ var _ = Describe("Reporting Metrics", func() {
 	})
 	Context("Without process info enabled", func() {
 		BeforeEach(func() {
-			go c.Start()
+			go func() {
+				Expect(c.Start()).NotTo(HaveOccurred())
+			}()
 		})
 		Describe("Report Denied Packets", func() {
 			BeforeEach(func() {
@@ -1934,7 +1938,9 @@ var _ = Describe("Reporting Metrics", func() {
 			c.SetConntrackInfoReader(dummyConntrackInfoReader{
 				MockSenderChannel: ciReaderSenderChan,
 			})
-			go c.Start()
+			go func() {
+				Expect(c.Start()).NotTo(HaveOccurred())
+			}()
 		})
 		It("should report a metric update for allowed Packets (ingress) with process info", func() {
 			By("initializing the mock process cache with data")
@@ -2042,7 +2048,9 @@ var _ = Describe("Reporting Metrics", func() {
 			c.SetConntrackInfoReader(dummyConntrackInfoReader{
 				MockSenderChannel: ciChan,
 			})
-			go c.Start()
+			go func() {
+				Expect(c.Start()).NotTo(HaveOccurred())
+			}()
 		})
 
 		Describe("Ensure we get Expire type metric update", func() {

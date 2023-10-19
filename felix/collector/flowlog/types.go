@@ -702,10 +702,6 @@ func (f *FlowStats) getActiveFlowsCount() int {
 	return len(f.flowsRefsActive)
 }
 
-func (f *FlowStats) containsActiveRefs(mu metric.Update) bool {
-	return f.flowsRefsActive.Contains(mu.Tuple)
-}
-
 func (f *FlowStats) reset() {
 	f.flowsStartedRefs = tuple.NewSet()
 	f.flowsCompletedRefs = tuple.NewSet()

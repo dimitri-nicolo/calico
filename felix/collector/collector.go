@@ -35,12 +35,6 @@ import (
 	kapiv1 "k8s.io/api/core/v1"
 )
 
-const (
-	expectedLocalEither byte = iota
-	expectedLocalDestination
-	expectedLocalSource
-)
-
 var (
 	// conntrack processing prometheus metrics
 	histogramConntrackLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
@@ -184,11 +178,15 @@ func (c *collector) Start() error {
 	c.setupStatsDumping()
 
 	if c.dnsLogReporter != nil {
-		c.dnsLogReporter.Start()
+		if err := c.dnsLogReporter.Start(); err != nil {
+			return err
+		}
 	}
 
 	if c.l7LogReporter != nil {
-		c.l7LogReporter.Start()
+		if err := c.l7LogReporter.Start(); err != nil {
+			return err
+		}
 	}
 
 	// init prometheus metrics timings
@@ -196,7 +194,9 @@ func (c *collector) Start() error {
 
 	// Start all metric reporters
 	for _, r := range c.metricReporters {
-		r.Start()
+		if err := r.Start(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -209,7 +209,9 @@ func (c *collector) RegisterMetricsReporter(mr types.Reporter) {
 func (c *collector) LogMetrics(mu metric.Update) {
 	logutil.Tracef(c.displayDebugTraceLogs, "Received metric update %v", mu)
 	for _, r := range c.metricReporters {
-		r.Report(mu)
+		if err := r.Report(mu); err != nil {
+			log.WithError(err).Debug("failed to report metric update")
+		}
 	}
 }
 

@@ -1333,8 +1333,6 @@ func (m *endpointManager) removeEgressGatewayInterfaceAddress(name string) {
 	// Removing this address causes the egress gateway device route to disappear, so tell the
 	// route table to resync in order to reinstate it.
 	m.routeTable.QueueResyncIface(name)
-
-	return
 }
 
 func (m *endpointManager) interfaceExistsInProcSys(name string) (bool, error) {

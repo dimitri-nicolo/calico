@@ -97,16 +97,9 @@ const (
 	// by SIGHUP, which means that the wrapper script also restarts Felix on a SIGHUP.
 	configChangedRC = 129
 
-	// Grace period we allow for graceful shutdown before panicking.
-	gracefulShutdownTimeout = 30 * time.Second
-
 	// Process return code used to report a child exit.  This is the same as the code used
 	// by SIGHUP, which means that the wrapper script also restarts Felix on a SIGHUP.
 	childExitedRC = 129
-
-	// CloudWatch Health metrics names.
-	healthyNodeMetricName   = "Nodes reporting healthy"
-	unHealthyNodeMetricName = "Nodes reporting unhealthy"
 )
 
 // Run is the entry point to run a Felix instance.
@@ -782,7 +775,11 @@ configRetry:
 
 	// Start the license monitor, which will trigger the callback above at start of day and then whenever the license
 	// status changes.
-	go licenseMonitor.MonitorForever(context.Background())
+	go func() {
+		if err := licenseMonitor.MonitorForever(context.Background()); err != nil {
+			log.WithError(err).Error("failed to start the license monitor")
+		}
+	}()
 
 	// Now monitor the worker process and our worker threads and shut
 	// down the process gracefully if they fail.

@@ -54,67 +54,67 @@ var _ = Describe("TPROXYManager", func() {
 
 	It("Should should not fail if it sees delete first", func() {
 		onRemove("ep1")
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify(nil, nil)
 
 		onUpdate("ep1", []string{"1.1.1.1"}, nil)
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1"}, nil)
 	})
 
 	It("Should should not fail if it sees delete first in the same batch", func() {
 		onRemove("ep1")
 		onUpdate("ep1", []string{"1.1.1.1"}, nil)
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1"}, nil)
 	})
 
 	It("Should succeed with simple add and delete", func() {
 		onUpdate("ep1", []string{"1.1.1.1"}, nil)
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1"}, nil)
 
 		onRemove("ep1")
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify(nil, nil)
 	})
 
 	It("Should not add shared IP just once", func() {
 		onUpdate("ep1", []string{"1.1.1.1"}, nil)
 		onUpdate("ep2", []string{"1.1.1.1"}, nil)
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1"}, nil)
 
 		onRemove("ep1")
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1"}, nil)
 
 		onRemove("ep2")
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify(nil, nil)
 	})
 
 	It("Should not add first address multiple times when second is added.", func() {
 		onUpdate("ep1", []string{"1.1.1.1"}, nil)
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1"}, nil)
 
 		onUpdate("ep1", []string{"1.1.1.1", "1.1.1.2"}, nil)
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1", "1.1.1.2"}, nil)
 
 		onRemove("ep1")
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify(nil, nil)
 
 		// And the same in the same batch
 		onUpdate("ep1", []string{"1.1.1.1"}, nil)
 		onUpdate("ep1", []string{"1.1.1.1", "1.1.1.2"}, nil)
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1", "1.1.1.2"}, nil)
 
 		onRemove("ep1")
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify(nil, nil)
 	})
 
@@ -124,45 +124,45 @@ var _ = Describe("TPROXYManager", func() {
 		onUpdate("ep1", []string{"1.1.1.1"}, nil)
 		onUpdate("ep1", []string{"1.1.1.1", "1.1.1.2"}, nil)
 		onUpdate("ep1", []string{"1.1.1.1"}, nil)
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1"}, nil)
 
 		onRemove("ep1")
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify(nil, nil)
 	})
 
 	It("Should handle remove in update.", func() {
 		onUpdate("ep1", []string{"1.1.1.1", "1.1.1.2"}, nil)
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1", "1.1.1.2"}, nil)
 
 		onUpdate("ep1", []string{"1.1.1.1"}, nil)
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1"}, nil)
 
 		onRemove("ep1")
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify(nil, nil)
 
 		// And the same in the same batch
 		onUpdate("ep1", []string{"1.1.1.1", "1.1.1.2"}, nil)
 		onUpdate("ep1", []string{"1.1.1.1"}, nil)
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1"}, nil)
 
 		onRemove("ep1")
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify(nil, nil)
 	})
 
 	It("Should should ignore ipv6 when not enabled", func() {
 		onUpdate("ep1", []string{"1.1.1.1"}, []string{"0000:::::::0001"})
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify([]string{"1.1.1.1"}, nil)
 
 		onRemove("ep1")
-		c.CompleteDeferredWork()
+		Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 		verify(nil, nil)
 	})
 
@@ -174,11 +174,11 @@ var _ = Describe("TPROXYManager", func() {
 		It("Should should handle ipv6 independently", func() {
 			onUpdate("ep1", []string{"1.1.1.1"}, []string{"0000:::::::0001"})
 			onUpdate("ep2", nil, []string{"0000:::::::0001"})
-			c.CompleteDeferredWork()
+			Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 			verify([]string{"1.1.1.1"}, []string{"0000:::::::0001"})
 
 			onRemove("ep1")
-			c.CompleteDeferredWork()
+			Expect(c.CompleteDeferredWork()).NotTo(HaveOccurred())
 			verify(nil, []string{"0000:::::::0001"})
 		})
 	})

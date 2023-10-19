@@ -90,7 +90,7 @@ func (m *Map) Iter(f maps.IterCallback) error {
 	return nil
 }
 
-func (m Map) Size() int {
+func (m *Map) Size() int {
 	return m.MapParameters.MaxEntries
 }
 

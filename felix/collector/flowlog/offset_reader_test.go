@@ -3,7 +3,6 @@
 package flowlog
 
 import (
-	"fmt"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -46,7 +45,7 @@ var _ = Describe("LogOffsetReader", func() {
 			"testdata/flows.log	fa0	1",
 			Offsets{"testdata/flows.log": -399}),
 		Entry("multiple entries",
-			fmt.Sprint("testdata/flows.log\t1\tany\ntestdata/dns.log\t1\tany\n"),
+			"testdata/flows.log\t1\tany\ntestdata/dns.log\t1\tany\n",
 			Offsets{"testdata/flows.log": 3600, "testdata/dns.log": 1718}),
 	)
 

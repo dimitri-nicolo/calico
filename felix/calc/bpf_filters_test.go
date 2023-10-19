@@ -57,13 +57,7 @@ func rule(protocol *numorstring.Protocol, ports ...numorstring.Port) v3.PacketCa
 }
 
 func compose(rules ...v3.PacketCaptureRule) []v3.PacketCaptureRule {
-	var result []v3.PacketCaptureRule
-
-	for _, rule := range rules {
-		result = append(result, rule)
-	}
-
-	return result
+	return rules
 }
 
 func mustParsePortRange(min, max uint16) numorstring.Port {

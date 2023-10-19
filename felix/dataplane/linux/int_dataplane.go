@@ -400,8 +400,6 @@ type InternalDataplane struct {
 	managersWithRouteRules  []ManagerWithRouteRules
 	ruleRenderer            rules.RuleRenderer
 
-	lookupCache *calc.LookupsCache
-
 	// datastoreInSync is set to true after we receive the "in sync" message from the datastore.
 	// We delay programming of the dataplane until we're in sync with the datastore.
 	datastoreInSync bool
@@ -936,7 +934,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				}
 				err = kp.AttachUDPv4()
 				if err != nil {
-					kp.DetachTCPv4()
+					_ = kp.DetachTCPv4()
 					return fmt.Errorf("failed to install UDP v4 kprobes: %v", err)
 				}
 			} else {
@@ -1893,7 +1891,7 @@ func (d *InternalDataplane) Start() {
 
 	// Use nfnetlink to capture DNS packets from iptables.
 	stopChannel := make(chan struct{})
-	nfnetlink.SubscribeDNS(
+	if err := nfnetlink.SubscribeDNS(
 		int(rules.NFLOGDomainGroup),
 		65535,
 		func(data []byte, timestamp uint64) {
@@ -1902,7 +1900,9 @@ func (d *InternalDataplane) Start() {
 				Timestamp: timestamp,
 			}
 		},
-		stopChannel)
+		stopChannel); err != nil {
+		log.WithError(err).Error("failed to subscribe DNS")
+	}
 
 	// Start the packet processors if configured.
 	if d.dnsDeniedPacketProcessor != nil {

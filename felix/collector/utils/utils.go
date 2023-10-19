@@ -94,7 +94,7 @@ func ExtractK8sServiceNameAndNamespace(addr string) (string, string) {
 
 func MustParseIP(s string) net2.IP {
 	ip := net.ParseIP(s)
-	return net2.IP{ip}
+	return net2.IP{IP: ip}
 }
 
 func MustParseMac(m string) *net2.MAC {
@@ -102,7 +102,7 @@ func MustParseMac(m string) *net2.MAC {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse MAC: %v; %v", m, err))
 	}
-	return &net2.MAC{hwAddr}
+	return &net2.MAC{HardwareAddr: hwAddr}
 }
 
 func MustParseNet(n string) net2.IPNet {

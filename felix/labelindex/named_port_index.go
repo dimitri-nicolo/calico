@@ -886,6 +886,7 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(id interface
 			for _, addr := range d.nets {
 				if ipSetData.isEgressSelector {
 					if addr.Version() == 4 {
+						// For egress IP, only IPv4 addresses are useful.
 						member := IPSetMember{
 							CIDR:                       addr,
 							IsEgressGateway:            true,
@@ -901,8 +902,6 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(id interface
 							}
 						}
 						contrib = append(contrib, member)
-					} else {
-						// For egress IP, only IPv4 addresses are useful.
 					}
 				} else {
 					contrib = append(contrib, IPSetMember{

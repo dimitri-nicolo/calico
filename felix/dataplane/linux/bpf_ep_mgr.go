@@ -203,7 +203,6 @@ const (
 type bpfInterfaceState struct {
 	policyIdx                 [hook.Count]int
 	filterIdx                 [hook.Count]int
-	isReady                   bool
 	programmedAsEgressGateway bool
 	programmedAsEgressClient  bool
 	readiness                 ifaceReadiness
@@ -2829,7 +2828,6 @@ func (m *bpfEndpointManager) setEgressProgramming(ifaceName string, isEgressGate
 		iface.dpState.programmedAsEgressClient = isEgressClient
 		return false
 	})
-	return
 }
 
 func (m *bpfEndpointManager) updatePolicyProgram(rules polprog.Rules, polDir string, ap attachPoint) error {

@@ -117,7 +117,7 @@ var _ = Describe("L7 Log Reporter", func() {
 		}
 		r = NewReporterWithShims(dispatcherMap, flushTrigger, nil)
 		r.AddAggregator(NewAggregator().AggregateOver(agg), []string{"testL7"})
-		r.Start()
+		Expect(r.Start()).NotTo(HaveOccurred())
 		remoteWlEpKey1 := model.WorkloadEndpointKey{
 			OrchestratorID: "orchestrator",
 			WorkloadID:     "default/remoteworkloadid1",

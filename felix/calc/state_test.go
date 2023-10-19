@@ -333,7 +333,7 @@ func (s State) withIPSecBinding(tunnelAddr, endpointAddr string) (newState State
 		// Once we're checking IPsec state, make sure we check the blacklist too...
 		newState.ExpectedIPSecBlacklist = set.New[string]()
 	}
-	newState.ExpectedIPSecBindings.Add(mock.IPSecBinding{tunnelAddr, endpointAddr})
+	newState.ExpectedIPSecBindings.Add(mock.IPSecBinding{TunnelAddr: tunnelAddr, EndpointAddr: endpointAddr})
 	return
 }
 
@@ -343,7 +343,7 @@ func (s State) withoutIPSecBinding(tunnelAddr, endpointAddr string) (newState St
 		// Once we're checking IPsec state, make sure we check the blacklist too...
 		newState.ExpectedIPSecBlacklist = set.New[string]()
 	}
-	newState.ExpectedIPSecBindings.Discard(mock.IPSecBinding{tunnelAddr, endpointAddr})
+	newState.ExpectedIPSecBindings.Discard(mock.IPSecBinding{TunnelAddr: tunnelAddr, EndpointAddr: endpointAddr})
 	return
 }
 

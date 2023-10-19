@@ -103,7 +103,7 @@ type K8sInfraIndex int
 
 const (
 	K8SInfraLocalCluster  K8sInfraIndex = 0
-	K8sInfraRemoteCluster               = 1
+	K8sInfraRemoteCluster K8sInfraIndex = 1
 )
 
 func TearDownK8sInfra(kds *K8sDatastoreInfra) {

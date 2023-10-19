@@ -21,21 +21,21 @@ var _ = Describe("DNS log type tests", func() {
 	Describe("DNSRData tests", func() {
 		Context("With IP address", func() {
 			ipstr := "127.0.0.1"
-			r := v1.DNSRData{nil, net.ParseIP(ipstr)}
+			r := v1.DNSRData{Raw: nil, Decoded: net.ParseIP(ipstr)}
 			It("Should return the IP string", func() {
 				Expect(r.String()).Should(Equal(ipstr))
 			})
 		})
 		Context("With NS", func() {
 			nsstr := "ns1.tigera.io."
-			r := v1.DNSRData{nil, nsstr}
+			r := v1.DNSRData{Raw: nil, Decoded: nsstr}
 			It("Should return the right hostname", func() {
 				Expect(r.String()).Should(Equal(nsstr))
 			})
 		})
 		Context("With TXT", func() {
 			txt := [][]byte{[]byte("foo"), []byte("bar")}
-			r := v1.DNSRData{nil, txt}
+			r := v1.DNSRData{Raw: nil, Decoded: txt}
 			It("Should return the strings joined together", func() {
 				Expect(r.String()).Should(Equal("foobar"))
 			})
@@ -50,7 +50,7 @@ var _ = Describe("DNS log type tests", func() {
 				Expire:  86400,
 				Minimum: 1800,
 			}
-			r := v1.DNSRData{nil, soa}
+			r := v1.DNSRData{Raw: nil, Decoded: soa}
 			It("Should return the zone formatted SOA", func() {
 				Expect(r.String()).Should(Equal("tigera.io. root.tigera.io. 1 3600 60 86400 1800"))
 			})
@@ -62,7 +62,7 @@ var _ = Describe("DNS log type tests", func() {
 				Port:     53,
 				Name:     []byte("ns.tigera.io."),
 			}
-			r := v1.DNSRData{nil, srv}
+			r := v1.DNSRData{Raw: nil, Decoded: srv}
 			It("Should return the zone formatted SRV", func() {
 				Expect(r.String()).Should(Equal("10 20 53 ns.tigera.io."))
 			})
@@ -72,14 +72,14 @@ var _ = Describe("DNS log type tests", func() {
 				Preference: 10,
 				Name:       []byte("mail.tigera.io."),
 			}
-			r := v1.DNSRData{nil, mx}
+			r := v1.DNSRData{Raw: nil, Decoded: mx}
 			It("Should return the zone formatted MX", func() {
 				Expect(r.String()).Should(Equal("10 mail.tigera.io."))
 			})
 		})
 		Context("With bytes", func() {
 			b := []byte("abc")
-			r := v1.DNSRData{nil, b}
+			r := v1.DNSRData{Raw: nil, Decoded: b}
 			It("Should return the base64 encoded string", func() {
 				Expect(r.String()).Should(Equal("YWJj"))
 			})
@@ -149,19 +149,19 @@ var _ = Describe("DNS log type tests", func() {
 
 	Describe("v1.DNSName", func() {
 		Context("A", func() {
-			n := v1.DNSName{"tigera.io.", v1.DNSClass(layers.DNSClassIN), v1.DNSType(layers.DNSTypeA)}
+			n := v1.DNSName{Name: "tigera.io.", Class: v1.DNSClass(layers.DNSClassIN), Type: v1.DNSType(layers.DNSTypeA)}
 			It("String", func() {
 				Expect(n.String()).Should(Equal("tigera.io. IN A"))
 			})
 		})
 		Context("Unknown Class", func() {
-			n := v1.DNSName{"tigera.io.", v1.DNSClass(5), v1.DNSType(layers.DNSTypeA)}
+			n := v1.DNSName{Name: "tigera.io.", Class: v1.DNSClass(5), Type: v1.DNSType(layers.DNSTypeA)}
 			It("String", func() {
 				Expect(n.String()).Should(Equal("tigera.io. #5 A"))
 			})
 		})
 		Context("Unknown type", func() {
-			n := v1.DNSName{"tigera.io.", v1.DNSClass(layers.DNSClassIN), v1.DNSType(254)}
+			n := v1.DNSName{Name: "tigera.io.", Class: v1.DNSClass(layers.DNSClassIN), Type: v1.DNSType(254)}
 			It("String", func() {
 				Expect(n.String()).Should(Equal("tigera.io. IN #254"))
 			})
@@ -217,13 +217,13 @@ var _ = Describe("DNS log type tests", func() {
 		})
 		Context("JSON", func() {
 			It("All knowns", func() {
-				n := v1.DNSName{"tigera.io.", v1.DNSClass(layers.DNSClassIN), v1.DNSType(layers.DNSTypeA)}
+				n := v1.DNSName{Name: "tigera.io.", Class: v1.DNSClass(layers.DNSClassIN), Type: v1.DNSType(layers.DNSTypeA)}
 				b, err := json.Marshal(n)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(string(b)).Should(Equal(`{"name":"tigera.io.","class":"IN","type":"A"}`))
 			})
 			It("Unknowns", func() {
-				n := v1.DNSName{"tigera.io.", v1.DNSClass(5), v1.DNSType(254)}
+				n := v1.DNSName{Name: "tigera.io.", Class: v1.DNSClass(5), Type: v1.DNSType(254)}
 				b, err := json.Marshal(n)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(string(b)).Should(Equal(`{"name":"tigera.io.","class":5,"type":254}`))
@@ -243,11 +243,11 @@ var _ = Describe("DNS log type tests", func() {
 		Context("Populated", func() {
 			r := make(v1.DNSRRSets)
 
-			r[v1.DNSName{"tigera.io.", v1.DNSClass(layers.DNSClassIN), v1.DNSType(layers.DNSTypeA)}] = v1.DNSRDatas{
+			r[v1.DNSName{Name: "tigera.io.", Class: v1.DNSClass(layers.DNSClassIN), Type: v1.DNSType(layers.DNSTypeA)}] = v1.DNSRDatas{
 				{Decoded: net.ParseIP("127.0.0.1")},
 				{Decoded: net.ParseIP("192.168.0.1")},
 			}
-			r[v1.DNSName{"cname.tigera.io.", v1.DNSClass(layers.DNSClassIN), v1.DNSType(layers.DNSTypeCNAME)}] = v1.DNSRDatas{
+			r[v1.DNSName{Name: "cname.tigera.io.", Class: v1.DNSClass(layers.DNSClassIN), Type: v1.DNSType(layers.DNSTypeCNAME)}] = v1.DNSRDatas{
 				{Decoded: "www.tigera.io."},
 			}
 
@@ -263,7 +263,7 @@ var _ = Describe("DNS log type tests", func() {
 		Context("Add function", func() {
 			It("Empty set should add a record", func() {
 				r := make(v1.DNSRRSets)
-				name := v1.DNSName{"tigera.io", 1, 1}
+				name := v1.DNSName{Name: "tigera.io", Class: 1, Type: 1}
 
 				r.Add(name, v1.DNSRData{Raw: []byte("2"), Decoded: "test1"})
 				Expect(r).Should(HaveLen(1))
@@ -272,7 +272,7 @@ var _ = Describe("DNS log type tests", func() {
 
 			It("Set with a duplicate key should add records in the right order", func() {
 				r := make(v1.DNSRRSets)
-				name := v1.DNSName{"tigera.io", 1, 1}
+				name := v1.DNSName{Name: "tigera.io", Class: 1, Type: 1}
 
 				r.Add(name, v1.DNSRData{Raw: []byte("2"), Decoded: "test1"})
 				r.Add(name, v1.DNSRData{Raw: []byte("1"), Decoded: "test2"})
@@ -289,8 +289,8 @@ var _ = Describe("DNS log type tests", func() {
 			It("Set with a different key should add a second record", func() {
 				r := make(v1.DNSRRSets)
 
-				r.Add(v1.DNSName{"tigera.io", 1, 1}, v1.DNSRData{Raw: []byte("1"), Decoded: "test1"})
-				r.Add(v1.DNSName{"tigera.io", 1, 2}, v1.DNSRData{Raw: []byte("2"), Decoded: "test2"})
+				r.Add(v1.DNSName{Name: "tigera.io", Class: 1, Type: 1}, v1.DNSRData{Raw: []byte("1"), Decoded: "test1"})
+				r.Add(v1.DNSName{Name: "tigera.io", Class: 1, Type: 2}, v1.DNSRData{Raw: []byte("2"), Decoded: "test2"})
 
 				Expect(r).Should(HaveLen(2))
 			})

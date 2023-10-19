@@ -119,9 +119,8 @@ func New(
 }
 
 type packetProcessor struct {
-	domainInfoStore *common.DomainInfoStore
-	nfc             nfqueue.NfQueueConnector
-	cancel          context.CancelFunc
+	nfc    nfqueue.NfQueueConnector
+	cancel context.CancelFunc
 }
 
 func (p *packetProcessor) Start() {

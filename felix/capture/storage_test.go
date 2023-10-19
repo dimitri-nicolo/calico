@@ -40,6 +40,7 @@ var _ = Describe("PacketCapture Storage Tests", func() {
 		var err error
 		var activeCaptures capture.ActiveCaptures
 		activeCaptures, err = capture.NewActiveCaptures(capture.Config{RotationSeconds: 1, Directory: baseDir}, make(chan interface{}))
+		Expect(err).NotTo(HaveOccurred())
 		err = activeCaptures.Add(capture.Key{CaptureName: "any"}, capture.Specification{DeviceName: "eth0"})
 		Expect(err).NotTo(HaveOccurred())
 		err = activeCaptures.Add(capture.Key{CaptureName: "any"}, capture.Specification{DeviceName: "eth0"})

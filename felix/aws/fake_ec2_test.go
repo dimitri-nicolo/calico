@@ -406,9 +406,7 @@ func (f *fakeEC2) CreateNetworkInterface(ctx context.Context, params *ec2.Create
 		if tagSpec.ResourceType != "network-interface" {
 			panic("tag spec missing incorrect resource type")
 		}
-		for _, t := range tagSpec.Tags {
-			tags = append(tags, t)
-		}
+		tags = append(tags, tagSpec.Tags...)
 	}
 	var sgs []types.GroupIdentifier
 

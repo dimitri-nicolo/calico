@@ -41,8 +41,7 @@ type EgressGWTracker struct {
 
 	healthReportC chan<- EGWHealthReport
 
-	fastRetryTicker *jitter.Ticker
-	context         context.Context
+	context context.Context
 }
 
 func NewEgressGWTracker(ctx context.Context, healthReportC chan<- EGWHealthReport, pollInterval time.Duration, pollFailCount int) *EgressGWTracker {
@@ -291,7 +290,6 @@ type egwPoller struct {
 	url                 string
 	cancel              func()
 	reportC             chan<- EGWHealthReport
-	fastRetryC          <-chan time.Time
 	pollInterval        time.Duration
 	minPollFailureCount int
 }

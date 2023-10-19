@@ -101,7 +101,7 @@ var _ = Describe("Charon", func() {
 		BeforeEach(func() {
 			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 			doneWG = &sync.WaitGroup{}
-			charon.Start(ctx, doneWG)
+			Expect(charon.Start(ctx, doneWG)).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
@@ -174,7 +174,7 @@ var _ = Describe("Charon", func() {
 
 		It("should panic if given an invalid conn", func() {
 			Expect(func() {
-				charon.LoadConnection("", "")
+				_ = charon.LoadConnection("", "")
 			}).To(Panic())
 		})
 

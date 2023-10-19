@@ -64,7 +64,6 @@ func (r *ResettableBackoff) reschedule(alreadyDrained bool) {
 		r.timer.Reset(jitteredInterval)
 	}
 	r.active = true
-	return
 }
 
 // Stop stops the timer and drains its channel if required.  The alreadyDrained parameter should be set to true if

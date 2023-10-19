@@ -165,12 +165,12 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			cr = NewReporter(dispatcherMap, flushInterval, nil, false, true, &NoOpLogOffset{})
 			cr.AddAggregator(ca, []string{"testFlowLog"})
 			cr.timeNowFn = mt.getMockTime
-			cr.Start()
+			Expect(cr.Start()).NotTo(HaveOccurred())
 		})
 
 		It("reports the given metric update in form of a flowLog", func() {
 			By("reporting the first metric Update")
-			cr.Report(muNoConn1Rule1AllowUpdate)
+			Expect(cr.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 			expectedNumFlows := 1
@@ -183,7 +183,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 
 			By("reporting the same metric Update with metrics in both directions")
-			cr.Report(muConn1Rule1AllowUpdate)
+			Expect(cr.Report(muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 			expectedNumFlowsStarted = 0
@@ -193,7 +193,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 
 			By("reporting a expired metric Update for the same tuple")
-			cr.Report(muConn1Rule1AllowExpire)
+			Expect(cr.Report(muConn1Rule1AllowExpire)).NotTo(HaveOccurred())
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 			expectedNumFlowsStarted = 0
@@ -204,7 +204,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 
 			By("reporting a metric Update for denied packets")
-			cr.Report(muNoConn3Rule2DenyUpdate)
+			Expect(cr.Report(muNoConn3Rule2DenyUpdate)).NotTo(HaveOccurred())
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 			expectedNumFlows = 1
@@ -216,7 +216,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 
 			By("reporting a expired denied packet metric Update for the same tuple")
-			cr.Report(muNoConn3Rule2DenyExpire)
+			Expect(cr.Report(muNoConn3Rule2DenyExpire)).NotTo(HaveOccurred())
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 			expectedNumFlowsStarted = 0
@@ -228,9 +228,9 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		})
 		It("aggregates metric updates for the duration of aggregation when reporting to flow logs", func() {
 			By("reporting the same metric Update twice and expiring it immediately")
-			cr.Report(muConn1Rule1AllowUpdate)
-			cr.Report(muConn1Rule1AllowUpdate)
-			cr.Report(muConn1Rule1AllowExpire)
+			Expect(cr.Report(muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
+			Expect(cr.Report(muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
+			Expect(cr.Report(muConn1Rule1AllowExpire)).NotTo(HaveOccurred())
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 			expectedNumFlows := 1
@@ -243,8 +243,8 @@ var _ = Describe("FlowLog Reporter verification", func() {
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 
 			By("reporting the same tuple different policies should be reported as separate flow logs")
-			cr.Report(muConn1Rule1AllowUpdate)
-			cr.Report(muNoConn1Rule2DenyUpdate)
+			Expect(cr.Report(muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
+			Expect(cr.Report(muNoConn1Rule2DenyUpdate)).NotTo(HaveOccurred())
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 
@@ -267,8 +267,8 @@ var _ = Describe("FlowLog Reporter verification", func() {
 
 		It("aggregates metric updates from multiple tuples", func() {
 			By("report different connections")
-			cr.Report(muConn1Rule1AllowUpdate)
-			cr.Report(muConn2Rule1AllowUpdate)
+			Expect(cr.Report(muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
+			Expect(cr.Report(muConn2Rule1AllowUpdate)).NotTo(HaveOccurred())
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 
@@ -289,8 +289,8 @@ var _ = Describe("FlowLog Reporter verification", func() {
 					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2, pvtMeta, pubMeta, noService, nil, nil, expectedFP2, expectedFlowExtras2, noProcessInfo, noTcpStatsInfo))
 
 			By("report expirations of the same connections")
-			cr.Report(muConn1Rule1AllowExpire)
-			cr.Report(muConn2Rule1AllowExpire)
+			Expect(cr.Report(muConn1Rule1AllowExpire)).NotTo(HaveOccurred())
+			Expect(cr.Report(muConn2Rule1AllowExpire)).NotTo(HaveOccurred())
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 
@@ -315,7 +315,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			muConn1Rule1AllowUpdateCopy := muConn1Rule1AllowUpdate
 			muConn1Rule1AllowUpdateCopy.SrcEp = localHostEd1
 			muConn1Rule1AllowUpdateCopy.DstEp = remoteHostEd1
-			cr.Report(muConn1Rule1AllowUpdateCopy)
+			Expect(cr.Report(muConn1Rule1AllowUpdateCopy)).NotTo(HaveOccurred())
 			time.Sleep(1 * time.Second)
 
 			By("Verifying that flow logs are logged with pvt and pub metadata")
@@ -331,7 +331,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		})
 		It("reports the given metric update with original source IPs in a flow log", func() {
 			By("reporting the first metric Update")
-			cr.Report(muWithOrigSourceIPs)
+			Expect(cr.Report(muWithOrigSourceIPs)).NotTo(HaveOccurred())
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 			expectedNumFlows := 1
@@ -355,14 +355,14 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			cr = NewReporter(dispatcherMap, flushInterval, nil, true, true, &NoOpLogOffset{})
 			cr.AddAggregator(ca, []string{"testFlowLog"})
 			cr.timeNowFn = mt.getMockTime
-			cr.Start()
+			Expect(cr.Start()).NotTo(HaveOccurred())
 		})
 		It("processes flows from Hostendoint to Hostendpoint", func() {
 			By("Reporting a update with host endpoint to host endpoint")
 			muConn1Rule1AllowUpdateCopy := muConn1Rule1AllowUpdate
 			muConn1Rule1AllowUpdateCopy.SrcEp = localHostEd1
 			muConn1Rule1AllowUpdateCopy.DstEp = remoteHostEd1
-			cr.Report(muConn1Rule1AllowUpdateCopy)
+			Expect(cr.Report(muConn1Rule1AllowUpdateCopy)).NotTo(HaveOccurred())
 
 			By("Verifying that flow logs are logged with HEP metadata")
 			time.Sleep(1 * time.Second)
@@ -396,13 +396,13 @@ var _ = Describe("Flowlog Reporter health verification", func() {
 			hr = health.NewHealthAggregator()
 			cr = NewReporter(dispatcherMap, flushInterval, hr, false, true, &NoOpLogOffset{})
 			cr.timeNowFn = mt.getMockTime
-			cr.Start()
+			Expect(cr.Start()).NotTo(HaveOccurred())
 		})
 		It("verify health reporting.", func() {
 			By("checking the Readiness flag in health aggregator")
 			expectedReport := health.HealthReport{Live: true, Ready: true}
-			Eventually(func() bool { return *&hr.Summary().Live }, 15, 1).Should(Equal(expectedReport.Live))
-			Eventually(func() bool { return *&hr.Summary().Ready }, 15, 1).Should(Equal(expectedReport.Ready))
+			Eventually(func() bool { return hr.Summary().Live }, 15, 1).Should(Equal(expectedReport.Live))
+			Eventually(func() bool { return hr.Summary().Ready }, 15, 1).Should(Equal(expectedReport.Ready))
 		})
 	})
 	Context("Test with dispatcher that fails to initialize", func() {
@@ -413,13 +413,13 @@ var _ = Describe("Flowlog Reporter health verification", func() {
 			hr = health.NewHealthAggregator()
 			cr = NewReporter(dispatcherMap, flushInterval, hr, false, true, &NoOpLogOffset{})
 			cr.timeNowFn = mt.getMockTime
-			cr.Start()
+			Expect(cr.Start()).NotTo(HaveOccurred())
 		})
 		It("verify health reporting.", func() {
 			By("checking the Readiness flag in health aggregator")
 			expectedReport := health.HealthReport{Live: true, Ready: false}
-			Eventually(func() bool { return *&hr.Summary().Live }, 15, 1).Should(Equal(expectedReport.Live))
-			Eventually(func() bool { return *&hr.Summary().Ready }, 15, 1).Should(Equal(expectedReport.Ready))
+			Eventually(func() bool { return hr.Summary().Live }, 15, 1).Should(Equal(expectedReport.Live))
+			Eventually(func() bool { return hr.Summary().Ready }, 15, 1).Should(Equal(expectedReport.Ready))
 		})
 	})
 })
@@ -444,7 +444,7 @@ var _ = Describe("FlowLog per minute verification", func() {
 			cr = NewReporter(dispatcherMap, mockFlushInterval, nil, false, true, &NoOpLogOffset{})
 			cr.AddAggregator(ca, []string{"testFlowLog"})
 			cr.timeNowFn = mt.getMockTime
-			cr.Start()
+			Expect(cr.Start()).NotTo(HaveOccurred())
 
 			Expect(cr.GetAndResetFlowLogsAvgPerMinute()).Should(Equal(0.0))
 		})
@@ -458,9 +458,9 @@ var _ = Describe("FlowLog per minute verification", func() {
 			cr = NewReporter(dispatcherMap, flushInterval, nil, false, true, &NoOpLogOffset{})
 			cr.AddAggregator(ca, []string{"testFlowLog"})
 			cr.timeNowFn = mt.getMockTime
-			cr.Start()
+			Expect(cr.Start()).NotTo(HaveOccurred())
 
-			cr.Report(muNoConn1Rule1AllowUpdate)
+			Expect(cr.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 			time.Sleep(1 * time.Second)
 
 			Expect(cr.GetAndResetFlowLogsAvgPerMinute()).Should(BeNumerically(">", 0))
@@ -613,14 +613,14 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			cr.AddAggregator(ca, []string{"mock"})
 
 			By("Starting the log reporter")
-			cr.Start()
+			Expect(cr.Start()).NotTo(HaveOccurred())
 
 			expectedLevel := 0
 			// Feed reporter with log with two iterations
 			i := 0
 			for ; i < 2; i++ {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
-				cr.Report(muNoConn1Rule1AllowUpdate)
+				Expect(cr.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 				ticker.invokeTick(time.Now())
 				logs := <-cd.collector
 				Expect(len(logs)).To(Equal(1))
@@ -631,7 +631,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			// Feed reporter with another log with two iterations
 			for ; i < 4; i++ {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
-				cr.Report(muNoConn1Rule1AllowUpdate)
+				Expect(cr.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 				ticker.invokeTick(time.Now())
 				logs := <-cd.collector
 				Expect(len(logs)).To(Equal(1))
@@ -664,14 +664,14 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			cr.AddAggregator(ca, []string{"mock"})
 
 			By("Starting the log reporter")
-			cr.Start()
+			Expect(cr.Start()).NotTo(HaveOccurred())
 
 			expectedLevel := 0
 			// Feed reporter with log with four iterations
 
 			for i := 0; i < 4; i++ {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
-				cr.Report(muNoConn1Rule1AllowUpdate)
+				Expect(cr.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 				ticker.invokeTick(time.Now())
 				logs := <-cd.collector
 				Expect(len(logs)).To(Equal(1))
@@ -755,13 +755,13 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			cr.AddAggregator(ca, []string{"mock"})
 
 			By("Starting the log reporter")
-			cr.Start()
+			Expect(cr.Start()).NotTo(HaveOccurred())
 
 			// Feed reporter with log with five iterations
 
 			for i := 0; i < 5; i++ {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
-				cr.Report(muNoConn1Rule1AllowUpdate)
+				Expect(cr.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 				ticker.invokeTick(time.Now())
 				logs := <-cd.collector
 				Expect(len(logs)).To(Equal(1))

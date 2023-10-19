@@ -111,7 +111,7 @@ func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain 
 	if r.KubeIPVSSupportEnabled {
 		result = append(result, r.StaticFilterInputForwardCheckChain(ipVersion))
 	}
-	if r.TPROXYModeEnabled() && r.BPFEnabled == false {
+	if r.TPROXYModeEnabled() && !r.BPFEnabled {
 		result = append(result,
 			&Chain{
 				Name:  ChainFilterInputTProxy,
@@ -925,7 +925,7 @@ func (r *DefaultRuleRenderer) StaticFilterOutputChains(ipVersion uint8) []*Chain
 		result = append(result, r.StaticFilterOutputForwardEndpointMarkChain())
 	}
 
-	if r.TPROXYModeEnabled() && r.BPFEnabled == false {
+	if r.TPROXYModeEnabled() && !r.BPFEnabled {
 		result = append(result,
 			&Chain{
 				Name:  ChainFilterOutputTProxy,

@@ -431,7 +431,7 @@ var _ = Describe("IpsecPolicyTable with IPsec enabled", func() {
 				polTable.SetRule(caliSel1, &caliPol1)
 				polTable.Apply()
 				// Simulate another process changing the policy.
-				mockDataplane.XfrmPolicyUpdate(&caliXFRMPolicy1b)
+				Expect(mockDataplane.XfrmPolicyUpdate(&caliXFRMPolicy1b)).NotTo(HaveOccurred())
 			})
 
 			It("should fix the policy", func() {
@@ -447,7 +447,7 @@ var _ = Describe("IpsecPolicyTable with IPsec enabled", func() {
 				polTable.SetRule(caliSel1, &caliPol1)
 				polTable.Apply()
 				// Simulate another process deleting the policy.
-				mockDataplane.XfrmPolicyDel(&caliXFRMPolicy1)
+				Expect(mockDataplane.XfrmPolicyDel(&caliXFRMPolicy1)).NotTo(HaveOccurred())
 				Expect(mockDataplane.ActivePolicies).To(ConsistOf(nonCaliPolicy1, nonCaliPolicy2))
 			})
 
@@ -661,11 +661,7 @@ func (m *mockIPSecDataplane) XfrmPolicyList(family int) ([]netlink.XfrmPolicy, e
 	if err != nil {
 		return nil, err
 	}
-	var result []netlink.XfrmPolicy
-	for _, x := range m.ActivePolicies {
-		result = append(result, x)
-	}
-	return result, nil
+	return m.ActivePolicies, nil
 }
 
 func (m *mockIPSecDataplane) XfrmPolicyUpdate(updatedPolicy *netlink.XfrmPolicy) error {

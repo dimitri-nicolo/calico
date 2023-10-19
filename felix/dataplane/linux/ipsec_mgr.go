@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/proto"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 func newIPSecManager(ipSecDataplane ipSecDataplane) *ipsecManager {
@@ -25,12 +24,7 @@ type ipSecDataplane interface {
 }
 
 type ipsecManager struct {
-	preSharedKey string
-	dataplane    ipSecDataplane
-
-	// activeHostnameToIP maps hostname to string IP address.
-	activeHostnameToIP map[string]string
-	dirtyHosts         set.Set[string]
+	dataplane ipSecDataplane
 }
 
 func (d *ipsecManager) OnUpdate(msg interface{}) {

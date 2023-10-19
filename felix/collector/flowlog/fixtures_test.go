@@ -512,14 +512,14 @@ var (
 			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
 		},
 		DstService: metric.ServiceInfo{
-			proxy.ServicePortName{
+			ServicePortName: proxy.ServicePortName{
 				NamespacedName: types.NamespacedName{
 					Namespace: "foo-ns",
 					Name:      "foo-svc",
 				},
 				Port: "foo-port",
 			},
-			8080,
+			PortNum: 8080,
 		},
 		RuleIDs:      []*calc.RuleID{ingressRule1Allow},
 		IsConnection: false,

@@ -157,8 +157,6 @@ type ipData struct {
 	// chain because it is actually the namesToNotify that we are interested in which is propagated all the way
 	// along the CNAME->A chain.
 	nameDatas set.Set[*nameData]
-	// The set of names to notify.
-	watchedDomains []string
 	// The set of top level names associated with this IP. Note that the way this slice is updated, it is always
 	// generated from scratch - this means it is safe to pass this slice without copying provided the consumer does not
 	// alter the contents.
@@ -209,9 +207,6 @@ type DomainInfoStore struct {
 
 	// Handlers that we need update.
 	handlers []DomainInfoChangeHandler
-
-	// Channel that we write to when we want DNS response capture to stop.
-	stopChannel chan struct{}
 
 	// Channel on which we receive captured DNS responses (beginning with the IP header).
 	msgChannel chan DataWithTimestamp
@@ -1579,8 +1574,6 @@ func (s *DomainInfoStore) releaseUnpairedDataForLogging(t time.Time) {
 			}
 		}
 	}
-
-	return
 }
 
 // combineTopLevelDomains combines two sets of top level domains, putting the primary elements at the front (these are

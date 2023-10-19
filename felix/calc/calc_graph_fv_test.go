@@ -648,10 +648,8 @@ func (l licenseTiersEnabled) GetLicenseStatus() lclient.LicenseStatus {
 type licenseTiersDisabled struct{}
 
 func (l licenseTiersDisabled) GetFeatureStatus(feature string) bool {
-	if feature == features.Tiers {
-		return false
-	}
-	return true // all other license features enabled by default
+	// all other license features enabled by default
+	return feature != features.Tiers
 }
 
 func (l licenseTiersDisabled) GetLicenseStatus() lclient.LicenseStatus {
