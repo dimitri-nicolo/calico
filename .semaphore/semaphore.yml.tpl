@@ -466,7 +466,7 @@ blocks:
       - cd felix
       - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
       - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-      - export ZONE=europe-west3-c
+      - export ZONE=us-east4-c
       - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-felix-
       - echo VM_PREFIX=${VM_PREFIX}
       - export REPO_NAME=$(basename $(pwd))
@@ -539,7 +539,7 @@ blocks:
       - cd node
       - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
       - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-      - export ZONE=europe-west3-c
+      - export ZONE=us-east4-c
       - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-kind-
       - echo VM_PREFIX=${VM_PREFIX}
       - export REPO_NAME=$(basename $(pwd))
@@ -1045,7 +1045,7 @@ blocks:
       - export REPO_NAME=$(basename $(pwd))
       - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
       - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-selinux
-      - export ZONE=europe-west3-c
+      - export ZONE=us-east4-c
       - echo VM_PREFIX=${VM_PREFIX}
     jobs:
     - name: "SELinux FV tests"
