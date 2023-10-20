@@ -147,6 +147,10 @@ promotions:
   pipeline_file: push-images/linseed.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push webhooks-processor images
+  pipeline_file: push-images/webhooks-processor.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 
 global_job_config:
   secrets:
@@ -1102,6 +1106,25 @@ blocks:
       - cd linseed
     jobs:
     - name: "linseed tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: 'webhooks processor'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/webhooks-processor/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu2004
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd webhooks-processor
+    jobs:
+    - name: "webhooks processor tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 

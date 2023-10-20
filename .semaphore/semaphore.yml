@@ -1111,9 +1111,9 @@ blocks:
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
-- name: 'webhooks-processor'
+- name: 'webhooks processor'
   run:
-    when: "false or change_in(['/*', '/linseed/', '/api/', '/libcalico-go/', '/webhooks-processor/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/webhooks-processor/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     agent:
