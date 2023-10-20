@@ -47,10 +47,10 @@ func newFuncMap() map[string]interface{} {
 	m["base64Encode"] = Base64Encode
 	m["base64Decode"] = Base64Decode
 	m["hashToIPv4"] = hashToIPv4
-	m["emitBIRDExternalNetworkConfig"] = EmitBIRDExternalNetworkConfig
-	m["emitExternalNetworkTableName"] = EmitExternalNetworkTableName
-	m["emitFunctionName"] = EmitBGPFilterFunctionName
-	m["emitBIRDBGPFilterFuncs"] = EmitBIRDBGPFilterFuncs
+	m["externalNetworkBIRDConfig"] = ExternalNetworkBIRDConfig
+	m["externalNetworkTableName"] = ExternalNetworkTableName
+	m["bgpFilterFunctionName"] = BGPFilterFunctionName
+	m["bgpFilterBIRDFuncs"] = BGPFilterBIRDFuncs
 	return m
 }
 
@@ -60,10 +60,10 @@ func addFuncs(out, in map[string]interface{}) {
 	}
 }
 
-// EmitExternalNetworkTableName returns a formatted name for use as a BIRD table, truncating and hashing if the provided
+// ExternalNetworkTableName returns a formatted name for use as a BIRD table, truncating and hashing if the provided
 // name would result in a table name longer than the max allowable length of 64 chars.
 // e.g. input of "my-external-network" would result in output of "'T_my-external-network'"
-func EmitExternalNetworkTableName(name string) (string, error) {
+func ExternalNetworkTableName(name string) (string, error) {
 	prefix := "T_"
 	resizedName, err := truncateAndHashName(name, maxBIRDSymLen-len(prefix))
 	if err != nil {
@@ -72,36 +72,82 @@ func EmitExternalNetworkTableName(name string) (string, error) {
 	return fmt.Sprintf("'%s%s'", prefix, resizedName), nil
 }
 
-// emitBGPFilterStatement produces a single comparison expression to be used within a multi-statement BIRD filter
+// filterStatement produces a single comparison expression to be used within a multi-statement BIRD filter
 // function.
-// e.g input of ("In", "77.0.0.1/16", "accept") produces output of "if ( net ~ 77.0.0.1/16 ) then { accept; }"
-func emitBGPFilterStatement(matchOperator, cidr, action string) (string, error) {
-	matchOperatorLUT := map[string]string{
-		string(v3.Equal):    "=",
-		string(v3.NotEqual): "!=",
-		string(v3.In):       "~",
-		string(v3.NotIn):    "!~",
-	}
-
-	op, ok := matchOperatorLUT[matchOperator]
-	if !ok {
-		err := fmt.Errorf("unexpected operator found in BGPFilter: %s", matchOperator)
+// e.g input of ("In", "77.0.0.1/16", "accept") produces output of "if ((net ~ 77.0.0.1/16)) then { accept; }"
+func filterStatement(fields filterArgs) (string, error) {
+	actionStatement, err := filterAction(fields.action)
+	if err != nil {
 		return "", err
 	}
 
-	return fmt.Sprintf("if ( net %s %s ) then { %s; }", op, cidr, strings.ToLower(action)), nil
+	var conditions []string
+	if fields.cidr != "" {
+		if fields.operator == "" {
+			return "", fmt.Errorf("Operator not included in BGPFilter")
+		}
+		cidrCondition, err := filterMatchCIDR(fields.cidr, fields.operator)
+		if err != nil {
+			return "", err
+		}
+		conditions = append(conditions, cidrCondition)
+	}
+
+	if fields.source != "" {
+		sourceCondition, err := filterMatchSource(fields.source)
+		if err != nil {
+			return "", nil
+		}
+		conditions = append(conditions, sourceCondition)
+	}
+
+	conditionExpr := strings.Join(conditions, "&&")
+	if conditionExpr != "" {
+		return fmt.Sprintf("if (%s) then { %s }", conditionExpr, actionStatement), nil
+	}
+	return actionStatement, nil
 }
 
-// EmitBGPFilterFunctionName returns a formatted name for use as a BIRD function, truncating and hashing if the provided
+func filterAction(action v3.BGPFilterAction) (string, error) {
+	if action != v3.Accept && action != v3.Reject {
+		return "", fmt.Errorf("Unexpected action found in BGPFilter: %s", action)
+	}
+	return fmt.Sprintf("%s;", strings.ToLower(string(action))), nil
+}
+
+var (
+	operatorLUT = map[v3.BGPFilterMatchOperator]string{
+		v3.Equal:    "=",
+		v3.NotEqual: "!=",
+		v3.In:       "~",
+		v3.NotIn:    "!~",
+	}
+)
+
+func filterMatchCIDR(cidr string, operator v3.BGPFilterMatchOperator) (string, error) {
+	op, ok := operatorLUT[operator]
+	if !ok {
+		return "", fmt.Errorf("Unexpected operator found in BGPFilter: %s", operator)
+	}
+	return fmt.Sprintf("(net %s %s)", op, cidr), nil
+}
+
+func filterMatchSource(source v3.BGPFilterMatchSource) (string, error) {
+	switch source {
+	case v3.BGPFilterSourceRemotePeers:
+		return "((defined(source))&&(source ~ [ RTS_BGP ]))", nil
+	default:
+		return "", fmt.Errorf("Unexpected source found in BGPFilter: %s", source)
+	}
+}
+
+// BGPFilterFunctionName returns a formatted name for use as a BIRD function, truncating and hashing if the provided
 // name would result in a function name longer than the max allowable length of 64 chars.
 // e.g. input of ("my-bgp-filter", "import", "4") would result in output of "'bgp_my-bpg-filter_importFilterV4'"
-func EmitBGPFilterFunctionName(filterName, direction, version string) (string, error) {
+func BGPFilterFunctionName(filterName, direction, version string) (string, error) {
 	normalizedDirection := strings.ToLower(direction)
-	switch normalizedDirection {
-	case "import":
-	case "export":
-	default:
-		return "", fmt.Errorf("provided direction '%s' does not map to either 'import' or 'export'", direction)
+	if normalizedDirection != "import" && normalizedDirection != "export" {
+		return "", fmt.Errorf("Provided direction '%s' does not map to either 'import' or 'export'", direction)
 	}
 	pieces := []string{"bgp_", "", "_", normalizedDirection, "FilterV", version}
 	resizedName, err := truncateAndHashName(filterName, maxBIRDSymLen-len(strings.Join(pieces, "")))
@@ -113,7 +159,7 @@ func EmitBGPFilterFunctionName(filterName, direction, version string) (string, e
 	return fmt.Sprintf("'%s'", fullName), nil
 }
 
-// EmitBIRDExternalNetworkConfig generates BIRD config for the tables and kernel protocol configuration based on
+// ExternalNetworkBIRDConfig generates BIRD config for the tables and kernel protocol configuration based on
 // configured ExternalNetwork resources.
 //
 // e.g. for ExternalNetwork resource configured as follows:
@@ -145,7 +191,7 @@ func EmitBGPFilterFunctionName(filterName, direction, version string) (string, e
 //	  "  };",
 //	  "}",
 //	 }
-func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPairs, globalPeersKVP memkv.KVPairs,
+func ExternalNetworkBIRDConfig(selfIP string, externalNetworkKVPs memkv.KVPairs, globalPeersKVP memkv.KVPairs,
 	nodeSpecificPeersKVP memkv.KVPairs) ([]string, error) {
 	lines := []string{}
 	peerReferencedExternalNetworks := map[string][]string{}
@@ -222,7 +268,7 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 		if externalNetwork.Spec.RouteTableIndex != nil {
 			routeTableIndex = *externalNetwork.Spec.RouteTableIndex
 		}
-		tableName, err := EmitExternalNetworkTableName(externalNetworkName)
+		tableName, err := ExternalNetworkTableName(externalNetworkName)
 		if err != nil {
 			return []string{}, err
 		}
@@ -272,7 +318,14 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 	return lines, nil
 }
 
-// EmitBIRDBGPFilterFuncs generates a set of BIRD functions for BGPFilter resources that have been packaged into KVPairs.
+type filterArgs struct {
+	operator v3.BGPFilterMatchOperator
+	cidr     string
+	source   v3.BGPFilterMatchSource
+	action   v3.BGPFilterAction
+}
+
+// BGPFilterBIRDFuncs generates a set of BIRD functions for BGPFilter resources that have been packaged into KVPairs.
 // By doing the formatting inside of this function we eliminate the need to copy and paste repeated blocks of golang
 // template code into our BIRD config templates that is both difficult to read and prone to errors
 //
@@ -306,26 +359,23 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 //	[]string{
 //	  "# v4 BGPFilter test-bgpfilter",
 //	  "function 'bgp_test-bgpfilter_importFilterV4'() {",
-//	  "  if ( net ~ 44.0.0.0/16 ) then { accept; }",
-//	  "  if ( net ~ 44.1.0.0/16 ) then { reject; }",
+//	  "  if ((net ~ 44.0.0.0/16)) then { accept; }",
+//	  "  if ((net ~ 44.1.0.0/16)) then { reject; }",
 //	  "}",
 //	  "function 'bgp_test-bgpfilter_exportFilterV4'() {",
-//	  "  if ( net ~ 77.0.0.0/16 ) then { accept; }",
-//	  "  if ( net ~ 77.1.0.0/16 ) then { reject; }",
+//	  "  if ((net ~ 77.0.0.0/16)) then { accept; }",
+//	  "  if ((net ~ 77.1.0.0/16)) then { reject; }",
 //	  "}",
 //	 }
-func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) {
+func BGPFilterBIRDFuncs(pairs memkv.KVPairs, version int) ([]string, error) {
 	lines := []string{}
 	var line string
 	var versionStr string
 
-	switch version {
-	case 4:
-		fallthrough
-	case 6:
+	if version == 4 || version == 6 {
 		versionStr = fmt.Sprintf("%d", version)
-	default:
-		return []string{}, fmt.Errorf("version must be either 4 or 6")
+	} else {
+		return []string{}, fmt.Errorf("Version must be either 4 or 6")
 	}
 
 	for _, kvp := range pairs {
@@ -362,29 +412,37 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 		var filterFuncName string
 		var filterRule string
 		if emitImports {
-			filterFuncName, err = EmitBGPFilterFunctionName(filterName, "import", versionStr)
+			filterFuncName, err = BGPFilterFunctionName(filterName, "import", versionStr)
 			if err != nil {
 				return []string{}, err
 			}
 			line = fmt.Sprintf("function %s() {", filterFuncName)
 			lines = append(lines, line)
 
-			var ruleFields [][]string
+			var ruleFields []filterArgs
 
 			if v4Selected {
 				for _, importV4 := range importFiltersV4 {
-					ruleFields = append(ruleFields, []string{string(importV4.MatchOperator), importV4.CIDR,
-						string(importV4.Action)})
+					ruleFields = append(ruleFields, filterArgs{
+						operator: importV4.MatchOperator,
+						cidr:     importV4.CIDR,
+						source:   importV4.Source,
+						action:   importV4.Action,
+					})
 				}
 			} else {
 				for _, importV6 := range importFiltersV6 {
-					ruleFields = append(ruleFields, []string{string(importV6.MatchOperator), importV6.CIDR,
-						string(importV6.Action)})
+					ruleFields = append(ruleFields, filterArgs{
+						operator: importV6.MatchOperator,
+						cidr:     importV6.CIDR,
+						source:   importV6.Source,
+						action:   importV6.Action,
+					})
 				}
 			}
 
 			for _, fields := range ruleFields {
-				filterRule, err = emitBGPFilterStatement(fields[0], fields[1], fields[2])
+				filterRule, err = filterStatement(fields)
 				if err != nil {
 					return []string{}, err
 				}
@@ -397,29 +455,37 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 		}
 
 		if emitExports {
-			filterFuncName, err = EmitBGPFilterFunctionName(filterName, "export", versionStr)
+			filterFuncName, err = BGPFilterFunctionName(filterName, "export", versionStr)
 			if err != nil {
 				return []string{}, err
 			}
 			line = fmt.Sprintf("function %s() {", filterFuncName)
 			lines = append(lines, line)
 
-			var ruleFields [][]string
+			var ruleFields []filterArgs
 
 			if v4Selected {
 				for _, exportV4 := range exportFiltersV4 {
-					ruleFields = append(ruleFields, []string{string(exportV4.MatchOperator), exportV4.CIDR,
-						string(exportV4.Action)})
+					ruleFields = append(ruleFields, filterArgs{
+						operator: exportV4.MatchOperator,
+						cidr:     exportV4.CIDR,
+						source:   exportV4.Source,
+						action:   exportV4.Action,
+					})
 				}
 			} else {
 				for _, exportV6 := range exportFiltersV6 {
-					ruleFields = append(ruleFields, []string{string(exportV6.MatchOperator), exportV6.CIDR,
-						string(exportV6.Action)})
+					ruleFields = append(ruleFields, filterArgs{
+						operator: exportV6.MatchOperator,
+						cidr:     exportV6.CIDR,
+						source:   exportV6.Source,
+						action:   exportV6.Action,
+					})
 				}
 			}
 
 			for _, fields := range ruleFields {
-				filterRule, err = emitBGPFilterStatement(fields[0], fields[1], fields[2])
+				filterRule, err = filterStatement(fields)
 				if err != nil {
 					return []string{}, err
 				}
