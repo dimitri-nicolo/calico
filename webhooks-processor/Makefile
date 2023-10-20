@@ -80,7 +80,5 @@ clean:
 ###############################################################################
 # SEMAPHORE
 ###############################################################################
-sem-build: static-checks build
-	$(MAKE) push-ci-images
-
-sem-fv: pull-ci-images fv
+.PHONY: ci
+ci: clean static-checks test
