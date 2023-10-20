@@ -21,6 +21,7 @@ node/windows-packaging/CalicoWindows/confd/config-bgp.psm1
 node/windows-packaging/nssm.zip
 node/windows-packaging/nssm.exe
 _output
+_release_archive
 builder.coverprofile
 hack/release/ghr
 manifests/ocp.tgz

@@ -95,6 +95,11 @@ endif
 chart-release: var-require-all-CHART_RELEASE-RELEASE_STREAM chart
 	mv ./bin/tigera-operator-$(RELEASE_STREAM).tgz ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
 
+publish-release-archive: release-archive
+	$(MAKE) -f Makefile.release-archive publish-release-archive RELEASE_STREAM=$(RELEASE_STREAM) REGISTRY=$(REGISTRY) CHART_RELEASE=$(CHART_RELEASE)
+release-archive: manifests/ocp.tgz
+	$(MAKE) -f Makefile.release-archive release-archive RELEASE_STREAM=$(RELEASE_STREAM) REGISTRY=$(REGISTRY) CHART_RELEASE=$(CHART_RELEASE)
+
 SUB_CHARTS=charts/tigera-operator/charts/tigera-prometheus-operator.tgz
 chart: tigera-operator-release tigera-operator-master
 
@@ -181,7 +186,7 @@ helm-index:
 
 # Creates the tar file used for installing Calico on OpenShift.
 # Excludes manifests that should be applied after cluster creation.
-manifests/ocp.tgz:
+manifests/ocp.tgz: bin/yq
 	rm -f $@
 	mkdir -p ocp-tmp
 	cp -r manifests/ocp ocp-tmp/
