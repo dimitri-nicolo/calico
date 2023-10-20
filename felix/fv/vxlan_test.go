@@ -755,9 +755,14 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					}
 					for i, c := range cs.GetActiveClusters() {
 						for _, f := range c.felixes {
-							Eventually(func() int {
-								return getNumIPSetMembers(f.Container, "cali40all-vxlan-net")
-							}, waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount - i))
+							if BPFMode() {
+								Eventually(func() int {
+									return strings.Count(f.BPFRoutes(), "host")
+								}).Should(Equal(len(felixes)*2),
+									"Expected one host and one host tunneled route per node")
+							} else {
+								Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), "10s", "200ms").Should(Equal(baseIPSetMemberCount - i))
+							}
 						}
 
 						ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -782,9 +787,17 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					} else {
 						adjustedIPSetMemberCount = baseIPSetMemberCount - 1
 					}
-					Eventually(func() int {
-						return getNumIPSetMembers(cs.local.felixes[0].Container, "cali40all-vxlan-net")
-					}, "5s", "200ms").Should(Equal(adjustedIPSetMemberCount))
+
+					if BPFMode() {
+						Eventually(func() int {
+							return strings.Count(felixes[0].BPFRoutes(), "host")
+						}).Should(Equal(adjustedIPSetMemberCount*2),
+							"Expected one host and one host tunneled route per node, not: "+felixes[0].BPFRoutes())
+					} else {
+						Eventually(func() int {
+							return getNumIPSetMembers(cs.local.felixes[0].Container, "cali40all-vxlan-net")
+						}, "5s", "200ms").Should(Equal(adjustedIPSetMemberCount))
+					}
 
 					cc.ExpectSome(cs.local.w[0], cs.local.w[1])
 					cc.ExpectSome(cs.local.w[1], cs.local.w[0])
@@ -828,6 +841,11 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 				// Simulate having a host send VXLAN traffic from an unknown source, should get blocked.
 				var baseIPSetMemberCount int
 				BeforeEach(func() {
+					if BPFMode() {
+						Skip("Skipping due to manual removal of host from ipset not breaking connectivity in BPF mode")
+						return
+					}
+
 					waitPeriod := "10s"
 					if cs.ExpectRemoteConnectivity() {
 						waitPeriod = "20s"
@@ -839,9 +857,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					for _, c := range cs.GetActiveClusters() {
 						for _, f := range c.felixes {
 							// Wait for Felix to set up the allow list.
-							Eventually(func() int {
-								return getNumIPSetMembers(f.Container, "cali40all-vxlan-net")
-							}, waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount))
+							Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount))
 						}
 
 						// Wait until dataplane has settled.
@@ -859,13 +875,9 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					}
 				})
 
-				if vxlanMode == api.VXLANModeAlways {
+				// BPF mode doesn't use the IP set.
+				if vxlanMode == api.VXLANModeAlways && !BPFMode() {
 					It("after manually removing third node from allow list should have expected connectivity", func() {
-						if BPFMode() {
-							Skip("Skipping due to manual removal of host from ipset not breaking connectivity in BPF mode")
-							return
-						}
-
 						cs.local.felixes[0].Exec("ipset", "del", "cali40all-vxlan-net", cs.local.felixes[2].IP)
 						if cs.ExpectRemoteConnectivity() {
 							cs.local.felixes[0].Exec("ipset", "del", "cali40all-vxlan-net", cs.remote.felixes[2].IP)
