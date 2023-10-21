@@ -1,11 +1,12 @@
 #!/bin/bash
-set -e -x
+set -e
 
 make -f /usr/share/selinux/devel/Makefile calico.pp
 
 cd build/
 
 rpmbuild \
+    --quiet \
     --define "_builddir $PWD" \
     --define "_buildrootdir $PWD/.build" \
     --define "_rpmdir $PWD/dist" \

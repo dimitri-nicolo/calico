@@ -1,0 +1,34 @@
+version: v1.0
+name: SELinux postrelease promotions
+
+execution_time_limit:
+  minutes: 30
+
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu2004
+
+global_job_config:
+  prologue:
+    commands:
+      # Correct permissions since they are too open by default:
+      - chmod 0600 ~/.keys/*
+      # Add the key to the ssh agent:
+      - ssh-add ~/.keys/*
+      - checkout
+      - cd selinux
+
+blocks:
+  - name: Publish SELinux packages
+    task:
+      secrets:
+        - name: marvin-github-ssh-private-key
+        - name: tigera-public-aws-upload
+      prologue:
+        commands:
+          - make docker-containers
+      jobs:
+        - name: Build and Publish
+          commands:
+            - make publish AWS_PROFILE=default
