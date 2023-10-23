@@ -1958,12 +1958,20 @@ func init() {
 			Interface: "%face",
 			Action:    "Reject",
 		}, false),
+		Entry("should reject invalid BGPFilter rule-v4 interface - 3", api.BGPFilterRuleV4{
+			Interface: "\"ace",
+			Action:    "Reject",
+		}, false),
 		Entry("should reject invalid BGPFilter rule-v6 interface - 1", api.BGPFilterRuleV6{
 			Interface: "$cali",
 			Action:    "Reject",
 		}, false),
 		Entry("should reject invalid BGPFilter rule-v6 interface - 2", api.BGPFilterRuleV6{
 			Interface: "eth#",
+			Action:    "Reject",
+		}, false),
+		Entry("should reject invalid BGPFilter rule-v6 interface - 3", api.BGPFilterRuleV6{
+			Interface: "\"face",
 			Action:    "Reject",
 		}, false),
 		Entry("should accept valid BGPFilter rule-v4 interface - 1 ", api.BGPFilterRuleV4{
