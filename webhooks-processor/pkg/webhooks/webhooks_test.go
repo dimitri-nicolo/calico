@@ -69,6 +69,39 @@ func TestWebhookHealthy(t *testing.T) {
 	require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
 }
 
+func TestFailedWebhookProviderValidationReportedNotHealthy(t *testing.T) {
+	testState := &TestState{}
+	testState.WebHooksAPI = &testutils.FakeSecurityEventWebhook{}
+	testState.GetEvents = func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
+		return []lsApi.Event{}
+	}
+	testState.Running = false
+
+	testState.Providers = DefaultProviders()
+
+	SetupWithTestState(t, testState)
+
+	wh := newTestWebhook("test-invalid-generic-webhook")
+	wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
+	wh.Spec.Config = []api.SecurityEventWebhookConfigVar{}
+
+	startTime := time.Now()
+
+	// Sanity check: webHook has no status initially
+	require.Nil(t, wh.Status)
+
+	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
+
+	// Check that webhook status is eventually updated to NOT healthy
+	require.Eventually(t, func() bool {
+		isHealthyFn := isHealthy(wh)
+		return !isHealthyFn()
+	}, time.Second, 10*time.Millisecond)
+	require.True(t, wh.Status[0].LastTransitionTime.After(startTime))
+
+	require.Equal(t, "url field is not present in webhook configuration", wh.Status[0].Message)
+}
+
 func TestWebhookSent(t *testing.T) {
 	testEvent := lsApi.Event{
 		ID:          "testid",
@@ -266,7 +299,7 @@ func TestBackoffOnInitialFailure(t *testing.T) {
 	wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
 	// Making sure we'll update the right config...
 	require.Equal(t, wh.Spec.Config[0].Name, "url")
-	// Updating URL to pint to the test server
+	// Updating URL to point to the test server
 	wh.Spec.Config[0].Value = whUrl
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
