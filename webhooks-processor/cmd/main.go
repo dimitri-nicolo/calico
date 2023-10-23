@@ -24,12 +24,14 @@ func main() {
 		logrus.WithError(err).Fatal("Unable to connect to initialize v3 client")
 	}
 
-	webhookWatcherUpdater := webhooks.NewWebhookWatcherUpdater().WithClient(v3Client)
-	controllerState := webhooks.NewControllerState().WithFetchEventsFunction(events.FetchSecurityEventsFunc)
-	webhookController := webhooks.NewWebhookController().WithState(controllerState)
+	config := webhooks.NewControllerConfig(v3Client.SecurityEventWebhook(), webhooks.DefaultProviders(), events.FetchSecurityEventsFunc)
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
+	webhookWatcherUpdater := webhooks.NewWebhookWatcherUpdater().WithClient(config.ClientV3)
+	controllerState := webhooks.NewControllerState().WithConfig(config)
+	webhookController := webhooks.NewWebhookController().WithState(controllerState)
+
 	wg.Add(2)
 	go webhookController.WithUpdater(webhookWatcherUpdater).Run(ctx, ctxCancel, &wg)
 	go webhookWatcherUpdater.WithController(webhookController).Run(ctx, ctxCancel, &wg)
@@ -45,5 +47,6 @@ func main() {
 
 	logrus.Info("Waiting for all components to terminate...")
 	wg.Wait()
+
 	logrus.Info("Goodbye!")
 }

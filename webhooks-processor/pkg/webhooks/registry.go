@@ -7,6 +7,7 @@ import (
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/generic"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/jira"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/slack"
 )
@@ -17,10 +18,8 @@ type ProviderConfiguration struct {
 	RateLimiterCount    uint
 }
 
-var RegisteredProviders map[api.SecurityEventWebhookConsumer]*ProviderConfiguration
-
-func init() {
-	RegisteredProviders = make(map[api.SecurityEventWebhookConsumer]*ProviderConfiguration)
+func DefaultProviders() map[api.SecurityEventWebhookConsumer]*ProviderConfiguration {
+	RegisteredProviders := make(map[api.SecurityEventWebhookConsumer]*ProviderConfiguration)
 	RegisteredProviders[api.SecurityEventWebhookConsumerJira] = &ProviderConfiguration{
 		Provider:            jira.NewProvider(),
 		RateLimiterDuration: 60 * time.Minute,
@@ -31,4 +30,11 @@ func init() {
 		RateLimiterDuration: 5 * time.Minute,
 		RateLimiterCount:    3,
 	}
+	RegisteredProviders[api.SecurityEventWebhookConsumerGeneric] = &ProviderConfiguration{
+		Provider:            generic.NewProvider(),
+		RateLimiterDuration: 1 * time.Hour,
+		RateLimiterCount:    100,
+	}
+
+	return RegisteredProviders
 }

@@ -14,8 +14,9 @@ const (
 	KindSecurityEventWebhook     = "SecurityEventWebhook"
 	KindSecurityEventWebhookList = "SecurityEventWebhookList"
 
-	SecurityEventWebhookConsumerSlack SecurityEventWebhookConsumer = "Slack"
-	SecurityEventWebhookConsumerJira  SecurityEventWebhookConsumer = "Jira"
+	SecurityEventWebhookConsumerSlack   SecurityEventWebhookConsumer = "Slack"
+	SecurityEventWebhookConsumerJira    SecurityEventWebhookConsumer = "Jira"
+	SecurityEventWebhookConsumerGeneric SecurityEventWebhookConsumer = "Generic"
 
 	SecurityEventWebhookStateEnabled  SecurityEventWebhookState = "Enabled"
 	SecurityEventWebhookStateDisabled SecurityEventWebhookState = "Disabled"

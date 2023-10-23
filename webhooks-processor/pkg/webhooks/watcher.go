@@ -15,7 +15,7 @@ import (
 )
 
 type WebhookWatcherUpdater struct {
-	client             clientv3.Interface
+	whClient           clientv3.SecurityEventWebhookInterface
 	controller         WebhookControllerInterface
 	webhookUpdatesChan chan *api.SecurityEventWebhook
 }
@@ -26,8 +26,8 @@ func NewWebhookWatcherUpdater() (watcher *WebhookWatcherUpdater) {
 	return
 }
 
-func (w *WebhookWatcherUpdater) WithClient(client clientv3.Interface) *WebhookWatcherUpdater {
-	w.client = client
+func (w *WebhookWatcherUpdater) WithClient(client clientv3.SecurityEventWebhookInterface) *WebhookWatcherUpdater {
+	w.whClient = client
 	return w
 }
 
@@ -51,7 +51,7 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.Cance
 		for {
 			select {
 			case webhook := <-w.webhookUpdatesChan:
-				if _, err := w.client.SecurityEventWebhook().Update(ctx, webhook, options.SetOptions{}); err != nil {
+				if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
 					logrus.WithError(err).Warn("Unable to update SecurityEventWebhook definition")
 				}
 			case <-ctx.Done():
@@ -61,7 +61,7 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.Cance
 	}()
 
 	for ctx.Err() == nil {
-		watcher, err := w.client.SecurityEventWebhook().Watch(ctx, options.ListOptions{})
+		watcher, err := w.whClient.Watch(ctx, options.ListOptions{})
 		if err != nil {
 			logrus.WithError(err).Error("Unable to watch for SecurityEventWebhook resources")
 			return

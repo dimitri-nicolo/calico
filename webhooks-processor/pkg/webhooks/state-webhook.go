@@ -15,10 +15,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 )
 
-const (
-	FetchingInterval = 10 * time.Second
-)
-
 func (s *ControllerState) webhookGoroutine(
 	ctx context.Context, // context for the goroutine
 	config map[string]string, // configuration for the webhook
@@ -52,7 +48,7 @@ func (s *ControllerState) webhookGoroutine(
 		}
 
 		var err error
-		for _, event := range s.eventsFetchFunc(ctx, selector, previousRunStamp.Time, thisRunStamp) {
+		for _, event := range s.config.EventsFetchFunction(ctx, selector, previousRunStamp.Time, thisRunStamp) {
 			if err = rateLimiter.Event(); err != nil {
 				break
 			}
@@ -65,7 +61,7 @@ func (s *ControllerState) webhookGoroutine(
 		logrus.WithField("uid", webhookRef.UID).WithError(err).Info("Iteration completed")
 	}
 
-	tick := time.NewTicker(FetchingInterval)
+	tick := time.NewTicker(s.config.FetchingInterval)
 	defer tick.Stop()
 
 	for {

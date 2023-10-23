@@ -49,7 +49,7 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 		s.updateWebhookHealth(webhook, "ConfigurationParsing", time.Now(), err)
 		return
 	}
-	providerConfig, ok := RegisteredProviders[webhook.Spec.Consumer]
+	providerConfig, ok := s.config.Providers[webhook.Spec.Consumer]
 	if !ok {
 		s.preventRestarts[webhook.UID] = true
 		s.updateWebhookHealth(webhook, "ConsumerDiscovery", time.Now(), fmt.Errorf("unknown consumer: %s", webhook.Spec.Consumer))
@@ -105,6 +105,11 @@ func (s *ControllerState) parseConfig(ctx context.Context, config []api.Security
 }
 
 func (s *ControllerState) updateWebhookHealth(webhook *api.SecurityEventWebhook, reason string, timestamp time.Time, err error) {
+	logrus.WithFields(logrus.Fields{
+		"webhook.Name": webhook.Name,
+		"reason":       reason,
+		"timestamp":    timestamp,
+	}).WithError(err).Debug("updateWebhookHealth update")
 	status, message := metav1.ConditionTrue, ConditionHealthyDesc
 	if err != nil {
 		status, message = metav1.ConditionFalse, err.Error()

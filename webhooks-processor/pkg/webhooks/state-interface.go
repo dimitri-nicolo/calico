@@ -23,9 +23,9 @@ type ControllerState struct {
 	outUpdatesChan  chan *api.SecurityEventWebhook
 	webhooksTrail   map[types.UID]*webhookState
 	preventRestarts map[types.UID]bool
+	config          *ControllerConfig
 	wg              sync.WaitGroup
 	cli             *kubernetes.Clientset
-	eventsFetchFunc EventsFetchFunc
 }
 
 func NewControllerState() *ControllerState {
@@ -36,8 +36,8 @@ func NewControllerState() *ControllerState {
 	}
 }
 
-func (s *ControllerState) WithFetchEventsFunction(fetch EventsFetchFunc) *ControllerState {
-	s.eventsFetchFunc = fetch
+func (s *ControllerState) WithConfig(config *ControllerConfig) *ControllerState {
+	s.config = config
 	return s
 }
 
