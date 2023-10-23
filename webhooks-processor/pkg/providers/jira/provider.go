@@ -95,7 +95,7 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, event *lsA
 			WithField("response", responseText).
 			Info("HTTP request processed")
 
-		if response.StatusCode/100 == 2 {
+		if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
 			return
 		}
 		return fmt.Errorf("unexpected Jira response [%d]:%s", response.StatusCode, responseText)
