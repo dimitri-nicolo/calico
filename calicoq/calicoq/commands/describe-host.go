@@ -423,12 +423,12 @@ func (cbs *describeCmd) OnUpdates(updates []api.Update) {
 	}
 }
 
-func (cbs *describeCmd) OnPolicyMatch(policyKey model.PolicyKey, endpointKey interface{}) {
+func (cbs *describeCmd) OnPolicyMatch(policyKey model.PolicyKey, endpointKey model.Key) {
 	log.Infof("Policy %v.%v now matches %v", policyKey.Tier, policyKey.Name, endpointKey)
 	cbs.epIDToPolIDs[endpointKey][policyKey] = true
 }
 
-func (cbs *describeCmd) OnPolicyMatchStopped(policyKey model.PolicyKey, endpointKey interface{}) {
+func (cbs *describeCmd) OnPolicyMatchStopped(policyKey model.PolicyKey, endpointKey model.Key) {
 	// Matt: Maybe we should remove something here, but it's an edge case
 }
 
@@ -439,6 +439,8 @@ func (cbs *describeCmd) OnEgressSelectorMatch(es string, endpointKey interface{}
 func (cbs *describeCmd) OnEgressSelectorMatchStopped(es string, endpointKey interface{}) {
 	// We don't currently analyze egress selectors.
 }
+
+var _ calc.PolicyMatchListener = (*describeCmd)(nil)
 
 type TierInfo struct {
 	Name     string

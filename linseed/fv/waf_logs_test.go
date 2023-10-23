@@ -5,7 +5,6 @@
 package fv_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -14,52 +13,34 @@ import (
 
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
-	elastic "github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/config"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func wafSetupAndTeardown(t *testing.T) func() {
-	// Hook logrus into testing.T
-	config.ConfigureLogging("DEBUG")
-	logCancel := logutils.RedirectLogrusToTestingT(t)
+// Run runs the given test in all modes.
+func RunWAFTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
+	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		defer setupAndTeardown(t, args, index.WAFLogMultiIndex)()
+		testFn(t, index.WAFLogMultiIndex)
+	})
 
-	// Create an ES client.
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
-	require.NoError(t, err)
-	lmaClient = lmaelastic.NewWithClient(esClient)
-
-	// Instantiate a client.
-	cli, err = NewLinseedClient()
-	require.NoError(t, err)
-
-	// Create a random cluster name for each test to make sure we don't
-	// interfere between tests.
-	cluster = testutils.RandomClusterName()
-
-	// Set up context with a timeout.
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-
-	return func() {
-		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, cluster)
-		logCancel()
-		cancel()
-	}
+	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		args.Backend = config.BackendTypeSingleIndex
+		defer setupAndTeardown(t, args, index.WAFLogIndex)()
+		testFn(t, index.WAFLogIndex)
+	})
 }
 
 func TestFV_WAF(t *testing.T) {
-	t.Run("should return an empty list if there are no WAF logs", func(t *testing.T) {
-		defer wafSetupAndTeardown(t)()
-
+	RunWAFTest(t, "should return an empty list if there are no WAF logs", func(t *testing.T, idx bapi.Index) {
 		params := v1.WAFLogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -75,9 +56,7 @@ func TestFV_WAF(t *testing.T) {
 		require.Equal(t, []v1.WAFLog{}, wafLogs.Items)
 	})
 
-	t.Run("should create and list waf logs", func(t *testing.T) {
-		defer wafSetupAndTeardown(t)()
-
+	RunWAFTest(t, "should create and list waf logs", func(t *testing.T, idx bapi.Index) {
 		reqTime := time.Now()
 		// Create a basic waf log
 		wafLogs := []v1.WAFLog{
@@ -91,7 +70,7 @@ func TestFV_WAF(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create waf logs did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_waf*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Read it back.
 		params := v1.WAFLogParams{
@@ -113,9 +92,7 @@ func TestFV_WAF(t *testing.T) {
 		require.Equal(t, wafLogs, resp.Items)
 	})
 
-	t.Run("should support pagination", func(t *testing.T) {
-		defer wafSetupAndTeardown(t)()
-
+	RunWAFTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
 		totalItems := 5
 
 		// Create 5 waf logs.
@@ -133,7 +110,7 @@ func TestFV_WAF(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_waf*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
@@ -195,16 +172,13 @@ func TestFV_WAF(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 
-	t.Run("should support pagination for items >= 10000 for WAF logs", func(t *testing.T) {
-		defer wafSetupAndTeardown(t)()
-
+	RunWAFTest(t, "should support pagination for items >= 10000 for WAF logs", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K threat logs.
 		logTime := time.Unix(0, 0).UTC()
 		var logs []v1.WAFLog
 		for i := 0; i < totalItems; i++ {
 			logs = append(logs, v1.WAFLog{
-
 				Timestamp: logTime.Add(time.Duration(i) * time.Second), // Make sure logs are ordered.
 				Host:      fmt.Sprintf("%d", i),
 			},
@@ -215,7 +189,7 @@ func TestFV_WAF(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create logs did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_waf*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Stream through all the items.
 		params := v1.WAFLogParams{
@@ -242,5 +216,4 @@ func TestFV_WAF(t *testing.T) {
 
 		require.Equal(t, receivedItems, totalItems)
 	})
-
 }

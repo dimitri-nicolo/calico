@@ -37,7 +37,7 @@ const (
 	ChainNamePrefix = "cali-"
 	// IPSetNamePrefix: similarly for IP sets, we use the following prefix; the IP sets layer
 	// adds its own "-" so it isn't included here.
-	IPSetNamePrefix = "cali"
+	IPSetNamePrefix = ipsets.IPSetNamePrefix
 
 	ChainFilterInput   = ChainNamePrefix + "INPUT"
 	ChainFilterForward = ChainNamePrefix + "FORWARD"
@@ -449,8 +449,9 @@ type Config struct {
 	NATPortRange                       numorstring.Port
 	IptablesNATOutgoingInterfaceFilter string
 
-	NATOutgoingAddress net.IP
-	BPFEnabled         bool
+	NATOutgoingAddress             net.IP
+	BPFEnabled                     bool
+	BPFForceTrackPacketsFromIfaces []string
 
 	ServiceLoopPrevention string
 

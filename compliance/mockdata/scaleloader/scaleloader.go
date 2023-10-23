@@ -13,8 +13,8 @@ import (
 
 	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
 	"github.com/projectcalico/calico/lma/pkg/elastic"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
@@ -97,7 +97,7 @@ func NewScaleLoader(base string, playbookCfg []PlaybookCfg) (*scaleloader, error
 
 	clustName := os.Getenv("ELASTIC_INDEX_SUFFIX")
 	if clustName == "" {
-		clustName = "cluster"
+		clustName = lmak8s.DefaultCluster
 	}
 	sl.indexSuffix = clustName
 	return &sl, nil

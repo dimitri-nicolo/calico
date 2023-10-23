@@ -18,7 +18,10 @@ crypto/tmp
 hack/release/release
 node/windows-packaging/CalicoWindows/confd/config-bgp.ps1
 node/windows-packaging/CalicoWindows/confd/config-bgp.psm1
+node/windows-packaging/nssm.zip
+node/windows-packaging/nssm.exe
 _output
+_release_archive
 builder.coverprofile
 hack/release/ghr
 manifests/ocp.tgz
@@ -29,7 +32,7 @@ hack/test/kind/kubectl
 hack/test/kind/*kubeconfig.yaml
 pod2daemon/node-driver-registrar/
 
-/networking-calico/upper-constraints.txt
+/networking-calico/upper-constraints*.txt
 
 # Sub-chart created as part of build.
 charts/tigera-operator/charts

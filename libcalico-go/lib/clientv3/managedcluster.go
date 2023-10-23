@@ -18,8 +18,12 @@ import (
 type ManagedClusterInterface interface {
 	Create(ctx context.Context, res *apiv3.ManagedCluster, opts options.SetOptions) (*apiv3.ManagedCluster, error)
 	Update(ctx context.Context, res *apiv3.ManagedCluster, opts options.SetOptions) (*apiv3.ManagedCluster, error)
-	Delete(ctx context.Context, name string, opts options.DeleteOptions) (*apiv3.ManagedCluster, error)
-	Get(ctx context.Context, name string, opts options.GetOptions) (*apiv3.ManagedCluster, error)
+
+	// Delete and Get honors the namespace in multitenant mode and ignores it in the single tenant mode.
+	// multitenant mode is enabled by setting a CalicoAPIConfigSpec's MultiTenantEnabled to be true.
+	Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*apiv3.ManagedCluster, error)
+	Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*apiv3.ManagedCluster, error)
+
 	List(ctx context.Context, opts options.ListOptions) (*apiv3.ManagedClusterList, error)
 	Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error)
 }
@@ -29,8 +33,11 @@ type managedClusters struct {
 	client client
 }
 
-// ErrMsgNotEmpty is the error message returned when editing InstallationManifest field for a ManagedCluster
-const ErrMsgNotEmpty = "InstallationManifest is a reserved field and is not editable"
+const (
+	// ErrMsgNotEmpty is the error message returned when editing InstallationManifest field for a ManagedCluster
+	ErrMsgNotEmpty             = "InstallationManifest is a reserved field and is not editable"
+	ErrMsgEmptyTenantNamespace = "Tenant namespace is empty in multitenant mode"
+)
 
 // Create takes the representation of a ManagedCluster and creates it.  Returns the stored
 // representation of the ManagedCluster, and an error, if there is any.
@@ -100,8 +107,8 @@ func (r managedClusters) Update(ctx context.Context, res *apiv3.ManagedCluster, 
 }
 
 // Delete takes name of the ManagedCluster and deletes it. Returns an error if one occurs.
-func (r managedClusters) Delete(ctx context.Context, name string, opts options.DeleteOptions) (*apiv3.ManagedCluster, error) {
-	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindManagedCluster, noNamespace, name)
+func (r managedClusters) Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*apiv3.ManagedCluster, error) {
+	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindManagedCluster, namespace, name)
 	if out != nil {
 		return out.(*apiv3.ManagedCluster), err
 	}
@@ -110,8 +117,20 @@ func (r managedClusters) Delete(ctx context.Context, name string, opts options.D
 
 // Get takes name of the ManagedCluster, and returns the corresponding ManagedCluster object,
 // and an error if there is any.
-func (r managedClusters) Get(ctx context.Context, name string, opts options.GetOptions) (*apiv3.ManagedCluster, error) {
-	out, err := r.client.resources.Get(ctx, opts, apiv3.KindManagedCluster, noNamespace, name)
+func (r managedClusters) Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*apiv3.ManagedCluster, error) {
+
+	// In multitenant mode, namespace should not be empty
+	if r.client.config.Spec.MultiTenantEnabled && len(namespace) == 0 {
+		return nil, cerrors.ErrorValidation{
+			ErroredFields: []cerrors.ErroredField{{
+				Name:   "Metadata.Name",
+				Reason: ErrMsgEmptyTenantNamespace,
+				Value:  name,
+			}},
+		}
+	}
+
+	out, err := r.client.resources.Get(ctx, opts, apiv3.KindManagedCluster, namespace, name)
 	if out != nil {
 		return out.(*apiv3.ManagedCluster), err
 	}
@@ -120,6 +139,17 @@ func (r managedClusters) Get(ctx context.Context, name string, opts options.GetO
 
 // List returns the list of ManagedCluster objects that match the supplied options.
 func (r managedClusters) List(ctx context.Context, opts options.ListOptions) (*apiv3.ManagedClusterList, error) {
+
+	// In multitenant mode, namespace should not be empty
+	if r.client.config.Spec.MultiTenantEnabled && len(opts.Namespace) == 0 {
+		return nil, cerrors.ErrorValidation{
+			ErroredFields: []cerrors.ErroredField{{
+				Name:   "Metadata.Namespace",
+				Reason: ErrMsgEmptyTenantNamespace,
+			}},
+		}
+	}
+
 	res := &apiv3.ManagedClusterList{}
 	if err := r.client.resources.List(ctx, opts, apiv3.KindManagedCluster, apiv3.KindManagedClusterList, res); err != nil {
 		return nil, err

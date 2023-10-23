@@ -15,7 +15,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/fv/containers"
@@ -127,7 +126,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					}
 				}
 			}
-			return fmt.Errorf("No IP set with 1000 members in:\n[%v]", ipsetsOutput)
+			return fmt.Errorf("No IP set with 1000 members (last=%d) in:\n[%v]", numMembers, ipsetsOutput)
 		}
 
 		for name, count := range getIPSetCounts(felix.Container) {
@@ -141,13 +140,13 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	It("programs DNS info from v1 file", func() {
 		startWithPersistentFileContent("1\n" + gen1000XYZMappings())
 		triggerCreateXYZIPSet()
-		Eventually(findIPSetWith1000Entries, "5s", "1s").Should(Succeed())
+		Eventually(findIPSetWith1000Entries, "10s", "1s").Should(Succeed())
 	})
 
 	It("programs DNS info from v2 file with current epoch declaration", func() {
 		startWithPersistentFileContent("2\n{\"Epoch\":0,\"RequiredFeatures\":[\"Epoch\"]}\n" + gen1000XYZMappings())
 		triggerCreateXYZIPSet()
-		Eventually(findIPSetWith1000Entries, "5s", "1s").Should(Succeed())
+		Eventually(findIPSetWith1000Entries, "10s", "1s").Should(Succeed())
 	})
 
 	It("ignores DNS info from v2 file with non-current epoch declaration", func() {

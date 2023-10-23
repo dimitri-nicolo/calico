@@ -130,7 +130,6 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 	}
 
 	debug := log.GetLevel() >= log.DebugLevel
-	debug = true
 
 	// Get total number of rules
 	totalNumberOfRules := 0

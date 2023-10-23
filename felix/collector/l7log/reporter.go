@@ -105,7 +105,9 @@ func (r *L7Reporter) run() {
 							"size":       len(fl),
 							"dispatcher": d,
 						}).Debug("Dispatching log buffer")
-						d.Report(fl)
+						if err := d.Report(fl); err != nil {
+							log.WithError(err).Debug("failed to dispatch L7 log")
+						}
 					}
 				}
 			}

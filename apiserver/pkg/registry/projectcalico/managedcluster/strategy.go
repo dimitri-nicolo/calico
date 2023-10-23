@@ -16,9 +16,9 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 	apivalidation "k8s.io/kubernetes/pkg/apis/core/validation"
 
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/apiserver/pkg/storage/calico"
 )
 
 type apiServerStrategy struct {
@@ -32,12 +32,12 @@ func NewStrategy(typer runtime.ObjectTyper) apiServerStrategy {
 }
 
 func (apiServerStrategy) NamespaceScoped() bool {
-	return false
+	return calico.MultiTenantEnabled
 }
 
 // PrepareForCreate clears the Status
 func (apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
-	managedCluster := obj.(*calico.ManagedCluster)
+	managedCluster := obj.(*v3.ManagedCluster)
 	managedCluster.Status = v3.ManagedClusterStatus{
 		Conditions: []v3.ManagedClusterStatusCondition{
 			{
@@ -75,7 +75,7 @@ func (apiServerStrategy) Canonicalize(obj runtime.Object) {
 }
 
 func (apiServerStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
-	return ValidateManagedClusterUpdate(obj.(*calico.ManagedCluster), old.(*calico.ManagedCluster))
+	return ValidateManagedClusterUpdate(obj.(*v3.ManagedCluster), old.(*v3.ManagedCluster))
 }
 
 type apiServerStatusStrategy struct {
@@ -87,19 +87,19 @@ func NewStatusStrategy(strategy apiServerStrategy) apiServerStatusStrategy {
 }
 
 func (apiServerStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
-	newManagedCluster := obj.(*calico.ManagedCluster)
-	oldManagedCluster := old.(*calico.ManagedCluster)
+	newManagedCluster := obj.(*v3.ManagedCluster)
+	oldManagedCluster := old.(*v3.ManagedCluster)
 	newManagedCluster.Spec = oldManagedCluster.Spec
 	newManagedCluster.Labels = oldManagedCluster.Labels
 }
 
 // ValidateUpdate is the default update validation for an end user updating status
 func (apiServerStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
-	return ValidateManagedClusterUpdate(obj.(*calico.ManagedCluster), old.(*calico.ManagedCluster))
+	return ValidateManagedClusterUpdate(obj.(*v3.ManagedCluster), old.(*v3.ManagedCluster))
 }
 
 func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
-	apiserver, ok := obj.(*calico.ManagedCluster)
+	apiserver, ok := obj.(*v3.ManagedCluster)
 	if !ok {
 		return nil, nil, fmt.Errorf("given object (type %v) is not a Managed Cluster", reflect.TypeOf(obj))
 	}
@@ -117,10 +117,10 @@ func MatchManagedCluster(label labels.Selector, field fields.Selector) storage.S
 }
 
 // ManagedClusterToSelectableFields returns a field set that represents the object.
-func ManagedClusterToSelectableFields(obj *calico.ManagedCluster) fields.Set {
-	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, false)
+func ManagedClusterToSelectableFields(obj *v3.ManagedCluster) fields.Set {
+	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, calico.MultiTenantEnabled)
 }
 
-func ValidateManagedClusterUpdate(update, old *calico.ManagedCluster) field.ErrorList {
+func ValidateManagedClusterUpdate(update, old *v3.ManagedCluster) field.ErrorList {
 	return apivalidation.ValidateObjectMetaUpdate(&update.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))
 }

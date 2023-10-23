@@ -433,13 +433,13 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		var expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound int
 
 		By("reporting two separate metrics for same rule and traffic direction, but different connections")
-		pr.Report(muConn1Rule1AllowUpdate)
+		Expect(pr.Report(muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 		expectedPacketsInbound += muConn1Rule1AllowUpdate.InMetric.DeltaPackets
 		expectedBytesInbound += muConn1Rule1AllowUpdate.InMetric.DeltaBytes
 		expectedPacketsOutbound += muConn1Rule1AllowUpdate.OutMetric.DeltaPackets
 		expectedBytesOutbound += muConn1Rule1AllowUpdate.OutMetric.DeltaBytes
 		expectedConnsInbound += 1
-		pr.Report(muConn2Rule1AllowUpdate)
+		Expect(pr.Report(muConn2Rule1AllowUpdate)).NotTo(HaveOccurred())
 		expectedPacketsInbound += muConn2Rule1AllowUpdate.InMetric.DeltaPackets
 		expectedBytesInbound += muConn2Rule1AllowUpdate.InMetric.DeltaBytes
 		expectedConnsInbound += 1
@@ -452,7 +452,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("reporting one of the same metrics")
-		pr.Report(muConn1Rule1AllowUpdate)
+		Expect(pr.Report(muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 		expectedPacketsInbound += muConn1Rule1AllowUpdate.InMetric.DeltaPackets
 		expectedBytesInbound += muConn1Rule1AllowUpdate.InMetric.DeltaBytes
 		expectedPacketsOutbound += muConn1Rule1AllowUpdate.OutMetric.DeltaPackets
@@ -467,7 +467,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("expiring one of the metric updates for Rule1 Inbound and one for Outbound")
-		pr.Report(muConn1Rule1AllowExpire)
+		Expect(pr.Report(muConn1Rule1AllowExpire)).NotTo(HaveOccurred())
 		expectedPacketsInbound += muConn1Rule1AllowExpire.InMetric.DeltaPackets
 		expectedBytesInbound += muConn1Rule1AllowExpire.InMetric.DeltaBytes
 		expectedPacketsOutbound += muConn1Rule1AllowExpire.OutMetric.DeltaPackets
@@ -488,7 +488,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
 
 		By("expiring the remaining Rule1 Inbound metric")
-		pr.Report(muConn2Rule1AllowExpire)
+		Expect(pr.Report(muConn2Rule1AllowExpire)).NotTo(HaveOccurred())
 		expectedPacketsInbound += muConn2Rule1AllowExpire.InMetric.DeltaPackets
 		expectedBytesInbound += muConn2Rule1AllowExpire.InMetric.DeltaBytes
 		// Adjust the clock, but not past the retention period, the inbound rule aggregate should
@@ -510,7 +510,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		var expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound int
 
 		By("reporting ingress direction metrics with multiple rules")
-		pr.Report(muConn1Rule3AllowUpdate)
+		Expect(pr.Report(muConn1Rule3AllowUpdate)).NotTo(HaveOccurred())
 		expectedPacketsInbound += muConn1Rule3AllowUpdate.InMetric.DeltaPackets
 		expectedBytesInbound += muConn1Rule3AllowUpdate.InMetric.DeltaBytes
 		expectedPacketsOutbound += muConn1Rule3AllowUpdate.OutMetric.DeltaPackets
@@ -526,7 +526,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("expiring one of the metric updates for Rule1 Inbound and one for Outbound")
-		pr.Report(muConn1Rule3AllowExpire)
+		Expect(pr.Report(muConn1Rule3AllowExpire)).NotTo(HaveOccurred())
 		expectedPacketsInbound += muConn1Rule3AllowExpire.InMetric.DeltaPackets
 		expectedBytesInbound += muConn1Rule3AllowExpire.InMetric.DeltaBytes
 		expectedPacketsOutbound += muConn1Rule3AllowExpire.OutMetric.DeltaPackets
@@ -549,7 +549,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		var expectedPacketsOutbound, expectedBytesOutbound int
 
 		By("reporting ingress direction metrics with multiple rules")
-		pr.Report(muNoConn1Rule4DenyUpdate)
+		Expect(pr.Report(muNoConn1Rule4DenyUpdate)).NotTo(HaveOccurred())
 		expectedPacketsInbound += muNoConn1Rule4DenyUpdate.InMetric.DeltaPackets
 		expectedBytesInbound += muNoConn1Rule4DenyUpdate.InMetric.DeltaBytes
 		expectedPacketsOutbound += muNoConn1Rule4DenyUpdate.OutMetric.DeltaPackets
@@ -565,7 +565,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		eventuallyExpectRuleAggregates(pa, types.TrafficDirOutbound, keyEgressRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
 
 		By("expiring the deny metric")
-		pr.Report(muNoConn1Rule4DenyExpire)
+		Expect(pr.Report(muNoConn1Rule4DenyExpire)).NotTo(HaveOccurred())
 		// no counters should change.
 		mt.incMockTime(retentionTime / 2)
 		By("checking for the correct number of aggregated statistics: ")

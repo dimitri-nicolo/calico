@@ -48,10 +48,7 @@ func consists(actual, expected []FlowProcessReportedStats) bool {
 			}
 		}
 	}
-	if count == len(expected) {
-		return true
-	}
-	return false
+	return count == len(expected)
 }
 
 var _ = Describe("Flow log types tests", func() {

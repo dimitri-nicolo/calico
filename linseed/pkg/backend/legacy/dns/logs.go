@@ -14,6 +14,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -22,19 +23,54 @@ import (
 type dnsLogBackend struct {
 	client               *elastic.Client
 	lmaclient            lmaelastic.Client
-	helper               lmaindex.Helper
-	templates            bapi.Cache
+	queryHelper          lmaindex.Helper
+	templates            bapi.IndexInitializer
 	deepPaginationCutOff int64
+	singleIndex          bool
+	index                bapi.Index
 }
 
-func NewDNSLogBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.DNSLogBackend {
+func NewDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.DNSLogBackend {
 	return &dnsLogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
-		helper:               lmaindex.DnsLogs(),
+		queryHelper:          lmaindex.MultiIndexDNSLogs(),
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
+		singleIndex:          false,
+		index:                index.DNSLogMultiIndex,
 	}
+}
+
+func NewSingleIndexDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.DNSLogBackend {
+	return &dnsLogBackend{
+		client:               c.Backend(),
+		lmaclient:            c,
+		queryHelper:          lmaindex.SingleIndexDNSLogs(),
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
+		singleIndex:          true,
+		index:                index.DNSLogIndex,
+	}
+}
+
+type logWithExtras struct {
+	v1.DNSLog `json:",inline"`
+	Cluster   string `json:"cluster"`
+	Tenant    string `json:"tenant,omitempty"`
+}
+
+// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// the backend is configured to write to a single index.
+func (b *dnsLogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.DNSLog) interface{} {
+	if b.singleIndex {
+		return &logWithExtras{
+			DNSLog:  l,
+			Cluster: i.Cluster,
+			Tenant:  i.Tenant,
+		}
+	}
+	return l
 }
 
 func (b *dnsLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1.DNSLog) (*v1.BulkResponse, error) {
@@ -44,13 +80,13 @@ func (b *dnsLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 		return nil, err
 	}
 
-	err := b.templates.InitializeIfNeeded(ctx, bapi.DNSLogs, i)
+	err := b.templates.Initialize(ctx, b.index, i)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine the index to write to using an alias
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 	log.Debugf("Writing DNS logs in bulk to alias %s", alias)
 
 	// Build a bulk request using the provided logs.
@@ -71,7 +107,7 @@ func (b *dnsLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 		f.GeneratedTime = &generatedTime
 
 		// Add this log to the bulk request.
-		dnsLog, err := json.Marshal(f)
+		dnsLog, err := json.Marshal(b.prepareForWrite(i, f))
 		if err != nil {
 			log.WithError(err).Warningf("Failed to marshal dns log and add it to the request %+v", f)
 			continue
@@ -108,7 +144,7 @@ func (b *dnsLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opt
 	if opts.NumBuckets > 0 {
 		// Time-series.
 		hist := elastic.NewAutoDateHistogramAggregation().
-			Field(b.helper.GetTimeField()).
+			Field(b.queryHelper.GetTimeField()).
 			Buckets(opts.NumBuckets)
 		for name, agg := range opts.Aggregations {
 			hist = hist.SubAggregation(name, logtools.RawAggregation{RawMessage: agg})
@@ -158,7 +194,7 @@ func (b *dnsLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.DN
 
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +223,7 @@ func (b *dnsLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.DNSLogParams) (*e
 
 	// Configure pagination options
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -198,7 +234,7 @@ func (b *dnsLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.DNSLogParams) (*e
 			query.Sort(s.Field, !s.Descending)
 		}
 	} else {
-		query.Sort(b.helper.GetTimeField(), true)
+		query.Sort(b.queryHelper.GetTimeField(), true)
 	}
 	return query, startFrom, nil
 }
@@ -207,7 +243,7 @@ func (b *dnsLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.DNSLogParams) (*e
 func (b *dnsLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.DNSLogParams) (elastic.Query, error) {
 	// Start with the base dns log query using common fields.
 	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
-	query, err := logtools.BuildQuery(b.helper, i, opts, start, end)
+	query, err := logtools.BuildQuery(b.queryHelper, i, opts, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -238,22 +274,4 @@ func (b *dnsLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.DNSLogParams) (e
 	}
 
 	return query, nil
-}
-
-func (b *dnsLogBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_dns.%s.%s.*", i.Tenant, i.Cluster)
-	}
-
-	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("tigera_secure_ee_dns.%s.*", i.Cluster)
-}
-
-func (b *dnsLogBackend) writeAlias(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_dns.%s.%s.", i.Tenant, i.Cluster)
-	}
-
-	return fmt.Sprintf("tigera_secure_ee_dns.%s.", i.Cluster)
 }

@@ -3,7 +3,6 @@ package l7
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/sirupsen/logrus"
 	kapiv1 "k8s.io/apimachinery/pkg/types"
@@ -13,6 +12,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -45,9 +45,20 @@ type l7FlowBackend struct {
 	aggMins          []lmaelastic.AggMaxMinInfo
 	aggMaxs          []lmaelastic.AggMaxMinInfo
 	aggMeans         []lmaelastic.AggMeanInfo
+
+	queryHelper lmaindex.Helper
+	index       bapi.Index
 }
 
 func NewL7FlowBackend(c lmaelastic.Client) bapi.L7FlowBackend {
+	return newBackend(c, false)
+}
+
+func NewSingleIndexL7FlowBackend(c lmaelastic.Client) bapi.L7FlowBackend {
+	return newBackend(c, true)
+}
+
+func newBackend(c lmaelastic.Client, singleIndex bool) bapi.L7FlowBackend {
 	// These are the keys which define an L7 in ES, and will be used to create buckets in the ES result.
 	compositeSources := []lmaelastic.AggCompositeSourceInfo{
 		{Name: "dest_type", Field: "dest_type"},
@@ -79,6 +90,13 @@ func NewL7FlowBackend(c lmaelastic.Client) bapi.L7FlowBackend {
 		{Name: flowL7AggMeanDuration, Field: "duration_mean"},
 	}
 
+	helper := lmaindex.MultiIndexL7Logs()
+	idx := index.L7LogMultiIndex
+	if singleIndex {
+		helper = lmaindex.SingleIndexL7Logs()
+		idx = index.L7LogIndex
+	}
+
 	return &l7FlowBackend{
 		lmaclient: c,
 		ft:        backend.NewFieldTracker(compositeSources),
@@ -89,6 +107,9 @@ func NewL7FlowBackend(c lmaelastic.Client) bapi.L7FlowBackend {
 		aggMins:          mins,
 		aggMaxs:          maxs,
 		aggMeans:         means,
+
+		queryHelper: helper,
+		index:       idx,
 	}
 }
 
@@ -102,7 +123,7 @@ func (b *l7FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.L
 
 	// Build the aggregation request.
 	query := &lmaelastic.CompositeAggregationQuery{
-		DocumentIndex:           b.index(i),
+		DocumentIndex:           b.index.Index(i),
 		Query:                   b.buildQuery(i, opts),
 		Name:                    "flows",
 		AggCompositeSourceInfos: b.compositeSources,
@@ -173,16 +194,8 @@ func (b *l7FlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Comp
 
 // buildQuery builds an elastic query using the given parameters.
 func (b *l7FlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L7FlowParams) elastic.Query {
+	query := b.queryHelper.BaseQuery(i)
 	start, end := logtools.ExtractTimeRange(opts.TimeRange)
-	return lmaindex.L7Logs().NewTimeRangeQuery(start, end)
-}
-
-func (b *l7FlowBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_l7.%s.%s.*", i.Tenant, i.Cluster)
-	}
-
-	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("tigera_secure_ee_l7.%s.*", i.Cluster)
+	query.Must(b.queryHelper.NewTimeRangeQuery(start, end))
+	return query
 }

@@ -31,12 +31,13 @@ static CALI_BPF_INLINE void calico_report_dns(struct cali_tc_ctx *ctx)
 
 static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 {
+#ifndef IPVER6
 	// Support UDP only; bail for TCP or any other IP protocol.
 	if (ctx->state->ip_proto != IPPROTO_UDP) {
 		return;
 	}
 
-	__be32 dst_ip = ctx->state->ip_dst;
+	ipv46_addr_t dst_ip = ctx->state->ip_dst;
 	__be16 dst_port = bpf_htons(ctx->state->dport);
 
 	// For the case where the packet was sent from a socket on this host, get the
@@ -60,12 +61,12 @@ static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 		// the message has the post-DNAT IP and port.  Miss implies that CTLB
 		// isn't in use or DNAT hasn't happened yet; in those cases the message in
 		// hand still has the dst IP and port that we need.)
-		struct sendrecv4_key key = {
+		struct sendrec_key key = {
 			.ip	= dst_ip,
 			.port	= dst_port,
 			.cookie	= cookie,
 		};
-		struct sendrecv4_val *revnat = cali_v4_srmsg_lookup_elem(&key);
+		struct sendrec_val *revnat = cali_srmsg_lookup_elem(&key);
 		if (revnat) {
 			CALI_DEBUG("Got cali_v4_srmsg entry\n");
 			dst_ip = revnat->ip;
@@ -74,7 +75,7 @@ static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 			CALI_DEBUG("No cali_v4_srmsg entry\n");
 		}
 	}
-	CALI_DEBUG("Now have dst IP 0x%x port %d\n", bpf_ntohl(dst_ip), bpf_ntohs(dst_port));
+	CALI_DEBUG("Now have dst IP 0x%x port %d\n", debug_ip(dst_ip), bpf_ntohs(dst_port));
 
 	// Compare dst IP and port against 'ipset' for trusted DNS servers.
 	union ip4_set_lpm_key sip;
@@ -95,8 +96,7 @@ static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 	} else {
 		CALI_DEBUG("Dst IP/port are not trusted for DNS\n");
 	}
-
-	return;
+#endif
 }
 
 static CALI_BPF_INLINE void calico_dns_check(struct cali_tc_ctx *ctx)

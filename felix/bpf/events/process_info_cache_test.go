@@ -90,7 +90,7 @@ var _ = Describe("ProcessInfoCache tests", func() {
 		testProcessPathChan = make(chan events.ProcessPath, 10)
 		pp := events.NewBPFProcessPathCache(testProcessPathChan, gcInterval, 30*ttl)
 		pic = events.NewBPFProcessInfoCache(testProcessChan, testTcpStatsChan, gcInterval, ttl, pp)
-		pic.Start()
+		Expect(pic.Start()).NotTo(HaveOccurred())
 	})
 	It("Should cache process information", func() {
 		By("Checking that lookup cache doesn't contain the right process info")

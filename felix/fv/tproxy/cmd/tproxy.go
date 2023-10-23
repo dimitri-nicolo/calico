@@ -213,12 +213,12 @@ func proxyConnection(down, up net.Conn) {
 	wg.Add(2)
 
 	go func() {
-		io.Copy(down, up)
+		_, _ = io.Copy(down, up)
 		wg.Done()
 	}()
 
 	go func() {
-		io.Copy(up, down)
+		_, _ = io.Copy(up, down)
 		wg.Done()
 	}()
 

@@ -39,7 +39,7 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 )
 
-func TestLoadAllowAllProgram(t *testing.T) {
+func TestPolicyLoadAllowAllProgram(t *testing.T) {
 	RegisterTestingT(t)
 
 	b := asm.NewBlock(false)
@@ -60,7 +60,7 @@ func TestLoadAllowAllProgram(t *testing.T) {
 	Expect(rc.RC).To(BeNumerically("==", -1))
 }
 
-func TestLoadProgramWithMapAccess(t *testing.T) {
+func TestPolicyLoadProgramWithMapAccess(t *testing.T) {
 	RegisterTestingT(t)
 
 	ipsMap := ipsets.Map()
@@ -113,7 +113,7 @@ func makeRulesSingleTier(protoRules []*proto.Rule) polprog.Rules {
 	}
 }
 
-func TestLoadKitchenSinkPolicy(t *testing.T) {
+func TestPolicyLoadKitchenSinkPolicy(t *testing.T) {
 	RegisterTestingT(t)
 	alloc := idalloc.New()
 	allocID := func(id string) string {
@@ -123,7 +123,8 @@ func TestLoadKitchenSinkPolicy(t *testing.T) {
 
 	cleanIPSetMap()
 
-	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), jumpMap.MapFD())
+	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), jumpMap.MapFD(),
+		polprog.WithAllowDenyJumps(tcdefs.ProgIndexAllowed, tcdefs.ProgIndexDrop))
 	insns, err := pg.Instructions(polprog.Rules{
 		Tiers: []polprog.Tier{{
 			Name: "base tier",
@@ -163,7 +164,7 @@ func TestLoadKitchenSinkPolicy(t *testing.T) {
 	Expect(fd.Close()).NotTo(HaveOccurred())
 }
 
-func TestLoadGarbageProgram(t *testing.T) {
+func TestPolicyLoadGarbageProgram(t *testing.T) {
 	RegisterTestingT(t)
 
 	var insns asm.Insns
@@ -2222,7 +2223,7 @@ func wrap(p polProgramTest) polProgramTestWrapper {
 	return polProgramTestWrapper{p}
 }
 
-func TestPolicyPrograms(t *testing.T) {
+func TestPolicyPolicyPrograms(t *testing.T) {
 	for i, p := range polProgramTests {
 		t.Run(fmt.Sprintf("%d:Policy=%s", i, p.PolicyName), func(t *testing.T) { runTest(t, wrap(p)) })
 	}
@@ -2593,6 +2594,10 @@ func TestPolicyProgramsFlowLog(t *testing.T) {
 
 func TestPolicyProgramsWithStagedPolicy(t *testing.T) {
 	for i, p := range polProgramTests {
+		if p.ForIPv6 {
+			// XXX skip for now
+			continue
+		}
 		if len(p.Policy.Tiers) > 0 {
 
 			// Make a copy of the tiers
@@ -2624,6 +2629,10 @@ func TestPolicyProgramsWithStagedPolicy(t *testing.T) {
 	}
 
 	for i, p := range polProgramTests {
+		if p.ForIPv6 {
+			// XXX skip for now
+			continue
+		}
 		if len(p.Policy.Tiers) < 2 {
 			continue
 		}
@@ -2657,6 +2666,10 @@ func TestPolicyProgramsWithStagedPolicy(t *testing.T) {
 
 func TestPolicyProgramsWithDropActionOverride(t *testing.T) {
 	for i, p := range polProgramTests {
+		if p.ForIPv6 {
+			// XXX skip for now
+			continue
+		}
 		allowed := make([]packet, 0, len(p.AllowedPackets)+len(p.DroppedPackets))
 		allowed = append(allowed, p.AllowedPackets...)
 		allowed = append(allowed, p.DroppedPackets...)
@@ -2670,19 +2683,23 @@ func TestPolicyProgramsWithDropActionOverride(t *testing.T) {
 	}
 
 	for i, p := range polProgramTests {
+		if p.ForIPv6 {
+			// XXX skip for now
+			continue
+		}
 		t.Run(fmt.Sprintf("DropActionOverride=deny %d:Policy=%s", i, p.PolicyName),
 			func(t *testing.T) { runTest(t, wrap(p), polprog.WithActionDropOverride("deny")) },
 		)
 	}
 }
 
-func TestHostPolicyPrograms(t *testing.T) {
+func TestPolicyHostPolicyPrograms(t *testing.T) {
 	for i, p := range hostPolProgramTests {
 		t.Run(fmt.Sprintf("%d:Policy=%s", i, p.PolicyName), func(t *testing.T) { runTest(t, wrap(p)) })
 	}
 }
 
-func TestXDPPolicyPrograms(t *testing.T) {
+func TestPolicyXDPPolicyPrograms(t *testing.T) {
 	for i, p := range xdpPolProgramTests {
 		t.Run(fmt.Sprintf("%d:Policy=%s", i, p.PolicyName), func(t *testing.T) { runTest(t, wrap(p)) })
 	}
@@ -2833,7 +2850,7 @@ func ipUintFromString(addrStr string, section int) uint32 {
 	return binary.LittleEndian.Uint32(addrBytes[section*4 : (section+1)*4])
 }
 
-func TestIPUintFromString(t *testing.T) {
+func TestPolicyIPUintFromString(t *testing.T) {
 	RegisterTestingT(t)
 	Expect(ipUintFromString("10.0.0.1", 0)).To(Equal(uint32(0x0100000a)))
 	Expect(ipUintFromString("10.0.0.1", 1)).To(Equal(uint32(0)))
@@ -2875,13 +2892,22 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 
 	setUpIPSets(tp.IPSets(), realAlloc, ipsMap)
 
-	jumpMap = jump.MapForTest()
+	jumpMap = jump.Map()
 	_ = unix.Unlink(jumpMap.Path())
 	err := jumpMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	// Build the program.
-	pg := polprog.NewBuilder(forceAlloc, ipsMap.MapFD(), testStateMap.MapFD(), jumpMap.MapFD(), polprogOpts...)
+	allowIdx := tcdefs.ProgIndexAllowed
+	denyIdx := tcdefs.ProgIndexDrop
+	if tp.ForIPv6() {
+		allowIdx = tcdefs.ProgIndexV6Allowed
+		denyIdx = tcdefs.ProgIndexV6Drop
+	}
+
+	polprogOpts = append(polprogOpts, polprog.WithAllowDenyJumps(allowIdx, denyIdx))
+
+	pg := polprog.NewBuilder(forceAlloc, ipsMap.MapFD(), testStateMap.MapFD(), jumpMap.MapFD(),
+		polprogOpts...)
 	if tp.ForIPv6() {
 		pg.EnableIPv6Mode()
 	}

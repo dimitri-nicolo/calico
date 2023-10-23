@@ -41,8 +41,7 @@ type EgressGWTracker struct {
 
 	healthReportC chan<- EGWHealthReport
 
-	fastRetryTicker *jitter.Ticker
-	context         context.Context
+	context context.Context
 }
 
 func NewEgressGWTracker(ctx context.Context, healthReportC chan<- EGWHealthReport, pollInterval time.Duration, pollFailCount int) *EgressGWTracker {
@@ -168,7 +167,7 @@ func (m *EgressGWTracker) GatewaysByID(id string) (gatewaysByIP, bool) {
 }
 
 func (m *EgressGWTracker) AllGatewayIPs() set.Set[ip.Addr] {
-	gatewayIPs := set.NewBoxed[ip.Addr]()
+	gatewayIPs := set.New[ip.Addr]()
 	for _, gateways := range m.ipSetIDToGateways {
 		for _, g := range gateways {
 			gatewayIPs.Add(g.addr)
@@ -291,7 +290,6 @@ type egwPoller struct {
 	url                 string
 	cancel              func()
 	reportC             chan<- EGWHealthReport
-	fastRetryC          <-chan time.Time
 	pollInterval        time.Duration
 	minPollFailureCount int
 }
@@ -433,7 +431,7 @@ func (p *egwPoller) doOneProbe(ctx context.Context, logCtx *log.Entry) (EGWHealt
 type gatewaysByIP map[ip.Addr]*gateway
 
 func (g gatewaysByIP) allIPs() set.Set[ip.Addr] {
-	s := set.NewBoxed[ip.Addr]()
+	s := set.New[ip.Addr]()
 	for _, m := range g {
 		s.Add(m.addr)
 	}

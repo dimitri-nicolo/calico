@@ -211,10 +211,7 @@ func (aec *ActiveEgressCalculator) egressPolicyIsValid(name string) bool {
 		return false
 	}
 	_, exists := aec.policies[name]
-	if !exists {
-		return false
-	}
-	return true
+	return exists
 }
 
 func (aec *ActiveEgressCalculator) calculateEgressConfig(epData *epData) epEgressConfig {

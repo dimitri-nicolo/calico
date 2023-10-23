@@ -3,35 +3,73 @@
 package compliance
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
+	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
-func NewSnapshotBackend(c lmaelastic.Client, cache bapi.Cache, deepPaginationCutOff int64) bapi.SnapshotsBackend {
+func NewSnapshotBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.SnapshotsBackend {
 	return &snapshotsBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
+		queryHelper:          lmaindex.MultiIndexComplianceSnapshots(),
+		singleIndex:          false,
+		index:                index.ComplianceSnapshotMultiIndex,
+	}
+}
+
+func NewSingleIndexSnapshotBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.SnapshotsBackend {
+	return &snapshotsBackend{
+		client:               c.Backend(),
+		lmaclient:            c,
+		templates:            cache,
+		deepPaginationCutOff: deepPaginationCutOff,
+		queryHelper:          lmaindex.SingleIndexComplianceSnapshots(),
+		singleIndex:          true,
+		index:                index.ComplianceSnapshotIndex,
 	}
 }
 
 type snapshotsBackend struct {
 	client               *elastic.Client
-	templates            bapi.Cache
+	templates            bapi.IndexInitializer
 	lmaclient            lmaelastic.Client
 	deepPaginationCutOff int64
+	queryHelper          lmaindex.Helper
+	singleIndex          bool
+	index                api.Index
+}
+
+// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// the backend is configured to write to a single index.
+func (b *snapshotsBackend) prepareForWrite(i bapi.ClusterInfo, l *list.TimestampedResourceList) (interface{}, error) {
+	if b.singleIndex {
+		// Insert cluster and tenant into the document. TimestampedResourceLists have a custom
+		// JSON marshaler so we need to add the cluster and tenant to the JSON directly.
+		b, err := l.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		buf := bytes.NewBuffer(bytes.TrimSuffix(b, []byte("}")))
+		buf.WriteString(fmt.Sprintf(`,"cluster":"%s","tenant":"%s"}`, i.Cluster, i.Tenant))
+		return buf.String(), nil
+	}
+	return l, nil
 }
 
 func (b *snapshotsBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.SnapshotParams) (*v1.List[v1.Snapshot], error) {
@@ -63,7 +101,7 @@ func (b *snapshotsBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v
 
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(i), results, b.deepPaginationCutOff, log)
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
 	if err != nil {
 		return nil, err
 	}
@@ -82,13 +120,13 @@ func (b *snapshotsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v
 		return nil, err
 	}
 
-	err := b.templates.InitializeIfNeeded(ctx, bapi.Snapshots, i)
+	err := b.templates.Initialize(ctx, b.index, i)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine the index to write to using an alias
-	alias := b.writeAlias(i)
+	alias := b.index.Alias(i)
 	log.Infof("Writing snapshot data in bulk to alias %s", alias)
 
 	// Build a bulk request using the provided logs.
@@ -96,7 +134,12 @@ func (b *snapshotsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v
 
 	for _, f := range l {
 		// Add this log to the bulk request.
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(&f.ResourceList).Id(f.ResourceList.String())
+		doc, err := b.prepareForWrite(i, &f.ResourceList)
+		if err != nil {
+			log.WithError(err).Error("Error preparing snapshot for write")
+			continue
+		}
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(doc).Id(f.ResourceList.String())
 		bulk.Add(req)
 	}
 
@@ -125,7 +168,7 @@ func (b *snapshotsBackend) getSearch(i bapi.ClusterInfo, opts *v1.SnapshotParams
 		return nil, 0, err
 	}
 
-	q := b.buildQuery(opts)
+	q := b.buildQuery(i, opts)
 
 	// Build the query, sorting by time.
 	query := b.client.Search().
@@ -135,7 +178,7 @@ func (b *snapshotsBackend) getSearch(i bapi.ClusterInfo, opts *v1.SnapshotParams
 	// Configure pagination options
 	var startFrom int
 	var err error
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -152,19 +195,13 @@ func (b *snapshotsBackend) getSearch(i bapi.ClusterInfo, opts *v1.SnapshotParams
 	return query, startFrom, nil
 }
 
-func (b *snapshotsBackend) buildQuery(p *v1.SnapshotParams) elastic.Query {
-	query := elastic.NewBoolQuery()
+func (b *snapshotsBackend) buildQuery(i api.ClusterInfo, p *v1.SnapshotParams) elastic.Query {
+	query := b.queryHelper.BaseQuery(i)
+
 	if p.TimeRange != nil {
-		unset := time.Time{}
-		tr := elastic.NewRangeQuery("requestCompletedTimestamp")
-		if p.TimeRange.From != unset {
-			tr.From(p.TimeRange.From)
-		}
-		if p.TimeRange.To != unset {
-			tr.To(p.TimeRange.To)
-		}
-		query.Must(tr)
+		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange.From, p.TimeRange.To))
 	}
+
 	if p.TypeMatch != nil {
 		if p.TypeMatch.Kind != "" {
 			query.Must(elastic.NewTermQuery("kind", p.TypeMatch.Kind))
@@ -174,18 +211,4 @@ func (b *snapshotsBackend) buildQuery(p *v1.SnapshotParams) elastic.Query {
 		}
 	}
 	return query
-}
-
-func (b *snapshotsBackend) index(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_snapshots.%s.%s.*", i.Tenant, i.Cluster)
-	}
-	return fmt.Sprintf("tigera_secure_ee_snapshots.%s.*", i.Cluster)
-}
-
-func (b *snapshotsBackend) writeAlias(i bapi.ClusterInfo) string {
-	if i.Tenant != "" {
-		return fmt.Sprintf("tigera_secure_ee_snapshots.%s.%s.", i.Tenant, i.Cluster)
-	}
-	return fmt.Sprintf("tigera_secure_ee_snapshots.%s.", i.Cluster)
 }

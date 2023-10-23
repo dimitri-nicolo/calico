@@ -38,10 +38,6 @@ blocks:
 promotions:
   # Have separate promotions for cutting releases so we can re-run
   # them individually if they fail, and so we can run them in parallel.
-  - name: Cut Anomaly Detection API Release
-    pipeline_file: ../anomaly-detection-api/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
   - name: Cut API Server Release
     pipeline_file: ../apiserver/.semaphore/cut-release.yml
     auto_promote:
@@ -140,5 +136,13 @@ promotions:
       when: "result = 'passed'"
   - name: Cut Linseed Release
     pipeline_file: ../linseed/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Ingress Collector Release
+    pipeline_file: ../ingress-collector/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut l7 Collector Release
+    pipeline_file: ../l7-collector/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"

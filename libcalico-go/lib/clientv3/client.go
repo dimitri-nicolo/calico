@@ -278,6 +278,11 @@ func (c client) EgressGatewayPolicy() EgressGatewayPolicyInterface {
 	return EgressGatewayPolicy{client: c}
 }
 
+// SecurityEventWebhook returns an interface for managing the SecurityEventWebhook resource.
+func (c client) SecurityEventWebhook() SecurityEventWebhookInterface {
+	return SecurityEventWebhooks{client: c}
+}
+
 type poolAccessor struct {
 	client *client
 }

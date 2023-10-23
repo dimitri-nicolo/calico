@@ -6,6 +6,8 @@ import (
 	"k8s.io/client-go/rest"
 
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // addHeaderRoundTripper implements the http.RoundTripper interface and inserts the headers in headers field
@@ -44,7 +46,7 @@ func ManagedClusterClient(config *rest.Config, multiClusterForwardingEndpoint, m
 		config.CAFile = multiClusterForwardingCA
 		config.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
 			return &addHeaderRoundTripper{
-				headers: map[string][]string{"x-cluster-id": {clusterName}},
+				headers: map[string][]string{lmak8s.XClusterIDHeader: {clusterName}},
 				rt:      rt,
 			}
 		}

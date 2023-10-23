@@ -4,20 +4,13 @@ package dnslog
 
 import (
 	"net"
-	"sync"
 	"time"
 
 	"github.com/google/gopacket/layers"
-	"golang.org/x/net/idna"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/utils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-)
-
-var (
-	idnaProfile *idna.Profile
-	ipOnce      sync.Once
 )
 
 type Update struct {
@@ -77,19 +70,6 @@ func (a *DNSSpec) Merge(b DNSSpec) {
 	a.Latency.Count += b.Latency.Count
 }
 
-type dnsNameEncoded struct {
-	Name  string      `json:"name"`
-	Class interface{} `json:"class"`
-	Type  interface{} `json:"type"`
-}
-
-type dnsServerEncoded struct {
-	Name      string `json:"name"`
-	NameAggr  string `json:"name_aggr"`
-	Namespace string `json:"namespace"`
-	IP        string `json:"ip"`
-}
-
 type DNSLabels map[string]string
 
 type DNSStats struct {
@@ -112,7 +92,11 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *v1
 	// Convert servers from a map to a slice.
 	var dnsServers []v1.DNSServer
 	for endpointMeta, labels := range d.Servers {
-		dnsServers = append(dnsServers, v1.DNSServer{endpointMeta.Endpoint, net.ParseIP(endpointMeta.IP), labels})
+		dnsServers = append(dnsServers, v1.DNSServer{
+			Endpoint: endpointMeta.Endpoint,
+			IP:       net.ParseIP(endpointMeta.IP),
+			Labels:   labels,
+		})
 	}
 
 	res := &v1.DNSLog{

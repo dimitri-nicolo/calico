@@ -10,7 +10,10 @@ import (
 	"time"
 
 	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	"github.com/stretchr/testify/require"
@@ -21,10 +24,23 @@ import (
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
-func TestFV_ComplianceBenchmarks(t *testing.T) {
-	t.Run("should return an empty list if there are no benchmarks", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
+func RunComplianceBenchmarkTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
+	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		defer setupAndTeardown(t, args, index.ComplianceBenchmarkMultiIndex)()
+		testFn(t, index.ComplianceBenchmarkMultiIndex)
+	})
 
+	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		args.Backend = config.BackendTypeSingleIndex
+		defer setupAndTeardown(t, args, index.ComplianceBenchmarkIndex)()
+		testFn(t, index.ComplianceBenchmarkIndex)
+	})
+}
+
+func TestFV_ComplianceBenchmarks(t *testing.T) {
+	RunComplianceBenchmarkTest(t, "should return an empty list if there are no benchmarks", func(t *testing.T, idx bapi.Index) {
 		params := v1.BenchmarksParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -40,9 +56,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 		require.Equal(t, []v1.Benchmarks{}, benchmarks.Items)
 	})
 
-	t.Run("should create and list benchmarks", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceBenchmarkTest(t, "should create and list benchmarks", func(t *testing.T, idx bapi.Index) {
 		benchmarks := v1.Benchmarks{
 			Version:           "v1",
 			KubernetesVersion: "v1.0",
@@ -67,7 +81,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_benchmark_results*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Read it back, passing an ID query.
 		params := v1.BenchmarksParams{ID: benchmarks.UID()}
@@ -99,9 +113,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 		require.Equal(t, benchmarks, resp.Items[0])
 	})
 
-	t.Run("should support pagination", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceBenchmarkTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
 		totalItems := 5
 
 		// Create 5 Benchmarks.
@@ -119,7 +131,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_benchmark_results*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
@@ -191,9 +203,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 
-	t.Run("should support pagination for items >= 10000 for Benchmarks", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceBenchmarkTest(t, "should support pagination for items >= 10000 for Benchmarks", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K benchmarks.
 		logTime := time.Unix(0, 0).UTC()
@@ -211,7 +221,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Succeeded, "create benchmarks did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_benchmark_results*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Stream through all the items.
 		params := v1.BenchmarksParams{
@@ -238,15 +248,14 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 
 		require.Equal(t, receivedItems, totalItems)
 	})
-
 }
 
 func TestFV_BenchmarksTenancy(t *testing.T) {
-	t.Run("should support tenancy restriction", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceBenchmarkTest(t, "should support tenancy restriction", func(t *testing.T, idx bapi.Index) {
 		// Instantiate a client for an unexpected tenant.
-		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		args := DefaultLinseedArgs()
+		args.TenantID = "bad-tenant"
+		tenantCLI, err := NewLinseedClient(args)
 		require.NoError(t, err)
 
 		// Create a basic flow log. We expect this to fail, since we're using

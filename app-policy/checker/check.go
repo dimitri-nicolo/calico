@@ -90,6 +90,43 @@ func lookupEndpointsFromRequest(store *policystore.PolicyStore, req *authz.Check
 	return
 }
 
+func lookupEndpointKeysFromRequest(store *policystore.PolicyStore, req *authz.CheckRequest) (source, destination []proto.WorkloadEndpointID, err error) {
+	log.Debugf("extracting endpoints from request %s", req.String())
+
+	// Extract source and destination IP addresses if possible:
+	requestAttributes := req.GetAttributes()
+	if requestAttributes == nil {
+		err = errors.New("cannot process specified request data")
+		return
+	}
+
+	// map destination first
+	if addr, port, ok := addrPortFromPeer(requestAttributes.Destination); ok {
+		log.Debugf("found destination address we would like to match: [%v:%v]", addr, port)
+		destinationIp, err := ip.ParseCIDROrIP(addr)
+		if err != nil {
+			rlog.Warnf("cannot process addr %v: %v", addr, err)
+		} else {
+			log.Debug("trying to match destination: ", destinationIp)
+			destination = ipToEndpointKeys(store, destinationIp.Addr())
+		}
+	}
+
+	// map source next
+	if addr, port, ok := addrPortFromPeer(requestAttributes.Source); ok {
+		log.Debugf("found source address we would like to match: [%v:%v]", addr, port)
+		sourceIp, err := ip.ParseCIDROrIP(addr)
+		if err != nil {
+			rlog.Warnf("cannot process addr %v: %v", addr, err)
+		} else {
+			log.Debug("trying to match source: ", sourceIp)
+			source = ipToEndpointKeys(store, sourceIp.Addr())
+		}
+	}
+
+	return
+}
+
 func addrPortFromPeer(peer *authz.AttributeContext_Peer) (addr string, port uint32, ok bool) {
 	if peer == nil {
 		return
@@ -103,6 +140,10 @@ func addrPortFromPeer(peer *authz.AttributeContext_Peer) (addr string, port uint
 
 func ipToEndpoints(store *policystore.PolicyStore, addr ip.Addr) []*proto.WorkloadEndpoint {
 	return store.IPToIndexes.Get(addr)
+}
+
+func ipToEndpointKeys(store *policystore.PolicyStore, addr ip.Addr) []proto.WorkloadEndpointID {
+	return store.IPToIndexes.Keys(addr)
 }
 
 func checkRequest(store *policystore.PolicyStore, req *authz.CheckRequest) status.Status {

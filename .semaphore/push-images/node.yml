@@ -59,4 +59,4 @@ blocks:
         - name: DEV_REGISTRIES
           value: gcr.io/unique-caldron-775/cnx/tigera
         commands:
-        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C node build-windows-upgrade-archive image-tar-windows-all cd-windows-all CONFIRM=true; fi
+        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C node release-windows CONFIRM=true; fi

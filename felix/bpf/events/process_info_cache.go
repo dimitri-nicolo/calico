@@ -37,7 +37,6 @@ type BPFProcessInfoCache struct {
 	stopC             chan struct{}
 	eventProcessInfo  <-chan EventProtoStats
 	eventTcpStatsInfo <-chan EventTcpStats
-	processInfoC      chan collector.ProcessInfo
 	processPathCache  *BPFProcessPathCache
 }
 
@@ -166,7 +165,6 @@ func (r *BPFProcessInfoCache) updateCacheWithProcessInfo(info collector.ProcessI
 		}
 		r.cache[info.Tuple] = entry
 	}
-	return
 }
 
 func (r *BPFProcessInfoCache) updateCacheWithStats(info collector.ProcessInfo) {

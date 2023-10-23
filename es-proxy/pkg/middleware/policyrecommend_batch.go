@@ -61,11 +61,7 @@ func BatchStagedActionsHandler(auth lmaauth.JWTAuth, clientSetk8sClientFactory l
 			return
 		}
 		// Get the cluster id, used for getting the cluster client set
-		clusterID := req.Header.Get(clusterIdHeader)
-		if clusterID == "" {
-			log.Debug("Cluster ID not present, setting default")
-			clusterID = datastore.DefaultCluster
-		}
+		clusterID := MaybeParseClusterNameFromRequest(req)
 		log.WithField("cluster", clusterID).Debug("Cluster ID from request")
 		// Authenticate user
 		usr, stat, err := auth.Authenticate(req)

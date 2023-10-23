@@ -5,6 +5,7 @@
 #include "ut.h"
 #include "bpf.h"
 #include "perf.h"
+#include "skb.h"
 
 #include <linux/ip.h>
 #include <linux/udp.h>
@@ -22,17 +23,18 @@ struct tuple {
 static CALI_BPF_INLINE int calico_unittest_entry (struct __sk_buff *skb)
 {
 	int err;
-	struct cali_tc_ctx ctx = {
+	struct cali_tc_ctx _ctx = {
 		.skb = skb,
 		.ipheader_len = IP_SIZE,
 	};
+	struct cali_tc_ctx *ctx = &_ctx;
 
-	if (skb_refresh_validate_ptrs(&ctx, UDP_SIZE)) {
-		ctx.fwd.reason = CALI_REASON_SHORT;
+	if (skb_refresh_validate_ptrs(ctx, UDP_SIZE)) {
+		ctx->fwd.reason = CALI_REASON_SHORT;
 		CALI_DEBUG("Too short\n");
 		return -1;
 	}
-	struct iphdr *ip = ctx.ip_header;
+	struct iphdr *ip = ctx->ip_header;
 
 	struct tuple tp = {
 		.hdr = {

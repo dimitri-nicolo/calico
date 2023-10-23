@@ -168,7 +168,7 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 
 	// We want to allow user to be able to select using only From the UI
 	if params.TimeRange != nil && params.TimeRange.To.IsZero() && !params.TimeRange.From.IsZero() {
-		params.TimeRange.To = time.Now()
+		params.TimeRange.To = time.Now().UTC()
 	}
 
 	return &params, nil

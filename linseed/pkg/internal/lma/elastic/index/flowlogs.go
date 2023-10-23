@@ -11,21 +11,27 @@ import (
 	"github.com/olivere/elastic/v7"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
-const esFlowLogsIndexPrefix = "tigera_secure_ee_flows"
+// SingleIndexFlowLogs returns an instance of the flow logs index helper that uses a single index.
+func SingleIndexFlowLogs() Helper {
+	return flowLogsIndexHelper{singleIndex: true}
+}
 
-// FlowLogs returns an instance of the flow logs index helper.
-func FlowLogs() Helper {
+// MultiIndexFlowLogs returns an instance of the flow logs multi-index helper.
+func MultiIndexFlowLogs() Helper {
 	return flowLogsIndexHelper{}
 }
 
 // flowLogsIndexHelper implements the Helper interface for flow logs.
-type flowLogsIndexHelper struct{}
+type flowLogsIndexHelper struct {
+	singleIndex bool
+}
 
 // NewFlowLogsConverter returns a Converter instance defined for flow logs.
 func NewFlowLogsConverter() converter {
@@ -49,6 +55,17 @@ func flowLogsAtomToElastic(a *query.Atom) JsonObject {
 }
 
 // Helper.
+
+func (h flowLogsIndexHelper) BaseQuery(i bapi.ClusterInfo) *elastic.BoolQuery {
+	q := elastic.NewBoolQuery()
+	if h.singleIndex {
+		q.Must(elastic.NewTermQuery("cluster", i.Cluster))
+		if i.Tenant != "" {
+			q.Must(elastic.NewTermQuery("tenant", i.Tenant))
+		}
+	}
+	return q
+}
 
 func (h flowLogsIndexHelper) NewSelectorQuery(selector string) (elastic.Query, error) {
 	q, err := query.ParseQuery(selector)
@@ -175,8 +192,4 @@ func (h flowLogsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query
 
 func (h flowLogsIndexHelper) GetTimeField() string {
 	return "end_time"
-}
-
-func (h flowLogsIndexHelper) GetIndex(cluster string) string {
-	return fmt.Sprintf("%s.%s.*", esFlowLogsIndexPrefix, cluster)
 }

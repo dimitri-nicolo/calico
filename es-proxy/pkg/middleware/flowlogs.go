@@ -280,7 +280,7 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	}
 
 	if params.ClusterName == "" {
-		params.ClusterName = "cluster"
+		params.ClusterName = MaybeParseClusterNameFromRequest(req)
 	}
 	srcTypeValid := validateFlowTypes(params.SourceType)
 	if !srcTypeValid {

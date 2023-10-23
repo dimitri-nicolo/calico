@@ -244,7 +244,11 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 				Type:  layers.DNSTypeA,
 			})
 
-			Expect(name).Should(Equal(v1.DNSName{"tigera.io", v1.DNSClass(layers.DNSClassIN), v1.DNSType(layers.DNSTypeA)}))
+			Expect(name).Should(Equal(v1.DNSName{
+				Name:  "tigera.io",
+				Class: v1.DNSClass(layers.DNSClassIN),
+				Type:  v1.DNSType(layers.DNSTypeA),
+			}))
 		})
 
 		It("returns rdata as expected", func() {

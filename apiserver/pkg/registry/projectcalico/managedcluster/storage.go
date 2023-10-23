@@ -5,8 +5,6 @@ package managedcluster
 import (
 	"context"
 
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/server"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -15,6 +13,10 @@ import (
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/apiserver/pkg/storage/calico"
 )
 
 // rest implements a RESTStorage for API services against etcd
@@ -24,12 +26,12 @@ type REST struct {
 
 // EmptyObject returns an empty instance
 func EmptyObject() runtime.Object {
-	return &calico.ManagedCluster{}
+	return &v3.ManagedCluster{}
 }
 
 // NewList returns a new shell of a binding list
 func NewList() runtime.Object {
-	return &calico.ManagedClusterList{}
+	return &v3.ManagedClusterList{}
 }
 
 // StatusREST implements the REST endpoint for changing the status of a deployment
@@ -38,7 +40,7 @@ type StatusREST struct {
 }
 
 func (r *StatusREST) New() runtime.Object {
-	return &calico.ManagedCluster{}
+	return &v3.ManagedCluster{}
 }
 
 func (r *StatusREST) Destroy() {
@@ -68,6 +70,13 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, *StatusREST, e
 		if err != nil {
 			return "", err
 		}
+		if calico.MultiTenantEnabled {
+			return genericregistry.NamespaceKeyFunc(
+				genericapirequest.WithNamespace(
+					genericapirequest.NewContext(),
+					accessor.GetNamespace()),
+				prefix, accessor.GetName())
+		}
 		return genericregistry.NoNamespaceKeyFunc(
 			genericapirequest.NewContext(),
 			prefix,
@@ -78,8 +87,8 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, *StatusREST, e
 		prefix,
 		keyFunc,
 		strategy,
-		func() runtime.Object { return &calico.ManagedCluster{} },
-		func() runtime.Object { return &calico.ManagedClusterList{} },
+		func() runtime.Object { return &v3.ManagedCluster{} },
+		func() runtime.Object { return &v3.ManagedClusterList{} },
 		GetAttrs,
 		nil,
 		nil,
@@ -88,15 +97,15 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, *StatusREST, e
 		return nil, nil, err
 	}
 	store := &genericregistry.Store{
-		NewFunc:     func() runtime.Object { return &calico.ManagedCluster{} },
-		NewListFunc: func() runtime.Object { return &calico.ManagedClusterList{} },
-		KeyRootFunc: opts.KeyRootFunc(false),
-		KeyFunc:     opts.KeyFunc(false),
+		NewFunc:     func() runtime.Object { return &v3.ManagedCluster{} },
+		NewListFunc: func() runtime.Object { return &v3.ManagedClusterList{} },
+		KeyRootFunc: opts.KeyRootFunc(calico.MultiTenantEnabled),
+		KeyFunc:     opts.KeyFunc(calico.MultiTenantEnabled),
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
-			return obj.(*calico.ManagedCluster).Name, nil
+			return obj.(*v3.ManagedCluster).Name, nil
 		},
 		PredicateFunc:            MatchManagedCluster,
-		DefaultQualifiedResource: calico.Resource("managedclusters"),
+		DefaultQualifiedResource: v3.Resource("managedclusters"),
 
 		CreateStrategy:          strategy,
 		UpdateStrategy:          strategy,

@@ -143,37 +143,6 @@ var _ = Describe("ElasticseachUsers", func() {
 							},
 						},
 					},
-					"tigera-ee-ad-job": {
-						Username: "tigera-ee-ad-job-managed-cluster-secure",
-						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-ad-job-managed-cluster-secure",
-							Definition: &elasticsearch.RoleDefinition{
-								Cluster: []string{"monitor", "manage_index_templates"},
-								Indices: []elasticsearch.RoleIndex{
-									{
-										Names:      []string{"tigera_secure_ee_flows.managed-cluster.*"},
-										Privileges: []string{"read"},
-									},
-									{
-										Names:      []string{"tigera_secure_ee_dns.managed-cluster.*"},
-										Privileges: []string{"read"},
-									},
-									{
-										Names:      []string{"tigera_secure_ee_l7.managed-cluster.*"},
-										Privileges: []string{"read"},
-									},
-									{
-										Names:      []string{"tigera_secure_ee_runtime.managed-cluster.*"},
-										Privileges: []string{"read"},
-									},
-									{
-										Names:      []string{"tigera_secure_ee_events.managed-cluster.*"},
-										Privileges: []string{"read", "write"},
-									},
-								},
-							},
-						}},
-					},
 					"tigera-ee-performance-hotspots": {
 						Username: "tigera-ee-performance-hotspots-managed-cluster-secure",
 						Roles: []elasticsearch.Role{{
@@ -240,9 +209,6 @@ var _ = Describe("ElasticseachUsers", func() {
 					},
 					"tigera-ee-intrusion-detection": {
 						Username: "tigera-ee-intrusion-detection-managed-cluster",
-					},
-					"tigera-ee-ad-job": {
-						Username: "tigera-ee-ad-job-managed-cluster",
 					},
 					"tigera-ee-performance-hotspots": {
 						Username: "tigera-ee-performance-hotspots-managed-cluster",
@@ -417,37 +383,6 @@ var _ = Describe("ElasticseachUsers", func() {
 									Privileges:  []string{"all"},
 									Resources:   []string{"*"},
 								}},
-							},
-						}},
-					},
-					"tigera-ee-ad-job": {
-						Username: "tigera-ee-ad-job-secure",
-						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-ad-job-secure",
-							Definition: &elasticsearch.RoleDefinition{
-								Cluster: []string{"monitor", "manage_index_templates"},
-								Indices: []elasticsearch.RoleIndex{
-									{
-										Names:      []string{"tigera_secure_ee_flows.*.*"},
-										Privileges: []string{"read"},
-									},
-									{
-										Names:      []string{"tigera_secure_ee_dns.*.*"},
-										Privileges: []string{"read"},
-									},
-									{
-										Names:      []string{"tigera_secure_ee_l7.*.*"},
-										Privileges: []string{"read"},
-									},
-									{
-										Names:      []string{"tigera_secure_ee_runtime.*.*"},
-										Privileges: []string{"read"},
-									},
-									{
-										Names:      []string{"tigera_secure_ee_events.*.*"},
-										Privileges: []string{"read", "write"},
-									},
-								},
 							},
 						}},
 					},
@@ -626,9 +561,6 @@ var _ = Describe("ElasticseachUsers", func() {
 					},
 					"tigera-ee-installer": {
 						Username: "tigera-ee-installer",
-					},
-					"tigera-ee-ad-job": {
-						Username: "tigera-ee-ad-job",
 					},
 					"tigera-ee-sasha": {
 						Username: "tigera-ee-sasha",

@@ -41,7 +41,8 @@ type CalicoAPIConfig struct {
 
 // CalicoAPIConfigSpec contains the specification for a Calico CalicoAPIConfig resource.
 type CalicoAPIConfigSpec struct {
-	DatastoreType DatastoreType `json:"datastoreType" envconfig:"DATASTORE_TYPE"`
+	DatastoreType      DatastoreType `json:"datastoreType" envconfig:"DATASTORE_TYPE"`
+	MultiTenantEnabled bool          `json:"multiTenantEnabled" envconfig:"MULTI_TENANT_ENABLED" default:"false"`
 	// Inline the ectd config fields
 	EtcdConfig
 	// Inline the k8s config fields.

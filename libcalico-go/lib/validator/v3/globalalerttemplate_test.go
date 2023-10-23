@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
 
 package v3
 
@@ -19,23 +19,9 @@ var _ = DescribeTable("GlobalAlertTemplate Validator",
 				"expected value to be invalid")
 		}
 	},
-	Entry("valid GlobalAlertTemplate with name that relate to detector for ADJobs",
+	Entry("GlobalAlertTemplate with type AnomalyDetection - no longer valid",
 		&api.GlobalAlertTemplate{
 			ObjectMeta: v1.ObjectMeta{Name: "tigera.io.detector.port-scan"},
-			Spec: api.GlobalAlertSpec{
-				Type:        api.GlobalAlertTypeAnomalyDetection,
-				Description: "test",
-				Detector: &api.DetectorParams{
-					Name: "port_scan",
-				},
-				Severity: 100,
-			},
-		},
-		true,
-	),
-	Entry("invalid GlobalAlertTemplate with uancceptable name for detector",
-		&api.GlobalAlertTemplate{
-			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalAlertSpec{
 				Type:        api.GlobalAlertTypeAnomalyDetection,
 				Description: "test",

@@ -1036,6 +1036,80 @@ var _ = Describe("Service Test", func() {
 			// Verify requests to write events
 			verifyEventWrites([]rest.MockRequest{*requests[1]}, expectedEvents("test_files/9_with_notin_without_metric_and_no_aggregation_events_doc.json"))
 		})
+		It("12 - with substitution and aggregation", func() {
+			// Uses file with prefix 12_with_substitution_and_aggregation_* for testing this scenario
+			ga := &v3.GlobalAlert{
+				ObjectMeta: v1.ObjectMeta{
+					Name: alertName,
+				},
+				Spec: v3.GlobalAlertSpec{
+					Description: fmt.Sprintf("test alert: %s", alertName),
+					Severity:    100,
+					DataSet:     "dns",
+					Query:       "qname NOTIN ${domains} AND client_namespace IN ${namespaces}",
+					AggregateBy: []string{"client_namespace", "client_name_aggr", "qname"},
+					Substitutions: []v3.GlobalAlertSubstitution{
+						{
+							Name:   "domains",
+							Values: []string{"*cluster.local", "ec2.internal", ".in-addr.arpa", "localhost"},
+						},
+						{
+							Name:   "namespaces",
+							Values: []string{"java-app"},
+						},
+					},
+				},
+			}
+
+			lsc = client.NewMockClient("", []rest.MockResult{
+				// This is the response to the query for dns logs
+				{
+					Body: expectedAggregations("test_files/12_with_substitution_and_aggregation_response.json"),
+				},
+				// This is the response when writing events
+				{
+					Body: lsv1.BulkResponse{
+						Total:     1,
+						Succeeded: 1,
+					},
+				},
+			}...)
+
+			e, err := getTestService(lsc, httpServer, "test-cluster", ga)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// Execute the alert
+			status := e.ExecuteAlert(ctx, ga)
+
+			// Verify alert status
+			Expect(status.Healthy).To(BeTrue())
+			Expect(len(status.ErrorConditions)).To(BeZero())
+
+			// Verify requests that have been made
+			lookBack := time.Duration(10)
+			requests := lsc.Requests()
+			Expect(len(requests)).To(Equal(2))
+			// Verify requests made to extract the count field from aggregations
+			verifyQueries([]rest.MockRequest{*requests[0]}, lookBack, []*lsv1.DNSAggregationParams{
+				{
+					DNSLogParams: lsv1.DNSLogParams{
+						QueryParams: lsv1.QueryParams{
+							TimeRange: &lmav1.TimeRange{
+								From: time.Unix(0, 0).UTC().Add(-1 * lookBack),
+								To:   time.Unix(0, 0).UTC(),
+							},
+							MaxPageSize: 0,
+						},
+						LogSelectionParams: lsv1.LogSelectionParams{
+							Selector: `qname NOTIN {"*cluster.local","ec2.internal",".in-addr.arpa","localhost"} AND client_namespace IN {"java-app"}`,
+						},
+					},
+					Aggregations: expectedAggregationParams("test_files/12_with_substitution_and_aggregation_query.json"),
+				},
+			})
+			// Verify requests to write events
+			verifyEventWrites([]rest.MockRequest{*requests[1]}, expectedEvents("test_files/12_with_substitution_and_aggregation_events_doc.json"))
+		})
 	})
 
 	Context("vulnerability dataset", func() {

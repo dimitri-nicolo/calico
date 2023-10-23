@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package server
 
@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"net"
 	"net/http"
@@ -16,6 +17,9 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	authnv1 "k8s.io/api/authentication/v1"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
@@ -29,6 +33,7 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/auth"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
@@ -41,18 +46,10 @@ import (
 )
 
 const (
-	// DefaultClusterID is the name of the management cluster. No tunnel is necessary for
-	// requests with this value in the ClusterHeaderField.
-	DefaultClusterID   = "cluster"
 	DefaultReadTimeout = 45 * time.Second
 
 	// CalicoCloudTenantIDClaimName is the name of the tenantID claim in Calico Cloud issued bearer tokens
 	CalicoCloudTenantIDClaimName = "https://calicocloud.io/tenantID"
-
-	// ImpersonateUserHeader kubernetes user impersonation header name
-	ImpersonateUserHeader = "Impersonate-User"
-	// ImpersonateGroupHeader kubernetes group impersonation header name
-	ImpersonateGroupHeader = "Impersonate-Group"
 
 	AuthzCacheMaxTTL = 20 * time.Second
 )
@@ -86,7 +83,18 @@ type Server struct {
 	config        *rest.Config
 	authenticator auth.JWTAuth
 
-	defaultProxy               *proxy.Proxy
+	// defaultProxy handles requests received by voltron which are destined to the management cluster itself.
+	// this primarily serves requests made by the user's browser.
+	// when nil, the server will returns a 400 error for requests that do not have the x-cluster-id header set.
+	//
+	// defaultProxy has its own ServeMux, separate from proxyMux and internalMux.
+	defaultProxy *proxy.Proxy
+
+	// tunnelTargetWhitelist contains a list of url paths which are allowed to go down the tunnel to the managed cluster.
+	// requests that do not match this whitelist will be diverted to the management cluster even if the request has specified
+	// the x-cluster-id header.
+	//
+	// this can be used to move services to the management cluster without needing any update to the client making the request.
 	tunnelTargetWhitelist      []regexp.Regexp
 	kubernetesAPITargets       []regexp.Regexp
 	unauthenticatedTargetPaths []string
@@ -124,13 +132,12 @@ type Server struct {
 
 	accessLogger *accesslog.Logger
 
-	modifyResponse              cors.ModifyResponse
-	corsPreflightRequestHandler cors.PreflightRequestHandler
+	cors *cors.CORS
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
 // or not if they set its user and return an error if it is nil
-func New(k8s bootstrap.K8sClient, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, opts ...Option) (*Server, error) {
+func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Config, vcfg config.Config, authenticator auth.JWTAuth, opts ...Option) (*Server, error) {
 	srv := &Server{
 		k8s:           k8s,
 		config:        config,
@@ -139,6 +146,7 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, vcfg config.Config, authe
 			clusters:   make(map[string]*cluster),
 			voltronCfg: &vcfg,
 			k8sCLI:     k8s,
+			client:     client,
 		},
 		tunnelEnableKeepAlive:   true,
 		tunnelKeepAliveInterval: 100 * time.Millisecond,
@@ -161,7 +169,7 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, vcfg config.Config, authe
 
 	// Create an HTTP server to handle incoming requests.
 	srv.proxyMux = http.NewServeMux()
-	srv.proxyMux.HandleFunc("/", wrapInMetricsAndLoggingAwareHandler(vcfg.MetricsEnabled, srv.accessLogger, srv.clusterMuxer))
+	srv.proxyMux.HandleFunc("/", wrapInMetricsAndLoggingAwareHandler(vcfg.MetricsEnabled, srv.accessLogger, wrapInCORSHandler(srv.cors, srv.clusterMuxer)))
 	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
 
 	cfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
@@ -210,6 +218,8 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, vcfg config.Config, authe
 		if err != nil {
 			return nil, errors.WithMessage(err, "Could not create a template to render manifests")
 		}
+
+		srv.clusters.clientCertificatePool = srv.tunSrv.GetClientCertificatePool()
 	}
 
 	return srv, nil
@@ -291,7 +301,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			}
 		}
 
-		clusterID, fingerprint := s.extractIdentity(t)
+		clusterID, fingerprint, tunnelCert := s.extractIdentity(t)
 
 		c := s.clusters.get(clusterID)
 		if c == nil {
@@ -299,6 +309,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			t.Close()
 			continue
 		}
+		managedCertificate := c.Certificate
 
 		c.RLock()
 
@@ -307,47 +318,55 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 		func() {
 			defer c.RUnlock()
 
-			if len(c.ActiveFingerprint) == 0 {
-				log.Error("no fingerprint has been stored against the current connection")
-				closeTunnel(t)
-				return
-
-			}
-			// Before Calico Enterprise v3.15, we use md5 hash algorithm for the managed cluster
-			// certificate fingerprint. md5 is known to cause collisions and it is not approved in
-			// FIPS mode. From v3.15, we are upgrading the active fingerprint to use sha256 hash algorithm.
-			if hex.DecodedLen(len(c.ActiveFingerprint)) == sha256.Size {
-				if fingerprint != c.ActiveFingerprint {
-					log.Error("stored fingerprint does not match provided fingerprint")
+			if len(managedCertificate) != 0 {
+				if err := validateCertificate(tunnelCert, managedCertificate); err != nil {
+					log.WithError(err).Errorf("failed to verify certificate for cluster %s", clusterID)
 					closeTunnel(t)
 					return
 				}
 			} else {
-				// md5 is not approved in FIPS mode so not upgrading from md5 to sha256
-				if s.fipsModeEnabled {
-					log.Errorf("cluster %s stored fingerprint can not be updated in FIPS mode", clusterID)
+				if len(c.ActiveFingerprint) == 0 {
+					log.Error("no fingerprint has been stored against the current connection")
 					closeTunnel(t)
 					return
-				}
 
-				// check pre-v3.15 fingerprint (md5)
-				if s.extractMD5Identity(t) != c.ActiveFingerprint {
-					log.Error("stored fingerprint does not match provided fingerprint")
-					closeTunnel(t)
-					return
 				}
+				// Before Calico Enterprise v3.15, we use md5 hash algorithm for the managed cluster
+				// certificate fingerprint. md5 is known to cause collisions and it is not approved in
+				// FIPS mode. From v3.15, we are upgrading the active fingerprint to use sha256 hash algorithm.
+				if hex.DecodedLen(len(c.ActiveFingerprint)) == sha256.Size {
+					if fingerprint != c.ActiveFingerprint {
+						log.Error("stored fingerprint does not match provided fingerprint")
+						closeTunnel(t)
+						return
+					}
+				} else {
+					// md5 is not approved in FIPS mode so not upgrading from md5 to sha256
+					if s.fipsModeEnabled {
+						log.Errorf("cluster %s stored fingerprint can not be updated in FIPS mode", clusterID)
+						closeTunnel(t)
+						return
+					}
 
-				// update to v3.15 fingerprint hash (sha256) when matched
-				if err := c.updateActiveFingerprint(fingerprint); err != nil {
-					log.WithError(err).Errorf("failed to update cluster %s stored fingerprint", clusterID)
-					closeTunnel(t)
-					return
+					// check pre-v3.15 fingerprint (md5)
+					if s.extractMD5Identity(t) != c.ActiveFingerprint {
+						log.Error("stored fingerprint does not match provided fingerprint")
+						closeTunnel(t)
+						return
+					}
+
+					// update to v3.15 fingerprint hash (sha256) when matched
+					if err := c.updateActiveFingerprint(fingerprint); err != nil {
+						log.WithError(err).Errorf("failed to update cluster %s stored fingerprint", clusterID)
+						closeTunnel(t)
+						return
+					}
+
+					log.Infof("Cluster %s stored fingerprint is successfully updated", clusterID)
 				}
-
-				log.Infof("Cluster %s stored fingerprint is successfully updated", clusterID)
 			}
 
-			if err := c.assignTunnel(t, s.modifyResponse); err != nil {
+			if err := c.assignTunnel(t); err != nil {
 				if err == tunnelmgr.ErrTunnelSet {
 					log.Errorf("opening a second tunnel ID %s rejected", clusterID)
 				} else {
@@ -371,7 +390,7 @@ func closeTunnel(t *tunnel.Tunnel) {
 	}
 }
 
-func (s *Server) extractIdentity(t *tunnel.Tunnel) (clusterID, fingerprint string) {
+func (s *Server) extractIdentity(t *tunnel.Tunnel) (clusterID, fingerprint string, certificate *x509.Certificate) {
 	switch id := t.Identity().(type) {
 	case *x509.Certificate:
 		// N.B. By now, we know that we signed this certificate as these checks
@@ -381,6 +400,7 @@ func (s *Server) extractIdentity(t *tunnel.Tunnel) (clusterID, fingerprint strin
 		// for the cert.
 		clusterID = id.Subject.CommonName
 		fingerprint = utils.GenerateFingerprint(id)
+		certificate = id
 	default:
 		log.Errorf("unknown tunnel identity type %T", id)
 	}
@@ -395,6 +415,27 @@ func (s *Server) extractMD5Identity(t *tunnel.Tunnel) (fingerprint string) {
 		log.Errorf("unknown tunnel identity type %T", id)
 	}
 	return
+}
+
+// validateCertificate validates the certificate of the tunnel against the certificate of the
+// managed cluster it is connecting to (if any) and returns an error if they don't match or if the
+// certificate of the managed cluster is not provided. It is assumed that the certificate PEM
+// is a single block.
+func validateCertificate(tunnelCert *x509.Certificate, certPEM []byte) error {
+	block, _ := pem.Decode(certPEM)
+	if block == nil || block.Type != "CERTIFICATE" {
+		log.Fatalf("Failed to decode PEM block containing certificate")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return err
+	}
+
+	if !tunnelCert.Equal(cert) {
+		return errors.New("certificates don't match")
+	}
+	return nil
 }
 
 func wrapInMetricsAndLoggingAwareHandler(metricsEnabled bool, logger *accesslog.Logger, delegate http.HandlerFunc) http.HandlerFunc {
@@ -429,22 +470,19 @@ func wrapInMetricsAndLoggingAwareHandler(metricsEnabled bool, logger *accesslog.
 			delegate(w, r)
 		})
 	}
+}
 
+func wrapInCORSHandler(cors *cors.CORS, delegate http.HandlerFunc) http.HandlerFunc {
+	if cors != nil {
+		return cors.NewHandlerFunc(delegate)
+	}
+	return delegate
 }
 
 func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	chdr, hasClusterHeader := r.Header[ClusterHeaderFieldCanon]
 	isK8sRequest := requestPathMatches(r, s.kubernetesAPITargets)
 	shouldUseTunnel := requestPathMatches(r, s.tunnelTargetWhitelist) && hasClusterHeader
-
-	// call handler before authentication because the fetch standard
-	// explicitly excludes credentials for cors preflight requests
-	if s.corsPreflightRequestHandler != nil && r.Method == http.MethodOptions {
-		if serveHTTP := s.corsPreflightRequestHandler(r, false); serveHTTP != nil {
-			serveHTTP(w, r)
-			return
-		}
-	}
 
 	if requestTargetPathMatches(r, s.defaultProxy, s.unauthenticatedTargetPaths) {
 		// This request is to a target that can be unauthenticated
@@ -477,14 +515,19 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	addImpersonationHeaders(r, usr)
+	// Don't overwrite impersonation headers set by clients
+	if len(r.Header.Get(authnv1.ImpersonateUserHeader)) == 0 {
+		addImpersonationHeaders(r, usr)
+	}
 	removeAuthHeaders(r)
 
 	// Note, we expect the value passed in the request header field to be the resource
 	// name for a ManagedCluster resource (which will be human-friendly and unique)
 	clusterID := r.Header.Get(utils.ClusterHeaderField)
 
-	if isK8sRequest && (!hasClusterHeader || clusterID == DefaultClusterID) {
+	// DefaultClusterID is the name of the management cluster. No tunnel is necessary for
+	// requests with this value in the ClusterHeaderField.
+	if isK8sRequest && (!hasClusterHeader || clusterID == lmak8s.DefaultCluster) {
 		r.Header.Set(authentication.AuthorizationHeader, fmt.Sprintf("Bearer %s", s.config.BearerToken))
 		s.defaultProxy.ServeHTTP(w, r)
 		return
@@ -495,11 +538,6 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		msg := fmt.Sprintf("Unknown target cluster %q", clusterID)
 		log.Errorf("clusterMuxer: %s", msg)
-		if s.corsPreflightRequestHandler != nil {
-			if serveHTTP := s.corsPreflightRequestHandler(r, true); serveHTTP != nil {
-				serveHTTP(w, r)
-			}
-		}
 		writeHTTPError(w, clusterNotFoundError(clusterID))
 		return
 	}
@@ -572,9 +610,9 @@ func removeAuthHeaders(r *http.Request) {
 }
 
 func addImpersonationHeaders(r *http.Request, user user.Info) {
-	r.Header.Add(ImpersonateUserHeader, user.GetName())
+	r.Header.Add(authnv1.ImpersonateUserHeader, user.GetName())
 	for _, group := range user.GetGroups() {
-		r.Header.Add(ImpersonateGroupHeader, group)
+		r.Header.Add(authnv1.ImpersonateGroupHeader, group)
 	}
 	log.Debugf("Adding impersonation headers")
 }

@@ -670,7 +670,7 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 			Combine(d.destReportedAllowed[svc].processes).
 			Combine(d.destReportedDenied[v1.ServicePort{Protocol: svc.Protocol}].processes).
 			Combine(d.destReportedDenied[svc].processes)
-		if len(destProcesses) > 0 && len(sourceProcesses) > 0 {
+		if len(destProcesses) > 0 || len(sourceProcesses) > 0 {
 			processes = &v1.GraphProcesses{
 				Source: sourceProcesses,
 				Dest:   destProcesses,

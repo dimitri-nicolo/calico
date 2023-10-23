@@ -174,7 +174,6 @@ func (r *BPFProcessPathCache) updateCacheWithProcessPathInfo(info ProcessPathInf
 		}
 		r.cache[pid] = entry
 	}
-	return
 }
 
 func (r *BPFProcessPathCache) expireCacheEntries() {

@@ -57,18 +57,15 @@ type CalicoServerOptions struct {
 
 	// Enable Admission Controller support.
 	EnableAdmissionController bool
-
-	// Path to CA cert and key required for managed cluster creation
-	// The parameters below can only be used in conjunction with
-	// EnableManagedClustersCreateAPI flag
-	ManagedClustersCACertPath      string
-	ManagedClustersCAKeyPath       string
-	EnableManagedClustersCreateAPI bool
-	FIPSModeEnabled                bool
+	FIPSModeEnabled           bool
 
 	// Use this to populate the managementClusterAddr inside the managementClusterConnection CR.
-	ManagementClusterAddr   string
-	ManagementClusterCAType string
+	// The parameters below can only be used in conjunction with
+	// EnableManagedClustersCreateAPI flag
+	EnableManagedClustersCreateAPI bool
+	ManagementClusterAddr          string
+	ManagementClusterCAType        string
+	TunnelSecretName               string
 
 	StopCh <-chan struct{}
 }
@@ -83,17 +80,13 @@ func (s *CalicoServerOptions) addFlags(flags *pflag.FlagSet) {
 		"If print-swagger is set true, then write swagger.json to location specified. Default is current directory.")
 	flags.BoolVar(&s.EnableManagedClustersCreateAPI, "enable-managed-clusters-create-api", false,
 		"If true, --set-managed-clusters-ca-cert and --set-managed-clusters-ca-key will be evaluated.")
-	flags.StringVar(&s.ManagedClustersCACertPath, "set-managed-clusters-ca-cert",
-		"/code/apiserver.local.config/multicluster/certificates/cert",
-		"If set, the path to the CA cert will be used to generate managed clusters")
-	flags.StringVar(&s.ManagedClustersCAKeyPath, "set-managed-clusters-ca-key",
-		"/code/apiserver.local.config/multicluster/certificates/key",
-		"If set, the path to the CA key will be used to generate managed clusters")
 	flags.StringVar(&s.ManagementClusterAddr, "managementClusterAddr",
 		"<your-management-cluster-address>",
 		"If set, manifests created for new managed clusters will use this value.")
 	flags.StringVar(&s.ManagementClusterCAType, "managementClusterCAType", "",
 		"Controls the value of tls.ca in generated ManagementClusterConnection resources")
+	flags.StringVar(&s.TunnelSecretName, "tunnelSecretName", "tigera-management-cluster-connection",
+		"Controls the value of secret name that contains the value x509 CA certificate for generating ManagementClusterConnection resources")
 }
 
 func (o CalicoServerOptions) Validate(args []string) error {
@@ -201,11 +194,10 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 	config := &apiserver.Config{
 		GenericConfig: serverConfig,
 		ExtraConfig: apiserver.ExtraConfig{
-			ManagedClustersCACert:          o.ManagedClustersCACertPath,
-			ManagedClustersCAKey:           o.ManagedClustersCAKeyPath,
 			EnableManagedClustersCreateAPI: o.EnableManagedClustersCreateAPI,
 			ManagementClusterAddr:          o.ManagementClusterAddr,
 			ManagementClusterCAType:        o.ManagementClusterCAType,
+			TunnelSecretName:               o.TunnelSecretName,
 			KubernetesAPIServerConfig:      serverConfig.ClientConfig,
 			MinResourceRefreshInterval:     minResourceRefreshInterval,
 		},

@@ -221,6 +221,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &v3.EgressGatewayPolicy{}
 		EgressPolicyConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
+	case *v3.SecurityEventWebhook:
+		lcg := libcalicoObject.(*v3.SecurityEventWebhook)
+		aapi := &v3.SecurityEventWebhook{}
+		SecurityEventWebhookConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
 	default:
 		klog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))
 		return nil

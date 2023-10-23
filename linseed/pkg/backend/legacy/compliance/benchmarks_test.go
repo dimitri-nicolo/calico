@@ -17,9 +17,7 @@ import (
 )
 
 func TestBenchmarksBasic(t *testing.T) {
-	t.Run("invalid ClusterInfo", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "invalid ClusterInfo", func(t *testing.T) {
 		f := v1.Benchmarks{}
 		p := v1.BenchmarksParams{}
 
@@ -41,8 +39,7 @@ func TestBenchmarksBasic(t *testing.T) {
 	// Run each test with a tenant specified, and also without a tenant.
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("create and retrieve benchmarks (tenant=%s)", tenant)
-		t.Run(name, func(t *testing.T) {
-			defer setupTest(t)()
+		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo.Tenant = tenant
 
 			f := v1.Benchmarks{
@@ -70,7 +67,7 @@ func TestBenchmarksBasic(t *testing.T) {
 			require.Equal(t, []v1.BulkError(nil), response.Errors)
 			require.Equal(t, 0, response.Failed)
 
-			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_benchmark_results.*")
+			err = backendutils.RefreshIndex(ctx, client, bIndexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Read it back and check it matches.
@@ -170,8 +167,7 @@ func TestBenchmarksFiltering(t *testing.T) {
 		// Run each test with a tenant specified, and also without a tenant.
 		for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
-			t.Run(name, func(t *testing.T) {
-				defer setupTest(t)()
+			RunAllModes(t, name, func(t *testing.T) {
 				clusterInfo.Tenant = tenant
 
 				bm1 := v1.Benchmarks{
@@ -220,7 +216,7 @@ func TestBenchmarksFiltering(t *testing.T) {
 				require.Equal(t, []v1.BulkError(nil), response.Errors)
 				require.Equal(t, 0, response.Failed)
 
-				err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_benchmark_results.*")
+				err = backendutils.RefreshIndex(ctx, client, bIndexGetter.Index(clusterInfo))
 				require.NoError(t, err)
 
 				resp, err := bb.List(ctx, clusterInfo, tc.Params)
@@ -236,15 +232,23 @@ func TestBenchmarksFiltering(t *testing.T) {
 				} else {
 					require.NotContains(t, resp.Items, bm2)
 				}
+
+				// A non-matching tenant should never return any results.
+				// Note that in production, the backend should never receive a request with
+				// an unexpected tenant ID because Linseed rejects this earlier in the stack,
+				// but we should still handle it properly.
+				badClusterInfo := clusterInfo
+				badClusterInfo.Tenant = "bad-tenant"
+				resp, err = bb.List(ctx, badClusterInfo, tc.Params)
+				require.NoError(t, err)
+				require.Empty(t, resp.Items)
 			})
 		}
 	}
 }
 
 func TestBenchmarkSorting(t *testing.T) {
-	t.Run("should respect sorting", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "should respect sorting", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 		t1 := time.Unix(100, 0)
@@ -294,7 +298,7 @@ func TestBenchmarkSorting(t *testing.T) {
 		_, err := bb.Create(ctx, clusterInfo, []v1.Benchmarks{bm1, bm2})
 		require.NoError(t, err)
 
-		err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_benchmark_results.*")
+		err = backendutils.RefreshIndex(ctx, client, bIndexGetter.Index(clusterInfo))
 		require.NoError(t, err)
 
 		// Query for flow logs without sorting.

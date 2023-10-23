@@ -11,7 +11,10 @@ import (
 	"time"
 
 	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	"github.com/stretchr/testify/require"
@@ -24,10 +27,23 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
-func TestFV_Snapshots(t *testing.T) {
-	t.Run("should return an empty list if there are no snapshots", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
+func RunComplianceSnapshotTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
+	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		defer setupAndTeardown(t, args, index.ComplianceSnapshotMultiIndex)()
+		testFn(t, index.ComplianceSnapshotMultiIndex)
+	})
 
+	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		args.Backend = config.BackendTypeSingleIndex
+		defer setupAndTeardown(t, args, index.ComplianceSnapshotIndex)()
+		testFn(t, index.ComplianceSnapshotIndex)
+	})
+}
+
+func TestFV_Snapshots(t *testing.T) {
+	RunComplianceSnapshotTest(t, "should return an empty list if there are no snapshots", func(t *testing.T, idx bapi.Index) {
 		params := v1.SnapshotParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -43,9 +59,7 @@ func TestFV_Snapshots(t *testing.T) {
 		require.Equal(t, []v1.Snapshot{}, snapshots.Items)
 	})
 
-	t.Run("should create and list snapshots", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceSnapshotTest(t, "should create and list snapshots", func(t *testing.T, idx bapi.Index) {
 		snapshots := v1.Snapshot{
 			ResourceList: list.TimestampedResourceList{
 				ResourceList: &apiv3.NetworkPolicyList{
@@ -70,7 +84,7 @@ func TestFV_Snapshots(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_snapshots*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Read it back.
 		params := v1.SnapshotParams{}
@@ -102,9 +116,7 @@ func TestFV_Snapshots(t *testing.T) {
 		require.Equal(t, snapshots, resp.Items[0])
 	})
 
-	t.Run("should support pagination", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceSnapshotTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
 		totalItems := 5
 
 		// Create 5 Snapshots.
@@ -137,7 +149,7 @@ func TestFV_Snapshots(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_snapshots*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
@@ -243,9 +255,7 @@ func TestFV_Snapshots(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 
-	t.Run("should support pagination for items >= 10000 for Snapshots", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceSnapshotTest(t, "should support pagination for items >= 10000 for Snapshots", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K snapshots.
 		logTime := time.Unix(100, 0).UTC()
@@ -279,7 +289,7 @@ func TestFV_Snapshots(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Succeeded, "create snapshots did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_snapshots*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Stream through all the items.
 		params := v1.SnapshotParams{
@@ -309,11 +319,11 @@ func TestFV_Snapshots(t *testing.T) {
 }
 
 func TestFV_SnapshotsTenancy(t *testing.T) {
-	t.Run("should support tenancy restriction", func(t *testing.T) {
-		defer complianceSetupAndTeardown(t)()
-
+	RunComplianceSnapshotTest(t, "should support tenancy restriction", func(t *testing.T, idx bapi.Index) {
 		// Instantiate a client for an unexpected tenant.
-		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		args := DefaultLinseedArgs()
+		args.TenantID = "bad-tenant"
+		tenantCLI, err := NewLinseedClient(args)
 		require.NoError(t, err)
 
 		// Create a basic entry. We expect this to fail, since we're using

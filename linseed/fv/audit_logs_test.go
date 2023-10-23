@@ -5,7 +5,6 @@
 package fv_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -20,52 +19,48 @@ import (
 
 	"k8s.io/apiserver/pkg/apis/audit"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
-	elastic "github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/config"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func auditSetupAndTeardown(t *testing.T) func() {
-	// Hook logrus into testing.T
-	config.ConfigureLogging("DEBUG")
-	logCancel := logutils.RedirectLogrusToTestingT(t)
+func RunAuditEETest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
+	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		defer setupAndTeardown(t, args, index.AuditLogEEMultiIndex)()
+		testFn(t, index.AuditLogEEMultiIndex)
+	})
 
-	// Create an ES client.
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
-	require.NoError(t, err)
-	lmaClient = lmaelastic.NewWithClient(esClient)
+	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		args.Backend = config.BackendTypeSingleIndex
+		defer setupAndTeardown(t, args, index.AuditLogIndex)()
+		testFn(t, index.AuditLogIndex)
+	})
+}
 
-	// Instantiate a client.
-	cli, err = NewLinseedClient()
-	require.NoError(t, err)
+func RunAuditKubeTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
+	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		defer setupAndTeardown(t, args, index.AuditLogKubeMultiIndex)()
+		testFn(t, index.AuditLogKubeMultiIndex)
+	})
 
-	// Create a random cluster name for each test to make sure we don't
-	// interfere between tests.
-	cluster = testutils.RandomClusterName()
-
-	// Set up context with a timeout.
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-
-	return func() {
-		// Cleanup indices created by the test.
-		testutils.CleanupIndices(context.Background(), esClient, cluster)
-		logCancel()
-		cancel()
-	}
+	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		args.Backend = config.BackendTypeSingleIndex
+		defer setupAndTeardown(t, args, index.AuditLogIndex)()
+		testFn(t, index.AuditLogIndex)
+	})
 }
 
 func TestFV_AuditEE(t *testing.T) {
-	t.Run("should return an empty list if there are no EE audits", func(t *testing.T) {
-		defer auditSetupAndTeardown(t)()
-
+	RunAuditEETest(t, "should return an empty list if there are no EE audits", func(t *testing.T, idx bapi.Index) {
 		params := v1.AuditLogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -82,9 +77,7 @@ func TestFV_AuditEE(t *testing.T) {
 		require.Equal(t, []v1.AuditLog{}, audits.Items)
 	})
 
-	t.Run("should create and list EE audits", func(t *testing.T) {
-		defer auditSetupAndTeardown(t)()
-
+	RunAuditEETest(t, "should create and list EE audits", func(t *testing.T, idx bapi.Index) {
 		reqTime := time.Now()
 		// Create a basic audit log
 		audits := []v1.AuditLog{{Event: audit.Event{
@@ -96,7 +89,8 @@ func TestFV_AuditEE(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create audit did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_ee*")
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Read it back.
 		params := v1.AuditLogParams{
@@ -119,9 +113,7 @@ func TestFV_AuditEE(t *testing.T) {
 		require.Equal(t, audits, resp.Items)
 	})
 
-	t.Run("should return an empty list if there are no Kube audits", func(t *testing.T) {
-		defer auditSetupAndTeardown(t)()
-
+	RunAuditKubeTest(t, "should return an empty list if there are no Kube audits", func(t *testing.T, idx bapi.Index) {
 		params := v1.AuditLogParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -138,9 +130,7 @@ func TestFV_AuditEE(t *testing.T) {
 		require.Equal(t, []v1.AuditLog{}, audits.Items)
 	})
 
-	t.Run("should create and list Kube audits", func(t *testing.T) {
-		defer auditSetupAndTeardown(t)()
-
+	RunAuditKubeTest(t, "should create and list Kube audits", func(t *testing.T, idx bapi.Index) {
 		// Create a basic audit log.
 		reqTime := time.Now()
 		audits := []v1.AuditLog{{Event: audit.Event{
@@ -152,7 +142,8 @@ func TestFV_AuditEE(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create audit did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_kube*")
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Read it back.
 		params := v1.AuditLogParams{
@@ -175,9 +166,7 @@ func TestFV_AuditEE(t *testing.T) {
 		require.Equal(t, audits, resp.Items)
 	})
 
-	t.Run("should support pagination for items >= 10000 for EE Audit", func(t *testing.T) {
-		defer auditSetupAndTeardown(t)()
-
+	RunAuditEETest(t, "should support pagination for items >= 10000 for EE Audit", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K audit logs.
 		logTime := time.Unix(100, 0).UTC()
@@ -196,7 +185,8 @@ func TestFV_AuditEE(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create EE audit log did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_ee*")
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Stream through all the items.
 		params := v1.AuditLogParams{
@@ -225,9 +215,7 @@ func TestFV_AuditEE(t *testing.T) {
 		require.Equal(t, receivedItems, totalItems)
 	})
 
-	t.Run("should support pagination for items >= 10000 for Kube Audit", func(t *testing.T) {
-		defer auditSetupAndTeardown(t)()
-
+	RunAuditKubeTest(t, "should support pagination for items >= 10000 for Kube Audit", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K audit logs.
 		logTime := time.Unix(100, 0).UTC()
@@ -246,7 +234,8 @@ func TestFV_AuditEE(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create Kube audit log did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_kube*")
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Stream through all the items.
 		params := v1.AuditLogParams{
@@ -275,9 +264,7 @@ func TestFV_AuditEE(t *testing.T) {
 		require.Equal(t, receivedItems, totalItems)
 	})
 
-	t.Run("should support pagination for EE Audit", func(t *testing.T) {
-		defer auditSetupAndTeardown(t)()
-
+	RunAuditEETest(t, "should support pagination for EE Audit", func(t *testing.T, idx bapi.Index) {
 		totalItems := 5
 		// Create 5 audit logs.
 		logTime := time.Unix(100, 0).UTC()
@@ -296,7 +283,8 @@ func TestFV_AuditEE(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_ee*")
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
@@ -364,9 +352,7 @@ func TestFV_AuditEE(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 
-	t.Run("should support pagination for Kube Audit", func(t *testing.T) {
-		defer auditSetupAndTeardown(t)()
-
+	RunAuditKubeTest(t, "should support pagination for Kube Audit", func(t *testing.T, idx bapi.Index) {
 		totalItems := 5
 
 		// Create 5 audit logs.
@@ -386,7 +372,8 @@ func TestFV_AuditEE(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_kube*")
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
@@ -455,11 +442,11 @@ func TestFV_AuditEE(t *testing.T) {
 }
 
 func TestFV_AuditLogsTenancy(t *testing.T) {
-	t.Run("should support tenancy restriction", func(t *testing.T) {
-		defer auditSetupAndTeardown(t)()
-
+	RunAuditKubeTest(t, "should support tenancy restriction", func(t *testing.T, idx bapi.Index) {
 		// Instantiate a client for an unexpected tenant.
-		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		args := DefaultLinseedArgs()
+		args.TenantID = "bad-tenant"
+		tenantCLI, err := NewLinseedClient(args)
 		require.NoError(t, err)
 
 		// Create a basic log. We expect this to fail, since we're using
@@ -474,7 +461,8 @@ func TestFV_AuditLogsTenancy(t *testing.T) {
 		require.Nil(t, bulk)
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_audit_kube*")
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
 
 		// Read it back.
 		params := v1.AuditLogParams{

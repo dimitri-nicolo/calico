@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"net"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -19,8 +18,8 @@ import (
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
-// Client is the voltron client. It accepts requests from voltron server
-// and redirects it to different parts in the cluster.
+// Client is the voltron client. It is used by Guardian to establish a secure tunnel connection to the Voltron server and
+// then enable managed cluster services and management cluster services to communicate with one another.
 type Client struct {
 	http      *http.Server
 	proxyMux  *http.ServeMux
@@ -33,6 +32,8 @@ type Client struct {
 	// tunnelRootCAs defines the set of root certificate authorities that guardian will use when verifying voltron certificates.
 	// if nil, dialer will use the host's CA set.
 	tunnelRootCAs *x509.CertPool
+	// TunnelServerName defines the server name to be used when connecting to Voltron
+	tunnelServerName string
 
 	tunnelEnableKeepAlive   bool
 	tunnelKeepAliveInterval time.Duration
@@ -52,7 +53,7 @@ type Client struct {
 }
 
 // New returns a new Client
-func New(addr string, opts ...Option) (*Client, error) {
+func New(addr string, serverName string, opts ...Option) (*Client, error) {
 	var err error
 	client := &Client{
 		http:                    new(http.Server),
@@ -68,6 +69,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 	}
 
 	client.tunnelAddr = addr
+	client.tunnelServerName = serverName
 	log.Infof("Tunnel Address: %s", client.tunnelAddr)
 
 	for _, o := range opts {
@@ -76,17 +78,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 		}
 	}
 
-	// default expected serverName to the value set when certs are signed
-	// by the apiserver: 'voltron'.
-	serverName := "voltron"
-
-	// tunnelRootCAs will be nil if using certs from the system for the case of a signed voltron cert.
-	// in this case, the serverName will match the remote address
-	if client.tunnelRootCAs == nil {
-		// strip the port
-		serverName = strings.Split(client.tunnelAddr, ":")[0]
-		log.Debug("expecting TLS server name: ", serverName)
-	}
+	log.Debug("expecting TLS server name: ", client.tunnelServerName)
 
 	// set the dialer for the tunnel manager if one hasn't been specified
 	tunnelAddress := client.tunnelAddr
@@ -111,7 +103,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 				tlsConfig := calicotls.NewTLSConfig(client.fipsModeEnabled)
 				tlsConfig.Certificates = []tls.Certificate{*tunnelCert}
 				tlsConfig.RootCAs = tunnelRootCAs
-				tlsConfig.ServerName = serverName
+				tlsConfig.ServerName = client.tunnelServerName
 				return tunnel.DialTLS(
 					tunnelAddress,
 					tlsConfig,

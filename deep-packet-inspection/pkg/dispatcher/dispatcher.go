@@ -267,7 +267,7 @@ func (h *dispatcher) processDirtyItems(ctx context.Context) {
 				// Update the mapping of WEP interface to snortProcessor and also mapping of DPI key to snortProcessor
 				dpis, ok := h.wepKeyToDPIs[i.wepKey]
 				if !ok {
-					dpis = set.NewBoxed[DPI]()
+					dpis = set.New[DPI]()
 				}
 				dpis.Add(dpi)
 				h.wepKeyToDPIs[i.wepKey] = dpis

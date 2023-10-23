@@ -451,6 +451,7 @@ func (m *SecondaryIfaceProvisioner) newBackoffManager() wait.BackoffManager {
 		backoffFactor = 2.0
 		jitter        = 0.1
 	)
+	//nolint:staticcheck // Ignore SA1019 deprecated
 	backoffMgr := wait.NewExponentialBackoffManager(initBackoff, maxBackoff, resetDuration, backoffFactor, jitter, m.backoffClock)
 	return backoffMgr
 }
@@ -901,7 +902,7 @@ func (m *SecondaryIfaceProvisioner) loadAWSENIsState() (s *awsState, err error) 
 
 // findUnusedAWSSecondaryIPs scans the AWS state for secondary IPs that are not assigned in Calico IPAM.
 func (m *SecondaryIfaceProvisioner) findUnusedAWSSecondaryIPs(awsState *awsState) set.Set[ip.Addr] {
-	awsIPsToRelease := set.NewBoxed[ip.Addr]()
+	awsIPsToRelease := set.New[ip.Addr]()
 	summary := map[string][]string{}
 	for addr, eniID := range awsState.eniIDBySecondaryIP {
 		release := false
@@ -1255,16 +1256,14 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(awsState *awsState, bestSub
 				"Found unattached Calico ENI with no private IP?  Remove.")
 			deleteENI = true
 		} else if m.mode == v3.AWSSecondaryIPEnabled {
-			var primaryIP ip.Addr
-			primaryIP = ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
+			primaryIP := ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
 			if !m.ourHostIPs.Contains(primaryIP) {
 				logrus.WithField("eniID", eniID).Info(
 					"Found unattached Calico ENI with no corresponding IPAM entry.  Remove.")
 				deleteENI = true
 			}
 		} else if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
-			var primaryIP ip.Addr
-			primaryIP = ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
+			primaryIP := ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
 			if _, ok := m.ds.LocalAWSAddrsByDst[primaryIP]; !ok {
 				logrus.WithField("eniID", eniID).Info(
 					"Found unattached Calico ENI that no longer matches a workload.  Remove.")
@@ -1737,7 +1736,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(awsState *awsSta
 	// Figure out which IPs already have an elastic IP attached.
 	logrus.Debug("Checking if we need to associate any elastic IPs.")
 	privIPToElasticIPID := map[ip.Addr]string{}
-	inUseElasticIPs := set.NewBoxed[ip.Addr]()
+	inUseElasticIPs := set.New[ip.Addr]()
 	for eniID, eni := range awsState.calicoOwnedENIsByID {
 		for _, privIP := range eni.IPAddresses {
 			if privIP.Association != nil {
@@ -1758,7 +1757,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(awsState *awsSta
 
 	// Collect all the elastic IP IDs that we _may_ want to attach.
 	eipToCandidatePrivIPs := map[ip.Addr][]ip.Addr{}
-	privIPsToDo := set.NewBoxed[ip.Addr]()
+	privIPsToDo := set.New[ip.Addr]()
 	for _, addrInfo := range m.ds.LocalAWSAddrsByDst {
 		privIPAddr := ip.MustParseCIDROrIP(addrInfo.Dst).Addr()
 		if _, ok := privIPToElasticIPID[privIPAddr]; ok {
@@ -1911,7 +1910,7 @@ func (m *SecondaryIfaceProvisioner) ensureIPAMLoaded() error {
 	logrus.Debug("Refreshing cache of host IPs from Calico IPAM.")
 	m.ourHostIPs = nil // Make sure we retry after a failure.
 
-	hostIPs := set.NewBoxed[ip.Addr]()
+	hostIPs := set.New[ip.Addr]()
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ourIPs, err := m.ipamClient.IPsByHandle(ctx, m.hostPrimaryIPIPAMHandle())

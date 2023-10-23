@@ -40,7 +40,7 @@ var tier1_order20 = Tier{
 
 // withPolicyAndTier adds a tier and policy containing selectors for all and b=="b"
 var withPolicyAndTier = initialisedStore.withKVUpdates(
-	KVPair{Key: TierKey{"tier-1"}, Value: &tier1_order20},
+	KVPair{Key: TierKey{Name: "tier-1"}, Value: &tier1_order20},
 	KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-1"}, Value: &policy1_order20},
 ).withName("with policy")
 
@@ -58,15 +58,19 @@ var localEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	"10.0.0.2/32",
 	"fc00:fe11::2/128",
 }).withActivePolicies(
-	proto.PolicyID{"tier-1", "pol-1"},
+	proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
 ).withActiveProfiles(
-	proto.ProfileID{"prof-1"},
-	proto.ProfileID{"prof-2"},
-	proto.ProfileID{"prof-missing"},
+	proto.ProfileID{Name: "prof-1"},
+	proto.ProfileID{Name: "prof-2"},
+	proto.ProfileID{Name: "prof-missing"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
-		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
+		{
+			Name:               "tier-1",
+			IngressPolicyNames: []string{"pol-1"},
+			EgressPolicyNames:  []string{"pol-1"},
+		},
 	},
 ).withRoutes(
 	// Routes for the local WEPs.
@@ -89,15 +93,19 @@ var hostEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	"10.0.0.2/32",
 	"fc00:fe11::2/128",
 }).withActivePolicies(
-	proto.PolicyID{"tier-1", "pol-1"},
+	proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
 ).withActiveProfiles(
-	proto.ProfileID{"prof-1"},
-	proto.ProfileID{"prof-2"},
-	proto.ProfileID{"prof-missing"},
+	proto.ProfileID{Name: "prof-1"},
+	proto.ProfileID{Name: "prof-2"},
+	proto.ProfileID{Name: "prof-missing"},
 ).withEndpoint(
 	hostEpWithNameId,
 	[]mock.TierInfo{
-		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
+		{
+			Name:               "tier-1",
+			IngressPolicyNames: []string{"pol-1"},
+			EgressPolicyNames:  []string{"pol-1"},
+		},
 	},
 ).withName("host ep1, policy")
 
@@ -109,14 +117,18 @@ var hostEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	"10.0.0.3/32", // ep2
 	"fc00:fe11::3/128",
 }).withIPSet(bEqBSelectorId, []string{}).withActivePolicies(
-	proto.PolicyID{"tier-1", "pol-1"},
+	proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
 ).withActiveProfiles(
-	proto.ProfileID{"prof-2"},
-	proto.ProfileID{"prof-3"},
+	proto.ProfileID{Name: "prof-2"},
+	proto.ProfileID{Name: "prof-3"},
 ).withEndpoint(
 	hostEpNoNameId,
 	[]mock.TierInfo{
-		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
+		{
+			Name:               "tier-1",
+			IngressPolicyNames: []string{"pol-1"},
+			EgressPolicyNames:  []string{"pol-1"},
+		},
 	},
 ).withName("host ep2, policy")
 
@@ -254,7 +266,7 @@ func commercialPolicyOrderState(policyOrders [3]float64, expectedOrder [3]string
 	}
 	state := initialisedStore.withKVUpdates(
 		KVPair{Key: localWlEpKey1, Value: &localWlEp1},
-		KVPair{Key: TierKey{"tier-1"}, Value: &tier1_order20},
+		KVPair{Key: TierKey{Name: "tier-1"}, Value: &tier1_order20},
 		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-1"}, Value: &policies[0]},
 		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-2"}, Value: &policies[1]},
 		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-3"}, Value: &policies[2]},
@@ -269,17 +281,21 @@ func commercialPolicyOrderState(policyOrders [3]float64, expectedOrder [3]string
 		"10.0.0.2/32",
 		"fc00:fe11::2/128",
 	}).withActivePolicies(
-		proto.PolicyID{"tier-1", "pol-1"},
-		proto.PolicyID{"tier-1", "pol-2"},
-		proto.PolicyID{"tier-1", "pol-3"},
+		proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
+		proto.PolicyID{Tier: "tier-1", Name: "pol-2"},
+		proto.PolicyID{Tier: "tier-1", Name: "pol-3"},
 	).withActiveProfiles(
-		proto.ProfileID{"prof-1"},
-		proto.ProfileID{"prof-2"},
-		proto.ProfileID{"prof-missing"},
+		proto.ProfileID{Name: "prof-1"},
+		proto.ProfileID{Name: "prof-2"},
+		proto.ProfileID{Name: "prof-missing"},
 	).withEndpoint(
 		localWlEp1Id,
 		[]mock.TierInfo{
-			{"tier-1", expectedOrder[:], expectedOrder[:]},
+			{
+				Name:               "tier-1",
+				IngressPolicyNames: expectedOrder[:],
+				EgressPolicyNames:  expectedOrder[:],
+			},
 		},
 	).withRoutes(
 		// Routes for the local WEPs.
@@ -326,30 +342,42 @@ func tierOrderState(tierOrders [3]float64, expectedOrder [3]string) State {
 	}
 	state := initialisedStore.withKVUpdates(
 		KVPair{Key: localWlEpKey1, Value: &localWlEp1},
-		KVPair{Key: TierKey{"tier-1"}, Value: &tiers[0]},
+		KVPair{Key: TierKey{Name: "tier-1"}, Value: &tiers[0]},
 		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "tier-1-pol"}, Value: &policy1_order20},
-		KVPair{Key: TierKey{"tier-2"}, Value: &tiers[1]},
+		KVPair{Key: TierKey{Name: "tier-2"}, Value: &tiers[1]},
 		KVPair{Key: PolicyKey{Tier: "tier-2", Name: "tier-2-pol"}, Value: &policy1_order20},
-		KVPair{Key: TierKey{"tier-3"}, Value: &tiers[2]},
+		KVPair{Key: TierKey{Name: "tier-3"}, Value: &tiers[2]},
 		KVPair{Key: PolicyKey{Tier: "tier-3", Name: "tier-3-pol"}, Value: &policy1_order20},
 	).withIPSet(
 		allSelectorId, ep1IPs,
 	).withIPSet(
 		bEqBSelectorId, ep1IPs,
 	).withActivePolicies(
-		proto.PolicyID{"tier-1", "tier-1-pol"},
-		proto.PolicyID{"tier-2", "tier-2-pol"},
-		proto.PolicyID{"tier-3", "tier-3-pol"},
+		proto.PolicyID{Tier: "tier-1", Name: "tier-1-pol"},
+		proto.PolicyID{Tier: "tier-2", Name: "tier-2-pol"},
+		proto.PolicyID{Tier: "tier-3", Name: "tier-3-pol"},
 	).withActiveProfiles(
-		proto.ProfileID{"prof-1"},
-		proto.ProfileID{"prof-2"},
-		proto.ProfileID{"prof-missing"},
+		proto.ProfileID{Name: "prof-1"},
+		proto.ProfileID{Name: "prof-2"},
+		proto.ProfileID{Name: "prof-missing"},
 	).withEndpoint(
 		localWlEp1Id,
 		[]mock.TierInfo{
-			{expectedOrder[0], []string{expectedOrder[0] + "-pol"}, []string{expectedOrder[0] + "-pol"}},
-			{expectedOrder[1], []string{expectedOrder[1] + "-pol"}, []string{expectedOrder[1] + "-pol"}},
-			{expectedOrder[2], []string{expectedOrder[2] + "-pol"}, []string{expectedOrder[2] + "-pol"}},
+			{
+				Name:               expectedOrder[0],
+				IngressPolicyNames: []string{expectedOrder[0] + "-pol"},
+				EgressPolicyNames:  []string{expectedOrder[0] + "-pol"},
+			},
+			{
+				Name:               expectedOrder[1],
+				IngressPolicyNames: []string{expectedOrder[1] + "-pol"},
+				EgressPolicyNames:  []string{expectedOrder[1] + "-pol"},
+			},
+			{
+				Name:               expectedOrder[2],
+				IngressPolicyNames: []string{expectedOrder[2] + "-pol"},
+				EgressPolicyNames:  []string{expectedOrder[2] + "-pol"},
+			},
 		},
 	).withRoutes(
 		// Routes for the local WEPs.
@@ -391,11 +419,11 @@ func tierDisabledOrderState(tierOrders [3]float64, expectedOrder [3]string, tier
 	}
 	state := initialisedStore.withKVUpdates(
 		KVPair{Key: localWlEpKey1, Value: &localWlEp1},
-		KVPair{Key: TierKey{"tier-1"}, Value: &tiers[0]},
+		KVPair{Key: TierKey{Name: "tier-1"}, Value: &tiers[0]},
 		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "tier-1-pol"}, Value: &policy1_order20},
-		KVPair{Key: TierKey{"default"}, Value: &tiers[1]},
+		KVPair{Key: TierKey{Name: "default"}, Value: &tiers[1]},
 		KVPair{Key: PolicyKey{Tier: "default", Name: "default-pol"}, Value: &policy1_order20},
-		KVPair{Key: TierKey{"allow-tigera"}, Value: &tiers[2]},
+		KVPair{Key: TierKey{Name: "allow-tigera"}, Value: &tiers[2]},
 		KVPair{Key: PolicyKey{Tier: "allow-tigera", Name: "allow-tigera-pol"}, Value: &policy1_order20},
 	).withIPSet(
 		allSelectorId, ep1IPs,
@@ -403,12 +431,12 @@ func tierDisabledOrderState(tierOrders [3]float64, expectedOrder [3]string, tier
 		bEqBSelectorId, ep1IPs,
 	).withActivePolicies(
 		// expect to NOT see "tier-1" and "tier-1-pol"
-		proto.PolicyID{"default", "default-pol"},
-		proto.PolicyID{"allow-tigera", "allow-tigera-pol"},
+		proto.PolicyID{Tier: "default", Name: "default-pol"},
+		proto.PolicyID{Tier: "allow-tigera", Name: "allow-tigera-pol"},
 	).withActiveProfiles(
-		proto.ProfileID{"prof-1"},
-		proto.ProfileID{"prof-2"},
-		proto.ProfileID{"prof-missing"},
+		proto.ProfileID{Name: "prof-1"},
+		proto.ProfileID{Name: "prof-2"},
+		proto.ProfileID{Name: "prof-missing"},
 	).withEndpoint(
 		localWlEp1Id,
 		ti,
@@ -438,14 +466,18 @@ var localEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 }).withIPSet(
 	bEqBSelectorId, []string{},
 ).withActivePolicies(
-	proto.PolicyID{"tier-1", "pol-1"},
+	proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
 ).withActiveProfiles(
-	proto.ProfileID{"prof-2"},
-	proto.ProfileID{"prof-3"},
+	proto.ProfileID{Name: "prof-2"},
+	proto.ProfileID{Name: "prof-3"},
 ).withEndpoint(
 	localWlEp2Id,
 	[]mock.TierInfo{
-		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
+		{
+			Name:               "tier-1",
+			IngressPolicyNames: []string{"pol-1"},
+			EgressPolicyNames:  []string{"pol-1"},
+		},
 	},
 ).withRoutes(
 	// Routes for the local WEPs.
@@ -475,21 +507,29 @@ var localEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	"10.0.0.2/32",
 	"fc00:fe11::2/128",
 }).withActivePolicies(
-	proto.PolicyID{"tier-1", "pol-1"},
+	proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
 ).withActiveProfiles(
-	proto.ProfileID{"prof-1"},
-	proto.ProfileID{"prof-2"},
-	proto.ProfileID{"prof-3"},
-	proto.ProfileID{"prof-missing"},
+	proto.ProfileID{Name: "prof-1"},
+	proto.ProfileID{Name: "prof-2"},
+	proto.ProfileID{Name: "prof-3"},
+	proto.ProfileID{Name: "prof-missing"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
-		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
+		{
+			Name:               "tier-1",
+			IngressPolicyNames: []string{"pol-1"},
+			EgressPolicyNames:  []string{"pol-1"},
+		},
 	},
 ).withEndpoint(
 	localWlEp2Id,
 	[]mock.TierInfo{
-		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
+		{
+			Name:               "tier-1",
+			IngressPolicyNames: []string{"pol-1"},
+			EgressPolicyNames:  []string{"pol-1"},
+		},
 	},
 ).withRoutes(
 	// Routes for the local WEPs.
@@ -706,11 +746,20 @@ var localEp2AsEp1WithNode = localEp2WithNode.withKVUpdates(
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
-		{"default", []string{"pol-1"}, []string{"pol-1"}},
+		{
+			Name:               "default",
+			IngressPolicyNames: []string{"pol-1"},
+			EgressPolicyNames:  []string{"pol-1"},
+		},
 	},
 ).withEndpoint(localWlEp2Id, nil).withName("Local endpoint 2 (using key for ep 1) with a host IP")
 
-var localWlEpKey3 = WorkloadEndpointKey{localHostname, "orch", "wl3", "ep3"}
+var localWlEpKey3 = WorkloadEndpointKey{
+	Hostname:       localHostname,
+	OrchestratorID: "orch",
+	WorkloadID:     "wl3",
+	EndpointID:     "ep3",
+}
 var localWlEp3 = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali3",
@@ -834,8 +883,12 @@ var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates
 	routelocalWlV6ColonThree,
 ).withName("3 endpoints sharing an IP with a duplicate host IP defined")
 
-var remoteWlEpKey3 = WorkloadEndpointKey{remoteHostname, "orch", "wl3", "ep3"}
-var remoteWlEp3ID = "orch/wl2/ep2"
+var remoteWlEpKey3 = WorkloadEndpointKey{
+	Hostname:       remoteHostname,
+	OrchestratorID: "orch",
+	WorkloadID:     "wl3",
+	EndpointID:     "ep3",
+}
 
 var remoteWlEp1 = WorkloadEndpoint{
 	State:    "active",
@@ -930,15 +983,19 @@ var localEpAndRemoteEpWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	"10.0.0.2/32",
 	"fc00:fe11::2/128",
 }).withActivePolicies(
-	proto.PolicyID{"tier-1", "pol-1"},
+	proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
 ).withActiveProfiles(
-	proto.ProfileID{"prof-1"},
-	proto.ProfileID{"prof-2"},
-	proto.ProfileID{"prof-missing"},
+	proto.ProfileID{Name: "prof-1"},
+	proto.ProfileID{Name: "prof-2"},
+	proto.ProfileID{Name: "prof-missing"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
-		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
+		{
+			Name:               "tier-1",
+			IngressPolicyNames: []string{"pol-1"},
+			EgressPolicyNames:  []string{"pol-1"},
+		},
 	},
 ).withRemoteEndpoint(
 	&calc.EndpointData{
@@ -968,11 +1025,6 @@ var remoteEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	},
 ).withName("2 remote endpoints")
 
-var localEpAndRemoteEpWithCapture = withPolicyAndTier.withKVUpdates(
-	// Two local endpoints with overlapping IPs.
-	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
-	KVPair{Key: remoteWlEpKey3, Value: &remoteWlEp3},
-)
 var commercialTests = []StateList{
 	// Empty should be empty!
 	{},
@@ -1229,15 +1281,8 @@ var _ = Describe("COMMERCIAL: Async calculation graph state sequencing tests wit
 	describeAsyncTests(commercialTestsDisabledTiers, licenseTiersDisabled{})
 })
 
-type tierInfo struct {
-	Name               string
-	IngressPolicyNames []string
-	EgressPolicyNames  []string
-}
-
 // Egress IP.
 var (
-	zeroTime        = time.Time{}
 	nowTime         = time.Now()
 	inSixtySecsTime = nowTime.Add(time.Second * 60)
 

@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 
@@ -29,17 +30,34 @@ import (
 )
 
 var (
-	client  lmaelastic.Client
-	cache   bapi.Cache
-	b       bapi.DNSFlowBackend
-	lb      bapi.DNSLogBackend
-	ctx     context.Context
-	cluster string
+	client      lmaelastic.Client
+	cache       bapi.IndexInitializer
+	b           bapi.DNSFlowBackend
+	lb          bapi.DNSLogBackend
+	ctx         context.Context
+	cluster     string
+	indexGetter bapi.Index
 )
+
+// RunAllModes runs the given test function twice, once using the single-index backend, and once using
+// the multi-index backend.
+func RunAllModes(t *testing.T, name string, testFn func(t *testing.T)) {
+	// Run using the multi-index backend.
+	t.Run(fmt.Sprintf("%s [legacy]", name), func(t *testing.T) {
+		defer setupTest(t, false)()
+		testFn(t)
+	})
+
+	// Run using the single-index backend.
+	t.Run(fmt.Sprintf("%s [singleindex]", name), func(t *testing.T) {
+		defer setupTest(t, true)()
+		testFn(t)
+	})
+}
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
-func setupTest(t *testing.T) func() {
+func setupTest(t *testing.T, singleIndex bool) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -52,11 +70,18 @@ func setupTest(t *testing.T) func() {
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
 	client = lmaelastic.NewWithClient(esClient)
-	cache = templates.NewTemplateCache(client, 1, 0)
+	cache = templates.NewCachedInitializer(client, 1, 0)
 
 	// Instantiate backends.
-	b = dns.NewDNSFlowBackend(client)
-	lb = dns.NewDNSLogBackend(client, cache, 10000)
+	if singleIndex {
+		b = dns.NewSingleIndexDNSFlowBackend(client)
+		lb = dns.NewSingleIndexDNSLogBackend(client, cache, 10000)
+		indexGetter = index.DNSLogIndex
+	} else {
+		b = dns.NewDNSFlowBackend(client)
+		lb = dns.NewDNSLogBackend(client, cache, 10000)
+		indexGetter = index.DNSLogMultiIndex
+	}
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
@@ -71,8 +96,8 @@ func setupTest(t *testing.T) func() {
 		// Cancel the context.
 		cancel()
 
-		// Cleanup any data that might left over from a previous failed run.
-		err = testutils.CleanupIndices(context.Background(), esClient, cluster)
+		// Clean up data from the test.
+		err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
 		require.NoError(t, err)
 
 		// Cancel logging
@@ -82,26 +107,26 @@ func setupTest(t *testing.T) func() {
 
 // TestListDNSFlows tests running a real elasticsearch query to list DNS flows.
 func TestListDNSFlows(t *testing.T) {
-	defer setupTest(t)()
+	RunAllModes(t, "TestListDNSFlows", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
-	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		// Put some data into ES so we can query it.
+		expected, reqTime := populateDNSLogData(t, ctx, client, clusterInfo.Cluster)
 
-	// Put some data into ES so we can query it.
-	expected, reqTime := populateDNSLogData(t, ctx, client, clusterInfo.Cluster)
+		// Set time range so that we capture all of the populated flow logs.
+		opts := v1.DNSFlowParams{}
+		opts.TimeRange = &lmav1.TimeRange{}
+		opts.TimeRange.From = reqTime.Add(-5 * time.Second)
+		opts.TimeRange.To = reqTime.Add(5 * time.Second)
 
-	// Set time range so that we capture all of the populated flow logs.
-	opts := v1.DNSFlowParams{}
-	opts.TimeRange = &lmav1.TimeRange{}
-	opts.TimeRange.From = reqTime.Add(-5 * time.Second)
-	opts.TimeRange.To = reqTime.Add(5 * time.Second)
+		// Query for flows. There should be a single flow from the populated data.
+		r, err := b.List(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 1)
 
-	// Query for flows. There should be a single flow from the populated data.
-	r, err := b.List(ctx, clusterInfo, &opts)
-	require.NoError(t, err)
-	require.Len(t, r.Items, 1)
-
-	// Assert that the flow data is populated correctly.
-	require.Equal(t, expected, r.Items[0])
+		// Assert that the flow data is populated correctly.
+		require.Equal(t, expected, r.Items[0])
+	})
 }
 
 // populateDNSLogData writes a series of DNS logs to elasticsearch, and returns the DNSFlow that we
@@ -173,14 +198,14 @@ func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 		expected.LatencyStats.LatencyCount += f.LatencyCount
 	}
 
-	resp, err := lb.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
+	clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+	resp, err := lb.Create(ctx, clusterInfo, batch)
 	require.NoError(t, err)
 	require.Empty(t, resp.Errors)
 
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
 	// for the refresh interval to occur.
-	index := fmt.Sprintf("tigera_secure_ee_dns.%s.", cluster)
-	err = testutils.RefreshIndex(ctx, client, index)
+	err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 	require.NoError(t, err)
 
 	return expected, reqTime

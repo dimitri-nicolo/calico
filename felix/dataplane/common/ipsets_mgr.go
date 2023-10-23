@@ -31,10 +31,10 @@ type IPSetsDataplane interface {
 	RemoveIPSet(setID string)
 	GetIPFamily() ipsets.IPFamily
 	GetTypeOf(setID string) (ipsets.IPSetType, error)
-	GetMembers(setID string) (set.Set[string], error)
+	GetDesiredMembers(setID string) (set.Set[string], error)
 	QueueResync()
 	ApplyUpdates(ipsetFilter func(ipSetName string) bool) set.Set[string]
-	ApplyDeletions()
+	ApplyDeletions() (reschedule bool)
 }
 
 // Except for domain IP sets, IPSetsManager simply passes through IP set updates from the datastore
@@ -101,7 +101,7 @@ func (m *IPSetsManager) GetIPSetType(setID string) (typ ipsets.IPSetType, err er
 
 func (m *IPSetsManager) GetIPSetMembers(setID string) (members set.Set[string], err error) {
 	for _, dp := range m.dataplanes {
-		members, err = dp.GetMembers(setID)
+		members, err = dp.GetDesiredMembers(setID)
 		if err == nil {
 			break
 		}
@@ -352,7 +352,7 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domain
 
 func (m *IPSetsManager) removeDomainIPSetTracking(ipSetId string) {
 	log.Infof("Domain set removed: id=%v", ipSetId)
-	for domain, _ := range m.domainSetIds {
+	for domain := range m.domainSetIds {
 		m.domainRemovedFromSet(domain, ipSetId)
 	}
 	delete(m.domainSetProgramming, ipSetId)

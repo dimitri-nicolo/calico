@@ -35,9 +35,11 @@ const (
 
 func TestPerfBasic(t *testing.T) {
 	RegisterTestingT(t)
+	hostIP = node1ip
 
-	_, ipv4, l4, _, pktBytes, err := testPacketUDPDefault()
+	_, iphdr, l4, _, pktBytes, err := testPacket(4, nil, nil, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
+	ipv4 := iphdr.(*layers.IPv4)
 	udp := l4.(*layers.UDP)
 
 	runBpfUnitTest(t, "perf_events.c", func(bpfrun bpfProgRunFn) {

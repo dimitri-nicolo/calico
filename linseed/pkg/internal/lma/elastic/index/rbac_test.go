@@ -120,7 +120,7 @@ func expectQueryJson(q elastic.Query, js string) {
 
 var _ = Describe("RBAC query tests", func() {
 	It("handles flows with full perms", func() {
-		query, err := FlowLogs().NewRBACQuery(authorizationMatrixAll)
+		query, err := MultiIndexFlowLogs().NewRBACQuery(authorizationMatrixAll)
 		Expect(err).NotTo(HaveOccurred())
 		expectQueryJson(query, `{
         "bool": {
@@ -211,7 +211,7 @@ var _ = Describe("RBAC query tests", func() {
 	})
 
 	It("handles flows with namespaced perms", func() {
-		query, err := FlowLogs().NewRBACQuery(authorizationMatrixNamespaces)
+		query, err := MultiIndexFlowLogs().NewRBACQuery(authorizationMatrixNamespaces)
 		Expect(err).NotTo(HaveOccurred())
 		expectQueryJson(query, `{
         "bool": {
@@ -318,7 +318,7 @@ var _ = Describe("RBAC query tests", func() {
 	})
 
 	It("handles flows with single perm", func() {
-		query, err := FlowLogs().NewRBACQuery(authorizationMatrixSingle)
+		query, err := MultiIndexFlowLogs().NewRBACQuery(authorizationMatrixSingle)
 		Expect(err).NotTo(HaveOccurred())
 		expectQueryJson(query, `{
         "bool": {
@@ -361,14 +361,14 @@ var _ = Describe("RBAC query tests", func() {
 	})
 
 	It("handles flows with no perms", func() {
-		_, err := FlowLogs().NewRBACQuery(authorizationMatrixNone)
+		_, err := MultiIndexFlowLogs().NewRBACQuery(authorizationMatrixNone)
 		Expect(err).To(HaveOccurred())
 		Expect(err).To(BeAssignableToTypeOf(&httputils.HttpStatusError{}))
 		Expect(err.(*httputils.HttpStatusError).Status).To(Equal(http.StatusForbidden))
 	})
 
 	It("handles l7 with full perms", func() {
-		query, err := L7Logs().NewRBACQuery(authorizationMatrixAll)
+		query, err := MultiIndexL7Logs().NewRBACQuery(authorizationMatrixAll)
 		Expect(err).NotTo(HaveOccurred())
 		expectQueryJson(query, `{
         "bool": {
@@ -459,7 +459,7 @@ var _ = Describe("RBAC query tests", func() {
 	})
 
 	It("handles l7 with namespaced perms", func() {
-		query, err := L7Logs().NewRBACQuery(authorizationMatrixNamespaces)
+		query, err := MultiIndexL7Logs().NewRBACQuery(authorizationMatrixNamespaces)
 		Expect(err).NotTo(HaveOccurred())
 		expectQueryJson(query, `{
         "bool": {
@@ -566,7 +566,7 @@ var _ = Describe("RBAC query tests", func() {
 	})
 
 	It("handles l7 with single perm", func() {
-		query, err := L7Logs().NewRBACQuery(authorizationMatrixSingle)
+		query, err := MultiIndexL7Logs().NewRBACQuery(authorizationMatrixSingle)
 		Expect(err).NotTo(HaveOccurred())
 		expectQueryJson(query, `{
         "bool": {
@@ -609,20 +609,20 @@ var _ = Describe("RBAC query tests", func() {
 	})
 
 	It("handles l7 with no perms", func() {
-		_, err := L7Logs().NewRBACQuery(authorizationMatrixNone)
+		_, err := MultiIndexL7Logs().NewRBACQuery(authorizationMatrixNone)
 		Expect(err).To(HaveOccurred())
 		Expect(err).To(BeAssignableToTypeOf(&httputils.HttpStatusError{}))
 		Expect(err.(*httputils.HttpStatusError).Status).To(Equal(http.StatusForbidden))
 	})
 
 	It("handles dns with full perms", func() {
-		query, err := DnsLogs().NewRBACQuery(authorizationMatrixAll)
+		query, err := MultiIndexDNSLogs().NewRBACQuery(authorizationMatrixAll)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(query).To(BeNil())
 	})
 
 	It("handles dns with namespaced perms", func() {
-		query, err := DnsLogs().NewRBACQuery(authorizationMatrixNamespaces)
+		query, err := MultiIndexDNSLogs().NewRBACQuery(authorizationMatrixNamespaces)
 		Expect(err).NotTo(HaveOccurred())
 		expectQueryJson(query, `{
         "bool": {
@@ -643,7 +643,7 @@ var _ = Describe("RBAC query tests", func() {
 	})
 
 	It("handles dns with single perm", func() {
-		query, err := DnsLogs().NewRBACQuery(authorizationMatrixSingle)
+		query, err := MultiIndexDNSLogs().NewRBACQuery(authorizationMatrixSingle)
 		Expect(err).NotTo(HaveOccurred())
 		expectQueryJson(query, `{
         "term": {
@@ -653,7 +653,7 @@ var _ = Describe("RBAC query tests", func() {
 	})
 
 	It("handles dns with no perms", func() {
-		_, err := DnsLogs().NewRBACQuery(authorizationMatrixNone)
+		_, err := MultiIndexDNSLogs().NewRBACQuery(authorizationMatrixNone)
 		Expect(err).To(HaveOccurred())
 		Expect(err).To(BeAssignableToTypeOf(&httputils.HttpStatusError{}))
 		Expect(err.(*httputils.HttpStatusError).Status).To(Equal(http.StatusForbidden))

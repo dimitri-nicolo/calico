@@ -14,17 +14,20 @@ import (
 
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/waf"
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/tproxydefs"
 )
 
+type wafCheckFn func(ps *policystore.PolicyStore, req *authz.CheckRequest, src, dst []proto.WorkloadEndpointID) (*authz.CheckResponse, error)
+
 type WAFCheckProvider struct {
 	subscriptionType string
-	checkFn          func(req *authz.CheckRequest) (*authz.CheckResponse, error)
+	checkFn          wafCheckFn
 }
 
 type WAFCheckProviderOption func(*WAFCheckProvider)
 
-func WithWAFCheckProviderCheckFn(fn func(req *authz.CheckRequest) (*authz.CheckResponse, error)) WAFCheckProviderOption {
+func WithWAFCheckProviderCheckFn(fn wafCheckFn) WAFCheckProviderOption {
 	return func(wp *WAFCheckProvider) {
 		wp.checkFn = fn
 	}
@@ -51,7 +54,16 @@ func (c *WAFCheckProvider) Check(ps *policystore.PolicyStore, req *authz.CheckRe
 	case "per-host-policies":
 		if wafIPSet, ok := ps.IPSetByID[tproxydefs.ServiceIPsIPSet]; ok &&
 			wafIPSet.ContainsAddress(req.Attributes.Destination.Address) {
-			return c.checkFn(req)
+			// lookup endpoints see if we get src or dest
+			src, dst, _ := lookupEndpointKeysFromRequest(ps, req)
+			if len(dst) == 0 {
+				// if we get to here, this means traffic was steered in from tproxy.
+				// but, WAF check is being processed at source (has src info, no dest info)
+				// continue to next (dest) node by returning OK (since waf is currently the last check performed )
+				log.Debug("WAF Check encountered at source. continuing to next check")
+				return &authz.CheckResponse{Status: &status.Status{Code: OK}}, nil
+			}
+			return c.checkFn(ps, req, src, dst)
 		}
 
 		// traffic described in request doesn't need to go through WAF check; or
@@ -61,11 +73,11 @@ func (c *WAFCheckProvider) Check(ps *policystore.PolicyStore, req *authz.CheckRe
 		// in any case, let it continue to next check
 		return &authz.CheckResponse{Status: &status.Status{Code: UNKNOWN}}, nil
 	default:
-		return c.checkFn(req)
+		return c.checkFn(ps, req, nil, nil)
 	}
 }
 
-func defaultWAFCheck(req *authz.CheckRequest) (*authz.CheckResponse, error) {
+func defaultWAFCheck(ps *policystore.PolicyStore, req *authz.CheckRequest, src, dst []proto.WorkloadEndpointID) (*authz.CheckResponse, error) {
 	resp := &authz.CheckResponse{Status: &status.Status{Code: OK}}
 
 	// Helper variables used to reduce potential code smells.
@@ -85,6 +97,7 @@ func defaultWAFCheck(req *authz.CheckRequest) (*authz.CheckResponse, error) {
 		reqPath, reqMethod, reqProtocol, reqSourceHost,
 		reqSourcePort, reqDestinationHost, reqDestinationPort,
 		reqHost, reqHeaders, reqBody,
+		src, dst,
 	)
 	if err != nil {
 		log.Errorf("WAF Process Http Request URL '%s' WAF rules rejected HTTP request!", reqPath)
@@ -95,7 +108,15 @@ func defaultWAFCheck(req *authz.CheckRequest) (*authz.CheckResponse, error) {
 	return resp, nil
 }
 
-func WafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, clientPort uint32, serverHost string, serverPort uint32, destinationHost string, reqHeaders map[string]string, reqBody string) error {
+func WafProcessHttpRequest(
+	uri, httpMethod, inputProtocol,
+	clientHost string, clientPort uint32,
+	serverHost string, serverPort uint32,
+	destinationHost string,
+	reqHeaders map[string]string,
+	reqBody string,
+	src, dst []proto.WorkloadEndpointID,
+) error {
 
 	// Use this as the correlationID.
 	id := waf.GenerateModSecurityID()
@@ -142,6 +163,18 @@ func WafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 		rule_info = append(rule_info, owaspInfo.String())
 	}
 
+	srcNamespace, srcName := extractFirstWepNameAndNamespace(src)
+	dstNamespace, dstName := extractFirstWepNameAndNamespace(dst)
+
+	if log.IsLevelEnabled(log.TraceLevel) {
+		log.WithFields(log.Fields{
+			"srcName":      srcName,
+			"srcNamespace": srcNamespace,
+			"dstName":      dstName,
+			"dstNamespace": dstNamespace,
+		}).Trace("logged names and namespaces")
+	}
+
 	if rules != nil {
 		// Log to Elasticsearch => Kibana.
 		waf.Logger.WithFields(log.Fields{
@@ -150,14 +183,18 @@ func WafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 			"method":     httpMethod,
 			"protocol":   inputProtocol,
 			"source": log.Fields{
-				"ip":       clientHost,
-				"port_num": clientPort,
-				"hostname": "-",
+				"ip":        clientHost,
+				"port_num":  clientPort,
+				"hostname":  "-",
+				"name":      srcName,
+				"namespace": srcNamespace,
 			},
 			"destination": log.Fields{
-				"ip":       serverHost,
-				"port_num": serverPort,
-				"hostname": destinationHost,
+				"ip":        serverHost,
+				"port_num":  serverPort,
+				"hostname":  destinationHost,
+				"name":      dstName,
+				"namespace": dstNamespace,
 			},
 			// keeping this field only for backward compatibility
 			"rule_info": strings.Join(rule_info, "\n"),
@@ -168,6 +205,20 @@ func WafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 	}
 
 	return err
+}
+
+func extractFirstWepNameAndNamespace(weps []proto.WorkloadEndpointID) (string, string) {
+	if len(weps) == 0 {
+		return "-", "-"
+	}
+
+	wepName := weps[0].WorkloadId
+	parts := strings.Split(wepName, "/")
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+
+	return wepName, "-"
 }
 
 // splitInput: split input based on delimiter specified into 2x components [left and right].

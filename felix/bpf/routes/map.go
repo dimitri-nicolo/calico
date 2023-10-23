@@ -36,6 +36,7 @@ func init() {
 
 func SetMapSize(size int) {
 	maps.SetSize(MapParameters.VersionedName(), size)
+	maps.SetSize(MapV6Parameters.VersionedName(), size)
 }
 
 // struct cali_rt_key {
@@ -47,7 +48,7 @@ const KeySize = 8
 type Key [KeySize]byte
 
 func (k Key) Addr() ip.Addr {
-	var addr ip.V4Addr // FIXME IPv6
+	var addr ip.V4Addr
 	copy(addr[:], k[4:8])
 	return addr
 }
@@ -104,7 +105,7 @@ func (v Value) Flags() Flags {
 }
 
 func (v Value) NextHop() ip.Addr {
-	var addr ip.V4Addr // FIXME IPv6
+	var addr ip.V4Addr
 	copy(addr[:], v[4:8])
 	return addr
 }

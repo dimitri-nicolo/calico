@@ -127,9 +127,9 @@ type endpointManager struct {
 	floatingIPsEnabled     bool
 
 	// Our dependencies.
-	rawTable     iptablesTable
-	mangleTable  iptablesTable
-	filterTable  iptablesTable
+	rawTable     IptablesTable
+	mangleTable  IptablesTable
+	filterTable  IptablesTable
 	ruleRenderer rules.RuleRenderer
 	routeTable   routetable.RouteTableInterface
 	writeProcSys procSysWriter
@@ -215,9 +215,9 @@ type EndpointStatusUpdateCallback func(ipVersion uint8, id interface{}, status s
 type procSysWriter func(path, value string) error
 
 func newEndpointManager(
-	rawTable iptablesTable,
-	mangleTable iptablesTable,
-	filterTable iptablesTable,
+	rawTable IptablesTable,
+	mangleTable IptablesTable,
+	filterTable IptablesTable,
 	ruleRenderer rules.RuleRenderer,
 	routeTable routetable.RouteTableInterface,
 	ipVersion uint8,
@@ -260,9 +260,9 @@ func newEndpointManager(
 }
 
 func newEndpointManagerWithShims(
-	rawTable iptablesTable,
-	mangleTable iptablesTable,
-	filterTable iptablesTable,
+	rawTable IptablesTable,
+	mangleTable IptablesTable,
+	filterTable IptablesTable,
 	ruleRenderer rules.RuleRenderer,
 	routeTable routetable.RouteTableInterface,
 	ipVersion uint8,
@@ -316,7 +316,7 @@ func newEndpointManagerWithShims(
 
 		wlIfaceNamesToReconfigure: set.New[string](),
 
-		epIDsToUpdateStatus: set.NewBoxed[any](),
+		epIDsToUpdateStatus: set.New[any](),
 
 		sourceSpoofingConfig: map[string][]string{},
 		rpfSkipChainDirty:    true,
@@ -1214,7 +1214,7 @@ func (m *endpointManager) updateHostEndpoints() {
 func (m *endpointManager) updateDispatchChains(
 	activeChains map[string]*iptables.Chain,
 	newChains []*iptables.Chain,
-	table iptablesTable,
+	table IptablesTable,
 ) {
 	seenChains := set.New[string]()
 	for _, newChain := range newChains {
@@ -1333,8 +1333,6 @@ func (m *endpointManager) removeEgressGatewayInterfaceAddress(name string) {
 	// Removing this address causes the egress gateway device route to disappear, so tell the
 	// route table to resync in order to reinstate it.
 	m.routeTable.QueueResyncIface(name)
-
-	return
 }
 
 func (m *endpointManager) interfaceExistsInProcSys(name string) (bool, error) {

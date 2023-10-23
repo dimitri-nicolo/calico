@@ -13,6 +13,7 @@ import (
 
 	elastic "github.com/olivere/elastic/v7"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -61,7 +62,23 @@ func LogIndicies(ctx context.Context, client *elastic.Client) error {
 	return nil
 }
 
-func CleanupIndices(ctx context.Context, client *elastic.Client, cluster string) error {
+// CleanupSingle handles cleanup for single-index backends. It deletes all the data for a given cluster and tenant.
+func CleanupSingle(ctx context.Context, client *elastic.Client, index string, i bapi.ClusterInfo) error {
+	query := elastic.NewBoolQuery()
+	query.Must(elastic.NewTermQuery("cluster", i.Cluster))
+	if i.Tenant != "" {
+		query.Must(elastic.NewTermQuery("tenant", i.Tenant))
+	}
+	logrus.Infof("[TEST] Deleting data for %s", i)
+	_, err := client.DeleteByQuery(index).WaitForCompletion(true).Query(query).Do(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// CleanupMulti cleans up data for the given cluster from a multi-index backend.
+func CleanupMulti(ctx context.Context, client *elastic.Client, cluster string) error {
 	indices, err := client.CatIndices().Do(ctx)
 	if err != nil {
 		return err
@@ -112,4 +129,12 @@ func CleanupIndices(ctx context.Context, client *elastic.Client, cluster string)
 	}
 
 	return nil
+}
+
+func CleanupIndices(ctx context.Context, client *elastic.Client, singleIndex bool, index bapi.Index, i bapi.ClusterInfo) error {
+	if singleIndex {
+		return CleanupSingle(ctx, client, index.Index(i), i)
+	} else {
+		return CleanupMulti(ctx, client, i.Cluster)
+	}
 }

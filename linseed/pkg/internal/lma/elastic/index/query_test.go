@@ -12,7 +12,7 @@ var _ = Describe("Query Converter", func() {
 	Context("Alerts", func() {
 		It("should return an error if the key is invalid", func() {
 			query := "invalid_key=allow"
-			_, err := Alerts().NewSelectorQuery(query)
+			_, err := MultiIndexAlerts().NewSelectorQuery(query)
 			Expect(err).Should(HaveOccurred())
 			Expect(err.Error()).Should(Equal("Invalid selector (invalid_key=allow) in request: invalid key: invalid_key"))
 		})
@@ -26,7 +26,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "origin=aval1"
-			esquery, err := Alerts().NewSelectorQuery(query)
+			esquery, err := MultiIndexAlerts().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -54,7 +54,7 @@ var _ = Describe("Query Converter", func() {
 			}
 
 			query := "origin=aval1 AND type=global_alert"
-			esquery, err := Alerts().NewSelectorQuery(query)
+			esquery, err := MultiIndexAlerts().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -81,7 +81,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "origin=aval1 OR type=global_alert"
-			esquery, err := Alerts().NewSelectorQuery(query)
+			esquery, err := MultiIndexAlerts().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -121,7 +121,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "(origin=aval1 OR type=global_alert) AND host=hostval"
-			esquery, err := Alerts().NewSelectorQuery(query)
+			esquery, err := MultiIndexAlerts().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -353,7 +353,7 @@ var _ = Describe("Query Converter", func() {
 				"\"source_name\" IN {\"*basic-123*\"} AND \"source_namespace\" IN {\"*default*\"} AND " +
 				"'source_ip' >= '172.16.0.0' AND source_ip <= '172.32.0.0' and " +
 				"suspicious_domains in {'sysdig.com','cilium.io'}"
-			esquery, err := Alerts().NewSelectorQuery(query)
+			esquery, err := MultiIndexAlerts().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -362,7 +362,7 @@ var _ = Describe("Query Converter", func() {
 	Context("Dns", func() {
 		It("should return an error if the key is invalid", func() {
 			query := "invalid_key=allow"
-			_, err := DnsLogs().NewSelectorQuery(query)
+			_, err := MultiIndexDNSLogs().NewSelectorQuery(query)
 			Expect(err).Should(HaveOccurred())
 			Expect(err.Error()).Should(Equal("Invalid selector (invalid_key=allow) in request: " +
 				"invalid key: invalid_key"))
@@ -370,7 +370,7 @@ var _ = Describe("Query Converter", func() {
 
 		It("should return an error if the value is invalid", func() {
 			query := "client_ip=invalid_value"
-			_, err := DnsLogs().NewSelectorQuery(query)
+			_, err := MultiIndexDNSLogs().NewSelectorQuery(query)
 			Expect(err).Should(HaveOccurred())
 			Expect(err.Error()).Should(Equal("Invalid selector (client_ip=invalid_value) in request: " +
 				"invalid value for client_ip: invalid_value"))
@@ -385,7 +385,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "client_ip=\"1.0.1.5\""
-			esquery, err := DnsLogs().NewSelectorQuery(query)
+			esquery, err := MultiIndexDNSLogs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -413,7 +413,7 @@ var _ = Describe("Query Converter", func() {
 			}
 
 			query := "start_time=\"2006-01-02 15:04:05\" AND client_ip=\"10.0.0.1\""
-			esquery, err := DnsLogs().NewSelectorQuery(query)
+			esquery, err := MultiIndexDNSLogs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -440,7 +440,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "qname=\"http://www.yolo.com\" OR count=5"
-			esquery, err := DnsLogs().NewSelectorQuery(query)
+			esquery, err := MultiIndexDNSLogs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -480,7 +480,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "(end_time=\"2006-01-02 15:04:05\" OR count=225) AND client_ip=\"192.168.2.1\""
-			esquery, err := DnsLogs().NewSelectorQuery(query)
+			esquery, err := MultiIndexDNSLogs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -489,7 +489,7 @@ var _ = Describe("Query Converter", func() {
 	Context("Flow", func() {
 		It("should return an error if the key is invalid", func() {
 			query := "invalid_key=allow"
-			_, err := FlowLogs().NewSelectorQuery(query)
+			_, err := MultiIndexFlowLogs().NewSelectorQuery(query)
 			Expect(err).Should(HaveOccurred())
 			Expect(err.Error()).Should(Equal("Invalid selector (invalid_key=allow) in request: " +
 				"invalid key: invalid_key"))
@@ -504,7 +504,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "action=allow"
-			esquery, err := FlowLogs().NewSelectorQuery(query)
+			esquery, err := MultiIndexFlowLogs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -532,7 +532,7 @@ var _ = Describe("Query Converter", func() {
 			}
 
 			query := "action=allow AND action=deny"
-			esquery, err := FlowLogs().NewSelectorQuery(query)
+			esquery, err := MultiIndexFlowLogs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -559,7 +559,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "action=allow OR action=deny"
-			esquery, err := FlowLogs().NewSelectorQuery(query)
+			esquery, err := MultiIndexFlowLogs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -599,7 +599,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "(action=allow OR action=deny) AND action=deny"
-			esquery, err := FlowLogs().NewSelectorQuery(query)
+			esquery, err := MultiIndexFlowLogs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -608,7 +608,7 @@ var _ = Describe("Query Converter", func() {
 	Context("L7", func() {
 		It("should return an error if the key is invalid", func() {
 			query := "invalid_key=allow"
-			_, err := L7Logs().NewSelectorQuery(query)
+			_, err := SingleIndexL7Logs().NewSelectorQuery(query)
 			Expect(err).Should(HaveOccurred())
 			Expect(err.Error()).Should(Equal("Invalid selector (invalid_key=allow) in request: " +
 				"invalid key: invalid_key"))
@@ -616,7 +616,7 @@ var _ = Describe("Query Converter", func() {
 
 		It("should return an error if the value is invalid", func() {
 			query := "source_type=invalid_value"
-			_, err := L7Logs().NewSelectorQuery(query)
+			_, err := SingleIndexL7Logs().NewSelectorQuery(query)
 			Expect(err).Should(HaveOccurred())
 			Expect(err.Error()).Should(Equal("Invalid selector (source_type=invalid_value) in request: " +
 				"invalid value for source_type: invalid_value"))
@@ -631,7 +631,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "source_type=wep"
-			esquery, err := L7Logs().NewSelectorQuery(query)
+			esquery, err := SingleIndexL7Logs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -659,7 +659,7 @@ var _ = Describe("Query Converter", func() {
 			}
 
 			query := "duration_mean=50 AND dest_type=net"
-			esquery, err := L7Logs().NewSelectorQuery(query)
+			esquery, err := SingleIndexL7Logs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -686,7 +686,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "url=\"http://www.yolo.com\" OR dest_service_port_num=65535"
-			esquery, err := L7Logs().NewSelectorQuery(query)
+			esquery, err := SingleIndexL7Logs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})
@@ -726,7 +726,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 			query := "(url=\"http://www.yolo.com\" OR method=methodval) AND dest_type=ns"
-			esquery, err := L7Logs().NewSelectorQuery(query)
+			esquery, err := SingleIndexL7Logs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
 		})

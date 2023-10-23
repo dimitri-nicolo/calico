@@ -5,8 +5,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var _ = Describe("getRFC1123PolicyName", func() {
@@ -35,6 +37,8 @@ var _ = Describe("CopyStagedNetworkPolicy", func() {
 		Expect(dest.ObjectMeta.Name).To(Equal(src.GetObjectMeta().GetName()))
 		Expect(dest.ObjectMeta.Namespace).To(Equal(src.GetObjectMeta().GetNamespace()))
 		Expect(dest.ObjectMeta.OwnerReferences).To(Equal(src.GetObjectMeta().GetOwnerReferences()))
+		Expect(dest.ObjectMeta.ResourceVersion).To(Equal(src.ObjectMeta.ResourceVersion))
+		Expect(dest.ObjectMeta.UID).To(Equal(src.ObjectMeta.UID))
 		Expect(dest.ObjectMeta.Annotations).To(Equal(src.GetObjectMeta().GetAnnotations()))
 		Expect(dest.ObjectMeta.Labels).To(Equal(src.GetObjectMeta().GetLabels()))
 
@@ -57,6 +61,8 @@ var _ = Describe("CopyStagedNetworkPolicy", func() {
 							Name: "test-cluster",
 						},
 					},
+					ResourceVersion: "454124",
+					UID:             "1234567890",
 					Annotations: map[string]string{
 						"test-annotation": "test-value",
 					},

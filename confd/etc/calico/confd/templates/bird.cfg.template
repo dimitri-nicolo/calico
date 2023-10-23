@@ -36,9 +36,9 @@ template kernel kernel_template {
 }
 
 {{- $ignored_interfaces := ""}}
-{{- $node_ignored_interfaces_key := printf "/host/%s/ignored_interfaces" (getenv "NODENAME")}}
+{{- $node_ignored_interfaces_key := printf "/bgp/v1/host/%s/ignored_interfaces" (getenv "NODENAME")}}
 {{- if exists $node_ignored_interfaces_key }}{{$ignored_interfaces = getv $node_ignored_interfaces_key}}
-{{- else if exists "/global/ignored_interfaces" }}{{$ignored_interfaces = getv "/global/ignored_interfaces"}}
+{{- else if exists "/bgp/v1/global/ignored_interfaces" }}{{$ignored_interfaces = getv "/bgp/v1/global/ignored_interfaces"}}
 {{- end}}
 
 template direct direct_template {
@@ -66,7 +66,7 @@ include "bird_ipam.cfg";
 
 # ------------- External Networks -------------
 {{- $node_peers_key := printf "/bgp/v1/host/%s/peer_v4" $node_name }}
-{{- range $line := emitBIRDExternalNetworkConfig $node_ip (gets "/resources/v3/projectcalico.org/externalnetworks/*") (gets "/bgp/v1/global/peer_v4/*") (gets (printf "%s/*" $node_peers_key)) }}
+{{- range $line := externalNetworkBIRDConfig $node_ip (gets "/resources/v3/projectcalico.org/externalnetworks/*") (gets "/bgp/v1/global/peer_v4/*") (gets (printf "%s/*" $node_peers_key)) }}
 {{ $line }}
 {{- end }}
 
@@ -187,7 +187,7 @@ template bgp bgp_template {
 }
 
 # -------------- BGP Filters ------------------
-{{- range $line := emitBIRDBGPFilterFuncs (gets "/resources/v3/projectcalico.org/bgpfilters/*") 4 }}
+{{- range $line := bgpFilterBIRDFuncs (gets "/resources/v3/projectcalico.org/bgpfilters/*") 4 }}
 {{ $line }}
 {{- end }}
 
@@ -288,7 +288,7 @@ protocol bgp Global_{{$id}} from bgp_template {
     {{- if exists $filterKey }}
     {{- $filterVal := json (getv $filterKey) }}
     {{- if $filterVal.spec.importV4 }}
-    {{ emitFunctionName $filter "import" "4" }}();
+    {{ bgpFilterFunctionName $filter "import" "4" }}();
     {{- end }}
     {{- end }}
     {{- end }}
@@ -300,7 +300,7 @@ protocol bgp Global_{{$id}} from bgp_template {
     {{- if exists $filterKey }}
     {{- $filterVal := json (getv $filterKey) }}
     {{- if $filterVal.spec.exportV4 }}
-    {{ emitFunctionName $filter "export" "4" }}();
+    {{ bgpFilterFunctionName $filter "export" "4" }}();
     {{- end }}
     {{- end }}
     {{- end }}
@@ -310,7 +310,7 @@ protocol bgp Global_{{$id}} from bgp_template {
   };  # Only want to export routes for workloads.
   gateway {{$data.gateway_mode}};
 {{- if $peer_external_network_exists }}
-  table {{ emitExternalNetworkTableName ($data.external_network) }};
+  table {{ externalNetworkTableName ($data.external_network) }};
 {{ end }}
 {{- if and ($data.calico_node) (gt $data.ip $node_ip)}}
   passive on; # Peering is unidirectional, peer will connect to us.
@@ -388,7 +388,7 @@ protocol bgp Node_{{$id}} from bgp_template {
     {{- if exists $filterKey }}
     {{- $filterVal := json (getv $filterKey) }}
     {{- if $filterVal.spec.importV4 }}
-    {{ emitFunctionName $filter "import" "4" }}();
+    {{ bgpFilterFunctionName $filter "import" "4" }}();
     {{- end }}
     {{- end }}
     {{- end }}
@@ -400,7 +400,7 @@ protocol bgp Node_{{$id}} from bgp_template {
     {{- if exists $filterKey }}
     {{- $filterVal := json (getv $filterKey) }}
     {{- if $filterVal.spec.exportV4 }}
-    {{ emitFunctionName $filter "export" "4" }}();
+    {{ bgpFilterFunctionName $filter "export" "4" }}();
     {{- end }}
     {{- end }}
     {{- end }}
@@ -410,7 +410,7 @@ protocol bgp Node_{{$id}} from bgp_template {
   };  # Only want to export routes for workloads.
   gateway {{$data.gateway_mode}};
 {{- if $peer_external_network_exists }}
-  table {{ emitExternalNetworkTableName ($data.external_network) }};
+  table {{ externalNetworkTableName ($data.external_network) }};
 {{ end }}
 {{- if eq $data.restart_mode "LongLivedGracefulRestart"}}
   graceful restart time 0;

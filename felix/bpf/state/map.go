@@ -17,8 +17,6 @@ package state
 import (
 	"unsafe"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/calico/felix/bpf/maps"
 )
 
@@ -97,7 +95,8 @@ type State struct {
 	TunIP1              uint32
 	TunIP2              uint32
 	TunIP3              uint32
-	_                   uint32
+	ihl                 uint16
+	_                   uint16
 	PolicyRC            PolicyResult
 	SrcPort             uint16
 	DstPort             uint16
@@ -120,15 +119,12 @@ type State struct {
 	NATData             uint64
 	ProgStartTime       uint64
 	Flags               uint64
+	_                   [48]byte // ipv6 padding
 }
 
-const expectedSize = 432
+const expectedSize = 480
 
 func (s *State) AsBytes() []byte {
-	size := unsafe.Sizeof(State{})
-	if size != expectedSize {
-		log.WithField("size", size).Panic("Incorrect struct size")
-	}
 	bPtr := (*[expectedSize]byte)(unsafe.Pointer(s))
 	bytes := make([]byte, expectedSize)
 	copy(bytes, bPtr[:])
@@ -146,9 +142,9 @@ var MapParameters = maps.MapParameters{
 	Type:       "percpu_array",
 	KeySize:    4,
 	ValueSize:  expectedSize,
-	MaxEntries: 1,
+	MaxEntries: 2,
 	Name:       "cali_state",
-	Version:    2,
+	Version:    4,
 }
 
 func Map() maps.Map {
@@ -160,7 +156,7 @@ func MapForTest() maps.Map {
 		Type:       "array",
 		KeySize:    4,
 		ValueSize:  expectedSize,
-		MaxEntries: 1,
+		MaxEntries: 2,
 		Name:       "test_state",
 	})
 }

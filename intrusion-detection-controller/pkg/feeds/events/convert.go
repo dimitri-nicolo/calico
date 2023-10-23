@@ -16,18 +16,20 @@ import (
 )
 
 const (
-	SuspiciousFlow     = "gtf_suspicious_flow"
-	SuspiciousDNSQuery = "gtf_suspicious_dns_query"
-	Severity           = 100
+	SuspiciousFlow         = "gtf_suspicious_flow"
+	SuspiciousDNSQuery     = "gtf_suspicious_dns_query"
+	SuspiciousFlowName     = "Suspicious Flow"
+	SuspiciousDnsQueryName = "Suspicious DNS Query"
+	Severity               = 100
 )
 
 func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v1.Event {
 	var description string
 	switch key {
 	case storage.QueryKeyFlowLogSourceIP:
-		description = fmt.Sprintf("suspicious IP %s from list %s connected to %s %s/%s", util.StringPtrWrapper{S: flowLog.SourceIP}, strings.Join(feeds, ", "), flowLog.DestType, flowLog.DestNamespace, flowLog.DestName)
+		description = fmt.Sprintf("suspicious IP %s, listed in Global Threat Feed %s, connected to %s/%s", util.StringPtrWrapper{S: flowLog.SourceIP}, strings.Join(feeds, ", "), flowLog.DestNamespace, flowLog.DestName)
 	case storage.QueryKeyFlowLogDestIP:
-		description = fmt.Sprintf("%s %s/%s connected to suspicious IP %s from list %s", flowLog.SourceType, flowLog.SourceNamespace, flowLog.SourceName, util.StringPtrWrapper{S: flowLog.DestIP}, strings.Join(feeds, ", "))
+		description = fmt.Sprintf("pod %s/%s connected to suspicious IP %s which is listed in Global Threat Feed %s", flowLog.SourceNamespace, flowLog.SourceName, util.StringPtrWrapper{S: flowLog.DestIP}, strings.Join(feeds, ", "))
 	default:
 		description = fmt.Sprintf("%s %s connected to %s %s", flowLog.SourceType, util.StringPtrWrapper{S: flowLog.SourceIP}, flowLog.DestType, util.StringPtrWrapper{S: flowLog.DestIP})
 	}
@@ -40,13 +42,33 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 		SuspiciousPrefix: nil,
 	}
 
+	var mitreID []string
+	var mitreTactic string
+	if flowLog.Reporter == "dst" {
+		mitreID = []string{"T1090"}
+		mitreTactic = "Command and Control"
+	} else {
+		mitreID = []string{"T1041"}
+		mitreTactic = "Exfiltration"
+	}
+
+	var mitigations []string
+	if record.FlowAction == "deny" {
+		mitigations = []string{"No mitigation needed. This network traffic was blocked by Calico"}
+	} else {
+		if flowLog.Reporter == "dst" {
+			mitigations = []string{"Create a global network policy to prevent traffic to this IP address"}
+		} else {
+			mitigations = []string{"Create a global network policy to prevent traffic from this IP address"}
+		}
+	}
 	return v1.Event{
 		ID:              generateSuspicousIPSetID(flowLog.StartTime, flowLog.SourceIP, flowLog.SourcePort, flowLog.DestIP, flowLog.DestPort, record),
 		Time:            v1.NewEventTimestamp(flowLog.StartTime),
 		Type:            SuspiciousFlow,
 		Description:     description,
 		Severity:        Severity,
-		Origin:          feeds[0],
+		Origin:          SuspiciousFlowName,
 		SourceIP:        flowLog.SourceIP,
 		SourcePort:      flowLog.SourcePort,
 		SourceNamespace: flowLog.SourceNamespace,
@@ -58,6 +80,12 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 		DestName:        flowLog.DestName,
 		DestNameAggr:    flowLog.DestNameAggr,
 		Record:          record,
+
+		Name:         SuspiciousFlowName,
+		AttackVector: "Network",
+		MitreIDs:     &mitreID,
+		Mitigations:  &mitigations,
+		MitreTactic:  mitreTactic,
 	}
 }
 
@@ -116,7 +144,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 			// But, press on anyway.
 		}
 		sort.Strings(sDomains)
-		desc = fmt.Sprintf("%s/%s got DNS query results including suspicious domain(s) %s from global threat feed(s) %s",
+		desc = fmt.Sprintf("A request originating from %v/%v queried the domain name %v, which is listed in the threat feed %v",
 			l.ClientNamespace,
 			sname,
 			strings.Join(sDomains, ", "),
@@ -154,6 +182,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		Feeds:             feeds,
 		SuspiciousDomains: sDomains,
 	}
+
 	startTime := l.StartTime.Unix()
 	return v1.Event{
 		ID:              generateSuspiciousDNSDomainID(startTime, util.StrPtr(l.ClientIP), record),
@@ -161,12 +190,18 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		Type:            SuspiciousDNSQuery,
 		Description:     desc,
 		Severity:        Severity,
-		Origin:          feeds[0],
+		Origin:          SuspiciousDnsQueryName,
 		SourceIP:        util.StrPtr(l.ClientIP),
 		SourceNamespace: l.ClientNamespace,
 		SourceName:      l.ClientName,
 		SourceNameAggr:  l.ClientNameAggr,
 		Record:          record,
+
+		Name:         SuspiciousDnsQueryName,
+		AttackVector: "Network",
+		MitreIDs:     &[]string{"T1041"},
+		Mitigations:  &[]string{"Create a global network policy to prevent traffic from this IP address"},
+		MitreTactic:  "Exfiltration",
 	}
 }
 

@@ -355,6 +355,8 @@ func getServerFromConnection(conn net.Conn, responses ...string) *http.Server {
 
 func acceptAndRespondOnce(listener net.Listener, wg *sync.WaitGroup, status, body string) {
 	go func() {
+		defer GinkgoRecover()
+
 		defer wg.Done()
 		conn, err := listener.Accept()
 		Expect(err).ShouldNot(HaveOccurred())

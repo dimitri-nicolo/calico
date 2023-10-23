@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
 package servicegraph
 
 import (
@@ -10,11 +10,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
-
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
+	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // This file provides a cache-backed interface for service graph data.
@@ -34,16 +37,23 @@ import (
 // TODO(rlb): Future iterations may use runtime stats to determine how the cache grows and ages out, and perhaps control
 //            garbage collection.
 
+const (
+	// This is the default request time range from Tigera Manager.
+	// Update this when Manager changes the default value.
+	defaultRequestTimeRange = 15 * time.Minute
+)
+
 type ServiceGraphCache interface {
 	GetFilteredServiceGraphData(ctx context.Context, rd *RequestData) (*ServiceGraphData, error)
 	GetCacheSize() int
 }
 
 func NewServiceGraphCache(
-	ctx context.Context,
+	k8sClient datastore.ClientSet,
 	backend ServiceGraphBackend,
 	cfg *Config,
 ) ServiceGraphCache {
+	ctx := context.Background()
 	sgc := &serviceGraphCache{
 		ctx:     ctx,
 		cache:   make(map[cacheKey]*cacheEntry),
@@ -51,6 +61,9 @@ func NewServiceGraphCache(
 		cfg:     cfg,
 	}
 	go sgc.backgroundCacheUpdateLoop()
+	if cfg.ServiceGraphCacheDataPrefetch {
+		sgc.prefetchRawData(ctx, k8sClient)
+	}
 	return sgc
 }
 
@@ -344,7 +357,7 @@ func (s *serviceGraphCache) newEntry(key cacheKey) *cacheEntry {
 		ctx:      ctx,
 		cancel:   cancel,
 		cacheKey: key,
-		accessed: time.Now().UTC(),
+		accessed: time.Now(),
 	}
 	s.addEntry(entry)
 
@@ -361,7 +374,7 @@ func (s *serviceGraphCache) newEntry(key cacheKey) *cacheEntry {
 //
 // Lock is held by caller.
 func (s *serviceGraphCache) touchEntry(d *cacheEntry) {
-	d.accessed = time.Now().UTC()
+	d.accessed = time.Now()
 	s.queue.add(d)
 }
 
@@ -410,6 +423,13 @@ func (s *serviceGraphCache) updateEntry(e *cacheEntry) {
 			s.removeEntry(e)
 		}
 
+		// Discard the cache entry when flow logs are empty as ServiceGraph nodes and edges are calculated based on flows.
+		// It is less likely for a cluster to have no flows. It happens when the cluster is newly installed and logcollector
+		// haven't yet send logs to datastore or the entire cluster got stopped and restarted.
+		if len(e.data.l3) == 0 {
+			s.removeEntry(e)
+		}
+
 		// and tidy the cache to maintain cache size and age out old entries.
 		s.tidyCache()
 	}()
@@ -421,8 +441,8 @@ func (s *serviceGraphCache) updateEntry(e *cacheEntry) {
 //
 // Lock is held by caller.
 func (s *serviceGraphCache) tidyCache() {
-	// Aged out cutoff time for slow queries that have not compeleted based on last access.
-	cutoff := time.Now().UTC().Add(-s.cfg.ServiceGraphCacheSlowQueryEntryAgeOut)
+	// Aged out cutoff time for slow queries that have not completed based on last access.
+	cutoff := time.Now().Add(-s.cfg.ServiceGraphCacheSlowQueryEntryAgeOut)
 
 	// Remove any entries that have excessively slow queries and are no longer required by any user.
 	entry := s.queue.first
@@ -448,7 +468,7 @@ func (s *serviceGraphCache) tidyCache() {
 	}
 
 	// Aged out cutoff time based on last access.
-	cutoff = time.Now().UTC().Add(-s.cfg.ServiceGraphCachePolledEntryAgeOut)
+	cutoff = time.Now().Add(-s.cfg.ServiceGraphCachePolledEntryAgeOut)
 
 	// Remove all aged-out relative time entries - this avoids unnecessary polling.
 	entry = s.queue.first
@@ -528,6 +548,47 @@ func (s *serviceGraphCache) backgroundCacheUpdateLoop() {
 		}
 
 		log.Debug("Finished cache update cycle")
+	}
+}
+
+func (s *serviceGraphCache) prefetchRawData(ctx context.Context, k8sClient datastore.ClientSet) {
+	log.Info("Prefetch cluster raw data to warm up cache")
+
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	// start with the default cluster name
+	clusterNames := []string{lmak8s.DefaultCluster}
+	// add managed cluster names
+	if managedClusters, err := k8sClient.ManagedClusters().List(ctx, metav1.ListOptions{}); err != nil {
+		log.WithError(err).Info("failed to list managed clusters. prefetching raw data for managed clusters are skipped")
+	} else {
+		for _, managedCluster := range managedClusters.Items {
+			clusterNames = append(clusterNames, managedCluster.Name)
+		}
+	}
+
+	now := time.Now().UTC()
+	from := now.Add(-defaultRequestTimeRange)
+	for _, clusterName := range clusterNames {
+		rd := &RequestData{
+			ServiceGraphRequest: &v1.ServiceGraphRequest{
+				Cluster: clusterName,
+				TimeRange: &lmav1.TimeRange{
+					From: from,
+					To:   now,
+					Now:  &now,
+				},
+				Timeout: metav1.Duration{
+					Duration: middleware.DefaultRequestTimeout,
+				},
+			},
+		}
+		if _, err := s.getRawDataForRequest(ctx, rd); err != nil {
+			log.WithError(err).WithField("cluster", clusterName).Info("failed to prefetch raw data and skipped")
+		} else {
+			log.WithField("cluster", clusterName).Info("Prefetch raw data is successful")
+		}
 	}
 }
 
@@ -720,9 +781,9 @@ type cacheEntry struct {
 	// Requests waiting for this data. Incremented upon request and decremented when the request is fulfilled.
 	requests int
 
-	// The time this entry was last accessed and is updated upon returning the response. This is used to mainain the
+	// The time this entry was last accessed and is updated upon returning the response. This is used to maintain the
 	// cache entries based on time, in particular the tidyCache processing ages out the following:
-	// - relative time entries that have not been accessed for some amount of time arae removed so that we don't just
+	// - relative time entries that have not been accessed for some amount of time are removed so that we don't just
 	//   keep querying forever (*)
 	// - long-running queries that are no longer being requested by the client to avoid queries that the user has
 	//   effectively aborted.
@@ -796,12 +857,8 @@ func (e *cacheEntry) needsUpdating(createdCutoff, settleCutoff time.Time) bool {
 		// An update is already in progress.
 		return false
 	}
-	if e.next == nil && e.prev == nil {
-		// Entry is no longer in queue which means it must have been discarded.
-		return false
-	}
 
-	// No update is in progess. If the original request is not pending then check if the creation time indicates we
+	// No update is in progress. If the original request is not pending then check if the creation time indicates we
 	// should update.
 	select {
 	case <-e.data.pending:
@@ -853,7 +910,7 @@ func (q *cacheEntryQueue) add(d *cacheEntry) {
 	q.first.prev, q.first, d.next = d, d, q.first
 }
 
-// add removes the cached data from the queue. This may be called with data not in the queue.
+// remove removes the cached data from the queue. This may be called with data not in the queue.
 func (q *cacheEntryQueue) remove(d *cacheEntry) {
 	prev := d.prev
 	next := d.next

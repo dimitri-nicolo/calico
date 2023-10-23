@@ -56,10 +56,18 @@ var initialisedStore = empty.withKVUpdates(
 
 // withPolicy adds a tier and policy containing selectors for all and b=="b"
 var pol1KVPair = KVPair{Key: PolicyKey{Name: "pol-1", Tier: "default"}, Value: &policy1_order20}
+var pol1KVPairAlways = KVPair{Key: PolicyKey{Name: "pol-1", Tier: "default"}, Value: &policy1_order20_always}
+var pol1KVPairOnDemand = KVPair{Key: PolicyKey{Name: "pol-1", Tier: "default"}, Value: &policy1_order20_ondemand}
 
 var withPolicy = initialisedStore.withKVUpdates(
 	pol1KVPair,
 ).withName("with policy")
+
+var withPolicyAlways = initialisedStore.withKVUpdates(
+	pol1KVPairAlways,
+).withActivePolicies(
+	proto.PolicyID{Tier: "default", Name: "pol-1"},
+).withIPSet(allSelectorId, []string{}).withIPSet(bEqBSelectorId, []string{}).withName("with always-programmed policy")
 
 // withPolicyIngressOnly adds a tier and ingress policy containing selectors for all
 var withPolicyIngressOnly = initialisedStore.withKVUpdates(
@@ -96,12 +104,16 @@ var withDNSPolicy = initialisedStore.withKVUpdates(
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.ext-service"}, Value: &policyDNSExternal},
 ).withActivePolicies(
-	proto.PolicyID{"default", "default.dns-basic"},
-	proto.PolicyID{"default", "default.ext-service"},
+	proto.PolicyID{Tier: "default", Name: "default.dns-basic"},
+	proto.PolicyID{Tier: "default", Name: "default.ext-service"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
-		{"default", nil, []string{"default.ext-service", "default.dns-basic"}},
+		{
+			Name:               "default",
+			IngressPolicyNames: nil,
+			EgressPolicyNames:  []string{"default.ext-service", "default.dns-basic"},
+		},
 	},
 ).withIPSet(allSelectorId, []string{
 	"fc00:fe11::1/128",
@@ -130,12 +142,16 @@ var withDNSPolicy2 = initialisedStore.withKVUpdates(
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.ext-service-2"}, Value: &policyDNSExternal2},
 ).withActivePolicies(
-	proto.PolicyID{"default", "default.dns-basic"},
-	proto.PolicyID{"default", "default.ext-service-2"},
+	proto.PolicyID{Tier: "default", Name: "default.dns-basic"},
+	proto.PolicyID{Tier: "default", Name: "default.ext-service-2"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
-		{"default", nil, []string{"default.ext-service-2", "default.dns-basic"}},
+		{
+			Name:               "default",
+			IngressPolicyNames: nil,
+			EgressPolicyNames:  []string{"default.ext-service-2", "default.dns-basic"},
+		},
 	},
 ).withIPSet(allSelectorId, []string{
 	"fc00:fe11::1/128",
@@ -158,12 +174,16 @@ var withDNSPolicy3 = initialisedStore.withKVUpdates(
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.destination-domains"}, Value: &policyDNSExternal3},
 ).withActivePolicies(
-	proto.PolicyID{"default", "default.dns-basic"},
-	proto.PolicyID{"default", "default.destination-domains"},
+	proto.PolicyID{Tier: "default", Name: "default.dns-basic"},
+	proto.PolicyID{Tier: "default", Name: "default.destination-domains"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
-		{"default", nil, []string{"default.destination-domains", "default.dns-basic"}},
+		{
+			Name:               "default",
+			IngressPolicyNames: nil,
+			EgressPolicyNames:  []string{"default.destination-domains", "default.dns-basic"},
+		},
 	},
 ).withIPSet(allSelectorId, []string{
 	"fc00:fe11::1/128",
@@ -322,6 +342,14 @@ var localEp1WithPolicy = withPolicy.withKVUpdates(
 	routelocalWlV6ColonOne,
 	routelocalWlV6ColonTwo,
 ).withName("ep1 local, policy")
+
+var localEp1WithPolicyAlways = localEp1WithPolicy.withKVUpdates(
+	pol1KVPairAlways,
+).withName("ep1 local, always policy")
+
+var localEp1WithPolicyOnDemand = localEp1WithPolicy.withKVUpdates(
+	pol1KVPairOnDemand,
+).withName("ep1 local, on-demand explicit policy")
 
 // localEp1WithNamedPortPolicy as above but with named port in the policy.
 var localEp1WithNamedPortPolicy = localEp1WithPolicy.withKVUpdates(

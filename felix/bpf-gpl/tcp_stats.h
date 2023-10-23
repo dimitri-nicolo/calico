@@ -5,7 +5,9 @@
 #ifndef __CALI_TCPSTATS_H__
 #define __CALI_TCPSTATS_H__
 
+#include "types.h"
 #include "sstats.h"
+#include "log.h"
 
 #define SEND_TCP_STATS_INTERVAL 5000000000
 
@@ -14,7 +16,6 @@ static CALI_BPF_INLINE void send_tcp_stats(struct bpf_sock *sk, struct bpf_tcp_s
 	struct calico_socket_stats_value *val = NULL;
 	struct calico_socket_stats_value value = {};
 	__u64 ts = 0;
-	int ret = 0;
 
 	if (tsk) {
 		if (BPF_TCP_ESTABLISHED == sk->state) {
@@ -32,7 +33,7 @@ static CALI_BPF_INLINE void send_tcp_stats(struct bpf_sock *sk, struct bpf_tcp_s
 			val = cali_sstats_lookup_elem(&key);
 			if (val == NULL) {
 				value.timestamp = ts;
-				ret = cali_sstats_update_elem(&key, &value, 0);
+				cali_sstats_update_elem(&key, &value, 0);
 			} else {
 				if (ts - val->timestamp <= SEND_TCP_STATS_INTERVAL) {
 					return;
@@ -56,7 +57,7 @@ static CALI_BPF_INLINE void send_tcp_stats(struct bpf_sock *sk, struct bpf_tcp_s
 		__builtin_memcpy(event.saddr, &key.saddr, 16);
 		__builtin_memcpy(event.daddr, &key.daddr, 16);
 		CALI_DEBUG("TCP stats: event sent for SIP: 0x%x DIP: 0x%x", event.saddr, event.daddr);
-		event_tcp_stats(ctx->skb, &event);
+		event_tcp_stats(ctx, &event);
 	}
 }
 

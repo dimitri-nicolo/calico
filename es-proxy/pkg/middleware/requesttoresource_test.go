@@ -9,6 +9,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 func genRequest(q string) *http.Request {
@@ -19,7 +21,7 @@ func genRequest(q string) *http.Request {
 func genRequestWithHeader(q, xclu string) *http.Request {
 	uri, _ := url.Parse(q)
 	req := &http.Request{URL: uri, Header: make(map[string][]string, 1)}
-	req.Header.Add(clusterIdHeader, xclu)
+	req.Header.Add(lmak8s.XClusterIDHeader, xclu)
 	return req
 }
 

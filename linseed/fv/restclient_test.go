@@ -6,6 +6,7 @@ package fv_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -29,6 +30,10 @@ func restSetupAndTeardown(t *testing.T) func() {
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
 
+	// Run Linseed for the test.
+	args := DefaultLinseedArgs()
+	linseed := RunLinseed(t, args)
+
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
 	cluster = testutils.RandomClusterName()
@@ -40,7 +45,7 @@ func restSetupAndTeardown(t *testing.T) func() {
 	var err error
 	cfg := rest.Config{
 		CACertPath:     "cert/RootCA.crt",
-		URL:            "https://localhost:8444/",
+		URL:            fmt.Sprintf("https://localhost:%d/", args.Port),
 		ClientCertPath: "cert/localhost.crt",
 		ClientKeyPath:  "cert/localhost.key",
 	}
@@ -48,6 +53,7 @@ func restSetupAndTeardown(t *testing.T) func() {
 	require.NoError(t, err)
 
 	return func() {
+		linseed.Stop()
 		logCancel()
 	}
 }
@@ -56,10 +62,11 @@ func TestFV_RESTClient(t *testing.T) {
 	t.Run("should reject requests from a client with no client cert", func(t *testing.T) {
 		defer restSetupAndTeardown(t)()
 
-		// This test verifies mTLS works as expected.
+		// This test verifies mTLS works as expected. Build a client which matches the value one,
+		// but doesn't have a client cert.
 		badClient, err := rest.NewClient(tenant, rest.Config{
 			CACertPath: "cert/RootCA.crt",
-			URL:        "https://localhost:8444/",
+			URL:        fmt.Sprintf("https://localhost:%d/", DefaultLinseedArgs().Port),
 		})
 		require.NoError(t, err)
 

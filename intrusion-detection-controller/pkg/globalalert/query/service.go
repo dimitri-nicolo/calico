@@ -111,7 +111,7 @@ func (e *service) buildVulnerabilityQuery(alert *v3.GlobalAlert) error {
 
 // convertAlertSpecQueryToVulnerabilityQueryParameters converts GlobalAlert's spec.query to Vulnerability API query parameters.
 func (e *service) convertAlertSpecQueryToVulnerabilityQueryParameters(alert *v3.GlobalAlert) (JsonObject, error) {
-	q, err := query.ParseQuery(e.substituteVariables(alert))
+	q, err := query.ParseQuery(substituteVariables(alert))
 	if err != nil {
 		log.WithError(err).Errorf("failed to parse spec.query in %s", alert.Name)
 		return nil, err
@@ -155,7 +155,7 @@ func (e *service) buildQueryConfiguration(alert *v3.GlobalAlert) (QueryBuilder, 
 	return QueryBuilder{
 		lookBack:     lookBack,
 		pageSize:     size,
-		selector:     alert.Spec.Query,
+		selector:     substituteVariables(alert),
 		aggregations: aggs,
 		dataType:     alert.Spec.DataSet,
 	}, nil
@@ -596,7 +596,7 @@ func (e *service) convert(record JsonObject) lsv1.Event {
 }
 
 // substituteVariables finds variables in the query string and replace them with values from GlobalAlertSpec.Substitutions.
-func (e *service) substituteVariables(alert *v3.GlobalAlert) string {
+func substituteVariables(alert *v3.GlobalAlert) string {
 	out := alert.Spec.Query
 	variables, err := extractVariablesFromTemplate(out)
 	if err != nil {

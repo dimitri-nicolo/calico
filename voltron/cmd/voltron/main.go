@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"regexp"
 
-	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
@@ -21,15 +23,14 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
-	"github.com/projectcalico/calico/voltron/internal/pkg/utils/cors"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	cfg := config.Config{}
-	if err := envconfig.Process(config.EnvConfigPrefix, &cfg); err != nil {
-		log.Fatal(err)
+	cfg, err := config.Parse()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to load voltron configuration.")
 	}
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
@@ -87,6 +88,16 @@ func main() {
 	}
 
 	k8s := bootstrap.NewK8sClientWithConfig(k8sConfig)
+
+	var client ctrlclient.WithWatch
+	scheme := runtime.NewScheme()
+	if err = v3.AddToScheme(scheme); err != nil {
+		log.WithError(err).Fatal("Failed to configure controller runtime client")
+	}
+	client, err = ctrlclient.NewWithWatch(k8sConfig, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		log.WithError(err).Fatal("Failed to configure controller runtime client with watch")
+	}
 
 	if cfg.EnableMultiClusterManagement {
 		// the cert used to sign guardian certs is required no matter what to verify inbound connections
@@ -168,7 +179,7 @@ func main() {
 				ClientCert:   cfg.InternalHTTPSCert,
 			},
 		}
-		targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled, nil)
+		targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
 		if err != nil {
 			log.WithError(err).Fatal("failed to parse Linseed proxy targets")
 		}
@@ -302,14 +313,9 @@ func main() {
 		})
 	}
 
-	var modifyResponse cors.ModifyResponse
 	if cfg.CalicoCloudCorsHost != "" {
-		corsOriginRegexp, err := regexp.Compile(cfg.CalicoCloudCorsHost)
-		if err != nil {
-			log.WithError(err).Fatalf("failed to compile regexp for CalicoCloud CORS Host %s", cfg.CalicoCloudCorsHost)
-		}
-		modifyResponse = cors.ResponseHandler(corsOriginRegexp)
-		opts = append(opts, server.WithCalicoCloudCORS(corsOriginRegexp, modifyResponse))
+		// pass prometheus path as a path to ignore because prometheus already sets cors headers in responses.
+		opts = append(opts, server.WithCalicoCloudCORS(cfg.CalicoCloudCorsHost, cfg.PrometheusPath))
 	}
 
 	var jwtAuthOpts []auth.JWTAuthOption
@@ -356,7 +362,7 @@ func main() {
 		log.Fatal("Unable to create authenticator", err)
 	}
 
-	targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled, modifyResponse)
+	targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to parse default proxy targets.")
 	}
@@ -369,8 +375,9 @@ func main() {
 
 	srv, err := server.New(
 		k8s,
+		client,
 		k8sConfig,
-		cfg,
+		*cfg,
 		authn,
 		opts...,
 	)

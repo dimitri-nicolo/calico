@@ -15,12 +15,13 @@ import (
 
 var _ = Describe("WAF Controller", func() {
 	var (
-		mockClient = client.NewMockClient("", rest.MockResult{})
-		wac        = &wafAlertController{
-			clusterName:      "clusterName",
-			wafLogs:          newMockWAFLogs(mockClient, "clustername"),
-			events:           newMockEvents(mockClient, "clustername"),
-			lastWafTimestamp: time.Now(),
+		numOfAlerts = 2
+		mockClient  = client.NewMockClient("", rest.MockResult{})
+		wac         = &wafAlertController{
+			clusterName: "clusterName",
+			wafLogs:     newMockWAFLogs(mockClient, "clustername"),
+			events:      newMockEvents(mockClient, "clustername"),
+			logsCache:   NewWAFLogsCache(time.Minute),
 		}
 	)
 
@@ -35,7 +36,7 @@ var _ = Describe("WAF Controller", func() {
 			params := &v1.WAFLogParams{
 				QueryParams: v1.QueryParams{
 					TimeRange: &lmav1.TimeRange{
-						From: wac.lastWafTimestamp,
+						From: wac.lastQueryTimestamp,
 						To:   now,
 					},
 				},
@@ -44,9 +45,46 @@ var _ = Describe("WAF Controller", func() {
 			logs, err := wac.events.List(ctx, params)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(logs.Items).To(BeEmpty())
+			Expect(len(logs.Items)).To(Equal(numOfAlerts))
 
 		})
+	})
+
+	Context("Test WAF Caching", func() {
+		It("Test WAF caching", func() {
+			ctx := context.Background()
+
+			err := wac.ProcessWafLogs(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			now := time.Now()
+			params := &v1.WAFLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: wac.lastQueryTimestamp,
+						To:   now,
+					},
+				},
+			}
+
+			logs, err := wac.events.List(ctx, params)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(logs.Items)).To(Equal(numOfAlerts))
+
+			// run the process again to make sure no new events are generated
+			err = wac.ProcessWafLogs(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			params.QueryParams.TimeRange.To = time.Now()
+
+			logs2, err := wac.events.List(ctx, params)
+			Expect(err).ToNot(HaveOccurred())
+			// no new Events should have been created
+			Expect(len(logs2.Items)).To(Equal(numOfAlerts))
+
+		})
+
 	})
 
 })

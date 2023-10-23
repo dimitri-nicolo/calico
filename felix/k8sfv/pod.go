@@ -116,6 +116,7 @@ func createPod(clientset *kubernetes.Clientset, d deployment, nsName string, spe
 	if host.isLocal {
 		// Create the cali interface, so that Felix does dataplane programming for the local
 		// endpoint.
+		//nolint:staticcheck // Ignore SA1019 deprecated
 		interfaceName := conversion.NewConverter().VethNameForWorkload(nsName, name)
 		log.WithField("interfaceName", interfaceName).Info("Prepare interface")
 
@@ -285,10 +286,14 @@ func runNmap(pod1, pod2 *v1.Pod) {
 	localNetworkingMutex.Lock()
 	defer localNetworkingMutex.Unlock()
 
-	err := localNetworkingMap[pod1.ObjectMeta.Namespace+"."+pod1.ObjectMeta.Name].namespace.Do(func(_ ns.NetNS) (err error) {
-		runCommand("ping", "-c", "1", "-W", "1", pod2.Status.PodIP)
-		runCommand("nmap", "-Pn", "-T5", pod2.Status.PodIP)
-		return
+	err := localNetworkingMap[pod1.ObjectMeta.Namespace+"."+pod1.ObjectMeta.Name].namespace.Do(func(_ ns.NetNS) error {
+		if err := runCommand("ping", "-c", "1", "-W", "1", pod2.Status.PodIP); err != nil {
+			return err
+		}
+		if err := runCommand("nmap", "-Pn", "-T5", pod2.Status.PodIP); err != nil {
+			return err
+		}
+		return nil
 	})
 	panicIfError(err)
 }

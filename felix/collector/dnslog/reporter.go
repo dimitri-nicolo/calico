@@ -106,7 +106,9 @@ func (r *DNSReporter) run() {
 							"size":       len(fl),
 							"dispatcher": d,
 						}).Debug("Dispatching log buffer")
-						d.Report(fl)
+						if err := d.Report(fl); err != nil {
+							log.WithError(err).Debug("failed to dispatch DNS log")
+						}
 					}
 				}
 			}

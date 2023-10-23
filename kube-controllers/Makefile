@@ -69,7 +69,7 @@ ifeq ($(ARCH), amd64)
 	$(call build_cgo_boring_binary, ./cmd/kube-controllers/, $@)
 else
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
-		$(GIT_CONFIG_SSH) go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS)" ./cmd/kube-controllers/'
+		$(GIT_CONFIG_SSH) go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS) -s -w" ./cmd/kube-controllers/'
 endif
 
 bin/wrapper-$(ARCH):
@@ -77,14 +77,14 @@ ifeq ($(ARCH), amd64)
 	$(call build_cgo_boring_binary, ./cmd/wrapper, $@)
 else
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
-		$(GIT_CONFIG_SSH) go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -buildvcs=false -v -o ./cmd/kube-controllers/ -ldflags "$(LDFLAGS)" ./cmd/wrapper'
+		$(GIT_CONFIG_SSH) go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -buildvcs=false -v -o ./cmd/kube-controllers/ -ldflags "$(LDFLAGS) -s -w" ./cmd/wrapper'
 endif
 
 bin/check-status-linux-$(ARCH): $(SRC_FILES)
 	$(DOCKER_RUN) \
 	  -e CGO_ENABLED=$(CGO_ENABLED) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS)" ./cmd/check-status/'
+	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS) -s -w" ./cmd/check-status/'
 
 bin/kubectl-$(ARCH):
 	wget https://storage.googleapis.com/kubernetes-release/release/$(K8S_VERSION)/bin/linux/$(ARCH)/kubectl -O $@
@@ -135,7 +135,7 @@ TEST_BINARIES=$(addsuffix /ut.test,$(WHAT))
 
 ## Run the unit tests in a container.
 test: ut
-ut fv: $(TEST_BINARIES)
+ut fv: $(TEST_BINARIES) image
 	KUBE_IMAGE=$(CALICO_BUILD) \
 		   ETCD_IMAGE=$(ETCD_IMAGE) \
 		   CONTAINER_NAME=$(KUBE_CONTROLLERS_IMAGE):latest-$(ARCH) \

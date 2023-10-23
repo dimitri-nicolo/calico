@@ -103,7 +103,7 @@ type K8sInfraIndex int
 
 const (
 	K8SInfraLocalCluster  K8sInfraIndex = 0
-	K8sInfraRemoteCluster               = 1
+	K8sInfraRemoteCluster K8sInfraIndex = 1
 )
 
 func TearDownK8sInfra(kds *K8sDatastoreInfra) {
@@ -182,7 +182,7 @@ func (kds *K8sDatastoreInfra) PerTestSetup(index K8sInfraIndex) {
 	// In BPF mode, start BPF logging.
 	arch := utils.GetSysArch()
 
-	if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+	if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" && index == K8SInfraLocalCluster {
 		kds.bpfLog = containers.Run("bpf-log",
 			containers.RunOpts{
 				AutoRemove:       true,

@@ -155,8 +155,7 @@ func (w *NullWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-type ContextHook struct {
-}
+type ContextHook struct{}
 
 func (hook ContextHook) Levels() []log.Level {
 	return log.AllLevels

@@ -237,10 +237,7 @@ func checkProcessArgs(actual, expected []string, numArgs int) bool {
 		}
 		return nil
 	})
-	if count == numArgs {
-		return true
-	}
-	return false
+	return count == numArgs
 }
 
 // compareProcessReportedStats compares FlowProcessReportedStats. With process Args
@@ -266,10 +263,7 @@ func compareProcessReportedStats(actual, expected FlowProcessReportedStats) bool
 			}
 		}
 	}
-	if count == len(expected.ProcessArgs) {
-		return true
-	}
-	return false
+	return count == len(expected.ProcessArgs)
 }
 
 var _ = Describe("Flow log aggregator tests", func() {
@@ -484,7 +478,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 		It("aggregates the fed metric updates", func() {
 			By("default duration")
 			ca.IncludePolicies(true)
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdate)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 			messages := ca.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(1))
 			message := *(messages[0])
@@ -502,20 +496,20 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 			By("source port")
 			ca = NewAggregator().AggregateOver(FlowSourcePort)
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdate)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 			// Construct a similar update; same tuple but diff src ports.
 			muNoConn1Rule1AllowUpdateCopy := muNoConn1Rule1AllowUpdate
 			tuple1Copy := tuple1
 			tuple1Copy.L4Src = 44123
 			muNoConn1Rule1AllowUpdateCopy.Tuple = tuple1Copy
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateCopy)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateCopy)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowSourcePort)
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
 
 			By("endpoint prefix names")
 			ca = NewAggregator().AggregateOver(FlowPrefixName)
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMeta)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMeta)).NotTo(HaveOccurred())
 			// Construct a similar update; same tuple but diff src ports.
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy := muNoConn1Rule1AllowUpdateWithEndpointMeta
 			// TODO(SS): Handle and organize these test constants better. Right now they are all over the places
@@ -548,7 +542,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 				Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
 			}
 
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowPrefixName)
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
@@ -575,7 +569,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 				Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "false"}},
 			}
 
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowPrefixName)
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
@@ -605,34 +599,34 @@ var _ = Describe("Flow log aggregator tests", func() {
 					DeltaBytes:   20,
 				},
 			}
-			ca.FeedUpdate(&muWithoutDstEndpointMeta)
+			Expect(ca.FeedUpdate(&muWithoutDstEndpointMeta)).NotTo(HaveOccurred())
 
 			// Another metric update comes in. This time on a different dst private IP
 			muWithoutDstEndpointMetaCopy := muWithoutDstEndpointMeta
 			muWithoutDstEndpointMetaCopy.Tuple.Dst = utils.IpStrTo16Byte("192.168.0.17")
-			ca.FeedUpdate(&muWithoutDstEndpointMetaCopy)
+			Expect(ca.FeedUpdate(&muWithoutDstEndpointMetaCopy)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowPrefixName)
 			// One flow expected: srcMeta.GenerateName -> pvt
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
 
 			// Initial Update
-			ca.FeedUpdate(&muWithoutDstEndpointMeta)
+			Expect(ca.FeedUpdate(&muWithoutDstEndpointMeta)).NotTo(HaveOccurred())
 			// + metric update comes in. This time on a non-private dst IP
 			muWithoutDstEndpointMetaCopy.Tuple.Dst = utils.IpStrTo16Byte("198.17.8.43")
-			ca.FeedUpdate(&muWithoutDstEndpointMetaCopy)
+			Expect(ca.FeedUpdate(&muWithoutDstEndpointMetaCopy)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowPrefixName)
 			// 2nd flow expected: srcMeta.GenerateName -> pub
 			// Three updates so far should result in 2 flows
 			Expect(len(messages)).Should(Equal(2)) // Metric Update comes in with a non private as the dst IP
 
 			// Initial Updates
-			ca.FeedUpdate(&muWithoutDstEndpointMeta)
-			ca.FeedUpdate(&muWithoutDstEndpointMetaCopy)
+			Expect(ca.FeedUpdate(&muWithoutDstEndpointMeta)).NotTo(HaveOccurred())
+			Expect(ca.FeedUpdate(&muWithoutDstEndpointMetaCopy)).NotTo(HaveOccurred())
 			// + metric update comes in. This time with missing src endpointMeta
 			muWithoutDstEndpointMetaCopy.SrcEp = nil
 			muWithoutDstEndpointMetaCopy.DstEp = &endpointMeta
-			ca.FeedUpdate(&muWithoutDstEndpointMetaCopy)
+			Expect(ca.FeedUpdate(&muWithoutDstEndpointMetaCopy)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowPrefixName)
 
 			// 3rd flow expected: pvt -> dst.GenerateName
@@ -726,7 +720,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 		It("aggregates labels from metric updates", func() {
 			By("intersecting labels in FlowSpec when IncludeLabels configured")
 			ca := NewAggregator().IncludeLabels(true)
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMeta)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMeta)).NotTo(HaveOccurred())
 
 			// Construct a similar update; but the endpoints have different labels
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy := muNoConn1Rule1AllowUpdateWithEndpointMeta
@@ -756,7 +750,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					Labels:       map[string]string{"k8s-app": "false"}, // conflicting labels; originally "k8s-app": "true"
 				},
 			}
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)).NotTo(HaveOccurred())
 			messages := ca.GetAndCalibrate(FlowDefault)
 			// Since the FlowMeta remains the same it should still equal 1.
 			Expect(len(messages)).Should(Equal(1))
@@ -790,7 +784,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 			By("not affecting flow logs when IncludeLabels is disabled")
 			ca = NewAggregator().IncludeLabels(false)
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMeta)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMeta)).NotTo(HaveOccurred())
 
 			// Construct a similar update; but the endpoints have different labels
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy = muNoConn1Rule1AllowUpdateWithEndpointMeta
@@ -820,7 +814,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					Labels:       map[string]string{"k8s-app": "false"}, // conflicting labels; originally "k8s-app": "true"
 				},
 			}
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowDefault)
 			// Since the FlowMeta remains the same it should still equal 1.
 			Expect(len(messages)).Should(Equal(1))
@@ -859,7 +853,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			var messages []*FlowLog
 
 			time.AfterFunc(2*time.Second, func() {
-				ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+				Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)).NotTo(HaveOccurred())
 			})
 
 			// ok GetAndCalibrate is a little after feedupdate because feedupdate has some preprocesssing
@@ -972,10 +966,10 @@ var _ = Describe("Flow log aggregator tests", func() {
 			caa = NewAggregator().ForAction(rules.RuleActionAllow)
 			cad = NewAggregator().ForAction(rules.RuleActionDeny)
 
-			caa.FeedUpdate(&muNoConn1Rule2DenyUpdate)
+			Expect(caa.FeedUpdate(&muNoConn1Rule2DenyUpdate)).NotTo(HaveOccurred())
 			messages := caa.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(0))
-			cad.FeedUpdate(&muNoConn1Rule2DenyUpdate)
+			Expect(cad.FeedUpdate(&muNoConn1Rule2DenyUpdate)).NotTo(HaveOccurred())
 			messages = cad.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(1))
 
@@ -983,10 +977,10 @@ var _ = Describe("Flow log aggregator tests", func() {
 			caa = NewAggregator().ForAction(rules.RuleActionAllow)
 			cad = NewAggregator().ForAction(rules.RuleActionDeny)
 
-			caa.FeedUpdate(&muConn1Rule1AllowUpdate)
+			Expect(caa.FeedUpdate(&muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 			messages = caa.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(1))
-			cad.FeedUpdate(&muConn1Rule1AllowUpdate)
+			Expect(cad.FeedUpdate(&muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 			messages = cad.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(0))
 		})
@@ -997,8 +991,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 		It("Aggregates HTTP allowed and denied packets", func() {
 			By("Feeding in two updates containing HTTP request counts")
 			ca := NewAggregator().ForAction(rules.RuleActionAllow)
-			ca.FeedUpdate(&muConn1Rule1HTTPReqAllowUpdate)
-			ca.FeedUpdate(&muConn1Rule1HTTPReqAllowUpdate)
+			Expect(ca.FeedUpdate(&muConn1Rule1HTTPReqAllowUpdate)).NotTo(HaveOccurred())
+			Expect(ca.FeedUpdate(&muConn1Rule1HTTPReqAllowUpdate)).NotTo(HaveOccurred())
 			messages := ca.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(1))
 			// StartedFlowRefs count should be 1
@@ -1015,8 +1009,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 		It("Aggregates original source IPs", func() {
 			By("Feeding in two updates containing HTTP request counts")
 			ca := NewAggregator().ForAction(rules.RuleActionAllow)
-			ca.FeedUpdate(&muWithOrigSourceIPs)
-			ca.FeedUpdate(&muWithMultipleOrigSourceIPs)
+			Expect(ca.FeedUpdate(&muWithOrigSourceIPs)).NotTo(HaveOccurred())
+			Expect(ca.FeedUpdate(&muWithMultipleOrigSourceIPs)).NotTo(HaveOccurred())
 			messages := ca.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(1))
 			// StartedFlowRefs count should be 1
@@ -1030,7 +1024,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 		It("Aggregates original source IPs with unknown rule ID", func() {
 			By("Feeding in update containing HTTP request counts and unknown RuleID")
 			ca := NewAggregator().ForAction(rules.RuleActionAllow)
-			ca.FeedUpdate(&muWithOrigSourceIPsUnknownRuleID)
+			Expect(ca.FeedUpdate(&muWithOrigSourceIPsUnknownRuleID)).NotTo(HaveOccurred())
 			messages := ca.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(1))
 			// StartedFlowRefs count should be 1
@@ -1047,7 +1041,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 		It("Purges only the completed non-aggregated flowMetas", func() {
 			By("Accounting for only the completed 5-tuple refs when making a purging decision")
 			ca := NewAggregator().ForAction(rules.RuleActionDeny)
-			ca.FeedUpdate(&muNoConn1Rule2DenyUpdate)
+			Expect(ca.FeedUpdate(&muNoConn1Rule2DenyUpdate)).NotTo(HaveOccurred())
 			messages := ca.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(1))
 			// StartedFlowRefs count should be 1
@@ -1058,14 +1052,14 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(len(ca.flowStore)).Should(Equal(1))
 
 			// Feeding an update again. But StartedFlowRefs count should be 0
-			ca.FeedUpdate(&muNoConn1Rule2DenyUpdate)
+			Expect(ca.FeedUpdate(&muNoConn1Rule2DenyUpdate)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(1))
 			flowLog = messages[0]
 			Expect(flowLog.NumFlowsStarted).Should(Equal(0))
 
 			// Feeding an expiration of the conn.
-			ca.FeedUpdate(&muNoConn1Rule2DenyExpire)
+			Expect(ca.FeedUpdate(&muNoConn1Rule2DenyExpire)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(1))
 			flowLog = messages[0]
@@ -1080,7 +1074,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 		It("Purges only the completed aggregated flowMetas", func() {
 			By("Accounting for only the completed 5-tuple refs when making a purging decision")
 			ca := NewAggregator().AggregateOver(FlowPrefixName)
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMeta)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMeta)).NotTo(HaveOccurred())
 			// Construct a similar update; same tuple but diff src ports.
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy := muNoConn1Rule1AllowUpdateWithEndpointMeta
 			tuple1Copy := tuple1
@@ -1111,7 +1105,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 				Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
 			}
 
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)).NotTo(HaveOccurred())
 			messages := ca.GetAndCalibrate(FlowPrefixName)
 			// Two updates should still result in 1 flowMeta
 			Expect(len(messages)).Should(Equal(1))
@@ -1122,9 +1116,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(flowLog.NumFlowsStarted).Should(Equal(2))
 
 			// Update one of the two flows and expire the other.
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMeta)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMeta)).NotTo(HaveOccurred())
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.UpdateType = metric.UpdateTypeExpire
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowPrefixName)
 			Expect(len(messages)).Should(Equal(1))
 			// flowStore still carries that 1 flowMeta
@@ -1136,7 +1130,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 			// Expire the sole flowRef
 			muNoConn1Rule1AllowUpdateWithEndpointMeta.UpdateType = metric.UpdateTypeExpire
-			ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMeta)
+			Expect(ca.FeedUpdate(&muNoConn1Rule1AllowUpdateWithEndpointMeta)).NotTo(HaveOccurred())
 			// Pre-purge/Dispatch the meta still lingers
 			Expect(len(ca.flowStore)).Should(Equal(1))
 			// On a dispatch the flowMeta is eventually purged
@@ -1151,7 +1145,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 		It("Updates the stats associated with the flows", func() {
 			By("Accounting for only the packet/byte counts as seen during the interval")
 			ca := NewAggregator().ForAction(rules.RuleActionAllow)
-			ca.FeedUpdate(&muConn1Rule1AllowUpdate)
+			Expect(ca.FeedUpdate(&muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 			messages := ca.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(1))
 			// After the initial update the counts as expected.
@@ -1163,7 +1157,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 			// The flow doesn't expire. But the Get should reset the stats.
 			// A new update on top, then, should result in the same counts
-			ca.FeedUpdate(&muConn1Rule1AllowUpdate)
+			Expect(ca.FeedUpdate(&muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 			messages = ca.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(1))
 			// After the initial update the counts as expected.

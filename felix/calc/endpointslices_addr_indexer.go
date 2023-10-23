@@ -145,8 +145,6 @@ func (e *EndpointSliceAddrIndexer) handleEndpointSlice(
 	if needFlush {
 		e.flush([]*model.ResourceKey{serviceKey, oldServiceKey})
 	}
-
-	return
 }
 
 // AddOrUpdateEndpointSlice tracks endpointSlice IP to EndpointSlice mappings.

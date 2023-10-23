@@ -296,6 +296,18 @@ var baseTests = []StateList{
 		withNonALPPolicy,
 	},
 
+	// Always programmed policies.
+	{
+		withPolicyAlways,
+		localEp1WithPolicyAlways,
+	},
+	{
+		withPolicy,
+		localEp1WithPolicyAlways,
+		withPolicyAlways,
+		localEp1WithPolicyOnDemand,
+	},
+
 	// VXLAN tests.
 
 	{
@@ -636,10 +648,8 @@ func (l licenseTiersEnabled) GetLicenseStatus() lclient.LicenseStatus {
 type licenseTiersDisabled struct{}
 
 func (l licenseTiersDisabled) GetFeatureStatus(feature string) bool {
-	if feature == features.Tiers {
-		return false
-	}
-	return true // all other license features enabled by default
+	// all other license features enabled by default
+	return feature != features.Tiers
 }
 
 func (l licenseTiersDisabled) GetLicenseStatus() lclient.LicenseStatus {
@@ -975,11 +985,16 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 			return nil
 		})
 		statsCollector.RegisterWith(calcGraph)
-		validationFilter = NewValidationFilter(calcGraph.AllUpdDispatcher, conf)
+		validationFilter = NewValidationFilter(calcGraph, conf)
 		sentInSync = false
 		lastState = empty
 		state = empty
 	})
+
+	flush := func() {
+		calcGraph.Flush()
+		eventBuf.Flush()
+	}
 
 	// iterStates iterates through the states in turn,
 	// executing the expectation function after each
@@ -999,11 +1014,11 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 							validationFilter.OnStatusUpdated(api.InSync)
 							sentInSync = true
 						}
-						eventBuf.Flush()
+						flush()
 					}
 					if flushStrategy == afterEachKVAndDupe {
 						validationFilter.OnUpdates([]api.Update{kv})
-						eventBuf.Flush()
+						flush()
 					}
 				}
 				_, _ = fmt.Fprintln(GinkgoWriter, "       -- <<FLUSH>>")
@@ -1012,7 +1027,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 						validationFilter.OnStatusUpdated(api.InSync)
 						sentInSync = true
 					}
-					eventBuf.Flush()
+					flush()
 				}
 				if flushStrategy == afterEachState ||
 					flushStrategy == afterEachKV ||
@@ -1023,7 +1038,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 			}
 			if flushStrategy == atEnd {
 				validationFilter.OnStatusUpdated(api.InSync)
-				eventBuf.Flush()
+				flush()
 				expectation()
 			}
 		}

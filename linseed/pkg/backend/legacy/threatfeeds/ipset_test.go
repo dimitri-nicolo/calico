@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/threatfeeds"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
@@ -25,18 +26,36 @@ import (
 )
 
 var (
-	client      lmaelastic.Client
-	cache       bapi.Cache
-	ib          bapi.IPSetBackend
-	db          bapi.DomainNameSetBackend
-	ctx         context.Context
-	cluster     string
-	clusterInfo bapi.ClusterInfo
+	client             lmaelastic.Client
+	cache              bapi.IndexInitializer
+	ib                 bapi.IPSetBackend
+	db                 bapi.DomainNameSetBackend
+	ctx                context.Context
+	cluster            string
+	clusterInfo        bapi.ClusterInfo
+	ipsetIndexGetter   bapi.Index
+	domainsIndexGetter bapi.Index
 )
+
+// RunAllModes runs the given test function twice, once using the single-index backend, and once using
+// the multi-index backend.
+func RunAllModes(t *testing.T, name string, testFn func(t *testing.T)) {
+	// Run using the multi-index backend.
+	t.Run(fmt.Sprintf("%s [legacy]", name), func(t *testing.T) {
+		defer setupTest(t, false)()
+		testFn(t)
+	})
+
+	// Run using the single-index backend.
+	t.Run(fmt.Sprintf("%s [singleindex]", name), func(t *testing.T) {
+		defer setupTest(t, true)()
+		testFn(t)
+	})
+}
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
-func setupTest(t *testing.T) func() {
+func setupTest(t *testing.T, singleIndex bool) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -46,11 +65,20 @@ func setupTest(t *testing.T) func() {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
-	cache = templates.NewTemplateCache(client, 1, 0)
+	cache = templates.NewCachedInitializer(client, 1, 0)
 
 	// Create backends to use.
-	ib = threatfeeds.NewIPSetBackend(client, cache, 10000)
-	db = threatfeeds.NewDomainNameSetBackend(client, cache, 10000)
+	if singleIndex {
+		ib = threatfeeds.NewSingleIndexIPSetBackend(client, cache, 10000)
+		db = threatfeeds.NewSingleIndexDomainNameSetBackend(client, cache, 10000)
+		ipsetIndexGetter = index.ThreatfeedsIPSetIndex
+		domainsIndexGetter = index.ThreatfeedsDomainIndex
+	} else {
+		ib = threatfeeds.NewIPSetBackend(client, cache, 10000)
+		db = threatfeeds.NewDomainNameSetBackend(client, cache, 10000)
+		ipsetIndexGetter = index.ThreatfeedsIPSetMultiIndex
+		domainsIndexGetter = index.ThreatfeedsDomainMultiIndex
+	}
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
@@ -66,9 +94,11 @@ func setupTest(t *testing.T) func() {
 		// Cancel the context.
 		cancel()
 
-		// Cleanup any data that might have been left over from a previous failed run.
-		err = backendutils.CleanupIndices(context.Background(), esClient, cluster)
-		require.NoError(t, err)
+		// Clean up data from the test.
+		for _, indexGetter := range []bapi.Index{ipsetIndexGetter, domainsIndexGetter} {
+			err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+			require.NoError(t, err)
+		}
 
 		// Cancel logging
 		logCancel()
@@ -76,9 +106,7 @@ func setupTest(t *testing.T) func() {
 }
 
 func TestIPSetBasic(t *testing.T) {
-	t.Run("invalid ClusterInfo", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "invalid ClusterInfo", func(t *testing.T) {
 		f := v1.IPSetThreatFeed{}
 		p := v1.IPSetThreatFeedParams{}
 
@@ -100,8 +128,7 @@ func TestIPSetBasic(t *testing.T) {
 	// Run each test with a tenant specified, and also without a tenant.
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("create and retrieve reports (tenant=%s)", tenant)
-		t.Run(name, func(t *testing.T) {
-			defer setupTest(t)()
+		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo.Tenant = tenant
 
 			// Create a dummy threat feed.
@@ -119,7 +146,7 @@ func TestIPSetBasic(t *testing.T) {
 			require.Equal(t, []v1.BulkError(nil), response.Errors)
 			require.Equal(t, 0, response.Failed)
 
-			err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_threatfeeds_ipset.*")
+			err = backendutils.RefreshIndex(ctx, client, ipsetIndexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Read it back and check it matches.
@@ -130,6 +157,16 @@ func TestIPSetBasic(t *testing.T) {
 			require.Equal(t, "my-threat-feed", resp.Items[0].ID)
 			require.Equal(t, feed, *resp.Items[0].Data)
 
+			// Attempt to delete it with an invalid tenant ID. It should fail.
+			badClusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: "bad-tenant"}
+			bulkResp, err := ib.Delete(ctx, badClusterInfo, []v1.IPSetThreatFeed{resp.Items[0]})
+			require.NoError(t, err)
+			if ipsetIndexGetter.IsSingleIndex() {
+				require.Len(t, bulkResp.Errors, 1)
+				require.Equal(t, bulkResp.Failed, 1)
+			}
+
+			// Delete it with the correct tenant ID and cluster.
 			delResp, err := ib.Delete(ctx, clusterInfo, []v1.IPSetThreatFeed{f})
 			require.NoError(t, err)
 			require.Equal(t, []v1.BulkError(nil), delResp.Errors)
@@ -202,8 +239,7 @@ func TestIPSetFiltering(t *testing.T) {
 		// Run each test with a tenant specified, and also without a tenant.
 		for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
-			t.Run(name, func(t *testing.T) {
-				defer setupTest(t)()
+			RunAllModes(t, name, func(t *testing.T) {
 				clusterInfo.Tenant = tenant
 
 				f1 := v1.IPSetThreatFeed{
@@ -226,7 +262,7 @@ func TestIPSetFiltering(t *testing.T) {
 				require.Equal(t, []v1.BulkError(nil), response.Errors)
 				require.Equal(t, 0, response.Failed)
 
-				err = backendutils.RefreshIndex(ctx, client, "tigera_secure_ee_threatfeeds_ipset.*")
+				err = backendutils.RefreshIndex(ctx, client, ipsetIndexGetter.Index(clusterInfo))
 				require.NoError(t, err)
 
 				resp, err := ib.List(ctx, clusterInfo, tc.Params)

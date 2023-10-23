@@ -296,7 +296,7 @@ func (a *awsIPManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 	}
 	if newSubnetID != "" && oldSubnetID != newSubnetID {
 		if _, ok := a.localRouteDestsBySubnetID[newSubnetID]; !ok {
-			a.localRouteDestsBySubnetID[newSubnetID] = set.NewBoxed[ip.CIDR]()
+			a.localRouteDestsBySubnetID[newSubnetID] = set.New[ip.CIDR]()
 		}
 		a.localRouteDestsBySubnetID[newSubnetID].Add(dst)
 		a.queueAWSResync("route subnet added")
@@ -459,7 +459,7 @@ func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
 	var elasticIPs set.Set[ip.Addr]
 	weps.Iter(func(wepID proto.WorkloadEndpointID) error {
 		wep := a.workloadEndpointsByID[wepID]
-		elasticIPsThisWEP := set.NewBoxed[ip.Addr]()
+		elasticIPsThisWEP := set.New[ip.Addr]()
 		for _, eip := range wep.ElasticIPs {
 			if elasticIPs != nil && !elasticIPs.Contains(eip) {
 				logrus.WithFields(logrus.Fields{
@@ -552,7 +552,7 @@ func (a *awsIPManager) resyncWithDataplane() error {
 	if err != nil {
 		return fmt.Errorf("failed to load local interfaces: %w", err)
 	}
-	activeRules := set.NewBoxed[awsRuleKey]()
+	activeRules := set.New[awsRuleKey]()
 	activeIfaceNames := set.New[string]()
 	var finalErr error
 
@@ -896,10 +896,10 @@ func (a *awsIPManager) updateRouteRules(activeRuleKeys set.Set[awsRuleKey]) {
 }
 
 func (a *awsIPManager) getOrAllocRoutingTable(ifaceName string) routetable.RouteTableInterface {
-	if rt, ok := a.routeTablesByIfaceName[ifaceName]; !ok {
+	if _, ok := a.routeTablesByIfaceName[ifaceName]; !ok {
 		logrus.WithField("ifaceName", ifaceName).Info("Making routing table for AWS interface.")
 		tableIndex := a.claimTableID()
-		rt = a.newRouteTable(
+		rt := a.newRouteTable(
 			[]string{"^" + regexp.QuoteMeta(ifaceName) + "$", routetable.InterfaceNone},
 			4,
 			false,

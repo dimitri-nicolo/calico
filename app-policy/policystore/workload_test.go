@@ -28,6 +28,10 @@ func (m *mockWorkloadCallbacks) Get(k ip.Addr) []*proto.WorkloadEndpoint {
 	return nil
 }
 
+func (m *mockWorkloadCallbacks) Keys(k ip.Addr) []proto.WorkloadEndpointID {
+	return nil
+}
+
 type workloadsTestCase struct {
 	comment  string
 	updates  []interface{}

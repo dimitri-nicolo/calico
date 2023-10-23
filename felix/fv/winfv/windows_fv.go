@@ -19,7 +19,7 @@ type CalicoBackEnd string
 
 const (
 	CalicoBackendBGP   CalicoBackEnd = "bgp"
-	CalicoBackendVXLAN               = "vxlan"
+	CalicoBackendVXLAN CalicoBackEnd = "vxlan"
 )
 
 type WinFV struct {

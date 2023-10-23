@@ -322,7 +322,7 @@ spec:
     # Only used if ICMP_PROBE_IPS is non-empty: timeout on each probe.
     - name: ICMP_PROBE_TIMEOUT
       value: "3s"
-    # Optional HTTP URL to send periodic probes to; if the probe fails that is reflected in 
+    # Optional HTTP URL to send periodic probes to; if the probe fails that is reflected in
     # the health reported on the health port.
     - name: HTTP_PROBE_URL
       value: "%s"

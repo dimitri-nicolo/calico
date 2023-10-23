@@ -20,23 +20,20 @@ import (
 	"sort"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/sirupsen/logrus"
-
-	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/encap"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
-	cresources "github.com/projectcalico/calico/libcalico-go/lib/resources"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/dispatcher"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
+	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/encap"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
+	cresources "github.com/projectcalico/calico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // L3RouteResolver is responsible for indexing (currently only IPv4 versions of):
@@ -303,8 +300,8 @@ func (c *L3RouteResolver) OnBlockUpdate(update api.Update) (_ bool) {
 	// Update the routes map based on the provided block update.
 	key := getRemoteClusterAwareKeyString(update)
 
-	deletes := set.NewBoxed[nodenameRoute]()
-	adds := set.NewBoxed[nodenameRoute]()
+	deletes := set.New[nodenameRoute]()
+	adds := set.New[nodenameRoute]()
 	if update.Value != nil {
 		// Block has been created or updated.
 		// We don't allow multiple blocks with the same CIDR within a cluster, so no need to check
@@ -314,7 +311,7 @@ func (c *L3RouteResolver) OnBlockUpdate(update api.Update) (_ bool) {
 		logrus.WithField("numRoutes", len(newRoutes)).Debug("IPAM block update")
 		cachedRoutes, ok := c.blockToRoutes[key]
 		if !ok {
-			cachedRoutes = set.NewBoxed[nodenameRoute]()
+			cachedRoutes = set.New[nodenameRoute]()
 			c.blockToRoutes[key] = cachedRoutes
 		}
 
@@ -1058,7 +1055,7 @@ func NewRouteTrie() *RouteTrie {
 	return &RouteTrie{
 		v4T:        ip.NewCIDRTrie(),
 		v6T:        ip.NewCIDRTrie(),
-		dirtyCIDRs: set.NewBoxed[ip.CIDR](),
+		dirtyCIDRs: set.New[ip.CIDR](),
 
 		OnAlive: func() {},
 	}

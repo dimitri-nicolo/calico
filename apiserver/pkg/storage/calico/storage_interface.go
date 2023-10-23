@@ -93,6 +93,8 @@ func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc)
 		return NewExternalNetworkStorage(opts)
 	case "projectcalico.org/egressgatewaypolicies":
 		return NewEgressGatewayPolicyStorage(opts)
+	case "projectcalico.org/securityeventwebhooks":
+		return NewSecurityEventWebhookStorage(opts)
 	default:
 		klog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
 		return registry.DryRunnableStorage{}, nil

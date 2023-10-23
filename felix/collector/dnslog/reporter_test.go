@@ -77,7 +77,7 @@ var _ = Describe("DNS Log Reporter", func() {
 		for _, sink := range sinks {
 			r.AddAggregator(sink.aggregator, []string{sink.name})
 		}
-		r.Start()
+		Expect(r.Start()).NotTo(HaveOccurred())
 	})
 
 	It("should generate correct logs", func() {

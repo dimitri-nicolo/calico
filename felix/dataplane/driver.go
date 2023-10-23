@@ -28,16 +28,14 @@ import (
 	"time"
 
 	coreV1 "k8s.io/api/core/v1"
-
-	log "github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/clock"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/calico/felix/aws"
 	"github.com/projectcalico/calico/felix/bpf"
@@ -60,6 +58,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/calico/libcalico-go/lib/security"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
@@ -368,6 +368,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				DNSTrustedServers:                  configParams.DNSTrustedServers,
 				NATOutgoingAddress:                 configParams.NATOutgoingAddress,
 				BPFEnabled:                         configParams.BPFEnabled,
+				BPFForceTrackPacketsFromIfaces:     configParams.BPFForceTrackPacketsFromIfaces,
 				ServiceLoopPrevention:              configParams.ServiceLoopPrevention,
 
 				TPROXYMode:             configParams.TPROXYMode,
@@ -470,6 +471,8 @@ func StartDataplaneDriver(configParams *config.Config,
 			BPFConnTimeLBEnabled:               configParams.BPFConnectTimeLoadBalancingEnabled,
 			BPFKubeProxyIptablesCleanupEnabled: configParams.BPFKubeProxyIptablesCleanupEnabled,
 			BPFLogLevel:                        configParams.BPFLogLevel,
+			BPFLogFilters:                      configParams.BPFLogFilters,
+			BPFCTLBLogFilter:                   configParams.BPFCTLBLogFilter,
 			BPFExtToServiceConnmark:            configParams.BPFExtToServiceConnmark,
 			BPFDataIfacePattern:                configParams.BPFDataIfacePattern,
 			BPFL3IfacePattern:                  configParams.BPFL3IfacePattern,
@@ -485,6 +488,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			BPFMapSizeIPSets:                   configParams.BPFMapSizeIPSets,
 			BPFMapSizeIfState:                  configParams.BPFMapSizeIfState,
 			BPFEnforceRPF:                      configParams.BPFEnforceRPF,
+			BPFDisableGROForIfaces:             configParams.BPFDisableGROForIfaces,
 			XDPEnabled:                         configParams.XDPEnabled,
 			XDPAllowGeneric:                    configParams.GenericXDPEnabled,
 			BPFConntrackTimeouts:               conntrack.DefaultTimeouts(), // FIXME make timeouts configurable
@@ -548,10 +552,11 @@ func StartDataplaneDriver(configParams *config.Config,
 		intDP.Start()
 
 		// Set source-destination-check on AWS EC2 instance.
-		if configParams.AWSSrcDstCheck != string(apiv3.AWSSrcDstCheckOptionDoNothing) {
+		check := apiv3.AWSSrcDstCheckOption(configParams.AWSSrcDstCheck)
+		if check != apiv3.AWSSrcDstCheckOptionDoNothing {
 			c := &clock.RealClock{}
 			updater := aws.NewEC2SrcDstCheckUpdater()
-			go aws.WaitForEC2SrcDstCheckUpdate(configParams.AWSSrcDstCheck, healthAggregator, updater, c)
+			go aws.WaitForEC2SrcDstCheckUpdate(check, healthAggregator, updater, c)
 		}
 
 		return intDP, nil, stopChan

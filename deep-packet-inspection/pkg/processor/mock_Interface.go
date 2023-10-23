@@ -21,6 +21,10 @@ func (_m *MockClientInterface) AlertExceptions() clientv3.AlertExceptionInterfac
 	return nil
 }
 
+func (_m *MockClientInterface) SecurityEventWebhook() clientv3.SecurityEventWebhookInterface {
+	return nil
+}
+
 func (_m *MockClientInterface) BGPConfigurations() clientv3.BGPConfigurationInterface {
 	return nil
 }

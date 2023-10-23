@@ -284,7 +284,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						}
 					}
 					return true
-				}, "20s", "1s").Should(BeTrue())
+				}, "20s", "1s").Should(BeTrue(), "cali40tproxy-svc-ips IP sets didn't show up?")
 			})
 
 			JustAfterEach(func() {

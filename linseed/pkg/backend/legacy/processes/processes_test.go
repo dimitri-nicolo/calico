@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 
@@ -31,17 +32,34 @@ import (
 )
 
 var (
-	client  lmaelastic.Client
-	cache   bapi.Cache
-	pb      bapi.ProcessBackend
-	flb     bapi.FlowLogBackend
-	ctx     context.Context
-	cluster string
+	client      lmaelastic.Client
+	cache       bapi.IndexInitializer
+	pb          bapi.ProcessBackend
+	flb         bapi.FlowLogBackend
+	ctx         context.Context
+	cluster     string
+	indexGetter bapi.Index
 )
+
+// RunAllModes runs the given test function twice, once using the single-index backend, and once using
+// the multi-index backend.
+func RunAllModes(t *testing.T, name string, testFn func(t *testing.T)) {
+	// Run using the multi-index backend.
+	t.Run(fmt.Sprintf("%s [legacy]", name), func(t *testing.T) {
+		defer setupTest(t, false)()
+		testFn(t)
+	})
+
+	// Run using the single-index backend.
+	t.Run(fmt.Sprintf("%s [singleindex]", name), func(t *testing.T) {
+		defer setupTest(t, true)()
+		testFn(t)
+	})
+}
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
-func setupTest(t *testing.T) func() {
+func setupTest(t *testing.T, singleIndex bool) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -51,11 +69,18 @@ func setupTest(t *testing.T) func() {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
-	cache = templates.NewTemplateCache(client, 1, 0)
+	cache = templates.NewCachedInitializer(client, 1, 0)
 
 	// Create backends to use.
-	pb = processes.NewBackend(client)
-	flb = flows.NewFlowLogBackend(client, cache, 10000)
+	if singleIndex {
+		pb = processes.NewSingleIndexBackend(client)
+		flb = flows.NewSingleIndexFlowLogBackend(client, cache, 10000)
+		indexGetter = index.FlowLogIndex
+	} else {
+		pb = processes.NewBackend(client)
+		flb = flows.NewFlowLogBackend(client, cache, 10000)
+		indexGetter = index.FlowLogMultiIndex
+	}
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
@@ -70,8 +95,8 @@ func setupTest(t *testing.T) func() {
 		// Cancel the context.
 		cancel()
 
-		// Cleanup any data that might left over from a previous failed run.
-		err = testutils.CleanupIndices(context.Background(), esClient, cluster)
+		// Clean up data from the test.
+		err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
 		require.NoError(t, err)
 
 		// Cancel logging
@@ -83,8 +108,7 @@ func setupTest(t *testing.T) func() {
 func TestListProcesses(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestListProcesses (tenant=%s)", tenant)
-		t.Run(name, func(t *testing.T) {
-			defer setupTest(t)()
+		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 			// Put some data into ES so we can query it.
@@ -106,7 +130,17 @@ func TestListProcesses(t *testing.T) {
 			dstLog, err := bld.Build()
 			require.NoError(t, err)
 
+			// Creating the flow logs may fail due to conflicts with other tests modifying the same index.
+			// Since go test runs packages in parallel, we need to retry a few times to avoid flakiness.
+			// We could avoid this by creating a new ES instance per-test or per-package, but that would
+			// slow down the test and use more resources. This is a reasonable compromise, and what clients will need to do anyway.
+			attempts := 0
 			response, err := flb.Create(ctx, clusterInfo, []v1.FlowLog{*srcLog, *dstLog})
+			for err != nil && attempts < 5 {
+				logrus.WithError(err).Info("[TEST] Retrying flow log creation due to error")
+				attempts++
+				response, err = flb.Create(ctx, clusterInfo, []v1.FlowLog{*srcLog, *dstLog})
+			}
 			require.NoError(t, err)
 			require.Equal(t, []v1.BulkError(nil), response.Errors)
 			require.Equal(t, 0, response.Failed)
@@ -117,7 +151,7 @@ func TestListProcesses(t *testing.T) {
 			opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
 			opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
-			err = testutils.RefreshIndex(ctx, client, "tigera_secure_ee_flows.*")
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 			require.NoError(t, err)
 
 			// Query for process info. There should be a single entry from the populated data.
@@ -134,6 +168,22 @@ func TestListProcesses(t *testing.T) {
 				Count:    1,
 			}
 			require.Equal(t, expected, r.Items[0])
+
+			// Query for process info using a different tenant ID. There should be no results.
+			otherInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: "other-tenant"}
+			r, err = pb.List(ctx, otherInfo, &opts)
+
+			// The actual behavior here varies slightly between the single-index and multi-index due to
+			// the way ES handles these requests. This is because for multi-index, the ES request targets
+			// an index that doesn't exist. In single-index, the request targets an index that does exist but doesn't
+			// match any documents.
+			if indexGetter.IsSingleIndex() {
+				require.NoError(t, err)
+				require.Len(t, r.Items, 0)
+			} else {
+				require.Error(t, err)
+				require.Nil(t, r)
+			}
 		})
 	}
 }

@@ -118,7 +118,9 @@ func (pc *PolicyLookupsCache) deleteNFLogPrefixEntry(prefix string) {
 	defer pc.lock.Unlock()
 	if pc.useIDs {
 		id64 := pc.nflogPrefixHash[bph].id64
-		pc.ids.ReleaseUintID(id64)
+		if err := pc.ids.ReleaseUintID(id64); err != nil {
+			log.WithError(err).WithField("id", id64).Error("failed to release ID")
+		}
 	}
 	delete(pc.nflogPrefixHash, bph)
 }
@@ -337,15 +339,15 @@ func (pc *PolicyLookupsCache) GetID64FromNFLOGPrefix(prefix [64]byte) uint64 {
 const (
 	// String values used in the string representation of the RuleID. These are used
 	// in some of the external APIs and therefore should not be modified.
-	RuleDirIngressStr  string = "ingress"
-	RuleDirEgressStr          = "egress"
-	ActionAllowStr            = "allow"
-	ActionDenyStr             = "deny"
-	ActionNextTierStr         = "pass"
-	GlobalNamespaceStr        = "__GLOBAL__"
-	ProfileTierStr            = "__PROFILE__"
-	NoMatchNameStr            = "__NO_MATCH__"
-	UnknownStr                = "__UNKNOWN__"
+	RuleDirIngressStr  = "ingress"
+	RuleDirEgressStr   = "egress"
+	ActionAllowStr     = "allow"
+	ActionDenyStr      = "deny"
+	ActionNextTierStr  = "pass"
+	GlobalNamespaceStr = "__GLOBAL__"
+	ProfileTierStr     = "__PROFILE__"
+	NoMatchNameStr     = "__NO_MATCH__"
+	UnknownStr         = "__UNKNOWN__"
 
 	// Special rule index that specifies that a policy has selected traffic that
 	// has implicitly denied traffic.

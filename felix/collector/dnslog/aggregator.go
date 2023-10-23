@@ -8,7 +8,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/rules"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -33,7 +32,6 @@ type Aggregator struct {
 	includeLabels        bool
 	aggregationStartTime time.Time
 	perNodeLimit         int
-	handledAction        rules.RuleAction
 	numUnloggedUpdates   int
 }
 

@@ -20,24 +20,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
 	"github.com/projectcalico/calico/felix/bpf/maps"
 )
 
-const (
-	kprobeEventsFileName = "/sys/kernel/debug/tracing/kprobe_events"
-)
-
 var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf", "tcp_connect"}
 var udpFns = []string{"udp_sendmsg", "udp_recvmsg", "udpv6_sendmsg", "udpv6_recvmsg"}
 var syscallFns = []string{"__x64_sys_execve"}
-
-type kprobeFDs struct {
-	progFD       bpf.ProgFD
-	tracePointFD int
-}
 
 type bpfKprobe struct {
 	logLevel   string
@@ -111,7 +102,7 @@ func (k *bpfKprobe) AttachSyscall() error {
 }
 
 func (k *bpfKprobe) installKprobe(typ string, fns []string) error {
-	filename := path.Join(bpf.ObjectDir, progFileName(typ, k.logLevel))
+	filename := path.Join(bpfdefs.ObjectDir, progFileName(typ, k.logLevel))
 	obj, err := libbpf.OpenObject(filename)
 	if err != nil {
 		return fmt.Errorf("error loading kprobe program %s: %w", filename, err)

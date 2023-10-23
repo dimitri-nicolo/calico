@@ -14,12 +14,3 @@ func ComputeSha256Hash(obj interface{}) string {
 	}
 	return fmt.Sprintf("%x", encoder.Sum(nil))
 }
-
-func ComputeSha256HashWithLimit(obj interface{}, limit int) string {
-	hash := ComputeSha256Hash(obj)
-	if len(hash) > limit {
-		hash = hash[:limit]
-	}
-
-	return hash
-}

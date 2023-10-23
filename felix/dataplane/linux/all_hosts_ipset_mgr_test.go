@@ -28,7 +28,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 
 	It("should not create the IP set until first call to CompleteDeferredWork()", func() {
 		Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
-		allHostsMgr.CompleteDeferredWork()
+		Expect(allHostsMgr.CompleteDeferredWork()).NotTo(HaveOccurred())
 		Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
 	})
 
@@ -43,7 +43,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 				Hostname: "host1",
 				Ipv4Addr: "10.0.0.1",
 			})
-			allHostsMgr.CompleteDeferredWork()
+			Expect(allHostsMgr.CompleteDeferredWork()).NotTo(HaveOccurred())
 		})
 
 		It("should add host1's IP to the IP set", func() {
@@ -56,7 +56,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 					Hostname: "host2",
 					Ipv4Addr: "10.0.0.2",
 				})
-				allHostsMgr.CompleteDeferredWork()
+				Expect(allHostsMgr.CompleteDeferredWork()).NotTo(HaveOccurred())
 			})
 			It("should add the IP to the IP set", func() {
 				Expect(allHostsSet()).To(Equal(set.From[string]("10.0.0.1", "10.0.0.2", externalCIDR)))
@@ -69,7 +69,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 					Hostname: "host2",
 					Ipv4Addr: "10.0.0.1",
 				})
-				allHostsMgr.CompleteDeferredWork()
+				Expect(allHostsMgr.CompleteDeferredWork()).NotTo(HaveOccurred())
 			})
 			It("should tolerate the duplicate", func() {
 				Expect(allHostsSet()).To(Equal(set.From[string]("10.0.0.1", externalCIDR)))
@@ -80,7 +80,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 					allHostsMgr.OnUpdate(&proto.HostMetadataRemove{
 						Hostname: "host2",
 					})
-					allHostsMgr.CompleteDeferredWork()
+					Expect(allHostsMgr.CompleteDeferredWork()).NotTo(HaveOccurred())
 				})
 				It("should keep the IP in the IP set", func() {
 					Expect(allHostsSet()).To(Equal(set.From[string]("10.0.0.1", externalCIDR)))
@@ -91,7 +91,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 						allHostsMgr.OnUpdate(&proto.HostMetadataRemove{
 							Hostname: "host1",
 						})
-						allHostsMgr.CompleteDeferredWork()
+						Expect(allHostsMgr.CompleteDeferredWork()).NotTo(HaveOccurred())
 					})
 					It("should remove the IP", func() {
 						Expect(allHostsSet()).To(Equal(set.From[string](externalCIDR)))
@@ -109,7 +109,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 				allHostsMgr.OnUpdate(&proto.HostMetadataRemove{
 					Hostname: "host2",
 				})
-				allHostsMgr.CompleteDeferredWork()
+				Expect(allHostsMgr.CompleteDeferredWork()).NotTo(HaveOccurred())
 			})
 			It("should keep the IP in the IP set", func() {
 				Expect(allHostsSet()).To(Equal(set.From[string]("10.0.0.1", externalCIDR)))
@@ -122,7 +122,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 					Hostname: "host1",
 					Ipv4Addr: "10.0.0.2",
 				})
-				allHostsMgr.CompleteDeferredWork()
+				Expect(allHostsMgr.CompleteDeferredWork()).NotTo(HaveOccurred())
 			})
 			It("should update the IP set", func() {
 				Expect(allHostsSet()).To(Equal(set.From[string]("10.0.0.2", externalCIDR)))
@@ -132,7 +132,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 		Describe("after a no-op batch", func() {
 			BeforeEach(func() {
 				ipSets.AddOrReplaceCalled = false
-				allHostsMgr.CompleteDeferredWork()
+				Expect(allHostsMgr.CompleteDeferredWork()).NotTo(HaveOccurred())
 			})
 			It("shouldn't rewrite the IP set", func() {
 				Expect(ipSets.AddOrReplaceCalled).To(BeFalse())

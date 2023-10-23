@@ -41,9 +41,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
+	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -101,7 +101,7 @@ func testConnection() error {
 
 	// If we have a kubeconfig, test connection to the APIServer
 	if conf.Kubernetes.Kubeconfig != "" {
-		k8sconfig, err := clientcmd.BuildConfigFromFlags("", conf.Kubernetes.Kubeconfig)
+		k8sconfig, err := winutils.BuildConfigFromFlags("", conf.Kubernetes.Kubeconfig)
 		if err != nil {
 			return fmt.Errorf("error building K8s client config: %s", err)
 		}
@@ -135,14 +135,14 @@ func isEndpointReady(readyEndpoint string, timeout time.Duration) (bool, error) 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		return false, fmt.Errorf("Endpoint is not ready, response code returned:%d", resp.StatusCode)
+		return false, fmt.Errorf("endpoint is not ready, response code returned:%d", resp.StatusCode)
 	}
 	return true, nil
 }
 
 func pollEndpointReadiness(endpoint string, interval, timeout time.Duration) error {
-	return wait.Poll(interval, timeout,
-		func() (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, false,
+		func(context.Context) (bool, error) {
 			if isReady, err := isEndpointReady(endpoint, interval); !isReady {
 				if err != nil {
 					logrus.Errorf("Endpoint may not be ready:%v", err)
@@ -251,7 +251,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 
 	for _, endpoint := range conf.ReadinessGates {
 		if _, err := url.ParseRequestURI(endpoint); err != nil {
-			return fmt.Errorf("Invalid URL set for ReadinessGates:%s Error:%v",
+			return fmt.Errorf("invalid URL set for ReadinessGates:%s Error:%v",
 				endpoint, err)
 		}
 		err := pollEndpointReadiness(endpoint, 5*time.Second, 30*time.Second)

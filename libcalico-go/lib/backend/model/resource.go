@@ -268,6 +268,11 @@ func init() {
 		"EgressGatewayPolicies",
 		reflect.TypeOf(apiv3.EgressGatewayPolicy{}),
 	)
+	registerResourceInfo(
+		apiv3.KindSecurityEventWebhook,
+		"SecurityEventWebhooks",
+		reflect.TypeOf(apiv3.SecurityEventWebhook{}),
+	)
 	// Resources that may be transported in a ResourceKey but are not part of the public API, for use-cases like Federation.
 	registerResourceInfo(
 		libapiv3.KindIPAMBlock,

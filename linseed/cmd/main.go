@@ -9,21 +9,32 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
-
-	"github.com/projectcalico/calico/linseed/pkg/handler/threatfeeds"
-
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kelseyhightower/envconfig"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/linseed/pkg/backend"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 	"github.com/projectcalico/calico/linseed/pkg/controller/token"
 	"github.com/projectcalico/calico/linseed/pkg/handler"
 	"github.com/projectcalico/calico/linseed/pkg/handler/audit"
@@ -35,15 +46,14 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/handler/l7"
 	"github.com/projectcalico/calico/linseed/pkg/handler/processes"
 	"github.com/projectcalico/calico/linseed/pkg/handler/runtime"
+	"github.com/projectcalico/calico/linseed/pkg/handler/threatfeeds"
 	"github.com/projectcalico/calico/linseed/pkg/handler/waf"
 	"github.com/projectcalico/calico/linseed/pkg/middleware"
+	"github.com/projectcalico/calico/linseed/pkg/server"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend"
-
-	rest "k8s.io/client-go/rest"
-
+	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	auditbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/audit"
 	bgpbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/bgp"
 	compliancebackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/compliance"
@@ -56,12 +66,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	threatfeedsbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/threatfeeds"
 	wafbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/waf"
-
-	"github.com/kelseyhightower/envconfig"
-	"github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/linseed/pkg/config"
-	"github.com/projectcalico/calico/linseed/pkg/server"
 )
 
 var (
@@ -77,10 +81,16 @@ func init() {
 func main() {
 	flag.Parse()
 
+	// Read and reconcile configuration
+	cfg := config.Config{}
+	if err := envconfig.Process(config.EnvConfigPrefix, &cfg); err != nil {
+		panic(err)
+	}
+
 	if ready {
-		doHealthCheck("readiness")
+		doHealthCheck("readiness", cfg.HealthPort)
 	} else if live {
-		doHealthCheck("liveness")
+		doHealthCheck("liveness", cfg.HealthPort)
 	} else {
 		// Just run the server.
 		run()
@@ -89,8 +99,8 @@ func main() {
 
 func run() {
 	// Read and reconcile configuration
-	cfg := config.Config{}
-	if err := envconfig.Process(config.EnvConfigPrefix, &cfg); err != nil {
+	cfg, err := config.LoadConfig()
+	if err != nil {
 		panic(err)
 	}
 
@@ -108,38 +118,78 @@ func run() {
 	healthAggregator := health.NewHealthAggregator()
 	healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true}, 0)
 
-	esClient := backend.MustGetElasticClient(cfg)
+	esClient := backend.MustGetElasticClient(*cfg)
 
 	// Create template caches for indices with special shards / replicas configuration
-	defaultCache := templates.NewTemplateCache(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
-	flowCache := templates.NewTemplateCache(esClient, cfg.ElasticFlowShards, cfg.ElasticFlowReplicas)
-	dnsCache := templates.NewTemplateCache(esClient, cfg.ElasticDNSShards, cfg.ElasticDNSReplicas)
-	l7Cache := templates.NewTemplateCache(esClient, cfg.ElasticL7Shards, cfg.ElasticL7Replicas)
-	auditCache := templates.NewTemplateCache(esClient, cfg.ElasticAuditShards, cfg.ElasticAuditReplicas)
-	bgpCache := templates.NewTemplateCache(esClient, cfg.ElasticBGPShards, cfg.ElasticBGPReplicas)
+	defaultCache := templates.NewCachedInitializer(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
+	flowCache := templates.NewCachedInitializer(esClient, cfg.ElasticFlowShards, cfg.ElasticFlowReplicas)
+	dnsCache := templates.NewCachedInitializer(esClient, cfg.ElasticDNSShards, cfg.ElasticDNSReplicas)
+	l7Cache := templates.NewCachedInitializer(esClient, cfg.ElasticL7Shards, cfg.ElasticL7Replicas)
+	auditCache := templates.NewCachedInitializer(esClient, cfg.ElasticAuditShards, cfg.ElasticAuditReplicas)
+	bgpCache := templates.NewCachedInitializer(esClient, cfg.ElasticBGPShards, cfg.ElasticBGPReplicas)
 
 	// Create all the necessary backends.
-	flowLogBackend := flowbackend.NewFlowLogBackend(esClient, flowCache, cfg.ElasticIndexMaxResultWindow)
-	eventBackend := eventbackend.NewBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-	flowBackend := flowbackend.NewFlowBackend(esClient)
-	dnsFlowBackend := dnsbackend.NewDNSFlowBackend(esClient)
-	dnsLogBackend := dnsbackend.NewDNSLogBackend(esClient, dnsCache, cfg.ElasticIndexMaxResultWindow)
-	l7FlowBackend := l7backend.NewL7FlowBackend(esClient)
-	l7LogBackend := l7backend.NewL7LogBackend(esClient, l7Cache, cfg.ElasticIndexMaxResultWindow)
-	auditBackend := auditbackend.NewBackend(esClient, auditCache, cfg.ElasticIndexMaxResultWindow)
-	bgpBackend := bgpbackend.NewBackend(esClient, bgpCache, cfg.ElasticIndexMaxResultWindow)
-	procBackend := procbackend.NewBackend(esClient)
-	wafBackend := wafbackend.NewBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-	reportsBackend := compliancebackend.NewReportsBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-	snapshotsBackend := compliancebackend.NewSnapshotBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-	benchmarksBackend := compliancebackend.NewBenchmarksBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-	runtimeBackend := runtimebackend.NewBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-	ipSetBackend := threatfeedsbackend.NewIPSetBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
-	domainNameSetBackend := threatfeedsbackend.NewDomainNameSetBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+	var flowLogBackend api.FlowLogBackend
+	var flowBackend api.FlowBackend
+	var auditBackend api.AuditBackend
+	var bgpBackend api.BGPBackend
+	var reportsBackend api.ReportsBackend
+	var snapshotsBackend api.SnapshotsBackend
+	var benchmarksBackend api.BenchmarksBackend
+	var dnsFlowBackend api.DNSFlowBackend
+	var dnsLogBackend api.DNSLogBackend
+	var l7FlowBackend api.L7FlowBackend
+	var l7LogBackend api.L7LogBackend
+	var procBackend api.ProcessBackend
+	var runtimeBackend api.RuntimeBackend
+	var eventBackend api.EventsBackend
+	var wafBackend api.WAFBackend
+	var ipSetBackend api.IPSetBackend
+	var domainNameSetBackend api.DomainNameSetBackend
+
+	switch cfg.Backend {
+	case config.BackendTypeMultiIndex:
+		flowLogBackend = flowbackend.NewFlowLogBackend(esClient, flowCache, cfg.ElasticIndexMaxResultWindow)
+		flowBackend = flowbackend.NewFlowBackend(esClient)
+		auditBackend = auditbackend.NewBackend(esClient, auditCache, cfg.ElasticIndexMaxResultWindow)
+		bgpBackend = bgpbackend.NewBackend(esClient, bgpCache, cfg.ElasticIndexMaxResultWindow)
+		reportsBackend = compliancebackend.NewReportsBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		snapshotsBackend = compliancebackend.NewSnapshotBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		benchmarksBackend = compliancebackend.NewBenchmarksBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		dnsFlowBackend = dnsbackend.NewDNSFlowBackend(esClient)
+		dnsLogBackend = dnsbackend.NewDNSLogBackend(esClient, dnsCache, cfg.ElasticIndexMaxResultWindow)
+		l7FlowBackend = l7backend.NewL7FlowBackend(esClient)
+		l7LogBackend = l7backend.NewL7LogBackend(esClient, l7Cache, cfg.ElasticIndexMaxResultWindow)
+		procBackend = procbackend.NewBackend(esClient)
+		runtimeBackend = runtimebackend.NewBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		eventBackend = eventbackend.NewBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		wafBackend = wafbackend.NewBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		ipSetBackend = threatfeedsbackend.NewIPSetBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		domainNameSetBackend = threatfeedsbackend.NewDomainNameSetBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+	case config.BackendTypeSingleIndex:
+		flowLogBackend = flowbackend.NewSingleIndexFlowLogBackend(esClient, flowCache, cfg.ElasticIndexMaxResultWindow)
+		flowBackend = flowbackend.NewSingleIndexFlowBackend(esClient)
+		auditBackend = auditbackend.NewSingleIndexBackend(esClient, auditCache, cfg.ElasticIndexMaxResultWindow)
+		bgpBackend = bgpbackend.NewSingleIndexBackend(esClient, bgpCache, cfg.ElasticIndexMaxResultWindow)
+		reportsBackend = compliancebackend.NewSingleIndexReportsBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		snapshotsBackend = compliancebackend.NewSingleIndexSnapshotBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		benchmarksBackend = compliancebackend.NewSingleIndexBenchmarksBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		dnsFlowBackend = dnsbackend.NewSingleIndexDNSFlowBackend(esClient)
+		dnsLogBackend = dnsbackend.NewSingleIndexDNSLogBackend(esClient, dnsCache, cfg.ElasticIndexMaxResultWindow)
+		l7FlowBackend = l7backend.NewSingleIndexL7FlowBackend(esClient)
+		l7LogBackend = l7backend.NewSingleIndexL7LogBackend(esClient, l7Cache, cfg.ElasticIndexMaxResultWindow)
+		procBackend = procbackend.NewSingleIndexBackend(esClient)
+		runtimeBackend = runtimebackend.NewSingleIndexBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		eventBackend = eventbackend.NewSingleIndexBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		wafBackend = wafbackend.NewSingleIndexBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		ipSetBackend = threatfeedsbackend.NewSingleIndexIPSetBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+		domainNameSetBackend = threatfeedsbackend.NewSingleIndexDomainNameSetBackend(esClient, defaultCache, cfg.ElasticIndexMaxResultWindow)
+	default:
+		logrus.Fatalf("Invalid backend type: %s", cfg.Backend)
+	}
 
 	// Create a Kuberentes client to use for authorization.
 	var kc *rest.Config
-	var err error
 	if cfg.Kubeconfig == "" {
 		// creates the in-cluster k8sConfig
 		kc, err = rest.InClusterConfig()
@@ -157,15 +207,21 @@ func run() {
 	if err != nil {
 		logrus.WithError(err).Fatal("Unable to create Kubernetes client")
 	}
-	pc, err := clientset.NewForConfig(kc)
+	scheme := clientruntime.NewScheme()
+	if err = v3.AddToScheme(scheme); err != nil {
+		logrus.WithError(err).Fatal("Failed to configure controller runtime client")
+	}
+
+	// client is used to get ManagedCluster resources in both single-tenant and multi-tenant modes.
+	client, err := ctrlclient.NewWithWatch(kc, ctrlclient.Options{Scheme: scheme})
 	if err != nil {
-		logrus.WithError(err).Fatal("Unable to create Calico client")
+		logrus.WithError(err).Fatal("Failed to configure client")
 	}
 
 	authOpts := []auth.JWTAuthOption{}
 	if cfg.TokenControllerEnabled {
 		// Get our token signing key.
-		key, err := tokenCredentials(cfg)
+		key, err := tokenCredentials(*cfg)
 		if err != nil {
 			logrus.WithError(err).Fatal("Unable to acquire token signing key")
 		}
@@ -198,18 +254,48 @@ func run() {
 		}
 
 		factory := k8s.NewClientSetFactory(cfg.MultiClusterForwardingCA, cfg.MultiClusterForwardingEndpoint)
+
+		secretsNamespace := cfg.ManagementOperatorNamespace
+		if len(cfg.ExpectedTenantID) > 0 {
+			secretsNamespace = cfg.TenantNamespace
+		}
+		secretsToCopy := []corev1.Secret{
+			{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      resource.VoltronLinseedPublicCert,
+					Namespace: secretsNamespace,
+				},
+			},
+		}
+
 		opts := []token.ControllerOption{
 			token.WithIssuer(token.LinseedIssuer),
 			token.WithIssuerName("tigera-linseed"),
 			token.WithUserInfos(users),
 			token.WithReconcilePeriod(tokenReconcilePeriod),
 			token.WithExpiry(tokenExpiry),
-			token.WithClient(pc),
+			token.WithControllerRuntimeClient(client),
+			token.WithK8sClient(k),
 			token.WithPrivateKey(key),
 			token.WithFactory(factory),
 			token.WithTenant(cfg.ExpectedTenantID),
 			token.WithHealthReport(reportHealth),
+			token.WithSecretsToCopy(secretsToCopy),
 		}
+
+		if cfg.ExpectedTenantID != "" {
+			impersonationInfo := user.DefaultInfo{
+				Name: "system:serviceaccount:tigera-elasticsearch:tigera-linseed",
+				Groups: []string{
+					serviceaccount.AllServiceAccountsGroup,
+					"system:authenticated",
+					fmt.Sprintf("%s%s", serviceaccount.ServiceAccountGroupPrefix, "tigera-elasticsearch"),
+				},
+			}
+			opts = append(opts, token.WithImpersonation(&impersonationInfo))
+			opts = append(opts, token.WithNamespace(cfg.TenantNamespace))
+		}
+
 		tokenController, err := token.NewController(opts...)
 		if err != nil {
 			logrus.WithError(err).Fatal("Failed to start token controller")
@@ -253,7 +339,7 @@ func run() {
 
 	// Configure options used to launch the server.
 	opts := []server.Option{
-		server.WithMiddlewares(server.Middlewares(cfg, authn, authzHelper)),
+		server.WithMiddlewares(server.Middlewares(*cfg, authn, authzHelper)),
 		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(handlers...)...),
 		server.WithRoutes(server.UtilityRoutes()...),
 	}
@@ -284,11 +370,13 @@ func run() {
 		}
 	}()
 
-	go func() {
-		// We only want the health aggregator to be accessible from within the container.
-		// Kubelet will use an exec probe to get status.
-		healthAggregator.ServeHTTP(true, "localhost", 8080)
-	}()
+	if cfg.HealthPort != 0 {
+		go func() {
+			// We only want the health aggregator to be accessible from within the container.
+			// Kubelet will use an exec probe to get status.
+			healthAggregator.ServeHTTP(true, "localhost", cfg.HealthPort)
+		}()
+	}
 
 	if cfg.EnableMetrics {
 		go func() {
@@ -301,8 +389,10 @@ func run() {
 		}()
 	}
 
-	// Indicate that we're ready to serve requests.
-	healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
+	if cfg.HealthPort != 0 {
+		// Indicate that we're ready to serve requests.
+		healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
+	}
 
 	// Listen for termination signals
 	sig := <-signalChan
@@ -319,8 +409,8 @@ func run() {
 
 // doHealthCheck checks the local readiness or liveness endpoint and prints its status.
 // It exits with a status code based on the status.
-func doHealthCheck(path string) {
-	url := fmt.Sprintf("http://localhost:8080/%s", path)
+func doHealthCheck(path string, port int) {
+	url := fmt.Sprintf("http://localhost:%d/%s", port, path)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)

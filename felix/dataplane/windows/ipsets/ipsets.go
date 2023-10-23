@@ -174,15 +174,14 @@ func (s *IPSets) GetIPFamily() IPFamily {
 
 // The following functions are no-ops on Windows.
 func (s *IPSets) QueueResync() {
-	return
 }
 
 func (m *IPSets) GetTypeOf(setID string) (IPSetType, error) {
 	panic("Not implemented")
 }
 
-func (m *IPSets) GetMembers(setID string) (set.Set[string], error) {
-	// GetMembers is only called from XDPState, and XDPState does not coexist with
+func (m *IPSets) GetDesiredMembers(setID string) (set.Set[string], error) {
+	// GetDesiredMembers is only called from XDPState, and XDPState does not coexist with
 	// config.BPFEnabled.
 	panic("Not implemented")
 }
@@ -191,8 +190,8 @@ func (m *IPSets) ApplyUpdates(_ func(name string) bool) set.Set[string] {
 	return nil
 }
 
-func (m *IPSets) ApplyDeletions() {
-	return
+func (m *IPSets) ApplyDeletions() bool {
+	return false
 }
 
 func (s *IPSets) SetFilter(ipSetNames set.Set[string]) {

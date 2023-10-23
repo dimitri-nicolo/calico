@@ -43,16 +43,22 @@ report-dir:
 	mkdir -p report
 
 .PHONY: ut
-ut: report-dir run-elastic
+ut: report-dir run-elastic run-uts stop-elastic
+run-uts:
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
-	-docker rm -f tigera-elastic
 
 ###############################################################################
 # CI
 ###############################################################################
 .PHONY: ci
+
+fv:
+	@echo "No FVs"
+
+st:
+	@echo "No STs"
 
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.

@@ -141,8 +141,10 @@ func RunEgressGateway(c *infrastructure.Felix, name, profile, ip string) (w *Wor
 func New(c *infrastructure.Felix, name, profile, ip, ports, protocol string, opts ...Opt) *Workload {
 	workloadIdx++
 	n := fmt.Sprintf("%s-idx%v", name, workloadIdx)
+	//nolint:staticcheck // Ignore SA1019 deprecated
 	interfaceName := conversion.NewConverter().VethNameForWorkload(profile, n)
 	spoofN := fmt.Sprintf("%s-spoof%v", name, workloadIdx)
+	//nolint:staticcheck // Ignore SA1019 deprecated
 	spoofIfaceName := conversion.NewConverter().VethNameForWorkload(profile, spoofN)
 	if c.IP == ip {
 		interfaceName = ""
@@ -336,7 +338,9 @@ func (w *Workload) RemoveFromDatastore(client client.Interface) {
 // ConfigureInInfra creates the workload endpoint for this Workload.
 func (w *Workload) ConfigureInInfra(infra infrastructure.DatastoreInfra) {
 	wep := w.WorkloadEndpoint
-	wep.Namespace = "default"
+	if wep.Namespace == "" {
+		wep.Namespace = "default"
+	}
 	wep.Spec.Workload = w.Name
 	wep.Spec.Endpoint = w.Name
 	wep.Spec.InterfaceName = w.InterfaceName

@@ -346,9 +346,8 @@ func (capture *rotatingPcapFile) cleanOlderFiles() []os.FileInfo {
 
 func (capture *rotatingPcapFile) listFiles(filterCurrent bool) (error, []os.FileInfo) {
 	var files []os.FileInfo
-	var err error
 
-	err = filepath.Walk(capture.directory, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(capture.directory, func(path string, info os.FileInfo, err error) error {
 		if info != nil && !info.IsDir() && strings.HasSuffix(info.Name(), ".pcap") {
 			if !filterCurrent || info.Name() != capture.currentCaptureFileName() {
 				files = append(files, info)
@@ -371,7 +370,7 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 	}
 	capture.updateStatus(capture.extractFileNames(files), proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
 
-	var delay = capture.endTime.Sub(time.Now())
+	var delay = time.Until(capture.endTime)
 	var endAfter = time.After(delay)
 	if capture.endTime.Before(calcCapture.MaxTime) {
 		log.WithField("CAPTURE", capture.loggingID).Infof("PacketCapture will stop after %v with start %v and end %v", delay, capture.startTime, capture.endTime)
@@ -384,7 +383,7 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 				continue
 			}
 
-			if capture.isCaptureFileOpen == false {
+			if !capture.isCaptureFileOpen {
 				log.WithField("CAPTURE", capture.loggingID).Debug("Start writing packets to pcap files")
 				if err = capture.open(); err != nil {
 					return err
@@ -504,7 +503,7 @@ func (capture *rotatingPcapFile) Start() error {
 
 	var delay = time.Second * 0
 	if capture.startTime.After(time.Now()) {
-		delay = capture.startTime.Sub(time.Now())
+		delay = time.Until(capture.startTime)
 		log.WithField("CAPTURE", capture.loggingID).Infof("Setting a delay of %v", delay)
 		capture.updateStatus(capture.extractFileNames(files), proto.PacketCaptureStatusUpdate_SCHEDULED)
 	}
@@ -518,8 +517,6 @@ func (capture *rotatingPcapFile) Start() error {
 		log.WithField("CAPTURE", capture.loggingID).Debug("Cancelling context")
 		return nil
 	}
-
-	return nil
 }
 
 func (capture *rotatingPcapFile) captureTraffic() error {

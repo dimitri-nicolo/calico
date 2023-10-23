@@ -170,7 +170,7 @@ var (
 	RestartModeRegex          = regexp.MustCompile("^(GracefulRestart|LongLivedGracefulRestart)$")
 	BIRDGatewayModeRegex      = regexp.MustCompile("^(Recursive|DirectIfDirectlyConnected)$")
 
-	GlobalAlertTypeRegex = regexp.MustCompile("^(RuleBased|AnomalyDetection)$")
+	GlobalAlertTypeRegex = regexp.MustCompile("^(RuleBased)$")
 
 	filterActionRegex  = regexp.MustCompile("^(Accept|Reject)$")
 	matchOperatorRegex = regexp.MustCompile("^(Equal|In|NotEqual|NotIn)$")
@@ -261,6 +261,7 @@ func init() {
 	registerFieldValidator("ipsecLogLevel", validateIPSecLogLevel)
 	registerFieldValidator("ipsecMode", validateIPSecMode)
 	registerFieldValidator("bpfLogLevel", validateBPFLogLevel)
+	registerFieldValidator("bpfLogFilters", validateBPFLogFilters)
 	registerFieldValidator("bpfServiceMode", validateBPFServiceMode)
 	registerFieldValidator("dropAcceptReturn", validateFelixEtoHAction)
 	registerFieldValidator("acceptReturn", validateAcceptReturn)
@@ -279,6 +280,8 @@ func init() {
 	registerFieldValidator("l7ResponseCodeAggregation", validateL7ResponseCodeAggregation)
 	registerFieldValidator("l7URLAggregation", validateL7URLAggregation)
 	registerFieldValidator("flowLogAggregationKind", validateFlowLogAggregationKind)
+	registerFieldValidator("interfaceSlice", validateInterfaceSlice)
+	registerFieldValidator("ifaceFilterSlice", validateIfaceFilterSlice)
 	registerFieldValidator("mac", validateMAC)
 	registerFieldValidator("iptablesBackend", validateIptablesBackend)
 	registerFieldValidator("keyValueList", validateKeyValueList)
@@ -353,6 +356,8 @@ func init() {
 	registerStructValidator(validate, validateEntityRule, api.EntityRule{})
 	registerStructValidator(validate, validateRemoteClusterConfigSpec, api.RemoteClusterConfigurationSpec{})
 	registerStructValidator(validate, validateBGPPeerSpec, api.BGPPeerSpec{})
+	registerStructValidator(validate, validateBGPFilterRuleV4, api.BGPFilterRuleV4{})
+	registerStructValidator(validate, validateBGPFilterRuleV6, api.BGPFilterRuleV6{})
 	registerStructValidator(validate, validateNetworkPolicy, api.NetworkPolicy{})
 	registerStructValidator(validate, validateGlobalNetworkPolicy, api.GlobalNetworkPolicy{})
 	registerStructValidator(validate, validateStagedNetworkPolicy, api.StagedNetworkPolicy{})
@@ -451,6 +456,36 @@ func validateIfaceFilter(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate Interface Filter : %s", s)
 	return ifaceFilterRegex.MatchString(s)
+}
+
+func validateInterfaceSlice(fl validator.FieldLevel) bool {
+	slice := fl.Field().Interface().([]string)
+	log.Debugf("Validate Interface Slice : %v", slice)
+
+	for _, val := range slice {
+		match := interfaceRegex.MatchString(val)
+		if !match {
+			return false
+		}
+	}
+
+	return true
+}
+
+func validateIfaceFilterSlice(fl validator.FieldLevel) bool {
+	slice := fl.Field().Interface().([]string)
+	log.Debugf("Validate Interface Filter Slice : %v", slice)
+
+	for _, val := range slice {
+		// Important: must use ifaceFilterRegex to allow interface wildcard match
+		// e.g. "docker+" which the standard interfaceRegex does not accommodate.
+		match := ifaceFilterRegex.MatchString(val)
+		if !match {
+			return false
+		}
+	}
+
+	return true
 }
 
 func validateDatastoreType(fl validator.FieldLevel) bool {
@@ -684,6 +719,23 @@ func validateIPSecMode(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate IPSec mode: %s", s)
 	return IPSecModeRegex.MatchString(s)
+}
+
+func validateBPFLogFilters(fl validator.FieldLevel) bool {
+	log.Debugf("Validate Felix BPF log level: %s", fl.Field().String())
+
+	m, ok := fl.Field().Interface().(map[string]string)
+	if !ok {
+		return false
+	}
+
+	for k := range m {
+		if !interfaceRegex.MatchString(k) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func validateBPFLogLevel(fl validator.FieldLevel) bool {
@@ -1830,6 +1882,27 @@ func validateReachableByField(fl validator.FieldLevel) bool {
 		}
 	}
 	return true
+}
+
+func validateBGPFilterRuleV4(structLevel validator.StructLevel) {
+	fs := structLevel.Current().Interface().(api.BGPFilterRuleV4)
+	validateBGPFilterRule(structLevel, fs.CIDR, fs.MatchOperator)
+}
+
+func validateBGPFilterRuleV6(structLevel validator.StructLevel) {
+	fs := structLevel.Current().Interface().(api.BGPFilterRuleV6)
+	validateBGPFilterRule(structLevel, fs.CIDR, fs.MatchOperator)
+}
+
+func validateBGPFilterRule(structLevel validator.StructLevel, cidr string, op api.BGPFilterMatchOperator) {
+	if cidr != "" && op == "" {
+		structLevel.ReportError(cidr, "CIDR", "",
+			reason("MatchOperator cannot be empty when CIDR is not"), "")
+	}
+	if cidr == "" && op != "" {
+		structLevel.ReportError(op, "MatchOperator", "",
+			reason("CIDR cannot be empty when MatchOperator is not"), "")
+	}
 }
 
 // validateEgressGatewayPolicy validates an egress gateway policy.

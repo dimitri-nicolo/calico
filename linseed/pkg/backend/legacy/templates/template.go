@@ -22,7 +22,7 @@ type Template struct {
 // in Elastic. A template has associated an ILM policy, index patterns
 // mappings, settings and a bootstrap index to perform rollover
 type TemplateConfig struct {
-	dataType bapi.DataType
+	Index    bapi.Index
 	info     bapi.ClusterInfo
 	shards   int
 	replicas int
@@ -30,8 +30,8 @@ type TemplateConfig struct {
 
 // NewTemplateConfig will build a TemplateConfig based on the logs type, cluster information
 // and provided Option(s)
-func NewTemplateConfig(logsType bapi.DataType, info bapi.ClusterInfo, opts ...Option) *TemplateConfig {
-	defaultConfig := &TemplateConfig{dataType: logsType, info: info, shards: 1, replicas: 0}
+func NewTemplateConfig(index bapi.Index, info bapi.ClusterInfo, opts ...Option) *TemplateConfig {
+	defaultConfig := &TemplateConfig{Index: index, info: info, shards: 1, replicas: 0}
 
 	for _, opt := range opts {
 		defaultConfig = opt(defaultConfig)
@@ -63,32 +63,19 @@ func WithShards(shards int) Option {
 
 // TemplateName will provide the name of the template
 func (c *TemplateConfig) TemplateName() string {
-	template, ok := TemplateNamePatternLookup[c.dataType]
-	if !ok {
-		panic("template name for log type not implemented")
-	}
-	if c.info.Tenant == "" {
-		return fmt.Sprintf(template, c.info.Cluster)
-	}
+	return c.Index.IndexTemplateName(c.info)
+}
 
-	return fmt.Sprintf(template, fmt.Sprintf("%s.%s", c.info.Tenant, c.info.Cluster))
+func (c *TemplateConfig) Alias() string {
+	return c.Index.Alias(c.info)
 }
 
 func (c *TemplateConfig) indexPatterns() string {
-	prefix, ok := IndexPatternsPrefixLookup[c.dataType]
-	if !ok {
-		panic("index prefix for log type not implemented")
-	}
-
-	if c.info.Tenant == "" {
-		return fmt.Sprintf("%s.%s.*", prefix, c.info.Cluster)
-	}
-
-	return fmt.Sprintf("%s.%s.%s.*", prefix, c.info.Tenant, c.info.Cluster)
+	return c.Index.Index(c.info)
 }
 
 func (c *TemplateConfig) mappings() string {
-	switch c.dataType {
+	switch c.Index.DataType() {
 	case bapi.FlowLogs:
 		return FlowLogMappings
 	case bapi.DNSLogs:
@@ -121,30 +108,10 @@ func (c *TemplateConfig) mappings() string {
 	}
 }
 
-// Alias will provide the alias used to write data
-func (c *TemplateConfig) Alias() string {
-	if c.info.Tenant == "" {
-		return fmt.Sprintf("tigera_secure_ee_%s.%s.", c.dataType, c.info.Cluster)
-	}
-	return fmt.Sprintf("tigera_secure_ee_%s.%s.%s.", c.dataType, c.info.Tenant, c.info.Cluster)
-}
-
-func (c *TemplateConfig) ilmPolicyName() string {
-	return fmt.Sprintf("tigera_secure_ee_%s_policy", c.dataType)
-}
-
 // BootstrapIndexName will construct the boostrap index name
 // to be used for rollover
 func (c *TemplateConfig) BootstrapIndexName() string {
-	template, ok := BootstrapIndexPatternLookup[c.dataType]
-	if !ok {
-		panic("bootstrap index name for log type not implemented")
-	}
-	if c.info.Tenant == "" {
-		return fmt.Sprintf(template, c.info.Cluster)
-	}
-
-	return fmt.Sprintf(template, fmt.Sprintf("%s.%s", c.info.Tenant, c.info.Cluster))
+	return c.Index.BootstrapIndexName(c.info)
 }
 
 func (c *TemplateConfig) settings() map[string]interface{} {
@@ -157,10 +124,9 @@ func (c *TemplateConfig) settings() map[string]interface{} {
 	lifeCycleEnabled := c.hasLifecycleEnabled()
 	if lifeCycleEnabled {
 		lifeCycle := make(map[string]interface{})
-		// ILM policy is created by the operator and only
-		// referenced by the template
-		lifeCycle["name"] = c.ilmPolicyName()
-		lifeCycle["rollover_alias"] = c.Alias()
+		// ILM policy is created by the operator and only referenced by the template
+		lifeCycle["name"] = c.Index.ILMPolicyName()
+		lifeCycle["rollover_alias"] = c.Index.Alias(c.info)
 		indexSettings["lifecycle"] = lifeCycle
 	}
 
@@ -171,7 +137,7 @@ func (c *TemplateConfig) settings() map[string]interface{} {
 // (that do not cover number of shards and replicas) if they have been
 // defined in SettingsLookup or an empty map otherwise
 func (c *TemplateConfig) initIndexSettings() map[string]interface{} {
-	settingsName, ok := SettingsLookup[c.dataType]
+	settingsName, ok := SettingsLookup[c.Index.DataType()]
 	if !ok {
 		return make(map[string]interface{})
 	}
@@ -197,6 +163,14 @@ func (c *TemplateConfig) Template() (*Template, error) {
 		return nil, err
 	}
 
+	// For single-index templates, the mappings must include keywords for
+	// cluster and tenant.
+	if c.Index.IsSingleIndex() {
+		properties := indexMappings["properties"].(map[string]interface{})
+		properties["cluster"] = map[string]string{"type": "keyword"}
+		properties["tenant"] = map[string]string{"type": "keyword"}
+	}
+
 	return &Template{
 		IndexPatterns: []string{indexPatterns},
 		Settings:      settings,
@@ -205,13 +179,12 @@ func (c *TemplateConfig) Template() (*Template, error) {
 }
 
 func (c *TemplateConfig) hasLifecycleEnabled() bool {
-	enabled, ok := LifeCycleEnabledLookup[c.dataType]
+	enabled, ok := LifeCycleEnabledLookup[c.Index.DataType()]
 	if !ok {
-		panic(fmt.Sprintf("ILM policies need to be defined for %s", c.dataType))
+		panic(fmt.Sprintf("ILM policies need to be defined for %s", c.Index.DataType()))
 	}
 
 	return enabled
-
 }
 
 func unmarshal(source string) (map[string]interface{}, error) {

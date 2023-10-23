@@ -30,6 +30,10 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/client-go/tools/clientcmd"
+
+	"k8s.io/client-go/kubernetes"
+
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -1360,6 +1364,133 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 	if timeoutErr != nil {
 		return timeoutErr
 	}
+	if len(events) != 2 {
+		return fmt.Errorf("expected 2 watch events got %d", len(events))
+	}
+
+	return nil
+}
+
+// TestSecurityEventWebhookClient exercises the SecurityEventWebhook client.
+func TestSecurityEventWebhookClient(t *testing.T) {
+	const name = "test-securityeventwebhook"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &v3.SecurityEventWebhook{}
+			}, true)
+			defer shutdownServer()
+			if err := testSecurityEventWebhookClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-securityeventwebhook test failed")
+	}
+}
+
+func testSecurityEventWebhookClient(client calicoclient.Interface, name string) error {
+	SEWClient := client.ProjectcalicoV3().SecurityEventWebhooks()
+	securityEventWebhook := &v3.SecurityEventWebhook{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: calico.SecurityEventWebhookSpec{
+			Consumer: "Slack",
+			State:    "Enabled",
+			Query:    "selector-1",
+			Config:   []v3.SecurityEventWebhookConfigVar{},
+		},
+	}
+	ctx := context.Background()
+
+	// start from scratch
+	securityEventWebhooks, err := SEWClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing SecurityEventWebhooks (%s)", err)
+	}
+	if securityEventWebhooks.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	securityEventWebhookServer, err := SEWClient.Create(ctx, securityEventWebhook, metav1.CreateOptions{})
+	if nil != err {
+		return fmt.Errorf("error creating the SecurityEventWebhook '%v' (%v)", securityEventWebhook, err)
+	}
+	if name != securityEventWebhookServer.Name {
+		return fmt.Errorf("didn't get the same SecurityEventWebhook back from the server \n%+v\n%+v", securityEventWebhook, securityEventWebhookServer)
+	}
+
+	securityEventWebhooks, err = SEWClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing SecurityEventWebhooks (%s)", err)
+	}
+	if len(securityEventWebhooks.Items) != 1 {
+		return fmt.Errorf("expected 1 SecurityEventWebhooks got %d", len(securityEventWebhooks.Items))
+	}
+
+	securityEventWebhookServer, err = SEWClient.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting SecurityEventWebhook %s (%s)", name, err)
+	}
+	if name != securityEventWebhookServer.Name && securityEventWebhook.ResourceVersion == securityEventWebhookServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same SecurityEventWebhook back from the server \n%+v\n%+v", securityEventWebhook, securityEventWebhookServer)
+	}
+
+	err = SEWClient.Delete(ctx, name, metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("SecurityEventWebhook should be deleted (%s)", err)
+	}
+
+	// Test SecurityEventWebhooks watch
+	w, err := client.ProjectcalicoV3().SecurityEventWebhooks().Watch(ctx, v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error watching SecurityEventWebhooks (%s)", err)
+	}
+
+	var events []watch.Event
+	done := sync.WaitGroup{}
+	done.Add(1)
+	timeout := time.After(500 * time.Millisecond)
+	var timeoutErr error
+
+	// watch for 2 events
+	go func() {
+		defer done.Done()
+		for i := 0; i < 2; i++ {
+			select {
+			case e := <-w.ResultChan():
+				events = append(events, e)
+			case <-timeout:
+				timeoutErr = fmt.Errorf("timed out wating for events")
+				return
+			}
+		}
+	}()
+
+	// Create two SecurityEventWebhooks
+	for i := 0; i < 2; i++ {
+		ga := &v3.SecurityEventWebhook{
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
+			Spec: calico.SecurityEventWebhookSpec{
+				Consumer: "Jira",
+				State:    "Debug",
+				Query:    "selector-2",
+				Config:   []v3.SecurityEventWebhookConfigVar{},
+			},
+		}
+		_, err = SEWClient.Create(ctx, ga, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("error creating the SecurityEventWebhook '%v' (%v)", ga, err)
+		}
+	}
+
+	done.Wait()
+
+	if timeoutErr != nil {
+		return timeoutErr
+	}
+
 	if len(events) != 2 {
 		return fmt.Errorf("expected 2 watch events got %d", len(events))
 	}
@@ -2992,13 +3123,14 @@ func TestManagedClusterClient(t *testing.T) {
 					return &v3.ManagedCluster{}
 				},
 				enableManagedClusterCreateAPI: true,
-				managedClustersCACertPath:     "../ca.crt",
-				managedClustersCAKeyPath:      "../ca.key",
 				managementClusterAddr:         "example.org:1234",
+				tunnelSecretName:              "tigera-management-cluster-connection",
 				applyTigeraLicense:            true,
 			}
 
-			client, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
+			client, _, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
+
+			createCASecret(t)
 
 			defer shutdownServer()
 			if err := testManagedClusterClient(client, name); err != nil {
@@ -3019,12 +3151,11 @@ func TestManagedClusterClient(t *testing.T) {
 				return &v3.ManagedCluster{}
 			},
 			enableManagedClusterCreateAPI: false,
-			managedClustersCACertPath:     "../ca.crt",
-			managedClustersCAKeyPath:      "../ca.key",
+			tunnelSecretName:              "tigera-management-cluster-connection",
 			applyTigeraLicense:            true,
 		}
 
-		client, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
+		client, _, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
 		defer shutdownServer()
 
 		managedClusterClient := client.ProjectcalicoV3().ManagedClusters()
@@ -3041,6 +3172,48 @@ func TestManagedClusterClient(t *testing.T) {
 			t.Fatalf("Expected API err to indicate that API is disabled. Received: %v", err)
 		}
 	})
+}
+
+func createCASecret(t *testing.T) {
+	kubeconfig := os.Getenv("KUBECONFIG")
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		t.Errorf("Failed to build K8S client configuration %s", err)
+		t.Fail()
+	}
+
+	k8sClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		t.Errorf("Cannot create k8s client due to %s", err)
+		t.Fail()
+	}
+
+	caPem, caKeyPem, err := CreateCAKeyPair("tigera-voltron", []string{"voltron"})
+	if err != nil {
+		t.Errorf("failed to create CA %s", err.Error())
+		t.Fail()
+	}
+	secret := ToSecret("tigera-management-cluster-connection", "tigera-system", caPem, caKeyPem)
+	namespace := &corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{Kind: "Namespace", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "tigera-system",
+		},
+	}
+
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelFunc()
+
+	_, err = k8sClient.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
+	if err != nil {
+		t.Errorf("Failed to create secrets %s", err)
+		t.Fail()
+	}
+	_, err = k8sClient.CoreV1().Secrets(namespace.Name).Create(ctx, secret, metav1.CreateOptions{})
+	if err != nil {
+		t.Errorf("Failed to create secrets %s", err)
+		t.Fail()
+	}
 }
 
 func testManagedClusterClient(client calicoclient.Interface, name string) error {
@@ -4320,12 +4493,11 @@ func testBGPFilterClient(client calicoclient.Interface, name string) error {
 	acceptRuleV4 := v3.BGPFilterRuleV4{
 		CIDR:          "10.10.10.0/24",
 		MatchOperator: v3.In,
+		Source:        v3.BGPFilterSourceRemotePeers,
 		Action:        v3.Accept,
 	}
 	rejectRuleV4 := v3.BGPFilterRuleV4{
-		CIDR:          "11.11.11.0/24",
-		MatchOperator: v3.NotIn,
-		Action:        v3.Reject,
+		Action: v3.Reject,
 	}
 	acceptRuleV6 := v3.BGPFilterRuleV6{
 		CIDR:          "dead:beef:1::/64",
@@ -4333,9 +4505,8 @@ func testBGPFilterClient(client calicoclient.Interface, name string) error {
 		Action:        v3.Accept,
 	}
 	rejectRuleV6 := v3.BGPFilterRuleV6{
-		CIDR:          "dead:beef:2::/64",
-		MatchOperator: v3.NotEqual,
-		Action:        v3.Reject,
+		Source: v3.BGPFilterSourceRemotePeers,
+		Action: v3.Reject,
 	}
 	bgpFilter := &v3.BGPFilter{
 		ObjectMeta: metav1.ObjectMeta{Name: name},

@@ -65,10 +65,6 @@ promotions:
   pipeline_file: push-images/mock-node.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
-- name: Push anomaly-detection-api images
-  pipeline_file: push-images/anomaly-detection-api.yml
-  auto_promote:
-    when: "branch =~ 'master|release-'"
 - name: Push compliance images
   pipeline_file: push-images/compliance.yml
   auto_promote:
@@ -198,6 +194,23 @@ blocks:
     - name: "Pre-flight checks"
       commands:
       - make ci-preflight-checks
+
+- name: "FOSSA scan"
+  run:
+    when: "branch =~ '^release-v' OR branch = 'master'"
+  execution_time_limit:
+    minutes: 30
+  dependencies: ["Prerequisites"]
+  task:
+    prologue:
+      commands:
+      - "curl -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install-latest.sh | bash"
+    jobs:
+    - name: "FOSSA scan"
+      commands:
+      - "fossa analyze"
+    secrets:
+      - name: foss-api-key
 
 - name: "API"
   run:
@@ -569,6 +582,9 @@ blocks:
     - name: "Build Windows archive"
       commands:
       - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
+    - name: "Build Windows image"
+      commands:
+      - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
 
 - name: "e2e tests"
   run:
@@ -737,6 +753,9 @@ blocks:
     - name: "cni-plugin tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
+    - name: "build windows cni-plugin images"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make image-windows
 
 - name: 'calicoq'
   run:
@@ -748,21 +767,6 @@ blocks:
     prologue:
       commands:
       - cd calicoq
-    jobs:
-    - name: "make ci"
-      commands:
-      - ../.semaphore/run-and-monitor ci.log make ci
-
-- name: 'anomaly-detection-api'
-  run:
-    when: "change_in(['/*', '/anomaly-detection-api/', '/crypto/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Prerequisites"]
-  task:
-    secrets:
-    - name: test-customer-license
-    prologue:
-      commands:
-      - cd anomaly-detection-api
     jobs:
     - name: "make ci"
       commands:
@@ -1102,6 +1106,79 @@ blocks:
     - name: "linseed tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
+
+# OpenStack is OS-only
+#- name: 'OpenStack integration (Ussuri)'
+#  run:
+#    when: "false or change_in(['/networking-calico/'])"
+#  dependencies: ["Prerequisites"]
+#  task:
+#    agent:
+#      machine:
+#        type: e1-standard-4
+#        os_image: ubuntu1804
+#    prologue:
+#      commands:
+#      - cd networking-calico
+#    jobs:
+#      - name: 'Unit and FV tests (tox) on Ussuri'
+#        commands:
+#          - ../.semaphore/run-and-monitor tox.log make tox-ussuri
+#      - name: 'Mainline ST (DevStack + Tempest) on Ussuri'
+#        commands:
+#          - git checkout -b devstack-test
+#          - export LIBVIRT_TYPE=qemu
+#          - export UPPER_CONSTRAINTS_FILE=https://releases.openstack.org/constraints/upper/ussuri
+#          # Use proposed fix at
+#          # https://review.opendev.org/c/openstack/requirements/+/810859.  See commit
+#          # message for more context.
+#          - export REQUIREMENTS_REPO=https://review.opendev.org/openstack/requirements
+#          - export REQUIREMENTS_BRANCH=refs/changes/59/810859/1
+#          - export NC_PLUGIN_REPO=$(dirname $(pwd))
+#          - export NC_PLUGIN_REF=$(git rev-parse --abbrev-ref HEAD)
+#          - TEMPEST=true DEVSTACK_BRANCH=stable/ussuri ./devstack/bootstrap.sh
+#    epilogue:
+#      on_fail:
+#        commands:
+#          - mkdir logs
+#          - sudo journalctl > logs/journalctl.txt
+#          - artifact push job --expire-in 1d logs
+#
+#- name: 'OpenStack integration (Yoga)'
+#  run:
+#    when: "true or change_in(['/networking-calico/'])"
+#  dependencies: ["Prerequisites"]
+#  task:
+#    agent:
+#      machine:
+#        type: e1-standard-4
+#        os_image: ubuntu2004
+#    prologue:
+#      commands:
+#      - cd networking-calico
+#    jobs:
+#      - name: 'Unit and FV tests (tox) on Yoga'
+#        commands:
+#          - ../.semaphore/run-and-monitor tox.log make tox-yoga
+#      - name: 'Mainline ST (DevStack + Tempest) on Yoga'
+#        commands:
+#          # For some reason python3-wrapt is pre-installed on a Semaphore ubuntu2004 node, but with
+#          # a version (1.11.2) that is different from the version that OpenStack needs (1.13.3), and
+#          # this was causing the DevStack setup to fail, because pip doesn't know how to uninstall
+#          # or replace the existing version.  Happily we do know that, so let's do it upfront here.
+#          - sudo apt-get remove -y python3-wrapt || true
+#          - git checkout -b devstack-test
+#          - export LIBVIRT_TYPE=qemu
+#          - export UPPER_CONSTRAINTS_FILE=https://releases.openstack.org/constraints/upper/yoga
+#          - export NC_PLUGIN_REPO=$(dirname $(pwd))
+#          - export NC_PLUGIN_REF=$(git rev-parse --abbrev-ref HEAD)
+#          - TEMPEST=true DEVSTACK_BRANCH=stable/yoga ./devstack/bootstrap.sh
+#    epilogue:
+#      on_fail:
+#        commands:
+#          - mkdir logs
+#          - sudo journalctl > logs/journalctl.txt
+#          - artifact push job --expire-in 1d logs
 
 after_pipeline:
   task:

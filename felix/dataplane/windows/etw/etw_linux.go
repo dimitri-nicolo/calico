@@ -39,7 +39,6 @@ func (t *EtwOperations) SubscribeToPktMon(ch chan<- *PktEvent,
 }
 
 func (t *EtwOperations) WaitForSessionClose() {
-	return
 }
 
 const (

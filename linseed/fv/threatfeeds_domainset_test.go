@@ -11,19 +11,36 @@ import (
 	"time"
 
 	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 
 	"github.com/stretchr/testify/require"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
-func TestFV_ThreatFeedsDomainSet(t *testing.T) {
-	t.Run("should return an empty list if there are no threat feeds", func(t *testing.T) {
-		defer threatFeedsSetupAndTeardown(t)()
+// Run runs the given test in all modes.
+func RunThreatfeedsDomainTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
+	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		defer setupAndTeardown(t, args, index.ThreatfeedsDomainMultiIndex)()
+		testFn(t, index.ThreatfeedsDomainMultiIndex)
+	})
 
+	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		args := DefaultLinseedArgs()
+		args.Backend = config.BackendTypeSingleIndex
+		defer setupAndTeardown(t, args, index.ThreatfeedsDomainIndex)()
+		testFn(t, index.ThreatfeedsDomainIndex)
+	})
+}
+
+func TestFV_ThreatFeedsDomainSet(t *testing.T) {
+	RunThreatfeedsDomainTest(t, "should return an empty list if there are no threat feeds", func(t *testing.T, idx bapi.Index) {
 		params := v1.DomainNameSetThreatFeedParams{
 			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
@@ -39,9 +56,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		require.Equal(t, []v1.DomainNameSetThreatFeed{}, feeds.Items)
 	})
 
-	t.Run("should create and list threat feeds", func(t *testing.T) {
-		defer threatFeedsSetupAndTeardown(t)()
-
+	RunThreatfeedsDomainTest(t, "should create and list threat feeds", func(t *testing.T, idx bapi.Index) {
 		feeds := v1.DomainNameSetThreatFeed{
 			ID: "feed-a",
 			Data: &v1.DomainNameSetThreatFeedData{
@@ -54,7 +69,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_threatfeeds_domainnameset*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Read it back, passing an ID query.
 		params := v1.DomainNameSetThreatFeedParams{ID: "feed-a"}
@@ -77,9 +92,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		require.Empty(t, afterDelete.Items)
 	})
 
-	t.Run("should support pagination", func(t *testing.T) {
-		defer threatFeedsSetupAndTeardown(t)()
-
+	RunThreatfeedsDomainTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
 		totalItems := 5
 
 		// Create 5 Feeds.
@@ -99,7 +112,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		}
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_threatfeeds_domainnameset*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Iterate through the first 4 pages and check they are correct.
 		var afterKey map[string]interface{}
@@ -165,9 +178,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		require.Nil(t, resp.AfterKey)
 	})
 
-	t.Run("should support pagination for items >= 10000 for threat feeds", func(t *testing.T) {
-		defer threatFeedsSetupAndTeardown(t)()
-
+	RunThreatfeedsDomainTest(t, "should support pagination for items >= 10000 for threat feeds", func(t *testing.T, idx bapi.Index) {
 		totalItems := 10001
 		// Create > 10K threat feeds.
 		createdAtTime := time.Unix(0, 0).UTC()
@@ -186,7 +197,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		require.Equal(t, totalItems, bulk.Total, "create feeds did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_threatfeeds_domainnameset*")
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 
 		// Stream through all the items.
 		params := v1.DomainNameSetThreatFeedParams{
@@ -213,15 +224,14 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 
 		require.Equal(t, receivedItems, totalItems)
 	})
-
 }
 
 func TestFV_DomainNameSetTenancy(t *testing.T) {
-	t.Run("should support tenancy restriction", func(t *testing.T) {
-		defer threatFeedsSetupAndTeardown(t)()
-
+	RunThreatfeedsDomainTest(t, "should support tenancy restriction", func(t *testing.T, idx bapi.Index) {
 		// Instantiate a client for an unexpected tenant.
-		tenantCLI, err := NewLinseedClientForTenant("bad-tenant")
+		args := DefaultLinseedArgs()
+		args.TenantID = "bad-tenant"
+		tenantCLI, err := NewLinseedClient(args)
 		require.NoError(t, err)
 
 		// Create a basic feed. We expect this to fail, since we're using

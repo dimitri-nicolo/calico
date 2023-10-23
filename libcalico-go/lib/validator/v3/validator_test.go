@@ -921,6 +921,7 @@ func init() {
 		Entry("should accept a valid LogSeverityScreen value 'Warning'", api.FelixConfigurationSpec{LogSeverityScreen: "Warning"}, true),
 		Entry("should accept a valid LogSeverityFile value 'Debug'", api.FelixConfigurationSpec{LogSeverityFile: "Debug"}, true),
 		Entry("should accept a valid LogSeveritySys value 'Info'", api.FelixConfigurationSpec{LogSeveritySys: "Info"}, true),
+
 		Entry("should accept a valid IptablesNATOutgoingInterfaceFilter value 'cali-123'", api.FelixConfigurationSpec{IptablesNATOutgoingInterfaceFilter: "cali-123"}, true),
 		Entry("should reject an invalid IptablesNATOutgoingInterfaceFilter value 'cali@123'", api.FelixConfigurationSpec{IptablesNATOutgoingInterfaceFilter: "cali@123"}, false),
 
@@ -1947,6 +1948,178 @@ func init() {
 				Action:   "Allow",
 				Metadata: &api.RuleMetadata{Annotations: map[string]string{"...": "bar"}},
 			}, false),
+
+		// (API) BGPFilterSpec
+		Entry("should reject invalid BGPFilter rule-v4 type", api.BGPFilterRuleV4{
+			Source:        "xyz",
+			MatchOperator: "In",
+			Action:        "Reject",
+		}, false),
+		Entry("should reject invalid BGPFilter rule-v6 type", api.BGPFilterRuleV6{
+			Source:        "xyz",
+			MatchOperator: "In",
+			Action:        "Reject",
+		}, false),
+		Entry("should accept valid BGPFilter rule-v4 type", api.BGPFilterRuleV4{
+			Source:        "RemotePeers",
+			CIDR:          "192.168.0.0/26",
+			MatchOperator: "In",
+			Action:        "Reject",
+		}, true),
+		Entry("should accept valid BGPFilter rule-v6 type", api.BGPFilterRuleV6{
+			Source:        "RemotePeers",
+			CIDR:          "ffee::/64",
+			MatchOperator: "In",
+			Action:        "Reject",
+		}, true),
+		Entry("should accept BGPFilter rule with valid IPv4 CIDR", api.BGPFilterRuleV4{
+			CIDR:          "192.168.0.0/26",
+			MatchOperator: "In",
+			Action:        "Accept",
+		}, true),
+		Entry("should accept BGPFilter rule with valid IPv6 CIDR", api.BGPFilterRuleV6{
+			CIDR:          "ffee::/64",
+			MatchOperator: "In",
+			Action:        "Accept",
+		}, true),
+		Entry("should reject BGPFilter rule with invalid IPv4 CIDR - 1 ", api.BGPFilterRuleV4{
+			CIDR:          "x.x.x.x/26",
+			MatchOperator: "In",
+			Action:        "Accept",
+		}, false),
+		Entry("should reject BGPFilter rule with invalid IPv4 CIDR - 2", api.BGPFilterRuleV4{
+			CIDR:          "ffee::/64",
+			MatchOperator: "In",
+			Action:        "Accept",
+		}, false),
+		Entry("should reject BGPFilter rule with invalid IPv6 CIDR - 1", api.BGPFilterRuleV6{
+			CIDR:          "xxxx::/64",
+			MatchOperator: "In",
+			Action:        "Accept",
+		}, false),
+		Entry("should reject BGPFilter rule with invalid IPv6 CIDR - 2", api.BGPFilterRuleV6{
+			CIDR:          "10.0.10.0/32",
+			MatchOperator: "In",
+			Action:        "Accept",
+		}, false),
+		Entry("should reject BGPFilter rule with invalid operator - 1", api.BGPFilterRuleV4{
+			CIDR:          "10.0.10.0/32",
+			MatchOperator: "fancyOperator",
+			Action:        "Accept",
+		}, false),
+		Entry("should reject BGPFilter rule with invalid operator - 2", api.BGPFilterRuleV6{
+			CIDR:          "ffff::/128",
+			MatchOperator: "fancyOperator",
+			Action:        "Accept",
+		}, false),
+		Entry("should accept BGPFilter rule with In operator - 1", api.BGPFilterRuleV4{
+			CIDR:          "10.0.10.0/32",
+			MatchOperator: "In",
+			Action:        "Accept",
+		}, true),
+		Entry("should accept BGPFilter rule with In operator - 2", api.BGPFilterRuleV6{
+			CIDR:          "ffff::/128",
+			MatchOperator: "In",
+			Action:        "Accept",
+		}, true),
+		Entry("should accept BGPFilter rule with NotIn operator - 1", api.BGPFilterRuleV4{
+			CIDR:          "10.0.10.0/32",
+			MatchOperator: "NotIn",
+			Action:        "Accept",
+		}, true),
+		Entry("should accept BGPFilter rule with NotIn operator - 2", api.BGPFilterRuleV6{
+			CIDR:          "ffff::/128",
+			MatchOperator: "NotIn",
+			Action:        "Accept",
+		}, true),
+		Entry("should accept BGPFilter rule with Equal operator - 1", api.BGPFilterRuleV4{
+			CIDR:          "10.0.10.0/32",
+			MatchOperator: "Equal",
+			Action:        "Accept",
+		}, true),
+		Entry("should accept BGPFilter rule with Equal operator - 2", api.BGPFilterRuleV6{
+			CIDR:          "ffff::/128",
+			MatchOperator: "Equal",
+			Action:        "Accept",
+		}, true),
+		Entry("should accept BGPFilter rule with NotEqual operator - 1", api.BGPFilterRuleV4{
+			CIDR:          "10.0.10.0/32",
+			MatchOperator: "NotEqual",
+			Action:        "Accept",
+		}, true),
+		Entry("should accept BGPFilter rule with NotEqual operator - 2", api.BGPFilterRuleV6{
+			CIDR:          "ffff::/128",
+			MatchOperator: "NotEqual",
+			Action:        "Accept",
+		}, true),
+		Entry("should reject BGPFilter rule with invalid Action - 1", api.BGPFilterRuleV4{
+			CIDR:          "10.0.10.0/32",
+			MatchOperator: "NotEqual",
+			Action:        "ActionX",
+		}, false),
+		Entry("should reject BGPFilter rule with invalid action - 2", api.BGPFilterRuleV6{
+			CIDR:          "ffff::/128",
+			MatchOperator: "NotEqual",
+			Action:        "ActionX",
+		}, false),
+		Entry("should accept BGPFilter rule with Accept Action - 1", api.BGPFilterRuleV4{
+			CIDR:          "10.0.10.0/32",
+			MatchOperator: "NotEqual",
+			Action:        "Accept",
+		}, true),
+		Entry("should accept BGPFilter rule with Accept action - 2", api.BGPFilterRuleV6{
+			CIDR:          "ffff::/128",
+			MatchOperator: "NotEqual",
+			Action:        "Accept",
+		}, true),
+		Entry("should accept BGPFilter rule with Reject Action - 1", api.BGPFilterRuleV4{
+			CIDR:          "10.0.10.0/32",
+			MatchOperator: "NotEqual",
+			Action:        "Reject",
+		}, true),
+		Entry("should accept BGPFilter rule with Reject action - 2", api.BGPFilterRuleV6{
+			CIDR:          "ffff::/128",
+			MatchOperator: "NotEqual",
+			Action:        "Reject",
+		}, true),
+		Entry("should reject BGPFilter rule with no CIDR when MatchOperator is set - 1", api.BGPFilterRuleV4{
+			MatchOperator: "NotEqual",
+			Action:        "Reject",
+		}, false),
+		Entry("should reject BGPFilter rule with no CIDR when MatchOperator is set - 2", api.BGPFilterRuleV6{
+			MatchOperator: "NotEqual",
+			Action:        "Reject",
+		}, false),
+		Entry("should reject BGPFilter rule with no MatchOperator when CIDR is set - 1", api.BGPFilterRuleV4{
+			CIDR:   "10.0.10.0/32",
+			Action: "Reject",
+		}, false),
+		Entry("should reject BGPFilter rule with no MatchOperator when CIDR is set - 2", api.BGPFilterRuleV6{
+			CIDR:   "ffff::/128",
+			Action: "Reject",
+		}, false),
+		Entry("should reject BGPFilter rule with no action - 1", api.BGPFilterRuleV4{
+			MatchOperator: "NotEqual",
+			CIDR:          "10.0.10.0/32",
+		}, false),
+		Entry("should reject BGPFilter rule with no action - 2", api.BGPFilterRuleV6{
+			MatchOperator: "NotEqual",
+			CIDR:          "ffff::/128",
+		}, false),
+		Entry("should accept BGPFilter rule with only source set - 1", api.BGPFilterRuleV4{
+			Source: "RemotePeers",
+			Action: "Reject",
+		}, true),
+		Entry("should accept BGPFilter rule with only source set - 2", api.BGPFilterRuleV6{
+			Source: "RemotePeers",
+			Action: "Reject",
+		}, true),
+		Entry("should accept BGPFilter rule with just an action - 1", api.BGPFilterRuleV4{
+			Action: "Reject",
+		}, true),
+		Entry("should accept BGPFilter rule with just an action - 2", api.BGPFilterRuleV6{
+			Action: "Reject",
+		}, true),
 
 		// (API) BGPPeerSpec
 		Entry("should accept valid BGPPeerSpec", api.BGPPeerSpec{PeerIP: ipv4_1}, true),
@@ -3003,6 +3176,60 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
 					ServiceAccountSelector: "global()",
+				},
+			}, false,
+		),
+		Entry("NetworkPolicy: disallow junk in PerformanceHints field",
+			&api.NetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.NetworkPolicySpec{
+					PerformanceHints: []api.PolicyPerformanceHint{"junk"},
+				},
+			}, false,
+		),
+		Entry("NetworkPolicy: allow PerfHintAssumeNeededOnEveryNode in PerformanceHints field",
+			&api.NetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.NetworkPolicySpec{
+					PerformanceHints: []api.PolicyPerformanceHint{api.PerfHintAssumeNeededOnEveryNode},
+				},
+			}, true,
+		),
+		Entry("NetworkPolicy: disallow dupes in PerformanceHints field",
+			&api.NetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.NetworkPolicySpec{
+					PerformanceHints: []api.PolicyPerformanceHint{
+						api.PerfHintAssumeNeededOnEveryNode,
+						api.PerfHintAssumeNeededOnEveryNode,
+					},
+				},
+			}, false,
+		),
+		Entry("GlobalNetworkPolicy: disallow junk in PerformanceHints field",
+			&api.GlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.GlobalNetworkPolicySpec{
+					PerformanceHints: []api.PolicyPerformanceHint{"junk"},
+				},
+			}, false,
+		),
+		Entry("GlobalNetworkPolicy: allow PerfHintAssumeNeededOnEveryNode in PerformanceHints field",
+			&api.GlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.GlobalNetworkPolicySpec{
+					PerformanceHints: []api.PolicyPerformanceHint{api.PerfHintAssumeNeededOnEveryNode},
+				},
+			}, true,
+		),
+		Entry("GlobalNetworkPolicy: disallow dupes in PerformanceHints field",
+			&api.GlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.GlobalNetworkPolicySpec{
+					PerformanceHints: []api.PolicyPerformanceHint{
+						api.PerfHintAssumeNeededOnEveryNode,
+						api.PerfHintAssumeNeededOnEveryNode,
+					},
 				},
 			}, false,
 		),
@@ -4588,6 +4815,9 @@ func init() {
 				},
 			},
 		}, true),
+		Entry("should accept a valid BPFForceTrackPacketsFromIfaces value 'docker+'", api.FelixConfigurationSpec{BPFForceTrackPacketsFromIfaces: &[]string{"docker+"}}, true),
+		Entry("should accept a valid BPFForceTrackPacketsFromIfaces value 'docker0,docker1'", api.FelixConfigurationSpec{BPFForceTrackPacketsFromIfaces: &[]string{"docker0", "docker1"}}, true),
+		Entry("should reject invalid BPFForceTrackPacketsFromIfaces value 'cali-123,cali@456'", api.FelixConfigurationSpec{BPFForceTrackPacketsFromIfaces: &[]string{"cali-123", "cali@456"}}, false),
 	)
 
 	Describe("particular error string checking", func() {

@@ -40,6 +40,9 @@
     cnx-node:
       image: tigera/cnx-node
       version: master
+    cnx-node-windows:
+      image: tigera/cnx-node-windows
+      version: master
     dikastes:
       image: tigera/dikastes
       version: master
@@ -56,12 +59,12 @@
       image: tigera/es-proxy
       version: master
     eck-kibana:
-      version: 7.17.11
+      version: 7.17.13
     kibana:
       image: tigera/kibana
       version: master
     eck-elasticsearch:
-      version: 7.17.11
+      version: 7.17.13
     elasticsearch:
       image: tigera/elasticsearch
       version: master
@@ -106,6 +109,9 @@
       image: tigera/cni
       version: master
       fips-image: true
+    tigera-cni-windows:
+      image: tigera/cni-windows
+      version: master
     firewall-integration:
       image: tigera/firewall-integration
       version: master
@@ -125,12 +131,6 @@
       image: tigera/key-cert-provisioner
       version: master
       registry: quay.io
-    anomaly_detection_jobs:
-      image: tigera/anomaly_detection_jobs
-      version: master
-    anomaly-detection-api:
-      image: tigera/anomaly-detection-api
-      version: master
     elasticsearch-metrics:
       image: tigera/elasticsearch-metrics
       version: master
@@ -178,12 +178,6 @@
       version: master
     envoy-init:
       image: tigera/envoy-init
-      version: master
-    windows:
-      image: tigera/calico-windows
-      version: master
-    windows-upgrade:
-      image: tigera/calico-windows-upgrade
       version: master
     # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
     # to the docs & manifest tooling not to default to the tigera registry.

@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
+//nolint:staticcheck // Ignore SA1019 deprecated until kubernetes/pkg/proxy/types.go fixes sets.String
 func ShouldAppendTopologyAwareEndpoint(nodeZone string, hintsAnnotation string, zoneHints sets.String) bool {
 
 	// In order for an endpoint to be Topology Aware and added to endpoint collection the following must be true
@@ -34,7 +35,7 @@ func ShouldAppendTopologyAwareEndpoint(nodeZone string, hintsAnnotation string, 
 	// If hints annotation is not recognized or empty then ignore Topology Aware Hints.
 	if hintsAnnotation != "Auto" && hintsAnnotation != "auto" {
 		if hintsAnnotation != "" && hintsAnnotation != "Disabled" && hintsAnnotation != "disabled" {
-			log.Debugf("Skipping topology aware endpoint filtering since Service has unexpected value '%s' for key '%s'\n", hintsAnnotation, v1.AnnotationTopologyAwareHints)
+			log.Debugf("Skipping topology aware endpoint filtering since Service has unexpected value '%s' for key '%s'\n", hintsAnnotation, v1.DeprecatedAnnotationTopologyAwareHints)
 		}
 
 		return true

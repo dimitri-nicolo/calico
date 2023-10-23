@@ -275,9 +275,9 @@ type GracefulShutdownPhase string
 
 const (
 	GraceNone           GracefulShutdownPhase = ""
-	GraceAllOptional                          = "all-optional"
-	GraceRemoveOutbound                       = "remove-outbound"
-	GraceRemoveAll                            = "remove-all"
+	GraceAllOptional    GracefulShutdownPhase = "all-optional"
+	GraceRemoveOutbound GracefulShutdownPhase = "remove-outbound"
+	GraceRemoveAll      GracefulShutdownPhase = "remove-all"
 )
 
 func (p *PolicyTable) CalculateGracefulShutdownPhase() GracefulShutdownPhase {

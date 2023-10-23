@@ -29,14 +29,12 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/servicegraph"
 	"github.com/projectcalico/calico/es-proxy/pkg/pip"
 	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
-
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/list"
-
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 var (
@@ -131,8 +129,8 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					servicegraph.NewServiceGraphHandler(
-						context.Background(),
 						authz,
+						k8sClientSet,
 						linseed,
 						k8sClientSetFactory,
 						&servicegraph.Config{
@@ -144,6 +142,7 @@ func Start(cfg *Config) error {
 							ServiceGraphCachePollLoopInterval:     cfg.ServiceGraphCachePollLoopInterval,
 							ServiceGraphCachePollQueryInterval:    cfg.ServiceGraphCachePollQueryInterval,
 							ServiceGraphCacheDataSettleTime:       cfg.ServiceGraphCacheDataSettleTime,
+							ServiceGraphCacheDataPrefetch:         cfg.ServiceGraphCacheDataPrefetch,
 						},
 					)))))
 	sm.Handle("/flowLogs",

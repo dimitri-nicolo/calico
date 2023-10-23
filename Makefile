@@ -35,7 +35,6 @@ clean:
 	$(MAKE) -C node clean
 	$(MAKE) -C pod2daemon clean
 	$(MAKE) -C typha clean
-	$(MAKE) -C calico clean
 	rm -rf ./bin
 	rm -f $(SUB_CHARTS)
 
@@ -74,6 +73,13 @@ gen-manifests: bin/helm bin/yq
 	rm -f $(SUB_CHARTS)
 	cd ./manifests && ./generate.sh
 
+# Get operator CRDs from the operator repo, OPERATOR_BRANCH_NAME must be set
+get-operator-crds: var-require-all-OPERATOR_BRANCH_NAME
+	cd ./charts/tigera-operator/crds/ && \
+	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH_NAME)/pkg/crds/operator/$${file} -o $${file}; done
+	cd ./manifests/ocp/ && \
+	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH_NAME)/pkg/crds/operator/$${file} -o $${file}; done
+
 gen-semaphore-yaml:
 	cd .semaphore && ./generate-semaphore-yaml.sh
 
@@ -88,6 +94,11 @@ endif
 
 chart-release: var-require-all-CHART_RELEASE-RELEASE_STREAM chart
 	mv ./bin/tigera-operator-$(RELEASE_STREAM).tgz ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
+
+publish-release-archive: release-archive
+	$(MAKE) -f Makefile.release-archive publish-release-archive RELEASE_STREAM=$(RELEASE_STREAM) REGISTRY=$(REGISTRY) CHART_RELEASE=$(CHART_RELEASE)
+release-archive: manifests/ocp.tgz
+	$(MAKE) -f Makefile.release-archive release-archive RELEASE_STREAM=$(RELEASE_STREAM) REGISTRY=$(REGISTRY) CHART_RELEASE=$(CHART_RELEASE)
 
 SUB_CHARTS=charts/tigera-operator/charts/tigera-prometheus-operator.tgz
 chart: tigera-operator-release tigera-operator-master
@@ -175,7 +186,7 @@ helm-index:
 
 # Creates the tar file used for installing Calico on OpenShift.
 # Excludes manifests that should be applied after cluster creation.
-manifests/ocp.tgz:
+manifests/ocp.tgz: bin/yq
 	rm -f $@
 	mkdir -p ocp-tmp
 	cp -r manifests/ocp ocp-tmp/
@@ -218,7 +229,7 @@ endif
 		bash -c '/usr/local/bin/python hack/release/get-contributors.py >> /code/AUTHORS.md'
 
 hack/release/release:
-	go build -o ./hack/release/release ./hack/release/cmd/main.go
+	go build -ldflags "-s -w" -o ./hack/release/release ./hack/release/cmd/main.go
 
 bin/metadata.yaml: hack/release/release
 	mkdir -p bin

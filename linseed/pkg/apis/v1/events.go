@@ -13,6 +13,8 @@ type EventParams struct {
 	QueryParams        `json:",inline" validate:"required"`
 	QuerySortParams    `json:",inline"`
 	LogSelectionParams `json:",inline"`
+
+	ID string `json:"id,omitempty"`
 }
 
 type TimestampOrDate struct {
@@ -179,7 +181,7 @@ func (t *TimestampOrDate) MarshalJSON() ([]byte, error) {
 	}
 
 	if t.timeVal == nil && t.intVal == nil {
-		var zero = 0
+		zero := 0
 		return json.Marshal(&zero)
 	}
 

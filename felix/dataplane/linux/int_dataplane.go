@@ -24,6 +24,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -224,6 +225,8 @@ type Config struct {
 	BPFDisableUnprivileged             bool
 	BPFKubeProxyIptablesCleanupEnabled bool
 	BPFLogLevel                        string
+	BPFLogFilters                      map[string]string
+	BPFCTLBLogFilter                   string
 	BPFExtToServiceConnmark            int
 	BPFDataIfacePattern                *regexp.Regexp
 	BPFL3IfacePattern                  *regexp.Regexp
@@ -246,6 +249,7 @@ type Config struct {
 	BPFIpv6Enabled                     bool
 	BPFHostConntrackBypass             bool
 	BPFEnforceRPF                      string
+	BPFDisableGROForIfaces             *regexp.Regexp
 	KubeProxyMinSyncPeriod             time.Duration
 	KubeProxyEndpointSlicesEnabled     bool
 	FlowLogsCollectProcessInfo         bool
@@ -395,8 +399,6 @@ type InternalDataplane struct {
 	managersWithRouteTables []ManagerWithRouteTables
 	managersWithRouteRules  []ManagerWithRouteRules
 	ruleRenderer            rules.RuleRenderer
-
-	lookupCache *calc.LookupsCache
 
 	// datastoreInSync is set to true after we receive the "in sync" message from the datastore.
 	// We delay programming of the dataplane until we're in sync with the datastore.
@@ -932,7 +934,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				}
 				err = kp.AttachUDPv4()
 				if err != nil {
-					kp.DetachTCPv4()
+					_ = kp.DetachTCPv4()
 					return fmt.Errorf("failed to install UDP v4 kprobes: %v", err)
 				}
 			} else {
@@ -1106,9 +1108,15 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 					excludeUDP = true
 				}
 			}
+			logLevel := strings.ToLower(config.BPFLogLevel)
+			if config.BPFLogFilters != nil {
+				if logLevel != "off" && config.BPFCTLBLogFilter != "all" {
+					logLevel = "off"
+				}
+			}
 			// Activate the connect-time load balancer.
 			err = bpfnat.InstallConnectTimeLoadBalancer(
-				config.BPFCgroupV2, config.BPFLogLevel, config.BPFConntrackTimeouts.UDPLastSeen, excludeUDP)
+				config.BPFCgroupV2, logLevel, config.BPFConntrackTimeouts.UDPLastSeen, excludeUDP)
 			if err != nil {
 				log.WithError(err).Panic("BPFConnTimeLBEnabled but failed to attach connect-time load balancer, bailing out.")
 			}
@@ -1883,7 +1891,7 @@ func (d *InternalDataplane) Start() {
 
 	// Use nfnetlink to capture DNS packets from iptables.
 	stopChannel := make(chan struct{})
-	nfnetlink.SubscribeDNS(
+	if err := nfnetlink.SubscribeDNS(
 		int(rules.NFLOGDomainGroup),
 		65535,
 		func(data []byte, timestamp uint64) {
@@ -1892,7 +1900,9 @@ func (d *InternalDataplane) Start() {
 				Timestamp: timestamp,
 			}
 		},
-		stopChannel)
+		stopChannel); err != nil {
+		log.WithError(err).Error("failed to subscribe DNS")
+	}
 
 	// Start the packet processors if configured.
 	if d.dnsDeniedPacketProcessor != nil {
@@ -1941,6 +1951,14 @@ type ifaceStateUpdate struct {
 	Index int
 }
 
+func NewIfaceStateUpdate(name string, state ifacemonitor.State, index int) any {
+	return &ifaceStateUpdate{
+		Name:  name,
+		State: state,
+		Index: index,
+	}
+}
+
 // Check if current felix ipvs config is correct when felix gets a kube-ipvs0 interface update.
 // If KubeIPVSInterface is UP and felix ipvs support is disabled (kube-proxy switched from iptables to ipvs mode),
 // or if KubeIPVSInterface is DOWN and felix ipvs support is enabled (kube-proxy switched from ipvs to iptables mode),
@@ -1973,6 +1991,13 @@ func (d *InternalDataplane) onIfaceAddrsChange(ifaceName string, addrs set.Set[s
 type ifaceAddrsUpdate struct {
 	Name  string
 	Addrs set.Set[string]
+}
+
+func NewIfaceAddrsUpdate(name string, ips ...string) any {
+	return &ifaceAddrsUpdate{
+		Name:  name,
+		Addrs: set.FromArray[string](ips),
+	}
 }
 
 func (d *InternalDataplane) SendMessage(msg interface{}) error {
@@ -2848,15 +2873,24 @@ func (d *InternalDataplane) apply() {
 	ipSetsWG.Wait()
 
 	// Now clean up any left-over IP sets.
+	var ipSetsNeedsReschedule atomic.Bool
 	for _, ipSets := range d.ipSets {
 		ipSetsWG.Add(1)
 		go func(s common.IPSetsDataplane) {
-			s.ApplyDeletions()
+			defer ipSetsWG.Done()
+			reschedule := s.ApplyDeletions()
+			if reschedule {
+				ipSetsNeedsReschedule.Store(true)
+			}
 			d.reportHealth()
-			ipSetsWG.Done()
 		}(ipSets)
 	}
 	ipSetsWG.Wait()
+	if ipSetsNeedsReschedule.Load() {
+		if reschedDelay == 0 || reschedDelay > 100*time.Millisecond {
+			reschedDelay = 100 * time.Millisecond
+		}
+	}
 
 	// Wait for the route updates to finish.
 	routesWG.Wait()
@@ -2922,7 +2956,8 @@ func (d *InternalDataplane) applyIPSetsAndNotifyDomainInfoStore() {
 			// been modified will be updated.
 			programmedIPs := ipSets.ApplyUpdates(func(ipSetName string) bool {
 				// Collect only Domain IP set updates so we don't overload the packet processor with irrelevant ips.
-				return ipSetName[0:2] == "d:"
+				ipSetID := ipsets.StripIPSetNamePrefix(ipSetName)
+				return strings.HasPrefix(ipSetID, "d:")
 			})
 
 			d.reportHealth()
@@ -2975,8 +3010,8 @@ func (d *InternalDataplane) loopReportingStatus() {
 	}
 }
 
-// iptablesTable is a shim interface for iptables.Table.
-type iptablesTable interface {
+// IptablesTable is a shim interface for iptables.Table.
+type IptablesTable interface {
 	UpdateChain(chain *iptables.Chain)
 	UpdateChains([]*iptables.Chain)
 	RemoveChains([]*iptables.Chain)

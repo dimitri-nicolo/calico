@@ -1615,6 +1615,10 @@ func (c shimClient) GlobalAlerts() client.GlobalAlertInterface {
 	panic("not implemented")
 }
 
+func (c shimClient) SecurityEventWebhook() client.SecurityEventWebhookInterface {
+	panic("not implemented")
+}
+
 func (c shimClient) GlobalAlertTemplates() client.GlobalAlertTemplateInterface {
 	panic("not implemented")
 }

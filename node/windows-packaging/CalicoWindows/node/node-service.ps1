@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+# Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -164,10 +164,6 @@ while ($True)
                 .\calico-node.exe -startup
                 if ($LastExitCode -EQ 0)
                 {
-                    if (($env:CALICO_NETWORKING_BACKEND -NE "none") -AND (-NOT(Test-Path $env:CNI_CONF_FILENAME)))
-                    {
-                        Install-CNIPlugin
-                    }
                     Write-Host "Calico node initialisation succeeded; monitoring kubelet for restarts..."
                     break
                 }

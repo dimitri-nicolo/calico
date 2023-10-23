@@ -11,19 +11,39 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 // auditLogsIndexHelper implements the Helper interface for audit logs.
-type auditLogsIndexHelper struct{}
+type auditLogsIndexHelper struct {
+	singleIndex bool
+}
 
-// AuditLogs returns an instance of the audit logs index helper.
-func AuditLogs() Helper {
+// MultiIndexAuditLogs returns an instance of the audit logs index helper.
+func MultiIndexAuditLogs() Helper {
 	return auditLogsIndexHelper{}
+}
+
+func SingleIndexAuditLogs() Helper {
+	return auditLogsIndexHelper{
+		singleIndex: true,
+	}
 }
 
 func NewAuditLogsConverter() converter {
 	return converter{basicAtomToElastic}
+}
+
+func (h auditLogsIndexHelper) BaseQuery(i bapi.ClusterInfo) *elastic.BoolQuery {
+	q := elastic.NewBoolQuery()
+	if h.singleIndex {
+		q.Must(elastic.NewTermQuery("cluster", i.Cluster))
+		if i.Tenant != "" {
+			q.Must(elastic.NewTermQuery("tenant", i.Tenant))
+		}
+	}
+	return q
 }
 
 func (h auditLogsIndexHelper) NewSelectorQuery(selector string) (elastic.Query, error) {
@@ -57,8 +77,4 @@ func (h auditLogsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Quer
 
 func (h auditLogsIndexHelper) GetTimeField() string {
 	return "requestReceivedTimestamp"
-}
-
-func (h auditLogsIndexHelper) GetIndex(cluster string) string {
-	panic("Not implemented!")
 }

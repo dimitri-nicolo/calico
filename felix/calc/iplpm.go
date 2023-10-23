@@ -40,7 +40,7 @@ type IpTrie struct {
 func NewIpTrie() *IpTrie {
 	return &IpTrie{
 		lpmCache:      patricia.NewTrie(),
-		existingCidrs: set.NewBoxed[ip.CIDR](),
+		existingCidrs: set.New[ip.CIDR](),
 	}
 }
 
@@ -56,7 +56,7 @@ func (t *IpTrie) GetLongestPrefixCidr(ipAddr ip.Addr) (model.Key, bool) {
 	var longestItem patricia.Item
 	ptrie := t.lpmCache
 
-	ptrie.VisitPrefixes(patricia.Prefix(ipAddr.AsBinary()),
+	err := ptrie.VisitPrefixes(patricia.Prefix(ipAddr.AsBinary()),
 		func(prefix patricia.Prefix, item patricia.Item) error {
 			if len(prefix) > len(longestPrefix) {
 				longestPrefix = prefix
@@ -64,7 +64,7 @@ func (t *IpTrie) GetLongestPrefixCidr(ipAddr ip.Addr) (model.Key, bool) {
 			}
 			return nil
 		})
-	if longestItem == nil {
+	if err != nil || longestItem == nil {
 		return nil, false
 	}
 	node := longestItem.(*IPTrieNode)
@@ -138,7 +138,6 @@ func (t *IpTrie) InsertKey(cidr ip.CIDR, key model.Key) {
 			node.keys = append(node.keys, key)
 		}
 	}
-	return
 }
 
 // DumpCIDRKeys returns slices of string with Cidr and corresponding key strings.

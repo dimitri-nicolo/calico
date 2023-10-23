@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 
@@ -28,17 +29,34 @@ import (
 )
 
 var (
-	client  lmaelastic.Client
-	cache   bapi.Cache
-	b       bapi.L7FlowBackend
-	lb      bapi.L7LogBackend
-	ctx     context.Context
-	cluster string
+	client      lmaelastic.Client
+	cache       bapi.IndexInitializer
+	b           bapi.L7FlowBackend
+	lb          bapi.L7LogBackend
+	ctx         context.Context
+	cluster     string
+	indexGetter bapi.Index
 )
+
+// RunAllModes runs the given test function twice, once using the single-index backend, and once using
+// the multi-index backend.
+func RunAllModes(t *testing.T, name string, testFn func(t *testing.T)) {
+	// Run using the multi-index backend.
+	t.Run(fmt.Sprintf("%s [legacy]", name), func(t *testing.T) {
+		defer setupTest(t, false)()
+		testFn(t)
+	})
+
+	// Run using the single-index backend.
+	t.Run(fmt.Sprintf("%s [singleindex]", name), func(t *testing.T) {
+		defer setupTest(t, true)()
+		testFn(t)
+	})
+}
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
-func setupTest(t *testing.T) func() {
+func setupTest(t *testing.T, singleIndex bool) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
@@ -48,11 +66,18 @@ func setupTest(t *testing.T) func() {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
-	cache = templates.NewTemplateCache(client, 1, 0)
+	cache = templates.NewCachedInitializer(client, 1, 0)
 
 	// Create backends to use.
-	b = l7.NewL7FlowBackend(client)
-	lb = l7.NewL7LogBackend(client, cache, 10000)
+	if singleIndex {
+		b = l7.NewSingleIndexL7FlowBackend(client)
+		lb = l7.NewSingleIndexL7LogBackend(client, cache, 10000)
+		indexGetter = index.L7LogIndex
+	} else {
+		b = l7.NewL7FlowBackend(client)
+		lb = l7.NewL7LogBackend(client, cache, 10000)
+		indexGetter = index.L7LogMultiIndex
+	}
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
@@ -67,8 +92,8 @@ func setupTest(t *testing.T) func() {
 		// Cancel the context.
 		cancel()
 
-		// Cleanup any data that might left over from a previous failed run.
-		err = testutils.CleanupIndices(context.Background(), esClient, cluster)
+		// Clean up data from the test.
+		err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
 		require.NoError(t, err)
 
 		// Cancel logging
@@ -81,9 +106,7 @@ func TestL7FlowsMainline(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestListL7Flows (tenant=%s)", tenant)
-		t.Run(name, func(t *testing.T) {
-			defer setupTest(t)()
-
+		RunAllModes(t, name, func(t *testing.T) {
 			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
 			// Put some data into ES so we can query it.
@@ -102,12 +125,30 @@ func TestL7FlowsMainline(t *testing.T) {
 
 			// Assert that the flow data is populated correctly.
 			require.Equal(t, expected, r.Items[0])
+
+			// Create some data for a different tenant.
+			otherTenantInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: "suspicious-tenant"}
+			otherL7Log := func(i int) v1.L7Log {
+				// Modify the base log to make it unique so we can distinguish between the two logs and
+				// thus check that the right data is returned for each call.
+				l := l7Log(i)
+				l.SourceType = "sus"
+				return l
+			}
+			expected2 := populateL7FlowData(t, ctx, client, otherTenantInfo, expectedL7Flow, otherL7Log)
+			expected2.Key.Source.Type = "sus"
+
+			// Attempt to access using another tenant but with the same options as above. This should return that tenant's flow,
+			// but other tenant's flow - even though the options otherwise match the data we inserted for the first tenant.
+			r, err = b.List(ctx, otherTenantInfo, &opts)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Equal(t, expected2, r.Items[0])
+			require.NotEqual(t, expected, r.Items[0])
 		})
 	}
 
-	t.Run("no cluster name given on request", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "no cluster name given on request", func(t *testing.T) {
 		// It should reject requests with no cluster name given.
 		clusterInfo := bapi.ClusterInfo{}
 		params := &v1.L7FlowParams{}
@@ -116,9 +157,7 @@ func TestL7FlowsMainline(t *testing.T) {
 		require.Nil(t, results)
 	})
 
-	t.Run("empty response code stored", func(t *testing.T) {
-		defer setupTest(t)()
-
+	RunAllModes(t, "empty response code stored", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 		// Put some data into ES so we can query it.
@@ -140,8 +179,10 @@ func TestL7FlowsMainline(t *testing.T) {
 	})
 }
 
-type l7FlowGenerator func() v1.L7Flow
-type l7LogGenerator func(i int) v1.L7Log
+type (
+	l7FlowGenerator func() v1.L7Flow
+	l7LogGenerator  func(i int) v1.L7Log
+)
 
 // populateFlowData writes a series of flow logs to elasticsearch, and returns the L7 flow that we
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
@@ -190,11 +231,7 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
 	// for the refresh interval to occur.
-	index := fmt.Sprintf("tigera_secure_ee_l7.%s.*", clusterInfo.Cluster)
-	if clusterInfo.Tenant != "" {
-		index = fmt.Sprintf("tigera_secure_ee_l7.%s.%s.*", clusterInfo.Tenant, clusterInfo.Cluster)
-	}
-	err = testutils.RefreshIndex(ctx, client, index)
+	err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
 	require.NoError(t, err)
 
 	return expected
@@ -239,6 +276,7 @@ func l7LogEmptyResponseCode(i int) v1.L7Log {
 	f.ResponseCode = ""
 	return f
 }
+
 func expectedL7FlowNoResponseCode() v1.L7Flow {
 	expected := v1.L7Flow{}
 	expected.Key = v1.L7FlowKey{
