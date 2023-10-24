@@ -4,7 +4,13 @@ package testutils
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 
+	"github.com/stretchr/testify/require"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
@@ -59,4 +65,39 @@ func (w *FakeSecurityEventWebhook) Get(ctx context.Context, name string, opts op
 }
 func (w *FakeSecurityEventWebhook) List(ctx context.Context, opts options.ListOptions) (*api.SecurityEventWebhookList, error) {
 	return nil, nil
+}
+
+type FakeConsumer struct {
+	Requests   []HttpRequest
+	ShouldFail bool
+	ts         *httptest.Server
+}
+
+func (fc *FakeConsumer) Url() string {
+	return fc.ts.URL
+}
+
+func NewFakeConsumer(t *testing.T) *FakeConsumer {
+	fc := &FakeConsumer{}
+	require.False(t, fc.ShouldFail)
+	fc.ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Let's make requests fail on demand
+		if fc.ShouldFail {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		fmt.Fprintln(w, "Does anyone read this?")
+		request := HttpRequest{
+			Method: r.Method,
+			URL:    r.URL.String(),
+			Header: r.Header,
+		}
+		var err error
+		request.Body, err = io.ReadAll(r.Body)
+		require.NoError(t, err)
+		fc.Requests = append(fc.Requests, request)
+	}))
+	t.Cleanup(func() {
+		fc.ts.Close()
+	})
+	return fc
 }

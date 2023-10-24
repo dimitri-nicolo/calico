@@ -27,6 +27,9 @@ import (
 	"github.com/projectcalico/calico/webhooks-processor/pkg/testutils"
 )
 
+// This file contains tests that combine the webhooks building blocks as a cohesive unit
+// and assert that all work together as expected to implement the desired behavior.
+
 func TestWebhooksProcessorExitsOnCancel(t *testing.T) {
 	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
 		return []lsApi.Event{}

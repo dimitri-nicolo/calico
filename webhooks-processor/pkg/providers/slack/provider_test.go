@@ -6,9 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -49,35 +46,12 @@ func TestSlackProviderValidation(t *testing.T) {
 }
 
 func TestSlackProviderProcessing(t *testing.T) {
-	var requests []testutils.HttpRequest
-	var shouldFail bool
-	var ts *httptest.Server
+	var fc *testutils.FakeConsumer
 	var ctx context.Context
 	var p providers.Provider
 	var event *lsApi.Event
 	setup := func(t *testing.T) {
-		requests = []testutils.HttpRequest{}
-		shouldFail = false
-		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Let's make requests fail on demand
-			if shouldFail {
-				w.WriteHeader(http.StatusInternalServerError)
-			}
-			fmt.Fprintln(w, "Does anyone read this?")
-			request := testutils.HttpRequest{
-				Method: r.Method,
-				URL:    r.URL.String(),
-				Header: r.Header,
-			}
-			var err error
-			request.Body, err = io.ReadAll(r.Body)
-			require.NoError(t, err)
-			requests = append(requests, request)
-		}))
-		t.Cleanup(func() {
-			ts.Close()
-		})
-
+		fc = testutils.NewFakeConsumer(t)
 		ctx = context.Background()
 		p = NewProvider()
 		event = &lsApi.Event{
@@ -91,15 +65,15 @@ func TestSlackProviderProcessing(t *testing.T) {
 	t.Run("slack success", func(t *testing.T) {
 		setup(t)
 		c := sampleValidConfig()
-		c["url"] = fmt.Sprintf("%s/test", ts.URL)
+		c["url"] = fmt.Sprintf("%s/test", fc.Url())
 
 		err := p.Process(ctx, c, event)
 		require.NoError(t, err)
 
-		require.Eventually(t, func() bool { return len(requests) == 1 }, 15*time.Second, 10*time.Millisecond)
+		require.Eventually(t, func() bool { return len(fc.Requests) == 1 }, 15*time.Second, 10*time.Millisecond)
 
 		var slackMessage SlackMessage
-		err = json.Unmarshal(requests[0].Body, &slackMessage)
+		err = json.Unmarshal(fc.Requests[0].Body, &slackMessage)
 		require.NoError(t, err)
 
 		// Not sure how much we want to test the content of each block...
@@ -124,7 +98,7 @@ func TestSlackProviderProcessing(t *testing.T) {
 	t.Run("slack failure", func(t *testing.T) {
 		setup(t)
 		c := sampleValidConfig()
-		c["url"] = fmt.Sprintf("%s/test", ts.URL)
+		c["url"] = fmt.Sprintf("%s/test", fc.Url())
 
 		// Override default parameters to make sure we retry quickly and get to a failure state quicker
 		slackProvider := p.(*Slack)
@@ -132,13 +106,13 @@ func TestSlackProviderProcessing(t *testing.T) {
 		slackProvider.Config.RetryDuration = 1 * time.Millisecond
 		slackProvider.Config.RequestTimeout = 1 * time.Millisecond
 
-		shouldFail = true
+		fc.ShouldFail = true
 		// This will take a while and only return once finished
 		err := p.Process(ctx, c, event)
 		require.Error(t, err)
 
 		// At this stage all the retries and errors have gone through, no need to wait further...
-		require.GreaterOrEqual(t, len(requests), 2)
+		require.GreaterOrEqual(t, len(fc.Requests), 2)
 
 		// This works as designed, and the error eventually coming up from p.Process()
 		// will be logged but there will be no other traces of the failure.

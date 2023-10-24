@@ -20,14 +20,6 @@ import (
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 )
 
-// const (
-//
-//	RequestTimeout = 5 * time.Second
-//	RetryDuration  = 2 * time.Second
-//	RetryTimes     = 5
-//
-// )
-
 type JiraProviderConfiguration struct {
 	RateLimiterDuration time.Duration `envconfig:"WEBHOOKS_JIRA_RATE_LIMITER_DURATION" default:"60m"`
 	RateLimiterCount    uint          `envconfig:"WEBHOOKS_JIRA_RATE_LIMITER_COUNT" default:"1"`
