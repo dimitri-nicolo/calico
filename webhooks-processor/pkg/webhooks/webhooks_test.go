@@ -103,11 +103,14 @@ func TestWebhookNonHealthyStates(t *testing.T) {
 
 	t.Run("malformed query", func(t *testing.T) {
 		wh := testutils.NewTestWebhook("test-wh")
-		// This test is a lot harder to fail that first anticipated.
-		// Currently we only deal with query parsing error.
-		// TODO: validate that queries are also valid as per libcalico selector validation logic.
 		wh.Spec.Query = "= runtime_security"
 		testNonHealthyState(wh, "QueryParsing", "unexpected token")
+	})
+
+	t.Run("invalid query", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
+		wh.Spec.Query = "type = runtime_securit"
+		testNonHealthyState(wh, "QueryValidation", "invalid value for type: runtime_securit")
 	})
 
 	// The following test will fail to initialise a CoreV1 API client.

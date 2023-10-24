@@ -43,6 +43,12 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 		s.updateWebhookHealth(webhook, "QueryParsing", time.Now(), err)
 		return
 	}
+	err = query.Validate(parsedQuery, query.IsValidEventsKeysAtom)
+	if err != nil {
+		s.preventRestarts[webhook.UID] = true
+		s.updateWebhookHealth(webhook, "QueryValidation", time.Now(), err)
+		return
+	}
 	config, err := s.parseConfig(ctx, webhook.Spec.Config)
 	if err != nil {
 		s.preventRestarts[webhook.UID] = true
