@@ -64,6 +64,72 @@ func TestWebhookHealthy(t *testing.T) {
 	require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
 }
 
+func TestWebhookNonHealthyStates(t *testing.T) {
+	testNonHealthyState := func(webhook *api.SecurityEventWebhook, reason string, message string) {
+		testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
+			return []lsApi.Event{}
+		})
+
+		startTime := time.Now()
+
+		// New webhook has no status
+		require.Nil(t, webhook.Status)
+
+		testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: webhook}
+
+		// Check that webhook status is eventually updated to healthy
+		require.Eventually(t, func() bool {
+			return webhook != nil &&
+				webhook.Status != nil &&
+				len(webhook.Status) == 1 &&
+				webhook.Status[0].Type == "Healthy" &&
+				webhook.Status[0].Status == metav1.ConditionStatus("False")
+		}, time.Second, 10*time.Millisecond)
+		require.True(t, webhook.Status[0].LastTransitionTime.After(startTime))
+
+		// Check details
+		require.Contains(t, webhook.Status[0].Reason, reason)
+		require.Contains(t, webhook.Status[0].Message, message)
+
+		// And make sure we're still running
+		require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
+	}
+
+	t.Run("disabled", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
+		wh.Spec.State = "Disabled"
+		testNonHealthyState(wh, "WebhookState", "the webhook has been disabled")
+	})
+
+	t.Run("malformed query", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
+		// This test is a lot harder to fail that first anticipated.
+		// Currently we only deal with query parsing error.
+		// TODO: validate that queries are also valid as per libcalico selector validation logic.
+		wh.Spec.Query = "= runtime_security"
+		testNonHealthyState(wh, "QueryParsing", "unexpected token")
+	})
+
+	// The following test will fail to initialise a CoreV1 API client.
+	// TODO: Add test for config parsing failure, with `configItem.ValueFrom`,
+	// that test the "key not found in secret/config map" code paths.
+	t.Run("config parsing - no cli client", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
+
+		wh.Spec.Config = append(wh.Spec.Config, api.SecurityEventWebhookConfigVar{
+			Name:      "some-secret",
+			ValueFrom: &api.SecurityEventWebhookConfigVarSource{},
+		})
+		testNonHealthyState(wh, "ConfigurationParsing", "invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable")
+	})
+
+	t.Run("unknown consumer", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
+		wh.Spec.Consumer = "Unknown"
+		testNonHealthyState(wh, "ConsumerDiscovery", "unknown consumer: Unknown")
+	})
+}
+
 func TestFailedWebhookProviderValidationReportedNotHealthy(t *testing.T) {
 	testState := &TestState{}
 	testState.WebHooksAPI = &testutils.FakeSecurityEventWebhook{}
