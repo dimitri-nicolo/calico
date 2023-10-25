@@ -83,7 +83,7 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 	rateLimiter := helpers.NewRateLimiter(provider.RateLimiterConfig())
 
 	s.wg.Add(1)
-	go s.webhookGoroutine(webhookCtx, config, parsedQuery, provider, webhookUpdateChan, webhook, rateLimiter)
+	go s.webhookGoroutine(webhookCtx, config, parsedQuery, provider.Process, webhookUpdateChan, webhook, rateLimiter)
 	s.updateWebhookHealth(webhook, "WebhookValidation", time.Now(), nil)
 
 	logrus.WithField("uid", webhook.UID).Info("Webhook validated and registered")
