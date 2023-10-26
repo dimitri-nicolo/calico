@@ -12,8 +12,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kelseyhightower/envconfig"
-
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
@@ -21,28 +19,26 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type GenericProviderConfiguration struct {
-	RateLimiterDuration time.Duration `envconfig:"WEBHOOKS_GENERIC_RATE_LIMITER_DURATION" default:"1h"`
-	RateLimiterCount    uint          `envconfig:"WEBHOOKS_GENERIC_RATE_LIMITER_COUNT" default:"100"`
-	RequestTimeout      time.Duration `envconfig:"WEBHOOKS_GENERIC_REQUEST_TIMEOUT" default:"5s"`
-	RetryDuration       time.Duration `envconfig:"WEBHOOKS_GENERIC_RETRY_DURATION" default:"2s"`
-	RetryTimes          uint          `envconfig:"WEBHOOKS_GENERIC_RETRY_TIMES" default:"5"`
-}
+const (
+	RequestTimeout      = 5 * time.Second
+	RetryDuration       = 2 * time.Second
+	RetryTimes          = 5
+	RateLimiterDuration = 1 * time.Hour
+	RateLimiterCount    = 100
+)
 
 type GenericProvider struct {
 	ProviderConfig providers.Config
 }
 
 func NewProvider() providers.Provider {
-	genericConfig := new(GenericProviderConfiguration)
-	envconfig.MustProcess("webhooks", genericConfig)
 	return &GenericProvider{
 		ProviderConfig: providers.Config{
-			RequestTimeout:      genericConfig.RequestTimeout,
-			RetryDuration:       genericConfig.RetryDuration,
-			RetryTimes:          genericConfig.RetryTimes,
-			RateLimiterDuration: genericConfig.RateLimiterDuration,
-			RateLimiterCount:    genericConfig.RateLimiterCount,
+			RequestTimeout:      RequestTimeout,
+			RetryDuration:       RetryDuration,
+			RetryTimes:          RetryTimes,
+			RateLimiterDuration: RateLimiterDuration,
+			RateLimiterCount:    RateLimiterCount,
 		},
 	}
 }
@@ -60,8 +56,8 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 		return
 	}
 
-	retryFunc := func(requestTimeout time.Duration) (err error) {
-		requestCtx, requestCtxCancel := context.WithTimeout(ctx, requestTimeout)
+	retryFunc := func() (err error) {
+		requestCtx, requestCtxCancel := context.WithTimeout(ctx, RequestTimeout)
 		defer requestCtxCancel()
 
 		request, err := http.NewRequestWithContext(requestCtx, "POST", config["url"], bytes.NewReader(payload))
@@ -94,8 +90,7 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 		return fmt.Errorf("unexpected response [%d]:%s", response.StatusCode, responseText)
 	}
 
-	c := p.Config()
-	return helpers.RetryWithLinearBackOff(retryFunc, c.RetryDuration, c.RetryTimes, c.RequestTimeout, config["url"])
+	return helpers.RetryWithLinearBackOff(retryFunc, RetryDuration, RetryTimes, config["url"])
 }
 
 func (p *GenericProvider) Config() providers.Config {

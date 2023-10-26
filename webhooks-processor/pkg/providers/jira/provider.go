@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -20,28 +19,26 @@ import (
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 )
 
-type JiraProviderConfiguration struct {
-	RateLimiterDuration time.Duration `envconfig:"WEBHOOKS_JIRA_RATE_LIMITER_DURATION" default:"60m"`
-	RateLimiterCount    uint          `envconfig:"WEBHOOKS_JIRA_RATE_LIMITER_COUNT" default:"1"`
-	RequestTimeout      time.Duration `envconfig:"WEBHOOKS_JIRA_REQUEST_TIMEOUT" default:"5s"`
-	RetryDuration       time.Duration `envconfig:"WEBHOOKS_JIRA_RETRY_DURATION" default:"2s"`
-	RetryTimes          uint          `envconfig:"WEBHOOKS_JIRA_RETRY_TIMES" default:"5"`
-}
+const (
+	RequestTimeout      = 5 * time.Second
+	RetryDuration       = 2 * time.Second
+	RetryTimes          = 5
+	RateLimiterDuration = 60 * time.Minute
+	RateLimiterCount    = 1
+)
 
 type Jira struct {
 	ProviderConfig providers.Config
 }
 
 func NewProvider() providers.Provider {
-	jiraConfig := new(JiraProviderConfiguration)
-	envconfig.MustProcess("webhooks", jiraConfig)
 	return &Jira{
 		ProviderConfig: providers.Config{
-			RequestTimeout:      jiraConfig.RequestTimeout,
-			RetryDuration:       jiraConfig.RetryDuration,
-			RetryTimes:          jiraConfig.RetryTimes,
-			RateLimiterDuration: jiraConfig.RateLimiterDuration,
-			RateLimiterCount:    jiraConfig.RateLimiterCount,
+			RequestTimeout:      RequestTimeout,
+			RetryDuration:       RetryDuration,
+			RetryTimes:          RetryTimes,
+			RateLimiterDuration: RateLimiterDuration,
+			RateLimiterCount:    RateLimiterCount,
 		},
 	}
 }
@@ -81,8 +78,8 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, event *lsA
 		return
 	}
 
-	retryFunc := func(requestTimeout time.Duration) (err error) {
-		requestCtx, requestCtxCancel := context.WithTimeout(ctx, requestTimeout)
+	retryFunc := func() (err error) {
+		requestCtx, requestCtxCancel := context.WithTimeout(ctx, RequestTimeout)
 		defer requestCtxCancel()
 
 		request, err := http.NewRequestWithContext(requestCtx, "POST", config["url"], bytes.NewReader(payloadBytes))
@@ -116,8 +113,7 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, event *lsA
 		return fmt.Errorf("unexpected Jira response [%d]:%s", response.StatusCode, responseText)
 	}
 
-	c := p.Config()
-	return helpers.RetryWithLinearBackOff(retryFunc, c.RetryDuration, c.RetryTimes, c.RequestTimeout, config["url"])
+	return helpers.RetryWithLinearBackOff(retryFunc, RetryDuration, RetryTimes, config["url"])
 }
 
 func (p *Jira) Config() providers.Config {
