@@ -41,13 +41,6 @@ func NewCachedInitializer(c lmaelastic.Client, shards, replicas int) bapi.IndexI
 	}
 }
 
-func NewNoOpInitializer() bapi.IndexInitializer {
-	return &cachedInitializer{
-		cache:     make(map[string]*Template),
-		bootstrap: NoopBootstrapper,
-	}
-}
-
 func (i *cachedInitializer) Initialize(ctx context.Context, index bapi.Index, info bapi.ClusterInfo) error {
 	if !i.exists(index, info) {
 		return i.initialize(ctx, index, info)
@@ -77,4 +70,16 @@ func (i *cachedInitializer) initialize(ctx context.Context, index bapi.Index, in
 	// Cache the index so that we don't need to re-initialize it on subsequent calls.
 	i.cache[index.Name(info)] = template
 	return nil
+}
+
+// noOpInitializer implements the IndexInitializer interface
+// but will not perform any initialization
+type noOpInitializer struct{}
+
+func (n noOpInitializer) Initialize(ctx context.Context, index bapi.Index, info bapi.ClusterInfo) error {
+	return nil
+}
+
+func NewNoOpInitializer() bapi.IndexInitializer {
+	return &noOpInitializer{}
 }

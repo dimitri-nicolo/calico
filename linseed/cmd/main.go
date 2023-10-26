@@ -96,7 +96,7 @@ func main() {
 	} else if live {
 		doHealthCheck("liveness", cfg.HealthPort)
 	} else if configureElasticIndices {
-		configureElasticIndicies()
+		boostrapElasticIndices()
 	} else {
 		// Just run the server.
 		run()
@@ -133,7 +133,9 @@ func run() {
 	var flowInitializer api.IndexInitializer
 	var l7Initializer api.IndexInitializer
 
-	if shouldCreateIndicesDynamically(cfg) {
+	if cfg.Backend == config.BackendTypeSingleIndex && cfg.SingleIndexIndicesCreationEnabled {
+		createSingleIndexIndices(cfg, esClient)
+	} else if cfg.Backend == config.BackendTypeMultiIndex {
 		// Create template caches for indices with special shards / replicas configuration
 		defaultInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
 		flowInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticFlowShards, cfg.ElasticFlowReplicas)
@@ -141,9 +143,8 @@ func run() {
 		l7Initializer = templates.NewCachedInitializer(esClient, cfg.ElasticL7Shards, cfg.ElasticL7Replicas)
 		auditInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticAuditShards, cfg.ElasticAuditReplicas)
 		bgpInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticBGPShards, cfg.ElasticBGPReplicas)
-
 	} else {
-		// Create a no op template caches for indices
+		// Create a no op initializer
 		defaultInitializer = templates.NewNoOpInitializer()
 		flowInitializer = templates.NewNoOpInitializer()
 		dnsInitializer = templates.NewNoOpInitializer()
@@ -429,10 +430,6 @@ func run() {
 		logrus.Fatalf("server shutdown failed: %+v", err)
 	}
 	logrus.Info("Server is shutting down")
-}
-
-func shouldCreateIndicesDynamically(cfg *config.Config) bool {
-	return cfg.Backend == config.BackendTypeMultiIndex || (cfg.Backend == config.BackendTypeSingleIndex && !cfg.ElasticDynamicIndexCreationEnabled)
 }
 
 // doHealthCheck checks the local readiness or liveness endpoint and prints its status.

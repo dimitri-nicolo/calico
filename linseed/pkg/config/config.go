@@ -114,9 +114,9 @@ type Config struct {
 	Backend         BackendType `envconfig:"BACKEND" default:"elastic-multi-index"`
 	TenantNamespace string      `envconfig:"TENANT_NAMESPACE" default:""`
 
-	// ElasticDynamicIndexCreationEnabled will configure index templates, write aliases and
+	// SingleIndexIndicesCreationEnabled will configure index templates, write aliases and
 	// create boostrap indices at runtime from the request received
-	ElasticDynamicIndexCreationEnabled bool `envconfig:"ELASTIC_DYNAMIC_INDEX_CREATION_ENABLED"`
+	SingleIndexIndicesCreationEnabled bool `envconfig:"ELASTIC_SINGLE_INDEX_INDICES_CREATION_ENABLED"`
 
 	// These environment variables allow overriding the index names to use for this Linseed.
 	// They are only supported when running in single-index mode. If unset, defaults will be used instead

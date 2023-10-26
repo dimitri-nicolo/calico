@@ -52,11 +52,6 @@ func (index IndexInfo) HasMappings(mappings map[string]interface{}) bool {
 	return reflect.DeepEqual(liveMappings, expectedMappings)
 }
 
-// NoopBootstrapper does not do anything
-var NoopBootstrapper Bootstrapper = func(ctx context.Context, client *elastic.Client, config *TemplateConfig) (*Template, error) {
-	return nil, nil
-}
-
 // DefaultBootstrapper creates an index template for the give log type and cluster information
 // pairing and create a bootstrap index that uses that template
 var DefaultBootstrapper Bootstrapper = func(ctx context.Context, client *elastic.Client, config *TemplateConfig) (*Template, error) {
