@@ -137,8 +137,7 @@ func TestJiraProviderProcessing(t *testing.T) {
 		err := p.Process(ctx, c, event)
 		require.Error(t, err)
 
-		// At this stage all the retries and errors have gone through, no need to wait further...
-		require.GreaterOrEqual(t, len(fc.Requests), 2)
+		require.Eventually(t, func() bool { return len(fc.Requests) >= 2 }, time.Second, 10*time.Millisecond)
 
 		// This works as designed, and the error eventually coming up from p.Process()
 		// will be logged but there will be no other traces of the failure.
