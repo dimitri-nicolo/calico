@@ -67,6 +67,10 @@ $(WEBHOOKS_PROCESSOR_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/web
 fv:
 	@echo "TBD"
 
+.PHONY: st
+st:
+	@echo "TBD"
+
 .PHONY: ut
 ut:
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test -coverpkg=./pkg/... -coverprofile ./cover.out ./pkg/...'
@@ -78,3 +82,9 @@ clean:
 	-rm -f ./bin/*
 	-rm -f $(WEBHOOKS_PROCESSOR_CONTAINER_CREATED)
 	-docker rmi -f $$(docker images -aq $(WEBHOOKS_IMAGE))
+
+###############################################################################
+# SEMAPHORE
+###############################################################################
+.PHONY: ci
+ci: clean static-checks test
