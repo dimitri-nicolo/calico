@@ -778,6 +778,11 @@ func evaluateENVBool(envVar string, defaultValue bool) bool {
 // specified.
 // Returns true if the node object needs to be updated.
 func configureASNumber(node *libapi.Node, asStr string, source string) bool {
+	// If Calico is running in policy only mode we don't need to write BGP related
+	// details to the Node, unless when performing CALICO_EARLY_NETWORKING setup
+	if os.Getenv("CALICO_NETWORKING_BACKEND") == "none" && os.Getenv("CALICO_EARLY_NETWORKING") == "" {
+		return false
+	}
 	if asStr != "" {
 		if asNum, err := numorstring.ASNumberFromString(asStr); err != nil {
 			log.WithError(err).Errorf("The AS number specified in the %v (AS=%s) is not valid", source, asStr)
