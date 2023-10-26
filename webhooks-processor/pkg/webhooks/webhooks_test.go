@@ -289,7 +289,7 @@ func TestGenericProvider(t *testing.T) {
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
 	// Make sure the webhook eventually hits the test provider
-	require.Eventually(t, func() bool { return len(requests) == 1 }, 15*time.Second, 10*time.Millisecond)
+	require.Eventually(t, func() bool { return len(requests) == 1 }, 5*time.Second, 10*time.Millisecond)
 
 	// We got the webhook as expected
 	require.Equal(t, "POST", requests[0].Method)
@@ -338,17 +338,17 @@ func TestBackoffOnInitialFailure(t *testing.T) {
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
 	// We will get the first request that will be denied
-	require.Eventually(t, func() bool { return len(requests) == 1 }, 15*time.Second, 10*time.Millisecond)
+	require.Eventually(t, func() bool { return len(requests) == 1 }, 5*time.Second, 10*time.Millisecond)
 
 	// I thought we would update the health of the webhook to something that shows the error
 	// or the fact that the request is not going through but seems like we don't.
 	// TODO: Do we want to consider doing this?
 	// // and update the health of the webhook
-	// require.Eventually(t, func() bool { return !isHealthy(wh)() }, 15*time.Second, 10*time.Millisecond)
+	// require.Eventually(t, func() bool { return !isHealthy(wh)() }, 5*time.Second, 10*time.Millisecond)
 	// require.Equal(t, "server doesn't like me :sob:", wh.Status[0].Message)
 
 	// Wait for the second request following the initial failure
-	require.Eventually(t, func() bool { return len(requests) == 2 }, 15*time.Second, 10*time.Millisecond)
+	require.Eventually(t, func() bool { return len(requests) == 2 }, 5*time.Second, 10*time.Millisecond)
 
 	// And check that the data is as expected
 	require.Equal(t, "POST", requests[0].Method)

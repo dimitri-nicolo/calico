@@ -3,11 +3,12 @@
 package webhooks
 
 import (
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/generic"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/jira"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/slack"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func DefaultProviders() map[api.SecurityEventWebhookConsumer]providers.Provider {

@@ -10,10 +10,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func sampleValidConfig() map[string]string {
@@ -30,14 +31,6 @@ func TestJiraProviderValidation(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
 		err := p.Validate(sampleValidConfig())
 		require.NoError(t, err)
-	})
-
-	t.Run("no url", func(t *testing.T) {
-		c := sampleValidConfig()
-		delete(c, "url")
-
-		err := p.Validate(c)
-		require.Error(t, err)
 	})
 
 	t.Run("no url", func(t *testing.T) {
@@ -79,12 +72,6 @@ func TestJiraProviderValidation(t *testing.T) {
 		err := p.Validate(c)
 		require.Error(t, err)
 	})
-}
-
-func TestSTringReplace(t *testing.T) {
-	str := `2023-10-23 14:57:40 &#43;0100 IST`
-	str2 := strings.Replace(str, "&#43;", "+", -1)
-	require.Contains(t, str2, "+")
 }
 
 func TestJiraProviderProcessing(t *testing.T) {

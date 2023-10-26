@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func sampleValidConfig() map[string]string {
@@ -70,7 +71,7 @@ func TestSlackProviderProcessing(t *testing.T) {
 		err := p.Process(ctx, c, event)
 		require.NoError(t, err)
 
-		require.Eventually(t, func() bool { return len(fc.Requests) == 1 }, 15*time.Second, 10*time.Millisecond)
+		require.Eventually(t, func() bool { return len(fc.Requests) == 1 }, 5*time.Second, 10*time.Millisecond)
 
 		var slackMessage SlackMessage
 		err = json.Unmarshal(fc.Requests[0].Body, &slackMessage)
