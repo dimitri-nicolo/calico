@@ -102,9 +102,9 @@ func TestSlackProviderProcessing(t *testing.T) {
 
 		// Override default parameters to make sure we retry quickly and get to a failure state quicker
 		slackProvider := p.(*Slack)
-		slackProvider.Config.RetryTimes = 2
-		slackProvider.Config.RetryDuration = 1 * time.Millisecond
-		slackProvider.Config.RequestTimeout = 1 * time.Millisecond
+		slackProvider.ProviderConfig.RetryTimes = 2
+		slackProvider.ProviderConfig.RetryDuration = 1 * time.Millisecond
+		slackProvider.ProviderConfig.RequestTimeout = 1 * time.Millisecond
 
 		fc.ShouldFail = true
 		// This will take a while and only return once finished

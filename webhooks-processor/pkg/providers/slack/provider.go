@@ -34,14 +34,20 @@ type SlackProviderConfiguration struct {
 }
 
 type Slack struct {
-	Config *SlackProviderConfiguration
+	ProviderConfig providers.Config
 }
 
 func NewProvider() providers.Provider {
-	config := new(SlackProviderConfiguration)
-	envconfig.MustProcess("webhooks", config)
+	slackConfig := new(SlackProviderConfiguration)
+	envconfig.MustProcess("webhooks", slackConfig)
 	return &Slack{
-		Config: config,
+		ProviderConfig: providers.Config{
+			RequestTimeout:      slackConfig.RequestTimeout,
+			RetryDuration:       slackConfig.RetryDuration,
+			RetryTimes:          slackConfig.RetryTimes,
+			RateLimiterDuration: slackConfig.RateLimiterDuration,
+			RateLimiterCount:    slackConfig.RateLimiterCount,
+		},
 	}
 }
 
@@ -98,7 +104,8 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, event *ls
 		}
 	}
 
-	return helpers.RetryWithLinearBackOff(retryFunc, p.RetryConfig(), config["url"])
+	c := p.Config()
+	return helpers.RetryWithLinearBackOff(retryFunc, c.RetryDuration, c.RetryTimes, c.RequestTimeout, config["url"])
 }
 
 func (p *Slack) message(event *lsApi.Event) *SlackMessage {
@@ -118,17 +125,6 @@ func (p *Slack) message(event *lsApi.Event) *SlackMessage {
 	return message
 }
 
-func (p *Slack) RetryConfig() providers.RetryConfig {
-	return providers.RetryConfig{
-		RequestTimeout: p.Config.RequestTimeout,
-		RetryDuration:  p.Config.RetryDuration,
-		RetryTimes:     p.Config.RetryTimes,
-	}
-}
-
-func (p *Slack) RateLimiterConfig() providers.RateLimiterConfig {
-	return providers.RateLimiterConfig{
-		RateLimiterDuration: p.Config.RateLimiterDuration,
-		RateLimiterCount:    p.Config.RateLimiterCount,
-	}
+func (p *Slack) Config() providers.Config {
+	return p.ProviderConfig
 }

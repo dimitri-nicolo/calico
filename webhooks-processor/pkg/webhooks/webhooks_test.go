@@ -246,7 +246,7 @@ func TestTooManyEventsAreRateLimited(t *testing.T) {
 	// Make sure the webhook eventually hits the test server
 	testProvider := testState.TestSlackProvider()
 	// Make sure the test is valid (we're providing more events than allowed)
-	numEventsAllowed := int(testState.Providers[api.SecurityEventWebhookConsumerSlack].RateLimiterConfig().RateLimiterCount)
+	numEventsAllowed := int(testState.Providers[api.SecurityEventWebhookConsumerSlack].Config().RateLimiterCount)
 	require.Less(t, numEventsAllowed, len(fetchedEvents))
 	require.Eventually(t, hasNRequest(testProvider, numEventsAllowed), 15*time.Second, 10*time.Millisecond)
 
@@ -420,7 +420,7 @@ func Setup(t *testing.T, getEvents func(context.Context, *query.Query, time.Time
 	testProviders := make(map[api.SecurityEventWebhookConsumer]providers.Provider)
 	testProviders[api.SecurityEventWebhookConsumerSlack] = NewTestProvider()
 
-	require.NotZero(t, testProviders[api.SecurityEventWebhookConsumerSlack].RateLimiterConfig().RateLimiterCount)
+	require.NotZero(t, testProviders[api.SecurityEventWebhookConsumerSlack].Config().RateLimiterCount)
 	testState := NewTestState(getEvents, testProviders)
 
 	return SetupWithTestState(t, testState)
@@ -502,10 +502,6 @@ func (p *TestProvider) Process(ctx context.Context, config map[string]string, ev
 	return nil
 }
 
-func (p *TestProvider) RetryConfig() providers.RetryConfig {
-	return p.SlackProvider.RetryConfig()
-}
-
-func (p *TestProvider) RateLimiterConfig() providers.RateLimiterConfig {
-	return p.SlackProvider.RateLimiterConfig()
+func (p *TestProvider) Config() providers.Config {
+	return p.SlackProvider.Config()
 }

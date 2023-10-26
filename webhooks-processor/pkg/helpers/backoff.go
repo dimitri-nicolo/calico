@@ -4,8 +4,6 @@ package helpers
 
 import (
 	"time"
-
-	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 )
 
 type NoRetryError struct {
@@ -24,12 +22,12 @@ type RetryFunction func(requestTimeout time.Duration) error
 
 type BackOffFunction func(time.Duration, uint) <-chan time.Time
 
-func RetryWithBackOff(retryFunc RetryFunction, backOffFunc BackOffFunction, config providers.RetryConfig, info string) (err error) {
-	for iteration := uint(0); iteration < config.RetryTimes; iteration++ {
+func RetryWithBackOff(retryFunc RetryFunction, backOffFunc BackOffFunction, duration time.Duration, times uint, timeout time.Duration, info string) (err error) {
+	for iteration := uint(0); iteration < times; iteration++ {
 		if iteration > 0 {
-			<-backOffFunc(config.RetryDuration, iteration)
+			<-backOffFunc(duration, iteration)
 		}
-		err = retryFunc(config.RequestTimeout)
+		err = retryFunc(timeout)
 		if err == nil {
 			break
 		}
@@ -43,23 +41,23 @@ func RetryWithBackOff(retryFunc RetryFunction, backOffFunc BackOffFunction, conf
 	return
 }
 
-func RetryWithConstantBackOff(retry RetryFunction, config providers.RetryConfig, info string) (err error) {
+func RetryWithConstantBackOff(retry RetryFunction, duration time.Duration, times uint, timeout time.Duration, info string) (err error) {
 	backOffFunc := func(duration time.Duration, iteration uint) <-chan time.Time {
 		return time.NewTimer(duration).C
 	}
-	return RetryWithBackOff(retry, backOffFunc, config, info)
+	return RetryWithBackOff(retry, backOffFunc, duration, times, timeout, info)
 }
 
-func RetryWithLinearBackOff(retry RetryFunction, config providers.RetryConfig, info string) (err error) {
+func RetryWithLinearBackOff(retry RetryFunction, duration time.Duration, times uint, timeout time.Duration, info string) (err error) {
 	backOffFunc := func(duration time.Duration, iteration uint) <-chan time.Time {
 		return time.NewTimer(duration * time.Duration(iteration)).C
 	}
-	return RetryWithBackOff(retry, backOffFunc, config, info)
+	return RetryWithBackOff(retry, backOffFunc, duration, times, timeout, info)
 }
 
-func RetryWithExponentialBackOff(retry RetryFunction, config providers.RetryConfig, info string) (err error) {
+func RetryWithExponentialBackOff(retry RetryFunction, duration time.Duration, times uint, timeout time.Duration, info string) (err error) {
 	backOffFunc := func(duration time.Duration, iteration uint) <-chan time.Time {
 		return time.NewTimer(duration * time.Duration(0x01<<iteration-1)).C
 	}
-	return RetryWithBackOff(retry, backOffFunc, config, info)
+	return RetryWithBackOff(retry, backOffFunc, duration, times, timeout, info)
 }

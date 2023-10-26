@@ -26,10 +26,6 @@ func (p *DebugProvider) Process(ctx context.Context, config map[string]string, e
 	logrus.WithField("uid", p.webhookUID).Info("Processing Security Events for a webhook in 'Debug' state")
 	return nil
 }
-func (p *DebugProvider) RetryConfig() RetryConfig {
-	return RetryConfig{}
-}
-
-func (p *DebugProvider) RateLimiterConfig() RateLimiterConfig {
-	return RateLimiterConfig{}
+func (p *DebugProvider) Config() Config {
+	return Config{}
 }

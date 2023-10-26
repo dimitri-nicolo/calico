@@ -29,14 +29,20 @@ type JiraProviderConfiguration struct {
 }
 
 type Jira struct {
-	Config *JiraProviderConfiguration
+	ProviderConfig providers.Config
 }
 
 func NewProvider() providers.Provider {
-	config := new(JiraProviderConfiguration)
-	envconfig.MustProcess("webhooks", config)
+	jiraConfig := new(JiraProviderConfiguration)
+	envconfig.MustProcess("webhooks", jiraConfig)
 	return &Jira{
-		Config: config,
+		ProviderConfig: providers.Config{
+			RequestTimeout:      jiraConfig.RequestTimeout,
+			RetryDuration:       jiraConfig.RetryDuration,
+			RetryTimes:          jiraConfig.RetryTimes,
+			RateLimiterDuration: jiraConfig.RateLimiterDuration,
+			RateLimiterCount:    jiraConfig.RateLimiterCount,
+		},
 	}
 }
 
@@ -110,20 +116,10 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, event *lsA
 		return fmt.Errorf("unexpected Jira response [%d]:%s", response.StatusCode, responseText)
 	}
 
-	return helpers.RetryWithLinearBackOff(retryFunc, p.RetryConfig(), config["url"])
+	c := p.Config()
+	return helpers.RetryWithLinearBackOff(retryFunc, c.RetryDuration, c.RetryTimes, c.RequestTimeout, config["url"])
 }
 
-func (p *Jira) RetryConfig() providers.RetryConfig {
-	return providers.RetryConfig{
-		RequestTimeout: p.Config.RequestTimeout,
-		RetryDuration:  p.Config.RetryDuration,
-		RetryTimes:     p.Config.RetryTimes,
-	}
-}
-
-func (p *Jira) RateLimiterConfig() providers.RateLimiterConfig {
-	return providers.RateLimiterConfig{
-		RateLimiterDuration: p.Config.RateLimiterDuration,
-		RateLimiterCount:    p.Config.RateLimiterCount,
-	}
+func (p *Jira) Config() providers.Config {
+	return p.ProviderConfig
 }

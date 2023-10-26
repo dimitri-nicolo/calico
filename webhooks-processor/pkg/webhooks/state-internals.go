@@ -80,7 +80,7 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 		webhookUpdates: webhookUpdateChan,
 	}
 
-	rateLimiter := helpers.NewRateLimiter(provider.RateLimiterConfig())
+	rateLimiter := helpers.NewRateLimiter(provider.Config().RateLimiterDuration, provider.Config().RateLimiterCount)
 
 	s.wg.Add(1)
 	go s.webhookGoroutine(webhookCtx, config, parsedQuery, provider.Process, webhookUpdateChan, webhook, rateLimiter)

@@ -9,25 +9,16 @@ import (
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-type RateLimiterConfig struct {
-	RateLimiterDuration time.Duration
-	RateLimiterCount    uint
-}
-
-type RetryConfig struct {
-	RequestTimeout time.Duration
-	RetryDuration  time.Duration
-	RetryTimes     uint
-}
-
-type ProviderConfiguration struct {
-	RateLimiterConfig RateLimiterConfig
-	RetryConfig       RetryConfig
-}
-
 type Provider interface {
 	Validate(map[string]string) error
 	Process(context.Context, map[string]string, *lsApi.Event) error
-	RetryConfig() RetryConfig
-	RateLimiterConfig() RateLimiterConfig
+	Config() Config
+}
+
+type Config struct {
+	RateLimiterDuration time.Duration `default:"1h"`
+	RateLimiterCount    uint          `default:"100"`
+	RequestTimeout      time.Duration `default:"5s"`
+	RetryDuration       time.Duration `default:"2s"`
+	RetryTimes          uint          `default:"5"`
 }

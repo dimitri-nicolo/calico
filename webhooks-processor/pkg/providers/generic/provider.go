@@ -29,14 +29,20 @@ type GenericProviderConfiguration struct {
 }
 
 type GenericProvider struct {
-	Config *GenericProviderConfiguration
+	ProviderConfig providers.Config
 }
 
 func NewProvider() providers.Provider {
-	config := new(GenericProviderConfiguration)
-	envconfig.MustProcess("webhooks", config)
+	genericConfig := new(GenericProviderConfiguration)
+	envconfig.MustProcess("webhooks", genericConfig)
 	return &GenericProvider{
-		Config: config,
+		ProviderConfig: providers.Config{
+			RequestTimeout:      genericConfig.RequestTimeout,
+			RetryDuration:       genericConfig.RetryDuration,
+			RetryTimes:          genericConfig.RetryTimes,
+			RateLimiterDuration: genericConfig.RateLimiterDuration,
+			RateLimiterCount:    genericConfig.RateLimiterCount,
+		},
 	}
 }
 
@@ -87,20 +93,10 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 		return fmt.Errorf("unexpected response [%d]:%s", response.StatusCode, responseText)
 	}
 
-	return helpers.RetryWithLinearBackOff(retryFunc, p.RetryConfig(), config["url"])
+	c := p.Config()
+	return helpers.RetryWithLinearBackOff(retryFunc, c.RetryDuration, c.RetryTimes, c.RequestTimeout, config["url"])
 }
 
-func (p *GenericProvider) RetryConfig() providers.RetryConfig {
-	return providers.RetryConfig{
-		RequestTimeout: p.Config.RequestTimeout,
-		RetryDuration:  p.Config.RetryDuration,
-		RetryTimes:     p.Config.RetryTimes,
-	}
-}
-
-func (p *GenericProvider) RateLimiterConfig() providers.RateLimiterConfig {
-	return providers.RateLimiterConfig{
-		RateLimiterDuration: p.Config.RateLimiterDuration,
-		RateLimiterCount:    p.Config.RateLimiterCount,
-	}
+func (p *GenericProvider) Config() providers.Config {
+	return p.ProviderConfig
 }
