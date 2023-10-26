@@ -11,8 +11,8 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-ELASTIC_VERSION=7.17.13
-GRADLE_VERSION=7.5.1
+ELASTIC_VERSION=7.17.14
+GRADLE_VERSION=8.2.1
 TINI_VERSION=0.19.0
 
 # Add --squash argument for CICD pipeline runs only to avoid setting "experimental",
