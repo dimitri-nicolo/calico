@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -19,27 +18,13 @@ import (
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 )
 
-const (
-	RequestTimeout      = 5 * time.Second
-	RetryDuration       = 2 * time.Second
-	RetryTimes          = 5
-	RateLimiterDuration = 5 * time.Minute
-	RateLimiterCount    = 3
-)
-
 type Slack struct {
 	ProviderConfig providers.Config
 }
 
-func NewProvider() providers.Provider {
+func NewProvider(config providers.Config) providers.Provider {
 	return &Slack{
-		ProviderConfig: providers.Config{
-			RequestTimeout:      RequestTimeout,
-			RetryDuration:       RetryDuration,
-			RetryTimes:          RetryTimes,
-			RateLimiterDuration: RateLimiterDuration,
-			RateLimiterCount:    RateLimiterCount,
-		},
+		ProviderConfig: config,
 	}
 }
 
@@ -59,7 +44,7 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, event *ls
 	}
 
 	retryFunc := func() (err error) {
-		requestCtx, requestCtxCancel := context.WithTimeout(ctx, RequestTimeout)
+		requestCtx, requestCtxCancel := context.WithTimeout(ctx, p.Config().RequestTimeout)
 		defer requestCtxCancel()
 
 		request, err := http.NewRequestWithContext(requestCtx, "POST", config["url"], bytes.NewReader(payload))
@@ -96,7 +81,8 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, event *ls
 		}
 	}
 
-	return helpers.RetryWithLinearBackOff(retryFunc, RetryDuration, RetryTimes, config["url"])
+	c := p.Config()
+	return helpers.RetryWithLinearBackOff(retryFunc, c.RetryDuration, c.RetryTimes, config["url"])
 }
 
 func (p *Slack) message(event *lsApi.Event) *SlackMessage {

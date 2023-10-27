@@ -482,7 +482,7 @@ type TestProvider struct {
 
 func NewTestProvider() providers.Provider {
 	return &TestProvider{
-		SlackProvider: *slack.NewProvider().(*slack.Slack),
+		SlackProvider: *slack.NewProvider(GetTestProviderConfig()).(*slack.Slack),
 	}
 }
 func (p *TestProvider) Validate(config map[string]string) error {
@@ -504,4 +504,14 @@ func (p *TestProvider) Process(ctx context.Context, config map[string]string, ev
 
 func (p *TestProvider) Config() providers.Config {
 	return p.SlackProvider.Config()
+}
+
+func GetTestProviderConfig() providers.Config {
+	return providers.Config{
+		RateLimiterDuration: time.Hour,
+		RateLimiterCount:    5,
+		RequestTimeout:      time.Second,
+		RetryDuration:       time.Millisecond,
+		RetryTimes:          2,
+	}
 }

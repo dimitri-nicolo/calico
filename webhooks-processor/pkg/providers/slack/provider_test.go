@@ -54,7 +54,13 @@ func TestSlackProviderProcessing(t *testing.T) {
 	setup := func(t *testing.T) {
 		fc = testutils.NewFakeConsumer(t)
 		ctx = context.Background()
-		p = NewProvider()
+		p = NewProvider(providers.Config{
+			RateLimiterDuration: time.Hour,
+			RateLimiterCount:    100,
+			RequestTimeout:      time.Second,
+			RetryDuration:       time.Millisecond,
+			RetryTimes:          2,
+		})
 		event = &lsApi.Event{
 			ID:          "testid",
 			Description: "This is an event",

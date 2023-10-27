@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
@@ -19,27 +18,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	RequestTimeout      = 5 * time.Second
-	RetryDuration       = 2 * time.Second
-	RetryTimes          = 5
-	RateLimiterDuration = 1 * time.Hour
-	RateLimiterCount    = 100
-)
-
 type GenericProvider struct {
 	ProviderConfig providers.Config
 }
 
-func NewProvider() providers.Provider {
+func NewProvider(config providers.Config) providers.Provider {
 	return &GenericProvider{
-		ProviderConfig: providers.Config{
-			RequestTimeout:      RequestTimeout,
-			RetryDuration:       RetryDuration,
-			RetryTimes:          RetryTimes,
-			RateLimiterDuration: RateLimiterDuration,
-			RateLimiterCount:    RateLimiterCount,
-		},
+		ProviderConfig: config,
 	}
 }
 
@@ -57,7 +42,7 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 	}
 
 	retryFunc := func() (err error) {
-		requestCtx, requestCtxCancel := context.WithTimeout(ctx, RequestTimeout)
+		requestCtx, requestCtxCancel := context.WithTimeout(ctx, p.Config().RequestTimeout)
 		defer requestCtxCancel()
 
 		request, err := http.NewRequestWithContext(requestCtx, "POST", config["url"], bytes.NewReader(payload))
@@ -90,7 +75,8 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 		return fmt.Errorf("unexpected response [%d]:%s", response.StatusCode, responseText)
 	}
 
-	return helpers.RetryWithLinearBackOff(retryFunc, RetryDuration, RetryTimes, config["url"])
+	c := p.Config()
+	return helpers.RetryWithLinearBackOff(retryFunc, c.RetryDuration, c.RetryTimes, config["url"])
 }
 
 func (p *GenericProvider) Config() providers.Config {
