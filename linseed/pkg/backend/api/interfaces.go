@@ -214,6 +214,8 @@ type Index interface {
 
 	// ILMPolicyName returns the name of the ILM policy to use for this index.
 	ILMPolicyName() string
+
+	HasLifecycleEnabled() bool
 }
 
 // IndexInitializer is a cache for the templates in order

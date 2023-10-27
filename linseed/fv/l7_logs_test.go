@@ -36,6 +36,13 @@ func RunL7LogTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+			L7BaseIndexName: index.L7LogIndex().Name(bapi.ClusterInfo{}),
+			L7PolicyName:    index.L7LogIndex().ILMPolicyName(),
+		})
+		if configureIndices.ListedInDockerPS() {
+			configureIndices.Stop()
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
 		defer setupAndTeardown(t, args, index.L7LogIndex())()

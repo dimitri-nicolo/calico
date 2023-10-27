@@ -16,7 +16,6 @@ package containers
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -221,7 +220,8 @@ func RunWithFixedName(name string, opts RunOpts, args ...string) (c *Container) 
 	}
 
 	// Prep command to run the container.
-	log.WithField("container", c).Info("About to run container")
+	logCtx := log.WithField("container", c)
+	logCtx.Info("About to run container")
 	runArgs := []string{"run", "--init", "--cgroupns", "host", "--name", c.Name, "--stop-timeout", fmt.Sprint(opts.StopTimeoutSecs)}
 
 	if opts.StopSignal != "" {
@@ -265,24 +265,11 @@ func RunWithFixedName(name string, opts RunOpts, args ...string) (c *Container) 
 	go c.copyOutputToLog("stderr", stderr, &c.logFinished, &c.stderrWatches)
 
 	if opts.RunAndExit {
-		ch := make(chan error, 1)
-		ctxTimeout, cancel := context.WithTimeout(context.Background(), time.Minute*1)
-		defer cancel()
-
-		go func() {
-			log.WithField("container", c).Info("Waiting for container to finish its run")
+		withTimeoutPanic(logCtx, 1*time.Minute, func() {
+			logCtx.Info("Waiting for container to finish its run")
 			err = c.runCmd.Wait()
-			log.WithField("container", c).WithError(err).Info("Container finished run")
-			ch <- err
-		}()
-
-		select {
-		case <-ctxTimeout.Done():
-			log.WithField("container", c).Info("Container did not finished its run in 1 minute")
-			Expect(ctxTimeout.Err()).NotTo(HaveOccurred())
-		case err := <-ch:
-			Expect(err).NotTo(HaveOccurred())
-		}
+			logCtx.WithError(err).Info("Container finished run")
+		})
 
 		return c
 	} else {

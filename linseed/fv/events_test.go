@@ -32,6 +32,13 @@ func RunEventsTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+			AlertBaseIndexName: index.AlertsIndex().Name(bapi.ClusterInfo{}),
+			AlertPolicyName:    index.AlertsIndex().ILMPolicyName(),
+		})
+		if configureIndices.ListedInDockerPS() {
+			configureIndices.Stop()
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
 		defer setupAndTeardown(t, args, index.AlertsIndex())()

@@ -37,6 +37,13 @@ func RunAuditEETest(t *testing.T, name string, testFn func(*testing.T, bapi.Inde
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+			AuditBaseIndexName: index.AuditLogIndex().Name(bapi.ClusterInfo{}),
+			AuditPolicyName:    index.AuditLogIndex().ILMPolicyName(),
+		})
+		if configureIndices.ListedInDockerPS() {
+			configureIndices.Stop()
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
 		defer setupAndTeardown(t, args, index.AuditLogIndex())()
@@ -52,6 +59,13 @@ func RunAuditKubeTest(t *testing.T, name string, testFn func(*testing.T, bapi.In
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+			AuditBaseIndexName: index.AuditLogIndex().Name(bapi.ClusterInfo{}),
+			AuditPolicyName:    index.AuditLogIndex().ILMPolicyName(),
+		})
+		if configureIndices.ListedInDockerPS() {
+			configureIndices.Stop()
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
 		defer setupAndTeardown(t, args, index.AuditLogIndex())()

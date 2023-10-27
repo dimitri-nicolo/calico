@@ -11,43 +11,47 @@ import (
 
 // Legacy indices - these all use multiple indices per-cluster and per-tenant.
 var (
-	ThreatfeedsDomainMultiIndex   bapi.Index = multiIndex{baseName: "tigera_secure_ee_threatfeeds_domainnameset", dataType: bapi.DomainNameSet}
-	ThreatfeedsIPSetMultiIndex    bapi.Index = multiIndex{baseName: "tigera_secure_ee_threatfeeds_ipset", dataType: bapi.IPSet}
-	EventsMultiIndex              bapi.Index = multiIndex{baseName: "tigera_secure_ee_events", dataType: bapi.Events}
-	ComplianceSnapshotMultiIndex  bapi.Index = multiIndex{baseName: "tigera_secure_ee_snapshots", dataType: bapi.Snapshots}
-	ComplianceBenchmarkMultiIndex bapi.Index = multiIndex{baseName: "tigera_secure_ee_benchmark_results", dataType: bapi.Benchmarks}
-	ComplianceReportMultiIndex    bapi.Index = multiIndex{baseName: "tigera_secure_ee_compliance_reports", dataType: bapi.ReportData}
-	WAFLogMultiIndex              bapi.Index = multiIndex{baseName: "tigera_secure_ee_waf", dataType: bapi.WAFLogs}
-	L7LogMultiIndex               bapi.Index = multiIndex{baseName: "tigera_secure_ee_l7", dataType: bapi.L7Logs}
-	BGPLogMultiIndex              bapi.Index = multiIndex{baseName: "tigera_secure_ee_bgp", dataType: bapi.BGPLogs}
-	AuditLogEEMultiIndex          bapi.Index = multiIndex{baseName: "tigera_secure_ee_audit_ee", dataType: bapi.AuditEELogs}
-	AuditLogKubeMultiIndex        bapi.Index = multiIndex{baseName: "tigera_secure_ee_audit_kube", dataType: bapi.AuditKubeLogs}
-	DNSLogMultiIndex              bapi.Index = multiIndex{baseName: "tigera_secure_ee_dns", dataType: bapi.DNSLogs}
-	FlowLogMultiIndex             bapi.Index = multiIndex{baseName: "tigera_secure_ee_flows", dataType: bapi.FlowLogs}
-	RuntimeReportMultiIndex       bapi.Index = multiIndex{baseName: "tigera_secure_ee_runtime", dataType: bapi.RuntimeReports}
+	ThreatfeedsDomainMultiIndex   bapi.Index = multiIndex{baseName: "tigera_secure_ee_threatfeeds_domainnameset", dataType: bapi.DomainNameSet, hasLifeCycleEnabled: false}
+	ThreatfeedsIPSetMultiIndex    bapi.Index = multiIndex{baseName: "tigera_secure_ee_threatfeeds_ipset", dataType: bapi.IPSet, hasLifeCycleEnabled: false}
+	EventsMultiIndex              bapi.Index = multiIndex{baseName: "tigera_secure_ee_events", dataType: bapi.Events, hasLifeCycleEnabled: true}
+	ComplianceSnapshotMultiIndex  bapi.Index = multiIndex{baseName: "tigera_secure_ee_snapshots", dataType: bapi.Snapshots, hasLifeCycleEnabled: true}
+	ComplianceBenchmarkMultiIndex bapi.Index = multiIndex{baseName: "tigera_secure_ee_benchmark_results", dataType: bapi.Benchmarks, hasLifeCycleEnabled: true}
+	ComplianceReportMultiIndex    bapi.Index = multiIndex{baseName: "tigera_secure_ee_compliance_reports", dataType: bapi.ReportData, hasLifeCycleEnabled: true}
+	WAFLogMultiIndex              bapi.Index = multiIndex{baseName: "tigera_secure_ee_waf", dataType: bapi.WAFLogs, hasLifeCycleEnabled: true}
+	L7LogMultiIndex               bapi.Index = multiIndex{baseName: "tigera_secure_ee_l7", dataType: bapi.L7Logs, hasLifeCycleEnabled: true}
+	BGPLogMultiIndex              bapi.Index = multiIndex{baseName: "tigera_secure_ee_bgp", dataType: bapi.BGPLogs, hasLifeCycleEnabled: true}
+	AuditLogEEMultiIndex          bapi.Index = multiIndex{baseName: "tigera_secure_ee_audit_ee", dataType: bapi.AuditEELogs, hasLifeCycleEnabled: true}
+	AuditLogKubeMultiIndex        bapi.Index = multiIndex{baseName: "tigera_secure_ee_audit_kube", dataType: bapi.AuditKubeLogs, hasLifeCycleEnabled: true}
+	DNSLogMultiIndex              bapi.Index = multiIndex{baseName: "tigera_secure_ee_dns", dataType: bapi.DNSLogs, hasLifeCycleEnabled: true}
+	FlowLogMultiIndex             bapi.Index = multiIndex{baseName: "tigera_secure_ee_flows", dataType: bapi.FlowLogs, hasLifeCycleEnabled: true}
+	RuntimeReportMultiIndex       bapi.Index = multiIndex{baseName: "tigera_secure_ee_runtime", dataType: bapi.RuntimeReports, hasLifeCycleEnabled: true}
 )
 
 // Single index - these all use a single index for all clusters and tenants.
 
-type Option func(index bapi.Index)
+type Option func(index *singleIndex)
 
-func WithIndexName(name string) Option {
-	return func(index bapi.Index) {
-		//index.SetName(name)
+func WithBaseIndexName(name string) Option {
+	return func(index *singleIndex) {
+		index.name = name
 	}
 }
 
-func WithPolicyName(name string) Option {
-	return func(index bapi.Index) {
-		//index.SetPolicyName(name)
+func WithILMPolicyName(name string) Option {
+	return func(index *singleIndex) {
+		index.policyName = name
 	}
 }
 
 func AlertsIndex(options ...Option) bapi.Index {
-	index := singleIndex{name: "calico_alerts", policyName: "tigera_secure_ee_events_policy", dataType: bapi.Events}
-
+	index := singleIndex{
+		name:                "calico_alerts",
+		policyName:          "tigera_secure_ee_events_policy",
+		dataType:            bapi.Events,
+		hasLifeCycleEnabled: true,
+	}
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
@@ -56,118 +60,165 @@ func AlertsIndex(options ...Option) bapi.Index {
 func AuditLogIndex(options ...Option) bapi.Index {
 	// The AuditLogIndex uses data type AuditEELogs, but it's actually used for both AuditEELogs and AuditKubeLogs.
 	// This is OK because our code for initializing indicies treats these the same anyway.
-	index := singleIndex{name: "calico_auditlogs", policyName: "tigera_secure_ee_audit_ee_policy", dataType: bapi.AuditEELogs}
-
+	index := singleIndex{
+		name:                "calico_auditlogs",
+		policyName:          "tigera_secure_ee_audit_ee_policy",
+		dataType:            bapi.AuditEELogs,
+		hasLifeCycleEnabled: true}
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
 }
 
 func BGPLogIndex(options ...Option) bapi.Index {
-	index := singleIndex{name: "calico_bgplogs", policyName: "tigera_secure_ee_bgp_policy", dataType: bapi.BGPLogs}
-
+	index := singleIndex{
+		name:                "calico_bgplogs",
+		policyName:          "tigera_secure_ee_bgp_policy",
+		dataType:            bapi.BGPLogs,
+		hasLifeCycleEnabled: true}
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
 }
 
 func ComplianceBenchmarksIndex(options ...Option) bapi.Index {
-	index := singleIndex{name: "calico_compliance_benchmark_results", policyName: "tigera_secure_ee_benchmark_results_policy", dataType: bapi.Benchmarks}
-
+	index := singleIndex{
+		name:                "calico_compliance_benchmark_results",
+		policyName:          "tigera_secure_ee_benchmark_results_policy",
+		dataType:            bapi.Benchmarks,
+		hasLifeCycleEnabled: true,
+	}
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
 }
 
 func ComplianceReportsIndex(options ...Option) bapi.Index {
-	index := singleIndex{name: "calico_compliance_reports", policyName: "tigera_secure_ee_compliance_reports_policy", dataType: bapi.ReportData}
-
+	index := singleIndex{
+		name:                "calico_compliance_reports",
+		policyName:          "tigera_secure_ee_compliance_reports_policy",
+		dataType:            bapi.ReportData,
+		hasLifeCycleEnabled: true,
+	}
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
 }
 
 func ComplianceSnapshotsIndex(options ...Option) bapi.Index {
-	index := singleIndex{name: "calico_compliance_snapshots", policyName: "tigera_secure_ee_snapshots_policy", dataType: bapi.Snapshots}
-
+	index := singleIndex{
+		name:                "calico_compliance_snapshots",
+		policyName:          "tigera_secure_ee_snapshots_policy",
+		dataType:            bapi.Snapshots,
+		hasLifeCycleEnabled: true,
+	}
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
 }
 func DNSLogIndex(options ...Option) bapi.Index {
-	index := singleIndex{name: "calico_dnslogs", policyName: "tigera_secure_ee_dns_policy", dataType: bapi.DNSLogs}
-
+	index := singleIndex{
+		name:                "calico_dnslogs",
+		policyName:          "tigera_secure_ee_dns_policy",
+		dataType:            bapi.DNSLogs,
+		hasLifeCycleEnabled: true,
+	}
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
 }
 
 func FlowLogIndex(options ...Option) bapi.Index {
-	index := singleIndex{name: "calico_flowlogs", policyName: "tigera_secure_ee_flows_policy", dataType: bapi.FlowLogs}
-
+	index := singleIndex{
+		name:                "calico_flowlogs",
+		policyName:          "tigera_secure_ee_flows_policy",
+		dataType:            bapi.FlowLogs,
+		hasLifeCycleEnabled: true,
+	}
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
 }
 
 func L7LogIndex(options ...Option) bapi.Index {
-	index := singleIndex{name: "calico_l7logs", policyName: "tigera_secure_ee_l7_policy", dataType: bapi.L7Logs}
-
+	index := singleIndex{
+		name:                "calico_l7logs",
+		policyName:          "tigera_secure_ee_l7_policy",
+		dataType:            bapi.L7Logs,
+		hasLifeCycleEnabled: true,
+	}
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
 }
 
 func RuntimeReportsIndex(options ...Option) bapi.Index {
-	index := singleIndex{name: "calico_runtime_reports", policyName: "tigera_secure_ee_runtime_policy", dataType: bapi.RuntimeReports}
-
+	index := singleIndex{
+		name:                "calico_runtime_reports",
+		policyName:          "tigera_secure_ee_runtime_policy",
+		dataType:            bapi.RuntimeReports,
+		hasLifeCycleEnabled: true,
+	}
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
 }
 
 func ThreatFeedsIPSetIndex(options ...Option) bapi.Index {
-	index := singleIndex{name: "calico_threatfeeds_ipset", dataType: bapi.IPSet}
-
+	index := singleIndex{
+		name:                "calico_threatfeeds_ipset",
+		policyName:          "missing",
+		dataType:            bapi.IPSet,
+		hasLifeCycleEnabled: false,
+	}
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
 }
 
 func ThreatFeedsDomainSetIndex(options ...Option) bapi.Index {
-	index := singleIndex{name: "calico_threatfeeds_domainnameset", dataType: bapi.DomainNameSet}
-
+	index := singleIndex{
+		name:                "calico_threatfeeds_domainnameset",
+		policyName:          "missing",
+		dataType:            bapi.DomainNameSet,
+		hasLifeCycleEnabled: false,
+	}
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
 }
 func WAFLogIndex(options ...Option) bapi.Index {
-	index := singleIndex{name: "calico_waf", policyName: "tigera_secure_ee_waf_policy", dataType: bapi.WAFLogs}
+	index := singleIndex{
+		name:                "calico_waf",
+		policyName:          "tigera_secure_ee_waf_policy",
+		dataType:            bapi.WAFLogs,
+		hasLifeCycleEnabled: true,
+	}
 
 	for _, opt := range options {
-		opt(index)
+		opt(&index)
 	}
 
 	return &index
@@ -176,9 +227,14 @@ func WAFLogIndex(options ...Option) bapi.Index {
 // singleIndex implements the Index interface for an index mode that uses a single index
 // to store data for multiple clusters and tenants.
 type singleIndex struct {
-	name       string
-	policyName string
-	dataType   bapi.DataType
+	name                string
+	policyName          string
+	hasLifeCycleEnabled bool
+	dataType            bapi.DataType
+}
+
+func (i singleIndex) HasLifecycleEnabled() bool {
+	return i.hasLifeCycleEnabled
 }
 
 func (i singleIndex) Name(info bapi.ClusterInfo) string {
@@ -221,8 +277,13 @@ func NewMultiIndex(baseName string, dataType bapi.DataType) bapi.Index {
 // multiIndex implements the Index interface for an index mode that uses multiple
 // indicies to store data for multiple clusters and tenants.
 type multiIndex struct {
-	baseName string
-	dataType bapi.DataType
+	baseName            string
+	dataType            bapi.DataType
+	hasLifeCycleEnabled bool
+}
+
+func (i multiIndex) HasLifecycleEnabled() bool {
+	return i.hasLifeCycleEnabled
 }
 
 func (i multiIndex) DataType() bapi.DataType {

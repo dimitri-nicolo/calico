@@ -32,6 +32,13 @@ func RunThreatfeedsDomainTest(t *testing.T, name string, testFn func(*testing.T,
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+			ThreatFeedsDomainSetBaseIndexName: index.ThreatFeedsDomainSetIndex().Name(bapi.ClusterInfo{}),
+			ThreatFeedsDomainSetPolicyName:    index.ThreatFeedsDomainSetIndex().ILMPolicyName(),
+		})
+		if configureIndices.ListedInDockerPS() {
+			configureIndices.Stop()
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
 		defer setupAndTeardown(t, args, index.ThreatFeedsDomainSetIndex())()

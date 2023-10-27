@@ -39,6 +39,13 @@ func RunRuntimeReportTest(t *testing.T, name string, testFn func(*testing.T, bap
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+			RuntimeReportsBaseIndexName: index.RuntimeReportsIndex().Name(bapi.ClusterInfo{}),
+			RuntimeReportsPolicyName:    index.RuntimeReportsIndex().ILMPolicyName(),
+		})
+		if configureIndices.ListedInDockerPS() {
+			configureIndices.Stop()
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
 		defer setupAndTeardown(t, args, index.RuntimeReportsIndex())()

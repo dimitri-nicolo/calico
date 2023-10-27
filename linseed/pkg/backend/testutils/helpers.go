@@ -269,12 +269,14 @@ func CheckSingleIndexTemplateBootstrapping(t *testing.T, ctx context.Context, cl
 	require.NotEmpty(t, responseSettings[index].Settings)
 	require.Contains(t, responseSettings[index].Settings, "index")
 	settings, _ := responseSettings[index].Settings["index"].(map[string]interface{})
-	// Check lifecycle section
-	require.Contains(t, settings, "lifecycle")
-	lifecycle, _ := settings["lifecycle"].(map[string]interface{})
-	require.Contains(t, lifecycle, "name")
-	require.EqualValues(t, lifecycle["name"], idx.ILMPolicyName())
-	require.EqualValues(t, lifecycle["rollover_alias"], idx.Alias(i))
+	if idx.HasLifecycleEnabled() {
+		// Check lifecycle section
+		require.Contains(t, settings, "lifecycle")
+		lifecycle, _ := settings["lifecycle"].(map[string]interface{})
+		require.Contains(t, lifecycle, "name")
+		require.EqualValues(t, lifecycle["name"], idx.ILMPolicyName())
+		require.EqualValues(t, lifecycle["rollover_alias"], idx.Alias(i))
+	}
 	// Check shards and replicas
 	require.Contains(t, settings, "number_of_replicas")
 	require.EqualValues(t, settings["number_of_replicas"], "0")

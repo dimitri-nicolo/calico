@@ -44,53 +44,43 @@ func createSingleIndexIndices(cfg *config.Config, esClient lmaelastic.Client) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	ch := make(chan struct{}, 1)
+	// Create template caches for indices with special shards / replicas configuration
+	defaultInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
+	flowInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticFlowShards, cfg.ElasticFlowReplicas)
+	dnsInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticDNSShards, cfg.ElasticDNSReplicas)
+	l7Initializer := templates.NewCachedInitializer(esClient, cfg.ElasticL7Shards, cfg.ElasticL7Replicas)
+	auditInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticAuditShards, cfg.ElasticAuditReplicas)
+	bgpInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticBGPShards, cfg.ElasticBGPReplicas)
 
-	go func() {
-		// Create template caches for indices with special shards / replicas configuration
-		defaultInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
-		flowInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticFlowShards, cfg.ElasticFlowReplicas)
-		dnsInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticDNSShards, cfg.ElasticDNSReplicas)
-		l7Initializer := templates.NewCachedInitializer(esClient, cfg.ElasticL7Shards, cfg.ElasticL7Replicas)
-		auditInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticAuditShards, cfg.ElasticAuditReplicas)
-		bgpInitializer := templates.NewCachedInitializer(esClient, cfg.ElasticBGPShards, cfg.ElasticBGPReplicas)
+	// Create all indices with the given configurations (name and ilm policy)
+	alertIndex := index.AlertsIndex(index.WithBaseIndexName(cfg.ElasticAlertsBaseIndexName), index.WithILMPolicyName(cfg.ElasticAlertsPolicyName))
+	auditIndex := index.AuditLogIndex(index.WithBaseIndexName(cfg.ElasticAuditLogsBaseIndexName), index.WithILMPolicyName(cfg.ElasticAuditLogsPolicyName))
+	bgpIndex := index.BGPLogIndex(index.WithBaseIndexName(cfg.ElasticBGPLogsBaseIndexName), index.WithILMPolicyName(cfg.ElasticBGPLogsPolicyName))
+	dnsIndex := index.DNSLogIndex(index.WithBaseIndexName(cfg.ElasticDNSLogsBaseIndexName), index.WithILMPolicyName(cfg.ElasticDNSLogsPolicyName))
+	flowIndex := index.FlowLogIndex(index.WithBaseIndexName(cfg.ElasticFlowLogsBaseIndexName), index.WithILMPolicyName(cfg.ElasticFlowLogsPolicyName))
+	complianceBenchmarksIndex := index.ComplianceBenchmarksIndex(index.WithBaseIndexName(cfg.ElasticComplianceBenchmarksBaseIndexName), index.WithILMPolicyName(cfg.ElasticComplianceBenchmarksPolicyName))
+	complianceReportsIndex := index.ComplianceReportsIndex(index.WithBaseIndexName(cfg.ElasticComplianceReportsBaseIndexName), index.WithILMPolicyName(cfg.ElasticComplianceReportsPolicyName))
+	complianceSnapshotsIndex := index.ComplianceSnapshotsIndex(index.WithBaseIndexName(cfg.ElasticComplianceSnapshotsBaseIndexName), index.WithILMPolicyName(cfg.ElasticComplianceSnapshotsPolicyName))
+	l7Index := index.L7LogIndex(index.WithBaseIndexName(cfg.ElasticL7LogsBaseIndexName), index.WithILMPolicyName(cfg.ElasticL7LogsPolicyName))
+	runtimeIndex := index.RuntimeReportsIndex(index.WithBaseIndexName(cfg.ElasticRuntimeReportsBaseIndexName), index.WithILMPolicyName(cfg.ElasticRuntimeReportsPolicyName))
+	threatFeedsIPSetIndex := index.ThreatFeedsIPSetIndex(index.WithBaseIndexName(cfg.ElasticThreatFeedsIPSetBaseIndexName), index.WithILMPolicyName(cfg.ElasticThreatFeedsIPSetIPolicyName))
+	threatFeedsDomainSetIndex := index.ThreatFeedsDomainSetIndex(index.WithBaseIndexName(cfg.ElasticThreatFeedsDomainSetBaseIndexName), index.WithILMPolicyName(cfg.ElasticThreatFeedsDomainSetPolicyName))
+	wafIndex := index.WAFLogIndex(index.WithBaseIndexName(cfg.ElasticWAFLogsBaseIndexName), index.WithILMPolicyName(cfg.ElasticWAFLogsPolicyName))
 
-		// Create all indices with the given configurations (name and ilm policy)
-		alertIndex := index.AlertsIndex(index.WithIndexName(cfg.ElasticAlertsIndexName), index.WithPolicyName(cfg.ElasticAlertsPolicyName))
-		auditIndex := index.AuditLogIndex(index.WithIndexName(cfg.ElasticAuditLogsIndexName), index.WithPolicyName(cfg.ElasticAuditLogsPolicyName))
-		bgpIndex := index.BGPLogIndex(index.WithIndexName(cfg.ElasticBGPLogsIndexName), index.WithPolicyName(cfg.ElasticBGPLogsPolicyName))
-		dnsIndex := index.DNSLogIndex(index.WithIndexName(cfg.ElasticDNSLogsIndexName), index.WithPolicyName(cfg.ElasticDNSLogsPolicyName))
-		flowIndex := index.FlowLogIndex(index.WithIndexName(cfg.ElasticFlowLogsIndexName), index.WithPolicyName(cfg.ElasticFlowLogsPolicyName))
-		complianceBenchmarksIndex := index.ComplianceBenchmarksIndex(index.WithIndexName(cfg.ElasticComplianceBenchmarksIndexName), index.WithPolicyName(cfg.ElasticComplianceBenchmarksPolicyName))
-		complianceReportsIndex := index.ComplianceReportsIndex(index.WithIndexName(cfg.ElasticComplianceReportsIndexName), index.WithPolicyName(cfg.ElasticComplianceReportsPolicyName))
-		complianceSnapshotsIndex := index.ComplianceSnapshotsIndex(index.WithIndexName(cfg.ElasticComplianceSnapshotsIndexName), index.WithPolicyName(cfg.ElasticComplianceSnapshotsPolicyName))
-		l7Index := index.L7LogIndex(index.WithIndexName(cfg.ElasticL7LogsIndexName), index.WithPolicyName(cfg.ElasticL7LogsPolicyName))
-		runtimeIndex := index.RuntimeReportsIndex(index.WithIndexName(cfg.ElasticRuntimeReportsIndexName), index.WithPolicyName(cfg.ElasticRuntimeReportsPolicyName))
-		threatFeedsIPSetIndex := index.ThreatFeedsIPSetIndex(index.WithIndexName(cfg.ElasticThreatFeedsIPSetIndexName), index.WithPolicyName(cfg.ElasticThreatFeedsIPSetIPolicyName))
-		threatFeedsDomainSetIndex := index.ThreatFeedsDomainSetIndex(index.WithIndexName(cfg.ElasticThreatFeedsDomainNameSetIndexName), index.WithPolicyName(cfg.ElasticThreatFeedsDomainNameSetPolicyName))
-		wafIndex := index.WAFLogIndex(index.WithIndexName(cfg.ElasticWAFLogsIndexName), index.WithPolicyName(cfg.ElasticWAFLogsPolicyName))
-
-		// Indices defined below share the same configuration for shards / replicas
-		indices := []api.Index{alertIndex, complianceBenchmarksIndex, complianceReportsIndex, complianceSnapshotsIndex,
-			runtimeIndex, threatFeedsIPSetIndex, threatFeedsDomainSetIndex, wafIndex}
-		for _, idx := range indices {
-			configureIndex(idx, defaultInitializer, ctx)
-		}
-		// Indices below can have replicas / shards user configured
-		configureIndex(auditIndex, auditInitializer, ctx)
-		configureIndex(bgpIndex, bgpInitializer, ctx)
-		configureIndex(dnsIndex, dnsInitializer, ctx)
-		configureIndex(flowIndex, flowInitializer, ctx)
-		configureIndex(l7Index, l7Initializer, ctx)
-		ch <- struct{}{}
-	}()
-
-	select {
-	case <-ctx.Done():
-		logrus.Fatal("Indices configuration time out")
-	case <-ch:
-		logrus.Info("Finished configuring Elastic indices")
+	// Indices defined below share the same configuration for shards / replicas
+	indices := []api.Index{alertIndex, complianceBenchmarksIndex, complianceReportsIndex, complianceSnapshotsIndex,
+		runtimeIndex, threatFeedsIPSetIndex, threatFeedsDomainSetIndex, wafIndex}
+	for _, idx := range indices {
+		configureIndex(idx, defaultInitializer, ctx)
 	}
+	// Indices below can have replicas / shards user configured
+	configureIndex(auditIndex, auditInitializer, ctx)
+	configureIndex(bgpIndex, bgpInitializer, ctx)
+	configureIndex(dnsIndex, dnsInitializer, ctx)
+	configureIndex(flowIndex, flowInitializer, ctx)
+	configureIndex(l7Index, l7Initializer, ctx)
+
+	logrus.Info("Finished configuring Elastic indices")
 }
 
 func configureIndex(idx api.Index, cache api.IndexInitializer, ctx context.Context) {
@@ -101,7 +91,7 @@ func configureIndex(idx api.Index, cache api.IndexInitializer, ctx context.Conte
 		logrus.Warnf("Skipping index configuration as no name was provided for data type %s", idx.DataType())
 		return
 	}
-	if len(policyName) == 0 {
+	if idx.HasLifecycleEnabled() && len(policyName) == 0 {
 		logrus.Warnf("Skipping index configuration as no policy name was provided for data type %s", idx.DataType())
 		return
 	}

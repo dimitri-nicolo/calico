@@ -31,6 +31,13 @@ func RunBGPLogTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+			BGPBaseIndexName: index.BGPLogIndex().Name(bapi.ClusterInfo{}),
+			BGPPolicyName:    index.BGPLogIndex().ILMPolicyName(),
+		})
+		if configureIndices.ListedInDockerPS() {
+			configureIndices.Stop()
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
 		defer setupAndTeardown(t, args, index.BGPLogIndex())()

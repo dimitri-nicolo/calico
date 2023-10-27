@@ -32,6 +32,13 @@ func RunWAFTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) 
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+			WAFBaseIndexName: index.WAFLogIndex().Name(bapi.ClusterInfo{}),
+			WAFPolicyName:    index.WAFLogIndex().ILMPolicyName(),
+		})
+		if configureIndices.ListedInDockerPS() {
+			configureIndices.Stop()
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
 		defer setupAndTeardown(t, args, index.WAFLogIndex())()

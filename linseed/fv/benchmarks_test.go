@@ -32,6 +32,13 @@ func RunComplianceBenchmarkTest(t *testing.T, name string, testFn func(*testing.
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+			ComplianceBenchmarksBaseIndexName: index.ComplianceBenchmarksIndex().Name(bapi.ClusterInfo{}),
+			ComplianceBenchmarksPolicyName:    index.ComplianceBenchmarksIndex().ILMPolicyName(),
+		})
+		if configureIndices.ListedInDockerPS() {
+			configureIndices.Stop()
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
 		defer setupAndTeardown(t, args, index.ComplianceBenchmarksIndex())()
