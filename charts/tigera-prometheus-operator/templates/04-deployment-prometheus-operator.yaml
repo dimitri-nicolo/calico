@@ -21,8 +21,8 @@ spec:
         kubernetes.io/os: linux
       serviceAccountName: calico-prometheus-operator
       {{- if .Values.imagePullSecrets }}
-      {{- range $key, $value := .Values.imagePullSecrets }}
       imagePullSecrets:
+      {{- range $key, $value := .Values.imagePullSecrets }}
         - name: {{ $key }}
       {{- end }}
       {{- end }}
