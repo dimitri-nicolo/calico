@@ -17,8 +17,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
+	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
-	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 )
 
 const (
@@ -67,8 +67,12 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 		return
 	}
 
+	processFunc := provider.Process
 	if webhook.Spec.State == api.SecurityEventWebhookStateDebug {
-		provider = providers.NewDebugProvider(string(webhook.UID))
+		processFunc = func(context.Context, map[string]string, *lsApi.Event) error {
+			logrus.WithField("uid", webhook.UID).Info("Processing Security Events for a webhook in 'Debug' state")
+			return nil
+		}
 	}
 	webhookCtx, cancelFunc := context.WithCancel(ctx)
 	webhookUpdateChan := make(chan *api.SecurityEventWebhook)
@@ -83,7 +87,7 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 	rateLimiter := helpers.NewRateLimiter(provider.Config().RateLimiterDuration, provider.Config().RateLimiterCount)
 
 	s.wg.Add(1)
-	go s.webhookGoroutine(webhookCtx, config, parsedQuery, provider.Process, webhookUpdateChan, webhook, rateLimiter)
+	go s.webhookGoroutine(webhookCtx, config, parsedQuery, processFunc, webhookUpdateChan, webhook, rateLimiter)
 	s.updateWebhookHealth(webhook, "WebhookValidation", time.Now(), nil)
 
 	logrus.WithField("uid", webhook.UID).Info("Webhook validated and registered")
