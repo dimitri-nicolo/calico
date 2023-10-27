@@ -101,10 +101,7 @@ else
 	$(call build_cgo_binary, ./cmd/dikastes, $@)
 endif
 else
-	$(DOCKER_RUN_RO) \
-	  -e CGO_ENABLED=$(CGO_ENABLED) \
-	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) go build -buildvcs=false -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o $(BINDIR)/dikastes-$(ARCH) ./cmd/dikastes
+	$(call build_binary, ./cmd/dikastes, $@)
 endif
 
 $(BINDIR)/healthz-amd64: ARCH=amd64
@@ -112,15 +109,12 @@ $(BINDIR)/healthz-arm64: ARCH=arm64
 $(BINDIR)/healthz-%: protobuf $(SRC_FILES)
 ifeq ($(ARCH),amd64)
 ifeq ($(FIPS), true)
-	$(call build_static_cgo_boring_binary, ./cmd/healthz, $@)
+	$(call build_cgo_boring_binary, ./cmd/healthz, $@)
 else
-	$(call build_static_binary, ./cmd/healthz, $@)
+	$(call build_binary, ./cmd/healthz, $@)
 endif
 else
-	$(DOCKER_RUN_RO) \
-	  -e CGO_ENABLED=$(CGO_ENABLED) \
-	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) go build -buildvcs=false -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o $(BINDIR)/healthz-$(ARCH) ./cmd/healthz
+	$(call build_binary, ./cmd/healthz, $@)
 endif
 
 

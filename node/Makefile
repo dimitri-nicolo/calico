@@ -251,7 +251,7 @@ else
 	$(call build_cgo_binary, ./cmd/calico-node/main.go, $@)
 endif
 else
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go build -buildvcs=false -v -o $@ $(BUILD_FLAGS) -ldflags "$(LDFLAGS)" ./cmd/calico-node/main.go'
+	$(call build_binary, ./cmd/calico-node/main.go, $@)
 endif
 
 $(WINDOWS_BINARY): $(SRC_FILES)
@@ -272,7 +272,12 @@ $(WINDOWS_ARCHIVE_ROOT)/cni/calico-ipam.exe:
 		go build -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS) -s -w" ./cmd/calico-ipam'
 
 $(TOOLS_MOUNTNS_BINARY):
+ifeq ($(CGO_ENABLED),1)
 	$(call build_cgo_binary, ./cmd/mountns, $@)
+else
+	$(call build_binary, ./cmd/mountns, $@)
+endif
+
 
 ###############################################################################
 # Building the image

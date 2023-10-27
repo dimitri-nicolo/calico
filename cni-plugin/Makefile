@@ -45,12 +45,10 @@ DEPLOY_CONTAINER_FIPS_MARKER=cni_deploy_container-$(ARCH)-fips.created
 FIPS ?= false
 
 ifeq ($(FIPS), true)
-CGO_ENABLED=1
 BIN=bin/$(ARCH)-fips
 DEPLOY_CONTAINER_MARKER=$(DEPLOY_CONTAINER_FIPS_MARKER)
 VALIDARCHES=amd64
 else
-CGO_ENABLED=0
 BIN=bin/$(ARCH)
 DEPLOY_CONTAINER_MARKER=$(DEPLOY_CONTAINER_STATIC_MARKER)
 endif
@@ -94,11 +92,14 @@ sub-build-%:
 
 ## Build the Calico network plugin and ipam plugins
 $(BIN)/install binary: $(SRC_FILES)
+ifeq ($(ARCH), amd64)
 ifeq ($(FIPS), true)
 	$(call build_cgo_boring_binary, $(PACKAGE_NAME)/cmd/calico, $(BIN)/install)
 else
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '\
-		$(GIT_CONFIG_SSH) go build -buildvcs=false -v -o $(BIN)/install -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/cmd/calico'
+	$(call build_binary, $(PACKAGE_NAME)/cmd/calico, $(BIN)/install)
+endif
+else
+	$(call build_binary, $(PACKAGE_NAME)/cmd/calico, $(BIN)/install)
 endif
 
 ## Build the Calico network plugin and ipam plugins for Windows
