@@ -73,12 +73,21 @@ gen-manifests: bin/helm bin/yq
 	rm -f $(SUB_CHARTS)
 	cd ./manifests && ./generate.sh
 
+# The following CRDs are modal, in that for most clusters they are Cluster scoped but for multi-tenant clusters they are namespace scoped.
+MULTI_TENANCY_CRDS_FILE_CHANGES = "operator.tigera.io_managers.yaml" "operator.tigera.io_policyrecommendations.yaml" "calico/crd.projectcalico.org_managedclusters.yaml"
 # Get operator CRDs from the operator repo, OPERATOR_BRANCH_NAME must be set
 get-operator-crds: var-require-all-OPERATOR_BRANCH_NAME
 	cd ./charts/tigera-operator/crds/ && \
 	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH_NAME)/pkg/crds/operator/$${file} -o $${file}; done
 	cd ./manifests/ocp/ && \
-	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH_NAME)/pkg/crds/operator/$${file} -o $${file}; done
+	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo for ocp" && curl -fsSL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH_NAME)/pkg/crds/operator/$${file} -o $${file}; done
+	cp -vLR ./charts/tigera-operator/crds/ ./charts/multi-tenant-crds/. && \
+	cd ./charts/multi-tenant-crds/crds && \
+	curl -fsSOL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH_NAME)/pkg/crds/operator/operator.tigera.io_tenants.yaml && \
+	for file in $(MULTI_TENANCY_CRDS_FILE_CHANGES); do \
+		echo "Update CRD $$file to be Namespaced"; \
+		sed -i 's/scope: Cluster/scope: Namespaced/g' $$file; \
+	done
 
 gen-semaphore-yaml:
 	cd .semaphore && ./generate-semaphore-yaml.sh
@@ -101,9 +110,17 @@ release-archive: manifests/ocp.tgz
 	$(MAKE) -f Makefile.release-archive release-archive RELEASE_STREAM=$(RELEASE_STREAM) REGISTRY=$(REGISTRY) CHART_RELEASE=$(CHART_RELEASE)
 
 SUB_CHARTS=charts/tigera-operator/charts/tigera-prometheus-operator.tgz
-chart: tigera-operator-release tigera-operator-master
+chart: tigera-operator-release tigera-operator-master multi-tenant-crds-release
 
 tigera-operator-release: bin/tigera-operator-$(chartVersion).tgz
+
+# Build the multi-tenant-crds helm chart.
+multi-tenant-crds-release: bin/multi-tenant-crds-$(chartVersion).tgz
+bin/multi-tenant-crds-$(chartVersion).tgz:
+	bin/helm package ./charts/multi-tenant-crds \
+	--destination ./bin/ \
+	--version $(chartVersion) \
+	--app-version $(appVersion)
 
 # If we run CD as master from semaphore, we want to also publish bin/tigera-operator-v0.0.tgz for the master docs.
 tigera-operator-master:

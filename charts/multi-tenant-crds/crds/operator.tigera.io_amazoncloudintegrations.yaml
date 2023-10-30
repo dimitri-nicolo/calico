@@ -3,22 +3,21 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.3
-  name: intrusiondetections.operator.tigera.io
+  name: amazoncloudintegrations.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
-    kind: IntrusionDetection
-    listKind: IntrusionDetectionList
-    plural: intrusiondetections
-    singular: intrusiondetection
+    kind: AmazonCloudIntegration
+    listKind: AmazonCloudIntegrationList
+    plural: amazoncloudintegrations
+    singular: amazoncloudintegration
   scope: Cluster
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: IntrusionDetection installs the components required for Tigera
-          intrusion detection. At most one instance of this resource is supported.
-          It must be named "tigera-secure".
+        description: AmazonCloudIntegration is the Schema for the amazoncloudintegrations
+          API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,88 +32,52 @@ spec:
           metadata:
             type: object
           spec:
-            description: Specification of the desired state for Tigera intrusion detection.
+            description: AmazonCloudIntegrationSpec defines the desired state of AmazonCloudIntegration
             properties:
-              anomalyDetection:
-                description: AnomalyDetection is now deprecated, and configuring it
-                  has no effect.
-                properties:
-                  storageClassName:
-                    description: StorageClassName is now deprecated, and configuring
-                      it has no effect.
-                    type: string
-                type: object
-              componentResources:
-                description: ComponentResources can be used to customize the resource
-                  requirements for each component. Only DeepPacketInspection is supported
-                  for this spec.
+              awsRegion:
+                description: AWSRegion is the region in which your cluster is located.
+                type: string
+              defaultPodMetadataAccess:
+                description: 'DefaultPodMetadataAccess defines what the default behavior
+                  will be for accessing the AWS metadata service from a pod. Default:
+                  Denied'
+                enum:
+                - Allowed
+                - Denied
+                type: string
+              enforcedSecurityGroupID:
+                description: EnforcedSecurityGroupID is the ID of the Security Group
+                  which will be applied to all ENIs that are on a host that is also
+                  part of the Kubernetes cluster.
+                type: string
+              nodeSecurityGroupIDs:
+                description: NodeSecurityGroupIDs is a list of Security Group IDs
+                  that all nodes and masters will be in.
                 items:
-                  description: The ComponentResource struct associates a ResourceRequirements
-                    with a component by name
-                  properties:
-                    componentName:
-                      description: ComponentName is an enum which identifies the component
-                      enum:
-                      - DeepPacketInspection
-                      type: string
-                    resourceRequirements:
-                      description: ResourceRequirements allows customization of limits
-                        and requests for compute resources such as cpu and memory.
-                      properties:
-                        claims:
-                          description: "Claims lists the names of resources, defined
-                            in spec.resourceClaims, that are used by this container.
-                            \n This is an alpha field and requires enabling the DynamicResourceAllocation
-                            feature gate. \n This field is immutable. It can only
-                            be set for containers."
-                          items:
-                            description: ResourceClaim references one entry in PodSpec.ResourceClaims.
-                            properties:
-                              name:
-                                description: Name must match the name of one entry
-                                  in pod.spec.resourceClaims of the Pod where this
-                                  field is used. It makes that resource available
-                                  inside a container.
-                                type: string
-                            required:
-                            - name
-                            type: object
-                          type: array
-                          x-kubernetes-list-map-keys:
-                          - name
-                          x-kubernetes-list-type: map
-                        limits:
-                          additionalProperties:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          description: 'Limits describes the maximum amount of compute
-                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
-                          type: object
-                        requests:
-                          additionalProperties:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          description: 'Requests describes the minimum amount of compute
-                            resources required. If Requests is omitted for a container,
-                            it defaults to Limits if that is explicitly specified,
-                            otherwise to an implementation-defined value. More info:
-                            https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
-                          type: object
-                      type: object
-                  required:
-                  - componentName
-                  - resourceRequirements
-                  type: object
+                  type: string
+                type: array
+              podSecurityGroupID:
+                description: PodSecurityGroupID is the ID of the Security Group which
+                  all pods should be placed in by default.
+                type: string
+              sqsURL:
+                description: SQSURL is the SQS URL needed to access the Simple Queue
+                  Service.
+                type: string
+              trustEnforcedSecurityGroupID:
+                description: TrustEnforcedSecurityGroupID is the ID of the Security
+                  Group which will be applied to all ENIs in the VPC.
+                type: string
+              vpcs:
+                description: VPCS is a list of VPC IDs to monitor for ENIs and Security
+                  Groups, only one is supported.
+                items:
+                  type: string
                 type: array
             type: object
           status:
-            description: Most recently observed state for Tigera intrusion detection.
+            description: AmazonCloudIntegrationStatus defines the observed state of
+              AmazonCloudIntegration
             properties:
               conditions:
                 description: Conditions represents the latest observed set of conditions
@@ -194,5 +157,35 @@ spec:
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: AmazonCloudIntegration is the Schema for the amazoncloudintegrations
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AmazonCloudIntegrationSpec defines the desired state of AmazonCloudIntegration
+            type: object
+          status:
+            description: AmazonCloudIntegrationStatus defines the observed state of
+              AmazonCloudIntegration
+            type: object
+        type: object
+    served: false
+    storage: false
     subresources:
       status: {}

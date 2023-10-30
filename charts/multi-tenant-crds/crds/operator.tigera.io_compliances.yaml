@@ -3,22 +3,22 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.3
-  name: intrusiondetections.operator.tigera.io
+  name: compliances.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
-    kind: IntrusionDetection
-    listKind: IntrusionDetectionList
-    plural: intrusiondetections
-    singular: intrusiondetection
+    kind: Compliance
+    listKind: ComplianceList
+    plural: compliances
+    singular: compliance
   scope: Cluster
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: IntrusionDetection installs the components required for Tigera
-          intrusion detection. At most one instance of this resource is supported.
-          It must be named "tigera-secure".
+        description: Compliance installs the components required for Tigera compliance
+          reporting. At most one instance of this resource is supported. It must be
+          named "tigera-secure".
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,88 +33,11 @@ spec:
           metadata:
             type: object
           spec:
-            description: Specification of the desired state for Tigera intrusion detection.
-            properties:
-              anomalyDetection:
-                description: AnomalyDetection is now deprecated, and configuring it
-                  has no effect.
-                properties:
-                  storageClassName:
-                    description: StorageClassName is now deprecated, and configuring
-                      it has no effect.
-                    type: string
-                type: object
-              componentResources:
-                description: ComponentResources can be used to customize the resource
-                  requirements for each component. Only DeepPacketInspection is supported
-                  for this spec.
-                items:
-                  description: The ComponentResource struct associates a ResourceRequirements
-                    with a component by name
-                  properties:
-                    componentName:
-                      description: ComponentName is an enum which identifies the component
-                      enum:
-                      - DeepPacketInspection
-                      type: string
-                    resourceRequirements:
-                      description: ResourceRequirements allows customization of limits
-                        and requests for compute resources such as cpu and memory.
-                      properties:
-                        claims:
-                          description: "Claims lists the names of resources, defined
-                            in spec.resourceClaims, that are used by this container.
-                            \n This is an alpha field and requires enabling the DynamicResourceAllocation
-                            feature gate. \n This field is immutable. It can only
-                            be set for containers."
-                          items:
-                            description: ResourceClaim references one entry in PodSpec.ResourceClaims.
-                            properties:
-                              name:
-                                description: Name must match the name of one entry
-                                  in pod.spec.resourceClaims of the Pod where this
-                                  field is used. It makes that resource available
-                                  inside a container.
-                                type: string
-                            required:
-                            - name
-                            type: object
-                          type: array
-                          x-kubernetes-list-map-keys:
-                          - name
-                          x-kubernetes-list-type: map
-                        limits:
-                          additionalProperties:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          description: 'Limits describes the maximum amount of compute
-                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
-                          type: object
-                        requests:
-                          additionalProperties:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          description: 'Requests describes the minimum amount of compute
-                            resources required. If Requests is omitted for a container,
-                            it defaults to Limits if that is explicitly specified,
-                            otherwise to an implementation-defined value. More info:
-                            https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
-                          type: object
-                      type: object
-                  required:
-                  - componentName
-                  - resourceRequirements
-                  type: object
-                type: array
+            description: Specification of the desired state for Tigera compliance
+              reporting.
             type: object
           status:
-            description: Most recently observed state for Tigera intrusion detection.
+            description: Most recently observed state for Tigera compliance reporting.
             properties:
               conditions:
                 description: Conditions represents the latest observed set of conditions
