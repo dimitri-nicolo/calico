@@ -41,7 +41,6 @@ require (
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-ini/ini v1.67.0
-	// apiserver build error in go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig after upgrade
 	github.com/go-openapi/runtime v0.25.0
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gofrs/flock v0.8.1
