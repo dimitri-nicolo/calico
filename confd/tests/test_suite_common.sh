@@ -1024,6 +1024,7 @@ kill_typha() {
 test_confd_templates() {
     # Compare the templates until they match (for a max of 10s).
     testdir=$1
+    echo "Comparing with templates in $testdir"
     for i in $(seq 1 10); do echo "comparing templates attempt $i" && compare_templates $testdir 0 false && break || sleep 1; done
     compare_templates $testdir 1 ${UPDATE_EXPECTED_DATA}
 }
@@ -1746,6 +1747,7 @@ spec:
       matchOperator: In
       cidr: 77.1.0.0/16
     - action: Accept
+      interface: "eth0"
       source: RemotePeers
     - action: Reject
   importV4:
@@ -1759,11 +1761,13 @@ spec:
     - action: Accept
       source: RemotePeers
     - action: Reject
+      interface: "eth*"
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 9000::0/64
     - action: Reject
+      interface: "vxlan.calico"
       source: RemotePeers
       matchOperator: In
       cidr: 9000:1::0/64
@@ -1772,6 +1776,7 @@ spec:
     - action: Reject
   importV6:
     - action: Accept
+      interface: "*.calico"
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
@@ -1870,6 +1875,7 @@ spec:
       matchOperator: In
       cidr: 77.0.0.0/16
     - action: Reject
+      interface: "eth0"
       source: RemotePeers
       matchOperator: In
       cidr: 77.1.0.0/16
@@ -1878,6 +1884,7 @@ spec:
     - action: Reject
   importV4:
     - action: Accept
+      interface: "eth*"
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
@@ -1898,11 +1905,13 @@ spec:
     - action: Accept
       source: RemotePeers
     - action: Reject
+      interface: "*.calico"
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      interface: "*"
       source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
@@ -1924,6 +1933,7 @@ spec:
       matchOperator: In
       cidr: 77.3.0.0/16
     - action: Accept
+      interface: "eth0"
       source: RemotePeers
     - action: Reject
   importV4:
@@ -1937,10 +1947,12 @@ spec:
     - action: Accept
       source: RemotePeers
     - action: Reject
+      interface: "*.calico"
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 9000:2::0/64
+      interface: "eth*"
     - action: Reject
       source: RemotePeers
       matchOperator: In
@@ -1958,6 +1970,7 @@ spec:
       cidr: 5000:3::0/64
     - action: Accept
       source: RemotePeers
+      interface: "cali*"
     - action: Reject
 ---
 kind: BGPPeer
@@ -2099,8 +2112,10 @@ spec:
     - action: Accept
       source: RemotePeers
     - action: Reject
+      interface: "eth0"
   importV4:
     - action: Accept
+      interface: "eth*"
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
@@ -2115,6 +2130,7 @@ spec:
       matchOperator: In
       cidr: 9000::0/64
     - action: Reject
+      interface: "vxlan.*"
       source: RemotePeers
       matchOperator: In
       cidr: 9000:1::0/64
@@ -2126,6 +2142,7 @@ spec:
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      interface: "*.calico"
       source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
@@ -2321,6 +2338,7 @@ metadata:
 spec:
   exportV4:
     - action: Accept
+      interface: "eth0"
       matchOperator: In
       cidr: 77.2.0.0/16
     - action: Reject
@@ -2335,6 +2353,7 @@ spec:
       matchOperator: In
       cidr: 44.2.0.0/16
     - action: Reject
+      interface: "*"
       source: RemotePeers
       matchOperator: In
       cidr: 44.3.0.0/16
@@ -2350,6 +2369,7 @@ spec:
       matchOperator: In
       cidr: 9000:3::0/64
     - action: Accept
+      interface: "*.calico"
       source: RemotePeers
     - action: Reject
   importV6:
@@ -2363,6 +2383,7 @@ spec:
     - action: Accept
       source: RemotePeers
     - action: Reject
+      interface: "*"
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -2490,6 +2511,7 @@ spec:
     - action: Accept
       matchOperator: In
       cidr: 77.0.0.0/16
+      interface: "*.calico"
     - action: Reject
       source: RemotePeers
       matchOperator: In
@@ -2502,6 +2524,7 @@ spec:
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      interface: "someiface"
       source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
@@ -2517,6 +2540,7 @@ spec:
       matchOperator: In
       cidr: 9000:1::0/64
     - action: Accept
+      interface: "some*iface"
       source: RemotePeers
     - action: Reject
   importV6:
@@ -2530,6 +2554,7 @@ spec:
     - action: Accept
       source: RemotePeers
     - action: Reject
+      interface: "cali*"
 EOF
 
     test_confd_templates bgpfilter/node_mesh
@@ -2938,6 +2963,144 @@ EOF
     fi
 }
 
+test_bgp_filter_match_interface() {
+    # For KDD, run Typha and clean up the output directory.
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+        start_typha
+        rm -f /etc/calico/confd/config/*
+    fi
+
+    # Run confd as a background process.
+    echo "Running confd as background process"
+    NODENAME=kube-master BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
+    CONFD_PID=$!
+    echo "Running with PID " $CONFD_PID
+
+    # Turn the node-mesh off
+    turn_mesh_off
+
+    # Create 3 nodes and a BGPFilter then globally pair the nodes all using the same filter
+    $CALICOCTL apply -f - <<EOF
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: kube-master
+  labels:
+    global-peer: yes
+spec:
+  bgp:
+    ipv4Address: 10.192.0.2/16
+    ipv6Address: "2001::102/64"
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: kube-node-1
+  labels:
+    global-peer: yes
+spec:
+  bgp:
+    ipv4Address: 10.192.0.3/16
+    ipv6Address: "2001::103/64"
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: kube-node-2
+  labels:
+    global-peer: yes
+spec:
+  bgp:
+    ipv4Address: 10.192.0.4/16
+    ipv6Address: "2001::104/64"
+---
+kind: BGPFilter
+apiVersion: projectcalico.org/v3
+metadata:
+  name: test-filter-match-interface
+spec:
+  exportV4:
+    - action: Accept
+      interface: "eth0"
+      matchOperator: NotIn
+      cidr: 77.0.0.0/16
+    - action: Reject
+      source: RemotePeers
+      matchOperator: In
+      cidr: 77.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
+  importV4:
+    - action: Accept
+      matchOperator: In
+      cidr: 44.0.0.0/16
+    - action: Reject
+      source: RemotePeers
+      matchOperator: In
+      cidr: 44.1.0.0/16
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
+      interface: "iface"
+  exportV6:
+    - action: Accept
+      matchOperator: In
+      cidr: 9000::0/64
+    - action: Reject
+      interface: "eth*"
+      source: RemotePeers
+      matchOperator: NotEqual
+      cidr: 9000:1::0/64
+    - action: Accept
+      source: RemotePeers
+    - action: Reject
+  importV6:
+    - action: Accept
+      matchOperator: In
+      cidr: 5000::0/64
+    - action: Reject
+      source: RemotePeers
+      matchOperator: In
+      cidr: 5000:1::0/64
+    - action: Accept
+      interface: "*.calico"
+      source: RemotePeers
+    - action: Reject
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: test-global-peer-with-filter
+spec:
+  peerSelector: has(global-peer)
+  filters:
+    - test-filter-match-interface
+EOF
+
+    test_confd_templates bgpfilter/match_interface
+
+    # Kill confd.
+    kill -9 $CONFD_PID
+
+    # Turn the node-mesh back on.
+    turn_mesh_on
+
+    # Delete remaining resources.
+    $CALICOCTL delete bgpfilter test-filter-match-interface
+    $CALICOCTL delete bgppeer test-global-peer-with-filter
+    if [ "$DATASTORE_TYPE" = etcdv3 ]; then
+      $CALICOCTL delete node kube-master
+      $CALICOCTL delete node kube-node-1
+      $CALICOCTL delete node kube-node-2
+    fi
+
+    # For KDD, kill Typha.
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+        kill_typha
+    fi
+}
+
 test_bgp_filter_names() {
     # For KDD, run Typha and clean up the output directory.
     if [ "$DATASTORE_TYPE" = kubernetes ]; then
@@ -3185,6 +3348,7 @@ spec:
     - action: Accept
       matchOperator: In
       cidr: 44.0.0.0/16
+      interface: "eth0"
     - action: Reject
       source: RemotePeers
       matchOperator: In
@@ -3202,6 +3366,7 @@ spec:
       cidr: 5000:1::0/64
     - action: Accept
       source: RemotePeers
+      interface: "*"
     - action: Reject
 ---
 kind: BGPFilter
@@ -3214,6 +3379,7 @@ spec:
       matchOperator: In
       cidr: 44.2.0.0/16
     - action: Reject
+      interface: "vxlan.calico"
       source: RemotePeers
       matchOperator: In
       cidr: 44.3.0.0/16
@@ -3229,6 +3395,7 @@ spec:
       matchOperator: In
       cidr: 5000:3::0/64
     - action: Accept
+      interface: "cali*"
       source: RemotePeers
     - action: Reject
 ---
@@ -3371,11 +3538,13 @@ spec:
     - action: Accept
       source: RemotePeers
     - action: Reject
+      interface: "*"
   importV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      interface: "eth."
       source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
@@ -3471,6 +3640,7 @@ spec:
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
+      interface: "*.calico"
       source: RemotePeers
       matchOperator: In
       cidr: 44.1.0.0/16
@@ -3486,6 +3656,7 @@ spec:
       matchOperator: In
       cidr: 5000:1::0/64
     - action: Accept
+      interface: "*"
       source: RemotePeers
     - action: Reject
 ---
@@ -3499,6 +3670,7 @@ spec:
       matchOperator: In
       cidr: 44.2.0.0/16
     - action: Reject
+      interface: "eth9"
       source: RemotePeers
       matchOperator: In
       cidr: 44.3.0.0/16
@@ -3514,6 +3686,7 @@ spec:
       matchOperator: In
       cidr: 5000:3::0/64
     - action: Accept
+      interface: "*.calico"
       source: RemotePeers
     - action: Reject
 ---
@@ -3656,11 +3829,13 @@ spec:
     - action: Accept
       source: RemotePeers
     - action: Reject
+      interface: "*.calico"
   exportV6:
     - action: Accept
       matchOperator: In
       cidr: 5000::0/64
     - action: Reject
+      interface: "*.calico"
       source: RemotePeers
       matchOperator: In
       cidr: 5000:1::0/64
@@ -3762,8 +3937,10 @@ spec:
     - action: Accept
       source: RemotePeers
     - action: Reject
+      interface: "*.calico"
   importV4:
     - action: Accept
+      interface: ".calico"
       matchOperator: In
       cidr: 44.0.0.0/16
     - action: Reject
@@ -3784,6 +3961,7 @@ spec:
       matchOperator: In
       cidr: 77.2.0.0/16
     - action: Reject
+      interface: "random.iface"
       source: RemotePeers
       matchOperator: In
       cidr: 77.3.0.0/16
@@ -3796,6 +3974,7 @@ spec:
       cidr: 44.2.0.0/16
     - action: Reject
       source: RemotePeers
+      interface: "random*"
       matchOperator: In
       cidr: 44.3.0.0/16
     - action: Accept
@@ -4036,6 +4215,7 @@ spec:
     - action: Accept
       matchOperator: In
       cidr: 9000::0/64
+      interface: "eth0"
     - action: Reject
       source: RemotePeers
       matchOperator: In
@@ -4043,6 +4223,7 @@ spec:
     - action: Accept
       source: RemotePeers
     - action: Reject
+      interface: "eth*"
   importV6:
     - action: Accept
       matchOperator: In
@@ -4054,6 +4235,7 @@ spec:
     - action: Accept
       source: RemotePeers
     - action: Reject
+      interface: "*"
 ---
 kind: BGPFilter
 apiVersion: projectcalico.org/v3
@@ -4076,6 +4258,7 @@ spec:
       matchOperator: In
       cidr: 5000:2::0/64
     - action: Reject
+      interface: "eth*"
       source: RemotePeers
       matchOperator: In
       cidr: 5000:3::0/64
@@ -4212,6 +4395,7 @@ spec:
       matchOperator: In
       cidr: 9000::0/64
     - action: Reject
+      interface: "*.calico"
       source: RemotePeers
       matchOperator: In
       cidr: 9000:1::0/64
@@ -4229,6 +4413,7 @@ spec:
     - action: Accept
       source: RemotePeers
     - action: Reject
+      interface: "eth0"
 ---
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
@@ -4273,6 +4458,7 @@ test_bgp_filters() {
   test_bgp_filter_names
   test_bgp_filter_match_operators
   test_bgp_filter_match_source
+  test_bgp_filter_match_interface
   test_bgp_filter_import_only_explicit_peers
   test_bgp_filter_import_only_global_peers
   test_bgp_filter_export_only_explicit_peers

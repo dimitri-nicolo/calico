@@ -1724,6 +1724,12 @@ func schema_pkg_apis_projectcalico_v3_BGPFilterRuleV4(ref common.ReferenceCallba
 							Format: "",
 						},
 					},
+					"interface": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"matchOperator": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -1758,6 +1764,12 @@ func schema_pkg_apis_projectcalico_v3_BGPFilterRuleV6(ref common.ReferenceCallba
 						},
 					},
 					"source": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"interface": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",

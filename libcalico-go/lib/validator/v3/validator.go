@@ -118,14 +118,15 @@ var (
 	andOr               = `(&&|\|\|)`
 	globalSelectorRegex = regexp.MustCompile(fmt.Sprintf(`%v global\(\)|global\(\) %v`, andOr, andOr))
 
-	interfaceRegex        = regexp.MustCompile("^[a-zA-Z0-9_.-]{1,15}$")
-	ignoredInterfaceRegex = regexp.MustCompile("^[a-zA-Z0-9_.*-]{1,15}$")
-	ifaceFilterRegex      = regexp.MustCompile("^[a-zA-Z0-9:._+-]{1,15}$")
-	actionRegex           = regexp.MustCompile("^(Allow|Deny|Log|Pass)$")
-	protocolRegex         = regexp.MustCompile("^(TCP|UDP|ICMP|ICMPv6|SCTP|UDPLite)$")
-	ipipModeRegex         = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
-	vxlanModeRegex        = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
-	logLevelRegex         = regexp.MustCompile("^(Debug|Info|Warning|Error|Fatal)$")
+	interfaceRegex          = regexp.MustCompile("^[a-zA-Z0-9_.-]{1,15}$")
+	bgpFilterInterfaceRegex = regexp.MustCompile("^[a-zA-Z0-9_.*-]{1,15}$")
+	ignoredInterfaceRegex   = regexp.MustCompile("^[a-zA-Z0-9_.*-]{1,15}$")
+	ifaceFilterRegex        = regexp.MustCompile("^[a-zA-Z0-9:._+-]{1,15}$")
+	actionRegex             = regexp.MustCompile("^(Allow|Deny|Log|Pass)$")
+	protocolRegex           = regexp.MustCompile("^(TCP|UDP|ICMP|ICMPv6|SCTP|UDPLite)$")
+	ipipModeRegex           = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
+	vxlanModeRegex          = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
+	logLevelRegex           = regexp.MustCompile("^(Debug|Info|Warning|Error|Fatal)$")
 
 	IPSeclogLevelRegex = regexp.MustCompile("^(None|Notice|Info|Debug|Verbose)$")
 	IPSecModeRegex     = regexp.MustCompile("^(PSK)$")
@@ -243,6 +244,7 @@ func init() {
 	// Register field validators.
 	registerFieldValidator("action", validateAction)
 	registerFieldValidator("interface", validateInterface)
+	registerFieldValidator("bgpFilterInterface", validateBGPFilterInterface)
 	registerFieldValidator("ignoredInterface", validateIgnoredInterface)
 	registerFieldValidator("datastoreType", validateDatastoreType)
 	registerFieldValidator("name", validateName)
@@ -444,6 +446,12 @@ func validateInterface(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate interface: %s", s)
 	return s == "*" || interfaceRegex.MatchString(s)
+}
+
+func validateBGPFilterInterface(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate BGPFilter rule interface: %s", s)
+	return s == "*" || bgpFilterInterfaceRegex.MatchString(s)
 }
 
 func validateIgnoredInterface(fl validator.FieldLevel) bool {
