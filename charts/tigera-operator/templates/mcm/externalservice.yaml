@@ -20,7 +20,9 @@ spec:
   type: {{ .Values.managementCluster.service.type }}
   selector:
     k8s-app: tigera-manager
+  {{- if eq .Values.managementCluster.service.type "LoadBalancer" }}
   externalTrafficPolicy: Local
+  {{- end }}
   ports:
     - port: {{ .Values.managementCluster.service.port }}
       targetPort: {{ .Values.managementCluster.service.targetPort }}
