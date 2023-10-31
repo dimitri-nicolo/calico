@@ -11,8 +11,6 @@ include ../lib.Makefile
 
 ###############################################################################
 
-test: ut test-kdd test-etcd
-
 LDFLAGS=-X $(PACKAGE_NAME)/pkg/buildinfo.GitVersion=$(GIT_DESCRIPTION)
 
 # All go files.
@@ -33,20 +31,23 @@ sub-build-%:
 	$(MAKE) build ARCH=$*
 
 bin/confd-$(ARCH): $(SRC_FILES)
+ifeq ($(ARCH),amd64)
+ifeq ($(FIPS), true)
 	$(call build_cgo_boring_binary, $(PACKAGE_NAME), $@)
+else
+	$(call build_binary, $(PACKAGE_NAME), $@)
+endif
+else
+	$(call build_binary, $(PACKAGE_NAME), $@)
+endif
 
 bin/confd: bin/confd-$(ARCH)
-ifeq ($(ARCH),amd64)
 	ln -f bin/confd-$(ARCH) bin/confd
-endif
 
 # Cross-compile confd for Windows
 windows-packaging/tigera-confd.exe: $(SRC_FILES)
 	@echo Building confd for Windows...
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		GOOS=windows go build -v -o $@ -buildvcs=false -v -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME) && \
-		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
-		( echo "Error: $@ was not statically linked"; false ) )'
+	$(call build_windows_binary, $(PACKAGE_NAME), $@)
 
 ###############################################################################
 # Unit Tests
@@ -54,6 +55,8 @@ windows-packaging/tigera-confd.exe: $(SRC_FILES)
 # Set to true when calling test-xxx to update the rendered templates instead of
 # checking them.
 UPDATE_EXPECTED_DATA?=false
+
+test: ut test-kdd test-etcd
 
 .PHONY: test-kdd
 ## Run template tests against KDD
