@@ -269,3 +269,14 @@ func (t *FlowTesterDeprecated) IterFlows(flowLogsOutput string, cb func(flowlog.
 	}
 	return nil
 }
+
+func (t *FlowTesterDeprecated) GetFlows(flowLogsOutput string) []flowlog.FlowLog {
+	logs := []flowlog.FlowLog{}
+	for _, f := range t.readers {
+		flogs, err := flowlogs.ReadFlowLogs(f.FlowLogDir(), flowLogsOutput)
+		if err == nil {
+			logs = append(logs, flogs...)
+		}
+	}
+	return logs
+}
