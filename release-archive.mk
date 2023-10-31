@@ -1,5 +1,7 @@
 include metadata.mk
 
+AWS_PROFILE := helm
+
 TOPLEVEL_DIR:=$(shell git rev-parse --show-toplevel)
 CALICO_DIR=$(TOPLEVEL_DIR)/calico
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
@@ -43,12 +45,13 @@ REGISTRY := quay.io
 MANIFEST_SRC:=$(TOPLEVEL_DIR)/manifests
 
 publish-release-archive: release-archive
-	@aws --profile helm s3 cp $(RELEASE_DIR).tgz s3://tigera-public/ee/archives/ --acl public-read
+	@aws --profile $(AWS_PROFILE) s3 cp $(RELEASE_DIR).tgz s3://tigera-public/ee/archives/ --acl public-read
 
 release-archive: $(RELEASE_DIR) $(RELEASE_DIR).tgz
 
 $(RELEASE_DIR)/private-registry.md:
-	sed \
+	$(info *** Generating private-registry.md with Calico Enterprise $(CALICO_VER), Operator $(OPERATOR_VER), Key Cert Provisioner $(KSP_VER))
+	@sed \
 		-e 's/__OP_VERSION__/$(OPERATOR_VER)/g' \
 		-e 's/__CE_VERSION__/$(CALICO_VER)/g' \
 		-e 's/__KSP_VERSION__/$(KSP_VER)/g' \
@@ -59,10 +62,9 @@ bin/ocp.tgz:
 	@cp manifests/ocp.tgz bin/ocp.tgz
 
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/private-registry.md $(RELEASE_DIR)/README.md bin/ocp.tgz
-	$(info Building release archive for Calico Enterprise $(CALICO_VER), Operator $(OPERATOR_VER), Key Cert Provisioner $(KSP_VER), chart release $(CHART_RELEASE))
-	# find ignored manifests in the archive and delete them
-	$(foreach var,$(IGNORED_MANIFESTS), find $(RELEASE_DIR) -name $(var) -delete;)
-	tar -czvf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
+	$(info *** Building release archive for Calico Enterprise $(CALICO_VER), Operator $(OPERATOR_VER), Key Cert Provisioner $(KSP_VER), chart release $(CHART_RELEASE))
+	$(foreach var,$(IGNORED_MANIFESTS), @find $(RELEASE_DIR) -name $(var) -delete;)
+	@tar -czf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
 
 $(RELEASE_DIR)/README.md:
 	@echo "This directory contains an archive of all the manifests for release of Calico Enterprise $(CALICO_VER)" >> $@
@@ -75,19 +77,19 @@ $(RELEASE_DIR)/README.md:
 	@echo "" >> $@
 	@echo "From the docs for OpenShift installation, we have the following command" >> $@
 	@echo "" >> $@
-	@echo "curl https://docs.tigera.io/manifests/ocp/01-cr-installation.yaml -o manifests/01-cr-installation.yaml" >> $@
+	@echo "curl -L https://docs.tigera.io/manifests/ocp/01-cr-installation.yaml -o manifests/01-cr-installation.yaml" >> $@
 	@echo "" >> $@
 	@echo "For this example, instead of download the manifest using curl, you need to navigate the archive (after extracting) " >> $@
 	@echo "and copy the relevant file at manifests/ocp/01-cr-installation.yaml and paste it into your local manifests folder " >> $@
 	@echo "" >> $@
 
 $(RELEASE_DIR):
-	mkdir -p $(RELEASE_DIR)
+	@mkdir -p $(RELEASE_DIR)
 
 $(RELEASE_DIR_K8S_MANIFESTS):
 	# Find all the hosted manifests and copy them into the release dir. Use xargs to mkdir the destination directory structure before copying them.
 	# -printf "%P\n" prints the file name and directory structure with the search dir stripped off
-	find $(MANIFEST_SRC) -name  '*.yaml' -printf "%P\n" | \
+	@find $(MANIFEST_SRC) -name  '*.yaml' -printf "%P\n" | \
 	  xargs -I FILE sh -c \
 	    'mkdir -p $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;\
 	    cp $(MANIFEST_SRC)/FILE $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;'
