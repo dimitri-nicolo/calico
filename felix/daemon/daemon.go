@@ -467,6 +467,9 @@ configRetry:
 	// Start the stats collector which also depends on the lookups cache.
 	dpStatsCollector = collector.New(configParams, lookupsCache, healthAggregator)
 
+	// Configure Windows firewall rules if appropriate
+	winutils.MaybeConfigureWindowsFirewallRules(configParams.WindowsManageFirewallRules, configParams.PrometheusMetricsEnabled, configParams.PrometheusMetricsPort, configParams.PrometheusReporterEnabled, configParams.PrometheusReporterPort)
+
 	if configParams.DebugPanicAfter > 0 {
 		log.WithField("delay", configParams.DebugPanicAfter).Warn("DebugPanicAfter is set, will panic after delay!")
 		go panicAfter(configParams.DebugPanicAfter)

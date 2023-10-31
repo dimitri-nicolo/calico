@@ -84,6 +84,14 @@ const (
 	FloatingIPsDisabled FloatingIPType = "Disabled"
 )
 
+// +kubebuilder:validation:Enum=Enabled;Disabled
+type WindowsManageFirewallRulesMode string
+
+const (
+	WindowsManageFirewallRulesEnabled  WindowsManageFirewallRulesMode = "Enabled"
+	WindowsManageFirewallRulesDisabled WindowsManageFirewallRulesMode = "Disabled"
+)
+
 // FelixConfigurationSpec contains the values of the Felix configuration.
 type FelixConfigurationSpec struct {
 	// UseInternalDataplaneDriver, if true, Felix will use its internal dataplane programming logic.  If false, it
@@ -1018,6 +1026,10 @@ type FelixConfigurationSpec struct {
 	//
 	// +optional
 	FloatingIPs *FloatingIPType `json:"floatingIPs,omitempty" validate:"omitempty"`
+
+	// WindowsManageFirewallRules configures whether or not Felix will program Windows Firewall rules. (to allow inbound access to its own metrics ports) [Default: Disabled]
+	// +optional
+	WindowsManageFirewallRules *WindowsManageFirewallRulesMode `json:"windowsManageFirewallRules,omitempty" validate:"omitempty,oneof=Enabled Disabled"`
 }
 
 type HealthTimeoutOverride struct {

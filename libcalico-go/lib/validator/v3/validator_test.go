@@ -143,6 +143,10 @@ func init() {
 	excludeL7URL := "ExcludeL7URL"
 	invalidL7 := "ExcludeL7"
 
+	windowsManageFirewallRulesEnabled := api.WindowsManageFirewallRulesEnabled
+	windowsManageFirewallRulesDisabled := api.WindowsManageFirewallRulesDisabled
+	var windowsManageFirewallRulesBlah api.WindowsManageFirewallRulesMode = "blah"
+
 	// Perform validation on error messages from validator
 	DescribeTable("Validator errors",
 		func(input interface{}, e string) {
@@ -4024,6 +4028,10 @@ func init() {
 		Entry("should reject TPROXYPort value negative", api.FelixConfigurationSpec{TPROXYPort: &Vneg1}, false),
 		Entry("should reject TPROXYPort value zero", api.FelixConfigurationSpec{TPROXYPort: &V0}, false),
 		Entry("should reject TPROXYPort value > 16 bit", api.FelixConfigurationSpec{TPROXYPort: &Vx10000}, false),
+
+		Entry("should accept WindowsManageFirewallRules value Disabled", api.FelixConfigurationSpec{WindowsManageFirewallRules: &windowsManageFirewallRulesDisabled}, true),
+		Entry("should accept WindowsManageFirewallRules value Enabled", api.FelixConfigurationSpec{WindowsManageFirewallRules: &windowsManageFirewallRulesEnabled}, true),
+		Entry("should reject WindowsManageFirewallRules value blah", api.FelixConfigurationSpec{WindowsManageFirewallRules: &windowsManageFirewallRulesBlah}, false),
 
 		// KubeControllersConfiguration validation
 		Entry("should not accept invalid HealthChecks",

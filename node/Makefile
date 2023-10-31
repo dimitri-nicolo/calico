@@ -76,7 +76,7 @@ TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created' ! -name '*.
 
 # Variables controlling the image
 NODE_CONTAINER_CREATED=.calico_node.created-$(ARCH)
-NODE_CONTAINER_BIN_DIR=./dist/bin/
+NODE_CONTAINER_BIN_DIR=dist/bin
 NODE_CONTAINER_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node-$(ARCH)
 WINDOWS_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node.exe
 TOOLS_MOUNTNS_BINARY = $(NODE_CONTAINER_BIN_DIR)/mountns-$(ARCH)
@@ -157,6 +157,7 @@ LDFLAGS= -X $(PACKAGE_NAME)/pkg/lifecycle/startup.CNXVERSION=$(NODE_GIT_VERSION)
 
 # Source golang files on which compiling the calico-node binary depends.
 SRC_FILES=$(shell find ./pkg -name '*.go') \
+	  $(shell find ./cmd -name '*.go') \
 	  $(shell find ../felix -name '*.go') \
 	  $(shell find ../felix -name '*.[ch]') \
 	  $(shell find ../libcalico-go -name '*.go') \
@@ -234,7 +235,7 @@ DOCKER_GO_BUILD_CGO_WINDOWS=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO
 $(NODE_CONTAINER_BINARY): filesystem/usr/lib/calico/bpf $(LIBBPF_A) $(SRC_FILES) ../go.mod
 	$(call build_cgo_boring_binary, ./cmd/calico-node/main.go, $@)
 
-$(WINDOWS_BINARY):
+$(WINDOWS_BINARY): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO_WINDOWS) sh -c '$(GIT_CONFIG_SSH) \
 		GOOS=windows CC=x86_64-w64-mingw32-gcc \
 		go build -buildvcs=false --buildmode=exe -v -o $@ -ldflags "$(LDFLAGS) -s -w" ./cmd/calico-node/main.go'
