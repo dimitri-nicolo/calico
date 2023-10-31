@@ -26,6 +26,7 @@ node/windows-packaging/nssm.zip
 node/windows-packaging/nssm.exe
 _output
 _release_archive
+private-registry.md
 builder.coverprofile
 hack/release/ghr
 manifests/ocp.tgz

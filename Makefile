@@ -105,9 +105,9 @@ chart-release: var-require-all-CHART_RELEASE-RELEASE_STREAM chart
 	mv ./bin/tigera-operator-$(RELEASE_STREAM).tgz ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
 
 publish-release-archive: release-archive
-	$(MAKE) -f Makefile.release-archive publish-release-archive RELEASE_STREAM=$(RELEASE_STREAM) REGISTRY=$(REGISTRY) CHART_RELEASE=$(CHART_RELEASE)
+	$(MAKE) -f release-archive.mk publish-release-archive
 release-archive: manifests/ocp.tgz
-	$(MAKE) -f Makefile.release-archive release-archive RELEASE_STREAM=$(RELEASE_STREAM) REGISTRY=$(REGISTRY) CHART_RELEASE=$(CHART_RELEASE)
+	$(MAKE) -f release-archive.mk release-archive
 
 SUB_CHARTS=charts/tigera-operator/charts/tigera-prometheus-operator.tgz
 chart: tigera-operator-release tigera-operator-master multi-tenant-crds-release
