@@ -19,12 +19,12 @@ import (
 )
 
 type Jira struct {
-	ProviderConfig providers.Config
+	config providers.Config
 }
 
 func NewProvider(config providers.Config) providers.Provider {
 	return &Jira{
-		ProviderConfig: config,
+		config: config,
 	}
 }
 
@@ -103,5 +103,5 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, event *lsA
 }
 
 func (p *Jira) Config() providers.Config {
-	return p.ProviderConfig
+	return p.config
 }

@@ -19,12 +19,12 @@ import (
 )
 
 type GenericProvider struct {
-	ProviderConfig providers.Config
+	config providers.Config
 }
 
 func NewProvider(config providers.Config) providers.Provider {
 	return &GenericProvider{
-		ProviderConfig: config,
+		config: config,
 	}
 }
 
@@ -80,5 +80,5 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 }
 
 func (p *GenericProvider) Config() providers.Config {
-	return p.ProviderConfig
+	return p.config
 }

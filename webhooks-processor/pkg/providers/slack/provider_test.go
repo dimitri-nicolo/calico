@@ -107,12 +107,6 @@ func TestSlackProviderProcessing(t *testing.T) {
 		c := sampleValidConfig()
 		c["url"] = fmt.Sprintf("%s/test", fc.Url())
 
-		// Override default parameters to make sure we retry quickly and get to a failure state quicker
-		slackProvider := p.(*Slack)
-		slackProvider.ProviderConfig.RetryTimes = 2
-		slackProvider.ProviderConfig.RetryDuration = 1 * time.Millisecond
-		slackProvider.ProviderConfig.RequestTimeout = 1 * time.Millisecond
-
 		fc.ShouldFail = true
 		// This will take a while and only return once finished
 		err := p.Process(ctx, c, event)

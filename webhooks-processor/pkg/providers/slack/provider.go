@@ -19,12 +19,12 @@ import (
 )
 
 type Slack struct {
-	ProviderConfig providers.Config
+	config providers.Config
 }
 
 func NewProvider(config providers.Config) providers.Provider {
 	return &Slack{
-		ProviderConfig: config,
+		config: config,
 	}
 }
 
@@ -103,5 +103,5 @@ func (p *Slack) message(event *lsApi.Event) *SlackMessage {
 }
 
 func (p *Slack) Config() providers.Config {
-	return p.ProviderConfig
+	return p.config
 }
