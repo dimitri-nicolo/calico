@@ -130,7 +130,7 @@ type RunConfigureElasticArgs struct {
 	WAFPolicyName                     string
 }
 
-func RunConfigureElasticLinseed(t *testing.T, args *RunConfigureElasticArgs) *containers.Container {
+func RunConfigureElasticLinseed(t *testing.T, args *RunConfigureElasticArgs) {
 	// The container library uses gomega, so we need to connect our testing.T to it.
 	gomega.RegisterTestingT(t)
 
@@ -174,5 +174,7 @@ func RunConfigureElasticLinseed(t *testing.T, args *RunConfigureElasticArgs) *co
 
 	c := containers.Run(name, containers.RunOpts{RunAndExit: true, AutoRemove: true, OutputWriter: logutils.TestingTWriter{t}}, dockerArgs...)
 	c.StopLogs()
-	return c
+	if c.ListedInDockerPS() {
+		c.Stop()
+	}
 }

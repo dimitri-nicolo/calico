@@ -30,21 +30,18 @@ import (
 func RunComplianceSnapshotTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
 	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
-		defer setupAndTeardown(t, args, index.ComplianceSnapshotMultiIndex)()
+		defer setupAndTeardown(t, args, nil, index.ComplianceSnapshotMultiIndex)()
 		testFn(t, index.ComplianceSnapshotMultiIndex)
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
-		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+		confArgs := &RunConfigureElasticArgs{
 			ComplianceSnapshotsBaseIndexName: index.ComplianceSnapshotsIndex().Name(bapi.ClusterInfo{}),
 			ComplianceSnapshotsPolicyName:    index.ComplianceSnapshotsIndex().ILMPolicyName(),
-		})
-		if configureIndices.ListedInDockerPS() {
-			configureIndices.Stop()
 		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.ComplianceSnapshotsIndex())()
+		defer setupAndTeardown(t, args, confArgs, index.ComplianceSnapshotsIndex())()
 		testFn(t, index.ComplianceSnapshotsIndex())
 	})
 }

@@ -272,11 +272,10 @@ func RunWithFixedName(name string, opts RunOpts, args ...string) (c *Container) 
 		})
 
 		return c
-	} else {
-		// Note: it might take a long time for the container to start running, e.g. if the image
-		// needs to be downloaded.
-		c.WaitUntilRunning()
 	}
+	// Note: it might take a long time for the container to start running, e.g. if the image
+	// needs to be downloaded.
+	c.WaitUntilRunning()
 
 	// Fill in rest of container struct.
 	c.IP = c.GetIP()

@@ -28,21 +28,18 @@ import (
 func RunDNSLogTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
 	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
-		defer setupAndTeardown(t, args, index.DNSLogMultiIndex)()
+		defer setupAndTeardown(t, args, nil, index.DNSLogMultiIndex)()
 		testFn(t, index.DNSLogMultiIndex)
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
-		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+		confArgs := &RunConfigureElasticArgs{
 			DNSBaseIndexName: index.DNSLogIndex().Name(bapi.ClusterInfo{}),
 			DNSPolicyName:    index.DNSLogIndex().ILMPolicyName(),
-		})
-		if configureIndices.ListedInDockerPS() {
-			configureIndices.Stop()
 		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.DNSLogIndex())()
+		defer setupAndTeardown(t, args, confArgs, index.DNSLogIndex())()
 		testFn(t, index.DNSLogIndex())
 	})
 }

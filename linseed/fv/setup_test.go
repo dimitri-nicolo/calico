@@ -32,11 +32,15 @@ var (
 
 // setupAndTeardown provides common setup and teardown logic for all FV tests to use.
 // It allows passing arugments for configuring the linseed instance, and the index to use for the test.
-func setupAndTeardown(t *testing.T, args *RunLinseedArgs, idx bapi.Index) func() {
+func setupAndTeardown(t *testing.T, args *RunLinseedArgs, confArgs *RunConfigureElasticArgs, idx bapi.Index) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
 
+	// Configure elastic if needed
+	if confArgs != nil {
+		RunConfigureElasticLinseed(t, confArgs)
+	}
 	// Start a linseed instance.
 	if args == nil {
 		args = DefaultLinseedArgs()

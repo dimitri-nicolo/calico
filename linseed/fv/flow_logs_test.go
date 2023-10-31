@@ -27,21 +27,18 @@ import (
 func RunFlowLogTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
 	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
-		defer setupAndTeardown(t, args, index.FlowLogMultiIndex)()
+		defer setupAndTeardown(t, args, nil, index.FlowLogMultiIndex)()
 		testFn(t, index.FlowLogMultiIndex)
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
-		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+		confArgs := &RunConfigureElasticArgs{
 			FlowBaseIndexName: index.FlowLogIndex().Name(bapi.ClusterInfo{}),
 			FlowPolicyName:    index.FlowLogIndex().ILMPolicyName(),
-		})
-		if configureIndices.ListedInDockerPS() {
-			configureIndices.Stop()
 		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.FlowLogIndex())()
+		defer setupAndTeardown(t, args, confArgs, index.FlowLogIndex())()
 		testFn(t, index.FlowLogIndex())
 	})
 }

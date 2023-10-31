@@ -185,7 +185,6 @@ func RuntimeReportsIndex(options ...Option) bapi.Index {
 func ThreatFeedsIPSetIndex(options ...Option) bapi.Index {
 	index := singleIndex{
 		name:                "calico_threatfeeds_ipset",
-		policyName:          "missing",
 		dataType:            bapi.IPSet,
 		hasLifeCycleEnabled: false,
 	}
@@ -199,7 +198,6 @@ func ThreatFeedsIPSetIndex(options ...Option) bapi.Index {
 func ThreatFeedsDomainSetIndex(options ...Option) bapi.Index {
 	index := singleIndex{
 		name:                "calico_threatfeeds_domainnameset",
-		policyName:          "missing",
 		dataType:            bapi.DomainNameSet,
 		hasLifeCycleEnabled: false,
 	}

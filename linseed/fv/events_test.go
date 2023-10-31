@@ -27,21 +27,18 @@ import (
 func RunEventsTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
 	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
-		defer setupAndTeardown(t, args, index.EventsMultiIndex)()
+		defer setupAndTeardown(t, args, nil, index.EventsMultiIndex)()
 		testFn(t, index.EventsMultiIndex)
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
-		configureIndices := RunConfigureElasticLinseed(t, &RunConfigureElasticArgs{
+		confArgs := &RunConfigureElasticArgs{
 			AlertBaseIndexName: index.AlertsIndex().Name(bapi.ClusterInfo{}),
 			AlertPolicyName:    index.AlertsIndex().ILMPolicyName(),
-		})
-		if configureIndices.ListedInDockerPS() {
-			configureIndices.Stop()
 		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.AlertsIndex())()
+		defer setupAndTeardown(t, args, confArgs, index.AlertsIndex())()
 		testFn(t, index.AlertsIndex())
 	})
 }

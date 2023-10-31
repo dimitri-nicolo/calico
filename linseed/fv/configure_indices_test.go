@@ -161,13 +161,7 @@ func TestFV_ConfigureFlowIndices(t *testing.T) {
 			defer configureIndicesSetupAndTeardown(t, tt.index)()
 
 			// Start a linseed configuration instance.
-			linseed := RunConfigureElasticLinseed(t, tt.linseedArgs)
-			defer func() {
-				if linseed.ListedInDockerPS() {
-					linseed.Stop()
-				}
-			}()
-
+			RunConfigureElasticLinseed(t, tt.linseedArgs)
 			testutils.CheckSingleIndexTemplateBootstrapping(t, ctx, esClient, tt.index, bapi.ClusterInfo{})
 		})
 	}

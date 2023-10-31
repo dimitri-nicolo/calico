@@ -38,6 +38,11 @@ func boostrapElasticIndices() {
 	os.Exit(0)
 }
 
+type indexInitializer struct {
+	index       api.Index
+	initializer api.IndexInitializer
+}
+
 func createSingleIndexIndices(cfg *config.Config, esClient lmaelastic.Client) {
 	// We are only configuring indices and there is no need to start the HTTP server
 	logrus.Info("Configuring Elastic indices")
@@ -67,23 +72,32 @@ func createSingleIndexIndices(cfg *config.Config, esClient lmaelastic.Client) {
 	threatFeedsDomainSetIndex := index.ThreatFeedsDomainSetIndex(index.WithBaseIndexName(cfg.ElasticThreatFeedsDomainSetBaseIndexName), index.WithILMPolicyName(cfg.ElasticThreatFeedsDomainSetPolicyName))
 	wafIndex := index.WAFLogIndex(index.WithBaseIndexName(cfg.ElasticWAFLogsBaseIndexName), index.WithILMPolicyName(cfg.ElasticWAFLogsPolicyName))
 
-	// Indices defined below share the same configuration for shards / replicas
-	indices := []api.Index{alertIndex, complianceBenchmarksIndex, complianceReportsIndex, complianceSnapshotsIndex,
-		runtimeIndex, threatFeedsIPSetIndex, threatFeedsDomainSetIndex, wafIndex}
-	for _, idx := range indices {
-		configureIndex(idx, defaultInitializer, ctx)
+	initialization := []indexInitializer{
+		// Indices defined below share the same configuration for shards / replicas
+		{index: alertIndex, initializer: defaultInitializer},
+		{index: complianceBenchmarksIndex, initializer: defaultInitializer},
+		{index: complianceReportsIndex, initializer: defaultInitializer},
+		{index: complianceSnapshotsIndex, initializer: defaultInitializer},
+		{index: runtimeIndex, initializer: defaultInitializer},
+		{index: threatFeedsDomainSetIndex, initializer: defaultInitializer},
+		{index: threatFeedsIPSetIndex, initializer: defaultInitializer},
+		{index: wafIndex, initializer: defaultInitializer},
+		// Indices below can have replicas / shards user configured
+		{index: auditIndex, initializer: auditInitializer},
+		{index: bgpIndex, initializer: bgpInitializer},
+		{index: dnsIndex, initializer: dnsInitializer},
+		{index: flowIndex, initializer: flowInitializer},
+		{index: l7Index, initializer: l7Initializer},
 	}
-	// Indices below can have replicas / shards user configured
-	configureIndex(auditIndex, auditInitializer, ctx)
-	configureIndex(bgpIndex, bgpInitializer, ctx)
-	configureIndex(dnsIndex, dnsInitializer, ctx)
-	configureIndex(flowIndex, flowInitializer, ctx)
-	configureIndex(l7Index, l7Initializer, ctx)
+
+	for _, idx := range initialization {
+		configureIndex(ctx, idx.index, idx.initializer)
+	}
 
 	logrus.Info("Finished configuring Elastic indices")
 }
 
-func configureIndex(idx api.Index, cache api.IndexInitializer, ctx context.Context) {
+func configureIndex(ctx context.Context, idx api.Index, cache api.IndexInitializer) {
 	var emptyClusterInfo api.ClusterInfo
 	indexName := idx.Name(emptyClusterInfo)
 	policyName := idx.ILMPolicyName()

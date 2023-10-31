@@ -134,9 +134,16 @@ func run() {
 	var l7Initializer api.IndexInitializer
 
 	if cfg.Backend == config.BackendTypeSingleIndex && cfg.SingleIndexIndicesCreationEnabled {
+		// In a single index setup with single index creation enabled, we need to create a
+		// single set of indices to store data from both the management and managed cluster.
+		// This is why we create index templates, write aliases and boostrap indices at startup
+		// instead of dynamically as we do for a multi-index setup that has one index for each cluster.
+		// In multi-index setup, the name of the index that to be created contains the name of cluster
+		// that send write requests. Thus, we do not know the name of the index in advance.
 		createSingleIndexIndices(cfg, esClient)
 	} else if cfg.Backend == config.BackendTypeMultiIndex {
-		// Create template caches for indices with special shards / replicas configuration
+		// Create initializers for indices with special shards / replicas configuration. These initializers
+		// will create an index for each new cluster that performs a write requests
 		defaultInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
 		flowInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticFlowShards, cfg.ElasticFlowReplicas)
 		dnsInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticDNSShards, cfg.ElasticDNSReplicas)
@@ -144,7 +151,10 @@ func run() {
 		auditInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticAuditShards, cfg.ElasticAuditReplicas)
 		bgpInitializer = templates.NewCachedInitializer(esClient, cfg.ElasticBGPShards, cfg.ElasticBGPReplicas)
 	} else {
-		// Create a no op initializer
+		// Create a no op initializer that will be used for single index setup with index creation disabled.
+		// This mode is used to run inside a multi-tenant management cluster for Calico Cloud, where
+		// index templates, write aliases and boostrap indices are created via a K8S Job that will
+		// be run after provisioning the Elastic Cluster
 		defaultInitializer = templates.NewNoOpInitializer()
 		flowInitializer = templates.NewNoOpInitializer()
 		dnsInitializer = templates.NewNoOpInitializer()
