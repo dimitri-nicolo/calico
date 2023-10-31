@@ -44,30 +44,19 @@ type Config struct {
 	// For Calico Cloud, the tenant ID to use.
 	TenantID string `envconfig:"TENANT_ID"`
 
-	// The URL that we should proxy requests to.
-	ElasticScheme             string   `envconfig:"ELASTIC_SCHEME" default:"https"`
-	ElasticHost               string   `envconfig:"ELASTIC_HOST"`
-	ElasticPort               int      `envconfig:"ELASTIC_PORT"`
-	ElasticURL                *url.URL `envconfig:"-"`
-	ElasticCAPath             string   `envconfig:"ELASTIC_CA"`
-	ElasticInsecureSkipVerify bool     `envconfig:"ELASTIC_INSECURE_SKIP_VERIFY" default:"false"`
-
-	// The username and password to inject.
-	ElasticUsername string `envconfig:"ELASTIC_USERNAME"`
-	ElasticPassword string `envconfig:"ELASTIC_PASSWORD"`
-
-	ElasticIndexSuffix       string        `envconfig:"ELASTIC_INDEX_SUFFIX" default:"cluster"`
-	ElasticConnRetries       int           `envconfig:"ELASTIC_CONN_RETRIES" default:"30"`
-	ElasticConnRetryInterval time.Duration `envconfig:"ELASTIC_CONN_RETRY_INTERVAL" default:"500ms"`
-	ElasticEnableTrace       bool          `envconfig:"ELASTIC_ENABLE_TRACE" default:"false"`
-	ElasticLicenseType       string        `envconfig:"ELASTIC_LICENSE_TYPE"`
-	ElasticKibanaEndpoint    string        `envconfig:"ELASTIC_KIBANA_ENDPOINT" default:"https://tigera-secure-kb-http.tigera-kibana.svc:5601"`
-	ElasticKibanaDisabled    bool          `envconfig:"ELASTIC_KIBANA_DISABLED"`
-
-	// Various proxy timeouts. Used when creating a http.Transport RoundTripper.
-	ProxyConnectTimeout  time.Duration `envconfig:"PROXY_CONNECT_TIMEOUT" default:"30s"`
-	ProxyKeepAlivePeriod time.Duration `envconfig:"PROXY_KEEPALIVE_PERIOD" default:"30s"`
-	ProxyIdleConnTimeout time.Duration `envconfig:"PROXY_IDLECONN_TIMEOUT" default:"90s"`
+	// Configuration for connection to Elasticsearch. These are only used when Kibana is enabled,
+	// as all other requests go via Linseed.
+	ElasticScheme         string   `envconfig:"ELASTIC_SCHEME" default:"https"`
+	ElasticHost           string   `envconfig:"ELASTIC_HOST"`
+	ElasticPort           int      `envconfig:"ELASTIC_PORT"`
+	ElasticURL            *url.URL `envconfig:"-"`
+	ElasticCAPath         string   `envconfig:"ELASTIC_CA"`
+	ElasticUsername       string   `envconfig:"ELASTIC_USERNAME"`
+	ElasticPassword       string   `envconfig:"ELASTIC_PASSWORD"`
+	ElasticIndexSuffix    string   `envconfig:"ELASTIC_INDEX_SUFFIX" default:"cluster"`
+	ElasticLicenseType    string   `envconfig:"ELASTIC_LICENSE_TYPE"`
+	ElasticKibanaEndpoint string   `envconfig:"ELASTIC_KIBANA_ENDPOINT" default:"https://tigera-secure-kb-http.tigera-kibana.svc:5601"`
+	ElasticKibanaDisabled bool     `envconfig:"ELASTIC_KIBANA_DISABLED"`
 
 	// If multi-cluster management is used inside the cluster, this CA
 	// is necessary for establishing a connection with Voltron, when
