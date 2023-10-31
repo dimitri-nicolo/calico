@@ -5,6 +5,7 @@ package webhooks
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,16 +18,13 @@ import (
 	"github.com/stretchr/testify/require"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/slack"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/testutils"
-)
-
-const (
-	testUrl = "https://test-hook"
 )
 
 // This file contains tests that combine the webhooks building blocks as a cohesive unit
@@ -56,7 +54,7 @@ func TestWebhookHealthy(t *testing.T) {
 	startTime := time.Now()
 
 	// New webhook has no status
-	wh := newTestWebhook("test-wh")
+	wh := testutils.NewTestWebhook("test-wh")
 	require.Nil(t, wh.Status)
 
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
@@ -67,6 +65,81 @@ func TestWebhookHealthy(t *testing.T) {
 
 	// And make sure we're still running
 	require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
+}
+
+func TestWebhookNonHealthyStates(t *testing.T) {
+	testNonHealthyState := func(webhook *api.SecurityEventWebhook, reason string, message string) {
+		testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
+			return []lsApi.Event{}
+		})
+
+		startTime := time.Now()
+
+		// New webhook has no status
+		require.Nil(t, webhook.Status)
+
+		testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: webhook}
+
+		// Check that webhook status is eventually updated to healthy
+		require.Eventually(t, func() bool {
+			return webhook != nil &&
+				webhook.Status != nil &&
+				len(webhook.Status) == 1 &&
+				webhook.Status[0].Type == "Healthy" &&
+				webhook.Status[0].Status == metav1.ConditionStatus("False")
+		}, time.Second, 10*time.Millisecond)
+		require.True(t, webhook.Status[0].LastTransitionTime.After(startTime))
+
+		// Check details
+		require.Contains(t, webhook.Status[0].Reason, reason)
+		require.Contains(t, webhook.Status[0].Message, message)
+
+		// And make sure we're still running
+		require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
+	}
+
+	t.Run("disabled", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
+		wh.Spec.State = "Disabled"
+		testNonHealthyState(wh, "WebhookState", "the webhook has been disabled")
+	})
+
+	t.Run("malformed query", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
+		wh.Spec.Query = "= runtime_security"
+		testNonHealthyState(wh, "QueryParsing", "unexpected token")
+	})
+
+	t.Run("invalid query", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
+		wh.Spec.Query = "type = runtime_securit"
+		testNonHealthyState(wh, "QueryValidation", "invalid value for type: runtime_securit")
+	})
+
+	// The following test will fail to initialise a CoreV1 API client.
+	// TODO: Add test for config parsing failure, with `configItem.ValueFrom`,
+	// that test the "key not found in secret/config map" code paths.
+	t.Run("config parsing - no cli client", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
+
+		wh.Spec.Config = append(wh.Spec.Config, api.SecurityEventWebhookConfigVar{
+			Name:      "some-secret",
+			ValueFrom: &api.SecurityEventWebhookConfigVarSource{},
+		})
+		testNonHealthyState(wh, "ConfigurationParsing", "invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable")
+	})
+
+	t.Run("unknown consumer", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
+		wh.Spec.Consumer = "Unknown"
+		testNonHealthyState(wh, "ConsumerDiscovery", "unknown consumer: Unknown")
+	})
+
+	t.Run("invalid provider config", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
+		wh.Spec.Config = []api.SecurityEventWebhookConfigVar{}
+		testNonHealthyState(wh, "ConsumerConfigurationValidation", "url field is not present in webhook configuration")
+	})
 }
 
 func TestWebhookSent(t *testing.T) {
@@ -81,12 +154,13 @@ func TestWebhookSent(t *testing.T) {
 		return []lsApi.Event{testEvent}
 	})
 
-	wh := newTestWebhook("test-wh")
+	wh := testutils.NewTestWebhook("test-wh")
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
 	// Make sure the webhook eventually hits the test provider
 	require.Eventually(t, hasOneRequest(testState.TestSlackProvider()), testState.FetchingInterval*4, 10*time.Millisecond)
-	require.Equal(t, testUrl, testState.TestSlackProvider().Requests[0].Config["url"])
+	require.Equal(t, wh.Spec.Config[0].Name, "url")
+	require.Equal(t, wh.Spec.Config[0].Value, testState.TestSlackProvider().Requests[0].Config["url"])
 	require.Equal(t, testEvent, testState.TestSlackProvider().Requests[0].Event)
 }
 
@@ -111,7 +185,7 @@ func TestSendsOneWebhookPerEvent(t *testing.T) {
 		return []lsApi.Event{testEvent1, testEvent2}
 	})
 
-	wh := newTestWebhook("test-wh")
+	wh := testutils.NewTestWebhook("test-wh")
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
 	// Make sure the webhook eventually hits the test provider
@@ -135,7 +209,7 @@ func TestEventsFetchedUsingNonOverlappingIntervals(t *testing.T) {
 		return []lsApi.Event{}
 	})
 
-	wh := newTestWebhook("test-wh")
+	wh := testutils.NewTestWebhook("test-wh")
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
 	// Wait that we get a few fetch requests
@@ -166,13 +240,13 @@ func TestTooManyEventsAreRateLimited(t *testing.T) {
 
 	// TODO: Add a check to test that the rate limiter is set to less than len(fetchedEvents)
 	// Right now it's hardcoded to 5 in the test setup (but that could and likely will change)
-	wh := newTestWebhook("test-wh")
+	wh := testutils.NewTestWebhook("test-wh")
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
 	// Make sure the webhook eventually hits the test server
 	testProvider := testState.TestSlackProvider()
 	// Make sure the test is valid (we're providing more events than allowed)
-	numEventsAllowed := int(testState.Providers[api.SecurityEventWebhookConsumerSlack].RateLimiterCount)
+	numEventsAllowed := int(testState.Providers[api.SecurityEventWebhookConsumerSlack].Config().RateLimiterCount)
 	require.Less(t, numEventsAllowed, len(fetchedEvents))
 	require.Eventually(t, hasNRequest(testProvider, numEventsAllowed), 15*time.Second, 10*time.Millisecond)
 
@@ -182,18 +256,11 @@ func TestTooManyEventsAreRateLimited(t *testing.T) {
 	require.Eventually(t, hasNRequest(testProvider, numEventsAllowed), 15*time.Second, 10*time.Millisecond)
 }
 
-type HttpRequest struct {
-	Method string
-	URL    string
-	Header http.Header
-	Body   []byte
-}
-
 func TestGenericProvider(t *testing.T) {
-	requests := []HttpRequest{}
+	requests := []testutils.HttpRequest{}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Does anyone read this?")
-		request := HttpRequest{
+		request := testutils.HttpRequest{
 			Method: r.Method,
 			URL:    r.URL.String(),
 			Header: r.Header,
@@ -213,7 +280,7 @@ func TestGenericProvider(t *testing.T) {
 	SetupWithTestState(t, testState)
 
 	whUrl := fmt.Sprintf("%s/test-hook", ts.URL)
-	wh := newTestWebhook("test-generic-webhook")
+	wh := testutils.NewTestWebhook("test-generic-webhook")
 	wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
 	// Making sure we'll update the right config...
 	require.Equal(t, wh.Spec.Config[0].Name, "url")
@@ -222,7 +289,7 @@ func TestGenericProvider(t *testing.T) {
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
 	// Make sure the webhook eventually hits the test provider
-	require.Eventually(t, func() bool { return len(requests) == 1 }, 15*time.Second, 10*time.Millisecond)
+	require.Eventually(t, func() bool { return len(requests) == 1 }, 5*time.Second, 10*time.Millisecond)
 
 	// We got the webhook as expected
 	require.Equal(t, "POST", requests[0].Method)
@@ -235,14 +302,14 @@ func TestGenericProvider(t *testing.T) {
 }
 
 func TestBackoffOnInitialFailure(t *testing.T) {
-	requests := []HttpRequest{}
+	requests := []testutils.HttpRequest{}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Let's make the first request fail
 		if len(requests) == 0 {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 		fmt.Fprintln(w, "Does anyone read this?")
-		request := HttpRequest{
+		request := testutils.HttpRequest{
 			Method: r.Method,
 			URL:    r.URL.String(),
 			Header: r.Header,
@@ -262,26 +329,26 @@ func TestBackoffOnInitialFailure(t *testing.T) {
 	SetupWithTestState(t, testState)
 
 	whUrl := fmt.Sprintf("%s/test-hook", ts.URL)
-	wh := newTestWebhook("test-generic-webhook")
+	wh := testutils.NewTestWebhook("test-generic-webhook")
 	wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
 	// Making sure we'll update the right config...
 	require.Equal(t, wh.Spec.Config[0].Name, "url")
-	// Updating URL to pint to the test server
+	// Updating URL to point to the test server
 	wh.Spec.Config[0].Value = whUrl
 	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
 
 	// We will get the first request that will be denied
-	require.Eventually(t, func() bool { return len(requests) == 1 }, 15*time.Second, 10*time.Millisecond)
+	require.Eventually(t, func() bool { return len(requests) == 1 }, 5*time.Second, 10*time.Millisecond)
 
 	// I thought we would update the health of the webhook to something that shows the error
 	// or the fact that the request is not going through but seems like we don't.
 	// TODO: Do we want to consider doing this?
 	// // and update the health of the webhook
-	// require.Eventually(t, func() bool { return !isHealthy(wh)() }, 15*time.Second, 10*time.Millisecond)
+	// require.Eventually(t, func() bool { return !isHealthy(wh)() }, 5*time.Second, 10*time.Millisecond)
 	// require.Equal(t, "server doesn't like me :sob:", wh.Status[0].Message)
 
 	// Wait for the second request following the initial failure
-	require.Eventually(t, func() bool { return len(requests) == 2 }, 15*time.Second, 10*time.Millisecond)
+	require.Eventually(t, func() bool { return len(requests) == 2 }, 5*time.Second, 10*time.Millisecond)
 
 	// And check that the data is as expected
 	require.Equal(t, "POST", requests[0].Method)
@@ -305,20 +372,6 @@ func newEvent(n int) lsApi.Event {
 	}
 }
 
-func newTestWebhook(name string) *api.SecurityEventWebhook {
-	wh := api.NewSecurityEventWebhook()
-	wh.Name = name
-	wh.Spec.Consumer = api.SecurityEventWebhookConsumerSlack
-	wh.Spec.State = api.SecurityEventWebhookStateEnabled
-	wh.Spec.Query = "type = runtime_security"
-	wh.Spec.Config = []api.SecurityEventWebhookConfigVar{{
-		Name:  "url",
-		Value: testUrl,
-	}}
-	wh.UID = types.UID(fmt.Sprintf("%s-uid", name))
-	return wh
-}
-
 func isHealthy(webhook *api.SecurityEventWebhook) func() bool {
 	return func() bool {
 		return webhook != nil &&
@@ -329,11 +382,11 @@ func isHealthy(webhook *api.SecurityEventWebhook) func() bool {
 	}
 }
 
-func hasOneRequest(provider *testutils.TestProvider) func() bool {
+func hasOneRequest(provider *TestProvider) func() bool {
 	return hasNRequest(provider, 1)
 }
 
-func hasNRequest(provider *testutils.TestProvider, n int) func() bool {
+func hasNRequest(provider *TestProvider, n int) func() bool {
 	return func() bool {
 		return len(provider.Requests) == n
 	}
@@ -344,11 +397,11 @@ type TestState struct {
 	Stop             func()
 	WebHooksAPI      *testutils.FakeSecurityEventWebhook
 	GetEvents        func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event
-	Providers        map[api.SecurityEventWebhookConsumer]*ProviderConfiguration
+	Providers        map[api.SecurityEventWebhookConsumer]providers.Provider
 	FetchingInterval time.Duration
 }
 
-func NewTestState(getEvents func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event, providers map[api.SecurityEventWebhookConsumer]*ProviderConfiguration) *TestState {
+func NewTestState(getEvents func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event, providers map[api.SecurityEventWebhookConsumer]providers.Provider) *TestState {
 	testState := &TestState{}
 	testState.WebHooksAPI = &testutils.FakeSecurityEventWebhook{}
 	testState.GetEvents = getEvents
@@ -359,18 +412,16 @@ func NewTestState(getEvents func(context.Context, *query.Query, time.Time, time.
 	return testState
 }
 
-func (t *TestState) TestSlackProvider() *testutils.TestProvider {
-	return t.Providers[api.SecurityEventWebhookConsumerSlack].Provider.(*testutils.TestProvider)
+func (t *TestState) TestSlackProvider() *TestProvider {
+	return t.Providers[api.SecurityEventWebhookConsumerSlack].(*TestProvider)
 }
 
 func Setup(t *testing.T, getEvents func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event) *TestState {
-	providers := make(map[api.SecurityEventWebhookConsumer]*ProviderConfiguration)
-	providers[api.SecurityEventWebhookConsumerSlack] = &ProviderConfiguration{
-		Provider:            &testutils.TestProvider{},
-		RateLimiterDuration: 5 * time.Second,
-		RateLimiterCount:    3,
-	}
-	testState := NewTestState(getEvents, providers)
+	testProviders := make(map[api.SecurityEventWebhookConsumer]providers.Provider)
+	testProviders[api.SecurityEventWebhookConsumerSlack] = NewTestProvider()
+
+	require.NotZero(t, testProviders[api.SecurityEventWebhookConsumerSlack].Config().RateLimiterCount)
+	testState := NewTestState(getEvents, testProviders)
 
 	return SetupWithTestState(t, testState)
 }
@@ -416,4 +467,51 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 	})
 
 	return testState
+}
+
+type Request struct {
+	Config map[string]string
+	Event  lsApi.Event
+}
+
+type SlackProvider = slack.Slack
+type TestProvider struct {
+	SlackProvider
+	Requests []Request
+}
+
+func NewTestProvider() providers.Provider {
+	return &TestProvider{
+		SlackProvider: *slack.NewProvider(GetTestProviderConfig()).(*slack.Slack),
+	}
+}
+func (p *TestProvider) Validate(config map[string]string) error {
+	if _, urlPresent := config["url"]; !urlPresent {
+		return errors.New("url field is not present in webhook configuration")
+	}
+	return nil
+}
+
+func (p *TestProvider) Process(ctx context.Context, config map[string]string, event *lsApi.Event) (err error) {
+	logrus.Infof("Processing event %s", event.ID)
+	p.Requests = append(p.Requests, Request{
+		Config: config,
+		Event:  *event,
+	})
+
+	return nil
+}
+
+func (p *TestProvider) Config() providers.Config {
+	return p.SlackProvider.Config()
+}
+
+func GetTestProviderConfig() providers.Config {
+	return providers.Config{
+		RateLimiterDuration: time.Hour,
+		RateLimiterCount:    5,
+		RequestTimeout:      time.Second,
+		RetryDuration:       time.Millisecond,
+		RetryTimes:          2,
+	}
 }

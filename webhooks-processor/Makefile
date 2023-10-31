@@ -73,7 +73,9 @@ st:
 
 .PHONY: ut
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./pkg/... -cover -count 1'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test -coverpkg=./pkg/... -coverprofile ./cover.out ./pkg/...'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go tool cover -func=./cover.out'
+	@echo 'To get more code coverage details, use: "go tool cover -html=./cover.out"'
 
 .PHONY: clean
 clean:

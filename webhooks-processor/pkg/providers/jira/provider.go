@@ -10,25 +10,22 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
-)
-
-const (
-	RequestTimeout = 5 * time.Second
-	RetryDuration  = 2 * time.Second
-	RetryTimes     = 5
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 )
 
 type Jira struct {
+	config providers.Config
 }
 
-func NewProvider() *Jira {
-	return &Jira{}
+func NewProvider(config providers.Config) providers.Provider {
+	return &Jira{
+		config: config,
+	}
 }
 
 func (p *Jira) Validate(config map[string]string) error {
@@ -67,7 +64,7 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, event *lsA
 	}
 
 	retryFunc := func() (err error) {
-		requestCtx, requestCtxCancel := context.WithTimeout(ctx, RequestTimeout)
+		requestCtx, requestCtxCancel := context.WithTimeout(ctx, p.Config().RequestTimeout)
 		defer requestCtxCancel()
 
 		request, err := http.NewRequestWithContext(requestCtx, "POST", config["url"], bytes.NewReader(payloadBytes))
@@ -101,5 +98,10 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, event *lsA
 		return fmt.Errorf("unexpected Jira response [%d]:%s", response.StatusCode, responseText)
 	}
 
-	return helpers.RetryWithLinearBackOff(retryFunc, RetryDuration, RetryTimes, config["url"])
+	c := p.Config()
+	return helpers.RetryWithLinearBackOff(retryFunc, c.RetryDuration, c.RetryTimes, config["url"])
+}
+
+func (p *Jira) Config() providers.Config {
+	return p.config
 }

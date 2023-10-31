@@ -4,14 +4,17 @@ package testutils
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 
-	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
-	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 // My typical approach is to use simple solutions while acceptable and reach for proper mocking tools
@@ -64,27 +67,37 @@ func (w *FakeSecurityEventWebhook) List(ctx context.Context, opts options.ListOp
 	return nil, nil
 }
 
-type Request struct {
-	Config map[string]string
-	Event  lsApi.Event
-}
-type TestProvider struct {
-	Requests []Request
+type FakeConsumer struct {
+	Requests   []HttpRequest
+	ShouldFail bool
+	ts         *httptest.Server
 }
 
-func (p *TestProvider) Validate(config map[string]string) error {
-	if _, urlPresent := config["url"]; !urlPresent {
-		return errors.New("url field is not present in webhook configuration")
-	}
-	return nil
+func (fc *FakeConsumer) Url() string {
+	return fc.ts.URL
 }
 
-func (p *TestProvider) Process(ctx context.Context, config map[string]string, event *lsApi.Event) (err error) {
-	logrus.Infof("Processing event %s", event.ID)
-	p.Requests = append(p.Requests, Request{
-		Config: config,
-		Event:  *event,
+func NewFakeConsumer(t *testing.T) *FakeConsumer {
+	fc := &FakeConsumer{}
+	require.False(t, fc.ShouldFail)
+	fc.ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Let's make requests fail on demand
+		if fc.ShouldFail {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		fmt.Fprintln(w, "Does anyone read this?")
+		request := HttpRequest{
+			Method: r.Method,
+			URL:    r.URL.String(),
+			Header: r.Header,
+		}
+		var err error
+		request.Body, err = io.ReadAll(r.Body)
+		require.NoError(t, err)
+		fc.Requests = append(fc.Requests, request)
+	}))
+	t.Cleanup(func() {
+		fc.ts.Close()
 	})
-
-	return nil
+	return fc
 }

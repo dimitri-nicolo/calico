@@ -17,11 +17,6 @@ type ProcessFunc func(context.Context, map[string]string, *lsApi.Event) error
 
 type EventsFetchFunc func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event
 
-type ProviderInterface interface {
-	Validate(map[string]string) error
-	Process(context.Context, map[string]string, *lsApi.Event) error
-}
-
 type RateLimiterInterface interface {
 	Event() error
 }

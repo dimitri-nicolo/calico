@@ -14,6 +14,10 @@ crypto/tmp
 *.test
 *.coverprofile
 
+# Code coverage files
+cover.out
+cover.html
+
 # Produced as part of release
 hack/release/release
 node/windows-packaging/CalicoWindows/confd/config-bgp.ps1
