@@ -211,6 +211,45 @@ ifndef VERSION
 endif
 	VERSION=$(VERSION) GITHUB_TOKEN=$(GITHUB_TOKEN) python2 ./hack/release/generate-release-notes.py
 
+# Create updates for pre-release
+release-prep: var-require-all-RELEASE_VERSION-HELM_RELEASE-OPERATOR_VERSION-CALICO_VERSION-REGISTRY var-require-one-of-CONFIRM-DRYRUN
+	@cd calico && \
+		$(YQ_V4) ".[0].title = \"$(RELEASE_VERSION)\" | .[0].helmRelease = $(HELM_RELEASE)" -i _data/versions.yml && \
+		$(YQ_V4) ".[0].tigera-operator.version = \"$(OPERATOR_VERSION)\" | .[0].calico.minor_version = \"$(shell echo "$(CALICO_VERSION)" | awk -F  "." '{print $$1"."$$2}')\"" -i _data/versions.yml && \
+		$(YQ_V4) ".[0].components |= with_entries(select(.key | test(\"^(eck-|coreos-).*\") | not)) |= with(.[]; .version = \"$(RELEASE_VERSION)\")" -i _data/versions.yml
+	@cd charts && \
+		$(YQ_V4) ".tigeraOperator.version = \"$(OPERATOR_VERSION)\" | .calicoctl.tag = \"$(RELEASE_VERSION)\"" -i tigera-operator/values.yaml && \
+		$(YQ_V4) ". |= with_entries(select(.key | test(\"^prometheus.*\"))) |= with(.[]; .tag = \"$(RELEASE_VERSION)\")" -i tigera-prometheus-operator/values.yaml && \
+		sed -i "s/gcr.io.*\/tigera/quay.io\/tigera/g" tigera*-operator/values.yaml
+	$(MAKE) generate CALICO_VERSION=$(RELEASE_VERSION)
+	$(eval RELEASE_UPDATE_BRANCH = $(if $(SEMAPHORE),semaphore-,)auto-build-updates-$(RELEASE_VERSION))
+	GIT_PR_BRANCH_BASE=$(if $(SEMAPHORE),$(SEMAPHORE_GIT_BRANCH),) RELEASE_UPDATE_BRANCH=$(RELEASE_UPDATE_BRANCH) \
+	GIT_PR_BRANCH_HEAD=$(if $(GIT_FORK_USER),$(GIT_FORK_USER):$(RELEASE_UPDATE_BRANCH),$(RELEASE_UPDATE_BRANCH)) GIT_REPO_SLUG=$(if $(SEMAPHORE),$(SEMAPHORE_GIT_REPO_SLUG),) \
+	$(MAKE) release-prep/create-and-push-branch release-prep/create-pr release-prep/set-merge-when-ready-on-pr
+
+
+ifneq ($(if $(GIT_REPO_SLUG),$(shell dirname $(GIT_REPO_SLUG)),), $(shell dirname `git config remote.$(GIT_REMOTE).url | cut -d: -f2`))
+GIT_FORK_USER:=$(shell dirname `git config remote.$(GIT_REMOTE).url | cut -d: -f2`)
+endif
+release-prep/create-and-push-branch:
+ifeq ($(shell git rev-parse --abbrev-ref HEAD),$(RELEASE_UPDATE_BRANCH))
+	$(error Current branch is pull request head, cannot set it up.)
+endif
+	-git branch -D $(RELEASE_UPDATE_BRANCH)
+	-$(GIT) push $(GIT_REMOTE) --delete $(RELEASE_UPDATE_BRANCH)
+	git checkout -b $(RELEASE_UPDATE_BRANCH)
+	$(GIT) add calico/_data/versions.yml charts/**/values.yaml manifests/*
+	$(GIT) commit -m "Automatic version updates for $(RELEASE_VERSION) release"
+	$(GIT) push $(GIT_REMOTE) $(RELEASE_UPDATE_BRANCH)
+
+release-prep/create-pr:
+	$(call github_pr_create,$(GIT_REPO_SLUG),[$(GIT_PR_BRANCH_BASE)] $(if $(SEMAPHORE),Semaphore ,)Auto Release Update for $(RELEASE_VERSION),$(GIT_PR_BRANCH_HEAD),$(GIT_PR_BRANCH_BASE))
+	echo 'Created release update pull request for $(RELEASE_VERSION): $(PR_NUMBER)'
+
+release-prep/set-merge-when-ready-on-pr:
+	$(call github_pr_add_comment,$(GIT_REPO_SLUG),$(PR_NUMBER),/merge-when-ready delete-branch)
+	echo "Added '/merge-when-ready' comment command to pull request $(PR_NUMBER)"
+
 ## Update the AUTHORS.md file.
 update-authors:
 ifndef GITHUB_TOKEN

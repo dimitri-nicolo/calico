@@ -163,7 +163,7 @@ tigeraOperator:
 
 calicoctl:
   enabled: false
-  image: gcr.io/unique-caldron-775/cnx/tigera/calicoctl:master
+  image: gcr.io/unique-caldron-775/cnx/tigera/calicoctl
   tag: master
   binPath: /bin
 
