@@ -33,7 +33,7 @@ func NewSnapshotBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPa
 	}
 }
 
-func NewSingleIndexSnapshotBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.SnapshotsBackend {
+func NewSingleIndexSnapshotBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.SnapshotsBackend {
 	return &snapshotsBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -41,7 +41,7 @@ func NewSingleIndexSnapshotBackend(c lmaelastic.Client, cache bapi.IndexInitiali
 		deepPaginationCutOff: deepPaginationCutOff,
 		queryHelper:          lmaindex.SingleIndexComplianceSnapshots(),
 		singleIndex:          true,
-		index:                index.ComplianceSnapshotIndex,
+		index:                index.ComplianceSnapshotsIndex(options...),
 	}
 }
 

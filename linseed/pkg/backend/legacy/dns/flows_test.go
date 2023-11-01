@@ -74,9 +74,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Instantiate backends.
 	if singleIndex {
+		indexGetter = index.DNSLogIndex()
 		b = dns.NewSingleIndexDNSFlowBackend(client)
 		lb = dns.NewSingleIndexDNSLogBackend(client, cache, 10000)
-		indexGetter = index.DNSLogIndex
 	} else {
 		b = dns.NewDNSFlowBackend(client)
 		lb = dns.NewDNSLogBackend(client, cache, 10000)

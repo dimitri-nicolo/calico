@@ -33,17 +33,21 @@ var (
 func RunRuntimeReportTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
 	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
-		defer setupAndTeardown(t, args, index.RuntimeReportMultiIndex)()
+		defer setupAndTeardown(t, args, nil, index.RuntimeReportMultiIndex)()
 		defer runtimeReportsSetupAndTeardown(t, args, index.RuntimeReportMultiIndex)()
 		testFn(t, index.RuntimeReportMultiIndex)
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		confArgs := &RunConfigureElasticArgs{
+			RuntimeReportsBaseIndexName: index.RuntimeReportsIndex().Name(bapi.ClusterInfo{}),
+			RuntimeReportsPolicyName:    index.RuntimeReportsIndex().ILMPolicyName(),
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.RuntimeReportIndex)()
-		defer runtimeReportsSetupAndTeardown(t, args, index.RuntimeReportIndex)()
-		testFn(t, index.RuntimeReportIndex)
+		defer setupAndTeardown(t, args, confArgs, index.RuntimeReportsIndex())()
+		defer runtimeReportsSetupAndTeardown(t, args, index.RuntimeReportsIndex())()
+		testFn(t, index.RuntimeReportsIndex())
 	})
 }
 
@@ -149,7 +153,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 		// This test only runs against the legacy multi-index backend, since the single-index implementation post-dates
 		// the introduction of Linseed populating the GeneratedTime field. As such, all single-index reports will have
 		// a GeneratedTime value.
-		defer setupAndTeardown(t, DefaultLinseedArgs(), index.RuntimeReportMultiIndex)()
+		defer setupAndTeardown(t, DefaultLinseedArgs(), nil, index.RuntimeReportMultiIndex)()
 
 		newRuntimeReport := func(startTime time.Time) v1.Report {
 			return v1.Report{

@@ -47,13 +47,13 @@ func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagination
 	}
 }
 
-func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.RuntimeBackend {
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.RuntimeBackend {
 	return &runtimeReportBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
-		index:                index.RuntimeReportIndex,
+		index:                index.RuntimeReportsIndex(options...),
 		singleIndex:          true,
 		queryHelper:          lmaindex.SingleIndexRuntimeReports(),
 	}

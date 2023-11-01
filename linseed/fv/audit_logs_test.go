@@ -32,30 +32,38 @@ import (
 func RunAuditEETest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
 	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
-		defer setupAndTeardown(t, args, index.AuditLogEEMultiIndex)()
+		defer setupAndTeardown(t, args, nil, index.AuditLogEEMultiIndex)()
 		testFn(t, index.AuditLogEEMultiIndex)
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		confArgs := &RunConfigureElasticArgs{
+			AuditBaseIndexName: index.AuditLogIndex().Name(bapi.ClusterInfo{}),
+			AuditPolicyName:    index.AuditLogIndex().ILMPolicyName(),
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.AuditLogIndex)()
-		testFn(t, index.AuditLogIndex)
+		defer setupAndTeardown(t, args, confArgs, index.AuditLogIndex())()
+		testFn(t, index.AuditLogIndex())
 	})
 }
 
 func RunAuditKubeTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
 	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
-		defer setupAndTeardown(t, args, index.AuditLogKubeMultiIndex)()
+		defer setupAndTeardown(t, args, nil, index.AuditLogKubeMultiIndex)()
 		testFn(t, index.AuditLogKubeMultiIndex)
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		confArgs := &RunConfigureElasticArgs{
+			AuditBaseIndexName: index.AuditLogIndex().Name(bapi.ClusterInfo{}),
+			AuditPolicyName:    index.AuditLogIndex().ILMPolicyName(),
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.AuditLogIndex)()
-		testFn(t, index.AuditLogIndex)
+		defer setupAndTeardown(t, args, confArgs, index.AuditLogIndex())()
+		testFn(t, index.AuditLogIndex())
 	})
 }
 

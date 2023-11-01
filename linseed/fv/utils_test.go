@@ -100,3 +100,81 @@ func RunLinseed(t *testing.T, args *RunLinseedArgs) *containers.Container {
 	c.StopLogs()
 	return c
 }
+
+type RunConfigureElasticArgs struct {
+	AlertBaseIndexName                string
+	AlertPolicyName                   string
+	AuditBaseIndexName                string
+	AuditPolicyName                   string
+	BGPBaseIndexName                  string
+	BGPPolicyName                     string
+	ComplianceBenchmarksBaseIndexName string
+	ComplianceBenchmarksPolicyName    string
+	ComplianceReportsBaseIndexName    string
+	ComplianceReportsPolicyName       string
+	ComplianceSnapshotsBaseIndexName  string
+	ComplianceSnapshotsPolicyName     string
+	DNSBaseIndexName                  string
+	DNSPolicyName                     string
+	FlowBaseIndexName                 string
+	FlowPolicyName                    string
+	L7BaseIndexName                   string
+	L7PolicyName                      string
+	RuntimeReportsBaseIndexName       string
+	RuntimeReportsPolicyName          string
+	ThreatFeedsIPSetBaseIndexName     string
+	ThreatFeedsIPSetPolicyName        string
+	ThreatFeedsDomainSetBaseIndexName string
+	ThreatFeedsDomainSetPolicyName    string
+	WAFBaseIndexName                  string
+	WAFPolicyName                     string
+}
+
+func RunConfigureElasticLinseed(t *testing.T, args *RunConfigureElasticArgs) {
+	// The container library uses gomega, so we need to connect our testing.T to it.
+	gomega.RegisterTestingT(t)
+
+	dockerArgs := []string{
+		"--net=host",
+		"-e", "ELASTIC_HOST=localhost",
+		"-e", "ELASTIC_SCHEME=http",
+		"-e", "LINSEED_LOG_LEVEL=debug",
+		"-e", fmt.Sprintf("LINSEED_BACKEND=%s", config.BackendTypeSingleIndex),
+		"-e", fmt.Sprintf("ELASTIC_ALERTS_BASE_INDEX_NAME=%s", args.AlertBaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_ALERTS_POLICY_NAME=%s", args.AlertPolicyName),
+		"-e", fmt.Sprintf("ELASTIC_AUDIT_LOGS_BASE_INDEX_NAME=%s", args.AuditBaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_AUDIT_LOGS_POLICY_NAME=%s", args.AuditPolicyName),
+		"-e", fmt.Sprintf("ELASTIC_BGP_LOGS_BASE_INDEX_NAME=%s", args.BGPBaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_BGP_LOGS_POLICY_NAME=%s", args.BGPPolicyName),
+		"-e", fmt.Sprintf("ELASTIC_COMPLIANCE_BENCHMARKS_BASE_INDEX_NAME=%s", args.ComplianceBenchmarksBaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_COMPLIANCE_BENCHMARKS_POLICY_NAME=%s", args.ComplianceBenchmarksPolicyName),
+		"-e", fmt.Sprintf("ELASTIC_COMPLIANCE_REPORTS_BASE_INDEX_NAME=%s", args.ComplianceReportsBaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_COMPLIANCE_REPORTS_POLICY_NAME=%s", args.ComplianceReportsPolicyName),
+		"-e", fmt.Sprintf("ELASTIC_COMPLIANCE_SNAPSHOTS_BASE_INDEX_NAME=%s", args.ComplianceSnapshotsBaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_COMPLIANCE_SNAPSHOTS_POLICY_NAME=%s", args.ComplianceSnapshotsPolicyName),
+		"-e", fmt.Sprintf("ELASTIC_DNS_LOGS_BASE_INDEX_NAME=%s", args.DNSBaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_DNS_LOGS_POLICY_NAME=%s", args.DNSPolicyName),
+		"-e", fmt.Sprintf("ELASTIC_FLOW_LOGS_BASE_INDEX_NAME=%s", args.FlowBaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_FLOW_LOGS_POLICY_NAME=%s", args.FlowPolicyName),
+		"-e", fmt.Sprintf("ELASTIC_L7_LOGS_BASE_INDEX_NAME=%s", args.L7BaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_L7_LOGS_POLICY_NAME=%s", args.L7PolicyName),
+		"-e", fmt.Sprintf("ELASTIC_RUNTIME_REPORTS_BASE_INDEX_NAME=%s", args.RuntimeReportsBaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_RUNTIME_REPORTS_POLICY_NAME=%s", args.RuntimeReportsPolicyName),
+		"-e", fmt.Sprintf("ELASTIC_THREAT_FEEDS_DOMAIN_SET_BASE_INDEX_NAME=%s", args.ThreatFeedsDomainSetBaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_THREAT_FEEDS_DOMAIN_SET_POLICY_NAME=%s", args.ThreatFeedsDomainSetPolicyName),
+		"-e", fmt.Sprintf("ELASTIC_THREAT_FEEDS_IP_SET_BASE_INDEX_NAME=%s", args.ThreatFeedsIPSetBaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_THREAT_FEEDS_IP_SET_POLICY_NAME=%s", args.ThreatFeedsIPSetPolicyName),
+		"-e", fmt.Sprintf("ELASTIC_WAF_LOGS_BASE_INDEX_NAME=%s", args.WAFBaseIndexName),
+		"-e", fmt.Sprintf("ELASTIC_WAF_LOGS_POLICY_NAME=%s", args.WAFPolicyName),
+		"tigera/linseed:latest",
+		"-configure-elastic-indices",
+	}
+
+	name := "tigera-configure-elastic-linseed-fv"
+
+	c := containers.Run(name, containers.RunOpts{RunAndExit: true, AutoRemove: true, OutputWriter: logutils.TestingTWriter{t}}, dockerArgs...)
+	c.StopLogs()
+	if c.ListedInDockerPS() {
+		c.Stop()
+	}
+}

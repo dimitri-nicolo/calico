@@ -31,7 +31,7 @@ func NewReportsBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPag
 	}
 }
 
-func NewSingleIndexReportsBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.ReportsBackend {
+func NewSingleIndexReportsBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.ReportsBackend {
 	return &reportsBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -39,7 +39,7 @@ func NewSingleIndexReportsBackend(c lmaelastic.Client, cache bapi.IndexInitializ
 		deepPaginationCutOff: deepPaginationCutOff,
 		queryHelper:          lmaindex.SingleIndexComplianceReports(),
 		singleIndex:          true,
-		index:                index.ComplianceReportIndex,
+		index:                index.ComplianceReportsIndex(options...),
 	}
 }
 

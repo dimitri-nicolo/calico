@@ -27,15 +27,19 @@ import (
 func RunWAFTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
 	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
-		defer setupAndTeardown(t, args, index.WAFLogMultiIndex)()
+		defer setupAndTeardown(t, args, nil, index.WAFLogMultiIndex)()
 		testFn(t, index.WAFLogMultiIndex)
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		confArgs := &RunConfigureElasticArgs{
+			WAFBaseIndexName: index.WAFLogIndex().Name(bapi.ClusterInfo{}),
+			WAFPolicyName:    index.WAFLogIndex().ILMPolicyName(),
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.WAFLogIndex)()
-		testFn(t, index.WAFLogIndex)
+		defer setupAndTeardown(t, args, confArgs, index.WAFLogIndex())()
+		testFn(t, index.WAFLogIndex())
 	})
 }
 

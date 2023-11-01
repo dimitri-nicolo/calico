@@ -41,14 +41,14 @@ func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagination
 	}
 }
 
-func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.EventsBackend {
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.EventsBackend {
 	return &eventsBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
 		templates:            cache,
 		queryHelper:          lmaindex.SingleIndexAlerts(),
 		deepPaginationCutOff: deepPaginationCutOff,
-		index:                index.AlertsIndex,
+		index:                index.AlertsIndex(options...),
 		singleIndex:          true,
 	}
 }

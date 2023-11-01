@@ -89,11 +89,11 @@ func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
 	return newFlowBackend(c, false)
 }
 
-func NewSingleIndexFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
-	return newFlowBackend(c, true)
+func NewSingleIndexFlowBackend(c lmaelastic.Client, options ...index.Option) bapi.FlowBackend {
+	return newFlowBackend(c, true, options...)
 }
 
-func newFlowBackend(c lmaelastic.Client, singleIndex bool) bapi.FlowBackend {
+func newFlowBackend(c lmaelastic.Client, singleIndex bool, options ...index.Option) bapi.FlowBackend {
 	// These are the keys which define a flow in ES, and will be used to create buckets in the ES result.
 	compositeSources := []lmaelastic.AggCompositeSourceInfo{
 		{Name: "dest_type", Field: "dest_type"},
@@ -179,7 +179,7 @@ func newFlowBackend(c lmaelastic.Client, singleIndex bool) bapi.FlowBackend {
 		{Name: "dest_domains"},
 	}
 
-	indexTemplate := index.FlowLogIndex
+	indexTemplate := index.FlowLogIndex(options...)
 	helper := lmaindex.SingleIndexFlowLogs()
 	if !singleIndex {
 		indexTemplate = index.FlowLogMultiIndex

@@ -42,7 +42,7 @@ func NewDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagi
 	}
 }
 
-func NewSingleIndexDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.DNSLogBackend {
+func NewSingleIndexDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.DNSLogBackend {
 	return &dnsLogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -50,7 +50,7 @@ func NewSingleIndexDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitialize
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
 		singleIndex:          true,
-		index:                index.DNSLogIndex,
+		index:                index.DNSLogIndex(options...),
 	}
 }
 

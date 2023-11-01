@@ -189,6 +189,7 @@ type RunOpts struct {
 	StopTimeoutSecs  int
 	StopSignal       string
 	OutputWriter     io.Writer
+	RunAndExit       bool
 }
 
 func NextContainerIndex() int {
@@ -219,7 +220,8 @@ func RunWithFixedName(name string, opts RunOpts, args ...string) (c *Container) 
 	}
 
 	// Prep command to run the container.
-	log.WithField("container", c).Info("About to run container")
+	logCtx := log.WithField("container", c)
+	logCtx.Info("About to run container")
 	runArgs := []string{"run", "--init", "--cgroupns", "host", "--name", c.Name, "--stop-timeout", fmt.Sprint(opts.StopTimeoutSecs)}
 
 	if opts.StopSignal != "" {
@@ -262,6 +264,15 @@ func RunWithFixedName(name string, opts RunOpts, args ...string) (c *Container) 
 	go c.copyOutputToLog("stdout", stdout, &c.logFinished, &c.stdoutWatches)
 	go c.copyOutputToLog("stderr", stderr, &c.logFinished, &c.stderrWatches)
 
+	if opts.RunAndExit {
+		withTimeoutPanic(logCtx, 1*time.Minute, func() {
+			logCtx.Info("Waiting for container to finish its run")
+			err = c.runCmd.Wait()
+			logCtx.WithError(err).Info("Container finished run")
+		})
+
+		return c
+	}
 	// Note: it might take a long time for the container to start running, e.g. if the image
 	// needs to be downloaded.
 	c.WaitUntilRunning()

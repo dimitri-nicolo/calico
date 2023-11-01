@@ -48,7 +48,7 @@ func (i *cachedInitializer) Initialize(ctx context.Context, index bapi.Index, in
 	return nil
 }
 
-// exists returns whether or not the index exists in the cache.
+// exists returns whether the index exists in the cache.
 func (i *cachedInitializer) exists(index bapi.Index, info bapi.ClusterInfo) bool {
 	i.RLock()
 	defer i.RUnlock()
@@ -70,4 +70,16 @@ func (i *cachedInitializer) initialize(ctx context.Context, index bapi.Index, in
 	// Cache the index so that we don't need to re-initialize it on subsequent calls.
 	i.cache[index.Name(info)] = template
 	return nil
+}
+
+// noOpInitializer implements the IndexInitializer interface
+// but will not perform any initialization
+type noOpInitializer struct{}
+
+func (n noOpInitializer) Initialize(ctx context.Context, index bapi.Index, info bapi.ClusterInfo) error {
+	return nil
+}
+
+func NewNoOpInitializer() bapi.IndexInitializer {
+	return &noOpInitializer{}
 }

@@ -26,15 +26,19 @@ import (
 func RunBGPLogTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
 	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
-		defer setupAndTeardown(t, args, index.BGPLogMultiIndex)()
+		defer setupAndTeardown(t, args, nil, index.BGPLogMultiIndex)()
 		testFn(t, index.BGPLogMultiIndex)
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		confArgs := &RunConfigureElasticArgs{
+			BGPBaseIndexName: index.BGPLogIndex().Name(bapi.ClusterInfo{}),
+			BGPPolicyName:    index.BGPLogIndex().ILMPolicyName(),
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.BGPLogIndex)()
-		testFn(t, index.BGPLogIndex)
+		defer setupAndTeardown(t, args, confArgs, index.BGPLogIndex())()
+		testFn(t, index.BGPLogIndex())
 	})
 }
 

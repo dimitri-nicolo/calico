@@ -70,7 +70,7 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 	// Instantiate a backend.
 	if singleIndex {
 		b = events.NewSingleIndexBackend(client, cache, 10000)
-		indexGetter = index.AlertsIndex
+		indexGetter = index.AlertsIndex()
 	} else {
 		b = events.NewBackend(client, cache, 10000)
 		indexGetter = index.EventsMultiIndex

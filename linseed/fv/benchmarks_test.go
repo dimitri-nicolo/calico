@@ -27,15 +27,19 @@ import (
 func RunComplianceBenchmarkTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
 	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
 		args := DefaultLinseedArgs()
-		defer setupAndTeardown(t, args, index.ComplianceBenchmarkMultiIndex)()
+		defer setupAndTeardown(t, args, nil, index.ComplianceBenchmarkMultiIndex)()
 		testFn(t, index.ComplianceBenchmarkMultiIndex)
 	})
 
 	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
+		confArgs := &RunConfigureElasticArgs{
+			ComplianceBenchmarksBaseIndexName: index.ComplianceBenchmarksIndex().Name(bapi.ClusterInfo{}),
+			ComplianceBenchmarksPolicyName:    index.ComplianceBenchmarksIndex().ILMPolicyName(),
+		}
 		args := DefaultLinseedArgs()
 		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, index.ComplianceBenchmarkIndex)()
-		testFn(t, index.ComplianceBenchmarkIndex)
+		defer setupAndTeardown(t, args, confArgs, index.ComplianceBenchmarksIndex())()
+		testFn(t, index.ComplianceBenchmarksIndex())
 	})
 }
 

@@ -54,11 +54,11 @@ func NewL7FlowBackend(c lmaelastic.Client) bapi.L7FlowBackend {
 	return newBackend(c, false)
 }
 
-func NewSingleIndexL7FlowBackend(c lmaelastic.Client) bapi.L7FlowBackend {
-	return newBackend(c, true)
+func NewSingleIndexL7FlowBackend(c lmaelastic.Client, options ...index.Option) bapi.L7FlowBackend {
+	return newBackend(c, true, options...)
 }
 
-func newBackend(c lmaelastic.Client, singleIndex bool) bapi.L7FlowBackend {
+func newBackend(c lmaelastic.Client, singleIndex bool, options ...index.Option) bapi.L7FlowBackend {
 	// These are the keys which define an L7 in ES, and will be used to create buckets in the ES result.
 	compositeSources := []lmaelastic.AggCompositeSourceInfo{
 		{Name: "dest_type", Field: "dest_type"},
@@ -94,7 +94,7 @@ func newBackend(c lmaelastic.Client, singleIndex bool) bapi.L7FlowBackend {
 	idx := index.L7LogMultiIndex
 	if singleIndex {
 		helper = lmaindex.SingleIndexL7Logs()
-		idx = index.L7LogIndex
+		idx = index.L7LogIndex(options...)
 	}
 
 	return &l7FlowBackend{

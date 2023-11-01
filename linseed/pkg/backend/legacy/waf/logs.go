@@ -43,7 +43,7 @@ func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagination
 	}
 }
 
-func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.WAFBackend {
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.WAFBackend {
 	return &wafLogBackend{
 		client:               c.Backend(),
 		queryHelper:          lmaindex.SingleIndexWAFLogs(),
@@ -51,7 +51,7 @@ func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, dee
 		templates:            cache,
 		deepPaginationCutOff: deepPaginationCutOff,
 		singleIndex:          true,
-		index:                index.WAFLogIndex,
+		index:                index.WAFLogIndex(options...),
 	}
 }
 

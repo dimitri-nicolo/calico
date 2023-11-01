@@ -44,7 +44,7 @@ func NewL7LogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagin
 	return b
 }
 
-func NewSingleIndexL7LogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.L7LogBackend {
+func NewSingleIndexL7LogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.L7LogBackend {
 	b := &l7LogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -52,7 +52,7 @@ func NewSingleIndexL7LogBackend(c lmaelastic.Client, cache bapi.IndexInitializer
 		deepPaginationCutOff: deepPaginationCutOff,
 		queryHelper:          lmaindex.SingleIndexL7Logs(),
 		singleIndex:          true,
-		index:                index.L7LogIndex,
+		index:                index.L7LogIndex(options...),
 	}
 	return b
 }

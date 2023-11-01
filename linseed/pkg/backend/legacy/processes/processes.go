@@ -43,10 +43,10 @@ func NewBackend(c lmaelastic.Client) bapi.ProcessBackend {
 	}
 }
 
-func NewSingleIndexBackend(c lmaelastic.Client) bapi.ProcessBackend {
+func NewSingleIndexBackend(c lmaelastic.Client, options ...index.Option) bapi.ProcessBackend {
 	return &processBackend{
 		lmaclient:   c,
-		index:       index.FlowLogIndex,
+		index:       index.FlowLogIndex(options...),
 		queryHelper: lmaindex.SingleIndexFlowLogs(),
 	}
 }

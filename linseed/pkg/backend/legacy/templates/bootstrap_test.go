@@ -78,10 +78,10 @@ func TestBootstrapLegacyFlowTemplate(t *testing.T) {
 }
 
 func TestBootstrapFlowTemplate(t *testing.T) {
-	defer setupTest(t, index.FlowLogIndex)()
+	defer setupTest(t, index.FlowLogIndex())()
 
 	info := bapi.ClusterInfo{Cluster: cluster}
-	idx := index.FlowLogIndex
+	idx := index.FlowLogIndex()
 
 	// Check that the template returned has the correct
 	// index_patterns, ILM policy, mappings and shards and replicas
@@ -90,14 +90,14 @@ func TestBootstrapFlowTemplate(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, templ)
 	require.Len(t, templ.IndexPatterns, 1)
-	checkSingleIndexTemplateBootstrapping(t, idx, info)
+	testutils.CheckSingleIndexTemplateBootstrapping(t, ctx, client, idx, info)
 }
 
 func TestBootstrapFlowTemplateAsync(t *testing.T) {
-	defer setupTest(t, index.FlowLogIndex)()
+	defer setupTest(t, index.FlowLogIndex())()
 
 	info := bapi.ClusterInfo{Cluster: cluster}
-	idx := index.FlowLogIndex
+	idx := index.FlowLogIndex()
 
 	// Check that the template returned has the correct
 	// index_patterns, ILM policy, mappings and shards and replicas
@@ -129,61 +129,7 @@ func TestBootstrapFlowTemplateAsync(t *testing.T) {
 	}
 
 	// Check that the resulting template in ES is correct.
-	checkSingleIndexTemplateBootstrapping(t, idx, info)
-}
-
-func checkSingleIndexTemplateBootstrapping(t *testing.T, idx bapi.Index, i bapi.ClusterInfo) {
-	// Check that the template was created.
-	templateExists, err := client.IndexTemplateExists(idx.IndexTemplateName(i)).Do(ctx)
-	require.NoError(t, err)
-	require.True(t, templateExists)
-
-	// Check that the bootstrap index exists
-	indexExists, err := client.IndexExists(idx.BootstrapIndexName(i)).Do(ctx)
-	require.NoError(t, err)
-	require.True(t, indexExists, "index doesn't exist: %s", idx.BootstrapIndexName(i))
-
-	// Check that write alias exists.
-	index := fmt.Sprintf("%s.%s-%s-000001", idx.Name(i), "linseed", time.Now().UTC().Format("20060102"))
-	responseAlias, err := client.CatAliases().Do(ctx)
-	require.NoError(t, err)
-	require.Greater(t, len(responseAlias), 0)
-	hasAlias := false
-	numWriteIndex := 0
-	numNonWriteIndex := 0
-	for _, row := range responseAlias {
-		if row.Alias == idx.Alias(i) {
-			hasAlias = true
-			if row.IsWriteIndex == "true" {
-				require.Equal(t, index, row.Index)
-				numWriteIndex++
-			} else {
-				require.NotEqual(t, index, row.Index)
-				numNonWriteIndex++
-			}
-		}
-	}
-	require.True(t, hasAlias)
-	require.Equal(t, 1, numWriteIndex)
-
-	responseSettings, err := client.IndexGetSettings(index).Do(ctx)
-	require.NoError(t, err)
-	require.NotEmpty(t, responseSettings)
-	require.Contains(t, responseSettings, index)
-	require.NotEmpty(t, responseSettings[index].Settings)
-	require.Contains(t, responseSettings[index].Settings, "index")
-	settings, _ := responseSettings[index].Settings["index"].(map[string]interface{})
-	// Check lifecycle section
-	require.Contains(t, settings, "lifecycle")
-	lifecycle, _ := settings["lifecycle"].(map[string]interface{})
-	require.Contains(t, lifecycle, "name")
-	require.EqualValues(t, lifecycle["name"], idx.ILMPolicyName())
-	require.EqualValues(t, lifecycle["rollover_alias"], idx.Alias(i))
-	// Check shards and replicas
-	require.Contains(t, settings, "number_of_replicas")
-	require.EqualValues(t, settings["number_of_replicas"], "0")
-	require.Contains(t, settings, "number_of_shards")
-	require.EqualValues(t, settings["number_of_shards"], "1")
+	testutils.CheckSingleIndexTemplateBootstrapping(t, ctx, client, idx, info)
 }
 
 func checkMultiIndexTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster, indexNumber string, expectedNumberIndices int, templateNameEndsInDot bool) {
