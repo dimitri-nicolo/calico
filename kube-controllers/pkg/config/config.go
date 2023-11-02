@@ -93,7 +93,7 @@ type Config struct {
 	KubeControllersConfigName string `split_words:"true"`
 
 	// TenantNamespace configuration for MultiTenant.
-	TenantNamespace string `split_words:"true"`
+	TenantNamespace string `split_words:"true" default:""`
 }
 
 // Parse parses envconfig and stores in Config struct

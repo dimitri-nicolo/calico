@@ -4,6 +4,7 @@ package config
 
 import (
 	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/kelseyhightower/envconfig"
