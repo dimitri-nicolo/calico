@@ -447,10 +447,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.ManagedCluster.RESTConfig = restCfg
 
 		// TenantNamespace will be available in Multitenant Mode.
-		if v, ok := envVars[EnvTenantNamespace]; ok && len(v) > 0 && rc.ManagedCluster.TenantNamespace == "" {
-			envCfg.TenantNamespace = v
-			rc.ManagedCluster.TenantNamespace = v
-		}
+		rc.ManagedCluster.TenantNamespace = envCfg.TenantNamespace
 	}
 	if rc.AuthorizationConfiguration != nil {
 		rc.AuthorizationConfiguration.NumberOfWorkers = envCfg.AuthorizationWorkers
