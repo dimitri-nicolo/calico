@@ -1,11 +1,8 @@
 package config
 
 import (
-	"os"
-	"strings"
-
+	"fmt"
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 )
 
 type Config struct {
@@ -43,14 +40,8 @@ func GetConfig() (*Config, error) {
 	if err := envconfig.Process("", cfg); err != nil {
 		return nil, err
 	}
-
-	// Get TenantNamespace in MultiTenant Mode.
-	if len(cfg.TenantID) > 0 && cfg.TenantNamespace == "" {
-		ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-		if err != nil {
-			log.WithError(err).Fatal("unable to get the tenant namespace: %w", err)
-		}
-		cfg.TenantNamespace = strings.TrimSpace(string(ns))
+	if cfg.TenantNamespace != "" && cfg.TenantID == "" {
+		return nil, fmt.Errorf("Tenant namespace was provided but TenantID was not")
 	}
 	return cfg, nil
 }

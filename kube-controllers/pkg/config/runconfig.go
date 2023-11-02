@@ -446,15 +446,10 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		}
 		rc.ManagedCluster.RESTConfig = restCfg
 
-		// Check Multitenant Mode.
-		if v, ok := envVars[EnvTenantID]; ok && len(v) > 0 && rc.ManagedCluster.TenantNamespace == "" {
-			envCfg.TenantID = v
-			// Get TenantNamespace in MultiTenant Mode.
-			ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-			if err != nil {
-				log.WithError(err).Fatal("unable to get the tenant namespace: %w", err)
-			}
-			rc.ManagedCluster.TenantNamespace = strings.TrimSpace(string(ns))
+		// TenantNamespace will be available in Multitenant Mode.
+		if v, ok := envVars[EnvTenantNamespace]; ok && len(v) > 0 && rc.ManagedCluster.TenantNamespace == "" {
+			envCfg.TenantNamespace = v
+			rc.ManagedCluster.TenantNamespace = v
 		}
 	}
 	if rc.AuthorizationConfiguration != nil {

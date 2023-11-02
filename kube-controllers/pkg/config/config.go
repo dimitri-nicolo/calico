@@ -30,10 +30,10 @@ const (
 	EnvTLSCert            = "TLS_CRT_PATH"
 	EnvCAFile             = "CA_CRT_PATH"
 	EnvCommonName         = "CLIENT_COMMON_NAME"
-	EnvTenantID           = "TENANT_ID"
+	EnvTenantNamespace    = "TENANT_NAMESPACE"
 )
 
-var AllEnvs = []string{EnvLogLevel, EnvReconcilerPeriod, EnvEnabledControllers, EnvCompactionPeriod, EnvHealthEnabled, EnvSyncNodeLabels, EnvAutoHostEndpoints, EnvTLSKey, EnvTLSCert, EnvCAFile, EnvCommonName, EnvTenantID}
+var AllEnvs = []string{EnvLogLevel, EnvReconcilerPeriod, EnvEnabledControllers, EnvCompactionPeriod, EnvHealthEnabled, EnvSyncNodeLabels, EnvAutoHostEndpoints, EnvTLSKey, EnvTLSCert, EnvCAFile, EnvCommonName, EnvTenantNamespace}
 
 // Config represents the configuration we load from the environment variables
 type Config struct {
@@ -92,8 +92,8 @@ type Config struct {
 
 	KubeControllersConfigName string `split_words:"true"`
 
-	// TenantID configuration for MultiTenant.
-	TenantID string `split_words:"true"`
+	// TenantNamespace configuration for MultiTenant.
+	TenantNamespace string `split_words:"true"`
 }
 
 // Parse parses envconfig and stores in Config struct

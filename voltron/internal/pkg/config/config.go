@@ -5,13 +5,11 @@ package config
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/calico/voltron/pkg/version"
 )
 
@@ -170,12 +168,9 @@ func Parse() (*Config, error) {
 	if err := envconfig.Process(EnvConfigPrefix, &config); err != nil {
 		return nil, err
 	}
-	if len(config.TenantID) > 0 && config.TenantNamespace == "" {
-		ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-		if err != nil {
-			logrus.WithError(err).Fatal("unable to get the tenant namespace: %w", err)
-		}
-		config.TenantNamespace = strings.TrimSpace(string(ns))
+
+	if config.TenantNamespace != "" && config.TenantID == "" {
+		return nil, fmt.Errorf("Tenant namespace was provided but TenantID was not")
 	}
 	return &config, nil
 }
