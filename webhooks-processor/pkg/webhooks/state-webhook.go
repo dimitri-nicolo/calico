@@ -48,12 +48,16 @@ func (s *ControllerState) webhookGoroutine(
 		}
 
 		var err error
-		for _, event := range s.config.EventsFetchFunction(ctx, selector, previousRunStamp.Time, thisRunStamp) {
-			if err = rateLimiter.Event(); err != nil {
-				break
-			}
-			if err = processFunc(ctx, config, &event); err != nil {
-				break
+
+		events, err := s.config.EventsFetchFunction(ctx, selector, previousRunStamp.Time, thisRunStamp)
+		if err == nil {
+			for _, event := range events {
+				if err = rateLimiter.Event(); err != nil {
+					break
+				}
+				if err = processFunc(ctx, config, &event); err != nil {
+					break
+				}
 			}
 		}
 

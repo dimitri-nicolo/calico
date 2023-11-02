@@ -51,7 +51,7 @@ func init() {
 	}
 }
 
-func FetchSecurityEventsFunc(ctx context.Context, query *query.Query, fromStamp time.Time, toStamp time.Time) []lsApi.Event {
+func FetchSecurityEventsFunc(ctx context.Context, query *query.Query, fromStamp time.Time, toStamp time.Time) ([]lsApi.Event, error) {
 	logrus.WithField("query", query.String()).Info("Fetching security events from Linseed")
 
 	queryParameters := lsApi.EventParams{
@@ -66,11 +66,10 @@ func FetchSecurityEventsFunc(ctx context.Context, query *query.Query, fromStamp 
 		},
 	}
 
-	events, err := securityEventsClient.List(ctx, &queryParameters)
-	if err != nil {
+	if events, err := securityEventsClient.List(ctx, &queryParameters); err != nil {
 		logrus.WithError(err).Error("Linseed error occured when fetching events")
-		return []lsApi.Event{}
+		return []lsApi.Event{}, err
+	} else {
+		return events.Items, nil
 	}
-
-	return events.Items
 }
