@@ -3,8 +3,7 @@
 package config
 
 import (
-	"os"
-	"strings"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
@@ -45,14 +44,10 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
-	// Get TenantNamespace in MultiTenant Mode.
-	if len(config.TenantID) > 0 && config.TenantNamespace == "" {
-		ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-		if err != nil {
-			log.WithError(err).Fatal("unable to get the tenant namespace: %w", err)
-		}
-		config.TenantNamespace = strings.TrimSpace(string(ns))
+	if config.TenantNamespace != "" && config.TenantID == "" {
+		return nil, fmt.Errorf("Tenant namespace was provided but TenantID was not")
 	}
+
 	return config, nil
 }
 

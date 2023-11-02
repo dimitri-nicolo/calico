@@ -291,7 +291,7 @@ func run() {
 		factory := k8s.NewClientSetFactory(cfg.MultiClusterForwardingCA, cfg.MultiClusterForwardingEndpoint)
 
 		secretsNamespace := cfg.ManagementOperatorNamespace
-		if len(cfg.ExpectedTenantID) > 0 {
+		if cfg.TenantNamespace != "" {
 			secretsNamespace = cfg.TenantNamespace
 		}
 		secretsToCopy := []corev1.Secret{
