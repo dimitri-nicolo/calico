@@ -46,11 +46,17 @@ type Config struct {
 	FIPSModeEnabled bool `default:"false" split_words:"true"`
 
 	// ExpectedTenantID will be verified against x-tenant-id header for all API calls
-	// in a multi-tenant environment
-	// If left empty, x-tenant-id header is not required as Linseed will run in a
-	// single-tenant environment
+	// in a multi-tenant environment. If left empty, Linseed will not require the x-tenant-id
+	// header to be set on incoming requests. Note that ExpectedTenantID is set for both single-tenant management clusters in CC,
+	// as well as multi-tenant management clusters.
 	ExpectedTenantID string `default:"" split_words:"true"`
 
+	// TenantNamespace indicates the namespace in which this Linseed's tenant resides. If set, this means
+	// Linseed is running within a multi-tenant management cluster. If left empty, this means Linseed is either running in a
+	// single-tenant management cluster or a zero-tenant management cluster (depending on the value of ExpectedTenantID).
+	TenantNamespace string `envconfig:"TENANT_NAMESPACE" default:""`
+
+	// ManagementOperatorNamespace is the namespace in the management cluster in which the tigera-operator is running.
 	ManagementOperatorNamespace string `envconfig:"MANAGEMENT_OPERATOR_NS" default:""`
 
 	// Whether or not to run the token controller. This must be true for management clusters.
@@ -110,8 +116,7 @@ type Config struct {
 	ElasticRuntimeShards   int `envconfig:"ELASTIC_RUNTIME_INDEX_SHARDS" default:"1"`
 
 	// Configures which backend mode to use.
-	Backend         BackendType `envconfig:"BACKEND" default:"elastic-multi-index"`
-	TenantNamespace string      `envconfig:"TENANT_NAMESPACE" default:""`
+	Backend BackendType `envconfig:"BACKEND" default:"elastic-multi-index"`
 
 	// SingleIndexIndicesCreationEnabled will configure index templates, write aliases and
 	// create boostrap indices at runtime from the request received
