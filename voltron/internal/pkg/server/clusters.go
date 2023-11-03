@@ -255,7 +255,7 @@ func (cs *clusters) updateLocked(mc *jclust.ManagedCluster, recovery bool) error
 		c.ManagedCluster = *mc
 		log.Infof("New cluster ID: %q", c.ID)
 		if updated {
-			if err := c.tunnelManager.Close(); err != nil {
+			if err := c.tunnelManager.CloseTunnel(); err != nil {
 				log.Error("failed to close tunnel")
 			}
 		}
