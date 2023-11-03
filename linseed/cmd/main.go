@@ -290,19 +290,6 @@ func run() {
 
 		factory := k8s.NewClientSetFactory(cfg.MultiClusterForwardingCA, cfg.MultiClusterForwardingEndpoint)
 
-		secretsNamespace := cfg.ManagementOperatorNamespace
-		if cfg.TenantNamespace != "" {
-			secretsNamespace = cfg.TenantNamespace
-		}
-		secretsToCopy := []corev1.Secret{
-			{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      resource.VoltronLinseedPublicCert,
-					Namespace: secretsNamespace,
-				},
-			},
-		}
-
 		opts := []token.ControllerOption{
 			token.WithIssuer(token.LinseedIssuer),
 			token.WithIssuerName("tigera-linseed"),
@@ -315,10 +302,14 @@ func run() {
 			token.WithFactory(factory),
 			token.WithTenant(cfg.ExpectedTenantID),
 			token.WithHealthReport(reportHealth),
-			token.WithSecretsToCopy(secretsToCopy),
 		}
 
-		if cfg.ExpectedTenantID != "" {
+		if cfg.TenantNamespace != "" {
+			// If a TenantNamespace is provided, it means we're running in a multi-tenant management cluster.
+			opts = append(opts, token.WithNamespace(cfg.TenantNamespace))
+
+			// We need to impersonate the standard tigera-elasticsearch:tigera-linsed service account
+			// in order to authorize with any managed clusters.
 			impersonationInfo := user.DefaultInfo{
 				Name: "system:serviceaccount:tigera-elasticsearch:tigera-linseed",
 				Groups: []string{
@@ -328,7 +319,18 @@ func run() {
 				},
 			}
 			opts = append(opts, token.WithImpersonation(&impersonationInfo))
-			opts = append(opts, token.WithNamespace(cfg.TenantNamespace))
+
+			// For multi-tenant management clusters, we don't run es-kube-controllers. Instead, Linseed copies
+			// the VoltronLinseedPublicCert secret from the management cluster to the managed cluster.
+			secretsToCopy := []corev1.Secret{
+				{
+					ObjectMeta: v1.ObjectMeta{
+						Name:      resource.VoltronLinseedPublicCert,
+						Namespace: cfg.TenantNamespace,
+					},
+				},
+			}
+			opts = append(opts, token.WithSecretsToCopy(secretsToCopy))
 		}
 
 		tokenController, err := token.NewController(opts...)
