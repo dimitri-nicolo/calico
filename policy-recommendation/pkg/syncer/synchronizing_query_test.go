@@ -42,6 +42,8 @@ var _ = Describe("Syncer", func() {
 		fakeClient          *fakecalico.Clientset
 		k8sClient           kubernetes.Interface
 		cacheSet            syncer.CacheSet
+
+		mockSuffixGenerator func() string
 	)
 
 	BeforeEach(func() {
@@ -63,6 +65,10 @@ var _ = Describe("Syncer", func() {
 			Namespaces:            cache.NewSynchronizedObjectCache[*v1.Namespace](),
 			StagedNetworkPolicies: cache.NewSynchronizedObjectCache[*v3.StagedNetworkPolicy](),
 			NetworkSets:           cache.NewSynchronizedObjectCache[*v3.NetworkSet](),
+		}
+
+		mockSuffixGenerator = func() string {
+			return "xv5fb"
 		}
 
 		synchronizer = syncer.NewCacheSynchronizer(mockLmaK8sClientSet, cacheSet, mockSuffixGenerator)
@@ -432,13 +438,13 @@ var _ = Describe("Syncer", func() {
 				},
 			}
 
-			snpCache.Set(snp1.Name, &snp1)
+			snpCache.Set(ns1, &snp1)
 			_, err := fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns1).Create(testCtx, &snp1, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
-			snpCache.Set(snp2.Name, &snp2)
+			snpCache.Set(ns2, &snp2)
 			_, err = fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns2).Create(testCtx, &snp2, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
-			snpCache.Set(snp3.Name, &snp3)
+			snpCache.Set(ns3, &snp3)
 			_, err = fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns3).Create(testCtx, &snp3, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
@@ -447,7 +453,7 @@ var _ = Describe("Syncer", func() {
 			}
 			synchronizer = syncer.NewCacheSynchronizer(mockLmaK8sClientSet, cacheSet, mockSuffixGenerator)
 
-			// setup policyrec to enable namespace listening
+			// Setup policyrec to enable namespace listening
 			policyRec := v3.PolicyRecommendationScope{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: prScopeName,
@@ -506,44 +512,38 @@ var _ = Describe("Syncer", func() {
 			Expect(ok).To(BeTrue())
 			Expect(namespaceResult.StagedNetworkPolicies).ToNot(BeNil())
 
-			// deleting namespace1 would delete snp1, and remote the rule of snp2 that referenced ns1 and not touch snp3
-			_, err = fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns1).Get(
-				testCtx,
-				snp1.Name,
-				metav1.GetOptions{})
-			Expect(err).ToNot(BeNil())
-			Expect(k8serrors.IsNotFound(err)).ToNot(BeNil())
-			key := snp1.Namespace
-			cacheresult := cacheSet.StagedNetworkPolicies.Get(key)
-			Expect(cacheresult).To(BeNil())
+			// Deleting namespace1 will delete the key from the cache, and by the value from the datastore
+			// by default
+			snp1CacheItem := cacheSet.StagedNetworkPolicies.Get(snp1.Namespace)
+			Expect(snp1CacheItem).To(BeNil())
 
-			snp2Result, err := fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns2).Get(
-				testCtx,
-				snp2.Name,
-				metav1.GetOptions{})
-			Expect(err).To(BeNil())
-			Expect(snp2Result).ToNot(BeNil())
-			key = snp2.Namespace
-			cacheresult = cacheSet.StagedNetworkPolicies.Get(key)
-			Expect(cacheresult).ToNot(BeNil())
-			Expect(*snp2Result).To(Equal(*cacheresult))
-			Expect(snp2Result.Spec.Egress).To(BeEmpty())
+			snp2CacheItem := cacheSet.StagedNetworkPolicies.Get(snp2.Namespace)
+			Expect(snp2CacheItem).ToNot(BeNil())
+			Expect(snp2CacheItem.Spec.Ingress).To(Equal([]v3.Rule{
+				{
+					Destination: v3.EntityRule{
+						NamespaceSelector: ns3,
+					},
+				},
+			}))
+			Expect(snp2CacheItem.Spec.Egress).To(BeEmpty())
 
-			snp3Result, err := fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns3).Get(
-				testCtx,
-				snp3.Name,
-				metav1.GetOptions{})
-			Expect(err).To(BeNil())
-			Expect(snp3Result).ToNot(BeNil())
-			key = snp3.Namespace
-			cacheresult = cacheSet.StagedNetworkPolicies.Get(key)
-			Expect(cacheresult).ToNot(BeNil())
-			Expect(*snp3Result).To(Equal(*cacheresult))
-
+			snp3CacheItem := cacheSet.StagedNetworkPolicies.Get(snp3.Namespace)
+			Expect(snp3CacheItem).ToNot(BeNil())
+			Expect(snp3CacheItem.Spec.Ingress).To(Equal([]v3.Rule{
+				{
+					Destination: v3.EntityRule{
+						NamespaceSelector: ns2,
+					},
+				},
+			}))
+			Expect(snp3CacheItem.Spec.Egress).To(Equal([]v3.Rule{
+				{
+					Destination: v3.EntityRule{
+						NamespaceSelector: ns3,
+					},
+				},
+			}))
 		})
 	})
 })
-
-func mockSuffixGenerator() string {
-	return "xv5fb"
-}

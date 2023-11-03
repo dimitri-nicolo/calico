@@ -17,6 +17,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	k8sClient "k8s.io/client-go/kubernetes"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
@@ -49,6 +50,7 @@ type policyRecommendationReconciler struct {
 	stateLock         sync.Mutex
 	state             *policyRecommendationScopeState
 	calico            calicoclient.ProjectcalicoV3Interface
+	k8sClientSet      k8sClient.Interface
 	linseedClient     linseed.Client
 	synchronizer      client.QueryInterface
 	caches            *syncer.CacheSet
@@ -67,6 +69,7 @@ type policyRecommendationScopeState struct {
 
 func NewPolicyRecommendationReconciler(
 	calico calicoclient.ProjectcalicoV3Interface,
+	k8sClientSet k8sClient.Interface,
 	linseedClient linseed.Client,
 	synchronizer client.QueryInterface,
 	caches *syncer.CacheSet,
@@ -79,6 +82,7 @@ func NewPolicyRecommendationReconciler(
 	return &policyRecommendationReconciler{
 		state:             nil,
 		calico:            calico,
+		k8sClientSet:      k8sClientSet,
 		linseedClient:     linseedClient,
 		synchronizer:      synchronizer,
 		caches:            caches,
@@ -458,6 +462,15 @@ func (pr *policyRecommendationReconciler) syncToDatastore(ctx context.Context, c
 	clog := log.WithField("key", cacheKey)
 	key := cacheKey
 	clog.Debug("Synching to datastore")
+
+	if _, err := pr.k8sClientSet.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{}); err != nil {
+		if k8serrors.IsNotFound(err) {
+			// Namespace has been deleted, delete the recommendation from the cache
+			clog.Debug("Namespace doesn't exist, deleting StagedNetworkPolicy from cache")
+			pr.caches.StagedNetworkPolicies.Delete(namespace)
+		}
+		return nil
+	}
 
 	if cacheSnp == nil {
 		datastoreSnp, err := pr.calico.StagedNetworkPolicies(namespace).Get(ctx, key, metav1.GetOptions{})

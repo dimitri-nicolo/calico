@@ -74,7 +74,7 @@ func (r *managedClusterReconciler) startRecommendationPolicyControllerForManaged
 
 	ctx, cancel := context.WithCancel(context.Background())
 	clog.Info("Starting policy recommendation")
-	clientSetForCluster, err := r.clientSetFactory.NewClientSetForApplication(mc.Name)
+	clientSet, err := r.clientSetFactory.NewClientSetForApplication(mc.Name)
 	if err != nil {
 		clog.WithError(err).Errorf("failed to create Calico client for managed cluster %s", mc.Name)
 		cancel()
@@ -103,11 +103,12 @@ func (r *managedClusterReconciler) startRecommendationPolicyControllerForManaged
 	}
 
 	// Setup Synchronizer
-	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSetForCluster, *caches, utils.SuffixGenerator)
+	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSet, *caches, utils.SuffixGenerator)
 
 	suffixGenerator := utils.SuffixGenerator
 	policyRecController := policyrecommendation.NewPolicyRecommendationController(
-		clientSetForCluster.ProjectcalicoV3(),
+		clientSet.ProjectcalicoV3(),
+		clientSet,
 		r.linseedClient,
 		cacheSynchronizer,
 		caches,
@@ -116,11 +117,11 @@ func (r *managedClusterReconciler) startRecommendationPolicyControllerForManaged
 		&suffixGenerator,
 	)
 	stagednetworkpoliciesController := stagednetworkpolicies.NewStagedNetworkPolicyController(
-		clientSetForCluster.ProjectcalicoV3(),
+		clientSet.ProjectcalicoV3(),
 		snpResourceCache,
 	)
 	namespaceController := namespace.NewNamespaceController(
-		clientSetForCluster,
+		clientSet,
 		namespaceCache,
 		cacheSynchronizer,
 	)

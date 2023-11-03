@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	fakeK8s "k8s.io/client-go/kubernetes/fake"
-	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
@@ -71,8 +70,8 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		cacheSynchronizer client.QueryInterface
 		namespaceCache    *cache.SynchronizedObjectCache[*v1.Namespace]
 
-		fakeClient *fakecalico.Clientset
-		fakeCoreV1 corev1.CoreV1Interface
+		fakeClient    *fakecalico.Clientset
+		fakeK8sClient *fakeK8s.Clientset
 
 		mockClientSet          *lmak8s.MockClientSet
 		mockClientSetFactory   *lmak8s.MockClientSetFactory
@@ -95,7 +94,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			ctx = context.Background()
 
 			fakeClient = fakecalico.NewSimpleClientset()
-			fakeCoreV1 = fakeK8s.NewSimpleClientset().CoreV1()
+			fakeK8sClient = fakeK8s.NewSimpleClientset()
 
 			mockClientSetFactory = &lmak8s.MockClientSetFactory{}
 			mockConstructorTesting = mockConstructorTestingTNewMockClientSet{}
@@ -103,7 +102,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			mockLinseedClient = linseed.NewMockClient("")
 
 			mockClientSet.On("ProjectcalicoV3").Return(fakeClient.ProjectcalicoV3())
-			mockClientSet.On("CoreV1").Return(fakeCoreV1)
+			mockClientSet.On("CoreV1").Return(fakeK8sClient.CoreV1())
 			mockClientSetFactory.On("NewClientSetForApplication", clusterID, mock.Anything).Return(mockClientSet, nil)
 
 			By("creating a policy recommendation scope resource")
@@ -141,7 +140,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Create namespaces
 			namespaces = []*v1.Namespace{tigeraNamespace, namespace1, namespace2, namespace3, namespace4, namespace5}
 			for _, ns := range namespaces {
-				_, err = fakeCoreV1.Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+				_, err = fakeK8sClient.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 				Expect(err).To(BeNil())
 			}
 
@@ -158,8 +157,8 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
-			err := prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
+				mockClientSet.ProjectcalicoV3(), fakeK8sClient, mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
+			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
 			// Reconcile namespaces
@@ -251,7 +250,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("EgressToService 2 step updates", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
+				mockClientSet.ProjectcalicoV3(), fakeK8sClient, mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -302,7 +301,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("Namespace 2 step update", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
+				mockClientSet.ProjectcalicoV3(), fakeK8sClient, mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -347,7 +346,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("NetworkSet", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
+				mockClientSet.ProjectcalicoV3(), fakeK8sClient, mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -404,7 +403,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("PrivateNetwork", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
+				mockClientSet.ProjectcalicoV3(), fakeK8sClient, mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 
@@ -470,14 +469,14 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			ctx = context.Background()
 
 			fakeClient = fakecalico.NewSimpleClientset()
-			fakeCoreV1 = fakeK8s.NewSimpleClientset().CoreV1()
+			fakeK8sClient = fakeK8s.NewSimpleClientset()
 
 			mockClientSetFactory = &lmak8s.MockClientSetFactory{}
 			mockConstructorTesting = mockConstructorTestingTNewMockClientSet{}
 			mockClientSet = lmak8s.NewMockClientSet(mockConstructorTesting)
 
 			mockClientSet.On("ProjectcalicoV3").Return(fakeClient.ProjectcalicoV3())
-			mockClientSet.On("CoreV1").Return(fakeCoreV1)
+			mockClientSet.On("CoreV1").Return(fakeK8sClient.CoreV1())
 			mockClientSetFactory.On("NewClientSetForApplication", clusterID, mock.Anything).Return(mockClientSet, nil)
 
 			By("creating a policy recommendation scope resource")
@@ -517,7 +516,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Create namespaces
 			namespaces = []*v1.Namespace{namespace1, namespace2, namespace3, namespace4, namespace5}
 			for _, ns := range namespaces {
-				_, err = fakeCoreV1.Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+				_, err = fakeK8sClient.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 				Expect(err).To(BeNil())
 			}
 		})
@@ -529,7 +528,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 		It("Timestamp update after 2 steps", func() {
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
+				mockClientSet.ProjectcalicoV3(), fakeK8sClient, mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err = prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName, Namespace: ""})
 			Expect(err).To(BeNil())
 
@@ -567,8 +566,11 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			// Delete and reconcile Namespace3
 			By("deleting and reconciling namespace3")
-			err = fakeCoreV1.Namespaces().Delete(ctx, namespace3.Name, metav1.DeleteOptions{})
+			err = fakeK8sClient.CoreV1().Namespaces().Delete(ctx, namespace3.Name, metav1.DeleteOptions{})
 			Expect(err).To(BeNil())
+			err = fakeClient.ProjectcalicoV3().StagedNetworkPolicies(namespace3.Name).Delete(ctx, "namespace-isolation.namespace3-xv5fb", metav1.DeleteOptions{})
+			Expect(err).To(BeNil())
+
 			err = nsReconciler.Reconcile(types.NamespacedName{Name: namespace3.Name, Namespace: namespace3.Namespace})
 			Expect(err).To(BeNil())
 
@@ -592,7 +594,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			ctx = context.Background()
 
 			fakeClient = fakecalico.NewSimpleClientset()
-			fakeCoreV1 = fakeK8s.NewSimpleClientset().CoreV1()
+			fakeK8sClient = fakeK8s.NewSimpleClientset()
 
 			mockClientSetFactory = &lmak8s.MockClientSetFactory{}
 			mockConstructorTesting = mockConstructorTestingTNewMockClientSet{}
@@ -600,7 +602,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			mockLinseedClient = linseed.NewMockClient("")
 
 			mockClientSet.On("ProjectcalicoV3").Return(fakeClient.ProjectcalicoV3())
-			mockClientSet.On("CoreV1").Return(fakeCoreV1)
+			mockClientSet.On("CoreV1").Return(fakeK8sClient.CoreV1())
 			mockClientSetFactory.On("NewClientSetForApplication", clusterID, mock.Anything).Return(mockClientSet, nil)
 
 			By("creating a policy recommendation scope resource")
@@ -640,7 +642,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 			// Create namespaces
 			namespaces = []*v1.Namespace{tigeraNamespace, namespace1, namespace2, namespace3, namespace4, namespace5}
 			for _, ns := range namespaces {
-				_, err = fakeCoreV1.Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+				_, err = fakeK8sClient.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 				Expect(err).To(BeNil())
 			}
 
@@ -657,7 +659,7 @@ var _ = Describe("Tests policy recommendation controller", func() {
 
 			// Reconcile policy recommendation scope
 			prsReconciler := policyrecommendation.NewPolicyRecommendationReconciler(
-				mockClientSet.ProjectcalicoV3(), mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
+				mockClientSet.ProjectcalicoV3(), fakeK8sClient, mockLinseedClient, cacheSynchronizer, caches, mockClock, serviceSuffixName, &suffixGenerator)
 			err := prsReconciler.Reconcile(types.NamespacedName{Name: policyRecommendationScopeName})
 			Expect(err).To(BeNil())
 

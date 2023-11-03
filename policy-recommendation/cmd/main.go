@@ -158,6 +158,7 @@ func main() {
 	suffixGenerator := utils.SuffixGenerator
 	managementStandalonePolicyRecController := policyrecommendation.NewPolicyRecommendationController(
 		clientSet.ProjectcalicoV3(),
+		clientSet,
 		linseedClient,
 		cacheSynchronizer,
 		caches,

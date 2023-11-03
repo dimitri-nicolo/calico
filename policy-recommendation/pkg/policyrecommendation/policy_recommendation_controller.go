@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/fields"
+	k8sClient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -42,6 +43,7 @@ type policyRecommendationController struct {
 
 func NewPolicyRecommendationController(
 	calico calicoclient.ProjectcalicoV3Interface,
+	k8sClientSet k8sClient.Interface,
 	linseedClient linseed.Client,
 	synchronizer client.QueryInterface,
 	caches *syncer.CacheSet,
@@ -51,6 +53,7 @@ func NewPolicyRecommendationController(
 ) controller.Controller {
 	prReconciler := &policyRecommendationReconciler{
 		calico:            calico,
+		k8sClientSet:      k8sClientSet,
 		linseedClient:     linseedClient,
 		synchronizer:      synchronizer,
 		caches:            caches,

@@ -13,8 +13,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	fakek8s "k8s.io/client-go/kubernetes/fake"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
@@ -365,7 +367,8 @@ var _ = Describe("policyRecommendationReconciler", func() {
 		ctx = context.Background()
 		client = fake.NewSimpleClientset().ProjectcalicoV3()
 		pr = &policyRecommendationReconciler{
-			calico: client,
+			calico:       client,
+			k8sClientSet: fakek8s.NewSimpleClientset(),
 			caches: &syncer.CacheSet{
 				StagedNetworkPolicies: cache.NewSynchronizedObjectCache[*v3.StagedNetworkPolicy](),
 			},
@@ -520,14 +523,23 @@ var _ = Describe("policyRecommendationReconciler", func() {
 			// Add the objects to the datastore
 			addObjects(ctx, client, pr, store)
 
-			// Call the syncToDatastore function
-			err := pr.syncToDatastore(ctx, key, namespace, cache)
+			// Create the namespace
+			_, err := pr.k8sClientSet.CoreV1().Namespaces().Create(ctx, &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
+				},
+			}, metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
 
+			// Call the syncToDatastore function
+			err = pr.syncToDatastore(ctx, key, namespace, cache)
+			if expectedErr != nil {
+				Expect(err).To(Equal(expectedErr))
+			}
 			// Check the results
 			if expectedErr != nil {
 				Expect(err).To(MatchError(expectedErr))
 			} else {
-
 				actual, err := pr.calico.StagedNetworkPolicies(namespace).List(ctx, metav1.ListOptions{
 					LabelSelector: labelSelector,
 				})

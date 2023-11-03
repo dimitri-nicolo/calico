@@ -178,21 +178,14 @@ func (s *synchronizer) synchronizeFromNamespaces(ctx context.Context, query Name
 		if !ok {
 			return nil, fmt.Errorf("received unrecognizable Key format %s", reflect.TypeOf(query.Source.Key))
 		}
-		// Iterate through the generated StagedNetworkPolicies and remove all those in the deleted namespace
+
+		// Remove key from cache
+		s.cacheSet.StagedNetworkPolicies.Delete(namespaceKey.Name)
+
+		// Remove all references from rules in the remaining StagedNetworkPolicies
 		errors := make(map[string]error, 0)
 		var results []*v3.StagedNetworkPolicy
 		for _, snp := range s.cacheSet.StagedNetworkPolicies.GetAll() {
-			snpName := snp.Name
-			if snp.Namespace == namespaceKey.Name {
-				err := s.deleteUntrackedSNP(ctx, *snp)
-				if err != nil {
-					errors[snpName] = err
-				} else {
-					results = append(results, snp)
-				}
-				continue
-			}
-
 			snp.Spec.Ingress = removeNamespaceContainingRule(snp.Spec.Ingress, namespaceKey.Name)
 			snp.Spec.Egress = removeNamespaceContainingRule(snp.Spec.Egress, namespaceKey.Name)
 
@@ -205,7 +198,7 @@ func (s *synchronizer) synchronizeFromNamespaces(ctx context.Context, query Name
 			}
 
 			if err != nil {
-				errors[snpName] = err
+				errors[snp.Name] = err
 			} else {
 				results = append(results, updatedSnp)
 			}
@@ -285,17 +278,15 @@ func (s *synchronizer) addRecommendationToCache(ctx context.Context, namespace v
 func (s *synchronizer) updateSNP(ctx context.Context, snp *v3.StagedNetworkPolicy) (*v3.StagedNetworkPolicy, error) {
 	namespace := snp.GetNamespace()
 	key := namespace
+	// Update the cache
+	s.cacheSet.StagedNetworkPolicies.Set(key, snp)
+	// Update the cluster
 	result, err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Update(
-		ctx,
-		snp,
-		metav1.UpdateOptions{},
+		ctx, snp, metav1.UpdateOptions{},
 	)
-
 	if err != nil {
 		return nil, err
 	}
-
-	s.cacheSet.StagedNetworkPolicies.Set(key, result)
 
 	return result, nil
 }
@@ -303,17 +294,16 @@ func (s *synchronizer) updateSNP(ctx context.Context, snp *v3.StagedNetworkPolic
 func (s *synchronizer) deleteUntrackedSNP(ctx context.Context, snp v3.StagedNetworkPolicy) error {
 	namespace := snp.GetNamespace()
 	key := namespace
+	// Delete the cache item
+	s.cacheSet.StagedNetworkPolicies.Delete(key)
+	// Delete the cluster item
 	err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Delete(
-		ctx,
-		snp.GetName(),
-		metav1.DeleteOptions{},
+		ctx, snp.GetName(), metav1.DeleteOptions{},
 	)
-
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
 	}
 
-	s.cacheSet.StagedNetworkPolicies.Delete(key)
 	return nil
 }
 
