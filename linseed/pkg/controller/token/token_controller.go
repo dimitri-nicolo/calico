@@ -466,13 +466,13 @@ func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *v3.ManagedC
 				managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(mc.Name)
 				if err != nil {
 					log.WithError(err).Error("failed to get client for cluster")
-					retry(rc, secret.String(), *secret, secretChan, stop)
+					retry(rc, fmt.Sprintf("%s/%s", secret.Namespace, secret.Name), *secret, secretChan, stop)
 					continue
 				}
 
 				if err = c.reconcileSecretsForCluster(mc, []corev1.Secret{*secret}, managedClient); err != nil {
 					log.WithError(err).Error("failed to reconcile secrets for cluster")
-					retry(rc, secret.String(), *secret, secretChan, stop)
+					retry(rc, fmt.Sprintf("%s/%s", secret.Namespace, secret.Name), *secret, secretChan, stop)
 				}
 			}
 		}
