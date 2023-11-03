@@ -31,8 +31,8 @@ import (
 // and assert that all work together as expected to implement the desired behavior.
 
 func TestWebhooksProcessorExitsOnCancel(t *testing.T) {
-	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
-		return []lsApi.Event{}
+	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+		return []lsApi.Event{}, nil
 	})
 
 	// Just making sure everything can run without crashing
@@ -47,8 +47,8 @@ func TestWebhooksProcessorExitsOnCancel(t *testing.T) {
 }
 
 func TestWebhookHealthy(t *testing.T) {
-	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
-		return []lsApi.Event{}
+	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+		return []lsApi.Event{}, nil
 	})
 
 	startTime := time.Now()
@@ -69,8 +69,8 @@ func TestWebhookHealthy(t *testing.T) {
 
 func TestWebhookNonHealthyStates(t *testing.T) {
 	testNonHealthyState := func(webhook *api.SecurityEventWebhook, reason string, message string) {
-		testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
-			return []lsApi.Event{}
+		testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+			return []lsApi.Event{}, nil
 		})
 
 		startTime := time.Now()
@@ -150,8 +150,8 @@ func TestWebhookSent(t *testing.T) {
 		Time:        lsApi.NewEventTimestamp(time.Now().Unix()),
 		Type:        "runtime_security",
 	}
-	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
-		return []lsApi.Event{testEvent}
+	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+		return []lsApi.Event{testEvent}, nil
 	})
 
 	wh := testutils.NewTestWebhook("test-wh")
@@ -181,8 +181,8 @@ func TestSendsOneWebhookPerEvent(t *testing.T) {
 		Time:        lsApi.NewEventTimestamp(time.Now().Unix()),
 		Type:        "runtime_security",
 	}
-	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
-		return []lsApi.Event{testEvent1, testEvent2}
+	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+		return []lsApi.Event{testEvent1, testEvent2}, nil
 	})
 
 	wh := testutils.NewTestWebhook("test-wh")
@@ -203,10 +203,10 @@ func TestEventsFetchedUsingNonOverlappingIntervals(t *testing.T) {
 	// and make sure they don't overlap.
 	testStartTime := time.Now()
 	requestedTimes := [][]time.Time{}
-	testState := Setup(t, func(ctx context.Context, query *query.Query, from time.Time, to time.Time) []lsApi.Event {
+	testState := Setup(t, func(ctx context.Context, query *query.Query, from time.Time, to time.Time) ([]lsApi.Event, error) {
 		logrus.Infof("Reading events (from: %s, to: %s)", from, to)
 		requestedTimes = append(requestedTimes, []time.Time{from, to})
-		return []lsApi.Event{}
+		return []lsApi.Event{}, nil
 	})
 
 	wh := testutils.NewTestWebhook("test-wh")
@@ -234,8 +234,8 @@ func TestTooManyEventsAreRateLimited(t *testing.T) {
 	// Testing what happens when we get a burst of events that's larger than the rate limiter allows...
 	// In this case we simply ignore the additional events. That doesn't feel right...
 	fetchedEvents := []lsApi.Event{newEvent(1), newEvent(2), newEvent(3), newEvent(4), newEvent(5), newEvent(6)}
-	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
-		return fetchedEvents
+	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+		return fetchedEvents, nil
 	})
 
 	// TODO: Add a check to test that the rate limiter is set to less than len(fetchedEvents)
@@ -273,8 +273,8 @@ func TestGenericProvider(t *testing.T) {
 	defer ts.Close()
 
 	fetchedEvents := []lsApi.Event{newEvent(1)}
-	testState := NewTestState(func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
-		return fetchedEvents
+	testState := NewTestState(func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+		return fetchedEvents, nil
 	}, DefaultProviders())
 
 	SetupWithTestState(t, testState)
@@ -322,8 +322,8 @@ func TestBackoffOnInitialFailure(t *testing.T) {
 	defer ts.Close()
 
 	fetchedEvents := []lsApi.Event{newEvent(1)}
-	testState := NewTestState(func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event {
-		return fetchedEvents
+	testState := NewTestState(func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+		return fetchedEvents, nil
 	}, DefaultProviders())
 
 	SetupWithTestState(t, testState)
@@ -396,12 +396,12 @@ type TestState struct {
 	Running          bool
 	Stop             func()
 	WebHooksAPI      *testutils.FakeSecurityEventWebhook
-	GetEvents        func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event
+	GetEvents        func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error)
 	Providers        map[api.SecurityEventWebhookConsumer]providers.Provider
 	FetchingInterval time.Duration
 }
 
-func NewTestState(getEvents func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event, providers map[api.SecurityEventWebhookConsumer]providers.Provider) *TestState {
+func NewTestState(getEvents func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error), providers map[api.SecurityEventWebhookConsumer]providers.Provider) *TestState {
 	testState := &TestState{}
 	testState.WebHooksAPI = &testutils.FakeSecurityEventWebhook{}
 	testState.GetEvents = getEvents
@@ -416,7 +416,7 @@ func (t *TestState) TestSlackProvider() *TestProvider {
 	return t.Providers[api.SecurityEventWebhookConsumerSlack].(*TestProvider)
 }
 
-func Setup(t *testing.T, getEvents func(context.Context, *query.Query, time.Time, time.Time) []lsApi.Event) *TestState {
+func Setup(t *testing.T, getEvents func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error)) *TestState {
 	testProviders := make(map[api.SecurityEventWebhookConsumer]providers.Provider)
 	testProviders[api.SecurityEventWebhookConsumerSlack] = NewTestProvider()
 
