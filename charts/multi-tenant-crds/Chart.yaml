@@ -1,0 +1,11 @@
+apiVersion: v2
+name: multi-tenant-crds
+description: |
+  A Helm chart that collects CRDs for a multi-tenant management cluster
+type: application
+keywords:
+  - multi-tenant
+  - crds
+  - tigera-operator
+version: 0.1.0
+appVersion: "v3.18.1-ep2"

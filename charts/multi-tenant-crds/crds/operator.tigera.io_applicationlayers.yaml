@@ -3,22 +3,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.3
-  name: intrusiondetections.operator.tigera.io
+  name: applicationlayers.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
-    kind: IntrusionDetection
-    listKind: IntrusionDetectionList
-    plural: intrusiondetections
-    singular: intrusiondetection
+    kind: ApplicationLayer
+    listKind: ApplicationLayerList
+    plural: applicationlayers
+    singular: applicationlayer
   scope: Cluster
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: IntrusionDetection installs the components required for Tigera
-          intrusion detection. At most one instance of this resource is supported.
-          It must be named "tigera-secure".
+        description: ApplicationLayer is the Schema for the applicationlayers API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,88 +31,62 @@ spec:
           metadata:
             type: object
           spec:
-            description: Specification of the desired state for Tigera intrusion detection.
+            description: ApplicationLayerSpec defines the desired state of ApplicationLayer
             properties:
-              anomalyDetection:
-                description: AnomalyDetection is now deprecated, and configuring it
-                  has no effect.
+              applicationLayerPolicy:
+                description: Application Layer Policy controls whether or not ALP
+                  enforcement is enabled for the cluster. When enabled, NetworkPolicies
+                  with HTTP Match rules may be defined to opt-in workloads for traffic
+                  enforcement on the application layer.
+                type: string
+              envoy:
+                description: User-configurable settings for the Envoy proxy.
                 properties:
-                  storageClassName:
-                    description: StorageClassName is now deprecated, and configuring
-                      it has no effect.
-                    type: string
+                  useRemoteAddress:
+                    default: false
+                    description: If set to true, the Envoy connection manager will
+                      use the real remote address of the client connection when determining
+                      internal versus external origin and manipulating various headers.
+                    type: boolean
+                  xffNumTrustedHops:
+                    default: 0
+                    description: The number of additional ingress proxy hops from
+                      the right side of the x-forwarded-for HTTP header to trust when
+                      determining the origin client’s IP address. 0 is permitted,
+                      but >=1 is the typical setting.
+                    format: int32
+                    maximum: 2147483647
+                    minimum: 0
+                    type: integer
                 type: object
-              componentResources:
-                description: ComponentResources can be used to customize the resource
-                  requirements for each component. Only DeepPacketInspection is supported
-                  for this spec.
-                items:
-                  description: The ComponentResource struct associates a ResourceRequirements
-                    with a component by name
-                  properties:
-                    componentName:
-                      description: ComponentName is an enum which identifies the component
-                      enum:
-                      - DeepPacketInspection
-                      type: string
-                    resourceRequirements:
-                      description: ResourceRequirements allows customization of limits
-                        and requests for compute resources such as cpu and memory.
-                      properties:
-                        claims:
-                          description: "Claims lists the names of resources, defined
-                            in spec.resourceClaims, that are used by this container.
-                            \n This is an alpha field and requires enabling the DynamicResourceAllocation
-                            feature gate. \n This field is immutable. It can only
-                            be set for containers."
-                          items:
-                            description: ResourceClaim references one entry in PodSpec.ResourceClaims.
-                            properties:
-                              name:
-                                description: Name must match the name of one entry
-                                  in pod.spec.resourceClaims of the Pod where this
-                                  field is used. It makes that resource available
-                                  inside a container.
-                                type: string
-                            required:
-                            - name
-                            type: object
-                          type: array
-                          x-kubernetes-list-map-keys:
-                          - name
-                          x-kubernetes-list-type: map
-                        limits:
-                          additionalProperties:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          description: 'Limits describes the maximum amount of compute
-                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
-                          type: object
-                        requests:
-                          additionalProperties:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          description: 'Requests describes the minimum amount of compute
-                            resources required. If Requests is omitted for a container,
-                            it defaults to Limits if that is explicitly specified,
-                            otherwise to an implementation-defined value. More info:
-                            https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
-                          type: object
-                      type: object
-                  required:
-                  - componentName
-                  - resourceRequirements
-                  type: object
-                type: array
+              logCollection:
+                description: Specification for application layer (L7) log collection.
+                properties:
+                  collectLogs:
+                    description: This setting enables or disable log collection. Allowed
+                      values are Enabled or Disabled.
+                    type: string
+                  logIntervalSeconds:
+                    description: 'Interval in seconds for sending L7 log information
+                      for processing. Default: 5 sec'
+                    format: int64
+                    type: integer
+                  logRequestsPerInterval:
+                    description: 'Maximum number of unique L7 logs that are sent LogIntervalSeconds.
+                      Adjust this to limit the number of L7 logs sent per LogIntervalSeconds
+                      to felix for further processing, use negative number to ignore
+                      limits. Default: -1'
+                    format: int64
+                    type: integer
+                type: object
+              webApplicationFirewall:
+                description: WebApplicationFirewall controls whether or not ModSecurity
+                  enforcement is enabled for the cluster. When enabled, Services may
+                  opt-in to having ingress traffic examed by ModSecurity.
+                type: string
             type: object
           status:
-            description: Most recently observed state for Tigera intrusion detection.
+            description: ApplicationLayerStatus defines the observed state of ApplicationLayer
             properties:
               conditions:
                 description: Conditions represents the latest observed set of conditions
