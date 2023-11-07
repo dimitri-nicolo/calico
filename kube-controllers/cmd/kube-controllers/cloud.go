@@ -10,8 +10,6 @@ import (
 	"os"
 	"regexp"
 
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/managedcluster"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
@@ -41,8 +39,4 @@ func getCloudManagedClusterControllerManagers(esK8sREST relastic.RESTClient, esC
 		managedcluster.NewElasticsearchController(esK8sREST, esClientBuilder, cfg.Controllers.ManagedCluster.ElasticConfig),
 		managedcluster.NewLicensingController(cfg.Controllers.ManagedCluster.LicenseConfig),
 	}
-}
-
-func addBuildSpecificControllers(cfg *config.RunConfig, cc *controllerControl, k8sClientset *kubernetes.Clientset) {
-
 }
