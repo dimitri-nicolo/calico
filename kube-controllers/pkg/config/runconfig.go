@@ -73,7 +73,6 @@ type ControllersConfig struct {
 	ElasticsearchConfiguration *ElasticsearchCfgControllerCfg
 	AuthorizationConfiguration *AuthorizationControllerCfg
 	ManagedCluster             *ManagedClusterControllerConfig
-	ImageAssurance             *ImageAssuranceConfig
 }
 
 type GenericControllerConfig struct {
@@ -116,23 +115,8 @@ type ManagedClusterControllerConfig struct {
 	MultiClusterForwardingCA       string
 	ElasticConfig                  ElasticsearchCfgControllerCfg
 	LicenseConfig                  LicenseControllerCfg
-	ImageAssuranceConfig           ImageAssuranceConfig
 	TenantNamespace                string
 }
-
-type ImageAssuranceConfig struct {
-	GenericControllerConfig
-	IntrusionDetectionControllerClusterRoleName string
-	AdmissionControllerClusterRoleName          string
-	CRAdaptorClusterRoleName                    string
-	ScannerClusterRoleName                      string
-	ScannerCLIClusterRoleName                   string
-	ScannerCLITokenSecretName                   string
-	OperatorCloudClusterRoleName                string
-	RuntimeCleanerClusterRoleName               string
-	ClusterScannerClusterRoleName               string
-}
-
 type RunConfigController struct {
 	out chan RunConfig
 }
@@ -646,8 +630,6 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 			case "authorization":
 				rc.AuthorizationConfiguration = &AuthorizationControllerCfg{}
 				// authorization not supported on KubeControllersConfiguration yet
-			case "imageassurance":
-				rc.ImageAssurance = &ImageAssuranceConfig{}
 			default:
 				log.Fatalf("Invalid controller '%s' provided.", controllerType)
 			}
