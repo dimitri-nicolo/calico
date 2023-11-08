@@ -848,6 +848,20 @@ func assertManagementConfiguration(managementK8sCli kubernetes.Interface, operat
 
 	for _, userSecret := range privateUserSecrets.Items {
 		userName := userSecret.Labels[ElasticsearchUserNameLabel]
+		if userName == "tigera-ee-ad-job" {
+			// The secret with user name tigera-ee-ad-job only exists because we have
+			// buggy operator code in Enterprise releases prior to 3.18ep2 that requires
+			// that secret to exist.  Specifically, in an MCM setup where the management
+			// cluster is >=3.18ep2 and someone then tries to provision a managed
+			// cluster with <3.18ep2, the managed cluster install will fail if this
+			// secret does not exist in the management cluster.
+			//
+			// Therefore kube-controllers continues to provision that secret - to make
+			// the backlevel operators happy - but it does not provision any of the
+			// corresponding 'private' resources, and hence we skip the rest of this
+			// loop iteration.
+			continue
+		}
 		user, exists := privateUserMap[esusers.ElasticsearchUserName(userName)]
 
 		Expect(exists).Should(BeTrue(), fmt.Sprintf("missing privateUserMap for %v (%v)", esusers.ElasticsearchUserName(userName), userName))
@@ -920,6 +934,20 @@ func assertManagedConfiguration(managedk8sCli, managementK8sCli kubernetes.Inter
 
 	for _, userSecret := range privateUserSecrets.Items {
 		userName := userSecret.Labels[ElasticsearchUserNameLabel]
+		if userName == "tigera-ee-ad-job" {
+			// The secret with user name tigera-ee-ad-job only exists because we have
+			// buggy operator code in Enterprise releases prior to 3.18ep2 that requires
+			// that secret to exist.  Specifically, in an MCM setup where the management
+			// cluster is >=3.18ep2 and someone then tries to provision a managed
+			// cluster with <3.18ep2, the managed cluster install will fail if this
+			// secret does not exist in the management cluster.
+			//
+			// Therefore kube-controllers continues to provision that secret - to make
+			// the backlevel operators happy - but it does not provision any of the
+			// corresponding 'private' resources, and hence we skip the rest of this
+			// loop iteration.
+			continue
+		}
 		user, exists := privateUserMap[esusers.ElasticsearchUserName(userName)]
 
 		Expect(exists).Should(BeTrue(), fmt.Sprintf("missing privateUserMap for %v (%v)", esusers.ElasticsearchUserName(userName), userName))

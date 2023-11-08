@@ -21,6 +21,7 @@ const (
 	ElasticsearchUserNameComplianceSnapshotter ElasticsearchUserName = "tigera-ee-compliance-snapshotter"
 	ElasticsearchUserNameComplianceServer      ElasticsearchUserName = "tigera-ee-compliance-server"
 	ElasticsearchUserNameIntrusionDetection    ElasticsearchUserName = "tigera-ee-intrusion-detection"
+	ElasticsearchUserNameADJob                 ElasticsearchUserName = "tigera-ee-ad-job"
 	ElasticsearchUserNameSasha                 ElasticsearchUserName = "tigera-ee-sasha"
 	ElasticsearchUserNamePerformanceHotspots   ElasticsearchUserName = "tigera-ee-performance-hotspots"
 	ElasticsearchUserNamePolicyRecommendation  ElasticsearchUserName = "tigera-ee-policy-recommendation"
@@ -226,6 +227,16 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 		},
 		ElasticsearchUserNameIntrusionDetection: {
 			Username: formatName(ElasticsearchUserNameIntrusionDetection, clusterName, management, false),
+		},
+		// This one is needed, to trigger provisioning of the
+		// "tigera-ee-ad-job-elasticsearch-access" secret, only because we have buggy
+		// operator code in Enterprise releases prior to 3.18ep2 that requires that secret
+		// to exist.  Specifically, in an MCM setup where the management cluster is
+		// >=3.18ep2 and someone then tries to provision a managed cluster with <3.18ep2,
+		// the managed cluster install will fail if this secret does not exist in the
+		// management cluster.
+		ElasticsearchUserNameADJob: {
+			Username: formatName(ElasticsearchUserNameADJob, clusterName, management, false),
 		},
 		ElasticsearchUserNamePerformanceHotspots: {
 			Username: formatName(ElasticsearchUserNamePerformanceHotspots, clusterName, management, false),
