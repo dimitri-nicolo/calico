@@ -372,6 +372,7 @@ type Block struct {
 	inUseJumpTargets   set.Set[string]
 	policyDebugEnabled bool
 	trampolineIdx      int
+	lastTrampolineAddr int
 	deferredErr        error
 }
 
@@ -677,14 +678,25 @@ const trampolineHeadroom = 100
 const trampolineInterval = math.MaxInt16 - trampolineHeadroom
 
 func (b *Block) addInsnWithOffsetFixup(insn Insn, targetLabel string) {
-	if len(b.insns)%trampolineInterval == trampolineInterval-1 {
-		b.writeTrampoline()
-	}
+	b.maybeWriteTrampoline(insn)
 
 	b.addInsnWithOffsetFixupNoTrampoline(insn, targetLabel)
 }
 
+func (b *Block) maybeWriteTrampoline(nextInsn Insn) {
+	if len(b.insns)-b.lastTrampolineAddr < trampolineInterval {
+		return
+	}
+	if nextInsn.OpCode() == LoadImm64Pt2 {
+		// LoadImm64 is a 2-part instruction, we must not split it.
+		return
+	}
+	b.writeTrampoline()
+}
+
 func (b *Block) writeTrampoline() {
+	b.lastTrampolineAddr = len(b.insns)
+
 	if len(b.fixUps) == 0 {
 		return
 	}

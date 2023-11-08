@@ -213,12 +213,16 @@ func TestSingleTrampoline(t *testing.T) {
 
 	// Calculate where the trampoline should be.  We sort the jumps within
 	// the trampoline for determinacy so longA will be before longB.
-	const trampolineStartAddr = trampolineInterval - 1
-	const longATrampolineAddr = trampolineStartAddr + 1
-	const longBTrampolineAddr = trampolineStartAddr + 2
-	const trampolineEndAddr = trampolineStartAddr + 3
-	const jumpToBAddr = 0
-	const jumpToAAddr = 1
+	const (
+		trampolineStartAddr = trampolineInterval + iota
+		longATrampolineAddr
+		longBTrampolineAddr
+		trampolineEndAddr
+	)
+	const (
+		jumpToBAddr = iota
+		jumpToAAddr
+	)
 	Expect(insns[jumpToBAddr]).To(Equal(MakeInsn(JumpEq64, R1, R2, longBTrampolineAddr-jumpToBAddr-1, 0)))
 	Expect(insns[jumpToAAddr]).To(Equal(MakeInsn(JumpEq64, R1, R2, longATrampolineAddr-jumpToAAddr-1, 0)))
 
@@ -230,21 +234,79 @@ func TestSingleTrampoline(t *testing.T) {
 	// Jump to skip the trampoline itself.
 	Expect(insns[trampolineStartAddr]).To(Equal(MakeInsn(JumpA, 0, 0, 2, 0)))
 	// Jump to longA
-	Expect(insns[longATrampolineAddr]).To(Equal(MakeInsn(JumpA, 0, 0, 4, 0)))
+	Expect(insns[longATrampolineAddr]).To(Equal(MakeInsn(JumpA, 0, 0, 3, 0)))
 	// Jump to longB
-	Expect(insns[longBTrampolineAddr]).To(Equal(MakeInsn(JumpA, 0, 0, 5, 0)))
+	Expect(insns[longBTrampolineAddr]).To(Equal(MakeInsn(JumpA, 0, 0, 4, 0)))
 
-	// 3 no-ops fall out of the trampoline interval because there are 2 user
-	// instructions in the block along with the first trampoline instruction.
+	// 2 no-ops fall out of the trampoline interval because there are 2 user
+	// instructions in the block.
 	Expect(insns[trampolineEndAddr]).To(Equal(noOp))
 	Expect(insns[trampolineEndAddr+1]).To(Equal(noOp))
-	Expect(insns[trampolineEndAddr+2]).To(Equal(noOp))
 
 	// longA
-	Expect(insns[trampolineEndAddr+3]).To(Equal(MakeInsn(Mov64, R1, R2, 0, 0)))
-	Expect(insns[trampolineEndAddr+4]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
+	Expect(insns[trampolineEndAddr+2]).To(Equal(MakeInsn(Mov64, R1, R2, 0, 0)))
+	Expect(insns[trampolineEndAddr+3]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
 	// longB
 	Expect(insns[trampolineEndAddr+4]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
+}
+
+func TestTrampolineLoadImm64(t *testing.T) {
+	RegisterTestingT(t)
+
+	b := NewBlock(false)
+
+	// Make a couple of long jumps, then lots of no-ops to trigger creation of
+	// a trampoline.
+	b.JumpEq64(R1, R2, "longB")
+	b.JumpEq64(R1, R2, "longA")
+	for i := 0; i < trampolineInterval-3; i++ {
+		b.NoOp()
+	}
+	b.LoadImm64(R3, 1234)
+
+	// Some instructions to jump to...
+	// Since the trampoline was blocked by the LoadImm64, this longA
+	// label actually labels the first instruction of the trampoline, which
+	// means we don't get a "longA" jump inside the trampoline.
+	b.LabelNextInsn("longA")
+	b.Mov64(R1, R2)
+	b.Exit()
+	b.LabelNextInsn("longB")
+	b.Exit()
+
+	insns, err := b.Assemble()
+	Expect(err).NotTo(HaveOccurred())
+	logSummarisingNoOps(t, insns)
+
+	// Calculate where the trampoline should be.  We sort the jumps within
+	// the trampoline for determinacy so longA will be before longB.
+	const (
+		trampolineStartAddr = trampolineInterval + 1 + iota
+		longBTrampolineAddr
+		trampolineEndAddr
+	)
+	const (
+		jumpToBAddr = iota
+		jumpToAAddr
+	)
+	Expect(insns[jumpToBAddr]).To(Equal(MakeInsn(JumpEq64, R1, R2, longBTrampolineAddr-jumpToBAddr-1, 0)))
+	Expect(insns[jumpToAAddr]).To(Equal(MakeInsn(JumpEq64, R1, R2, trampolineStartAddr-jumpToAAddr-1, 0)))
+
+	noOp := MakeInsn(Mov64, R0, R0, 0, 0)
+	for i := 2; i < trampolineInterval-1; i++ {
+		Expect(insns[i]).To(Equal(noOp))
+	}
+
+	// Jump to skip the trampoline itself.
+	Expect(insns[trampolineStartAddr]).To(Equal(MakeInsn(JumpA, 0, 0, 1, 0)))
+	// Jump to longB
+	Expect(insns[longBTrampolineAddr]).To(Equal(MakeInsn(JumpA, 0, 0, 2, 0)))
+
+	// longA
+	Expect(insns[trampolineEndAddr]).To(Equal(MakeInsn(Mov64, R1, R2, 0, 0)))
+	Expect(insns[trampolineEndAddr+1]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
+	// longB
+	Expect(insns[trampolineEndAddr+2]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
 }
 
 func TestShortJumpAndTrampoline(t *testing.T) {
@@ -272,11 +334,16 @@ func TestShortJumpAndTrampoline(t *testing.T) {
 
 	// Calculate where the trampoline should be.  We sort the jumps within
 	// the trampoline for determinacy so longA will be before longB.
-	const trampolineStartAddr = trampolineInterval - 1
-	const longATrampolineAddr = trampolineStartAddr + 1
-	const trampolineEndAddr = trampolineStartAddr + 2
-	const jumpToShort = 0
-	const jumpToLong = 1
+	const (
+		trampolineStartAddr = trampolineInterval + iota
+		longATrampolineAddr
+		trampolineEndAddr
+	)
+	const (
+		jumpToShort = iota
+		jumpToLong
+	)
+
 	Expect(insns[jumpToShort]).To(Equal(MakeInsn(JumpEq64, R1, R2, 1, 0)))
 	Expect(insns[jumpToLong]).To(Equal(MakeInsn(JumpEq64, R1, R2, longATrampolineAddr-jumpToLong-1, 0)))
 
@@ -288,17 +355,16 @@ func TestShortJumpAndTrampoline(t *testing.T) {
 	// Jump to skip the trampoline itself.
 	Expect(insns[trampolineStartAddr]).To(Equal(MakeInsn(JumpA, 0, 0, 1, 0)))
 	// Jump to longA
-	Expect(insns[longATrampolineAddr]).To(Equal(MakeInsn(JumpA, 0, 0, 3, 0)))
+	Expect(insns[longATrampolineAddr]).To(Equal(MakeInsn(JumpA, 0, 0, 2, 0)))
 
-	// 3 no-ops fall out of the trampoline interval because there are 2 user
-	// instructions in the block along with the first trampoline instruction.
+	// 2 no-ops fall out of the trampoline interval because there are 2 user
+	// instructions in the block.
 	Expect(insns[trampolineEndAddr]).To(Equal(noOp))
 	Expect(insns[trampolineEndAddr+1]).To(Equal(noOp))
-	Expect(insns[trampolineEndAddr+2]).To(Equal(noOp))
 
 	// longA
-	Expect(insns[trampolineEndAddr+3]).To(Equal(MakeInsn(Mov64, R1, R2, 0, 0)))
-	Expect(insns[trampolineEndAddr+4]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
+	Expect(insns[trampolineEndAddr+2]).To(Equal(MakeInsn(Mov64, R1, R2, 0, 0)))
+	Expect(insns[trampolineEndAddr+3]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
 }
 
 func TestDoubleTrampoline(t *testing.T) {
@@ -338,20 +404,25 @@ func TestDoubleTrampoline(t *testing.T) {
 
 	// Calculate where the trampolines should be.  We sort the jumps within
 	// the trampoline for determinacy so longA will be before longB.
-	const jumpToBAddr = 0
-	const jumpToAAddr = 1
-	const trampoline0StartAddr = trampolineInterval - 1
-	const longATrampoline0Addr = trampoline0StartAddr + 1
-	const longBTrampoline0Addr = trampoline0StartAddr + 2
-	const trampoline0EndAddr = trampoline0StartAddr + 3
-
-	const trampoline1StartAddr = trampolineInterval*2 - 1
-	const longATrampoline1Addr = trampoline1StartAddr + 1
-	const longBTrampoline1Addr = trampoline1StartAddr + 2
-	const longCTrampoline1Addr = trampoline1StartAddr + 3
-	const trampoline1EndAddr = trampoline1StartAddr + 4
-	const secondJumpToAAddr = trampoline0EndAddr + 3 // After the no-ops that fell out.
-	const jumpToCAddr = trampoline0EndAddr + 4
+	const (
+		trampoline0StartAddr = trampolineInterval + iota
+		longATrampoline0Addr
+		longBTrampoline0Addr
+		trampoline0EndAddr
+	)
+	const (
+		jumpToBAddr = iota
+		jumpToAAddr
+	)
+	const (
+		trampoline1StartAddr = trampolineInterval*2 + iota
+		longATrampoline1Addr
+		longBTrampoline1Addr
+		longCTrampoline1Addr
+		trampoline1EndAddr
+	)
+	const secondJumpToAAddr = trampoline0EndAddr + 2 // After the no-ops that fell out.
+	const jumpToCAddr = trampoline0EndAddr + 3
 
 	// Trampoline 1
 	// Similar to single-trampoline case but the jumps in the trampoline
@@ -373,12 +444,10 @@ func TestDoubleTrampoline(t *testing.T) {
 	// Jump to longB in the next trampoline...
 	Expect(insns[longBTrampoline0Addr]).To(Equal(MakeInsn(JumpA, 0, 0, longBTrampoline1Addr-longBTrampoline0Addr-1, 0)))
 
-	// 3 no-ops fall out of the trampoline interval: one for each non-no-op
-	// plus one because we start writing the trampoline at
-	// trampolineInterval - 1.
-	Expect(insns[trampoline0EndAddr]).To(Equal(noOp))
-	Expect(insns[trampoline0EndAddr+1]).To(Equal(noOp))
-	Expect(insns[trampoline0EndAddr+2]).To(Equal(noOp))
+	// Couple of no-ops fell out of first block.
+	for i := trampoline0EndAddr; i < secondJumpToAAddr; i++ {
+		Expect(insns[i]).To(Equal(noOp))
+	}
 
 	// Jump to longA
 	t.Log("Checking trampoline 1...")
@@ -393,25 +462,24 @@ func TestDoubleTrampoline(t *testing.T) {
 	// Jump to skip the trampoline itself.
 	Expect(insns[trampoline1StartAddr]).To(Equal(MakeInsn(JumpA, 0, 0, 3, 0)))
 	// Jump to longA,B,C
-	Expect(insns[longATrampoline1Addr]).To(Equal(MakeInsn(JumpA, 0, 0, 10, 0)))
-	Expect(insns[longBTrampoline1Addr]).To(Equal(MakeInsn(JumpA, 0, 0, 11, 0)))
-	Expect(insns[longCTrampoline1Addr]).To(Equal(MakeInsn(JumpA, 0, 0, 11, 0)))
+	Expect(insns[longATrampoline1Addr]).To(Equal(MakeInsn(JumpA, 0, 0, 9, 0)))
+	Expect(insns[longBTrampoline1Addr]).To(Equal(MakeInsn(JumpA, 0, 0, 10, 0)))
+	Expect(insns[longCTrampoline1Addr]).To(Equal(MakeInsn(JumpA, 0, 0, 10, 0)))
 
-	// 8 no-ops fall out this time; pushed out by: 3 no-ops from the first batch,
-	// 2 trampoline jumps, two user jumps, and the first instruction in the
-	// second trampoline.
-	for i := trampoline1EndAddr; i < trampoline1EndAddr+8; i++ {
+	// 7 no-ops fall out.  2 for the previous no-ops, 2 for the jumps and
+	// 3 for the size of the first trampoline.
+	for i := trampoline1EndAddr; i < trampoline1EndAddr+7; i++ {
 		Expect(insns[i]).To(Equal(noOp))
 	}
 	// Then we should see mov, exit, exit, exit...
 
 	// longA
-	Expect(insns[trampoline1EndAddr+8]).To(Equal(MakeInsn(Mov64, R1, R2, 0, 0)))
-	Expect(insns[trampoline1EndAddr+9]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
+	Expect(insns[trampoline1EndAddr+7]).To(Equal(MakeInsn(Mov64, R1, R2, 0, 0)))
+	Expect(insns[trampoline1EndAddr+8]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
 	// longB
-	Expect(insns[trampoline1EndAddr+10]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
+	Expect(insns[trampoline1EndAddr+9]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
 	// longC
-	Expect(insns[trampoline1EndAddr+11]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
+	Expect(insns[trampoline1EndAddr+10]).To(Equal(MakeInsn(Exit, 0, 0, 0, 0)))
 }
 
 func logSummarisingNoOps(t *testing.T, insns Insns) {
