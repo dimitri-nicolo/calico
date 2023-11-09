@@ -20,11 +20,9 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
       serviceAccountName: calico-prometheus-operator
-      {{- if .Values.imagePullSecrets }}
-      {{- range $key, $value := .Values.imagePullSecrets }}
+      {{- if or .Values.imagePullSecrets .Values.imagePullSecretReferences }}
       imagePullSecrets:
-        - name: {{ $key }}
-      {{- end }}
+      {{- include "tigera-prometheus-operator.imagePullSecrets" . | nindent 6 }}
       {{- end }}
       containers:
       - name: calico-prometheus-operator
