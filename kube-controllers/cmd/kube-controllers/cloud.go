@@ -10,10 +10,7 @@ import (
 	"os"
 	"regexp"
 
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/imageassuranceconfiguration"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/managedcluster"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	relastic "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
@@ -41,21 +38,5 @@ func getCloudManagedClusterControllerManagers(esK8sREST relastic.RESTClient, esC
 	return []managedcluster.ControllerManager{
 		managedcluster.NewElasticsearchController(esK8sREST, esClientBuilder, cfg.Controllers.ManagedCluster.ElasticConfig),
 		managedcluster.NewLicensingController(cfg.Controllers.ManagedCluster.LicenseConfig),
-		managedcluster.NewImageAssuranceController(cfg.Controllers.ManagedCluster.ImageAssuranceConfig),
-	}
-}
-
-func addBuildSpecificControllers(cfg *config.RunConfig, cc *controllerControl, k8sClientset *kubernetes.Clientset) {
-	if cfg.Controllers.ImageAssurance != nil {
-		cc.controllerStates["ImageAssurance"] = &controllerState{
-			controller: imageassuranceconfiguration.New(
-				"cluster",
-				"",
-				k8sClientset,
-				k8sClientset,
-				true,
-				*cfg.Controllers.ImageAssurance,
-				cc.restartCntrlChan),
-		}
 	}
 }
