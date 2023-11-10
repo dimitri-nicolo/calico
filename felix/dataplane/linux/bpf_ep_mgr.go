@@ -34,6 +34,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -2910,16 +2911,68 @@ func policyProgramName(iface, polDir string, ipFamily proto.IPVersion) string {
 	return fmt.Sprintf("p%v%c_%s", version, polDir[0], iface)
 }
 
-func (m *bpfEndpointManager) loadPolicyProgram(progName string,
-	ipFamily proto.IPVersion, rules polprog.Rules, progsMap maps.Map, opts ...polprog.Option) (
-	fileDescriptor, asm.Insns, error) {
+var nextPolCounter atomic.Int64
 
-	pg := polprog.NewBuilder(m.ipSetIDAlloc, m.bpfmaps.IpsetsMap.MapFD(),
-		m.bpfmaps.StateMap.MapFD(), progsMap.MapFD(), opts...)
+func (m *bpfEndpointManager) loadPolicyProgram(
+	progName string,
+	ipFamily proto.IPVersion,
+	rules polprog.Rules,
+	progsMap maps.Map,
+	opts ...polprog.Option,
+) (
+	fd fileDescriptor, insns asm.Insns, err error,
+) {
+	mapName := fmt.Sprintf(progName[1:])
+	if len(mapName) > 14 {
+		suffix := progName[len(progName)-10:] // FIXME too short to be unique
+		fourOrSix := progName[1]
+		dir := progName[2]
+		if fourOrSix == '6' {
+			dir++
+		}
+		mapName = string([]byte{dir}) + suffix
+	}
+
+	internalJumpMap := maps.NewPinnedMap(maps.MapParameters{
+		Type:       "prog_array",
+		KeySize:    4,
+		ValueSize:  4,
+		MaxEntries: 32,
+		Name:       fmt.Sprintf("cali%s", mapName),
+	})
+
+	// FIXME need to clean up internal jump maps when no longer used.
+	err = internalJumpMap.EnsureExists()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create internal jump map: %w", err)
+	}
+	jumpMapUsed := false
+	defer func() {
+		closeErr := internalJumpMap.Close()
+		if closeErr != nil {
+			log.WithError(err).Error("Error reported when closing map.")
+		}
+		if err != nil || !jumpMapUsed {
+			// Avoid leaking if we fail to load (or if the map wasn't used at all).
+			rmErr := os.Remove(internalJumpMap.VersionedFilename())
+			if rmErr != nil {
+				log.WithError(err).Error("Error reported when deleting map.")
+			}
+		}
+	}()
+
+	pg := polprog.NewBuilder(
+		m.ipSetIDAlloc,
+		m.bpfmaps.IpsetsMap.MapFD(),
+		m.bpfmaps.StateMap.MapFD(),
+		progsMap.MapFD(),
+		internalJumpMap.MapFD(),
+		opts...,
+	)
 	if ipFamily == proto.IPVersion_IPV6 {
 		pg.EnableIPv6Mode()
 	}
-	insns, err := pg.Instructions(rules)
+	programs, err := pg.Instructions(rules)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to generate policy bytecode v%v: %w", ipFamily, err)
 	}
@@ -2927,12 +2980,36 @@ func (m *bpfEndpointManager) loadPolicyProgram(progName string,
 	if rules.ForXDP {
 		progType = unix.BPF_PROG_TYPE_XDP
 	}
-	progFD, err := bpf.LoadBPFProgramFromInsns(insns, progName, "Apache-2.0", uint32(progType))
+
+	// Other programs get loaded into the internalJumpMap.
+	for i, insns := range programs[1:] {
+		jumpMapUsed = true
+		progFD, err := bpf.LoadBPFProgramFromInsns(
+			insns,
+			fmt.Sprintf("%s_%d", progName, i+1),
+			"Apache-2.0",
+			uint32(progType),
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to load BPF policy program v%v: %w", ipFamily, err)
+		}
+		var k, v [4]byte
+		binary.LittleEndian.PutUint32(k[:], uint32(i))
+		binary.LittleEndian.PutUint32(v[:], uint32(progFD))
+		err = internalJumpMap.Update(k[:], v[:])
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to load BPF policy program v%v: %w", ipFamily, err)
+		}
+	}
+
+	// First program gets returned as the "main" program.  Goes in the
+	// policy jump map.
+	progFD, err := bpf.LoadBPFProgramFromInsns(programs[0], progName, "Apache-2.0", uint32(progType))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to load BPF policy program v%v: %w", ipFamily, err)
 	}
 
-	return progFD, insns, nil
+	return progFD, programs[0] /*FIXME debug file will only contain first prog*/, nil
 }
 
 func (m *bpfEndpointManager) doUpdatePolicyProgram(hk hook.Hook, progName string, jmp int, rules polprog.Rules,

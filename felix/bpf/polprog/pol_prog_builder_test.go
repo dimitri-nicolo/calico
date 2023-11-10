@@ -34,8 +34,8 @@ func TestPolicySanityCheck(t *testing.T) {
 		alloc.GetOrAlloc(id)
 		return id
 	}
-	pg := NewBuilder(alloc, 1, 2, 3, WithAllowDenyJumps(666, 777))
-	insns, err := pg.Instructions(Rules{
+	pg := NewBuilder(alloc, 1, 2, 3, 0, WithAllowDenyJumps(666, 777))
+	progs, err := pg.Instructions(Rules{
 		Tiers: []Tier{{
 			Policies: []Policy{{
 				Rules: []Rule{{
@@ -70,7 +70,7 @@ func TestPolicySanityCheck(t *testing.T) {
 	})
 
 	Expect(err).NotTo(HaveOccurred())
-	for i, in := range insns {
+	for i, in := range progs[0] {
 		t.Log(i, ": ", in.Instruction)
 	}
 }
@@ -79,7 +79,7 @@ func TestLogActionIgnored(t *testing.T) {
 	RegisterTestingT(t)
 	alloc := idalloc.New()
 
-	pg := NewBuilder(alloc, 1, 2, 3, WithAllowDenyJumps(666, 777))
+	pg := NewBuilder(alloc, 1, 2, 3, 0, WithAllowDenyJumps(666, 777))
 	insns, err := pg.Instructions(Rules{
 		Tiers: []Tier{{
 			Name: "default",
@@ -92,7 +92,7 @@ func TestLogActionIgnored(t *testing.T) {
 		}}})
 	Expect(err).NotTo(HaveOccurred())
 
-	pg = NewBuilder(alloc, 1, 2, 3, WithAllowDenyJumps(666, 777))
+	pg = NewBuilder(alloc, 1, 2, 3, 0, WithAllowDenyJumps(666, 777))
 	noOpInsns, err := pg.Instructions(Rules{
 		Tiers: []Tier{{
 			Name:     "default",
@@ -112,7 +112,7 @@ func TestPolicyDump(t *testing.T) {
 
 	checkLabelsAndComments := func(rule proto.Rule, expectedString string, matchLabelOrComment string) {
 
-		pg := NewBuilder(alloc, 1, 2, 3, WithAllowDenyJumps(666, 777), WithPolicyDebugEnabled())
+		pg := NewBuilder(alloc, 1, 2, 3, 0, WithAllowDenyJumps(666, 777), WithPolicyDebugEnabled())
 		rule.Action = "Allow"
 		rule.IpVersion = 4
 		insns, err := pg.Instructions(Rules{
@@ -126,7 +126,7 @@ func TestPolicyDump(t *testing.T) {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		labels, comments := aggregateCommentsAndLabels(&insns)
+		labels, comments := aggregateCommentsAndLabels(&insns[0])
 		if matchLabelOrComment == "label" {
 			Expect(labels).To(ContainElement(expectedString))
 		} else {

@@ -229,7 +229,7 @@ func ResetSizes() {
 
 func NewPinnedMap(params MapParameters) *PinnedMap {
 	if len(params.VersionedName()) >= unix.BPF_OBJ_NAME_LEN {
-		log.WithField("name", params.Name).Panic("Bug: BPF map name too long")
+		log.WithField("name", params.Name).Panicf("Bug: BPF map name too long (%d)", len(params.VersionedName()))
 	}
 	if val := Size(params.VersionedName()); val != 0 {
 		params.MaxEntries = val

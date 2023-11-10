@@ -51,7 +51,8 @@ type Builder struct {
 
 	// CaliEnt features below
 
-	actionOnDrop string
+	actionOnDrop      string
+	internalJumpMapFD maps.FD
 }
 
 type ipSetIDProvider interface {
@@ -63,14 +64,15 @@ type Option func(b *Builder)
 
 func NewBuilder(
 	ipSetIDProvider ipSetIDProvider,
-	ipsetMapFD, stateMapFD, jumpMapFD maps.FD,
+	ipsetMapFD, stateMapFD, jumpMapFD, internalJumpMapFD maps.FD,
 	opts ...Option) *Builder {
 	b := &Builder{
-		ipSetIDProvider: ipSetIDProvider,
-		ipSetMapFD:      ipsetMapFD,
-		stateMapFD:      stateMapFD,
-		jumpMapFD:       jumpMapFD,
-		actionOnDrop:    "deny",
+		ipSetIDProvider:   ipSetIDProvider,
+		ipSetMapFD:        ipsetMapFD,
+		stateMapFD:        stateMapFD,
+		jumpMapFD:         jumpMapFD,
+		internalJumpMapFD: internalJumpMapFD,
+		actionOnDrop:      "deny",
 	}
 
 	for _, option := range opts {
@@ -215,7 +217,7 @@ func (p *Builder) EnableIPv6Mode() {
 	p.forIPv6 = true
 }
 
-func (p *Builder) Instructions(rules Rules) (Insns, error) {
+func (p *Builder) Instructions(rules Rules) ([]Insns, error) {
 	p.b = NewBlock(p.policyDebugEnabled)
 	p.writeProgramHeader()
 
@@ -283,7 +285,11 @@ normalPolicy:
 	}
 
 	p.writeProgramFooter(rules.ForXDP)
-	return p.b.Assemble()
+	insns, err := p.b.Assemble()
+	if err != nil {
+		return nil, err
+	}
+	return []Insns{insns}, nil
 }
 
 // writeProgramHeader emits instructions to load the state from the state map, leaving

@@ -411,14 +411,15 @@ func setupAndRun(logger testLogger, loglevel, section string, rules *polprog.Rul
 		Expect(ipsMapFD).NotTo(BeZero())
 		stateMapFD := stateMap.MapFD()
 		Expect(stateMapFD).NotTo(BeZero())
-		pg := polprog.NewBuilder(alloc, ipsMapFD, stateMapFD, jmpMap.MapFD(), popts...)
+		pg := polprog.NewBuilder(alloc, ipsMapFD, stateMapFD, jmpMap.MapFD(), 0, popts...)
 		insns, err := pg.Instructions(*rules)
+		Expect(insns).To(HaveLen(1))
 		Expect(err).NotTo(HaveOccurred())
 		var polProgFD bpf.ProgFD
 		if topts.xdp {
-			polProgFD, err = bpf.LoadBPFProgramFromInsns(insns, "calico_policy", "Apache-2.0", unix.BPF_PROG_TYPE_XDP)
+			polProgFD, err = bpf.LoadBPFProgramFromInsns(insns[0], "calico_policy", "Apache-2.0", unix.BPF_PROG_TYPE_XDP)
 		} else {
-			polProgFD, err = bpf.LoadBPFProgramFromInsns(insns, "calico_policy", "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
+			polProgFD, err = bpf.LoadBPFProgramFromInsns(insns[0], "calico_policy", "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
 		}
 		Expect(err).NotTo(HaveOccurred(), "Failed to load rules program.")
 		defer func() { _ = polProgFD.Close() }()
@@ -1783,7 +1784,7 @@ func ipv6HopByHopExt() gopacket.SerializableLayer {
 
 	/* from gopacket ip6_test.go */
 	tlv := &layers.IPv6HopByHopOption{}
-	tlv.OptionType = 0x01 //PadN
+	tlv.OptionType = 0x01 // PadN
 	tlv.OptionData = []byte{0x00, 0x00, 0x00, 0x00}
 	hop.Options = append(hop.Options, tlv)
 
@@ -1803,7 +1804,7 @@ func testPacketUDPDefaultNPV6(destIP net.IP) (*layers.Ethernet, *layers.IPv6, go
 
 	/* from gopacket ip6_test.go */
 	tlv := &layers.IPv6HopByHopOption{}
-	tlv.OptionType = 0x01 //PadN
+	tlv.OptionType = 0x01 // PadN
 	tlv.OptionData = []byte{0x00, 0x00, 0x00, 0x00}
 	hop.Options = append(hop.Options, tlv)
 
@@ -1922,12 +1923,13 @@ func TestJumpMap(t *testing.T) {
 	RegisterTestingT(t)
 
 	jumpMapFD := progMap.MapFD()
-	pg := polprog.NewBuilder(idalloc.New(), ipsMap.MapFD(), stateMap.MapFD(), jumpMapFD,
+	pg := polprog.NewBuilder(idalloc.New(), ipsMap.MapFD(), stateMap.MapFD(), jumpMapFD, 0,
 		polprog.WithAllowDenyJumps(tcdefs.ProgIndexAllowed, tcdefs.ProgIndexDrop))
 	rules := polprog.Rules{}
 	insns, err := pg.Instructions(rules)
 	Expect(err).NotTo(HaveOccurred())
-	progFD, err := bpf.LoadBPFProgramFromInsns(insns, "calico_policy", "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
+	Expect(insns).To(HaveLen(1))
+	progFD, err := bpf.LoadBPFProgramFromInsns(insns[0], "calico_policy", "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
 	Expect(err).NotTo(HaveOccurred())
 
 	k := make([]byte, 4)
