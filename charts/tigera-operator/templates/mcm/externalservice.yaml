@@ -13,7 +13,7 @@ metadata:
   name: tigera-manager-mcm
   namespace: tigera-manager
   annotations:
-  {{- range .Values.managementCluster.annotations }}
+  {{- range .Values.managementCluster.service.annotations }}
     {{ .key | quote }}: {{ .value | quote }}
   {{- end }}
 spec:
