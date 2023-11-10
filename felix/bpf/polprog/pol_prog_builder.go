@@ -33,6 +33,7 @@ import (
 )
 
 type Builder struct {
+	blocks          []*Block
 	b               *Block
 	tierID          int
 	policyID        int
@@ -53,6 +54,7 @@ type Builder struct {
 
 	actionOnDrop      string
 	internalJumpMapFD maps.FD
+	xdp               bool
 }
 
 type ipSetIDProvider interface {
@@ -218,10 +220,12 @@ func (p *Builder) EnableIPv6Mode() {
 }
 
 func (p *Builder) Instructions(rules Rules) ([]Insns, error) {
+	p.xdp = rules.ForXDP
 	p.b = NewBlock(p.policyDebugEnabled)
+	p.blocks = append(p.blocks, p.b)
 	p.writeProgramHeader()
 
-	if rules.ForXDP {
+	if p.xdp {
 		// For an XDP program HostNormalTiers continues the untracked policy to enforce;
 		// other fields are unused.
 		goto normalPolicy
@@ -284,12 +288,17 @@ normalPolicy:
 		p.writeProfiles(rules.Profiles, rules.NoProfileMatchID, "allow")
 	}
 
-	p.writeProgramFooter(rules.ForXDP)
-	insns, err := p.b.Assemble()
-	if err != nil {
-		return nil, err
+	p.writeProgramFooter()
+
+	var progs []Insns
+	for i, b := range p.blocks {
+		insns, err := b.Assemble()
+		if err != nil {
+			return nil, fmt.Errorf("failed to assemble policy program %d: %w", i, err)
+		}
+		progs = append(progs, insns)
 	}
-	return []Insns{insns}, nil
+	return progs, nil
 }
 
 // writeProgramHeader emits instructions to load the state from the state map, leaving
@@ -330,7 +339,7 @@ func (p *Builder) writeJumpIfToOrFromHost(label string) {
 }
 
 // writeProgramFooter emits the program exit jump targets.
-func (p *Builder) writeProgramFooter(forXDP bool) {
+func (p *Builder) writeProgramFooter() {
 	// Fall through here if there's no match.  Also used when we hit an error or if policy rejects packet.
 	p.b.LabelNextInsn("deny")
 
@@ -350,15 +359,9 @@ func (p *Builder) writeProgramFooter(forXDP bool) {
 	p.b.Call(HelperTailCall)
 
 	// Fall through if tail call fails.
-	p.b.LabelNextInsn("exit")
-	if forXDP {
-		p.b.MovImm64(R0, 1 /* XDP_DROP */)
-	} else {
-		p.b.MovImm64(R0, 2 /* TC_ACT_SHOT */)
-	}
-	p.b.Exit()
+	p.writeExitTarget()
 
-	if forXDP {
+	if p.xdp {
 		p.b.LabelNextInsn("xdp_pass")
 		p.b.MovImm64(R0, 2 /* XDP_PASS */)
 		p.b.Exit()
@@ -383,13 +386,23 @@ func (p *Builder) writeProgramFooter(forXDP bool) {
 		// Fall through if tail call fails.
 		p.b.MovImm32(R1, state.PolicyTailCallFailed)
 		p.b.Store32(R9, R1, stateOffPolResult)
-		if forXDP {
+		if p.xdp {
 			p.b.MovImm64(R0, 1 /* XDP_DROP */)
 		} else {
 			p.b.MovImm64(R0, 2 /* TC_ACT_SHOT */)
 		}
 		p.b.Exit()
 	}
+}
+
+func (p *Builder) writeExitTarget() {
+	p.b.LabelNextInsn("exit")
+	if p.xdp {
+		p.b.MovImm64(R0, 1 /* XDP_DROP */)
+	} else {
+		p.b.MovImm64(R0, 2 /* TC_ACT_SHOT */)
+	}
+	p.b.Exit()
 }
 
 func (p *Builder) writeRecordRuleID(id RuleMatchID, skipLabel string) {
@@ -595,6 +608,8 @@ func (p *Builder) ipVersion() uint8 {
 }
 
 func (p *Builder) writeRule(r Rule, actionLabel string, destLeg matchLeg) {
+	p.maybeSplitProgram()
+
 	if actionLabel == "" {
 		log.Panic("empty action label")
 	}
@@ -1066,6 +1081,55 @@ func (p *Builder) endOfRuleLabel() string {
 
 func (p *Builder) endOfcidrV6Match(cidrIndex int) string {
 	return fmt.Sprintf("rule_%d_cidr_%d_end", p.ruleID, cidrIndex)
+}
+
+// maybeSplitProgram is called before writing a rule, it may decide that the
+// current program is too big and push a new program.
+func (p *Builder) maybeSplitProgram() {
+	if p.b.NumJumps < 8000 {
+		return
+	}
+
+	log.Debug("Program is too large, splitting...")
+
+	var targets []string
+	for _, t := range p.b.DanglingTargets() {
+		if t == "exit" {
+			continue // Handled specially below.
+		}
+		targets = append(targets, t)
+	}
+	p.b.DisableTrampolines() // We're about to write a special trampoline...
+	p.b.MovImm64(R0, 0)
+	p.b.Jump("next-program")
+	for i, t := range targets {
+		p.b.LabelNextInsn(t)
+		p.b.MovImm64(R0, int32(i+1))
+		p.b.Jump("next-program")
+	}
+	p.b.LabelNextInsn("next-program")
+	// Stash the trampoline offset in the policy result so the next program
+	// can pick it up.
+	p.b.Store32(R9, R0, stateOffPolResult)
+	jumpIdx := len(p.blocks) - 1
+
+	p.b.Mov64(R1, R6)                              // First arg is the context.
+	p.b.LoadMapFD(R2, uint32(p.internalJumpMapFD)) // Second arg is the map.
+	p.b.MovImm64(R3, int32(jumpIdx))               // Third arg is index to jump to.
+	p.b.Call(HelperTailCall)
+	p.writeExitTarget()
+
+	// Now start the new program...
+	p.b = NewBlock(p.policyDebugEnabled)
+	p.blocks = append(p.blocks, p.b)
+	// Header initialises the long-lived registers.
+	p.writeProgramHeader()
+	// Then write our trampoline.
+	p.b.Load32(R0, R9, stateOffPolResult)
+	for i, t := range targets {
+		p.b.JumpEqImm64(R0, int32(i+1), t)
+	}
+	// Or, fall through to policy rule we were just about to write...
 }
 
 func protocolToNumber(protocol *proto.Protocol) uint8 {

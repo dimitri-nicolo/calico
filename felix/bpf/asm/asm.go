@@ -380,6 +380,7 @@ type Block struct {
 	lastTrampolineAddr int
 	deferredErr        error
 	NumJumps           int
+	trampolinesEnabled bool
 }
 
 func NewBlock(policyDebugEnabled bool) *Block {
@@ -390,6 +391,7 @@ func NewBlock(policyDebugEnabled bool) *Block {
 		insnIdxToComments:  map[int][]string{},
 		policyDebugEnabled: policyDebugEnabled,
 		fixUps:             map[string][]fixUp{},
+		trampolinesEnabled: true,
 	}
 }
 
@@ -872,6 +874,19 @@ func (b *Block) ReserveInstructionCapacity(n int) {
 	newInsns := make(Insns, len(b.insns), n)
 	copy(newInsns, b.insns)
 	b.insns = newInsns
+}
+
+func (b *Block) DanglingTargets() []string {
+	var out []string
+	for t := range b.fixUps {
+		out = append(out, t)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func (b *Block) DisableTrampolines() {
+	b.trampolinesEnabled = false
 }
 
 // RelocateBpfInsn replaces the imm in the insn with the map FD
