@@ -71,6 +71,7 @@ const (
 	OpClassJump64   = 0b00000_101 // 0x5 64-bit wide operands (jump target always in offset)
 	OpClassJump32   = 0b00000_110 // 0x6 32-bit wide operands (jump target always in offset)
 	OpClassALU64    = 0b00000_111 // 0x7
+	OpClassMask     = 0b00000_111
 
 	// For memory operations, the upper 3 bits are the mode.
 	MemOpModeImm  = 0b000_00_000
@@ -349,6 +350,10 @@ func (n Insn) IsNoOp() bool {
 	return n.OpCode() == Mov64 && n.Dst() == n.Src()
 }
 
+func (n Insn) OpClass() OpCode {
+	return n.OpCode() & OpClassMask
+}
+
 // Block is a "builder" object for a block of BPF instructions.  After
 // creating a new Block, call the instruction-named methods to add
 // instructions to the block and then call Assemble() to resolve the
@@ -374,6 +379,7 @@ type Block struct {
 	trampolineIdx      int
 	lastTrampolineAddr int
 	deferredErr        error
+	NumJumps           int
 }
 
 func NewBlock(policyDebugEnabled bool) *Block {
@@ -756,6 +762,11 @@ func (b *Block) addInsnWithOffsetFixupNoTrampoline(insn Insn, targetLabel string
 		}
 		b.inUseJumpTargets.Add(targetLabel)
 		b.fixUps[targetLabel] = append(b.fixUps[targetLabel], fixUp{origInsnIdx: len(b.insns) - 1})
+	}
+	if insn.OpClass() == OpClassJump64 || insn.OpClass() == OpClassJump32 {
+		// Track number of jumps written, useful for estimating how complex
+		// the verifier will think the program is.
+		b.NumJumps++
 	}
 }
 
