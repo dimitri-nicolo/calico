@@ -84,6 +84,61 @@ registry, and then push the newly tagged images to your own registry.
     `$PRIVATE_REGISTRY`.
 
     ``` highlight
+    docker pull quay.io/tigera/operator:__OP_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/operator:__OP_VERSION__
+    docker pull quay.io/tigera/cnx-manager:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-manager:__CE_VERSION__
+    docker pull quay.io/tigera/voltron:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/voltron:__CE_VERSION__
+    docker pull quay.io/tigera/guardian:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/guardian:__CE_VERSION__
+    docker pull quay.io/tigera/cnx-apiserver:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-apiserver:__CE_VERSION__
+    docker pull quay.io/tigera/cnx-queryserver:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-queryserver:__CE_VERSION__
+    docker pull quay.io/tigera/kube-controllers:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/kube-controllers:__CE_VERSION__
+    docker pull quay.io/tigera/calicoq:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/calicoq:__CE_VERSION__
+    docker pull quay.io/tigera/typha:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/typha:__CE_VERSION__
+    docker pull quay.io/tigera/calicoctl:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/calicoctl:__CE_VERSION__
+    docker pull quay.io/tigera/cnx-node:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-node:__CE_VERSION__
+    docker pull quay.io/tigera/dikastes:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/dikastes:__CE_VERSION__
+    docker pull quay.io/tigera/dex:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/dex:__CE_VERSION__
+    docker pull quay.io/tigera/fluentd:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/fluentd:__CE_VERSION__
+    docker pull quay.io/tigera/es-proxy:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/es-proxy:__CE_VERSION__
+    docker pull quay.io/tigera/kibana:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/kibana:__CE_VERSION__
+    docker pull quay.io/tigera/elasticsearch:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch:__CE_VERSION__
+    docker pull quay.io/tigera/elasticsearch:__CE_VERSION__-fips $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch:__CE_VERSION__-fips
+    docker pull quay.io/tigera/cloud-controllers:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/cloud-controllers:__CE_VERSION__
+    docker pull quay.io/tigera/intrusion-detection-job-installer:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/intrusion-detection-job-installer:__CE_VERSION__
+    docker pull quay.io/tigera/es-curator:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/es-curator:__CE_VERSION__
+    docker pull quay.io/tigera/intrusion-detection-controller:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/intrusion-detection-controller:__CE_VERSION__
+    docker pull quay.io/tigera/compliance-controller:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-controller:__CE_VERSION__
+    docker pull quay.io/tigera/compliance-reporter:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-reporter:__CE_VERSION__
+    docker pull quay.io/tigera/compliance-snapshotter:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-snapshotter:__CE_VERSION__
+    docker pull quay.io/tigera/compliance-server:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-server:__CE_VERSION__
+    docker pull quay.io/tigera/compliance-benchmarker:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-benchmarker:__CE_VERSION__
+    docker pull quay.io/tigera/ingress-collector:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/ingress-collector:__CE_VERSION__
+    docker pull quay.io/tigera/l7-collector:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/l7-collector:__CE_VERSION__
+    docker pull quay.io/tigera/license-agent:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/license-agent:__CE_VERSION__
+    docker pull quay.io/tigera/cni:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/cni:__CE_VERSION__
+    docker pull quay.io/tigera/cni:__CE_VERSION__-fips $PRIVATE_REGISTRY/$IMAGE_PATH/cni:__CE_VERSION__-fips
+    docker pull quay.io/tigera/firewall-integration:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/firewall-integration:__CE_VERSION__
+    docker pull quay.io/tigera/egress-gateway:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/egress-gateway:__CE_VERSION__
+    docker pull quay.io/tigera/honeypod:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/honeypod:__CE_VERSION__
+    docker pull quay.io/tigera/honeypod-exp-service:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/honeypod-exp-service:__CE_VERSION__
+    docker pull quay.io/tigera/honeypod-controller:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/honeypod-controller:__CE_VERSION__
+    docker pull quay.io/tigera/key-cert-provisioner:__KSP_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/key-cert-provisioner:__KSP_VERSION__
+    docker pull quay.io/tigera/anomaly_detection_jobs:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/anomaly_detection_jobs:__CE_VERSION__
+    docker pull quay.io/tigera/anomaly-detection-api:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/anomaly-detection-api:__CE_VERSION__
+    docker pull quay.io/tigera/elasticsearch-metrics:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch-metrics:__CE_VERSION__
+    docker pull quay.io/tigera/packetcapture:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/packetcapture:__CE_VERSION__
+    docker pull quay.io/tigera/prometheus:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/prometheus:__CE_VERSION__
+    docker pull quay.io/tigera/prometheus-operator:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/prometheus-operator:__CE_VERSION__
+    docker pull quay.io/tigera/prometheus-config-reloader:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/prometheus-config-reloader:__CE_VERSION__
+    docker pull quay.io/tigera/prometheus-service:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/prometheus-service:__CE_VERSION__
+    docker pull quay.io/tigera/es-gateway:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/es-gateway:__CE_VERSION__
+    docker pull quay.io/tigera/deep-packet-inspection:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/deep-packet-inspection:__CE_VERSION__
+    docker pull quay.io/tigera/eck-operator:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/eck-operator:__CE_VERSION__
+    docker pull quay.io/tigera/alertmanager:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/alertmanager:__CE_VERSION__
+    docker pull quay.io/tigera/envoy:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/envoy:__CE_VERSION__
+    docker pull quay.io/tigera/envoy-init:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/envoy-init:__CE_VERSION__
+    docker pull quay.io/tigera/pod2daemon-flexvol:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/pod2daemon-flexvol:__CE_VERSION__
+    docker pull quay.io/tigera/csi:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/csi:__CE_VERSION__
+    docker pull quay.io/tigera/node-driver-registrar:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/node-driver-registrar:__CE_VERSION__
     ```
 
     For hybrid Linux + Windows clusters, retag the following Windows
@@ -98,61 +153,61 @@ registry, and then push the newly tagged images to your own registry.
 3.  Push the images to your private registry.
 
     ``` highlight
-    docker push $PRIVATE_REGISTRY/tigera/operator:__OP_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/cnx-manager:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/voltron:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/guardian:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/cnx-apiserver:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/cnx-queryserver:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/kube-controllers:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/calicoq:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/typha:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/calicoctl:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/cnx-node:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/dikastes:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/dex:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/fluentd:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/es-proxy:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/kibana:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/elasticsearch:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/elasticsearch:__CE_VERSION__-fips
-    docker push $PRIVATE_REGISTRY/tigera/cloud-controllers:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/intrusion-detection-job-installer:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/es-curator:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/intrusion-detection-controller:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/compliance-controller:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/compliance-reporter:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/compliance-snapshotter:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/compliance-server:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/compliance-benchmarker:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/ingress-collector:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/l7-collector:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/license-agent:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/cni:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/cni:__CE_VERSION__-fips
-    docker push $PRIVATE_REGISTRY/tigera/firewall-integration:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/egress-gateway:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/honeypod:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/honeypod-exp-service:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/honeypod-controller:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/key-cert-provisioner:__KSP_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/anomaly_detection_jobs:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/anomaly-detection-api:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/elasticsearch-metrics:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/packetcapture:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/prometheus:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/prometheus-operator:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/prometheus-config-reloader:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/prometheus-service:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/es-gateway:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/deep-packet-inspection:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/eck-operator:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/alertmanager:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/envoy:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/envoy-init:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/pod2daemon-flexvol:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/csi:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/tigera/node-driver-registrar:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/operator:__OP_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-manager:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/voltron:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/guardian:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-apiserver:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-queryserver:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/kube-controllers:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/calicoq:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/typha:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/calicoctl:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cnx-node:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/dikastes:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/dex:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/fluentd:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/es-proxy:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/kibana:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch:__CE_VERSION__-fips
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cloud-controllers:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/intrusion-detection-job-installer:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/es-curator:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/intrusion-detection-controller:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-controller:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-reporter:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-snapshotter:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-server:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/compliance-benchmarker:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/ingress-collector:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/l7-collector:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/license-agent:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cni:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cni:__CE_VERSION__-fips
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/firewall-integration:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/egress-gateway:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/honeypod:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/honeypod-exp-service:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/honeypod-controller:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/key-cert-provisioner:__KSP_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/anomaly_detection_jobs:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/anomaly-detection-api:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch-metrics:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/packetcapture:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/prometheus:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/prometheus-operator:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/prometheus-config-reloader:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/prometheus-service:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/es-gateway:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/deep-packet-inspection:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/eck-operator:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/alertmanager:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/envoy:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/envoy-init:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/pod2daemon-flexvol:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/csi:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/node-driver-registrar:__CE_VERSION__
     ```
 
     For hybrid Linux + Windows clusters, push the following Windows
@@ -173,8 +228,7 @@ Before applying `tigera-operator.yaml`, modify registry references to
 use your custom registry:
 
 ``` highlight
-sed -ie "s?quay.io/?$PRIVATE_REGISTRY?g" tigera-operator.yaml
-sed -ie "s?quay.io?$PRIVATE_REGISTRY?g" tigera-operator.yaml
+sed -i -e "s^quay.io/tigera^${PRIVATE_REGISTRY}/${IMAGE_PATH}^"
 ```
 
 Next, ensure that an image pull secret has been configured for your
