@@ -776,6 +776,18 @@ func (b *Block) TargetIsUsed(label string) bool {
 	return b.inUseJumpTargets.Contains(label)
 }
 
+// DanglingTargets returns a slice containing the names of all jump targets
+// that are still tobe resolved.  I.e. jumps to labels that have not yet been
+// written.
+func (b *Block) DanglingTargets() []string {
+	var out []string
+	for t := range b.fixUps {
+		out = append(out, t)
+	}
+	sort.Strings(out)
+	return out
+}
+
 func (b *Block) Assemble() (Insns, error) {
 	if b.deferredErr != nil {
 		return nil, b.deferredErr
@@ -876,17 +888,8 @@ func (b *Block) ReserveInstructionCapacity(n int) {
 	b.insns = newInsns
 }
 
-func (b *Block) DanglingTargets() []string {
-	var out []string
-	for t := range b.fixUps {
-		out = append(out, t)
-	}
-	sort.Strings(out)
-	return out
-}
-
-func (b *Block) DisableTrampolines() {
-	b.trampolinesEnabled = false
+func (b *Block) SetTrampolinesEnabled(en bool) {
+	b.trampolinesEnabled = en
 }
 
 // RelocateBpfInsn replaces the imm in the insn with the map FD

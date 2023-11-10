@@ -55,6 +55,7 @@ type Builder struct {
 	actionOnDrop      string
 	internalJumpMapFD maps.FD
 	xdp               bool
+	numRulesProcessed int
 }
 
 type ipSetIDProvider interface {
@@ -735,6 +736,7 @@ func (p *Builder) writeRule(r Rule, actionLabel string, destLeg matchLeg) {
 	p.writeEndOfRule(r, actionLabel)
 	p.ruleID++
 	p.rulePartID = 0
+	p.numRulesProcessed++
 }
 
 func (p *Builder) writeStartOfRule() {
@@ -840,6 +842,9 @@ func (p *Builder) writeCIDRSMatch(negate bool, leg matchLeg, cidrs []string) {
 	addrU32 := make([]uint32, size)
 	maskU32 := make([]uint32, size)
 	for cidrIndex, cidrStr := range cidrs {
+		// Number of CIDRs isn't bounded so may need to split mid-rule.
+		p.maybeSplitProgram()
+
 		cidr := ip.MustParseCIDROrIP(cidrStr)
 		if p.forIPv6 {
 			addrU64P1, addrU64P2 := cidr.Addr().(ip.V6Addr).AsUint64Pair()
@@ -1027,6 +1032,13 @@ func (p *Builder) writePortsMatch(negate bool, leg matchLeg, ports []*proto.Port
 				p.b.LabelNextInsn(skipToNextPortLabel)
 			}
 		}
+
+		// Number of ports not bounded so may need to split mid-rule.
+		if p.maybeSplitProgram() {
+			// Program was split so the next instruction goes in the new program.
+			// Need to reload our register(s).
+			p.b.Load16(R1, R9, leg.offsetToStatePortField())
+		}
 	}
 
 	if p.policyDebugEnabled {
@@ -1047,6 +1059,8 @@ func (p *Builder) writePortsMatch(negate bool, leg matchLeg, ports []*proto.Port
 	}
 
 	for _, ipSetID := range namedPorts {
+		p.maybeSplitProgram()
+
 		id := p.ipSetIDProvider.GetNoAlloc(ipSetID)
 		if id == 0 {
 			log.WithField("setID", ipSetID).Panic("Failed to look up IP set ID.")
@@ -1083,29 +1097,55 @@ func (p *Builder) endOfcidrV6Match(cidrIndex int) string {
 	return fmt.Sprintf("rule_%d_cidr_%d_end", p.ruleID, cidrIndex)
 }
 
+// Verifier imposes a limit on how many jumps can be on the same code path.
+const verifierMaxJumpsLimit = 8192
+const maxJumpsHeadroom = 200
+
 // maybeSplitProgram is called before writing a rule, it may decide that the
 // current program is too big and push a new program.
-func (p *Builder) maybeSplitProgram() {
-	if p.b.NumJumps < 8000 {
-		return
+//
+// Returns true if the program was split.  After a split only the registers
+// initialised by writeProgramHeader are valid.
+func (p *Builder) maybeSplitProgram() bool {
+	// Verifier imposes a limit on how many jumps can be on a path through
+	// the bytecode (taken or not).  Since our code falls through to the next
+	// rule by default, to first approximation, all our jumps are on the same
+	// path.
+	if p.b.NumJumps < verifierMaxJumpsLimit-maxJumpsHeadroom {
+		return false
 	}
 
-	log.Debug("Program is too large, splitting...")
+	p.b.SetTrampolinesEnabled(false) // We're about to write a special trampoline...
+	p.b.MovImm64(R0, 0)
+	p.b.Jump("next-program")
 
+	// Program footer takes care of "allow" "deny" "exit" labels.
+	p.writeProgramFooter()
+
+	// Likely that the only remaining label is the "pass to next tier" label,
+	// but we handle any others that may be added by generating a landing pad
+	// for each label here that will pass a unique ID to the next program.
+	// TODO when doing a "nest tier" jump it'd be nice to skip any intermediate
+	//      programs that are continuations of this tier...
 	var targets []string
 	for _, t := range p.b.DanglingTargets() {
-		if t == "exit" {
-			continue // Handled specially below.
+		if t == "next-program" {
+			continue
 		}
 		targets = append(targets, t)
 	}
-	p.b.DisableTrampolines() // We're about to write a special trampoline...
-	p.b.MovImm64(R0, 0)
-	p.b.Jump("next-program")
+	log.WithFields(log.Fields{
+		"danglingTargets": targets,
+		"numRules":        p.numRulesProcessed,
+		"numJumps":        p.b.NumJumps,
+		"numProgs":        len(p.blocks),
+	}).Info("Splitting policy program")
 	for i, t := range targets {
 		p.b.LabelNextInsn(t)
 		p.b.MovImm64(R0, int32(i+1))
-		p.b.Jump("next-program")
+		if i != len(targets)-1 {
+			p.b.Jump("next-program")
+		}
 	}
 	p.b.LabelNextInsn("next-program")
 	// Stash the trampoline offset in the policy result so the next program
@@ -1117,9 +1157,10 @@ func (p *Builder) maybeSplitProgram() {
 	p.b.LoadMapFD(R2, uint32(p.internalJumpMapFD)) // Second arg is the map.
 	p.b.MovImm64(R3, int32(jumpIdx))               // Third arg is index to jump to.
 	p.b.Call(HelperTailCall)
-	p.writeExitTarget()
+	p.writeExitTarget() // Drop if tail call fails.
 
 	// Now start the new program...
+	p.numRulesProcessed = 0
 	p.b = NewBlock(p.policyDebugEnabled)
 	p.blocks = append(p.blocks, p.b)
 	// Header initialises the long-lived registers.
@@ -1129,7 +1170,10 @@ func (p *Builder) maybeSplitProgram() {
 	for i, t := range targets {
 		p.b.JumpEqImm64(R0, int32(i+1), t)
 	}
-	// Or, fall through to policy rule we were just about to write...
+	// If none of the trampoline jumps hit then we fall through.  This
+	// continues whatever code was being written when we were called.
+
+	return true
 }
 
 func protocolToNumber(protocol *proto.Protocol) uint8 {
