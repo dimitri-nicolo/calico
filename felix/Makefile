@@ -621,14 +621,14 @@ bin/bpf_debug.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go') mod-downl
 .PHONY: ut-bpf
 ut-bpf: $(LIBBPF_A) bin/bpf_ut.test bin/bpf.test build-bpf
 	$(DOCKER_RUN) \
-		--privileged \
+		--privileged -i \
 		-e RUN_AS_ROOT=true \
 		$(CALICO_BUILD) sh -c ' \
 		mount bpffs /sys/fs/bpf -t bpf && \
 		cd /go/src/$(PACKAGE_NAME)/bpf/ && \
 		BPF_FORCE_REAL_LIB=true ../bin/bpf.test -test.v -test.run "$(FOCUS)"'
 	$(DOCKER_RUN) \
-		--privileged \
+		--privileged -i \
 		-e RUN_AS_ROOT=true \
 		-v `pwd`:/code \
 		-v `pwd`/bpf-gpl/bin:/usr/lib/calico/bpf \

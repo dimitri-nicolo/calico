@@ -776,10 +776,10 @@ func (b *Block) TargetIsUsed(label string) bool {
 	return b.inUseJumpTargets.Contains(label)
 }
 
-// DanglingTargets returns a slice containing the names of all jump targets
-// that are still tobe resolved.  I.e. jumps to labels that have not yet been
-// written.
-func (b *Block) DanglingTargets() []string {
+// UnresolvedJumpTargets returns a slice containing the names of all target
+// labels that have been used in a jump but don't currently have a labeled
+// instruction to jump to.
+func (b *Block) UnresolvedJumpTargets() []string {
 	var out []string
 	for t := range b.fixUps {
 		out = append(out, t)

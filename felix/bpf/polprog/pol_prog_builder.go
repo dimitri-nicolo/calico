@@ -32,6 +32,13 @@ import (
 	"github.com/projectcalico/calico/felix/rules"
 )
 
+// Verifier imposes a limit on how many jumps can be on the same code path.
+const (
+	verifierMaxJumpsLimit      = 8192
+	maxJumpsHeadroom           = 200
+	defaultPerProgramJumpLimit = verifierMaxJumpsLimit - maxJumpsHeadroom
+)
+
 type Builder struct {
 	blocks          []*Block
 	b               *Block
@@ -43,19 +50,22 @@ type Builder struct {
 
 	ipSetMapFD         maps.FD
 	stateMapFD         maps.FD
-	jumpMapFD          maps.FD
+	staticJumpMapFD    maps.FD
+	policyJumpMapFD    maps.FD
+	policyMapIndex     int
+	policyMapStride    int
 	policyDebugEnabled bool
 	forIPv6            bool
 	allowJmp           int
 	denyJmp            int
 	useJmps            bool
+	maxJumpsPerProgram int
 
 	// CaliEnt features below
 
 	actionOnDrop      string
-	internalJumpMapFD maps.FD
 	xdp               bool
-	numRulesProcessed int
+	numRulesInProgram int
 }
 
 type ipSetIDProvider interface {
@@ -67,15 +77,16 @@ type Option func(b *Builder)
 
 func NewBuilder(
 	ipSetIDProvider ipSetIDProvider,
-	ipsetMapFD, stateMapFD, jumpMapFD, internalJumpMapFD maps.FD,
+	ipsetMapFD, stateMapFD, staticProgsMapFD, policyJumpMapFD maps.FD,
 	opts ...Option) *Builder {
 	b := &Builder{
-		ipSetIDProvider:   ipSetIDProvider,
-		ipSetMapFD:        ipsetMapFD,
-		stateMapFD:        stateMapFD,
-		jumpMapFD:         jumpMapFD,
-		internalJumpMapFD: internalJumpMapFD,
-		actionOnDrop:      "deny",
+		ipSetIDProvider:    ipSetIDProvider,
+		ipSetMapFD:         ipsetMapFD,
+		stateMapFD:         stateMapFD,
+		staticJumpMapFD:    staticProgsMapFD,
+		policyJumpMapFD:    policyJumpMapFD,
+		actionOnDrop:       "deny",
+		maxJumpsPerProgram: defaultPerProgramJumpLimit,
 	}
 
 	for _, option := range opts {
@@ -349,8 +360,8 @@ func (p *Builder) writeProgramFooter() {
 	p.b.Store32(R9, R1, stateOffPolResult)
 
 	// Execute the tail call to drop program
-	p.b.Mov64(R1, R6)                      // First arg is the context.
-	p.b.LoadMapFD(R2, uint32(p.jumpMapFD)) // Second arg is the map.
+	p.b.Mov64(R1, R6)                            // First arg is the context.
+	p.b.LoadMapFD(R2, uint32(p.staticJumpMapFD)) // Second arg is the map.
 	if p.useJmps {
 		p.b.AddComment(fmt.Sprintf("Deny jump to %d", p.denyJmp))
 		p.b.MovImm32(R3, int32(p.denyJmp)) // Third arg is the index (rather than a pointer to the index).
@@ -374,8 +385,8 @@ func (p *Builder) writeProgramFooter() {
 		p.b.MovImm32(R1, int32(state.PolicyAllow))
 		p.b.Store32(R9, R1, stateOffPolResult)
 		// Execute the tail call.
-		p.b.Mov64(R1, R6)                      // First arg is the context.
-		p.b.LoadMapFD(R2, uint32(p.jumpMapFD)) // Second arg is the map.
+		p.b.Mov64(R1, R6)                            // First arg is the context.
+		p.b.LoadMapFD(R2, uint32(p.staticJumpMapFD)) // Second arg is the map.
 		if p.useJmps {
 			p.b.AddComment(fmt.Sprintf("Allow jump to %d", p.allowJmp))
 			p.b.MovImm32(R3, int32(p.allowJmp)) // Third arg is the index (rather than a pointer to the index).
@@ -736,7 +747,7 @@ func (p *Builder) writeRule(r Rule, actionLabel string, destLeg matchLeg) {
 	p.writeEndOfRule(r, actionLabel)
 	p.ruleID++
 	p.rulePartID = 0
-	p.numRulesProcessed++
+	p.numRulesInProgram++
 }
 
 func (p *Builder) writeStartOfRule() {
@@ -1097,49 +1108,56 @@ func (p *Builder) endOfcidrV6Match(cidrIndex int) string {
 	return fmt.Sprintf("rule_%d_cidr_%d_end", p.ruleID, cidrIndex)
 }
 
-// Verifier imposes a limit on how many jumps can be on the same code path.
-const verifierMaxJumpsLimit = 8192
-const maxJumpsHeadroom = 200
-
-// maybeSplitProgram is called before writing a rule, it may decide that the
-// current program is too big and push a new program.
+// maybeSplitProgram checks how large/complex the program has become and, if
+// it reaches the threshold, starts a new policy program and adds it to
+// p.blocks.
 //
 // Returns true if the program was split.  After a split only the registers
-// initialised by writeProgramHeader are valid.
+// initialised by writeProgramHeader are valid so, if the caller was using
+// any other registers, they must be recalculated if maybeSplitProgram returns
+// true.
 func (p *Builder) maybeSplitProgram() bool {
 	// Verifier imposes a limit on how many jumps can be on a path through
 	// the bytecode (taken or not).  Since our code falls through to the next
 	// rule by default, to first approximation, all our jumps are on the same
 	// path.
-	if p.b.NumJumps < verifierMaxJumpsLimit-maxJumpsHeadroom {
+	if p.b.NumJumps < p.maxJumpsPerProgram {
+		return false
+	}
+	if p.policyMapStride == 0 {
+		// Cannot split; parameters not set.  We'll just have to hope the
+		// program fits.
 		return false
 	}
 
 	p.b.SetTrampolinesEnabled(false) // We're about to write a special trampoline...
+	p.b.AddComment(fmt.Sprintf("Splitting program after %d jumps", p.b.NumJumps))
 	p.b.MovImm64(R0, 0)
 	p.b.Jump("next-program")
 
 	// Program footer takes care of "allow" "deny" "exit" labels.
 	p.writeProgramFooter()
 
-	// Likely that the only remaining label is the "pass to next tier" label,
-	// but we handle any others that may be added by generating a landing pad
-	// for each label here that will pass a unique ID to the next program.
-	// TODO when doing a "nest tier" jump it'd be nice to skip any intermediate
-	//      programs that are continuations of this tier...
+	// Find any jump targets that need to jump to the next program.  This may
+	// include a next-tier label or an internal rule label, if we're called
+	// from within a rule-writing method.
 	var targets []string
-	for _, t := range p.b.DanglingTargets() {
+	for _, t := range p.b.UnresolvedJumpTargets() {
 		if t == "next-program" {
+			// Skip our label, we're about to resolve that below.
 			continue
 		}
 		targets = append(targets, t)
 	}
+
+	// Write a landing pad for each dangling jump target.  Each landing pad
+	// sets R0 to a unique value before jumping to the next-program label.
 	log.WithFields(log.Fields{
 		"danglingTargets": targets,
-		"numRules":        p.numRulesProcessed,
+		"numRules":        p.numRulesInProgram,
 		"numJumps":        p.b.NumJumps,
 		"numProgs":        len(p.blocks),
-	}).Info("Splitting policy program")
+	}).Debug("Splitting policy program")
 	for i, t := range targets {
 		p.b.LabelNextInsn(t)
 		p.b.MovImm64(R0, int32(i+1))
@@ -1151,22 +1169,32 @@ func (p *Builder) maybeSplitProgram() bool {
 	// Stash the trampoline offset in the policy result so the next program
 	// can pick it up.
 	p.b.Store32(R9, R0, stateOffPolResult)
-	jumpIdx := len(p.blocks) - 1
+	// Calculate the index of the next program.
+	// With a "stride" of 1000, the first sub-program is at position n, then
+	// the second goes at position 1000+n, then the next at 2000+n and so on.
+	// The current block is in p.blocks already so this will calculate 1000+n
+	// on the first time through.
+	jumpIdx := SubProgramJumpIdx(p.policyMapIndex, len(p.blocks), p.policyMapStride)
 
-	p.b.Mov64(R1, R6)                              // First arg is the context.
-	p.b.LoadMapFD(R2, uint32(p.internalJumpMapFD)) // Second arg is the map.
-	p.b.MovImm64(R3, int32(jumpIdx))               // Third arg is index to jump to.
+	p.b.Mov64(R1, R6)                            // First arg is the context.
+	p.b.LoadMapFD(R2, uint32(p.policyJumpMapFD)) // Second arg is the map.
+	p.b.AddComment(fmt.Sprintf("Tail call to policy program at index %d * %d + %d = %d", p.policyMapStride, len(p.blocks), p.policyMapIndex, jumpIdx))
+	p.b.MovImm64(R3, int32(jumpIdx)) // Third arg is index to jump to.
 	p.b.Call(HelperTailCall)
 	p.writeExitTarget() // Drop if tail call fails.
 
 	// Now start the new program...
-	p.numRulesProcessed = 0
+	p.numRulesInProgram = 0
 	p.b = NewBlock(p.policyDebugEnabled)
 	p.blocks = append(p.blocks, p.b)
 	// Header initialises the long-lived registers.
+	p.b.AddComment(fmt.Sprintf("##### Start of program %d #####", len(p.blocks)-1))
 	p.writeProgramHeader()
 	// Then write our trampoline.
 	p.b.Load32(R0, R9, stateOffPolResult)
+	// Reset the policy result field to its default value.
+	p.b.MovImm32(R1, 0)
+	p.b.Store32(R9, R1, stateOffPolResult)
 	for i, t := range targets {
 		p.b.JumpEqImm64(R0, int32(i+1), t)
 	}
@@ -1174,6 +1202,10 @@ func (p *Builder) maybeSplitProgram() bool {
 	// continues whatever code was being written when we were called.
 
 	return true
+}
+
+func SubProgramJumpIdx(polProgIdx, subProgIdx, stride int) int {
+	return polProgIdx + subProgIdx*stride
 }
 
 func protocolToNumber(protocol *proto.Protocol) uint8 {
@@ -1215,6 +1247,13 @@ func WithAllowDenyJumps(allow, deny int) Option {
 		b.allowJmp = allow
 		b.denyJmp = deny
 		b.useJmps = true
+	}
+}
+
+func WithPolicyMapIndexAndStride(index, stride int) Option {
+	return func(b *Builder) {
+		b.policyMapIndex = index
+		b.policyMapStride = stride
 	}
 }
 

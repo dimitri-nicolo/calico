@@ -34,7 +34,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -156,8 +155,12 @@ type bpfDataplane interface {
 
 type hasLoadPolicyProgram interface {
 	loadPolicyProgram(progName string,
-		ipFamily proto.IPVersion, rules polprog.Rules, progsMap maps.Map, opts ...polprog.Option) (
-		fileDescriptor, asm.Insns, error)
+		ipFamily proto.IPVersion,
+		rules polprog.Rules,
+		staticProgsMap maps.Map,
+		polProgsMap maps.Map,
+		opts ...polprog.Option,
+	) ([]fileDescriptor, []asm.Insns, error)
 }
 
 type bpfInterface struct {
@@ -281,9 +284,14 @@ type bpfEndpointManager struct {
 	// onStillAlive is called from loops to reset the watchdog.
 	onStillAlive func()
 
-	loadPolicyProgramFn func(progName string,
-		ipFamily proto.IPVersion, rules polprog.Rules, progsMap maps.Map, opts ...polprog.Option) (
-		fileDescriptor, asm.Insns, error)
+	loadPolicyProgramFn func(
+		progName string,
+		ipFamily proto.IPVersion,
+		rules polprog.Rules,
+		staticProgsMap maps.Map,
+		polProgsMap maps.Map,
+		opts ...polprog.Option,
+	) ([]fileDescriptor, []asm.Insns, error)
 	updatePolicyProgramFn func(rules polprog.Rules, polDir string, ap attachPoint) error
 
 	// HEP processing.
@@ -451,14 +459,12 @@ func newBPFEndpointManager(
 			maps.NewTypedMap[ifstate.Key, ifstate.Value](
 				bpfmaps.IfStateMap.(maps.MapWithExistsCheck), ifstate.KeyFromBytes, ifstate.ValueFromBytes,
 			)),
-		jumpMapAlloc: &jumpMapAlloc{
-			max:  jump.MaxEntries,
-			free: make(chan int, jump.MaxEntries),
-		},
-		xdpJumpMapAlloc: &jumpMapAlloc{
-			max:  jump.XDPMaxEntries,
-			free: make(chan int, jump.XDPMaxEntries),
-		},
+
+		// Note: the allocators only allocate a fraction of the map, the
+		// rest is reserved for sub-programs generated if a single program
+		// would be too large.
+		jumpMapAlloc:        newJumpMapAlloc(jump.TCMaxEntryPoints),
+		xdpJumpMapAlloc:     newJumpMapAlloc(jump.XDPMaxEntryPoints),
 		ruleRenderer:        iptablesRuleRenderer,
 		iptablesFilterTable: iptablesFilterTable,
 		onStillAlive:        livenessCallback,
@@ -578,6 +584,8 @@ func newBPFEndpointManager(
 
 	return m, nil
 }
+
+var _ hasLoadPolicyProgram = (*bpfEndpointManager)(nil)
 
 func (m *bpfEndpointManager) repinJumpMaps() error {
 	oldBase := path.Join(bpfdefs.GlobalPinDir, "old_jumps")
@@ -1083,15 +1091,17 @@ func (m *bpfEndpointManager) markExistingWEPDirty(wlID proto.WorkloadEndpointID,
 	}
 }
 
-func jumpMapDeleteEntry(m maps.Map, idx int) error {
-	if err := m.Delete(jump.Key(idx)); err != nil {
-		if maps.IsNotExists(err) {
-			log.WithError(err).WithField("idx", idx).
-				Warn("Policy program already not in table - inconsistency fixed!")
-			return nil
-		} else {
-			log.WithError(err).Warn("Policy program may leak.")
-			return err
+func jumpMapDeleteEntry(m maps.Map, idx, stride int) error {
+	for subProg := 0; subProg < jump.MaxSubPrograms; subProg++ {
+		if err := m.Delete(jump.Key(polprog.SubProgramJumpIdx(idx, subProg, stride))); err != nil {
+			if maps.IsNotExists(err) {
+				log.WithError(err).WithField("idx", idx).
+					Debug("Policy program already not in table - inconsistency fixed!")
+				return nil
+			} else {
+				log.WithError(err).Warn("Failed to delete policy program from map; policy program may leak.")
+				return err
+			}
 		}
 	}
 
@@ -1120,13 +1130,19 @@ func (m *bpfEndpointManager) syncIfStateMap() {
 				// about as we will not hear about that device again.
 				for _, fn := range []func() int{
 					v.XDPPolicy,
+				} {
+					if idx := fn(); idx != -1 {
+						_ = jumpMapDeleteEntry(m.bpfmaps.XDPJumpMap, idx, jump.XDPMaxEntryPoints)
+					}
+				}
+				for _, fn := range []func() int{
 					v.IngressPolicy,
 					v.EgressPolicy,
 					v.TcIngressFilter,
 					v.TcEgressFilter,
 				} {
 					if idx := fn(); idx != -1 {
-						_ = jumpMapDeleteEntry(m.bpfmaps.XDPJumpMap, idx)
+						_ = jumpMapDeleteEntry(m.bpfmaps.JumpMap, idx, jump.TCMaxEntryPoints)
 					}
 				}
 			} else {
@@ -1192,12 +1208,12 @@ func (m *bpfEndpointManager) syncIfStateMap() {
 	})
 
 	// Fill unallocated indexes.
-	for i := 0; i < jump.MaxEntries; i++ {
+	for i := 0; i < jump.TCMaxEntryPoints; i++ {
 		if !palloc.Contains(i) {
 			_ = m.jumpMapAlloc.Put(i)
 		}
 	}
-	for i := 0; i < jump.XDPMaxEntries; i++ {
+	for i := 0; i < jump.XDPMaxEntryPoints; i++ {
 		if !xdpPalloc.Contains(i) {
 			_ = m.xdpJumpMapAlloc.Put(i)
 		}
@@ -1953,8 +1969,12 @@ func (m *bpfEndpointManager) addHostPolicy(rules *polprog.Rules, hostEndpoint *p
 	rules.HostProfiles = m.extractProfiles(hostEndpoint.ProfileIds, polDirection)
 }
 
-func (m *bpfEndpointManager) attachDataIfaceProgram(ifaceName string, ep *proto.HostEndpoint,
-	polDirection PolDirection, policyIdx, filterIdx int) error {
+func (m *bpfEndpointManager) attachDataIfaceProgram(
+	ifaceName string,
+	ep *proto.HostEndpoint,
+	polDirection PolDirection,
+	policyIdx, filterIdx int,
+) error {
 
 	if m.hostIP == nil {
 		// Do not bother and wait
@@ -2776,7 +2796,7 @@ func (m *bpfEndpointManager) removePolicyDebugInfo(ifaceName string, ipFamily pr
 	}
 }
 
-func (m *bpfEndpointManager) writePolicyDebugInfo(insns asm.Insns, ifaceName string, ipFamily proto.IPVersion, polDir string, h hook.Hook, polErr error) error {
+func (m *bpfEndpointManager) writePolicyDebugInfo(insns []asm.Insns, ifaceName string, ipFamily proto.IPVersion, polDir string, h hook.Hook, polErr error) error {
 	if !m.bpfPolicyDebugEnabled {
 		return nil
 	}
@@ -2789,10 +2809,20 @@ func (m *bpfEndpointManager) writePolicyDebugInfo(insns asm.Insns, ifaceName str
 		errStr = polErr.Error()
 	}
 
+	// We may have >1 sub-program; it seems to work reasonably well to just
+	// concatenate the instructions.  The pol icy program builder writes
+	// comments that delineate the programs.
+	var combinedInsns asm.Insns
+	if len(insns) > 0 {
+		combinedInsns = insns[0]
+		for _, ins := range insns[1:] {
+			combinedInsns = append(combinedInsns, ins...)
+		}
+	}
 	policyDebugInfo := bpf.PolicyDebugInfo{
 		IfaceName:  ifaceName,
 		Hook:       "tc " + h.String(),
-		PolicyInfo: insns,
+		PolicyInfo: combinedInsns,
 		Error:      errStr,
 	}
 
@@ -2853,8 +2883,14 @@ func (m *bpfEndpointManager) updatePolicyProgram(rules polprog.Rules, polDir str
 			}
 			opts = append(opts, polprog.WithAllowDenyJumps(allow, deny))
 		}
-		insns, err := m.doUpdatePolicyProgram(ap.HookName(), progName,
-			ap.PolicyIdx(int(ipFamily)), rules, ipFamily, opts...)
+		insns, err := m.doUpdatePolicyProgram(
+			ap.HookName(),
+			progName,
+			ap.PolicyIdx(int(ipFamily)),
+			rules,
+			ipFamily,
+			opts...,
+		)
 		perr := m.writePolicyDebugInfo(insns, ap.IfaceName(), ipFamily, polDir, ap.HookName(), err)
 		if perr != nil {
 			log.WithError(perr).Warn("error writing policy debug information")
@@ -2911,62 +2947,23 @@ func policyProgramName(iface, polDir string, ipFamily proto.IPVersion) string {
 	return fmt.Sprintf("p%v%c_%s", version, polDir[0], iface)
 }
 
-var nextPolCounter atomic.Int64
-
 func (m *bpfEndpointManager) loadPolicyProgram(
 	progName string,
 	ipFamily proto.IPVersion,
 	rules polprog.Rules,
-	progsMap maps.Map,
+	staticProgsMap maps.Map,
+	polProgsMap maps.Map,
 	opts ...polprog.Option,
 ) (
-	fd fileDescriptor, insns asm.Insns, err error,
+	fd []fileDescriptor, insns []asm.Insns, err error,
 ) {
-	mapName := fmt.Sprintf(progName[1:])
-	if len(mapName) > 14 {
-		suffix := progName[len(progName)-10:] // FIXME too short to be unique
-		fourOrSix := progName[1]
-		dir := progName[2]
-		if fourOrSix == '6' {
-			dir++
-		}
-		mapName = string([]byte{dir}) + suffix
-	}
-
-	internalJumpMap := maps.NewPinnedMap(maps.MapParameters{
-		Type:       "prog_array",
-		KeySize:    4,
-		ValueSize:  4,
-		MaxEntries: 32,
-		Name:       fmt.Sprintf("cali%s", mapName),
-	})
-
-	// FIXME need to clean up internal jump maps when no longer used.
-	err = internalJumpMap.EnsureExists()
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create internal jump map: %w", err)
-	}
-	jumpMapUsed := false
-	defer func() {
-		closeErr := internalJumpMap.Close()
-		if closeErr != nil {
-			log.WithError(err).Error("Error reported when closing map.")
-		}
-		if err != nil || !jumpMapUsed {
-			// Avoid leaking if we fail to load (or if the map wasn't used at all).
-			rmErr := os.Remove(internalJumpMap.VersionedFilename())
-			if rmErr != nil {
-				log.WithError(err).Error("Error reported when deleting map.")
-			}
-		}
-	}()
 
 	pg := polprog.NewBuilder(
 		m.ipSetIDAlloc,
 		m.bpfmaps.IpsetsMap.MapFD(),
 		m.bpfmaps.StateMap.MapFD(),
-		progsMap.MapFD(),
-		internalJumpMap.MapFD(),
+		staticProgsMap.MapFD(),
+		polProgsMap.MapFD(),
 		opts...,
 	)
 	if ipFamily == proto.IPVersion_IPV6 {
@@ -2981,69 +2978,94 @@ func (m *bpfEndpointManager) loadPolicyProgram(
 		progType = unix.BPF_PROG_TYPE_XDP
 	}
 
-	// Other programs get loaded into the internalJumpMap.
-	for i, insns := range programs[1:] {
-		jumpMapUsed = true
-		progFD, err := bpf.LoadBPFProgramFromInsns(
-			insns,
-			fmt.Sprintf("%s_%d", progName, i+1),
-			"Apache-2.0",
-			uint32(progType),
-		)
+	progFDs := make([]fileDescriptor, 0, len(programs))
+	success := false
+	defer func() {
+		if success {
+			return
+		}
+		for _, progFD := range progFDs {
+			if err := progFD.Close(); err != nil {
+				log.WithError(err).Panic("Failed to close program FD.")
+			}
+		}
+	}()
+	for i, p := range programs {
+		subProgName := progName
+		if i > 0 {
+			if len(subProgName) > 12 {
+				subProgName = subProgName[:12]
+			}
+			subProgName = fmt.Sprintf("%s_%d", subProgName, i)
+		}
+		progFD, err := bpf.LoadBPFProgramFromInsns(p, subProgName, "Apache-2.0", uint32(progType))
 		if err != nil {
+			log.WithError(err).WithFields(log.Fields{
+				"name":       subProgName,
+				"subProgram": i,
+			}).Error("Failed to load BPF policy program")
 			return nil, nil, fmt.Errorf("failed to load BPF policy program v%v: %w", ipFamily, err)
 		}
-		var k, v [4]byte
-		binary.LittleEndian.PutUint32(k[:], uint32(i))
-		binary.LittleEndian.PutUint32(v[:], uint32(progFD))
-		err = internalJumpMap.Update(k[:], v[:])
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to load BPF policy program v%v: %w", ipFamily, err)
-		}
+		progFDs = append(progFDs, progFD)
 	}
-
-	// First program gets returned as the "main" program.  Goes in the
-	// policy jump map.
-	progFD, err := bpf.LoadBPFProgramFromInsns(programs[0], progName, "Apache-2.0", uint32(progType))
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load BPF policy program v%v: %w", ipFamily, err)
-	}
-
-	return progFD, programs[0] /*FIXME debug file will only contain first prog*/, nil
+	success = true
+	return progFDs, programs, nil
 }
 
-func (m *bpfEndpointManager) doUpdatePolicyProgram(hk hook.Hook, progName string, jmp int, rules polprog.Rules,
-	ipFamily proto.IPVersion, opts ...polprog.Option) (asm.Insns, error) {
-
+func (m *bpfEndpointManager) doUpdatePolicyProgram(
+	hk hook.Hook,
+	progName string,
+	polJumpMapIdx int,
+	rules polprog.Rules,
+	ipFamily proto.IPVersion,
+	opts ...polprog.Option,
+) ([]asm.Insns, error) {
 	if m.bpfPolicyDebugEnabled {
 		opts = append(opts, polprog.WithPolicyDebugEnabled())
 	}
 
-	progsMap := m.bpfmaps.ProgramsMap
+	staticProgsMap := m.bpfmaps.ProgramsMap
 	if hk == hook.XDP {
-		progsMap = m.bpfmaps.XDPProgramsMap
+		staticProgsMap = m.bpfmaps.XDPProgramsMap
 	}
 
-	progFD, insns, err := m.loadPolicyProgramFn(progName, ipFamily, rules, progsMap, opts...)
+	// If we have to break a program up into sub-programs to please the
+	// verifier then we store the sub-programs at
+	// polJumpMapIdx + subProgNo * stride.
+	polProgsMap := m.bpfmaps.JumpMap
+	stride := jump.TCMaxEntryPoints
+	if hk == hook.XDP {
+		polProgsMap = m.bpfmaps.XDPJumpMap
+		stride = jump.XDPMaxEntryPoints
+	}
+	opts = append(opts, polprog.WithPolicyMapIndexAndStride(polJumpMapIdx, stride))
+	progFDs, insns, err := m.loadPolicyProgramFn(
+		progName,
+		ipFamily,
+		rules,
+		staticProgsMap,
+		polProgsMap,
+		opts...,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	defer func() {
-		// Once we've put the program in the map, we don't need its FD any more.
-		err := progFD.Close()
-		if err != nil {
-			log.WithError(err).Panic("Failed to close program FD.")
+		for _, progFD := range progFDs {
+			// Once we've put the programs in the map, we don't need their FDs.
+			if err := progFD.Close(); err != nil {
+				log.WithError(err).Panic("Failed to close program FD.")
+			}
 		}
 	}()
 
-	jumpMap := m.bpfmaps.JumpMap
-	if hk == hook.XDP {
-		jumpMap = m.bpfmaps.XDPJumpMap
-	}
-
-	if err := jumpMap.Update(jump.Key(jmp), jump.Value(progFD.FD())); err != nil {
-		return nil, fmt.Errorf("failed to update %s policy jump map [%d]=%d: %w", hk, jmp, progFD, err)
+	for i, progFD := range progFDs {
+		subProgIdx := polprog.SubProgramJumpIdx(polJumpMapIdx, i, stride)
+		log.Debugf("Putting sub-program %d at position %d", i, subProgIdx)
+		if err := polProgsMap.Update(jump.Key(subProgIdx), jump.Value(progFD.FD())); err != nil {
+			return nil, fmt.Errorf("failed to update %s policy jump map [%d]=%d: %w", hk, subProgIdx, progFD, err)
+		}
 	}
 
 	return insns, nil
@@ -3055,11 +3077,13 @@ func (m *bpfEndpointManager) jumpMapDelete(h hook.Hook, idx int) error {
 	}
 
 	jumpMap := m.bpfmaps.JumpMap
+	stride := jump.TCMaxEntryPoints
 	if h == hook.XDP {
 		jumpMap = m.bpfmaps.XDPJumpMap
+		stride = jump.XDPMaxEntryPoints
 	}
 
-	return jumpMapDeleteEntry(jumpMap, idx)
+	return jumpMapDeleteEntry(jumpMap, idx, stride)
 }
 
 func (m *bpfEndpointManager) removePolicyProgram(ap attachPoint) error {
@@ -3075,14 +3099,16 @@ func (m *bpfEndpointManager) removePolicyProgram(ap attachPoint) error {
 		}
 
 		var pm maps.Map
-
+		var stride int
 		if ap.HookName() == hook.XDP {
 			pm = m.bpfmaps.JumpMap
+			stride = jump.XDPMaxEntryPoints
 		} else {
 			pm = m.bpfmaps.XDPJumpMap
+			stride = jump.TCMaxEntryPoints
 		}
 
-		if err := jumpMapDeleteEntry(pm, idx); err != nil {
+		if err := jumpMapDeleteEntry(pm, idx, stride); err != nil {
 			return fmt.Errorf("removing policy iface %s hook %s: %w", ap.IfaceName(), ap.HookName(), err)
 		}
 
@@ -3340,6 +3366,13 @@ func (m *bpfEndpointManager) ruleMatchID(
 	}
 
 	return m.ruleMatchIDFromNFLOGPrefix(rules.CalculateNFLOGPrefixStr(a, owner, dir, idx, name))
+}
+
+func newJumpMapAlloc(entryPoints int) *jumpMapAlloc {
+	return &jumpMapAlloc{
+		max:  entryPoints,
+		free: make(chan int, entryPoints),
+	}
 }
 
 type jumpMapAlloc struct {

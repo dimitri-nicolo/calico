@@ -20,6 +20,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -123,7 +124,7 @@ func TestPolicyLoadKitchenSinkPolicy(t *testing.T) {
 
 	cleanIPSetMap()
 
-	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), jumpMap.MapFD(), 0,
+	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), policyJumpMap.MapFD(), 0,
 		polprog.WithAllowDenyJumps(tcdefs.ProgIndexAllowed, tcdefs.ProgIndexDrop))
 	insns, err := pg.Instructions(polprog.Rules{
 		Tiers: []polprog.Tier{{
@@ -2880,6 +2881,8 @@ type testCase interface {
 	MatchStateOut(stateOut state.State)
 }
 
+var nextPolProgIdx atomic.Int64
+
 func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 	RegisterTestingT(t)
 
@@ -2893,9 +2896,9 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 
 	setUpIPSets(tp.IPSets(), realAlloc, ipsMap)
 
-	jumpMap = jump.Map()
-	_ = unix.Unlink(jumpMap.Path())
-	err := jumpMap.EnsureExists()
+	policyJumpMap = jump.Map()
+	_ = unix.Unlink(policyJumpMap.Path())
+	err := policyJumpMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
 	allowIdx := tcdefs.ProgIndexAllowed
@@ -2907,41 +2910,72 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 
 	polprogOpts = append(polprogOpts, polprog.WithAllowDenyJumps(allowIdx, denyIdx))
 
-	pg := polprog.NewBuilder(forceAlloc, ipsMap.MapFD(), testStateMap.MapFD(), jumpMap.MapFD(), 0,
-		polprogOpts...)
+	staticProgsMap := maps.NewPinnedMap(maps.MapParameters{
+		Type:       "prog_array",
+		KeySize:    4,
+		ValueSize:  4,
+		MaxEntries: 32,
+		Name:       "teststatic",
+	})
+	staticProgsMap.EnsureExists()
+
+	polProgIdx := int(nextPolProgIdx.Add(1))
+	stride := jump.TCMaxEntryPoints
+	polprogOpts = append(polprogOpts, polprog.WithPolicyMapIndexAndStride(int(polProgIdx), stride))
+	pg := polprog.NewBuilder(
+		forceAlloc,
+		ipsMap.MapFD(),
+		testStateMap.MapFD(),
+		staticProgsMap.MapFD(),
+		policyJumpMap.MapFD(),
+		polprogOpts...,
+	)
 	if tp.ForIPv6() {
 		pg.EnableIPv6Mode()
 	}
 	insns, err := pg.Instructions(tp.Policy())
 	Expect(err).NotTo(HaveOccurred(), "failed to assemble program")
 
-	// Load the program into the kernel.  We don't pin it so it'll be removed when the
-	// test process exits (or by the defer).
-	Expect(insns).To(HaveLen(1))
-	polProgFD, err := bpf.LoadBPFProgramFromInsns(insns[0], "calico_policy", "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
-	Expect(err).NotTo(HaveOccurred(), "failed to load program into the kernel")
-	Expect(polProgFD).NotTo(BeZero())
+	// Load the program(s) into the kernel.
+	var polProgFDs []bpf.ProgFD
 	defer func() {
-		err := polProgFD.Close()
-		Expect(err).NotTo(HaveOccurred())
+		var errs []error
+		for _, polProgFD := range polProgFDs {
+			err := polProgFD.Close()
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+		Expect(errs).To(BeEmpty())
 	}()
+	for i, p := range insns {
+		polProgFD, err := bpf.LoadBPFProgramFromInsns(p, "calico_policy", "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
+		Expect(err).NotTo(HaveOccurred(), "failed to load program into the kernel")
+		Expect(polProgFD).NotTo(BeZero())
+		polProgFDs = append(polProgFDs, polProgFD)
+		err = policyJumpMap.Update(
+			jump.Key(polprog.SubProgramJumpIdx(polProgIdx, i, stride)),
+			jump.Value(polProgFD.FD()),
+		)
+		Expect(err).NotTo(HaveOccurred())
+	}
 
 	// Give the policy program somewhere to jump to.
-	jumpMapIndex := tcdefs.ProgIndexAllowed
+	allowProgIdx := tcdefs.ProgIndexAllowed
 	if tp.ForIPv6() {
-		jumpMapIndex = tcdefs.ProgIndexV6Allowed
+		allowProgIdx = tcdefs.ProgIndexV6Allowed
 	}
-	epiFD := installAllowedProgram(jumpMap, jumpMapIndex)
+	epiFD := installAllowedProgram(staticProgsMap, allowProgIdx)
 	defer func() {
 		err := epiFD.Close()
 		Expect(err).NotTo(HaveOccurred())
 	}()
 
-	jumpMapIndex = tcdefs.ProgIndexDrop
+	dropProgIdx := tcdefs.ProgIndexDrop
 	if tp.ForIPv6() {
-		jumpMapIndex = tcdefs.ProgIndexV6Drop
+		dropProgIdx = tcdefs.ProgIndexV6Drop
 	}
-	dropFD := installDropProgram(jumpMap, jumpMapIndex)
+	dropFD := installDropProgram(staticProgsMap, dropProgIdx)
 	defer func() {
 		err := dropFD.Close()
 		Expect(err).NotTo(HaveOccurred())
@@ -2951,19 +2985,19 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 	for _, tc := range tp.AllowedPackets() {
 		t.Run(fmt.Sprintf("should allow %s", tc), func(t *testing.T) {
 			RegisterTestingT(t)
-			runProgram(tc, testStateMap, polProgFD, RCAllowedReached, state.PolicyAllow)
+			runProgram(tc, testStateMap, polProgFDs[0], RCAllowedReached, state.PolicyAllow)
 		})
 	}
 	for _, tc := range tp.DroppedPackets() {
 		t.Run(fmt.Sprintf("should drop %s", tc), func(t *testing.T) {
 			RegisterTestingT(t)
-			runProgram(tc, testStateMap, polProgFD, RCDropReached, state.PolicyDeny)
+			runProgram(tc, testStateMap, polProgFDs[0], RCDropReached, state.PolicyDeny)
 		})
 	}
 	for _, tc := range tp.UnmatchedPackets() {
 		t.Run(fmt.Sprintf("should not match %s", tc), func(t *testing.T) {
 			RegisterTestingT(t)
-			runProgram(tc, testStateMap, polProgFD, XDPPass, state.PolicyNoMatch)
+			runProgram(tc, testStateMap, polProgFDs[0], XDPPass, state.PolicyNoMatch)
 		})
 	}
 }
