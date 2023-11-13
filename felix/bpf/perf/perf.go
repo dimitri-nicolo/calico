@@ -93,6 +93,8 @@ type perf struct {
 
 	watermark    int
 	watermarkBit bool
+
+	closed atomic.Bool
 }
 
 // New creates a new Perf that interfaces through the provided bpf map.
@@ -191,6 +193,9 @@ func (p *perf) Next() (Event, error) {
 				continue // EINTR is benign a happens often, just retry the loop
 			}
 		}
+		if p.closed.Load() {
+			return Event{}, syscall.EINTR
+		}
 
 		ring := p.ready[p.readyIdx]
 		event, err := ring.Next()
@@ -213,6 +218,7 @@ func (p *perf) Next() (Event, error) {
 }
 
 func (p *perf) Close() error {
+	p.closed.Store(true)
 	for i, ring := range p.rings {
 		if ring != nil {
 			if err := ring.Close(); err != nil {

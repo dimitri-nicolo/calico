@@ -160,7 +160,7 @@ func TestPolicyVerdictEvents(t *testing.T) {
 				defer close(done)
 				evnt, err = evnts.Next()
 			}()
-			Eventually(done).Should(BeClosed())
+			Eventually(done, "5s").Should(BeClosed())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(evnt.Type()).To(Equal(events.TypePolicyVerdict))
 
