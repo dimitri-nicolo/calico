@@ -102,10 +102,12 @@ func New(
 		configureFlowAggregation(configParams, cw)
 		statsCollector.RegisterMetricsReporter(cw)
 	}
-
-	syslogReporter := syslog.New(configParams.SyslogReporterNetwork, configParams.SyslogReporterAddress)
-	if syslogReporter != nil {
-		statsCollector.RegisterMetricsReporter(syslogReporter)
+	if configParams.SyslogReporterEnabled {
+		log.Info("Creating a Syslog Reporter")
+		syslogReporter := syslog.New(configParams.SyslogReporterNetwork, configParams.SyslogReporterAddress)
+		if syslogReporter != nil {
+			statsCollector.RegisterMetricsReporter(syslogReporter)
+		}
 	}
 
 	if configParams.DNSLogsFileEnabled {
