@@ -1095,8 +1095,8 @@ func jumpMapDeleteEntry(m maps.Map, idx, stride int) error {
 	for subProg := 0; subProg < jump.MaxSubPrograms; subProg++ {
 		if err := m.Delete(jump.Key(polprog.SubProgramJumpIdx(idx, subProg, stride))); err != nil {
 			if maps.IsNotExists(err) {
-				log.WithError(err).WithField("idx", idx).
-					Debug("Policy program already not in table - inconsistency fixed!")
+				log.WithError(err).WithField("idx", idx).Debug(
+					"Policy program already gone from map.")
 				return nil
 			} else {
 				log.WithError(err).Warn("Failed to delete policy program from map; policy program may leak.")
@@ -2957,7 +2957,10 @@ func (m *bpfEndpointManager) loadPolicyProgram(
 ) (
 	fd []fileDescriptor, insns []asm.Insns, err error,
 ) {
-
+	log.WithFields(log.Fields{
+		"progName": progName,
+		"ipFamily": ipFamily,
+	}).Debug("Generating policy program...")
 	pg := polprog.NewBuilder(
 		m.ipSetIDAlloc,
 		m.bpfmaps.IpsetsMap.MapFD(),
@@ -3101,11 +3104,11 @@ func (m *bpfEndpointManager) removePolicyProgram(ap attachPoint) error {
 		var pm maps.Map
 		var stride int
 		if ap.HookName() == hook.XDP {
-			pm = m.bpfmaps.JumpMap
 			stride = jump.XDPMaxEntryPoints
-		} else {
 			pm = m.bpfmaps.XDPJumpMap
+		} else {
 			stride = jump.TCMaxEntryPoints
+			pm = m.bpfmaps.JumpMap
 		}
 
 		if err := jumpMapDeleteEntry(pm, idx, stride); err != nil {
