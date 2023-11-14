@@ -2917,7 +2917,8 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 		MaxEntries: 32,
 		Name:       "teststatic",
 	})
-	staticProgsMap.EnsureExists()
+	err = staticProgsMap.EnsureExists()
+	Expect(err).NotTo(HaveOccurred())
 
 	polProgIdx := int(nextPolProgIdx.Add(1))
 	stride := jump.TCMaxEntryPoints

@@ -435,12 +435,18 @@ func setupAndRun(logger testLogger, loglevel, section string, rules *polprog.Rul
 			}
 			Expect(errs).To(BeEmpty())
 		}()
+		var progType uint32
+		if topts.xdp {
+			progType = unix.BPF_PROG_TYPE_XDP
+		} else {
+			progType = unix.BPF_PROG_TYPE_SCHED_CLS
+		}
 		for i, p := range insns {
-			polProgFD, err := bpf.LoadBPFProgramFromInsns(p, "calico_policy", "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
+			polProgFD, err := bpf.LoadBPFProgramFromInsns(p, "calico_policy", "Apache-2.0", progType)
 			Expect(err).NotTo(HaveOccurred(), "failed to load program into the kernel")
 			Expect(polProgFD).NotTo(BeZero())
 			polProgFDs = append(polProgFDs, polProgFD)
-			err = policyJumpMap.Update(
+			err = polMap.Update(
 				jump.Key(polprog.SubProgramJumpIdx(policyIdx, i, stride)),
 				jump.Value(polProgFD.FD()),
 			)
@@ -578,14 +584,13 @@ func initMapsOnce() {
 		countersMap = counters.Map()
 		ifstateMap = ifstate.Map()
 		policyJumpMap = jump.Map()
-		policyJumpMap.EnsureExists()
 		policyJumpMapXDP = jump.XDPMap()
-		policyJumpMapXDP.EnsureExists()
 
 		perfMap = perf.Map("perf_evnt", 512)
 
 		allMaps = []maps.Map{natMap, natBEMap, natMapV6, natBEMapV6, ctMap, ctMapV6, rtMap, rtMapV6, ipsMap,
-			stateMap, testStateMap, affinityMap, affinityMapV6, arpMap, arpMapV6, fsafeMap, countersMap, ifstateMap}
+			stateMap, testStateMap, affinityMap, affinityMapV6, arpMap, arpMapV6, fsafeMap, countersMap, ifstateMap,
+			policyJumpMap, policyJumpMapXDP}
 		for _, m := range allMaps {
 			err := m.EnsureExists()
 			if err != nil {
@@ -617,6 +622,9 @@ func cleanUpMaps() {
 			return maps.IterDelete
 		})
 		if err != nil {
+			if errors.Is(err, maps.ErrNotSupported) {
+				continue
+			}
 			log.WithError(err).Panic("Failed to walk map")
 		}
 	}
@@ -1948,7 +1956,7 @@ func TestJumpMap(t *testing.T) {
 	RegisterTestingT(t)
 
 	jumpMapFD := progMap.MapFD()
-	pg := polprog.NewBuilder(idalloc.New(), ipsMap.MapFD(), stateMap.MapFD(), jumpMapFD, 0,
+	pg := polprog.NewBuilder(idalloc.New(), ipsMap.MapFD(), stateMap.MapFD(), jumpMapFD, policyJumpMap.MapFD(),
 		polprog.WithAllowDenyJumps(tcdefs.ProgIndexAllowed, tcdefs.ProgIndexDrop))
 	rules := polprog.Rules{}
 	insns, err := pg.Instructions(rules)
