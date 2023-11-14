@@ -756,12 +756,13 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					for i, c := range cs.GetActiveClusters() {
 						for _, f := range c.felixes {
 							if BPFMode() {
+								numFelixes := len(cs.local.felixes) + len(cs.remote.felixes)
 								Eventually(func() int {
 									return strings.Count(f.BPFRoutes(), "host")
-								}).Should(Equal(len(felixes)*2),
+								}, waitPeriod, "200ms").Should(Equal(numFelixes*2),
 									"Expected one host and one host tunneled route per node")
 							} else {
-								Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), "10s", "200ms").Should(Equal(baseIPSetMemberCount - i))
+								Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount - i))
 							}
 						}
 
@@ -789,14 +790,13 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					}
 
 					if BPFMode() {
+						numFelixes := baseIPSetMemberCount + 1
 						Eventually(func() int {
-							return strings.Count(felixes[0].BPFRoutes(), "host")
-						}).Should(Equal(adjustedIPSetMemberCount*2),
-							"Expected one host and one host tunneled route per node, not: "+felixes[0].BPFRoutes())
+							return strings.Count(cs.local.felixes[0].BPFRoutes(), "host")
+						}).Should(Equal(numFelixes*2),
+							"Expected one host and one host tunneled route per node, not: "+cs.local.felixes[0].BPFRoutes())
 					} else {
-						Eventually(func() int {
-							return getNumIPSetMembers(cs.local.felixes[0].Container, "cali40all-vxlan-net")
-						}, "5s", "200ms").Should(Equal(adjustedIPSetMemberCount))
+						Eventually(cs.local.felixes[0].IPSetSizeFn("cali40all-vxlan-net"), "5s", "200ms").Should(Equal(adjustedIPSetMemberCount))
 					}
 
 					cc.ExpectSome(cs.local.w[0], cs.local.w[1])

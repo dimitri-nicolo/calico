@@ -129,7 +129,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			return fmt.Errorf("No IP set with 1000 members (last=%d) in:\n[%v]", numMembers, ipsetsOutput)
 		}
 
-		for name, count := range getIPSetCounts(felix.Container) {
+		for name, count := range felix.IPSetSizes() {
 			if strings.HasPrefix(name, "cali40d:") && count == 1000 {
 				return nil
 			}
