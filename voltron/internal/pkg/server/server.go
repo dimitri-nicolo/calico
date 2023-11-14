@@ -329,7 +329,6 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 					log.Error("no fingerprint has been stored against the current connection")
 					closeTunnel(t)
 					return
-
 				}
 				// Before Calico Enterprise v3.15, we use md5 hash algorithm for the managed cluster
 				// certificate fingerprint. md5 is known to cause collisions and it is not approved in
@@ -424,7 +423,9 @@ func (s *Server) extractMD5Identity(t *tunnel.Tunnel) (fingerprint string) {
 func validateCertificate(tunnelCert *x509.Certificate, certPEM []byte) error {
 	block, _ := pem.Decode(certPEM)
 	if block == nil || block.Type != "CERTIFICATE" {
-		log.Fatalf("Failed to decode PEM block containing certificate")
+		err := errors.New("failed to decode PEM block containing certificate")
+		log.WithError(err).Error("failed to validate certificate")
+		return err
 	}
 
 	cert, err := x509.ParseCertificate(block.Bytes)

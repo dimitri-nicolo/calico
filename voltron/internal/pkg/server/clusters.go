@@ -245,21 +245,43 @@ func (cs *clusters) update(mc *jclust.ManagedCluster) error {
 func (cs *clusters) updateLocked(mc *jclust.ManagedCluster, recovery bool) error {
 	if c, ok := cs.clusters[mc.ID]; ok {
 		c.Lock()
-		log.Infof("Updating cluster ID: %q", c.ID)
-		// Update the certificate pool if the certificate has changed.
-		err, updated := cs.updateCertPool(mc.Certificate, c.Certificate)
+		clog := log.WithField("cluster", c.ID)
+		clog.Info("Updating the managed cluster")
+
+		oldCert := c.ManagedCluster.Certificate
+		newCert := mc.Certificate
+
+		// Update the managed cluster
+		c.ManagedCluster = *mc
+
+		// Update the certificate pool if the certificate has changed
+		err, updated := cs.updateCertPool(newCert, oldCert)
 		if err != nil {
+			clog.WithError(err).Error("failed to update the client certificate pool")
+			// Close the tunnel to disconnect
+			if err := c.closeTunnel(); err != nil {
+				clog.WithError(err).Error("failed to close tunnel")
+				c.Unlock()
+
+				return err
+			}
 			c.Unlock()
+
 			return err
 		}
-		c.ManagedCluster = *mc
-		log.Infof("New cluster ID: %q", c.ID)
+
 		if updated {
-			if err := c.tunnelManager.CloseTunnel(); err != nil {
-				log.Error("failed to close tunnel")
+			clog.Info("Updated the client certificate pool, closing tunnel")
+			// Close the tunnel to disconnect
+			if err := c.closeTunnel(); err != nil {
+				clog.WithError(err).Error("failed to close tunnel")
+				c.Unlock()
+
+				return err
 			}
 		}
 		c.Unlock()
+
 		return nil
 	}
 
@@ -475,15 +497,22 @@ func (c *cluster) checkTunnelState() {
 	c.Lock()
 	defer c.Unlock()
 
+	clog := log.WithField("cluster", c.ID)
+
 	c.proxy = nil
-	if err := c.tunnelManager.CloseTunnel(); err != nil {
+	if err := c.tunnelManager.CloseTunnel(); err != nil && err != tunnel.ErrTunnelClosed {
 		log.WithError(err).Error("an error occurred closing the tunnel")
 	}
 
 	if err := c.setConnectedStatus(v3.ManagedClusterStatusValueFalse); err != nil {
-		log.WithError(err).Errorf("failed to update the connection status for cluster %s", c.ID)
+		clog.WithError(err).Error("failed to update the connection status")
 	}
-	log.Errorf("Cluster %s tunnel is broken (%s), deleted", c.ID, err)
+
+	if err != nil {
+		clog.WithError(err).Error("Cluster tunnel is broken, deleted")
+		return
+	}
+	clog.Info("Cluster tunnel is closed")
 }
 
 func (c *cluster) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -546,7 +575,11 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 					defer listener.Close()
 
 					if err := c.tlsProxy.ListenAndProxy(listener); err != nil {
-						log.WithError(err).Error("failed to listen for incoming requests through the tunnel")
+						if err != tunnel.ErrTunnelClosed {
+							log.WithError(err).Error("failed to listen for incoming requests through the tunnel")
+						} else {
+							log.Info("failed to listen for incoming requests through the tunnel, tunnel closed")
+						}
 					}
 				}()
 
@@ -616,6 +649,22 @@ func (c *cluster) stop() {
 		}
 	}
 	c.RUnlock()
+}
+
+// closeTunnel closes the tunnel to disconnect. Is not thread safe, so the caller
+// must hold the RLock to access the tunnel.
+func (c *cluster) closeTunnel() error {
+	if c.tunnelManager != nil {
+		// Close the tunnel to disconnect.
+		if err := c.tunnelManager.CloseTunnel(); err != nil {
+			if err != tunnel.ErrTunnelClosed {
+				log.WithError(err).Error("an error occurred closing tunnel")
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func proxyVoidDirector(*http.Request) {
