@@ -1235,7 +1235,7 @@ func WithActionDropOverride(value string) Option {
 	}
 }
 
-// WithPolicyDebug enabled policy debug.
+// WithPolicyDebugEnabled enables policy debug.
 func WithPolicyDebugEnabled() Option {
 	return func(b *Builder) {
 		b.policyDebugEnabled = true
@@ -1250,9 +1250,15 @@ func WithAllowDenyJumps(allow, deny int) Option {
 	}
 }
 
-func WithPolicyMapIndexAndStride(index, stride int) Option {
+// WithPolicyMapIndexAndStride tells the builder the "shape" of the policy
+// jump map, allowing it to split the program if it gets too large.
+// entryPointIdx is the jump map key for the first "entry point" program.
+// stride is the number of indexes to skip to get to the next sub-program.
+// If WithPolicyMapIndexAndStride is not provided, program-splitting is
+// disabled.
+func WithPolicyMapIndexAndStride(entryPointIdx, stride int) Option {
 	return func(b *Builder) {
-		b.policyMapIndex = index
+		b.policyMapIndex = entryPointIdx
 		b.policyMapStride = stride
 	}
 }

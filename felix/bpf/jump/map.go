@@ -23,7 +23,7 @@ import (
 const (
 	// MaxSubPrograms is the maximum number of policy sub-programs that
 	// we allow for a single hook.  BPF allows a maximum of 32 tail calls
-	// (so 33 chained programs in total) but we some for our own use.
+	// (so 33 chained programs in total) but we reserve some for our own use.
 	MaxSubPrograms = 24
 
 	// TCMaxEntryPoints is the maximum number of policy program entry points

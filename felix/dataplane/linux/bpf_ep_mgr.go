@@ -2810,7 +2810,7 @@ func (m *bpfEndpointManager) writePolicyDebugInfo(insns []asm.Insns, ifaceName s
 	}
 
 	// We may have >1 sub-program; it seems to work reasonably well to just
-	// concatenate the instructions.  The pol icy program builder writes
+	// concatenate the instructions.  The policy program builder writes
 	// comments that delineate the programs.
 	var combinedInsns asm.Insns
 	if len(insns) > 0 {

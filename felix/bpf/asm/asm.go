@@ -376,11 +376,11 @@ type Block struct {
 	insnIdxToComments  map[int][]string
 	inUseJumpTargets   set.Set[string]
 	policyDebugEnabled bool
+	trampolinesEnabled bool
 	trampolineIdx      int
 	lastTrampolineAddr int
 	deferredErr        error
 	NumJumps           int
-	trampolinesEnabled bool
 }
 
 func NewBlock(policyDebugEnabled bool) *Block {
