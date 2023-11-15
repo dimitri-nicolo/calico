@@ -489,7 +489,7 @@ var localPktEgressAllowedPreDNAT = &nfnetlink.NflogPacketAggregate{
 	},
 	OriginalTuple: nfnetlink.CtTuple{
 		Src:        localIp1,
-		Dst:        localIp2DNAT,
+		Dst:        localIp1DNAT,
 		L3ProtoNum: ipv4,
 		ProtoNum:   proto_tcp,
 		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
@@ -1962,7 +1962,8 @@ var _ = Describe("Reporting Metrics", func() {
 			}
 			Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 		})
-		It("should handle a preDNAT like connection that is eventually allowed", func() {
+
+		doPreDNATTest := func(firstOp string) {
 			By("initializing the mock process cache with data")
 			mpc.outboundCache[*localPktEgressDenyTuplePreDNAT] = proc2
 
@@ -1990,11 +1991,28 @@ var _ = Describe("Reporting Metrics", func() {
 			By("Checking epstats for connection tuple")
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*localPktEgressDenyTuplePreDNAT))
 
+			// We previously had a race here where the order of arrival of the
+			// messages caused a failure.  We now run both orders with a sleep
+			// in between to test both code paths.
 			By("Sending a NFLOG update with allowed verdict")
-			nflogReader.EgressC <- localPktEgressAllowedPreDNAT
-
-			// will call handlerInfo from c.Start() in BeforeEach
-			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntryWithDNAT, 0)}
+			sendPkt := func() {
+				nflogReader.EgressC <- localPktEgressAllowedPreDNAT
+			}
+			sendConntrack := func() {
+				ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntryWithDNAT, 0)}
+			}
+			switch firstOp {
+			case "packet-first":
+				sendPkt()
+				time.Sleep(10 * time.Millisecond)
+				sendConntrack()
+			case "conntrack-first":
+				sendConntrack()
+				time.Sleep(10 * time.Millisecond)
+				sendPkt()
+			default:
+				Fail("Unknown op: " + firstOp)
+			}
 
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
@@ -2036,6 +2054,13 @@ var _ = Describe("Reporting Metrics", func() {
 				processID:    1234,
 			}
 			Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+		}
+
+		It("should handle a preDNAT like connection that is eventually allowed; packet then conntrack", func() {
+			doPreDNATTest("packet-first")
+		})
+		It("should handle a preDNAT like connection that is eventually allowed; conntrack then packet", func() {
+			doPreDNATTest("conntrack-first")
 		})
 	})
 	Context("Withtproxyenabled", func() {

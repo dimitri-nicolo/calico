@@ -425,14 +425,14 @@ func (d *Data) String() string {
 	return fmt.Sprintf(
 		"tuple={%v}, srcEp={%v} dstEp={%v}, dstSvc={%v}, connTrackCtr={packets=%v bytes=%v}, "+
 			"connTrackCtrReverse={packets=%v bytes=%v}, httpPkts={allowed=%v, denied=%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}, "+
-			"expired=%v, reported=%v isDNAT=%v isConnection=%+v "+
+			"expired=%v, reported=%v isDNAT=%v preDNATAddr=%v preDNATPort=%v isConnection=%+v "+
 			"origSourceIPs={ips=%v totalCount=%v}, "+
 			"sourceProcessInfo{name=%s, args=%s, pid=%d}, destProcessInfo{name=%s, args=%s, pid=%d} "+
 			"TcpStats{sendCongestionwnd=%v, smoothRtt=%v, minRtt=%v, mss=%v, totalRetrans=%v, lostOut=%v, unrecoveredTO=%v}",
 		&(d.Tuple), srcName, dstName, dstSvcName, d.conntrackPktsCtr.Absolute(), d.conntrackBytesCtr.Absolute(),
 		d.conntrackPktsCtrReverse.Absolute(), d.conntrackBytesCtrReverse.Absolute(), d.httpReqAllowedCtr.Delta(),
 		d.httpReqDeniedCtr.Delta(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace,
-		d.Expired, d.Reported, d.IsDNAT, d.IsConnection,
+		d.Expired, d.Reported, d.IsDNAT, d.PreDNATAddr, d.PreDNATPort, d.IsConnection,
 		osi, osiTc,
 		d.SourceProcessData().Name, d.SourceProcessData().Arguments, d.SourceProcessData().Pid, d.DestProcessData().Name,
 		d.DestProcessData().Arguments, d.DestProcessData().Pid, d.TcpStats.sendCongestionWnd, d.TcpStats.smoothRtt,
