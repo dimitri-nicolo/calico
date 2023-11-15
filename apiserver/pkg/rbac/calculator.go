@@ -960,5 +960,4 @@ func (u *userCalculator) updateResources() {
 	log.Debug("Update user calculator to use updated cache of known resource types")
 	u.resources = u.calculator.resources
 	u.resourcesUpdateTime = u.calculator.resourceUpdateTime
-	return
 }

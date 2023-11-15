@@ -126,7 +126,7 @@ func withConfigGetFreshApiserverServerAndClient(
 	cfg.Host = secureAddr
 	cfg.Insecure = true
 	clientset, err := calicoclient.NewForConfig(cfg)
-	if nil != err {
+	if err != nil {
 		t.Fatal("can't make the client from the config", err)
 	}
 

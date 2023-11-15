@@ -67,24 +67,23 @@ type (
 )
 
 type resourceStore struct {
-	client             clientv3.Interface
-	codec              runtime.Codec
-	versioner          storage.Versioner
-	aapiType           reflect.Type
-	aapiListType       reflect.Type
-	libCalicoType      reflect.Type
-	libCalicoListType  reflect.Type
-	isNamespaced       bool
-	create             clientObjectOperator
-	update             clientObjectOperator
-	get                clientNameOperator
-	delete             clientNameOperator
-	list               clientLister
-	watch              clientWatcher
-	hasRestrictions    clientLicenseCheck
-	resourceName       string
-	converter          resourceConverter
-	registeredFeatures []string
+	client            clientv3.Interface
+	codec             runtime.Codec
+	versioner         storage.Versioner
+	aapiType          reflect.Type
+	aapiListType      reflect.Type
+	libCalicoType     reflect.Type
+	libCalicoListType reflect.Type
+	isNamespaced      bool
+	create            clientObjectOperator
+	update            clientObjectOperator
+	get               clientNameOperator
+	delete            clientNameOperator
+	list              clientLister
+	watch             clientWatcher
+	hasRestrictions   clientLicenseCheck
+	resourceName      string
+	converter         resourceConverter
 }
 
 func CreateClientFromConfig() clientv3.Interface {
@@ -461,7 +460,7 @@ func (rs *resourceStore) GuaranteedUpdate(
 		updatedRes := updatedObj.(resourceObject)
 		if !shouldCreateOnUpdate() {
 			if updatedRes.GetObjectMeta().GetResourceVersion() == "" || revInt < int(curState.rev) {
-				updatedRes.(resourceObject).GetObjectMeta().SetResourceVersion(strconv.FormatInt(curState.rev, 10))
+				updatedRes.GetObjectMeta().SetResourceVersion(strconv.FormatInt(curState.rev, 10))
 			}
 		}
 		libcalicoObj := rs.converter.convertToLibcalico(updatedRes)
