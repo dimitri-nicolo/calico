@@ -27,7 +27,6 @@ func NewCachingAuthorizer(cache cache.Cache[string, bool], delegate RBACAuthoriz
 }
 
 func newCachingAuthorizer(cache cache.Cache[string, bool], delegate RBACAuthorizer) *cachingAuthorizer {
-
 	return &cachingAuthorizer{
 		delegate: delegate,
 		cache:    cache,
@@ -79,7 +78,6 @@ func toAuthorizeCacheKey(uer user.Info, resources *authzv1.ResourceAttributes) s
 }
 
 func toAuthorizeCacheKeyManual(uer user.Info, resources *authzv1.ResourceAttributes) string {
-
 	sb := strings.Builder{}
 	sb.WriteString("{")
 	sb.WriteString("userName:")
