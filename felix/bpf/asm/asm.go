@@ -388,7 +388,6 @@ func NewBlock(policyDebugEnabled bool) *Block {
 }
 
 type fixUp struct {
-	label       string
 	origInsnIdx int
 }
 
@@ -756,7 +755,7 @@ func (b *Block) addInsnWithOffsetFixupNoTrampoline(insn Insn, targetLabel string
 			b.insns[len(b.insns)-1].Annotation = fmt.Sprintf("goto %s", targetLabel)
 		}
 		b.inUseJumpTargets.Add(targetLabel)
-		b.fixUps[targetLabel] = append(b.fixUps[targetLabel], fixUp{label: targetLabel, origInsnIdx: len(b.insns) - 1})
+		b.fixUps[targetLabel] = append(b.fixUps[targetLabel], fixUp{origInsnIdx: len(b.insns) - 1})
 	}
 }
 
@@ -792,9 +791,9 @@ func (b *Block) Assemble() (Insns, error) {
 
 func (b *Block) applyFixUps(targetLabel string) error {
 	for _, f := range b.fixUps[targetLabel] {
-		labelIdx, ok := b.labelToInsnIdx[f.label]
+		labelIdx, ok := b.labelToInsnIdx[targetLabel]
 		if !ok {
-			return fmt.Errorf("missing label: %s", f.label)
+			return fmt.Errorf("missing label: %s", targetLabel)
 		}
 		// Offset is relative to the next instruction since the PC is auto-incremented.
 		offset := labelIdx - f.origInsnIdx - 1
@@ -802,10 +801,10 @@ func (b *Block) applyFixUps(targetLabel string) error {
 			// This case is made more likely by the trampoline machinery
 			// since it's what we'd hit if a trampoline was generated but
 			// then the intended jump target was never added.
-			return fmt.Errorf("calculated jump offset (%d) to label %s would jump to same instruction", offset, f.label)
+			return fmt.Errorf("calculated jump offset (%d) to label %s would jump to same instruction", offset, targetLabel)
 		}
 		if offset > math.MaxInt16 || offset < math.MinInt16 {
-			return fmt.Errorf("calculated jump offset (%d) to label %s would exceed jump range", offset, f.label)
+			return fmt.Errorf("calculated jump offset (%d) to label %s would exceed jump range", offset, targetLabel)
 		}
 		binary.LittleEndian.PutUint16(b.insns[f.origInsnIdx].Instruction[2:4], uint16(offset))
 	}
@@ -817,8 +816,8 @@ func (b *Block) LabelNextInsn(label string) {
 	b.labelToInsnIdx[label] = len(b.insns)
 	b.insnIdxToLabels[len(b.insns)] = append(b.insnIdxToLabels[len(b.insns)], label)
 
-	// Eagerly apply fixUps now so that we can re-use the same jumps when
-	// making trampolines.
+	// Eagerly apply fixUps now so that we can re-use the same label names
+	// when making trampolines.
 	err := b.applyFixUps(label)
 	if err != nil {
 		log.WithError(err).Error("Failed to apply fix-ups in BPF assembler; program generation will fail")
