@@ -41,18 +41,16 @@ type Config struct {
 	LogLevel string `default:"info" split_words:"true"`
 
 	// Number of workers to run for each controller.
-	WorkloadEndpointWorkers                          int `default:"1" split_words:"true"`
-	ProfileWorkers                                   int `default:"1" split_words:"true"`
-	PolicyWorkers                                    int `default:"1" split_words:"true"`
-	ServiceWorkers                                   int `default:"1" split_words:"true"`
-	NodeWorkers                                      int `default:"1" split_words:"true"`
-	FederatedServicesWorkers                         int `default:"1" split_words:"true"`
-	AuthorizationWorkers                             int `default:"1" split_words:"true"`
-	ImageAssuranceWorkers                            int `default:"1" split_words:"true"`
-	ManagedClusterWorkers                            int `default:"1" split_words:"true"`
-	ManagedClusterElasticsearchConfigurationWorkers  int `default:"1" split_words:"true"`
-	ManagedClusterLicenseConfigurationWorkers        int `default:"1" split_words:"true"`
-	ManagedClusterImageAssuranceConfigurationWorkers int `default:"1" split_words:"true"`
+	WorkloadEndpointWorkers                         int `default:"1" split_words:"true"`
+	ProfileWorkers                                  int `default:"1" split_words:"true"`
+	PolicyWorkers                                   int `default:"1" split_words:"true"`
+	ServiceWorkers                                  int `default:"1" split_words:"true"`
+	NodeWorkers                                     int `default:"1" split_words:"true"`
+	FederatedServicesWorkers                        int `default:"1" split_words:"true"`
+	AuthorizationWorkers                            int `default:"1" split_words:"true"`
+	ManagedClusterWorkers                           int `default:"1" split_words:"true"`
+	ManagedClusterElasticsearchConfigurationWorkers int `default:"1" split_words:"true"`
+	ManagedClusterLicenseConfigurationWorkers       int `default:"1" split_words:"true"`
 
 	// Path to a kubeconfig file to use for accessing the k8s API.
 	Kubeconfig string `default:"" split_words:"false"`
@@ -79,16 +77,6 @@ type Config struct {
 	ElasticHost                       string `default:"" split_words:"true"`
 	ElasticPort                       string `default:"9200" split_words:"true"`
 	ElasticCA                         string `default:"" split_words:"true"`
-
-	ImageAssuranceIntrusionDetectionControllerClusterRoleName string `split_words:"true"`
-	ImageAssuranceScannerClusterRoleName                      string `split_words:"true"`
-	ImageAssuranceScannerCLIClusterRoleName                   string `split_words:"true"`
-	ImageAssuranceScannerCLITokenSecretName                   string `split_words:"true"`
-	ImageAssuranceAdmissionControllerClusterRoleName          string `split_words:"true"`
-	ImageAssuranceCRAdaptorClusterRoleName                    string `split_words:"true"`
-	ImageAssuranceOperatorClusterRoleName                     string `split_words:"true"`
-	ImageAssuranceRuntimeCleanerClusterRoleName               string `split_words:"true"`
-	ImageAssuranceClusterScannerClusterRoleName               string `split_words:"true"`
 
 	KubeControllersConfigName string `split_words:"true"`
 

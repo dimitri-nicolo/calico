@@ -19,24 +19,23 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/storage"
+	"k8s.io/apiserver/pkg/storage/storagebackend"
 	"k8s.io/klog/v2"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"golang.org/x/net/context"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 
-	"k8s.io/apiserver/pkg/registry/generic"
-	"k8s.io/apiserver/pkg/storage"
-	"k8s.io/apiserver/pkg/storage/storagebackend"
-
-	"golang.org/x/net/context"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func init() {
 	metav1.AddToGroupVersion(scheme, metav1.SchemeGroupVersion)
-	v3.AddToScheme(scheme)
+	_ = v3.AddToScheme(scheme)
 }
 
 func TestTierCreate(t *testing.T) {
@@ -48,12 +47,12 @@ func TestTierCreate(t *testing.T) {
 	obj := &v3.Tier{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
 
 	// verify that kv pair is empty before set
-	libcTier, err := store.client.Tiers().Get(ctx, "foo", options.GetOptions{})
+	libcTier, _ := store.client.Tiers().Get(ctx, "foo", options.GetOptions{})
 	if libcTier != nil {
 		t.Fatalf("expecting empty result on key: %s", key)
 	}
 
-	err = store.Create(ctx, key, obj, out, 0)
+	err := store.Create(ctx, key, obj, out, 0)
 	if err != nil {
 		t.Fatalf("Set failed: %v", err)
 	}
@@ -283,7 +282,7 @@ func TestTierGuaranteedUpdate(t *testing.T) {
 	ctx, store := testTierSetup(t)
 	defer func() {
 		testTierCleanup(t, ctx, store)
-		store.client.Tiers().Delete(ctx, "non-existing", options.DeleteOptions{})
+		_, _ = store.client.Tiers().Delete(ctx, "non-existing", options.DeleteOptions{})
 	}()
 	key, storeObj := testTierPropogateStore(ctx, t, store, &v3.Tier{ObjectMeta: metav1.ObjectMeta{Name: "foo", UID: "A"}})
 
@@ -498,9 +497,9 @@ func TestTierGuaranteedUpdateWithConflict(t *testing.T) {
 func TestTierList(t *testing.T) {
 	ctx, store := testTierSetup(t)
 	defer func() {
-		store.client.Tiers().Delete(ctx, "foo", options.DeleteOptions{})
-		store.client.Tiers().Delete(ctx, "bar", options.DeleteOptions{})
-		store.client.LicenseKey().Delete(ctx, "default", options.DeleteOptions{})
+		_, _ = store.client.Tiers().Delete(ctx, "foo", options.DeleteOptions{})
+		_, _ = store.client.Tiers().Delete(ctx, "bar", options.DeleteOptions{})
+		_, _ = store.client.LicenseKey().Delete(ctx, "default", options.DeleteOptions{})
 	}()
 
 	preset := []struct {
@@ -525,7 +524,10 @@ func TestTierList(t *testing.T) {
 
 	defaultTier := &v3.Tier{}
 	opts := storage.GetOptions{IgnoreNotFound: false}
-	store.Get(ctx, "projectcalico.org/tiers/default", opts, defaultTier)
+	err := store.Get(ctx, "projectcalico.org/tiers/default", opts, defaultTier)
+	if err != nil {
+		t.Fatalf("Get failed: %v", err)
+	}
 
 	tests := []struct {
 		prefix      string
@@ -607,7 +609,7 @@ func testTierSetup(t *testing.T) (context.Context, *resourceStore) {
 func testTierCleanup(t *testing.T, ctx context.Context, store *resourceStore) {
 	tr, _ := store.client.Tiers().Get(ctx, "default", options.GetOptions{})
 	if tr != nil {
-		store.client.Tiers().Delete(ctx, "foo", options.DeleteOptions{})
+		_, _ = store.client.Tiers().Delete(ctx, "foo", options.DeleteOptions{})
 	}
 }
 

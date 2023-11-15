@@ -19,19 +19,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/storage"
+	"k8s.io/apiserver/pkg/storage/storagebackend"
 	"k8s.io/klog/v2"
+
+	"golang.org/x/net/context"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
-
-	"k8s.io/apiserver/pkg/registry/generic"
-	"k8s.io/apiserver/pkg/storage"
-	"k8s.io/apiserver/pkg/storage/storagebackend"
-
-	"golang.org/x/net/context"
 )
 
 var (
@@ -41,7 +40,7 @@ var (
 
 func init() {
 	metav1.AddToGroupVersion(scheme, metav1.SchemeGroupVersion)
-	v3.AddToScheme(scheme)
+	_ = v3.AddToScheme(scheme)
 }
 
 func TestNetworkPolicyCreate(t *testing.T) {
@@ -53,12 +52,12 @@ func TestNetworkPolicyCreate(t *testing.T) {
 	obj := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
 
 	// verify that kv pair is empty before set
-	libcPolicy, err := store.client.NetworkPolicies().Get(ctx, "default", "default.foo", options.GetOptions{})
+	libcPolicy, _ := store.client.NetworkPolicies().Get(ctx, "default", "default.foo", options.GetOptions{})
 	if libcPolicy != nil {
 		t.Fatalf("expecting empty result on key: %s", key)
 	}
 
-	err = store.Create(ctx, key, obj, out, 0)
+	err := store.Create(ctx, key, obj, out, 0)
 	if err != nil {
 		t.Fatalf("Set failed: %v", err)
 	}
@@ -122,12 +121,12 @@ func TestNetworkPolicyCreateDisallowK8sPrefix(t *testing.T) {
 	out := &v3.NetworkPolicy{}
 	obj := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name}}
 
-	libcPolicy, err := store.client.NetworkPolicies().Get(ctx, ns, name, options.GetOptions{})
+	libcPolicy, _ := store.client.NetworkPolicies().Get(ctx, ns, name, options.GetOptions{})
 	if libcPolicy != nil {
 		t.Fatalf("expecting empty result on key: %s", key)
 	}
 
-	err = store.Create(ctx, key, obj, out, 0)
+	err := store.Create(ctx, key, obj, out, 0)
 	if err == nil {
 		t.Fatalf("Expected Create of a policy with prefix 'knp.default.' to fail")
 	}
@@ -322,7 +321,7 @@ func TestNetworkPolicyGuaranteedUpdate(t *testing.T) {
 	ctx, store, gnpStore := testSetup(t)
 	defer func() {
 		testCleanup(t, ctx, store, gnpStore)
-		store.client.NetworkPolicies().Delete(ctx, "default", "default.non-existing", options.DeleteOptions{})
+		_, _ = store.client.NetworkPolicies().Delete(ctx, "default", "default.non-existing", options.DeleteOptions{})
 	}()
 	key, storeObj := testPropogateStore(ctx, t, store, &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"}})
 
@@ -466,7 +465,7 @@ func TestNetworkPolicyGuaranteedUpdateWithTTL(t *testing.T) {
 	defer testCleanup(t, ctx, store, gnpStore)
 
 	input := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
-	input.SetCreationTimestamp(metav1.Time{time.Now()})
+	input.SetCreationTimestamp(metav1.Time{Time: time.Now()})
 	input.SetUID("test_uid")
 	key := "projectcalico.org/networkpolicies/default/default.foo"
 
@@ -538,9 +537,9 @@ func TestNetworkPolicyGuaranteedUpdateWithConflict(t *testing.T) {
 func TestNetworkPolicyList(t *testing.T) {
 	ctx, store, _ := testSetup(t)
 	defer func() {
-		store.client.NetworkPolicies().Delete(ctx, "default", "foo", options.DeleteOptions{})
-		store.client.NetworkPolicies().Delete(ctx, "default1", "foo", options.DeleteOptions{})
-		store.client.NetworkPolicies().Delete(ctx, "default1", "bar", options.DeleteOptions{})
+		_, _ = store.client.NetworkPolicies().Delete(ctx, "default", "foo", options.DeleteOptions{})
+		_, _ = store.client.NetworkPolicies().Delete(ctx, "default1", "foo", options.DeleteOptions{})
+		_, _ = store.client.NetworkPolicies().Delete(ctx, "default1", "bar", options.DeleteOptions{})
 	}()
 
 	preset := []struct {
@@ -651,11 +650,11 @@ func testSetup(t *testing.T) (context.Context, *resourceStore, *resourceStore) {
 func testCleanup(t *testing.T, ctx context.Context, store, gnpStore *resourceStore) {
 	np, _ := store.client.NetworkPolicies().Get(ctx, "default", "default.foo", options.GetOptions{})
 	if np != nil {
-		store.client.NetworkPolicies().Delete(ctx, "default", "default.foo", options.DeleteOptions{})
+		_, _ = store.client.NetworkPolicies().Delete(ctx, "default", "default.foo", options.DeleteOptions{})
 	}
 	gnp, _ := gnpStore.client.GlobalNetworkPolicies().Get(ctx, "default.foo", options.GetOptions{})
 	if gnp != nil {
-		gnpStore.client.GlobalNetworkPolicies().Delete(ctx, "default.foo", options.DeleteOptions{})
+		_, _ = gnpStore.client.GlobalNetworkPolicies().Delete(ctx, "default.foo", options.DeleteOptions{})
 	}
 }
 

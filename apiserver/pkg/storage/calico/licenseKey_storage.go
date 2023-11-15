@@ -107,8 +107,8 @@ func (gc LicenseKeyConverter) convertToAAPI(libcalicoObject resourceObject, aapi
 			aapiLicenseKey.Status = v3.LicenseKeyStatus{
 				Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 				MaxNodes: *licClaims.Nodes,
-				Package:  helpers.ConvertToPackageType(*&licClaims.Features),
-				Features: helpers.ExpandFeatureNames(*&licClaims.Features)}
+				Package:  helpers.ConvertToPackageType(licClaims.Features),
+				Features: helpers.ExpandFeatureNames(licClaims.Features)}
 		}
 	}
 }

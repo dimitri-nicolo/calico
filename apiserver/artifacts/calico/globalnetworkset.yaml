@@ -1,8 +1,0 @@
-apiVersion: projectcalico.org/v3
-kind: GlobalNetworkSet
-metadata:
-  name: sample-global-network-set
-spec:
-  nets:
-  - 198.51.100.0/28
-  - 203.0.113.0/24

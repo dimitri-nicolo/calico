@@ -73,7 +73,6 @@ type ControllersConfig struct {
 	ElasticsearchConfiguration *ElasticsearchCfgControllerCfg
 	AuthorizationConfiguration *AuthorizationControllerCfg
 	ManagedCluster             *ManagedClusterControllerConfig
-	ImageAssurance             *ImageAssuranceConfig
 }
 
 type GenericControllerConfig struct {
@@ -116,23 +115,8 @@ type ManagedClusterControllerConfig struct {
 	MultiClusterForwardingCA       string
 	ElasticConfig                  ElasticsearchCfgControllerCfg
 	LicenseConfig                  LicenseControllerCfg
-	ImageAssuranceConfig           ImageAssuranceConfig
 	TenantNamespace                string
 }
-
-type ImageAssuranceConfig struct {
-	GenericControllerConfig
-	IntrusionDetectionControllerClusterRoleName string
-	AdmissionControllerClusterRoleName          string
-	CRAdaptorClusterRoleName                    string
-	ScannerClusterRoleName                      string
-	ScannerCLIClusterRoleName                   string
-	ScannerCLITokenSecretName                   string
-	OperatorCloudClusterRoleName                string
-	RuntimeCleanerClusterRoleName               string
-	ClusterScannerClusterRoleName               string
-}
-
 type RunConfigController struct {
 	out chan RunConfig
 }
@@ -412,32 +396,11 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		}
 		rc.ElasticsearchConfiguration.RESTConfig = restCfg
 	}
-	if rc.ImageAssurance != nil {
-		rc.ImageAssurance.NumberOfWorkers = envCfg.ImageAssuranceWorkers
-		rc.ImageAssurance.IntrusionDetectionControllerClusterRoleName = envCfg.ImageAssuranceIntrusionDetectionControllerClusterRoleName
-		rc.ImageAssurance.AdmissionControllerClusterRoleName = envCfg.ImageAssuranceAdmissionControllerClusterRoleName
-		rc.ImageAssurance.CRAdaptorClusterRoleName = envCfg.ImageAssuranceCRAdaptorClusterRoleName
-		rc.ImageAssurance.ScannerClusterRoleName = envCfg.ImageAssuranceScannerClusterRoleName
-		rc.ImageAssurance.ScannerCLITokenSecretName = envCfg.ImageAssuranceScannerCLITokenSecretName
-		rc.ImageAssurance.ScannerCLIClusterRoleName = envCfg.ImageAssuranceScannerCLIClusterRoleName
-		rc.ImageAssurance.OperatorCloudClusterRoleName = envCfg.ImageAssuranceOperatorClusterRoleName
-		rc.ImageAssurance.RuntimeCleanerClusterRoleName = envCfg.ImageAssuranceRuntimeCleanerClusterRoleName
-		rc.ImageAssurance.ClusterScannerClusterRoleName = envCfg.ImageAssuranceClusterScannerClusterRoleName
-	}
+
 	if rc.ManagedCluster != nil {
 		rc.ManagedCluster.NumberOfWorkers = envCfg.ManagedClusterWorkers
 		rc.ManagedCluster.ElasticConfig.NumberOfWorkers = envCfg.ManagedClusterElasticsearchConfigurationWorkers
 		rc.ManagedCluster.LicenseConfig.NumberOfWorkers = envCfg.ManagedClusterLicenseConfigurationWorkers
-		rc.ManagedCluster.ImageAssuranceConfig.NumberOfWorkers = envCfg.ManagedClusterImageAssuranceConfigurationWorkers
-		rc.ManagedCluster.ImageAssuranceConfig.IntrusionDetectionControllerClusterRoleName = envCfg.ImageAssuranceIntrusionDetectionControllerClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.ScannerClusterRoleName = envCfg.ImageAssuranceScannerClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.ScannerCLIClusterRoleName = envCfg.ImageAssuranceScannerCLIClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.ScannerCLITokenSecretName = envCfg.ImageAssuranceScannerCLITokenSecretName
-		rc.ManagedCluster.ImageAssuranceConfig.OperatorCloudClusterRoleName = envCfg.ImageAssuranceOperatorClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.AdmissionControllerClusterRoleName = envCfg.ImageAssuranceAdmissionControllerClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.CRAdaptorClusterRoleName = envCfg.ImageAssuranceCRAdaptorClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.RuntimeCleanerClusterRoleName = envCfg.ImageAssuranceRuntimeCleanerClusterRoleName
-		rc.ManagedCluster.ImageAssuranceConfig.ClusterScannerClusterRoleName = envCfg.ImageAssuranceClusterScannerClusterRoleName
 		rc.ManagedCluster.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
 		rc.ManagedCluster.MultiClusterForwardingCA = envCfg.MultiClusterForwardingCA
 		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
@@ -667,8 +630,6 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 			case "authorization":
 				rc.AuthorizationConfiguration = &AuthorizationControllerCfg{}
 				// authorization not supported on KubeControllersConfiguration yet
-			case "imageassurance":
-				rc.ImageAssurance = &ImageAssuranceConfig{}
 			default:
 				log.Fatalf("Invalid controller '%s' provided.", controllerType)
 			}

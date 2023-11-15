@@ -193,13 +193,20 @@ func (r *Result) Into(obj any) error {
 		// The path wasn't found. We shouldn't parse the response as JSON.
 		return fmt.Errorf("server returned not found for path %s: %s", r.path, string(r.body))
 	} else if r.statusCode != http.StatusOK {
-		// A structured error returned by the server - parse it.
+		// Attempt to parse the response as a structured error.
 		httpError := v1.HTTPError{}
 		err := json.Unmarshal(r.body, &httpError)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal error response: %s", err)
+			return fmt.Errorf("client failed to unmarshal error response: %s", err)
 		}
-		return fmt.Errorf("[status %d] %s", httpError.Status, httpError.Msg)
+
+		if len(httpError.Msg) == 0 || httpError.Status == 0 {
+			// No structured error returned by the server, just error out the full body.
+			return fmt.Errorf("client received unstructured error: %s", string(r.body))
+		}
+
+		// A structured error returned by the server.
+		return fmt.Errorf("[status %d] server error: %s", httpError.Status, httpError.Msg)
 	}
 
 	// Got an OK response - unmarshal it into the expected type.

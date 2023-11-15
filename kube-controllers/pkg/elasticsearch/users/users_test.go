@@ -210,6 +210,9 @@ var _ = Describe("ElasticseachUsers", func() {
 					"tigera-ee-intrusion-detection": {
 						Username: "tigera-ee-intrusion-detection-managed-cluster",
 					},
+					"tigera-ee-ad-job": {
+						Username: "tigera-ee-ad-job-managed-cluster",
+					},
 					"tigera-ee-performance-hotspots": {
 						Username: "tigera-ee-performance-hotspots-managed-cluster",
 					},
@@ -561,6 +564,9 @@ var _ = Describe("ElasticseachUsers", func() {
 					},
 					"tigera-ee-installer": {
 						Username: "tigera-ee-installer",
+					},
+					"tigera-ee-ad-job": {
+						Username: "tigera-ee-ad-job",
 					},
 					"tigera-ee-sasha": {
 						Username: "tigera-ee-sasha",

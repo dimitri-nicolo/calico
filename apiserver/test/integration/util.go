@@ -30,12 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// returns the address of s. useful for filling struct fields that require a *string
-// (for json decoding purposes)
-func strPtr(s string) *string {
-	return &s
-}
-
 func CreateCAKeyPair(cn string, altNames []string) ([]byte, []byte, error) {
 	// Create a x509 template for the CreateCAKeyPair
 	template := &x509.Certificate{

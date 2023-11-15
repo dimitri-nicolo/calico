@@ -10,8 +10,6 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/managedcluster"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	relastic "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
-
-	"k8s.io/client-go/kubernetes"
 )
 
 // ValidateEnvVars performs validation on environment variables that are specific to this variant Enterprise.
@@ -22,7 +20,4 @@ func getCloudManagedClusterControllerManagers(esK8sREST relastic.RESTClient, esC
 		managedcluster.NewElasticsearchController(esK8sREST, esClientBuilder, cfg.Controllers.ManagedCluster.ElasticConfig),
 		managedcluster.NewLicensingController(cfg.Controllers.ManagedCluster.LicenseConfig),
 	}
-}
-
-func addBuildSpecificControllers(cfg *config.RunConfig, cc *controllerControl, k8sClientset *kubernetes.Clientset) {
 }
