@@ -28,6 +28,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/projectcalico/calico/felix/bpf/jump"
+	"github.com/projectcalico/calico/felix/bpf/polprog"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/fv/containers"
@@ -394,12 +396,14 @@ func (f *Felix) FlowLogDir() string {
 }
 
 type BPFIfState struct {
-	IfIndex  int
-	Workload bool
-	Ready    bool
+	IfIndex       int
+	Workload      bool
+	Ready         bool
+	IngressPolicy int
+	EgressPolicy  int
 }
 
-var bpfIfStateRegexp = regexp.MustCompile(`.*([0-9]+) : \{flags: (.*) name: (.*)\}`)
+var bpfIfStateRegexp = regexp.MustCompile(`.*([0-9]+) : \{flags: (.*) name: (.*)}`)
 
 func (f *Felix) BPFIfState() map[string]BPFIfState {
 	out, err := f.ExecOutput("calico-bpf", "ifstate", "dump")
@@ -417,14 +421,63 @@ func (f *Felix) BPFIfState() map[string]BPFIfState {
 		name := match[3]
 		flags := match[2]
 		ifIndex, _ := strconv.Atoi(match[1])
+
+		r := regexp.MustCompile(`IngressPolicy: (\d+)`)
+		m := r.FindStringSubmatch(line)
+		inPol, _ := strconv.Atoi(m[1])
+		r = regexp.MustCompile(`EgressPolicy: (\d+)`)
+		m = r.FindStringSubmatch(line)
+		outPol, _ := strconv.Atoi(m[1])
+
 		state := BPFIfState{
-			IfIndex:  ifIndex,
-			Workload: strings.Contains(flags, "workload"),
-			Ready:    strings.Contains(flags, "ready"),
+			IfIndex:       ifIndex,
+			Workload:      strings.Contains(flags, "workload"),
+			Ready:         strings.Contains(flags, "ready"),
+			IngressPolicy: inPol,
+			EgressPolicy:  outPol,
 		}
 
 		states[name] = state
 	}
 
 	return states
+}
+
+func (f *Felix) BPFNumPolProgramsFn(iface string, ingressOrEgress string) func() int {
+	return func() int {
+		return f.BPFNumPolPrograms(iface, ingressOrEgress)
+	}
+}
+
+func (f *Felix) BPFNumPolPrograms(iface string, ingressOrEgress string) int {
+	ifState := f.BPFIfState()[iface]
+	var startProg int
+	if ingressOrEgress == "ingress" {
+		startProg = ifState.IngressPolicy
+	} else {
+		startProg = ifState.EgressPolicy
+	}
+
+	var count int
+	for i := 0; i < jump.MaxSubPrograms; i++ {
+		k := polprog.SubProgramJumpIdx(startProg, i, jump.TCMaxEntryPoints)
+		out, err := f.ExecOutput(
+			"bpftool", "map", "lookup",
+			"pinned", "/sys/fs/bpf/tc/globals/cali_jump3",
+			"key",
+			fmt.Sprintf("%d", k&0xff),
+			fmt.Sprintf("%d", (k>>8)&0xff),
+			fmt.Sprintf("%d", (k>>16)&0xff),
+			fmt.Sprintf("%d", (k>>24)&0xff),
+		)
+		if err != nil {
+			break
+		}
+		if strings.Contains(out, "value:") {
+			count++
+		} else {
+			break
+		}
+	}
+	return count
 }
