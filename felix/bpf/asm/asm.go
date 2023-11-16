@@ -855,9 +855,18 @@ func (b *Block) LabelNextInsn(label string) {
 }
 
 func (b *Block) AddComment(comment string) {
-	if b.policyDebugEnabled {
-		b.insnIdxToComments[len(b.insns)] = append(b.insnIdxToComments[len(b.insns)], comment)
+	if !b.policyDebugEnabled {
+		return
 	}
+	b.insnIdxToComments[len(b.insns)] = append(b.insnIdxToComments[len(b.insns)], comment)
+}
+
+func (b *Block) AddCommentF(comment string, args ...any) {
+	if !b.policyDebugEnabled {
+		return
+	}
+	comment = fmt.Sprintf(comment, args...)
+	b.insnIdxToComments[len(b.insns)] = append(b.insnIdxToComments[len(b.insns)], comment)
 }
 
 func (b *Block) nextInsnReachble() bool {
