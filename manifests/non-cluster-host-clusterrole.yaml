@@ -112,7 +112,9 @@ rules:
   - apiGroups:
       - crd.projectcalico.org
     resources:
+      - externalnetworks
       - licensekeys
+      - egressgatewaypolicies
       - remoteclusterconfigurations
       - stagedglobalnetworkpolicies
       - stagedkubernetesnetworkpolicies
