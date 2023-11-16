@@ -20,6 +20,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -2225,10 +2226,104 @@ func wrap(p polProgramTest) polProgramTestWrapper {
 	return polProgramTestWrapper{p}
 }
 
-func TestPolicyPolicyPrograms(t *testing.T) {
+func TestPolicyPrograms(t *testing.T) {
 	for i, p := range polProgramTests {
 		t.Run(fmt.Sprintf("%d:Policy=%s", i, p.PolicyName), func(t *testing.T) { runTest(t, wrap(p)) })
 	}
+}
+
+func TestExpandedPolicyPrograms(t *testing.T) {
+	RegisterTestingT(t)
+	for i, p := range polProgramTests {
+		for _, expander := range testExpanders {
+			expandedP := expander.Expand(p)
+			Expect(expandedP).NotTo(Equal(p))
+			t.Run(fmt.Sprintf("%s/%d:Policy=%s", expander.Name, i, p.PolicyName),
+				func(t *testing.T) {
+					// Expansions result ina  lot of debug output, disable that.
+					logLevel := log.GetLevel()
+					defer log.SetLevel(logLevel)
+					log.SetLevel(log.InfoLevel)
+
+					runTest(t, wrap(expandedP))
+				})
+		}
+	}
+}
+
+var testExpanders = []testExpander{
+	{
+		Name: "WithLargePrefixedTier",
+		Expand: func(p polProgramTest) polProgramTest {
+			out := p
+			initExtraTierOnce.Do(initExtraTier)
+			out.Policy.Tiers = append([]polprog.Tier{extraTier}, out.Policy.Tiers...)
+			return out
+		},
+	},
+}
+
+var extraTier polprog.Tier
+var initExtraTierOnce sync.Once
+
+func initExtraTier() {
+	const numExtraPols = 250
+	const numRulesPerPol = 50
+	pols := make([]polprog.Policy, 0, numExtraPols)
+	for i := 0; i < numExtraPols; i++ {
+		pol := polprog.Policy{
+			Name: fmt.Sprintf("pol-%d", i),
+		}
+		for j := 0; j < numRulesPerPol; j++ {
+			pol.Rules = append(pol.Rules, noOpRule(i*numRulesPerPol+j))
+		}
+		pols = append(pols, pol)
+	}
+	// Need a pass rule somewhere to send traffic to the tier under
+	// test.
+	passRule := polprog.Rule{
+		Rule: &proto.Rule{
+			Action: "pass",
+		},
+		MatchID: polprog.RuleMatchID(numExtraPols * numRulesPerPol),
+	}
+	pols[len(pols)-1].Rules = append(pols[len(pols)-1].Rules, passRule)
+	extraTier = polprog.Tier{
+		Name:     "extra tier",
+		Policies: pols,
+	}
+}
+func noOpRule(n int) polprog.Rule {
+	actions := []string{
+		"allow", "deny", "pass",
+	}
+	ports := []*proto.PortRange{
+		{First: 1, Last: int32(1 + (n % 8000))},
+	}
+	if n%1000 == 0 {
+		// Add lots of ports to a handful of rules.
+		for p := 0; p < 2000; p++ {
+			ports = append(ports, &proto.PortRange{
+				First: int32(p*2 + 10000),
+				Last:  int32(p*2 + 10001),
+			})
+		}
+	}
+	r := polprog.Rule{
+		Rule: &proto.Rule{
+			SrcIpSetIds: []string{"setNoOp"},
+			Protocol:    &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
+			Action:      actions[n%len(actions)],
+			DstPorts:    ports,
+		},
+		MatchID: polprog.RuleMatchID(n),
+	}
+	return r
+}
+
+type testExpander struct {
+	Name   string
+	Expand func(p polProgramTest) polProgramTest
 }
 
 type testFlowLogCase struct {
@@ -2896,6 +2991,9 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 
 	setUpIPSets(tp.IPSets(), realAlloc, ipsMap)
 
+	if policyJumpMap != nil {
+		_ = policyJumpMap.Close()
+	}
 	policyJumpMap = jump.Map()
 	_ = unix.Unlink(policyJumpMap.Path())
 	err := policyJumpMap.EnsureExists()
@@ -2918,6 +3016,9 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 		Name:       "teststatic",
 	})
 	err = staticProgsMap.EnsureExists()
+	defer func() {
+		_ = staticProgsMap.Close()
+	}()
 	Expect(err).NotTo(HaveOccurred())
 
 	polProgIdx := int(nextPolProgIdx.Add(1))
@@ -2958,7 +3059,7 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 			jump.Key(polprog.SubProgramJumpIdx(polProgIdx, i, stride)),
 			jump.Value(polProgFD.FD()),
 		)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to add policy sub program %d/%d", i, len(insns)))
 	}
 
 	// Give the policy program somewhere to jump to.
