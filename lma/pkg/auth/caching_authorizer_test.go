@@ -16,7 +16,6 @@ import (
 )
 
 var _ = Describe("Test Caching Authorizer", func() {
-
 	var (
 		fakeCache *fake.Cache[string, bool]
 		subject   *cachingAuthorizer
@@ -30,7 +29,6 @@ var _ = Describe("Test Caching Authorizer", func() {
 	})
 
 	It("should cache values and report metrics", func() {
-
 		execute := func(usr user.Info, resources *authzv1.ResourceAttributes, expectedResult bool, expectedHits, expectedMisses, expectedSize int) {
 			result, err := subject.Authorize(usr, resources, nil)
 			ExpectWithOffset(1, err).ToNot(HaveOccurred())
@@ -133,34 +131,6 @@ func BenchmarkFmtKey(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		res := toAuthorizeCacheKey(u, attrs)
-		if res != expected {
-			b.Fatal("bad result")
-		}
-		benchmarkResult = res
-	}
-}
-
-func BenchmarkManualKey(b *testing.B) {
-	u := &user.DefaultInfo{
-		Name:   "un",
-		UID:    "ui",
-		Groups: []string{"ug1", "ug2"},
-		Extra:  map[string][]string{"ue1": {"a", "b"}},
-	}
-	attrs := &authzv1.ResourceAttributes{
-		Namespace:   "ns",
-		Verb:        "vb",
-		Group:       "gr",
-		Version:     "ver",
-		Resource:    "res",
-		Subresource: "sub",
-		Name:        "nam",
-	}
-
-	expected := "{userName:un userUID:ui userGroups:[ug1 ug2] userExtra:{ue1:[a b]} attrs:{Namespace:ns Verb:vb Group:gr Version:ver Resource:res Subresource:sub Name:nam}}"
-
-	for i := 0; i < b.N; i++ {
-		res := toAuthorizeCacheKeyManual(u, attrs)
 		if res != expected {
 			b.Fatal("bad result")
 		}

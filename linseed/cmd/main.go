@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/flowcontrol"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kelseyhightower/envconfig"
@@ -53,6 +54,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/middleware"
 	"github.com/projectcalico/calico/linseed/pkg/server"
 	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/cache"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -235,6 +237,12 @@ func run() {
 	if err != nil {
 		logrus.WithError(err).Fatal("Unable to load Kubernetes config")
 	}
+	// Linseed creates an AuthorizationReview for every incoming request. Use a custom rate limiter
+	// on the client we use here to minimize rate limiting. We maintain a smoothed rate of 100 queries
+	// per second with a maximum burst of 1000. This on its own will satisfy on the order of 500 clients
+	// sending requests every 5s before encountering any rate limiting. We also use caching of authorization
+	// results to further reduce the number of requests we need to make.
+	kc.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(100, 1000)
 
 	// We can only perform authentication / authorization if our Kubernetes configuration
 	// has a bearer token present.
@@ -354,8 +362,17 @@ func run() {
 		logrus.WithError(err).Fatal("Unable to create authenticator")
 	}
 
-	// Create an RBAC authorizer to use for authorizing requests.
-	authz := auth.NewRBACAuthorizer(k)
+	// Create an RBAC authorizer to use for authorizing requests. We use a cached implementation
+	// to reduce the number of calls to the API server.
+	authCache, err := cache.NewExpiring[string, bool](cache.ExpiringConfig{
+		Context: context.Background(),
+		Name:    "linseed-access-authorizer",
+		TTL:     20 * time.Second,
+	})
+	if err != nil {
+		logrus.WithError(err).Fatal("Unable to create authorizer")
+	}
+	authz := auth.NewCachingAuthorizer(authCache, auth.NewRBACAuthorizer(k))
 	authzHelper := middleware.NewKubernetesAuthzTracker(authz)
 
 	// Create the full list of handlers, and register them

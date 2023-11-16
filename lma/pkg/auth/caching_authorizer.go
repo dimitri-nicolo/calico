@@ -4,7 +4,6 @@ package auth
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	authzv1 "k8s.io/api/authorization/v1"
@@ -27,7 +26,6 @@ func NewCachingAuthorizer(cache cache.Cache[string, bool], delegate RBACAuthoriz
 }
 
 func newCachingAuthorizer(cache cache.Cache[string, bool], delegate RBACAuthorizer) *cachingAuthorizer {
-
 	return &cachingAuthorizer{
 		delegate: delegate,
 		cache:    cache,
@@ -76,51 +74,4 @@ func toAuthorizeCacheKey(uer user.Info, resources *authzv1.ResourceAttributes) s
 		userExtra:  uer.GetExtra(),
 		attrs:      *resources,
 	})
-}
-
-func toAuthorizeCacheKeyManual(uer user.Info, resources *authzv1.ResourceAttributes) string {
-
-	sb := strings.Builder{}
-	sb.WriteString("{")
-	sb.WriteString("userName:")
-	sb.WriteString(uer.GetName())
-	sb.WriteString(" userUID:")
-	sb.WriteString(uer.GetUID())
-	sb.WriteString(" userGroups:[")
-	for i, g := range uer.GetGroups() {
-		if i > 0 {
-			sb.WriteString(" ")
-		}
-		sb.WriteString(g)
-	}
-	sb.WriteString("] userExtra:{")
-	for k, v := range uer.GetExtra() {
-		sb.WriteString(k)
-		sb.WriteString(":[")
-		for i, s := range v {
-			if i > 0 {
-				sb.WriteString(" ")
-			}
-			sb.WriteString(s)
-		}
-		sb.WriteString("]")
-	}
-	sb.WriteString("} attrs:{")
-	sb.WriteString("Namespace:")
-	sb.WriteString(resources.Namespace)
-	sb.WriteString(" Verb:")
-	sb.WriteString(resources.Verb)
-	sb.WriteString(" Group:")
-	sb.WriteString(resources.Group)
-	sb.WriteString(" Version:")
-	sb.WriteString(resources.Version)
-	sb.WriteString(" Resource:")
-	sb.WriteString(resources.Resource)
-	sb.WriteString(" Subresource:")
-	sb.WriteString(resources.Subresource)
-	sb.WriteString(" Name:")
-	sb.WriteString(resources.Name)
-	sb.WriteString("}}")
-
-	return sb.String()
 }
