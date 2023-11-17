@@ -1555,7 +1555,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Info("Stopping bpf event poller")
 			bpfEvnt.Close()
 		}
-
 	}
 
 	if config.DebugConsoleEnabled {
