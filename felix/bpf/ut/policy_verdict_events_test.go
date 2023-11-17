@@ -154,7 +154,13 @@ func TestPolicyVerdictEvents(t *testing.T) {
 				Expect(res.Retval).To(Equal(tcRes))
 			})
 
-			evnt, err := evnts.Next()
+			var evnt events.Event
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				evnt, err = evnts.Next()
+			}()
+			Eventually(done, "5s").Should(BeClosed())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(evnt.Type()).To(Equal(events.TypePolicyVerdict))
 
