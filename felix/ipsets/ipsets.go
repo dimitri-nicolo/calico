@@ -171,6 +171,11 @@ func (s *IPSets) AddOrReplaceIPSet(setMetadata IPSetMetadata, members []string) 
 			"setType": setMetadata.Type,
 		}).Info("Queueing IP set for creation")
 		s.setNameToProgrammedMetadata.Desired().Set(mainIPSetName, dpMeta)
+	} else if log.IsLevelEnabled(log.DebugLevel) {
+		s.logCxt.WithFields(log.Fields{
+			"setID":   setID,
+			"setType": setMetadata.Type,
+		}).Debug("IP set is filtered out, skipping creation.")
 	}
 
 	// Set the desired contents of the IP set.
