@@ -828,6 +828,24 @@ func (c *Container) BPFRoutes() string {
 	return strings.Join(filteredLines, "\n")
 }
 
+func (c *Container) BPFNumRemoteHostRoutes() int {
+	routes := c.BPFRoutes()
+	count := 0
+	for _, line := range strings.Split(routes, "\n") {
+		if strings.Contains(line, "tunneled") {
+			// Skip tunnels.
+			continue
+		}
+		if strings.Contains(line, "local") {
+			continue
+		}
+		if strings.Contains(line, "host") {
+			count++
+		}
+	}
+	return count
+}
+
 // BPFNATDump returns parsed out NAT maps keyed by "<ip> port <port> proto <proto>". Each
 // value is list of "<ip>:<port>".
 func (c *Container) BPFNATDump() map[string][]string {

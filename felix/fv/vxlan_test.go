@@ -747,20 +747,20 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 				var baseIPSetMemberCount int
 				BeforeEach(func() {
 					waitPeriod := "10s"
+					var numFelixes int
 					if cs.ExpectRemoteConnectivity() {
 						waitPeriod = "60s"
-						baseIPSetMemberCount = len(cs.local.felixes) + len(cs.remote.felixes) - 1
+						numFelixes = len(cs.local.felixes) + len(cs.remote.felixes)
 					} else {
-						baseIPSetMemberCount = len(cs.local.felixes) - 1
+						numFelixes = len(cs.local.felixes)
 					}
+					baseIPSetMemberCount = numFelixes - 1
 					for i, c := range cs.GetActiveClusters() {
 						for _, f := range c.felixes {
 							if BPFMode() {
-								numFelixes := len(cs.local.felixes) + len(cs.remote.felixes)
-								Eventually(func() int {
-									return strings.Count(f.BPFRoutes(), "host")
-								}, waitPeriod, "200ms").Should(Equal(numFelixes*2),
-									"Expected one host and one host tunneled route per node")
+								// numFelixes := len(cs.local.felixes) + len(cs.remote.felixes)
+								Eventually(f.BPFNumRemoteHostRoutes, waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount),
+									fmt.Sprintf("Expected felic %s to have %d host routes, got: %s", f.IP, baseIPSetMemberCount, f.BPFRoutes()))
 							} else {
 								Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount - i))
 							}
@@ -790,13 +790,11 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					}
 
 					if BPFMode() {
-						numFelixes := baseIPSetMemberCount + 1
-						Eventually(func() int {
-							return strings.Count(cs.local.felixes[0].BPFRoutes(), "host")
-						}).Should(Equal(numFelixes*2),
-							"Expected one host and one host tunneled route per node, not: "+cs.local.felixes[0].BPFRoutes())
+						Eventually(cs.local.felixes[0].BPFNumRemoteHostRoutes, "10s", "200ms").Should(Equal(adjustedIPSetMemberCount),
+							fmt.Sprintf("Expected %d host routes, got: %s", adjustedIPSetMemberCount, cs.local.felixes[0].BPFRoutes()))
 					} else {
-						Eventually(cs.local.felixes[0].IPSetSizeFn("cali40all-vxlan-net"), "5s", "200ms").Should(Equal(adjustedIPSetMemberCount))
+						Eventually(cs.local.felixes[0].IPSetSizeFn("cali40all-vxlan-net"), "5s", "200ms").Should(
+							Equal(adjustedIPSetMemberCount))
 					}
 
 					cc.ExpectSome(cs.local.w[0], cs.local.w[1])

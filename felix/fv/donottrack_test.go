@@ -19,6 +19,7 @@ package fv_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/projectcalico/calico/felix/fv/connectivity"
@@ -224,7 +225,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ do-not-track policy tests; 
 
 			if BPFMode() {
 				By("Having a Linux IP set for the egress policy")
-				Expect(tc.Felixes[0].IPSetNames()).To(ConsistOf(utils.IPSetNameForSelector(4, host1Selector)))
+				setName := utils.IPSetNameForSelector(4, host1Selector)
+				domainSetName := strings.Replace(setName, "cali40s:", "cali40d:", 1)
+				Expect(tc.Felixes[0].IPSetNames()).To(ConsistOf(
+					setName,
+					domainSetName,
+				))
 			}
 
 			By("Having only failsafe connectivity after replacing host-0's egress rules with Deny")
