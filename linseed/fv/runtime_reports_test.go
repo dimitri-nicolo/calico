@@ -476,6 +476,89 @@ func TestFV_RuntimeReports(t *testing.T) {
 		require.Contains(t, clusters, cluster)
 		require.Contains(t, clusters, anotherCluster)
 	})
+
+	RunRuntimeReportTest(t, "supports query with selector", func(t *testing.T, idx bapi.Index) {
+		startTime := time.Unix(1, 0).UTC()
+		endTime := time.Unix(1, 0).UTC()
+
+		// Create a basic runtime report
+		runtimeReport1 := v1.Report{
+			StartTime:  startTime,
+			EndTime:    endTime,
+			Host:       "any-host",
+			Count:      1,
+			Type:       "ProcessStart",
+			ConfigName: "malware-protection",
+			Pod: v1.PodInfo{
+				Name:          "app1",
+				NameAggr:      "app-*",
+				Namespace:     "default",
+				ContainerName: "app",
+			},
+			File: v1.File{
+				Path:     "/usr/sbin/runc",
+				HostPath: "/run/docker/runtime-runc/moby/48f10a5eb9a245e6890433205053ba4e72c8e3bab5c13c2920dc32fadd7290cd/runc.rB3K51",
+			},
+			ProcessStart: v1.ProcessStart{
+				Invocation: "runc --root /var/run/docker/runtime-runc/moby",
+				Hashes: v1.ProcessHashes{
+					MD5:    "MD5",
+					SHA1:   "SHA1",
+					SHA256: "SHA256",
+				},
+			},
+			FileAccess: v1.FileAccess{},
+		}
+		runtimeReport2 := runtimeReport1
+		runtimeReport2.Pod.Name = "app2"
+		bulk, err := cli.RuntimeReports(cluster).Create(ctx, []v1.Report{runtimeReport1, runtimeReport2})
+		require.NoError(t, err)
+		require.Equal(t, bulk.Succeeded, 2, "create runtime reports did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
+
+		// Use a selector to read back only the first report.
+		params := v1.RuntimeReportParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: startTime,
+					To:   time.Now(),
+				},
+			},
+			Selector: "'pod.name' = 'app1'",
+		}
+		resp, err := cli.RuntimeReports("").List(ctx, &params)
+		require.NoError(t, err)
+		require.Len(t, resp.Items, 1)
+
+		// Validate that we got the first report
+		for _, item := range resp.Items {
+			// Validate that the id is populated
+			item = testutils.AssertRuntimeReportIDAndReset(t, item)
+			// Validate that the rest of the fields are populated
+			require.NotNil(t, item.Report.GeneratedTime)
+			runtimeReport1.GeneratedTime = item.Report.GeneratedTime
+			require.Equal(t, runtimeReport1, item.Report)
+		}
+
+		// Repeat with a selector to get only the second report.
+		params.Selector = "'pod.name' = 'app2'"
+		resp, err = cli.RuntimeReports("").List(ctx, &params)
+		require.NoError(t, err)
+		require.Len(t, resp.Items, 1)
+
+		// Validate that we got the second report
+		for _, item := range resp.Items {
+			// Validate that the id is populated
+			item = testutils.AssertRuntimeReportIDAndReset(t, item)
+			// Validate that the rest of the fields are populated
+			require.NotNil(t, item.Report.GeneratedTime)
+			runtimeReport2.GeneratedTime = item.Report.GeneratedTime
+			require.Equal(t, runtimeReport2, item.Report)
+		}
+	})
 }
 
 func TestFV_RuntimeReportTenancy(t *testing.T) {
