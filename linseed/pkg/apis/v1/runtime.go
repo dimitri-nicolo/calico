@@ -37,6 +37,7 @@ type RuntimeReportParams struct {
 	QueryParams     `json:",inline" validate:"required"`
 	QuerySortParams `json:",inline"`
 	LegacyTimeRange *lmav1.TimeRange `json:"legacy_time_range"`
+	Selector        string           `json:"selector"`
 }
 
 type PodInfo struct {

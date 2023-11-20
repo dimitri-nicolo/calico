@@ -4,12 +4,15 @@ package index
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/olivere/elastic/v7"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 // runtimeReportsIndexHelper implements the Helper interface.
@@ -43,7 +46,22 @@ func (h runtimeReportsIndexHelper) BaseQuery(i bapi.ClusterInfo) *elastic.BoolQu
 }
 
 func (h runtimeReportsIndexHelper) NewSelectorQuery(selector string) (elastic.Query, error) {
-	return nil, fmt.Errorf("not implemented")
+	q, err := query.ParseQuery(selector)
+	if err != nil {
+		return nil, &httputils.HttpStatusError{
+			Status: http.StatusBadRequest,
+			Err:    err,
+			Msg:    fmt.Sprintf("Invalid selector (%s) in request: %v", selector, err),
+		}
+	} else if err := query.Validate(q, IsValidRuntimeAtom); err != nil {
+		return nil, &httputils.HttpStatusError{
+			Status: http.StatusBadRequest,
+			Err:    err,
+			Msg:    fmt.Sprintf("Invalid selector (%s) in request: %v", selector, err),
+		}
+	}
+	converter := converter{basicAtomToElastic}
+	return JsonObjectElasticQuery(converter.Convert(q)), nil
 }
 
 func (h runtimeReportsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceVerbs) (elastic.Query, error) {
@@ -56,4 +74,11 @@ func (h runtimeReportsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic
 
 func (h runtimeReportsIndexHelper) GetTimeField() string {
 	return ""
+}
+
+func IsValidRuntimeAtom(*query.Atom) error {
+	// We don't need any detailed validation here because the querying of runtime reports via
+	// selector is not exposed to our users.  It is only used by the Sasha code for retrieving
+	// historical reports.
+	return nil
 }
