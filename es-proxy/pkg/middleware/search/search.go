@@ -70,7 +70,7 @@ func SearchHandler(t SearchType, authReview middleware.AuthorizationReview, k8sC
 	})
 }
 
-// search is a helepr for performing a search. We split this out into a separate function to make it easier to
+// search is a helper for performing a search. We split this out into a separate function to make it easier to
 // unit test without requiring a full HTTP handler.
 func search(
 	ctx context.Context,
