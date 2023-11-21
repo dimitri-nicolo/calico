@@ -184,6 +184,7 @@ var _ = Describe("Syncer", func() {
 	})
 
 	It("deletes all StagedNetworkPolicy in each namespace", func() {
+		nsCache := cache.NewSynchronizedObjectCache[*v1.Namespace]()
 		snpCache := cache.NewSynchronizedObjectCache[*v3.StagedNetworkPolicy]()
 		for i := 0; i < 2; i++ {
 			ns := fmt.Sprintf("%s-%d", testNamespacePrefix, i)
@@ -193,7 +194,20 @@ var _ = Describe("Syncer", func() {
 					Namespace: ns,
 				},
 			}
-			_, err := fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns).Create(
+
+			nsCache.Set(ns, &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: ns,
+				},
+			})
+			_, err := k8sClient.CoreV1().Namespaces().Create(testCtx, &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: ns,
+				},
+			}, metav1.CreateOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			_, err = fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns).Create(
 				testCtx,
 				&snp,
 				metav1.CreateOptions{})
@@ -203,6 +217,7 @@ var _ = Describe("Syncer", func() {
 		}
 
 		cacheSet = syncer.CacheSet{
+			Namespaces:            nsCache,
 			StagedNetworkPolicies: snpCache,
 		}
 		synchronizer = syncer.NewCacheSynchronizer(mockLmaK8sClientSet, cacheSet, mockSuffixGenerator)
@@ -261,9 +276,8 @@ var _ = Describe("Syncer", func() {
 			ns := fmt.Sprintf("%s-%d", testNamespacePrefix, i)
 			snpName := utils.GetPolicyName(testTierName, ns, mockSuffixGenerator)
 			_, err := fakeClient.ProjectcalicoV3().StagedNetworkPolicies(ns).Get(
-				testCtx,
-				snpName,
-				metav1.GetOptions{})
+				testCtx, snpName, metav1.GetOptions{},
+			)
 			Expect(err).ToNot(BeNil())
 			Expect(k8serrors.IsNotFound(err)).To(BeTrue())
 
