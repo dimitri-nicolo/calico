@@ -81,8 +81,7 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, event *ls
 		}
 	}
 
-	c := p.Config()
-	return helpers.RetryWithLinearBackOff(retryFunc, c.RetryDuration, c.RetryTimes, config["url"])
+	return helpers.RetryWithLinearBackOff(retryFunc, p.config.RetryDuration, p.config.RetryTimes)
 }
 
 func (p *Slack) message(event *lsApi.Event) *SlackMessage {
