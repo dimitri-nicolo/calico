@@ -3,8 +3,6 @@ package main
 
 import (
 	"fmt"
-	"time"
-
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -20,17 +18,20 @@ type Config struct {
 	EKSStateFileDir              string `envconfig:"EKS_CLOUDWATCH_STATE_FILE_PFX" default:"/fluentd/cloudwatch-logs/"`
 
 	// Elastic Config
-	ESURI               string        `envconfig:"ELASTIC_URI"`
-	ESScheme            string        `envconfig:"ELASTIC_SCHEME" default:"https"`
-	ESHost              string        `envconfig:"ELASTIC_HOST" default:"tigera-secure-es-http.tigera-elasticsearch.svc"`
-	ESPort              int           `envconfig:"ELASTIC_PORT" default:"9200"`
-	ESUser              string        `envconfig:"ELASTIC_USER" default:"elastic"`
-	ESPassword          string        `envconfig:"ELASTIC_PASSWORD"`
-	ESSSLVerify         bool          `envconfig:"ELASTIC_SSL_VERIFY" default:"true"`
-	ESCA                string        `envconfig:"ELASTIC_CA"`
-	ESIndexSuffix       string        `envconfig:"ELASTIC_INDEX_SUFFIX" default:"cluster"`
-	ESConnRetries       int           `envconfig:"ELASTIC_CONN_RETRIES" default:"30"`
-	ESConnRetryInterval time.Duration `envconfig:"ELASTIC_CONN_RETRY_INTERVAL" default:"500ms"`
+	ESIndexSuffix string `envconfig:"ELASTIC_INDEX_SUFFIX" default:"cluster"`
+
+	// Linseed parameters
+	LinseedURL        string `envconfig:"LINSEED_ENDPOINT" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
+	LinseedCA         string `envconfig:"LINSEED_CA_PATH" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	LinseedClientCert string `envconfig:"TLS_CRT_PATH"`
+	LinseedClientKey  string `envconfig:"TLS_KEY_PATH"`
+	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
+
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	FIPSModeEnabled bool `envconfig:"FIPS_MODE_ENABLED" default:"false"`
+
+	// For Calico Cloud, the tenant ID to use.
+	TenantID string `envconfig:"TENANT_ID"`
 }
 
 func LoadConfig() (*Config, error) {

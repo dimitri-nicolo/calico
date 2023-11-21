@@ -21,19 +21,17 @@ func main() {
 		log.WithError(err).Fatal("Error loading configuration.")
 	}
 
-	// init time setup
-	// TODO: @realgaurav:  move to init()
-	es, err := ESSetup(config)
+	linseed, err := GetLinseedClient(config)
 	if err != nil {
-		log.WithError(err).Fatal("Error setting up elastic client.")
+		log.WithError(err).Fatal("Error setting linseed client.")
 	}
 
 	logs := AwsSetupLogSession()
 
-	// Get start-time from ES and get the token based on that
-	startTime, err := ESGetStartTime(config, es)
+	// Get start-time from ES via linseed and get the token based on that
+	startTime, err := GetStartTime(config, linseed)
 	if err != nil {
-		log.WithError(err).Fatal("Error getting start-time from elastic.")
+		log.WithError(err).Fatal("Error getting start-time from elastic via linseed.")
 	}
 
 	stateFileTokenMap, err := AwsGetStateFileWithToken(logs, config.EKSCloudwatchLogGroup, config.EKSCloudwatchLogStreamPrefix, startTime)
