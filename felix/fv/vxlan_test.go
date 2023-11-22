@@ -765,7 +765,9 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 								Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount - i))
 							}
 						}
+					}
 
+					for _, c := range cs.GetActiveClusters() {
 						ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 						defer cancel()
 						c.infra.RemoveNodeAddresses(c.felixes[2])
