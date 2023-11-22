@@ -559,7 +559,8 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 	}
 
 	testFelixReporter := testAccess(func(caFile, certFile, keyFile string) error {
-		_, err := metrics.GetMetric(tc.Felixes[0].IP, 9092, "calico_denied_packets", caFile, certFile, keyFile)
+		// Using GetRawMetrics here because the metrics are empty at start of day.
+		_, err := metrics.GetRawMetrics(tc.Felixes[0].IP, 9092, caFile, certFile, keyFile)
 		return err
 	})
 
