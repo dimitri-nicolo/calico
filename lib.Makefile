@@ -1338,7 +1338,7 @@ kubectl $(KUBECTL):
 bin/helm:
 	mkdir -p bin
 	$(eval TMP := $(shell mktemp -d))
-	wget -q https://get.helm.sh/helm-v3.11.0-linux-amd64.tar.gz -O $(TMP)/helm3.tar.gz
+	curl -sSf -L --retry 5 -o $(TMP)/helm3.tar.gz https://get.helm.sh/helm-v3.11.0-linux-amd64.tar.gz
 	tar -zxvf $(TMP)/helm3.tar.gz -C $(TMP)
 	mv $(TMP)/linux-amd64/helm bin/helm
 
@@ -1355,7 +1355,7 @@ publish-charts:
 bin/yq:
 	mkdir -p bin
 	$(eval TMP := $(shell mktemp -d))
-	wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_$(BUILDARCH).tar.gz -O $(TMP)/yq4.tar.gz
+	curl -sSf -L --retry 5 -o $(TMP)/yq4.tar.gz https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_$(BUILDARCH).tar.gz
 	tar -zxvf $(TMP)/yq4.tar.gz -C $(TMP)
 	mv $(TMP)/yq_linux_$(BUILDARCH) bin/yq
 

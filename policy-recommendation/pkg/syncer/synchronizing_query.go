@@ -297,11 +297,14 @@ func (s *synchronizer) deleteUntrackedSNP(ctx context.Context, snp v3.StagedNetw
 	// Delete the cache item
 	s.cacheSet.StagedNetworkPolicies.Delete(key)
 	// Delete the cluster item
-	err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Delete(
-		ctx, snp.GetName(), metav1.DeleteOptions{},
-	)
-	if err != nil && !k8serrors.IsNotFound(err) {
-		return err
+	ns, _ := s.clientSet.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+	if ns != nil {
+		err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(ns.Name).Delete(
+			ctx, snp.GetName(), metav1.DeleteOptions{},
+		)
+		if err != nil && !k8serrors.IsNotFound(err) {
+			return err
+		}
 	}
 
 	return nil
