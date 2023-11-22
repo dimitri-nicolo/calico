@@ -1,4 +1,4 @@
-{{ if .Values.managementCluster.enabled }}
+{{ if .Values.managementCluster.service.enabled }}
 
 apiVersion: v1
 kind: Namespace
