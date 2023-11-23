@@ -157,7 +157,16 @@ ci: build test image
 #  Note: this is called from both Linux and Windows so ARCH_TAG is required.
 cd: image cd-common
 
-#
-push-windows-manifest: var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
-	$(MAKE) push-manifests IMAGETAG=$(BRANCH_NAME) OUTPUT_DIR=/tmp/ MANIFEST_TOOL_SPEC_TEMPLATE=manifest-tool-spec.yaml.tpl.sh MANIFEST_TOOL_EXTRA_DOCKER_ARGS="-v /tmp:/tmp" FLUENTD_IMAGE=tigera/fluentd-windows
-	$(MAKE) push-manifests IMAGETAG=$(shell git describe --tags --dirty --long --always --abbrev=12) OUTPUT_DIR=/tmp/ MANIFEST_TOOL_SPEC_TEMPLATE=manifest-tool-spec.yaml.tpl.sh MANIFEST_TOOL_EXTRA_DOCKER_ARGS="-v /tmp:/tmp" FLUENTD_IMAGE=tigera/fluentd-windows
+# create fluentd windows manifests
+NANOSERVER_VERSIONS ?= 1809 ltsc2022
+push-windows-manifest: var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME  $(addprefix sub-windows-manifest-,$(call escapefs,$(PUSH_MANIFEST_IMAGES)))
+sub-windows-manifest-%:
+	for imagetag in $(BRANCH_NAME) $(GIT_VERSION); do \
+		docker manifest create $(call unescapefs,$*):$${imagetag} $(addprefix --amend ,$(addprefix $(call unescapefs,$*):$${imagetag}-,$(ARCHES))); \
+		for win_ver in $(NANOSERVER_VERSIONS); do \
+			ver=$$(docker manifest inspect mcr.microsoft.com/windows/nanoserver:$${win_ver} | jq -r '.manifests[0].platform."os.version"'); \
+			image=$(call unescapefs,$*):$${imagetag}-windows-$${win_ver//ltsc/}; \
+			docker manifest annotate --os windows --arch amd64 --os-version $${ver} $(call unescapefs,$*):$${imagetag} $${image}; \
+		done; \
+		docker manifest push --purge $(call unescapefs,$*):$${imagetag}; \
+	done;
