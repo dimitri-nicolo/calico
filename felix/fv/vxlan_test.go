@@ -24,6 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/utils"
@@ -77,7 +78,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 
 		Describe(fmt.Sprintf("VXLAN mode set to %s, routeSource %s, brokenXSum: %v, enableIPv6: %v, overlap: %v", vxlanMode, routeSource, brokenXSum, enableIPv6, overlap), func() {
 			var (
-				cs VXLANClusters
+				cs *VXLANClusters
 				cc *connectivity.Checker
 			)
 
@@ -85,7 +86,9 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 				if !infraFactories.IsRemoteSetup() && overlap != OverlapTestType_None {
 					Skip("Skipping overlapping pools tests for non-remote setup")
 				}
-				cs.overlap = overlap
+				cs = &VXLANClusters{
+					overlap: overlap,
+				}
 
 				for i, infraFactory := range infraFactories.AllFactories() {
 					creatingRemote := i == 1
@@ -99,9 +102,14 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					if infraFactories.IsRemoteSetup() {
 						topologyOptions.WithTypha = true
 						if creatingRemote && overlap == OverlapTestType_None {
+							logrus.Info("OverlapTestType_None: local and remote clusters use unique CIDRs.")
 							// Change CIDR for the second datastore to prevent overlap.
 							topologyOptions.IPPoolCIDR = "10.75.0.0/16"
 							topologyOptions.IPv6PoolCIDR = "dead:cafe::/64"
+						} else if overlap == OverlapTestType_Connect {
+							logrus.Info("OverlapTestType_Connect: local and remote clusters share IP pool CIDRs.")
+						} else if overlap == OverlapTestType_ConnectDisconnect {
+							logrus.Info("OverlapTestType_ConnectDisconnect: local and remote clusters share IP pool CIDRs.")
 						}
 					}
 					tc, client := infrastructure.StartNNodeTopology(3, topologyOptions, infra)
@@ -758,7 +766,6 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					for i, c := range cs.GetActiveClusters() {
 						for _, f := range c.felixes {
 							if BPFMode() {
-								// numFelixes := len(cs.local.felixes) + len(cs.remote.felixes)
 								Eventually(f.BPFNumRemoteHostRoutes, waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount),
 									fmt.Sprintf("Expected felix %s to have %d host routes, got: %s", f.IP, baseIPSetMemberCount, f.BPFRoutes()))
 							} else {
