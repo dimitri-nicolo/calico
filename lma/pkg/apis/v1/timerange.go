@@ -18,8 +18,10 @@ type TimeRange struct {
 	From time.Time `json:"from,omitempty"`
 	To   time.Time `json:"to,omitempty"`
 
-	// The time field to match against.  When this is not specified, the chosen time field is as
-	// determined by the "query helper" for each index, on a per-index basis.
+	// The time field to match against.  Please note that this is only implemented for some log
+	// storage indices; currently it is only for DNS logs.  When this field is not specified, or
+	// when querying an index for which this field has not yet been implemented, the chosen time
+	// field is as determined by the "query helper" for each index, on a per-index basis.
 	Field string `json:"field,omitempty"`
 
 	// If the from and to are relative to "now", then the now time is also filled in - this allows relative times
