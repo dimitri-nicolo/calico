@@ -25,14 +25,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/felix/fv/connectivity"
-	"github.com/projectcalico/calico/felix/fv/utils"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
+	"github.com/projectcalico/calico/felix/fv/metrics"
+	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -145,24 +144,20 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					_, err = cs.remote.infra.GetCalicoClient().RemoteClusterConfigurations().Create(context.Background(), localRCC, options.SetOptions{})
 					Expect(err).To(BeNil())
 
+					// Wait for the remotes to sync to reduce flakes. We expect routes and IP sets to only reflect
+					// the local cluster as part of overlap handling, so we check the number of nodes seen by Felix
+					// to determine the status.
+					expectedNumHosts := len(cs.local.felixes) + len(cs.remote.felixes)
+					for _, localFelix := range cs.local.felixes {
+						Eventually(metrics.GetFelixMetricIntFn(localFelix.IP, "felix_cluster_num_hosts"), "60s", "200ms").Should(Equal(expectedNumHosts))
+					}
+					for _, remoteFelix := range cs.remote.felixes {
+						Eventually(metrics.GetFelixMetricIntFn(remoteFelix.IP, "felix_cluster_num_hosts"), "60s", "200ms").Should(Equal(expectedNumHosts))
+					}
+
 					if overlap == OverlapTestType_ConnectDisconnect {
 						// Wait for the remotes to sync before we disconnect. We expect routes and IP sets to only reflect the local cluster as
 						// part of overlap handling, so we check the number of nodes seen by Felix to determine the status.
-						expectedNumHosts := len(cs.local.felixes) + len(cs.remote.felixes)
-						for _, localFelix := range cs.local.felixes {
-							Eventually(func() string {
-								metrics, _ := localFelix.ExecOutput("wget", "-qO-", "http://localhost:9091/metrics")
-								return metrics
-							}, "60s", "200ms").Should(ContainSubstring(fmt.Sprintf("felix_cluster_num_hosts %d", expectedNumHosts)))
-						}
-
-						for _, remoteFelix := range cs.remote.felixes {
-							Eventually(func() string {
-								metrics, _ := remoteFelix.ExecOutput("wget", "-qO-", "http://localhost:9091/metrics")
-								return metrics
-							}, "60s", "200ms").Should(ContainSubstring(fmt.Sprintf("felix_cluster_num_hosts %d", expectedNumHosts)))
-						}
-
 						_, err = cs.local.infra.GetCalicoClient().RemoteClusterConfigurations().Delete(context.Background(), remoteRCC.Name, options.DeleteOptions{})
 						_, err = cs.remote.infra.GetCalicoClient().RemoteClusterConfigurations().Delete(context.Background(), localRCC.Name, options.DeleteOptions{})
 					}
@@ -195,7 +190,6 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					}
 					c.infra.Stop()
 				}
-				cs.Reset()
 			})
 
 			if brokenXSum {
@@ -750,19 +744,34 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 				})
 			})
 
+			calculateBaseIPSetMemberCount := func() int {
+				var numFelixes int
+
+				// In BPF mode, we examine the routes map, which contains
+				// all known hosts.  In iptables mode, we examine the
+				// VXLAN IP set, which only contains hosts with a valid VTEP
+				// so the expected count differs.
+				if (BPFMode() && cs.ExpectRemoteClusterConnection()) || (!BPFMode() && cs.ExpectRemoteConnectivity()) {
+					numFelixes = len(cs.local.felixes) + len(cs.remote.felixes)
+				} else {
+					numFelixes = len(cs.local.felixes)
+				}
+				baseIPSetMemberCount := numFelixes - 1
+				return baseIPSetMemberCount
+			}
+
 			Context("after removing BGP address from third node", func() {
 				// Simulate having a host send VXLAN traffic from an unknown source, should get blocked.
 				var baseIPSetMemberCount int
+				var numIPsRemoved int
+
 				BeforeEach(func() {
 					waitPeriod := "10s"
-					var numFelixes int
-					if cs.ExpectRemoteConnectivity() {
+					if cs.IsRemoteSetup() {
 						waitPeriod = "60s"
-						numFelixes = len(cs.local.felixes) + len(cs.remote.felixes)
-					} else {
-						numFelixes = len(cs.local.felixes)
 					}
-					baseIPSetMemberCount = numFelixes - 1
+					baseIPSetMemberCount = calculateBaseIPSetMemberCount()
+
 					for _, c := range cs.GetActiveClusters() {
 						for _, f := range c.felixes {
 							if BPFMode() {
@@ -774,6 +783,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 						}
 					}
 
+					numIPsRemoved = 0
 					for _, c := range cs.GetActiveClusters() {
 						ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 						defer cancel()
@@ -787,20 +797,16 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 
 						node.Spec.BGP = nil
 						_, err = c.client.Nodes().Update(ctx, node, options.SetOptions{})
+						Expect(err).NotTo(HaveOccurred())
+						numIPsRemoved++
 					}
 				})
 
 				It("should have no connectivity from third felix and expected number of IPs in allow list", func() {
-					var adjustedIPSetMemberCount int
-					if cs.ExpectRemoteConnectivity() {
-						adjustedIPSetMemberCount = baseIPSetMemberCount - 2
-					} else {
-						adjustedIPSetMemberCount = baseIPSetMemberCount - 1
-					}
-
+					adjustedIPSetMemberCount := baseIPSetMemberCount - numIPsRemoved
 					if BPFMode() {
 						Eventually(cs.local.felixes[0].BPFNumRemoteHostRoutes, "10s", "200ms").Should(Equal(adjustedIPSetMemberCount),
-							fmt.Sprintf("Expected %d host routes, got: %s", adjustedIPSetMemberCount, cs.local.felixes[0].BPFRoutes()))
+							fmt.Sprintf("Expected %d host routes, got:\n%s", adjustedIPSetMemberCount, cs.local.felixes[0].BPFRoutes()))
 					} else {
 						Eventually(cs.local.felixes[0].IPSetSizeFn("cali40all-vxlan-net"), "5s", "200ms").Should(
 							Equal(adjustedIPSetMemberCount))
@@ -847,6 +853,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 			Context("after removing BGP address from third node, all felixes paused", func() {
 				// Simulate having a host send VXLAN traffic from an unknown source, should get blocked.
 				var baseIPSetMemberCount int
+
 				BeforeEach(func() {
 					if BPFMode() {
 						Skip("Skipping due to manual removal of host from ipset not breaking connectivity in BPF mode")
@@ -854,26 +861,26 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					}
 
 					waitPeriod := "10s"
-					if cs.ExpectRemoteConnectivity() {
-						waitPeriod = "20s"
-						baseIPSetMemberCount = len(cs.local.felixes) + len(cs.remote.felixes) - 1
-					} else {
-						baseIPSetMemberCount = len(cs.local.felixes) - 1
+					if cs.IsRemoteSetup() {
+						waitPeriod = "60s"
 					}
+					baseIPSetMemberCount = calculateBaseIPSetMemberCount()
+
 					// Check we initially have the expected number of entries.
 					for _, c := range cs.GetActiveClusters() {
 						for _, f := range c.felixes {
 							// Wait for Felix to set up the allow list.
 							Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount))
 						}
-
 						// Wait until dataplane has settled.
 						cc.ExpectSome(c.w[0], c.w[1])
 						cc.ExpectSome(c.w[0], c.w[2])
 						cc.ExpectSome(c.w[1], c.w[2])
 						cc.CheckConnectivity()
 						cc.ResetExpectations()
+					}
 
+					for _, c := range cs.GetActiveClusters() {
 						// Then pause all the felixes.
 						for _, f := range c.felixes {
 							pid := f.GetFelixPID()
@@ -1260,11 +1267,14 @@ func (c *VXLANClusters) IsRemoteSetup() bool {
 	return c.remote != nil
 }
 
-func (c *VXLANClusters) ExpectRemoteConnectivity() bool {
-	return c.IsRemoteSetup() && c.overlap == OverlapTestType_None
+// ExpectRemoteClusterConnection returns true if there should be a federation
+// connection (even one with overlapping IPPools).
+func (c *VXLANClusters) ExpectRemoteClusterConnection() bool {
+	return c.IsRemoteSetup() && c.overlap != OverlapTestType_ConnectDisconnect
 }
 
-func (c *VXLANClusters) Reset() {
-	c.local = nil
-	c.remote = nil
+// ExpectRemoteConnectivity returns true if there should be connectivity to
+// remote pods.
+func (c *VXLANClusters) ExpectRemoteConnectivity() bool {
+	return c.IsRemoteSetup() && c.overlap == OverlapTestType_None
 }
