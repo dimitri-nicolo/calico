@@ -71,6 +71,8 @@ managementCluster:
   enabled: false
   address:
   service:
+    enabled: false
+    annotations:
     type:
     port: 9449
     nodePort:

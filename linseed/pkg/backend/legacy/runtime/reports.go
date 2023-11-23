@@ -162,8 +162,6 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 		return nil, err
 	}
 
-	log.WithField("INDEX", b.getIndex(i)).Info("Listing from index")
-
 	// Configure sorting.
 	if len(opts.GetSortBy()) != 0 {
 		for _, s := range opts.GetSortBy() {
@@ -219,7 +217,7 @@ func (b *runtimeReportBackend) buildQuery(i bapi.ClusterInfo, opts *v1.RuntimeRe
 	queryTimeRange := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("generated_time").From(start))
 
 	if opts.LegacyTimeRange != nil {
-		logrus.Infof("Legacy time range declared")
+		logrus.Debug("Legacy time range declared")
 		legacyStart, _ := logtools.ExtractTimeRange(opts.LegacyTimeRange)
 
 		queryLegacy := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("start_time").From(legacyStart))
