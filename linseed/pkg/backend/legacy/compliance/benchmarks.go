@@ -195,7 +195,7 @@ func (b *benchmarksBackend) buildQuery(i bapi.ClusterInfo, p *v1.BenchmarksParam
 	query := b.queryHelper.BaseQuery(i)
 
 	if p.TimeRange != nil {
-		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange.From, p.TimeRange.To))
+		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange))
 	}
 	if p.ID != "" {
 		query.Must(elastic.NewTermQuery("_id", p.ID))

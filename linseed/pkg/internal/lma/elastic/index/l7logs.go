@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -169,8 +169,8 @@ func (h l7LogsIndexHelper) NewRBACQuery(
 	return elastic.NewBoolQuery().Should(should...), nil
 }
 
-func (h l7LogsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query {
-	return elastic.NewRangeQuery("end_time").Gt(from.Unix()).Lte(to.Unix())
+func (h l7LogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
+	return elastic.NewRangeQuery("end_time").Gt(r.From.Unix()).Lte(r.To.Unix())
 }
 
 func (h l7LogsIndexHelper) GetTimeField() string {

@@ -6,6 +6,7 @@ import (
 	elastic "github.com/olivere/elastic/v7"
 
 	api "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -102,12 +103,12 @@ func (_m *MockHelper) NewSelectorQuery(selector string) (elastic.Query, error) {
 }
 
 // NewTimeRangeQuery provides a mock function with given fields: from, to
-func (_m *MockHelper) NewTimeRangeQuery(from time.Time, to time.Time) elastic.Query {
-	ret := _m.Called(from, to)
+func (_m *MockHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
+	ret := _m.Called(r.From, r.To)
 
 	var r0 elastic.Query
 	if rf, ok := ret.Get(0).(func(time.Time, time.Time) elastic.Query); ok {
-		r0 = rf(from, to)
+		r0 = rf(r.From, r.To)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(elastic.Query)

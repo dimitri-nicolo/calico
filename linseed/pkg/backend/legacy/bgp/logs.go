@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -181,16 +182,15 @@ func (b *bgpLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.BGPLogParams) el
 	query := b.queryHelper.BaseQuery(i)
 
 	// Add the time range to the query.
-	var start, end time.Time
 	if opts.QueryParams.TimeRange != nil {
-		start = opts.QueryParams.TimeRange.From
-		end = opts.QueryParams.TimeRange.To
+		query.Filter(b.queryHelper.NewTimeRangeQuery(opts.QueryParams.TimeRange))
 	} else {
 		// Default to the latest 5 minute window.
-		start = time.Now().Add(-5 * time.Minute)
-		end = time.Now()
+		query.Filter(b.queryHelper.NewTimeRangeQuery(&lmav1.TimeRange{
+			From: time.Now().Add(-5 * time.Minute),
+			To:   time.Now(),
+		}))
 	}
-	query.Filter(b.queryHelper.NewTimeRangeQuery(start, end))
 
 	return query
 }

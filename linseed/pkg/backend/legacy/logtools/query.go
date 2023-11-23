@@ -24,8 +24,7 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (*elas
 
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
-	start, end := ExtractTimeRange(opts.GetTimeRange())
-	query.Filter(h.NewTimeRangeQuery(start, end))
+	query.Filter(h.NewTimeRangeQuery(WithDefault(opts.GetTimeRange())))
 
 	// If RBAC constraints were given, add them in.
 	if perms := opts.GetPermissions(); len(perms) > 0 {
@@ -52,19 +51,15 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (*elas
 	return query, nil
 }
 
-func ExtractTimeRange(timeRange *lmav1.TimeRange) (time.Time, time.Time) {
-	// Parse times from the request. We default to a time-range query
-	// if no other search parameters are given.
-	var start, end time.Time
+func WithDefault(timeRange *lmav1.TimeRange) *lmav1.TimeRange {
 	if timeRange != nil {
-		start = timeRange.From
-		end = timeRange.To
-	} else {
-		// Default to the start of the timeline
-		start = time.Time{}
-		end = time.Now()
+		return timeRange
 	}
-	return start, end
+	return &lmav1.TimeRange{
+		// Default to the start of the timeline
+		From: time.Time{},
+		To:   time.Now(),
+	}
 }
 
 // StartFrom parses the given parameters to determine which log to start from in the ES query.

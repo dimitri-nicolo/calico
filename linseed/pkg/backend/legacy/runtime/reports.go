@@ -213,14 +213,14 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 func (b *runtimeReportBackend) buildQuery(i bapi.ClusterInfo, opts *v1.RuntimeReportParams) elastic.Query {
 	baseQuery := b.queryHelper.BaseQuery(i)
 
-	start, _ := logtools.ExtractTimeRange(opts.GetTimeRange())
-	queryTimeRange := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("generated_time").From(start))
+	tr := logtools.WithDefault(opts.GetTimeRange())
+	queryTimeRange := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("generated_time").From(tr.From))
 
 	if opts.LegacyTimeRange != nil {
 		logrus.Debug("Legacy time range declared")
-		legacyStart, _ := logtools.ExtractTimeRange(opts.LegacyTimeRange)
+		legacyTR := logtools.WithDefault(opts.LegacyTimeRange)
 
-		queryLegacy := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("start_time").From(legacyStart))
+		queryLegacy := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("start_time").From(legacyTR.From))
 
 		// this query forces presence of the `generated_time` field
 		generatedTimeQuery := elastic.NewExistsQuery("generated_time")

@@ -13,6 +13,7 @@ import (
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -161,16 +162,15 @@ func (b *dnsFlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.DNSFlowParams) 
 	query := b.queryHelper.BaseQuery(i)
 
 	// Parse times from the request.
-	var start, end time.Time
 	if opts.TimeRange != nil {
-		start = opts.TimeRange.From
-		end = opts.TimeRange.To
+		query.Filter(b.queryHelper.NewTimeRangeQuery(opts.TimeRange))
 	} else {
 		// Default to the latest 5 minute window.
-		start = time.Now().Add(-5 * time.Minute)
-		end = time.Now()
+		query.Filter(b.queryHelper.NewTimeRangeQuery(&lmav1.TimeRange{
+			From: time.Now().Add(-5 * time.Minute),
+			To:   time.Now(),
+		}))
 	}
-	query.Filter(b.queryHelper.NewTimeRangeQuery(start, end))
 
 	return query
 }
