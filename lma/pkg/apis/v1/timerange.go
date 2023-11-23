@@ -18,14 +18,19 @@ type TimeRange struct {
 	From time.Time `json:"from,omitempty"`
 	To   time.Time `json:"to,omitempty"`
 
+	// The time field to match against.  When this is not specified, the chosen time field is as
+	// determined by the "query helper" for each index, on a per-index basis.
+	Field string `json:"field,omitempty"`
+
 	// If the from and to are relative to "now", then the now time is also filled in - this allows relative times
 	// to be reverse engineered (useful for the cache which keeps data for relative times updated in the background).
 	Now *time.Time `json:"-"`
 }
 
 type timeRangeInternal struct {
-	From *string `json:"from"`
-	To   *string `json:"to"`
+	From  *string `json:"from"`
+	To    *string `json:"to"`
+	Field string  `json:"field,omitempty"`
 }
 
 // UnmarshalJSON implements the unmarshalling interface for JSON.
@@ -90,6 +95,8 @@ func (t *TimeRange) UnmarshalJSON(b []byte) error {
 		}
 	}
 
+	t.Field = s.Field
+
 	return nil
 }
 
@@ -100,14 +107,19 @@ func (t TimeRange) MarshalJSON() ([]byte, error) {
 	from := t.From.UTC().Format(time.RFC3339)
 	to := t.To.UTC().Format(time.RFC3339)
 	s := timeRangeInternal{
-		From: &from,
-		To:   &to,
+		From:  &from,
+		To:    &to,
+		Field: t.Field,
 	}
 	return json.Marshal(s)
 }
 
 func (t TimeRange) String() string {
-	return fmt.Sprintf("%s -> %s", t.From.UTC().Format(time.RFC3339), t.To.UTC().Format(time.RFC3339))
+	tr := fmt.Sprintf("%s -> %s", t.From.UTC().Format(time.RFC3339), t.To.UTC().Format(time.RFC3339))
+	if t.Field != "" {
+		return t.Field + ": " + tr
+	}
+	return tr
 }
 
 func (t TimeRange) Duration() time.Duration {
