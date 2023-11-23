@@ -213,12 +213,12 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 func (b *runtimeReportBackend) buildQuery(i bapi.ClusterInfo, opts *v1.RuntimeReportParams) elastic.Query {
 	baseQuery := b.queryHelper.BaseQuery(i)
 
-	tr := logtools.WithDefault(opts.GetTimeRange())
+	tr := logtools.WithDefaultUntilNow(opts.GetTimeRange())
 	queryTimeRange := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("generated_time").From(tr.From))
 
 	if opts.LegacyTimeRange != nil {
 		logrus.Debug("Legacy time range declared")
-		legacyTR := logtools.WithDefault(opts.LegacyTimeRange)
+		legacyTR := logtools.WithDefaultUntilNow(opts.LegacyTimeRange)
 
 		queryLegacy := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("start_time").From(legacyTR.From))
 

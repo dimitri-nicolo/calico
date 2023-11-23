@@ -195,6 +195,8 @@ func (b *l7FlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Comp
 // buildQuery builds an elastic query using the given parameters.
 func (b *l7FlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L7FlowParams) elastic.Query {
 	query := b.queryHelper.BaseQuery(i)
-	query.Must(b.queryHelper.NewTimeRangeQuery(logtools.WithDefault(opts.TimeRange)))
+	query.Must(b.queryHelper.NewTimeRangeQuery(
+		logtools.WithDefaultUntilNow(opts.TimeRange),
+	))
 	return query
 }

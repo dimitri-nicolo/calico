@@ -24,7 +24,7 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (*elas
 
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
-	query.Filter(h.NewTimeRangeQuery(WithDefault(opts.GetTimeRange())))
+	query.Filter(h.NewTimeRangeQuery(WithDefaultUntilNow(opts.GetTimeRange())))
 
 	// If RBAC constraints were given, add them in.
 	if perms := opts.GetPermissions(); len(perms) > 0 {
@@ -51,13 +51,24 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (*elas
 	return query, nil
 }
 
-func WithDefault(timeRange *lmav1.TimeRange) *lmav1.TimeRange {
+func WithDefaultUntilNow(timeRange *lmav1.TimeRange) *lmav1.TimeRange {
 	if timeRange != nil {
 		return timeRange
 	}
 	return &lmav1.TimeRange{
 		// Default to the start of the timeline
 		From: time.Time{},
+		To:   time.Now(),
+	}
+}
+
+func WithDefaultLast5Minutes(timeRange *lmav1.TimeRange) *lmav1.TimeRange {
+	if timeRange != nil {
+		return timeRange
+	}
+	return &lmav1.TimeRange{
+		// Default to the latest 5 minute window.
+		From: time.Now().Add(-5 * time.Minute),
 		To:   time.Now(),
 	}
 }
