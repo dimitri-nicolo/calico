@@ -763,13 +763,13 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 						numFelixes = len(cs.local.felixes)
 					}
 					baseIPSetMemberCount = numFelixes - 1
-					for i, c := range cs.GetActiveClusters() {
+					for _, c := range cs.GetActiveClusters() {
 						for _, f := range c.felixes {
 							if BPFMode() {
 								Eventually(f.BPFNumRemoteHostRoutes, waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount),
 									fmt.Sprintf("Expected felix %s to have %d host routes, got: %s", f.IP, baseIPSetMemberCount, f.BPFRoutes()))
 							} else {
-								Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount - i))
+								Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount))
 							}
 						}
 					}
