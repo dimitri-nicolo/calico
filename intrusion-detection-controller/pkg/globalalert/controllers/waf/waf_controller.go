@@ -62,7 +62,11 @@ func (c *wafAlertController) Run(parentCtx context.Context) {
 	if err != nil {
 		log.WithError(err).Warn("failed to init logs cache")
 	}
-	// Then loop forever...
+
+	go c.runWafLogsProcessingLoop(ctx)
+}
+
+func (c *wafAlertController) runWafLogsProcessingLoop(ctx context.Context) {
 	for {
 		err := c.ProcessWafLogs(ctx)
 		if err != nil {
