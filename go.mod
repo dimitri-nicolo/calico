@@ -1,11 +1,11 @@
 module github.com/tigera/elasticsearch-docker
 
-go 1.20
+go 1.21
 
 require (
 	// ECK version 2.6.1
 	github.com/elastic/cloud-on-k8s/v2 v2.0.0-20230111163007-62f2e278e418
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.3
 )
 
 require (
