@@ -19,9 +19,11 @@ package fv_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/projectcalico/calico/felix/fv/connectivity"
+	"github.com/projectcalico/calico/felix/fv/utils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -165,6 +167,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ do-not-track policy tests; 
 			host0Selector := fmt.Sprintf("name == 'eth0-%s'", tc.Felixes[0].Name)
 			host1Selector := fmt.Sprintf("name == 'eth0-%s'", tc.Felixes[1].Name)
 
+			if BPFMode() {
+				By("Having no Linux IP sets")
+				Consistently(tc.Felixes[0].IPSetNames, "2s", "1s").Should(BeEmpty())
+			}
+
 			By("Having connectivity after installing bidirectional policies")
 			host0Pol := api.NewGlobalNetworkPolicy()
 			host0Pol.Name = "host-0-pol"
@@ -215,6 +222,16 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ do-not-track policy tests; 
 			Expect(err).NotTo(HaveOccurred())
 
 			expectFullConnectivity()
+
+			if BPFMode() {
+				By("Having a Linux IP set for the egress policy")
+				setName := utils.IPSetNameForSelector(4, host1Selector)
+				domainSetName := strings.Replace(setName, "cali40s:", "cali40d:", 1)
+				Expect(tc.Felixes[0].IPSetNames()).To(ConsistOf(
+					setName,
+					domainSetName,
+				))
+			}
 
 			By("Having only failsafe connectivity after replacing host-0's egress rules with Deny")
 			// Since there's no conntrack, removing rules in one direction is enough to prevent
