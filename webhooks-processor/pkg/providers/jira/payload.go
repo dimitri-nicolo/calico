@@ -4,9 +4,13 @@ package jira
 
 import (
 	"bytes"
+	"encoding/json"
 	"html/template"
+	"strings"
+	"time"
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/sirupsen/logrus"
 )
 
 type jiraPayload struct {
@@ -28,13 +32,35 @@ type jiraIssueType struct {
 	Name string `json:"name"`
 }
 
-var descriptionTemplate = template.Must(template.New("description").Parse(`
-*Alert type:* {{.Type}}
-*Time:* {{.Time}}
-*Origin:* {{.Origin}}
-*Severity:* {{.Severity}}
+var descriptionTemplate = template.Must(template.New("description").Funcs(template.FuncMap{
+	"when": func(when lsApi.TimestampOrDate) string { return when.GetTime().Format(time.RFC850) },
+	"record": func(event *lsApi.Event) string {
+		data := make(map[string]any)
+		if err := event.GetRecord(&data); err != nil {
+			logrus.WithError(err).Error("error processing event record")
+			return "n/a"
+		}
+		if bytes, err := json.MarshalIndent(data, "", "\t"); err != nil {
+			logrus.WithError(err).Error("error marshalling record data")
+			return "n/a"
+		} else {
+			return strings.ReplaceAll(string(bytes), `"`, `‟`)
+		}
+	},
+}).Parse(`
+*What happened:* {{.Description}}
+*When it happened:* {{when .Time}}
+*Event source:* {{.Origin}}
+*Attack vector:* {{.AttackVector}}
+*Severity:* {{.Severity}}/100
+*Mitre IDs:* {{range .MitreIDs}}{{.}} {{end}}
+*Mitre tactic:* {{.MitreTactic}}
 
-{{.Description}}
+*Mitigations:*
+{{range .Mitigations}}
+- {{.}}{{end}}
+
+{code:json|title=Detailed record information}{{ record .}}{code}
 `))
 
 func buildSummary(event *lsApi.Event) (string, error) {
@@ -43,19 +69,6 @@ func buildSummary(event *lsApi.Event) (string, error) {
 
 func buildDescription(event *lsApi.Event) (string, error) {
 	buffer := new(bytes.Buffer)
-	templateData := struct {
-		Type        string
-		Time        string
-		Origin      string
-		Severity    int
-		Description string
-	}{
-		Type:        event.Type,
-		Time:        event.Time.GetTime().String(),
-		Origin:      event.Origin,
-		Severity:    event.Severity,
-		Description: event.Description,
-	}
-	err := descriptionTemplate.Execute(buffer, templateData)
+	err := descriptionTemplate.Execute(buffer, event)
 	return buffer.String(), err
 }
