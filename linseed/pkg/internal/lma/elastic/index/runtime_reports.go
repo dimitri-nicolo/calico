@@ -6,8 +6,9 @@ import (
 	"fmt"
 
 	"github.com/olivere/elastic/v7"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 )

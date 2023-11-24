@@ -8,8 +8,9 @@ import (
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 func SingleIndexThreatfeedsDomainNameSet() Helper {
