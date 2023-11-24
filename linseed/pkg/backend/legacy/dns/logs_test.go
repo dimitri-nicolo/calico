@@ -96,6 +96,22 @@ func TestCreateDNSLog(t *testing.T) {
 		actual.StartTime = f.StartTime
 		actual.EndTime = f.EndTime
 		require.Equal(t, f, backendutils.AssertDNSLogIDAndReset(t, actual))
+
+		// If we update the query params to specify matching against the "generated_time"
+		// field, we should get no results, because the time right now is years later than
+		// reqTime.
+		params.TimeRange.Field = "generated_time"
+		listResp, err = lb.List(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+		require.Len(t, listResp.Items, 0)
+
+		// Now if we keep using "generated_time" and change the time range to cover the time
+		// period when this test has been running, we should get back that log again.
+		params.TimeRange.To = time.Now().Add(10 * time.Second)
+		params.TimeRange.From = params.TimeRange.To.Add(-5 * time.Minute)
+		listResp, err = lb.List(ctx, clusterInfo, &params)
+		require.NoError(t, err)
+		require.Len(t, listResp.Items, 1)
 	})
 }
 
