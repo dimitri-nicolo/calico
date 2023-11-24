@@ -98,8 +98,8 @@ func TestCreateDNSLog(t *testing.T) {
 		require.Equal(t, f, backendutils.AssertDNSLogIDAndReset(t, actual))
 
 		// If we update the query params to specify matching against the "generated_time"
-		// field, we should get no results, because the time right now is years later than
-		// reqTime.
+		// field, we should get no results, because the time right now (>=2023) is years
+		// later than reqTime (1970).
 		params.TimeRange.Field = "generated_time"
 		listResp, err = lb.List(ctx, clusterInfo, &params)
 		require.NoError(t, err)
