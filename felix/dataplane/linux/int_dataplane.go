@@ -823,11 +823,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 		tc.CleanUpProgramsAndPins()
 	} else {
-		// In BPF mode we still use iptables for raw egress policy.
-		dp.RegisterManager(newRawEgressPolicyManager(rawTableV4, ruleRenderer, 4,
-			func(neededIPSets set.Set[string]) {
-				ipSetsV4.SetFilter(neededIPSets)
-			}))
+		// In BPF mode we still use iptables for raw egress policy, but we
+		// filter the IP sets that we render to the dataplane.  Set an empty
+		// filter now so that the IP sets driver does a lot less logging.
+		ipSetsV4.SetFilter(set.New[string]())
+		dp.RegisterManager(newRawEgressPolicyManager(rawTableV4, ruleRenderer, 4, ipSetsV4.SetFilter))
 	}
 
 	interfaceRegexes := make([]string, len(config.RulesConfig.WorkloadIfacePrefixes))

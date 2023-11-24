@@ -90,7 +90,7 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 
 	// Determine the index to write to using an alias
 	alias := b.index.Alias(i)
-	log.Infof("Writing flow logs in bulk to alias %s", alias)
+	log.Debugf("Writing flow logs in bulk to alias %s", alias)
 
 	// Build a bulk request using the provided logs.
 	bulk := b.client.Bulk()
