@@ -44,7 +44,7 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, event *ls
 	}
 
 	retryFunc := func() (err error) {
-		requestCtx, requestCtxCancel := context.WithTimeout(ctx, p.Config().RequestTimeout)
+		requestCtx, requestCtxCancel := context.WithTimeout(ctx, p.config.RequestTimeout)
 		defer requestCtxCancel()
 
 		request, err := http.NewRequestWithContext(requestCtx, "POST", config["url"], bytes.NewReader(payload))
