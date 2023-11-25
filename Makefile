@@ -165,7 +165,7 @@ sub-windows-manifest-%:
 		docker manifest create $(call unescapefs,$*):$${imagetag} $(addprefix --amend ,$(addprefix $(call unescapefs,$*):$${imagetag}-,$(ARCHES))); \
 		for win_ver in $(NANOSERVER_VERSIONS); do \
 			ver=$$(docker manifest inspect mcr.microsoft.com/windows/nanoserver:$${win_ver} | jq -r '.manifests[0].platform."os.version"'); \
-			image=$(call unescapefs,$*):$${imagetag}-windows-$${win_ver//ltsc/}; \
+			image=$(call unescapefs,$*):$${imagetag}-windows-$$(printf '%s' $${win_ver} | sed 's/ltsc//g'); \
 			docker manifest annotate --os windows --arch amd64 --os-version $${ver} $(call unescapefs,$*):$${imagetag} $${image}; \
 		done; \
 		docker manifest push --purge $(call unescapefs,$*):$${imagetag}; \

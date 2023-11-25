@@ -25,7 +25,7 @@ global_job_config:
       - ssh-add ~/.keys/*
       # Login to docker in order to pull images.
       - docker login -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
-       # set experimental for docker on semaphore vm to use `--squash` for building docker images
+      # set experimental for docker on semaphore vm to use `--squash` for building docker images
       - sudo bash -c 'echo "{\"experimental\":true}" >> /etc/docker/daemon.json'
       - sudo systemctl restart docker
       - checkout
@@ -34,7 +34,7 @@ global_job_config:
       - git fetch --unshallow
 
 blocks:
-  - name: 'CI'
+  - name: "CI"
     dependencies: []
     task:
       jobs:
@@ -54,15 +54,15 @@ blocks:
     task:
       prologue:
         commands:
-        - "curl -fsSLH 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install-latest.sh | bash"
+          - "curl -fsSLH 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install-latest.sh | bash"
       jobs:
-      - name: "FOSSA scan"
-        commands:
-        - "fossa analyze"
+        - name: "FOSSA scan"
+          commands:
+            - "fossa analyze"
       secrets:
         - name: foss-api-key
 
-  - name: 'Push Images (non-PR builds only)'
+  - name: "Push Images (non-PR builds only)"
     dependencies: ["CI"]
     skip:
       # Only run on branches, not PRs.
@@ -87,7 +87,7 @@ blocks:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - make cd CONFIRM=true
 
-  - name: 'Push Windows Images (non-PR builds only)'
+  - name: "Push Windows Images (non-PR builds only)"
     dependencies: ["CI"]
     skip:
       # Only run on branches, not PRs.
@@ -127,7 +127,7 @@ blocks:
             - export PROCESS_REPO=~/process/testing/windows-instances
             - CONFIRM=true .semaphore/windows-cd.sh
 
-  - name: 'Push Windows Manifests (non-PR builds only)'
+  - name: "Push Windows Manifests (non-PR builds only)"
     dependencies:
       - "Push Windows Images (non-PR builds only)"
     skip:
@@ -150,4 +150,4 @@ blocks:
             minutes: 60
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
-            - make push-windows-manifest CONFIRM=true
+            - CONFIRM=true WINDOWS_RELEASE=true make push-windows-manifest
