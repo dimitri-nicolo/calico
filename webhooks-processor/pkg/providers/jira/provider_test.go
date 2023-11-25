@@ -90,7 +90,7 @@ func TestJiraProviderProcessing(t *testing.T) {
 		})
 		event = &lsApi.Event{
 			ID:           "testid",
-			Description:  "This is an event",
+			Description:  "$DEADB33F is now under attack",
 			Time:         lsApi.NewEventTimestamp(0),
 			Origin:       "test",
 			AttackVector: "unit test",
@@ -124,7 +124,7 @@ func TestJiraProviderProcessing(t *testing.T) {
 		require.Equal(t, jiraPayload.Fields.Summary, "Calico Security Alert")
 
 		require.Equal(t, jiraPayload.Fields.Description, `
-*What happened:* This is an event
+*What happened:* $DEADB33F is now under attack
 *When it happened:* Thursday, 01-Jan-70 00:00:00 UTC
 *Event source:* test
 *Attack vector:* unit test
