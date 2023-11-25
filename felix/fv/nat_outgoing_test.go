@@ -92,3 +92,84 @@ var _ = infrastructure.DatastoreDescribe("NATOutgoing rule rendering test", []ap
 		}, 5*time.Second, 100*time.Millisecond).Should(MatchRegexp("-A cali-nat-outgoing .*-o eth\\+ "))
 	})
 })
+
+var _ = infrastructure.DatastoreDescribeWithRemote("NATOutgoing remote cluster rendering test", []apiconfig.DatastoreType{}, func(factories infrastructure.LocalRemoteInfraFactories) {
+	var infra [2]infrastructure.DatastoreInfra
+	var tc [2]infrastructure.TopologyContainers
+	var natPool [2]*api.IPPool
+
+	BeforeEach(func() {
+		for i, infraFactory := range factories.AllFactories() {
+			topologyOptions := infrastructure.DefaultTopologyOptions()
+			topologyOptions.VXLANMode = api.VXLANModeAlways
+			topologyOptions.WithTypha = true
+			topologyOptions.IPIPEnabled = false
+			if i == 1 {
+				// Change CIDR of the default pool for the second datastore to prevent overlap.
+				topologyOptions.IPPoolCIDR = "10.75.0.0/16"
+			}
+
+			infra[i] = infraFactory()
+			tc[i], _ = infrastructure.StartNNodeTopology(1, topologyOptions, infra[i])
+
+			// Create a NAT outgoing pool for each cluster. Set VXLAN mode and create before the RCC to default OverlayRoutingMode correctly.
+			var err error
+			natPool[i] = api.NewIPPool()
+			natPool[i].Name = "nat-pool"
+			if i == 1 {
+				// Change CIDR of the NAT pool for the second datastore to prevent overlap.
+				natPool[i].Spec.CIDR = "10.255.255.0/24"
+			} else {
+				natPool[i].Spec.CIDR = "10.244.255.0/24"
+			}
+			natPool[i].Spec.VXLANMode = api.VXLANModeAlways
+			natPool[i].Spec.NATOutgoing = true
+			natPool[i], err = infra[i].GetCalicoClient().IPPools().Create(context.Background(), natPool[i], options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		var err error
+
+		// Setup local with an RCC for remote.
+		remoteRCC := infra[1].GetRemoteClusterConfig()
+		_, err = infra[0].GetCalicoClient().RemoteClusterConfigurations().Create(context.Background(), remoteRCC, options.SetOptions{})
+		Expect(err).To(BeNil())
+
+		// Setup remote with an RCC for local.
+		localRCC := infra[0].GetRemoteClusterConfig()
+		_, err = infra[1].GetCalicoClient().RemoteClusterConfigurations().Create(context.Background(), localRCC, options.SetOptions{})
+		Expect(err).To(BeNil())
+	})
+
+	It("should have expected all pools ipset", func() {
+		listingAllIPAMPoolsIPSet := func() string {
+			output, _ := tc[0].Felixes[0].ExecOutput("ipset", "-L", "cali40all-ipam-pools")
+			return output
+		}
+
+		// The remote pool should be included in the all pools ipset, as traffic to it should not be masqueraded.
+		Eventually(listingAllIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring("Number of entries: 2"))
+		Eventually(listingAllIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring(natPool[0].Spec.CIDR))
+		Eventually(listingAllIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring(natPool[1].Spec.CIDR))
+	})
+
+	It("should have expected masq pools ipset", func() {
+		listingMasqIPAMPoolsIPSet := func() string {
+			output, _ := tc[0].Felixes[0].ExecOutput("ipset", "-L", "cali40masq-ipam-pools")
+			return output
+		}
+
+		// The remote pool should not be programmed as a masq pool for the local cluster.
+		Eventually(listingMasqIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring("Number of entries: 1"))
+		Eventually(listingMasqIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring(natPool[0].Spec.CIDR))
+	})
+
+	AfterEach(func() {
+		for _, tc := range tc {
+			tc.Stop()
+		}
+		for _, inf := range infra {
+			inf.Stop()
+		}
+	})
+})

@@ -191,6 +191,11 @@ message ToDataplane {
     ExternalNetworkUpdate external_network_update = 130;
     // ExternalNetworkRemove is sent when a ExternalNetwork is removed.
     ExternalNetworkRemove external_network_remove = 131;
+
+    // RemoteIPAMPoolUpdate is sent when a remote IPAM pool is added/updated.
+    RemoteIPAMPoolUpdate remote_ipam_pool_update = 132;
+    // RemoteIPAMPoolRemove is sent when a remote IPAM pool is removed.
+    RemoteIPAMPoolRemove remote_ipam_pool_remove = 133;
   }
 }
 
@@ -960,4 +965,15 @@ message ExternalNetworkUpdate {
 
 message ExternalNetworkRemove {
   ExternalNetworkID id = 1;;
+}
+
+message RemoteIPAMPoolUpdate {
+  string id = 1;
+  string cluster = 2;
+  IPAMPool pool = 3;
+}
+
+message RemoteIPAMPoolRemove {
+  string id = 1;
+  string cluster = 2;
 }

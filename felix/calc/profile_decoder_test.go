@@ -206,6 +206,14 @@ func (p *passthruCallbackRecorder) OnExternalNetworkRemove(*proto.ExternalNetwor
 	Fail("OnExternalNetworkRemove received")
 }
 
+func (p *passthruCallbackRecorder) OnRemoteIPPoolUpdate(string, model.IPPoolKey, *model.IPPool) {
+	Fail("OnRemoteIPPoolUpdate received")
+}
+
+func (p *passthruCallbackRecorder) OnRemoteIPPoolRemove(string, model.IPPoolKey) {
+	Fail("OnRemoteIPPoolRemove received")
+}
+
 func labelsKV(name string, labels map[string]string) model.KVPair {
 	var value interface{}
 	if labels != nil {

@@ -120,6 +120,8 @@ type EventSequencer struct {
 	pendingPacketCaptureRemovals  map[string]*proto.PacketCaptureRemove
 	pendingServiceUpdates         map[serviceID]*proto.ServiceUpdate
 	pendingServiceDeletes         set.Set[serviceID]
+	pendingRemoteIPPools          map[remotePoolID]*proto.RemoteIPAMPoolUpdate
+	pendingRemoteIPPoolRemovals   set.Set[remotePoolID]
 
 	// Sets to record what we've sent downstream. Updated whenever we flush.
 	sentIPSets           set.Set[string]
@@ -138,6 +140,7 @@ type EventSequencer struct {
 	sentWireguardV6      set.Set[string]
 	sentServices         set.Set[serviceID]
 	sentExternalNetworks set.Set[proto.ExternalNetworkID]
+	sentRemoteIPPools    set.Set[remotePoolID]
 
 	// Enterprise-only fields.
 	sentPacketCapture set.Set[string]
@@ -155,6 +158,11 @@ type hostInfo struct {
 type serviceID struct {
 	Name      string
 	Namespace string
+}
+
+type remotePoolID struct {
+	cluster string
+	cidr    ip.CIDR
 }
 
 // func (buf *EventSequencer) HasPendingUpdates() {
@@ -213,6 +221,8 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		pendingServiceDeletes:         set.New[serviceID](),
 		pendingExternalNetworkUpdates: map[proto.ExternalNetworkID]*proto.ExternalNetworkUpdate{},
 		pendingExternalNetworkDeletes: set.New[proto.ExternalNetworkID](),
+		pendingRemoteIPPools:          map[remotePoolID]*proto.RemoteIPAMPoolUpdate{},
+		pendingRemoteIPPoolRemovals:   set.New[remotePoolID](),
 
 		// Sets to record what we've sent downstream. Updated whenever we flush.
 		sentIPSets:           set.New[string](),
@@ -232,6 +242,7 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		sentServices:         set.New[serviceID](),
 		sentPacketCapture:    set.New[string](),
 		sentExternalNetworks: set.New[proto.ExternalNetworkID](),
+		sentRemoteIPPools:    set.New[remotePoolID](),
 	}
 	return buf
 }
@@ -951,6 +962,63 @@ func (buf *EventSequencer) OnPacketCaptureInactive(key model.ResourceKey, endpoi
 	}
 }
 
+func (buf *EventSequencer) OnRemoteIPPoolUpdate(cluster string, key model.IPPoolKey, pool *model.IPPool) {
+	log.WithFields(log.Fields{
+		"cluster": cluster,
+		"key":     key,
+		"pool":    pool,
+	}).Debug("Remote IPPool update")
+	cidr := ip.CIDRFromCalicoNet(key.CIDR)
+	id := remotePoolID{
+		cluster: cluster,
+		cidr:    cidr,
+	}
+	buf.pendingRemoteIPPoolRemovals.Discard(id)
+	buf.pendingRemoteIPPools[id] = &proto.RemoteIPAMPoolUpdate{
+		Id:      cidrToIPPoolID(cidr),
+		Cluster: cluster,
+		Pool: &proto.IPAMPool{
+			Cidr:        pool.CIDR.String(),
+			Masquerade:  pool.Masquerade,
+			IpipMode:    string(pool.IPIPMode),
+			VxlanMode:   string(pool.VXLANMode),
+			AwsSubnetId: pool.AWSSubnetID,
+		},
+	}
+}
+
+func (buf *EventSequencer) flushRemoteIPPoolUpdates() {
+	for key, pool := range buf.pendingRemoteIPPools {
+		buf.Callback(pool)
+		buf.sentRemoteIPPools.Add(key)
+		delete(buf.pendingRemoteIPPools, key)
+	}
+}
+
+func (buf *EventSequencer) OnRemoteIPPoolRemove(cluster string, key model.IPPoolKey) {
+	log.WithField("key", key).Debug("Remote IPPool removed")
+	cidr := ip.CIDRFromCalicoNet(key.CIDR)
+	id := remotePoolID{
+		cluster: cluster,
+		cidr:    cidr,
+	}
+	delete(buf.pendingRemoteIPPools, id)
+	if buf.sentRemoteIPPools.Contains(id) {
+		buf.pendingRemoteIPPoolRemovals.Add(id)
+	}
+}
+
+func (buf *EventSequencer) flushRemoteIPPoolDeletes() {
+	buf.pendingRemoteIPPoolRemovals.Iter(func(id remotePoolID) error {
+		buf.Callback(&proto.RemoteIPAMPoolRemove{
+			Id:      cidrToIPPoolID(id.cidr),
+			Cluster: id.cluster,
+		})
+		buf.sentRemoteIPPools.Discard(id)
+		return set.RemoveItem
+	})
+}
+
 func (buf *EventSequencer) Flush() {
 	// Flush (rare) config changes first, since they may trigger a restart of the process.
 	buf.flushReadyFlag()
@@ -1002,6 +1070,8 @@ func (buf *EventSequencer) Flush() {
 	buf.flushHostUpdates()
 	buf.flushIPPoolDeletes()
 	buf.flushIPPoolUpdates()
+	buf.flushRemoteIPPoolDeletes()
+	buf.flushRemoteIPPoolUpdates()
 	buf.flushEncapUpdate()
 	buf.flushExternalNetworkRemoves()
 	buf.flushExternalNetworkUpdates()
