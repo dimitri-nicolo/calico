@@ -34,10 +34,13 @@ type jiraIssueType struct {
 
 var descriptionTemplate = template.Must(template.New("description").Funcs(template.FuncMap{
 	"when": func(when lsApi.TimestampOrDate) string { return when.GetTime().Format(time.RFC850) },
+	"join": func(pieces []string) string { return strings.Join(pieces, " ") },
 	"record": func(event *lsApi.Event) string {
 		data := make(map[string]any)
 		if err := event.GetRecord(&data); err != nil {
 			logrus.WithError(err).Error("error processing event record")
+			return "n/a"
+		} else if data == nil {
 			return "n/a"
 		}
 		if bytes, err := json.MarshalIndent(data, "", "\t"); err != nil {
@@ -53,7 +56,7 @@ var descriptionTemplate = template.Must(template.New("description").Funcs(templa
 *Event source:* {{.Origin}}
 *Attack vector:* {{.AttackVector}}
 *Severity:* {{.Severity}}/100
-*Mitre IDs:* {{range .MitreIDs}}{{.}} {{end}}
+*Mitre IDs:* {{join .MitreIDs}}
 *Mitre tactic:* {{.MitreTactic}}
 
 *Mitigations:*
