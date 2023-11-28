@@ -43,12 +43,33 @@ var descriptionTemplate = template.Must(template.New("description").Funcs(templa
 			return "n/a"
 		} else if data == nil {
 			return "n/a"
-		}
-		if bytes, err := json.MarshalIndent(data, "", "\t"); err != nil {
+		} else if bytes, err := json.MarshalIndent(data, "", "\t"); err != nil {
 			logrus.WithError(err).Error("error marshalling record data")
 			return "n/a"
 		} else {
-			return strings.ReplaceAll(string(bytes), `"`, `‟`)
+			// The following characters of the record will get encoded down the line:
+			// " < > [ \ ] ^ ` { | }
+			// The reason is the structure of what we are sending to the Jira endpoint:
+			// - a JSON payload
+			// - that contains some formatted text
+			// - with another JSON (record data) embedded in it.
+			// This could be rectified on Jira end but we don't have any control over it.
+			// There is no workaround to this issue and the best we can do is to convert these
+			// characters to their UTF-8 equivalents to ensure the document is properly displayed.
+			// The trade-off is that the displayed record will no longer be a valid JSON document.
+			record := string(bytes)
+			record = strings.ReplaceAll(record, `"`, "ʺ")
+			record = strings.ReplaceAll(record, "<", "ᐸ")
+			record = strings.ReplaceAll(record, ">", "ᐳ")
+			record = strings.ReplaceAll(record, "[", "❲")
+			record = strings.ReplaceAll(record, `\`, "∖")
+			record = strings.ReplaceAll(record, "]", "❳")
+			record = strings.ReplaceAll(record, "^", "˄")
+			record = strings.ReplaceAll(record, "`", "ʽ")
+			record = strings.ReplaceAll(record, "{", "❴")
+			record = strings.ReplaceAll(record, "|", "ǀ")
+			record = strings.ReplaceAll(record, "}", "❵")
+			return record
 		}
 	},
 }).Parse(`
