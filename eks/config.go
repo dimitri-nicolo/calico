@@ -17,9 +17,6 @@ type Config struct {
 	EKSCloudwatchLogStreamPrefix string `envconfig:"EKS_CLOUDWATCH_LOG_STREAM_PREFIX" default:"kube-apiserver-audit-"`
 	EKSStateFileDir              string `envconfig:"EKS_CLOUDWATCH_STATE_FILE_PFX" default:"/fluentd/cloudwatch-logs/"`
 
-	// Elastic Config
-	ESIndexSuffix string `envconfig:"ELASTIC_INDEX_SUFFIX" default:"cluster"`
-
 	// Linseed parameters
 	LinseedURL        string `envconfig:"LINSEED_ENDPOINT" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
 	LinseedCA         string `envconfig:"LINSEED_CA_PATH" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
