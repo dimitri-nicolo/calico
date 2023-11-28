@@ -42,11 +42,11 @@ FIPS ?= false
 ifeq ($(FIPS), true)
 TYPHA_CONTAINER_MARKER=$(TYPHA_CONTAINER_FIPS_CREATED)
 VALIDARCHES=amd64
-BINDIR=./bin/$(ARCH)-fips
+BINDIR=bin/$(ARCH)-fips
 CGO_ENABLED=1
 else
 TYPHA_CONTAINER_MARKER=$(TYPHA_CONTAINER_CREATED)
-BINDIR=./bin
+BINDIR=bin
 CGO_ENABLED=0
 endif
 
@@ -73,18 +73,12 @@ clean:
 ###############################################################################
 # Building the binary
 ###############################################################################
-build: $(BINDIR)/calico-typha
+build: $(BINDIR)/wrapper-$(ARCH) $(BINDIR)/calico-typha-$(ARCH)
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
 
-$(BINDIR)/calico-typha: $(BINDIR)/calico-typha-$(ARCH)
-	ln -f $(BINDIR)/calico-typha-$(ARCH) $(BINDIR)/calico-typha
-
-$(BINDIR)/wrapper: $(BINDIR)/wrapper-$(ARCH)
-	ln -f $(BINDIR)/wrapper-$(ARCH) $(BINDIR)/wrapper
-
-$(BINDIR)/wrapper-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
+$(BINDIR)/wrapper-$(ARCH): $(SRC_FILES)
 ifeq ($(ARCH), amd64)
 ifeq ($(FIPS), true)
 	$(call build_static_cgo_boring_binary, ./cmd/wrapper, $@)
@@ -158,15 +152,17 @@ $(TYPHA_CONTAINER_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
 	touch $(TYPHA_CONTAINER_CREATED)
 
 $(TYPHA_CONTAINER_FIPS_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
-                            LICENSE docker-image/licenses/* \
-                            docker-image/Dockerfile* \
-                            docker-image/nsswitch.conf \
-                            docker-image/typha.cfg \
-                            $(shell test "$(TYPHA_IMAGE_ID)" || echo force-rebuild)
+                                 $(BINDIR)/wrapper-$(ARCH) \
+                                 LICENSE docker-image/licenses/* \
+                                 docker-image/Dockerfile* \
+                                 docker-image/nsswitch.conf \
+                                 docker-image/typha.cfg \
+                                 $(shell test "$(TYPHA_IMAGE_ID)" || echo force-rebuild)
 	$(MAKE) register
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/calico-typha-$(ARCH) docker-image/bin/
+	cp $(BINDIR)/wrapper-$(ARCH) docker-image/bin/
 	cp LICENSE docker-image/
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(TYPHA_IMAGE):latest-fips-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
@@ -242,9 +238,6 @@ cover-report: combined.coverprofile
 				   sed 's=$(PACKAGE_NAME)/==' | \
 				   column -t | \
 				   grep -v '100\.0%'"
-
-$(BINDIR)/calico-typha.transfer-url: $(BINDIR)/calico-typha-$(ARCH)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file $(BINDIR)/calico-typha-$(ARCH) https://transfer.sh/calico-typha > $@'
 
 # Install or update the tools used by the build
 .PHONY: update-tools
