@@ -207,8 +207,8 @@ manifests/ocp.tgz: bin/yq
 	rm -f $@
 	mkdir -p ocp-tmp
 	cp -r manifests/ocp ocp-tmp/
-	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "                                                                              \
-		for file in ocp-tmp/ocp/* ;                                                                                       \
+	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c " \
+		for file in ocp-tmp/ocp/* ; \
         	do bin/yq -i 'del(.. | select(select(has(\"description\")).description|type == \"!!str\").description)' \$$file ; \
         done"
 	tar czvf $@ -C ocp-tmp \
