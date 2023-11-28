@@ -36,6 +36,19 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_TYPHA_DIRS),-path ./$(dir) -prune 
 
 # Touchfile created when we make the typha image.
 TYPHA_CONTAINER_CREATED=.calico_typha.created-$(ARCH)
+TYPHA_CONTAINER_FIPS_CREATED=.calico_typha.created-$(ARCH)-fips
+FIPS ?= false
+
+ifeq ($(FIPS), true)
+TYPHA_CONTAINER_MARKER=$(TYPHA_CONTAINER_FIPS_CREATED)
+VALIDARCHES=amd64
+BINDIR=./bin/$(ARCH)-fips
+CGO_ENABLED=1
+else
+TYPHA_CONTAINER_MARKER=$(TYPHA_CONTAINER_CREATED)
+BINDIR=./bin
+CGO_ENABLED=0
+endif
 
 .PHONY: clean
 clean:
@@ -53,39 +66,54 @@ clean:
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete
 	find . -name "*.pyc" -type f -delete
+	docker rmi $(TYPHA_IMAGE):latest-$(ARCH) || true
+	docker rmi $(TYPHA_IMAGE):latest-fips-$(ARCH) || true
+
 
 ###############################################################################
 # Building the binary
 ###############################################################################
-build: bin/calico-typha
+build: $(BINDIR)/calico-typha
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
 
-bin/calico-typha: bin/calico-typha-$(ARCH)
-	ln -f bin/calico-typha-$(ARCH) bin/calico-typha
+$(BINDIR)/calico-typha: $(BINDIR)/calico-typha-$(ARCH)
+	ln -f $(BINDIR)/calico-typha-$(ARCH) $(BINDIR)/calico-typha
 
-bin/wrapper: bin/wrapper-$(ARCH)
-	ln -f bin/wrapper-$(ARCH) bin/wrapper
+$(BINDIR)/wrapper: $(BINDIR)/wrapper-$(ARCH)
+	ln -f $(BINDIR)/wrapper-$(ARCH) $(BINDIR)/wrapper
 
-bin/wrapper-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
+$(BINDIR)/wrapper-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
 ifeq ($(ARCH), amd64)
+ifeq ($(FIPS), true)
 	$(call build_static_cgo_boring_binary, ./cmd/wrapper, $@)
+else
+	$(call build_static_binary, ./cmd/wrapper, $@)
+endif
 else
 	$(call build_binary, ./cmd/wrapper, $@)
 endif
 
-bin/calico-typha-$(ARCH): $(SRC_FILES)
+$(BINDIR)/calico-typha-$(ARCH): $(SRC_FILES)
 ifeq ($(ARCH), amd64)
+ifeq ($(FIPS), true)
 	$(call build_static_cgo_boring_binary, ./cmd/calico-typha, $@)
+else
+	$(call build_static_binary, ./cmd/calico-typha, $@)
+endif
 else
 	$(call build_binary, ./cmd/calico-typha, $@)
 endif
 
-bin/typha-client-$(ARCH): $(SRC_FILES)
+$(BINDIR)/typha-client-$(ARCH): $(SRC_FILES)
 ifeq ($(ARCH), amd64)
 	@echo Building typha client...
+ifeq ($(FIPS), true)
 	$(call build_static_cgo_boring_binary, ./cmd/typha-client, $@)
+else
+	$(call build_static_binary, ./cmd/typha-client, $@)
+endif
 else
 	$(call build_binary, ./cmd/typha-client, $@)
 endif
@@ -99,9 +127,11 @@ image: $(BUILD_IMAGES)
 
 # Build the image for the target architecture
 .PHONY: image-all
-image-all: $(addprefix sub-image-,$(VALIDARCHES))
+image-all: $(addprefix sub-image-,$(VALIDARCHES)) sub-image-fips-amd64
 sub-image-%:
 	$(MAKE) image ARCH=$*
+sub-image-fips-%:
+	$(MAKE) image FIPS=true ARCH=$*
 
 # Build the tigera/typha docker image, which contains only Typha.
 .PHONY: image $(TYPHA_IMAGE)
@@ -110,8 +140,8 @@ TYPHA_IMAGE_ID=$(shell docker images -q $(TYPHA_IMAGE_WITH_TAG))
 
 # This target actually builds the image if any of its dependencies have changed or if it's
 # missing from docker.
-$(TYPHA_CONTAINER_CREATED): bin/calico-typha-$(ARCH) \
-                            bin/wrapper-$(ARCH) \
+$(TYPHA_CONTAINER_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
+                            $(BINDIR)/wrapper-$(ARCH) \
                             LICENSE docker-image/licenses/* \
                             docker-image/Dockerfile* \
                             docker-image/nsswitch.conf \
@@ -120,15 +150,31 @@ $(TYPHA_CONTAINER_CREATED): bin/calico-typha-$(ARCH) \
 	$(MAKE) register
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
-	cp bin/calico-typha-$(ARCH) docker-image/bin/
-	cp bin/wrapper-$(ARCH) docker-image/bin/
+	cp $(BINDIR)/calico-typha-$(ARCH) docker-image/bin/
+	cp $(BINDIR)/wrapper-$(ARCH) docker-image/bin/
 	cp LICENSE docker-image/
-	$(DOCKER_BUILD) -t $(TYPHA_IMAGE_WITH_TAG) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(TYPHA_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $(TYPHA_CONTAINER_CREATED)
 
+$(TYPHA_CONTAINER_FIPS_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
+                            LICENSE docker-image/licenses/* \
+                            docker-image/Dockerfile* \
+                            docker-image/nsswitch.conf \
+                            docker-image/typha.cfg \
+                            $(shell test "$(TYPHA_IMAGE_ID)" || echo force-rebuild)
+	$(MAKE) register
+	rm -rf docker-image/bin
+	mkdir -p docker-image/bin
+	cp $(BINDIR)/calico-typha-$(ARCH) docker-image/bin/
+	cp LICENSE docker-image/
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(TYPHA_IMAGE):latest-fips-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
+	touch $(TYPHA_CONTAINER_FIPS_CREATED)
+
+
 # This target retags the already built image, deferring the build to the target above.
-$(TYPHA_IMAGE): $(TYPHA_CONTAINER_CREATED)
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+$(TYPHA_IMAGE): $(TYPHA_CONTAINER_MARKER)
 
 ###############################################################################
 # Unit Tests
@@ -197,8 +243,8 @@ cover-report: combined.coverprofile
 				   column -t | \
 				   grep -v '100\.0%'"
 
-bin/calico-typha.transfer-url: bin/calico-typha-$(ARCH)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/calico-typha-$(ARCH) https://transfer.sh/calico-typha > $@'
+$(BINDIR)/calico-typha.transfer-url: $(BINDIR)/calico-typha-$(ARCH)
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file $(BINDIR)/calico-typha-$(ARCH) https://transfer.sh/calico-typha > $@'
 
 # Install or update the tools used by the build
 .PHONY: update-tools

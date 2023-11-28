@@ -38,6 +38,19 @@ MOCKERY_FILE_PATHS= \
 	pkg/elasticsearch/ClientBuilder \
 
 SRC_FILES=$(shell find cmd -name '*.go') $(shell find pkg -name '*.go') $(shell find ../libcalico-go -name '*.go')
+KUBE_CONTROLLER_CONTAINER_CREATED=image.created-$(ARCH)
+KUBE_CONTROLLER_CONTAINER_FIPS_CREATED=image.created-$(ARCH)-fips
+
+FIPS ?= false
+
+ifeq ($(FIPS), true)
+KUBE_CONTROLLER_CONTAINER_MARKER=$(KUBE_CONTROLLER_CONTAINER_FIPS_CREATED)
+VALIDARCHES=amd64
+BINDIR=bin/$(ARCH)-fips
+else
+KUBE_CONTROLLER_CONTAINER_MARKER=$(KUBE_CONTROLLER_CONTAINER_CREATED)
+BINDIR=bin
+endif
 
 ###############################################################################
 
@@ -49,6 +62,7 @@ clean:
 	rm -rf .go-pkg-cache bin image.created-$(ARCH) build report/*.xml release-notes-*
 	-docker rmi $(KUBE_CONTROLLERS_IMAGE)
 	-docker rmi $(KUBE_CONTROLLERS_IMAGE):latest-amd64
+	-docker rmi $(KUBE_CONTROLLERS_IMAGE):latest-fips-amd64
 	-docker rmi $(FLANNEL_MIGRATION_IMAGE)
 	-docker rmi $(FLANNEL_MIGRATION_IMAGE):latest-amd64
 	rm -f tests/fv/fv.test
@@ -59,34 +73,42 @@ clean:
 ###############################################################################
 LDFLAGS = -X main.VERSION=$(GIT_VERSION)
 
-build: bin/kube-controllers-linux-$(ARCH) bin/check-status-linux-$(ARCH)
+build: $(BINDIR)/kube-controllers-linux-$(ARCH) $(BINDIR)/check-status-linux-$(ARCH)
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
 
-bin/kube-controllers-linux-$(ARCH): $(SRC_FILES)
+$(BINDIR)/kube-controllers-linux-$(ARCH): $(SRC_FILES)
 ifeq ($(ARCH), amd64)
+ifeq ($(FIPS), true)
 	$(call build_cgo_boring_binary, ./cmd/kube-controllers/, $@)
+else
+	$(call build_binary, ./cmd/kube-controllers/, $@)
+endif
 else
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
 		$(GIT_CONFIG_SSH) go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS) -s -w" ./cmd/kube-controllers/'
 endif
 
-bin/wrapper-$(ARCH):
+$(BINDIR)/wrapper-$(ARCH):
 ifeq ($(ARCH), amd64)
+ifeq ($(FIPS), true)
 	$(call build_cgo_boring_binary, ./cmd/wrapper, $@)
+else
+	$(call build_binary, ./cmd/wrapper, $@)
+endif
 else
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
 		$(GIT_CONFIG_SSH) go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -buildvcs=false -v -o ./cmd/kube-controllers/ -ldflags "$(LDFLAGS) -s -w" ./cmd/wrapper'
 endif
 
-bin/check-status-linux-$(ARCH): $(SRC_FILES)
+$(BINDIR)/check-status-linux-$(ARCH): $(SRC_FILES)
 	$(DOCKER_RUN) \
 	  -e CGO_ENABLED=$(CGO_ENABLED) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS) -s -w" ./cmd/check-status/'
 
-bin/kubectl-$(ARCH):
+$(BINDIR)/kubectl-$(ARCH):
 	curl -sSf -L --retry 5 -o $@ https://storage.googleapis.com/kubernetes-release/release/$(K8S_VERSION)/bin/linux/$(ARCH)/kubectl
 	chmod +x $@
 
@@ -94,15 +116,24 @@ bin/kubectl-$(ARCH):
 # Building the image
 ###############################################################################
 ## Builds the controller binary and docker image.
-image: image.created-$(ARCH)
-image-all: $(addprefix sub-image-,$(VALIDARCHES))
+image-all: $(addprefix sub-image-,$(VALIDARCHES)) sub-image-fips-amd64
 sub-image-%:
 	$(MAKE) image ARCH=$*
+sub-image-fips-%:
+	$(MAKE) image FIPS=true ARCH=$*
 
-image.created-$(ARCH): bin/kube-controllers-linux-$(ARCH) bin/check-status-linux-$(ARCH) bin/wrapper-$(ARCH) bin/kubectl-$(ARCH)
-	$(DOCKER_BUILD) -t $(KUBE_CONTROLLERS_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
-	$(DOCKER_BUILD) -t $(FLANNEL_MIGRATION_IMAGE):latest-$(ARCH) -f docker-images/flannel-migration/Dockerfile.$(ARCH) . --load
+image: $(KUBE_CONTROLLER_CONTAINER_MARKER)
+
+$(KUBE_CONTROLLER_CONTAINER_CREATED): $(BINDIR)/kube-controllers-linux-$(ARCH) $(BINDIR)/check-status-linux-$(ARCH) $(BINDIR)/wrapper-$(ARCH) $(BINDIR)/kubectl-$(ARCH) register
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(KUBE_CONTROLLERS_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(FLANNEL_MIGRATION_IMAGE):latest-$(ARCH) -f docker-images/flannel-migration/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	touch $@
+
+$(KUBE_CONTROLLER_CONTAINER_FIPS_CREATED): $(BINDIR)/kube-controllers-linux-$(ARCH) $(BINDIR)/check-status-linux-$(ARCH) $(BINDIR)/kubectl-$(ARCH) register
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(KUBE_CONTROLLERS_IMAGE):latest-fips-$(ARCH) -f Dockerfile.$(ARCH) . --load
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(FLANNEL_MIGRATION_IMAGE):latest-fips-$(ARCH) -f docker-images/flannel-migration/Dockerfile.$(ARCH) . --load
+	$(MAKE) FIPS=true retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
 
 ###############################################################################
