@@ -111,4 +111,23 @@ var _ = Describe("Unmarshaling works correctly", func() {
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(Equal("Request body contains an invalid value for the time range 'to' field: now-X"))
 	})
+
+	It("Handles Field field", func() {
+		var tr TimeRange
+		d := "{\"field\":\"generated_time\", \"from\":\"2021-05-30T21:23:10Z\", \"to\":\"2021-05-30T21:24:10Z\"}"
+
+		err := json.Unmarshal([]byte(d), &tr)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(tr.Now).To(BeNil())
+		Expect(tr.Duration()).To(Equal(time.Minute))
+		Expect(string(tr.Field)).To(Equal("generated_time"))
+	})
+
+	It("Rejects an unsupported Field field", func() {
+		var tr TimeRange
+		d := "{\"field\":\"unsupported_time_field\", \"from\":\"2021-05-30T21:23:10Z\", \"to\":\"2021-05-30T21:24:10Z\"}"
+
+		err := json.Unmarshal([]byte(d), &tr)
+		Expect(err).To(HaveOccurred())
+	})
 })

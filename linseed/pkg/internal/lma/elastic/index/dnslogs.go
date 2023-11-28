@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -140,8 +140,9 @@ func (h dnsLogsIndexHelper) NewRBACQuery(
 	return elastic.NewBoolQuery().Should(should...), nil
 }
 
-func (h dnsLogsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query {
-	return elastic.NewRangeQuery("end_time").Gt(from).Lte(to)
+func (h dnsLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
+	timeField := GetTimeFieldForQuery(h, r)
+	return elastic.NewRangeQuery(timeField).Gt(r.From).Lte(r.To)
 }
 
 func (h dnsLogsIndexHelper) GetTimeField() string {

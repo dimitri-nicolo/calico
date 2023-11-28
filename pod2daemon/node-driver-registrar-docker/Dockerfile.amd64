@@ -35,6 +35,7 @@ COPY --from=ubi /etc/networks /etc/networks
 COPY --from=ubi /etc/hosts /etc/hosts
 COPY --from=ubi /etc/host.conf /etc/host.conf
 
-COPY bin/node-driver-registrar-amd64 /usr/local/bin/node-driver-registrar
+ARG BIN_DIR
+COPY ${BIN_DIR}/node-driver-registrar-amd64 /usr/local/bin/node-driver-registrar
 
 ENTRYPOINT ["/usr/local/bin/node-driver-registrar"]

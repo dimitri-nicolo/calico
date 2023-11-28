@@ -2,12 +2,11 @@
 package index
 
 import (
-	"time"
-
 	"github.com/olivere/elastic/v7"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -46,10 +45,10 @@ func (h bgpLogsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceVer
 	return nil, nil
 }
 
-func (h bgpLogsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query {
-	return elastic.NewRangeQuery(h.GetTimeField()).
-		Gt(from.Format(v1.BGPLogTimeFormat)).
-		Lte(to.Format(v1.BGPLogTimeFormat))
+func (h bgpLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
+	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).
+		Gt(r.From.Format(v1.BGPLogTimeFormat)).
+		Lte(r.To.Format(v1.BGPLogTimeFormat))
 }
 
 func (h bgpLogsIndexHelper) GetTimeField() string {

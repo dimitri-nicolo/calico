@@ -211,8 +211,9 @@ RUN chgrp -R 0 /etc/calico && \
 
 COPY --from=bpftool /bpftool /bin
 
+ARG BIN_DIR
 # Copy in the calico-node binary
-COPY dist/bin/calico-node-amd64 /bin/calico-node
+COPY ${BIN_DIR}/calico-node-amd64 /bin/calico-node
 # FIXME remove patchelf and this step when calico/go-build is migrated to UBI compatible base
 RUN patchelf --replace-needed libpcap.so.0.8 libpcap.so.1 /bin/calico-node
 
@@ -220,7 +221,7 @@ RUN patchelf --replace-needed libpcap.so.0.8 libpcap.so.1 /bin/calico-node
 RUN chmod u+s /bin/calico-node
 
 # Copy in the moutnns binary
-COPY dist/bin/mountns-amd64 /bin/mountns
+COPY $BIN_DIR/mountns-amd64 /bin/mountns
 
 # Set the suid bit on mountns
 RUN chmod u+s /bin/mountns

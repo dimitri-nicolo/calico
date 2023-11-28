@@ -16,6 +16,11 @@
 
 set -ex
 
+sudo pip uninstall -y setuptools
+sudo rm -rf /usr/local/lib/python3.8/dist-packages/setuptools-67.8.0.dist-info
+sudo find / -name "*setuptools*" || true
+sudo pip list || true
+
 #------------------------------------------------------------------------------
 # IMPORTANT - Review before use!
 #
@@ -158,11 +163,16 @@ ls -la /opt/stack
 
 # Stack!
 sudo -u stack -H -E bash -x <<'EOF'
-
-set
 cd /opt/stack/devstack
 ./stack.sh
+EOF
 
+# We use a fresh `sudo -u stack -H -E bash ...` invocation here, because with
+# OpenStack Yoga it appears there is something in the stack.sh setup that
+# closes stdin, and that means that bash doesn't read any further commands from
+# stdin after the exit of the ./stack.sh line.
+sudo -u stack -H -E bash -x <<'EOF'
+cd /opt/stack/devstack
 if ! ${TEMPEST:-false}; then
     if [ x${SERVICE_HOST:-$HOSTNAME} = x$HOSTNAME ]; then
         # We're not running Tempest tests, and we're on the controller node.

@@ -235,8 +235,7 @@ func (b *flowLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.FlowLogParams) (
 // buildQuery builds an elastic query using the given parameters.
 func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.FlowLogParams) (elastic.Query, error) {
 	// Start with the base flow log query using common fields.
-	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
-	query, err := logtools.BuildQuery(b.queryHelper, i, opts, start, end)
+	query, err := logtools.BuildQuery(b.queryHelper, i, opts)
 	if err != nil {
 		return nil, err
 	}

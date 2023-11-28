@@ -9,6 +9,8 @@ import (
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 func SingleIndexThreatfeedsDomainNameSet() Helper {
@@ -43,14 +45,14 @@ func (h domainSetIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceV
 	return nil, nil
 }
 
-func (h domainSetIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query {
+func (h domainSetIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
 	unset := time.Time{}
-	tr := elastic.NewRangeQuery("created_at")
-	if from != unset {
-		tr.From(from)
+	tr := elastic.NewRangeQuery(GetTimeFieldForQuery(h, r))
+	if r.From != unset {
+		tr.From(r.From)
 	}
-	if to != unset {
-		tr.To(to)
+	if r.To != unset {
+		tr.To(r.To)
 	}
 	return tr
 }

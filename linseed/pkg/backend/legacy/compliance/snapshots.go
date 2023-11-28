@@ -199,7 +199,7 @@ func (b *snapshotsBackend) buildQuery(i api.ClusterInfo, p *v1.SnapshotParams) e
 	query := b.queryHelper.BaseQuery(i)
 
 	if p.TimeRange != nil {
-		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange.From, p.TimeRange.To))
+		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange))
 	}
 
 	if p.TypeMatch != nil {

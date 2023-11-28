@@ -4,13 +4,13 @@ package index
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
@@ -70,8 +70,8 @@ func (h alertsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceVerb
 	return nil, nil
 }
 
-func (h alertsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query {
-	return elastic.NewRangeQuery("time").Gt(from.Unix()).Lte(to.Unix())
+func (h alertsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
+	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).Gt(r.From.Unix()).Lte(r.To.Unix())
 }
 
 func (h alertsIndexHelper) GetTimeField() string {
