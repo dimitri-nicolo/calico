@@ -92,6 +92,8 @@ type passthruCallbacks interface {
 	OnExternalNetworkRemove(*proto.ExternalNetworkRemove)
 	OnServiceUpdate(*proto.ServiceUpdate)
 	OnServiceRemove(*proto.ServiceRemove)
+	OnRemoteIPPoolUpdate(cluster string, key model.IPPoolKey, value *model.IPPool)
+	OnRemoteIPPoolRemove(cluster string, key model.IPPoolKey)
 }
 
 type routeCallbacks interface {
