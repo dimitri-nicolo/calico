@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
@@ -89,8 +89,8 @@ func (h wafLogsIndexHelper) NewRBACQuery(
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (h wafLogsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query {
-	return elastic.NewRangeQuery("@timestamp").Gt(from).Lte(to)
+func (h wafLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
+	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).Gt(r.From).Lte(r.To)
 }
 
 func (h wafLogsIndexHelper) GetTimeField() string {

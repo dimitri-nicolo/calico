@@ -7,6 +7,7 @@ import (
 	"github.com/olivere/elastic/v7"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -42,17 +43,17 @@ func (h complianceReportsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedR
 	return nil, nil
 }
 
-func (h complianceReportsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query {
+func (h complianceReportsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
 	unset := time.Time{}
-	if from != unset && to != unset {
+	if r.From != unset && r.To != unset {
 		return elastic.NewBoolQuery().Should(
-			elastic.NewRangeQuery("startTime").From(from).To(to),
-			elastic.NewRangeQuery("endTime").From(from).To(to),
+			elastic.NewRangeQuery("startTime").From(r.From).To(r.To),
+			elastic.NewRangeQuery("endTime").From(r.From).To(r.To),
 		)
-	} else if from != unset && to == unset {
-		return elastic.NewRangeQuery("endTime").From(from)
-	} else if from == unset && to != unset {
-		return elastic.NewRangeQuery("startTime").To(to)
+	} else if r.From != unset && r.To == unset {
+		return elastic.NewRangeQuery("endTime").From(r.From)
+	} else if r.From == unset && r.To != unset {
+		return elastic.NewRangeQuery("startTime").To(r.To)
 	}
 	return nil
 }

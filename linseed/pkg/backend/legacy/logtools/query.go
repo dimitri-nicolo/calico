@@ -19,12 +19,12 @@ import (
 )
 
 // BuildQuery builds an elastic log query using the given parameters.
-func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams, start time.Time, end time.Time) (*elastic.BoolQuery, error) {
+func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams) (*elastic.BoolQuery, error) {
 	query := h.BaseQuery(i)
 
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
-	query.Filter(h.NewTimeRangeQuery(start, end))
+	query.Filter(h.NewTimeRangeQuery(WithDefaultUntilNow(opts.GetTimeRange())))
 
 	// If RBAC constraints were given, add them in.
 	if perms := opts.GetPermissions(); len(perms) > 0 {
@@ -51,19 +51,26 @@ func BuildQuery(h lmaindex.Helper, i bapi.ClusterInfo, opts v1.LogParams, start 
 	return query, nil
 }
 
-func ExtractTimeRange(timeRange *lmav1.TimeRange) (time.Time, time.Time) {
-	// Parse times from the request. We default to a time-range query
-	// if no other search parameters are given.
-	var start, end time.Time
+func WithDefaultUntilNow(timeRange *lmav1.TimeRange) *lmav1.TimeRange {
 	if timeRange != nil {
-		start = timeRange.From
-		end = timeRange.To
-	} else {
-		// Default to the start of the timeline
-		start = time.Time{}
-		end = time.Now()
+		return timeRange
 	}
-	return start, end
+	return &lmav1.TimeRange{
+		// Default to the start of the timeline
+		From: time.Time{},
+		To:   time.Now(),
+	}
+}
+
+func WithDefaultLast5Minutes(timeRange *lmav1.TimeRange) *lmav1.TimeRange {
+	if timeRange != nil {
+		return timeRange
+	}
+	return &lmav1.TimeRange{
+		// Default to the latest 5 minute window.
+		From: time.Now().Add(-5 * time.Minute),
+		To:   time.Now(),
+	}
 }
 
 // StartFrom parses the given parameters to determine which log to start from in the ES query.

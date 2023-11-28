@@ -130,8 +130,7 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 		return nil, fmt.Errorf("no cluster ID on request")
 	}
 
-	start, end := logtools.ExtractTimeRange(opts.GetTimeRange())
-	q, err := logtools.BuildQuery(b.queryHelper, i, opts, start, end)
+	q, err := logtools.BuildQuery(b.queryHelper, i, opts)
 	if err != nil {
 		return nil, err
 	}

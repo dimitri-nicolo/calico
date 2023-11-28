@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -334,16 +334,9 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) elas
 	query := b.queryHelper.BaseQuery(i)
 
 	// Every request has at least a time-range limitation.
-	var start, end time.Time
-	if opts.TimeRange != nil {
-		start = opts.TimeRange.From
-		end = opts.TimeRange.To
-	} else {
-		// Default to the latest 5 minute window.
-		start = time.Now().Add(-5 * time.Minute)
-		end = time.Now()
-	}
-	query.Filter(b.queryHelper.NewTimeRangeQuery(start, end))
+	query.Filter(b.queryHelper.NewTimeRangeQuery(
+		logtools.WithDefaultLast5Minutes(opts.TimeRange),
+	))
 
 	if len(opts.Actions) > 0 {
 		// Filter-in any flows with one of the given actions.

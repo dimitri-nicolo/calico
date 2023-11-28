@@ -5,13 +5,13 @@ package index
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
@@ -71,8 +71,8 @@ func (h auditLogsIndexHelper) NewRBACQuery(
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (h auditLogsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query {
-	return elastic.NewRangeQuery("requestReceivedTimestamp").Gt(from).Lte(to)
+func (h auditLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
+	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).Gt(r.From).Lte(r.To)
 }
 
 func (h auditLogsIndexHelper) GetTimeField() string {

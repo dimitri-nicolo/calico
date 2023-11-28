@@ -4,10 +4,11 @@ package index
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 )
@@ -50,7 +51,7 @@ func (h runtimeReportsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedReso
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (h runtimeReportsIndexHelper) NewTimeRangeQuery(from, to time.Time) elastic.Query {
+func (h runtimeReportsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
 	return nil
 }
 

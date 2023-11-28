@@ -3,7 +3,6 @@ package dns
 
 import (
 	"context"
-	"time"
 
 	elastic "github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
@@ -12,6 +11,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -161,16 +161,9 @@ func (b *dnsFlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.DNSFlowParams) 
 	query := b.queryHelper.BaseQuery(i)
 
 	// Parse times from the request.
-	var start, end time.Time
-	if opts.TimeRange != nil {
-		start = opts.TimeRange.From
-		end = opts.TimeRange.To
-	} else {
-		// Default to the latest 5 minute window.
-		start = time.Now().Add(-5 * time.Minute)
-		end = time.Now()
-	}
-	query.Filter(b.queryHelper.NewTimeRangeQuery(start, end))
+	query.Filter(b.queryHelper.NewTimeRangeQuery(
+		logtools.WithDefaultLast5Minutes(opts.TimeRange),
+	))
 
 	return query
 }
