@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	v1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -280,9 +279,20 @@ func (s *synchronizer) updateSNP(ctx context.Context, snp *v3.StagedNetworkPolic
 	key := namespace
 	// Update the cache
 	s.cacheSet.StagedNetworkPolicies.Set(key, snp)
+	// Get the current value from the data store
+	storeSnp, err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Get(
+		ctx, snp.Name, metav1.GetOptions{},
+	)
+	if err != nil {
+		return nil, err
+	}
+	// Update the rules in the data store
+	storeSnp.Spec.Egress = snp.Spec.Egress
+	storeSnp.Spec.Ingress = snp.Spec.Ingress
+	storeSnp.Spec.Types = snp.Spec.Types
 	// Update the cluster
 	result, err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Update(
-		ctx, snp, metav1.UpdateOptions{},
+		ctx, storeSnp, metav1.UpdateOptions{},
 	)
 	if err != nil {
 		return nil, err
@@ -302,8 +312,8 @@ func (s *synchronizer) deleteUntrackedSNP(ctx context.Context, snp v3.StagedNetw
 		err := s.clientSet.ProjectcalicoV3().StagedNetworkPolicies(ns.Name).Delete(
 			ctx, snp.GetName(), metav1.DeleteOptions{},
 		)
-		if err != nil && !k8serrors.IsNotFound(err) {
-			return err
+		if err != nil {
+			log.WithError(err).Warningf("Could not delete StagedNetworkPolicy: %s", snp.Name)
 		}
 	}
 

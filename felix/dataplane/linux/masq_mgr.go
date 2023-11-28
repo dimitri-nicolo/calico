@@ -41,7 +41,7 @@ type masqManager struct {
 	ipVersion       uint8
 	ipsetsDataplane common.IPSetsDataplane
 	natTable        IptablesTable
-	activePools     map[string]*proto.IPAMPool
+	allCIDRs        map[string]*cidrState
 	masqPools       set.Set[string]
 	dirty           bool
 	ruleRenderer    rules.RuleRenderer
@@ -74,7 +74,7 @@ func newMasqManager(
 		ipVersion:       ipVersion,
 		ipsetsDataplane: ipsetsDataplane,
 		natTable:        natTable,
-		activePools:     map[string]*proto.IPAMPool{},
+		allCIDRs:        map[string]*cidrState{},
 		masqPools:       set.New[string](),
 		dirty:           true,
 		ruleRenderer:    ruleRenderer,
@@ -83,39 +83,65 @@ func newMasqManager(
 }
 
 func (d *masqManager) OnUpdate(msg interface{}) {
-	var poolID string
+	var cidrKey string
 	var newPool *proto.IPAMPool
+	var cluster string
 
 	switch msg := msg.(type) {
 	case *proto.IPAMPoolUpdate:
 		d.logCxt.WithField("id", msg.Id).Debug("IPAM pool update/create")
-		poolID = msg.Id
+		cidrKey = msg.Id
 		newPool = msg.Pool
 	case *proto.IPAMPoolRemove:
 		d.logCxt.WithField("id", msg.Id).Debug("IPAM pool removed")
-		poolID = msg.Id
+		cidrKey = msg.Id
+	case *proto.RemoteIPAMPoolUpdate:
+		if msg.Cluster == "" {
+			d.logCxt.Panic("BUG: Cluster not set on RemoteIPAMPoolUpdate")
+		}
+		d.logCxt.WithField("id", msg.Id).Debug("Remote IPAM pool update/create")
+		cidrKey = msg.Id
+		newPool = msg.Pool
+		cluster = msg.Cluster
+	case *proto.RemoteIPAMPoolRemove:
+		if msg.Cluster == "" {
+			d.logCxt.Panic("BUG: Cluster not set on RemoteIPAMPoolRemove")
+		}
+		d.logCxt.WithField("id", msg.Id).Debug("Remote IPAM pool removed")
+		cidrKey = msg.Id
+		cluster = msg.Cluster
 	default:
 		return
 	}
 
-	logCxt := d.logCxt.WithField("id", poolID)
-	if oldPool := d.activePools[poolID]; oldPool != nil {
+	logCxt := d.logCxt.WithField("cidr", cidrKey)
+	oldCIDRState := d.allCIDRs[cidrKey]
+	if oldCIDRState != nil {
 		// For simplicity (in case of an update to the CIDR, say) always
 		// remove the old values from the IP sets.  The IPSets object
 		// defers and coalesces the update so removing then adding the
 		// same IP is a no-op anyway.
 		logCxt.Debug("Removing old pool.")
-		d.ipsetsDataplane.RemoveMembers(rules.IPSetIDNATOutgoingAllPools, []string{oldPool.Cidr})
-		if oldPool.Masquerade {
-			logCxt.Debug("Masquerade was enabled on pool.")
-			d.ipsetsDataplane.RemoveMembers(rules.IPSetIDNATOutgoingMasqPools, []string{oldPool.Cidr})
+		oldProgrammablePool, oldPoolIsRemote := oldCIDRState.getProgrammablePool()
+		if oldProgrammablePool == nil {
+			d.logCxt.Panicf("BUG: Tracking CIDR with no programmable pool.")
 		}
-		delete(d.activePools, poolID)
-		d.masqPools.Discard(poolID)
+		d.ipsetsDataplane.RemoveMembers(rules.IPSetIDNATOutgoingAllPools, []string{oldProgrammablePool.Cidr})
+		if !oldPoolIsRemote && oldProgrammablePool.Masquerade {
+			logCxt.Debug("Masquerade was enabled on pool.")
+			d.ipsetsDataplane.RemoveMembers(rules.IPSetIDNATOutgoingMasqPools, []string{oldProgrammablePool.Cidr})
+		}
+		oldCIDRState.clearPoolForCluster(cluster)
+		delete(d.allCIDRs, cidrKey)
+		d.masqPools.Discard(cidrKey)
 	}
-	if newPool != nil {
+
+	nextCIDRState := d.getOrCreateNextCIDRState(oldCIDRState)
+	nextCIDRState.updateForNewPool(cluster, newPool)
+	if nextCIDRState.hasProgrammablePool() {
 		// An update/create.
-		newPoolIsV6 := strings.Contains(newPool.Cidr, ":")
+		newProgrammablePool, newProgrammablePoolIsRemote := nextCIDRState.getProgrammablePool()
+		newPoolIsV6 := strings.Contains(newProgrammablePool.Cidr, ":")
 		weAreV6 := d.ipVersion == 6
 		if newPoolIsV6 != weAreV6 {
 			logCxt.Debug("Skipping IPAM pool of different version.")
@@ -124,13 +150,13 @@ func (d *masqManager) OnUpdate(msg interface{}) {
 
 		// Update the IP sets.
 		logCxt.Debug("Adding IPAM pool to IP sets.")
-		d.ipsetsDataplane.AddMembers(rules.IPSetIDNATOutgoingAllPools, []string{newPool.Cidr})
-		if newPool.Masquerade {
+		d.ipsetsDataplane.AddMembers(rules.IPSetIDNATOutgoingAllPools, []string{newProgrammablePool.Cidr})
+		if !newProgrammablePoolIsRemote && newProgrammablePool.Masquerade {
 			logCxt.Debug("IPAM has masquerade enabled.")
-			d.ipsetsDataplane.AddMembers(rules.IPSetIDNATOutgoingMasqPools, []string{newPool.Cidr})
-			d.masqPools.Add(poolID)
+			d.ipsetsDataplane.AddMembers(rules.IPSetIDNATOutgoingMasqPools, []string{newProgrammablePool.Cidr})
+			d.masqPools.Add(cidrKey)
 		}
-		d.activePools[poolID] = newPool
+		d.allCIDRs[cidrKey] = nextCIDRState
 	}
 	d.dirty = true
 }
@@ -148,4 +174,58 @@ func (m *masqManager) CompleteDeferredWork() error {
 	m.dirty = false
 
 	return nil
+}
+
+func (m *masqManager) getOrCreateNextCIDRState(currentCIDRState *cidrState) *cidrState {
+	if currentCIDRState != nil {
+		return currentCIDRState
+	} else {
+		return &cidrState{
+			remoteClusters: set.New[string](),
+		}
+	}
+}
+
+type cidrState struct {
+	cidr           string
+	localPool      *proto.IPAMPool
+	remoteClusters set.Set[string]
+}
+
+func (c *cidrState) getProgrammablePool() (pool *proto.IPAMPool, isRemote bool) {
+	if c.localPool != nil {
+		return c.localPool, false
+	}
+
+	if c.remoteClusters.Len() > 0 {
+		// For the purposes of programming, remote pools only contribute their CIDR.
+		return &proto.IPAMPool{Cidr: c.cidr}, true
+	}
+
+	return nil, false
+}
+
+func (c *cidrState) hasProgrammablePool() bool {
+	return c.localPool != nil || c.remoteClusters.Len() > 0
+}
+
+func (c *cidrState) updateForNewPool(cluster string, newPool *proto.IPAMPool) {
+	if newPool == nil {
+		return
+	}
+
+	c.cidr = newPool.Cidr
+	if cluster != "" {
+		c.remoteClusters.Add(cluster)
+	} else {
+		c.localPool = newPool
+	}
+}
+
+func (c *cidrState) clearPoolForCluster(cluster string) {
+	if cluster != "" {
+		c.remoteClusters.Discard(cluster)
+	} else {
+		c.localPool = nil
+	}
 }

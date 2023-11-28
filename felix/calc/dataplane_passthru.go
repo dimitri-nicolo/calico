@@ -18,6 +18,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	kapiv1 "k8s.io/api/core/v1"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	libv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
@@ -37,13 +39,16 @@ type DataplanePassthru struct {
 
 	hostIPs   map[string]*net.IP
 	hostIPv6s map[string]*net.IP
+
+	remoteIPPools map[string]*model.KVPair
 }
 
 func NewDataplanePassthru(callbacks passthruCallbacks) *DataplanePassthru {
 	return &DataplanePassthru{
-		callbacks: callbacks,
-		hostIPs:   map[string]*net.IP{},
-		hostIPv6s: map[string]*net.IP{},
+		callbacks:     callbacks,
+		hostIPs:       map[string]*net.IP{},
+		hostIPv6s:     map[string]*net.IP{},
+		remoteIPPools: map[string]*model.KVPair{},
 	}
 }
 
@@ -52,6 +57,7 @@ func (h *DataplanePassthru) RegisterWith(dispatcher *dispatcher.Dispatcher) {
 	dispatcher.Register(model.IPPoolKey{}, h.OnUpdate)
 	dispatcher.Register(model.WireguardKey{}, h.OnUpdate)
 	dispatcher.Register(model.ResourceKey{}, h.OnUpdate)
+	dispatcher.Register(model.RemoteClusterResourceKey{}, h.OnUpdate)
 }
 
 func (h *DataplanePassthru) OnUpdate(update api.Update) (filterOut bool) {
@@ -175,6 +181,37 @@ func (h *DataplanePassthru) OnUpdate(update api.Update) (filterOut bool) {
 			}
 		} else {
 			log.WithField("key", key).Debugf("Ignoring v3 resource of kind %s", key.Kind)
+		}
+	case model.RemoteClusterResourceKey:
+		if key.Kind == v3.KindIPPool {
+			cluster := key.Cluster
+			cacheKey := getRemoteClusterAwareKeyString(update)
+			oldV1KVP := h.remoteIPPools[cacheKey]
+			if update.Value == nil {
+				log.WithField("update", update).Debug("Passing-through remote IPPool deletion")
+				if oldV1KVP != nil {
+					h.callbacks.OnRemoteIPPoolRemove(cluster, oldV1KVP.Key.(model.IPPoolKey))
+					delete(h.remoteIPPools, cacheKey)
+				}
+			} else {
+				log.WithField("update", update).Debug("Passing-through remote IPPool update")
+				newV1KVP, err := resources.IPPoolV3ToV1(&update.KVPair)
+				if err != nil {
+					log.WithError(err).Panic("Failed to convert v3 IPPool to v1")
+				}
+
+				// If the v1 key differs, we must issue a delete.
+				// This can happen when the CIDR changes: the v3 key stays the same, but the v1 key changes.
+				if oldV1KVP != nil && oldV1KVP.Key.String() != newV1KVP.Key.String() {
+					log.WithField("update", update).Debug("Issuing remote IPPool delete due to v1 key change")
+					h.callbacks.OnRemoteIPPoolRemove(cluster, oldV1KVP.Key.(model.IPPoolKey))
+				}
+
+				h.remoteIPPools[cacheKey] = newV1KVP
+				h.callbacks.OnRemoteIPPoolUpdate(cluster, newV1KVP.Key.(model.IPPoolKey), newV1KVP.Value.(*model.IPPool))
+			}
+		} else {
+			log.WithField("key", key).Debugf("Ignoring remote v3 resource of kind %s", key.Kind)
 		}
 	}
 	return
