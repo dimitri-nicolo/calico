@@ -72,5 +72,6 @@ COPY --from=ubi /etc/host.conf /etc/host.conf
 ARG BIN_DIR
 COPY ${BIN_DIR}/kube-controllers-linux-amd64 /usr/bin/kube-controllers
 COPY ${BIN_DIR}/check-status-linux-amd64 /usr/bin/check-status
+COPY ${BIN_DIR}/wrapper-amd64 /usr/bin/wrapper
 USER 999
 ENTRYPOINT ["/usr/bin/wrapper", "/usr/bin/kube-controllers"]
