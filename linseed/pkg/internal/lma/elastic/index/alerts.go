@@ -71,7 +71,7 @@ func (h alertsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceVerb
 }
 
 func (h alertsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
-	return elastic.NewRangeQuery("time").Gt(r.From.Unix()).Lte(r.To.Unix())
+	return elastic.NewRangeQuery(h.GetTimeField()).Gt(r.From.Unix()).Lte(r.To.Unix())
 }
 
 func (h alertsIndexHelper) GetTimeField() string {

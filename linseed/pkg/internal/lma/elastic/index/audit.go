@@ -72,7 +72,7 @@ func (h auditLogsIndexHelper) NewRBACQuery(
 }
 
 func (h auditLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
-	return elastic.NewRangeQuery("requestReceivedTimestamp").Gt(r.From).Lte(r.To)
+	return elastic.NewRangeQuery(h.GetTimeField()).Gt(r.From).Lte(r.To)
 }
 
 func (h auditLogsIndexHelper) GetTimeField() string {

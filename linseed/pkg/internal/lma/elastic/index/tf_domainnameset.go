@@ -47,7 +47,7 @@ func (h domainSetIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceV
 
 func (h domainSetIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
 	unset := time.Time{}
-	tr := elastic.NewRangeQuery("created_at")
+	tr := elastic.NewRangeQuery(h.GetTimeField())
 	if r.From != unset {
 		tr.From(r.From)
 	}

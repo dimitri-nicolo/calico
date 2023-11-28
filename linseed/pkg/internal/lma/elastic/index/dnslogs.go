@@ -141,7 +141,7 @@ func (h dnsLogsIndexHelper) NewRBACQuery(
 }
 
 func (h dnsLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
-	timeField := "end_time"
+	timeField := h.GetTimeField()
 	if r.Field != "" {
 		timeField = r.Field
 	}
