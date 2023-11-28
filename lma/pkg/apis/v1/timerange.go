@@ -102,7 +102,14 @@ func (t *TimeRange) UnmarshalJSON(b []byte) error {
 		}
 	}
 
-	t.Field = s.Field
+	switch s.Field {
+	case FieldDefault, FieldGeneratedTime:
+		t.Field = s.Field
+	default:
+		return httputils.NewHttpStatusErrorBadRequest(
+			fmt.Sprintf("Request body contains an invalid time range: unsupported time field (%s)", s.Field), nil,
+		)
+	}
 
 	return nil
 }
