@@ -13,6 +13,13 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
 )
 
+type TimeField string
+
+const (
+	FieldDefault       TimeField = ""
+	FieldGeneratedTime TimeField = "generated_time"
+)
+
 type TimeRange struct {
 	// The from->to time ranges parsed from the request.
 	From time.Time `json:"from,omitempty"`
@@ -22,7 +29,7 @@ type TimeRange struct {
 	// storage indices; currently it is only for DNS logs.  When this field is not specified, or
 	// when querying an index for which this field has not yet been implemented, the chosen time
 	// field is as determined by the "query helper" for each index, on a per-index basis.
-	Field string `json:"field,omitempty"`
+	Field TimeField `json:"field,omitempty"`
 
 	// If the from and to are relative to "now", then the now time is also filled in - this allows relative times
 	// to be reverse engineered (useful for the cache which keeps data for relative times updated in the background).
@@ -30,9 +37,9 @@ type TimeRange struct {
 }
 
 type timeRangeInternal struct {
-	From  *string `json:"from"`
-	To    *string `json:"to"`
-	Field string  `json:"field,omitempty"`
+	From  *string   `json:"from"`
+	To    *string   `json:"to"`
+	Field TimeField `json:"field,omitempty"`
 }
 
 // UnmarshalJSON implements the unmarshalling interface for JSON.
@@ -119,7 +126,7 @@ func (t TimeRange) MarshalJSON() ([]byte, error) {
 func (t TimeRange) String() string {
 	tr := fmt.Sprintf("%s -> %s", t.From.UTC().Format(time.RFC3339), t.To.UTC().Format(time.RFC3339))
 	if t.Field != "" {
-		return t.Field + ": " + tr
+		return string(t.Field) + ": " + tr
 	}
 	return tr
 }

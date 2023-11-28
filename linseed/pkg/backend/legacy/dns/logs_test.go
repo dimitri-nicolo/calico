@@ -100,7 +100,7 @@ func TestCreateDNSLog(t *testing.T) {
 		// If we update the query params to specify matching against the "generated_time"
 		// field, we should get no results, because the time right now (>=2023) is years
 		// later than reqTime (1970).
-		params.TimeRange.Field = "generated_time"
+		params.TimeRange.Field = lmav1.FieldGeneratedTime
 		listResp, err = lb.List(ctx, clusterInfo, &params)
 		require.NoError(t, err)
 		require.Len(t, listResp.Items, 0)
