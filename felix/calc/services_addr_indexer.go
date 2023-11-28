@@ -277,6 +277,8 @@ func (slc *ServiceLookupsCache) RegisterWith(allUpdateDisp *dispatcher.Dispatche
 // OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
 // kubernetes services updates.
 func (slc *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
+	slc.mutex.Lock()
+	defer slc.mutex.Unlock()
 	switch k := update.Key.(type) {
 	case model.ResourceKey:
 		switch k.Kind {
@@ -298,14 +300,16 @@ func (slc *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
 }
 
 func (slc *ServiceLookupsCache) GetServiceSpecFromResourceKey(key model.ResourceKey) (kapiv1.ServiceSpec, bool) {
+	slc.mutex.RLock()
+	defer slc.mutex.RUnlock()
 	spec, found := slc.suh.services[key]
 	return spec, found
 }
 
 // GetNodePortService returns a matching node port service.
 func (slc *ServiceLookupsCache) GetNodePortService(port int, proto int) (svc proxy.ServicePortName, found bool) {
-	slc.mutex.Lock()
-	defer slc.mutex.Unlock()
+	slc.mutex.RLock()
+	defer slc.mutex.RUnlock()
 
 	// Check to see if the port/protocol corresponds to a node port service.
 	if nps := slc.suh.nodePortServices[portProtoKey{port: port, proto: proto}]; len(nps) == 0 {
@@ -317,10 +321,10 @@ func (slc *ServiceLookupsCache) GetNodePortService(port int, proto int) (svc pro
 	}
 }
 
-// GetServiceFromNATedDest returns the service associated with a pre-DNAT destination address.
+// GetServiceFromPreDNATDest returns the service associated with a pre-DNAT destination address.
 func (slc *ServiceLookupsCache) GetServiceFromPreDNATDest(ipPreDNAT [16]byte, portPreDNAT int, proto int) (svc proxy.ServicePortName, found bool) {
-	slc.mutex.Lock()
-	defer slc.mutex.Unlock()
+	slc.mutex.RLock()
+	defer slc.mutex.RUnlock()
 
 	svcs := slc.suh.ipPortProtoToServices[ipPortProtoKey{ip: ipPreDNAT, port: portPreDNAT, proto: proto}]
 	if len(svcs) != 0 {
