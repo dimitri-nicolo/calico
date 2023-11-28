@@ -558,6 +558,11 @@ func TestFV_RuntimeReports(t *testing.T) {
 			runtimeReport2.GeneratedTime = item.Report.GeneratedTime
 			require.Equal(t, runtimeReport2, item.Report)
 		}
+
+		// Validate that we can't use a selector with a disallowed field.
+		params.Selector = "'tenant_id' = 'super-secret'"
+		resp, err = cli.RuntimeReports("").List(ctx, &params)
+		require.ErrorContains(t, err, "tenant_id")
 	})
 }
 
