@@ -46,7 +46,7 @@ func (h complianceSnapshotsIndexHelper) NewRBACQuery(resources []apiv3.Authorize
 
 func (h complianceSnapshotsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
 	unset := time.Time{}
-	tr := elastic.NewRangeQuery(h.GetTimeField())
+	tr := elastic.NewRangeQuery(GetTimeFieldForQuery(h, r))
 	if r.From != unset {
 		tr.From(r.From)
 	}

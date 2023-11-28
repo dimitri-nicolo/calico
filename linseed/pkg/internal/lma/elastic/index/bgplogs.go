@@ -46,7 +46,7 @@ func (h bgpLogsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceVer
 }
 
 func (h bgpLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
-	return elastic.NewRangeQuery(h.GetTimeField()).
+	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).
 		Gt(r.From.Format(v1.BGPLogTimeFormat)).
 		Lte(r.To.Format(v1.BGPLogTimeFormat))
 }

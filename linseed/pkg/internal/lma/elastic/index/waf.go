@@ -90,7 +90,7 @@ func (h wafLogsIndexHelper) NewRBACQuery(
 }
 
 func (h wafLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
-	return elastic.NewRangeQuery(h.GetTimeField()).Gt(r.From).Lte(r.To)
+	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).Gt(r.From).Lte(r.To)
 }
 
 func (h wafLogsIndexHelper) GetTimeField() string {

@@ -170,7 +170,7 @@ func (h l7LogsIndexHelper) NewRBACQuery(
 }
 
 func (h l7LogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
-	return elastic.NewRangeQuery(h.GetTimeField()).Gt(r.From.Unix()).Lte(r.To.Unix())
+	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).Gt(r.From.Unix()).Lte(r.To.Unix())
 }
 
 func (h l7LogsIndexHelper) GetTimeField() string {

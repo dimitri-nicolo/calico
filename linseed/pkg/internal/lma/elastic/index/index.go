@@ -28,3 +28,10 @@ type Helper interface {
 	// BaseQuery returns the base query for the index, to which additional query clauses can be added.
 	BaseQuery(i bapi.ClusterInfo) *elastic.BoolQuery
 }
+
+func GetTimeFieldForQuery(h Helper, r *lmav1.TimeRange) string {
+	if r != nil && r.Field != lmav1.FieldDefault {
+		return string(r.Field)
+	}
+	return h.GetTimeField()
+}
