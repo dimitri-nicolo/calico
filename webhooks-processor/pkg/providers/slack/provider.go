@@ -95,9 +95,14 @@ func (p *Slack) message(event *lsApi.Event) *SlackMessage {
 	} else {
 		record = string(recordBytes)
 	}
+	mitigations := []string{}
+	for index, mitigation := range *event.Mitigations {
+		mitigations = append(mitigations, fmt.Sprintf("%d. %s", index+1, mitigation))
+	}
 	message := NewMessage().AddBlocks(
 		NewBlock("header", NewField("plain_text", "⚠ Calico Security Alert")),
 		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*%s*", event.Description))),
+		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Mitigations:*\n\n%s", strings.Join(mitigations, "\n")))),
 		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Event source:* %s", event.Origin))),
 		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Attack vector:* %s", event.AttackVector))),
 		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Severity:* %d/100", event.Severity))),
