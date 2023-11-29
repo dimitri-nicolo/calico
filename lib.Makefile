@@ -192,6 +192,17 @@ define build_binary
 		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" $(1)'
 endef
 
+# For windows builds that require cgo.
+define build_cgo_windows_binary
+	$(DOCKER_RUN) \
+		-e CC=x86_64-w64-mingw32-gcc \
+		-e CGO_ENABLED=1 \
+		-e GOARCH=amd64 \
+		-e GOOS=windows \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) -v -buildvcs=false -ldflags "$(LDFLAGS)" $(1)'
+endef
+
 # For windows builds that do not require cgo.
 define build_windows_binary
 	$(DOCKER_RUN) \

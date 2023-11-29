@@ -191,7 +191,7 @@ endif
 # Cross-compile Felix for Windows
 bin/calico-felix.exe: $(SRC_FILES) ../go.mod
 	@echo Building felix for Windows...
-	$(call build_windows_binary, "$(PACKAGE_NAME)/cmd/calico-felix", $@)
+	$(call build_cgo_windows_binary, "$(PACKAGE_NAME)/cmd/calico-felix", $@)
 
 bin/tigera-felix.exe: $(REMOTE_DEPS) bin/calico-felix.exe
 	cp $< $@

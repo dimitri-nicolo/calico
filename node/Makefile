@@ -55,7 +55,7 @@ include ../lib.Makefile
 FIPS ?= false
 
 ifeq ($(FIPS),true)
-NODE_CONTAINER_BIN_DIR=./dist/bin/$(ARCH)-fips
+NODE_CONTAINER_BIN_DIR=dist/bin/$(ARCH)-fips
 NODE_CONTAINER_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node-$(ARCH)
 NODE_CONTAINER_MARKER=$(NODE_CONTAINER_FIPS_CREATED)
 VALIDARCHES=amd64
@@ -252,7 +252,7 @@ endif
 endif
 
 $(WINDOWS_BINARY): $(SRC_FILES)
-	$(call build_windows_binary, ./cmd/calico-node/main.go, $@)
+	$(call build_cgo_windows_binary, ./cmd/calico-node/main.go, $@)
 
 $(WINDOWS_ARCHIVE_ROOT)/cni/calico.exe:
 	$(call build_windows_binary, ./cmd/calico, $@)
