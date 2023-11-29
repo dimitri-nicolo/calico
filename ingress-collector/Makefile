@@ -27,7 +27,11 @@ SRC_FILES=$(shell find cmd pkg -name '*.go') \
 .PHONY: build
 build: bin/ingress-collector-$(ARCH)
 bin/ingress-collector-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, ./cmd/ingress-collector, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd/ingress-collector, $@)
+else
+	$(call build_binary, ./cmd/ingress-collector, $@)
+endif
 
 ##############################################################################
 # Image

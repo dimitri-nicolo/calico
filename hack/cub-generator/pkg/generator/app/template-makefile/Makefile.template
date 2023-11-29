@@ -36,7 +36,7 @@ build: bin/{{ lower .Name }}-$(ARCH)
 
 .PHONY: bin/{{ lower .Name }}-$(ARCH)
 bin/{{ lower .Name }}-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/$*/*.go, $@)
+	$(call build_binary, cmd/$*/*.go, $@)
 
 ###############################################################################
 # BUILD IMAGE

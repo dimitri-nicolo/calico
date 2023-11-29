@@ -34,7 +34,11 @@ build: bin/es-gateway-$(ARCH)
 
 .PHONY: bin/es-gateway-$(ARCH)
 bin/es-gateway-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, ./cmd, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd, $@)
+else
+	$(call build_binary, ./cmd, $@)
+endif
 
 ###############################################################################
 # Building the image

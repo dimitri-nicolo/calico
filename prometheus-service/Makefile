@@ -48,7 +48,11 @@ SRC_FILES:= $(shell find cmd pkg -type f -name '*.go') \
 build: bin/prometheus-service-$(ARCH)
 
 bin/prometheus-service-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, ./cmd/server, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd/server, $@)
+else
+	$(call build_binary, ./cmd/server, $@)
+endif
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGES) $(addsuffix -$(ARCH),$(BUILD_IMAGES))

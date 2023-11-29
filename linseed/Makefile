@@ -39,7 +39,11 @@ build: bin/linseed-$(ARCH)
 
 .PHONY: bin/linseed-$(ARCH)
 bin/linseed-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/$*/*.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/$*/*.go, $@)
+else
+	$(call build_binary, cmd/$*/*.go, $@)
+endif
 
 ###############################################################################
 # BUILD IMAGE

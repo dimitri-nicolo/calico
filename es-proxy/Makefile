@@ -53,7 +53,11 @@ LDFLAGS = -X $(PACKAGE_NAME)/pkg/handler.VERSION=$(GIT_VERSION) \
 build: $(BINDIR)/es-proxy-$(ARCH)
 
 $(BINDIR)/es-proxy-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/server/*.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/server/*.go, $@)
+else
+	$(call build_binary, cmd/server/*.go, $@)
+endif
 
 ES_PROXY_CONTAINER_CREATED=.es-proxy.created-$(ARCH)
 

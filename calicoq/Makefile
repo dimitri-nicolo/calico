@@ -54,7 +54,7 @@ clean-image:
 
 build: $(BINARY)
 $(BINARY): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, ./calicoq/calicoq.go, $(BINARY))
+	$(call build_binary, ./calicoq/calicoq.go, $@)
 
 ###############################################################################
 # CI/CD

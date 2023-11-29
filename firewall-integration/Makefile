@@ -43,7 +43,11 @@ build: bin/firewall-integration-$(ARCH)
 
 .PHONY: bin/firewall-integration-$(ARCH)
 bin/firewall-integration-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/server/*.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/server/*.go, $@)
+else
+	$(call build_binary, cmd/server/*.go, $@)
+endif
 
 ###############################################################################
 # BUILD IMAGE

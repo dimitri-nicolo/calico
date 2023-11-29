@@ -34,7 +34,11 @@ build: $(BINDIR)/license-agent-$(ARCH)
 
 .PHONY: $(BINDIR)/license-agent-$(ARCH)
 $(BINDIR)/license-agent-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, ./cmd/server, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd/server, $@)
+else
+	$(call build_binary, ./cmd/server, $@)
+endif
 
 # Build the docker image.
 .PHONY: $(LICENSE_AGENT_IMAGE)

@@ -31,7 +31,11 @@ build: bin/l7-collector-$(ARCH)
 
 .PHONY: bin/l7-collector-$(ARCH)
 bin/l7-collector-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/l7-collector/*.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/l7-collector/*.go, $@)
+else
+	$(call build_binary, cmd/l7-collector/*.go, $@)
+endif
 
 ###############################################################################
 # Building the image

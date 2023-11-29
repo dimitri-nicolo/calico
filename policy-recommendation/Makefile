@@ -38,7 +38,11 @@ build: bin/policy-recommendation-$(ARCH)
 
 .PHONY: bin/policy-recommendation-$(ARCH)
 bin/policy-recommendation-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, ./cmd/main.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd/main.go, $@)
+else
+	$(call build_binary, ./cmd/main.go, $@)
+endif
 
 ###############################################################################
 # BUILD IMAGE

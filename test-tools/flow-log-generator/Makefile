@@ -58,7 +58,7 @@ build-all: $(addprefix bin/flow-log-generator-,$(VALIDARCHES))
 build: $(BINARY)
 bin/flow-log-generator-amd64: ARCH=amd64
 bin/flow-log-generator-%: $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, ./cmd/flow-log-generator, $@)
+	$(call build_binary, ./cmd/flow-log-generator, $@)
 
 ###############################################################################
 # Building the image

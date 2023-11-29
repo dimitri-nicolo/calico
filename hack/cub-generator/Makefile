@@ -33,7 +33,7 @@ build: bin/cub-generator-$(ARCH)
 
 .PHONY: bin/cub-generator-$(ARCH)
 bin/cub-generator-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/$*/*.go, $@)
+	$(call build_binary, cmd/$*/*.go, $@)
 
 ###############################################################################
 # Tests
