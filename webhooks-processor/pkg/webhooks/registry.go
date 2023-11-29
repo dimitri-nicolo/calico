@@ -18,12 +18,12 @@ type ProvidersConfig struct {
 	RequestTimeout                     time.Duration `default:"5s"`
 	RetryDuration                      time.Duration `default:"2s"`
 	RetryTimes                         uint          `default:"5"`
-	GenericProviderRateLimiterDuration time.Duration `default:"1h"`
-	GenericProviderRateLimiterCount    uint          `default:"100"`
-	JiraProviderRateLimiterDuration    time.Duration `default:"60m"`
-	JiraProviderRateLimiterCount       uint          `default:"1"`
-	SlackProviderRateLimiterDuration   time.Duration `default:"5m"`
-	SlackProviderRateLimiterCount      uint          `default:"3"`
+	GenericProviderRateLimiterDuration time.Duration `default:"1s"`
+	GenericProviderRateLimiterCount    uint          `default:"1000"`
+	JiraProviderRateLimiterDuration    time.Duration `default:"1m"`
+	JiraProviderRateLimiterCount       uint          `default:"10"`
+	SlackProviderRateLimiterDuration   time.Duration `default:"1m"`
+	SlackProviderRateLimiterCount      uint          `default:"10"`
 }
 
 func DefaultProviders() map[api.SecurityEventWebhookConsumer]providers.Provider {
