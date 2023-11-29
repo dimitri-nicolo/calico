@@ -4,7 +4,6 @@ package slack
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 type SlackMessage struct {
@@ -48,16 +47,4 @@ func NewField(kind string, text string) *SlackMessageField {
 		Type: kind,
 		Text: text,
 	}
-}
-
-func NewDivider() *SlackMessageBlock {
-	return NewBlock("divider", nil)
-}
-
-func NewMrkdwnField(title, content string) *SlackMessageField {
-	return NewField("mrkdwn", fmt.Sprintf("*%s*\n%s", title, content))
-}
-
-func NewMrkdwnHeader(header string) *SlackMessageField {
-	return NewField("mrkdwn", fmt.Sprintf("*%s*", header))
 }
