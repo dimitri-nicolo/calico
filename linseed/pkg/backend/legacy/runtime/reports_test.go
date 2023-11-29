@@ -17,6 +17,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 
 	"github.com/olivere/elastic/v7"
@@ -271,4 +272,142 @@ func TestCreateRuntimeReportForMultipleTenants(t *testing.T) {
 		require.Equal(t, []v1.RuntimeReport{{Tenant: anotherTenant, Cluster: cluster, Report: f}},
 			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, results))
 	})
+}
+
+func TestRuntimeSelection(t *testing.T) {
+	timeA := time.Unix(9564, 0).UTC()
+	timeB := timeA.Add(time.Minute)
+	reports := []v1.Report{
+		{
+			StartTime: timeA,
+			EndTime:   timeB,
+			Host:      "host",
+			Count:     2,
+			Type:      "ProcessStart",
+			Pod: v1.PodInfo{
+				Name:          "drax",
+				NameAggr:      "drax-*",
+				Namespace:     "moonraker",
+				ContainerName: "diamond",
+			},
+			File: v1.File{
+				Path:     "/usr/sbin/runc",
+				HostPath: "/run/docker/runtime-runc/moby/48f10a5eb9a245e6890433205053ba4e72c8e3bab5c13c2920dc32fadd7290cd/runc.rB3K51",
+			},
+			ProcessStart: v1.ProcessStart{
+				Invocation: "runc --root /var/run/docker/runtime-runc/moby",
+				Hashes: v1.ProcessHashes{
+					MD5:    "",
+					SHA1:   "",
+					SHA256: "SHA256",
+				},
+			},
+		},
+		{
+			StartTime: timeA,
+			EndTime:   timeB,
+			Host:      "host",
+			Count:     10,
+			Type:      "ProcessStart",
+			Pod: v1.PodInfo{
+				Name:          "goldfinger",
+				NameAggr:      "goldfinger-*",
+				Namespace:     "fortknox",
+				ContainerName: "gold",
+			},
+			File: v1.File{
+				Path:     "/usr/sbin/laser",
+				HostPath: "/run/docker/runtime-runc/moby/48f10a5eb9a245e6890433205053ba4e72c8e3bab5c13c2920dc32fadd7290cd/laser.rB3K51",
+			},
+			ProcessStart: v1.ProcessStart{
+				Invocation: "runc --root /var/run/docker/runtime-runc/laser",
+				Hashes: v1.ProcessHashes{
+					MD5:    "",
+					SHA1:   "",
+					SHA256: "Laser-SHA256",
+				},
+			},
+		},
+		{
+			StartTime: timeA,
+			EndTime:   timeB,
+			Host:      "host",
+			Count:     1,
+			Type:      "ProcessStart",
+			Pod: v1.PodInfo{
+				Name:          "blofeld",
+				NameAggr:      "blofeld-*",
+				Namespace:     "spectre",
+				ContainerName: "fur",
+			},
+			File: v1.File{
+				Path:     "/usr/sbin/ski",
+				HostPath: "/run/docker/runtime-runc/moby/48f10a5eb9a245e6890433205053ba4e72c8e3bab5c13c2920dc32fadd7290cd/ski.rB3K51",
+			},
+			ProcessStart: v1.ProcessStart{
+				Invocation: "runc --root /var/run/docker/runtime-runc/ski",
+				Hashes: v1.ProcessHashes{
+					MD5:    "",
+					SHA1:   "",
+					SHA256: "Ski-SHA256",
+				},
+			},
+		},
+	}
+
+	testSelection := func(t *testing.T, selector string, expectedReports []v1.Report) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		// Create the event in ES.
+		resp, err := b.Create(ctx, clusterInfo, reports)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
+		require.Equal(t, len(reports), resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, len(reports), resp.Succeeded)
+
+		// Refresh the index.
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		require.NoError(t, err)
+
+		r, e := b.List(ctx, clusterInfo, &v1.RuntimeReportParams{
+			Selector: selector,
+		})
+		require.NoError(t, e)
+		require.Equal(t, len(expectedReports), len(r.Items))
+		for i := range expectedReports {
+			expectedReports[i].GeneratedTime = r.Items[i].Report.GeneratedTime
+			require.Equal(t, expectedReports[i], backendutils.AssertRuntimeReportIDAndReset(t, r.Items[i]).Report)
+		}
+	}
+
+	tests := []struct {
+		selector        string
+		expectedReports []v1.Report
+	}{
+		{"'pod.name'=\"goldfinger\"", []v1.Report{reports[1]}},
+		{"'pod.name' IN {\"goldfinger\",\"blofeld\"}", []v1.Report{reports[1], reports[2]}},
+		{"count > 5", []v1.Report{reports[1]}},
+		{"count <= 2", []v1.Report{reports[0], reports[2]}},
+		{"type = FutureFeature", []v1.Report{}},
+		{"type = ProcessStart", []v1.Report{reports[0], reports[1], reports[2]}},
+		{"'pod.namespace'='moonraker'", []v1.Report{reports[0]}},
+		{"'pod.name_aggr' != 'blofeld-*'", []v1.Report{reports[0], reports[1]}},
+		{"'pod.container_name' NOTIN {gold}", []v1.Report{reports[0], reports[2]}},
+		{"'pod.ready' = false", []v1.Report{reports[0], reports[1], reports[2]}},
+		{"'pod.ready' = true", []v1.Report{}},
+		{"'file.path' IN {'*laser*'}", []v1.Report{reports[1]}},
+		{"'file.host_path' IN {'*laser*'}", []v1.Report{reports[1]}},
+		{"'process_start.invocation' NOTIN {'*laser*'}", []v1.Report{reports[0], reports[2]}},
+		{"'process_start.hashes.md5' != \"\"", []v1.Report{}},
+		{"'process_start.hashes.sha256' IN {\"*Laser*\"}", []v1.Report{reports[1]}},
+		{"host = host", []v1.Report{reports[0], reports[1], reports[2]}},
+	}
+
+	for _, tt := range tests {
+		name := fmt.Sprintf("TestReportSelection: %s", tt.selector)
+		RunAllModes(t, name, func(t *testing.T) {
+			testSelection(t, tt.selector, tt.expectedReports)
+		})
+	}
 }
