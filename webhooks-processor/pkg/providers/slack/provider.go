@@ -5,6 +5,7 @@ package slack
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -44,7 +45,7 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, event *ls
 	}
 
 	retryFunc := func() (err error) {
-		requestCtx, requestCtxCancel := context.WithTimeout(ctx, p.Config().RequestTimeout)
+		requestCtx, requestCtxCancel := context.WithTimeout(ctx, p.config.RequestTimeout)
 		defer requestCtxCancel()
 
 		request, err := http.NewRequestWithContext(requestCtx, "POST", config["url"], bytes.NewReader(payload))
@@ -85,17 +86,27 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, event *ls
 }
 
 func (p *Slack) message(event *lsApi.Event) *SlackMessage {
+	var record string
+	recordData := make(map[string]any)
+	if err := event.GetRecord(&recordData); err != nil || recordData == nil {
+		record = "n/a"
+	} else if recordBytes, err := json.MarshalIndent(recordData, "", "\t"); err != nil {
+		record = "n/a"
+	} else {
+		record = string(recordBytes)
+	}
+	mitigations := []string{}
+	mitigations = append(mitigations, *event.Mitigations...)
 	message := NewMessage().AddBlocks(
-		NewBlock("header", NewField("plain_text", "Calico Alert")),
-		NewDivider(),
-		NewBlock(
-			"section", nil,
-			NewMrkdwnField("⚠️ Alert Type:", event.Type),
-			NewMrkdwnField("📟 Origin:", event.Origin),
-			NewMrkdwnField("⏱️ Time:", event.Time.GetTime().String()),
-			NewMrkdwnField("🔥 Severity:", fmt.Sprint(event.Severity)),
-		),
-		NewBlock("section", NewMrkdwnField("🗎 Description:", event.Description)),
+		NewBlock("header", NewField("plain_text", "⚠ Calico Security Alert")),
+		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*%s*", event.Description))),
+		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Mitigations:*\n\n%s", strings.Join(mitigations, "\n\n")))),
+		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Event source:* %s", event.Origin))),
+		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Attack vector:* %s", event.AttackVector))),
+		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Severity:* %d/100", event.Severity))),
+		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Mitre IDs:* %s", strings.Join(*event.MitreIDs, ", ")))),
+		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Mitre tactic:* %s", event.MitreTactic))),
+		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Detailed record information:* ```%s```", record))),
 	)
 
 	return message

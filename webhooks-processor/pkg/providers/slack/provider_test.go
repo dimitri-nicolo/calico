@@ -62,11 +62,14 @@ func TestSlackProviderProcessing(t *testing.T) {
 			RetryTimes:          2,
 		})
 		event = &lsApi.Event{
-			ID:          "testid",
-			Description: "This is an event",
-			Severity:    3,
-			Time:        lsApi.NewEventTimestamp(time.Now().Unix()),
-			Type:        "runtime_security",
+			Description:  "$DEADB33F is now under attack",
+			Time:         lsApi.NewEventTimestamp(0),
+			Origin:       "test",
+			AttackVector: "unit test",
+			Severity:     10,
+			MitreIDs:     &[]string{"1234", "5678"},
+			MitreTactic:  "cork boi",
+			Mitigations:  &[]string{"do this", "do that too"},
 		}
 	}
 	t.Run("slack success", func(t *testing.T) {
@@ -83,25 +86,21 @@ func TestSlackProviderProcessing(t *testing.T) {
 		err = json.Unmarshal(fc.Requests[0].Body, &slackMessage)
 		require.NoError(t, err)
 
-		// Not sure how much we want to test the content of each block...
-		// Probably want to check that we can find important fields in the event
-		require.NotNil(t, slackMessage.Blocks)
-		require.Len(t, slackMessage.Blocks, 4)
-		require.Equal(t, slackMessage.Blocks[0].Type, "header")
-		require.Equal(t, slackMessage.Blocks[1].Type, "divider")
-		require.Equal(t, slackMessage.Blocks[2].Type, "section")
-		require.Equal(t, slackMessage.Blocks[3].Type, "section")
-
 		messageJsonBytes, err := slackMessage.JSON()
 		require.NoError(t, err)
 		messageJson := string(messageJsonBytes)
-		require.Contains(t, messageJson, event.Type)
-		require.Contains(t, messageJson, event.Origin)
-		require.Contains(t, messageJson, event.Time.GetTime().String())
-		require.Contains(t, messageJson, fmt.Sprint(event.Severity))
-		require.Contains(t, messageJson, event.Description)
+		expectedJson := `{"blocks":[` +
+			`{"type":"header","text":{"type":"plain_text","text":"⚠ Calico Security Alert"}},` +
+			`{"type":"section","text":{"type":"mrkdwn","text":"*$DEADB33F is now under attack*"}},` +
+			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Mitigations:*\n\ndo this\n\ndo that too"}},` +
+			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Event source:* test"}},` +
+			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Attack vector:* unit test"}},` +
+			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Severity:* 10/100"}},` +
+			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Mitre IDs:* 1234, 5678"}},` +
+			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Mitre tactic:* cork boi"}},` +
+			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Detailed record information:* ` + "```n/a```" + `"}}]}`
+		require.Equal(t, messageJson, expectedJson)
 	})
-
 	t.Run("slack failure", func(t *testing.T) {
 		setup(t)
 		c := sampleValidConfig()
