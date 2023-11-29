@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -90,11 +89,15 @@ func TestJiraProviderProcessing(t *testing.T) {
 			RetryTimes:          2,
 		})
 		event = &lsApi.Event{
-			ID:          "testid",
-			Description: "This is an event",
-			Severity:    3,
-			Time:        lsApi.NewEventTimestamp(time.Now().Unix()),
-			Type:        "runtime_security",
+			ID:           "testid",
+			Description:  "$DEADB33F is now under attack",
+			Time:         lsApi.NewEventTimestamp(0),
+			Origin:       "test",
+			AttackVector: "unit test",
+			Severity:     10,
+			MitreIDs:     &[]string{"1234", "5678"},
+			MitreTactic:  "cork boi",
+			Mitigations:  &[]string{"do this", "do that too"},
 		}
 	}
 	t.Run("jira success", func(t *testing.T) {
@@ -119,12 +122,24 @@ func TestJiraProviderProcessing(t *testing.T) {
 		require.Equal(t, jiraPayload.Fields.Project.Key, c["project"])
 		require.Equal(t, jiraPayload.Fields.IssueType.Name, c["issueType"])
 		require.Equal(t, jiraPayload.Fields.Summary, "Calico Security Alert")
-		require.Contains(t, jiraPayload.Fields.Description, event.Description)
-		require.Contains(t, jiraPayload.Fields.Description, event.Type)
-		require.Contains(t, jiraPayload.Fields.Description, event.Origin)
-		// The '+' is templated to '&#43;'
-		require.Contains(t, jiraPayload.Fields.Description, strings.Replace(event.Time.GetTime().String(), "+", "&#43;", -1))
-		require.Contains(t, jiraPayload.Fields.Description, fmt.Sprint(event.Severity))
+
+		require.Equal(t, jiraPayload.Fields.Description, `
+*What happened:* $DEADB33F is now under attack
+*When it happened:* Thursday, 01-Jan-70 00:00:00 UTC
+*Event source:* test
+*Attack vector:* unit test
+*Severity:* 10/100
+*Mitre IDs:* 1234 5678
+*Mitre tactic:* cork boi
+
+*Mitigations:*
+
+- do this
+- do that too
+
+{code:json|title=Detailed record information}n/a{code}
+`)
+
 	})
 
 	t.Run("jira failure", func(t *testing.T) {
