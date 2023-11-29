@@ -150,13 +150,16 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 	log := bapi.ContextLogger(i)
 
 	// Build the query.
+	q, err := b.buildQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
 	query := b.client.Search().
 		Size(opts.GetMaxPageSize()).
-		Query(b.buildQuery(i, opts))
+		Query(q)
 
 	// Configure pagination options
 	var startFrom int
-	var err error
 	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.getIndex(i))
 	if err != nil {
 		return nil, err
@@ -210,8 +213,8 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *runtimeReportBackend) buildQuery(i bapi.ClusterInfo, opts *v1.RuntimeReportParams) elastic.Query {
-	baseQuery := b.queryHelper.BaseQuery(i)
+func (b *runtimeReportBackend) buildQuery(i bapi.ClusterInfo, opts *v1.RuntimeReportParams) (elastic.Query, error) {
+	query := b.queryHelper.BaseQuery(i)
 
 	tr := logtools.WithDefaultUntilNow(opts.GetTimeRange())
 	queryTimeRange := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("generated_time").From(tr.From))
@@ -226,12 +229,25 @@ func (b *runtimeReportBackend) buildQuery(i bapi.ClusterInfo, opts *v1.RuntimeRe
 		generatedTimeQuery := elastic.NewExistsQuery("generated_time")
 
 		// combining all above queries into one ES query
-		return baseQuery.Should(
+		query.Should(
 			queryTimeRange.Must(generatedTimeQuery),
 			queryLegacy.MustNot(generatedTimeQuery)).MinimumShouldMatch("1")
+	} else {
+		query.Must(queryTimeRange)
 	}
 
-	return baseQuery.Must(queryTimeRange)
+	// If a selector was provided, parse it and add it in.
+	if sel := opts.Selector; len(sel) > 0 {
+		selQuery, err := b.queryHelper.NewSelectorQuery(sel)
+		if err != nil {
+			return nil, err
+		}
+		if selQuery != nil {
+			query.Must(selQuery)
+		}
+	}
+
+	return query, nil
 }
 
 // extractTenantAndCluster extracts tenant and cluster from the given index name. This is needed in multi-index mode
