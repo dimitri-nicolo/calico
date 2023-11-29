@@ -92,7 +92,7 @@ func TestSlackProviderProcessing(t *testing.T) {
 		expectedJson := `{"blocks":[` +
 			`{"type":"header","text":{"type":"plain_text","text":"⚠ Calico Security Alert"}},` +
 			`{"type":"section","text":{"type":"mrkdwn","text":"*$DEADB33F is now under attack*"}},` +
-			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Mitigations:*\n\n1. do this\n2. do that too"}},` +
+			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Mitigations:*\n\ndo this\n\ndo that too"}},` +
 			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Event source:* test"}},` +
 			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Attack vector:* unit test"}},` +
 			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Severity:* 10/100"}},` +
