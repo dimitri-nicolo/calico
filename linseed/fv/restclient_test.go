@@ -86,7 +86,7 @@ func TestFV_RESTClient(t *testing.T) {
 			Do(context.TODO()).
 			Into(&flows)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "bad certificate")
+		require.Contains(t, err.Error(), "certificate required")
 	})
 
 	t.Run("should handle an OK response", func(t *testing.T) {
