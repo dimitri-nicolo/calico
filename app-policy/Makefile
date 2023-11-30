@@ -98,7 +98,7 @@ ifeq ($(ARCH),amd64)
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, ./cmd/dikastes, $@)
 else
-	$(call build_binary, ./cmd/dikastes, $@)
+	$(call build_cgo_binary, ./cmd/dikastes, $@)
 endif
 else
 	$(DOCKER_RUN_RO) \
