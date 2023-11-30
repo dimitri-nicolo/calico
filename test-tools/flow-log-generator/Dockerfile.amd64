@@ -1,0 +1,25 @@
+ARG UBI_IMAGE
+ARG ARCH=x86_64
+ARG GIT_VERSION=unknown
+
+FROM ${UBI_IMAGE} as ubi
+ARG ARCH
+ARG GIT_VERSION
+
+# Update base packages to pick up security updates.
+RUN microdnf upgrade
+
+# Required labels for certification
+LABEL name="Calico flow log generator" \
+      vendor="Tigera" \
+      version=$GIT_VERSION \
+      release="1" \
+      summary="Calico flow log generator for scale testing" \
+      description="Calico flow log generator for scale testing" \
+      maintainer="lance@tigera.io"
+
+# Copy in the flow-log-generator and example flows
+COPY example-flows/flows.log /home/log-gen/flows.log
+COPY bin/flow-log-generator-amd64 /home/log-gen/flow-log-generator
+WORKDIR /home/log-gen
+ENTRYPOINT ["/home/log-gen/flow-log-generator"]

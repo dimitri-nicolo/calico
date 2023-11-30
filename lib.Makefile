@@ -322,7 +322,7 @@ DOCKER_BUILD=docker buildx build --pull \
 	     --build-arg UBI_IMAGE_FULL=$(UBI_IMAGE_FULL) \
 	     --build-arg GIT_VERSION=$(GIT_VERSION) $(TARGET_PLATFORM)
 
-DOCKER_RUN := mkdir -p ../.go-pkg-cache bin $(GOMOD_CACHE) && \
+DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
 	docker run --rm \
 		--net=host \
 		--init \

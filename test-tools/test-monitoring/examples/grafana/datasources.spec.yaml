@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: kube-system
+data:
+  prometheus-k8s-datasource.json: |
+    {
+      "name": "kubernetes",
+      "type": "prometheus",
+      "url": "http://prometheus-k8s.tigera-fluentd:9090",
+      "access": "proxy",
+      "basicAuth": false
+    }
+  prometheus-calico-node-datasource.json: |
+    {
+      "name": "calico",
+      "type": "prometheus",
+      "url": "http://prometheus-calico-node.calico-system:9090",
+      "access": "proxy",
+      "basicAuth": false
+    }
+  prometheus-client-datasource.json: |
+    {
+      "name": "prometheus-client",
+      "type": "prometheus",
+      "url": "http://prometheus-client.tigera-fluentd:9090",
+      "access": "proxy",
+      "basicAuth": false
+    }
+  prometheus-typha-datasource.json: |
+    {
+      "name": "Typha",
+      "type": "prometheus",
+      "url": "http://prometheus-calico-typha.calico-system:9090",
+      "access": "proxy",
+      "basicAuth": false
+    }
+

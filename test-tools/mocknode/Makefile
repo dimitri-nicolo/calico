@@ -1,6 +1,6 @@
-include ../metadata.mk
+include ../../metadata.mk
 
-PACKAGE_NAME?=github.com/projectcalico/calico/mocknode
+PACKAGE_NAME?=github.com/projectcalico/calico/test-tools/mocknode
 SEMAPHORE_PROJECT_ID=""
 
 IMAGE_NAME  ?=mock-node
@@ -20,18 +20,18 @@ test: ut ## Run the tests for the current platform/architecture
 ###############################################################################
 CONTAINER_CREATED=.container.created-$(ARCH)
 # Files that go into the image
-BINARY=./bin/mocknode-$(ARCH)
+BINARY=./bin/test-tools/mocknode-$(ARCH)
 # Files to be built
 SRC_FILES=$(shell find . -name '*.go' | grep -v vendor) \
-          $(shell find ../libcalico-go -name '*.go' | grep -v vendor)\
-          $(shell find ../typha -name '*.go' | grep -v vendor)
+          $(shell find ../../libcalico-go -name '*.go' | grep -v vendor)\
+          $(shell find ../../typha -name '*.go' | grep -v vendor)
 
 ###############################################################################
-# Include ../lib.Makefile
+# Include ../../lib.Makefile
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ###############################################################################
-include ../lib.Makefile
+include ../../lib.Makefile
 
 ###############################################################################
 ## Clean enough that a new release build will be clean
@@ -58,8 +58,8 @@ build-all: $(addprefix bin/mocknode-,$(VALIDARCHES))
 .PHONY: build
 ## Build the binary for the current architecture and platform
 build: $(BINARY)
-bin/mocknode-amd64: ARCH=amd64
-bin/mocknode-%: $(SRC_FILES)
+bin/test-tools/mocknode-amd64: ARCH=amd64
+bin/test-tools/mocknode-%: $(SRC_FILES)
 	$(call build_static_cgo_boring_binary, ./cmd/mocknode, $@)
 
 ###############################################################################

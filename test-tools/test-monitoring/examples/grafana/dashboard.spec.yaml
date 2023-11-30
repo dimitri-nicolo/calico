@@ -1,0 +1,5197 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: kube-system
+data:
+  scale-test-dashboard.json: |
+    {
+      "__inputs": [
+        {
+          "name": "DS_PROMETHEUS-CLIENT",
+          "label": "prometheus-client",
+          "description": "",
+          "type": "datasource",
+          "pluginId": "prometheus",
+          "pluginName": "Prometheus"
+        },
+        {
+          "name": "DS_KUBERNETES",
+          "label": "kubernetes",
+          "description": "",
+          "type": "datasource",
+          "pluginId": "prometheus",
+          "pluginName": "Prometheus"
+        },
+        {
+          "name": "DS_CALICO",
+          "label": "calico",
+          "description": "",
+          "type": "datasource",
+          "pluginId": "prometheus",
+          "pluginName": "Prometheus"
+        }
+      ],
+      "__requires": [
+        {
+          "type": "grafana",
+          "id": "grafana",
+          "name": "Grafana",
+          "version": "4.5.2"
+        },
+        {
+          "type": "panel",
+          "id": "graph",
+          "name": "Graph",
+          "version": ""
+        },
+        {
+          "type": "datasource",
+          "id": "prometheus",
+          "name": "Prometheus",
+          "version": "1.0.0"
+        },
+        {
+          "type": "panel",
+          "id": "singlestat",
+          "name": "Singlestat",
+          "version": ""
+        }
+      ],
+      "dashboard": {
+        "annotations": {
+          "list": []
+        },
+        "editable": true,
+        "gnetId": null,
+        "graphTooltip": 0,
+        "hideControls": false,
+        "id": null,
+        "links": [],
+        "refresh": "10s",
+        "rows": [
+          {
+            "collapse": false,
+            "height": "108",
+            "panels": [
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(245, 54, 54, 0.9)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(50, 172, 45, 0.97)"
+                ],
+                "datasource": "prometheus-client",
+                "format": "none",
+                "gauge": {
+                  "maxValue": 6,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": false
+                },
+                "height": "150px",
+                "id": 1,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 2,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "operator_state",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "operator_state",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "",
+                "title": "State",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "Unstarted",
+                    "value": "null"
+                  },
+                  {
+                    "op": "=",
+                    "text": "Unstarted",
+                    "value": "0"
+                  },
+                  {
+                    "op": "=",
+                    "text": "Creating Namespaces",
+                    "value": "1"
+                  },
+                  {
+                    "op": "=",
+                    "text": "Creating Servers",
+                    "value": "2"
+                  },
+                  {
+                    "op": "=",
+                    "text": "Creating Clients",
+                    "value": "3"
+                  },
+                  {
+                    "op": "=",
+                    "text": "Churning",
+                    "value": "4"
+                  },
+                  {
+                    "op": "=",
+                    "text": "Done",
+                    "value": "5"
+                  },
+                  {
+                    "op": "=",
+                    "text": "Tearing Down",
+                    "value": "6"
+                  },
+                  {
+                    "op": "=",
+                    "text": "Error",
+                    "value": "7"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(245, 54, 54, 0.9)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(50, 172, 45, 0.97)"
+                ],
+                "datasource": "kubernetes",
+                "description": "",
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 18,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "all_pods_count",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "",
+                "title": "Running Pods",
+                "transparent": false,
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(245, 54, 54, 0.9)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(50, 172, 45, 0.97)"
+                ],
+                "datasource": "kubernetes",
+                "decimals": null,
+                "format": "percentunit",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 41,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "running_client_percent",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": ".33,.66",
+                "title": "Clients (% desired)",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "kubernetes",
+                "decimals": null,
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 42,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "running_client_count",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "4e6,5e6",
+                "title": "Clients (running)",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "kubernetes",
+                "decimals": null,
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 43,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "desired_client_count",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "4e6,5e6",
+                "title": "Clients (desired)",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "prometheus-client",
+                "decimals": 2,
+                "description": "Number of churns started on average by deployment.",
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 44,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "Value",
+                "targets": [
+                  {
+                    "expr": "client_churns{state=\"started\"}",
+                    "format": "time_series",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "1,10",
+                "title": "Client Churns (Started)",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "prometheus-client",
+                "decimals": 2,
+                "description": "Number of churns completed on average by deployment",
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 62,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "Value",
+                "targets": [
+                  {
+                    "expr": "client_churns{state=\"completed\"}",
+                    "format": "time_series",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "1,10",
+                "title": "Client Churns (Complete)",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "prometheus-client",
+                "decimals": null,
+                "description": "Policy churns of random policies which do not impact traffic between test pods.",
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 63,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "Value",
+                "targets": [
+                  {
+                    "expr": "sum(num_random_policy_churn_cycles)",
+                    "format": "time_series",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "1,10",
+                "title": "Policy Churns (Random)",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "prometheus-client",
+                "decimals": null,
+                "description": "Number of churns that have occurred on active policies. That is, policies which actually impact traffic between test workloads.",
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 45,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "Value",
+                "targets": [
+                  {
+                    "expr": "sum(num_active_policy_churns)",
+                    "format": "time_series",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "1,10",
+                "title": "Policy Churns (Active)",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Test status",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 151,
+            "panels": [
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "prometheus-client",
+                "decimals": null,
+                "description": "Count of TTFP records received.",
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 38,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "ttfp_count",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "",
+                "title": "TTFP count",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": true,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "prometheus-client",
+                "decimals": null,
+                "format": "s",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "ttfp_quantile{quantile=\"1.00\"}",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "5,7",
+                "title": "100th Percentile TTFP",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": true,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "prometheus-client",
+                "decimals": null,
+                "format": "s",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 15,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "ttfp_quantile{quantile=\"0.99\"}",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "1.1,5",
+                "title": "99th Percentile TTFP",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": true,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "prometheus-client",
+                "decimals": null,
+                "format": "s",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 23,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "ttfp_quantile{quantile=\"0.50\"}",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "0.05,0.1",
+                "title": "50th Percentile TTFP",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "prometheus-client",
+                "decimals": null,
+                "description": "Total number of pings sent by client pods",
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 39,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "Value",
+                "targets": [
+                  {
+                    "expr": "num_ttfp_pings",
+                    "format": "time_series",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "1,10",
+                "title": "Pings sent",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": true,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "prometheus-client",
+                "decimals": null,
+                "description": "Number of pings that succeeded despite policy indicating they should not.",
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 40,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "Value",
+                "targets": [
+                  {
+                    "expr": "ttfp_pings_bypass_policy",
+                    "format": "time_series",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "1,10",
+                "title": "Allowed Pings",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": true,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "kubernetes",
+                "decimals": null,
+                "format": "µs",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 14,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "api_request_latencies{quantile=\"0.99\"}",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "4e6,5e6",
+                "title": "99% k8s API Response Time",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": true,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "calico",
+                "decimals": null,
+                "description": "The amount of CPU being used by the Felix using the most CPU.",
+                "format": "percent",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 46,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "max_cpu",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "4e6,5e6",
+                "title": "Highest Felix CPU",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": true,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "kubernetes",
+                "decimals": null,
+                "description": "The amount of memory being used by the calico/node using the most memory.",
+                "format": "decbytes",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 48,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "max(container_memory_rss{pod=~\"calico-node.*\"})",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "4e8,6e8",
+                "title": "Highest calico/node mem",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": true,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "Typha",
+                "decimals": null,
+                "description": "The amount of CPU being used by the Typha using the most CPU.",
+                "format": "percent",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 50,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "max_cpu",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "4e6,5e6",
+                "title": "Highest Typha CPU",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": true,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "kubernetes",
+                "decimals": null,
+                "description": "The amount of memory being used by the Typha using the most memory.",
+                "format": "decbytes",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 49,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "max(container_memory_rss{pod=~\"calico-typha.*\"})",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "2e8, 3e8",
+                "title": "Highest Typha Mem",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "current"
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Key Metrics",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 169,
+            "panels": [
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "kubernetes",
+                "format": "percent",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": true,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "id": 52,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 3,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "cluster_mem",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "75,90",
+                "title": "Cluster Memory Usage %",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "avg"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": false,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "kubernetes",
+                "format": "percent",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": true,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "id": 51,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 3,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "cluster_cpu",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "75,90",
+                "title": "Cluster CPU usage",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "avg"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": true,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "kubernetes",
+                "decimals": null,
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "id": 55,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 2,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "sum(kube_node_status_ready{condition!=\"true\"})",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "1,1",
+                "title": "NotReady nodes",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "avg"
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": true,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "kubernetes",
+                "decimals": null,
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "id": 53,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 1,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "tableColumn": "",
+                "targets": [
+                  {
+                    "expr": "sum(kube_node_status_disk_pressure{condition=\"true\"})",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": "1,1",
+                "title": "Nodes with Disk Pressure",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "avg"
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Cluster",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": "330",
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "dashLength": 10,
+                "dashes": false,
+                "datasource": "kubernetes",
+                "fill": 1,
+                "hideTimeOverride": false,
+                "id": 57,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "spaceLength": 10,
+                "span": 3,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "cluster_mem",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "refId": "A",
+                    "step": 20
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "2h",
+                "timeShift": null,
+                "title": "Cluster Memory",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "buckets": null,
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "decimals": 0,
+                    "format": "percent",
+                    "label": "",
+                    "logBase": 1,
+                    "max": "100",
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "none",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": false
+                  }
+                ]
+              },
+              {
+                "aliasColors": {},
+                "bars": false,
+                "dashLength": 10,
+                "dashes": false,
+                "datasource": "kubernetes",
+                "fill": 1,
+                "hideTimeOverride": false,
+                "id": 58,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "spaceLength": 10,
+                "span": 3,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "cluster_cpu",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "refId": "A",
+                    "step": 20
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "2h",
+                "timeShift": null,
+                "title": "Cluster CPU",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "buckets": null,
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "decimals": 0,
+                    "format": "percent",
+                    "label": "",
+                    "logBase": 1,
+                    "max": "100",
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "none",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": false
+                  }
+                ]
+              },
+              {
+                "aliasColors": {},
+                "bars": false,
+                "dashLength": 10,
+                "dashes": false,
+                "datasource": "kubernetes",
+                "fill": 1,
+                "hideTimeOverride": false,
+                "id": 56,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "spaceLength": 10,
+                "span": 3,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "sum(kube_node_status_ready{condition=\"true\"})",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "refId": "A",
+                    "step": 20
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "2h",
+                "timeShift": null,
+                "title": "Ready Nodes",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "buckets": null,
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "decimals": 0,
+                    "format": "none",
+                    "label": "",
+                    "logBase": 1,
+                    "max": null,
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "none",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": false
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Cluster",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": -1035,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "dashLength": 10,
+                "dashes": false,
+                "datasource": "kubernetes",
+                "fill": 1,
+                "height": "400px",
+                "id": 59,
+                "legend": {
+                  "alignAsTable": true,
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "rightSide": true,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "spaceLength": 10,
+                "span": 4,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "sum(container_memory_rss{pod=~\"calico-node.*\"}) by (pod)",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{ pod }}",
+                    "refId": "A",
+                    "step": 20
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "2h",
+                "timeShift": null,
+                "title": "Calico Node Memory",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "buckets": null,
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "decbytes",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              },
+              {
+                "aliasColors": {},
+                "bars": false,
+                "dashLength": 10,
+                "dashes": false,
+                "datasource": "kubernetes",
+                "fill": 1,
+                "height": "400px",
+                "id": 60,
+                "legend": {
+                  "alignAsTable": true,
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "rightSide": true,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "spaceLength": 10,
+                "span": 4,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "sum(container_memory_rss{pod=~\"calico-typha.*\"}) by (pod)",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{ pod }}",
+                    "refId": "A",
+                    "step": 20
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "2h",
+                "timeShift": null,
+                "title": "Calico Typha Memory",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "buckets": null,
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "decbytes",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              },
+              {
+                "aliasColors": {},
+                "bars": false,
+                "dashLength": 10,
+                "dashes": false,
+                "datasource": "kubernetes",
+                "fill": 1,
+                "height": "400px",
+                "id": 61,
+                "legend": {
+                  "alignAsTable": true,
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "rightSide": true,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "spaceLength": 10,
+                "span": 4,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "sum(container_memory_rss{pod=~\"prometheus-.*\"}) by (pod)",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{ pod }}",
+                    "refId": "A",
+                    "step": 20
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "2h",
+                "timeShift": null,
+                "title": "Prometheus Memory",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "buckets": null,
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "decbytes",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          }
+        ],
+        "schemaVersion": 14,
+        "style": "dark",
+        "tags": [],
+        "templating": {
+          "list": []
+        },
+        "time": {
+          "from": "now-5m",
+          "to": "now"
+        },
+        "timepicker": {
+          "refresh_intervals": [
+            "5s",
+            "10s",
+            "30s",
+            "1m",
+            "5m",
+            "15m",
+            "30m",
+            "1h",
+            "2h",
+            "1d"
+          ],
+          "time_options": [
+            "5m",
+            "15m",
+            "1h",
+            "6h",
+            "12h",
+            "24h",
+            "2d",
+            "7d",
+            "30d"
+          ]
+        },
+        "timezone": "browser",
+        "title": "Live Test Data",
+        "version": 4
+      }
+    }
+
+  post-test-dashboard.json: |
+    {
+      "dashboard": {
+        "annotations": {
+          "list": []
+        },
+        "description": "Data useful for post-test analysis. Some of this data has a high calculation cost, so it is not recommended you query during a test.",
+        "editable": true,
+        "gnetId": null,
+        "graphTooltip": 0,
+        "hideControls": false,
+        "id": null,
+        "links": [],
+        "refresh": false,
+        "rows": [
+          {
+            "collapse": false,
+            "height": "250px",
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "kubernetes",
+                "decimals": null,
+                "fill": 1,
+                "id": 1,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 6,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "pod_start_latency_microseconds{quantile=\"0.99\"}",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "refId": "A",
+                    "step": 120
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "99th Percentile Pod Start Latency",
+                "tooltip": {
+                  "shared": false,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "µs",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": false
+                  }
+                ]
+              },
+              {
+                "cacheTimeout": null,
+                "colorBackground": false,
+                "colorValue": true,
+                "colors": [
+                  "rgba(50, 172, 45, 0.97)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(245, 54, 54, 0.9)"
+                ],
+                "datasource": "kubernetes",
+                "format": "none",
+                "gauge": {
+                  "maxValue": 100,
+                  "minValue": 0,
+                  "show": false,
+                  "thresholdLabels": false,
+                  "thresholdMarkers": true
+                },
+                "height": "150px",
+                "id": 2,
+                "interval": null,
+                "links": [],
+                "mappingType": 1,
+                "mappingTypes": [
+                  {
+                    "name": "value to text",
+                    "value": 1
+                  },
+                  {
+                    "name": "range to text",
+                    "value": 2
+                  }
+                ],
+                "maxDataPoints": 100,
+                "nullPointMode": "connected",
+                "nullText": null,
+                "postfix": "",
+                "postfixFontSize": "50%",
+                "prefix": "",
+                "prefixFontSize": "50%",
+                "rangeMaps": [
+                  {
+                    "from": "null",
+                    "text": "N/A",
+                    "to": "null"
+                  }
+                ],
+                "span": 6,
+                "sparkline": {
+                  "fillColor": "rgba(31, 118, 189, 0.18)",
+                  "full": false,
+                  "lineColor": "rgb(31, 120, 193)",
+                  "show": false
+                },
+                "targets": [
+                  {
+                    "expr": "count(kubelet_pod_start_latency_microseconds{quantile=\"0.99\"} > 5e6)",
+                    "intervalFactor": 1,
+                    "refId": "A",
+                    "step": 300
+                  }
+                ],
+                "thresholds": "0,0",
+                "title": "Kubelets with 99th Percentile Pod Start Latency over 5s",
+                "type": "singlestat",
+                "valueFontSize": "80%",
+                "valueMaps": [
+                  {
+                    "op": "=",
+                    "text": "N/A",
+                    "value": "null"
+                  }
+                ],
+                "valueName": "avg"
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          }
+        ],
+        "schemaVersion": 14,
+        "style": "dark",
+        "tags": [],
+        "templating": {
+          "list": []
+        },
+        "time": {
+          "from": "now-5m",
+          "to": "now"
+        },
+        "timepicker": {
+          "refresh_intervals": [
+            "5s",
+            "10s",
+            "30s",
+            "1m",
+            "5m",
+            "15m",
+            "30m",
+            "1h",
+            "2h",
+            "1d"
+          ],
+          "time_options": [
+            "5m",
+            "15m",
+            "1h",
+            "6h",
+            "12h",
+            "24h",
+            "2d",
+            "7d",
+            "30d"
+          ]
+        },
+        "timezone": "browser",
+        "title": "Test Results Dashboard",
+        "version": 2
+      }
+    }
+
+  ttfp-details-dashboard.json: |
+    {
+      "dashboard": {
+        "annotations": {
+          "list": []
+        },
+        "editable": true,
+        "gnetId": null,
+        "graphTooltip": 0,
+        "hideControls": false,
+        "id": null,
+        "links": [],
+        "refresh": "10s",
+        "rows": [
+          {
+            "collapse": false,
+            "height": "250px",
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "prometheus-client",
+                "fill": 1,
+                "hideTimeOverride": false,
+                "id": 1,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": false,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 1,
+                "points": true,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "ttfp_seconds",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "TTFP Scatter",
+                "tooltip": {
+                  "shared": false,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "series",
+                  "name": null,
+                  "show": false,
+                  "values": [
+                    "current"
+                  ]
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": "TTFP",
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": false
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "prometheus-client",
+                "fill": 1,
+                "id": 2,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "ttfp_quantile{quantile=\"0.99\"}",
+                    "hide": false,
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "99%ile",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 2
+                  },
+                  {
+                    "expr": "ttfp_quantile{quantile=\"0.90\"}",
+                    "hide": false,
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "90%ile",
+                    "metric": "",
+                    "refId": "B",
+                    "step": 2
+                  },
+                  {
+                    "expr": "ttfp_quantile{quantile=\"0.80\"}",
+                    "hide": false,
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "80%ile",
+                    "metric": "",
+                    "refId": "C",
+                    "step": 2
+                  },
+                  {
+                    "expr": "ttfp_quantile{quantile=\"0.50\"}",
+                    "hide": false,
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "50%ile",
+                    "metric": "",
+                    "refId": "D",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "TTFP Percentiles vs Time",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "prometheus-client",
+                "fill": 1,
+                "id": 3,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "dropped_pings",
+                    "intervalFactor": 2,
+                    "legendFormat": "Failed connectivity checks",
+                    "metric": "ttfp_ping_responses",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "Dropped Pings",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "prometheus-client",
+                "fill": 1,
+                "id": 4,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "count(ttfp_seconds) by (node)",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "Cumulative TTFP Reports Per-Node",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "prometheus-client",
+                "fill": 1,
+                "id": 5,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "quantile(.99, ttfp_seconds) by (node)",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{node}}",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "99%ile TTFP By Node",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          }
+        ],
+        "schemaVersion": 14,
+        "style": "dark",
+        "tags": [],
+        "templating": {
+          "list": []
+        },
+        "time": {
+          "from": "now-5m",
+          "to": "now"
+        },
+        "timepicker": {
+          "refresh_intervals": [
+            "5s",
+            "10s",
+            "30s",
+            "1m",
+            "5m",
+            "15m",
+            "30m",
+            "1h",
+            "2h",
+            "1d"
+          ],
+          "time_options": [
+            "5m",
+            "15m",
+            "1h",
+            "6h",
+            "12h",
+            "24h",
+            "2d",
+            "7d",
+            "30d"
+          ]
+        },
+        "timezone": "utc",
+        "title": "TTFP Details",
+        "version": 2
+      }
+    }
+
+  felix-dashboard.json: |
+    {
+      "dashboard": {
+        "annotations": {
+          "list": []
+        },
+        "editable": true,
+        "gnetId": null,
+        "graphTooltip": 0,
+        "hideControls": false,
+        "id": null,
+        "links": [],
+        "refresh": "10s",
+        "rows": [
+          {
+            "collapse": false,
+            "height": "250px",
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "calico",
+                "fill": 1,
+                "id": 1,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "histogram_quantile(.99, felix_int_dataplane_apply_time_seconds_bucket)",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "99%ile Felix Dataplane Apply Time",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "dtdurations",
+                    "label": "",
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "dtdurationms",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": false
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "calico",
+                "fill": 1,
+                "id": 2,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "rate(process_cpu_seconds_total[30s]) * 100",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "Felix CPU by instance",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "percent",
+                    "label": "",
+                    "logBase": 1,
+                    "max": "100",
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "calico",
+                "fill": 1,
+                "id": 3,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "felix_resyncs_started",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "Felix Resyncs by instance",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": false
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          }
+        ],
+        "schemaVersion": 14,
+        "style": "dark",
+        "tags": [],
+        "templating": {
+          "list": []
+        },
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "timepicker": {
+          "refresh_intervals": [
+            "5s",
+            "10s",
+            "30s",
+            "1m",
+            "5m",
+            "15m",
+            "30m",
+            "1h",
+            "2h",
+            "1d"
+          ],
+          "time_options": [
+            "5m",
+            "15m",
+            "1h",
+            "6h",
+            "12h",
+            "24h",
+            "2d",
+            "7d",
+            "30d"
+          ]
+        },
+        "timezone": "browser",
+        "title": "Felix",
+        "version": 2
+      }
+    }
+
+  cpu-dashboard.json: |
+    {
+      "dashboard": {
+        "annotations": {
+          "list": []
+        },
+        "editable": true,
+        "gnetId": null,
+        "graphTooltip": 0,
+        "hideControls": false,
+        "id": null,
+        "links": [],
+        "refresh": "10s",
+        "rows": [
+          {
+            "collapse": false,
+            "height": "250px",
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "kubernetes",
+                "fill": 1,
+                "id": 1,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "100 - (avg by (instance) (irate(node_cpu{mode=\"idle\"}[2m])) * 100)",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "Total Node CPU Usage",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "percent",
+                    "label": "",
+                    "logBase": 1,
+                    "max": "100",
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "kubernetes",
+                "fill": 1,
+                "id": 3,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "cpu_calico_node",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{pod}}",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "calico/node CPU usage",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "percent",
+                    "label": "",
+                    "logBase": 1,
+                    "max": "100",
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": true,
+            "title": "Calico",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "kubernetes",
+                "fill": 1,
+                "id": 4,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 6,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "cpu_kube_proxy",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{pod}}",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "Kube Proxy CPU usage",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "percent",
+                    "label": "",
+                    "logBase": 1,
+                    "max": "100",
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              },
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "kubernetes",
+                "fill": 1,
+                "id": 8,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 6,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "cpu_kubelet",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "Kubelet CPU usage",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "percent",
+                    "label": "",
+                    "logBase": 1,
+                    "max": "100",
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": true,
+            "title": "Kubernetes",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "kubernetes",
+                "fill": 1,
+                "id": 6,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 6,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "cpu_client_pods",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "Usage due to client pods",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "percent",
+                    "label": "",
+                    "logBase": 1,
+                    "max": "100",
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              },
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "kubernetes",
+                "fill": 1,
+                "id": 7,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": false,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 6,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "cpu_server_pods",
+                    "interval": "",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "metric": "",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": null,
+                "timeShift": null,
+                "title": "Usage due to server pods",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "percent",
+                    "label": "",
+                    "logBase": 1,
+                    "max": "100",
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": true,
+            "title": "Client / Servers",
+            "titleSize": "h6"
+          }
+        ],
+        "schemaVersion": 14,
+        "style": "dark",
+        "tags": [],
+        "templating": {
+          "list": []
+        },
+        "time": {
+          "from": "now-5m",
+          "to": "now"
+        },
+        "timepicker": {
+          "refresh_intervals": [
+            "5s",
+            "10s",
+            "30s",
+            "1m",
+            "5m",
+            "15m",
+            "30m",
+            "1h",
+            "2h",
+            "1d"
+          ],
+          "time_options": [
+            "5m",
+            "15m",
+            "1h",
+            "6h",
+            "12h",
+            "24h",
+            "2d",
+            "7d",
+            "30d"
+          ]
+        },
+        "timezone": "browser",
+        "title": "CPU",
+        "version": 1
+      }
+    }
+
+  typha-dashboard.json: |
+    {
+      "dashboard": {
+        "annotations": {
+          "list": []
+        },
+        "editable": true,
+        "gnetId": null,
+        "graphTooltip": 0,
+        "hideControls": false,
+        "id": null,
+        "links": [],
+        "refresh": false,
+        "rows": [
+          {
+            "collapse": false,
+            "height": "250px",
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "Typha",
+                "fill": 1,
+                "id": 1,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 6,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "typha_connections_active",
+                    "interval": "2s",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "metric": "typha_connections_active",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "30m",
+                "timeShift": null,
+                "title": "Active Connections",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "transparent": false,
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": "",
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              },
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "Typha",
+                "fill": 1,
+                "id": 2,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 6,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "typha_connections_dropped",
+                    "interval": "2s",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "metric": "typha_connections_dropped",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "30m",
+                "timeShift": null,
+                "title": "Dropped Connections",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": "Number of dropped connections",
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": true,
+            "title": "Row title",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "Typha",
+                "fill": 1,
+                "id": 3,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "quantile(.99, typha_client_latency_secs_sum)",
+                    "interval": "2s",
+                    "intervalFactor": 2,
+                    "legendFormat": "",
+                    "metric": "typha_client_latency_secs_sum",
+                    "refId": "A",
+                    "step": 4
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "30m",
+                "timeShift": null,
+                "title": "99%ile Latency",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "Typha",
+                "fill": 1,
+                "id": 6,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "typha_client_latency_secs",
+                    "interval": "1000ms",
+                    "intervalFactor": 10,
+                    "legendFormat": "{{instance}}",
+                    "refId": "A",
+                    "step": 10
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "30m",
+                "timeShift": null,
+                "title": "Client Latency",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "Typha",
+                "fill": 1,
+                "hideTimeOverride": false,
+                "id": 4,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "rate(process_cpu_seconds_total[30s]) * 100",
+                    "interval": "100ms",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "metric": "process_cpu_seconds_total",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "30m",
+                "timeShift": null,
+                "title": "CPU Usage",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "percent",
+                    "label": "",
+                    "logBase": 1,
+                    "max": null,
+                    "min": "0",
+                    "show": true
+                  },
+                  {
+                    "format": "percent",
+                    "label": null,
+                    "logBase": 1,
+                    "max": "100",
+                    "min": "0",
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "Typha",
+                "fill": 1,
+                "height": "200px",
+                "id": 5,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "go_memstats_alloc_bytes",
+                    "interval": "200ms",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "metric": "go_memstats_alloc_bytes",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "30m",
+                "timeShift": null,
+                "title": "Memory Usage",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "bytes",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "bytes",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 294,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "Typha",
+                "fill": 1,
+                "height": "",
+                "id": 7,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 6,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "typha_breadcrumb_non_block",
+                    "interval": "1s",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "30m",
+                "timeShift": null,
+                "title": "Non-block Breadcrum",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              },
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "Typha",
+                "fill": 1,
+                "id": 8,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 6,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "typha_breadcrumb_block",
+                    "interval": "1s",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "30m",
+                "timeShift": null,
+                "title": "Block Breadcrum",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          },
+          {
+            "collapse": false,
+            "height": 250,
+            "panels": [
+              {
+                "aliasColors": {},
+                "bars": false,
+                "datasource": "Typha",
+                "fill": 1,
+                "id": 9,
+                "legend": {
+                  "avg": false,
+                  "current": false,
+                  "max": false,
+                  "min": false,
+                  "show": true,
+                  "total": false,
+                  "values": false
+                },
+                "lines": true,
+                "linewidth": 1,
+                "links": [],
+                "nullPointMode": "null",
+                "percentage": false,
+                "pointradius": 5,
+                "points": false,
+                "renderer": "flot",
+                "seriesOverrides": [],
+                "span": 12,
+                "stack": false,
+                "steppedLine": false,
+                "targets": [
+                  {
+                    "expr": "typha_breadcrumb_size",
+                    "interval": "1s",
+                    "intervalFactor": 2,
+                    "legendFormat": "{{instance}}",
+                    "refId": "A",
+                    "step": 2
+                  }
+                ],
+                "thresholds": [],
+                "timeFrom": "30m",
+                "timeShift": null,
+                "title": "Breadcrumb Size",
+                "tooltip": {
+                  "shared": true,
+                  "sort": 0,
+                  "value_type": "individual"
+                },
+                "type": "graph",
+                "xaxis": {
+                  "mode": "time",
+                  "name": null,
+                  "show": true,
+                  "values": []
+                },
+                "yaxes": [
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  },
+                  {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                  }
+                ]
+              }
+            ],
+            "repeat": null,
+            "repeatIteration": null,
+            "repeatRowId": null,
+            "showTitle": false,
+            "title": "Dashboard Row",
+            "titleSize": "h6"
+          }
+        ],
+        "schemaVersion": 14,
+        "style": "dark",
+        "tags": [],
+        "templating": {
+          "list": []
+        },
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "timepicker": {
+          "refresh_intervals": [
+            "5s",
+            "10s",
+            "30s",
+            "1m",
+            "5m",
+            "15m",
+            "30m",
+            "1h",
+            "2h",
+            "1d"
+          ],
+          "time_options": [
+            "5m",
+            "15m",
+            "1h",
+            "6h",
+            "12h",
+            "24h",
+            "2d",
+            "7d",
+            "30d"
+          ]
+        },
+        "timezone": "browser",
+        "title": "Typha",
+        "version": 1
+      }
+    }
+
+  flow-log-dashboard.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "gnetId": null,
+      "graphTooltip": 0,
+      "hideControls": false,
+      "id": 7,
+      "links": [],
+      "refresh": "10s",
+      "rows": [
+        {
+          "collapse": false,
+          "height": "250px",
+          "panels": [
+            {
+              "aliasColors": {},
+              "bars": false,
+              "dashLength": 10,
+              "dashes": false,
+              "datasource": "prometheus-client",
+              "fill": 1,
+              "id": 1,
+              "legend": {
+                "avg": false,
+                "current": false,
+                "max": false,
+                "min": false,
+                "show": true,
+                "total": false,
+                "values": false
+              },
+              "lines": true,
+              "linewidth": 1,
+              "links": [],
+              "nullPointMode": "null",
+              "percentage": false,
+              "pointradius": 5,
+              "points": false,
+              "renderer": "flot",
+              "seriesOverrides": [],
+              "spaceLength": 10,
+              "span": 12,
+              "stack": false,
+              "steppedLine": false,
+              "targets": [
+                {
+                  "expr": "linseed_request_duration_seconds",
+                  "format": "time_series",
+                  "intervalFactor": 2,
+                  "refId": "A",
+                  "step": 2
+                }
+              ],
+              "thresholds": [],
+              "timeFrom": null,
+              "timeShift": null,
+              "title": "99%ile linseed API response time",
+              "tooltip": {
+                "shared": true,
+                "sort": 0,
+                "value_type": "individual"
+              },
+              "type": "graph",
+              "xaxis": {
+                "buckets": null,
+                "mode": "time",
+                "name": null,
+                "show": true,
+                "values": []
+              },
+              "yaxes": [
+                {
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                },
+                {
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                }
+              ]
+            }
+          ],
+          "repeat": null,
+          "repeatIteration": null,
+          "repeatRowId": null,
+          "showTitle": false,
+          "title": "Dashboard Row",
+          "titleSize": "h6"
+        },
+        {
+          "collapse": false,
+          "height": 250,
+          "panels": [
+            {
+              "aliasColors": {},
+              "bars": false,
+              "dashLength": 10,
+              "dashes": false,
+              "datasource": "prometheus-client",
+              "fill": 1,
+              "id": 2,
+              "legend": {
+                "avg": false,
+                "current": false,
+                "max": false,
+                "min": false,
+                "show": true,
+                "total": false,
+                "values": false
+              },
+              "lines": true,
+              "linewidth": 1,
+              "links": [],
+              "nullPointMode": "null",
+              "percentage": false,
+              "pointradius": 5,
+              "points": false,
+              "renderer": "flot",
+              "seriesOverrides": [],
+              "spaceLength": 10,
+              "span": 12,
+              "stack": false,
+              "steppedLine": false,
+              "targets": [
+                {
+                  "expr": "histogram_quantile(0.99, rate(linseed_request_duration_seconds_bucket[2m]))",
+                  "format": "time_series",
+                  "intervalFactor": 2,
+                  "refId": "A",
+                  "step": 2
+                }
+              ],
+              "thresholds": [],
+              "timeFrom": null,
+              "timeShift": null,
+              "title": "99%ile over last 2m",
+              "tooltip": {
+                "shared": true,
+                "sort": 0,
+                "value_type": "individual"
+              },
+              "type": "graph",
+              "xaxis": {
+                "buckets": null,
+                "mode": "time",
+                "name": null,
+                "show": true,
+                "values": []
+              },
+              "yaxes": [
+                {
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                },
+                {
+                  "format": "short",
+                  "label": null,
+                  "logBase": 1,
+                  "max": null,
+                  "min": null,
+                  "show": true
+                }
+              ]
+            }
+          ],
+          "repeat": null,
+          "repeatIteration": null,
+          "repeatRowId": null,
+          "showTitle": false,
+          "title": "Dashboard Row",
+          "titleSize": "h6"
+        }
+      ],
+      "schemaVersion": 14,
+      "style": "dark",
+      "tags": [],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-30m",
+        "to": "now"
+      },
+      "timepicker": {
+        "refresh_intervals": [
+          "5s",
+          "10s",
+          "30s",
+          "1m",
+          "5m",
+          "15m",
+          "30m",
+          "1h",
+          "2h",
+          "1d"
+        ],
+        "time_options": [
+          "5m",
+          "15m",
+          "1h",
+          "6h",
+          "12h",
+          "24h",
+          "2d",
+          "7d",
+          "30d"
+        ]
+      },
+      "timezone": "",
+      "title": "Flow log generation",
+      "version": 4
+    }

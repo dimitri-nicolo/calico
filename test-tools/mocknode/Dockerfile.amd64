@@ -35,5 +35,5 @@ LABEL name="Calico mock node" \
 # Copy in the filesystem - this contains licenses, etc...
 COPY filesystem/licenses/ /licenses
 # And the mock-node itself...
-COPY bin/mocknode-amd64 /usr/bin/mocknode
+COPY bin/test-tools/mocknode-amd64 /usr/bin/mocknode
 CMD /usr/bin/mocknode

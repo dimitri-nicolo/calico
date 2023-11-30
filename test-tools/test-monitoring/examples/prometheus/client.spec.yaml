@@ -1,0 +1,128 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: client
+  namespace: tigera-fluentd
+spec:
+  # Update this selector to choose the nodes you want to run this Prometheus on.
+  # If you don't care, then delete the node selector entirely.
+  nodeSelector:
+    kubernetes.io/os: linux
+  retention: 48h
+  version: v2.17.1
+  serviceMonitorSelector:
+    matchLabels:
+      role: prometheus-servicemonitor
+      prometheus: client
+  ruleSelector:
+    matchLabels:
+      role: prometheus-rulefiles
+      prometheus: client
+  resources:
+    requests:
+      cpu: __PROMETHEUS_HIGH_CPU__
+      memory: __PROMETHEUS_HIGH_MEM__
+    limits:
+      cpu: __PROMETHEUS_HIGH_CPU__
+      memory: __PROMETHEUS_HIGH_MEM__
+  serviceAccountName: prometheus-client
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: flow-log-gen-metrics-svc
+  namespace: tigera-fluentd
+  labels:
+    k8s-app: flow-log-gen
+  annotations:
+    prometheus.io/scrape: 'true'
+spec:
+  selector:
+    k8s-app: flow-log-gen
+  ports:
+  - name: metrics
+    protocol: TCP
+    port: 2112
+    targetPort: metrics
+  clusterIP: None
+
+---
+# Monitor the log generator
+kind: ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  name: flow-log-gen-metrics-svc
+  namespace: tigera-fluentd
+  labels:
+    role: prometheus-servicemonitor
+    prometheus: client
+spec:
+  selector:
+    matchLabels:
+      k8s-app: flow-log-gen
+  endpoints:
+  - port: metrics
+    interval: 10s
+# ---
+# apiVersion: monitoring.coreos.com/v1
+# kind: PodMonitor
+# metadata:
+#   name: example-app
+#   labels:
+#     team: frontend
+# spec:
+#   selector:
+#     matchLabels:
+#       k8s-app: flow-log-gen
+#   podMetricsEndpoints:
+#   - port: metrics
+# ---
+# apiVersion: monitoring.coreos.com/v1
+# kind: Prometheus
+# metadata:
+#   name: prometheus
+# spec:
+#   serviceAccountName: prometheus
+#   podMonitorSelector:
+#     matchLabels:
+#       team: frontend
+#   resources:
+#     requests:
+#       memory: 400Mi
+#   enableAdminAPI: false
+---
+# A service for the prometheus UI
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-client
+  namespace: tigera-fluentd
+spec:
+  type: LoadBalancer
+  ports:
+  - name: web
+    nodePort: 30300
+    port: 9090
+    protocol: TCP
+    targetPort: web
+  selector:
+    prometheus: client
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-client
+  namespace: tigera-fluentd
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-client
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: prometheus-client
+  namespace: tigera-fluentd

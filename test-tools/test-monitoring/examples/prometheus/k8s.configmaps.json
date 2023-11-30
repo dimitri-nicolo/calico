@@ -1,0 +1,7 @@
+{
+    "items": [
+        {
+            "key": "tigera-fluentd/prometheus-k8s-rules"
+        }
+    ]
+}

@@ -1,0 +1,177 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: k8s
+  namespace: tigera-fluentd
+spec:
+  # Update this selector to choose the nodes you want to run this Prometheus on.
+  # If you don't care, then delete the node selector entirely.
+  nodeSelector:
+    kubernetes.io/os: linux
+  # Only store data for 2 hours. This helps us conserve disk space and memory,
+  # since most tests don't longer than a couple of hours anyway.
+  retention: 2h
+  version: v2.17.2
+  resources:
+    requests:
+      cpu: __PROMETHEUS_HIGH_CPU__
+      memory: __PROMETHEUS_HIGH_MEM__
+    limits:
+      cpu: __PROMETHEUS_HIGH_CPU__
+      memory: __PROMETHEUS_HIGH_MEM__
+  ruleSelector:
+    matchLabels:
+      role: prometheus-rulefiles
+      prometheus: k8s
+  serviceAccountName: prometheus-k8s
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-k8s
+  namespace: tigera-fluentd
+spec:
+  type: LoadBalancer
+  ports:
+  - name: web
+    nodePort: 30900
+    port: 9090
+    protocol: TCP
+    targetPort: web
+  selector:
+    prometheus:  k8s
+---
+# Per-node exporters, etc.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-state-metrics
+  namespace: tigera-fluentd
+spec:
+  selector:
+    matchLabels:
+      app: kube-state-metrics
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kube-state-metrics
+    spec:
+      serviceAccountName: prometheus-k8s
+      containers:
+      - name: kube-state-metrics
+        image: gcr.io/google_containers/kube-state-metrics:v0.5.0
+        args: ["--collectors", "daemonsets,deployments,nodes,replicasets,replicationcontrollers"]
+        ports:
+        - name: metrics
+          containerPort: 8080
+        resources:
+          requests:
+            memory: 500Mi
+            cpu: 100m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: 'true'
+  labels:
+    app: kube-state-metrics
+  name: kube-state-metrics
+  namespace: tigera-fluentd
+spec:
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: metrics
+    protocol: TCP
+  selector:
+    app: kube-state-metrics
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: tigera-fluentd
+spec:
+  selector:
+    matchLabels:
+      app: node-exporter
+  template:
+    metadata:
+      labels:
+        app: node-exporter
+      name: node-exporter
+    spec:
+      serviceAccountName: prometheus-k8s
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - image:  quay.io/prometheus/node-exporter:v0.13.0
+        args:
+        - "-collector.procfs=/host/proc"
+        - "-collector.sysfs=/host/sys"
+        name: node-exporter
+        ports:
+        - containerPort: 9100
+          hostPort: 9100
+          name: scrape
+        resources:
+          requests:
+            memory: 30Mi
+            cpu: 100m
+          limits:
+            memory: 50Mi
+            cpu: 200m
+        volumeMounts:
+        - name: proc
+          readOnly:  true
+          mountPath: /host/proc
+        - name: sys
+          readOnly: true
+          mountPath: /host/sys
+      volumes:
+      - name: proc
+        hostPath:
+          path: /proc
+      - name: sys
+        hostPath:
+          path: /sys
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: node-exporter
+  annotations:
+    prometheus.io/scrape: 'true'
+  name: node-exporter
+  namespace: tigera-fluentd
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: 9100
+    protocol: TCP
+  selector:
+    app: node-exporter
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-k8s
+  namespace: tigera-fluentd
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-k8s
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: prometheus-k8s
+  namespace: tigera-fluentd

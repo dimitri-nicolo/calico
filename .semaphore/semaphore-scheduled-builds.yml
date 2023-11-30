@@ -65,6 +65,10 @@ promotions:
   pipeline_file: push-images/mock-node.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push flow-log-generator images
+  pipeline_file: push-images/flow-log-generator.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push compliance images
   pipeline_file: push-images/compliance.yml
   auto_promote:
@@ -610,16 +614,27 @@ blocks:
       commands:
       - .semaphore/run-and-monitor e2e-test.log make e2e-test
 
+- name: "Flow log generator"
+  run:
+    when: "true or change_in(['/*', '/test-tools/flow-log-generator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    jobs:
+    - name: "Flow log generator"
+      commands:
+      - cd test-tools/flow-log-generator
+      - ../../.semaphore/run-and-monitor make-ci.log make ci
+
 - name: "Mock node"
   run:
-    when: "true or change_in(['/*', '/mocknode/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "true or change_in(['/*', '/test-tools/mocknode/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     jobs:
     - name: "Mock node"
       commands:
-      - cd mocknode
-      - ../.semaphore/run-and-monitor make-ci.log make ci
+      - cd test-tools/mocknode
+      - ../../.semaphore/run-and-monitor make-ci.log make ci
 
 - name: "kube-controllers: Tests"
   run:

@@ -1,0 +1,43 @@
+# Derived from ./manifests
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: kube-system
+  labels:
+    app: grafana
+spec:
+  selector:
+    matchLabels:
+      app: grafana
+  replicas: 1
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      # Update this selector to choose the nodes you want to run Grafana on.
+      # If you don't care, then delete the node selector entirely.
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - image: grafana/grafana:4.5.2
+        name: grafana
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: __GRAFANA_CPU__
+            memory: __GRAFANA_MEM__
+        ports:
+        - containerPort: 3000
+          name: grafana
+          protocol: TCP
+        env:
+          - name: GF_AUTH_BASIC_ENABLED
+            value: "false"
+          - name: GF_AUTH_ANONYMOUS_ENABLED
+            value: "true"
+          - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+            value: Admin

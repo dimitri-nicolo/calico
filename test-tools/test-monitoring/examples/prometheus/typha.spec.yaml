@@ -1,0 +1,100 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: calico-typha
+  namespace: calico-system
+spec:
+  # Update this selector to choose the nodes you want to run this Prometheus on.
+  # If you don't care, then delete the node selector entirely.
+  nodeSelector:
+    kubernetes.io/os: linux
+  # Only store data for 4 hours. This helps us conserve disk space,
+  # since most tests don't longer than a couple of hours anyway.
+  retention: 4h
+  version: v2.17.1
+  resources:
+    requests:
+      cpu: __PROMETHEUS_CPU__
+      memory: __PROMETHEUS_MEM__
+    limits:
+      cpu: __PROMETHEUS_CPU__
+      memory: __PROMETHEUS_MEM__
+  serviceMonitorSelector:
+    matchLabels:
+      app: calico-typha
+  ruleSelector:
+    matchLabels:
+      role: prometheus-rulefiles
+      prometheus: typha
+  serviceAccountName: prometheus-typha
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: calico-typha
+  namespace: calico-system
+  labels:
+    app: calico-typha
+spec:
+  selector:
+    matchLabels:
+      app: calico-typha-prometheus
+  endpoints:
+  - port: web
+    interval: 10s
+---
+# This is the Service that exposes the Prometheus UI to the user.
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-calico-typha
+  namespace: calico-system
+spec:
+  type: LoadBalancer
+  ports:
+  - name: web
+    nodePort: 30400
+    port: 9090
+    protocol: TCP
+    targetPort: web
+  selector:
+    prometheus: calico-typha
+---
+# This is the Service that is monitored for endpoints, and
+# tells Prometheus how to access Typha's Prometheus server.
+kind: Service
+apiVersion: v1
+metadata:
+  name: calico-typha-prometheus
+  namespace: calico-system
+  labels:
+    app: calico-typha-prometheus
+  annotations:
+    prometheus.io/scrape: 'true'
+spec:
+  selector:
+    k8s-app: calico-typha
+  ports:
+  - name: web
+    protocol: TCP
+    port: 9093
+  clusterIP: None
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-typha
+  namespace: calico-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-typha
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: prometheus-typha
+  namespace: calico-system

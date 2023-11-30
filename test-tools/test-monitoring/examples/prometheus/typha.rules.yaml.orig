@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: prometheus-typha-rules
+  namespace: calico-system
+  labels:
+    role: prometheus-rulefiles
+    prometheus: typha
+spec:
+  groups:
+  - name: typha.rules
+    rules:
+    - record: max_cpu
+      expr: max((avg by (instance) (irate(process_cpu_seconds_total[5m]))) * 100)
+    - record: max_mem
+      expr: max(go_memstats_alloc_bytes)

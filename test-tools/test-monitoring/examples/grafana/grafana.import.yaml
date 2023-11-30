@@ -1,0 +1,69 @@
+# This batch job waits until Grafana is running,
+# then configures it's datasources and dashboards using the info defined in the
+# above configmap.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: grafana-import
+  namespace: kube-system
+  labels:
+    app: grafana-import
+    component: import-dashboards
+spec:
+  template:
+    metadata:
+      name: grafana-import
+      labels:
+        app: grafana-import
+    spec:
+      # Update this selector to choose the nodes you want to run Grafana on.
+      # If you don't care, then delete the node selector entirely.
+      nodeSelector:
+        kubernetes.io/os: linux
+      initContainers:
+      - name: wait-for-endpoints
+        image: giantswarm/tiny-tools
+        imagePullPolicy: IfNotPresent
+        command: ["fish", "-c", "echo \"waiting for endpoints...\"; while true; set endpoints (curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --header \"Authorization: Bearer \"(cat /var/run/secrets/kubernetes.io/serviceaccount/token) https://kubernetes.default.svc/api/v1/namespaces/kube-system/endpoints/grafana); echo $endpoints | jq \".\"; if test (echo $endpoints | jq -r \".subsets[].addresses | length\") -gt 0; exit 0; end; echo \"waiting...\";sleep 1; end"]
+        args: ["monitoring", "grafana"]
+      containers:
+      - name: grafana-import
+        image: giantswarm/tiny-tools
+        command: ["/bin/sh", "-c"]
+        args:
+          - >
+            for file in /opt/datasources/*-datasource.json ; do
+              if [ -e "$file" ] ; then
+                echo "importing $file" &&
+                curl --silent --fail --show-error \
+                  --request POST http://admin:admin@grafana:3000/api/datasources \
+                  --header "Content-Type: application/json" \
+                  --data-binary "@$file" ;
+                echo "" ;
+              fi
+            done;
+            for file in /opt/dashboards/*-dashboard.json ; do
+              if [ -e "$file" ] ; then
+                echo "importing $file" &&
+                cat "$file" \
+                | jq -c '.' \
+                | curl --silent --fail --show-error \
+                  --request POST http://admin:admin@grafana:3000/api/dashboards/import \
+                  --header "Content-Type: application/json" \
+                  --data-binary "@-" ;
+                echo "" ;
+              fi
+            done
+        volumeMounts:
+        - name: grafana-datasources
+          mountPath: /opt/datasources
+        - name: grafana-dashboards
+          mountPath: /opt/dashboards
+      restartPolicy: Never
+      volumes:
+      - name: grafana-datasources
+        configMap:
+          name: grafana-datasources
+      - name: grafana-dashboards
+        configMap:
+          name: grafana-dashboards
