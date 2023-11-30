@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hpcloud/tail"
+	"github.com/nxadm/tail"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
