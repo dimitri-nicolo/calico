@@ -71,9 +71,9 @@ RUN mkdir /var/log/snort /var/log/snort-alerts \
     && snort -c /usr/local/etc/snort/snort.lua -T
 
 # Install snort 3 rule
-RUN mkdir -p /usr/local/etc/rules \
-    && curl -sfL https://www.snort.org/downloads/community/snort3-community-rules.tar.gz -o snort3-community-rules.tar.gz \
-    && tar xzf snort3-community-rules.tar.gz -C /usr/local/etc/rules/
+RUN mkdir -p /usr/local/etc/rules
+
+COPY docker-image/snort3-community.rules /usr/local/etc/rules/snort3-community.rules
 
 
 FROM scratch
