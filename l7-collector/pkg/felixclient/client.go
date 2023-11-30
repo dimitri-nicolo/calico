@@ -8,8 +8,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/l7-collector/pkg/collector"
-	"github.com/projectcalico/calico/l7-collector/proto"
 )
 
 const (
@@ -153,7 +153,7 @@ func (fc *felixClient) dataplaneStatsFromL7Log(logData collector.EnvoyLog) *prot
 		},
 	}
 
-	d.HttpData = []*proto.HttpData{
+	d.HttpData = []*proto.HTTPData{
 		{
 			Duration:      logData.Duration,
 			ResponseCode:  logData.ResponseCode,

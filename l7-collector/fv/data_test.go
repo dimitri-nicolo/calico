@@ -3,7 +3,7 @@
 package fv_test
 
 import (
-	"github.com/projectcalico/calico/l7-collector/proto"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 var (
@@ -28,8 +28,8 @@ var (
 		SrcPort:  int32(34368),
 		DstPort:  int32(80),
 		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
-		HttpData: []*proto.HttpData{
-			&proto.HttpData{
+		HttpData: []*proto.HTTPData{
+			{
 				Duration:      3,
 				ResponseCode:  200,
 				BytesSent:     33,
@@ -44,7 +44,7 @@ var (
 			},
 		},
 		Stats: []*proto.Statistic{
-			&proto.Statistic{
+			{
 				Direction:  proto.Statistic_IN,
 				Relativity: proto.Statistic_DELTA,
 				Kind:       proto.Statistic_HTTP_DATA,
@@ -60,8 +60,8 @@ var (
 		SrcPort:  int32(34368),
 		DstPort:  int32(80),
 		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
-		HttpData: []*proto.HttpData{
-			&proto.HttpData{
+		HttpData: []*proto.HTTPData{
+			{
 				Duration:      9,
 				ResponseCode:  200,
 				BytesSent:     99,
@@ -76,7 +76,7 @@ var (
 			},
 		},
 		Stats: []*proto.Statistic{
-			&proto.Statistic{
+			{
 				Direction:  proto.Statistic_IN,
 				Relativity: proto.Statistic_DELTA,
 				Kind:       proto.Statistic_HTTP_DATA,
@@ -92,7 +92,7 @@ var (
 		SrcPort:  int32(34368),
 		DstPort:  int32(80),
 		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
-		HttpData: []*proto.HttpData{
+		HttpData: []*proto.HTTPData{
 			{
 				Duration:      3,
 				ResponseCode:  200,
