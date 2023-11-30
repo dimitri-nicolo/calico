@@ -23,7 +23,7 @@ import (
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/fileutils"
 
-	"github.com/hpcloud/tail"
+	"github.com/nxadm/tail"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"

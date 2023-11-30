@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hpcloud/tail"
+	"github.com/nxadm/tail"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/ingress-collector/pkg/config"
