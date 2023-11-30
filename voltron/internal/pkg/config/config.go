@@ -93,7 +93,6 @@ type Config struct {
 	CalicoCloudRbacApiCABundlePath string `split_words:"true"`
 	CalicoCloudRbacApiEndpoint     string `split_words:"true"`
 	CalicoCloudRequireTenantClaim  bool   `split_words:"true"`
-	CalicoCloudTenantClaim         string `split_words:"true"`
 	CalicoCloudCorsHost            string `split_words:"true"`
 
 	// Dex settings
@@ -112,6 +111,8 @@ type Config struct {
 	OIDCAuthGroupsClaim     string        `default:"groups" split_words:"true"`
 	OIDCAuthGroupsPrefix    string        `split_words:"true"`
 	OIDCTokenReviewCacheTTL time.Duration `default:"0" split_words:"true"`
+	// This will enable tenant claims check on the Bearer token presented on a request
+	RequireTenantClaim bool `split_words:"true"`
 
 	// The DefaultForward parameters configure where connections from guardian should be forwarded to by default
 	ForwardingEnabled               bool          `default:"true" split_words:"true"`

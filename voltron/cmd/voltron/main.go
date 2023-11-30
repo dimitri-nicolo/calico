@@ -214,7 +214,7 @@ func main() {
 			if cfg.HTTPAccessLoggingIncludeAuthGroups {
 				logOpts = append(logOpts, accesslog.WithStringArrayJWTClaim(cfg.OIDCAuthGroupsClaim, "groups"))
 			}
-			if cfg.CalicoCloudRequireTenantClaim {
+			if cfg.CalicoCloudRequireTenantClaim || cfg.RequireTenantClaim {
 				logOpts = append(logOpts, accesslog.WithStringJWTClaim(server.CalicoCloudTenantIDClaimName, "ccTenantID"))
 			}
 		}
@@ -336,11 +336,11 @@ func main() {
 			auth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
 			auth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
 		}
-		if cfg.CalicoCloudRequireTenantClaim {
-			if cfg.CalicoCloudTenantClaim == "" {
-				log.Panic("Tenant claim not specified")
+		if cfg.CalicoCloudRequireTenantClaim || cfg.RequireTenantClaim {
+			if cfg.TenantID == "" {
+				log.Panic("Tenant ID not specified")
 			}
-			authOpts = append(authOpts, auth.WithCalicoCloudTenantClaim(cfg.CalicoCloudTenantClaim))
+			authOpts = append(authOpts, auth.WithCalicoCloudTenantClaim(cfg.TenantID))
 		}
 
 		oidcAuth, err := auth.NewDexAuthenticator(
