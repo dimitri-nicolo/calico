@@ -326,25 +326,29 @@ var _ = Describe("SearchElasticHits", func() {
 			setLinseedResponse(lsResp)
 			setExpectedQuery(lsQuery)
 
-			params := &v1.SearchRequest{
-				ClusterName: "cl_name_val",
-				PageSize:    100,
-				PageNum:     0,
-				TimeRange: &lmav1.TimeRange{
-					From: mustParseTime("2021-04-19T21:25:30Z"),
-					To:   mustParseTime("2021-04-19T22:25:30Z"),
+			pageSize := 100
+			params := &v1.FlowLogSearchRequest{
+				CommonSearchRequest: v1.CommonSearchRequest{
+					ClusterName: "cl_name_val",
+					PageSize:    &pageSize,
+					PageNum:     0,
+					TimeRange: &lmav1.TimeRange{
+						From: mustParseTime("2021-04-19T21:25:30Z"),
+						To:   mustParseTime("2021-04-19T22:25:30Z"),
+					},
+					SortBy: []v1.SearchRequestSortBy{{
+						Field:      "test",
+						Descending: true,
+					}, {
+						Field:      "test2",
+						Descending: false,
+					}},
+					Timeout: &metav1.Duration{Duration: 60 * time.Second},
 				},
-				SortBy: []v1.SearchRequestSortBy{{
-					Field:      "test",
-					Descending: true,
-				}, {
-					Field:      "test2",
-					Descending: false,
-				}},
-				Timeout: &metav1.Duration{Duration: 60 * time.Second},
+				PolicyMatches: []v1.PolicyMatch{},
 			}
 
-			results, err := search(ctx, SearchTypeFlows, params, userAuthReview, fakeClientSet, client)
+			results, err := searchFlowLogs(ctx, client, params, userAuthReview, fakeClientSet)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results.NumPages).To(Equal(1))
 			Expect(results.TotalHits).To(Equal(2))
@@ -429,9 +433,10 @@ var _ = Describe("SearchElasticHits", func() {
 				},
 			)
 
-			params := &v1.SearchRequest{
+			pageSize := 100
+			params := &v1.CommonSearchRequest{
 				ClusterName: "cl_name_val",
-				PageSize:    100,
+				PageSize:    &pageSize,
 				PageNum:     0,
 				Filter: []json.RawMessage{
 					json.RawMessage(`{"range":{"time":{"gte":"2022-01-24T00:00:00Z","lte":"2022-01-31T23:59:59Z"}}}`),
@@ -444,7 +449,7 @@ var _ = Describe("SearchElasticHits", func() {
 				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
-			results, err := search(ctx, SearchTypeEvents, params, userAuthReview, fakeClientSet, client)
+			results, err := searchEvents(ctx, client, params, userAuthReview, fakeClientSet)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results.NumPages).To(Equal(1))
 			Expect(results.TotalHits).To(Equal(2))
@@ -473,18 +478,21 @@ var _ = Describe("SearchElasticHits", func() {
 				Items:     []lapi.FlowLog{},
 			})
 
-			params := &v1.SearchRequest{
-				ClusterName: "cl_name_val",
-				PageSize:    100,
-				PageNum:     0,
-				TimeRange: &lmav1.TimeRange{
-					From: fromTime,
-					To:   toTime,
+			pageSize := 100
+			params := &v1.FlowLogSearchRequest{
+				CommonSearchRequest: v1.CommonSearchRequest{
+					ClusterName: "cl_name_val",
+					PageSize:    &pageSize,
+					PageNum:     0,
+					TimeRange: &lmav1.TimeRange{
+						From: fromTime,
+						To:   toTime,
+					},
+					Timeout: &metav1.Duration{Duration: 60 * time.Second},
 				},
-				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
-			results, err := search(ctx, SearchTypeFlows, params, userAuthReview, fakeClientSet, client)
+			results, err := searchFlowLogs(ctx, client, params, userAuthReview, fakeClientSet)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results.NumPages).To(Equal(1))
 			Expect(results.Took.Milliseconds()).To(BeNumerically(">", (int64(0))))
@@ -501,21 +509,24 @@ var _ = Describe("SearchElasticHits", func() {
 			// Delay linseed response by 1 second.
 			setLinseedDelay(1 * time.Second)
 
-			params := &v1.SearchRequest{
-				ClusterName: "cl_name_val",
-				PageSize:    100,
-				PageNum:     0,
-				TimeRange: &lmav1.TimeRange{
-					From: fromTime,
-					To:   toTime,
+			pageSize := 100
+			params := &v1.FlowLogSearchRequest{
+				CommonSearchRequest: v1.CommonSearchRequest{
+					ClusterName: "cl_name_val",
+					PageSize:    &pageSize,
+					PageNum:     0,
+					TimeRange: &lmav1.TimeRange{
+						From: fromTime,
+						To:   toTime,
+					},
+					Timeout: &metav1.Duration{Duration: 5 * time.Millisecond}, // Timeout after just a few ms.
 				},
-				Timeout: &metav1.Duration{Duration: 5 * time.Millisecond}, // Timeout after just a few ms.
 			}
 
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Millisecond)
 			defer cancel()
 
-			results, err := search(ctx, SearchTypeFlows, params, userAuthReview, fakeClientSet, client)
+			results, err := searchFlowLogs(ctx, client, params, userAuthReview, fakeClientSet)
 			Expect(err).To(HaveOccurred())
 			var se *httputils.HttpStatusError
 			Expect(errors.As(err, &se)).To(BeTrue())
@@ -530,18 +541,21 @@ var _ = Describe("SearchElasticHits", func() {
 
 			setLinseedResponseError(fmt.Errorf("An error!"))
 
-			params := &v1.SearchRequest{
-				ClusterName: "cl_name_val",
-				PageSize:    100,
-				PageNum:     0,
-				TimeRange: &lmav1.TimeRange{
-					From: fromTime,
-					To:   toTime,
+			pageSize := 100
+			params := &v1.FlowLogSearchRequest{
+				CommonSearchRequest: v1.CommonSearchRequest{
+					ClusterName: "cl_name_val",
+					PageSize:    &pageSize,
+					PageNum:     0,
+					TimeRange: &lmav1.TimeRange{
+						From: fromTime,
+						To:   toTime,
+					},
+					Timeout: &metav1.Duration{Duration: 60 * time.Second},
 				},
-				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
-			results, err := search(ctx, SearchTypeFlows, params, userAuthReview, fakeClientSet, client)
+			results, err := searchFlowLogs(ctx, client, params, userAuthReview, fakeClientSet)
 			Expect(err).To(HaveOccurred())
 
 			var httpErr *httputils.HttpStatusError
@@ -552,25 +566,13 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 	})
 
-	Context("parseRequestBodyForParams response validation", func() {
-		It("Should parse x-cluster-id in the request header when cluster is missing in body", func() {
-			r, err := http.NewRequest(
-				http.MethodGet, "", bytes.NewReader([]byte(validRequestBodyNoCluster)))
-			Expect(err).NotTo(HaveOccurred())
-			r.Header.Add("x-cluster-id", "cluster-id-in-header")
-
-			var w http.ResponseWriter
-			searchRequest, err := parseRequestBodyForParams(w, r)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(searchRequest.ClusterName).To(Equal("cluster-id-in-header"))
-		})
-
+	Context("parseBody response validation", func() {
 		It("Should return a SearchError when http request not POST or GET", func() {
 			var w http.ResponseWriter
 			r, err := http.NewRequest(http.MethodPut, "", bytes.NewReader([]byte(validRequestBody)))
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = parseRequestBodyForParams(w, r)
+			_, err = parseBody[v1.CommonSearchRequest](w, r)
 			Expect(err).To(HaveOccurred())
 			var se *httputils.HttpStatusError
 			Expect(errors.As(err, &se)).To(BeTrue())
@@ -582,52 +584,70 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			_, err = parseRequestBodyForParams(w, r)
+			_, err = parseBody[v1.CommonSearchRequest](w, r)
 			Expect(err).To(HaveOccurred())
 
 			var mr *httputils.HttpStatusError
 			Expect(errors.As(err, &mr)).To(BeTrue())
 		})
+	})
 
-		It("Should return an error when parsing a page size that is greater than lte", func() {
+	Context("defaultAndValidateCommonRequest defaulting and validating parseBody result", func() {
+		It("Should parse x-cluster-id in the request header when cluster is missing in body", func() {
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(validRequestBodyNoCluster)))
+			Expect(err).NotTo(HaveOccurred())
+			r.Header.Add("x-cluster-id", "cluster-id-in-header")
+
+			var w http.ResponseWriter
+			searchRequest, err := parseBody[v1.CommonSearchRequest](w, r)
+			Expect(err).NotTo(HaveOccurred())
+			err = defaultAndValidateCommonRequest(r, searchRequest)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(searchRequest.ClusterName).To(Equal("cluster-id-in-header"))
+		})
+
+		It("Should return an error when validating a page size that is greater than lte", func() {
 			r, err := http.NewRequest(
 				http.MethodGet, "", bytes.NewReader([]byte(validRequestBodyPageSizeGreaterThanLTE)))
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			_, err = parseRequestBodyForParams(w, r)
+			searchRequest, err := parseBody[v1.CommonSearchRequest](w, r)
+			Expect(err).NotTo(HaveOccurred())
+			err = defaultAndValidateCommonRequest(r, searchRequest)
 			Expect(err).To(HaveOccurred())
 
 			var se *httputils.HttpStatusError
 			Expect(errors.As(err, &se)).To(BeTrue())
 			Expect(se.Status).To(Equal(400))
-			Expect(se.Msg).To(Equal("error with field PageSize = '1001' (Reason: failed to validate Field: PageSize " +
-				"because of Tag: lte )"))
+			Expect(se.Msg).To(Equal("error with field PageSize = '1001' (Reason: failed to validate Field: PageSize because of Tag: lte )"))
 		})
 
-		It("Should return an error when parsing a page size that is less than gte", func() {
+		It("Should return an error when validating a page size that is less than gte", func() {
 			r, err := http.NewRequest(
 				http.MethodGet, "", bytes.NewReader([]byte(validRequestBodyPageSizeLessThanGTE)))
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			_, err = parseRequestBodyForParams(w, r)
+			searchRequest, err := parseBody[v1.CommonSearchRequest](w, r)
+			Expect(err).NotTo(HaveOccurred())
+			err = defaultAndValidateCommonRequest(r, searchRequest)
 			Expect(err).To(HaveOccurred())
 
 			var se *httputils.HttpStatusError
 			Expect(errors.As(err, &se)).To(BeTrue())
 			Expect(se.Status).To(Equal(400))
-			Expect(se.Msg).To(Equal("error with field PageSize = '-1' (Reason: failed to validate Field: PageSize "+
-				"because of Tag: gte )"), se.Msg)
+			Expect(se.Msg).To(Equal("error with field PageSize = '-1' (Reason: failed to validate Field: PageSize because of Tag: gt )"), se.Msg)
 		})
 
-		It("Should return an error when parsing an invalid value for time_range value", func() {
+		It("Should return an error when validating an invalid value for time_range value", func() {
 			r, err := http.NewRequest(
 				http.MethodGet, "", bytes.NewReader([]byte(invalidRequestBodyTimeRangeContainsInvalidTimeValue)))
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			_, err = parseRequestBodyForParams(w, r)
+			_, err = parseBody[v1.CommonSearchRequest](w, r)
 			Expect(err).To(HaveOccurred())
 
 			var se *httputils.HttpStatusError
@@ -637,26 +657,32 @@ var _ = Describe("SearchElasticHits", func() {
 				"field (at position 20)"), se.Msg)
 		})
 
-		It("Should parse request that have only from", func() {
+		It("Should parse & validate request that have only from", func() {
 			r, err := http.NewRequest(
 				http.MethodGet, "", bytes.NewReader([]byte(validRequestBodyOnlyFrom)))
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			searchRequest, err := parseRequestBodyForParams(w, r)
+			searchRequest, err := parseBody[v1.CommonSearchRequest](w, r)
 			Expect(err).NotTo(HaveOccurred())
+			err = defaultAndValidateCommonRequest(r, searchRequest)
+			Expect(err).NotTo(HaveOccurred())
+
 			Expect(searchRequest.TimeRange.From).NotTo(Equal(time.Time{}))
 			Expect(searchRequest.TimeRange.To).NotTo(Equal(time.Time{}))
 		})
 
-		It("Should parse request that have only to", func() {
+		It("Should parse & validate request that have only to", func() {
 			r, err := http.NewRequest(
 				http.MethodGet, "", bytes.NewReader([]byte(validRequestBodyOnlyTo)))
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			searchRequest, err := parseRequestBodyForParams(w, r)
+			searchRequest, err := parseBody[v1.CommonSearchRequest](w, r)
 			Expect(err).NotTo(HaveOccurred())
+			err = defaultAndValidateCommonRequest(r, searchRequest)
+			Expect(err).NotTo(HaveOccurred())
+
 			Expect(searchRequest.TimeRange.From).To(Equal(time.Time{}))
 			Expect(searchRequest.TimeRange.To).NotTo(Equal(time.Time{}))
 		})
@@ -925,6 +951,20 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte("invalid-json-body")))
+			Expect(err).NotTo(HaveOccurred())
+
+			rr := httptest.NewRecorder()
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should return error when request body is not valid", func() {
+			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
+			Expect(err).NotTo(HaveOccurred())
+
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte("{\"policy_matches\": [{}]}")))
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()

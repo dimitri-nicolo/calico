@@ -1,30 +1,28 @@
-// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
 package search
 
 import (
 	"context"
+	gojson "encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
-	gojson "encoding/json"
-
 	"github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/es-proxy/pkg/math"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
@@ -37,68 +35,102 @@ const (
 	SearchTypeEvents
 )
 
-const (
-	defaultPageSize = 100
-)
+type RequestType interface {
+	v1.CommonSearchRequest | v1.FlowLogSearchRequest
+}
 
 // SearchHandler is a handler for the /search endpoint.
 //
-// Uses a request body (JSON.blob) to extract parameters to build an elasticsearch query,
-// executes it and returns the results.
+// Calls different handlers based on the SearchType - flowLogTypeSearchHandler for SearchTypeFlows and commonTypeSearchHandler
+// for other types.
 func SearchHandler(t SearchType, authReview middleware.AuthorizationReview, k8sClient datastore.ClientSet, lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse request body onto search parameters. If an error occurs while decoding define an http
 		// error and return.
-		request, err := parseRequestBodyForParams(w, r)
+		var response *v1.SearchResponse
+		var err error
+		switch t {
+		case SearchTypeFlows:
+			response, err = flowlogTypeSearchHandler(authReview, k8sClient, lsclient, w, r)
+		default:
+			response, err = commonTypeSearchHandler(t, authReview, k8sClient, lsclient, w, r)
+		}
+
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
 		}
 
-		// Create a context with timeout to ensure we don't block for too long with this query.
-		// This releases timer resources if the operation completes before the timeout.
-		ctx, cancel := context.WithTimeout(r.Context(), request.Timeout.Duration)
-		defer cancel()
-
-		// Perform the search.
-		response, err := search(ctx, t, request, authReview, k8sClient, lsclient)
-		if err != nil {
-			httputils.EncodeError(w, err)
-			return
-		}
 		httputils.Encode(w, response)
 	})
 }
 
-// search is a helper for performing a search. We split this out into a separate function to make it easier to
-// unit test without requiring a full HTTP handler.
-func search(
-	ctx context.Context,
-	t SearchType,
-	request *v1.SearchRequest,
-	authReview middleware.AuthorizationReview,
-	k8sClient datastore.ClientSet,
-	lsclient client.Client,
-) (*v1.SearchResponse, error) {
-	// Perform the search based on the type.
+// flowlogTypeSearchHandler handles flowlog search requests.
+//
+// Uses a request body (JSON.blob) to extract parameters to build an elasticsearch query,
+// executes it and returns the results.
+func flowlogTypeSearchHandler(authReview middleware.AuthorizationReview, k8sClient datastore.ClientSet,
+	lsclient client.Client, w http.ResponseWriter, r *http.Request) (*v1.SearchResponse, error) {
+
+	// Decode the request
+	searchRequest, err := parseBody[v1.FlowLogSearchRequest](w, r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate request and set defaults
+	err = defaultAndValidateCommonRequest(r, &searchRequest.CommonSearchRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a context with timeout to ensure we don't block for too long with this query.
+	// This releases timer resources if the operation completes before the timeout.
+	ctx, cancel := context.WithTimeout(r.Context(), searchRequest.Timeout.Duration)
+	defer cancel()
+
+	// Perform the search.
+	return searchFlowLogs(ctx, lsclient, searchRequest, authReview, k8sClient)
+}
+
+// commonTypeSearchHandler handles dnslogs, l7logs, and event search requests.
+//
+// Uses a request body (JSON.blob) to extract parameters to build an elasticsearch query,
+// executes it and returns the results.
+func commonTypeSearchHandler(t SearchType, authReview middleware.AuthorizationReview, k8sClient datastore.ClientSet,
+	lsclient client.Client, w http.ResponseWriter, r *http.Request) (*v1.SearchResponse, error) {
+	// Decode the request
+	searchRequest, err := parseBody[v1.CommonSearchRequest](w, r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate request and set defaults
+	err = defaultAndValidateCommonRequest(r, searchRequest)
+	if err != nil {
+		return nil, err
+	}
+	// Create a context with timeout to ensure we don't block for too long with this query.
+	// This releases timer resources if the operation completes before the timeout.
+	ctx, cancel := context.WithTimeout(r.Context(), searchRequest.Timeout.Duration)
+	defer cancel()
+
+	// Perform the search.
 	switch t {
-	case SearchTypeFlows:
-		return searchFlowLogs(ctx, lsclient, request, authReview, k8sClient)
 	case SearchTypeDNS:
-		return searchDNSLogs(ctx, lsclient, request, authReview, k8sClient)
+		return searchDNSLogs(ctx, lsclient, searchRequest, authReview, k8sClient)
 	case SearchTypeL7:
-		return searchL7Logs(ctx, lsclient, request, authReview, k8sClient)
+		return searchL7Logs(ctx, lsclient, searchRequest, authReview, k8sClient)
 	case SearchTypeEvents:
-		return searchEvents(ctx, lsclient, request, authReview, k8sClient)
+		return searchEvents(ctx, lsclient, searchRequest, authReview, k8sClient)
 	}
 	return nil, fmt.Errorf("Unhandled search type")
 }
 
-// parseRequestBodyForParams extracts query parameters from the request body (JSON.blob) and
-// validates them.
+// parseBody extracts query parameters from the request body (JSON.blob) into RequestType.
 //
 // Will define an http.Error if an error occurs.
-func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.SearchRequest, error) {
+func parseBody[T RequestType](w http.ResponseWriter, r *http.Request) (*T, error) {
 	// Validate http method.
 	if r.Method != http.MethodGet && r.Method != http.MethodPost {
 		logrus.WithError(middleware.ErrInvalidMethod).Info("Invalid http method.")
@@ -110,20 +142,16 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 		}
 	}
 
-	// Initialize the search parameters to their default values.
-	params := v1.SearchRequest{
-		PageSize: defaultPageSize,
-		Timeout:  &metav1.Duration{Duration: middleware.DefaultRequestTimeout},
-	}
+	params := new(T)
 
 	// Decode the http request body into the struct.
-	if err := httputils.Decode(w, r, &params); err != nil {
+	if err := httputils.Decode(w, r, params); err != nil {
 		var mr *httputils.HttpStatusError
 		if errors.As(err, &mr) {
 			logrus.WithError(mr.Err).Info(mr.Msg)
 			return nil, mr
 		} else {
-			logrus.WithError(mr.Err).Info("Error validating /search request.")
+			logrus.WithError(mr.Err).Info("Error parsing /search request.")
 			return nil, &httputils.HttpStatusError{
 				Status: http.StatusMethodNotAllowed,
 				Msg:    http.StatusText(http.StatusInternalServerError),
@@ -132,9 +160,30 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 		}
 	}
 
+	return params, nil
+}
+
+// defaultAndValidateCommonRequest validates CommonSearchRequest fields and defaults them where needed.
+//
+// Will define an http.Error if an error occurs.
+func defaultAndValidateCommonRequest(r *http.Request, c *v1.CommonSearchRequest) error {
+	// Initialize the search parameters to their default values.
+	if c == nil {
+		return fmt.Errorf("SearchRequest is not initialized before validation")
+	}
+
+	if c.PageSize == nil {
+		size := elastic.DefaultPageSize
+		c.PageSize = &size
+	}
+
+	if c.Timeout == nil {
+		c.Timeout = &metav1.Duration{Duration: middleware.DefaultRequestTimeout}
+	}
+
 	// Validate parameters.
-	if err := validator.Validate(params); err != nil {
-		return nil, &httputils.HttpStatusError{
+	if err := validator.Validate(c); err != nil {
+		return &httputils.HttpStatusError{
 			Status: http.StatusBadRequest,
 			Msg:    err.Error(),
 			Err:    err,
@@ -142,13 +191,13 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	}
 
 	// Set cluster name to default: "cluster", if empty.
-	if params.ClusterName == "" {
-		params.ClusterName = middleware.MaybeParseClusterNameFromRequest(r)
+	if c.ClusterName == "" {
+		c.ClusterName = middleware.MaybeParseClusterNameFromRequest(r)
 	}
 
 	// Check that we are not attempting to enumerate more than the maximum number of results.
-	if params.PageNum*params.PageSize > middleware.MaxNumResults {
-		return nil, &httputils.HttpStatusError{
+	if c.PageNum*(*c.PageSize) > middleware.MaxNumResults {
+		return &httputils.HttpStatusError{
 			Status: http.StatusBadRequest,
 			Msg:    "page number overflow",
 			Err:    errors.New("page number / Page size combination is too large"),
@@ -158,8 +207,8 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	// At the moment, we only support a single sort by field.
 	// TODO(rlb): Need to check the fields are valid for the index type. Maybe something else for the
 	// index helper.
-	if len(params.SortBy) > 1 {
-		return nil, &httputils.HttpStatusError{
+	if len(c.SortBy) > 1 {
+		return &httputils.HttpStatusError{
 			Status: http.StatusBadRequest,
 			Msg:    "too many sort fields specified",
 			Err:    errors.New("too many sort fields specified"),
@@ -167,11 +216,11 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	}
 
 	// We want to allow user to be able to select using only From the UI
-	if params.TimeRange != nil && params.TimeRange.To.IsZero() && !params.TimeRange.From.IsZero() {
-		params.TimeRange.To = time.Now().UTC()
+	if c.TimeRange != nil && c.TimeRange.To.IsZero() && !c.TimeRange.From.IsZero() {
+		c.TimeRange.To = time.Now().UTC()
 	}
 
-	return &params, nil
+	return nil
 }
 
 func validateSelector(selector string, t SearchType) error {
@@ -211,7 +260,7 @@ func validateSelector(selector string, t SearchType) error {
 }
 
 // intoLogParams converts a request into the given Linseed API parameters.
-func intoLogParams(ctx context.Context, t SearchType, request *v1.SearchRequest, params lapi.LogParams, authReview middleware.AuthorizationReview) error {
+func intoLogParams(ctx context.Context, t SearchType, request *v1.CommonSearchRequest, params lapi.LogParams, authReview middleware.AuthorizationReview) error {
 	// Add in the selector.
 	if len(request.Selector) > 0 {
 		// Validate the selector. Linseed performs the same check, but
@@ -257,12 +306,12 @@ func intoLogParams(ctx context.Context, t SearchType, request *v1.SearchRequest,
 
 	// Configure pagination, timeout, etc.
 	params.SetTimeout(request.Timeout)
-	params.SetMaxPageSize(request.PageSize)
+	params.SetMaxPageSize(*request.PageSize)
 	if request.PageNum != 0 {
 		// TODO: Ideally, clients don't know the format of the AfterKey. In order to satisfy
 		// the exising UI API, we need to for now.
 		params.SetAfterKey(map[string]interface{}{
-			"startFrom": request.PageNum * request.PageSize,
+			"startFrom": request.PageNum * (*request.PageSize),
 		})
 	}
 
@@ -273,15 +322,37 @@ func intoLogParams(ctx context.Context, t SearchType, request *v1.SearchRequest,
 func searchFlowLogs(
 	ctx context.Context,
 	lsclient client.Client,
-	request *v1.SearchRequest,
+	request *v1.FlowLogSearchRequest,
 	authReview middleware.AuthorizationReview,
 	k8sClient datastore.ClientSet,
 ) (*v1.SearchResponse, error) {
+	// build base params.
 	params := &lapi.FlowLogParams{}
-	err := intoLogParams(ctx, SearchTypeFlows, request, params, authReview)
+
+	if len(request.PolicyMatches) > 0 {
+		var policyMatches []lapi.PolicyMatch
+		for _, item := range request.PolicyMatches {
+			if (item != v1.PolicyMatch{}) {
+				pm := lapi.PolicyMatch{
+					Name:      item.Name,
+					Namespace: item.Namespace,
+					Action:    item.Action,
+					Tier:      item.Tier,
+				}
+				policyMatches = append(policyMatches, pm)
+			}
+		}
+		if len(policyMatches) > 0 {
+			params.PolicyMatches = policyMatches
+		}
+	}
+
+	// Merge in common search request parameters.
+	err := intoLogParams(ctx, SearchTypeFlows, &request.CommonSearchRequest, params, authReview)
 	if err != nil {
 		return nil, err
 	}
+
 	listFn := lsclient.FlowLogs(request.ClusterName).List
 	return searchLogs(ctx, listFn, params, authReview, k8sClient)
 }
@@ -290,7 +361,7 @@ func searchFlowLogs(
 func searchDNSLogs(
 	ctx context.Context,
 	lsclient client.Client,
-	request *v1.SearchRequest,
+	request *v1.CommonSearchRequest,
 	authReview middleware.AuthorizationReview,
 	k8sClient datastore.ClientSet,
 ) (*v1.SearchResponse, error) {
@@ -307,7 +378,7 @@ func searchDNSLogs(
 func searchL7Logs(
 	ctx context.Context,
 	lsclient client.Client,
-	request *v1.SearchRequest,
+	request *v1.CommonSearchRequest,
 	authReview middleware.AuthorizationReview,
 	k8sClient datastore.ClientSet,
 ) (*v1.SearchResponse, error) {
@@ -324,7 +395,7 @@ func searchL7Logs(
 func searchEvents(
 	ctx context.Context,
 	lsclient client.Client,
-	request *v1.SearchRequest,
+	request *v1.CommonSearchRequest,
 	authReview middleware.AuthorizationReview,
 	k8sClient datastore.ClientSet,
 ) (*v1.SearchResponse, error) {

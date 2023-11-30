@@ -14,6 +14,12 @@ type FlowLogParams struct {
 	LogSelectionParams `json:",inline"`
 
 	IPMatches []IPMatch `json:"ip_matches" validate:"omitempty"`
+
+	// PolicyMatches selects flowlogs based on whether an action is taken on the flowlog
+	// by the provided tier.
+	// For example, return flowlogs which are allowed by the default tier.
+	// If multiple PolicyMatches are provided, they are combined with a logical OR.
+	PolicyMatches []PolicyMatch `json:"policy_matches"`
 }
 
 type IPMatch struct {

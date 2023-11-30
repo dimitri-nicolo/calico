@@ -220,13 +220,17 @@ func (b *flowBackend) BaseQuery() *lmaelastic.CompositeAggregationQuery {
 func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.L3FlowParams) (*v1.List[v1.L3Flow], error) {
 	log := bapi.ContextLogger(i)
 
-	if err := i.Valid(); err != nil {
+	err := i.Valid()
+	if err != nil {
 		return nil, err
 	}
 
 	// Build the aggregation request.
 	query := b.BaseQuery()
-	query.Query = b.buildQuery(i, opts)
+	query.Query, err = b.buildQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
 	query.DocumentIndex = b.index.Index(i)
 	query.MaxBucketsPerQuery = opts.GetMaxPageSize()
 	log.Debugf("Listing flows from index %s", query.DocumentIndex)
@@ -330,7 +334,7 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) elastic.Query {
+func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) (elastic.Query, error) {
 	query := b.queryHelper.BaseQuery(i)
 
 	// Every request has at least a time-range limitation.
@@ -427,12 +431,13 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) elas
 
 	if len(opts.PolicyMatches) > 0 {
 		// Filter-in any flow logs that match any of the given policy matches.
-		b := elastic.NewBoolQuery()
-		for _, m := range opts.PolicyMatches {
-			b.Should(policyQuery(m))
+		q, err := BuildPolicyMatchQuery(opts.PolicyMatches)
+		if err != nil {
+			return nil, err
 		}
-		b.MinimumNumberShouldMatch(1)
-		query.Filter(b)
+		if q != nil {
+			query.Filter(q)
+		}
 	}
 
 	// Add in label selectors, if specified.
@@ -443,37 +448,7 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) elas
 		query.Filter(buildLabelSelectorFilter(opts.DestinationSelectors, "dest_labels"))
 	}
 
-	return query
-}
-
-func policyQuery(m v1.PolicyMatch) elastic.Query {
-	index := "*"
-	tier := "*"
-	name := "*"
-	action := "*"
-	if m.Tier != "" {
-		tier = m.Tier
-	}
-
-	// Names can look differently depending on the type of hit.
-	// - Namespaced policy: <namespace>/<tier>.<name>
-	// - Global / Profile: <tier>.<name>
-	if m.Name != nil {
-		name = fmt.Sprintf("%s.%s", tier, *m.Name)
-	}
-	if m.Namespace != nil {
-		name = fmt.Sprintf("%s/%s", *m.Namespace, name)
-	}
-	if m.Action != nil {
-		action = string(*m.Action)
-	}
-
-	// Policy strings are formatted like so:
-	// <index> | <tier> | <name> | <action> | <ruleID>
-	matchString := fmt.Sprintf("%s|%s|%s|%s*", index, tier, name, action)
-	logrus.WithField("match", matchString).Debugf("Matching on policy string")
-	wildcard := elastic.NewWildcardQuery("policies.all_policies", matchString)
-	return elastic.NewNestedQuery("policies", wildcard)
+	return query, nil
 }
 
 // IMPORTANT: This function does not create the correct Elasticsearch query from the label selector and needs to be redone.

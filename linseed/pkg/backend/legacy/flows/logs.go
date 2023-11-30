@@ -229,6 +229,7 @@ func (b *flowLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.FlowLogParams) (
 	} else {
 		query.Sort(b.queryHelper.GetTimeField(), true)
 	}
+
 	return query, startFrom, nil
 }
 
@@ -264,6 +265,15 @@ func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.FlowLogParams) 
 				).MinimumNumberShouldMatch(1))
 			}
 		}
+	}
+
+	// Configure policy match.
+	q, err := BuildPolicyMatchQuery(opts.PolicyMatches)
+	if err != nil {
+		return nil, err
+	}
+	if q != nil {
+		query.Filter(q)
 	}
 
 	return query, nil

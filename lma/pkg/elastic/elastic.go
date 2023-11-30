@@ -23,11 +23,10 @@ import (
 )
 
 const (
-	DefaultPageSize = 100
-
 	createIndexMaxRetries    = 3
 	createIndexRetryInterval = 1 * time.Second
 	applicationName          = "lma"
+	DefaultPageSize          = 100
 )
 
 type IndexTemplate struct {

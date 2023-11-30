@@ -69,7 +69,7 @@ type L3FlowParams struct {
 	// PolicyMatches selects flows based on whether an action is taken on the flow
 	// by the provided tier.
 	// For example, return flows which are allowed by the default tier.
-	// If multiple tiers are provided, they are combined with a logical OR.
+	// If multiple PolicyMatches are provided, they are combined with a logical OR.
 	PolicyMatches []PolicyMatch `json:"policy_matches"`
 
 	// Statistics will include different metrics for the L3 flows that are queried
@@ -81,14 +81,15 @@ type L3FlowParams struct {
 // PolicyMatch allows matching on a policy when querying flow logs.
 type PolicyMatch struct {
 	// Tier for the policy.
-	Tier string `json:"tier"`
+	Tier string `json:"tier,omitempty" validate:"omitempty"`
 
 	// The action taken by the policy.
-	Action *FlowAction `json:"action"`
+	Action *FlowAction `json:"action,omitempty" validate:"omitempty"`
 
-	// Namespace and name of the policy.
-	Namespace *string `json:"namespace"`
-	Name      *string `json:"name"`
+	// Namespace and name of the policy. If Tier and Name are provided but Namespace is not, it means we are matching
+	// for global (non-namespaced) policies.
+	Namespace *string `json:"namespace,omitempty" validate:"omitempty"`
+	Name      *string `json:"name,omitempty" validate:"omitempty"`
 }
 
 type MatchType string

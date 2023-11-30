@@ -337,6 +337,102 @@ func TestFlowLogFiltering(t *testing.T) {
 			ExpectLog1: false,
 			ExpectLog2: false,
 		},
+		{
+			Name: "should support selection when only tier is specified",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Tier: "custom-tier",
+					},
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: true,
+		},
+		{
+			Name: "should support selection with policy tier and namespace match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Tier:      "allow-tigera",
+						Namespace: testutils.StringPtr("openshift-dns"),
+					},
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
+		{
+			Name: "should support selection with policy tier,name, and namespace match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Tier:      "allow-tigera",
+						Namespace: testutils.StringPtr("openshift-dns"),
+						Name:      testutils.StringPtr("cluster-dns"),
+					},
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
+		{
+			Name: "should support selection with policy action and namespace match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Namespace: testutils.StringPtr("kube-system"),
+						Action:    ActionPtr(v1.FlowActionPass),
+					},
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: true,
+		},
+		{
+			Name: "should select global policy when name and tier are set but namespace is not",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Name: testutils.StringPtr("malicious-traffic"),
+						Tier: "allow-tigera",
+					},
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: false,
+		},
+		{
+			Name: "should support selection with policy action=allow match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Action: ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
+		{
+			Name: "should support selection with policy action=deny match",
+			Params: v1.FlowLogParams{
+				QueryParams: v1.QueryParams{},
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Action: ActionPtr(v1.FlowActionDeny),
+					},
+				},
+			},
+			ExpectLog1: false,
+			ExpectLog2: true,
+		},
 	}
 
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
@@ -372,7 +468,9 @@ func TestFlowLogFiltering(t *testing.T) {
 					WithSourceIP("34.15.66.3").
 					WithRandomFlowStats().WithRandomPacketStats().
 					WithReporter("src").WithAction("allowed").
-					WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none")
+					WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none").
+					WithPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").
+					WithPolicy("0|allow-tigera|openshift-dns/mallicious-dns|pass|1")
 
 				fl1, err := bld.Build()
 				require.NoError(t, err)
@@ -392,7 +490,9 @@ func TestFlowLogFiltering(t *testing.T) {
 					WithSourceIP("192.168.1.1").
 					WithRandomFlowStats().WithRandomPacketStats().
 					WithReporter("src").WithAction("allowed").
-					WithSourceLabels("cheese=brie")
+					WithSourceLabels("cheese=brie").
+					WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
+					WithPolicy("1|custom-tier|custom-tier.my-deployment-dns|deny|1")
 				fl2, err := bld2.Build()
 				require.NoError(t, err)
 
