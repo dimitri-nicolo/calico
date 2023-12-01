@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	ConfigVarNamespace     = "tigera-operator"
+	ConfigVarNamespace     = "tigera-intrusion-detection"
 	ConditionHealthy       = "Healthy"
 	ConditionHealthyDesc   = "the webhook is healthy"
 	ConditionLastFetch     = "EventsFetched"
