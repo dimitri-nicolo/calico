@@ -44,7 +44,11 @@ build: bin/controller-$(ARCH)
 
 .PHONY: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/controller/controller.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/controller/controller.go, $@)
+else
+	$(call build_binary, cmd/controller/controller.go, $@)
+endif
 
 ###############################################################################
 # Building the images

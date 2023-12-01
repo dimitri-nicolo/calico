@@ -41,7 +41,11 @@ build: bin/deep-packet-inspection-$(ARCH)
 
 .PHONY: bin/deep-packet-inspection-$(ARCH)
 bin/deep-packet-inspection-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/*.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/*.go, $@)
+else
+	$(call build_binary, cmd/*.go, $@)
+endif
 
 ###############################################################################
 # BUILD IMAGE

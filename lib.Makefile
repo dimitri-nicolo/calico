@@ -157,27 +157,6 @@ endif
 GO_BUILD_IMAGE ?= calico/go-build
 CALICO_BUILD    = $(GO_BUILD_IMAGE):$(GO_BUILD_VER)
 
-# Build a static binary with boring crypto support.
-# This function expects you to pass in two arguments:
-#   1st arg: path/to/input/package(s)
-#   2nd arg: path/to/output/binary
-# Only when arch = amd64 it will use boring crypto to build the binary.
-# Uses LDFLAGS, CGO_LDFLAGS, CGO_CFLAGS when set.
-# Tests that the resulting binary contains boringcrypto symbols.
-define build_static_cgo_boring_binary
-    $(DOCKER_RUN) \
-        -e CGO_ENABLED=1 \
-        -e CGO_LDFLAGS=$(CGO_LDFLAGS) \
-        -e CGO_CFLAGS=$(CGO_CFLAGS) \
-        $(GO_BUILD_IMAGE):$(GO_BUILD_VER) \
-        sh -c '$(GIT_CONFIG_SSH) \
-            GOEXPERIMENT=boringcrypto go build -o $(2)  \
-            -tags fipsstrict,osusergo,netgo$(if $(BUILD_TAGS),$(comma)$(BUILD_TAGS)) -v -buildvcs=false \
-            -ldflags "$(LDFLAGS) -s -w -linkmode external -extldflags -static" \
-            $(1) \
-            && strings $(2) | grep '_Cfunc__goboringcrypto_' 1>/dev/null'
-endef
-
 # Build a binary with boring crypto support.
 # This function expects you to pass in two arguments:
 #   1st arg: path/to/input/package(s)
@@ -186,55 +165,53 @@ endef
 # Uses LDFLAGS, CGO_LDFLAGS, CGO_CFLAGS when set.
 # Tests that the resulting binary contains boringcrypto symbols.
 define build_cgo_boring_binary
-    $(DOCKER_RUN) \
-        -e CGO_ENABLED=1 \
-        -e CGO_LDFLAGS=$(CGO_LDFLAGS) \
-        -e CGO_CFLAGS=$(CGO_CFLAGS) \
-        $(GO_BUILD_IMAGE):$(GO_BUILD_VER) \
-        sh -c '$(GIT_CONFIG_SSH) \
-            GOEXPERIMENT=boringcrypto go build -o $(2)  \
-            -tags fipsstrict$(if $(BUILD_TAGS),$(comma)$(BUILD_TAGS)) -v -buildvcs=false \
-            -ldflags "$(LDFLAGS) -s -w" \
-            $(1) \
-            && strings $(2) | grep '_Cfunc__goboringcrypto_' 1>/dev/null'
+	$(DOCKER_RUN) \
+		-e CGO_ENABLED=1 \
+		-e CGO_CFLAGS=$(CGO_CFLAGS) \
+		-e CGO_LDFLAGS=$(CGO_LDFLAGS) \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) GOEXPERIMENT=boringcrypto go build -o $(2) -tags fipsstrict -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" $(1) \
+			&& strings $(2) | grep '_Cfunc__goboringcrypto_' 1> /dev/null'
 endef
 
 # Use this when building binaries that need cgo, but have no crypto and therefore would not contain any boring symbols.
 define build_cgo_binary
-    $(DOCKER_RUN) \
-        -e CGO_ENABLED=1 \
-        -e CGO_LDFLAGS=$(CGO_LDFLAGS) \
-        -e CGO_CFLAGS=$(CGO_CFLAGS) \
-        $(GO_BUILD_IMAGE):$(GO_BUILD_VER) \
-        sh -c '$(GIT_CONFIG_SSH) \
-            go build -o $(2)  \
-            -v -buildvcs=false \
-            -ldflags "$(LDFLAGS) -s -w" \
-            $(1)'
+	$(DOCKER_RUN) \
+		-e CGO_ENABLED=1 \
+		-e CGO_CFLAGS=$(CGO_CFLAGS) \
+		-e CGO_LDFLAGS=$(CGO_LDFLAGS) \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" $(1)'
 endef
 
 # For binaries that do not require boring crypto.
 define build_binary
-    $(DOCKER_RUN) \
-        -e CGO_ENABLED=0 \
-        $(GO_BUILD_IMAGE):$(GO_BUILD_VER) \
-        sh -c '$(GIT_CONFIG_SSH) \
-            go build -o $(2)  \
-            -v -buildvcs=false \
-            -ldflags "$(LDFLAGS) -s -w" \
-            $(1)'
+	$(DOCKER_RUN) \
+		-e CGO_ENABLED=0 \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" $(1)'
 endef
 
-# For binaries that do not require boring crypto.
-define build_static_binary
-        $(DOCKER_RUN) $(GO_BUILD_IMAGE):$(GO_BUILD_VER) \
-                sh -c '$(GIT_CONFIG_SSH) \
-                go build -o $(2)  \
-                -v -buildvcs=false \
-                -ldflags "$(LDFLAGS) -linkmode external -extldflags -static" \
-                $(1)'
+# For windows builds that require cgo.
+define build_cgo_windows_binary
+	$(DOCKER_RUN) \
+		-e CC=x86_64-w64-mingw32-gcc \
+		-e CGO_ENABLED=1 \
+		-e GOARCH=amd64 \
+		-e GOOS=windows \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) -v -buildvcs=false -ldflags "$(LDFLAGS)" $(1)'
 endef
 
+# For windows builds that do not require cgo.
+define build_windows_binary
+	$(DOCKER_RUN) \
+		-e CGO_ENABLED=0 \
+		-e GOARCH=amd64 \
+		-e GOOS=windows \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) go build -o $(2) -v -buildvcs=false -ldflags "$(LDFLAGS)" $(1)'
+endef
 
 # Images used in build / test across multiple directories.
 PROTOC_CONTAINER=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)

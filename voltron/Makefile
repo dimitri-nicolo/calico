@@ -57,11 +57,19 @@ build: $(BINDIR)/voltron-$(ARCH) $(BINDIR)/guardian-$(ARCH)
 
 .PHONY: $(BINDIR)/voltron-$(ARCH)
 $(BINDIR)/voltron-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, ./cmd/voltron/main.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd/voltron/main.go, $@)
+else
+	$(call build_binary, ./cmd/voltron/main.go, $@)
+endif
 
 .PHONY: $(BINDIR)/guardian-$(ARCH)
 $(BINDIR)/guardian-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, ./cmd/guardian/main.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd/guardian/main.go, $@)
+else
+	$(call build_binary, ./cmd/guardian/main.go, $@)
+endif
 
 #############################################
 # Docker Image

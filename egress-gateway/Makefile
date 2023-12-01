@@ -71,7 +71,11 @@ build-all: $(addprefix bin/egressd-,$(VALIDARCHES))
 build: bin/egressd-$(ARCH)
 bin/egressd-amd64: ARCH=amd64
 bin/egressd-%: $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, ./cmd/egressd, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd/egressd, $@)
+else
+	$(call build_binary, ./cmd/egressd, $@)
+endif
 
 ###############################################################################
 # Building the image

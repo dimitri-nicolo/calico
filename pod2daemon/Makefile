@@ -52,7 +52,7 @@ endif
 FIPS ?= false
 
 FLEXVOL_CONTAINER_MARKER=$(FLEXVOL_CONTAINER_CREATED)
-ifeq ($(FIPS), true)
+ifeq ($(FIPS),true)
 CSI_CONTAINER_MARKER=$(CSI_CONTAINER_FIPS_CREATED)
 REGISTRAR_CONTAINER_MARKER=$(REGISTRAR_CONTAINER_FIPS_CREATED)
 VALIDARCHES=amd64
@@ -76,30 +76,18 @@ build: $(BINDIR)/node-driver-registrar-$(ARCH) bin/flexvol-$(ARCH) $(BINDIR)/csi
 bin/flexvol-amd64: ARCH=amd64
 bin/flexvol-arm64: ARCH=arm64
 bin/flexvol-%: $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=0 $(CALICO_BUILD) go build -buildvcs=false -ldflags "-s -w" -v -o bin/flexvol-$(ARCH) flexvol/flexvoldriver.go
+	$(call build_binary, flexvol/flexvoldriver.go, $@)
 
-bin/csi-driver-arm64: ARCH=arm64
-bin/csi-driver-%: $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) go build -buildvcs=false -ldflags "-s -w" -v -o $(BINDIR)/csi-driver-$(ARCH) csidriver/main.go
-
-$(BINDIR)/csi-driver-amd64: $(SRC_FILES)
-ifeq ($(FIPS), true)
-	$(call build_static_cgo_boring_binary, csidriver/main.go, $@)
-else
-	$(call build_static_binary, csidriver/main.go, $@)
-endif
+$(BINDIR)/csi-driver-amd64: ARCH=amd64
+$(BINDIR)/csi-driver-arm64: ARCH=arm64
+$(BINDIR)/csi-driver-%: $(SRC_FILES)
+	$(call build_binary, csidriver/main.go, $@)
 
 UPSTREAM_REGISTRAR_PROJECT ?= kubernetes-csi/$(REGISTRAR_IMAGE)
 UPSTREAM_REGISTRAR_TAG     ?= v2.8.0
 
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-REGISTRAR_TIGERA_BUILD_CMD_LDFLAGS = -ldflags '-s -w -linkmode external -extldflags -static'
-else
-REGISTRAR_TIGERA_BUILD_CMD_LDFLAGS = -ldflags '-s -w'
-endif
-
 REGISTRAR_TIGERA_BUILD_CMD="cd /go/src/github.com/$(UPSTREAM_REGISTRAR_PROJECT) && \
-	go build -buildvcs=false $(REGISTRAR_TIGERA_BUILD_CMD_LDFLAGS) -tags $(TAGS) -v -o $(BINDIR)/csi-node-driver-registrar cmd/csi-node-driver-registrar/*.go"
+	go build -buildvcs=false -tags $(TAGS) -v -o $(BINDIR)/csi-node-driver-registrar cmd/csi-node-driver-registrar/*.go"
 REGISTRAR_UPSTREAM_BUILD_CMD="cd /go/src/github.com/$(UPSTREAM_REGISTRAR_PROJECT) && \
 	make build BUILD_PLATFORMS=$(BUILD_PLATFORMS)"
 
@@ -107,7 +95,7 @@ ifeq ($(ARCH), $(filter $(ARCH),amd64))
 # We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
 REGISTRAR_BUILD_CMD=$(REGISTRAR_TIGERA_BUILD_CMD)
 CGO_ENABLED=1
-ifeq ($(FIPS), true)
+ifeq ($(FIPS),true)
 TAGS=fipsstrict
 GOEXPERIMENT=boringcrypto
 else

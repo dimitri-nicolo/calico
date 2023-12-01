@@ -39,7 +39,11 @@ build: bin/packetcapture-$(ARCH)
 
 .PHONY: bin/packetcapture-$(ARCH)
 bin/packetcapture-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, ./cmd, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd, $@)
+else
+	$(call build_binary, ./cmd, $@)
+endif
 
 ###############################################################################
 # BUILD IMAGE

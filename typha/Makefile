@@ -39,15 +39,13 @@ TYPHA_CONTAINER_CREATED=.calico_typha.created-$(ARCH)
 TYPHA_CONTAINER_FIPS_CREATED=.calico_typha.created-$(ARCH)-fips
 FIPS ?= false
 
-ifeq ($(FIPS), true)
+ifeq ($(FIPS),true)
 TYPHA_CONTAINER_MARKER=$(TYPHA_CONTAINER_FIPS_CREATED)
 VALIDARCHES=amd64
 BINDIR=bin/$(ARCH)-fips
-CGO_ENABLED=1
 else
 TYPHA_CONTAINER_MARKER=$(TYPHA_CONTAINER_CREATED)
 BINDIR=bin
-CGO_ENABLED=0
 endif
 
 .PHONY: clean
@@ -78,36 +76,24 @@ build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
 
-$(BINDIR)/wrapper-$(ARCH): $(SRC_FILES)
-ifeq ($(ARCH), amd64)
-ifeq ($(FIPS), true)
-	$(call build_static_cgo_boring_binary, ./cmd/wrapper, $@)
-else
-	$(call build_static_binary, ./cmd/wrapper, $@)
-endif
+$(BINDIR)/wrapper-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd/wrapper, $@)
 else
 	$(call build_binary, ./cmd/wrapper, $@)
 endif
 
 $(BINDIR)/calico-typha-$(ARCH): $(SRC_FILES)
-ifeq ($(ARCH), amd64)
-ifeq ($(FIPS), true)
-	$(call build_static_cgo_boring_binary, ./cmd/calico-typha, $@)
-else
-	$(call build_static_binary, ./cmd/calico-typha, $@)
-endif
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd/calico-typha, $@)
 else
 	$(call build_binary, ./cmd/calico-typha, $@)
 endif
 
 $(BINDIR)/typha-client-$(ARCH): $(SRC_FILES)
-ifeq ($(ARCH), amd64)
 	@echo Building typha client...
-ifeq ($(FIPS), true)
-	$(call build_static_cgo_boring_binary, ./cmd/typha-client, $@)
-else
-	$(call build_static_binary, ./cmd/typha-client, $@)
-endif
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd/typha-client, $@)
 else
 	$(call build_binary, ./cmd/typha-client, $@)
 endif

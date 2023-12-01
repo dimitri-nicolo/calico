@@ -72,35 +72,67 @@ sub-build-%:
 
 .PHONY: bin/server-$(ARCH)
 bin/server-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/server/server.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/server/server.go, $@)
+else
+	$(call build_binary, cmd/server/server.go, $@)
+endif
 
 .PHONY: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/controller/controller.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/controller/controller.go, $@)
+else
+	$(call build_binary, cmd/controller/controller.go, $@)
+endif
 
 .PHONY: bin/snapshotter-$(ARCH)
 bin/snapshotter-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/snapshotter/snapshotter.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/snapshotter/snapshotter.go, $@)
+else
+	$(call build_binary, cmd/snapshotter/snapshotter.go, $@)
+endif
 
 .PHONY: bin/reporter-$(ARCH)
 bin/reporter-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/reporter/reporter.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/reporter/reporter.go, $@)
+else
+	$(call build_binary, cmd/reporter/reporter.go, $@)
+endif
 
 .PHONY: bin/report-type-gen-$(ARCH)
 bin/report-type-gen-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/report-type-gen/*.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/report-type-gen/*.go, $@)
+else
+	$(call build_binary, cmd/report-type-gen/*.go, $@)
+endif
 
 .PHONY: bin/scaleloader-$(ARCH)
 bin/scaleloader-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/mockdata-scaleloader/scaleloader.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/mockdata-scaleloader/scaleloader.go, $@)
+else
+	$(call build_binary, cmd/mockdata-scaleloader/scaleloader.go, $@)
+endif
 
 .PHONY: bin/kube-bench-$(ARCH)
 bin/kube-bench-$(ARCH): check-kube-bench-update cmd/kube-bench/main.go
-	$(call build_static_cgo_boring_binary, cmd/kube-bench/main.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/kube-bench/main.go, $@)
+else
+	$(call build_binary, cmd/kube-bench/main.go, $@)
+endif
 
 .PHONY: bin/benchmarker-$(ARCH)
 bin/benchmarker-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/benchmarker/benchmarker.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/benchmarker/benchmarker.go, $@)
+else
+	$(call build_binary, cmd/benchmarker/benchmarker.go, $@)
+endif
 
 K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
 check-kube-bench-update:

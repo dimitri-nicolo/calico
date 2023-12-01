@@ -35,7 +35,7 @@ CONTAINER_FIPS_CREATED=image.created-$(ARCH)-fips
 
 FIPS ?= false
 
-ifeq ($(FIPS), true)
+ifeq ($(FIPS),true)
 CONTAINER_MARKER=$(CONTAINER_FIPS_CREATED)
 VALIDARCHES=amd64
 BINDIR=bin/$(ARCH)-fips
@@ -94,33 +94,19 @@ build:
 $(BINDIR)/dikastes-amd64: ARCH=amd64
 $(BINDIR)/dikastes-arm64: ARCH=arm64
 $(BINDIR)/dikastes-%: protobuf $(SRC_FILES)
-ifeq ($(ARCH),amd64)
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, ./cmd/dikastes, $@)
 else
 	$(call build_cgo_binary, ./cmd/dikastes, $@)
 endif
-else
-	$(DOCKER_RUN_RO) \
-	  -e CGO_ENABLED=$(CGO_ENABLED) \
-	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) go build -buildvcs=false -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o $(BINDIR)/dikastes-$(ARCH) ./cmd/dikastes
-endif
 
 $(BINDIR)/healthz-amd64: ARCH=amd64
 $(BINDIR)/healthz-arm64: ARCH=arm64
 $(BINDIR)/healthz-%: protobuf $(SRC_FILES)
-ifeq ($(ARCH),amd64)
-ifeq ($(FIPS), true)
-	$(call build_static_cgo_boring_binary, ./cmd/healthz, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, ./cmd/healthz, $@)
 else
-	$(call build_static_binary, ./cmd/healthz, $@)
-endif
-else
-	$(DOCKER_RUN_RO) \
-	  -e CGO_ENABLED=$(CGO_ENABLED) \
-	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) go build -buildvcs=false -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o $(BINDIR)/healthz-$(ARCH) ./cmd/healthz
+	$(call build_binary, ./cmd/healthz, $@)
 endif
 
 

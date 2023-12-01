@@ -56,15 +56,27 @@ build: $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH) $(BINDIR)/intrusio
 
 .PHONY: $(BINDIR)/controller-$(ARCH)
 $(BINDIR)/controller-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/controller/controller.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/controller/controller.go, $@)
+else
+	$(call build_binary, cmd/controller/controller.go, $@)
+endif
 
 .PHONY: $(BINDIR)/healthz-$(ARCH)
 $(BINDIR)/healthz-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/healthz/healthz.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/healthz/healthz.go, $@)
+else
+	$(call build_binary, cmd/healthz/healthz.go, $@)
+endif
 
 .PHONY: $(BINDIR)/intrusion-detection-job-installer-$(ARCH)
 $(BINDIR)/intrusion-detection-job-installer-$(ARCH):
-	$(call build_static_cgo_boring_binary, cmd/install/install.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/install/install.go, $@)
+else
+	$(call build_binary, cmd/install/install.go, $@)
+endif
 
 # by default, build the image for the target architecture
 .PHONY: image-all

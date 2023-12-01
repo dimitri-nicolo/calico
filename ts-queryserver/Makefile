@@ -45,7 +45,11 @@ build: bin/cnx-queryserver-$(ARCH)
 
 .PHONY: bin/cnx-queryserver-$(ARCH)
 bin/cnx-queryserver-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, queryserver/$*/*.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, queryserver/$*/*.go, $@)
+else
+	$(call build_binary, queryserver/$*/*.go, $@)
+endif
 
 ###############################################################################
 # BUILD IMAGE

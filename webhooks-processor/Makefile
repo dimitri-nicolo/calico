@@ -38,7 +38,11 @@ build: bin/webhooks-processor-$(ARCH)
 
 .PHONY: bin/webhooks-processor-$(ARCH)
 bin/webhooks-processor-$(ARCH): $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, cmd/$*/*.go, $@)
+ifeq ($(FIPS),true)
+	$(call build_cgo_boring_binary, cmd/$*/*.go, $@)
+else
+	$(call build_binary, cmd/$*/*.go, $@)
+endif
 
 ###############################################################################
 # BUILD IMAGE

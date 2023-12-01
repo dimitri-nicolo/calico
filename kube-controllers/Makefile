@@ -43,7 +43,7 @@ KUBE_CONTROLLER_CONTAINER_FIPS_CREATED=image.created-$(ARCH)-fips
 
 FIPS ?= false
 
-ifeq ($(FIPS), true)
+ifeq ($(FIPS),true)
 KUBE_CONTROLLER_CONTAINER_MARKER=$(KUBE_CONTROLLER_CONTAINER_FIPS_CREATED)
 VALIDARCHES=amd64
 BINDIR=bin/$(ARCH)-fips
@@ -79,34 +79,21 @@ sub-build-%:
 	$(MAKE) build ARCH=$*
 
 $(BINDIR)/kube-controllers-linux-$(ARCH): $(SRC_FILES)
-ifeq ($(ARCH), amd64)
-ifeq ($(FIPS), true)
+ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, ./cmd/kube-controllers/, $@)
 else
 	$(call build_binary, ./cmd/kube-controllers/, $@)
 endif
-else
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
-		$(GIT_CONFIG_SSH) go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS) -s -w" ./cmd/kube-controllers/'
-endif
 
 $(BINDIR)/wrapper-$(ARCH):
-ifeq ($(ARCH), amd64)
-ifeq ($(FIPS), true)
+ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, ./cmd/wrapper, $@)
 else
 	$(call build_binary, ./cmd/wrapper, $@)
 endif
-else
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
-		$(GIT_CONFIG_SSH) go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -buildvcs=false -v -o ./cmd/kube-controllers/ -ldflags "$(LDFLAGS) -s -w" ./cmd/wrapper'
-endif
 
 $(BINDIR)/check-status-linux-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) \
-	  -e CGO_ENABLED=$(CGO_ENABLED) \
-	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -buildvcs=false -v -o $@ -ldflags "$(LDFLAGS) -s -w" ./cmd/check-status/'
+	$(call build_binary, ./cmd/check-status, $@)
 
 $(BINDIR)/kubectl-$(ARCH):
 	curl -sSf -L --retry 5 -o $@ https://storage.googleapis.com/kubernetes-release/release/$(K8S_VERSION)/bin/linux/$(ARCH)/kubectl

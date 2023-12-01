@@ -60,7 +60,7 @@ build-all: $(addprefix bin/mocknode-,$(VALIDARCHES))
 build: $(BINARY)
 bin/test-tools/mocknode-amd64: ARCH=amd64
 bin/test-tools/mocknode-%: $(SRC_FILES)
-	$(call build_static_cgo_boring_binary, ./cmd/mocknode, $@)
+	$(call build_binary, ./cmd/mocknode, $@)
 
 ###############################################################################
 # Building the image
