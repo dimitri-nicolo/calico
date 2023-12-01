@@ -262,14 +262,22 @@ var _ = Describe("ServiceLookupsCache tests", func() {
 			operations[i], operations[j] = operations[j], operations[i]
 		})
 
+		// Set up all our goroutines with a trigger channel to tell them
+		// to start.
 		wg := sync.WaitGroup{}
+		start := make(chan struct{})
 		for _, op := range operations {
 			wg.Add(1)
-			go func() {
+			go func(op operation) {
 				defer wg.Done()
+				<-start
 				op()
-			}()
+			}(op)
 		}
+
+		// Trigger them all at once for maximum concurrency.
+		close(start)
+
 		if waitWithTimeout(&wg, time.Second*20) {
 			Fail("This test took longer than 20s, while it should take <10ms on modern hardware. " +
 				"We suspect a concurrency issue has taken place.")

@@ -277,18 +277,12 @@ func (slc *ServiceLookupsCache) RegisterWith(allUpdateDisp *dispatcher.Dispatche
 // OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
 // kubernetes services updates.
 func (slc *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
-	slc.mutex.Lock()
-	defer slc.mutex.Unlock()
 	switch k := update.Key.(type) {
 	case model.ResourceKey:
 		switch k.Kind {
 		case model.KindKubernetesService:
-			log.Debugf("processing update for service %s", k)
-			if update.Value == nil {
-				slc.suh.RemoveService(k)
-			} else {
-				slc.suh.AddOrUpdateService(k, update.Value.(*kapiv1.Service))
-			}
+			log.Debugf("Processing update for service %s", k)
+			slc.onServiceUpdate(update, k)
 		default:
 			log.Debugf("Ignoring update for resource: %s", k)
 		}
@@ -297,6 +291,16 @@ func (slc *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
 			reflect.TypeOf(update.Key), update)
 	}
 	return
+}
+
+func (slc *ServiceLookupsCache) onServiceUpdate(update api.Update, k model.ResourceKey) {
+	slc.mutex.Lock()
+	defer slc.mutex.Unlock()
+	if update.Value == nil {
+		slc.suh.RemoveService(k)
+	} else {
+		slc.suh.AddOrUpdateService(k, update.Value.(*kapiv1.Service))
+	}
 }
 
 func (slc *ServiceLookupsCache) GetServiceSpecFromResourceKey(key model.ResourceKey) (kapiv1.ServiceSpec, bool) {
