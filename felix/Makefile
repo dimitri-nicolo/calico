@@ -334,7 +334,7 @@ ut combined.coverprofile: $(SRC_FILES) $(LIBBPF_A) build-bpf
 fv/fv.test: $(LIBBPF_A) $(SRC_FILES) $(FV_SRC_FILES)
 	# We pre-build the FV test binaries so that we can run them
 	# outside a container and allow them to interact with docker.
-	$(DOCKER_GO_BUILD_CGO) go test ./fv -c --tags fvtests -o $@
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c --tags fvtests -o $@'
 
 REMOTE_DEPS=build-typha
 
@@ -420,8 +420,7 @@ check-wireguard:
 
 fv/win-fv.exe: $(REMOTE_DEPS)
 	mkdir -p bin
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-		GOOS=windows go test ./fv/winfv -c -o $@'
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) GOOS=windows go test ./fv/winfv -c -o $@'
 
 ###############################################################################
 # K8SFV Tests
@@ -460,8 +459,7 @@ k8sfv-test: $(REMOTE_DEPS) $(FELIX_CONTAINER_CREATED) $(FV_BINARY) bin/k8sfv.tes
 
 bin/k8sfv.test: $(K8SFV_GO_FILES)
 	@echo Building $@...
-	$(DOCKER_GO_BUILD) \
-	    sh -c 'go test -c -o $@ ./k8sfv'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test -c -o $@ ./k8sfv'
 
 .PHONY: run-prometheus run-grafana stop-prometheus stop-grafana
 run-prometheus: stop-prometheus $(K8SFV_PROMETHEUS_DATA_DIR)
@@ -594,16 +592,16 @@ ut-watch: $(SRC_FILES)
 
 .PHONY: bin/bpf.test
 bin/bpf.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go')
-	$(DOCKER_GO_BUILD_CGO) go test ./bpf/ -c -o $@
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go test ./bpf/ -c -o $@'
 
 .PHONY: bin/bpf_ut.test
 bin/bpf_ut.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go')
-	$(DOCKER_GO_BUILD_CGO) go test ./bpf/ut -c -o $@
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go test ./bpf/ut -c -o $@'
 
 # Build debug version of bpf.test for use with the delve debugger.
 .PHONY: bin/bpf_debug.test
 bin/bpf_debug.test: $(GENERATED_FILES) $(shell find bpf/ -name '*.go')
-	$(DOCKER_GO_BUILD_CGO) go test ./bpf/ut -c -gcflags="-N -l" -o $@
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go test ./bpf/ut -c -gcflags="-N -l" -o $@'
 
 .PHONY: ut-bpf
 ut-bpf: $(LIBBPF_A) bin/bpf_ut.test bin/bpf.test build-bpf
