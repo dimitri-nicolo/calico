@@ -3,6 +3,11 @@
 package calc_test
 
 import (
+	"fmt"
+	"math/rand"
+	"sync"
+	"time"
+
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/proxy"
 
@@ -211,4 +216,87 @@ var _ = Describe("ServiceLookupsCache tests", func() {
 		_, ok = sc.GetNodePortService(int(sv1NodePort), 6)
 		Expect(ok).To(BeFalse())
 	})
+
+	It("should be able to perform operations concurrently", func() {
+		type operation func()
+		var operations []operation
+
+		randomKey := func() model.ResourceKey {
+			return model.ResourceKey{Kind: model.KindKubernetesService, Name: fmt.Sprintf("service-%d", rand.Intn(10)), Namespace: fmt.Sprintf("service-%d", rand.Intn(10))}
+		}
+
+		onResourceUpdateFn := func() {
+			var updateType api.UpdateType
+			if rand.Intn(2) == 0 {
+				updateType = api.UpdateTypeKVUpdated
+			} else {
+				updateType = api.UpdateTypeKVNew
+			}
+			sc.OnResourceUpdate(api.Update{
+				KVPair: model.KVPair{
+					Key: randomKey(),
+					Value: &kapiv1.Service{
+						Spec: spec1,
+					},
+				},
+				UpdateType: updateType,
+			})
+		}
+		getServiceFromPreDNATDestFn := func() {
+			sc.GetServiceFromPreDNATDest(clusterIP, int(sv1Port), 6)
+		}
+		getNodePortServiceFn := func() {
+			sc.GetNodePortService(int(sv1Port), 6)
+		}
+
+		// Make a list with 600 operations to be performed.
+		for i := 0; i < 200; i++ {
+			operations = append(operations,
+				onResourceUpdateFn,
+				getServiceFromPreDNATDestFn,
+				getNodePortServiceFn,
+			)
+		}
+		// Shuffle the operations in a random order to simulate a concurrent random-ish scenario.
+		rand.Shuffle(len(operations), func(i, j int) {
+			operations[i], operations[j] = operations[j], operations[i]
+		})
+
+		// Set up all our goroutines with a trigger channel to tell them
+		// to start.
+		wg := sync.WaitGroup{}
+		start := make(chan struct{})
+		for _, op := range operations {
+			wg.Add(1)
+			go func(op operation) {
+				defer wg.Done()
+				<-start
+				op()
+			}(op)
+		}
+
+		// Trigger them all at once for maximum concurrency.
+		close(start)
+
+		if waitWithTimeout(&wg, time.Second*20) {
+			Fail("This test took longer than 20s, while it should take <10ms on modern hardware. " +
+				"We suspect a concurrency issue has taken place.")
+		}
+	})
 })
+
+// waitWithTimeout waits for the WaitGroup for the specified max timeout.
+// Returns true if waiting timed out.
+func waitWithTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return false // completed normally
+	case <-time.After(timeout):
+		return true // timed out
+	}
+}
