@@ -278,6 +278,7 @@ func run() {
 		users := []token.UserInfo{
 			{Namespace: "tigera-fluentd", Name: "fluentd-node"},
 			{Namespace: "tigera-fluentd", Name: "fluentd-node-windows"},
+			{Namespace: "tigera-fluentd", Name: "eks-log-forwarder"},
 			{Namespace: "tigera-compliance", Name: "tigera-compliance-benchmarker"},
 			{Namespace: "tigera-compliance", Name: "tigera-compliance-controller"},
 			{Namespace: "tigera-compliance", Name: "tigera-compliance-reporter"},
