@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cnf/structhash"
@@ -180,7 +181,15 @@ func (s *ControllerState) retrieveConfigValue(ctx context.Context, src *api.Secu
 }
 
 func (s *ControllerState) extractLabels(webhook api.SecurityEventWebhook) map[string]string {
-	return map[string]string{}
+	labels := make(map[string]string)
+	if annotation, ok := webhook.Annotations[WebhookLabelsAnnotation]; ok {
+		for _, label := range strings.Split(annotation, ",") {
+			if keyValue := strings.SplitN(label, ":", 2); len(keyValue) == 2 {
+				labels[keyValue[0]] = keyValue[1]
+			}
+		}
+	}
+	return labels
 }
 
 func (s *ControllerState) debugProcessFunc(webhook *api.SecurityEventWebhook) ProcessFunc {
