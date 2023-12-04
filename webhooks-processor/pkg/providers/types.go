@@ -11,7 +11,7 @@ import (
 
 type Provider interface {
 	Validate(map[string]string) error
-	Process(context.Context, map[string]string, *lsApi.Event) error
+	Process(context.Context, map[string]string, map[string]string, *lsApi.Event) error
 	Config() Config
 }
 
