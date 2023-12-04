@@ -359,7 +359,7 @@ func generatePod(n int) *corev1.Pod {
 
 func randomHex(length int) string {
 	buf := make([]byte, length/2)
-	_, err := rand.Read(buf)
+	_, err := rand.Read(buf[:])
 	Expect(err).NotTo(HaveOccurred())
 	return fmt.Sprintf("%x", buf)
 }
