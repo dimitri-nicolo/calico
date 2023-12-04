@@ -51,11 +51,12 @@ func (s *ControllerState) webhookGoroutine(
 
 		events, err := s.config.EventsFetchFunction(ctx, selector, previousRunStamp.Time, thisRunStamp)
 		if err == nil {
+			labels := s.extractLabels(*webhookRef)
 			for _, event := range events {
 				if err = rateLimiter.Event(); err != nil {
 					break
 				}
-				if err = processFunc(ctx, config, &event); err != nil {
+				if err = processFunc(ctx, config, labels, &event); err != nil {
 					break
 				}
 			}

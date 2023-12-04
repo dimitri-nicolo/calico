@@ -38,7 +38,7 @@ func (p *Slack) Validate(config map[string]string) error {
 	return nil
 }
 
-func (p *Slack) Process(ctx context.Context, config map[string]string, event *lsApi.Event) (err error) {
+func (p *Slack) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (err error) {
 	payload, err := p.message(event).JSON()
 	if err != nil {
 		return
