@@ -148,6 +148,7 @@ func (pm *ProgramsMap) loadObj(at AttachType, file string) (Layout, error) {
 		if strings.HasPrefix(mapName, ".rodata") {
 			continue
 		}
+
 		if err := pm.setMapSize(m); err != nil {
 			return nil, fmt.Errorf("error setting map size %s : %w", mapName, err)
 		}

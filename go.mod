@@ -95,6 +95,7 @@ require (
 	github.com/prometheus/common v0.45.0
 	github.com/rakelkar/gonetsh v0.3.2
 	github.com/robfig/cron v1.2.0
+	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
 	github.com/satori/go.uuid v1.2.0
 	github.com/shirou/gopsutil v0.0.0-20190323131628-2cbc9195c892
 	github.com/sirupsen/logrus v1.9.3
@@ -304,7 +305,6 @@ require (
 	github.com/rivo/uniseg v0.1.0 // indirect
 	github.com/rubiojr/go-vhd v0.0.0-20200706105327-02e210299021 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
 	github.com/sagikazarmark/locafero v0.3.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/seccomp/libseccomp-golang v0.9.2-0.20220502022130-f33da4d89646 // indirect
