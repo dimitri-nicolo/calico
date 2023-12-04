@@ -24,8 +24,7 @@ func sampleValidConfig() map[string]string {
 
 func sampleLabels() map[string]string {
 	return map[string]string{
-		"cluster":     "unit-test-cluster",
-		"environment": "testing",
+		"Cluster": "unit-test-cluster",
 	}
 }
 
@@ -105,6 +104,7 @@ func TestSlackProviderProcessing(t *testing.T) {
 			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Severity:* 10/100"}},` +
 			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Mitre IDs:* 1234, 5678"}},` +
 			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Mitre tactic:* cork boi"}},` +
+			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Cluster:* unit-test-cluster"}},` +
 			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Detailed record information:* ` + "```n/a```" + `"}}]}`
 		require.Equal(t, messageJson, expectedJson)
 	})

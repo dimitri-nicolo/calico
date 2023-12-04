@@ -39,7 +39,7 @@ func (p *Slack) Validate(config map[string]string) error {
 }
 
 func (p *Slack) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (err error) {
-	payload, err := p.message(event).JSON()
+	payload, err := p.message(event, labels).JSON()
 	if err != nil {
 		return
 	}
@@ -85,7 +85,7 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, labels ma
 	return helpers.RetryWithLinearBackOff(retryFunc, p.config.RetryDuration, p.config.RetryTimes)
 }
 
-func (p *Slack) message(event *lsApi.Event) *SlackMessage {
+func (p *Slack) message(event *lsApi.Event, labels map[string]string) *SlackMessage {
 	var record string
 	recordData := make(map[string]any)
 	if err := event.GetRecord(&recordData); err != nil || recordData == nil {
@@ -106,6 +106,15 @@ func (p *Slack) message(event *lsApi.Event) *SlackMessage {
 		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Severity:* %d/100", event.Severity))),
 		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Mitre IDs:* %s", strings.Join(*event.MitreIDs, ", ")))),
 		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Mitre tactic:* %s", event.MitreTactic))),
+	)
+
+	for label, value := range labels {
+		message.AddBlocks(
+			NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ %s:* %s", label, value))),
+		)
+	}
+
+	message.AddBlocks(
 		NewBlock("section", NewField("mrkdwn", fmt.Sprintf("*‣ Detailed record information:* ```%s```", record))),
 	)
 
