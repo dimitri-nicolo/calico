@@ -28,8 +28,7 @@ func sampleValidConfig() map[string]string {
 
 func sampleLabels() map[string]string {
 	return map[string]string{
-		"cluster":     "unit-test-cluster",
-		"environment": "testing",
+		"Cluster": "jira-unit-test-cluster",
 	}
 }
 
@@ -139,6 +138,7 @@ func TestJiraProviderProcessing(t *testing.T) {
 *Severity:* 10/100
 *Mitre IDs:* 1234 5678
 *Mitre tactic:* cork boi
+*Cluster:* jira-unit-test-cluster
 
 *Mitigations:*
 

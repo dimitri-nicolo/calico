@@ -80,7 +80,8 @@ var descriptionTemplate = template.Must(template.New("description").Funcs(templa
 *Severity:* {{.Event.Severity}}/100
 *Mitre IDs:* {{join .Event.MitreIDs}}
 *Mitre tactic:* {{.Event.MitreTactic}}
-
+{{range $label, $value := .Labels}}*{{$label}}:* {{$value}}
+{{end}}
 *Mitigations:*
 {{range .Event.Mitigations}}
 - {{.}}{{end}}
