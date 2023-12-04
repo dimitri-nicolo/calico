@@ -923,7 +923,8 @@ run_edited_individual_test() {
     run_individual_test $testdir
 
     # Unedit the template
-    head -n -1 /etc/calico/confd/templates/bird.cfg.template > temp; mv temp /etc/calico/confd/templates/bird.cfg.template
+    temp=$(mktemp)
+    head -n -1 /etc/calico/confd/templates/bird.cfg.template > "$temp"; mv "$temp" /etc/calico/confd/templates/bird.cfg.template
 }
 
 # Run an individual test using oneshot mode:
@@ -985,7 +986,8 @@ run_edited_individual_test_oneshot() {
     run_individual_test_oneshot $testdir
 
     # Unedit the template
-    head -n -1 /etc/calico/confd/templates/bird.cfg.template > temp; mv temp /etc/calico/confd/templates/bird.cfg.template
+    temp=$(mktemp)
+    head -n -1 /etc/calico/confd/templates/bird.cfg.template > "$temp"; mv "$temp" /etc/calico/confd/templates/bird.cfg.template
 }
 
 start_typha() {

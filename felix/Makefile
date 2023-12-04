@@ -657,13 +657,6 @@ cover-report: combined.coverprofile
 				   column -t | \
 				   grep -v '100\.0%'"
 
-bin/calico-felix.transfer-url: bin/calico-felix
-	$(DOCKER_GO_BUILD) sh -c 'curl --upload-file bin/calico-felix https://transfer.sh/calico-felix > $@'
-
-.PHONY: patch-script
-patch-script: bin/calico-felix.transfer-url
-	$(DOCKER_GO_BUILD) bash -c 'utils/make-patch-script.sh $$(cat bin/calico-felix.transfer-url)'
-
 # Generate diagrams showing Felix internals:
 # - docs/calc.pdf: Felix's internal calculation graph.
 # - docs/flowlogs.pdf: Structures involved in flow log processing.
