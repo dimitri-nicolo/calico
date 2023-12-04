@@ -492,7 +492,7 @@ func (p *TestProvider) Validate(config map[string]string) error {
 	return nil
 }
 
-func (p *TestProvider) Process(ctx context.Context, config map[string]string, event *lsApi.Event) (err error) {
+func (p *TestProvider) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (err error) {
 	logrus.Infof("Processing event %s", event.ID)
 	p.Requests = append(p.Requests, Request{
 		Config: config,
