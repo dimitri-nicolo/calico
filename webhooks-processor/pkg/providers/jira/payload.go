@@ -73,27 +73,34 @@ var descriptionTemplate = template.Must(template.New("description").Funcs(templa
 		}
 	},
 }).Parse(`
-*What happened:* {{.Description}}
-*When it happened:* {{when .Time}}
-*Event source:* {{.Origin}}
-*Attack vector:* {{.AttackVector}}
-*Severity:* {{.Severity}}/100
-*Mitre IDs:* {{join .MitreIDs}}
-*Mitre tactic:* {{.MitreTactic}}
+*What happened:* {{.Event.Description}}
+*When it happened:* {{when .Event.Time}}
+*Event source:* {{.Event.Origin}}
+*Attack vector:* {{.Event.AttackVector}}
+*Severity:* {{.Event.Severity}}/100
+*Mitre IDs:* {{join .Event.MitreIDs}}
+*Mitre tactic:* {{.Event.MitreTactic}}
 
 *Mitigations:*
-{{range .Mitigations}}
+{{range .Event.Mitigations}}
 - {{.}}{{end}}
 
-{code:json|title=Detailed record information}{{ record .}}{code}
+{code:json|title=Detailed record information}{{record .Event}}{code}
 `))
 
 func buildSummary(event *lsApi.Event) (string, error) {
 	return "Calico Security Alert", nil
 }
 
-func buildDescription(event *lsApi.Event) (string, error) {
+func buildDescription(event *lsApi.Event, labels map[string]string) (string, error) {
 	buffer := new(bytes.Buffer)
-	err := descriptionTemplate.Execute(buffer, event)
+	templateData := struct {
+		Event  *lsApi.Event
+		Labels map[string]string
+	}{
+		Event:  event,
+		Labels: labels,
+	}
+	err := descriptionTemplate.Execute(buffer, templateData)
 	return buffer.String(), err
 }

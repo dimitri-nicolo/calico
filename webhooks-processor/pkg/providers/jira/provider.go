@@ -54,7 +54,7 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, labels map
 	if payload.Fields.Summary, err = buildSummary(event); err != nil {
 		return
 	}
-	if payload.Fields.Description, err = buildDescription(event); err != nil {
+	if payload.Fields.Description, err = buildDescription(event, labels); err != nil {
 		return
 	}
 
