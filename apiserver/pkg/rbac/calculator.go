@@ -14,6 +14,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -49,11 +50,9 @@ const (
 	resourceManagedClusters             = "managedclusters"
 )
 
-var (
-	AllVerbs = []Verb{
-		VerbGet, VerbList, VerbUpdate, VerbCreate, VerbPatch, VerbDelete, VerbWatch,
-	}
-)
+var AllVerbs = []Verb{
+	VerbGet, VerbList, VerbUpdate, VerbCreate, VerbPatch, VerbDelete, VerbWatch,
+}
 
 // Calculator provides methods to determine RBAC permissions for a user.
 type Calculator interface {
@@ -156,7 +155,6 @@ func NewCalculator(
 	calicoResourceLister CalicoResourceLister,
 	minResourceRefreshInterval time.Duration,
 ) Calculator {
-
 	// Split out the cluster and namespaced rule resolvers - this allows us to perform namespace queries without
 	// checking cluster rules every time. For cluster specific rule resolver, use a "no-op" RuleBindingLister - this
 	// is a lister that returns no RuleBindings, the upshot is that only ClusterRoleBindings are discovered by the
@@ -395,14 +393,14 @@ type userCalculator struct {
 	user                         user.Info
 	errors                       []error
 	calculator                   *calculator
-	allTiers                     []string
-	gettableTiers                []string
-	allUISettingsGroups          []string
-	gettableUISettingsGroups     []string
-	allNamespaces                []string
-	gettableNamespaces           []string
-	allManagedClusters           []string
-	gettableManagedClusters      []string
+	allTiers                     []types.NamespacedName
+	gettableTiers                []types.NamespacedName
+	allUISettingsGroups          []types.NamespacedName
+	gettableUISettingsGroups     []types.NamespacedName
+	allNamespaces                []types.NamespacedName
+	gettableNamespaces           []types.NamespacedName
+	allManagedClusters           []types.NamespacedName
+	gettableManagedClusters      []types.NamespacedName
 	clusterRules                 []rbacv1.PolicyRule
 	namespacedRules              map[string][]rbacv1.PolicyRule
 	canGetAllTiersVal            *bool
@@ -424,10 +422,10 @@ func newUserCalculator(c *calculator, user user.Info, resources map[ResourceType
 }
 
 // getMatches returns the calculated matches for a specific resource and verb.
-func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource string) []Match {
+func (u *userCalculator) getMatches(verb Verb, res apiResource, subresource string) []Match {
 	var matches []Match
 	var match Match
-	resource, reqdSubresource := ar.rbacResource()
+	resource, reqdSubresource := res.rbacResource()
 
 	// User should not be requesting a subresource when a subresource is already used for the resource RBAC.
 	if subresource != "" && reqdSubresource != "" {
@@ -441,7 +439,7 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource strin
 
 	record := authorizer.AttributesRecord{
 		Verb:            string(verb),
-		APIGroup:        ar.APIGroup,
+		APIGroup:        res.APIGroup,
 		Resource:        resource,
 		Subresource:     subresource,
 		Name:            "",
@@ -463,37 +461,38 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource strin
 	//   tier value for a tiered policy verb.
 
 	if verb == VerbGet {
-		if ar.isTier() {
+		if res.isTier() {
 			// Special case tier gets - we always expand get across Tiers, so include all configured Tiers.
 			log.Debug("Return gettable Tiers")
 			for _, tier := range u.getGettableTiers() {
-				match.Tier = tier
+				match.Tier = tier.Name
 				matches = append(matches, match)
 			}
 
 			return matches
-		} else if ar.isUISettingsGroup() {
+		} else if res.isUISettingsGroup() {
 			// Special case UISettingsGroups gets - we always expand get across Namespaces, so include all configured Namespaces.
 			log.Debug("Return gettable Namespaces")
 			for _, gp := range u.getGettableUISettingsGroups() {
-				match.UISettingsGroup = gp
+				match.UISettingsGroup = gp.Name
 				matches = append(matches, match)
 			}
 
 			return matches
-		} else if ar.isNamespace() {
+		} else if res.isNamespace() {
 			// Special case namespace gets - we always expand get across Namespaces, so include all configured Namespaces.
 			log.Debug("Return gettable Namespaces")
 			for _, namespace := range u.getGettableNamespaces() {
-				match.Namespace = namespace
+				match.Namespace = namespace.Name
 				matches = append(matches, match)
 			}
 
 			return matches
-		} else if ar.isManagedCluster() {
+		} else if res.isManagedCluster() {
 			// Special case ManagedCluster gets - we always expand get across all ManagedCluster resources, so include all configured ManagedClusters.
 			for _, managedCluster := range u.getGettableManagedClusters() {
-				match.ManagedCluster = managedCluster
+				match.ManagedCluster = managedCluster.Name
+				match.Namespace = managedCluster.Namespace
 				matches = append(matches, match)
 			}
 
@@ -505,18 +504,18 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource strin
 	if rbac_auth.RulesAllow(record, u.getClusterRules()...) {
 		log.Debug("Full wildcard match")
 
-		if ar.isTieredPolicy() {
+		if res.isTieredPolicy() {
 			// This is a tiered policy, expand the results by gettable tier.
 			for _, tier := range u.getGettableTiers() {
 				log.Debugf("Add cluster match for tiered-policy: tier=%s", tier)
-				match.Tier = tier
+				match.Tier = tier.Name
 				matches = append(matches, match)
 			}
-		} else if ar.isUISettings() {
+		} else if res.isUISettings() {
 			// For UISettings expand by UISettingsGroup.
 			for _, gp := range u.getGettableUISettingsGroups() {
 				log.Debugf("Add cluster match for UISettings: gp=%s", gp)
-				match.UISettingsGroup = gp
+				match.UISettingsGroup = gp.Name
 				matches = append(matches, match)
 			}
 		} else {
@@ -530,38 +529,39 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource strin
 
 	if verb == VerbWatch {
 		// If not allowed cluster-wide with full wildcarded-name, then expand watch for tier, namespace and uisettings.
-		if ar.isTier() {
+		if res.isTier() {
 			log.Debug("Return individual watchable Tiers")
-			tiers := u.expandClusterResourceByName(u.getAllTiers(), verb, ar)
+			tiers := u.expandResourceByName(u.getAllTiers(), verb, res)
 			for _, tier := range tiers {
-				match.Tier = tier
+				match.Tier = tier.Name
 				matches = append(matches, match)
 			}
 			// Nothing else to do for this resource.
 			return matches
-		} else if ar.isUISettingsGroup() {
+		} else if res.isUISettingsGroup() {
 			log.Debug("Return individual watchable UISettingsGroup")
-			gps := u.expandClusterResourceByName(u.getAllUISettingsGroups(), verb, ar)
+			gps := u.expandResourceByName(u.getAllUISettingsGroups(), verb, res)
 			for _, gp := range gps {
-				match.UISettingsGroup = gp
+				match.UISettingsGroup = gp.Name
 				matches = append(matches, match)
 			}
 			// Nothing else to do for this resource.
 			return matches
-		} else if ar.isNamespace() {
+		} else if res.isNamespace() {
 			log.Debug("Return individual watchable Namespaces")
-			namespaces := u.expandClusterResourceByName(u.getAllNamespaces(), verb, ar)
+			namespaces := u.expandResourceByName(u.getAllNamespaces(), verb, res)
 			for _, namespace := range namespaces {
-				match.Namespace = namespace
+				match.Namespace = namespace.Name
 				matches = append(matches, match)
 			}
 			// Nothing else to do for this resource.
 			return matches
-		} else if ar.isManagedCluster() {
+		} else if res.isManagedCluster() {
 			log.Debug("Return individual watchable ManagedClusters")
-			managedClusters := u.expandClusterResourceByName(u.getAllManagedClusters(), verb, ar)
+			managedClusters := u.expandResourceByName(u.getAllManagedClusters(), verb, res)
 			for _, managedCluster := range managedClusters {
-				match.ManagedCluster = managedCluster
+				match.ManagedCluster = managedCluster.Name
+				match.Namespace = managedCluster.Namespace
 				matches = append(matches, match)
 			}
 			return matches
@@ -574,18 +574,18 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource strin
 	// Note that if we do not have cluster-wide access for the tier then we'll need to check per-namespace, so we track
 	// Tiers that did not match cluster scoped.
 	var tiersNoClusterMatch []string
-	if ar.isTieredPolicy() {
+	if res.isTieredPolicy() {
 		log.Debug("Check cluster-scoped tiered-policy in each gettable tier")
 
 		for _, tier := range u.getGettableTiers() {
-			record.Name = tier + ".*"
+			record.Name = tier.Name + ".*"
 			if rbac_auth.RulesAllow(record, u.getClusterRules()...) {
 				log.Debugf("Rules allow cluster-scoped policy in tier(%s)", tier)
-				match.Tier = tier
+				match.Tier = tier.Name
 				matches = append(matches, match)
 			} else {
 				log.Debugf("Rules do not allow cluster-scoped policy in tier(%s)", tier)
-				tiersNoClusterMatch = append(tiersNoClusterMatch, tier)
+				tiersNoClusterMatch = append(tiersNoClusterMatch, tier.Name)
 			}
 		}
 
@@ -595,23 +595,23 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource strin
 			log.Debug("All Tiers individually matched cluster-wide")
 			return matches
 		}
-	} else if ar.isUISettings() {
+	} else if res.isUISettings() {
 		// If we are processing a UISettings, check if the user has cluster-scoped access within the group. We do this
 		// by checking the group sub resource /data.
 		log.Debug("Check cluster-scoped UISettings in each gettable UISettingsGroup")
 
 		for _, gp := range u.getGettableUISettingsGroups() {
-			record.Name = gp
+			record.Name = gp.Name
 			if rbac_auth.RulesAllow(record, u.getClusterRules()...) {
 				log.Debugf("Rules allow cluster-scoped policy in UISettingGroup(%s)", gp)
-				match.UISettingsGroup = gp
+				match.UISettingsGroup = gp.Name
 				matches = append(matches, match)
 			}
 		}
 	}
 
 	// If the resource is not namespaced then no more checks.
-	if !ar.Namespaced {
+	if !res.Namespaced {
 		log.Debug("Resource is not namespaced, so nothing left to check")
 		return matches
 	}
@@ -627,7 +627,7 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource strin
 			// The user is authorized for full wildcarded names for the resource type in this namespace
 			// -  If this is a tiered policy then expand by tier.
 			// -  Otherwise, include a single wildcarded name result.
-			if !ar.isTieredPolicy() {
+			if !res.isTieredPolicy() {
 				// This is not a tiered policy so include the match unchanged.
 				log.Debug("Add namespaced match for non-tiered policy")
 				matches = append(matches, match)
@@ -677,15 +677,15 @@ func (u *userCalculator) canGetAllTiers() bool {
 }
 
 // getAllTiers returns the current set of configured Tiers.
-func (u *userCalculator) getAllTiers() []string {
+func (u *userCalculator) getAllTiers() []types.NamespacedName {
 	if u.allTiers == nil {
 		if tiers, err := u.calculator.calicoResourceLister.ListTiers(); err != nil {
 			log.WithError(err).Debug("Failed to list Tiers")
 			u.errors = append(u.errors, err)
-			u.allTiers = make([]string, 0)
+			u.allTiers = make([]types.NamespacedName, 0)
 		} else {
 			for _, tier := range tiers {
-				u.allTiers = append(u.allTiers, tier.Name)
+				u.allTiers = append(u.allTiers, types.NamespacedName{Name: tier.Name})
 			}
 		}
 		log.Debugf("getAllTiers returns %v", u.allTiers)
@@ -694,14 +694,14 @@ func (u *userCalculator) getAllTiers() []string {
 }
 
 // getGettableTiers determines which Tiers the user is able to get.
-func (u *userCalculator) getGettableTiers() []string {
+func (u *userCalculator) getGettableTiers() []types.NamespacedName {
 	if u.gettableTiers == nil {
 		for _, tier := range u.getAllTiers() {
 			if u.canGetAllTiers() || rbac_auth.RulesAllow(authorizer.AttributesRecord{
 				Verb:            string(VerbGet),
 				APIGroup:        v3.Group,
 				Resource:        resourceTiers,
-				Name:            tier,
+				Name:            tier.Name,
 				ResourceRequest: true,
 			}, u.getClusterRules()...) {
 				u.gettableTiers = append(u.gettableTiers, tier)
@@ -730,15 +730,15 @@ func (u *userCalculator) canGetAllUISettingsGroups() bool {
 }
 
 // getAllUISettingsGroups returns the current set of configured UISettingsGroups.
-func (u *userCalculator) getAllUISettingsGroups() []string {
+func (u *userCalculator) getAllUISettingsGroups() []types.NamespacedName {
 	if u.allUISettingsGroups == nil {
-		if tiers, err := u.calculator.calicoResourceLister.ListUISettingsGroups(); err != nil {
+		if groups, err := u.calculator.calicoResourceLister.ListUISettingsGroups(); err != nil {
 			log.WithError(err).Debug("Failed to list UISettingsGroups")
 			u.errors = append(u.errors, err)
-			u.allUISettingsGroups = make([]string, 0)
+			u.allUISettingsGroups = make([]types.NamespacedName, 0)
 		} else {
-			for _, tier := range tiers {
-				u.allUISettingsGroups = append(u.allUISettingsGroups, tier.Name)
+			for _, group := range groups {
+				u.allUISettingsGroups = append(u.allUISettingsGroups, types.NamespacedName{Name: group.Name})
 			}
 		}
 		log.Debugf("getAllUISettingsGroups returns %v", u.allUISettingsGroups)
@@ -747,17 +747,17 @@ func (u *userCalculator) getAllUISettingsGroups() []string {
 }
 
 // getGettableUISettingsGroups determines which UISettingsGroups the user is able to get.
-func (u *userCalculator) getGettableUISettingsGroups() []string {
+func (u *userCalculator) getGettableUISettingsGroups() []types.NamespacedName {
 	if u.gettableUISettingsGroups == nil {
-		for _, tier := range u.getAllUISettingsGroups() {
+		for _, group := range u.getAllUISettingsGroups() {
 			if u.canGetAllUISettingsGroups() || rbac_auth.RulesAllow(authorizer.AttributesRecord{
 				Verb:            string(VerbGet),
 				APIGroup:        v3.Group,
 				Resource:        resourceUISettingsGroups,
-				Name:            tier,
+				Name:            group.Name,
 				ResourceRequest: true,
 			}, u.getClusterRules()...) {
-				u.gettableUISettingsGroups = append(u.gettableUISettingsGroups, tier)
+				u.gettableUISettingsGroups = append(u.gettableUISettingsGroups, group)
 			}
 		}
 		log.Debugf("getGettableUISettingsGroups returns %v", u.gettableUISettingsGroups)
@@ -766,15 +766,16 @@ func (u *userCalculator) getGettableUISettingsGroups() []string {
 	return u.gettableUISettingsGroups
 }
 
-// expandClusterResourceByName checks authorization of a verb on a specific cluster-wide resource type for individual
+// expandResourceByName checks authorization of a verb on a specific resource type for individual
 // names. This is only used in certain cases because expanding by name could be an expensive operation.
-func (u *userCalculator) expandClusterResourceByName(names []string, verb Verb, res apiResource) (rs []string) {
+func (u *userCalculator) expandResourceByName(names []types.NamespacedName, verb Verb, res apiResource) (rs []types.NamespacedName) {
 	for _, name := range names {
 		if rbac_auth.RulesAllow(authorizer.AttributesRecord{
 			Verb:            string(verb),
 			APIGroup:        res.APIGroup,
 			Resource:        res.Resource,
-			Name:            name,
+			Name:            name.Name,
+			Namespace:       name.Namespace,
 			ResourceRequest: true,
 		}, u.getClusterRules()...) {
 			rs = append(rs, name)
@@ -783,7 +784,6 @@ func (u *userCalculator) expandClusterResourceByName(names []string, verb Verb, 
 
 	log.Debugf("expandClusterResourceByName returns %v", rs)
 	return rs
-
 }
 
 // canGetAllNamespaces determines whether the user is able to get all Namespaces.
@@ -804,15 +804,15 @@ func (u *userCalculator) canGetAllNamespaces() bool {
 }
 
 // getAllNamespaces returns the current set of configured Namespaces.
-func (u *userCalculator) getAllNamespaces() []string {
+func (u *userCalculator) getAllNamespaces() []types.NamespacedName {
 	if u.allNamespaces == nil {
 		if namespaces, err := u.calculator.namespaceLister.ListNamespaces(); err != nil {
 			log.WithError(err).Debug("Failed to list Namespaces")
 			u.errors = append(u.errors, err)
-			u.allNamespaces = make([]string, 0)
+			u.allNamespaces = make([]types.NamespacedName, 0)
 		} else {
 			for _, namespace := range namespaces {
-				u.allNamespaces = append(u.allNamespaces, namespace.Name)
+				u.allNamespaces = append(u.allNamespaces, types.NamespacedName{Name: namespace.Name})
 			}
 		}
 		log.Debugf("getAllNamespaces returns %v", u.allNamespaces)
@@ -822,14 +822,14 @@ func (u *userCalculator) getAllNamespaces() []string {
 }
 
 // getGettableNamespaces determines which Namespaces the user is able to get.
-func (u *userCalculator) getGettableNamespaces() []string {
+func (u *userCalculator) getGettableNamespaces() []types.NamespacedName {
 	if u.gettableNamespaces == nil {
 		for _, namespace := range u.getAllNamespaces() {
 			if u.canGetAllNamespaces() || rbac_auth.RulesAllow(authorizer.AttributesRecord{
 				Verb:            string(VerbGet),
 				APIGroup:        v3.Group,
 				Resource:        resourceNamespaces,
-				Name:            namespace,
+				Name:            namespace.Name,
 				ResourceRequest: true,
 			}, u.getClusterRules()...) {
 				u.gettableNamespaces = append(u.gettableNamespaces, namespace)
@@ -849,7 +849,7 @@ func (u *userCalculator) getClusterRules() []rbacv1.PolicyRule {
 		if errors != nil {
 			log.WithError(errors).Debug("Failed to list cluster-wide rules for user")
 			// Filter out NotFound error for any missing cluster role to match the k8s API
-			var curatedError = utilerrors.FilterOut(errors, func(err error) bool {
+			curatedError := utilerrors.FilterOut(errors, func(err error) bool {
 				return k8serrors.IsNotFound(err)
 			})
 			if curatedError != nil {
@@ -882,7 +882,7 @@ func (u *userCalculator) getNamespacedRules() map[string][]rbacv1.PolicyRule {
 				rules, errors := u.calculator.namespacedRuleResolver.RulesFor(u.user, n.Name)
 
 				// Filter out NotFound error for any missing cluster role to match the k8s API
-				var curatedError = utilerrors.FilterOut(errors, func(err error) bool {
+				curatedError := utilerrors.FilterOut(errors, func(err error) bool {
 					return k8serrors.IsNotFound(err)
 				})
 				if curatedError != nil {

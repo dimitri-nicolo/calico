@@ -11,6 +11,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 
 	rbac_v1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	rbacmock "github.com/projectcalico/calico/apiserver/pkg/rbac/mock"
@@ -164,7 +165,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			Namespaces:          []string{"ns1", "ns2", "ns3", "ns4", "ns5"},
 			Tiers:               []string{"default", "tier1", "tier2", "tier3", "tier4"},
 			UISettingsGroups:    []string{"group1", "group2", "group3", "group4"},
-			ManagedClusters:     []string{"cluster1", "cluster2"},
+			ManagedClusters:     []types.NamespacedName{{Name: "cluster1"}, {Name: "cluster2"}},
 		}
 		calc = NewCalculator(mock, mock, mock, mock, mock, mock, mock, 0)
 		myUser = &user.DefaultInfo{
