@@ -433,10 +433,39 @@ func (s *Server) serve(cxt context.Context) {
 		}
 
 		logCxt.Infof("Accepted from %s", conn.RemoteAddr())
+		var tcpConn *net.TCPConn
+		if s.config.requiringTLS() {
+			// Doing TLS, we must do the handshake...
+			tlsConn := conn.(*tls.Conn)
+			logCxt.Debug("TLS connection")
+			err = func() error {
+				handshakeCxt, handshakeCancel := context.WithTimeout(cxt, s.config.HandshakeTimeout)
+				defer handshakeCancel()
+				return tlsConn.HandshakeContext(handshakeCxt)
+			}()
+			if err != nil {
+				logCxt.WithError(err).Error("TLS handshake error")
+				err = conn.Close()
+				if err != nil {
+					logCxt.WithError(err).Warning("Error closing failed TLS connection")
+				}
+				continue
+			}
+			state := tlsConn.ConnectionState()
+			for _, v := range state.PeerCertificates {
+				bytes, _ := x509.MarshalPKIXPublicKey(v.PublicKey)
+				logCxt.Debugf("%#v", bytes)
+				logCxt.Debugf("%#v", v.Subject)
+				logCxt.Debugf("%#v", v.URIs)
+			}
+			tcpConn, _ = tlsConn.NetConn().(*net.TCPConn)
+		} else {
+			tcpConn, _ = conn.(*net.TCPConn)
+		}
 
 		if s.config.WriteBufferSize != 0 {
 			// Try to set the write buffer size.  Only used in tests for now.
-			setWriteBufferSizeBestEffort(conn, s.config.WriteBufferSize)
+			setWriteBufferSizeBestEffort(tcpConn, s.config.WriteBufferSize)
 		}
 
 		connID := s.nextConnID
