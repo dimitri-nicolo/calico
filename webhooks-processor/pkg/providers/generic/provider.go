@@ -22,6 +22,11 @@ type GenericProvider struct {
 	config providers.Config
 }
 
+type GenericProviderPayload struct {
+	*lsApi.Event
+	Labels map[string]string `json:"labels"`
+}
+
 func NewProvider(config providers.Config) providers.Provider {
 	return &GenericProvider{
 		config: config,
@@ -36,7 +41,7 @@ func (p *GenericProvider) Validate(config map[string]string) error {
 }
 
 func (p *GenericProvider) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (err error) {
-	payload, err := json.Marshal(event)
+	payload, err := json.Marshal(GenericProviderPayload{Event: event, Labels: labels})
 	if err != nil {
 		return
 	}
