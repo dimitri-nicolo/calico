@@ -1264,38 +1264,6 @@ func udpResponseRawV6(in []byte) []byte {
 	return out.Bytes()
 }
 
-func udpResponseRawV6(in []byte) []byte {
-	pkt := gopacket.NewPacket(in, layers.LayerTypeEthernet, gopacket.Default)
-	ethL := pkt.Layer(layers.LayerTypeEthernet)
-	ethR := ethL.(*layers.Ethernet)
-	ethR.SrcMAC, ethR.DstMAC = ethR.DstMAC, ethR.SrcMAC
-
-	ipv6L := pkt.Layer(layers.LayerTypeIPv6)
-	ipv6R := ipv6L.(*layers.IPv6)
-	ipv6R.SrcIP, ipv6R.DstIP = ipv6R.DstIP, ipv6R.SrcIP
-
-	lrs := []gopacket.SerializableLayer{ethR, ipv6R}
-
-	if ipv6R.NextHeader == layers.IPProtocolIPv6HopByHop {
-		l := pkt.Layer(layers.LayerTypeIPv6HopByHop)
-		lrs = append(lrs, l.(*layers.IPv6HopByHop))
-	}
-
-	udpL := pkt.Layer(layers.LayerTypeUDP)
-	udpR := udpL.(*layers.UDP)
-	udpR.SrcPort, udpR.DstPort = udpR.DstPort, udpR.SrcPort
-
-	_ = udpR.SetNetworkLayerForChecksum(ipv6R)
-
-	lrs = append(lrs, udpR, gopacket.Payload(pkt.ApplicationLayer().Payload()))
-
-	out := gopacket.NewSerializeBuffer()
-	err := gopacket.SerializeLayers(out, gopacket.SerializeOptions{ComputeChecksums: true}, lrs...)
-	Expect(err).NotTo(HaveOccurred())
-
-	return out.Bytes()
-}
-
 func tcpResponseRaw(in []byte) []byte {
 	pkt := gopacket.NewPacket(in, layers.LayerTypeEthernet, gopacket.Default)
 	ethL := pkt.Layer(layers.LayerTypeEthernet)
