@@ -2226,7 +2226,7 @@ func wrap(p polProgramTest) polProgramTestWrapper {
 	return polProgramTestWrapper{p}
 }
 
-func TestPolicyPrograms(t *testing.T) {
+func TestPolicyPolicyPrograms(t *testing.T) {
 	for i, p := range polProgramTests {
 		t.Run(fmt.Sprintf("%d:Policy=%s", i, p.PolicyName), func(t *testing.T) { runTest(t, wrap(p)) })
 	}
