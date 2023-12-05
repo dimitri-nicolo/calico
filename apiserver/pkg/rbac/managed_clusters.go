@@ -1,6 +1,7 @@
 package rbac
 
 import (
+	"github.com/projectcalico/calico/apiserver/pkg/storage/calico"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/types"
@@ -10,6 +11,12 @@ import (
 
 // canGetAllManagedClusters determines whether the user is able to get all ManagedClusters.
 func (u *userCalculator) canGetAllManagedClusters() bool {
+	if calico.MultiTenantEnabled {
+		// In multi-tenant management clusters, nobody should have access to all ManagedClusters - we can
+		// short-circuit the calculation and return false.
+		return false
+	}
+
 	if u.canGetAllManagedClustersVal == nil {
 		allManagedClusters := rbac_auth.RulesAllow(authorizer.AttributesRecord{
 			Verb:            string(VerbGet),
