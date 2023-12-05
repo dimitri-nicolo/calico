@@ -72,7 +72,7 @@ type TcGlobalData6 struct {
 	NatIn        uint32
 	NatOut       uint32
 	LogFilterJmp uint32
-	Jumps        [32]uint32
+	Jumps        [40]uint32
 }
 
 type XDPGlobalData struct {
