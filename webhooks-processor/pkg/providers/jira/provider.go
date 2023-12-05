@@ -47,14 +47,14 @@ func (p *Jira) Validate(config map[string]string) error {
 	return nil
 }
 
-func (p *Jira) Process(ctx context.Context, config map[string]string, event *lsApi.Event) (err error) {
+func (p *Jira) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (err error) {
 	payload := new(jiraPayload)
 	payload.Fields.Project.Key = config["project"]
 	payload.Fields.IssueType.Name = config["issueType"]
 	if payload.Fields.Summary, err = buildSummary(event); err != nil {
 		return
 	}
-	if payload.Fields.Description, err = buildDescription(event); err != nil {
+	if payload.Fields.Description, err = buildDescription(event, labels); err != nil {
 		return
 	}
 

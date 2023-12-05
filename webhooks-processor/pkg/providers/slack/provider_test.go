@@ -22,6 +22,12 @@ func sampleValidConfig() map[string]string {
 	}
 }
 
+func sampleLabels() map[string]string {
+	return map[string]string{
+		"Cluster": "unit-test-cluster",
+	}
+}
+
 func TestSlackProviderValidation(t *testing.T) {
 	p := Slack{}
 	t.Run("valid config", func(t *testing.T) {
@@ -77,7 +83,7 @@ func TestSlackProviderProcessing(t *testing.T) {
 		c := sampleValidConfig()
 		c["url"] = fmt.Sprintf("%s/test", fc.Url())
 
-		err := p.Process(ctx, c, event)
+		err := p.Process(ctx, c, sampleLabels(), event)
 		require.NoError(t, err)
 
 		require.Eventually(t, func() bool { return len(fc.Requests) == 1 }, 5*time.Second, 10*time.Millisecond)
@@ -98,6 +104,7 @@ func TestSlackProviderProcessing(t *testing.T) {
 			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Severity:* 10/100"}},` +
 			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Mitre IDs:* 1234, 5678"}},` +
 			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Mitre tactic:* cork boi"}},` +
+			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Cluster:* unit-test-cluster"}},` +
 			`{"type":"section","text":{"type":"mrkdwn","text":"*‣ Detailed record information:* ` + "```n/a```" + `"}}]}`
 		require.Equal(t, messageJson, expectedJson)
 	})
@@ -108,7 +115,7 @@ func TestSlackProviderProcessing(t *testing.T) {
 
 		fc.ShouldFail = true
 		// This will take a while and only return once finished
-		err := p.Process(ctx, c, event)
+		err := p.Process(ctx, c, sampleLabels(), event)
 		require.Error(t, err)
 
 		require.Eventually(t, func() bool { return len(fc.Requests) >= 2 }, time.Second, 10*time.Millisecond)

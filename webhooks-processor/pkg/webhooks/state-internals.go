@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cnf/structhash"
@@ -22,11 +23,12 @@ import (
 )
 
 const (
-	ConfigVarNamespace     = "tigera-intrusion-detection"
-	ConditionHealthy       = "Healthy"
-	ConditionHealthyDesc   = "the webhook is healthy"
-	ConditionLastFetch     = "EventsFetched"
-	ConditionLastFetchDesc = ""
+	ConfigVarNamespace      = "tigera-intrusion-detection"
+	WebhookLabelsAnnotation = "webhooks.projectcalico.org/labels"
+	ConditionHealthy        = "Healthy"
+	ConditionHealthyDesc    = "the webhook is healthy"
+	ConditionLastFetch      = "EventsFetched"
+	ConditionLastFetchDesc  = ""
 )
 
 func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.SecurityEventWebhook) {
@@ -69,10 +71,7 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 
 	processFunc := provider.Process
 	if webhook.Spec.State == api.SecurityEventWebhookStateDebug {
-		processFunc = func(context.Context, map[string]string, *lsApi.Event) error {
-			logrus.WithField("uid", webhook.UID).Info("Processing Security Events for a webhook in 'Debug' state")
-			return nil
-		}
+		processFunc = s.debugProcessFunc(webhook)
 	}
 	webhookCtx, cancelFunc := context.WithCancel(ctx)
 	webhookUpdateChan := make(chan *api.SecurityEventWebhook)
@@ -179,4 +178,23 @@ func (s *ControllerState) retrieveConfigValue(ctx context.Context, src *api.Secu
 	}
 
 	return "", errors.New("neither ConfigMap nor Secret reference present") // should never happen
+}
+
+func (s *ControllerState) extractLabels(webhook api.SecurityEventWebhook) map[string]string {
+	labels := make(map[string]string)
+	if annotation, ok := webhook.Annotations[WebhookLabelsAnnotation]; ok {
+		for _, label := range strings.Split(annotation, ",") {
+			if keyValue := strings.SplitN(label, ":", 2); len(keyValue) == 2 {
+				labels[keyValue[0]] = keyValue[1]
+			}
+		}
+	}
+	return labels
+}
+
+func (s *ControllerState) debugProcessFunc(webhook *api.SecurityEventWebhook) ProcessFunc {
+	return func(context.Context, map[string]string, map[string]string, *lsApi.Event) error {
+		logrus.WithField("uid", webhook.UID).Info("Processing Security Events for a webhook in 'Debug' state")
+		return nil
+	}
 }

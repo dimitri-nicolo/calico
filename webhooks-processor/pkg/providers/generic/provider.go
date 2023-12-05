@@ -35,7 +35,7 @@ func (p *GenericProvider) Validate(config map[string]string) error {
 	return nil
 }
 
-func (p *GenericProvider) Process(ctx context.Context, config map[string]string, event *lsApi.Event) (err error) {
+func (p *GenericProvider) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (err error) {
 	payload, err := json.Marshal(event)
 	if err != nil {
 		return
