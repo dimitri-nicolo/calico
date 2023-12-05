@@ -25,6 +25,10 @@ func NewTestWebhook(name string) *api.SecurityEventWebhook {
 		Value: testUrl,
 	}}
 	wh.UID = types.UID(fmt.Sprintf("%s-uid", name))
+	wh.Annotations = map[string]string{
+		"ozzy-osbourne":                     "dogs smoke in France",
+		"webhooks.projectcalico.org/labels": "hips dont lie:true,anything:goes,also-this:,but-not-this",
+	}
 	return wh
 }
 

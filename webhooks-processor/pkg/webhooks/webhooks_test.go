@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -162,6 +163,20 @@ func TestWebhookSent(t *testing.T) {
 	require.Equal(t, wh.Spec.Config[0].Name, "url")
 	require.Equal(t, wh.Spec.Config[0].Value, testState.TestSlackProvider().Requests[0].Config["url"])
 	require.Equal(t, testEvent, testState.TestSlackProvider().Requests[0].Event)
+
+	// Make sure labels annotation is correctly processed
+	require.Eventually(t,
+		func() bool {
+			return assert.Equal(t,
+				map[string]string{
+					"hips dont lie": "true",
+					"anything":      "goes",
+					"also-this":     "",
+				},
+				testState.TestSlackProvider().Requests[0].Labels,
+			)
+		}, testState.FetchingInterval*4, 10*time.Millisecond,
+	)
 }
 
 func TestSendsOneWebhookPerEvent(t *testing.T) {
@@ -471,6 +486,7 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 
 type Request struct {
 	Config map[string]string
+	Labels map[string]string
 	Event  lsApi.Event
 }
 
@@ -496,6 +512,7 @@ func (p *TestProvider) Process(ctx context.Context, config map[string]string, la
 	logrus.Infof("Processing event %s", event.ID)
 	p.Requests = append(p.Requests, Request{
 		Config: config,
+		Labels: labels,
 		Event:  *event,
 	})
 
