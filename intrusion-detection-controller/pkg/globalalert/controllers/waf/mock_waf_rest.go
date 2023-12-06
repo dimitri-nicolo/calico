@@ -100,7 +100,7 @@ type mockEvents struct {
 // newEvents returns a new EventsInterface bound to the supplied client.
 func newMockEvents(c client.Client, cluster string, failPush bool) client.EventsInterface {
 	return &mockEvents{restClient: c.RESTClient(), clusterID: cluster, events: v1.List[v1.Event]{}, failPush: failPush}
-
+}
 
 // List gets the events for the given input params.
 func (f *mockEvents) List(ctx context.Context, params v1.Params) (*v1.List[v1.Event], error) {
