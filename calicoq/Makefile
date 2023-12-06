@@ -31,6 +31,12 @@ include ../lib.Makefile
 # All calicoq Go source files.
 SRC_FILES:=$(shell find calicoq -type f -name '*.go' -print)
 
+build: bin/calicoq-$(ARCH)
+bin/calicoq-$(ARCH): $(SRC_FILES)
+	$(call build_binary, ./calicoq/calicoq.go, $@)
+
+CALICOQ_IMAGE_CREATED=.calicoq.created-$(ARCH)
+
 # Build image for testing
 .PHONY: image $(BUILD_IMAGES)
 image: $(BUILD_IMAGES)
@@ -41,20 +47,19 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-BINARY = bin/calicoq
-$(CALICOQ_IMAGE): $(BINARY)
-	$(DOCKER_BUILD) -t $(CALICOQ_IMAGE):latest-$(ARCH) --file Dockerfile.$(ARCH) . --load
-ifeq ($(ARCH),amd64)
-	docker tag $(CALICOQ_IMAGE):latest-$(ARCH) $(CALICOQ_IMAGE):latest
-endif
-# Clean up image from testing
-.PHONY: clean-image
-clean-image:
-	docker rmi -f $(shell docker images -a | grep $(CALICOQ_IMAGE) | awk '{print $$3}' | awk '!a[$$0]++')
+$(CALICOQ_IMAGE): $(CALICOQ_IMAGE_CREATED)
+$(CALICOQ_IMAGE_CREATED): Dockerfile bin/calicoq-$(ARCH)
+	$(DOCKER_BUILD) -t $(CALICOQ_IMAGE):latest-$(ARCH) -f Dockerfile .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	touch $@
 
-build: $(BINARY)
-$(BINARY): $(SRC_FILES)
-	$(call build_binary, ./calicoq/calicoq.go, $@)
+.PHONY: clean
+clean:
+	rm -rf bin
+	rm -f $(CALICOQ_IMAGE_CREATED) $(TOOLING_IMAGE_CREATED)
+
+	-docker image rm -f $$(docker images $(CALICOQ_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(TOOLING_IMAGE) -a -q)
 
 ###############################################################################
 # CI/CD
@@ -70,8 +75,8 @@ ci: clean static-checks fv ut st
 ## Deploys images to registry
 cd: image cd-common
 
-$(TOOLING_IMAGE_CREATED): Dockerfile-testenv.amd64
-	$(DOCKER_BUILD) --cpuset-cpus 0 -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv.amd64 . --load
+$(TOOLING_IMAGE_CREATED): Dockerfile-testenv
+	$(DOCKER_BUILD) --cpuset-cpus 0 -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv .
 	touch $@
 
 .PHONY: ut 
@@ -89,7 +94,7 @@ fv: image run-etcd
 		-e TSEE_TEST_LICENSE=$(TSEE_TEST_LICENSE) \
 		-w /code/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) \
-		-c 'CALICOQ=`pwd`/$(BINARY) fv/run-test'
+		-c 'CALICOQ=`pwd`/bin/calicoq-$(ARCH) fv/run-test'
 
 .PHONY: st
 st: image $(TOOLING_IMAGE_CREATED)
@@ -103,7 +108,7 @@ st: image $(TOOLING_IMAGE_CREATED)
 		-e ETCD_IMAGE=$(ETCD_IMAGE) \
 		-e TSEE_TEST_LICENSE=$(TSEE_TEST_LICENSE) \
 		$(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) \
-		-c 'CALICOQ=`pwd`/$(BINARY) st/run-test'
+		-c 'CALICOQ=`pwd`/bin/calicoq-$(ARCH) st/run-test'
 
 .PHONY: scale-test
 scale-test: image
@@ -114,18 +119,7 @@ scale-test: image
 		-w /code/$(PACKAGE_NAME) \
 		-e ETCD_IMAGE=$(ETCD_IMAGE) \
 		$(CALICO_BUILD) \
-		-c 'CALICOQ=`pwd`/$(BINARY) scale-test/run-test'
-
-.PHONY: clean
-clean:
-	-rm -f *.created
-	find . -name '*.pyc' -exec rm -f {} +
-	-rm -rf build bin release vendor
-	-docker rmi calico/build
-	-docker rmi $(CALICOQ_IMAGE) -f
-	-docker rmi $(CALICO_BUILD) -f
-	-docker rmi $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f
-	-rm -f $(TOOLING_IMAGE_CREATED)
+		-c 'CALICOQ=`pwd`/bin/calicoq-$(ARCH) scale-test/run-test'
 
 ###############################################################################
 # Release

@@ -67,8 +67,8 @@ sub-image-%:
 image: $(FIREWALL_INTEGRATION_IMAGE)
 
 $(FIREWALL_INTEGRATION_IMAGE): $(FIREWALL_INTEGRATION_CONTAINER_CREATED)
-$(FIREWALL_INTEGRATION_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/firewall-integration-$(ARCH)
-	$(DOCKER_BUILD) -t $(FIREWALL_INTEGRATION_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+$(FIREWALL_INTEGRATION_CONTAINER_CREATED): Dockerfile bin/firewall-integration-$(ARCH)
+	$(DOCKER_BUILD) -t $(FIREWALL_INTEGRATION_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 

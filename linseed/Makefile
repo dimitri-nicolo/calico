@@ -63,8 +63,8 @@ sub-image-%:
 image: $(LINSEED_IMAGE)
 
 $(LINSEED_IMAGE): $(LINSEED_CONTAINER_CREATED)
-$(LINSEED_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/linseed-$(ARCH)
-	$(DOCKER_BUILD) -t $(LINSEED_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+$(LINSEED_CONTAINER_CREATED): Dockerfile bin/linseed-$(ARCH)
+	$(DOCKER_BUILD) -t $(LINSEED_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 

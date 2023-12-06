@@ -39,7 +39,7 @@ Running snort with custom rules:
 alert icmp any any -> any any ( sid:1000005; rev:1;)
 ```
 
-- Copy the `local.rules` file to docker image by adding this line in Dockerfile.amd64.
+- Copy the `local.rules` file to docker image by adding this line in `Dockerfile`.
 
 ```dockerfile
 # Copy local rules for dev testing

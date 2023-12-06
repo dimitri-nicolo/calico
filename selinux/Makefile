@@ -26,13 +26,13 @@ docker-containers: selinux-build.el8 selinux-build.el9
 selinux-build.el8: $(SELINUX_BUILD_IMAGE_EL8) clean-files
 $(SELINUX_BUILD_IMAGE_EL8): $(SELINUX_BUILD_CONTAINER_CREATED_EL8)
 $(SELINUX_BUILD_CONTAINER_CREATED_EL8): Dockerfile.el8
-	$(DOCKER_BUILD) -t $(SELINUX_BUILD_IMAGE_EL8):latest -f Dockerfile.el8 . --load
+	$(DOCKER_BUILD) -t $(SELINUX_BUILD_IMAGE_EL8):latest -f Dockerfile.el8 .
 	touch $@
 
 selinux-build.el9: $(SELINUX_BUILD_IMAGE_EL9) clean-files
 $(SELINUX_BUILD_IMAGE_EL9): $(SELINUX_BUILD_CONTAINER_CREATED_EL9)
 $(SELINUX_BUILD_CONTAINER_CREATED_EL9): Dockerfile.el9
-	$(DOCKER_BUILD) -t $(SELINUX_BUILD_IMAGE_EL9):latest -f Dockerfile.el9 . --load
+	$(DOCKER_BUILD) -t $(SELINUX_BUILD_IMAGE_EL9):latest -f Dockerfile.el9 .
 	touch $@
 
 ###############################################################################

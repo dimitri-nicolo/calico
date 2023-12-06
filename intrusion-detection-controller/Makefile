@@ -88,14 +88,14 @@ sub-image-%:
 image: $(IDS_CONTROLLER_IMAGE) $(JOB_INSTALLER_IMAGE)
 
 $(IDS_CONTROLLER_IMAGE): $(IDS_CONTROLLER_CONTAINER_CREATED)
-$(IDS_CONTROLLER_CONTAINER_CREATED): docker-image/controller/Dockerfile.$(ARCH) $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
-	$(DOCKER_BUILD) -t $(IDS_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile.$(ARCH) . --load
+$(IDS_CONTROLLER_CONTAINER_CREATED): docker-image/controller/Dockerfile $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+	$(DOCKER_BUILD) -t $(IDS_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(IDS_CONTROLLER_IMAGE)
 	touch $@
 
 $(JOB_INSTALLER_IMAGE): $(JOB_INSTALLER_CONTAINER_CREATED)
-$(JOB_INSTALLER_CONTAINER_CREATED): docker-image/install/Dockerfile.$(ARCH) $(BINDIR)/intrusion-detection-job-installer-$(ARCH)
-	$(DOCKER_BUILD) -t $(JOB_INSTALLER_IMAGE):latest-$(ARCH) -f docker-image/install/Dockerfile.$(ARCH) . --load
+$(JOB_INSTALLER_CONTAINER_CREATED): docker-image/install/Dockerfile $(BINDIR)/intrusion-detection-job-installer-$(ARCH)
+	$(DOCKER_BUILD) -t $(JOB_INSTALLER_IMAGE):latest-$(ARCH) -f docker-image/install/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(JOB_INSTALLER_IMAGE)
 	touch $@
 

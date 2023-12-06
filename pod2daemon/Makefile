@@ -37,6 +37,7 @@ clean:
 	-docker image rm -f $$(docker images $(CSI_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(FLEXVOL_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(REGISTRAR_IMAGE) -a -q)
+
 	$(MAKE) clean-registrar
 
 ###############################################################################

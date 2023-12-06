@@ -47,8 +47,8 @@ sub-image-%:
 image: $(INGRESS_COLLECTOR_IMAGE)
 
 $(INGRESS_COLLECTOR_IMAGE): $(INGRESS_COLLECTOR_IMAGE_CREATED)
-$(INGRESS_COLLECTOR_IMAGE_CREATED): Dockerfile.$(ARCH) bin/ingress-collector-$(ARCH)
-	$(DOCKER_BUILD) -t $(INGRESS_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(INGRESS_COLLECTOR_IMAGE_CREATED): Dockerfile bin/ingress-collector-$(ARCH)
+	$(DOCKER_BUILD) -t $(INGRESS_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 

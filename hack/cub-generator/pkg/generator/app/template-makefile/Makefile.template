@@ -57,7 +57,7 @@ image: $({{ snakecase .Name | upper }}_IMAGE)
 
 $({{ snakecase .Name | upper }}_IMAGE): $({{ snakecase .Name | upper }}_CONTAINER_CREATED)
 $({{ snakecase .Name | upper }}_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/{{ lower .Name }}-$(ARCH)
-	$(DOCKER_BUILD) -t $({{ snakecase .Name | upper }}_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+	$(DOCKER_BUILD) -t $({{ snakecase .Name | upper }}_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 

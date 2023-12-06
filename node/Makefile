@@ -30,9 +30,6 @@ BPFGPL_CONTAINER_PATH=/go/src/github.com/projectcalico/calico/felix/bpf-gpl/
 # Paths within the repository for BPF source.
 LIBBPF_A=../felix/bpf-gpl/include/libbpf/src/$(ARCH)/libbpf.a
 
-# These arches not yet building in node-private
-EXCLUDEARCH?=armv7 arm64 ppc64le s390x
-
 # This gets embedded into node as the Calico version, the Enterprise release
 # is based off of. This should be updated everytime a new opensource Calico
 # release is merged into node-private.

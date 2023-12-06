@@ -66,7 +66,7 @@ image: $(HONEYPOD_CONTROLLER_IMAGE)
 
 $(HONEYPOD_CONTROLLER_IMAGE): $(HONEYPOD_CONTROLLER_CONTAINER_CREATED)
 $(HONEYPOD_CONTROLLER_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/controller-$(ARCH)
-	$(DOCKER_BUILD) --build-arg SNORT_VERSION=$(SNORT_VERSION) -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+	$(DOCKER_BUILD) --build-arg SNORT_VERSION=$(SNORT_VERSION) -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 

@@ -74,8 +74,8 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(IMAGE_NAME): $(CONTAINER_CREATED)
-$(CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(BINARY)
-	$(DOCKER_BUILD) -t $(IMAGE_NAME):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(CONTAINER_CREATED): Dockerfile $(BINARY)
+	$(DOCKER_BUILD) -t $(IMAGE_NAME):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 

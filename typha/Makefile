@@ -136,7 +136,6 @@ $(TYPHA_CONTAINER_FIPS_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
                                  docker-image/Dockerfile \
                                  docker-image/typha.cfg \
                                  $(shell test "$(TYPHA_IMAGE_ID)" || echo force-rebuild)
-	$(MAKE) register
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/calico-typha-$(ARCH) docker-image/bin/

@@ -13,9 +13,6 @@ DEV_TAG_SUFFIX        ?=calient-0.dev
 CALICOCTL_IMAGE       ?=calicoctl
 BUILD_IMAGES          ?=$(CALICOCTL_IMAGE)
 
-# Remove any excluded architectures since for calicoctl we want to build everything.
-EXCLUDEARCH?=
-
 ###############################################################################
 # Download and include ../lib.Makefile
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since

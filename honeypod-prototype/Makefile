@@ -8,17 +8,8 @@ PACKAGE_NAME ?= github.com/tigera/calico-private/honeypod-prototype
 HONEYPOD_IMAGE                      ?=honeypod
 HONEYPOD_EXP_SERVICE_IMAGE          ?=honeypod-exp-service
 BUILD_IMAGES                        ?=$(HONEYPOD_IMAGE) $(HONEYPOD_EXP_SERVICE_IMAGE)
-ARCHES                              ?=amd64
-
-RELEASE_BRANCH_PREFIX				?=release-calient
-DEV_TAG_SUFFIX						?=calient-0.dev
-
-LDFLAGS:=-ldflags "\
-		-X $(PACKAGE_NAME)/pkg/version.VERSION=$(PKG_VERSION) \
-		-X $(PACKAGE_NAME)/pkg/version.BUILD_DATE=$(PKG_VERSION_BUILD_DATE) \
-		-X $(PACKAGE_NAME)/pkg/version.GIT_DESCRIPTION=$(PKG_VERSION_GIT_DESCRIPTION) \
-		-X $(PACKAGE_NAME)/pkg/version.GIT_REVISION=$(PKG_VERSION_REVISION) \
-		-B 0x$(BUILD_ID)"
+RELEASE_BRANCH_PREFIX               ?=release-calient
+DEV_TAG_SUFFIX                      ?=calient-0.dev
 
 ##############################################################################
 # Include ../lib.Makefile before anything else
@@ -30,9 +21,6 @@ include ../lib.Makefile
 ###############################################################################
 # BUILD IMAGE
 ###############################################################################
-.PHONY: build
-build:
-
 # Build the docker image.
 .PHONY: image $(BUILD_IMAGES)
 
@@ -50,14 +38,13 @@ HONEYPOD_EXP_SERVICE_IMAGE_CREATED=.honeypod-exp-service.created-$(ARCH)
 
 $(HONEYPOD_IMAGE): $(HONEYPOD_IMAGE_CREATED)
 $(HONEYPOD_IMAGE_CREATED):
-	$(DOCKER_BUILD) -t $(HONEYPOD_IMAGE):latest-$(ARCH) -f compromised_k8s_pod/ip_enumeration/Dockerfile.$(ARCH) .
+	$(DOCKER_BUILD) -t $(HONEYPOD_IMAGE):latest-$(ARCH) -f compromised_k8s_pod/ip_enumeration/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(HONEYPOD_IMAGE)
 	touch $@
 
-
 $(HONEYPOD_EXP_SERVICE_IMAGE): $(HONEYPOD_EXP_SERVICE_IMAGE_CREATED)
 $(HONEYPOD_EXP_SERVICE_IMAGE_CREATED):
-	$(DOCKER_BUILD) -t $(HONEYPOD_EXP_SERVICE_IMAGE):latest-$(ARCH) -f compromised_k8s_pod/exposed_service_nginx/Dockerfile.$(ARCH) compromised_k8s_pod/exposed_service_nginx
+	$(DOCKER_BUILD) -t $(HONEYPOD_EXP_SERVICE_IMAGE):latest-$(ARCH) -f compromised_k8s_pod/exposed_service_nginx/Dockerfile compromised_k8s_pod/exposed_service_nginx
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(HONEYPOD_EXP_SERVICE_IMAGE)
 	touch $@
 

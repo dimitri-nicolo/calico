@@ -53,9 +53,10 @@ LICENSE_AGENT_CONTAINER_CREATED=.$(LICENSE_AGENT_IMAGE).created-$(ARCH)
 
 image: $(LICENSE_AGENT_IMAGE)
 $(LICENSE_AGENT_IMAGE): $(LICENSE_AGENT_CONTAINER_CREATED)
-$(LICENSE_AGENT_CONTAINER_CREATED): $(BINDIR)/license-agent-$(ARCH)
-	$(DOCKER_BUILD) --pull -t $(LICENSE_AGENT_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+$(LICENSE_AGENT_CONTAINER_CREATED): Dockerfile $(BINDIR)/license-agent-$(ARCH)
+	$(DOCKER_BUILD) --pull -t $(LICENSE_AGENT_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	touch $@
 
 ##########################################################################
 # Testing

@@ -1,0 +1,13 @@
+FROM scratch as source
+
+ARG TARGETARCH
+
+COPY bin/webhooks-processor-${TARGETARCH} /webhooks-processor
+
+FROM calico/base
+
+COPY --from=source / /
+
+USER 10001:10001
+
+ENTRYPOINT ["/webhooks-processor"]

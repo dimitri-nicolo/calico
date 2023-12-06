@@ -54,8 +54,8 @@ sub-image-%:
 image: $(ES_GATEWAY_IMAGE)
 
 $(ES_GATEWAY_IMAGE): $(ES_GATEWAY_CONTAINER_CREATED)
-$(ES_GATEWAY_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/es-gateway-$(ARCH)
-	$(DOCKER_BUILD) -t $(ES_GATEWAY_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+$(ES_GATEWAY_CONTAINER_CREATED): Dockerfile bin/es-gateway-$(ARCH)
+	$(DOCKER_BUILD) -t $(ES_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 

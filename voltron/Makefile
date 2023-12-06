@@ -87,14 +87,14 @@ sub-image-%:
 image: $(BUILD_IMAGES)
 
 $(VOLTRON_IMAGE): $(VOLTRON_CONTAINER_CREATED)
-$(VOLTRON_CONTAINER_CREATED): docker-image/voltron/Dockerfile.$(ARCH) $(BINDIR)/voltron-$(ARCH)
-	$(DOCKER_BUILD) -t $(VOLTRON_IMAGE):latest-$(ARCH) -f docker-image/voltron/Dockerfile.$(ARCH) . --load
+$(VOLTRON_CONTAINER_CREATED): docker-image/voltron/Dockerfile $(BINDIR)/voltron-$(ARCH)
+	$(DOCKER_BUILD) -t $(VOLTRON_IMAGE):latest-$(ARCH) -f docker-image/voltron/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(VOLTRON_IMAGE)
 	touch $@
 
 $(GUARDIAN_IMAGE): $(GUARDIAN_CONTAINER_CREATED)
-$(GUARDIAN_CONTAINER_CREATED): docker-image/guardian/Dockerfile.$(ARCH) $(BINDIR)/guardian-$(ARCH)
-	$(DOCKER_BUILD) -t $(GUARDIAN_IMAGE):latest-$(ARCH) -f docker-image/guardian/Dockerfile.$(ARCH) . --load
+$(GUARDIAN_CONTAINER_CREATED): docker-image/guardian/Dockerfile $(BINDIR)/guardian-$(ARCH)
+	$(DOCKER_BUILD) -t $(GUARDIAN_IMAGE):latest-$(ARCH) -f docker-image/guardian/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(GUARDIAN_IMAGE)
 	touch $@
 

@@ -21,7 +21,6 @@ test: ut ## Run the tests for the current platform/architecture
 GATEWAY_CONTAINER_CREATED=.egress_gateway.created-$(ARCH)
 GATEWAY_TEST_CONTAINER_CREATED=.egress_gateway_testing.created-$(ARCH)
 # Files that go into the image
-GATEWAY_CONTAINER_FILES=$(shell find ./filesystem -type f)
 GATEWAY_DAEMON_EXECUTABLE=./bin/egressd-$(ARCH)
 # Files to be built
 SRC_FILES=$(shell find . -name '*.go' | grep -v vendor) ../felix/proto/felixbackend.pb.go $(shell find ../libcalico-go -name '*.go' | grep -v vendor)
@@ -90,14 +89,14 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(EGRESS_GATEWAY_IMAGE): $(GATEWAY_CONTAINER_CREATED)
-$(GATEWAY_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(GATEWAY_CONTAINER_FILES) $(GATEWAY_DAEMON_EXECUTABLE)
-	$(DOCKER_BUILD) -t $(EGRESS_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(GATEWAY_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(GATEWAY_DAEMON_EXECUTABLE)
+	$(DOCKER_BUILD) -t $(EGRESS_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 $(EGRESS_GATEWAY_TESTING_IMAGE): $(GATEWAY_TEST_CONTAINER_CREATED)
-$(GATEWAY_TEST_CONTAINER_CREATED): register ./test/Dockerfile.$(ARCH) $(GATEWAY_CONTAINER_FILES) $(GATEWAY_DAEMON_EXECUTABLE)
-	$(DOCKER_BUILD) -t $(EGRESS_GATEWAY_TESTING_IMAGE):latest-$(ARCH) -f test/Dockerfile.$(ARCH) . --load
+$(GATEWAY_TEST_CONTAINER_CREATED): register ./test/Dockerfile.$(ARCH) $(GATEWAY_DAEMON_EXECUTABLE)
+	$(DOCKER_BUILD) -t $(EGRESS_GATEWAY_TESTING_IMAGE):latest-$(ARCH) -f test/Dockerfile.$(ARCH) .
 	touch $@
 
 ## Run the tests in a container. Useful for CI, Mac dev
