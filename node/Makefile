@@ -90,7 +90,6 @@ TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created' ! -name '*.
 # Variables controlling the image
 NODE_CONTAINER_CREATED=.calico_node.created-$(ARCH)
 NODE_CONTAINER_FIPS_CREATED=.calico_node.created-$(ARCH)-fips
-NODE_CONTAINER_WINDOWS_CREATED=.calico_node-windows.created
 WINDOWS_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node.exe
 TOOLS_MOUNTNS_BINARY = $(NODE_CONTAINER_BIN_DIR)/mountns-$(ARCH)
 NODE_GIT_VERSION?=$(shell git describe --tags --dirty --long --always --abbrev=12)
@@ -618,10 +617,6 @@ release-build: .release-$(VERSION).created
 	$(MAKE) FIPS=true retag-build-images-with-registries RELEASE=true IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	# Generate the Windows zip archives.
 	$(MAKE) release-windows-archive
-	$(MAKE) release-windows-upgrade-archive
-	# Generate the Windows upgrade image tarballs (this must come after the
-	# upgrade archive)
-	$(MAKE) image-tar-windows-all
 	touch $@
 
 ## Produces the Windows installation ZIP archive for the release.
@@ -641,7 +636,7 @@ release-publish: release-prereqs .release-$(VERSION).published
 	$(MAKE) FIPS=true push-images-to-registries push-manifests IMAGETAG=$(VERSION)-fips RELEASE=$(RELEASE) CONFIRM=$(CONFIRM)
 
 	# Push Windows images.
-	$(MAKE) cd-windows-all RELEASE=$(RELEASE) CONFIRM=$(CONFIRM)
+	$(MAKE) release-windows IMAGETAG=$(VERSION) CONFIRM=$(CONFIRM)
 
 	touch $@
 
@@ -650,6 +645,8 @@ release-publish: release-prereqs .release-$(VERSION).published
 ## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
 release-publish-latest: release-verify
 	$(MAKE) push-images-to-registries push-manifests IMAGETAG=latest RELEASE=$(RELEASE) CONFIRM=$(CONFIRM)
+	# Push Windows images.
+	$(MAKE) release-windows IMAGETAG=latest CONFIRM=$(CONFIRM)
 
 ###############################################################################
 # Windows packaging
