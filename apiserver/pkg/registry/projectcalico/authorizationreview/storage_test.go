@@ -107,7 +107,7 @@ var _ = Describe("AuthorizationReview storage tests", func() {
 		}
 
 		// Send an authz review for managed clusters.
-		res, err := rest.Create(myContext, &v3.AuthorizationReview{
+		authzReview := &v3.AuthorizationReview{
 			Spec: v3.AuthorizationReviewSpec{
 				ResourceAttributes: []v3.AuthorizationReviewResourceAttributes{
 					{
@@ -117,13 +117,13 @@ var _ = Describe("AuthorizationReview storage tests", func() {
 					},
 				},
 			},
-		}, nil, nil)
+		}
+		res, err := rest.Create(myContext, authzReview, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res).NotTo(BeNil())
 
 		// Expect the managed cluster for tenant-b to show up, but not tenant-a.
-		ar := res.(*v3.AuthorizationReview)
-		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal([]v3.AuthorizedResourceVerbs{
+		expected := []v3.AuthorizedResourceVerbs{
 			{
 				APIGroup: "projectcalico.org",
 				Resource: "managedclusters",
@@ -136,7 +136,21 @@ var _ = Describe("AuthorizationReview storage tests", func() {
 					},
 				},
 			},
-		}))
+		}
+		ar := res.(*v3.AuthorizationReview)
+		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal(expected))
+
+		// Check that it also works with a namespaced Role instead of a ClusterRole.
+		mock.ClusterRoles = nil
+		mock.RoleBindings = map[string][]string{"tenant-b": {"/get-managed-clusters"}}
+		mock.Roles = map[string][]rbac_v1.PolicyRule{
+			"tenant-b/get-managed-clusters": {{Verbs: []string{"get"}, Resources: []string{"managedclusters"}, APIGroups: []string{"projectcalico.org"}}},
+		}
+		res, err = rest.Create(myContext, authzReview, nil, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).NotTo(BeNil())
+		ar = res.(*v3.AuthorizationReview)
+		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal(expected))
 	})
 
 	It("returns authorized managed clusters", func() {
