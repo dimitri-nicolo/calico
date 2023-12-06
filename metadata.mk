@@ -54,9 +54,6 @@ RELEASE_REGISTRIES = quay.io/tigera
 # The directory for windows image tarballs
 WINDOWS_DIST = dist/windows
 
-# The directory for windows image tarballs
-WINDOWS_DIST = dist/windows
-
 # FIXME: Use WINDOWS_HPC_VERSION and remove WINDOWS_VERSIONS when containerd v1.6 is EOL'd
 # The Windows HPC container version used as base for Calico Windows images
 WINDOWS_HPC_VERSION ?= v1.0.0
