@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/linseed/pkg/client"
 
@@ -20,6 +21,22 @@ import (
 var testfiles = []string{
 	"testdata/waf_log.json",
 	"testdata/waf_log_2.json",
+}
+
+type MockClient struct {
+	client.Client
+}
+
+func (MockClient) WAFLogs(string) client.WAFLogsInterface {
+	return newMockWAFLogs(client.NewMockClient("", rest.MockResult{}), "cluster")
+}
+
+func (MockClient) Events(string) client.EventsInterface {
+	return newMockEvents(client.NewMockClient("", rest.MockResult{}), "cluster")
+}
+
+func NewMockClient() MockClient {
+	return MockClient{}
 }
 
 // WAFLogs implements WAFLogsInterface.
@@ -41,18 +58,17 @@ func (f *MockWaf) List(ctx context.Context, params v1.Params) (*v1.List[v1.WAFLo
 	for _, testfile := range testfiles {
 		fileData, err := os.Open(testfile)
 		if err != nil {
-			panic(err)
+			logrus.Fatal(err)
 		}
 		rawLog, err := io.ReadAll(fileData)
 		if err != nil {
-			panic(err)
+			logrus.Fatal(err)
 		}
 
 		err = json.Unmarshal(rawLog, &wafLog)
 		if err != nil {
-			panic(err)
+			logrus.Fatal(err)
 		}
-
 		logs = append(logs, wafLog)
 	}
 	return &v1.List[v1.WAFLog]{Items: logs}, nil
@@ -83,8 +99,8 @@ type mockEvents struct {
 
 // newEvents returns a new EventsInterface bound to the supplied client.
 func newMockEvents(c client.Client, cluster string, failPush bool) client.EventsInterface {
-	return &mockEvents{restClient: c.RESTClient(), clusterID: cluster, failPush: failPush}
-}
+	return &mockEvents{restClient: c.RESTClient(), clusterID: cluster, events: v1.List[v1.Event]{}, failPush: failPush}
+
 
 // List gets the events for the given input params.
 func (f *mockEvents) List(ctx context.Context, params v1.Params) (*v1.List[v1.Event], error) {

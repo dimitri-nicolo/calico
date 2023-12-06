@@ -117,7 +117,6 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 			},
 		},
 	}
-
 	events, err := c.events.List(ctx, eventParams)
 	if err != nil {
 		log.WithError(err).WithField("params", eventParams).Error("error reading events logs from linseed")
@@ -141,7 +140,10 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 
 // Close cancels the WafAlertForwarder context.
 func (c *wafAlertController) Close() {
-	c.cancel()
+	// check if the cancel function has been called by another goroutine
+	if c.cancel != nil {
+		c.cancel()
+	}
 }
 
 func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {

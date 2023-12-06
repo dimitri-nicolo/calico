@@ -68,6 +68,11 @@ func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName
 		r.cancelAlertController(namespacedName.Name)
 	}
 
+	wafClustername := fmt.Sprintf("waf-%v", namespacedName.Name)
+	if _, ok := r.alertNameToAlertControllerState[wafClustername]; ok {
+		r.cancelAlertController(wafClustername)
+	}
+
 	if k8serrors.IsNotFound(err) {
 		// we are done closing the goroutine
 		return nil

@@ -81,5 +81,8 @@ func (c *globalAlertController) Run(parentCtx context.Context) {
 // Close cancels the GlobalAlert worker context and removes health check for all the objects that worker watches.
 func (c *globalAlertController) Close() {
 	c.worker.Close()
-	c.cancel()
+	// check if the cancel function has been called by another goroutine
+	if c.cancel != nil {
+		c.cancel()
+	}
 }
