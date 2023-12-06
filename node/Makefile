@@ -90,6 +90,7 @@ TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created' ! -name '*.
 # Variables controlling the image
 NODE_CONTAINER_CREATED=.calico_node.created-$(ARCH)
 NODE_CONTAINER_FIPS_CREATED=.calico_node.created-$(ARCH)-fips
+NODE_CONTAINER_WINDOWS_CREATED=.calico_node-windows.created
 WINDOWS_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node.exe
 TOOLS_MOUNTNS_BINARY = $(NODE_CONTAINER_BIN_DIR)/mountns-$(ARCH)
 NODE_GIT_VERSION?=$(shell git describe --tags --dirty --long --always --abbrev=12)
@@ -602,6 +603,53 @@ ensure-calico-version-release-defined:
 ifndef CALICO_VERSION_RELEASE
 	$(error CALICO_VERSION_RELEASE is undefined - run using make release CALICO_VERSION_RELEASE=vX.Y.Z)
 endif
+
+###############################################################################
+# Release
+###############################################################################
+## Produces a clean build of release artifacts at the specified version.
+release-build: .release-$(VERSION).created
+.release-$(VERSION).created:
+	$(MAKE) clean image-all RELEASE=true
+	$(MAKE) retag-build-images-with-registries RELEASE=true IMAGETAG=$(VERSION)
+	# Generate the `latest` node images.
+	$(MAKE) retag-build-images-with-registries RELEASE=true IMAGETAG=latest
+	$(MAKE) FIPS=true retag-build-images-with-registries RELEASE=true IMAGETAG=$(VERSION)-fips LATEST_IMAGE_TAG=latest-fips
+	$(MAKE) FIPS=true retag-build-images-with-registries RELEASE=true IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
+	# Generate the Windows zip archives.
+	$(MAKE) release-windows-archive
+	$(MAKE) release-windows-upgrade-archive
+	# Generate the Windows upgrade image tarballs (this must come after the
+	# upgrade archive)
+	$(MAKE) image-tar-windows-all
+	touch $@
+
+## Produces the Windows installation ZIP archive for the release.
+release-windows-archive: release-prereqs
+	$(MAKE) build-windows-archive WINDOWS_ARCHIVE_TAG=$(VERSION)
+
+## Verifies the release artifacts produces by `make release-build` are correct.
+release-verify: release-prereqs
+	# Check the reported version is correct for each release artifact.
+	if ! docker run $(NODE_IMAGE):$(VERSION)-$(ARCH) versions | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(NODE_IMAGE):$(VERSION)-$(ARCH) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
+
+## Pushes a github release and release artifacts produced by `make release-build`.
+release-publish: release-prereqs .release-$(VERSION).published
+.release-$(VERSION).published:
+	# Push node images.
+	$(MAKE) push-images-to-registries push-manifests IMAGETAG=$(VERSION) RELEASE=$(RELEASE) CONFIRM=$(CONFIRM)
+	$(MAKE) FIPS=true push-images-to-registries push-manifests IMAGETAG=$(VERSION)-fips RELEASE=$(RELEASE) CONFIRM=$(CONFIRM)
+
+	# Push Windows images.
+	$(MAKE) cd-windows-all RELEASE=$(RELEASE) CONFIRM=$(CONFIRM)
+
+	touch $@
+
+# WARNING: Only run this target if this release is the latest stable release. Do NOT
+# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
+## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
+release-publish-latest: release-verify
+	$(MAKE) push-images-to-registries push-manifests IMAGETAG=latest RELEASE=$(RELEASE) CONFIRM=$(CONFIRM)
 
 ###############################################################################
 # Windows packaging
