@@ -5,6 +5,7 @@ package waf
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 
@@ -34,6 +35,7 @@ func newMockWAFLogs(c client.Client, cluster string) client.WAFLogsInterface {
 
 // List gets the waf for the given input params.
 func (f *MockWaf) List(ctx context.Context, params v1.Params) (*v1.List[v1.WAFLog], error) {
+
 	var wafLog v1.WAFLog
 	logs := []v1.WAFLog{}
 	for _, testfile := range testfiles {
@@ -53,7 +55,6 @@ func (f *MockWaf) List(ctx context.Context, params v1.Params) (*v1.List[v1.WAFLo
 
 		logs = append(logs, wafLog)
 	}
-
 	return &v1.List[v1.WAFLog]{Items: logs}, nil
 }
 
@@ -77,11 +78,12 @@ type mockEvents struct {
 	restClient rest.RESTClient
 	clusterID  string
 	events     v1.List[v1.Event]
+	failPush   bool
 }
 
 // newEvents returns a new EventsInterface bound to the supplied client.
-func newMockEvents(c client.Client, cluster string) client.EventsInterface {
-	return &mockEvents{restClient: c.RESTClient(), clusterID: cluster}
+func newMockEvents(c client.Client, cluster string, failPush bool) client.EventsInterface {
+	return &mockEvents{restClient: c.RESTClient(), clusterID: cluster, failPush: failPush}
 }
 
 // List gets the events for the given input params.
@@ -90,8 +92,11 @@ func (f *mockEvents) List(ctx context.Context, params v1.Params) (*v1.List[v1.Ev
 }
 
 func (f *mockEvents) Create(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
-	f.events.Items = append(f.events.Items, events...)
-	return &v1.BulkResponse{}, nil
+	if !f.failPush {
+		f.events.Items = append(f.events.Items, events...)
+		return &v1.BulkResponse{}, nil
+	}
+	return &v1.BulkResponse{}, fmt.Errorf("Failed to create events")
 }
 
 func (f *mockEvents) UpdateDismissFlag(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {

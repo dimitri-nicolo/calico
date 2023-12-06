@@ -20,7 +20,7 @@ var _ = Describe("WAF Controller", func() {
 		wac         = &wafAlertController{
 			clusterName: "clusterName",
 			wafLogs:     newMockWAFLogs(mockClient, "clustername"),
-			events:      newMockEvents(mockClient, "clustername"),
+			events:      newMockEvents(mockClient, "clustername", false),
 			logsCache:   NewWAFLogsCache(time.Minute),
 		}
 	)
@@ -82,6 +82,49 @@ var _ = Describe("WAF Controller", func() {
 			Expect(err).ToNot(HaveOccurred())
 			// no new Events should have been created
 			Expect(len(logs2.Items)).To(Equal(numOfAlerts))
+
+		})
+
+		It("Test WAF caching fail", func() {
+
+			mockClient2 := client.NewMockClient("", rest.MockResult{})
+			wafAlertCtr := &wafAlertController{
+				clusterName: "clusterName",
+				wafLogs:     newMockWAFLogs(mockClient2, "clustername"),
+				events:      newMockEvents(mockClient2, "clustername", true),
+				logsCache:   NewWAFLogsCache(time.Minute),
+			}
+			ctx := context.Background()
+			// have the mock client return a failed push
+
+			err := wafAlertCtr.ProcessWafLogs(ctx)
+			Expect(err).To(HaveOccurred())
+
+			now := time.Now()
+			params := &v1.WAFLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: wac.lastQueryTimestamp,
+						To:   now,
+					},
+				},
+			}
+
+			logs, err := wafAlertCtr.events.List(ctx, params)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(logs.Items)).To(Equal(0))
+
+			// run the process again to make sure no new events are generated
+			err = wafAlertCtr.ProcessWafLogs(ctx)
+			Expect(err).To(HaveOccurred())
+
+			params.QueryParams.TimeRange.To = time.Now()
+
+			logs2, err := wafAlertCtr.events.List(ctx, params)
+			Expect(err).ToNot(HaveOccurred())
+			// no new Events should have been created
+			Expect(len(logs2.Items)).To(Equal(0))
 
 		})
 
