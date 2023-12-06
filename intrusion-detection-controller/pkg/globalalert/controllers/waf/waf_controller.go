@@ -178,7 +178,6 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 	wafEvents := []v1.Event{}
 	for _, wafLog := range logs.Items {
 		if !c.logsCache.Contains(&wafLog) {
-			c.logsCache.Add(&wafLog)
 			// generate the new alerts/events from the waflogs
 			wafEvents = append(wafEvents, NewWafEvent(wafLog))
 		}
@@ -189,6 +188,14 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 		_, err = c.events.Create(ctx, wafEvents)
 		if err != nil {
 			return err
+		}
+
+		// Add waflog to cache after push, in case push fails
+		for _, event := range wafEvents{
+			wafLog, ok := event.Record.(v1.WAFLog)
+			if ok{
+				c.logsCache.Add(&wafLog)
+			}
 		}
 	}
 
