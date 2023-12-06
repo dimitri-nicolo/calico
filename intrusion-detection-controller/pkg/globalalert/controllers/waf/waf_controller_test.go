@@ -116,14 +116,14 @@ var _ = Describe("WAF Controller", func() {
 
 			// run the process again to make sure no new events are generated
 			err = wafAlertCtr.ProcessWafLogs(ctx)
-			Expect(err).To(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 
 			params.QueryParams.TimeRange.To = time.Now()
 
 			logs2, err := wafAlertCtr.events.List(ctx, params)
 			Expect(err).ToNot(HaveOccurred())
 			// no new Events should have been created
-			Expect(len(logs2.Items)).To(Equal(0))
+			Expect(len(logs2.Items)).To(Equal(numOfAlerts))
 
 		})
 

@@ -194,10 +194,8 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 
 		// Add waflog to cache after push, in case push fails
 		for _, event := range wafEvents {
-			wafLog, ok := event.Record.(v1.WAFLog)
-			if ok {
-				c.logsCache.Add(&wafLog)
-			}
+			wafLog, _ := event.Record.(v1.WAFLog)
+			c.logsCache.Add(&wafLog)
 		}
 	}
 

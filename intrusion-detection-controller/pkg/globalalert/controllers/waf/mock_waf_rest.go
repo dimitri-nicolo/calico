@@ -32,7 +32,7 @@ func (MockClient) WAFLogs(string) client.WAFLogsInterface {
 }
 
 func (MockClient) Events(string) client.EventsInterface {
-	return newMockEvents(client.NewMockClient("", rest.MockResult{}), "cluster")
+	return newMockEvents(client.NewMockClient("", rest.MockResult{}), "cluster", false)
 }
 
 func NewMockClient() MockClient {
@@ -94,12 +94,12 @@ type mockEvents struct {
 	restClient rest.RESTClient
 	clusterID  string
 	events     v1.List[v1.Event]
-	failPush   bool
+	FailPush   bool
 }
 
 // newEvents returns a new EventsInterface bound to the supplied client.
 func newMockEvents(c client.Client, cluster string, failPush bool) client.EventsInterface {
-	return &mockEvents{restClient: c.RESTClient(), clusterID: cluster, events: v1.List[v1.Event]{}, failPush: failPush}
+	return &mockEvents{restClient: c.RESTClient(), clusterID: cluster, events: v1.List[v1.Event]{}, FailPush: failPush}
 }
 
 // List gets the events for the given input params.
@@ -108,10 +108,11 @@ func (f *mockEvents) List(ctx context.Context, params v1.Params) (*v1.List[v1.Ev
 }
 
 func (f *mockEvents) Create(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
-	if !f.failPush {
+	if !f.FailPush {
 		f.events.Items = append(f.events.Items, events...)
 		return &v1.BulkResponse{}, nil
 	}
+	f.FailPush = false
 	return &v1.BulkResponse{}, fmt.Errorf("Failed to create events")
 }
 
