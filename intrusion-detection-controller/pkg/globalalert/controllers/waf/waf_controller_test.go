@@ -95,7 +95,6 @@ var _ = Describe("WAF Controller", func() {
 				logsCache:   NewWAFLogsCache(time.Minute),
 			}
 			ctx := context.Background()
-			// have the mock client return a failed push
 
 			err := wafAlertCtr.ProcessWafLogs(ctx)
 			Expect(err).To(HaveOccurred())
