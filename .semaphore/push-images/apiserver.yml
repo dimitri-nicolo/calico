@@ -64,4 +64,4 @@ blocks:
             - name: DEV_REGISTRIES
               value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make VALIDARCHES="amd64 arm64" -C apiserver cd-common OMIT_IMAGES=true CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make VALIDARCHES="amd64 arm64" -C apiserver push-manifests-with-tag CONFIRM=true; fi

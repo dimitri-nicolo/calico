@@ -92,7 +92,6 @@ NODE_CONTAINER_CREATED=.calico_node.created-$(ARCH)
 NODE_CONTAINER_FIPS_CREATED=.calico_node.created-$(ARCH)-fips
 WINDOWS_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node.exe
 TOOLS_MOUNTNS_BINARY = $(NODE_CONTAINER_BIN_DIR)/mountns-$(ARCH)
-NODE_GIT_VERSION?=$(shell git describe --tags --dirty --long --always --abbrev=12)
 NODE_RELEASE_VERSION?=$(call git-release-tag-from-dev-tag)
 
 WINDOWS_INSTALL_SCRIPT := dist/install-calico-windows.ps1
@@ -102,7 +101,7 @@ WINDOWS_INSTALL_SCRIPT := dist/install-calico-windows.ps1
 WINDOWS_PACKAGING_ROOT := windows-packaging
 WINDOWS_ARCHIVE_ROOT := windows-packaging/CalicoWindows
 WINDOWS_ARCHIVE_BINARY := $(WINDOWS_ARCHIVE_ROOT)/calico-node.exe
-WINDOWS_ARCHIVE_TAG?=$(NODE_GIT_VERSION)
+WINDOWS_ARCHIVE_TAG?=$(GIT_VERSION)
 WINDOWS_ARCHIVE := dist/tigera-calico-windows-$(WINDOWS_ARCHIVE_TAG).zip
 # Version of NSSM to download.
 WINDOWS_NSSM_VERSION=2.24-103-gdee49fc
@@ -159,10 +158,10 @@ NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 # CALICO_VERSION is used by pkg/lifecycle/startup
 # All these are required for correct version reporting by the various binaries
 # as well as embedding this information within the ClusterInformation resource.
-LDFLAGS= -X $(PACKAGE_NAME)/pkg/lifecycle/startup.CNXVERSION=$(NODE_GIT_VERSION) \
+LDFLAGS= -X $(PACKAGE_NAME)/pkg/lifecycle/startup.CNXVERSION=$(GIT_VERSION) \
 	-X $(PACKAGE_NAME)/pkg/lifecycle/startup.CNXRELEASEVERSION=$(NODE_RELEASE_VERSION) \
 	-X $(PACKAGE_NAME)/pkg/lifecycle/startup.CALICOVERSION=$(CALICO_VERSION) \
-	-X main.VERSION=$(NODE_GIT_VERSION) \
+	-X main.VERSION=$(GIT_VERSION) \
 	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
 	-X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT)
@@ -668,12 +667,12 @@ WINDOWS_GCS_BUCKET := gs://tigera-windows/dev/
 # This target builds the Windows installation zip file and uploads it to GCS.
 push-windows-archive-gcs: build-windows-archive
 	gcloud auth activate-service-account --key-file ~/secrets/gcp-registry-pusher-service-account.json
-	gsutil cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip $(WINDOWS_GCS_BUCKET)
+	gsutil cp dist/tigera-calico-windows-$(GIT_VERSION).zip $(WINDOWS_GCS_BUCKET)
 	gcloud auth revoke registry-pusher@unique-caldron-775.iam.gserviceaccount.com
 
 release-verify-version: var-require-all-VERSION
 ifdef CONFIRM
-	$(if $(filter $(VERSION),$(NODE_GIT_VERSION)),,\
+	$(if $(filter $(VERSION),$(GIT_VERSION)),,\
 		echo Current version $(CURRENT_RELEASE_VERSION) does not match given version $(VERSION) && exit 1)
 endif
 
@@ -681,11 +680,11 @@ endif
 release-publish-windows-archive-gcs: var-require-one-of-CONFIRM-DRYRUN var-require-all-VERSION release-verify-version build-windows-archive
 ifdef CONFIRM
 	gcloud auth activate-service-account --key-file ~/secrets/gcp-registry-pusher-service-account.json
-	gsutil cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip gs://tigera-windows/
+	gsutil cp dist/tigera-calico-windows-$(GIT_VERSION).zip gs://tigera-windows/
 	gcloud auth revoke registry-pusher@unique-caldron-775.iam.gserviceaccount.com
 else
 	@echo [DRYRUN] gcloud auth activate-service-account --key-file ~/secrets/gcp-registry-pusher-service-account.json
-	@echo [DRYRUN] gsutil cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip gs://tigera-windows/
+	@echo [DRYRUN] gsutil cp dist/tigera-calico-windows-$(GIT_VERSION).zip gs://tigera-windows/
 	@echo [DRYRUN] gcloud auth revoke registry-pusher@unique-caldron-775.iam.gserviceaccount.com
 endif
 

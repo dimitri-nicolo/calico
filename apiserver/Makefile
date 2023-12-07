@@ -220,26 +220,3 @@ ci: clean static-checks image ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common
-
-###############################################################################
-# Release
-###############################################################################
-## Produces a clean build of release artifacts at the specified version.
-release-build: .release-$(VERSION).created
-.release-$(VERSION).created:
-	$(MAKE) clean image-all RELEASE=true
-	$(MAKE) retag-build-images-with-registries IMAGETAG=$(VERSION) RELEASE=true
-	# Generate the `latest` images.
-	$(MAKE) retag-build-images-with-registries IMAGETAG=latest RELEASE=true
-	$(MAKE) FIPS=true retag-build-images-with-registries IMAGETAG=$(VERSION)-fips RELEASE=true LATEST_IMAGE_TAG=latest-fips
-	$(MAKE) FIPS=true retag-build-images-with-registries IMAGETAG=latest-fips RELEASE=true LATEST_IMAGE_TAG=latest-fips
-	touch $@
-
-###############################################################################
-# Utils
-###############################################################################
-# this is not a linked target, available for convenience.
-.PHONY: tidy
-## 'tidy' mods.
-tidy:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod tidy'
