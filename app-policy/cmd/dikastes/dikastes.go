@@ -4,118 +4,67 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io"
-	"net"
-	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
-	"sync"
 	"syscall"
 	"time"
 
-	"github.com/docopt/docopt-go"
-	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	log "github.com/sirupsen/logrus"
 
-	"google.golang.org/grpc"
-
+	"github.com/projectcalico/calico/app-policy/flags"
 	"github.com/projectcalico/calico/app-policy/server"
-	"github.com/projectcalico/calico/app-policy/waf"
 	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
-	"github.com/projectcalico/calico/libcalico-go/lib/uds"
 )
-
-const usage = `Dikastes - the decider.
-
-Usage:
-  dikastes server [options]
-  dikastes client <namespace> <account> [--method <method>] [options]
-
-Options:
-  <namespace>                 Service account namespace.
-  <account>                   Service account name.
-  -h --help                   Show this screen.
-  -n --listen-network <net>   Listen network e.g. tcp, unix [default: unix]
-  -l --listen <port>          Listen address [default: /var/run/dikastes/dikastes.sock]
-  -x --dial-network <net>     PolicySync network e.g. tcp, unix [default: unix]
-  -d --dial <target>          PolicySync address [default: localhost:50051]
-  -r --rules <target>         Directory where WAF rules are stored.
-  --log-level <level>         Log at specified level e.g. panic, fatal,info, debug, trace [default: info].
-`
 
 var VERSION string = "dev"
 
 func main() {
-	log.Infof("Dikastes (%s) launching", VERSION)
 	// Make sure the RNG is seeded.
 	seedrng.EnsureSeeded()
 
-	arguments, err := docopt.ParseArgs(usage, nil, VERSION)
-	if err != nil {
-		println(usage)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	config := flags.New()
+	if err := config.Parse(os.Args); err != nil {
+		log.Fatal(err)
 		return
 	}
 
-	if lvl, ok := arguments["--log-level"].(string); ok {
-		setLevel, err := log.ParseLevel(lvl)
-		if err != nil {
-			log.WithError(err).Warn("invalid log-level value. falling back to default value 'info'")
-			setLevel = log.InfoLevel
-		}
-		log.SetLevel(setLevel)
-	}
-
-	if arguments["server"].(bool) {
-		runServer(arguments)
-	} else if arguments["client"].(bool) {
-		runClient(arguments)
-	}
+	log.Infof("Dikastes (%s) launching", VERSION)
+	runServer(ctx, config)
 }
 
-func runServer(arguments map[string]interface{}) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func runServer(ctx context.Context, config *flags.Config, readyCh ...chan struct{}) {
+	// setup log level
+	setLevel, err := log.ParseLevel(config.LogLevel)
+	if err != nil {
+		log.WithError(err).Warn("invalid log-level value. falling back to default value 'info'")
+		setLevel = log.InfoLevel
+	}
+	log.SetLevel(setLevel)
 
 	// Lifecycle: use a buffered channel so we don't miss any signals
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	var (
-		listenNetwork    string = arguments["--listen-network"].(string)
-		listenAddr       string = arguments["--listen"].(string)
-		policySyncNet    string = arguments["--dial-network"].(string)
-		policySyncAdress string = arguments["--dial"].(string)
-		rulesetArgument         = arguments["--rules"]
-	)
-
-	subscriptionType := getEnv("DIKASTES_SUBSCRIPTION_TYPE", "per-pod-policies")
-
-	log.WithFields(log.Fields{
-		"listenNetwork":    listenNetwork,
-		"listenAddress":    listenAddr,
-		"wafRuleset":       rulesetArgument,
-		"subscriptionType": subscriptionType,
-	}).Info("runtime arguments")
-
-	// WAF: initialize if enabled, also cleanup after
-	waf.Initialize(rulesetArgument)
-	defer waf.CleanupModSecurity()
+	log.WithFields(config.Fields()).Info("runtime arguments")
 
 	// Dikastes main: Setup and serve
 	dikastesServer := server.NewDikastesServer(
-		server.WithListenArguments(listenNetwork, listenAddr),
-		server.WithDialAddress(policySyncNet, policySyncAdress),
-		server.WithSubscriptionType(subscriptionType),
+		server.WithListenArguments(config.ListenNetwork, config.ListenAddress),
+		server.WithDialAddress(config.DialNetwork, config.DialAddress),
+		server.WithSubscriptionType(config.SubscriptionType),
+		server.WithWAFConfig(config.WAFEnabled, config.WAFLogFile, config.WAFDirectives.Value(), config.WAFRulesetBaseDir),
 	)
-	go dikastesServer.Serve(ctx)
+	go dikastesServer.Serve(ctx, readyCh...)
 
 	// Istio: termination handler (i.e., quitquitquit handler)
-	th := httpTerminationHandler{make(chan bool, 1)}
-	if httpServerPort := os.Getenv("DIKASTES_HTTP_BIND_PORT"); httpServerPort != "" {
-		httpServerAddr := os.Getenv("DIKASTES_HTTP_BIND_ADDR")
-		if httpServer, httpServerWg, err := th.RunHTTPServer(httpServerAddr, httpServerPort); err == nil {
+	thChan := make(chan struct{}, 1)
+	if config.HTTPServerPort != "" {
+		th := httpTerminationHandler{thChan}
+		log.Info("http server port is", config.HTTPServerPort)
+		if httpServer, httpServerWg, err := th.RunHTTPServer(config.HTTPServerAddr, config.HTTPServerPort); err == nil {
 			defer httpServerWg.Wait()
 			defer func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -131,96 +80,11 @@ func runServer(arguments map[string]interface{}) {
 
 	// Lifecycle: block until a signal is received.
 	select {
+	case <-ctx.Done():
+		log.Info("Context cancelled")
 	case sig := <-sigChan:
 		log.Infof("Got signal: %v", sig)
-	case <-th.termChan:
+	case <-thChan:
 		log.Info("Received HTTP termination request")
 	}
-}
-
-func runClient(arguments map[string]interface{}) {
-	dial := arguments["--dial"].(string)
-	namespace := arguments["<namespace>"].(string)
-	account := arguments["<account>"].(string)
-	useMethod := arguments["--method"].(bool)
-	method := arguments["<method>"].(string)
-
-	opts := uds.GetDialOptions()
-	conn, err := grpc.Dial(dial, opts...)
-	if err != nil {
-		log.Fatalf("fail to dial: %v", err)
-	}
-	defer conn.Close()
-	client := authz.NewAuthorizationClient(conn)
-	req := authz.CheckRequest{
-		Attributes: &authz.AttributeContext{
-			Source: &authz.AttributeContext_Peer{
-				Principal: fmt.Sprintf("spiffe://cluster.local/ns/%s/sa/%s",
-					namespace, account),
-			},
-		},
-	}
-	if useMethod {
-		req.Attributes.Request = &authz.AttributeContext_Request{
-			Http: &authz.AttributeContext_HttpRequest{
-				Method: method,
-			},
-		}
-	}
-	resp, err := client.Check(context.Background(), &req)
-	if err != nil {
-		log.Fatalf("Failed %v", err)
-	}
-	log.Infof("Check response:\n %v", resp)
-}
-
-type httpTerminationHandler struct {
-	termChan chan bool
-}
-
-func (h *httpTerminationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.termChan <- true
-	if _, err := io.WriteString(w, "terminating Dikastes\n"); err != nil {
-		log.Fatalf("error writing HTTP response: %v", err)
-	}
-}
-
-func (h *httpTerminationHandler) RunHTTPServer(addr string, port string) (*http.Server, *sync.WaitGroup, error) {
-	if i, err := strconv.Atoi(port); err != nil {
-		err = fmt.Errorf("error parsing provided HTTP listen port: %v", err)
-		return nil, nil, err
-	} else if i < 1 {
-		err = fmt.Errorf("please provide non-zero, non-negative port number for HTTP listening port")
-		return nil, nil, err
-	}
-
-	if addr != "" {
-		if ip := net.ParseIP(addr); ip == nil {
-			err := fmt.Errorf("invalid HTTP bind address \"%v\"", addr)
-			return nil, nil, err
-		}
-	}
-
-	httpServerSockAddr := fmt.Sprintf("%s:%s", addr, port)
-	httpServerMux := http.NewServeMux()
-	httpServerMux.Handle("/terminate", h)
-	httpServer := &http.Server{Addr: httpServerSockAddr, Handler: httpServerMux}
-	httpServerWg := &sync.WaitGroup{}
-	httpServerWg.Add(1)
-
-	go func() {
-		defer httpServerWg.Done()
-		log.Infof("starting HTTP server on %v", httpServer.Addr)
-		if err := httpServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatalf("HTTP server closed unexpectedly: %v", err)
-		}
-	}()
-	return httpServer, httpServerWg, nil
-}
-
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
 }

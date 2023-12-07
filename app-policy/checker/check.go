@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
+	"github.com/projectcalico/calico/app-policy/types"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/tproxydefs"
@@ -90,14 +91,18 @@ func lookupEndpointsFromRequest(store *policystore.PolicyStore, req *authz.Check
 	return
 }
 
-func lookupEndpointKeysFromRequest(store *policystore.PolicyStore, req *authz.CheckRequest) (source, destination []proto.WorkloadEndpointID, err error) {
+func LookupEndpointKeysFromRequest(store *policystore.PolicyStore, req *authz.CheckRequest) (source, destination []proto.WorkloadEndpointID, err error) {
+	if store == nil {
+		// can't lookup anything without a store
+		return source, destination, types.ErrNoStore{}
+	}
+
 	log.Debugf("extracting endpoints from request %s", req.String())
 
 	// Extract source and destination IP addresses if possible:
 	requestAttributes := req.GetAttributes()
 	if requestAttributes == nil {
-		err = errors.New("cannot process specified request data")
-		return
+		return source, destination, types.ErrUnprocessable{Reason: "cannot process specified request without attributes"}
 	}
 
 	// map destination first

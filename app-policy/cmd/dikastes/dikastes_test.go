@@ -16,91 +16,133 @@ package main
 
 import (
 	"context"
-	"net/http"
-	"net/http/httptest"
-	"reflect"
+	jsonenc "encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
+
+	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/genproto/googleapis/rpc/code"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/projectcalico/calico/app-policy/flags"
+	"github.com/projectcalico/calico/app-policy/internal/testdata"
+	"github.com/projectcalico/calico/app-policy/internal/util/testutils"
+	fakepolicysync "github.com/projectcalico/calico/app-policy/test/fv/policysync"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/uds"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-func TestTerminationHandler_ServeHTTP(t *testing.T) {
-	th := httpTerminationHandler{make(chan bool, 1)}
-	req := httptest.NewRequest("POST", "http://127.0.0.1:7777/terminate", nil)
-	w := httptest.NewRecorder()
-	th.ServeHTTP(w, req)
+func TestRunServer(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	resp := w.Result()
+	listenPath := filepath.Join(t.TempDir(), "dikastes.sock")
+	policySyncPath := filepath.Join(t.TempDir(), "nodeagent.sock")
+	wafLogFile := filepath.Join(t.TempDir(), "waf.log")
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected OK but instead got %v", resp.StatusCode)
+	fps, err := fakepolicysync.NewFakePolicySync(policySyncPath)
+	if err != nil {
+		t.Fatalf("cannot setup policysync fake %v", err)
+		return
+	}
+	go fps.Serve(ctx)
+
+	config := flags.New()
+	args := []string{
+		"dikastes", "server",
+		"-log-level", "trace",
+		"-dial", policySyncPath,
+		"-listen", listenPath,
+		"-waf-log-file", wafLogFile,
+		"-waf-enabled",
+		"-subscription-type", "per-host-policies",
+	}
+	// Add the default embedded directives.
+	// e.g. -waf-directive="Include @coraza.conf-recommended", etc
+	args = append(
+		args,
+		testdata.DirectivesToCLI(testdata.DefaultEmbeddedDirectives)...,
+	)
+	if err := config.Parse(args); err != nil {
+		t.Fatalf("cannot parse config %v", err)
+		return
+	}
+	ready := make(chan struct{}, 1)
+	go runServer(ctx, config, ready)
+	<-ready
+	fps.SendUpdates(inSync())
+
+	client, err := NewExtAuthzClient(ctx, listenPath)
+	if err != nil {
+		t.Fatal("cannot create client", err)
 		return
 	}
 
-	select {
-	case <-th.termChan:
-		return
-	default:
-		t.Error("termination handler did not write to channel as expected")
+	requests := []struct {
+		*testutils.CheckRequestBuilder
+		expectedCode code.Code
+		expectedErr  error
+	}{
+		{testutils.NewCheckRequestBuilder(), code.Code_OK, nil},
+		{testutils.NewCheckRequestBuilder(
+			testutils.WithMethod("GET"),
+			testutils.WithHost("my.loadbalancer.address"),
+			testutils.WithPath("/cart?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user"),
+		), code.Code_PERMISSION_DENIED, nil},
+		{testutils.NewCheckRequestBuilder(
+			testutils.WithMethod("POST"),
+			testutils.WithHost("www.example.com"),
+			testutils.WithPath("/vulnerable.php?id=1' waitfor delay '00:00:10'--"),
+			testutils.WithScheme("https"),
+		), code.Code_PERMISSION_DENIED, nil},
 	}
+
+	for _, req := range requests {
+		resp, err := client.Check(ctx, req.Value())
+		assert.Nil(t, err, "error must not have occurred")
+		assert.Equal(t, req.expectedErr, err)
+		assert.Equal(t, req.expectedCode, code.Code(resp.Status.Code))
+	}
+
+	f, err := os.Open(wafLogFile)
+	assert.Nil(t, err, "error must not have occurred")
+	defer f.Close()
+
+	sc := jsonenc.NewDecoder(f)
+	entries := []v1.WAFLog{}
+	for sc.More() {
+		var log v1.WAFLog
+		err := sc.Decode(&log)
+		if err != nil {
+			t.Error("cannot decode log", err)
+			continue
+		}
+		entries = append(entries, log)
+	}
+	assert.Equal(t, 2, len(entries), "expected 2 logs")
 }
 
-func TestHttpTerminationHandler_RunHTTPServer(t *testing.T) {
-	th := httpTerminationHandler{make(chan bool, 1)}
-	type input struct {
-		addr, port string
+func NewExtAuthzClient(ctx context.Context, addr string) (authzv3.AuthorizationClient, error) {
+	dialOpts := uds.GetDialOptionsWithNetwork("unix")
+	dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	cc, err := grpc.DialContext(
+		ctx, addr,
+		dialOpts...,
+	)
+	if err != nil {
+		return nil, err
 	}
-	type output struct {
-		addr, err string
-	}
-	tests := []struct {
-		name string
-		in   input
-		want output
-	}{
-		{
-			name: "no addr empty port",
-			in:   input{"", ""},
-			want: output{"", "error parsing provided HTTP listen port: strconv.Atoi: parsing \"\": invalid syntax"},
-		},
-		{
-			name: "no addr zero port",
-			in:   input{"", "0"},
-			want: output{"", "please provide non-zero, non-negative port number for HTTP listening port"},
-		},
-		{
-			name: "no addr valid port",
-			in:   input{"", "7777"},
-			want: output{":7777", ""},
-		},
-		{
-			name: "invalid addr valid port",
-			in:   input{"invalid", "7777"},
-			want: output{"", "invalid HTTP bind address \"invalid\""},
-		},
-		{
-			name: "valid addr valid port",
-			in:   input{"127.0.0.1", "7777"},
-			want: output{"127.0.0.1:7777", ""},
-		},
-	}
+	return authzv3.NewAuthorizationClient(cc), nil
+}
 
-	for _, tc := range tests {
-		gotSvr, wg, gotErr := th.RunHTTPServer(tc.in.addr, tc.in.port)
-		got := output{"", ""}
-		if gotSvr != nil {
-			got.addr = gotSvr.Addr
-		}
-		if gotErr != nil {
-			got.err = gotErr.Error()
-		}
-		if !reflect.DeepEqual(tc.want, got) {
-			t.Fatalf("%s: expected: %v got: %v", tc.name, tc.want, got)
-		}
-
-		if gotSvr != nil {
-			if err := gotSvr.Shutdown(context.Background()); err != nil {
-				t.Fatalf("failed to shutdown: %v", err)
-			}
-			wg.Wait()
-		}
+func inSync() *proto.ToDataplane {
+	return &proto.ToDataplane{
+		Payload: &proto.ToDataplane_InSync{
+			InSync: &proto.InSync{},
+		},
 	}
 }

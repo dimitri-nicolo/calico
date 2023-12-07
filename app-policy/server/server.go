@@ -5,6 +5,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/projectcalico/calico/app-policy/checker"
+	"github.com/projectcalico/calico/app-policy/logger"
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/app-policy/syncher"
@@ -26,6 +28,10 @@ type Dikastes struct {
 	subscriptionType             string
 	dialNetwork, dialAddress     string
 	listenNetwork, listenAddress string
+	wafEnabled                   bool
+	wafLogFile                   string
+	wafDirectives                []string
+	wafRulesetBaseDir            string
 	grpcServerOptions            []grpc.ServerOption
 
 	Ready chan struct{}
@@ -56,6 +62,15 @@ func WithSubscriptionType(s string) DikastesServerOptions {
 func WithGRPCServerOpts(opts ...grpc.ServerOption) DikastesServerOptions {
 	return func(ds *Dikastes) {
 		ds.grpcServerOptions = append(ds.grpcServerOptions, opts...)
+	}
+}
+
+func WithWAFConfig(wafEnabled bool, wafLogFile string, directives []string, rulesetBaseDir string) DikastesServerOptions {
+	return func(ds *Dikastes) {
+		ds.wafEnabled = wafEnabled
+		ds.wafDirectives = directives
+		ds.wafLogFile = wafLogFile
+		ds.wafRulesetBaseDir = rulesetBaseDir
 	}
 }
 
@@ -125,9 +140,17 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 		checker.WithRegisteredCheckProvider(checker.NewALPCheckProvider(s.subscriptionType)),
 	}
 
-	// waf checks are expensive, do it after alp
-	if waf.IsEnabled() {
-		checkServerOptions = append(checkServerOptions, checker.WithRegisteredCheckProvider(checker.NewWAFCheckProvider(s.subscriptionType)))
+	if s.wafEnabled {
+		wafLogHandler := logger.New(setupWAFLogging(s.wafLogFile)...)
+		s, err := waf.New(s.wafDirectives, s.wafRulesetBaseDir, wafLogHandler.Process)
+		if err != nil {
+			log.Fatalf("cannot initialize WAF: %v", err)
+		}
+
+		checkServerOptions = append(
+			checkServerOptions,
+			checker.WithRegisteredCheckProvider(s),
+		)
 	}
 
 	// checkServer provides envoy v3, v2, v2 alpha ext authz services
@@ -174,4 +197,21 @@ func (s *Dikastes) Addr() string {
 	}
 	u.Host = s.listenAddress
 	return u.String()
+}
+
+func setupWAFLogging(logFile string) []io.Writer {
+	res := []io.Writer{os.Stderr}
+	if logFile == "" {
+		// blank logfile param. skip logfile setup
+		log.Warn("only logging to stderr")
+		return res
+	}
+	w, err := logger.FileWriter(logFile)
+	if err != nil {
+		log.Warnf("cannot create log file writer (%v). writing to stderr only", err)
+		return res
+	} else {
+		res = append(res, w)
+	}
+	return res
 }

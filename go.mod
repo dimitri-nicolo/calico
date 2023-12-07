@@ -26,6 +26,8 @@ require (
 	// keep track of versions used in https://github.com/projectcalico/containernetworking-plugins
 	github.com/containernetworking/cni v1.1.1
 	github.com/containernetworking/plugins v1.1.1
+	github.com/corazawaf/coraza/v3 v3.0.4
+	github.com/corazawaf/coraza-coreruleset v0.0.0-20231103220038-fd5c847140a6
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/coreos/go-semver v0.3.1
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
@@ -61,6 +63,7 @@ require (
 	github.com/hashicorp/yamux v0.1.1
 	github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
 	github.com/jarcoal/httpmock v1.3.1
+	github.com/jcchavezs/mergefs v0.0.0-20230503083351-07f27d256761
 	github.com/joho/godotenv v1.5.1
 	github.com/jpillora/backoff v1.0.0
 	github.com/json-iterator/go v1.1.12
@@ -204,6 +207,7 @@ require (
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/containerd/containerd v1.6.23 // indirect
 	github.com/containerd/ttrpc v1.1.2 // indirect
+	github.com/corazawaf/libinjection-go v0.1.2 // indirect
 	github.com/coreos/go-iptables v0.6.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.4.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
@@ -268,6 +272,7 @@ require (
 	github.com/lestrrat-go/strftime v1.0.6 // indirect
 	github.com/libopenstorage/openstorage v1.0.0 // indirect
 	github.com/lithammer/dedent v1.1.0 // indirect
+	github.com/magefile/mage v1.15.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -298,6 +303,7 @@ require (
 	github.com/opencontainers/selinux v1.10.1 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
+	github.com/petar-dambovaliev/aho-corasick v0.0.0-20230725210150-fb29fc3c913e // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/pquerna/otp v1.2.0 // indirect
@@ -317,6 +323,9 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/urfave/cli v1.22.4 // indirect
+	github.com/tidwall/gjson v1.17.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/vishvananda/netns v0.0.2 // indirect
 	github.com/vmware/govmomi v0.30.6 // indirect
 	go.elastic.co/apm/module/apmzap/v2 v2.4.3 // indirect
@@ -368,6 +377,7 @@ require (
 	k8s.io/legacy-cloud-providers v0.0.0 // indirect
 	k8s.io/mount-utils v0.27.8 // indirect
 	k8s.io/pod-security-admission v0.0.0 // indirect
+	rsc.io/binaryregexp v0.2.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect

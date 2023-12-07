@@ -15,30 +15,6 @@
 ARG UBI_IMAGE
 ARG UBI_IMAGE_FULL
 
-FROM ${UBI_IMAGE_FULL} as build
-
-ARG MODSEC_VERSION=v3.0.10
-
-RUN dnf install -y https://www6.atomicorp.com/channels/atomic/redhat/8/x86_64/RPMS/GeoIP-1.6.12-7.el8.x86_64.rpm \
-      https://www6.atomicorp.com/channels/atomic/redhat/8/x86_64/RPMS/GeoIP-GeoLite-data-2018.06-3.el8.noarch.rpm \
-      https://www6.atomicorp.com/channels/atomic/redhat/8/x86_64/RPMS/GeoIP-GeoLite-data-extra-2018.06-3.el8.noarch.rpm \
-      https://www6.atomicorp.com/channels/atomic/redhat/8/x86_64/RPMS/GeoIP-devel-1.6.12-7.el8.x86_64.rpm
-
-RUN dnf install --disableplugin=subscription-manager -y \
-      gcc \
-      gcc-c++ \
-      git \
-      libcurl-devel \
-      libtool \
-      libxml2-devel \
-      make \
-      pcre-devel
-
-RUN git clone -b ${MODSEC_VERSION} --depth 1 --recurse-submodules --shallow-submodules https://github.com/SpiderLabs/ModSecurity.git modsecurity && \
-      cd modsecurity && ./build.sh && ./configure && \
-      make && make install
-
-
 FROM ${UBI_IMAGE} as ubi
 
 RUN mkdir -p /tmp/dikastes
@@ -48,10 +24,7 @@ RUN chmod 0777 /tmp/dikastes
 RUN mkdir /licenses
 COPY LICENSE /licenses
 
-COPY --from=build /usr/local/modsecurity/ /usr/local/modsecurity/
-COPY --from=build /usr/lib64/libGeoIP.* /usr/lib64/
-
-FROM scratch
+FROM scratch as build
 
 COPY --from=ubi /licenses /licenses
 
@@ -59,64 +32,11 @@ ARG BIN_DIR
 COPY ${BIN_DIR}/dikastes-amd64 /dikastes
 COPY ${BIN_DIR}/healthz-amd64 /healthz
 
-# Include libraries from UBI for dynamic linking.
-#
-# Copy the specific libraries; these were obtained by running 'ldd /dikastes'
-COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
-COPY --from=ubi /lib64/libbrotlicommon.so.1 /lib64/libbrotlicommon.so.1
-COPY --from=ubi /lib64/libbrotlidec.so.1 /lib64/libbrotlidec.so.1
-COPY --from=ubi /lib64/libcom_err.so.2 /lib64/libcom_err.so.2
-COPY --from=ubi /lib64/libcrypto.so.1.1 /lib64/libcrypto.so.1.1
-COPY --from=ubi /lib64/libcrypt.so.1 /lib64/libcrypt.so.1
-COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
-COPY --from=ubi /lib64/libcurl.so.4 /lib64/libcurl.so.4
-COPY --from=ubi /lib64/libdl.so.2 /lib64/libdl.so.2
-COPY --from=ubi /lib64/libgcc_s.so.1 /lib64/libgcc_s.so.1
-COPY --from=ubi /lib64/libGeoIP.so.1 /lib64/libGeoIP.so.1
-COPY --from=ubi /lib64/libgssapi_krb5.so.2 /lib64/libgssapi_krb5.so.2
-COPY --from=ubi /lib64/libidn2.so.0 /lib64/libidn2.so.0
-COPY --from=ubi /lib64/libk5crypto.so.3 /lib64/libk5crypto.so.3
-COPY --from=ubi /lib64/libkeyutils.so.1 /lib64/libkeyutils.so.1
-COPY --from=ubi /lib64/libkrb5.so.3 /lib64/libkrb5.so.3
-COPY --from=ubi /lib64/libkrb5support.so.0 /lib64/libkrb5support.so.0
-COPY --from=ubi /lib64/liblber-2.4.so.2 /lib64/liblber-2.4.so.2
-COPY --from=ubi /lib64/libldap-2.4.so.2 /lib64/libldap-2.4.so.2
-COPY --from=ubi /lib64/liblzma.so.5 /lib64/liblzma.so.5
-COPY --from=ubi /lib64/libm.so.6 /lib64/libm.so.6
-COPY --from=ubi /lib64/libnghttp2.so.14 /lib64/libnghttp2.so.14
-COPY --from=ubi /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
-COPY --from=ubi /lib64/libpcre.so.1 /lib64/libpcre.so.1
-COPY --from=ubi /lib64/libpsl.so.5 /lib64/libpsl.so.5
-COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
-
-# The following dependencies do not show up when performing ldd on the binary, but are still necessary.
-COPY --from=ubi /lib64/libnss_dns.so.2 /lib64/libnss_dns.so.2
-COPY --from=ubi /lib64/libnss_files.so.2 /lib64/libnss_files.so.2
-COPY --from=ubi /lib64/libresolv.so.2 /lib64/libresolv.so.2
-COPY --from=ubi /lib64/librt.so.1 /lib64/librt.so.1
-COPY --from=ubi /lib64/libsasl2.so.3 /lib64/libsasl2.so.3
-COPY --from=ubi /lib64/libselinux.so.1 /lib64/libselinux.so.1
-COPY --from=ubi /lib64/libssh.so.4 /lib64/libssh.so.4
-COPY --from=ubi /lib64/libssl.so.1.1 /lib64/libssl.so.1.1
-COPY --from=ubi /lib64/libstdc++.so.6 /lib64/libstdc++.so.6
-COPY --from=ubi /lib64/libunistring.so.2 /lib64/libunistring.so.2
-COPY --from=ubi /lib64/libxml2.so.2 /lib64/libxml2.so.2
-COPY --from=ubi /lib64/libz.so.1 /lib64/libz.so.1
-COPY --from=ubi /usr/local/modsecurity/lib/libmodsecurity.so.3 /usr/local/modsecurity/lib/libmodsecurity.so.3
-
-# Copy hostname configuration files from UBI so glibc hostname lookups work.
-COPY --from=ubi /etc/host.conf /etc/host.conf
-COPY --from=ubi /etc/nsswitch.conf /etc/nsswitch.conf
-
-# Typical Linux systems start numbering human users at 1000, reserving 1-999
-# for services, so we pick 999 to be least likely to overlap.  It's not a big
-# deal if we happen to overlap, as it would take a container escape for
-# an attacker to use any privileges that happen to be assigned to this user.
-#
 # Precreate the /var/run/dikastes directory so that we don't need any elevated
 # permission to create the directory at runtime.
-COPY --chown=999 --from=ubi /tmp/dikastes /var/run/dikastes
-COPY --chown=999 --from=ubi /tmp/dikastes /tmp/dikastes
-USER 999
+COPY --chown=10001 --from=ubi /tmp/dikastes /var/run/dikastes
+
+FROM scratch
+COPY --from=build / /
+USER 10001:10001
 ENTRYPOINT ["/dikastes"]
-CMD ["server"]
