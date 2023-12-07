@@ -33,6 +33,7 @@ import (
 const (
 	// The stats reporting and flush interval. Currently set to half the hardcoded expiration time of cache entries in
 	// the Felix stats collector component.
+	DefaultSubscriptionType   = "per-pod-policies"
 	DefaultStatsFlushInterval = 5 * time.Second
 	PolicySyncRetryTime       = 1000 * time.Millisecond
 )
@@ -40,46 +41,48 @@ const (
 type SyncClient struct {
 	target           string
 	dialOpts         []grpc.DialOption
-	stats            statscache.StatsCache
 	subscriptionType string
 	inSync           bool
 	storeManager     policystore.PolicyStoreManager
-	syncRequest      *proto.SyncRequest
+	stats            chan map[statscache.Tuple]statscache.Values
 
 	mu sync.Mutex
 }
 
-type ClientOptions struct {
-	StatsFlushInterval time.Duration
-	SubscriptionType   string
+type ClientOptions func(*SyncClient)
+
+func WithSubscriptionType(subscriptionType string) ClientOptions {
+	return func(s *SyncClient) {
+		switch subscriptionType {
+		case "":
+			s.subscriptionType = "per-pod-policies"
+		case "per-pod-policies", "per-host-policies":
+			s.subscriptionType = subscriptionType
+		default:
+			log.Panicf("invalid subscription type: '%s'", subscriptionType)
+		}
+	}
 }
 
 // NewClient creates a new syncClient.
-func NewClient(target string, policyStoreManager policystore.PolicyStoreManager, dialOpts []grpc.DialOption, clientOpts ClientOptions) *SyncClient {
-	statsFlushInterval := DefaultStatsFlushInterval
-	if clientOpts.StatsFlushInterval != 0 {
-		statsFlushInterval = clientOpts.StatsFlushInterval
-	}
-
-	switch clientOpts.SubscriptionType {
-	case "":
-		clientOpts.SubscriptionType = "per-pod-policies"
-	case "per-pod-policies", "per-host-policies":
-		// pass
-	default:
-		log.Panicf("invalid subscription type: '%s'", clientOpts.SubscriptionType)
-	}
-
-	return &SyncClient{
+func NewClient(target string, policyStoreManager policystore.PolicyStoreManager, dialOpts []grpc.DialOption, clientOpts ...ClientOptions) *SyncClient {
+	syncClient := &SyncClient{
 		target: target, dialOpts: dialOpts,
-		subscriptionType: clientOpts.SubscriptionType,
-		stats:            statscache.New(statsFlushInterval),
 		storeManager:     policyStoreManager,
-		syncRequest: &proto.SyncRequest{
-			SupportsDropActionOverride: true,
-			SupportsDataplaneStats:     true,
-			SubscriptionType:           clientOpts.SubscriptionType,
-		},
+		stats:            make(chan map[statscache.Tuple]statscache.Values),
+		subscriptionType: DefaultSubscriptionType,
+	}
+	for _, opt := range clientOpts {
+		opt(syncClient)
+	}
+	return syncClient
+}
+
+func (s *SyncClient) syncRequest() *proto.SyncRequest {
+	return &proto.SyncRequest{
+		SupportsDropActionOverride: true,
+		SupportsDataplaneStats:     true,
+		SubscriptionType:           s.subscriptionType,
 	}
 }
 
@@ -87,8 +90,7 @@ func (s *SyncClient) RegisterGRPCServices(gs *grpc.Server) {
 	dikastesproto.RegisterHealthzServer(gs, health.NewHealthCheckService(s))
 }
 
-func (s *SyncClient) Start(ctx context.Context, dpStats <-chan statscache.DPStats) {
-	s.stats.Start(ctx, dpStats)
+func (s *SyncClient) Start(ctx context.Context) {
 	for {
 		if err := s.connectAndSync(ctx); err != nil {
 			log.Error("connectAndSync error: ", err)
@@ -97,8 +99,16 @@ func (s *SyncClient) Start(ctx context.Context, dpStats <-chan statscache.DPStat
 	}
 }
 
-func (s *SyncClient) connectAndSync(ctx context.Context) error {
-	cctx, cancel := context.WithCancel(ctx)
+func (s *SyncClient) OnStatsCacheFlush(v map[statscache.Tuple]statscache.Values) {
+	// Only send stats if we are in sync.
+	if !s.inSync {
+		return
+	}
+	s.stats <- v
+}
+
+func (s *SyncClient) connectAndSync(ptx context.Context, cb ...statscache.StatsCacheFlushCallback) error {
+	ctx, cancel := context.WithCancel(ptx)
 	defer cancel()
 
 	s.setInSync(false)
@@ -115,11 +125,11 @@ func (s *SyncClient) connectAndSync(ctx context.Context) error {
 	defer cc.Close()
 
 	client := proto.NewPolicySyncClient(cc)
-	stream, err := client.Sync(ctx, s.syncRequest)
+	stream, err := client.Sync(ctx, s.syncRequest())
 	if err != nil {
 		return fmt.Errorf("failed to stream from PolicySync server: %w", err)
 	}
-	go s.sendStats(cctx, client)
+	go s.sendStats(ctx, client)
 
 	return s.sync(stream, ctx)
 }
@@ -162,8 +172,7 @@ func (s *SyncClient) sendStats(ctx context.Context, client proto.PolicySyncClien
 	log.Info("Starting sending DataplaneStats to Policy Sync server")
 	for {
 		select {
-		case a := <-s.stats.Aggregated():
-			log.Debug("sending stats")
+		case a := <-s.stats:
 			for t, v := range a {
 				if err := s.report(ctx, client, t, v); err != nil {
 					// Error reporting stats, exit now to start reconnction processing.
@@ -206,7 +215,6 @@ func (s *SyncClient) report(ctx context.Context, client proto.PolicySyncClient, 
 			Value:      v.HTTPRequestsDenied,
 		})
 	}
-
 	if r, err := client.Report(ctx, d); err != nil {
 		// Error sending stats, must be a connection issue, so exit now to force a reconnect.
 		return err

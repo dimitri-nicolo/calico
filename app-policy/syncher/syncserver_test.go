@@ -92,13 +92,11 @@ func TestSyncRestart(t *testing.T) {
 	server.Start()
 
 	psm := newMockPolicyStoreManager()
-	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), ClientOptions{})
-
-	dpStats := make(chan statscache.DPStats, 10)
+	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
 
 	cCtx, cCancel := context.WithCancel(context.Background())
 	defer cCancel()
-	go uut.Start(cCtx, dpStats)
+	go uut.Start(cCtx)
 
 	if uut.Readiness() {
 		t.Error("Expected syncClient not to be ready before receiving inSync")
@@ -137,11 +135,10 @@ func TestSyncCancelBeforeInSync(t *testing.T) {
 	server.Start()
 
 	psm := newMockPolicyStoreManager()
-	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), ClientOptions{})
-	dpStats := make(chan statscache.DPStats, 10)
+	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
 
 	cCtx, cCancel := context.WithCancel(context.Background())
-	go uut.Start(cCtx, dpStats)
+	go uut.Start(cCtx)
 
 	time.Sleep(10 * time.Millisecond)
 	cCancel()
@@ -156,11 +153,10 @@ func TestSyncCancelAfterInSync(t *testing.T) {
 	server.Start()
 
 	psm := newMockPolicyStoreManager()
-	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), ClientOptions{})
-	dpStats := make(chan statscache.DPStats, 10)
+	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
 
 	cCtx, cCancel := context.WithCancel(context.Background())
-	go uut.Start(cCtx, dpStats)
+	go uut.Start(cCtx)
 
 	server.SendInSync()
 	Eventually(uut.Readiness, "2s", "100ms").Should(BeTrue())
@@ -177,15 +173,12 @@ func TestSyncServerCancelBeforeInSync(t *testing.T) {
 	server.Start()
 
 	psm := newMockPolicyStoreManager()
-	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), ClientOptions{})
-	dpStats := make(chan statscache.DPStats, 10)
+	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
 
 	cCtx, cCancel := context.WithCancel(context.Background())
 	defer cCancel()
 
-	go func() {
-		uut.Start(cCtx, dpStats)
-	}()
+	go uut.Start(cCtx)
 
 	server.Shutdown()
 	time.Sleep(10 * time.Millisecond)
@@ -194,6 +187,9 @@ func TestSyncServerCancelBeforeInSync(t *testing.T) {
 }
 
 func TestDPStatsAfterConnection(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	RegisterTestingT(t)
 
 	server := newTestSyncServer()
@@ -201,25 +197,19 @@ func TestDPStatsAfterConnection(t *testing.T) {
 	server.Start()
 
 	psm := newMockPolicyStoreManager()
-	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), ClientOptions{
-		StatsFlushInterval: time.Millisecond * 100,
-	})
-	dpStats := make(chan statscache.DPStats, 10)
+	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
+	dpStats := statscache.NewWithFlushInterval(time.Millisecond * 100)
 
-	cCtx, cCancel := context.WithCancel(context.Background())
-	defer cCancel()
-
-	go func() {
-		uut.Start(cCtx, dpStats)
-		log.Debug("closing syncDone")
-	}()
+	go uut.Start(ctx)
+	dpStats.RegisterFlushCallback(uut.OnStatsCacheFlush)
+	go dpStats.Start(ctx)
 
 	// Wait for in sync, so that we can be sure we've connected.
 	server.SendInSync()
 	Eventually(uut.Readiness, "2s", "100ms").Should(BeTrue())
-
+	time.Sleep(time.Millisecond * 100)
 	// Send a DPStats update (allowed packets) and check we have the corresponding aggregated protobuf stored.
-	dpStats <- statscache.DPStats{
+	dpStats.Add(statscache.DPStats{
 		Tuple: statscache.Tuple{
 			SrcIp:    "1.2.3.4",
 			DstIp:    "11.22.33.44",
@@ -231,8 +221,9 @@ func TestDPStatsAfterConnection(t *testing.T) {
 			HTTPRequestsAllowed: 3,
 			HTTPRequestsDenied:  0,
 		},
-	}
-	Eventually(server.GetDataplaneStats, "500ms", "50ms").Should(Equal([]*proto.DataplaneStats{
+	})
+
+	Eventually(server.GetDataplaneStats, "1000ms", "50ms").Should(Equal([]*proto.DataplaneStats{
 		{
 			SrcIp:    "1.2.3.4",
 			DstIp:    "11.22.33.44",
@@ -252,7 +243,7 @@ func TestDPStatsAfterConnection(t *testing.T) {
 	}))
 
 	// Send a DPStats update (denied packets) and check we have the corresponding aggregated protobuf stored.
-	dpStats <- statscache.DPStats{
+	dpStats.Add(statscache.DPStats{
 		Tuple: statscache.Tuple{
 			SrcIp:    "1.2.3.4",
 			DstIp:    "11.22.33.44",
@@ -264,7 +255,7 @@ func TestDPStatsAfterConnection(t *testing.T) {
 			HTTPRequestsAllowed: 0,
 			HTTPRequestsDenied:  5,
 		},
-	}
+	})
 	Eventually(server.GetDataplaneStats, "500ms", "50ms").Should(Equal([]*proto.DataplaneStats{
 		{
 			SrcIp:    "1.2.3.4",
@@ -299,28 +290,26 @@ func TestDPStatsAfterConnection(t *testing.T) {
 			},
 		},
 	}))
-
-	cCancel()
 }
 
 func TestDPStatsBeforeConnection(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	RegisterTestingT(t)
 
 	server := newTestSyncServer()
 	defer server.Shutdown()
 
 	psm := newMockPolicyStoreManager()
-	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), ClientOptions{})
+	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
+	dpStats := statscache.NewWithFlushInterval(time.Millisecond * 100)
 
-	dpStats := make(chan statscache.DPStats, 10)
+	go uut.Start(ctx)
+	dpStats.RegisterFlushCallback(uut.OnStatsCacheFlush)
+	go dpStats.Start(ctx)
 
-	cCtx, cCancel := context.WithCancel(context.Background())
-	defer cCancel()
-	go func() {
-		uut.Start(cCtx, dpStats)
-	}()
-
-	dpStats <- statscache.DPStats{
+	dpStats.Add(statscache.DPStats{
 		Tuple: statscache.Tuple{
 			SrcIp:    "1.2.3.4",
 			DstIp:    "11.22.33.44",
@@ -332,7 +321,7 @@ func TestDPStatsBeforeConnection(t *testing.T) {
 			HTTPRequestsAllowed: 0,
 			HTTPRequestsDenied:  1,
 		},
-	}
+	})
 	Consistently(server.GetDataplaneStats, "100ms", "10ms").Should(HaveLen(0))
 
 	// Start the server. This should allow the connection to complete - we expect the stats to have been
@@ -345,10 +334,13 @@ func TestDPStatsBeforeConnection(t *testing.T) {
 
 	Consistently(server.GetDataplaneStats, "100ms", "10ms").Should(HaveLen(0))
 
-	cCancel()
 }
 
 func TestDPStatsReportReturnsError(t *testing.T) {
+	log.SetLevel(log.TraceLevel)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	RegisterTestingT(t)
 
 	server := newTestSyncServer()
@@ -356,17 +348,12 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 	defer server.Shutdown()
 
 	psm := newMockPolicyStoreManager()
-	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), ClientOptions{
-		StatsFlushInterval: time.Millisecond * 200,
-	})
+	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
+	dpStats := statscache.NewWithFlushInterval(time.Millisecond * 100)
 
-	dpStats := make(chan statscache.DPStats, 10)
-
-	cCtx, cCancel := context.WithCancel(context.Background())
-	defer cCancel()
-	go func() {
-		uut.Start(cCtx, dpStats)
-	}()
+	go uut.Start(ctx)
+	dpStats.RegisterFlushCallback(uut.OnStatsCacheFlush)
+	go dpStats.Start(ctx)
 
 	// Wait for in sync, so that we can be sure we've connected.
 	server.SendInSync()
@@ -376,7 +363,7 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 	server.Stop()
 	Consistently(server.GetDataplaneStats).Should(HaveLen(0))
 
-	dpStats <- statscache.DPStats{
+	dpStats.Add(statscache.DPStats{
 		Tuple: statscache.Tuple{
 			SrcIp:    "1.2.3.4",
 			DstIp:    "11.22.33.44",
@@ -388,7 +375,7 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 			HTTPRequestsAllowed: 15,
 			HTTPRequestsDenied:  0,
 		},
-	}
+	})
 	Consistently(server.GetDataplaneStats).Should(HaveLen(0))
 
 	// Restart the test server, the stats should have been dropped, so we should still not receive them.
@@ -401,7 +388,7 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 	Eventually(uut.Readiness, "2s", "100ms").Should(BeTrue())
 
 	// Send in another stat and this time, check that we do eventually get it reported.
-	dpStats <- statscache.DPStats{
+	dpStats.Add(statscache.DPStats{
 		Tuple: statscache.Tuple{
 			SrcIp:    "1.2.3.4",
 			DstIp:    "11.22.33.44",
@@ -413,7 +400,7 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 			HTTPRequestsAllowed: 7,
 			HTTPRequestsDenied:  0,
 		},
-	}
+	})
 	Eventually(server.GetDataplaneStats, "3s", "100ms").Should(
 		ContainElement(
 			&proto.DataplaneStats{
@@ -432,8 +419,6 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 					},
 				},
 			}))
-
-	cCancel()
 }
 
 func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
@@ -443,17 +428,13 @@ func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
 	defer server.Shutdown()
 
 	psm := newMockPolicyStoreManager()
-	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), ClientOptions{
-		StatsFlushInterval: time.Millisecond * 200,
-	})
+	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
 
-	dpStats := make(chan statscache.DPStats, 10)
+	dpStats := statscache.New()
 
 	cCtx, cCancel := context.WithCancel(context.Background())
 	defer cCancel()
-	go func() {
-		uut.Start(cCtx, dpStats)
-	}()
+	go uut.Start(cCtx)
 
 	// Start the server. This should allow the connection to complete, and we should receive one aggregated
 	// statistic.
@@ -466,7 +447,7 @@ func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
 	// Tell the Report fn to return unsuccessful (which can occur if the remote end is no longer expecting statistics
 	// to be sent to it) and then send in the stats. We should not receive any updates.
 	server.SetReportSuccessful(false)
-	dpStats <- statscache.DPStats{
+	dpStats.Add(statscache.DPStats{
 		Tuple: statscache.Tuple{
 			SrcIp:    "1.2.3.4",
 			DstIp:    "11.22.33.44",
@@ -478,7 +459,7 @@ func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
 			HTTPRequestsAllowed: 15,
 			HTTPRequestsDenied:  0,
 		},
-	}
+	})
 	Consistently(server.GetDataplaneStats).Should(HaveLen(0))
 
 	// Tell the Report fn to succeed and check we still don't get the stats - they should have been dropped at this
@@ -572,7 +553,6 @@ func (s *testSyncServer) Report(_ context.Context, d *proto.DataplaneStats) (*pr
 			Successful: false,
 		}, nil
 	}
-
 	// Store the stats and return succes.
 	s.dpStats = append(s.dpStats, d)
 	return &proto.ReportResult{

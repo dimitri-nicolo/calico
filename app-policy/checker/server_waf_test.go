@@ -25,7 +25,7 @@ func TestWAFProcessHttpRequestHTTPGetAllowed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dpStats := make(chan statscache.DPStats, 10)
+	dpStats := statscache.New()
 	psm := policystore.NewPolicyStoreManager()
 	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewWAFCheckProvider("per-pod-policies")))
 
@@ -91,7 +91,7 @@ func TestWAFProcessHttpRequestPassThroughSQLInjection(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dpStats := make(chan statscache.DPStats, 10)
+	dpStats := statscache.New()
 	psm := policystore.NewPolicyStoreManager()
 	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewWAFCheckProvider("per-pod-policies")))
 
@@ -154,7 +154,7 @@ func TestWAFProcessHttpRequestHTTPPostDeniedCrossSiteScript(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dpStats := make(chan statscache.DPStats, 10)
+	dpStats := statscache.New()
 	psm := policystore.NewPolicyStoreManager()
 	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewWAFCheckProvider("per-pod-policies")))
 

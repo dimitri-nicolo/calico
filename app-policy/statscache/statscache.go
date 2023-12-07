@@ -17,9 +17,14 @@ package statscache
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	DefaultStatsFlushInterval = 5 * time.Second
 )
 
 // Tuple encapsulates the 5-tuple connection information.
@@ -64,66 +69,79 @@ func (d DPStats) String() string {
 
 // The statscache interface.
 type StatsCache interface {
-	Start(cxt context.Context, dpStats <-chan DPStats)
-	Aggregated() <-chan map[Tuple]Values
+	Start(context.Context)
+	Aggregated() map[Tuple]Values
+	Add(DPStats)
+	Flush()
+	RegisterFlushCallback(StatsCacheFlushCallback)
 }
 
+type StatsCacheFlushCallback func(map[Tuple]Values)
+
 // New() creates a new statscache.
-func New(flushInterval time.Duration) StatsCache {
-	return &statsCache{
-		flushInterval: flushInterval,
-		stats:         make(map[Tuple]Values),
-		aggregated:    make(chan map[Tuple]Values),
+func New(opts ...StatsCacheOption) StatsCache {
+	return NewWithFlushInterval(DefaultStatsFlushInterval, opts...)
+}
+
+type StatsCacheOption func(*statsCache)
+
+func WithTicker(t LazyTicker) StatsCacheOption {
+	return func(s *statsCache) {
+		s.ticker = t
 	}
 }
 
+func WithStatsFlushCallbacks(callbacks ...StatsCacheFlushCallback) StatsCacheOption {
+	return func(s *statsCache) {
+		s.callbacks = callbacks
+	}
+}
+
+func NewWithFlushInterval(flushInterval time.Duration, opts ...StatsCacheOption) StatsCache {
+	res := &statsCache{
+		ticker:    NewLazyTicker(flushInterval),
+		stats:     make(map[Tuple]Values),
+		callbacks: make([]StatsCacheFlushCallback, 0),
+	}
+	for _, o := range opts {
+		o(res)
+	}
+	return res
+}
+
 // Start starts the statscache collection, aggregation and reporting.
-// Statistics are fed in through the dpStats channel, and the aggregated statistics are reported through
-// the aggregated channel with a flush interval defined by `flushInterval`.
-func (s *statsCache) Start(cxt context.Context, dpStats <-chan DPStats) {
-	go s.run(cxt, dpStats)
-}
-
-// Aggregated returns the aggregated stats channel. If no goroutine is actively reading from this channel
-// when the stats are flushed, the stats will be dropped.
-func (s *statsCache) Aggregated() <-chan map[Tuple]Values {
-	return s.aggregated
-}
-
-// NewTicker is a wrapper around time.NewTicker, and allows us to mock out the tick channel for testing
-// purposes.
-var NewTicker = func(d time.Duration) *time.Ticker {
-	return time.NewTicker(d)
-}
-
-type statsCache struct {
-	flushInterval time.Duration
-	stats         map[Tuple]Values
-	aggregated    chan map[Tuple]Values
-}
-
-// run is the main loop that pulls stats from the dsStats channel and periodically reports aggregated
-// stats through the aggregated channel.
-func (s *statsCache) run(cxt context.Context, dpStats <-chan DPStats) {
+func (s *statsCache) Start(cxt context.Context) {
 	log.Debug("Starting statistics consolidation and reporting")
-	flushStatsTicker := NewTicker(s.flushInterval)
-	defer flushStatsTicker.Stop()
-
+	go s.ticker.Start(cxt)
 	for {
+
 		select {
-		case d := <-dpStats:
-			s.add(d)
-		case <-flushStatsTicker.C:
-			s.flush()
+		case <-s.ticker.C():
+			log.Debug("ticker fired")
+			s.Flush()
 		case <-cxt.Done():
 			return
 		}
 	}
 }
 
-// add adds the supplied DPStats to the current cache, either creating a new entry, or aggregating
+type statsCache struct {
+	ticker    LazyTicker
+	stats     map[Tuple]Values
+	mu        sync.Mutex
+	callbacks []StatsCacheFlushCallback
+}
+
+func (s *statsCache) RegisterFlushCallback(cb StatsCacheFlushCallback) {
+	s.callbacks = append(s.callbacks, cb)
+}
+
+// Add adds the supplied DPStats to the current cache, either creating a new entry, or aggregating
 // into the existing entry.
-func (s *statsCache) add(d DPStats) {
+func (s *statsCache) Add(d DPStats) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	log.Debugf("Caching statistic: %v", d)
 	if v, ok := s.stats[d.Tuple]; ok {
 		// Entry already exists in cache, increment stats in existing entry.
@@ -134,20 +152,30 @@ func (s *statsCache) add(d DPStats) {
 	s.stats[d.Tuple] = d.Values
 }
 
-// flush sends the current aggregated cache, and creates a new empty cache.
-func (s *statsCache) flush() {
-	log.Trace("Reporting cached statistics and flushing cache")
+// Flush sends the current aggregated cache, and creates a new empty cache.
+func (s *statsCache) Flush() {
+	log.Trace("Flushing cached statistics")
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if len(s.stats) == 0 {
 		// No stats, so nothing to report.
+		log.Debug("No statistics to report")
 		return
 	}
 
-	// Report the current set of stats, and create a new empty stats cache.
-	select {
-	case s.aggregated <- s.stats:
-		// Aggregated stats successfully received by remote end.
-	default:
-		// No go-routine waiting on the stats. Drop them.
+	log.Trace("Reporting cached statistics")
+	for _, cb := range s.callbacks {
+		cb(s.stats)
 	}
+	log.Trace("Clearing cached statistics")
 	s.stats = make(map[Tuple]Values)
+}
+
+// Aggregated returns current aggregated stats.
+func (s *statsCache) Aggregated() map[Tuple]Values {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.stats
 }

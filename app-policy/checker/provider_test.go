@@ -25,7 +25,7 @@ func TestCheckAuthScenarios(t *testing.T) {
 			}
 		})
 		ps.OnInSync()
-		dpStats := make(chan statscache.DPStats)
+		dpStats := statscache.New()
 		checkServer := checker.NewServer(
 			ctx, ps, dpStats,
 			checker.WithSubscriptionType(scenario.subscriptionType),
