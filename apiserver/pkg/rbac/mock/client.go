@@ -6,6 +6,7 @@ import (
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 
 	log "github.com/sirupsen/logrus"
 
@@ -24,7 +25,7 @@ type MockClient struct {
 	Namespaces          []string
 	Tiers               []string
 	UISettingsGroups    []string
-	ManagedClusters     []string
+	ManagedClusters     []types.NamespacedName
 	ResourcesQueries    int
 }
 
@@ -235,10 +236,11 @@ func (m *MockClient) ListManagedClusters() ([]*v3.ManagedCluster, error) {
 	}
 
 	mgs := make([]*v3.ManagedCluster, len(m.ManagedClusters))
-	for i, name := range m.ManagedClusters {
+	for i, obj := range m.ManagedClusters {
 		mgs[i] = &v3.ManagedCluster{
 			ObjectMeta: meta_v1.ObjectMeta{
-				Name: name,
+				Name:      obj.Name,
+				Namespace: obj.Namespace,
 			},
 		}
 	}

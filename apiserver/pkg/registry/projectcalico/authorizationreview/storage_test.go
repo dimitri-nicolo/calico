@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	rbac_v1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
@@ -18,7 +19,7 @@ import (
 	. "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
 )
 
-var _ = Describe("RBAC calculator tests", func() {
+var _ = Describe("AuthorizationReview storage tests", func() {
 	var calc rbac.Calculator
 	var mock *rbacmock.MockClient
 	var myUser user.Info
@@ -85,6 +86,110 @@ var _ = Describe("RBAC calculator tests", func() {
 				Verbs: []v3.AuthorizedResourceVerb{
 					{
 						Verb: "get",
+					},
+				},
+			},
+		}))
+	})
+
+	It("returns authorized namespaced managed clusters in a multi-tenant cluster", func() {
+		// Configure a two managed clusters in different namespaces.
+		mock.Namespaces = []string{"tenant-a", "tenant-b"}
+		mock.ManagedClusters = []types.NamespacedName{
+			{Name: "cluster1", Namespace: "tenant-a"},
+			{Name: "cluster1", Namespace: "tenant-b"},
+		}
+
+		// Configure permissions to get managed clusters, but only in namespace "tenant-b".
+		mock.RoleBindings = map[string][]string{"tenant-b": {"get-managed-clusters"}}
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"get-managed-clusters": {{Verbs: []string{"get"}, Resources: []string{"managedclusters"}, APIGroups: []string{"projectcalico.org"}}},
+		}
+
+		// Send an authz review for managed clusters.
+		authzReview := &v3.AuthorizationReview{
+			Spec: v3.AuthorizationReviewSpec{
+				ResourceAttributes: []v3.AuthorizationReviewResourceAttributes{
+					{
+						APIGroup:  "projectcalico.org",
+						Resources: []string{"managedclusters"},
+						Verbs:     []string{"get"},
+					},
+				},
+			},
+		}
+		res, err := rest.Create(myContext, authzReview, nil, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).NotTo(BeNil())
+
+		// Expect the managed cluster for tenant-b to show up, but not tenant-a.
+		expected := []v3.AuthorizedResourceVerbs{
+			{
+				APIGroup: "projectcalico.org",
+				Resource: "managedclusters",
+				Verbs: []v3.AuthorizedResourceVerb{
+					{
+						Verb: "get",
+						ResourceGroups: []v3.AuthorizedResourceGroup{
+							{ManagedCluster: "cluster1", Namespace: "tenant-b"},
+						},
+					},
+				},
+			},
+		}
+		ar := res.(*v3.AuthorizationReview)
+		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal(expected))
+
+		// Check that it also works with a namespaced Role instead of a ClusterRole.
+		mock.ClusterRoles = nil
+		mock.RoleBindings = map[string][]string{"tenant-b": {"/get-managed-clusters"}}
+		mock.Roles = map[string][]rbac_v1.PolicyRule{
+			"tenant-b/get-managed-clusters": {{Verbs: []string{"get"}, Resources: []string{"managedclusters"}, APIGroups: []string{"projectcalico.org"}}},
+		}
+		res, err = rest.Create(myContext, authzReview, nil, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).NotTo(BeNil())
+		ar = res.(*v3.AuthorizationReview)
+		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal(expected))
+	})
+
+	It("returns authorized managed clusters", func() {
+		// Configure a single, cluster-scoped managed cluster.
+		mock.ManagedClusters = []types.NamespacedName{{Name: "cluster1"}}
+
+		// Configure permissions to get managed clusters.
+		mock.ClusterRoleBindings = []string{"get-managed-clusters"}
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"get-managed-clusters": {{Verbs: []string{"get"}, Resources: []string{"managedclusters"}, APIGroups: []string{"projectcalico.org"}}},
+		}
+
+		// Send an authz review for managed clusters.
+		res, err := rest.Create(myContext, &v3.AuthorizationReview{
+			Spec: v3.AuthorizationReviewSpec{
+				ResourceAttributes: []v3.AuthorizationReviewResourceAttributes{
+					{
+						APIGroup:  "projectcalico.org",
+						Resources: []string{"managedclusters"},
+						Verbs:     []string{"get"},
+					},
+				},
+			},
+		}, nil, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).NotTo(BeNil())
+
+		// Expect the managed cluster to show up.
+		ar := res.(*v3.AuthorizationReview)
+		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal([]v3.AuthorizedResourceVerbs{
+			{
+				APIGroup: "projectcalico.org",
+				Resource: "managedclusters",
+				Verbs: []v3.AuthorizedResourceVerb{
+					{
+						Verb: "get",
+						ResourceGroups: []v3.AuthorizedResourceGroup{
+							{ManagedCluster: "cluster1"},
+						},
 					},
 				},
 			},
