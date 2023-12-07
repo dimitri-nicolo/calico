@@ -2,32 +2,25 @@ package waf
 
 import (
 	"encoding/json"
-	"io"
-	"os"
 	"time"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 var _ = Describe("WAF new event", func() {
 	var (
 		wafLog   v1.WAFLog
-		rawLog   []byte
 		wafCache *WAFLogsCache
 		err      error
 	)
 
 	BeforeEach(func() {
 		wafCache = NewWAFLogsCache(time.Minute)
-		f := mustOpen("testdata/waf_log.json")
-		defer f.Close()
-		rawLog, err = io.ReadAll(f)
-		Expect(err).NotTo(HaveOccurred())
-		err = json.Unmarshal(rawLog, &wafLog)
+		err = json.Unmarshal([]byte(rawLog), &wafLog)
 		Expect(err).NotTo(HaveOccurred())
 
 	})
@@ -76,11 +69,3 @@ var _ = Describe("WAF new event", func() {
 
 	})
 })
-
-func mustOpen(name string) io.ReadCloser {
-	f, err := os.Open(name)
-	if err != nil {
-		panic(err)
-	}
-	return f
-}
