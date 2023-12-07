@@ -33,7 +33,7 @@ func TestServerCheckerProvidersNone(t *testing.T) {
 	defer cancel()
 
 	psm := policystore.NewPolicyStoreManager()
-	dpStats := make(chan statscache.DPStats, 10)
+	dpStats := statscache.New()
 	uut := NewServer(ctx, psm, dpStats) // no providers.. provided
 
 	req := &authz.CheckRequest{}
@@ -52,7 +52,7 @@ func TestServerCheckerProvidersAllOK(t *testing.T) {
 	defer cancel()
 
 	psm := policystore.NewPolicyStoreManager()
-	dpStats := make(chan statscache.DPStats, 10)
+	dpStats := statscache.New()
 	uut := NewServer(ctx, psm, dpStats,
 		WithRegisteredCheckProvider(new(okProvider)),
 		WithRegisteredCheckProvider(new(okProvider)),
@@ -74,7 +74,7 @@ func TestServerCheckerProvidersAllDeny(t *testing.T) {
 	defer cancel()
 
 	psm := policystore.NewPolicyStoreManager()
-	dpStats := make(chan statscache.DPStats, 10)
+	dpStats := statscache.New()
 	uut := NewServer(ctx, psm, dpStats,
 		WithRegisteredCheckProvider(new(denyProvider)),
 		WithRegisteredCheckProvider(new(denyProvider)),
@@ -96,7 +96,7 @@ func TestServerCheckerProvidersFiftyFifty(t *testing.T) {
 	defer cancel()
 
 	psm := policystore.NewPolicyStoreManager()
-	dpStats := make(chan statscache.DPStats, 10)
+	dpStats := statscache.New()
 	uut := NewServer(ctx, psm, dpStats,
 		WithRegisteredCheckProvider(new(okProvider)),
 		WithRegisteredCheckProvider(new(denyProvider)),

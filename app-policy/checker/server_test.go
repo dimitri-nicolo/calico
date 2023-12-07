@@ -23,7 +23,7 @@ func TestCheckStoreNoHTTP(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dpStats := make(chan statscache.DPStats, 10)
+	dpStats := statscache.New()
 	psm := policystore.NewPolicyStoreManager()
 	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewALPCheckProvider("per-pod-policies")))
 
@@ -52,7 +52,7 @@ func TestCheckStoreNoHTTP(t *testing.T) {
 		return rsp
 	}
 	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &status.Status{Code: OK}}))
-	Consistently(dpStats, "200ms", "50ms").ShouldNot(Receive())
+	Consistently(dpStats.Aggregated(), "200ms", "50ms").Should(BeEmpty())
 }
 
 func TestCheckStoreHTTPAllowed(t *testing.T) {
@@ -60,7 +60,7 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dpStats := make(chan statscache.DPStats, 10)
+	dpStats := statscache.New()
 	psm := policystore.NewPolicyStoreManager()
 	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewALPCheckProvider("per-pod-policies")))
 
@@ -113,7 +113,7 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 	}
 
 	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &status.Status{Code: OK}}))
-	Consistently(dpStats, "200ms", "50ms").ShouldNot(Receive())
+	Consistently(dpStats.Aggregated(), "200ms", "50ms").Should(BeEmpty())
 
 	// Enable stats, re-run the request and this time check we do get stats updates.
 	psm.Write(func(ps *policystore.PolicyStore) {
@@ -125,19 +125,21 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 		return rsp
 	}
 	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &status.Status{Code: OK}}))
-	Eventually(dpStats).Should(Receive(Equal(statscache.DPStats{
-		Tuple: statscache.Tuple{
-			SrcIp:    "1.2.3.4",
-			DstIp:    "11.22.33.44",
-			SrcPort:  1000,
-			DstPort:  2000,
-			Protocol: "TCP",
+
+	Eventually(dpStats.Aggregated()).Should(Equal(
+		map[statscache.Tuple]statscache.Values{
+			{
+				SrcIp:    "1.2.3.4",
+				DstIp:    "11.22.33.44",
+				SrcPort:  1000,
+				DstPort:  2000,
+				Protocol: "TCP",
+			}: {
+				HTTPRequestsAllowed: 1,
+				HTTPRequestsDenied:  0,
+			},
 		},
-		Values: statscache.Values{
-			HTTPRequestsAllowed: 1,
-			HTTPRequestsDenied:  0,
-		},
-	})))
+	))
 }
 
 func TestCheckStoreHTTPDenied(t *testing.T) {
@@ -145,7 +147,7 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dpStats := make(chan statscache.DPStats, 10)
+	dpStats := statscache.New()
 	psm := policystore.NewPolicyStoreManager()
 	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewALPCheckProvider("per-pod-policies")))
 
@@ -197,7 +199,7 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 		return rsp
 	}
 	Eventually(chk, "2s", "50ms").Should(Equal(&authz.CheckResponse{Status: &status.Status{Code: PERMISSION_DENIED}}))
-	Consistently(dpStats, "200ms", "50ms").ShouldNot(Receive())
+	Consistently(dpStats.Aggregated(), "200ms", "50ms").Should(BeEmpty())
 
 	// Enable stats, re-run the request and this time check we do get stats updates.
 	psm.Write(func(ps *policystore.PolicyStore) {
@@ -209,17 +211,18 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 		return rsp
 	}
 	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &status.Status{Code: PERMISSION_DENIED}}))
-	Eventually(dpStats).Should(Receive(Equal(statscache.DPStats{
-		Tuple: statscache.Tuple{
-			SrcIp:    "1.2.3.4",
-			DstIp:    "11.22.33.44",
-			SrcPort:  1000,
-			DstPort:  2000,
-			Protocol: "TCP",
+	Eventually(dpStats.Aggregated()).Should(Equal(
+		map[statscache.Tuple]statscache.Values{
+			{
+				SrcIp:    "1.2.3.4",
+				DstIp:    "11.22.33.44",
+				SrcPort:  1000,
+				DstPort:  2000,
+				Protocol: "TCP",
+			}: {
+				HTTPRequestsAllowed: 0,
+				HTTPRequestsDenied:  1,
+			},
 		},
-		Values: statscache.Values{
-			HTTPRequestsAllowed: 0,
-			HTTPRequestsDenied:  1,
-		},
-	})))
+	))
 }

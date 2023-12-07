@@ -89,6 +89,13 @@ get-operator-crds: var-require-all-OPERATOR_BRANCH_NAME
 		sed -i 's/scope: Cluster/scope: Namespaced/g' $$file; \
 	done
 
+# Get operator CRDs from the operator repo, OPERATOR_BRANCH_NAME must be set
+get-operator-crds: var-require-all-OPERATOR_BRANCH_NAME
+	cd ./charts/tigera-operator/crds/ && \
+	for file in *_crd.yaml; do curl -fsSL https://raw.githubusercontent.com/tigera/operator/${OPERATOR_BRANCH_NAME}/pkg/crds/operator/$${file%_crd.yaml}.yaml -o $${file}; done
+	cd ./manifests/ocp/ && \
+	for file in *_crd.yaml; do curl -fsSL https://raw.githubusercontent.com/tigera/operator/${OPERATOR_BRANCH_NAME}/pkg/crds/operator/$${file%_crd.yaml}.yaml -o $${file}; done
+
 gen-semaphore-yaml:
 	cd .semaphore && ./generate-semaphore-yaml.sh
 

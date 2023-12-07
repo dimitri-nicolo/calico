@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -17,19 +16,10 @@ import (
 
 	"github.com/projectcalico/calico/app-policy/checker"
 	"github.com/projectcalico/calico/app-policy/policystore"
-	dikastesproto "github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/app-policy/syncher"
 	"github.com/projectcalico/calico/app-policy/waf"
 	"github.com/projectcalico/calico/libcalico-go/lib/uds"
-)
-
-const (
-	maxPendingDataplaneStats = 100
-)
-
-var (
-	_ dikastesproto.HealthzServer
 )
 
 type Dikastes struct {
@@ -126,7 +116,7 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 
 	gs := grpc.NewServer(s.grpcServerOptions...)
 
-	dpStats := make(chan statscache.DPStats, maxPendingDataplaneStats)
+	dpStats := statscache.New()
 	policyStoreManager := policystore.NewPolicyStoreManager()
 
 	checkServerOptions := []checker.AuthServerOption{
@@ -153,13 +143,13 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 		s.dialAddress,
 		policyStoreManager,
 		opts,
-		syncher.ClientOptions{
-			StatsFlushInterval: time.Second * 5,
-			SubscriptionType:   s.subscriptionType,
-		},
+		syncher.WithSubscriptionType(s.subscriptionType),
 	)
 	syncClient.RegisterGRPCServices(gs)
-	go syncClient.Start(ctx, dpStats)
+	// wire up stats cache flush callback
+	dpStats.RegisterFlushCallback(syncClient.OnStatsCacheFlush)
+	go syncClient.Start(ctx)
+	go dpStats.Start(ctx)
 
 	if _, ok := os.LookupEnv("DIKASTES_ENABLE_CHECKER_REFLECTION"); ok {
 		reflection.Register(gs)

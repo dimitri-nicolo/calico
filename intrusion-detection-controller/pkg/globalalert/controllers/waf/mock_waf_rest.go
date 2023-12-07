@@ -4,24 +4,23 @@ package waf
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
-	"fmt"
-	"io"
-	"os"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
-var testfiles = []string{
-	"testdata/waf_log.json",
-	"testdata/waf_log_2.json",
-}
+var (
+	//go:embed testdata/waf_log.json
+	rawLog string
+	//go:embed testdata/waf_log_2.json
+	rawLog2 string
+)
 
 type MockClient struct {
 	client.Client
@@ -55,17 +54,10 @@ func (f *MockWaf) List(ctx context.Context, params v1.Params) (*v1.List[v1.WAFLo
 
 	var wafLog v1.WAFLog
 	logs := []v1.WAFLog{}
-	for _, testfile := range testfiles {
-		fileData, err := os.Open(testfile)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		rawLog, err := io.ReadAll(fileData)
-		if err != nil {
-			logrus.Fatal(err)
-		}
 
-		err = json.Unmarshal(rawLog, &wafLog)
+	rawLogs := []string{rawLog, rawLog2}
+	for _, rl := range rawLogs {
+		err := json.Unmarshal([]byte(rl), &wafLog)
 		if err != nil {
 			logrus.Fatal(err)
 		}

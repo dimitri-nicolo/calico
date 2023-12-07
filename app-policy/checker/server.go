@@ -26,7 +26,7 @@ import (
 )
 
 type authServer struct {
-	dpStats          chan<- statscache.DPStats
+	dpStats          statscache.StatsCache
 	Store            policystore.PolicyStoreManager
 	checkProviders   []CheckProvider
 	subscriptionType string
@@ -35,7 +35,7 @@ type authServer struct {
 type AuthServerOption func(*authServer)
 
 // NewServer creates a new authServer and returns a pointer to it.
-func NewServer(ctx context.Context, storeManager policystore.PolicyStoreManager, dpStats chan<- statscache.DPStats, opts ...AuthServerOption) *authServer {
+func NewServer(ctx context.Context, storeManager policystore.PolicyStoreManager, dpStats statscache.StatsCache, opts ...AuthServerOption) *authServer {
 	s := &authServer{Store: storeManager, dpStats: dpStats}
 	for _, o := range opts {
 		o(s)
@@ -136,7 +136,7 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 		// the response is not OK then report the stats.
 		if (ps.DataplaneStatsEnabledForAllowed && resp.Status.Code == OK) ||
 			ps.DataplaneStatsEnabledForDenied && resp.Status.Code != OK {
-			as.reportStats(ctx, resp.Status, req)
+			as.reportStats(resp.Status, req)
 		}
 	})
 
@@ -151,7 +151,7 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 }
 
 // reportStats creates a statistics for this request and reports it to the client.
-func (as *authServer) reportStats(ctx context.Context, st *status.Status, req *authz.CheckRequest) {
+func (as *authServer) reportStats(st *status.Status, req *authz.CheckRequest) {
 	if req.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetProtocol() != core.SocketAddress_TCP {
 		log.Debug("No statistics to report for non-TCP request")
 		return
@@ -176,11 +176,7 @@ func (as *authServer) reportStats(ctx context.Context, st *status.Status, req *a
 	} else {
 		dpStats.Values.HTTPRequestsDenied = 1
 	}
-
-	select {
-	case as.dpStats <- dpStats:
-	case <-ctx.Done():
-	}
+	as.dpStats.Add(dpStats)
 }
 
 func (as *authServer) V2Compat() *authServerV2 {
