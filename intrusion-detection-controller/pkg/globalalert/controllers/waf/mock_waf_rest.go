@@ -94,12 +94,12 @@ type mockEvents struct {
 	restClient rest.RESTClient
 	clusterID  string
 	events     v1.List[v1.Event]
-	FailPush   bool
+	failFirstPush   bool
 }
 
 // newEvents returns a new EventsInterface bound to the supplied client.
 func newMockEvents(c client.Client, cluster string, failPush bool) client.EventsInterface {
-	return &mockEvents{restClient: c.RESTClient(), clusterID: cluster, events: v1.List[v1.Event]{}, FailPush: failPush}
+	return &mockEvents{restClient: c.RESTClient(), clusterID: cluster, events: v1.List[v1.Event]{}, failFirstPush: failPush}
 }
 
 // List gets the events for the given input params.
@@ -108,12 +108,12 @@ func (f *mockEvents) List(ctx context.Context, params v1.Params) (*v1.List[v1.Ev
 }
 
 func (f *mockEvents) Create(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
-	if !f.FailPush {
+	if !f.failFirstPush {
 		f.events.Items = append(f.events.Items, events...)
 		return &v1.BulkResponse{}, nil
 	}
-	f.FailPush = false
-	return &v1.BulkResponse{}, fmt.Errorf("Failed to create events")
+	f.failFirstPush = false
+	return &v1.BulkResponse{}, fmt.Errorf("failed to create events")
 }
 
 func (f *mockEvents) UpdateDismissFlag(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
