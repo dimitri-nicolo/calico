@@ -41,7 +41,7 @@ GIT_USE_SSH = true
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 # The version of BIRD to use for calico/node builds and confd tests.
-BIRD_VERSION=v0.3.3-202-g7a77fb73
+BIRD_VERSION=v0.3.3-206-g0f4d6086
 
 # DEV_REGISTRIES configures the container image registries which are built from this
 # repository.
