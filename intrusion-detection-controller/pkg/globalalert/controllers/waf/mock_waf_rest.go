@@ -6,6 +6,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
@@ -83,10 +84,10 @@ func (f *MockWaf) Aggregations(ctx context.Context, params v1.Params) (elastic.A
 
 // Events implements EventsInterface.
 type mockEvents struct {
-	restClient rest.RESTClient
-	clusterID  string
-	events     v1.List[v1.Event]
-	failFirstPush   bool
+	restClient    rest.RESTClient
+	clusterID     string
+	events        v1.List[v1.Event]
+	failFirstPush bool
 }
 
 // newEvents returns a new EventsInterface bound to the supplied client.
