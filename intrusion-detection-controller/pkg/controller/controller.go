@@ -189,7 +189,7 @@ func (c *controller) processUpdate(u update) {
 func (c *controller) reconcile(ctx context.Context) {
 	metas, err := c.data.List(ctx)
 	if err != nil {
-		log.WithError(err).Error("failed to reconcile thread feed object")
+		log.WithError(err).Errorf("failed to reconcile threat feed object (%d)", len(c.dirty))
 		for _, u := range c.dirty {
 			feedutils.AddErrorToFeedStatus(u.feedCacher, c.errorType, err)
 		}
