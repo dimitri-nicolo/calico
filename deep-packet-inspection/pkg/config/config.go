@@ -21,7 +21,7 @@ type Config struct {
 	HealthTimeout           time.Duration `split_words:"true" default:"30s"`
 	SnortAlertFileBasePath  string        `split_words:"true" default:"/var/log/calico/snort-alerts"`
 	SnortAlertFileSize      int           `split_words:"true" default:"5"`
-	SnortCommunityRulesFile string        `split_words:"true" default:"/usr/local/etc/rules/snort3-community.rules"`
+	SnortCommunityRulesFile string        `split_words:"true" default:"/usr/etc/snort/snort3-community.rules"`
 
 	// Multi-cluster configuration
 	TenantID    string `envconfig:"TENANT_ID"`

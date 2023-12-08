@@ -50,7 +50,7 @@ func NewExec(podName string,
 	s.cmd = exec.Command(
 		"snort",
 		"-c",
-		"/usr/local/etc/snort/snort.lua",
+		"/usr/etc/snort/snort.lua",
 		"-q",
 		"-y",
 		"-k", "none",

@@ -1,19 +1,19 @@
-# deep-packet-inspection
+# Deep Packet Inspection
 
-It starts a typha client to get updates on DeepPacketInspection and WorkloadEndPoint resources required by tigera-dpi daemonset.
-Starts a snort process for each WEP that matches the selector in DeepPacketInspection resource.
+It starts a typha client to get updates on `DeepPacketInspection` and `WorkloadEndpoint` resources required by tigera-dpi daemonset.
+Starts a snort process for each WEP that matches the selector in `DeepPacketInspection` resource.
 
 ## Building and testing
 
 To build this locally, use one of the following commands:
 
-```
+```bash
 make image
 ```
 
 or
 
-```
+```bash
 make ci
 ```
 
@@ -21,7 +21,7 @@ make ci
 
 To run all tests
 
-```
+```bash
 make fv ut
 ```
 
@@ -32,32 +32,40 @@ FV test runs against real k8s, they should be added to the `FV_GINKGO_FOCUS` var
 To trigger snort alert during development, one option is to use custom snort rules.
 
 Running snort with custom rules:
-- Create and populate `local.rules` file, below is sample rule that alerts on any ICMP request
-```
+
+- Create and populate `local.rules` file, below is sample rule that alerts on any ICMP request.
+
+```text
 alert icmp any any -> any any ( sid:1000005; rev:1;)
-``` 
-- Copy the `local.rules` file to docker image by adding this line in Dockerfile.snort.amd64
 ```
+
+- Copy the `local.rules` file to docker image by adding this line in Dockerfile.amd64.
+
+```dockerfile
 # Copy local rules for dev testing
-COPY local.rules /usr/local/etc/rules/
+COPY local.rules /usr/etc/rules/
 ```
-- Pass the local rules file when setting snort command line in `/pkg/exec/snort_exec.go` like below
+
+- Pass the local rules file when setting snort command line in `/pkg/exec/snort_exec.go` like below.
+
 ```go
     exec.Command(
     "snort",
     ....
-    "-R", "/usr/local/etc/rules/local.rules",
+    "-R", "/usr/etc/rules/local.rules",
     )
 ```
 
 ## Debug logs
-Set environment variable `DPI_LOG_LEVEL` with value `debug`
+
+Set environment variable `DPI_LOG_LEVEL` with value `debug`.
 
 ## Update Snort3 version
 
-To update the Snort3 version used for DPI, update the version number assigned to the variable `SNORT3_VERSION` in Makefile.
+To update the Snort3 version used for DPI, update the version number assigned to the variable `SNORT3_VERSION` in Dockerfile.
 
 ## Code flow
+
 ![Alt text](flow_diagram.svg)
 
 ```mermaid
@@ -89,4 +97,3 @@ sequenceDiagram
     E->>EF: Security events
     EF-->>ES: Send received events to ES
 ```
-
