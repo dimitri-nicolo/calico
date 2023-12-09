@@ -13,15 +13,17 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
+
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (
@@ -93,14 +95,13 @@ func CreateMockBackendWithData(rbac RBACFilter, names NameHelper) *MockServiceGr
 var _ = Describe("Service graph cache tests", func() {
 	var cache ServiceGraphCache
 	var backend *MockServiceGraphBackend
-	var fakeClientSet datastore.ClientSet
+	var fakeClient ctrlclient.WithWatch
 
 	// This is a slow test.
 	// Unfortunately we only track down to the second in the cache and so to test the various timeouts we need to
 	// have timings around 1s. Sorry! It is just the one test though.
 
 	Context("Service graph cache tests without prefetch", func() {
-
 		BeforeEach(func() {
 			cfg := &Config{
 				ServiceGraphCacheMaxEntries:        4,
@@ -112,9 +113,12 @@ var _ = Describe("Service graph cache tests", func() {
 			}
 
 			// Create a service graph with a mock backend.
-			fakeClientSet = datastore.NewClientSet(nil, fake.NewSimpleClientset().ProjectcalicoV3())
+			scheme := kscheme.Scheme
+			err := v3.AddToScheme(scheme)
+			Expect(err).NotTo(HaveOccurred())
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 			backend = CreateMockBackendWithData(RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil))
-			cache = NewServiceGraphCache(fakeClientSet, backend, cfg)
+			cache = NewServiceGraphCache(fakeClient, backend, cfg)
 		})
 
 		It("handles request timeout", func() {
@@ -532,7 +536,6 @@ var _ = Describe("Service graph cache tests", func() {
 	})
 
 	Context("Service graph cache tests with prefetch", func() {
-
 		BeforeEach(func() {
 			cfg := &Config{
 				ServiceGraphCacheMaxEntries:        5,
@@ -544,8 +547,10 @@ var _ = Describe("Service graph cache tests", func() {
 			}
 
 			// Create a service graph with a mock backend.
-			fakeClientSet = datastore.NewClientSet(nil, fake.NewSimpleClientset().ProjectcalicoV3())
-			backend = CreateMockBackendWithData(RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil))
+			scheme := kscheme.Scheme
+			err := v3.AddToScheme(scheme)
+			Expect(err).NotTo(HaveOccurred())
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
 			// create some managed clusters
 			managedClusterNames := []string{"managed-1", "managed-2"}
@@ -554,11 +559,12 @@ var _ = Describe("Service graph cache tests", func() {
 					ObjectMeta: metav1.ObjectMeta{Name: managedClusterName},
 					Spec:       v3.ManagedClusterSpec{},
 				}
-				_, err := fakeClientSet.ManagedClusters().Create(context.Background(), managedCluster, metav1.CreateOptions{})
+				err = fakeClient.Create(context.Background(), managedCluster)
 				Expect(err).NotTo(HaveOccurred())
 			}
 
-			cache = NewServiceGraphCache(fakeClientSet, backend, cfg)
+			backend = CreateMockBackendWithData(RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil))
+			cache = NewServiceGraphCache(fakeClient, backend, cfg)
 		})
 
 		It("should prefetch raw data", func() {
@@ -626,5 +632,4 @@ var _ = Describe("Service graph cache tests", func() {
 			Eventually(backend.GetNumCallsEvents(), "5s").Should(Equal(3))
 		})
 	})
-
 })

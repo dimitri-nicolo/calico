@@ -8,8 +8,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -26,13 +26,13 @@ import (
 
 func NewServiceGraphHandler(
 	authz auth.RBACAuthorizer,
-	k8sClient datastore.ClientSet,
+	client ctrlclient.WithWatch,
 	linseed lsclient.Client,
 	clientSetFactory k8s.ClientSetFactory,
 	cfg *Config,
 ) http.Handler {
 	return NewServiceGraphHandlerWithBackend(
-		k8sClient,
+		client,
 		&realServiceGraphBackend{
 			authz:            authz,
 			linseed:          linseed,
@@ -44,14 +44,14 @@ func NewServiceGraphHandler(
 }
 
 func NewServiceGraphHandlerWithBackend(
-	k8sClient datastore.ClientSet,
+	client ctrlclient.WithWatch,
 	backend ServiceGraphBackend,
 	cfg *Config,
 ) http.Handler {
 	noServiceGroups := NewServiceGroups()
 	noServiceGroups.FinishMappings()
 	return &serviceGraph{
-		sgCache:         NewServiceGraphCache(k8sClient, backend, cfg),
+		sgCache:         NewServiceGraphCache(client, backend, cfg),
 		noServiceGroups: noServiceGroups,
 	}
 }

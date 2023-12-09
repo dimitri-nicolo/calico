@@ -6,13 +6,19 @@ import (
 	"net/http"
 	"sync"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
@@ -86,14 +92,27 @@ func Start(cfg *Config) error {
 		}
 		options = append(options, lmaauth.WithAuthenticator(cfg.OIDCAuthIssuer, dex))
 	}
+
+	// Create authenticator and authorizer.
 	authn, err = lmaauth.NewJWTAuth(restConfig, k8sCli, options...)
 	if err != nil {
 		log.Fatal("Unable to create authenticator", err)
 	}
+	authz := lmaauth.NewRBACAuthorizer(k8sCli)
 
-	// Install pip mutator
+	// Create clients for access the management cluster apiserver.
 	k8sClientSet := datastore.MustGetClientSet()
-	policyCalcConfig := pipcfg.MustLoadConfig()
+
+	// We use a controller-runtime client for accessing ManagedCluster resources because unlike the ClientSet, it functions in both Enterprise and
+	// multi-tenant environments where the ManagedCluster CRD may be namespaced.
+	scheme := runtime.NewScheme()
+	if err = v3.AddToScheme(scheme); err != nil {
+		log.WithError(err).Fatal("Failed to configure controller runtime client")
+	}
+	client, err := ctrlclient.NewWithWatch(restConfig, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		log.WithError(err).Fatal("Failed to configure controller runtime client with watch")
+	}
 
 	// Create linseed Client.
 	config := lsrest.Config{
@@ -110,14 +129,26 @@ func Start(cfg *Config) error {
 	}
 
 	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.VoltronCAPath, cfg.VoltronURL)
-	authz := lmaauth.NewRBACAuthorizer(k8sCli)
 
 	// For handlers that use the newer AuthorizationReview to perform RBAC checks, the k8sClientSetFactory provide
 	// cluster and user aware k8s clients.
 	k8sClientSetFactory := k8s.NewClientSetFactory(cfg.VoltronCAPath, cfg.VoltronURL)
 
+	// For multi-tenant clusters, we need to configure the clientset factory to impersonate the canonical
+	// system:serviceaccount:tigera-manager:tigera-manager service account. This is because each tenant runs
+	// this component in its own namespace, whereas the managed cluster isn't tenant aware and expects the
+	// canonical name.
+	if cfg.TenantNamespace != "" {
+		impersonationInfo := user.DefaultInfo{
+			Name:   "system:serviceaccount:tigera-manager:tigera-manager",
+			Groups: []string{},
+		}
+		k8sClientSetFactory = k8sClientSetFactory.Impersonate(&impersonationInfo)
+		k8sClientFactory = k8sClientFactory.Impersonate(&impersonationInfo)
+	}
+
 	// Create a PIP backend.
-	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, linseed)
+	p := pip.New(pipcfg.MustLoadConfig(), &clusterAwareLister{k8sClientFactory}, linseed)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
@@ -130,7 +161,7 @@ func Start(cfg *Config) error {
 				middleware.AuthorizeRequest(authz,
 					servicegraph.NewServiceGraphHandler(
 						authz,
-						k8sClientSet,
+						client,
 						linseed,
 						k8sClientSetFactory,
 						&servicegraph.Config{
@@ -143,6 +174,7 @@ func Start(cfg *Config) error {
 							ServiceGraphCachePollQueryInterval:    cfg.ServiceGraphCachePollQueryInterval,
 							ServiceGraphCacheDataSettleTime:       cfg.ServiceGraphCacheDataSettleTime,
 							ServiceGraphCacheDataPrefetch:         cfg.ServiceGraphCacheDataPrefetch,
+							TenantNamespace:                       cfg.TenantNamespace,
 						},
 					)))))
 	sm.Handle("/flowLogs",

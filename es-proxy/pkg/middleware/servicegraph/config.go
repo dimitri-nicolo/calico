@@ -40,4 +40,7 @@ type Config struct {
 
 	// Whether or not to prefetch raw data when the cache is initialized.
 	ServiceGraphCacheDataPrefetch bool
+
+	// TenantNamespace is the namespace of the tenant this instance is serving, or empty if this is a single-tenant cluster.
+	TenantNamespace string
 }

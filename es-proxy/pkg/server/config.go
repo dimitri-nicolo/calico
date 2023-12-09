@@ -41,8 +41,11 @@ type Config struct {
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
 	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 
-	// For Calico Cloud, the tenant ID to use.
-	TenantID string `envconfig:"TENANT_ID"`
+	// TenantID is the unique identifier for the tenant this instance is serving. If left blank, this is a
+	// zero-tenant (enterprise) instance. If set and TENANT_NAMESPACE is empty, this is a single-tenant management cluster.
+	// If set and TENANT_NAMESPACE is set, this is a multi-tenant management cluster.
+	TenantID        string `envconfig:"TENANT_ID"`
+	TenantNamespace string `envconfig:"TENANT_NAMESPACE"`
 
 	// Configuration for connection to Elasticsearch. These are only used when Kibana is enabled,
 	// as all other requests go via Linseed.

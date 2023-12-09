@@ -21,6 +21,7 @@ MOCKERY_FILE_PATHS= \
 	pkg/api/ReportEventFetcher \
 	pkg/api/ListDestination \
 	pkg/api/ComplianceStore \
+	pkg/datastore/ClusterCtxK8sClientFactory \
 	pkg/api/StoreFactory
 
 
@@ -64,7 +65,7 @@ build: bin/benchmarker-$(ARCH) \
 	bin/reporter-$(ARCH) \
 	bin/scaleloader-$(ARCH) \
 	bin/server-$(ARCH) \
-	bin/snapshotter-$(ARCH) 
+	bin/snapshotter-$(ARCH)
 
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:

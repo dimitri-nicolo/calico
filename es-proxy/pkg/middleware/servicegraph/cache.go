@@ -9,10 +9,11 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
@@ -48,11 +49,7 @@ type ServiceGraphCache interface {
 	GetCacheSize() int
 }
 
-func NewServiceGraphCache(
-	k8sClient datastore.ClientSet,
-	backend ServiceGraphBackend,
-	cfg *Config,
-) ServiceGraphCache {
+func NewServiceGraphCache(client ctrlclient.WithWatch, backend ServiceGraphBackend, cfg *Config) ServiceGraphCache {
 	ctx := context.Background()
 	sgc := &serviceGraphCache{
 		ctx:     ctx,
@@ -62,7 +59,7 @@ func NewServiceGraphCache(
 	}
 	go sgc.backgroundCacheUpdateLoop()
 	if cfg.ServiceGraphCacheDataPrefetch {
-		sgc.prefetchRawData(ctx, k8sClient)
+		sgc.prefetchRawData(ctx, client)
 	}
 	return sgc
 }
@@ -551,19 +548,21 @@ func (s *serviceGraphCache) backgroundCacheUpdateLoop() {
 	}
 }
 
-func (s *serviceGraphCache) prefetchRawData(ctx context.Context, k8sClient datastore.ClientSet) {
+func (s *serviceGraphCache) prefetchRawData(ctx context.Context, client ctrlclient.WithWatch) {
 	log.Info("Prefetch cluster raw data to warm up cache")
 
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
-	// start with the default cluster name
+	// Start with the default cluster name
 	clusterNames := []string{lmak8s.DefaultCluster}
-	// add managed cluster names
-	if managedClusters, err := k8sClient.ManagedClusters().List(ctx, metav1.ListOptions{}); err != nil {
+
+	// Add managed cluster names
+	mcs := &v3.ManagedClusterList{}
+	if err := client.List(context.Background(), mcs, &ctrlclient.ListOptions{Namespace: s.cfg.TenantNamespace}); err != nil {
 		log.WithError(err).Info("failed to list managed clusters. prefetching raw data for managed clusters are skipped")
 	} else {
-		for _, managedCluster := range managedClusters.Items {
+		for _, managedCluster := range mcs.Items {
 			clusterNames = append(clusterNames, managedCluster.Name)
 		}
 	}

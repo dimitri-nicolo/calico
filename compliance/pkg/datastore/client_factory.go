@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"sync"
 
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -20,6 +21,7 @@ type ClusterCtxK8sClientFactory interface {
 	RestConfigForCluster(clusterID string) *rest.Config
 	ClientSetForCluster(clusterID string) (ClientSet, error)
 	RBACAuthorizerForCluster(clusterId string) (auth.RBACAuthorizer, error)
+	Impersonate(user *user.DefaultInfo) ClusterCtxK8sClientFactory
 }
 
 // clientSetFactory is an implementation of the ClusterCtxK8sClientFactory interface that creates clients that send their
@@ -95,6 +97,22 @@ func (f *clientSetFactory) RestConfigForCluster(clusterID string) *rest.Config {
 	}
 
 	return restConfig
+}
+
+// Impersonate makes a copy of the factory and adds HTTP Impersonation headers if provided user info is non-nil. If user
+// info is nil the original factory is returned.
+func (f *clientSetFactory) Impersonate(user *user.DefaultInfo) ClusterCtxK8sClientFactory {
+	if user == nil {
+		return f
+	}
+	newRestConfig := f.copyRESTConfig()
+	newRestConfig.Impersonate = rest.ImpersonationConfig{
+		UserName: user.Name,
+		Groups:   user.Groups,
+		Extra:    user.Extra,
+		UID:      user.UID,
+	}
+	return NewClusterCtxK8sClientFactory(newRestConfig, f.multiClusterForwardingCA, f.multiClusterForwardingEndpoint)
 }
 
 func (f *clientSetFactory) copyRESTConfig() *rest.Config {

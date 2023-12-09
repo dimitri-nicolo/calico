@@ -19,10 +19,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	. "github.com/projectcalico/calico/es-proxy/pkg/middleware/servicegraph"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
@@ -183,7 +184,7 @@ func compareNodes(actual, expected v1.GraphNode) []string {
 }
 
 var _ = Describe("Service graph data tests", func() {
-	var fakeClientSet datastore.ClientSet
+	var fakeClient ctrlclient.WithWatch
 
 	// Track last handled response filename and expected data.
 	var expectDataFilename string
@@ -191,7 +192,10 @@ var _ = Describe("Service graph data tests", func() {
 	var actualData *v1.ServiceGraphResponse
 
 	BeforeEach(func() {
-		fakeClientSet = datastore.NewClientSet(nil, fake.NewSimpleClientset().ProjectcalicoV3())
+		scheme := kscheme.Scheme
+		err := v3.AddToScheme(scheme)
+		Expect(err).NotTo(HaveOccurred())
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 	})
 
 	AfterEach(func() {
@@ -237,7 +241,7 @@ var _ = Describe("Service graph data tests", func() {
 			// Create a service graph.
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			sg := NewServiceGraphHandlerWithBackend(fakeClientSet, mb, &Config{
+			sg := NewServiceGraphHandlerWithBackend(fakeClient, mb, &Config{
 				ServiceGraphCacheMaxEntries:        1,
 				ServiceGraphCachePolledEntryAgeOut: 5 * time.Minute,
 				ServiceGraphCachePollLoopInterval:  5 * time.Minute,
@@ -623,7 +627,7 @@ var _ = Describe("Service graph data tests", func() {
 			// Create a service graph.
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			sg := NewServiceGraphHandlerWithBackend(fakeClientSet, mb, &Config{
+			sg := NewServiceGraphHandlerWithBackend(fakeClient, mb, &Config{
 				ServiceGraphCacheMaxEntries:        1,
 				ServiceGraphCachePolledEntryAgeOut: 5 * time.Minute,
 				ServiceGraphCachePollLoopInterval:  5 * time.Minute,
