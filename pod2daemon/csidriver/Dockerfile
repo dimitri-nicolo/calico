@@ -12,8 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM arm64v8/alpine:3.16
+FROM scratch as source
 
-COPY bin/csi-driver-arm64 /usr/local/bin/csi-driver
+ARG BIN_DIR
+ARG TARGETARCH
 
-ENTRYPOINT ["/usr/local/bin/csi-driver"]
+COPY ${BIN_DIR}/csi-driver-${TARGETARCH} /usr/bin/csi-driver
+
+FROM calico/base
+
+ARG GIT_VERSION=unknown
+
+LABEL description="Calico CSI driver to setup secure connections from Kubernetes pods to local daemons"
+LABEL maintainer="maintainers@tigera.io"
+LABEL name="Calico CSI Driver"
+LABEL release="1"
+LABEL summary="Calico CSI driver to setup secure connections from Kubernetes pods to local daemons"
+LABEL vendor="Project Calico"
+LABEL version=${GIT_VERSION}
+
+COPY --from=source / /
+
+ENTRYPOINT ["/usr/bin/csi-driver"]

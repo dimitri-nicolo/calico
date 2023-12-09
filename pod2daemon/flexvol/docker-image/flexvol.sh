@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright (c) 2018 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +28,7 @@ usage: ${BASH_SOURCE[0]} [options ...]
    -i ... source binary name
    -d ... destination binary name
 EOF
-   exit 2
+  exit 2
 }
 
 SRCDIR=/usr/local/bin
@@ -38,11 +38,11 @@ DSTIMAGE=uds
 
 while getopts s:t:i:d: arg; do
   case ${arg} in
-    s) SRCDIR="${OPTARG}" ;;
-    t) DSTDIR="${OPTARG}" ;;
-    i) IMAGE="${OPTARG}" ;;
-    d) DSTIMAGE="${OPTARG}" ;;
-    *) usage "Invalid option: -${OPTARG}" ;;
+  s) SRCDIR="${OPTARG}" ;;
+  t) DSTDIR="${OPTARG}" ;;
+  i) IMAGE="${OPTARG}" ;;
+  d) DSTIMAGE="${OPTARG}" ;;
+  *) usage "Invalid option: -${OPTARG}" ;;
   esac
 done
 

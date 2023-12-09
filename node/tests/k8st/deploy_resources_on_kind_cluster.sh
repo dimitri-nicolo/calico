@@ -145,13 +145,13 @@ ${kubectl} get po --all-namespaces -o wide
 ${kubectl} get svc
 
 function test_connection() {
-    local svc="webserver-ipv$1"
-    output=$(${kubectl} exec client -- wget $svc -T 5 -O -)
-    echo $output
-    if [[ $output != *test-webserver* ]]; then
-	echo "connection to $svc service failed"
-	exit 1
-    fi
+  local svc="webserver-ipv$1"
+  output=$(${kubectl} exec client -- wget $svc -T 10 -O -)
+  echo $output
+  if [[ $output != *test-webserver* ]]; then
+    echo "connection to $svc service failed"
+    exit 1
+  fi
 }
 # Run ipv4 ipv6 connection test
 test_connection 4

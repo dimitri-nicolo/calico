@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+# Copyright (c) 2020 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM arm64v8/alpine:3.16
+FROM scratch as source
 
-COPY flexvol/docker/flexvol.sh /usr/local/bin/
-COPY bin/flexvol-arm64 /usr/local/bin/flexvol
+ARG TARGETARCH
 
-ENTRYPOINT ["/usr/local/bin/flexvol.sh"]
+COPY bin/calicoctl-linux-${TARGETARCH} /calicoctl
+
+FROM calico/base
+
+ARG GIT_VERSION=unknown
+
+LABEL description="calicoctl(1) is a command line tool used to interface with the Calico datastore"
+LABEL maintainer="maintainers@tigera.io"
+LABEL name="Calico CLI tool"
+LABEL release="1"
+LABEL summary="Calico CLI tool"
+LABEL vendor="Project Calico"
+LABEL version=${GIT_VERSION}
+
+ENV CALICO_CTL_CONTAINER=TRUE
+
+COPY --from=source / /
+
+ENTRYPOINT ["/calicoctl"]

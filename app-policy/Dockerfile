@@ -12,34 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG UBI_IMAGE
-ARG UBI_IMAGE_FULL
+ARG QEMU_IMAGE
 
-FROM ${UBI_IMAGE} as ubi
+FROM ${QEMU_IMAGE} as qemu
 
-RUN mkdir -p /tmp/dikastes
-RUN chmod 0777 /tmp/dikastes
+FROM alpine:3 as builder
 
-FROM scratch as build
+COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
+
+RUN mkdir -p /var/run/dikastes
+
+FROM scratch as source
+
 ARG BIN_DIR
-
-# Include libraries from UBI for dynamic linking.
-#
-# Copy the specific libraries; these were obtained by running 'ldd /dikastes'
-COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
-COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
-COPY --from=ubi /lib64/libresolv.so.2 /lib64/libresolv.so.2
-COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+ARG TARGETARCH
 
 # Precreate the /var/run/dikastes directory so that we don't need any elevated
 # permission to create the directory at runtime.
-COPY --chown=10001 --from=ubi /tmp/dikastes /var/run/dikastes
+COPY --chown=10001 --from=builder /var/run/dikastes /var/run/dikastes/
 
-# Copy the binaries
-COPY ${BIN_DIR}/dikastes-amd64 /dikastes
-COPY ${BIN_DIR}/healthz-amd64 /healthz
+COPY ${BIN_DIR}/dikastes-${TARGETARCH} /dikastes
+COPY ${BIN_DIR}/healthz-${TARGETARCH} /healthz
 
-FROM scratch
-COPY --from=build / /
+FROM calico/base
+
+ARG GIT_VERSION=unknown
+
+LABEL description="Calico Dikastes enables Application Layer Policy"
+LABEL maintainer="maintainers@tigera.io"
+LABEL name="Calico Dikastes"
+LABEL release="1"
+LABEL summary="Calico Dikastes enables Application Layer Policy"
+LABEL vendor="Project Calico"
+LABEL version=${GIT_VERSION}
+
+COPY --from=source / /
+
 USER 10001:10001
+
 ENTRYPOINT ["/dikastes"]

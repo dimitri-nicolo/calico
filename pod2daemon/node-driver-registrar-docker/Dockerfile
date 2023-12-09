@@ -1,4 +1,4 @@
-# Copyright 2019 Tigera, Inc
+# Copyright (c) 2022 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM scratch
-LABEL maintainer "Song Jiang <song@tigera.io>"
+FROM scratch as source
 
-COPY bin/kubectl-arm64 /usr/bin/kubectl
-COPY bin/kube-controllers-linux-arm64 /usr/bin/kube-controllers
-COPY bin/check-status-linux-arm64 /usr/bin/check-status
-ENTRYPOINT ["/usr/bin/kube-controllers"]
+ARG BIN_DIR
+ARG TARGETARCH
+
+COPY ${BIN_DIR}/node-driver-registrar-${TARGETARCH} /usr/bin/node-driver-registrar
+
+FROM calico/base
+
+COPY --from=source / /
+
+ENTRYPOINT ["/usr/bin/node-driver-registrar"]
