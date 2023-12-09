@@ -22,6 +22,4 @@ COPY --from=source / /
 
 WORKDIR /code
 
-USER 10001:10001
-
 ENTRYPOINT ["/code/apiserver"]

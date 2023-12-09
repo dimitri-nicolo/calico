@@ -537,12 +537,6 @@ external-network-run-test: .calico_test.created $(KIND_KUBECONFIG)
 external-network-cleanup:
 	-STEPS=cleanup $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
-# Needed for Semaphore CI (where disk space is a real issue during k8s-test)
-.PHONY: remove-go-build-image
-remove-go-build-image:
-	@echo "Removing $(CALICO_BUILD) image to save space needed for testing ..."
-	@-docker rmi $(CALICO_BUILD)
-
 .PHONY: st
 ## Run the system tests
 st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
