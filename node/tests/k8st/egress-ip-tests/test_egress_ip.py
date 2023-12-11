@@ -1240,23 +1240,25 @@ EOF
             _log.info("--- Restarting calico/node with routeTableRage 201-250 ---")
             update_ds_env("calico-node", "kube-system", oldEnv)
 
-            retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
-
             run("docker exec %s ip rule" % node)
 
-            node_rules_and_tables = self.read_client_hops_for_node(node, range(201, 251))
-            assert len(node_rules_and_tables) == 3
-            # Verify we have 3 different tables.
-            # Two tables have latest indexes and table3 is 203.
-            table1 = node_rules_and_tables[c1.ip]["table"]
-            table2 = node_rules_and_tables[c2.ip]["table"]
-            table3 = node_rules_and_tables[c3.ip]["table"]
-            assert {table1, table2, table3} == {"250", "249", "213"}
+            def verify_reused_tables():
+              _log.info("verify_reused_tables looking for expected route-rules and tables")
+              node_rules_and_tables = self.read_client_hops_for_node(node, range(201, 251))
+              assert len(node_rules_and_tables) == 3
+              # Verify we have 3 different tables.
+              # Two tables have latest indexes and table3 is 213.
+              table1 = node_rules_and_tables[c1.ip]["table"]
+              table2 = node_rules_and_tables[c2.ip]["table"]
+              table3 = node_rules_and_tables[c3.ip]["table"]
+              assert {table1, table2, table3} == {"250", "249", "213"}
 
-            hops1 = sorted(node_rules_and_tables[c1.ip]["hops"])
-            hops2 = sorted(node_rules_and_tables[c2.ip]["hops"])
-            hops3 = sorted(node_rules_and_tables[c3.ip]["hops"])
-            assert (hops1 != hops2) and (hops2 != hops3) and (hops1 != hops3)
+              hops1 = sorted(node_rules_and_tables[c1.ip]["hops"])
+              hops2 = sorted(node_rules_and_tables[c2.ip]["hops"])
+              hops3 = sorted(node_rules_and_tables[c3.ip]["hops"])
+              assert (hops1 != hops2) and (hops2 != hops3) and (hops1 != hops3)
+
+            retry_until_success(verify_reused_tables, retries=3, wait_time=3)
 
             # Cleanup manually added tables. ip rules should have been cleaned up already by felix.
             run("docker exec %s ip route flush table %s" % (node, "213"))
@@ -1264,6 +1266,7 @@ EOF
             run("docker exec %s ip route flush table %s" % (node, "211"))
 
     def has_ip_rule(self, nodename, ip):
+        _log.info("has_ip_rule checking %s for rule with IP %s" % (nodename, ip))
         # Validate egress ip rule exists for a client pod ip on a node.
         output = run("docker exec -t %s ip rule" % nodename)
         if output.find(ip) == -1:
