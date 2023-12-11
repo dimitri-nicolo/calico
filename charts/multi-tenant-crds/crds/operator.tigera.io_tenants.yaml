@@ -35,6 +35,12 @@ spec:
               id:
                 description: ID is the unique identifier for this tenant.
                 type: string
+              controlPlaneReplicas:
+                description: ControlPlaneReplicas defines how many replicas of the
+                  control plane core components will be deployed in the Tenant's namespace.
+                  Defaults to the controlPlaneReplicas in Installation CR
+                format: int32
+                type: integer
               indices:
                 description: Indices defines the how to store a tenant's data
                 items:
