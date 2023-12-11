@@ -19,7 +19,6 @@ import (
 var securityEventsClient lsClient.EventsInterface
 
 type LinseedCfg struct {
-	Cluster    string `envconfig:"LINSEED_CLUSTER" default:"cluster"`
 	TenantId   string `envconfig:"LINSEED_TENANT_ID"`
 	URL        string `envconfig:"LINSEED_URL" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
 	CA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
@@ -44,7 +43,7 @@ func init() {
 	)
 
 	if err == nil {
-		securityEventsClient = client.Events(config.Cluster)
+		securityEventsClient = client.Events("")
 		logrus.Info("Linseed connection initialized")
 	} else {
 		logrus.WithError(err).Fatal(("Linseed connection error"))
