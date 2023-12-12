@@ -88,11 +88,7 @@ build:
 $(BINDIR)/dikastes-amd64: ARCH=amd64
 $(BINDIR)/dikastes-arm64: ARCH=arm64
 $(BINDIR)/dikastes-%: protobuf $(SRC_FILES)
-ifeq ($(FIPS),true)
-	$(call build_cgo_boring_binary, ./cmd/dikastes, $@)
-else
 	$(call build_cgo_binary, ./cmd/dikastes, $@)
-endif
 
 $(BINDIR)/healthz-amd64: ARCH=amd64
 $(BINDIR)/healthz-arm64: ARCH=arm64
@@ -171,7 +167,7 @@ ut-exec:
 ###############################################################################
 
 .PHONY: ci
-ci: mod-download build-all check-generated-files static-checks ut
+ci: mod-download build-all image check-generated-files static-checks ut
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files
