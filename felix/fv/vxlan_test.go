@@ -71,7 +71,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 		enableIPv6 := testConfig.EnableIPv6
 		overlap := testConfig.Overlap
 
-		if BPFMode() && enableIPv6 && !BPFIPv6Support() {
+		if BPFMode() && enableIPv6 {
 			continue
 		}
 

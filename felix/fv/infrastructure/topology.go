@@ -203,6 +203,12 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (tc T
 	log.WithField("options", opts).Infof("Starting a %d-node topology", n)
 	success := false
 	var err error
+
+	if opts.EnableIPv6 && opts.IPIPEnabled && os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+		log.Errorf("IPIP not supported in BPF with ipv6!")
+		return
+	}
+
 	startTime := time.Now()
 	defer func() {
 		if !success {
@@ -322,7 +328,11 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (tc T
 		if opts.EnableIPv6 {
 			Expect(felix.IPv6).ToNot(BeEmpty(), "IPv6 enabled but Felix didn't get an IPv6 address, is docker configured for IPv6?  Look for \"ipv6\" in semaphore.yml to see what is needed.")
 		}
+
 		expectedIPs := []string{felix.IP}
+		if felix.IPv6 != "" {
+			expectedIPs = append(expectedIPs, felix.IPv6)
+		}
 		if kdd, ok := infra.(*K8sDatastoreInfra); ok && opts.ExternalIPs {
 			kdd.SetExternalIP(felix, i)
 			expectedIPs = append(expectedIPs, felix.ExternalIP)
@@ -425,9 +435,9 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (tc T
 					Expect(err).ToNot(HaveOccurred())
 				}
 				if opts.EnableIPv6 {
-					jBlockV6 := fmt.Sprintf("%x%x:%x%x:%x%x:%x%x:%x%x:100:%d:0/96", IPv6CIDR.IP[0], IPv6CIDR.IP[1], IPv6CIDR.IP[2], IPv6CIDR.IP[3], IPv6CIDR.IP[4], IPv6CIDR.IP[5], IPv6CIDR.IP[6], IPv6CIDR.IP[7], IPv6CIDR.IP[8], IPv6CIDR.IP[9], j)
+					jBlockV6 := fmt.Sprintf("%x%x:%x%x:%x%x:%x%x:%x%x:0:%d:0/112", IPv6CIDR.IP[0], IPv6CIDR.IP[1], IPv6CIDR.IP[2], IPv6CIDR.IP[3], IPv6CIDR.IP[4], IPv6CIDR.IP[5], IPv6CIDR.IP[6], IPv6CIDR.IP[7], IPv6CIDR.IP[8], IPv6CIDR.IP[9], j)
 					ipSec := opts.InitialFelixConfiguration != nil && opts.InitialFelixConfiguration.Spec.IPSecMode != ""
-					if opts.VXLANMode == api.VXLANModeNever && !opts.IPIPRoutesEnabled && !ipSec {
+					if opts.VXLANMode == api.VXLANModeNever && !ipSec {
 						// If VXLAN is enabled, Felix will program these routes itself.
 						// If IPIP routes are enabled, these routes will conflict with configured ones and a 'RTNETLINK answers: File exists' error would occur.
 						//

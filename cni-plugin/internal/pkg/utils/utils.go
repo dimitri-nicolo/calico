@@ -44,13 +44,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
-func Min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // DetermineNodename gets the node name, in order of priority:
 // 1. Nodename field in NetConf
 // 2. Nodename from the file /var/lib/calico/nodename

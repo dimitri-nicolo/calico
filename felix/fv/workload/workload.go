@@ -146,7 +146,7 @@ func New(c *infrastructure.Felix, name, profile, ip, ports, protocol string, opt
 	spoofN := fmt.Sprintf("%s-spoof%v", name, workloadIdx)
 	//nolint:staticcheck // Ignore SA1019 deprecated
 	spoofIfaceName := conversion.NewConverter().VethNameForWorkload(profile, spoofN)
-	if c.IP == ip {
+	if c.IP == ip || c.IPv6 == ip {
 		interfaceName = ""
 		spoofIfaceName = ""
 	}

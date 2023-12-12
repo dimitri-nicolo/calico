@@ -46,13 +46,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 )
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // GetResultForCurrent takes the output with cniVersion and returns the Result in cniv1.Result format.
 func GetResultForCurrent(session *gexec.Session, cniVersion string) (*cniv1.Result, error) {
 	// Check if the version is older than 0.3.0.

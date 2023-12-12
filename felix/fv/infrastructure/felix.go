@@ -80,6 +80,8 @@ type Felix struct {
 	cwlStreamName    string
 	cwlRetentionDays int64
 	uniqueName       string
+
+	TopologyOptions TopologyOptions
 }
 
 type workload interface {
@@ -297,6 +299,7 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 		),
 		cwlRetentionDays: cwlRetentionDays,
 		uniqueName:       uniqueName,
+		TopologyOptions:  options,
 	}
 }
 

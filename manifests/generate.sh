@@ -48,7 +48,7 @@ VERSIONS_FILE=${VERSIONS_FILE:-}
 echo "Generating manifests for Calico=$CALICO_VERSION and tigera-operator=$OPERATOR_VERSION"
 
 ##########################################################################
-# Build the operator manifest. 
+# Build the operator manifest.
 ##########################################################################
 cat <<EOF > tigera-operator.yaml
 apiVersion: v1
@@ -67,6 +67,7 @@ cp ../charts/tigera-prometheus-operator/Chart.yaml ../charts/tigera-operator/cha
 
 ${HELM} -n tigera-operator template \
 	--include-crds \
+	--no-hooks \
 	--set installation.enabled=false \
 	--set apiServer.enabled=false \
 	--set apiServer.enabled=false \
@@ -167,6 +168,7 @@ ${HELM} template --include-crds \
 	-n tigera-operator \
 	../charts/tigera-operator/ \
 	--output-dir ocp \
+	--no-hooks \
 	--set installation.kubernetesProvider=openshift \
 	--set installation.enabled=false \
 	--set apiServer.enabled=false \

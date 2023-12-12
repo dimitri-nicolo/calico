@@ -1006,6 +1006,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			ipSetsConfigV4,
 			ipSetIDAllocator,
 			bpfMaps.IpsetsMap,
+			bpfipsets.IPSetEntryFromBytes,
+			bpfipsets.ProtoIPSetMemberToBPFEntry,
 			dp.loopSummarizer,
 		)
 		dp.ipSets = append(dp.ipSets, ipSetsV4)
@@ -1032,11 +1034,15 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		config.LookupsCache.EnableID64()
 		// The failsafe manager sets up the failsafe port map.  It's important that it is registered before the
 		// endpoint managers so that the map is brought up to date before they run for the first time.
+		keyFromSlice := failsafes.KeyFromSlice
+		makeKey := failsafes.MakeKey
 		failsafeMgr := failsafes.NewManager(
 			bpfMaps.FailsafesMap,
 			config.RulesConfig.FailsafeInboundHostPorts,
 			config.RulesConfig.FailsafeOutboundHostPorts,
 			dp.loopSummarizer,
+			keyFromSlice,
+			makeKey,
 		)
 		dp.RegisterManager(failsafeMgr)
 
@@ -1066,7 +1072,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		bpfEndpointManager.Features = dataplaneFeatures
 
-		conntrackScanner := bpfconntrack.NewScanner(bpfMaps.CtMap,
+		kfb := conntrack.KeyFromBytes
+		vfb := conntrack.ValueFromBytes
+
+		conntrackScanner := bpfconntrack.NewScanner(bpfMaps.CtMap, kfb, vfb,
 			bpfconntrack.NewLivenessScanner(config.BPFConntrackTimeouts, config.BPFNodePortDSREnabled))
 
 		// Before we start, scan for all finished / timed out connections to

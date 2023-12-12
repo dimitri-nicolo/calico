@@ -26,8 +26,8 @@ require (
 	// keep track of versions used in https://github.com/projectcalico/containernetworking-plugins
 	github.com/containernetworking/cni v1.1.1
 	github.com/containernetworking/plugins v1.1.1
-	github.com/corazawaf/coraza/v3 v3.0.4
 	github.com/corazawaf/coraza-coreruleset v0.0.0-20231103220038-fd5c847140a6
+	github.com/corazawaf/coraza/v3 v3.0.4
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/coreos/go-semver v0.3.1
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
@@ -322,10 +322,10 @@ require (
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
-	github.com/urfave/cli v1.22.4 // indirect
 	github.com/tidwall/gjson v1.17.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/urfave/cli v1.22.4 // indirect
 	github.com/vishvananda/netns v0.0.2 // indirect
 	github.com/vmware/govmomi v0.30.6 // indirect
 	go.elastic.co/apm/module/apmzap/v2 v2.4.3 // indirect

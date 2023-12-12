@@ -115,6 +115,11 @@ type FrontendKeyInterface interface {
 	AsBytes() []byte
 }
 
+type FrontendKeyComparable interface {
+	comparable
+	FrontendKeyInterface
+}
+
 func NewNATKey(addr net.IP, port uint16, protocol uint8) FrontendKey {
 	return NewNATKeySrc(addr, port, protocol, ZeroCIDR)
 }
@@ -511,6 +516,7 @@ type AffinityKeyInterface interface {
 	ClientIP() net.IP
 	FrontendAffinityKey() FrontEndAffinityKeyInterface
 	String() string
+	AsBytes() []byte
 }
 
 type FrontEndAffinityKey [frontendAffKeySize]byte

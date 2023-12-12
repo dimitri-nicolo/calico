@@ -159,7 +159,8 @@ var _ = Describe("BPF Syncer", func() {
 		}))
 
 		By("creating a CT scanner", func() {
-			connScan = conntrack.NewScanner(ct, conntrack.NewStaleNATScanner(s))
+			connScan = conntrack.NewScanner(ct,
+				conntrack.KeyFromBytes, conntrack.ValueFromBytes, conntrack.NewStaleNATScanner(s))
 		})
 
 		By("creating conntrack entries for test-service", makestep(func() {
@@ -985,7 +986,8 @@ var _ = Describe("BPF Syncer", func() {
 		}))
 
 		By("recreating a CT scanner for the actual syncer", func() {
-			connScan = conntrack.NewScanner(ct, conntrack.NewStaleNATScanner(s))
+			connScan = conntrack.NewScanner(ct,
+				conntrack.KeyFromBytes, conntrack.ValueFromBytes, conntrack.NewStaleNATScanner(s))
 		})
 
 		By("checking that CT table emptied by connScan", makestep(func() {

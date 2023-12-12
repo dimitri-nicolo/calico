@@ -72,11 +72,11 @@ const (
 
 // EntryGet is a function prototype provided to EntryScanner in case it needs to
 // evaluate other entries to make a verdict
-type EntryGet func(Key) (Value, error)
+type EntryGet func(KeyInterface) (ValueInterface, error)
 
 // EntryScanner is a function prototype to be called on every entry by the scanner
 type EntryScanner interface {
-	Check(Key, Value, EntryGet) ScanVerdict
+	Check(KeyInterface, ValueInterface, EntryGet) ScanVerdict
 }
 
 // EntryScannerSynced is a scaner synchronized with the iteration start/end.
@@ -94,8 +94,10 @@ type EntryScannerSynced interface {
 // It provides a delete-save iteration over the conntrack table for multiple
 // evaluation functions, to keep their implementation simpler.
 type Scanner struct {
-	ctMap    maps.Map
-	scanners []EntryScanner
+	ctMap          maps.Map
+	keyFromBytes   func([]byte) KeyInterface
+	valueFromBytes func([]byte) ValueInterface
+	scanners       []EntryScanner
 
 	wg       sync.WaitGroup
 	stopCh   chan struct{}
@@ -104,11 +106,15 @@ type Scanner struct {
 
 // NewScanner returns a scanner for the given conntrack map and the set of
 // EntryScanner. They are executed in the provided order on each entry.
-func NewScanner(ctMap maps.Map, scanners ...EntryScanner) *Scanner {
+func NewScanner(ctMap maps.Map, kfb func([]byte) KeyInterface, vfb func([]byte) ValueInterface,
+	scanners ...EntryScanner) *Scanner {
+
 	return &Scanner{
-		ctMap:    ctMap,
-		scanners: scanners,
-		stopCh:   make(chan struct{}),
+		ctMap:          ctMap,
+		keyFromBytes:   kfb,
+		valueFromBytes: vfb,
+		scanners:       scanners,
+		stopCh:         make(chan struct{}),
 	}
 }
 
@@ -121,15 +127,12 @@ func (s *Scanner) Scan() {
 
 	debug := log.GetLevel() >= log.DebugLevel
 
-	var ctKey Key
-	var ctVal Value
-
 	used := 0
 	cleaned := 0
 
 	err := s.ctMap.Iter(func(k, v []byte) maps.IteratorAction {
-		copy(ctKey[:], k[:])
-		copy(ctVal[:], v[:])
+		ctKey := s.keyFromBytes(k)
+		ctVal := s.valueFromBytes(v)
 
 		used++
 		conntrackCounterCleaned.Inc()
@@ -163,14 +166,14 @@ func (s *Scanner) Scan() {
 	}
 }
 
-func (s *Scanner) get(k Key) (Value, error) {
+func (s *Scanner) get(k KeyInterface) (ValueInterface, error) {
 	v, err := s.ctMap.Get(k.AsBytes())
 
 	if err != nil {
-		return Value{}, err
+		return nil, err
 	}
 
-	return ValueFromBytes(v), nil
+	return s.valueFromBytes(v), nil
 }
 
 // Start the periodic scanner
