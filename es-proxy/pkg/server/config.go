@@ -54,7 +54,7 @@ type Config struct {
 	ElasticPort           int      `envconfig:"ELASTIC_PORT"`
 	ElasticURL            *url.URL `envconfig:"-"`
 	ElasticCAPath         string   `envconfig:"ELASTIC_CA"`
-	ElasticUsername       string   `envconfig:"ELASTIC_USERNAME"`
+	ElasticUser           string   `envconfig:"ELASTIC_USER"`
 	ElasticPassword       string   `envconfig:"ELASTIC_PASSWORD"`
 	ElasticIndexSuffix    string   `envconfig:"ELASTIC_INDEX_SUFFIX" default:"cluster"`
 	ElasticLicenseType    string   `envconfig:"ELASTIC_LICENSE_TYPE"`
@@ -123,7 +123,7 @@ func validateConfig(config *Config) error {
 		if config.ElasticURL.Scheme == "" || config.ElasticURL.Host == "" {
 			return errors.New("Invalid Elasticsearch backend URL specified")
 		}
-		if config.ElasticUsername == "" || config.ElasticPassword == "" {
+		if config.ElasticUser == "" || config.ElasticPassword == "" {
 			return errors.New("Elasticsearch credentials not provided")
 		}
 		if config.ElasticURL.Scheme == "https" && config.ElasticCAPath == "" {

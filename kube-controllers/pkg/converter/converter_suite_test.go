@@ -25,6 +25,6 @@ import (
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/converter_suite.xml")
+	junitReporter := reporters.NewJUnitReporter("./report/converter_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Converter Suite", []Reporter{junitReporter})
 }

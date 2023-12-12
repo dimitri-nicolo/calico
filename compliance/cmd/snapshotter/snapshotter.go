@@ -77,7 +77,7 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}
-	store := api.NewComplianceStore(linseed, cfg.ClusterName)
+	store := api.NewComplianceStore(linseed, "")
 
 	// Create clientset.
 	datastoreClient := datastore.MustGetClientSet()

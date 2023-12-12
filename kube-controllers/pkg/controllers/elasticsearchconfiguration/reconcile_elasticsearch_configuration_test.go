@@ -415,7 +415,19 @@ var _ = Describe("Reconcile", func() {
 
 	Context("Managed cluster configuration successfully created", func() {
 		var managedK8sCli *k8sfake.Clientset
+		var managedESConfigMap *corev1.ConfigMap
 		BeforeEach(func() {
+			managedESConfigMap = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resource.ElasticsearchConfigMapName,
+					Namespace: resource.OperatorNamespace,
+				},
+				Data: map[string]string{
+					"clusterName": "managed-1",
+					"replicas":    "1",
+					"shards":      "5",
+				},
+			}
 			managedK8sCli = k8sfake.NewSimpleClientset()
 		})
 
@@ -444,7 +456,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
 		})
 
 		It("regenerates user Secrets if the Secret's hash is stale", func() {
@@ -464,7 +476,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
 
 			ctx := context.Background()
 
@@ -501,7 +513,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
 
 			ctx := context.Background()
 
@@ -542,7 +554,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
 
 			ctx := context.Background()
 
@@ -590,14 +602,27 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
 		})
 	})
 
 	Context("Managed cluster configuration successfully created with alternate operator namespace", func() {
 		var managedK8sCli *k8sfake.Clientset
+		var managedESConfigMap *corev1.ConfigMap
 		altOperatorNamespace := "alternate-operator"
 		BeforeEach(func() {
+			managedESConfigMap = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resource.ElasticsearchConfigMapName,
+					Namespace: resource.OperatorNamespace,
+				},
+				Data: map[string]string{
+					"clusterName": "managed-1",
+					"replicas":    "1",
+					"shards":      "5",
+				},
+			}
+
 			activeOperatorConfigMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "active-operator",
@@ -636,7 +661,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
 		})
 
 		It("regenerates user Secrets if the Secret's hash is stale", func() {
@@ -657,7 +682,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
 
 			ctx := context.Background()
 
@@ -695,7 +720,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
 
 			ctx := context.Background()
 
@@ -738,7 +763,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
 
 			ctx := context.Background()
 
@@ -788,7 +813,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
 		})
 	})
 })
@@ -878,9 +903,9 @@ func assertManagementConfiguration(managementK8sCli kubernetes.Interface, operat
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(gatewayCertSecret.Data).Should(Equal(expectedGatewayCertSecret.Data))
 
-	managedESConfigMap, err := managementK8sCli.CoreV1().ConfigMaps(operatorNs).Get(ctx, resource.ElasticsearchConfigMapName, metav1.GetOptions{})
+	managementESConfigMap, err := managementK8sCli.CoreV1().ConfigMaps(operatorNs).Get(ctx, resource.ElasticsearchConfigMapName, metav1.GetOptions{})
 	Expect(err).ShouldNot(HaveOccurred())
-	Expect(managedESConfigMap.Data).Should(Equal(map[string]string{
+	Expect(managementESConfigMap.Data).Should(Equal(map[string]string{
 		"clusterName": "cluster",
 		"replicas":    expectedESConfigMap.Data["replicas"],
 		"shards":      expectedESConfigMap.Data["shards"],

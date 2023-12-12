@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 
 var tenantID = os.Getenv("TENANT_ID")

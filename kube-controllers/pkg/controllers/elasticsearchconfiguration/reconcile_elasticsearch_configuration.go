@@ -134,8 +134,9 @@ func (c *reconciler) reconcileCASecrets() error {
 	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
 		return err
 	}
+
 	secret.ObjectMeta.Name = resource.KibanaCertSecret
-	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
+	if err = resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
 		return err
 	}
 

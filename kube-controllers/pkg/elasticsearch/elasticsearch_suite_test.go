@@ -25,6 +25,6 @@ import (
 
 func TestElasticsearch(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/elasticsearch_suite.xml")
+	junitReporter := reporters.NewJUnitReporter("./report/elasticsearch_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Elasticsearch", []Reporter{junitReporter})
 }

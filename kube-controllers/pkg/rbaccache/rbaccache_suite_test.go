@@ -13,6 +13,6 @@ import (
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/rbaccache.xml")
+	junitReporter := reporters.NewJUnitReporter("./report/rbaccache.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "RBACCache Suite", []Reporter{junitReporter})
 }

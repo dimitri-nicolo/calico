@@ -49,7 +49,7 @@ var _ = Describe("Test configuration validation", func() {
 
 		By("Validating when credentials are set in serviceuser access mode.")
 		me = extendMap(me, map[string]string{
-			"ELASTIC_USERNAME": "bob",
+			"ELASTIC_USER":     "bob",
 			"ELASTIC_PASSWORD": "cannotsetapassword",
 		})
 		me.setenv()

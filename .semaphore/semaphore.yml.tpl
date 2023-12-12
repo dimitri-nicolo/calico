@@ -633,6 +633,10 @@ blocks:
     - name: "kube-controllers: tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
+    epilogue:
+      always:
+        commands:
+        - test-results publish report
 
 - name: "pod2daemon"
   run:

@@ -33,6 +33,6 @@ func init() {
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/main_controller_suite.xml")
+	junitReporter := reporters.NewJUnitReporter("./report/main_controller_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Main binary suite", []Reporter{junitReporter})
 }

@@ -44,9 +44,6 @@ type Config struct {
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
 	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 
-	// ClusterName name, for components that serve a single cluster.
-	ClusterName string `envconfig:"CLUSTER_NAME"`
-
 	// Tenant configuration for Calico Cloud.
 	TenantID string `envconfig:"TENANT_ID"`
 

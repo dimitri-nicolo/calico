@@ -33,6 +33,6 @@ func init() {
 
 func TestCache(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/cache_suite.xml")
+	junitReporter := reporters.NewJUnitReporter("./report/cache_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Cache Suite", []Reporter{junitReporter})
 }

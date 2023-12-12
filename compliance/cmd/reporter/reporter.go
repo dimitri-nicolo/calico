@@ -75,7 +75,7 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}
-	store := capi.NewComplianceStore(linseed, cfg.ClusterName)
+	store := capi.NewComplianceStore(linseed, "")
 
 	// Setup signals.
 	sigs := make(chan os.Signal, 1)
