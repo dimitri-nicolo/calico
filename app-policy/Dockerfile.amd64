@@ -21,7 +21,6 @@ ARG BIN_DIR
 COPY ${BIN_DIR}/dikastes-amd64 /dikastes
 COPY ${BIN_DIR}/healthz-amd64 /healthz
 RUN ldd /dikastes
-RUN ldd /healthz
 
 RUN mkdir -p /tmp/dikastes
 RUN chmod 0777 /tmp/dikastes
