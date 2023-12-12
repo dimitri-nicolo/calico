@@ -17,6 +17,12 @@ ARG UBI_IMAGE_FULL
 
 FROM ${UBI_IMAGE} as ubi
 
+ARG BIN_DIR
+COPY ${BIN_DIR}/dikastes-amd64 /dikastes
+COPY ${BIN_DIR}/healthz-amd64 /healthz
+RUN ldd /dikastes
+RUN ldd /healthz
+
 RUN mkdir -p /tmp/dikastes
 RUN chmod 0777 /tmp/dikastes
 
@@ -28,13 +34,25 @@ FROM scratch as build
 
 COPY --from=ubi /licenses /licenses
 
-ARG BIN_DIR
-COPY ${BIN_DIR}/dikastes-amd64 /dikastes
-COPY ${BIN_DIR}/healthz-amd64 /healthz
+# Include libraries from UBI for dynamic linking.
+#
+# Copy the specific libraries; these were obtained by running 'ldd /dikastes'
+COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
+COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
+COPY --from=ubi /lib64/libresolv.so.2 /lib64/libresolv.so.2
+COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+
+# Copy hostname configuration files from UBI so glibc hostname lookups work.
+COPY --from=ubi /etc/host.conf /etc/host.conf
+COPY --from=ubi /etc/nsswitch.conf /etc/nsswitch.conf
 
 # Precreate the /var/run/dikastes directory so that we don't need any elevated
 # permission to create the directory at runtime.
 COPY --chown=10001 --from=ubi /tmp/dikastes /var/run/dikastes
+
+# Copy the binaries
+COPY --from=ubi /dikastes /dikastes
+COPY --from=ubi /healthz /healthz
 
 FROM scratch
 COPY --from=build / /
