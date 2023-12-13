@@ -19,7 +19,7 @@ helm install calico-enterprise tigera-operator-{CALIENT_RELEASE_VERSION}.tgz --n
 In order to update multi-tenancy CRDs to the latest version, run the makefile target below:
 
 ```
-OPERATOR_BRANCH_NAME=master make get-multi-tenancy-crds
+OPERATOR_BRANCH_NAME=master make get-operator-crds
 ```
 
 ## Release a new chart
@@ -28,6 +28,12 @@ In order to create a new version of the chart, run the makefile target below:
 
 ```
 RELEASE_STREAM=v3.18.1-ep2 make multi-tenant-crds-release
+```
+
+or
+
+```
+make chart
 ```
 
 ## Installing the chart
@@ -39,5 +45,5 @@ helm install calico-enterprise-crds multi-tenant-crds-{RELEASE_VERSION}.tgz
 ## Upgrading CRDs
 
 ```
-helm template calico-enterprise-crds | kubectl apply -f
+helm template --include-crds  multi-tenant-crds-{RELEASE_VERSION}.tgz | kubectl apply --server-side --force-conflicts -f -
 ```

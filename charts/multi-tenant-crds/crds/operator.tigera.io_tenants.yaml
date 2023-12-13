@@ -32,15 +32,29 @@ spec:
             type: object
           spec:
             properties:
-              id:
-                description: ID is the unique identifier for this tenant.
-                type: string
               controlPlaneReplicas:
                 description: ControlPlaneReplicas defines how many replicas of the
                   control plane core components will be deployed in the Tenant's namespace.
                   Defaults to the controlPlaneReplicas in Installation CR
                 format: int32
                 type: integer
+              elastic:
+                description: Elastic configures per-tenant ElasticSearch and Kibana
+                  parameters. This field is required for clusters using external ES.
+                properties:
+                  kibanaURL:
+                    type: string
+                  mutualTLS:
+                    type: boolean
+                  url:
+                    type: string
+                required:
+                - mutualTLS
+                - url
+                type: object
+              id:
+                description: ID is the unique identifier for this tenant.
+                type: string
               indices:
                 description: Indices defines the how to store a tenant's data
                 items:
@@ -74,6 +88,9 @@ spec:
                   - dataType
                   type: object
                 type: array
+              name:
+                description: Name is a human readable name for this tenant.
+                type: string
             required:
             - indices
             type: object
