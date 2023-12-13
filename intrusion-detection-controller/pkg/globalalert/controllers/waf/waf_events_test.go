@@ -32,7 +32,7 @@ var _ = Describe("WAF new event", func() {
 				Origin:          "Web Application Firewall",
 				Time:            v1.NewEventTimestamp(wafLog.Timestamp.Unix()),
 				Name:            "WAF Event",
-				Description:     "Some traffic inside your cluster triggered some Web Application Firewall rules",
+				Description:     "Traffic inside your cluster triggered Web Application Firewall rules",
 				Severity:        80,
 				Host:            "lorcan-bz-wodc-kadm-node-1",
 				Protocol:        "HTTP/1.1",
