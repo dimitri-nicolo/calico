@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"k8s.io/apiserver/pkg/authentication/user"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -166,6 +168,15 @@ func main() {
 		serviceNameSuffix,
 		&suffixGenerator,
 	)
+
+	if policyrecommendationConfig.TenantNamespace != "" {
+		impersonationInfo := user.DefaultInfo{
+			Name:   "system:serviceaccount:tigera-policy-recommendation:tigera-policy-recommendation",
+			Groups: []string{},
+		}
+		clientFactory = clientFactory.Impersonate(&impersonationInfo)
+	}
+
 	managedclusterController := managedcluster.NewManagedClusterController(ctx,
 		client,
 		clientFactory,
