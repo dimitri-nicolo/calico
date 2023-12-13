@@ -64,7 +64,7 @@ func NewWafEvent(l v1.WAFLog) v1.Event {
 		// timestamp from the WAF log...
 		Time:        v1.NewEventTimestamp(time.Now().Unix()),
 		Name:        "WAF Event",
-		Description: "Some traffic inside your cluster triggered some Web Application Firewall rules",
+		Description: "Traffic inside your cluster triggered Web Application Firewall rules",
 		// Bad but not too bad :) Open for feedback
 		Severity:        80,
 		Host:            l.Host,
