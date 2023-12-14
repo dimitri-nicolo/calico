@@ -1296,9 +1296,9 @@ kubectl $(KUBECTL):
 bin/helm:
 	mkdir -p bin
 	$(eval TMP := $(shell mktemp -d))
-	curl -sSf -L --retry 5 -o $(TMP)/helm3.tar.gz https://get.helm.sh/helm-v3.11.0-linux-amd64.tar.gz
+	curl -sSf -L --retry 5 -o $(TMP)/helm3.tar.gz https://get.helm.sh/helm-v3.11.0-linux-$(ARCH).tar.gz
 	tar -zxvf $(TMP)/helm3.tar.gz -C $(TMP)
-	mv $(TMP)/linux-amd64/helm bin/helm
+	mv $(TMP)/linux-$(ARCH)/helm bin/helm
 
 helm-install-gcs-plugin:
 	bin/helm plugin install https://github.com/viglesiasce/helm-gcs.git
