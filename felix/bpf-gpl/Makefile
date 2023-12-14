@@ -58,7 +58,7 @@ OBJS+=bin/tc_preamble.o
 OBJS+=bin/tc_preamble_v6.o
 OBJS+=bin/xdp_preamble.o
 OBJS+=bin/policy_default.o
-C_FILES:=tc_preamble.c tc.c connect_balancer.c connect_balancer_v6.c xdp_preamble.c xdp.c policy_default.c
+C_FILES:=tc_preamble.c tc.c connect_balancer.c connect_balancer_v46.c connect_balancer_v6.c xdp_preamble.c xdp.c policy_default.c
 # EE only files
 C_FILES+=tcp_kprobe.c udp_kprobe.c tcp_stats.c syscall_kprobe.c
 
@@ -68,8 +68,10 @@ ut-objs: $(UT_OBJS)
 COMPILE=$(CC) $(CFLAGS) `./calculate-flags $@` -c $< -o $@
 connect_time_%v4.ll: connect_balancer.c connect_balancer.d calculate-flags
 	$(COMPILE)
-connect_time_%v6.ll: connect_balancer_v6.c connect_balancer_v6.d calculate-flags
+connect_time_%v46.ll: connect_balancer_v46.c connect_balancer_v46.d calculate-flags
 	$(COMPILE)
+connect_time_%v6.ll: connect_balancer_v6.c connect_balancer_v6.d calculate-flags
+	$(COMPILE) -DIPVER6
 tcp_%kprobe.ll: tcp_kprobe.c tcp_kprobe.d calculate-flags
 	$(COMPILE)
 udp_%kprobe.ll: udp_kprobe.c udp_kprobe.d calculate-flags
@@ -140,6 +142,8 @@ bin/xdp%.o: xdp%.ll | bin
 	$(LINK)
 bin/connect_time_%v4.o: connect_time_%v4.ll | bin
 	$(LINK)
+bin/connect_time_%v46.o: connect_time_%v46.ll | bin
+	$(LINK)
 bin/connect_time_%v6.o: connect_time_%v6.ll | bin
 	$(LINK)
 bin/tcp_%kprobe.o: tcp_%kprobe.ll | bin
@@ -151,6 +155,8 @@ bin/tcp_%stats.o: tcp_%stats.ll | bin
 bin/syscall_%kprobe.o: syscall_%kprobe.ll | bin
 	$(LINK)
 bin/connect_time_%v4_co-re.o: connect_time_%v4.ll | bin
+	$(LINK)
+bin/connect_time_%v46_co-re.o: connect_time_%v46.ll | bin
 	$(LINK)
 bin/connect_time_%v6_co-re.o: connect_time_%v6.ll | bin
 	$(LINK)
