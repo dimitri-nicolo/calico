@@ -17,7 +17,7 @@ import json
 
 from tests.k8st.test_base import TestBaseV6
 from tests.k8st.utils.utils import start_external_node_with_bgp, \
-        retry_until_success, run, curl, DiagsCollector, calicoctl, kubectl, node_info, update_ds_env
+        retry_until_success, run, curl, DiagsCollector, calicoctl, kubectl, node_info, NGINX_IMAGE, update_ds_env
 
 _log = logging.getLogger(__name__)
 
@@ -616,7 +616,7 @@ spec:
     spec:
       containers:
       - name: nginx-rr
-        image: nginx:1.7.9
+        image: %s
         ports:
         - containerPort: 80
       nodeSelector:
@@ -645,7 +645,7 @@ spec:
   type: NodePort
   externalTrafficPolicy: Local
 EOF
-""" % self.nodes[1])
+""" % (NGINX_IMAGE, self.nodes[1]))
 
         calicoctl("get nodes -o yaml")
         calicoctl("get bgppeers -o yaml")
