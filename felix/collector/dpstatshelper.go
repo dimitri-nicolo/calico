@@ -50,6 +50,7 @@ func New(
 			ExportingInterval:            config.DefaultExportingInterval,
 			EnableServices:               configParams.FlowLogsFileIncludeService,
 			EnableNetworkSets:            configParams.FlowLogsEnableNetworkSets,
+			EnableDestDomainsByClient:    configParams.FlowLogsDestDomainsByClient,
 			MaxOriginalSourceIPsIncluded: configParams.FlowLogsMaxOriginalIPsIncluded,
 			IsBPFDataplane:               configParams.BPFEnabled,
 			DisplayDebugTraceLogs:        configParams.FlowLogsCollectorDebugTrace,

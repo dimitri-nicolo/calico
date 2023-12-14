@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -60,13 +60,14 @@ func StartDataplaneDriver(configParams *config.Config,
 		Collector:    collector,
 		LookupsCache: lookupsCache,
 
-		DNSCacheFile:         configParams.GetDNSCacheFile(),
-		DNSCacheSaveInterval: configParams.DNSCacheSaveInterval,
-		DNSCacheEpoch:        configParams.DNSCacheEpoch,
-		DNSExtraTTL:          configParams.GetDNSExtraTTL(),
-		DNSLogsLatency:       configParams.DNSLogsLatency,
-		DNSTrustedServers:    configParams.DNSTrustedServers,
-		PktMonStartArgs:      configParams.DebugWindowsPktMonStartArgs,
+		DNSCacheFile:              configParams.GetDNSCacheFile(),
+		DNSCacheSaveInterval:      configParams.DNSCacheSaveInterval,
+		DNSCacheEpoch:             configParams.DNSCacheEpoch,
+		DNSExtraTTL:               configParams.GetDNSExtraTTL(),
+		DNSLogsLatency:            configParams.DNSLogsLatency,
+		DNSTrustedServers:         configParams.DNSTrustedServers,
+		EnableDestDomainsByClient: configParams.FlowLogsDestDomainsByClient,
+		PktMonStartArgs:           configParams.DebugWindowsPktMonStartArgs,
 	}
 
 	stopChan := make(chan *sync.WaitGroup, 1)

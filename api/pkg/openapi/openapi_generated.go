@@ -5871,6 +5871,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "",
 						},
 					},
+					"flowLogsDestDomainsByClient": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsDestDomainsByClient is used to configure if the source IP is used in the mapping of top level destination domains. [Default: true]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"flowLogsFileEnabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "FlowLogsFileEnabled when set to true, enables logging flow logs to a file. If false no flow logging to file will occur.",

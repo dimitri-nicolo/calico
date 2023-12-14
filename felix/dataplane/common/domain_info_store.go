@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -127,6 +127,15 @@ const (
 	maxHoldDurationResponse = 1 * time.Second
 )
 
+// dnsLookupInfoByClient holds the DNS lookup information per client.
+type dnsLookupInfoByClient struct {
+	// Stores for the information that we glean from DNS responses. Note: IPs are held here as
+	// strings, and also passed to the ipsets manager as strings.
+	mappings map[string]*nameData
+	// Store for reverse DNS lookups.
+	reverse map[[16]byte]*ipData
+}
+
 // The data that we hold for each value in a name -> value mapping.  A value can be an IP, or
 // another name.  The values themselves are held as the keys of the nameData.values map.
 type valueData struct {
@@ -140,7 +149,7 @@ type valueData struct {
 
 // The data that we hold for each name.
 type nameData struct {
-	// Known values for this name.  Map keys are the actual values (i.e. IPs or lowercase CNAME names),
+	// Known values for this name. Map keys are the actual values (i.e. IPs or lowercase CNAME names),
 	// and valueData is as above.
 	values map[string]*valueData
 	// Top-level domains associated with this name.
@@ -205,6 +214,9 @@ type DomainInfoStore struct {
 	rateLimitedNoRequestLogger  *logutils.RateLimitedLogger
 	rateLimitedNoResponseLogger *logutils.RateLimitedLogger
 
+	// Map from client IP to the DNS lookup data for that client.
+	dnsLookup map[string]*dnsLookupInfoByClient
+
 	// Handlers that we need update.
 	handlers []DomainInfoChangeHandler
 
@@ -214,14 +226,6 @@ type DomainInfoStore struct {
 	// Channel used to send trigger notifications to the dataplane that there are updates that can be applied to the
 	// DomainInfoChangeHandlers.
 	updatesReady chan struct{}
-
-	// Stores for the information that we glean from DNS responses.  Note: IPs are held here as
-	// strings, and also passed to the ipsets manager as strings.
-	mutex    sync.RWMutex
-	mappings map[string]*nameData
-
-	// Store for reverse DNS lookups.
-	reverse map[[16]byte]*ipData
 
 	// Wildcard domain names that consumers are interested in (i.e. have called GetDomainIPs
 	// for).
@@ -306,23 +310,29 @@ type DomainInfoStore struct {
 
 	// The revision number that has been applied to the dataplane.
 	appliedRevision uint64
+
+	// enableDestDomainsByClient enables the tracking of destination domains by client IP.
+	enableDestDomainsByClient bool
+
+	mutex sync.RWMutex
 }
 
 // Signal sent by timers' AfterFunc to the domain info store when a particular name -> IP or name ->
 // cname mapping expires.
 type domainMappingExpired struct {
-	name, value string
+	clientIP, name, value string
 }
 
 type DnsConfig struct {
-	Collector             collector.Collector
-	DNSCacheEpoch         int
-	DNSCacheFile          string
-	DNSCacheSaveInterval  time.Duration
-	DNSExtraTTL           time.Duration
-	DNSLogsLatency        bool
-	DebugDNSResponseDelay time.Duration
-	MaxTopLevelDomains    int
+	Collector                 collector.Collector
+	DNSCacheEpoch             int
+	DNSCacheFile              string
+	DNSCacheSaveInterval      time.Duration
+	DNSExtraTTL               time.Duration
+	DNSLogsLatency            bool
+	DebugDNSResponseDelay     time.Duration
+	EnableDestDomainsByClient bool
+	MaxTopLevelDomains        int
 }
 
 func NewDomainInfoStore(config *DnsConfig) *DomainInfoStore {
@@ -345,8 +355,7 @@ func newDomainInfoStoreWithShims(
 
 		// Updates ready channel has capacity 1 since only one notification is required at a time.
 		updatesReady:         make(chan struct{}, 1),
-		mappings:             make(map[string]*nameData),
-		reverse:              make(map[[16]byte]*ipData),
+		dnsLookup:            make(map[string]*dnsLookupInfoByClient),
 		wildcards:            make(map[string]*regexp.Regexp),
 		resultsCache:         make(map[string][]string),
 		mappingExpiryChannel: make(chan *domainMappingExpired),
@@ -378,7 +387,11 @@ func newDomainInfoStoreWithShims(
 
 		// Current update revision starts at 1.  0 is used to indicate no required updates.
 		currentRevision: 1,
+
+		// Destination domains by client.
+		enableDestDomainsByClient: config.EnableDestDomainsByClient,
 	}
+
 	return s
 }
 
@@ -596,8 +609,17 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC, latencyTimerC <-ch
 				return
 			}
 
+			// Processing a DNS response, the client IP we will gather information for is represented by
+			// the destination IP for this packet.
+			clientIP := ipv4.DstIP.String()
+			if !s.enableDestDomainsByClient {
+				// When disabled, we store the DNS lookup info on a single clientIP key address. "0.0.0.0"
+				// IP is used as the sentinel value to do so.
+				clientIP = collector.DefaultGroupIP
+			}
+
 			// Process the packet for our DNS cache first and then process the packet for logging purposes.
-			s.processDNSResponsePacket(dns, msg.Callback)
+			s.processDNSResponsePacket(clientIP, dns, msg.Callback)
 			s.processDNSResponsePacketForLogging(ipv4, dns, msg.Timestamp)
 			prometheusRespPacketsInCount.Inc()
 
@@ -606,7 +628,7 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC, latencyTimerC <-ch
 			releaseImmediately = false
 		}
 	case expiry := <-s.mappingExpiryChannel:
-		s.processMappingExpiry(expiry.name, expiry.value, s.nowFunc())
+		s.processMappingExpiry(expiry.clientIP, expiry.name, expiry.value, s.nowFunc())
 	case <-saveTimerC:
 		if err := s.SaveMappingsV1(); err != nil {
 			log.WithError(err).Warning("Failed to save mappings to file")
@@ -648,6 +670,7 @@ func (s *DomainInfoStore) maybeSignalUpdatesReady(reason string) {
 }
 
 type jsonMappingV1 struct {
+	Client string
 	LHS    string
 	RHS    string
 	Expiry string
@@ -688,11 +711,13 @@ type v2FileHeader struct {
 type v2FileFeature string
 
 const (
-	v2FileFeatureEpoch v2FileFeature = "Epoch"
+	v2FileFeatureEpoch     v2FileFeature = "Epoch"
+	v2FileFeaturePerClient v2FileFeature = "PerClient"
 )
 
 var currentV2Features = set.From(
 	v2FileFeatureEpoch,
+	v2FileFeaturePerClient,
 )
 
 func (s *DomainInfoStore) readMappings() error {
@@ -725,7 +750,7 @@ func (s *DomainInfoStore) readMappings() error {
 				return err
 			}
 		} else {
-			return fmt.Errorf("Unrecognised format version: %v", version)
+			return fmt.Errorf("unrecognised format version: %v", version)
 		}
 	}
 	// If we reach here, there was a problem scanning the version line.
@@ -775,14 +800,25 @@ func (s *DomainInfoStore) readMappingsV2(scanner *bufio.Scanner) error {
 
 func (s *DomainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
 	// Track which of the names is top-level (i.e. has no parent in the CNAME chain)
-	hasParent := make(map[string]bool)
+	hasParent := make(map[string]map[string]bool)
 
 	for scanner.Scan() {
 		var jsonMapping jsonMappingV1
 		if err := json.Unmarshal(scanner.Bytes(), &jsonMapping); err != nil {
 			return err
 		}
-		hasParent[strings.ToLower(jsonMapping.RHS)] = true
+
+		client := jsonMapping.Client
+		if client == "" {
+			// This is a mapping from the old format, where we didn't store the client IP.
+			// Assume it's from the default client. The item will be expired shortly anyway.
+			client = collector.DefaultGroupIP
+		}
+
+		if _, ok := hasParent[client]; !ok {
+			hasParent[client] = make(map[string]bool)
+		}
+		hasParent[client][strings.ToLower(jsonMapping.RHS)] = true
 
 		expiryTime, err := time.Parse(time.RFC3339, jsonMapping.Expiry)
 		if err != nil {
@@ -791,18 +827,29 @@ func (s *DomainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
 		ttlNow := time.Until(expiryTime)
 		if ttlNow.Seconds() > 1 {
 			log.Debugf("Recreate mapping %v", jsonMapping)
+
 			// The mapping may have been saved by a previous version including uppercase letters,
 			// so lowercase it now.
-			s.storeInfo(strings.ToLower(jsonMapping.LHS), strings.ToLower(jsonMapping.RHS), ttlNow, jsonMapping.Type == v1TypeName)
+			s.storeInfo(
+				client,
+				strings.ToLower(jsonMapping.LHS),
+				strings.ToLower(jsonMapping.RHS),
+				ttlNow,
+				jsonMapping.Type == v1TypeName,
+			)
 		} else {
 			log.Debugf("Ignore expired mapping %v", jsonMapping)
 		}
 	}
 
-	// Loop through the mappings and update any that don't have parents to be "top-level".
-	for name, data := range s.mappings {
-		if !hasParent[name] {
-			s.propagateTopLevelDomains(name, data, []string{name})
+	// Loop through every client that was stored in the previous step, and update the top-level
+	// domains.
+	for cip, clk := range s.dnsLookup {
+		// Loop through the mappings and update any that don't have parents to be "top-level".
+		for name, data := range clk.mappings {
+			if !hasParent[cip][name] {
+				s.propagateTopLevelDomains(cip, name, data, []string{name})
+			}
 		}
 	}
 
@@ -844,17 +891,20 @@ func (s *DomainInfoStore) SaveMappingsV1() error {
 	}); err != nil {
 		return err
 	}
-	for lhsName, nameData := range s.mappings {
-		for rhsName, valueData := range nameData.values {
-			jsonMapping := jsonMappingV1{LHS: lhsName, RHS: rhsName, Type: v1TypeIP}
-			if valueData.isName {
-				jsonMapping.Type = v1TypeName
+	// Loop through every client and write out the mappings.
+	for cip, clk := range s.dnsLookup {
+		for lhsName, nameData := range clk.mappings {
+			for rhsName, valueData := range nameData.values {
+				jsonMapping := jsonMappingV1{Client: cip, LHS: lhsName, RHS: rhsName, Type: v1TypeIP}
+				if valueData.isName {
+					jsonMapping.Type = v1TypeName
+				}
+				jsonMapping.Expiry = valueData.expiryTime.Format(time.RFC3339)
+				if err = jsonEncoder.Encode(jsonMapping); err != nil {
+					return err
+				}
+				log.Debugf("Saved mapping: %v", jsonMapping)
 			}
-			jsonMapping.Expiry = valueData.expiryTime.Format(time.RFC3339)
-			if err = jsonEncoder.Encode(jsonMapping); err != nil {
-				return err
-			}
-			log.Debugf("Saved mapping: %v", jsonMapping)
 		}
 	}
 
@@ -1027,7 +1077,7 @@ func (s *DomainInfoStore) processDNSResponsePacketForLogging(ipv4 *layers.IPv4, 
 	}
 }
 
-func (s *DomainInfoStore) processDNSResponsePacket(dns *layers.DNS, callback func()) {
+func (s *DomainInfoStore) processDNSResponsePacket(clientIP string, dns *layers.DNS, callback func()) {
 	log.Debugf("DNS packet with %v answers %v additionals", len(dns.Answers), len(dns.Additionals))
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -1036,12 +1086,12 @@ func (s *DomainInfoStore) processDNSResponsePacket(dns *layers.DNS, callback fun
 	// associated with these changes so that we can determine when to invoke the callbacks (if supplied).
 	var maxRevision uint64
 	for _, rec := range dns.Answers {
-		if revision := s.storeDNSRecordInfo(&rec, "answer"); revision > maxRevision {
+		if revision := s.storeDNSRecordInfo(&rec, clientIP, "answer"); revision > maxRevision {
 			maxRevision = revision
 		}
 	}
 	for _, rec := range dns.Additionals {
-		if msgNum := s.storeDNSRecordInfo(&rec, "additional"); msgNum > maxRevision {
+		if msgNum := s.storeDNSRecordInfo(&rec, clientIP, "additional"); msgNum > maxRevision {
 			maxRevision = msgNum
 		}
 	}
@@ -1079,26 +1129,32 @@ func (s *DomainInfoStore) processDNSResponsePacket(dns *layers.DNS, callback fun
 	}
 }
 
-func (s *DomainInfoStore) processMappingExpiry(name, value string, now time.Time) {
+func (s *DomainInfoStore) processMappingExpiry(clientIP, name, value string, now time.Time) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if nameData := s.mappings[name]; nameData != nil {
-		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(now) {
-			log.Debugf("Mapping expiry for %v -> %v", name, value)
-			delete(nameData.values, value)
-			if !valueData.isName {
-				s.removeIPMapping(nameData, value)
+	clk := s.dnsLookup[clientIP]
+	if clk != nil {
+		if nameData := clk.mappings[name]; nameData != nil {
+			if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(now) {
+				log.Debugf("Mapping expiry for %v/%v -> %v", clientIP, name, value)
+				delete(nameData.values, value)
+				if !valueData.isName {
+					s.removeIPMapping(nameData, clientIP, value)
+				}
+				s.gcTrigger = true
+				s.compileChangedNames(clientIP, name)
+			} else if valueData != nil {
+				log.Debugf("Too early mapping expiry for %v -> %v", name, value)
+			} else {
+				log.Debugf("Mapping already gone for %v -> %v", name, value)
 			}
-			s.gcTrigger = true
-			s.compileChangedNames(name)
-		} else if valueData != nil {
-			log.Debugf("Too early mapping expiry for %v -> %v", name, value)
 		} else {
-			log.Debugf("Mapping already gone for %v -> %v", name, value)
+			log.Debugf("No mappings for clientIP %s", clientIP)
 		}
+	} else {
+		log.Debugf("DNS lookup info for clientIP %s doesn't exist", clientIP)
 	}
-
 	s.maybeSignalUpdatesReady("mapping expired")
 }
 
@@ -1108,15 +1164,17 @@ func (s *DomainInfoStore) expireAllMappings() {
 	defer s.mutex.Unlock()
 
 	// For each mapping...
-	for name, nameData := range s.mappings {
-		// ...discard all of its values, being careful to release any reverse IP mappings.
-		for value, valueData := range nameData.values {
-			if !valueData.isName {
-				s.removeIPMapping(nameData, value)
+	for clientIP, cl := range s.dnsLookup {
+		for name, nameData := range cl.mappings {
+			// ...discard all of its values, being careful to release any reverse IP mappings.
+			for value, valueData := range nameData.values {
+				if !valueData.isName {
+					s.removeIPMapping(nameData, clientIP, value)
+				}
 			}
+			nameData.values = make(map[string]*valueData)
+			s.compileChangedNames(clientIP, name)
 		}
-		nameData.values = make(map[string]*valueData)
-		s.compileChangedNames(name)
 	}
 
 	// Trigger a GC to reclaim the memory that we can.
@@ -1125,45 +1183,55 @@ func (s *DomainInfoStore) expireAllMappings() {
 	s.maybeSignalUpdatesReady("epoch changed")
 }
 
-// Add a mapping between an IP and the nameData that directly contains the IP.
-func (s *DomainInfoStore) addIPMapping(nd *nameData, ipStr string) {
+// Add a mapping between an IP and the nameData that directly contains the IP for a given clientIP.
+func (s *DomainInfoStore) addIPMapping(nd *nameData, clientIP, ipStr string) {
 	ipBytes, ok := ip.ParseIPAs16Byte(ipStr)
 	if !ok {
 		return
 	}
 
-	ipd := s.reverse[ipBytes]
-	if ipd == nil {
-		ipd = &ipData{
-			nameDatas:       set.New[*nameData](),
-			topLevelDomains: nd.topLevelDomains,
+	clk := s.dnsLookup[clientIP]
+	if clk != nil {
+		ipd := clk.reverse[ipBytes]
+		if ipd == nil {
+			ipd = &ipData{
+				nameDatas:       set.New[*nameData](),
+				topLevelDomains: nd.topLevelDomains,
+			}
+			clk.reverse[ipBytes] = ipd
+		} else {
+			ipd.topLevelDomains = s.combineTopLevelDomains(nd.topLevelDomains, ipd.topLevelDomains)
 		}
-		s.reverse[ipBytes] = ipd
+		log.Debugf("Client's %s queries to IP %s has the top level names %v", clientIP, ipStr, ipd.topLevelDomains)
+		ipd.nameDatas.Add(nd)
 	} else {
-		ipd.topLevelDomains = s.combineTopLevelDomains(nd.topLevelDomains, ipd.topLevelDomains)
+		log.Debugf("DNS lookup info for clientIP %s doesn't exist", clientIP)
 	}
-	log.Debugf("IP %s has the top level names %v", ipStr, ipd.topLevelDomains)
-	ipd.nameDatas.Add(nd)
 }
 
 // Remove a mapping between an IP and the nameData that directly contained the IP.
-func (s *DomainInfoStore) removeIPMapping(nameData *nameData, ipStr string) {
+func (s *DomainInfoStore) removeIPMapping(nameData *nameData, clientIP, ipStr string) {
 	ipBytes, ok := ip.ParseIPAs16Byte(ipStr)
 	if !ok {
 		return
 	}
 
-	if ipd := s.reverse[ipBytes]; ipd != nil {
-		ipd.nameDatas.Discard(nameData)
-		if ipd.nameDatas.Len() == 0 {
-			delete(s.reverse, ipBytes)
+	clk := s.dnsLookup[clientIP]
+	if clk != nil {
+		if ipd := clk.reverse[ipBytes]; ipd != nil {
+			ipd.nameDatas.Discard(nameData)
+			if ipd.nameDatas.Len() == 0 {
+				delete(clk.reverse, ipBytes)
+			}
+		} else {
+			log.Warningf("IP mapping is not cached %v", ipBytes)
 		}
 	} else {
-		log.Warningf("IP mapping is not cached %v", ipBytes)
+		log.Debugf("DNS lookup info for clientIP %s doesn't exist", clientIP)
 	}
 }
 
-func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, section string) (revision uint64) {
+func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, clientIP, section string) (revision uint64) {
 	if rec.Class != layers.DNSClassIN {
 		log.Debugf("Ignore DNS response with class %v", rec.Class)
 		return
@@ -1186,7 +1254,7 @@ func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 			rec.TTL,
 			section,
 		)
-		revision = s.storeInfo(name, rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
+		revision = s.storeInfo(clientIP, name, rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
 	case layers.DNSTypeAAAA:
 		log.Debugf("AAAA: %v -> %v with TTL %v (%v)",
 			name,
@@ -1194,7 +1262,7 @@ func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 			rec.TTL,
 			section,
 		)
-		revision = s.storeInfo(name, rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
+		revision = s.storeInfo(clientIP, name, rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
 	case layers.DNSTypeCNAME:
 		cname := strings.ToLower(string(rec.CNAME))
 		log.Debugf("CNAME: %v -> %v with TTL %v (%v)",
@@ -1203,7 +1271,7 @@ func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 			rec.TTL,
 			section,
 		)
-		revision = s.storeInfo(name, cname, time.Duration(rec.TTL)*time.Second, true)
+		revision = s.storeInfo(clientIP, name, cname, time.Duration(rec.TTL)*time.Second, true)
 	default:
 		log.Debugf("Ignore DNS response with type %v", rec.Type)
 	}
@@ -1211,7 +1279,7 @@ func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 	return
 }
 
-func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isName bool) (revision uint64) {
+func (s *DomainInfoStore) storeInfo(clientIP, name, value string, ttl time.Duration, isName bool) (revision uint64) {
 	if value == "0.0.0.0" {
 		// DNS records sometimes contain 0.0.0.0, but it's not a real routable IP and we
 		// must avoid passing it on to ipsets, because ipsets complains with "ipset v6.38:
@@ -1246,13 +1314,22 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 
 	makeTimer := func() *time.Timer {
 		return s.makeExpiryTimer(ttl, func() {
-			s.mappingExpiryChannel <- &domainMappingExpired{name: name, value: value}
+			s.mappingExpiryChannel <- &domainMappingExpired{clientIP: clientIP, name: name, value: value}
 		})
 	}
 
-	// Get the stored nameData for this name. If it does not exist, and we are not in the data loading stage of start
-	// up then this must be a top-of-chain request.
-	thisNameData := s.mappings[name]
+	// Get the dnsLookupInfo for this clientIP. If it does not exist, create it.
+	clientDNSLookup, ok := s.dnsLookup[clientIP]
+	if !ok {
+		clientDNSLookup = &dnsLookupInfoByClient{
+			mappings: make(map[string]*nameData),
+			reverse:  make(map[[16]byte]*ipData),
+		}
+		s.dnsLookup[clientIP] = clientDNSLookup
+	}
+	// Get the stored nameData for this name. If it does not exist, and we are not in the data loading
+	// stage of start up then this must be a top-of-chain request.
+	thisNameData := clientDNSLookup.mappings[name]
 	if thisNameData == nil {
 		thisNameData = &nameData{
 			values:        make(map[string]*valueData),
@@ -1262,7 +1339,7 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			log.Debugf("Top level CNAME query for %s", name)
 			thisNameData.topLevelDomains = []string{name}
 		}
-		s.mappings[name] = thisNameData
+		clientDNSLookup.mappings[name] = thisNameData
 	}
 	existingValue := thisNameData.values[value]
 	if existingValue == nil {
@@ -1286,9 +1363,9 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			// mapping entry for it so we can record that it is a descendant of the name in
 			// hand.  Then, when we get information for the descendant name, we can correctly
 			// signal changes for the name in hand and any of its ancestors.
-			if valueNameData := s.mappings[value]; valueNameData == nil {
+			if valueNameData := clientDNSLookup.mappings[value]; valueNameData == nil {
 				log.Debugf("Storing value %s for name %s with top level names %v", value, name, thisNameData.topLevelDomains)
-				s.mappings[value] = &nameData{
+				clientDNSLookup.mappings[value] = &nameData{
 					values:          make(map[string]*valueData),
 					namesToNotify:   set.New[string](),
 					topLevelDomains: thisNameData.topLevelDomains,
@@ -1296,19 +1373,19 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			} else {
 				// Propagate the top level names down the chain.
 				log.Debugf("Propagating to %s the top level names %v", value, thisNameData.topLevelDomains)
-				s.propagateTopLevelDomains(value, valueNameData, thisNameData.topLevelDomains)
+				s.propagateTopLevelDomains(clientIP, value, valueNameData, thisNameData.topLevelDomains)
 			}
 		} else {
 			// Value is an IP. Add to our IP mapping.
-			s.addIPMapping(thisNameData, value)
+			s.addIPMapping(thisNameData, clientIP, value)
 		}
 
 		// Compile the set of changed names. The calling code will signal that the info has changed for
 		// the compiled set of names.
-		s.compileChangedNames(name)
+		s.compileChangedNames(clientIP, name)
 
 		// Set the revision for this entry.
-		s.mappings[name].revision = s.currentRevision
+		clientDNSLookup.mappings[name].revision = s.currentRevision
 		revision = s.currentRevision
 	} else {
 		newExpiryTime := s.nowFunc().Add(ttl)
@@ -1326,9 +1403,17 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 	return
 }
 
-func (s *DomainInfoStore) propagateTopLevelDomains(name string, data *nameData, topLevelDomains []string) {
+// propagateTopLevelDomains propagates the top level domains down the chain of names, for a given client.
+func (s *DomainInfoStore) propagateTopLevelDomains(clientIP, name string, data *nameData, topLevelDomains []string) {
 	var prop func(currentName string, currentNameData *nameData)
 	handled := set.New[string]()
+
+	clk := s.dnsLookup[clientIP]
+	if clk == nil {
+		log.Debugf("DNS lookup info for clientIP %s doesn't exist", clientIP)
+		return
+	}
+
 	prop = func(currentName string, currentNameData *nameData) {
 		if handled.Contains(currentName) {
 			return
@@ -1337,9 +1422,9 @@ func (s *DomainInfoStore) propagateTopLevelDomains(name string, data *nameData, 
 		currentNameData.topLevelDomains = s.combineTopLevelDomains(topLevelDomains, currentNameData.topLevelDomains)
 		for value, data := range currentNameData.values {
 			if data.isName {
-				if valueNameData := s.mappings[value]; valueNameData != nil {
+				if valueNameData := clk.mappings[value]; valueNameData != nil {
 					// Propagate the top level names down the chain.
-					log.Debugf("Propogating to %s the top level names %v", value, topLevelDomains)
+					log.Debugf("Propagating to %s the top level names %v", value, topLevelDomains)
 					prop(value, valueNameData)
 				}
 			} else {
@@ -1348,7 +1433,7 @@ func (s *DomainInfoStore) propagateTopLevelDomains(name string, data *nameData, 
 					return
 				}
 
-				ipd := s.reverse[ipBytes]
+				ipd := clk.reverse[ipBytes]
 				if ipd != nil {
 					ipd.topLevelDomains = s.combineTopLevelDomains(topLevelDomains, ipd.topLevelDomains)
 				}
@@ -1360,6 +1445,8 @@ func (s *DomainInfoStore) propagateTopLevelDomains(name string, data *nameData, 
 	prop(name, data)
 }
 
+// GetDomainIPs returns the list of IPs associated with a domain name. The domains are extracted
+// from the DNS mappings from every client.
 func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -1367,14 +1454,19 @@ func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
 	domain = strings.ToLower(domain)
 	ips := s.resultsCache[domain]
 	if ips == nil {
-		var collectIPsForName func(string, set.Set[string])
-		collectIPsForName = func(name string, collectedNames set.Set[string]) {
+		var collectIPsForName func(string, string, set.Set[string])
+		collectIPsForName = func(clientIP, name string, collectedNames set.Set[string]) {
+			clk := s.dnsLookup[clientIP]
+			if clk == nil {
+				log.Debugf("DNS lookup info for clientIP %s doesn't exist", clientIP)
+				return
+			}
 			if collectedNames.Contains(name) {
 				log.Warningf("%v has a CNAME loop back to itself", name)
 				return
 			}
 			collectedNames.Add(name)
-			nameData := s.mappings[name]
+			nameData := clk.mappings[name]
 			log.WithFields(log.Fields{
 				"name":     name,
 				"nameData": nameData,
@@ -1385,7 +1477,7 @@ func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
 					if valueData.isName {
 						// The RHS of the mapping is another name, so we recurse to pick up
 						// its IPs.
-						collectIPsForName(value, collectedNames)
+						collectIPsForName(clientIP, value, collectedNames)
 					} else {
 						// The RHS of the mapping is an IP, so add it to the list that we
 						// will return.
@@ -1406,13 +1498,17 @@ func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
 				}
 				s.wildcards[domain] = regex
 			}
-			for name := range s.mappings {
-				if regex.MatchString(name) {
-					collectIPsForName(name, set.New[string]())
+			for clientIP, cl := range s.dnsLookup {
+				for name := range cl.mappings {
+					if regex.MatchString(name) {
+						collectIPsForName(clientIP, name, set.New[string]())
+					}
 				}
 			}
 		} else {
-			collectIPsForName(domain, set.New[string]())
+			for clientIP := range s.dnsLookup {
+				collectIPsForName(clientIP, domain, set.New[string]())
+			}
 		}
 		s.resultsCache[domain] = ips
 	}
@@ -1425,40 +1521,48 @@ func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
 //
 // The signature of this method is somewhat specific to how the collector stores connection data and is used to
 // minimize allocations during connection processing.
-func (s *DomainInfoStore) IterWatchedDomainsForIP(ip [16]byte, cb func(domain string) (stop bool)) {
+func (s *DomainInfoStore) IterWatchedDomainsForIP(clientIP string, ip [16]byte, cb func(domain string) (stop bool)) {
 	// We only need the read lock to access this data.
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
+
 	var stop bool
-	if ipData := s.reverse[ip]; ipData != nil {
-		ipData.nameDatas.Iter(func(nd *nameData) error {
-			// Just return the first domain name we find. This should cover the most general case where the user adds
-			// a single entry for a particular domain. Return the first "name to notify" that we find.
-			nd.namesToNotify.Iter(func(itemWatchedName string) error {
-				stop = cb(itemWatchedName)
+	clk := s.dnsLookup[clientIP]
+	if clk != nil {
+		if ipData := s.dnsLookup[clientIP].reverse[ip]; ipData != nil {
+			ipData.nameDatas.Iter(func(nd *nameData) error {
+				// Just return the first domain name we find. This should cover the most general case where the user adds
+				// a single entry for a particular domain. Return the first "name to notify" that we find.
+				nd.namesToNotify.Iter(func(itemWatchedName string) error {
+					stop = cb(itemWatchedName)
+					if stop {
+						return set.StopIteration
+					}
+					return nil
+				})
 				if stop {
 					return set.StopIteration
 				}
 				return nil
 			})
-			if stop {
-				return set.StopIteration
-			}
-			return nil
-		})
+		}
 	}
 }
 
-// GetTopLevelDomainsForIP returns the set of top level domains associated with an IP.
+// GetTopLevelDomainsForIP returns the set of top level domains associated with an IP and
+// client IP.
 //
 // The signature of this method is somewhat specific to how the collector stores connection data and is used to
 // minimize allocations during connection processing.
-func (s *DomainInfoStore) GetTopLevelDomainsForIP(ip [16]byte) []string {
+func (s *DomainInfoStore) GetTopLevelDomainsForIP(clientIP string, ip [16]byte) []string {
 	// We only need the read lock to access this data.
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	if ipData := s.reverse[ip]; ipData != nil {
-		return ipData.topLevelDomains
+	clk := s.dnsLookup[clientIP]
+	if clk != nil {
+		if ipData := clk.reverse[ip]; ipData != nil {
+			return ipData.topLevelDomains
+		}
 	}
 	return nil
 }
@@ -1475,15 +1579,19 @@ func wildcardToRegexpString(wildcard string) string {
 	return "^" + strings.Join(nonWildParts, ".*") + "$"
 }
 
-func (s *DomainInfoStore) compileChangedNames(name string) {
+func (s *DomainInfoStore) compileChangedNames(clientIP, name string) {
 	s.changedNames.Add(name)
 	delete(s.resultsCache, name)
-	if nameData := s.mappings[name]; nameData != nil {
-		nameData.namesToNotify.Iter(func(ancestor string) error {
-			s.changedNames.Add(ancestor)
-			delete(s.resultsCache, ancestor)
-			return nil
-		})
+
+	clk := s.dnsLookup[clientIP]
+	if clk != nil {
+		if nameData := s.dnsLookup[clientIP].mappings[name]; nameData != nil {
+			nameData.namesToNotify.Iter(func(ancestor string) error {
+				s.changedNames.Add(ancestor)
+				delete(s.resultsCache, ancestor)
+				return nil
+			})
+		}
 	}
 }
 
@@ -1493,40 +1601,42 @@ func (s *DomainInfoStore) collectGarbage() (numDeleted int) {
 
 	if s.gcTrigger {
 		// Accumulate the mappings that are still useful.
-		namesToKeep := set.New[string]()
-		for name, nameData := range s.mappings {
-			// A mapping is still useful if it has any unexpired values, because policy
-			// might be configured at any moment for that mapping's name, and then we'd
-			// want to be able to return the corresponding IPs.
-			if len(nameData.values) > 0 {
-				namesToKeep.Add(name)
-			}
-			// A mapping X is also still useful if its name is the RHS of another
-			// mapping Y, even if we don't currently have any values for X, because
-			// there could be a GetDomainIPs(Y) call, and later a new value for X, and
-			// in that case we need to be able to signal that the information for Y has
-			// changed.
-			for rhs, valueData := range nameData.values {
-				if valueData.isName {
-					namesToKeep.Add(rhs)
-					// There must be a mapping for the RHS name.
-					if s.mappings[rhs] == nil {
-						log.Panicf("Missing mapping for %v, which is a RHS value for %v", rhs, name)
+		for _, clk := range s.dnsLookup {
+			namesToKeep := set.New[string]()
+			for name, nameData := range clk.mappings {
+				// A mapping is still useful if it has any unexpired values, because policy
+				// might be configured at any moment for that mapping's name, and then we'd
+				// want to be able to return the corresponding IPs.
+				if len(nameData.values) > 0 {
+					namesToKeep.Add(name)
+				}
+				// A mapping X is also still useful if its name is the RHS of another
+				// mapping Y, even if we don't currently have any values for X, because
+				// there could be a GetDomainIPs(Y) call, and later a new value for X, and
+				// in that case we need to be able to signal that the information for Y has
+				// changed.
+				for rhs, valueData := range nameData.values {
+					if valueData.isName {
+						namesToKeep.Add(rhs)
+						// There must be a mapping for the RHS name.
+						if clk.mappings[rhs] == nil {
+							log.Panicf("Missing mapping for %v, which is a RHS value for %v", rhs, name)
+						}
 					}
 				}
 			}
-		}
-		// Delete the mappings that are now useless.  Since this mapping contains no values, there can be no
-		// corresponding reverse mappings to tidy up.
-		for name := range s.mappings {
-			if !namesToKeep.Contains(name) {
-				log.WithField("name", name).Debug("Delete useless mapping")
-				delete(s.mappings, name)
-				numDeleted += 1
+			// Delete the mappings that are now useless.  Since this mapping contains no values, there can be no
+			// corresponding reverse mappings to tidy up.
+			for name := range clk.mappings {
+				if !namesToKeep.Contains(name) {
+					log.WithField("name", name).Debug("Delete useless mapping")
+					delete(clk.mappings, name)
+					numDeleted += 1
+				}
 			}
+			// Reset the flag that will trigger the next GC.
+			s.gcTrigger = false
 		}
-		// Reset the flag that will trigger the next GC.
-		s.gcTrigger = false
 	}
 
 	return

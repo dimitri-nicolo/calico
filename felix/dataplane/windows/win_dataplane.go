@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,13 +68,14 @@ type Config struct {
 	MaxIPSetSize int
 
 	// Config for DNS policy.
-	DNSCacheFile         string
-	DNSCacheSaveInterval time.Duration
-	DNSCacheEpoch        int
-	DNSExtraTTL          time.Duration
-	DNSLogsLatency       bool
-	DNSTrustedServers    []config.ServerPort
-	PktMonStartArgs      string
+	DNSCacheFile              string
+	DNSCacheSaveInterval      time.Duration
+	DNSCacheEpoch             int
+	DNSExtraTTL               time.Duration
+	DNSLogsLatency            bool
+	DNSTrustedServers         []config.ServerPort
+	EnableDestDomainsByClient bool
+	PktMonStartArgs           string
 
 	Hostname     string
 	VXLANEnabled bool
@@ -226,11 +227,12 @@ func NewWinDataplaneDriver(hns hns.API, config Config, stopChan chan *sync.WaitG
 	dp.domainInfoReader = NewDomainInfoReader(config.DNSTrustedServers, config.PktMonStartArgs)
 	dp.domainInfoStore = common.NewDomainInfoStore(
 		&common.DnsConfig{
-			Collector:            config.Collector,
-			DNSCacheFile:         config.DNSCacheFile,
-			DNSCacheSaveInterval: config.DNSCacheSaveInterval,
-			DNSCacheEpoch:        config.DNSCacheEpoch,
-			DNSExtraTTL:          config.DNSExtraTTL,
+			Collector:                 config.Collector,
+			DNSCacheFile:              config.DNSCacheFile,
+			DNSCacheSaveInterval:      config.DNSCacheSaveInterval,
+			DNSCacheEpoch:             config.DNSCacheEpoch,
+			DNSExtraTTL:               config.DNSExtraTTL,
+			EnableDestDomainsByClient: config.EnableDestDomainsByClient,
 		})
 	dp.RegisterManager(dp.domainInfoStore)
 

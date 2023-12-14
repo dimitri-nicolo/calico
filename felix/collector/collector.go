@@ -35,6 +35,10 @@ import (
 	kapiv1 "k8s.io/api/core/v1"
 )
 
+// defaultGroupIP is used as the key for the DNS lookup info for all clients when
+// enableDestDomainsByClient is false.
+const DefaultGroupIP = "0.0.0.0"
+
 var (
 	// conntrack processing prometheus metrics
 	histogramConntrackLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
@@ -97,11 +101,12 @@ func init() {
 type Config struct {
 	StatsDumpFilePath string
 
-	AgeTimeout            time.Duration
-	InitialReportingDelay time.Duration
-	ExportingInterval     time.Duration
-	EnableNetworkSets     bool
-	EnableServices        bool
+	AgeTimeout                time.Duration
+	InitialReportingDelay     time.Duration
+	ExportingInterval         time.Duration
+	EnableNetworkSets         bool
+	EnableServices            bool
+	EnableDestDomainsByClient bool
 
 	MaxOriginalSourceIPsIncluded int
 	IsBPFDataplane               bool
@@ -274,8 +279,8 @@ func (c *collector) startStatsCollectionAndReporting() {
 	}
 }
 
-// getDataAndUpdateEndpoints returns a pointer to the data structure keyed off the supplied tuple.  If there
-// is no entry and the tuple is for an active flow then an entry is created.
+// getDataAndUpdateEndpoints returns a pointer to the data structure keyed off the supplied tuple.
+// If there is no entry and the tuple is for an active flow then an entry is created.
 //
 // This may return nil if the endpoint data does not match up with the requested data type.
 //
@@ -288,12 +293,13 @@ func (c *collector) getDataAndUpdateEndpoints(t tuple.Tuple, expired bool, packe
 		return data
 	}
 
-	// Get the source endpoint.
-	srcEp := c.lookupEndpoint(t.Src, false)
+	// Get the source endpoint. Set the clientIP to an empty value, as it is not used for to get
+	// the source endpoint.
+	srcEp := c.lookupEndpoint([16]byte{}, t.Src, false)
 	srcEpIsNotLocal := srcEp == nil || !srcEp.IsLocal
 
 	// Get the destination endpoint. If the source is local then we can use egress domain lookups if required.
-	dstEp := c.lookupEndpoint(t.Dst, !srcEpIsNotLocal)
+	dstEp := c.lookupEndpoint(t.Src, t.Dst, !srcEpIsNotLocal)
 	dstEpIsNotLocal := dstEp == nil || !dstEp.IsLocal
 
 	if !okData {
@@ -363,7 +369,7 @@ func endpointChanged(ep1, ep2 *calc.EndpointData) bool {
 	return ep1.Key != ep2.Key
 }
 
-func (c *collector) lookupEndpoint(ip [16]byte, canCheckEgressDomains bool) *calc.EndpointData {
+func (c *collector) lookupEndpoint(clientIPBytes, ip [16]byte, canCheckEgressDomains bool) *calc.EndpointData {
 	// Get the endpoint data for this entry.
 	if ep, ok := c.luc.GetEndpoint(ip); ok {
 		return ep
@@ -376,12 +382,14 @@ func (c *collector) lookupEndpoint(ip [16]byte, canCheckEgressDomains bool) *cal
 			return ep
 		}
 
-		// NetworkSets endpoint types are enabled, but no NetworkSet matches the IP.  If canCheckEgressDomains is true
-		// then we can also check for egress domain and lookup NetworkSet from that.
+		// NetworkSets endpoint types are enabled, but no NetworkSet matches the IP.
+		// If canCheckEgressDomains is true, then we can also check for egress domain and lookup
+		// NetworkSet from that.
 		if canCheckEgressDomains && c.domainLookup != nil {
 			var ep *calc.EndpointData
 			var ok bool
-			c.domainLookup.IterWatchedDomainsForIP(ip, func(domain string) bool {
+			clientIP := c.getClientIP(clientIPBytes)
+			c.domainLookup.IterWatchedDomainsForIP(clientIP, ip, func(domain string) bool {
 				ep, ok = c.luc.GetNetworkSetFromEgressDomain(domain)
 				// Returning true stops the iteration, so stop as soon as we locate a network set.
 				return ok
@@ -569,10 +577,23 @@ func (c *collector) maybeUpdateDomains(data *Data) {
 		return
 	}
 	if data.DstEp == nil || data.DstEp.Networkset != nil {
-		if egressDomains := c.domainLookup.GetTopLevelDomainsForIP(data.Tuple.Dst); len(egressDomains) > len(data.DestDomains) {
+		clientIP := c.getClientIP(data.Tuple.Src)
+		if egressDomains := c.domainLookup.GetTopLevelDomainsForIP(clientIP, data.Tuple.Dst); len(egressDomains) > len(data.DestDomains) {
+			log.Debugf("Updating domains for clientIP %s and ip %s to %v", clientIP, data.Tuple.Dst, egressDomains)
 			data.DestDomains = egressDomains
 		}
 	}
+}
+
+// getClientIP returns the client IP for the tuple. If the config.EnableDestDomainsByClient is
+// false, then it returns the defaultGroupIP ("0.0.0.0").
+func (c *collector) getClientIP(ip [16]byte) string {
+	cl := net.IP(ip[:]).String()
+	if !c.config.EnableDestDomainsByClient {
+		// All of the dns lookup info is keyed off of the sentinel value IP 0.0.0.0.
+		cl = DefaultGroupIP
+	}
+	return cl
 }
 
 // reportMetrics reports the metrics if all required data is present, or returns false if not reported.

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package common
 
@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"net"
+	"os"
 	"reflect"
 	"regexp"
 	"strings"
@@ -62,6 +63,10 @@ var _ = Describe("Domain Info Store", func() {
 	var (
 		handler             *mockDomainInfoChangeHandler
 		domainStore         *DomainInfoStore
+		clientIP            = cnet.MustParseIP("192.168.1.1").IP
+		client1IP           = cnet.MustParseIP("192.168.1.2").IP
+		client2IP           = cnet.MustParseIP("1.2.3.4").IP
+		client3IP           = cnet.MustParseIP("10.10.10.99").IP
 		mockDNSRecA1        = testutils.MakeA("a.com", "10.0.0.10")
 		mockDNSRecA2        = testutils.MakeA("b.com", "10.0.0.20")
 		mockDNSRecA2Caps    = testutils.MakeA("B.cOm", "10.0.0.20")
@@ -109,7 +114,7 @@ var _ = Describe("Domain Info Store", func() {
 	})
 
 	// Program a DNS record as an "answer" type response.
-	programDNSAnswer := func(domainStore *DomainInfoStore, dnsPacket layers.DNSResourceRecord, callbackId ...string) {
+	programDNSAnswer := func(clientIP string, domainStore *DomainInfoStore, dnsPacket layers.DNSResourceRecord, callbackId ...string) {
 		var layerDNS layers.DNS
 		layerDNS.Answers = append(layerDNS.Answers, dnsPacket)
 		var cb func()
@@ -120,11 +125,11 @@ var _ = Describe("Domain Info Store", func() {
 				callbackIds = append(callbackIds, callbackId[0])
 			}
 		}
-		domainStore.processDNSResponsePacket(&layerDNS, cb)
+		domainStore.processDNSResponsePacket(clientIP, &layerDNS, cb)
 	}
 
 	// Program a DNS record as an "additionals" type response.
-	programDNSAdditionals := func(domainStore *DomainInfoStore, dnsPacket layers.DNSResourceRecord, callbackId ...string) {
+	programDNSAdditionals := func(clientIP net.IP, domainStore *DomainInfoStore, dnsPacket layers.DNSResourceRecord, callbackId ...string) {
 		var layerDNS layers.DNS
 		layerDNS.Additionals = append(layerDNS.Additionals, dnsPacket)
 		var cb func()
@@ -135,7 +140,8 @@ var _ = Describe("Domain Info Store", func() {
 				callbackIds = append(callbackIds, callbackId[0])
 			}
 		}
-		domainStore.processDNSResponsePacket(&layerDNS, cb)
+		client := clientIP.String()
+		domainStore.processDNSResponsePacket(client, &layerDNS, cb)
 	}
 
 	// Assert that the domain store accepted and signaled the given record (and reason).
@@ -151,12 +157,13 @@ var _ = Describe("Domain Info Store", func() {
 	}
 
 	// Assert that the domain store registered the given record and then process its expiration.
-	AssertValidRecord := func(dnsRec layers.DNSResourceRecord) {
+	AssertValidRecord := func(clientIP net.IP, dnsRec layers.DNSResourceRecord) {
 		It("should result in a domain entry", func() {
 			Expect(domainStore.GetDomainIPs(string(dnsRec.Name))).To(Equal([]string{dnsRec.IP.String()}))
 		})
 		It("should expire and signal a domain change", func() {
-			domainStore.processMappingExpiry(strings.ToLower(string(dnsRec.Name)), dnsRec.IP.String(), expire)
+			client := clientIP.String()
+			domainStore.processMappingExpiry(client, strings.ToLower(string(dnsRec.Name)), dnsRec.IP.String(), expire)
 			AssertDomainChanged(domainStore, string(dnsRec.Name), "mapping expired")
 			Expect(domainStore.collectGarbage()).To(Equal(1))
 		})
@@ -203,40 +210,40 @@ var _ = Describe("Domain Info Store", func() {
 
 			Context("with a valid type A DNS answer record", func() {
 				BeforeEach(func() {
-					programDNSAnswer(domainStore, dnsRec1)
+					programDNSAnswer(clientIP.String(), domainStore, dnsRec1)
 					AssertDomainChanged(domainStore, string(dnsRec1.Name), "mapping added")
 				})
-				AssertValidRecord(dnsRec1)
+				AssertValidRecord(clientIP, dnsRec1)
 			})
 
 			Context("with a valid type A DNS additional record", func() {
 				BeforeEach(func() {
-					programDNSAdditionals(domainStore, dnsRec1)
+					programDNSAdditionals(clientIP, domainStore, dnsRec1)
 					AssertDomainChanged(domainStore, string(dnsRec1.Name), "mapping added")
 				})
-				AssertValidRecord(dnsRec1)
+				AssertValidRecord(clientIP, dnsRec1)
 			})
 
 			Context("with two valid type A DNS answer records", func() {
 				BeforeEach(func() {
-					programDNSAnswer(domainStore, dnsRec1)
+					programDNSAnswer(clientIP.String(), domainStore, dnsRec1)
 					AssertDomainChanged(domainStore, string(dnsRec1.Name), "mapping added")
-					programDNSAnswer(domainStore, dnsRec2)
+					programDNSAnswer(clientIP.String(), domainStore, dnsRec2)
 					AssertDomainChanged(domainStore, string(dnsRec2.Name), "mapping added")
 				})
-				AssertValidRecord(dnsRec1)
-				AssertValidRecord(dnsRec2)
+				AssertValidRecord(clientIP, dnsRec1)
+				AssertValidRecord(clientIP, dnsRec2)
 			})
 
 			Context("with two valid type A DNS additional records", func() {
 				BeforeEach(func() {
-					programDNSAdditionals(domainStore, dnsRec1)
+					programDNSAdditionals(clientIP, domainStore, dnsRec1)
 					AssertDomainChanged(domainStore, string(dnsRec1.Name), "mapping added")
-					programDNSAdditionals(domainStore, dnsRec2)
+					programDNSAdditionals(clientIP, domainStore, dnsRec2)
 					AssertDomainChanged(domainStore, string(dnsRec2.Name), "mapping added")
 				})
-				AssertValidRecord(dnsRec1)
-				AssertValidRecord(dnsRec2)
+				AssertValidRecord(clientIP, dnsRec1)
+				AssertValidRecord(clientIP, dnsRec2)
 			})
 		})
 	}
@@ -246,7 +253,7 @@ var _ = Describe("Domain Info Store", func() {
 		Context("with an invalid DNS record", func() {
 			BeforeEach(func() {
 				domainStoreCreate()
-				programDNSAnswer(domainStore, dnsRec)
+				programDNSAnswer(clientIP.String(), domainStore, dnsRec)
 			})
 			It("should return nil", func() {
 				Expect(domainStore.GetDomainIPs(string(dnsRec.Name))).To(BeNil())
@@ -255,17 +262,17 @@ var _ = Describe("Domain Info Store", func() {
 	}
 
 	// Check that a chain of CNAME records with one A record results in a domain change only for the latter.
-	domainStoreTestCNAME := func(CNAMErecs []layers.DNSResourceRecord, aRec layers.DNSResourceRecord) {
+	domainStoreTestCNAME := func(CNAMErecs []layers.DNSResourceRecord, client string, aRec layers.DNSResourceRecord) {
 		Context("with a chain of CNAME records", func() {
 			BeforeEach(func() {
 				// Check that we receive signals when there are updates ready.
 				domainStoreCreate()
 				for _, r := range CNAMErecs {
-					programDNSAnswer(domainStore, r)
+					programDNSAnswer(client, domainStore, r)
 					Expect(domainStore.UpdatesReadyChannel()).Should(Receive())
 					domainStore.HandleUpdates()
 				}
-				programDNSAnswer(domainStore, aRec)
+				programDNSAnswer(client, domainStore, aRec)
 				Expect(domainStore.UpdatesReadyChannel()).Should(Receive())
 				domainStore.HandleUpdates()
 			})
@@ -275,7 +282,8 @@ var _ = Describe("Domain Info Store", func() {
 			It("should reverse lookup to the first CNAME record in the chain", func() {
 				ipb, _ := ip.ParseIPAs16Byte(aRec.IP.String())
 				name := strings.ToLower(string(CNAMErecs[0].Name))
-				Expect(domainStore.GetTopLevelDomainsForIP(ipb)).To(Equal([]string{name}))
+				client := net.IP(clientIP[:]).String()
+				Expect(domainStore.GetTopLevelDomainsForIP(client, ipb)).To(Equal([]string{name}))
 			})
 		})
 
@@ -288,7 +296,7 @@ var _ = Describe("Domain Info Store", func() {
 				domainStoreCreate()
 				orderedNames = nil
 				for i := range CNAMErecs {
-					programDNSAnswer(domainStore, CNAMErecs[len(CNAMErecs)-i-1])
+					programDNSAnswer(clientIP.String(), domainStore, CNAMErecs[len(CNAMErecs)-i-1])
 					Expect(domainStore.UpdatesReadyChannel()).Should(Receive())
 					domainStore.HandleUpdates()
 					name := strings.ToLower(string(CNAMErecs[len(CNAMErecs)-i-1].Name))
@@ -297,7 +305,7 @@ var _ = Describe("Domain Info Store", func() {
 				if len(orderedNames) > 5 {
 					orderedNames = orderedNames[:5]
 				}
-				programDNSAnswer(domainStore, aRec)
+				programDNSAnswer(clientIP.String(), domainStore, aRec)
 				Expect(domainStore.UpdatesReadyChannel()).Should(Receive())
 				domainStore.HandleUpdates()
 			})
@@ -306,7 +314,7 @@ var _ = Describe("Domain Info Store", func() {
 			})
 			It("should reverse lookup to the all CNAME records in the chain", func() {
 				ipb, _ := ip.ParseIPAs16Byte(aRec.IP.String())
-				Expect(domainStore.GetTopLevelDomainsForIP(ipb)).To(Equal(orderedNames))
+				Expect(domainStore.GetTopLevelDomainsForIP(clientIP.String(), ipb)).To(Equal(orderedNames))
 			})
 		})
 	}
@@ -316,8 +324,8 @@ var _ = Describe("Domain Info Store", func() {
 	domainStoreTestValidRec(mockDNSRecAAAA1, mockDNSRecAAAA2)
 	domainStoreTestValidRec(mockDNSRecAAAA1, mockDNSRecAAAA3Caps)
 	domainStoreTestInvalidRec(invalidDNSRec)
-	domainStoreTestCNAME(mockDNSRecCNAME, mockDNSRecA1)
-	domainStoreTestCNAME(mockDNSRecCNAMEUnderscore, mockDNSRecA1)
+	domainStoreTestCNAME(mockDNSRecCNAME, clientIP.String(), mockDNSRecA1)
+	domainStoreTestCNAME(mockDNSRecCNAMEUnderscore, clientIP.String(), mockDNSRecA1)
 
 	handleUpdatesAndExpectChangesFor := func(domains ...string) {
 		// For a set of changes we should get a single update ready notification.
@@ -370,11 +378,11 @@ var _ = Describe("Domain Info Store", func() {
 			orderedNames = nil
 			for _, recs := range [][]layers.DNSResourceRecord{mockDNSRecCNAME, mockDNSRecCNAMEUnderscore} {
 				for _, rec := range recs {
-					programDNSAnswer(domainStore, rec)
+					programDNSAnswer(clientIP.String(), domainStore, rec)
 				}
 				name := strings.ToLower(string(recs[0].Name))
 				orderedNames = append([]string{name}, orderedNames...)
-				programDNSAnswer(domainStore, mockDNSRecA1)
+				programDNSAnswer(clientIP.String(), domainStore, mockDNSRecA1)
 			}
 			if len(orderedNames) > 5 {
 				orderedNames = orderedNames[:5]
@@ -382,7 +390,7 @@ var _ = Describe("Domain Info Store", func() {
 		})
 		It("should reverse lookup to top of the two chains", func() {
 			ipb, _ := ip.ParseIPAs16Byte(mockDNSRecA1.IP.String())
-			Expect(domainStore.GetTopLevelDomainsForIP(ipb)).To(Equal(orderedNames))
+			Expect(domainStore.GetTopLevelDomainsForIP(clientIP.String(), ipb)).To(Equal(orderedNames))
 		})
 	})
 
@@ -449,11 +457,11 @@ var _ = Describe("Domain Info Store", func() {
 
 		It("microsoft case", func() {
 			Expect(domainStore.GetDomainIPs("*.microsoft.com")).To(Equal([]string(nil)))
-			programDNSAnswer(domainStore, testutils.MakeCNAME("www.microsoft.com", "www.microsoft.com-c-3.edgekey.net"))
+			programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("www.microsoft.com", "www.microsoft.com-c-3.edgekey.net"))
 			checkMonitor(nil)
-			programDNSAnswer(domainStore, testutils.MakeCNAME("www.microsoft.com-c-3.edgekey.net", "www.microsoft.com-c-3.edgekey.net.globalredir.akadns.net"))
-			programDNSAnswer(domainStore, testutils.MakeCNAME("www.microsoft.com-c-3.edgekey.net.globalredir.akadns.net", "e13678.dspb.akamaiedge.net"))
-			programDNSAnswer(domainStore, testutils.MakeA("e13678.dspb.akamaiedge.net", "104.75.174.50"))
+			programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("www.microsoft.com-c-3.edgekey.net", "www.microsoft.com-c-3.edgekey.net.globalredir.akadns.net"))
+			programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("www.microsoft.com-c-3.edgekey.net.globalredir.akadns.net", "e13678.dspb.akamaiedge.net"))
+			programDNSAnswer(clientIP.String(), domainStore, testutils.MakeA("e13678.dspb.akamaiedge.net", "104.75.174.50"))
 			checkMonitor([]string{"104.75.174.50"})
 		})
 	})
@@ -468,18 +476,19 @@ var _ = Describe("Domain Info Store", func() {
 	// should be notified that domain info has changed for both a1.com and a2.com.
 	It("should handle a branched DNS graph", func() {
 		domainStoreCreate()
-		programDNSAnswer(domainStore, testutils.MakeCNAME("a1.com", "b.com"))
-		programDNSAnswer(domainStore, testutils.MakeCNAME("a2.com", "b.com"))
-		programDNSAnswer(domainStore, testutils.MakeCNAME("b.com", "c.com"))
-		programDNSAnswer(domainStore, testutils.MakeA("c.com", "3.4.5.6"))
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("a1.com", "b.com"))
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("a2.com", "b.com"))
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("b.com", "c.com"))
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeA("c.com", "3.4.5.6"))
 		handleUpdatesAndExpectChangesFor("a1.com", "a2.com", "b.com", "c.com")
 		Expect(domainStore.GetDomainIPs("a1.com")).To(Equal([]string{"3.4.5.6"}))
 		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"3.4.5.6"}))
-		programDNSAnswer(domainStore, testutils.MakeA("c.com", "7.8.9.10"))
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeA("c.com", "7.8.9.10"))
 		handleUpdatesAndExpectChangesFor("a1.com", "a2.com", "c.com")
 		Expect(domainStore.GetDomainIPs("a1.com")).To(ConsistOf("3.4.5.6", "7.8.9.10"))
 		Expect(domainStore.GetDomainIPs("a2.com")).To(ConsistOf("3.4.5.6", "7.8.9.10"))
-		domainStore.processMappingExpiry("c.com", "3.4.5.6", expire)
+		client := clientIP.String()
+		domainStore.processMappingExpiry(client, "c.com", "3.4.5.6", expire)
 		handleUpdatesAndExpectChangesFor("a1.com", "a2.com", "c.com")
 		Expect(domainStore.GetDomainIPs("a1.com")).To(Equal([]string{"7.8.9.10"}))
 		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"7.8.9.10"}))
@@ -489,19 +498,19 @@ var _ = Describe("Domain Info Store", func() {
 
 	It("is not vulnerable to CNAME loops", func() {
 		domainStoreCreate()
-		programDNSAnswer(domainStore, testutils.MakeCNAME("a.com", "b.com"))
-		programDNSAnswer(domainStore, testutils.MakeCNAME("b.com", "c.com"))
-		programDNSAnswer(domainStore, testutils.MakeCNAME("c.com", "a.com"))
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("a.com", "b.com"))
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("b.com", "c.com"))
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("c.com", "a.com"))
 		Expect(domainStore.GetDomainIPs("a.com")).To(BeEmpty())
 	})
 
 	It("0.0.0.0 is ignored", func() {
 		domainStoreCreate()
 		// 0.0.0.0 should be ignored.
-		programDNSAnswer(domainStore, testutils.MakeA("a.com", "0.0.0.0"))
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeA("a.com", "0.0.0.0"))
 		Expect(domainStore.GetDomainIPs("a.com")).To(BeEmpty())
 		// But not any other IP.
-		programDNSAnswer(domainStore, testutils.MakeA("a.com", "0.0.0.1"))
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeA("a.com", "0.0.0.1"))
 		Expect(domainStore.GetDomainIPs("a.com")).To(HaveLen(1))
 	})
 
@@ -910,7 +919,7 @@ var _ = Describe("Domain Info Store", func() {
 
 			Context("with IP for update.google.com", func() {
 				BeforeEach(func() {
-					programDNSAnswer(domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
+					programDNSAnswer(clientIP.String(), domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
 				})
 
 				It("should update *.google.com", func() {
@@ -919,8 +928,9 @@ var _ = Describe("Domain Info Store", func() {
 				})
 
 				It("should reverse lookup to update.google.com", func() {
+					client := clientIP.String()
 					ipb, _ := ip.ParseIPAs16Byte("1.2.3.5")
-					Expect(domainStore.GetTopLevelDomainsForIP(ipb)).To(Equal([]string{"update.google.com"}))
+					Expect(domainStore.GetTopLevelDomainsForIP(client, ipb)).To(Equal([]string{"update.google.com"}))
 				})
 			})
 		})
@@ -930,7 +940,8 @@ var _ = Describe("Domain Info Store", func() {
 		Context("with IP for update.google.com", func() {
 			getWatchedDomains := func(ipb [16]byte) []string {
 				var domains []string
-				domainStore.IterWatchedDomainsForIP(ipb, func(domain string) (stop bool) {
+				client := clientIP.String()
+				domainStore.IterWatchedDomainsForIP(client, ipb, func(domain string) (stop bool) {
 					domains = append(domains, domain)
 					return false
 				})
@@ -938,7 +949,7 @@ var _ = Describe("Domain Info Store", func() {
 			}
 
 			BeforeEach(func() {
-				programDNSAnswer(domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
+				programDNSAnswer(clientIP.String(), domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
 			})
 
 			It("should get that IP for *.google.com", func() {
@@ -977,7 +988,7 @@ var _ = Describe("Domain Info Store", func() {
 				DNSExtraTTL:   10 * time.Second,
 				DNSCacheEpoch: 1,
 			})
-			programDNSAnswer(domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
+			programDNSAnswer(clientIP.String(), domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
 		})
 
 		It("delivers the IP when queried", func() {
@@ -1013,7 +1024,7 @@ var _ = Describe("Domain Info Store", func() {
 				Config: map[string]string{"DNSExtraTTL": "3600"},
 			})
 			log.Info("Updated extra TTL to 1h")
-			programDNSAnswer(domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
+			programDNSAnswer(clientIP.String(), domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
 		})
 
 		It("delivers the IP when queried", func() {
@@ -1031,20 +1042,20 @@ var _ = Describe("Domain Info Store", func() {
 
 		// Program answer.  Handle updates and expect domain updates. No callbacks should be invoked until updates
 		// are applied.
-		programDNSAnswer(domainStore, testutils.MakeCNAME("a1.com", "b.com"), "cb1")
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("a1.com", "b.com"), "cb1")
 		handleUpdatesAndExpectChangesFor("a1.com")
 		expectCallbacks()
 		domainStore.UpdatesApplied()
 		expectCallbacks("cb1")
 
-		programDNSAnswer(domainStore, testutils.MakeCNAME("a2.com", "b.com"), "cb2")
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("a2.com", "b.com"), "cb2")
 		handleUpdatesAndExpectChangesFor("a2.com")
 
 		// We are already waiting for the dataplane updates for the previous two messages to be applied. In the meantime
 		// send in more updates, the last is a repeat of the previous message.
-		programDNSAnswer(domainStore, testutils.MakeCNAME("b.com", "c.com"), "cb3")
-		programDNSAnswer(domainStore, testutils.MakeA("c.com", "3.4.5.6"), "cb4")
-		programDNSAnswer(domainStore, testutils.MakeCNAME("a2.com", "b.com"), "cb5")
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("b.com", "c.com"), "cb3")
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeA("c.com", "3.4.5.6"), "cb4")
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("a2.com", "b.com"), "cb5")
 
 		// Apply the dataplane changes. We should get the callbacks for cb2 and cb5 once the changes are applied.
 		expectCallbacks()
@@ -1064,7 +1075,7 @@ var _ = Describe("Domain Info Store", func() {
 		// Have the handler indicate that no dataplane updates are required.  In this case the callbacks should happen
 		// immediately without waiting for UpdatesApplied().
 		handler.dataplaneSyncNeeded = false
-		programDNSAnswer(domainStore, testutils.MakeA("c.com", "7.8.9.10"), "cb6")
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeA("c.com", "7.8.9.10"), "cb6")
 		handleUpdatesAndExpectChangesFor("a1.com", "a2.com", "c.com")
 		expectCallbacks("cb6")
 		domainStore.UpdatesApplied()
@@ -1073,7 +1084,7 @@ var _ = Describe("Domain Info Store", func() {
 
 		// Repeat a message that is already programmed. We should get no further changes and the callback should happen
 		// without any further dataplane involvement.
-		programDNSAnswer(domainStore, testutils.MakeCNAME("a2.com", "b.com"), "cb7")
+		programDNSAnswer(clientIP.String(), domainStore, testutils.MakeCNAME("a2.com", "b.com"), "cb7")
 		Expect(domainStore.UpdatesReadyChannel()).ShouldNot(Receive())
 		expectCallbacks("cb7")
 	})
@@ -1160,5 +1171,219 @@ var _ = Describe("Domain Info Store", func() {
 				domainStore.loopIteration(saveTimerC, gcTimerC, latencyTimerC)
 			}).NotTo(Panic())
 		}
+	})
+
+	Context("handles domains that resolve to the same IP, for calls made by different clients", func() {
+		BeforeEach(func() {
+			programDNSAnswer(client1IP.String(), domainStore, testutils.MakeCNAME("cname1.example.com", "update.example.com"))
+			programDNSAnswer(client1IP.String(), domainStore, testutils.MakeA("update.example.com", "1.2.3.5"))
+			programDNSAnswer(client2IP.String(), domainStore, testutils.MakeCNAME("cname2.example.com", "update.example.com"))
+			programDNSAnswer(client2IP.String(), domainStore, testutils.MakeA("update.example.com", "1.2.3.5"))
+			programDNSAnswer(client3IP.String(), domainStore, testutils.MakeCNAME("cname3.example.com", "cname4.example.com"))
+			programDNSAnswer(client3IP.String(), domainStore, testutils.MakeCNAME("cname4.example.com", "update.example.com"))
+			programDNSAnswer(client3IP.String(), domainStore, testutils.MakeCNAME("cname5.example.com", "update.example.com"))
+			programDNSAnswer(client3IP.String(), domainStore, testutils.MakeA("update.example.com", "1.2.3.5"))
+			programDNSAnswer(client3IP.String(), domainStore, testutils.MakeA("other.example.com", "1.2.3.5"))
+		})
+
+		It("should get top level domains associated with the right client", func() {
+			client1 := client1IP.String()
+			client2 := client2IP.String()
+			client3 := client3IP.String()
+			ipb, _ := ip.ParseIPAs16Byte("1.2.3.5")
+
+			// The right top level domains should be returned for the corresponding client.
+			Expect(domainStore.GetTopLevelDomainsForIP(client1, ipb)).To(Equal([]string{"cname1.example.com"}))
+			Expect(domainStore.GetTopLevelDomainsForIP(client2, ipb)).To(Equal([]string{"cname2.example.com"}))
+			Expect(domainStore.GetTopLevelDomainsForIP(client3, ipb)).To(Equal([]string{"other.example.com", "cname5.example.com", "cname3.example.com"}))
+		})
+	})
+
+	Context("handles domains that resolve to the same IP, for calls made by the zero client", func() {
+		// This doesn't test different functionality, however, it is a special case that we want to make
+		// sure we handle correctly. When the FlowLogsDestDomainByClient is false, programming of each
+		// DNS answer is done by the zero client. The GetTopLevelDomains is requested with the zero
+		// client.
+		BeforeEach(func() {
+			zeroIP := "0.0.0.0"
+			programDNSAnswer(zeroIP, domainStore, testutils.MakeCNAME("cname1.example.com", "update.example.com"))
+			programDNSAnswer(zeroIP, domainStore, testutils.MakeA("update.example.com", "1.2.3.5"))
+			programDNSAnswer(zeroIP, domainStore, testutils.MakeCNAME("cname2.example.com", "update.example.com"))
+			programDNSAnswer(zeroIP, domainStore, testutils.MakeA("update.example.com", "1.2.3.5"))
+			programDNSAnswer(zeroIP, domainStore, testutils.MakeCNAME("cname3.example.com", "cname4.example.com"))
+			programDNSAnswer(zeroIP, domainStore, testutils.MakeCNAME("cname4.example.com", "update.example.com"))
+			programDNSAnswer(zeroIP, domainStore, testutils.MakeCNAME("cname5.example.com", "update.example.com"))
+			programDNSAnswer(zeroIP, domainStore, testutils.MakeA("update.example.com", "1.2.3.5"))
+		})
+
+		It("should get top level domains associated with the right client", func() {
+			zeroIP := "0.0.0.0"
+			ipb, _ := ip.ParseIPAs16Byte("1.2.3.5")
+
+			// The right top level domains should be returned for the corresponding client.
+			Expect(domainStore.GetTopLevelDomainsForIP(zeroIP, ipb)).To(Equal([]string{"cname5.example.com", "cname3.example.com", "cname2.example.com", "cname1.example.com"}))
+		})
+	})
+
+	Describe("SaveMappingsV1", func() {
+		const (
+			expectedFileContentOrder1 = `2
+{"RequiredFeatures":["Epoch","PerClient"],"Epoch":0}
+{"Client":"1.1.1.1","LHS":"lhsName1","RHS":"rhsName1","Expiry":"2022-01-01T00:00:00Z","Type":"ip"}
+{"Client":"2.2.2.2","LHS":"lhsName2","RHS":"rhsName2","Expiry":"2022-01-01T00:00:01Z","Type":"ip"}
+`
+
+			expectedFileContentOrder2 = `2
+{"RequiredFeatures":["PerClient","Epoch"],"Epoch":0}
+{"Client":"1.1.1.1","LHS":"lhsName1","RHS":"rhsName1","Expiry":"2022-01-01T00:00:00Z","Type":"ip"}
+{"Client":"2.2.2.2","LHS":"lhsName2","RHS":"rhsName2","Expiry":"2022-01-01T00:00:01Z","Type":"ip"}
+`
+		)
+
+		var (
+			tempDir string
+		)
+
+		BeforeEach(func() {
+			var err error
+			tempDir, err = os.MkdirTemp(".", "tmp")
+			Expect(err).NotTo(HaveOccurred())
+			_, err = os.Create(tempDir + "/dnsinfo")
+			Expect(err).NotTo(HaveOccurred())
+
+			domainStoreCreate()
+			domainStore.saveFile = tempDir + "/dnsinfo"
+			domainStore.dnsLookup = map[string]*dnsLookupInfoByClient{
+				"1.1.1.1": {
+					mappings: map[string]*nameData{
+						"lhsName1": {
+							values: map[string]*valueData{
+								"rhsName1": {
+									isName:     false,
+									expiryTime: time.Date(2022, time.January, 1, 0, 0, 0, 0, time.UTC),
+								},
+							},
+						},
+					},
+				},
+				"2.2.2.2": {
+					mappings: map[string]*nameData{
+						"lhsName2": {
+							values: map[string]*valueData{
+								"rhsName2": {
+									isName:     false,
+									expiryTime: time.Date(2022, time.January, 1, 0, 0, 1, 0, time.UTC),
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		AfterEach(func() {
+			os.RemoveAll(tempDir)
+		})
+
+		It("should save mappings to file", func() {
+			err := domainStore.SaveMappingsV1()
+			Expect(err).NotTo(HaveOccurred())
+			dir, err := os.ReadDir(tempDir)
+			Expect(err).NotTo(HaveOccurred())
+			f, err := os.ReadFile(tempDir + "/" + dir[0].Name())
+			Expect(err).NotTo(HaveOccurred())
+			// The order of client entries in the file is not deterministic, so we need to check for both
+			// possible.
+			Expect(string(f)).Should(SatisfyAny(
+				Equal(expectedFileContentOrder1),
+				Equal(expectedFileContentOrder2),
+			))
+		})
+	})
+
+	Describe("readMappings", func() {
+		var (
+			expectedMappings = map[string]*dnsLookupInfoByClient{
+				"1.1.1.1": {
+					mappings: map[string]*nameData{
+						"lhsName1": {
+							values: map[string]*valueData{
+								"rhsName1": {
+									isName:     false,
+									expiryTime: time.Date(2022, time.January, 1, 0, 0, 0, 0, time.UTC),
+								},
+							},
+							topLevelDomains: []string{"lhsName1"},
+						},
+					},
+				},
+				"2.2.2.2": {
+					mappings: map[string]*nameData{
+						"lhsName2": {
+							values: map[string]*valueData{
+								"rhsName2": {
+									isName:     false,
+									expiryTime: time.Date(2022, time.January, 1, 0, 0, 1, 0, time.UTC),
+								},
+							},
+							topLevelDomains: []string{"lhsName2"},
+						},
+					},
+				},
+			}
+			tempDir string
+		)
+
+		BeforeEach(func() {
+			var err error
+			tempDir, err = os.MkdirTemp(".", "tmp")
+			Expect(err).NotTo(HaveOccurred())
+			_, err = os.Create(tempDir + "/dnsinfo")
+			Expect(err).NotTo(HaveOccurred())
+
+			domainStoreCreate()
+			domainStore.saveFile = tempDir + "/dnsinfo"
+			domainStore.dnsLookup = map[string]*dnsLookupInfoByClient{
+				"1.1.1.1": {
+					mappings: map[string]*nameData{
+						"lhsName1": {
+							values: map[string]*valueData{
+								"rhsName1": {
+									isName:     false,
+									expiryTime: time.Date(2022, time.January, 1, 0, 0, 0, 0, time.UTC),
+								},
+							},
+						},
+					},
+				},
+				"2.2.2.2": {
+					mappings: map[string]*nameData{
+						"lhsName2": {
+							values: map[string]*valueData{
+								"rhsName2": {
+									isName:     false,
+									expiryTime: time.Date(2022, time.January, 1, 0, 0, 1, 0, time.UTC),
+								},
+							},
+						},
+					},
+				},
+			}
+
+			err = domainStore.SaveMappingsV1()
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			os.RemoveAll(tempDir)
+		})
+
+		It("should save mappings to file", func() {
+			err := domainStore.readMappings()
+			Expect(err).NotTo(HaveOccurred())
+			for i, clk := range domainStore.dnsLookup {
+				Expect(clk).To(Equal(expectedMappings[i]))
+			}
+		})
 	})
 })

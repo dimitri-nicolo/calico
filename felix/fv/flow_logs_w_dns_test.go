@@ -104,6 +104,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrNone))
 		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSDESTDOMAINSBYCLIENT"] = "false"
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = strings.Join(nameservers, ",")
 		opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "false"
 		opts.ExtraEnvVars["FELIX_DNSLOGSLATENCY"] = "false"
@@ -373,6 +374,186 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		}
 
 		ep1_1.Stop()
+		for _, felix := range tc.Felixes {
+			if bpfEnabled {
+				felix.Exec("calico-bpf", "connect-time", "clean")
+			}
+			felix.Stop()
+		}
+
+		if CurrentGinkgoTestDescription().Failed {
+			infra.DumpErrorData()
+		}
+		infra.Stop()
+	})
+})
+
+// This is an extension of the flow_logs_tests.go file to test flow logs for flows with
+// DNS queried by different endpoints, and resolving to the same domain.
+//
+// Felix1
+//  EP1-1 ----> gist.github.com (resolves to the same IP as github.com)
+//  EP2-1 ----> github.com
+//  EP2-1 ----> microsoft.com
+//
+//
+
+// The main purpose is to check that destination domains are collected and reported in the flow logs
+// on a per client basis.
+var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
+
+	var (
+		infra           infrastructure.DatastoreInfra
+		opts            infrastructure.TopologyOptions
+		tc              infrastructure.TopologyContainers
+		flowLogsReaders []metrics.FlowLogReader
+		ep1_1, ep2_1    *workload.Workload
+
+		dnsServerIP string
+	)
+
+	bpfEnabled := os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
+
+	logAndReport := func(out string, err error) error {
+		log.WithError(err).Infof("test-dns said:\n%v", out)
+		return err
+	}
+
+	wgetDomainErrFn := func(ep *workload.Workload, domain string) func() error {
+		return func() error {
+			out, err := ep.ExecCombinedOutput("test-dns", "-", domain, fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+			return logAndReport(out, err)
+		}
+	}
+
+	canWgetDomain := func(ep *workload.Workload, domain string) {
+		ExpectWithOffset(1, wgetDomainErrFn(ep, domain)()).NotTo(HaveOccurred())
+		ConsistentlyWithOffset(1, wgetDomainErrFn(ep, domain), "4s", "1s").ShouldNot(HaveOccurred())
+	}
+
+	BeforeEach(func() {
+		infra = getInfra()
+		opts = infrastructure.DefaultTopologyOptions()
+
+		nameservers := GetLocalNameservers()
+		dnsServerIP = nameservers[0]
+
+		opts.IPIPEnabled = false
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "5"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLENETWORKSETS"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDELABELS"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDEPOLICIES"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
+		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
+		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = strings.Join(nameservers, ",")
+		opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "false"
+		opts.ExtraEnvVars["FELIX_DNSLOGSLATENCY"] = "false"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSDESTDOMAINSBYCLIENT"] = "true"
+		opts.ExtraEnvVars["FELIX_DNSEXTRATTL"] = "300"
+
+		// Start felix instances.
+		tc, _ = infrastructure.StartNNodeTopology(2, opts, infra)
+
+		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
+		infra.AddDefaultAllow()
+
+		// Create ep1 workload on host 1.
+		ep1_1 = workload.Run(tc.Felixes[0], "ep1-1", "default", "10.65.0.0", "8055", "tcp")
+		ep1_1.ConfigureInInfra(infra)
+
+		// Create ep2 workload on host 1.
+		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.0.1", "8056", "tcp")
+		ep2_1.ConfigureInInfra(infra)
+
+		flowLogsReaders = []metrics.FlowLogReader{}
+		for _, f := range tc.Felixes {
+			flowLogsReaders = append(flowLogsReaders, f)
+		}
+
+		// Allow workloads to connect out to the Internet.
+		for ii := range tc.Felixes {
+			tc.Felixes[ii].Exec(
+				"iptables", "-w", "-t", "nat",
+				"-A", "POSTROUTING",
+				"-o", "eth0",
+				"-j", "MASQUERADE", "--random-fully",
+			)
+		}
+
+		// Wait for rules to be programmed.
+		time.Sleep(5 * time.Second)
+	})
+
+	// When FELIX_FLOWLOGSDESTDOMAINSBYCLIENT is true, domains that are queried by different endpoints
+	// and that resolve to the same IP should not be reported in the destination domains together.
+	It("should correctly resolve and domains should be listed by client", func() {
+		// Run a few tests for both interesting domains. These should work immediately and consistently.
+		canWgetDomain(ep1_1, "gist.github.com")
+		canWgetDomain(ep2_1, "github.com")
+		canWgetDomain(ep2_1, "microsoft.com")
+
+		if bpfEnabled {
+			// Make sure that conntrack scanning ticks at least once
+			time.Sleep(3 * conntrack.ScanPeriod)
+		} else {
+			// Allow 6 seconds for the Felixes to poll conntrack. (This is conntrack polling time plus
+			// 20%, which gives us 10% leeway over the polling jitter of 10%)
+			time.Sleep(6 * time.Second)
+		}
+
+		Eventually(func() error {
+			flowTester := metrics.NewFlowTesterDeprecated(flowLogsReaders, true, true, 0)
+
+			errs := []string{}
+			// Track all errors before failing
+			flowTester.IterFlows("file", func(flowLog flowlog.FlowLog) error {
+				if flowLog.SrcMeta.Type == "wep" && flowLog.DstMeta.Type == "net" && flowLog.DstMeta.AggregatedName == "pub" {
+					log.Debugf("FlowLog: %#v", flowLog)
+					if strings.Contains(flowLog.SrcMeta.AggregatedName, ep1_1.Name) {
+						// dest_domains should only report gist.github.com for ep1_1
+						domains := destDomainsToSlice(flowLog.FlowDestDomains)
+						for _, domain := range domains {
+							if domain != "gist.github.com" {
+								errs = append(errs, fmt.Sprintf("Unexpected domains for ep1_1: %#v", domains))
+							}
+						}
+					}
+					if strings.Contains(flowLog.SrcMeta.AggregatedName, ep2_1.Name) {
+						domains := destDomainsToSlice(flowLog.FlowDestDomains)
+						// dest_domains should either report github.com and/or microsoft.com for ep2_1
+						for _, domain := range domains {
+							if domain != "github.com" && domain != "microsoft.com" {
+								errs = append(errs, fmt.Sprintf("Unexpected domains for ep2_1: %#v", domains))
+							}
+						}
+					}
+				}
+
+				return nil
+			})
+
+			if len(errs) == 0 {
+				return nil
+			}
+
+			return errors.New(strings.Join(errs, "\n==============\n"))
+		}, "30s", "3s").ShouldNot(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			for _, felix := range tc.Felixes {
+				felix.Exec("iptables-save", "-c")
+				felix.Exec("ipset", "list")
+				felix.Exec("ip", "r")
+				felix.Exec("ip", "a")
+			}
+		}
+
+		ep1_1.Stop()
+		ep2_1.Stop()
 		for _, felix := range tc.Felixes {
 			if bpfEnabled {
 				felix.Exec("calico-bpf", "connect-time", "clean")

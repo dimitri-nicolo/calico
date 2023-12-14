@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -310,6 +310,8 @@ type Config struct {
 	DNSPacketsNfqueueMaxHoldDuration time.Duration
 	DebugDNSResponseDelay            time.Duration
 	DisableDNSPolicyPacketProcessor  bool
+
+	EnableDestDomainsByClient bool
 
 	LookPathOverride func(file string) (string, error)
 
@@ -705,14 +707,15 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
 	dp.domainInfoStore = common.NewDomainInfoStore(&common.DnsConfig{
-		Collector:             config.Collector,
-		DNSCacheEpoch:         config.DNSCacheEpoch,
-		DNSCacheFile:          config.DNSCacheFile,
-		DNSCacheSaveInterval:  config.DNSCacheSaveInterval,
-		DNSExtraTTL:           config.DNSExtraTTL,
-		DNSLogsLatency:        config.DNSLogsLatency,
-		DebugDNSResponseDelay: config.DebugDNSResponseDelay,
-		MaxTopLevelDomains:    config.FlowLogsFileDomainsLimit,
+		Collector:                 config.Collector,
+		DNSCacheEpoch:             config.DNSCacheEpoch,
+		DNSCacheFile:              config.DNSCacheFile,
+		DNSCacheSaveInterval:      config.DNSCacheSaveInterval,
+		DNSExtraTTL:               config.DNSExtraTTL,
+		DNSLogsLatency:            config.DNSLogsLatency,
+		DebugDNSResponseDelay:     config.DebugDNSResponseDelay,
+		EnableDestDomainsByClient: config.EnableDestDomainsByClient,
+		MaxTopLevelDomains:        config.FlowLogsFileDomainsLimit,
 	})
 	dp.RegisterManager(dp.domainInfoStore)
 
