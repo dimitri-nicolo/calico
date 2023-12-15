@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 // The specification specifies behavior that must be true for all clientv3.SecurityEventWebhookInterface.

@@ -60,7 +60,8 @@ func TestWebhookHealthy(t *testing.T) {
 	wh := testutils.NewTestWebhook("test-wh")
 	require.Nil(t, wh.Status)
 
-	testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Check that webhook status is eventually updated to healthy
 	require.Eventually(t, isHealthy(wh), time.Second, 10*time.Millisecond)
@@ -152,7 +153,8 @@ func TestWebhookSent(t *testing.T) {
 	})
 
 	wh := testutils.NewTestWebhook("test-wh")
-	testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Make sure the webhook eventually hits the test provider
 	require.Eventually(t, hasOneRequest(testState.TestSlackProvider()), testState.FetchingInterval*4, 10*time.Millisecond)
@@ -197,7 +199,8 @@ func TestSendsOneWebhookPerEvent(t *testing.T) {
 	})
 
 	wh := testutils.NewTestWebhook("test-wh")
-	testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Make sure the webhook eventually hits the test provider
 	testProvider := testState.TestSlackProvider()
@@ -221,7 +224,8 @@ func TestEventsFetchedUsingNonOverlappingIntervals(t *testing.T) {
 	})
 
 	wh := testutils.NewTestWebhook("test-wh")
-	testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Wait that we get a few fetch requests
 	require.Eventually(t, func() bool {
@@ -252,7 +256,8 @@ func TestTooManyEventsAreRateLimited(t *testing.T) {
 	// TODO: Add a check to test that the rate limiter is set to less than len(fetchedEvents)
 	// Right now it's hardcoded to 5 in the test setup (but that could and likely will change)
 	wh := testutils.NewTestWebhook("test-wh")
-	testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Make sure the webhook eventually hits the test server
 	testProvider := testState.TestSlackProvider()
@@ -297,7 +302,8 @@ func TestGenericProvider(t *testing.T) {
 	require.Equal(t, wh.Spec.Config[0].Name, "url")
 	// Updating URL to point to the test server
 	wh.Spec.Config[0].Value = whUrl
-	testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Make sure the webhook eventually hits the test provider
 	require.Eventually(t, func() bool { return len(requests) == 1 }, 5*time.Second, 10*time.Millisecond)
@@ -307,7 +313,7 @@ func TestGenericProvider(t *testing.T) {
 	require.Equal(t, "/test-hook", requests[0].URL)
 	// And check that we get a JSON of the original event
 	var whEvent lsApi.Event
-	err := json.Unmarshal(requests[0].Body, &whEvent)
+	err = json.Unmarshal(requests[0].Body, &whEvent)
 	require.NoError(t, err)
 	require.Equal(t, fetchedEvents[0], whEvent)
 }
@@ -352,7 +358,8 @@ func TestBackoffOnInitialFailure(t *testing.T) {
 	require.Equal(t, wh.Spec.Config[0].Name, "url")
 	// Updating URL to point to the test server
 	wh.Spec.Config[0].Value = whUrl
-	testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// The health of the webhook is only updated to an error status after the maximum number of retries
 	// has been reached and we give up on that event.
@@ -364,7 +371,7 @@ func TestBackoffOnInitialFailure(t *testing.T) {
 	require.Equal(t, "/test-hook", requests[0].URL)
 	// And check that we get a JSON of the original event
 	var whEvent lsApi.Event
-	err := json.Unmarshal(requests[0].Body, &whEvent)
+	err = json.Unmarshal(requests[0].Body, &whEvent)
 	require.NoError(t, err)
 	require.Equal(t, fetchedEvents[0], whEvent)
 
@@ -400,7 +407,8 @@ func TestWebhookErrorsDontDisappear(t *testing.T) {
 	wh.Spec.Config[0].Value = "http://test.com/does-not-exists"
 	require.Nil(t, wh.Status)
 
-	testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Check that webhook status is eventually updated to healthy
 	require.Eventually(t, hasHealthStatus(wh, true), time.Second, 10*time.Millisecond)
