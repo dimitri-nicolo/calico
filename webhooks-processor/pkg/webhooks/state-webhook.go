@@ -30,6 +30,7 @@ func (s *ControllerState) webhookGoroutine(
 
 	var processingLock sync.Mutex
 
+	var previousFetchError error
 	var previousError error
 
 	eventProcessing := func() {
@@ -49,10 +50,9 @@ func (s *ControllerState) webhookGoroutine(
 			return
 		}
 
+		events, fetchError := s.config.EventsFetchFunction(ctx, selector, previousRunStamp.Time, thisRunStamp)
 		var err error
-
-		events, err := s.config.EventsFetchFunction(ctx, selector, previousRunStamp.Time, thisRunStamp)
-		if err == nil {
+		if fetchError == nil {
 			labels := s.extractLabels(*webhookRef)
 			for _, event := range events {
 				if err = rateLimiter.Event(); err != nil {
@@ -65,9 +65,12 @@ func (s *ControllerState) webhookGoroutine(
 		}
 
 		// If we have a previous error and there is nothing new to process
-		if err == nil && previousError != nil && len(events) == 0 {
+		if fetchError == nil && err == nil && previousFetchError == nil && previousError != nil && len(events) == 0 {
 			// We report the previous error but update the run timestamp
 			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, previousError)
+		} else if fetchError != nil {
+			// We should always report errors to fetch, even if it hides a previous processing error
+			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, fetchError)
 		} else {
 			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, err)
 			previousError = err

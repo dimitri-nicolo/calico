@@ -435,6 +435,59 @@ func TestWebhookErrorsDontDisappear(t *testing.T) {
 	require.Greater(t, wh.Status[0].LastTransitionTime.Time, previousTime)
 }
 
+func TestLinseedErrorHandling(t *testing.T) {
+	t.Run("Linseed query error gets cleared", func(t *testing.T) {
+		providers := DefaultProviders()
+		genericProviderConfig := providers[api.SecurityEventWebhookConsumerGeneric].Config()
+		genericProviderConfig.RequestTimeout = 100 * time.Millisecond
+		genericProviderConfig.RetryTimes = 3
+		genericProviderConfig.RetryDuration = 1 * time.Second
+		providers[api.SecurityEventWebhookConsumerGeneric] = generic.NewProvider(genericProviderConfig)
+		fetchError := errors.New("Failed to fetch events from Linseed")
+		testState := NewTestState(func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+			return []lsApi.Event{}, fetchError
+		}, providers)
+
+		SetupWithTestState(t, testState)
+
+		previousTime := time.Now()
+
+		// New webhook has no status
+		wh := testutils.NewTestWebhook("test-wh")
+		wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
+		// Use an invalid URL to generate an error
+		// require.Equal(t, "url", wh.Spec.Config[0].Name)
+		// require.Nil(t, wh.Status)
+
+		_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+		require.NoError(t, err)
+
+		// Check that webhook status is eventually updated to healthy
+		require.Eventually(t, hasHealthStatus(wh, false), 5*time.Second, 10*time.Millisecond)
+		require.True(t, wh.Status[0].LastTransitionTime.After(previousTime))
+		previousTime = wh.Status[0].LastTransitionTime.Time
+
+		logrus.Debug("Clearing fetchError")
+		fetchError = nil
+		// Wait for the status to go bad
+		require.Eventually(t, hasHealthStatus(wh, true), 5*time.Second, time.Second)
+		require.True(t, wh.Status[0].LastTransitionTime.After(previousTime))
+		// previousError := wh.Status[0].Message
+		// previousTime = wh.Status[0].LastTransitionTime.Time
+		// require.Contains(t, previousError, "context deadline exceeded")
+
+		// shouldSendEvents = false
+
+		// // Wait for another round of processing (with no new events)
+		// time.Sleep(testState.FetchingInterval * 2)
+
+		// // And make sure that the previous error is still visible
+		// require.Eventually(t, hasHealthStatus(wh, false), time.Second, 10*time.Millisecond)
+		// require.Greater(t, wh.Status[0].LastTransitionTime.Time, previousTime)
+	})
+
+}
+
 func newEvent(n int) lsApi.Event {
 	return lsApi.Event{
 		ID:          fmt.Sprintf("testid%d", n),
