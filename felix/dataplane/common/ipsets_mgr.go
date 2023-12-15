@@ -43,6 +43,7 @@ type IPSetsDataplane interface {
 type IPSetsManager struct {
 	dataplanes []IPSetsDataplane
 	maxSize    int
+	lg         *log.Entry
 
 	// Provider of domain name to IP information.
 	domainInfoStore store
@@ -71,10 +72,11 @@ type store interface {
 	GetDomainIPs(domain string) []string
 }
 
-func NewIPSetsManager(ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore store) *IPSetsManager {
+func NewIPSetsManager(name string, ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore store) *IPSetsManager {
 	ipsm := &IPSetsManager{
 		dataplanes:      []IPSetsDataplane{ipsets_},
 		maxSize:         maxIPSetSize,
+		lg:              log.WithField("name", name),
 		domainInfoStore: domainInfoStore,
 
 		domainSetProgramming: make(map[string]map[string]set.Set[string]),
@@ -113,7 +115,7 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	// IP set-related messages, these are extremely common.
 	case *proto.IPSetDeltaUpdate:
-		log.WithField("ipSetId", msg.Id).Debug("IP set delta update")
+		m.lg.WithField("ipSetId", msg.Id).Debug("IP set delta update")
 		if m.domainSetProgramming[msg.Id] != nil {
 			// Work needed to resolve domain name deltas against the current ipset
 			// programming.  These domain names may be mixed case.
@@ -126,7 +128,7 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 			}
 		}
 	case *proto.IPSetUpdate:
-		log.WithField("ipSetId", msg.Id).Debug("IP set update")
+		m.lg.WithField("ipSetId", msg.Id).Debug("IP set update")
 		var setType ipsets.IPSetType
 		switch msg.Type {
 		case proto.IPSetUpdate_IP:
@@ -146,7 +148,7 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 		case proto.IPSetUpdate_PORTS:
 			setType = ipsets.IPSetTypeBitmapPort
 		default:
-			log.WithField("type", msg.Type).Panic("Unknown IP set type")
+			m.lg.WithField("type", msg.Type).Panic("Unknown IP set type")
 		}
 
 		metadata := ipsets.IPSetMetadata{
@@ -169,7 +171,7 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 			}
 		}
 	case *proto.IPSetRemove:
-		log.WithField("ipSetId", msg.Id).Debug("IP set remove")
+		m.lg.WithField("ipSetId", msg.Id).Debug("IP set remove")
 		if m.domainSetProgramming[msg.Id] != nil {
 			// Remove tracking data for this domain set.
 			m.removeDomainIPSetTracking(msg.Id)

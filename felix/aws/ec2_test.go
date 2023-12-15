@@ -31,7 +31,7 @@ import (
 
 	clock "k8s.io/utils/clock/testing"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )

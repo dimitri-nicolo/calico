@@ -1,12 +1,13 @@
 package rbac
 
 import (
-	"github.com/projectcalico/calico/apiserver/pkg/storage/calico"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	rbac_auth "k8s.io/kubernetes/plugin/pkg/auth/authorizer/rbac"
+
+	"github.com/projectcalico/calico/apiserver/pkg/storage/calico"
 )
 
 // canGetAllManagedClusters determines whether the user is able to get all ManagedClusters.
