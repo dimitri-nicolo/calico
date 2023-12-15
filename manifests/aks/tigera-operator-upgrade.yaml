@@ -40464,7 +40464,7 @@ metadata:
 spec:
   template:
     metadata:
-      name: "RELEASE-NAME"
+      name: "release-name"
       labels:
         helm.sh/chart: "tigera-operator-v0.0"
     spec:
