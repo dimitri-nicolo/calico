@@ -258,6 +258,27 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 	return privateUsers, publicUsers
 }
 
+// Returns a list of usernames whose resources we should cleanup on upgrade so that we don't leave behind anything
+// that is no longer being used. An example is once Curator was no longer supported in ElasticSearch beyond version 8
+// we needed to remove the Curator user and role in addition to any secrets created for it
+func DecommissionedElasticsearchUsers(clusterName string) map[ElasticsearchUserName]elasticsearch.User {
+	return map[ElasticsearchUserName]elasticsearch.User{
+		ElasticsearchUserNameCurator: {
+			Username: formatName(ElasticsearchUserNameCurator, clusterName, true, true),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameCurator, clusterName, true, true),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor", "manage_index_templates"},
+					Indices: []elasticsearch.RoleIndex{{
+						Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*"), indexPattern("tigera_secure_ee_events", "*", "")},
+						Privileges: []string{"all"},
+					}},
+				},
+			}},
+		},
+	}
+}
+
 func buildElasticsearchSashaUserRoleIndex(clusterName string, isManagement bool) []elasticsearch.RoleIndex {
 	clusterPattern := clusterName
 	if isManagement {
@@ -369,20 +390,6 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 				},
 			}},
 		},
-		ElasticsearchUserNameCurator: {
-			Username: formatName(ElasticsearchUserNameCurator, clusterName, true, true),
-			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameCurator, clusterName, true, true),
-				Definition: &elasticsearch.RoleDefinition{
-					Cluster: []string{"monitor", "manage_index_templates"},
-					Indices: []elasticsearch.RoleIndex{{
-						// Curator needs to trim all the logs, so we don't set the cluster name on the index pattern
-						Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*"), indexPattern("tigera_secure_ee_events", "*", "")},
-						Privileges: []string{"all"},
-					}},
-				},
-			}},
-		},
 		ElasticsearchUserNameOperator: {
 			Username: formatName(ElasticsearchUserNameOperator, clusterName, true, true),
 			Roles: []elasticsearch.Role{{
@@ -467,9 +474,6 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 		},
 		ElasticsearchUserNameManager: {
 			Username: formatName(ElasticsearchUserNameManager, clusterName, true, false),
-		},
-		ElasticsearchUserNameCurator: {
-			Username: formatName(ElasticsearchUserNameCurator, clusterName, true, false),
 		},
 		ElasticsearchUserNameOperator: {
 			Username: formatName(ElasticsearchUserNameOperator, clusterName, true, false),

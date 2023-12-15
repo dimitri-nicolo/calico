@@ -180,7 +180,8 @@ func (c *reconciler) verifyOperatorNamespaces(reqLogger *log.Entry) error {
 }
 
 // reconcileUsers makes sure that all the necessary users exist for a managed cluster in elasticsearch and that the managed
-// cluster has access to those users via secrets
+// cluster has access to those users via secrets. It will also clean up users that used to be created by us but have since
+// been decommissioned
 func (c *reconciler) reconcileUsers(reqLogger *log.Entry) error {
 	staleOrMissingPrivateUsers, staleOrMissingPublicUsers, err := c.missingOrStaleUsers()
 	if err != nil {
@@ -199,6 +200,11 @@ func (c *reconciler) reconcileUsers(reqLogger *log.Entry) error {
 		if err := c.createUser(username, user, false); err != nil {
 			return err
 		}
+	}
+
+	err = c.cleanupDecommissionedElasticsearchUsers(reqLogger)
+	if err != nil {
+		return err
 	}
 
 	return c.reconcileVerificationSecrets(reqLogger)
@@ -297,6 +303,97 @@ func (c *reconciler) reconcileVerificationSecrets(reqLogger *log.Entry) error {
 	}
 
 	return nil
+}
+
+func (c *reconciler) cleanupDecommissionedElasticsearchUsers(reqLogger *log.Entry) error {
+	decommissionedUsers := esusers.DecommissionedElasticsearchUsers(c.clusterName)
+
+	esCLI, err := c.getOrInitializeESClient()
+	if err != nil {
+		return err
+	}
+
+	allESUsers, err := esCLI.GetUsers()
+	if err != nil {
+		return err
+	}
+
+	// Build a lookup table so that we can figure out whether our decommissioned users exist in ES in constant time
+	allESUsersLUT := map[string]any{}
+	for _, esUser := range allESUsers {
+		allESUsersLUT[esUser.Username] = true
+	}
+
+	errored := false
+
+	for username, user := range decommissionedUsers {
+		// Name of secrets should mirror those used in createUser function. We need to account for the fact that the
+		// secrets may have come from both a "private" and "public" user list as returned by users.go
+		secretName := fmt.Sprintf("%s-elasticsearch-access", username)
+
+		reqLogger.Debugf("Deleting decommissioned secret %s/%s", c.managedOperatorNamespace, secretName)
+		err = c.managedK8sCLI.CoreV1().Secrets(c.managedOperatorNamespace).Delete(context.Background(), secretName, metav1.DeleteOptions{})
+		if err != nil && !strings.Contains(err.Error(), "not found") {
+			errored = true
+			reqLogger.WithError(err).Errorf("Error while deleting secret %s/%s (via mgd client)", c.managedOperatorNamespace, secretName)
+		}
+
+		if _, ok := allESUsersLUT[user.Username]; ok {
+			reqLogger.Debugf("Deleting decommissioned user %s", username)
+			for _, role := range user.Roles {
+				err = esCLI.DeleteRole(role)
+				if err != nil {
+					errored = true
+					reqLogger.WithError(err).Errorf("Error while deleting role %s", role.Name)
+				}
+			}
+			err = esCLI.DeleteUser(user)
+			if err != nil {
+				errored = true
+				reqLogger.WithError(err).Errorf("Error while deleting user %s", user.Username)
+			}
+
+			if c.management {
+				secretName = fmt.Sprintf("%s-elasticsearch", username)
+			} else {
+				secretName = fmt.Sprintf("%s-%s-elasticsearch", username, c.clusterName)
+			}
+
+			if user.DirectConnection {
+				secretName = fmt.Sprintf("%s-user-secret", secretName)
+			} else {
+				secretName = fmt.Sprintf("%s-access-gateway", secretName)
+			}
+
+			reqLogger.Debugf("Deleting decommissioned secret %s/%s", resource.TigeraElasticsearchNamespace, secretName)
+			err = c.managementK8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Delete(context.Background(), secretName, metav1.DeleteOptions{})
+			if err != nil && !strings.Contains(err.Error(), "not found") {
+				errored = true
+				reqLogger.WithError(err).Errorf("Error while deleting secret %s/%s (via mgmt client)", resource.TigeraElasticsearchNamespace, secretName)
+			}
+		}
+
+		// These name patterns need to match those in the reconcileVerificationSecrets function.
+		var verificationSecretName string
+		if c.management {
+			verificationSecretName = fmt.Sprintf("%s-gateway-verification-credentials", username)
+		} else {
+			verificationSecretName = fmt.Sprintf("%s-%s-gateway-verification-credentials", username, c.clusterName)
+		}
+
+		reqLogger.Debugf("Deleting decommissioned secret %s/%s", resource.TigeraElasticsearchNamespace, verificationSecretName)
+		err = c.managementK8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Delete(context.Background(), verificationSecretName, metav1.DeleteOptions{})
+		if err != nil && !strings.Contains(err.Error(), "not found") {
+			errored = true
+			reqLogger.WithError(err).Errorf("Error while deleting verification secret %s/%s (via mgmt client)", resource.TigeraElasticsearchNamespace, verificationSecretName)
+		}
+	}
+
+	if errored {
+		return fmt.Errorf("one or more errors occurred while deleting decommissioned users")
+	} else {
+		return nil
+	}
 }
 
 // createUser creates the given Elasticsearch user in Elasticsearch if passed a private user and creates a secret containing that users credentials.
