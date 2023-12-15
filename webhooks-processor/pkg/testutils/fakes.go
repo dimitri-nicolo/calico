@@ -23,6 +23,7 @@ import (
 type FakeSecurityEventWebhook struct {
 	ExpectedWebhook *api.SecurityEventWebhook
 	Watcher         *FakeWatcher
+	webhookNames    []string
 }
 
 type FakeWatcher struct {
@@ -36,10 +37,20 @@ func (fw *FakeWatcher) ResultChan() <-chan watch.Event {
 	return fw.Results
 }
 
-// Returned event is never used, we may care about simulating an error later
 func (w *FakeSecurityEventWebhook) Update(ctx context.Context, res *api.SecurityEventWebhook, opts options.SetOptions) (*api.SecurityEventWebhook, error) {
-	return nil, nil
+	eventType := watch.Added
+	for _, name := range w.webhookNames {
+		if name == res.Name {
+			eventType = watch.Modified
+		}
+	}
+	if eventType == watch.Added {
+		w.webhookNames = append(w.webhookNames, res.Name)
+	}
+	w.Watcher.Results <- watch.Event{Type: eventType, Object: res}
+	return res, nil
 }
+
 func (w *FakeSecurityEventWebhook) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
 	w.Watcher = &FakeWatcher{
 		Results: make(chan watch.Event),

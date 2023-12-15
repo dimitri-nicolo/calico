@@ -30,6 +30,8 @@ func (s *ControllerState) webhookGoroutine(
 
 	var processingLock sync.Mutex
 
+	var previousError error
+
 	eventProcessing := func() {
 		defer processingLock.Unlock()
 
@@ -62,7 +64,15 @@ func (s *ControllerState) webhookGoroutine(
 			}
 		}
 
-		s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, err)
+		// If we have a previous error and there is nothing new to process
+		if err == nil && previousError != nil && len(events) == 0 {
+			// We report the previous error but update the run timestamp
+			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, previousError)
+		} else {
+			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, err)
+			previousError = err
+		}
+
 		logrus.WithField("uid", webhookRef.UID).WithError(err).Info("Iteration completed")
 	}
 
