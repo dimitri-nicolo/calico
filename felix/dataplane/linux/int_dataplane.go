@@ -235,6 +235,8 @@ type Config struct {
 	BPFConntrackTimeouts               bpfconntrack.Timeouts
 	BPFCgroupV2                        string
 	BPFConnTimeLBEnabled               bool
+	BPFConnTimeLB                      string
+	BPFHostNetworkedNAT                string
 	BPFMapRepin                        bool
 	BPFNodePortDSREnabled              bool
 	BPFDSROptoutCIDRs                  []string
@@ -1050,6 +1052,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(failsafeMgr)
 
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
+
+		if config.BPFConnTimeLB == string(apiv3.BPFConnectTimeLBDisabled) &&
+			config.BPFHostNetworkedNAT == string(apiv3.BPFHostNetworkedNATDisabled) {
+			log.Warn("Access to services from host networked process wont work, forcing hostnetworked NAT to Enabled")
+			config.BPFHostNetworkedNAT = string(apiv3.BPFHostNetworkedNATEnabled)
+		}
+
 		bpfEndpointManager, err = newBPFEndpointManager(
 			nil,
 			&config,
@@ -1120,13 +1129,26 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.Info("BPF enabled but no Kubernetes client available, unable to run kube-proxy module.")
 		}
 
-		if config.BPFConnTimeLBEnabled {
+		// HostNetworkedNAT is Enabled and CTLB enabled.
+		// HostNetworkedNAT is Disabled and CTLB is either disabled/TCP.
+		// The above cases are invalid configuration. Revert to CTLB enabled.
+		if config.BPFHostNetworkedNAT == string(apiv3.BPFHostNetworkedNATEnabled) {
+			if config.BPFConnTimeLB == string(apiv3.BPFConnectTimeLBEnabled) {
+				log.Warn("Access to services may not work properly, reverting to default CTLB configuration")
+				config.BPFConnTimeLB = string(apiv3.BPFConnectTimeLBTCP)
+			}
+		} else {
+			if config.BPFConnTimeLB != string(apiv3.BPFConnectTimeLBEnabled) {
+				log.Warn("Access to services may not work properly, reverting to default CTLB configuration")
+				config.BPFConnTimeLB = string(apiv3.BPFConnectTimeLBTCP)
+				config.BPFHostNetworkedNAT = string(apiv3.BPFHostNetworkedNATEnabled)
+			}
+		}
+
+		if config.BPFConnTimeLB != string(apiv3.BPFConnectTimeLBDisabled) {
 			excludeUDP := false
-			if config.FeatureGates != nil {
-				switch config.FeatureGates["BPFConnectTimeLoadBalancingWorkaround"] {
-				case "udp":
-					excludeUDP = true
-				}
+			if config.BPFConnTimeLB == string(apiv3.BPFConnectTimeLBTCP) && config.BPFHostNetworkedNAT == string(apiv3.BPFHostNetworkedNATEnabled) {
+				excludeUDP = true
 			}
 			logLevel := strings.ToLower(config.BPFLogLevel)
 			if config.BPFLogFilters != nil {
