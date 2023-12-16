@@ -147,12 +147,12 @@ sub-image-fips-%:
 
 $(DIKASTES_IMAGE): $(CONTAINER_MARKER)
 $(CONTAINER_CREATED): Dockerfile.$(ARCH) $(BINDIR)/dikastes-$(ARCH) $(BINDIR)/healthz-$(ARCH)
-	$(DOCKER_BUILD) --progress=plain --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 $(CONTAINER_FIPS_CREATED): Dockerfile.$(ARCH) $(BINDIR)/dikastes-$(ARCH) $(BINDIR)/healthz-$(ARCH)
-	$(DOCKER_BUILD) --progress=plain --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-fips-$(ARCH) -f Dockerfile.$(ARCH) . --load
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-fips-$(ARCH) -f Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
 ###############################################################################
