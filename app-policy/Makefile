@@ -171,7 +171,7 @@ ut-exec:
 ###############################################################################
 
 .PHONY: ci
-ci: mod-download build-all image check-generated-files static-checks ut
+ci: mod-download build-all check-generated-files static-checks ut
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files

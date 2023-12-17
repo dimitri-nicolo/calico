@@ -14,7 +14,6 @@
 
 ARG UBI_IMAGE
 ARG UBI_IMAGE_FULL
-ARG BIN_DIR
 
 FROM ${UBI_IMAGE} as ubi
 
@@ -25,6 +24,7 @@ RUN chmod 0777 /tmp/dikastes
 RUN mkdir /licenses
 COPY LICENSE /licenses
 
+ARG BIN_DIR
 FROM scratch as build
 
 COPY --from=ubi /licenses /licenses
