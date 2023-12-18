@@ -40184,6 +40184,10 @@ rules:
     verbs:
       - list
       - watch
+      - update
+      - get
+      - create
+      - delete
   - apiGroups:
       - policy
     resources:
