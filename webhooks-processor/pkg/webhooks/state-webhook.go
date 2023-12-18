@@ -70,11 +70,13 @@ func (s *ControllerState) webhookGoroutine(
 			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, previousError)
 		} else if fetchError != nil {
 			// We should always report errors to fetch, even if it hides a previous processing error
-			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, fetchError)
+			// But we don't update the timestamp to avoid missing some events
+			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", previousRunStamp.Time, fetchError)
 		} else {
 			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, err)
 			previousError = err
 		}
+		previousFetchError = fetchError
 
 		logrus.WithField("uid", webhookRef.UID).WithError(err).Info("Iteration completed")
 	}
