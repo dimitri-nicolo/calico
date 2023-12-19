@@ -32,7 +32,7 @@ const (
 )
 
 func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.SecurityEventWebhook) {
-	logrus.WithField("uid", webhook.UID).Info("Webhook validation process started")
+	logEntry(webhook).Info("Webhook validation process started")
 
 	if webhook.Spec.State == api.SecurityEventWebhookStateDisabled {
 		s.preventRestarts[webhook.UID] = true
@@ -89,7 +89,7 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 	go s.webhookGoroutine(webhookCtx, config, parsedQuery, processFunc, webhookUpdateChan, webhook, rateLimiter)
 	s.updateWebhookHealth(webhook, "WebhookValidation", time.Now(), nil)
 
-	logrus.WithField("uid", webhook.UID).Info("Webhook validated and registered")
+	logEntry(webhook).Info("Webhook validated and registered")
 }
 
 func (s *ControllerState) parseConfig(ctx context.Context, config []api.SecurityEventWebhookConfigVar) (map[string]string, error) {
@@ -202,7 +202,7 @@ func (s *ControllerState) extractLabels(webhook api.SecurityEventWebhook) map[st
 
 func (s *ControllerState) debugProcessFunc(webhook *api.SecurityEventWebhook) ProcessFunc {
 	return func(context.Context, map[string]string, map[string]string, *lsApi.Event) error {
-		logrus.WithField("uid", webhook.UID).Info("Processing Security Events for a webhook in 'Debug' state")
+		logEntry(webhook).Info("Processing Security Events for a webhook in 'Debug' state")
 		return nil
 	}
 }

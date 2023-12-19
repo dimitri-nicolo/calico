@@ -51,7 +51,7 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.Cance
 		for {
 			select {
 			case webhook := <-w.webhookUpdatesChan:
-				logrus.WithField("webhook", webhook.Name).Debug("Updating webhook")
+				logEntry(webhook).Debug("Updating webhook")
 				if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
 					logrus.WithError(err).Warn("Unable to update SecurityEventWebhook definition")
 				}

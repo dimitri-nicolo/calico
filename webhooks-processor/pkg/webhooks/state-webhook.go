@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -25,8 +24,8 @@ func (s *ControllerState) webhookGoroutine(
 	rateLimiter RateLimiterInterface, // RateLimiter for this goroutine
 ) {
 	defer s.wg.Done()
-	defer logrus.WithField("uid", webhookRef.UID).Info("Webhook goroutine is terminating")
-	logrus.WithField("uid", webhookRef.UID).Info("Webhook goroutine started")
+	defer logEntry(webhookRef).Info("Webhook goroutine is terminating")
+	logEntry(webhookRef).Info("Webhook goroutine started")
 
 	var processingLock sync.Mutex
 
@@ -74,7 +73,7 @@ func (s *ControllerState) webhookGoroutine(
 			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", previousRunStamp.Time, err)
 		}
 
-		logrus.WithField("uid", webhookRef.UID).WithError(err).Info("Iteration completed")
+		logEntry(webhookRef).WithError(err).Info("Iteration completed")
 	}
 
 	tick := time.NewTicker(s.config.FetchingInterval)
@@ -90,7 +89,7 @@ func (s *ControllerState) webhookGoroutine(
 			if processingLock.TryLock() {
 				go eventProcessing()
 			} else {
-				logrus.WithField("uid", webhookRef.UID).Info("Still processing events")
+				logEntry(webhookRef).Info("Still processing events")
 			}
 		}
 	}
