@@ -206,7 +206,7 @@ require (
 	github.com/cnf/structhash v0.0.0-20201127153200-e1b16c1ebc08
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/containerd/console v1.0.3 // indirect
-	github.com/containerd/containerd v1.6.23 // indirect
+	github.com/containerd/containerd v1.6.26 // indirect
 	github.com/containerd/ttrpc v1.1.2 // indirect
 	github.com/corazawaf/libinjection-go v0.1.2 // indirect
 	github.com/coreos/go-iptables v0.6.0 // indirect
