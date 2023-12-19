@@ -42,7 +42,7 @@ func (s *ControllerState) WithConfig(config *ControllerConfig) *ControllerState 
 }
 
 func (s *ControllerState) IncomingWebhookUpdate(ctx context.Context, webhook *api.SecurityEventWebhook) {
-	logrus.WithField("uid", webhook.UID).Info("Processing incoming webhook update")
+	logEntry(webhook).Info("Processing incoming webhook update")
 
 	if trail, ok := s.webhooksTrail[webhook.UID]; ok {
 		specHash := string(structhash.Md5(webhook.Spec, 1))
@@ -50,12 +50,12 @@ func (s *ControllerState) IncomingWebhookUpdate(ctx context.Context, webhook *ap
 			trail.webhookUpdates <- webhook
 			return
 		}
-		logrus.WithField("uid", webhook.UID).Info("Webhook spec changed")
+		logEntry(webhook).Info("Webhook spec changed")
 		s.Stop(ctx, webhook)
 	}
 
 	if _, preventRestart := s.preventRestarts[webhook.UID]; preventRestart {
-		logrus.WithField("uid", webhook.UID).Info("Webhook restart prevented")
+		logEntry(webhook).Info("Webhook restart prevented")
 		delete(s.preventRestarts, webhook.UID)
 		return
 	}
@@ -67,7 +67,7 @@ func (s *ControllerState) Stop(ctx context.Context, webhook *api.SecurityEventWe
 	if trail, ok := s.webhooksTrail[webhook.UID]; ok {
 		trail.cancelFunc()
 		delete(s.webhooksTrail, webhook.UID)
-		logrus.WithField("uid", webhook.UID).Info("Webhook stopped")
+		logEntry(webhook).Info("Webhook stopped")
 	}
 }
 

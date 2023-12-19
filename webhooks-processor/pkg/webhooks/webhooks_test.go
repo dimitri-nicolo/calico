@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -20,10 +21,12 @@ import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/generic"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/slack"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/testutils"
 )
@@ -58,14 +61,12 @@ func TestWebhookHealthy(t *testing.T) {
 	wh := testutils.NewTestWebhook("test-wh")
 	require.Nil(t, wh.Status)
 
-	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Check that webhook status is eventually updated to healthy
 	require.Eventually(t, isHealthy(wh), time.Second, 10*time.Millisecond)
 	require.True(t, wh.Status[0].LastTransitionTime.After(startTime))
-
-	// And make sure we're still running
-	require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
 }
 
 func TestWebhookNonHealthyStates(t *testing.T) {
@@ -94,9 +95,6 @@ func TestWebhookNonHealthyStates(t *testing.T) {
 		// Check details
 		require.Contains(t, webhook.Status[0].Reason, reason)
 		require.Contains(t, webhook.Status[0].Message, message)
-
-		// And make sure we're still running
-		require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
 	}
 
 	t.Run("disabled", func(t *testing.T) {
@@ -156,7 +154,8 @@ func TestWebhookSent(t *testing.T) {
 	})
 
 	wh := testutils.NewTestWebhook("test-wh")
-	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Make sure the webhook eventually hits the test provider
 	require.Eventually(t, hasOneRequest(testState.TestSlackProvider()), testState.FetchingInterval*4, 10*time.Millisecond)
@@ -201,7 +200,8 @@ func TestSendsOneWebhookPerEvent(t *testing.T) {
 	})
 
 	wh := testutils.NewTestWebhook("test-wh")
-	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Make sure the webhook eventually hits the test provider
 	testProvider := testState.TestSlackProvider()
@@ -225,7 +225,8 @@ func TestEventsFetchedUsingNonOverlappingIntervals(t *testing.T) {
 	})
 
 	wh := testutils.NewTestWebhook("test-wh")
-	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Wait that we get a few fetch requests
 	require.Eventually(t, func() bool {
@@ -256,7 +257,8 @@ func TestTooManyEventsAreRateLimited(t *testing.T) {
 	// TODO: Add a check to test that the rate limiter is set to less than len(fetchedEvents)
 	// Right now it's hardcoded to 5 in the test setup (but that could and likely will change)
 	wh := testutils.NewTestWebhook("test-wh")
-	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Make sure the webhook eventually hits the test server
 	testProvider := testState.TestSlackProvider()
@@ -301,7 +303,8 @@ func TestGenericProvider(t *testing.T) {
 	require.Equal(t, wh.Spec.Config[0].Name, "url")
 	// Updating URL to point to the test server
 	wh.Spec.Config[0].Value = whUrl
-	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
 	// Make sure the webhook eventually hits the test provider
 	require.Eventually(t, func() bool { return len(requests) == 1 }, 5*time.Second, 10*time.Millisecond)
@@ -311,16 +314,17 @@ func TestGenericProvider(t *testing.T) {
 	require.Equal(t, "/test-hook", requests[0].URL)
 	// And check that we get a JSON of the original event
 	var whEvent lsApi.Event
-	err := json.Unmarshal(requests[0].Body, &whEvent)
+	err = json.Unmarshal(requests[0].Body, &whEvent)
 	require.NoError(t, err)
 	require.Equal(t, fetchedEvents[0], whEvent)
 }
 
 func TestBackoffOnInitialFailure(t *testing.T) {
+	const retryTimes int = 3
 	requests := []testutils.HttpRequest{}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Let's make the first request fail
-		if len(requests) == 0 {
+		// Let's make the first requests fail
+		if len(requests) < retryTimes {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 		fmt.Fprintln(w, "Does anyone read this?")
@@ -337,9 +341,14 @@ func TestBackoffOnInitialFailure(t *testing.T) {
 	defer ts.Close()
 
 	fetchedEvents := []lsApi.Event{newEvent(1)}
+	providers := DefaultProviders()
+	genericProviderConfig := providers[api.SecurityEventWebhookConsumerGeneric].Config()
+	genericProviderConfig.RetryTimes = uint(retryTimes)
+	genericProviderConfig.RetryDuration = 1 * time.Second
+	providers[api.SecurityEventWebhookConsumerGeneric] = generic.NewProvider(genericProviderConfig)
 	testState := NewTestState(func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
 		return fetchedEvents, nil
-	}, DefaultProviders())
+	}, providers)
 
 	SetupWithTestState(t, testState)
 
@@ -350,31 +359,156 @@ func TestBackoffOnInitialFailure(t *testing.T) {
 	require.Equal(t, wh.Spec.Config[0].Name, "url")
 	// Updating URL to point to the test server
 	wh.Spec.Config[0].Value = whUrl
-	testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: wh}
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
 
-	// We will get the first request that will be denied
-	require.Eventually(t, func() bool { return len(requests) == 1 }, 5*time.Second, 10*time.Millisecond)
-
-	// I thought we would update the health of the webhook to something that shows the error
-	// or the fact that the request is not going through but seems like we don't.
-	// TODO: Do we want to consider doing this?
-	// // and update the health of the webhook
-	// require.Eventually(t, func() bool { return !isHealthy(wh)() }, 5*time.Second, 10*time.Millisecond)
-	// require.Equal(t, "server doesn't like me :sob:", wh.Status[0].Message)
-
-	// Wait for the second request following the initial failure
-	require.Eventually(t, func() bool { return len(requests) == 2 }, 5*time.Second, 10*time.Millisecond)
+	// The health of the webhook is only updated to an error status after the maximum number of retries
+	// has been reached and we give up on that event.
+	require.Eventually(t, func() bool { return !isHealthy(wh)() }, 20*time.Second, 10*time.Millisecond)
+	require.Contains(t, wh.Status[0].Message, "unexpected response [500]:Does anyone read this?")
 
 	// And check that the data is as expected
 	require.Equal(t, "POST", requests[0].Method)
 	require.Equal(t, "/test-hook", requests[0].URL)
 	// And check that we get a JSON of the original event
 	var whEvent lsApi.Event
-	err := json.Unmarshal(requests[0].Body, &whEvent)
+	err = json.Unmarshal(requests[0].Body, &whEvent)
 	require.NoError(t, err)
 	require.Equal(t, fetchedEvents[0], whEvent)
 
-	// We could also check that the webhook remains healthy as per comment above...
+	// Eventually, the webhook gets back to healthy status as requests start to go through
+	require.Eventually(t, func() bool { return isHealthy(wh)() }, 5*time.Second, 10*time.Millisecond)
+}
+
+func TestWebhookErrorsDontDisappear(t *testing.T) {
+	providers := DefaultProviders()
+	genericProviderConfig := providers[api.SecurityEventWebhookConsumerGeneric].Config()
+	genericProviderConfig.RequestTimeout = 100 * time.Millisecond
+	genericProviderConfig.RetryTimes = 3
+	genericProviderConfig.RetryDuration = 1 * time.Second
+	providers[api.SecurityEventWebhookConsumerGeneric] = generic.NewProvider(genericProviderConfig)
+	shouldSendEvents := false
+	testState := NewTestState(func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+		if shouldSendEvents {
+			// Set to false so that we only do it once
+			return []lsApi.Event{{ID: "test", Description: "test", Severity: 3, Type: "runtime_security", Origin: "test"}}, nil
+		}
+		return []lsApi.Event{}, nil
+	}, providers)
+
+	SetupWithTestState(t, testState)
+
+	previousTime := time.Now()
+
+	// New webhook has no status
+	wh := testutils.NewTestWebhook("test-wh")
+	wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
+	// Use an invalid URL to generate an error
+	require.Equal(t, "url", wh.Spec.Config[0].Name)
+	wh.Spec.Config[0].Value = "http://test.com/does-not-exists"
+	require.Nil(t, wh.Status)
+
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
+
+	// Check that webhook status is eventually updated to healthy
+	require.Eventually(t, hasHealthStatus(wh, true), time.Second, 10*time.Millisecond)
+	require.True(t, wh.Status[0].LastTransitionTime.After(previousTime))
+	previousTime = wh.Status[0].LastTransitionTime.Time
+
+	// Let's return test events
+	shouldSendEvents = true
+	logrus.Debug("Setting shouldSendEvents to true")
+	// Wait for the status to go bad
+	require.Eventually(t, hasHealthStatus(wh, false), 20*time.Second, time.Second)
+	require.True(t, wh.Status[0].LastTransitionTime.After(previousTime))
+	previousError := wh.Status[0].Message
+	previousTime = wh.Status[0].LastTransitionTime.Time
+	require.Contains(t, previousError, "context deadline exceeded")
+
+	shouldSendEvents = false
+
+	// Wait for another round of processing (with no new events)
+	time.Sleep(testState.FetchingInterval * 2)
+
+	// And make sure that the previous error is still visible
+	require.Eventually(t, hasHealthStatus(wh, false), time.Second, 10*time.Millisecond)
+	require.Greater(t, wh.Status[0].LastTransitionTime.Time, previousTime)
+}
+
+func TestLinseedErrorHandling(t *testing.T) {
+	// In this test, we want to test that:
+	//  - Linseed query error (fetchError) gets cleared once issue is resolved
+	//  - A fetchError does not update the health status timestamp so that we don't skip any event once we recover
+	providers := DefaultProviders()
+	genericProviderConfig := providers[api.SecurityEventWebhookConsumerGeneric].Config()
+	genericProviderConfig.RequestTimeout = 100 * time.Millisecond
+	genericProviderConfig.RetryTimes = 3
+	genericProviderConfig.RetryDuration = 1 * time.Second
+	providers[api.SecurityEventWebhookConsumerGeneric] = generic.NewProvider(genericProviderConfig)
+
+	fetchError := errors.New("Failed to fetch events from Linseed")
+	queriedTimes := []map[string]time.Time{}
+	testState := NewTestState(func(ctx context.Context, query *query.Query, start, end time.Time) ([]lsApi.Event, error) {
+		times := make(map[string]time.Time)
+		times["start"] = start
+		times["end"] = end
+		queriedTimes = append(queriedTimes, times)
+		return []lsApi.Event{}, fetchError
+	}, providers)
+
+	SetupWithTestState(t, testState)
+
+	previousTime := time.Now()
+
+	// New webhook has no status
+	wh := testutils.NewTestWebhook("test-wh")
+	wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
+
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
+
+	// Check that webhook status is non-healthy because of a fetch error
+	require.Eventually(t, healthStatusIs(wh, false, fetchError.Error()), 5*time.Second, 10*time.Millisecond)
+	require.True(t, wh.Status[0].LastTransitionTime.After(previousTime))
+	previousTime = wh.Status[0].LastTransitionTime.Time
+
+	// Wait for 2 requests to fetch events for next test
+	var numFetchErrors int
+	require.Eventually(t, func() bool {
+		numFetchErrors = len(queriedTimes)
+		return numFetchErrors > 1
+	}, 5*time.Second, 10*time.Millisecond)
+
+	// Check that request following a fetchError used the same start time (so that we don't miss events)
+	require.Equal(t, queriedTimes[0]["start"], queriedTimes[1]["start"])
+	// But they should not have the same end time
+	require.NotEqual(t, queriedTimes[0]["end"], queriedTimes[1]["end"])
+
+	// Clear fetchError
+	fetchError = nil
+
+	// Wait for the status to become healthy
+	require.Eventually(t, hasHealthStatus(wh, true), 5*time.Second, time.Second)
+	require.True(t, wh.Status[0].LastTransitionTime.After(previousTime))
+
+	previousTime = wh.Status[0].LastTransitionTime.Time
+
+	// Wait for successful fetch after recovering form fetchError
+	require.Eventually(t, func() bool {
+		return wh.Status[0].LastTransitionTime.After(previousTime) &&
+			wh.Status[0].Status == "True"
+	}, 5*time.Second, time.Second)
+
+	// Check that request after recovering from a fetchError no longer has overlapping times
+	last := len(queriedTimes) - 1
+	// Expecting to have at least 3 requests at this stage (initial fetchError, transition to fix fetchError, next request with no fetchError)
+	require.Greater(t, last, 2)
+	// The start time should match the previous message's end time
+	require.NotEqual(t, queriedTimes[last]["start"], queriedTimes[last-1]["start"], queriedTimes)
+	require.Equal(t, queriedTimes[last]["start"], queriedTimes[last-1]["end"])
+	// But they should not have the same end time
+	require.NotEqual(t, queriedTimes[last]["end"], queriedTimes[last-1]["end"])
 }
 
 func newEvent(n int) lsApi.Event {
@@ -387,14 +521,27 @@ func newEvent(n int) lsApi.Event {
 	}
 }
 
-func isHealthy(webhook *api.SecurityEventWebhook) func() bool {
+func healthStatusIs(webhook *api.SecurityEventWebhook, status bool, message string) func() bool {
+	value := "False"
+	if status {
+		value = "True"
+	}
 	return func() bool {
 		return webhook != nil &&
 			webhook.Status != nil &&
 			len(webhook.Status) == 1 &&
 			webhook.Status[0].Type == "Healthy" &&
-			webhook.Status[0].Status == metav1.ConditionStatus("True")
+			webhook.Status[0].Status == metav1.ConditionStatus(value) &&
+			strings.Contains(webhook.Status[0].Message, message)
 	}
+}
+
+func hasHealthStatus(webhook *api.SecurityEventWebhook, status bool) func() bool {
+	return healthStatusIs(webhook, status, "")
+}
+
+func isHealthy(webhook *api.SecurityEventWebhook) func() bool {
+	return hasHealthStatus(webhook, true)
 }
 
 func hasOneRequest(provider *TestProvider) func() bool {
