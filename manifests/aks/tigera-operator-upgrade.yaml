@@ -40352,6 +40352,22 @@ rules:
       - list
       - watch
   - apiGroups:
+      - certificates.k8s.io
+    resources:
+      - certificatesigningrequests/approval
+      - certificatesigningrequests/status
+    verbs:
+      - update
+  - apiGroups:
+      - certificates.k8s.io
+    resourceNames:
+      - tigera.io/operator-signer
+    resources:
+      - signers
+    verbs:
+      - approve
+      - sign
+  - apiGroups:
       - storage.k8s.io
     resources:
       - csidrivers
