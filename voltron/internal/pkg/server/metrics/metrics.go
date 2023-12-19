@@ -116,7 +116,6 @@ func OnRequestStart(r *http.Request, authToken jwt.JWT) func(*httpsnoop.Metrics)
 	}
 
 	return func(snoopMetrics *httpsnoop.Metrics) {
-
 		if inflightErr == nil {
 			inflightMetric.Dec()
 		}
