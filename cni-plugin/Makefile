@@ -9,7 +9,15 @@ DEV_TAG_SUFFIX        ?=calient-0.dev
 # e.g., <registry>/<name>:<tag>
 CNI_PLUGIN_IMAGE ?=cni
 WINDOWS_IMAGE ?=cni-windows
-BUILD_IMAGES   ?=$(CNI_PLUGIN_IMAGE)
+
+# If this is a windows release build the windows image.  ARCHES will contain the values
+# in WINDOWS_VERSIONS (defined in metadata.mk), prefixed with "windows-".
+ifdef WINDOWS_RELEASE
+BUILD_IMAGES          ?=$(WINDOWS_IMAGE)
+ARCHES                ?= $(patsubst %,windows-%,$(WINDOWS_VERSIONS))
+else
+BUILD_IMAGES          ?=$(CNI_PLUGIN_IMAGE)
+endif
 
 ###############################################################################
 # include ../lib.Makefile

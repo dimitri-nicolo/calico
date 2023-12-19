@@ -11,9 +11,8 @@ NODE_IMAGE            ?=cnx-node
 # - EE: tigera/cnx-node-windows
 WINDOWS_IMAGE         ?=cnx-node-windows
 
-# If this is a windows release build the windows upgrade image.
-# ARCHES will contain the values in WINDOWS_VERSIONS, prefixed with "windows-".
-WINDOWS_VERSIONS      ?=1809 2004 20H2 ltsc2022
+# If this is a windows release build the windows image.  ARCHES will contain the values
+# in WINDOWS_VERSIONS (defined in metadata.mk), prefixed with "windows-".
 ifdef WINDOWS_RELEASE
 BUILD_IMAGES          ?=$(WINDOWS_IMAGE)
 ARCHES                ?= $(patsubst %,windows-%,$(WINDOWS_VERSIONS))
