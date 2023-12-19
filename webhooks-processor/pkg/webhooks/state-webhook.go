@@ -30,7 +30,6 @@ func (s *ControllerState) webhookGoroutine(
 
 	var processingLock sync.Mutex
 
-	var previousFetchError error
 	var previousError error
 
 	eventProcessing := func() {
@@ -50,9 +49,9 @@ func (s *ControllerState) webhookGoroutine(
 			return
 		}
 
-		events, fetchError := s.config.EventsFetchFunction(ctx, selector, previousRunStamp.Time, thisRunStamp)
-		var err error
-		if fetchError == nil {
+		events, err := s.config.EventsFetchFunction(ctx, selector, previousRunStamp.Time, thisRunStamp)
+		switch {
+		case err == nil && len(events) > 0:
 			labels := s.extractLabels(*webhookRef)
 			for _, event := range events {
 				if err = rateLimiter.Event(); err != nil {
@@ -62,21 +61,18 @@ func (s *ControllerState) webhookGoroutine(
 					break
 				}
 			}
-		}
-
-		// If we have a previous error and there is nothing new to process
-		if fetchError == nil && err == nil && previousFetchError == nil && previousError != nil && len(events) == 0 {
-			// We report the previous error but update the run timestamp
-			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, previousError)
-		} else if fetchError != nil {
-			// We should always report errors to fetch, even if it hides a previous processing error
-			// But we don't update the timestamp to avoid missing some events
-			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", previousRunStamp.Time, fetchError)
-		} else {
-			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, err)
+			// we have now processed events - either with or without processing error;
+			// we store the previous error value and update webhoook health:
 			previousError = err
+			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, err)
+		case err == nil && len(events) == 0:
+			// we have no error and there is nothing to process so we keep the previousError value
+			// and update the timestamp; the value of previousError is not important to us, we just keep it:
+			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, previousError)
+		default:
+			// we have encountered a Linseed fetch error - we log it and keep the previous timestamp value:
+			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", previousRunStamp.Time, err)
 		}
-		previousFetchError = fetchError
 
 		logrus.WithField("uid", webhookRef.UID).WithError(err).Info("Iteration completed")
 	}
