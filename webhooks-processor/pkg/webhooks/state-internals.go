@@ -110,15 +110,23 @@ func (s *ControllerState) parseConfig(ctx context.Context, config []api.Security
 }
 
 func (s *ControllerState) updateWebhookHealth(webhook *api.SecurityEventWebhook, reason string, timestamp time.Time, err error) {
-	logrus.WithFields(logrus.Fields{
+	var status metav1.ConditionStatus
+	var message string
+
+	logEntry := logrus.WithFields(logrus.Fields{
 		"webhook.Name": webhook.Name,
 		"reason":       reason,
 		"timestamp":    timestamp,
-	}).WithError(err).Debug("updateWebhookHealth update")
-	status, message := metav1.ConditionTrue, ConditionHealthyDesc
-	if err != nil {
+	}).WithError(err)
+
+	if err == nil {
+		logEntry.Debug("updateWebhookHealth update")
+		status, message = metav1.ConditionTrue, ConditionHealthyDesc
+	} else {
+		logEntry.Error("updateWebhookHealth update")
 		status, message = metav1.ConditionFalse, err.Error()
 	}
+
 	webhook.Status = []metav1.Condition{
 		{
 			Type:               ConditionHealthy,
