@@ -25,16 +25,25 @@ RUN mkdir /licenses
 COPY LICENSE /licenses
 
 FROM scratch as build
+ARG BIN_DIR
 
 COPY --from=ubi /licenses /licenses
 
-ARG BIN_DIR
-COPY ${BIN_DIR}/dikastes-amd64 /dikastes
-COPY ${BIN_DIR}/healthz-amd64 /healthz
+# Include libraries from UBI for dynamic linking.
+#
+# Copy the specific libraries; these were obtained by running 'ldd /dikastes'
+COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
+COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
+COPY --from=ubi /lib64/libresolv.so.2 /lib64/libresolv.so.2
+COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
 
 # Precreate the /var/run/dikastes directory so that we don't need any elevated
 # permission to create the directory at runtime.
 COPY --chown=10001 --from=ubi /tmp/dikastes /var/run/dikastes
+
+# Copy the binaries
+COPY ${BIN_DIR}/dikastes-amd64 /dikastes
+COPY ${BIN_DIR}/healthz-amd64 /healthz
 
 FROM scratch
 COPY --from=build / /
