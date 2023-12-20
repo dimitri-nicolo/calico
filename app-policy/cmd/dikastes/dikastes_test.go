@@ -126,6 +126,95 @@ func TestRunServer(t *testing.T) {
 	assert.Equal(t, 2, len(entries), "expected 2 logs")
 }
 
+func TestRunServerWithoutPolicySync(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	listenPath := filepath.Join(t.TempDir(), "dikastes.sock")
+	policySyncPath := filepath.Join(t.TempDir(), "nodeagent.sock")
+	wafLogFile := filepath.Join(t.TempDir(), "waf.log")
+
+	fps, err := fakepolicysync.NewFakePolicySync(policySyncPath)
+	if err != nil {
+		t.Fatalf("cannot setup policysync fake %v", err)
+		return
+	}
+	go fps.Serve(ctx)
+
+	config := flags.New()
+	args := []string{
+		"dikastes", "server",
+		"-log-level", "trace",
+		"-listen", listenPath,
+		"-waf-log-file", wafLogFile,
+		"-waf-enabled",
+		"-subscription-type", "per-pod-policies",
+	}
+	// Add the default embedded directives.
+	// e.g. -waf-directive="Include @coraza.conf-recommended", etc
+	args = append(
+		args,
+		testdata.DirectivesToCLI(testdata.DefaultEmbeddedDirectives)...,
+	)
+	if err := config.Parse(args); err != nil {
+		t.Fatalf("cannot parse config %v", err)
+		return
+	}
+	ready := make(chan struct{}, 1)
+	go runServer(ctx, config, ready)
+	<-ready
+
+	client, err := NewExtAuthzClient(ctx, listenPath)
+	if err != nil {
+		t.Fatal("cannot create client", err)
+		return
+	}
+
+	assert.Equal(t, fps.ActiveConnections(), 0, "expected 0 active connection with fake policy sync server")
+	requests := []struct {
+		*testutils.CheckRequestBuilder
+		expectedCode code.Code
+		expectedErr  error
+	}{
+		{testutils.NewCheckRequestBuilder(), code.Code_OK, nil},
+		{testutils.NewCheckRequestBuilder(
+			testutils.WithMethod("GET"),
+			testutils.WithHost("my.loadbalancer.address"),
+			testutils.WithPath("/cart?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user"),
+		), code.Code_PERMISSION_DENIED, nil},
+		{testutils.NewCheckRequestBuilder(
+			testutils.WithMethod("POST"),
+			testutils.WithHost("www.example.com"),
+			testutils.WithPath("/vulnerable.php?id=1' waitfor delay '00:00:10'--"),
+			testutils.WithScheme("https"),
+		), code.Code_PERMISSION_DENIED, nil},
+	}
+
+	for _, req := range requests {
+		resp, err := client.Check(ctx, req.Value())
+		assert.Nil(t, err, "error must not have occurred")
+		assert.Equal(t, req.expectedErr, err)
+		assert.Equal(t, req.expectedCode, code.Code(resp.Status.Code))
+	}
+
+	f, err := os.Open(wafLogFile)
+	assert.Nil(t, err, "error must not have occurred")
+	defer f.Close()
+
+	sc := jsonenc.NewDecoder(f)
+	entries := []v1.WAFLog{}
+	for sc.More() {
+		var log v1.WAFLog
+		err := sc.Decode(&log)
+		if err != nil {
+			t.Error("cannot decode log", err)
+			continue
+		}
+		entries = append(entries, log)
+	}
+	assert.Equal(t, 2, len(entries), "expected 2 logs")
+}
+
 func NewExtAuthzClient(ctx context.Context, addr string) (authzv3.AuthorizationClient, error) {
 	dialOpts := uds.GetDialOptionsWithNetwork("unix")
 	dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))

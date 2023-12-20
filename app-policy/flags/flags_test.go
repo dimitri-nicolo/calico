@@ -23,7 +23,7 @@ func TestFlagDefaults(t *testing.T) {
 		{config.ListenNetwork, "unix"},
 		{config.ListenAddress, "/var/run/dikastes/dikastes.sock"},
 		{config.DialNetwork, "unix"},
-		{config.DialAddress, "/var/run/nodeagent/socket"},
+		{config.DialAddress, ""},
 		{config.LogLevel, "info"},
 		{config.WAFEnabled, false},
 		{config.WAFDirectives.Value(), []string{}},

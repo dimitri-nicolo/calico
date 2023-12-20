@@ -36,9 +36,9 @@ func New() *Config {
 
 	fs.StringVar(&cfg.ListenAddress, "listen", "/var/run/dikastes/dikastes.sock", "Listen address")
 	fs.StringVar(&cfg.ListenNetwork, "listen-network", "unix", "Listen network e.g. tcp, unix")
-	fs.StringVar(&cfg.DialAddress, "dial", "/var/run/nodeagent/socket", "PolicySync address")
+	fs.StringVar(&cfg.DialAddress, "dial", "", "PolicySync address e.g. /var/run/nodeagent/socket")
 	fs.StringVar(&cfg.DialNetwork, "dial-network", "unix", "PolicySync network e.g. tcp, unix")
-	fs.StringVar(&cfg.LogLevel, "log-level", "info", "Log at specified level e.g. panic, fatal,info, debug, trace")
+	fs.StringVar(&cfg.LogLevel, "log-level", "info", "Log at specified level e.g. panic, fatal, info, debug, trace")
 	fs.BoolVar(&cfg.WAFEnabled, "waf-enabled", false, "Enable WAF.")
 	fs.StringVar(&cfg.WAFRulesetBaseDir, "waf-ruleset-base-dir", "/etc/modsecurity-ruleset", "Base directory for WAF rulesets.")
 	fs.Var(&cfg.WAFDirectives, "waf-directive", "Additional directives to specify for WAF (if enabled). Can be specified multiple times.")
