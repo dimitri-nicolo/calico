@@ -1029,6 +1029,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			)
 			dp.ipSets = append(dp.ipSets, ipSetsV6)
 			ipsetsManagerV6.AddDataplane(ipSetsV6)
+			bpfIPSets = ipSetsV6
 		} else {
 			ipSetsV4 := bpfipsets.NewBPFIPSets(
 				ipSetsConfigV4,
@@ -1040,6 +1041,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			)
 			dp.ipSets = append(dp.ipSets, ipSetsV4)
 			ipsetsManager.AddDataplane(ipSetsV4)
+			bpfIPSets = ipSetsV4
 		}
 		bpfRTMgr := newBPFRouteManager(&config, bpfMaps, dp.loopSummarizer)
 		dp.RegisterManager(bpfRTMgr)
