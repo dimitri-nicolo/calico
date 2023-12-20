@@ -17,10 +17,6 @@ ARG UBI_IMAGE
 
 FROM ${UBI_IMAGE} as ubi
 
-# Add in top-level license file
-RUN mkdir /licenses
-COPY LICENSE /licenses
-
 # Make sure the status file is owned by our user.
 RUN mkdir /status
 RUN touch /status/status.json && chown 999 /status/status.json
@@ -34,7 +30,6 @@ LABEL name="Calico Flannel migration controller" \
       description="Calico Flannel migration controller updates a flannel cluster to Calico" \
       maintainer="Song Jiang <song@tigera.io>"
 
-COPY --from=ubi /licenses /licenses
 COPY --from=ubi /status /status
 
 COPY --from=ubi /usr/include /usr/include

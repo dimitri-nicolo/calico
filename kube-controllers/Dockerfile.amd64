@@ -17,10 +17,6 @@ ARG UBI_IMAGE
 
 FROM ${UBI_IMAGE} as ubi
 
-# Add in top-level license file
-RUN mkdir /licenses
-COPY LICENSE /licenses
-
 # Run as a specific user
 # shadow-utils is required for adduser
 RUN microdnf install shadow-utils
@@ -46,7 +42,6 @@ LABEL name="Calico Kubernetes controllers" \
       description="Calico Kubernetes controllers monitor the Kubernetes API and perform actions based on cluster state" \
       maintainer="Casey Davenport <casey@tigera.io>"
 
-COPY --from=ubi /licenses /licenses
 COPY --from=ubi /profiles /profiles
 COPY --from=ubi /status /status
 

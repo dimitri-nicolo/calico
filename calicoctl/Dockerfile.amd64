@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Enterprise version is not Apache licensed and doesn't have a LICENSE file
-
 ARG UBI_IMAGE
 FROM ${UBI_IMAGE} as ubi
 

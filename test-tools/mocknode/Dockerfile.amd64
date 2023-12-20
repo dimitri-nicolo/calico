@@ -32,8 +32,6 @@ LABEL name="Calico mock node" \
       description="Calico mock node for scale testing" \
       maintainer="shaun@tigera.io"
 
-# Copy in the filesystem - this contains licenses, etc...
-COPY filesystem/licenses/ /licenses
 # And the mock-node itself...
 COPY bin/test-tools/mocknode-amd64 /usr/bin/mocknode
 CMD /usr/bin/mocknode

@@ -20,14 +20,8 @@ FROM ${UBI_IMAGE} as ubi
 RUN mkdir -p /tmp/dikastes
 RUN chmod 0777 /tmp/dikastes
 
-# Add in top-level license file
-RUN mkdir /licenses
-COPY LICENSE /licenses
-
 FROM scratch as build
 ARG BIN_DIR
-
-COPY --from=ubi /licenses /licenses
 
 # Include libraries from UBI for dynamic linking.
 #

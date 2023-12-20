@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # testing image - not for publication - contains added debug tools for troubleshooting / functional verification
 ARG UBI_IMAGE
 ARG ARCH=x86_64

@@ -140,12 +140,9 @@ RUN rm /etc/yum.repos.d/ubi.repo && \
     alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
     alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1
 
-# Copy in the filesystem - this contains licenses, etc...
-COPY filesystem/ /
 COPY bin/egressd-amd64 /egressd
 
 # Add symlink to modprobe where iptables expects it to be.
-# This has to come after copying over filesystem/, since that may overwrite /sbin depending on the base image.
 RUN test -f /sbin/modprobe || ln -s /usr/sbin/modprobe /sbin/modprobe
 
 # Clean out as many files as we can from the filesystem.  We no longer need dnf or the platform python install
