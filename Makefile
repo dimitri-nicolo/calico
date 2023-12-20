@@ -1,8 +1,5 @@
 PACKAGE_NAME = github.com/projectcalico/calico
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 include metadata.mk
 include lib.Makefile
 

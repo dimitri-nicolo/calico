@@ -14,8 +14,6 @@ BUILD_IMAGES          ?=$(ES_PROXY_IMAGE)
 ifeq ($(TESLA),true)
 	RELEASE_REGISTRIES    = gcr.io/tigera-tesla/tigera
 	BUILD_TAGS            ?= tesla
-	RELEASE_BRANCH_PREFIX = release-cloud
-	DEV_TAG_SUFFIX        = cloud-0.dev
 	IMAGETAG_PREFIX       ?= tesla
 endif
 

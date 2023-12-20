@@ -37,9 +37,6 @@ include ../metadata.mk
 ###############################################################################
 PACKAGE_NAME?=github.com/projectcalico/calico/felix
 
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
-
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 FELIX_IMAGE    ?=felix

@@ -5,9 +5,6 @@ SEMAPHORE_PROJECT_ID=""
 
 IMAGE_NAME  ?=mock-node
 BUILD_IMAGES          ?=$(IMAGE_NAME)
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-VALIDARCHES ?= amd64
 
 ###############################################################################
 # Shortcut targets

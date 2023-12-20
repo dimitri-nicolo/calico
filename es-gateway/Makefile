@@ -2,9 +2,6 @@ include ../metadata.mk
 
 PACKAGE_NAME    ?= github.com/projectcalico/calico/es-gateway
 
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
-
 ###############################################################################
 # Env vars related to building
 ###############################################################################

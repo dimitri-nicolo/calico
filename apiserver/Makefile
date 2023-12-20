@@ -6,9 +6,6 @@ LOCAL_CHECKS     = lint-cache-dir goimports
 # Used so semaphore commits generated files when pins are updated
 EXTRA_FILES_TO_COMMIT=*_generated.go *_generated.*.go
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 API_SERVER_IMAGE      ?=cnx-apiserver

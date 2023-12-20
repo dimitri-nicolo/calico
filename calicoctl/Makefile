@@ -5,9 +5,6 @@ PACKAGE_NAME = github.com/projectcalico/calico/calicoctl
 KUBE_APISERVER_PORT?=6443
 KUBE_MOCK_NODE_MANIFEST?=mock-node.yaml
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 CALICOCTL_IMAGE       ?=calicoctl

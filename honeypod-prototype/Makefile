@@ -8,8 +8,6 @@ PACKAGE_NAME ?= github.com/tigera/calico-private/honeypod-prototype
 HONEYPOD_IMAGE                      ?=honeypod
 HONEYPOD_EXP_SERVICE_IMAGE          ?=honeypod-exp-service
 BUILD_IMAGES                        ?=$(HONEYPOD_IMAGE) $(HONEYPOD_EXP_SERVICE_IMAGE)
-RELEASE_BRANCH_PREFIX               ?=release-calient
-DEV_TAG_SUFFIX                      ?=calient-0.dev
 
 ##############################################################################
 # Include ../lib.Makefile before anything else

@@ -13,8 +13,6 @@ TESLA ?= false
 ifeq ($(TESLA),true)
 	RELEASE_REGISTRIES    = gcr.io/tigera-tesla/tigera
 	BUILD_TAGS            ?= tesla
-	RELEASE_BRANCH_PREFIX = release-tesla
-	DEV_TAG_SUFFIX        = tesla-0.dev
 	IMAGETAG_PREFIX       ?= tesla
 endif
 

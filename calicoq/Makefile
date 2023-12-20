@@ -8,9 +8,6 @@ PACKAGE_NAME    ?= github.com/projectcalico/calico/calicoq
 CALICOQ_IMAGE         ?=calicoq
 BUILD_IMAGES          ?=$(CALICOQ_IMAGE)
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 LDFLAGS=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(GIT_VERSION) \
 	-X $(PACKAGE_NAME)/calicoq/commands.BUILD_DATE=$(DATE) \
 	-X $(PACKAGE_NAME)/calicoq/commands.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \

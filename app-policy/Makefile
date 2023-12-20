@@ -7,9 +7,6 @@ PACKAGE_NAME = github.com/projectcalico/calico/app-policy
 GENERATED_FILES=../felix/proto/felixbackend.pb.go proto/healthz.pb.go
 SRC_FILES=$(shell find . -name '*.go' |grep -v vendor) $(GENERATED_FILES)
 
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
-
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 DIKASTES_IMAGE ?=dikastes

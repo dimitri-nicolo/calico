@@ -9,9 +9,6 @@ CSI_IMAGE       ?=csi
 REGISTRAR_IMAGE ?=node-driver-registrar
 BUILD_IMAGES    ?=$(FLEXVOL_IMAGE) $(CSI_IMAGE) $(REGISTRAR_IMAGE)
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 ###############################################################################
 # Download and include ../lib.Makefile before anything else
 ###############################################################################
