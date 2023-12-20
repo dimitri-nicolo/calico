@@ -73,8 +73,7 @@ type store interface {
 }
 
 func NewIPSetsManager(name string, ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore store) *IPSetsManager {
-	ipsm := &IPSetsManager{
-		dataplanes:      []IPSetsDataplane{ipsets_},
+	m := &IPSetsManager{
 		maxSize:         maxIPSetSize,
 		lg:              log.WithField("name", name),
 		domainInfoStore: domainInfoStore,
@@ -83,8 +82,13 @@ func NewIPSetsManager(name string, ipsets_ IPSetsDataplane, maxIPSetSize int, do
 		domainSetIds:         make(map[string]set.Set[string]),
 		ignoredSetIds:        set.New[string](),
 	}
-	domainInfoStore.RegisterHandler(ipsm)
-	return ipsm
+
+	if ipsets_ != nil {
+		m.dataplanes = append(m.dataplanes, ipsets_)
+	}
+
+	domainInfoStore.RegisterHandler(m)
+	return m
 }
 
 func (m *IPSetsManager) AddDataplane(dp IPSetsDataplane) {
