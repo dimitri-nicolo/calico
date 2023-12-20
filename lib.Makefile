@@ -41,11 +41,11 @@ endif
 
 # If architectures cannot infer from Dockerfiles, set default supported architecture.
 ifeq ($(ARCHES),)
-	ARCHES=amd64 arm64 ppc64le s390x
+	ARCHES=amd64
 endif
 
 # list of arches *not* to build when doing *-all
-EXCLUDEARCH?=
+EXCLUDEARCH?=arm64 ppc64le s390x
 VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
 # BUILDARCH is the host architecture
