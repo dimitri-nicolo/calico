@@ -204,6 +204,184 @@ func TestMultipleFlows(t *testing.T) {
 	})
 }
 
+// TestSourceIPAndDestIPFlows tests that we return multiple flows properly with source IP and
+// destination IP
+func TestSourceIPAndDestIPFlows(t *testing.T) {
+	RunAllModes(t, "TestMultipleFlows", func(t *testing.T) {
+		// Both flows use the same cluster information.
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		// Template for flow logs batch #1.
+		bld := backendutils.NewFlowLogBuilder()
+		bld.WithType("wep").
+			WithSourceNamespace("tigera-operator").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("tigera-operator").
+			WithSourceIP("34.15.66.3").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		batch1 := populateFlowData(t, ctx, bld, client, clusterInfo)
+
+		// Template for flow logs batch #2.
+		bld2 := backendutils.NewFlowLogBuilder()
+		bld2.WithType("wep").
+			WithSourceNamespace("tigera-operator").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("tigera-operator").
+			WithSourceIP("192.168.66.3").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		batch2 := populateFlowData(t, ctx, bld2, client, clusterInfo)
+
+		// Template for flow logs batch #3.
+		bld3 := backendutils.NewFlowLogBuilder()
+		bld3.WithType("wep").
+			WithSourceNamespace("tigera-operator").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.9").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("tigera-operator").
+			WithSourceIP("192.168.66.3").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		batch3 := populateFlowData(t, ctx, bld3, client, clusterInfo)
+
+		// Merge all three intermediate flows to create the expected
+		// flow
+		exp1 := aggregate(batch1, batch2, batch3)
+
+		// Template for flow logs batch #4.
+		bld4 := backendutils.NewFlowLogBuilder()
+		bld4.WithType("wep").
+			WithSourceNamespace("default").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("my-deployment").
+			WithSourceIP("192.168.1.1").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		exp2 := populateFlowData(t, ctx, bld4, client, clusterInfo)
+
+		// Set time range so that we capture all the populated flow logs.
+		opts := v1.L3FlowParams{}
+		opts.TimeRange = &lmav1.TimeRange{}
+		opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+		opts.TimeRange.To = time.Now().Add(5 * time.Minute)
+
+		// Query for flows. There should be two flows from the populated data.
+		r, err := fb.List(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 2)
+		require.Nil(t, r.AfterKey)
+
+		// Assert that the flow data is populated correctly.
+		require.Equal(t, exp2, r.Items[0])
+		require.Equal(t, exp1, r.Items[1])
+	})
+}
+
+func aggregate(base v1.L3Flow, extras ...v1.L3Flow) v1.L3Flow {
+	result := base
+
+	sourceIps := make(map[string]struct{})
+	destinationIps := make(map[string]struct{})
+	slt := flows.NewLabelTracker()
+	dlt := flows.NewLabelTracker()
+
+	// Update trackers with label information.
+	for _, l := range result.SourceLabels {
+		for _, val := range l.Values {
+			slt.Add(l.Key, val.Value, val.Count)
+		}
+	}
+	for _, l := range result.DestinationLabels {
+		for _, val := range l.Values {
+			dlt.Add(l.Key, val.Value, val.Count)
+		}
+	}
+	addToSet(base.IPs.Source, sourceIps)
+	addToSet(base.IPs.Destination, destinationIps)
+	for _, flow := range extras {
+		addToSet(flow.IPs.Source, sourceIps)
+		addToSet(flow.IPs.Destination, destinationIps)
+		if result.HTTPStats != nil && flow.HTTPStats != nil {
+			result.HTTPStats.AllowedIn += flow.HTTPStats.AllowedIn
+			result.HTTPStats.DeniedIn += flow.HTTPStats.DeniedIn
+		}
+		if result.LogStats != nil && flow.LogStats != nil {
+			result.LogStats.Completed += flow.LogStats.Completed
+			result.LogStats.FlowLogCount += flow.LogStats.LogCount
+			result.LogStats.LogCount += flow.LogStats.LogCount
+			result.LogStats.Started += flow.LogStats.Started
+		}
+		if result.TrafficStats != nil && flow.TrafficStats != nil {
+			result.TrafficStats.BytesIn += flow.TrafficStats.BytesIn
+			result.TrafficStats.BytesOut += flow.TrafficStats.BytesOut
+			result.TrafficStats.PacketsIn += flow.TrafficStats.PacketsIn
+			result.TrafficStats.PacketsOut += flow.TrafficStats.PacketsOut
+		}
+		if result.TCPStats != nil && flow.TCPStats != nil {
+			result.TCPStats.MaxMinRTT += flow.TCPStats.MaxMinRTT
+			result.TCPStats.MaxSmoothRTT += flow.TCPStats.MaxSmoothRTT
+			result.TCPStats.MeanSendCongestionWindow += flow.TCPStats.MeanSendCongestionWindow
+			result.TCPStats.MeanMinRTT += flow.TCPStats.MeanMinRTT
+			result.TCPStats.MeanSmoothRTT += flow.TCPStats.MeanSmoothRTT
+			result.TCPStats.MeanMSS += flow.TCPStats.MeanMSS
+			result.TCPStats.MinSendCongestionWindow += flow.TCPStats.MinSendCongestionWindow
+			result.TCPStats.MinMSS += flow.TCPStats.MinMSS
+			result.TCPStats.LostPackets += flow.TCPStats.LostPackets
+			result.TCPStats.TotalRetransmissions += flow.TCPStats.TotalRetransmissions
+			result.TCPStats.UnrecoveredTo += flow.TCPStats.UnrecoveredTo
+		}
+
+		// Update trackers with label information.
+		for _, l := range flow.SourceLabels {
+			for _, val := range l.Values {
+				slt.Add(l.Key, val.Value, val.Count)
+			}
+		}
+		for _, l := range flow.DestinationLabels {
+			for _, val := range l.Values {
+				dlt.Add(l.Key, val.Value, val.Count)
+			}
+		}
+	}
+
+	result.SourceLabels = slt.Labels()
+	result.DestinationLabels = dlt.Labels()
+	result.IPs.Source = backendutils.Keys(sourceIps)
+	result.IPs.Destination = backendutils.Keys(destinationIps)
+
+	return result
+}
+
+func addToSet(values []string, set map[string]struct{}) {
+	for _, value := range values {
+		set[value] = struct{}{}
+	}
+}
+
 // TestFlowMultiplePolicies tests a flow that traverses multiple policies and ultimately
 // hits the default profile allow rule.
 func TestFlowMultiplePolicies(t *testing.T) {

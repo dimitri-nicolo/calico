@@ -177,6 +177,8 @@ func newFlowBackend(c lmaelastic.Client, singleIndex bool, options ...index.Opti
 
 	terms := []lmaelastic.AggTermInfo{
 		{Name: "dest_domains"},
+		{Name: "source_ip"},
+		{Name: "dest_ip"},
 	}
 
 	indexTemplate := index.FlowLogIndex(options...)
@@ -329,6 +331,10 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 
 	// Add in the destination domains.
 	flow.DestDomains = getDestDomainsFromAggregation(log, bucket.AggregatedTerms)
+
+	// Add source IPs and destination IPs
+	flow.IPs.Source = getValuesFromAggregation(log, bucket.AggregatedTerms, "source_ip")
+	flow.IPs.Destination = getValuesFromAggregation(log, bucket.AggregatedTerms, "dest_ip")
 
 	return &flow
 }
@@ -601,6 +607,27 @@ func getDestDomainsFromAggregation(log *logrus.Entry, terms map[string]*lmaelast
 	sort.Strings(domains)
 
 	return domains
+}
+
+// getValuesFromAggregation parses and sorts the values out from the
+// given AggregationSingleBucket into an array that can be sent back in the response.
+func getValuesFromAggregation(log *logrus.Entry, terms map[string]*lmaelastic.AggregatedTerm, resultKey string) []string {
+	values := []string{}
+	if terms, found := terms[resultKey]; found {
+		for k := range terms.Buckets {
+			key, ok := k.(string)
+			if !ok {
+				// This means the flow log is invalid so just skip it, otherwise a minor issue with a single flow
+				// could completely disable this endpoint.
+				log.WithField("key", key).Warningf("skipping value that failed to parse from %s", resultKey)
+				continue
+			}
+			values = append(values, strings.TrimSpace(key))
+		}
+	}
+	sort.Strings(values)
+
+	return values
 }
 
 // getPoliciesFromPolicyBucket parses the policy logs out from the given AggregationSingleBucket into a FlowResponsePolicy

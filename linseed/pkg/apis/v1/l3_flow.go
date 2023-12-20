@@ -147,6 +147,8 @@ type L3Flow struct {
 	// DestDomains are the destination domains of this flow
 	DestDomains []string `json:"dest_domains,omitempty"`
 
+	IPs IPs `json:"ips,omitempty"`
+
 	// DestinationLabels are the labels applied to the destination during the lifetime
 	// of this flow. Note that a single label may have had multiple values throughout this flow's life.
 	DestinationLabels []FlowLabels `json:"destination_labels,omitempty"`
@@ -169,6 +171,11 @@ type L3Flow struct {
 
 	// ProcessStats are process aggregated metrics generated from the traffic described by the L3 flows.
 	ProcessStats *ProcessStats `json:"process_stats,omitempty"`
+}
+
+type IPs struct {
+	Source      []string `json:"source"`
+	Destination []string `json:"destination"`
 }
 
 type Policy struct {

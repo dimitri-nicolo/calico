@@ -88,7 +88,7 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 			Type:      EndpointType(lsf.Key.Source.Type),
 			Name:      lsf.Key.Source.AggregatedName,
 			Namespace: lsf.Key.Source.Namespace,
-			IP:        nil, // TODO: We don't return this from Linseed!
+			IP:        getIPs(lsf.IPs.Source),
 			Port:      &srcPort,
 			Labels:    GetLinseedFlowLabels(lsf.SourceLabels),
 		},
@@ -96,7 +96,7 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 			Type:        EndpointType(lsf.Key.Destination.Type),
 			Name:        lsf.Key.Destination.AggregatedName,
 			Namespace:   lsf.Key.Destination.Namespace,
-			IP:          nil, // TODO: We don't return this from Linseed!
+			IP:          getIPs(lsf.IPs.Destination),
 			Port:        &dstPort,
 			Labels:      GetLinseedFlowLabels(lsf.DestinationLabels),
 			Domains:     strings.Join(lsf.DestDomains, ","),
@@ -110,16 +110,16 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 	// Set IP version based on source IP, defaulting to v4.
 	ipVersion := 4
 	if flow.Source.IP != nil {
-		ipVersion = flow.Source.IP.Version()
+		ipVersion = *getVersion(flow.Source.IP)
 	} else if flow.Destination.IP != nil {
-		ipVersion = flow.Source.IP.Version()
+		ipVersion = *getVersion(flow.Destination.IP)
 	}
 	flow.IPVersion = &ipVersion
 
 	return flow
 }
 
-// GetFlowEndpointLabels extracts the flow endpoint labels from the composite aggregation key.
+// GetLinseedFlowLabels extracts the flow endpoint labels from the composite aggregation key.
 func GetLinseedFlowLabels(labels []lapi.FlowLabels) map[string]string {
 	// Find the most frequently seen label value.
 	l := make(map[string]string)
@@ -134,6 +134,40 @@ func GetLinseedFlowLabels(labels []lapi.FlowLabels) map[string]string {
 		l[labelKey.Key] = val
 	}
 	return l
+}
+
+// getIPs will extract net.IP from raw string
+func getIPs(rawIPs []string) []*net.IP {
+	var ips []*net.IP
+	for _, raw := range rawIPs {
+		ip := net.ParseIP(raw)
+		ips = append(ips, ip)
+	}
+	return ips
+}
+
+// getVersion will return the ip version across all IPs
+// if this version is consistent or nil (marking it as unknown)
+func getVersion(ips []*net.IP) *int {
+
+	if len(ips) == 0 {
+		return nil
+	}
+
+	if len(ips) == 1 {
+		version := ips[0].Version()
+		return &version
+	}
+
+	version := ips[0].Version()
+
+	for _, ip := range ips {
+		if version != ip.Version() {
+			return nil
+		}
+	}
+
+	return &version
 }
 
 func GetPolicyHits(pols []lapi.Policy) []PolicyHit {
@@ -197,7 +231,7 @@ type FlowEndpointData struct {
 	Labels map[string]string
 
 	// IP, or nil if unknown.
-	IP *net.IP
+	IP []*net.IP
 
 	// Domains.
 	Domains string

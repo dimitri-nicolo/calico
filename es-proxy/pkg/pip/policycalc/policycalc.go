@@ -362,7 +362,7 @@ func (fp *policyCalculator) newFlowCache(flow *api.Flow) *flowCache {
 	if flow.Destination.Labels != nil {
 		flowCache.destination.selectors = fp.CreateSelectorCache()
 	}
-	flowCache.policies = make(map[string]api.ActionFlag)
+	flowCache.policies = make(map[string]actions)
 	return flowCache
 }
 

@@ -71,6 +71,10 @@ func flow(reporter, action, protocol string, source, dest epData, policies ...st
 				Port:           int64(dest.Port),
 			},
 		},
+		IPs: lapi.IPs{
+			Source:      []string{"0.0.0.0"},
+			Destination: []string{"0.0.0.0"},
+		},
 		LogStats: &lapi.LogStats{
 			FlowLogCount: 1,
 		},

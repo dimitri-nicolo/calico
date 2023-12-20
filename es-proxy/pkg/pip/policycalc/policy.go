@@ -66,9 +66,10 @@ func (p *CompiledPolicy) Applies(flow *api.Flow, cache *flowCache) MatchType {
 //   - It returns a set of possible actions for this policy - a combination of allow, deny, pass or no-match.
 //   - It also uses the flow log to validate or provide certainty with the calculation, so the response may contain
 //     additional bits that pertain to the flow log value.
-func (c *CompiledPolicy) Action(flow *api.Flow, cache *flowCache) api.ActionFlag {
+func (c *CompiledPolicy) Action(flow *api.Flow, cache *flowCache) (api.ActionFlag, *int) {
 	var exact bool
 	var flagsThisPolicy api.ActionFlag
+	var ruleIndex *int
 loop:
 	for i := range c.Rules {
 		log.Debugf("Processing rule %d, action flags %d", i, c.Rules[i].ActionFlag)
@@ -79,6 +80,7 @@ loop:
 			log.Debug("Rule matches exactly")
 			flagsThisPolicy |= c.Rules[i].ActionFlag
 			exact = true
+			ruleIndex = &i
 			break loop
 		case MatchTypeUncertain:
 			// If the match type is unknown, then at this point we bifurcate by assuming we both matched and did not
@@ -97,7 +99,7 @@ loop:
 	}
 
 	log.Debugf("Policy action flags calculated %d", flagsThisPolicy)
-	return flagsThisPolicy
+	return flagsThisPolicy, ruleIndex
 }
 
 // compilePolicy compiles the Calico v3 policy resource into separate ingress and egress CompiledPolicy structs.
