@@ -1,0 +1,13 @@
+- name: es-gateway
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd es-gateway
+    jobs:
+      - name: es-gateway tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci

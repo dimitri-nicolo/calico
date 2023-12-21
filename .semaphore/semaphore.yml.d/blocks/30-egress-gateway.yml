@@ -1,0 +1,13 @@
+- name: egress-gateway
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd egress-gateway
+    jobs:
+      - name: make ci
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci

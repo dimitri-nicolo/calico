@@ -1,0 +1,13 @@
+- name: es-proxy
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/es-proxy/', '/api/', '/compliance/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd es-proxy
+    jobs:
+      - name: es-proxy tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci

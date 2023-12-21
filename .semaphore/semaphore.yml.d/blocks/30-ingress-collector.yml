@@ -1,0 +1,13 @@
+- name: ingress-collector
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd ingress-collector
+    jobs:
+      - name: ingress-collector tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
