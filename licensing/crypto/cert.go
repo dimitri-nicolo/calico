@@ -14,19 +14,14 @@ import (
 )
 
 const (
-	randSerialSeed = 9223372036854775807
-
-	CertCommonName = "tigera.io"
-
-	CertOrgName = "Tigera Inc."
-
-	CertTigeraDomain = "https://tigera.io"
-
+	CertCommonName      = "tigera.io"
+	CertEmailAddress    = "licensing@tigera.io"
 	CertLicensingDomain = "licensing.tigera.io"
+	CertOrgName         = "Tigera Inc."
+	CertTigeraDomain    = "https://tigera.io"
+	CertType            = "CERTIFICATE"
 
-	CertEmailAddress = "licensing@tigera.io"
-
-	CertType = "CERTIFICATE"
+	randSerialSeed = 9223372036854775807
 )
 
 // Generatex509Cert generates an x.509 certificate with start and expiration time
@@ -88,8 +83,9 @@ func SaveCertToFile(derBytes []byte, filePath string) error {
 
 	defer certCerFile.Close()
 
-	certCerFile.Write(derBytes)
-
+	if _, err = certCerFile.Write(derBytes); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -100,12 +96,13 @@ func SaveCertAsPEM(derBytes []byte, filePath string) error {
 	}
 	defer certPEMFile.Close()
 
-	pem.Encode(certPEMFile,
+	if err := pem.Encode(certPEMFile,
 		&pem.Block{
 			Type:  CertType,
 			Bytes: derBytes,
-		})
-
+		}); err != nil {
+		return err
+	}
 	return nil
 }
 
