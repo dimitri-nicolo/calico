@@ -124,7 +124,7 @@ run-prometheus-service-proxy:
 .PHONY: ci
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
-ci: clean image-all static-checks ut fv
+ci: clean static-checks image ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common

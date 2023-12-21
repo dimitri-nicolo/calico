@@ -127,7 +127,7 @@ MOCKERY_FILE_PATHS= \
 .PHONY: ci cd
 
 ## run CI cycle - build, test, etc.
-ci: clean static-checks ut
+ci: clean static-checks image ut
 
 ## Deploy images to registry
 cd: image-all cd-common

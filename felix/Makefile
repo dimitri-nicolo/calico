@@ -70,8 +70,8 @@ include ../lib.Makefile
 
 ifeq ($(ARCH),arm64)
 # Required for eBPF support in ARM64.
-# We need to force ARM64 build image to be used in a crosscompilation run.
-CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
+# We need to force ARM64 build image to be used in a cross-compilation run.
+CALICO_BUILD:=$(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(ARCH)
 DOCKER_GO_BUILD:=$(DOCKER_RUN) $(CALICO_BUILD)
 endif
 
@@ -566,7 +566,7 @@ gen-files: protobuf bpf/asm/opcode_string.go
 ###############################################################################
 .PHONY: ci cd
 
-ci: mod-download image-all ut
+ci: clean static-checks image ut
 ifeq (,$(filter fv, $(EXCEPT)))
 	@$(MAKE) fv
 endif
@@ -576,7 +576,7 @@ ifeq (,$(filter k8sfv-test, $(EXCEPT)))
 endif
 
 ## Deploy images to registry
-cd: cd-common
+cd: image-all cd-common
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)

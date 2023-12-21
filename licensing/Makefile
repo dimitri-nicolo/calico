@@ -82,4 +82,4 @@ ut: $(SRC_FILES)
 fv st:
 	@echo "No FVs or STs available"
 
-ci: test
+ci: clean static-checks build test

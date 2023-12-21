@@ -61,8 +61,8 @@ endif
 # Set the platform correctly for building docker images.
 ifeq ($(ARCH),arm64)
 # Required for eBPF support in ARM64.
-# We need to force ARM64 build image to be used in a crosscompilation run.
-CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
+# We need to force ARM64 build image to be used in a cross-compilation run.
+CALICO_BUILD:=$(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(ARCH)
 endif
 
 ###############################################################################
@@ -561,10 +561,10 @@ st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: static-checks ut image-all st
+ci: clean static-checks image ut st
 
 ## Deploys images to registry
-cd: cd-common release-windows
+cd: image-all cd-common release-windows
 
 .PHONY: node-test-at
 # Run docker-image acceptance tests

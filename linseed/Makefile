@@ -185,7 +185,7 @@ build-tests: $(shell find ./fv -type f -name '*.go' -print)
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks test
+ci: clean static-checks image test
 
 ## Deploys images to registry
 cd: image-all cd-common

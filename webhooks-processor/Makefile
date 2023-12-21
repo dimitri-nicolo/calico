@@ -91,4 +91,6 @@ clean:
 # SEMAPHORE
 ###############################################################################
 .PHONY: ci
-ci: clean static-checks test
+ci: clean static-checks image test
+
+cd: image-all cd-common

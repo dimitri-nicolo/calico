@@ -160,7 +160,7 @@ ut combined.coverprofile: $(SRC_FILES)
 version: image
 	docker run --rm $(TYPHA_IMAGE):latest-$(ARCH) calico-typha --version
 
-ci: mod-download image-all version static-checks ut
+ci: version static-checks image ut
 ifeq (,$(filter k8sfv-test, $(EXCEPT)))
 	@$(MAKE) k8sfv-test
 endif

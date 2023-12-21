@@ -240,7 +240,7 @@ stop-kubernetes-master:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: mod-download build-all static-checks test
+ci: clean static-checks image test
 
 ###############################################################################
 # CD

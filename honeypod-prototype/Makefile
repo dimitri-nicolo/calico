@@ -61,7 +61,7 @@ clean:
 ###############################################################################
 .PHONY: cd ci
 
-ci: image
+ci: clean image
 
 ## Deploys images to registry
 cd: image-all cd-common

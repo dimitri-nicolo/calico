@@ -67,10 +67,10 @@ TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
 
 .PHONY: ci
 ## Run what CI runs
-ci: clean static-checks fv ut st
+ci: clean static-checks image test
 
 ## Deploys images to registry
-cd: image cd-common
+cd: image-all cd-common
 
 $(TOOLING_IMAGE_CREATED): Dockerfile-testenv
 	$(DOCKER_BUILD) --cpuset-cpus 0 -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv .

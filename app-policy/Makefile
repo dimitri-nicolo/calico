@@ -35,6 +35,12 @@ CONTAINER_MARKER=$(CONTAINER_CREATED)
 BINDIR=bin
 endif
 
+# Set the platform correctly for building docker images.
+ifeq ($(ARCH),arm64)
+# We need to force ARM64 build image to be used in a cross-compilation run.
+CALICO_BUILD:=$(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(ARCH)
+endif
+
 # Shortcut targets
 default: build
 
@@ -62,7 +68,6 @@ clean-generated:
 ###############################################################################
 # Building the binary
 ###############################################################################
-
 .PHONY: build-all
 ## Build the binaries for all architectures and platforms
 $(VALIDARCHES):
@@ -72,7 +77,7 @@ build-all: $(VALIDARCHES)
 
 .PHONY: build
 ## Build the binary for the current architecture and platform
-build: 
+build: register
 	$(MAKE) $(BINDIR)/dikastes-$(ARCH) ARCH=$(ARCH)
 	$(MAKE) $(BINDIR)/healthz-$(ARCH) ARCH=$(ARCH)
 
@@ -162,7 +167,7 @@ ut-exec:
 ###############################################################################
 
 .PHONY: ci
-ci: mod-download build-all check-generated-files static-checks ut
+ci: check-generated-files static-checks image ut
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files

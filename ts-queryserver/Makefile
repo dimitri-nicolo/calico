@@ -97,7 +97,7 @@ MOCKERY_FILE_PATHS= \
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean image static-checks ut fv
+ci: clean static-checks image ut fv
 
 ## Deploys images to registry
-cd: image cd-common
+cd: image-all cd-common

@@ -109,7 +109,7 @@ fv:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean image static-checks ut fv
+ci: clean static-checks image ut fv
 
 ## Deploys images to registry
-cd: image cd-common
+cd: image-all cd-common

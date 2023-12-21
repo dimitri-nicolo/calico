@@ -179,7 +179,7 @@ fv st:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download build-all clean-registrar static-checks ut
+ci: clean clean-registrar static-checks image ut
 
 ###############################################################################
 # CD
