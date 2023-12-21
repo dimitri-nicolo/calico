@@ -296,7 +296,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 				// error, will not block
 				return
 			default:
-				log.Errorf("accepting tunnel failed: %s", err)
+				log.Warnf("accepting tunnel failed: %s", err)
 				continue
 			}
 		}
