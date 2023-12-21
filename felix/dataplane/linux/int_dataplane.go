@@ -1042,20 +1042,21 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.ipSets = append(dp.ipSets, ipSetsV4)
 			ipsetsManager.AddDataplane(ipSetsV4)
 			bpfIPSets = ipSetsV4
+
+			// Create an 'ipset' to represent trusted DNS servers.
+			trustedDNSServers := []string{}
+			for _, serverPort := range config.RulesConfig.DNSTrustedServers {
+				trustedDNSServers = append(trustedDNSServers,
+					fmt.Sprintf("%v,udp:%v", serverPort.IP, serverPort.Port))
+			}
+			ipSetsV4.AddOrReplaceIPSet(
+				ipsets.IPSetMetadata{SetID: bpfipsets.TrustedDNSServersName, Type: ipsets.IPSetTypeHashIPPort},
+				trustedDNSServers,
+			)
+
 		}
 		bpfRTMgr := newBPFRouteManager(&config, bpfMaps, dp.loopSummarizer)
 		dp.RegisterManager(bpfRTMgr)
-
-		// Create an 'ipset' to represent trusted DNS servers.
-		trustedDNSServers := []string{}
-		for _, serverPort := range config.RulesConfig.DNSTrustedServers {
-			trustedDNSServers = append(trustedDNSServers,
-				fmt.Sprintf("%v,udp:%v", serverPort.IP, serverPort.Port))
-		}
-		ipSetsV4.AddOrReplaceIPSet(
-			ipsets.IPSetMetadata{SetID: bpfipsets.TrustedDNSServersName, Type: ipsets.IPSetTypeHashIPPort},
-			trustedDNSServers,
-		)
 
 		// Forwarding into an IPIP tunnel fails silently because IPIP tunnels are L3 devices and support for
 		// L3 devices in BPF is not available yet.  Disable the FIB lookup in that case.
