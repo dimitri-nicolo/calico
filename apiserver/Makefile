@@ -119,7 +119,7 @@ lint-cache-dir:
 
 .PHONY: ut
 ut: lint-cache-dir run-etcd
-	$(DOCKER_RUN) $(CALICO_BUILD) \
+	$(DOCKER_RUN) -v $(SECRETS_PATH):/home/user/secrets  $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
