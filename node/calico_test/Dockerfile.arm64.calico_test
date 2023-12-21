@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-#
+
 ### calico/test
 # This image is used by various calico repositories and components to run UTs
 # and STs. It has libcalico, nose, and other common python libraries

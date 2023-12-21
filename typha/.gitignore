@@ -52,7 +52,4 @@ htmlcov/
 /k8sfv/output/
 /report/*.xml
 
-# Copied in as part of the build.
-docker-image/LICENSE
-
 Makefile.common*

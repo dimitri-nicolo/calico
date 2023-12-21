@@ -22,11 +22,6 @@ ENV TINI_VERSION v0.18.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static-amd64 /sbin/tini
 RUN chmod +x /sbin/tini
 
-# Add in top-level license file
-RUN mkdir /licenses
-COPY licenses /licenses
-COPY LICENSE /licenses
-
 FROM scratch
 ARG GIT_VERSION
 LABEL name="Calico Typha" \
@@ -38,7 +33,6 @@ LABEL name="Calico Typha" \
       maintainer="Shaun Crampton <shaun@tigera.io>"
 
 COPY --from=ubi /sbin/tini /sbin/tini
-COPY --from=ubi /licenses /licenses
 
 COPY --from=ubi /usr/include /usr/include
 

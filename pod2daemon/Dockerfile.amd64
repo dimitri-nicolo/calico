@@ -20,9 +20,6 @@ COPY flexvol/docker/clean.sh /usr/local/bin/clean.sh
 COPY flexvol/docker/flexvol.sh /usr/local/bin/flexvol.sh
 RUN touch /in-the-container
 
-RUN mkdir /licenses
-COPY LICENSE /licenses
-
 RUN microdnf upgrade
 
 SHELL ["/bin/bash", "-c"]
@@ -41,7 +38,6 @@ LABEL name="Calico FlexVolume driver installer" \
       description="Calico FlexVolume driver installer to setup secure connections from Kubernetes pods to local daemons" \
       maintainer="Laurence Man <laurence@tigera.io>"
 
-COPY --from=ubi /licenses /licenses
 COPY --from=ubi /bin /bin
 COPY --from=ubi /usr/bin /usr/bin
 COPY --from=ubi /usr/local/bin/flexvol.sh /usr/local/bin/flexvol.sh

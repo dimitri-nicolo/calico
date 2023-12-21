@@ -122,7 +122,6 @@ TYPHA_IMAGE_ID=$(shell docker images -q $(TYPHA_IMAGE_WITH_TAG))
 # missing from docker.
 $(TYPHA_CONTAINER_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
                             $(BINDIR)/wrapper-$(ARCH) \
-                            LICENSE docker-image/licenses/* \
                             docker-image/Dockerfile* \
                             docker-image/nsswitch.conf \
                             docker-image/typha.cfg \
@@ -132,14 +131,12 @@ $(TYPHA_CONTAINER_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/calico-typha-$(ARCH) docker-image/bin/
 	cp $(BINDIR)/wrapper-$(ARCH) docker-image/bin/
-	cp LICENSE docker-image/
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(TYPHA_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $(TYPHA_CONTAINER_CREATED)
 
 $(TYPHA_CONTAINER_FIPS_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
                                  $(BINDIR)/wrapper-$(ARCH) \
-                                 LICENSE docker-image/licenses/* \
                                  docker-image/Dockerfile* \
                                  docker-image/nsswitch.conf \
                                  docker-image/typha.cfg \
@@ -149,7 +146,6 @@ $(TYPHA_CONTAINER_FIPS_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/calico-typha-$(ARCH) docker-image/bin/
 	cp $(BINDIR)/wrapper-$(ARCH) docker-image/bin/
-	cp LICENSE docker-image/
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(TYPHA_IMAGE):latest-fips-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $(TYPHA_CONTAINER_FIPS_CREATED)
