@@ -217,6 +217,13 @@ blocks:
       - name: make ci
         commands:
           - ../.semaphore/run-and-monitor make-ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: API
   run:
     when: "true or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -249,6 +256,13 @@ blocks:
       - name: app-policy tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: calicoctl
   run:
     when: "true or change_in(['/*', '/calicoctl/', '/libcalico-go/', '/api/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -262,6 +276,13 @@ blocks:
       - name: calicoctl tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: cni-plugin
   run:
     when: "true or change_in(['/*', '/cni-plugin/', '/libcalico-go/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -275,6 +296,13 @@ blocks:
       - name: cni-plugin tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
       - name: build windows cni-plugin images
         commands:
           - ../.semaphore/run-and-monitor ci.log make image-windows
@@ -617,6 +645,13 @@ blocks:
       - name: "kube-controllers: tests"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
     epilogue:
       always:
         commands:
@@ -656,6 +691,19 @@ blocks:
       - name: "Node: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor image-$ARCH.log make image ARCH=$ARCH
+      - name: "Build Windows archive"
+        commands:
+          - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
+      - name: "Build Windows image"
+        commands:
+          - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
     epilogue:
       always:
         commands:
@@ -696,27 +744,6 @@ blocks:
       - name: google-service-account-for-gce
       - name: tigera-dev-ci-pull-credentials
       - name: test-customer-license
-
-- name: "Node: multi-arch builds"
-  run:
-    when: "change_in(['/felix/', '/confd/', '/node/'])"
-  dependencies:
-    - "Node: Build"
-  task:
-    agent:
-      machine:
-        type: e1-standard-4
-        os_image: ubuntu2004
-    prologue:
-      commands:
-        - cd node
-    jobs:
-      - name: "Build Windows archive"
-        commands:
-          - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
-      - name: "Build Windows image"
-        commands:
-          - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
 - name: pod2daemon
   run:
     when: "true or change_in(['/*', '/pod2daemon/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -730,6 +757,13 @@ blocks:
       - name: pod2daemon tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: Typha
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -747,6 +781,13 @@ blocks:
       - name: "Typha: UT and FV tests"
         commands:
           - ../.semaphore/run-and-monitor make-ci.log make ci EXCEPT=k8sfv-test
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
     epilogue:
       always:
         commands:
@@ -778,6 +819,13 @@ blocks:
       - name: make ci
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: compliance
   run:
     when: "true or change_in(['/*', '/compliance/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -795,6 +843,13 @@ blocks:
       - name: compliance tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: deep-packet-inspection
   run:
     when: "true or change_in(['/*', '/deep-packet-inspection/', '/api/', '/libcalico-go/', '/lma/', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -808,6 +863,13 @@ blocks:
       - name: deep-packet-inspection tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: egress-gateway
   run:
     when: "true or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -821,6 +883,14 @@ blocks:
       - name: make ci
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          # It is non-trivial to build component image so use "make image" here.
+          - ../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
 - name: es-gateway
   run:
     when: "true or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -834,6 +904,13 @@ blocks:
       - name: es-gateway tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: es-proxy
   run:
     when: "true or change_in(['/*', '/es-proxy/', '/api/', '/compliance/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -847,6 +924,13 @@ blocks:
       - name: es-proxy tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: firewall-integration
   run:
     when: "true or change_in(['/*', '/firewall-integration/', '/api/', '/compliance/', '/kube-controllers/', '/libcalico-go/', '/lma/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -860,6 +944,13 @@ blocks:
       - name: firewall-integration tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: honeypod-controller
   run:
     when: "true or change_in(['/*', '/honeypod-controller/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -873,6 +964,14 @@ blocks:
       - name: honeypod-controller tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          # It is non-trivial to build component image so use "make image" here.
+          - ../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
 - name: honeypod-prototype
   run:
     when: "true or change_in(['/*', '/honeypod-prototype/'])"
@@ -886,6 +985,14 @@ blocks:
       - name: honeypod-prototype tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          # Only "make image" is available for honeypod.
+          - ../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
 - name: ingress-collector
   run:
     when: "true or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -899,6 +1006,13 @@ blocks:
       - name: ingress-collector tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: intrusion-detection-controller
   run:
     when: "true or change_in(['/*', '/intrusion-detection-controller/', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -912,6 +1026,13 @@ blocks:
       - name: intrusion-detection-controller tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: l7-collector
   run:
     when: "true or change_in(['/*', '/l7-collector/', '/libcalico-go/lib/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -925,6 +1046,13 @@ blocks:
       - name: l7-collector tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: license-agent
   run:
     when: "true or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -938,6 +1066,13 @@ blocks:
       - name: License Agent tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: licensing
   run:
     when: "true or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -951,6 +1086,13 @@ blocks:
       - name: Licensing tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: linseed
   run:
     when: "true or change_in(['/*', '/linseed/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -968,6 +1110,13 @@ blocks:
       - name: linseed tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: lma
   run:
     when: "true or change_in(['/*', '/lma/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -994,6 +1143,13 @@ blocks:
       - name: packetcapture tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: policy-recommendation
   run:
     when: "true or change_in(['/*', '/policy-recommendation/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1007,6 +1163,13 @@ blocks:
       - name: policy-recommendation tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: prometheus-service
   run:
     when: "true or change_in(['/*', '/prometheus-service/', 'libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1020,6 +1183,13 @@ blocks:
       - name: prometheus-service tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: queryserver
   run:
     when: "true or change_in(['/*', '/ts-queryserver/', '/api/', '/calicoctl/', '/felix/', '/lma/', '/libcalico-go/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1033,6 +1203,13 @@ blocks:
       - name: queryserver tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: voltron
   run:
     when: "true or change_in(['/*', '/voltron/', '/api/', '/libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1046,6 +1223,13 @@ blocks:
       - name: voltron tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: webhooks-processor
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/webhooks-processor/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1063,6 +1247,13 @@ blocks:
       - name: webhooks processor tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: selinux
   run:
     when: "true or change_in(['/selinux/'])"
