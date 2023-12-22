@@ -181,7 +181,7 @@ bin/calico-felix-$(ARCH): $(LIBBPF_A) $(SRC_FILES) ../go.mod
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, $(PACKAGE_NAME)/cmd/calico-felix, $@)
 else
-ifeq ($(ARCH),amd64)
+ifeq ($(ARCH), $(filter $(ARCH),amd64 arm64))
 	$(call build_cgo_binary, $(PACKAGE_NAME)/cmd/calico-felix, $@)
 else
 	$(call build_binary, $(PACKAGE_NAME)/cmd/calico-felix, $@)

@@ -45,6 +45,8 @@ CFLAGS += -I/usr/include/$(TRIPLET)
 
 ifeq ($(ARCH),amd64)
 	CFLAGS += -D__TARGET_ARCH_x86
+else ifeq ($(ARCH),arm64)
+	CFLAGS += -D__TARGET_ARCH_arm64
 endif
 CC := clang-16
 LD := llc
