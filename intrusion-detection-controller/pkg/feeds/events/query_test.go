@@ -106,6 +106,11 @@ func TestSuspiciousIP_Success(t *testing.T) {
 
 	results, _, _, err := uut.QuerySet(ctx, testFeed)
 	g.Expect(err).ToNot(HaveOccurred())
+	// Clearing event times as we can't accurately test it
+	for i, result := range results {
+		result.Time = v1.NewEventTimestamp(0)
+		results[i] = result
+	}
 	g.Expect(results).To(Equal(expected))
 }
 
