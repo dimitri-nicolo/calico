@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2023 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,10 @@
 # limitations under the License.
 
 ARG IPTABLES_VER=1.8.2-16
+ARG QEMU_IMAGE
 ARG UBI_IMAGE
+
+FROM ${QEMU_IMAGE} as qemu
 
 # Use this build stage to build iptables rpm binaries.
 # We need to rebuild the iptables rpm because the prepackaged rpm does not have legacy iptables binaries.
@@ -25,6 +28,8 @@ ARG CENTOS_MIRROR_BASE_URL=http://vault.centos.org/8.1.1911
 ARG LIBNFTNL_VER=1.1.1-4
 ARG LIBNFTNL_SOURCERPM_URL=${CENTOS_MIRROR_BASE_URL}/BaseOS/Source/SPackages/libnftnl-${LIBNFTNL_VER}.el8.src.rpm
 ARG IPTABLES_SOURCERPM_URL=${CENTOS_MIRROR_BASE_URL}/BaseOS/Source/SPackages/iptables-${IPTABLES_VER}.el8.src.rpm
+
+COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin/qemu-aarch64-static
 
 # Install build dependencies and security updates.
 RUN dnf install -y 'dnf-command(config-manager)' && \
@@ -45,8 +50,8 @@ RUN rpm -i ${LIBNFTNL_SOURCERPM_URL} && \
     yum-builddep -y --spec /root/rpmbuild/SPECS/libnftnl.spec && \
     rpmbuild -bb /root/rpmbuild/SPECS/libnftnl.spec && \
     # Now install libnftnl and libnftnl-devel
-    rpm -Uv /root/rpmbuild/RPMS/x86_64/libnftnl-${LIBNFTNL_VER}.el8.x86_64.rpm && \
-    rpm -Uv /root/rpmbuild/RPMS/x86_64/libnftnl-devel-${LIBNFTNL_VER}.el8.x86_64.rpm && \
+    rpm -Uv /root/rpmbuild/RPMS/aarch64/libnftnl-${LIBNFTNL_VER}.el8.aarch64.rpm && \
+    rpm -Uv /root/rpmbuild/RPMS/aarch64/libnftnl-devel-${LIBNFTNL_VER}.el8.aarch64.rpm && \
     # Install source RPM for iptables and install its build dependencies.
     rpm -i ${IPTABLES_SOURCERPM_URL} && \
     yum-builddep -y --spec /root/rpmbuild/SPECS/iptables.spec
@@ -83,6 +88,8 @@ FROM ${UBI_IMAGE} as ubi
 ARG GIT_VERSION=unknown
 ARG IPTABLES_VER
 
+COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin/qemu-aarch64-static
+
 # Update base packages to pick up security updates.
 RUN microdnf upgrade
 
@@ -96,13 +103,15 @@ LABEL vendor="Project Calico"
 LABEL version=${GIT_VERSION}
 
 # Copy in our rpms
-COPY --from=centos  /root/rpmbuild/RPMS/x86_64/* /tmp/rpms/
+COPY --from=centos  /root/rpmbuild/RPMS/aarch64/* /tmp/rpms/
 
 # Install the necessary packages, making sure that we're using only CentOS repos.
 # Since the ubi repos do not contain all the packages we need (they're missing conntrack-tools),
 # we're using CentOS repos for all our packages. Using packages from a single source (CentOS) makes
 # it less likely we'll run into package dependency version mismatches.
 COPY centos.repo /etc/yum.repos.d/
+
+RUN sed -i 's/x86_64/aarch64/' /etc/yum.repos.d/centos.repo
 
 RUN rm /etc/yum.repos.d/ubi.repo && \
     touch /in-the-container && \
@@ -132,21 +141,24 @@ RUN rm /etc/yum.repos.d/ubi.repo && \
     microdnf clean all && \
     # Install iptables via rpms. The libs must be force installed because the iptables source RPM has the release
     # version '9.el8_0.1' while the existing iptables-libs (pulled in by the iputils package) has version '9.el8.1'.
-    rpm --force -i /tmp/rpms/iptables-libs-${IPTABLES_VER}.el8.x86_64.rpm && \
-    rpm -i /tmp/rpms/iptables-${IPTABLES_VER}.el8.x86_64.rpm && \
+    rpm --force -i /tmp/rpms/iptables-libs-${IPTABLES_VER}.el8.aarch64.rpm && \
+    rpm -i /tmp/rpms/iptables-${IPTABLES_VER}.el8.aarch64.rpm && \
     # Set alternatives
     alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
     alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1
 
-COPY bin/egressd-amd64 /egressd
+COPY bin/egressd-arm64 /egressd
 
 # Add symlink to modprobe where iptables expects it to be.
 RUN test -f /sbin/modprobe || ln -s /usr/sbin/modprobe /sbin/modprobe
 
 # Clean out as many files as we can from the filesystem.  We no longer need dnf or the platform python install
 # or any of its dependencies.
-COPY clean-up-filesystem.sh /
+COPY clean-up-filesystem.sh /clean-up-filesystem.sh
 RUN /clean-up-filesystem.sh
+
+# Delete qemu binaries
+RUN rm /usr/bin/qemu-aarch64-static
 
 # Copy everything into a fresh scratch image so that naive CVE scanners don't pick up binaries and libraries
 # that have been removed in our later layers.
