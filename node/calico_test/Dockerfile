@@ -35,6 +35,7 @@
 FROM docker:18.09
 
 ARG ETCD_VERSION
+ARG K8S_VERSION
 ARG TARGETARCH
 
 # Running STs in this container requires that it has all dependencies installed
@@ -61,6 +62,10 @@ RUN apk add --no-cache \
 # Install etcdctl
 RUN curl -sfL https://github.com/coreos/etcd/releases/download/${ETCD_VERSION}/etcd-${ETCD_VERSION}-linux-${TARGETARCH}.tar.gz | \
     tar xz --strip-components 1 -C /usr/local/bin etcd-${ETCD_VERSION}-linux-${TARGETARCH}/etcdctl
+
+# Install kubectl
+RUN curl -sfL https://dl.k8s.io/release/${K8S_VERSION}/bin/linux/${TARGETARCH}/kubectl -o /usr/bin/kubectl && \
+	chmod 755 /usr/bin/kubectl
 
 COPY requirements.txt /requirements.txt
 RUN pip install -r /requirements.txt

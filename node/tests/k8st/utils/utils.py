@@ -228,7 +228,7 @@ def kubectl(args, logerr=True, allow_fail=False, allow_codes=[], timeout=0, retu
     if timeout == 0:
         cmd = "kubectl "
     else:
-        cmd = "timeout -s %d kubectl " % timeout
+        cmd = "timeout %d kubectl " % timeout
     return run(cmd + args,
                logerr=logerr,
                allow_fail=allow_fail,

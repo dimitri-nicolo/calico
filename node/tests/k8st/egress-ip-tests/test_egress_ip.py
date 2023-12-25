@@ -1436,7 +1436,7 @@ EOF
         # Without waiting for route to be ready, it is possible the traffic hit 
         # unreachable route or the transition phrase from unreachable route to a valid route.
         # What we found is that `kubectl exec test 1 -- nc -w 2` sometimes hung. We added
-        # `timeout -s 3 kubectl` to workaround this issue, but kubectl still panics in some cases.
+        # `timeout 3 kubectl` to workaround this issue, but kubectl still panics in some cases.
         retry_until_success(check_routes, retries=3, wait_time=3, function_args=[[gateway.ip]])
 
         self.validate_egress_ip(client, server, gateway.ip)

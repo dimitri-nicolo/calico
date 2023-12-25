@@ -367,7 +367,7 @@ IPT_ALLOW_ETCD:=-A INPUT -i docker0 -p tcp --dport 2379 -m comment --comment "ca
 # Create the calico/test image
 test_image: .calico_test.created
 .calico_test.created: calico_test/Dockerfile $(TEST_CONTAINER_FILES)
-	$(DOCKER_BUILD) --build-arg ETCD_VERSION=$(ETCD_VERSION) -f calico_test/Dockerfile -t $(TEST_CONTAINER_NAME) calico_test
+	$(DOCKER_BUILD) --build-arg ETCD_VERSION=$(ETCD_VERSION) --build-arg K8S_VERSION=$(K8S_VERSION) -f calico_test/Dockerfile -t $(TEST_CONTAINER_NAME) calico_test
 	touch $@
 
 cnx-node.tar: $(NODE_CONTAINER_CREATED)
@@ -424,15 +424,11 @@ TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
 .PHONY: dual-tor-test
 dual-tor-test: $(K8ST_IMAGE_TARS) .calico_test.created dual-tor-setup dual-tor-run-test dual-tor-cleanup
 
-kubectl:
-	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl
-	chmod +x ./kubectl
-
 # TODO: dual-tor uses a custom kind build, and so doesn't leverage the common
 # kind logic from lib.Makefile.
 .PHONY: dual-tor-setup
 DUAL_TOR_DIR=tests/k8st/dual-tor
-dual-tor-setup: dual-tor-cleanup kubectl dist/calicoctl $(K8ST_IMAGE_TARS) .calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
+dual-tor-setup: dual-tor-cleanup dist/calicoctl $(K8ST_IMAGE_TARS) .calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
 	docker build -t calico-test/busybox-with-reliable-nc tests/k8st/reliable-nc
 	mkdir -p $(DUAL_TOR_DIR)/tmp
 	cp -a $(K8ST_IMAGE_TARS) $(DUAL_TOR_DIR)/tmp/
@@ -448,12 +444,11 @@ dual-tor-run-test:
 	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v ${HOME}/.kube/kind-config-kind:/root/.kube/config \
-	    -v $(CURDIR)/kubectl:/root/bin/kubectl \
 	    --privileged \
 	    --net host \
 	${TEST_CONTAINER_NAME} \
-	    sh -c 'echo "container started.." && cp /root/bin/kubectl /bin/kubectl && echo "kubectl copied." && \
-	     cd /code/tests/k8st && nosetests $(DUAL_TOR_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-dual-tor-tests.xml" --with-timer'
+	    sh -c 'echo "container started.." && \
+			cd /code/tests/k8st && nosetests $(DUAL_TOR_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-dual-tor-tests.xml" --with-timer'
 
 .PHONY: dual-tor-cleanup
 dual-tor-cleanup:
@@ -500,7 +495,6 @@ kind-k8st-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v $(KIND_KUBECONFIG):/root/.kube/config \
-	    -v $(KUBECTL):/bin/kubectl \
 	    -e ROUTER_IMAGE=$(BIRD_IMAGE) \
 	    --privileged \
 	    --net host \
@@ -521,7 +515,7 @@ external-network-test:
 
 .PHONY: external-network-setup
 EXTERNAL_NETWORK_DIR=tests/k8st/external-network
-external-network-setup: .calico_test.created external-network-cleanup kubectl dist/calicoctl $(KIND_KUBECONFIG)
+external-network-setup: .calico_test.created external-network-cleanup dist/calicoctl $(KIND_KUBECONFIG)
 	STEPS=setup \
 	ROUTER_IMAGE=$(BIRD_DIND_IMAGE) CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
@@ -533,12 +527,11 @@ external-network-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v $(KIND_KUBECONFIG):/root/.kube/config \
-	    -v $(CURDIR)/kubectl:/root/bin/kubectl \
 	    --privileged \
 	    --net host \
 	${TEST_CONTAINER_NAME} \
-	    sh -c 'echo "container started..." && cp /root/bin/kubectl /bin/kubectl && echo "kubectl copied." && \
-	     cd /code/tests/k8st && nosetests $(EXTERNAL_NETWORK_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-enet-tests.xml" --with-timer'
+	    sh -c 'echo "container started..." && \
+			cd /code/tests/k8st && nosetests $(EXTERNAL_NETWORK_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-enet-tests.xml" --with-timer'
 
 .PHONY: external-network-cleanup
 external-network-cleanup:
