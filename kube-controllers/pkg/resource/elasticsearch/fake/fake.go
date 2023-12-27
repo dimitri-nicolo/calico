@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
 package fake
 
@@ -9,13 +9,11 @@ import (
 	"net/http"
 
 	esv1 "github.com/elastic/cloud-on-k8s/v2/pkg/apis/elasticsearch/v1"
-
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	restfake "k8s.io/client-go/rest/fake"
 
-	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
-
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 )
 
 type RESTClient struct {
@@ -30,9 +28,9 @@ func init() {
 	}
 }
 
-// This creates a very simple fake elasticsearch.RESTClient, where it always responds with the given elasticsearch object,
-// no matter what the request is. You can change the elasticsearch object it responds with (and in turn the hash) using
-// the SetElasticsearch function.
+// NewFakeRESTClient creates a very simple fake elasticsearch.RESTClient, where it always responds with the given
+// elasticsearch object, no matter what the request is. You can change the elasticsearch object it responds with (and
+// in turn the hash) using the SetElasticsearch function.
 //
 // Note that at the time this was written the only call made through this rest client would be to grab the singular
 // elasticsearch resource, thus there was no need to do anything but return an single elasticsearch response for every
@@ -67,5 +65,5 @@ func (r *RESTClient) SetElasticsearch(es *esv1.Elasticsearch) {
 }
 
 func (r *RESTClient) CalculateTigeraElasticsearchHash() (string, error) {
-	return resource.CreateHashFromObject(r.esResponse.CreationTimestamp)
+	return utils.GenerateTruncatedHash(r.esResponse.CreationTimestamp, 24)
 }

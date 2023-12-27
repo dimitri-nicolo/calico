@@ -6,9 +6,12 @@
 package authorization
 
 import (
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 )
+
+// esUserPrefix is prefixed to usernames in ES for OIDC/IdP users that we create. A prefix can be used to make sure
+// a user in es does not collide with a user created by another (management) cluster.
+var esUserPrefix string
 
 var resourceNameToElasticsearchRole = map[string]string{
 	"flows":      esusers.ElasticsearchRoleNameFlowsViewer,
@@ -32,8 +35,4 @@ var resourceNameToGlobalElasticsearchRoles = map[string]string{
 // and also for every oidc user in cache it creates/overwrites corresponding elasticsearch native users.
 func (n *nativeUserSynchronizer) resync() error {
 	return n.eeResync()
-}
-
-func (n *nativeUserSynchronizer) deleteEsUsers(esUsers map[string]elasticsearch.User) error {
-	return n.eeDeleteEsUsers(esUsers)
 }

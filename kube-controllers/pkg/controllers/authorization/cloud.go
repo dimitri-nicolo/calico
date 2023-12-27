@@ -14,7 +14,13 @@ import (
 	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 )
 
-var tenantID = os.Getenv("TENANT_ID")
+var (
+	tenantID = os.Getenv("TENANT_ID")
+
+	// esUserPrefix is prefixed to usernames in ES for OIDC/IdP users that we create. A prefix can be used to make sure
+	// a user in es does not collide with a user created by another (management) cluster.
+	esUserPrefix = os.Getenv("TENANT_ID")
+)
 
 var resourceNameToElasticsearchRole = map[string]string{
 	"flows":      formatRoleName(esusers.ElasticsearchRoleNameFlowsViewer),
@@ -42,7 +48,7 @@ func formatRoleName(name string) string {
 	}
 }
 
-// resync removes all elasticsearch native users with prefix `tigera-k8s` that doesn't have an entry in user cache
+// resync removes all elasticsearch native users that don't have an entry in user cache
 // and also for every oidc user in cache it creates/overwrites corresponding elasticsearch native users.
 // This is the Cloud/Tesla variant of this function which ignores any users that do not have the tenantID suffix
 // in their role names to avoid overwriting another tenants oidc users.
@@ -54,13 +60,8 @@ func (n *nativeUserSynchronizer) resync() error {
 		}
 
 		for _, user := range users {
-			if strings.HasPrefix(user.Username, nativeUserPrefix) {
-				rolesNames := user.RoleNames()
-				// Skip deleting this user if it does not contain roles specific to this tenant.
-				if !strings.HasSuffix(rolesNames[0], tenantID) {
-					continue
-				}
-				subjectID := strings.TrimPrefix(user.Username, fmt.Sprintf("%s-", nativeUserPrefix))
+			if strings.HasPrefix(user.Username, n.esUserPrefix) {
+				subjectID := strings.TrimPrefix(user.Username, fmt.Sprintf("%s-", n.esUserPrefix))
 				if !n.userCache.Exists(subjectID) {
 					if err := n.esCLI.DeleteUser(elasticsearch.User{Username: user.Username}); err != nil {
 						return err
@@ -74,22 +75,4 @@ func (n *nativeUserSynchronizer) resync() error {
 	}
 
 	return n.eeResync()
-}
-
-func (n *nativeUserSynchronizer) deleteEsUsers(esUsers map[string]elasticsearch.User) error {
-	if tenantID != "" {
-		for _, esUser := range esUsers {
-			rolesNames := esUser.RoleNames()
-			// Skip deleting this user if it does not contain roles specific to this tenant.
-			if len(rolesNames) != 0 && !strings.HasSuffix(rolesNames[0], tenantID) {
-				continue
-			}
-			if err := n.esCLI.DeleteUser(esUser); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	return n.eeDeleteEsUsers(esUsers)
 }
