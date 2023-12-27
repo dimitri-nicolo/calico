@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2015-2021 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,25 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# FIXME: Use WINDOWS_HPC_VERSION and image instead of nanoserver and WINDOWS_VERSIONS when containerd v1.6 is EOL'd
-# ARG WINDOWS_HPC_VERSION
-ARG WINDOWS_VERSION
+FROM scratch as source
 
-# FROM mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:${WINDOWS_HPC_VERSION}
-FROM mcr.microsoft.com/windows/nanoserver:${WINDOWS_VERSION}
+ARG BIN_DIR
+
+COPY ${BIN_DIR} /opt/cni/bin/
+
+FROM calico/base
 
 ARG GIT_VERSION=unknown
 
-LABEL name="Calico Networking for CNI"
-LABEL vendor="Project Calico"
-LABEL version=${GIT_VERSION}
-LABEL release="1"
-LABEL summary="Calico Networking for CNI"
 LABEL description="Calico Networking for CNI includes a CNI networking plugin and CNI IPAM plugin"
 LABEL maintainer="maintainers@tigera.io"
+LABEL name="Calico Networking for CNI"
+LABEL release="1"
+LABEL summary="Calico Networking for CNI"
+LABEL vendor="Project Calico"
+LABEL version=${GIT_VERSION}
 
-COPY bin/windows /opt/cni/bin/
+ENV PATH=/opt/cni/bin:$PATH
 
-ENV PATH=$PATH;/opt/cni/bin
+COPY --from=source / /
+
 WORKDIR /opt/cni/bin
-CMD ["/opt/cni/bin/install.exe"]
+
+CMD ["/opt/cni/bin/install"]

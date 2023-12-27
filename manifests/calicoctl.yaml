@@ -27,7 +27,7 @@ spec:
     - name: calicoctl
       image: gcr.io/unique-caldron-775/cnx/tigera/calicoctl:master
       command:
-        - /calicoctl
+        - calicoctl
       args:
         - version
         - --poll=1m

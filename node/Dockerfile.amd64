@@ -235,19 +235,20 @@ RUN /clean-up-filesystem.sh
 # that have been removed in our later layers.
 FROM scratch
 
-# base ubi image has been cleaned from  clean-up-filesystem.sh of all unecessary imports
-COPY --from=ubi / /
-
-CMD ["start_runit"]
-
-# Required labels for certification
-LABEL name="Calico node" \
-      vendor="Project Calico" \
-      version=$GIT_VERSION \
-      release="1" \
-      summary="Calico node handles networking and policy for Calico" \
-      description="Calico node handles networking and policy for Calico" \
-      maintainer="laurence@tigera.io"
+ARG GIT_VERSION
 
 # Tell sv where to find the services.
 ENV SVDIR=/etc/service/enabled
+
+# Required labels for certification
+LABEL description="Calico node handles networking and policy for Calico"
+LABEL maintainer="maintainers@tigera.io"
+LABEL name="Calico node"
+LABEL release="1"
+LABEL summary="Calico node handles networking and policy for Calico"
+LABEL vendor="Project Calico"
+LABEL version=${GIT_VERSION}
+
+COPY --from=ubi / /
+
+CMD ["start_runit"]

@@ -53,8 +53,7 @@ clean:
 	# Clean .created files which indicate images / releases have been built.
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete
-	rm -rf .go-pkg-cache \
-		bin \
+	rm -rf bin \
 		docker-image/bin \
 		build \
 		report/*.xml \
@@ -64,8 +63,7 @@ clean:
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete
 	find . -name "*.pyc" -type f -delete
-	docker rmi $(TYPHA_IMAGE):latest-$(ARCH) || true
-	docker rmi $(TYPHA_IMAGE):latest-fips-$(ARCH) || true
+	-docker image rm -f $$(docker images $(TYPHA_IMAGE) -a -q)
 
 
 ###############################################################################
@@ -122,23 +120,20 @@ TYPHA_IMAGE_ID=$(shell docker images -q $(TYPHA_IMAGE_WITH_TAG))
 # missing from docker.
 $(TYPHA_CONTAINER_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
                             $(BINDIR)/wrapper-$(ARCH) \
-                            docker-image/Dockerfile* \
-                            docker-image/nsswitch.conf \
+                            docker-image/Dockerfile \
                             docker-image/typha.cfg \
                             $(shell test "$(TYPHA_IMAGE_ID)" || echo force-rebuild)
-	$(MAKE) register
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/calico-typha-$(ARCH) docker-image/bin/
 	cp $(BINDIR)/wrapper-$(ARCH) docker-image/bin/
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(TYPHA_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load
+	$(DOCKER_BUILD) -t $(TYPHA_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile docker-image
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $(TYPHA_CONTAINER_CREATED)
 
 $(TYPHA_CONTAINER_FIPS_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
                                  $(BINDIR)/wrapper-$(ARCH) \
-                                 docker-image/Dockerfile* \
-                                 docker-image/nsswitch.conf \
+                                 docker-image/Dockerfile \
                                  docker-image/typha.cfg \
                                  $(shell test "$(TYPHA_IMAGE_ID)" || echo force-rebuild)
 	$(MAKE) register
@@ -146,7 +141,7 @@ $(TYPHA_CONTAINER_FIPS_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/calico-typha-$(ARCH) docker-image/bin/
 	cp $(BINDIR)/wrapper-$(ARCH) docker-image/bin/
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(TYPHA_IMAGE):latest-fips-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load
+	$(DOCKER_BUILD) -t $(TYPHA_IMAGE):latest-fips-$(ARCH) -f docker-image/Dockerfile docker-image
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $(TYPHA_CONTAINER_FIPS_CREATED)
 

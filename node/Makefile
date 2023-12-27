@@ -179,7 +179,6 @@ clean: clean-windows
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete
 	find . -name '*.pyc' -exec rm -f {} +
-	rm -rf .go-pkg-cache
 	rm -rf certs *.tar $(NODE_CONTAINER_BIN_DIR)
 	rm -rf $(REMOTE_DEPS)
 	rm -rf filesystem/included-source
@@ -188,20 +187,20 @@ clean: clean-windows
 	# We build felix as part of the node build, so clean it as part of the clean.
 	make -C ../felix clean
 	# Delete images that we built in this repo
-	docker rmi $(NODE_IMAGE):latest-$(ARCH) || true
-	docker rmi $(NODE_IMAGE):latest-fips-$(ARCH) || true
-	docker rmi $(TEST_CONTAINER_NAME) || true
+	-docker image rm -f $$(docker images $(NODE_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(NODE_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(TEST_CONTAINER_NAME) -a -q)
 
 clean-windows: clean-windows-builder
-	-rm -f $(WINDOWS_ARCHIVE) $(WINDOWS_ARCHIVE_BINARY) $(WINDOWS_BINARY)
-	-rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1
-	-rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt
-	-rm -f $(WINDOWS_ARCHIVE_ROOT)/cni/*.exe
-	-rm -f $(WINDOWS_ARCHIVE_ROOT)/../nssm.zip
-	-rm -f $(WINDOWS_ARCHIVE_ROOT)/../nssm.exe
-	-rm -f $(WINDOWS_INSTALL_SCRIPT)
-	-rm -rf "$(WINDOWS_DIST)"
-	-docker rmi $(addprefix $(WINDOWS_IMAGE):latest-,$(WINDOWS_VERSIONS))
+	rm -f $(WINDOWS_ARCHIVE) $(WINDOWS_ARCHIVE_BINARY) $(WINDOWS_BINARY)
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/cni/*.exe
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/../nssm.zip
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/../nssm.exe
+	rm -f $(WINDOWS_INSTALL_SCRIPT)
+	rm -rf "$(WINDOWS_DIST)"
+	-docker image rm -f $$(docker images $(WINDOWS_IMAGE) -a -q)
 
 ###############################################################################
 # Building the binary
@@ -277,13 +276,13 @@ sub-image-fips-%:
 	$(MAKE) image FIPS=true ARCH=$*
 
 image $(NODE_IMAGE): register $(NODE_CONTAINER_MARKER)
-$(NODE_CONTAINER_CREATED): $(REMOTE_DEPS) ./Dockerfile.$(ARCH) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) $(NODE_CONTAINER_FILES) $(TOOLS_MOUNTNS_BINARY)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) --build-arg BIRD_IMAGE=$(BIRD_IMAGE) -t $(NODE_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) . --load
+$(NODE_CONTAINER_CREATED): $(REMOTE_DEPS) Dockerfile.$(ARCH) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) $(NODE_CONTAINER_FILES) $(TOOLS_MOUNTNS_BINARY)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) --build-arg BIRD_IMAGE=$(BIRD_IMAGE) -t $(NODE_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-$(NODE_CONTAINER_FIPS_CREATED): $(REMOTE_DEPS) ./Dockerfile.$(ARCH) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) $(NODE_CONTAINER_FILES) $(TOOLS_MOUNTNS_BINARY)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) --build-arg BIRD_IMAGE=$(BIRD_IMAGE) -t $(NODE_IMAGE):latest-fips-$(ARCH) -f ./Dockerfile.$(ARCH) . --load
+$(NODE_CONTAINER_FIPS_CREATED): $(REMOTE_DEPS) Dockerfile.$(ARCH) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) $(NODE_CONTAINER_FILES) $(TOOLS_MOUNTNS_BINARY)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) --build-arg BIRD_IMAGE=$(BIRD_IMAGE) -t $(NODE_IMAGE):latest-fips-$(ARCH) -f Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
 
@@ -359,16 +358,16 @@ busybox.tar:
 	docker pull $(ARCH)/busybox:latest
 	docker save --output busybox.tar $(ARCH)/busybox:latest
 
-workload.tar:
-	cd workload && $(DOCKER_BUILD) -t workload -f Dockerfile.$(ARCH) . --load
+workload.tar: workload/Dockerfile
+	$(DOCKER_BUILD) -t workload -f workload/Dockerfile workload
 	docker save --output workload.tar workload
 
 IPT_ALLOW_ETCD:=-A INPUT -i docker0 -p tcp --dport 2379 -m comment --comment "calico-st-allow-etcd" -j ACCEPT
 
 # Create the calico/test image
 test_image: .calico_test.created
-.calico_test.created: $(TEST_CONTAINER_FILES)
-	cd calico_test && $(DOCKER_BUILD) -f Dockerfile.$(ARCH).calico_test -t $(TEST_CONTAINER_NAME) . --load
+.calico_test.created: calico_test/Dockerfile $(TEST_CONTAINER_FILES)
+	$(DOCKER_BUILD) --build-arg ETCD_VERSION=$(ETCD_VERSION) --build-arg K8S_VERSION=$(K8S_VERSION) -f calico_test/Dockerfile -t $(TEST_CONTAINER_NAME) calico_test
 	touch $@
 
 cnx-node.tar: $(NODE_CONTAINER_CREATED)
@@ -425,15 +424,11 @@ TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
 .PHONY: dual-tor-test
 dual-tor-test: $(K8ST_IMAGE_TARS) .calico_test.created dual-tor-setup dual-tor-run-test dual-tor-cleanup
 
-kubectl:
-	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl
-	chmod +x ./kubectl
-
 # TODO: dual-tor uses a custom kind build, and so doesn't leverage the common
 # kind logic from lib.Makefile.
 .PHONY: dual-tor-setup
 DUAL_TOR_DIR=tests/k8st/dual-tor
-dual-tor-setup: dual-tor-cleanup kubectl dist/calicoctl $(K8ST_IMAGE_TARS) .calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
+dual-tor-setup: dual-tor-cleanup dist/calicoctl $(K8ST_IMAGE_TARS) .calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
 	docker build -t calico-test/busybox-with-reliable-nc tests/k8st/reliable-nc
 	mkdir -p $(DUAL_TOR_DIR)/tmp
 	cp -a $(K8ST_IMAGE_TARS) $(DUAL_TOR_DIR)/tmp/
@@ -449,12 +444,11 @@ dual-tor-run-test:
 	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v ${HOME}/.kube/kind-config-kind:/root/.kube/config \
-	    -v $(CURDIR)/kubectl:/root/bin/kubectl \
 	    --privileged \
 	    --net host \
 	${TEST_CONTAINER_NAME} \
-	    sh -c 'echo "container started.." && cp /root/bin/kubectl /bin/kubectl && echo "kubectl copied." && \
-	     cd /code/tests/k8st && nosetests $(DUAL_TOR_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-dual-tor-tests.xml" --with-timer'
+	    sh -c 'echo "container started.." && \
+			cd /code/tests/k8st && nosetests $(DUAL_TOR_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-dual-tor-tests.xml" --with-timer'
 
 .PHONY: dual-tor-cleanup
 dual-tor-cleanup:
@@ -501,7 +495,6 @@ kind-k8st-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v $(KIND_KUBECONFIG):/root/.kube/config \
-	    -v $(KUBECTL):/bin/kubectl \
 	    -e ROUTER_IMAGE=$(BIRD_IMAGE) \
 	    --privileged \
 	    --net host \
@@ -522,7 +515,7 @@ external-network-test:
 
 .PHONY: external-network-setup
 EXTERNAL_NETWORK_DIR=tests/k8st/external-network
-external-network-setup: .calico_test.created external-network-cleanup kubectl dist/calicoctl $(KIND_KUBECONFIG)
+external-network-setup: .calico_test.created external-network-cleanup dist/calicoctl $(KIND_KUBECONFIG)
 	STEPS=setup \
 	ROUTER_IMAGE=$(BIRD_DIND_IMAGE) CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
@@ -534,12 +527,11 @@ external-network-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v $(KIND_KUBECONFIG):/root/.kube/config \
-	    -v $(CURDIR)/kubectl:/root/bin/kubectl \
 	    --privileged \
 	    --net host \
 	${TEST_CONTAINER_NAME} \
-	    sh -c 'echo "container started..." && cp /root/bin/kubectl /bin/kubectl && echo "kubectl copied." && \
-	     cd /code/tests/k8st && nosetests $(EXTERNAL_NETWORK_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-enet-tests.xml" --with-timer'
+	    sh -c 'echo "container started..." && \
+			cd /code/tests/k8st && nosetests $(EXTERNAL_NETWORK_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-enet-tests.xml" --with-timer'
 
 .PHONY: external-network-cleanup
 external-network-cleanup:

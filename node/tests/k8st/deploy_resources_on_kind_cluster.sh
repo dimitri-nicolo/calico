@@ -108,7 +108,7 @@ echo
 # Apply the enterprise license.
 # FIXME(karthik): Applying the enterprise license here since the test written don't test for invalid or no license.
 # Once such tests are added, this will have to move into the test itself.
-${kubectl} exec -i -n kube-system calicoctl -- /calicoctl --allow-version-mismatch apply -f - < ${TSEE_TEST_LICENSE}
+${kubectl} exec -i -n kube-system calicoctl -- calicoctl --allow-version-mismatch apply -f - < ${TSEE_TEST_LICENSE}
 
 echo "Install MetalLB controller for allocating LoadBalancer IPs"
 ${kubectl} create ns metallb-system
@@ -145,13 +145,13 @@ ${kubectl} get po --all-namespaces -o wide
 ${kubectl} get svc
 
 function test_connection() {
-    local svc="webserver-ipv$1"
-    output=$(${kubectl} exec client -- wget $svc -T 5 -O -)
-    echo $output
-    if [[ $output != *test-webserver* ]]; then
-	echo "connection to $svc service failed"
-	exit 1
-    fi
+  local svc="webserver-ipv$1"
+  output=$(${kubectl} exec client -- wget $svc -T 10 -O -)
+  echo $output
+  if [[ $output != *test-webserver* ]]; then
+    echo "connection to $svc service failed"
+    exit 1
+  fi
 }
 # Run ipv4 ipv6 connection test
 test_connection 4

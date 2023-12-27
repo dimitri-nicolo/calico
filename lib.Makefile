@@ -39,8 +39,13 @@ ifeq ($(ARCHES),)
 	ARCHES=$(patsubst Dockerfile.%,%,$(wildcard Dockerfile.*))
 endif
 
+# If architectures cannot infer from Dockerfiles, set default supported architecture.
+ifeq ($(ARCHES),)
+	ARCHES=amd64
+endif
+
 # list of arches *not* to build when doing *-all
-EXCLUDEARCH?=
+EXCLUDEARCH?=arm64 ppc64le s390x
 VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
 # BUILDARCH is the host architecture
@@ -274,18 +279,14 @@ GOARCH_FLAGS :=-e GOARCH=$(ARCH)
 REPO_ROOT := $(shell git rev-parse --show-toplevel)
 CERTS_PATH := $(REPO_ROOT)/hack/test/certs
 
-# Set the platform correctly for building docker images so that
-# cross-builds get the correct architecture set in the produced images.
-ifeq ($(ARCH),arm64)
-TARGET_PLATFORM=--platform=linux/arm64/v8
-endif
+QEMU_IMAGE ?= calico/qemu-user-static:latest
 
 # DOCKER_BUILD is the base build command used for building all images.
-DOCKER_BUILD=docker buildx build --pull \
-	     --build-arg QEMU_IMAGE=$(CALICO_BUILD) \
+DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) --pull \
+	     --build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
 	     --build-arg UBI_IMAGE=$(UBI_IMAGE) \
 	     --build-arg UBI_IMAGE_FULL=$(UBI_IMAGE_FULL) \
-	     --build-arg GIT_VERSION=$(GIT_VERSION) $(TARGET_PLATFORM)
+	     --build-arg GIT_VERSION=$(GIT_VERSION)
 
 DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
 	docker run --rm \
@@ -302,22 +303,6 @@ DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
 		-e ACK_GINKGO_DEPRECATIONS=1.16.5 \
 		-e ACK_GINKGO_RC=true \
 		-v $(REPO_ROOT):/go/src/github.com/projectcalico/calico:rw \
-		-v $(REPO_ROOT)/.go-pkg-cache:/go-cache:rw \
-		-w /go/src/$(PACKAGE_NAME)
-
-DOCKER_RUN_RO := mkdir -p .go-pkg-cache bin $(GOMOD_CACHE) && \
-	docker run --rm \
-		--net=host \
-		--init \
-		$(EXTRA_DOCKER_ARGS) \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-e GOCACHE=/go-cache \
-		$(GOARCH_FLAGS) \
-		-e GOPATH=/go \
-		-e OS=$(BUILDOS) \
-		-e GOOS=$(BUILDOS) \
-		-e GOFLAGS=$(GOFLAGS) \
-		-v $(REPO_ROOT):/go/src/github.com/projectcalico/calico:ro \
 		-v $(REPO_ROOT)/.go-pkg-cache:/go-cache:rw \
 		-w /go/src/$(PACKAGE_NAME)
 
