@@ -1,6 +1,11 @@
+ARG QEMU_IMAGE
 ARG UBI_IMAGE
 
+FROM ${QEMU_IMAGE} as qemu
+
 FROM rockylinux:8 AS snort
+
+COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 ARG SNORT3_VERSION=3.1.76.0
 ARG DAQ_VERSION=3.0.13

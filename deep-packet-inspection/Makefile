@@ -65,7 +65,7 @@ sub-image-%:
 image: $(DEEP_PACKET_INSPECTION_IMAGE)
 
 $(DEEP_PACKET_INSPECTION_IMAGE): $(DEEP_PACKET_INSPECTION_CONTAINER_CREATED)
-$(DEEP_PACKET_INSPECTION_CONTAINER_CREATED): docker-image/Dockerfile bin/deep-packet-inspection-$(ARCH)
+$(DEEP_PACKET_INSPECTION_CONTAINER_CREATED): register docker-image/Dockerfile bin/deep-packet-inspection-$(ARCH)
 	$(DOCKER_BUILD) -t $(DEEP_PACKET_INSPECTION_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

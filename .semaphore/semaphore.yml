@@ -863,13 +863,14 @@ blocks:
       - name: deep-packet-inspection tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
+      - name: Build image
         matrix:
           - env_var: ARCH
             values:
               - arm64
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+          # It is non-trivial to build component image so use "make image" here.
+          - ../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
 - name: egress-gateway
   run:
     when: "false or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
