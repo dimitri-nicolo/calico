@@ -1,0 +1,13 @@
+- name: license-agent
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd license-agent
+    jobs:
+      - name: License Agent tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci

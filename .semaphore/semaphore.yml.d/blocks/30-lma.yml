@@ -1,0 +1,13 @@
+- name: lma
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/lma/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd lma
+    jobs:
+      - name: lma tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci

@@ -1,0 +1,13 @@
+- name: l7-collector
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/l7-collector/', '/libcalico-go/lib/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd l7-collector
+    jobs:
+      - name: l7-collector tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci

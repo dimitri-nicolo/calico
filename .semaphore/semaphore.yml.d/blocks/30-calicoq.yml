@@ -1,0 +1,15 @@
+- name: calicoq
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/calicoq/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    secrets:
+      - name: test-customer-license
+    prologue:
+      commands:
+        - cd calicoq
+    jobs:
+      - name: make ci
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci

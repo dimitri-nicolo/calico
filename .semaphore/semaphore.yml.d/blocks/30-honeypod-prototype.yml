@@ -1,0 +1,13 @@
+- name: honeypod-prototype
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/honeypod-prototype/'])"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd honeypod-prototype
+    jobs:
+      - name: honeypod-prototype tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
