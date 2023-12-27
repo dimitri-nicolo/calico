@@ -443,7 +443,9 @@ var _ = Describe("role mapping listenAndSynchronize", func() {
 })
 
 var _ = Describe("native user listenAndSynchronize", func() {
-
+	BeforeEach(func() {
+		esUserPrefix = "tigera-k8s-"
+	})
 	Context("Update ConfigMap", func() {
 		It("deletes elasticsearch native users if ClusterRole doesn't exist", func() {
 			configMap := &corev1.ConfigMap{
