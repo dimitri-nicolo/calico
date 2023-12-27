@@ -7,6 +7,9 @@ PACKAGE_NAME            ?= github.com/projectcalico/calico/honeypod-controller
 ##############################################################################
 HONEYPOD_CONTROLLER_IMAGE ?=honeypod-controller
 BUILD_IMAGES              ?=$(HONEYPOD_CONTROLLER_IMAGE)
+# Snort 2 rpm package is x86_64 only from the vendor. As this is an experimental
+# component and we have plans to remove it, limit honeypod controller to amd64 only.
+ARCH                      =amd64
 
 SNORT_VERSION             ?=2.9.20
 
