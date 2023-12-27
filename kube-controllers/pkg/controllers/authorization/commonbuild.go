@@ -14,8 +14,8 @@ func (n *nativeUserSynchronizer) eeResync() error {
 	}
 
 	for _, user := range users {
-		if strings.HasPrefix(user.Username, nativeUserPrefix) {
-			subjectID := strings.TrimPrefix(user.Username, fmt.Sprintf("%s-", nativeUserPrefix))
+		if strings.HasPrefix(user.Username, n.esUserPrefix) {
+			subjectID := strings.TrimPrefix(user.Username, fmt.Sprintf("%s-", n.esUserPrefix))
 			if !n.userCache.Exists(subjectID) {
 				if err := n.esCLI.DeleteUser(elasticsearch.User{Username: user.Username}); err != nil {
 					return err
@@ -26,13 +26,4 @@ func (n *nativeUserSynchronizer) eeResync() error {
 
 	subjects := n.userCache.SubjectIDs()
 	return n.synchronizeOIDCUsers(subjects)
-}
-
-func (n *nativeUserSynchronizer) eeDeleteEsUsers(esUsers map[string]elasticsearch.User) error {
-	for _, esUser := range esUsers {
-		if err := n.esCLI.DeleteUser(esUser); err != nil {
-			return err
-		}
-	}
-	return nil
 }

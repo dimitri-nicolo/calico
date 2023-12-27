@@ -3,7 +3,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 
@@ -111,7 +110,6 @@ var _ = Describe("Kibana", func() {
 	Context("Dex is enabled, issuer is Dex, and the Elasticsearch license is basic", func() {
 		It("logs the user in by setting cookies and redirects to Kibana", func() {
 			userSubjectID := "123456789abcdefg"
-			esUsername := fmt.Sprintf("%s-%s", ElasticsearchUsernamePrefix, userSubjectID)
 			userESPassword := "password"
 			sid := "lmnop987654321"
 
@@ -139,7 +137,7 @@ var _ = Describe("Kibana", func() {
 				},
 			}))
 
-			mockKibanaCli.On("Login", "https://localhost:9443", esUsername, userESPassword).Return(&http.Response{
+			mockKibanaCli.On("Login", "https://localhost:9443", userSubjectID, userESPassword).Return(&http.Response{
 				StatusCode: http.StatusOK,
 				Header: http.Header{
 					"Set-Cookie": {(&http.Cookie{Name: "sid", Value: sid}).String()},
