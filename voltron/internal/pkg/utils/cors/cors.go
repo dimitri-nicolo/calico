@@ -71,7 +71,7 @@ func (c *CORS) NewHandlerFunc(h http.HandlerFunc) http.HandlerFunc {
 
 		if r.Method == http.MethodOptions {
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, X-Auth-IdToken, x-cluster-id")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, X-Auth-IdToken, x-cluster-id, x-project-id")
 			// we would ideally allow the options request through to some backend services like prometheus which respond with the correct cors settings
 			// but voltron is configured to strictly check credentials, even if it is incorrect to do so on options requests, so we won't allow
 			// the request to continue through and instead will respond on behalf of the backend services.
