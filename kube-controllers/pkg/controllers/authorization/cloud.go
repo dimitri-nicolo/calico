@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
 
 //go:build tesla
 // +build tesla
@@ -61,7 +61,7 @@ func (n *nativeUserSynchronizer) resync() error {
 
 		for _, user := range users {
 			// Exclude Tigera's system users from deletion.
-			if user.FullName != eusers.SystemUserFullName {
+			if user.FullName != esusers.SystemUserFullName {
 				subjectID := strings.TrimPrefix(user.Username, fmt.Sprintf("%s-", n.esUserPrefix))
 				if !n.userCache.Exists(subjectID) {
 					if err := n.esCLI.DeleteUser(elasticsearch.User{Username: user.Username}); err != nil {
