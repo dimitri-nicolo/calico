@@ -11,11 +11,10 @@
       - name: deep-packet-inspection tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build image
+      - name: Build binary
         matrix:
           - env_var: ARCH
             values:
               - arm64
         commands:
-          # It is non-trivial to build component image so use "make image" here.
-          - ../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH

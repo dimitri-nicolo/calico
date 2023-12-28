@@ -67,6 +67,7 @@ build-all: $(addprefix bin/egressd-,$(VALIDARCHES))
 ## Build the binary for the current architecture and platform
 build: bin/egressd-$(ARCH)
 bin/egressd-amd64: ARCH=amd64
+bin/egressd-arm64: ARCH=arm64
 bin/egressd-%: $(SRC_FILES)
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, ./cmd/egressd, $@)

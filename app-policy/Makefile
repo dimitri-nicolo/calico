@@ -130,7 +130,7 @@ proto/healthz.pb.go: proto/healthz.proto
 		      --gogofast_out=plugins=grpc:proto
 	$(MAKE) fix
 
-
+###############################################################################
 # Building the image
 ###############################################################################
 .PHONY: image $(DIKASTES_IMAGE)

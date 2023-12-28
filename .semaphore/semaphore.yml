@@ -691,13 +691,13 @@ blocks:
       - name: "Node: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build image
+      - name: Build binary
         matrix:
           - env_var: ARCH
             values:
               - arm64
         commands:
-          - ../.semaphore/run-and-monitor image-$ARCH.log make image ARCH=$ARCH
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
       - name: "Build Windows archive"
         commands:
           - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
@@ -863,14 +863,13 @@ blocks:
       - name: deep-packet-inspection tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build image
+      - name: Build binary
         matrix:
           - env_var: ARCH
             values:
               - arm64
         commands:
-          # It is non-trivial to build component image so use "make image" here.
-          - ../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: egress-gateway
   run:
     when: "false or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -884,14 +883,13 @@ blocks:
       - name: make ci
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build image
+      - name: Build binary
         matrix:
           - env_var: ARCH
             values:
               - arm64
         commands:
-          # It is non-trivial to build component image so use "make image" here.
-          - ../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: es-gateway
   run:
     when: "false or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
