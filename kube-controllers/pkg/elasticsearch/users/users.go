@@ -38,6 +38,9 @@ const (
 	ElasticsearchSecureUserSuffix = "secure"
 )
 
+// SystemUserFullName is a O(1) lookup of the elasticsearch users that are created.
+var SystemUserFullName = "system:serviceaccount"
+
 // ElasticsearchUsers returns two maps of ElasticsearchUserNames as keys and elasticsearch.Users as values. The first map contains
 // private Elasticsearch users with permissions and the second contains public credentials to be given to components and swapped
 // out by the ES Gateway. The clusterName is used to format the username / role names for the elasticsearch.User (format is <name>-<clusterName>).
@@ -50,6 +53,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 	privateUsers := map[ElasticsearchUserName]elasticsearch.User{
 		ElasticsearchUserNameFluentd: {
 			Username: formatName(ElasticsearchUserNameFluentd, clusterName, management, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameFluentd, clusterName, management, true),
 				Definition: &elasticsearch.RoleDefinition{
@@ -63,6 +67,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 		},
 		ElasticsearchUserNameEKSLogForwarder: {
 			Username: formatName(ElasticsearchUserNameEKSLogForwarder, clusterName, management, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameEKSLogForwarder, clusterName, management, true),
 				Definition: &elasticsearch.RoleDefinition{
@@ -76,6 +81,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 		},
 		ElasticsearchUserNameComplianceBenchmarker: {
 			Username: formatName(ElasticsearchUserNameComplianceBenchmarker, clusterName, management, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameComplianceBenchmarker, clusterName, management, true),
 				Definition: &elasticsearch.RoleDefinition{
@@ -89,6 +95,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 		},
 		ElasticsearchUserNameComplianceController: {
 			Username: formatName(ElasticsearchUserNameComplianceController, clusterName, management, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameComplianceController, clusterName, management, true),
 				Definition: &elasticsearch.RoleDefinition{
@@ -102,6 +109,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 		},
 		ElasticsearchUserNameComplianceReporter: {
 			Username: formatName(ElasticsearchUserNameComplianceReporter, clusterName, management, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameComplianceReporter, clusterName, management, true),
 				Definition: &elasticsearch.RoleDefinition{
@@ -133,6 +141,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 		},
 		ElasticsearchUserNameComplianceSnapshotter: {
 			Username: formatName(ElasticsearchUserNameComplianceSnapshotter, clusterName, management, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameComplianceSnapshotter, clusterName, management, true),
 				Definition: &elasticsearch.RoleDefinition{
@@ -146,6 +155,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 		},
 		ElasticsearchUserNameIntrusionDetection: {
 			Username: formatName(ElasticsearchUserNameIntrusionDetection, clusterName, management, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{
 				{
 					Name: formatName(ElasticsearchUserNameIntrusionDetection, clusterName, management, true),
@@ -161,6 +171,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 		},
 		ElasticsearchUserNamePerformanceHotspots: {
 			Username: formatName(ElasticsearchUserNamePerformanceHotspots, clusterName, management, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{
 				{
 					Name: formatName(ElasticsearchUserNamePerformanceHotspots, clusterName, management, true),
@@ -190,6 +201,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 		},
 		ElasticsearchUserNamePolicyRecommendation: {
 			Username: formatName(ElasticsearchUserNamePolicyRecommendation, clusterName, management, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{
 				{
 					Name: formatName(ElasticsearchUserNamePolicyRecommendation, clusterName, management, true),
@@ -359,6 +371,7 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 	privateUsers := map[ElasticsearchUserName]elasticsearch.User{
 		ElasticsearchUserNameComplianceServer: {
 			Username: formatName(ElasticsearchUserNameComplianceServer, clusterName, true, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameComplianceServer, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
@@ -373,6 +386,7 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 		},
 		ElasticsearchUserNameManager: {
 			Username: formatName(ElasticsearchUserNameManager, clusterName, true, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameManager, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
@@ -393,6 +407,8 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 		},
 		ElasticsearchUserNameOperator: {
 			Username: formatName(ElasticsearchUserNameOperator, clusterName, true, true),
+			FullName: SystemUserFullName,
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameOperator, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
@@ -407,6 +423,7 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 		// Deprecated Elastic user for Kibana dashboard and index-patterns creation
 		ElasticsearchUserNameInstaller: {
 			Username: formatName(ElasticsearchUserNameInstaller, clusterName, true, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameInstaller, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
@@ -427,6 +444,7 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 		},
 		ElasticsearchUserNameElasticsearchMetrics: {
 			Username: formatName(ElasticsearchUserNameElasticsearchMetrics, clusterName, true, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameElasticsearchMetrics, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
@@ -440,6 +458,7 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 		},
 		ElasticsearchUserNameSasha: {
 			Username: formatName(ElasticsearchUserNameSasha, clusterName, true, true),
+			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{
 				{
 					Name: formatName(ElasticsearchUserNameSasha, clusterName, true, true),
@@ -453,6 +472,7 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 		ElasticsearchUserNameLinseed: {
 			DirectConnection: true,
 			Username:         formatName(ElasticsearchUserNameLinseed, clusterName, true, true),
+			FullName:         SystemUserFullName,
 			Roles: []elasticsearch.Role{
 				{
 					Name: formatName(ElasticsearchUserNameLinseed, clusterName, true, true),

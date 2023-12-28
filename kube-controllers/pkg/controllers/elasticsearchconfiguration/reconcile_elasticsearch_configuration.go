@@ -480,6 +480,7 @@ func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]el
 			if err != nil {
 				return nil, nil, err
 			}
+			log.WithField("userName", user.Username).WithField("userHash", userHash).WithField("secretHash", secret.Labels[UserChangeHashLabel]).Trace("public user comparison")
 			if secret.Labels[UserChangeHashLabel] == userHash {
 				delete(publicEsUsers, username)
 			}
@@ -497,17 +498,25 @@ func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]el
 			if err != nil {
 				return nil, nil, err
 			}
+			log.WithField("userName", user.Username).WithField("userHash", userHash).WithField("secretHash", secret.Labels[UserChangeHashLabel]).Trace("private user comparison")
 			if secret.Labels[UserChangeHashLabel] == userHash {
 				delete(privateEsUsers, username)
 			}
 		}
 	}
-
+	log.WithField("privateUsers", privateEsUsers).WithField("publicUsers", publicEsUsers).Trace("missing users")
 	return privateEsUsers, publicEsUsers, nil
 }
 
 func (c *reconciler) calculateUserChangeHash(user elasticsearch.User) (string, error) {
-	return utils.GenerateTruncatedHash([]interface{}{c.esHash, c.ownerReference, user.Roles, EsUserCredentialsSchemaVersion}, 24)
+	obj := []interface{}{c.esHash, c.ownerReference, user.FullName, EsUserCredentialsSchemaVersion}
+	for _, role := range user.Roles {
+		obj = append(obj, role.Name)
+		if role.Definition != nil {
+			obj = append(obj, *role.Definition)
+		}
+	}
+	return utils.GenerateTruncatedHash(obj, 24)
 }
 
 func (c *reconciler) getOrInitializeESClient() (elasticsearch.Client, error) {
