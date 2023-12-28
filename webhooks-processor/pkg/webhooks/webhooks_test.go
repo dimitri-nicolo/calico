@@ -405,7 +405,7 @@ func TestWebhookErrorsDontDisappear(t *testing.T) {
 	wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
 	// Use an invalid URL to generate an error
 	require.Equal(t, "url", wh.Spec.Config[0].Name)
-	wh.Spec.Config[0].Value = "http://test.com/does-not-exists"
+	wh.Spec.Config[0].Value = "http://my-fake-webhook-server.test/does-not-exists"
 	require.Nil(t, wh.Status)
 
 	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
@@ -422,9 +422,8 @@ func TestWebhookErrorsDontDisappear(t *testing.T) {
 	// Wait for the status to go bad
 	require.Eventually(t, hasHealthStatus(wh, false), 20*time.Second, time.Second)
 	require.True(t, wh.Status[0].LastTransitionTime.After(previousTime))
-	previousError := wh.Status[0].Message
 	previousTime = wh.Status[0].LastTransitionTime.Time
-	require.Contains(t, previousError, "context deadline exceeded")
+	// We don't check the error message as it can either be "host not found" or "context deadline exceeded"
 
 	shouldSendEvents = false
 
