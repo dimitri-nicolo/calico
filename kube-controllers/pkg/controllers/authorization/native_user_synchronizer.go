@@ -85,7 +85,7 @@ func createNativeUserSynchronizer(roleCache rbaccache.ClusterRoleCache,
 		userCache:    userCache,
 		k8sCLI:       k8sCLI,
 		esCLI:        esCLI,
-		esUserPrefix: esUserPrefix,
+		esUserPrefix: prefix,
 	}
 }
 

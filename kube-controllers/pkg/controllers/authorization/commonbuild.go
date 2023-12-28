@@ -1,3 +1,5 @@
+// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
+
 package authorization
 
 import (
@@ -5,6 +7,7 @@ import (
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	eusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
+
 	log "github.com/sirupsen/logrus"
 )
 
