@@ -11,7 +11,7 @@ execution_time_limit:
 blocks:
   # Build and push images.
   # We'll only do this on non-PR builds, where we have credentials to do so.
-  - name: "Publish linseed images"
+  - name: Publish linseed images
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
@@ -37,7 +37,7 @@ blocks:
         - name: docker
         - name: google-service-account-for-gcr
       jobs:
-        - name: "linseed"
+        - name: Linux multi-arch
           env_vars:
             - name: DEV_REGISTRIES
               value: gcr.io/unique-caldron-775/cnx/tigera
