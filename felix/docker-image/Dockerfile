@@ -26,7 +26,7 @@ FROM debian:11-slim as source
 
 LABEL maintainer="Shaun Crampton <shaun@tigera.io>"
 
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin
+COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 # Install remaining runtime deps required for felix from the global repository
 RUN apt-get update && apt-get install -y \

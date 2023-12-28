@@ -10,8 +10,7 @@ ARG K8S_VERSION
 ARG KUBE_BENCH_VERSION
 ARG TARGETARCH
 
-# Add qemu static binaries when Calico Enterprise needs to support more architectures.
-COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin/qemu-aarch64-static
+COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 RUN apk add --no-cache curl
 
