@@ -40,6 +40,7 @@ type Client interface {
 type User struct {
 	Username string
 	Password string
+	FullName string
 	Roles    []Role
 	// Indicate whether this user will connect directly to Elastic or via a proxy
 	DirectConnection bool
@@ -244,8 +245,9 @@ func (cli *client) CreateUser(user User) error {
 	}
 
 	j, err := json.Marshal(map[string]interface{}{
-		"password": user.Password,
-		"roles":    user.RoleNames(),
+		"password":  user.Password,
+		"roles":     user.RoleNames(),
+		"full_name": user.FullName,
 	})
 	if err != nil {
 		return err
@@ -321,6 +323,9 @@ func (cli *client) UpdateUser(user User) error {
 	if user.Password != "" {
 		reqBody["password"] = user.Password
 	}
+	if user.FullName != "" {
+		reqBody["full_name"] = user.FullName
+	}
 
 	j, err := json.Marshal(reqBody)
 	if err != nil {
@@ -368,7 +373,9 @@ func (cli *client) UserExists(username string) (bool, error) {
 
 type esUsers map[string]esUser
 type esUser struct {
-	Roles []string
+	Roles    []string `json:"roles"`
+	Username string   `json:"username"`
+	FullName string   `json:"full_name"`
 }
 
 // GetUsers returns all users stored in ES
@@ -404,7 +411,7 @@ func (cli *client) GetUsers() ([]User, error) {
 		for _, role := range v.Roles {
 			roles = append(roles, Role{Name: role})
 		}
-		users = append(users, User{Username: k, Roles: roles})
+		users = append(users, User{Username: k, Roles: roles, FullName: v.FullName})
 	}
 
 	if users == nil {

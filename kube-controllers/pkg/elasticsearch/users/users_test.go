@@ -650,7 +650,7 @@ func testDecommissionedElasticsearchUsers(decommissionedUsers, expectedDecommiss
 		esUser, exists := decommissionedUsers[expectedName]
 		Expect(exists).Should(BeTrue())
 		Expect(esUser.Username).Should(Equal(expectedUser.Username))
-
+		Expect(esUser.FullName).To(Equal("system:serviceaccount"))
 		Expect(len(esUser.Roles)).Should(Equal(len(expectedUser.Roles)))
 
 		for _, expectedRole := range expectedUser.Roles {

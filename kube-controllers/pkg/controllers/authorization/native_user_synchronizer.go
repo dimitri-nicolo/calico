@@ -253,12 +253,14 @@ func (n *nativeUserSynchronizer) synchronizeOIDCUsers(oidcUsersUpdated []string)
 	}
 
 	for _, esUser := range updateEsUsers {
+		log.WithField("esUser", esUser).Trace("Updating OIDC user.")
 		if err = n.esCLI.UpdateUser(esUser); err != nil {
 			return err
 		}
 	}
 
 	for _, esUser := range deleteEsUsers {
+		log.WithField("esUser", esUser).Trace("Deleting OIDC user.")
 		if err = n.esCLI.DeleteUser(esUser); err != nil {
 			return err
 		}

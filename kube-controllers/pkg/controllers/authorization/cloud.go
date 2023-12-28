@@ -60,7 +60,8 @@ func (n *nativeUserSynchronizer) resync() error {
 		}
 
 		for _, user := range users {
-			if strings.HasPrefix(user.Username, n.esUserPrefix) {
+			// Exclude Tigera's system users from deletion.
+			if user.FullName != eusers.SystemUserFullName {
 				subjectID := strings.TrimPrefix(user.Username, fmt.Sprintf("%s-", n.esUserPrefix))
 				if !n.userCache.Exists(subjectID) {
 					if err := n.esCLI.DeleteUser(elasticsearch.User{Username: user.Username}); err != nil {
