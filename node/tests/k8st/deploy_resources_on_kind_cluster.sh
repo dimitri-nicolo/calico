@@ -8,7 +8,7 @@ ARCH=${ARCH:-amd64}
 : ${TSEE_TEST_LICENSE:=/home/semaphore/secrets/new-test-customer-license.yaml}
 
 # kubectl binary.
-: ${kubectl:=../hack/test/kind/kubectl}
+: ${kubectl:=./kubectl}
 
 function checkModule(){
   MODULE="$1"
