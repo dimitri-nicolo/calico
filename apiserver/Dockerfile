@@ -1,3 +1,5 @@
+# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
 FROM scratch as source
 
 ARG BIN_DIR

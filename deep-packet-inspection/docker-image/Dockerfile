@@ -1,3 +1,5 @@
+# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
 ARG QEMU_IMAGE
 ARG UBI_IMAGE
 
