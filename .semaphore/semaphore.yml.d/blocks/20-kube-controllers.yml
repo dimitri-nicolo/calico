@@ -15,6 +15,13 @@
       - name: "kube-controllers: tests"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
     epilogue:
       always:
         commands:

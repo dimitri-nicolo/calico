@@ -7,9 +7,6 @@ PACKAGE_NAME = github.com/projectcalico/calico/app-policy
 GENERATED_FILES=../felix/proto/felixbackend.pb.go proto/healthz.pb.go
 SRC_FILES=$(shell find . -name '*.go' |grep -v vendor) $(GENERATED_FILES)
 
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
-
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 DIKASTES_IMAGE ?=dikastes
@@ -36,6 +33,15 @@ BINDIR=bin/$(ARCH)-fips
 else
 CONTAINER_MARKER=$(CONTAINER_CREATED)
 BINDIR=bin
+endif
+
+# Set the platform correctly for building docker images.
+ifeq ($(ARCH),arm64)
+# We need to force ARM64 build image to be used in a cross-compilation run.
+# Coraza needs CGO to use new CRS version (see https://github.com/tigera/calico-private/pull/7011)
+# but UBI based calico/go-build:amd64 doesn't ship the full multi-arch headers for corss-compilation.
+# We need a calico/go-build container for the target architecture to do qemu emulated native build.
+CALICO_BUILD:=$(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(ARCH)
 endif
 
 # Shortcut targets
@@ -65,7 +71,6 @@ clean-generated:
 ###############################################################################
 # Building the binary
 ###############################################################################
-
 .PHONY: build-all
 ## Build the binaries for all architectures and platforms
 $(VALIDARCHES):
@@ -75,7 +80,7 @@ build-all: $(VALIDARCHES)
 
 .PHONY: build
 ## Build the binary for the current architecture and platform
-build: 
+build: register
 	$(MAKE) $(BINDIR)/dikastes-$(ARCH) ARCH=$(ARCH)
 	$(MAKE) $(BINDIR)/healthz-$(ARCH) ARCH=$(ARCH)
 
@@ -128,7 +133,7 @@ proto/healthz.pb.go: proto/healthz.proto
 		      --gogofast_out=plugins=grpc:proto
 	$(MAKE) fix
 
-
+###############################################################################
 # Building the image
 ###############################################################################
 .PHONY: image $(DIKASTES_IMAGE)
@@ -165,7 +170,7 @@ ut-exec:
 ###############################################################################
 
 .PHONY: ci
-ci: mod-download build-all check-generated-files static-checks ut
+ci: check-generated-files static-checks image ut
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files

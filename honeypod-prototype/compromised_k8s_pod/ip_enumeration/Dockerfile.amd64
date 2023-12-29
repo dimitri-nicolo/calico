@@ -1,8 +1,0 @@
-FROM alpine:3
-
-RUN apk upgrade --no-cache
-
-USER 10001:10001
-
-ENTRYPOINT ["/bin/sh", "-c", "sleep infinity"]
-

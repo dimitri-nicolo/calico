@@ -66,8 +66,8 @@ sub-image-%:
 image: $(QUERYSERVER_IMAGE)
 
 $(QUERYSERVER_IMAGE): $(QUERYSERVER_CONTAINER_CREATED)
-$(QUERYSERVER_CONTAINER_CREATED): Dockerfile.$(ARCH) bin/cnx-queryserver-$(ARCH)
-	$(DOCKER_BUILD) -t $(QUERYSERVER_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(QUERYSERVER_CONTAINER_CREATED): Dockerfile bin/cnx-queryserver-$(ARCH)
+	$(DOCKER_BUILD) -t $(QUERYSERVER_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -97,7 +97,7 @@ MOCKERY_FILE_PATHS= \
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean image static-checks ut fv
+ci: clean static-checks image ut fv
 
 ## Deploys images to registry
-cd: image cd-common
+cd: image-all cd-common

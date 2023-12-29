@@ -62,8 +62,8 @@ sub-image-%:
 image: $(WEBHOOKS_IMAGE)
 
 $(WEBHOOKS_IMAGE): $(WEBHOOKS_PROCESSOR_CONTAINER_CREATED)
-$(WEBHOOKS_PROCESSOR_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/webhooks-processor-$(ARCH)
-	$(DOCKER_BUILD) -t $(WEBHOOKS_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+$(WEBHOOKS_PROCESSOR_CONTAINER_CREATED): Dockerfile bin/webhooks-processor-$(ARCH)
+	$(DOCKER_BUILD) -t $(WEBHOOKS_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -91,4 +91,6 @@ clean:
 # SEMAPHORE
 ###############################################################################
 .PHONY: ci
-ci: clean static-checks test
+ci: clean static-checks image test
+
+cd: image-all cd-common

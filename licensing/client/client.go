@@ -63,7 +63,7 @@ var (
 	// LicenseKey is a singleton resource, and has to have the name "default".
 	ResourceName = "default"
 
-	opts x509.VerifyOptions
+	//opts x509.VerifyOptions
 )
 
 func init() {
@@ -76,9 +76,9 @@ func init() {
 		panic("failed to load root cert")
 	}
 
-	opts = x509.VerifyOptions{
-		Roots: roots,
-	}
+	//opts = x509.VerifyOptions{
+	//	Roots: roots,
+	//}
 }
 
 // LicenseClaims contains all the license control fields.

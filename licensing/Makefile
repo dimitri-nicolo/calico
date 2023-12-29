@@ -4,9 +4,6 @@ PACKAGE_NAME?=github.com/projectcalico/calico/licensing
 
 CARROTCTL_IMAGE       ?=tigera/carrotctl
 BUILD_IMAGES          ?=$(CARROTCTL_IMAGE)
-RELEASE_REGISTRIES    ?=quay.io
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
 
 ###############################################################################
 # Include ../lib.Makefile before anything else
@@ -85,4 +82,4 @@ ut: $(SRC_FILES)
 fv st:
 	@echo "No FVs or STs available"
 
-ci: test
+ci: clean static-checks build test

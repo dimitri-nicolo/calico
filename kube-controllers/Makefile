@@ -8,10 +8,6 @@ TESLA ?= false
 KUBE_CONTROLLERS_IMAGE  ?=kube-controllers
 FLANNEL_MIGRATION_IMAGE ?=flannel-migration-controller
 
-# Makefile configuration options
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
-
 ifdef RELEASE
 BUILD_IMAGES ?=$(KUBE_CONTROLLERS_IMAGE)
 else
@@ -21,8 +17,6 @@ endif
 ifeq ($(TESLA),true)
 	RELEASE_REGISTRIES    = gcr.io/tigera-tesla/tigera
 	BUILD_TAGS            ?= tesla
-	RELEASE_BRANCH_PREFIX = release-tesla
-	DEV_TAG_SUFFIX        = tesla-0.dev
 	IMAGETAG_PREFIX       ?= tesla
 endif
 
@@ -176,7 +170,7 @@ st:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download image-all static-checks ut
+ci: clean static-checks image ut
 
 ###############################################################################
 # CD

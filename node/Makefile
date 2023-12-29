@@ -20,18 +20,12 @@ else
 BUILD_IMAGES          ?=$(NODE_IMAGE)
 endif
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 # Paths within the build container for BPF source.
 LIBBPF_CONTAINER_PATH=/go/src/github.com/projectcalico/calico/felix/bpf-gpl/include/libbpf/src/
 BPFGPL_CONTAINER_PATH=/go/src/github.com/projectcalico/calico/felix/bpf-gpl/
 
 # Paths within the repository for BPF source.
 LIBBPF_A=../felix/bpf-gpl/include/libbpf/src/$(ARCH)/libbpf.a
-
-# These arches not yet building in node-private
-EXCLUDEARCH?=armv7 arm64 ppc64le s390x
 
 # This gets embedded into node as the Calico version, the Enterprise release
 # is based off of. This should be updated everytime a new opensource Calico
@@ -67,8 +61,8 @@ endif
 # Set the platform correctly for building docker images.
 ifeq ($(ARCH),arm64)
 # Required for eBPF support in ARM64.
-# We need to force ARM64 build image to be used in a crosscompilation run.
-CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
+# We need to force ARM64 build image to be used in a cross-compilation run.
+CALICO_BUILD:=$(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(ARCH)
 endif
 
 ###############################################################################
@@ -241,7 +235,7 @@ $(NODE_CONTAINER_BINARY): filesystem/usr/lib/calico/bpf $(LIBBPF_A) $(SRC_FILES)
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, ./cmd/calico-node/main.go, $@)
 else
-ifeq ($(ARCH),amd64)
+ifeq ($(ARCH), $(filter $(ARCH),amd64 arm64))
 	$(call build_cgo_binary, ./cmd/calico-node/main.go, $@)
 else
 	$(call build_binary, ./cmd/calico-node/main.go, $@)
@@ -537,12 +531,6 @@ external-network-run-test: .calico_test.created $(KIND_KUBECONFIG)
 external-network-cleanup:
 	-STEPS=cleanup $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
-# Needed for Semaphore CI (where disk space is a real issue during k8s-test)
-.PHONY: remove-go-build-image
-remove-go-build-image:
-	@echo "Removing $(CALICO_BUILD) image to save space needed for testing ..."
-	@-docker rmi $(CALICO_BUILD)
-
 .PHONY: st
 ## Run the system tests
 st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
@@ -573,10 +561,10 @@ st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: static-checks ut image-all st
+ci: clean static-checks image ut st
 
 ## Deploys images to registry
-cd: cd-common release-windows
+cd: image-all cd-common release-windows
 
 .PHONY: node-test-at
 # Run docker-image acceptance tests

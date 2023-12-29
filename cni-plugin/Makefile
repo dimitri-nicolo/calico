@@ -2,9 +2,6 @@ include ../metadata.mk
 
 PACKAGE_NAME = github.com/projectcalico/calico/cni-plugin
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 CNI_PLUGIN_IMAGE ?=cni
@@ -215,12 +212,12 @@ test-install-cni: run-k8s-apiserver image pkg/install/install.test
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download build static-checks test-cni-versions image-all test-install-cni
+ci: clean static-checks image test-cni-versions test-install-cni
 
 ## Deploys images to registry
 cd: image-all cd-common
 	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME)-fips
-	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION)-fips EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION)-fips
 
 ## Build fv binary for Windows
 $(WINDOWS_BIN)/win-fv.exe: $(WINFV_SRCFILES)

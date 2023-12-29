@@ -40,16 +40,12 @@ type set map[string]bool
 func merge(a set, b set) set {
 	var new set = make(set)
 
-	if a != nil {
-		for k, v := range a {
-			new[k] = v
-		}
+	for k, v := range a {
+		new[k] = v
 	}
 
-	if b != nil {
-		for k, v := range b {
-			new[k] = v
-		}
+	for k, v := range b {
+		new[k] = v
 	}
 
 	return new

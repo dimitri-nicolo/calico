@@ -65,8 +65,8 @@ sub-image-%:
 image: $(DEEP_PACKET_INSPECTION_IMAGE)
 
 $(DEEP_PACKET_INSPECTION_IMAGE): $(DEEP_PACKET_INSPECTION_CONTAINER_CREATED)
-$(DEEP_PACKET_INSPECTION_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/deep-packet-inspection-$(ARCH)
-	$(DOCKER_BUILD) -t $(DEEP_PACKET_INSPECTION_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+$(DEEP_PACKET_INSPECTION_CONTAINER_CREATED): register docker-image/Dockerfile bin/deep-packet-inspection-$(ARCH)
+	$(DOCKER_BUILD) -t $(DEEP_PACKET_INSPECTION_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -127,7 +127,7 @@ fv: run-k8s-apiserver
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks ut fv
+ci: clean static-checks image ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common

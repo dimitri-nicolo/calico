@@ -102,10 +102,6 @@ const (
 	typhaKeyFile        = "/node-certs/tls.key"
 	typhaCN             = "typha-server"
 	typhaURISAN         = ""
-
-	promCA   = "/etc/pki/tls/certs/tigera-ca-bundle.crt"
-	promCert = "/calico-node-prometheus-server-tls/tls.crt"
-	promKey  = "/calico-node-prometheus-server-tls/tls.key"
 )
 
 func main() {

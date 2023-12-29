@@ -41,15 +41,13 @@ ARG STREAM9_MIRROR_BASE_URL=https://iad.mirror.rackspace.com/centos-stream/9-str
 ARG IPSET_SOURCERPM_URL=${STREAM9_MIRROR_BASE_URL}/BaseOS/source/tree/Packages/ipset-${IPSET_VER}.el9.src.rpm
 
 # Install build dependencies and security updates.
-RUN dnf install -y 'dnf-command(config-manager)' epel-release && \
+RUN dnf install -y 'dnf-command(config-manager)' && \
     # Enable PowerTools repo for '-devel' packages
     dnf config-manager --set-enabled powertools && \
     # Install required packages for building rpms. yum-utils is not required but it gives us yum-builddep to easily install build deps.
     dnf install --allowerasing -y rpm-build yum-utils make && \
     # Need these to build runit.
     dnf install --allowerasing  -y wget glibc-static gcc && \
-    # Patch calico-node shared libraries.
-    dnf install -y patchelf && \
     # Ensure all security updates are installed.
     dnf -y update-minimal --security
 
@@ -124,9 +122,6 @@ COPY --from=centos  /tmp/admin/runit-${RUNIT_VER}/command/* /usr/local/bin/
 
 # Copy in our rpms
 COPY --from=centos  /root/rpmbuild/RPMS/${ARCH}/* /tmp/rpms/
-
-# Copy patchelf to patch calico-node
-COPY --from=centos /usr/bin/patchelf /usr/bin/patchelf
 
 # Install a subset of packages from UBI prior to removing the UBI repo below.
 # We do this because the UBI repo has updated versions with CVE fixes. We can remove
@@ -214,8 +209,6 @@ COPY --from=bpftool /bpftool /bin
 ARG BIN_DIR
 # Copy in the calico-node binary
 COPY ${BIN_DIR}/calico-node-amd64 /bin/calico-node
-# FIXME remove patchelf and this step when calico/go-build is migrated to UBI compatible base
-RUN patchelf --replace-needed libpcap.so.0.8 libpcap.so.1 /bin/calico-node
 
 # Set the suid bit on calico-node
 RUN chmod u+s /bin/calico-node

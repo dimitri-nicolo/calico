@@ -5,9 +5,6 @@ SEMAPHORE_PROJECT_ID=""
 
 IMAGE_NAME  ?=flow-log-generator
 BUILD_IMAGES          ?=$(IMAGE_NAME)
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-VALIDARCHES ?= amd64
 
 ###############################################################################
 # Shortcut targets
@@ -72,8 +69,8 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(IMAGE_NAME): $(CONTAINER_CREATED)
-$(CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(BINARY)
-	$(DOCKER_BUILD) -t $(IMAGE_NAME):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(CONTAINER_CREATED): Dockerfile $(BINARY)
+	$(DOCKER_BUILD) -t $(IMAGE_NAME):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -92,6 +89,6 @@ st:
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: static-checks clean image-all test
+ci: clean static-checks image test
 ## Deploys images to registry
 cd: image-all cd-common

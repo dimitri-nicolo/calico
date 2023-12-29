@@ -41,11 +41,11 @@ endif
 
 # If architectures cannot infer from Dockerfiles, set default supported architecture.
 ifeq ($(ARCHES),)
-	ARCHES=amd64
+	ARCHES=amd64 arm64
 endif
 
 # list of arches *not* to build when doing *-all
-EXCLUDEARCH?=arm64 ppc64le s390x
+EXCLUDEARCH?=ppc64le s390x
 VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
 # BUILDARCH is the host architecture
@@ -151,7 +151,7 @@ endif
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
 GO_BUILD_IMAGE ?= calico/go-build
-CALICO_BUILD    = $(GO_BUILD_IMAGE):$(GO_BUILD_VER)
+CALICO_BUILD    = $(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(BUILDARCH)
 
 # Build a binary with boring crypto support.
 # This function expects you to pass in two arguments:
@@ -889,15 +889,11 @@ sub-manifest-%:
 	$(DOCKER) manifest create $(call unescapefs,$*):$(IMAGETAG) $(addprefix --amend ,$(addprefix $(call unescapefs,$*):$(IMAGETAG)-,$(VALIDARCHES)))
 	$(DOCKER) manifest push --purge $(call unescapefs,$*):$(IMAGETAG)
 
-push-manifests-with-tag: var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
-	$(MAKE) push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
-
 # cd-common tags and pushes images with the branch name and git version. This target uses PUSH_IMAGES, BUILD_IMAGE,
 # and BRANCH_NAME env variables to figure out what to tag and where to push it to.
 cd-common: var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
-	$(MAKE) retag-build-images-with-registries push-images-to-registries IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) retag-build-images-with-registries push-images-to-registries IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Release targets and helpers
@@ -1534,7 +1530,7 @@ release-windows-with-tag: var-require-one-of-CONFIRM-DRYRUN var-require-all-IMAG
 		wait; \
 		$(DOCKER_MANIFEST) create --amend $${manifest_image} $${all_images}; \
 		for win_ver in $(WINDOWS_VERSIONS); do \
-			version=$$(docker manifest inspect mcr.microsoft.com/windows/nanoserver:$${win_ver} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'); \
+			version=$$(docker manifest inspect mcr.microsoft.com/windows/nanoserver:$${win_ver} | jq -r '.manifests[0].platform."os.version"'; \
 			image="$${registry}/$(WINDOWS_IMAGE):$(IMAGETAG)-windows-$${win_ver}"; \
 			$(DOCKER_MANIFEST) annotate --os windows --arch amd64 --os-version $${version} $${manifest_image} $${image}; \
 		done; \

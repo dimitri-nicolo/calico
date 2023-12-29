@@ -53,9 +53,10 @@ LICENSE_AGENT_CONTAINER_CREATED=.$(LICENSE_AGENT_IMAGE).created-$(ARCH)
 
 image: $(LICENSE_AGENT_IMAGE)
 $(LICENSE_AGENT_IMAGE): $(LICENSE_AGENT_CONTAINER_CREATED)
-$(LICENSE_AGENT_CONTAINER_CREATED): $(BINDIR)/license-agent-$(ARCH)
-	$(DOCKER_BUILD) --pull -t $(LICENSE_AGENT_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+$(LICENSE_AGENT_CONTAINER_CREATED): Dockerfile $(BINDIR)/license-agent-$(ARCH)
+	$(DOCKER_BUILD) --pull -t $(LICENSE_AGENT_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	touch $@
 
 ##########################################################################
 # Testing
@@ -85,7 +86,7 @@ clean:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean image-all static-checks ut
+ci: clean static-checks image ut
 
 ## Deploys images to registry
 cd: image-all cd-common

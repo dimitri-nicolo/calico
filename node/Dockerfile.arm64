@@ -31,7 +31,7 @@ FROM quay.io/centos/centos:stream8 as centos
 MAINTAINER Reza Ramezanpour <reza@projectcalico.org>
 # Enable non-native builds of this image on an amd64 hosts.
 # This must be the first RUN command in this file!
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
+COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin/qemu-aarch64-static
 
 ARG ARCH
 ARG IPTABLES_VER
@@ -129,7 +129,7 @@ ARG RUNIT_VER
 
 # Enable non-native builds of this image on an amd64 hosts.
 # This must be the first RUN command in this file!
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
+COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin/qemu-aarch64-static
 
 # Update base packages to pick up security updates.  Must do this before adding the centos repo.
 RUN microdnf upgrade
@@ -240,14 +240,11 @@ RUN chmod u+s /bin/mountns
 
 # Clean out as many files as we can from the filesystem.  We no longer need dnf or the platform python install
 # or any of its dependencies.
-COPY clean-up-filesystem.sh /
-
-# Allowing qemu binaries to persist.
-RUN sed -i 's#zmore#zmore\n\tqemu\n#m' clean-up-filesystem.sh
+COPY clean-up-filesystem.sh /clean-up-filesystem.sh
 RUN /clean-up-filesystem.sh
 
 # Delete qemu binaries
-RUN rm /usr/bin/qemu-*-static
+RUN rm /usr/bin/qemu-aarch64-static
 
 # Copy everything into a fresh scratch image so that naive CVE scanners don't pick up binaries and libraries
 # that have been removed in our later layers.

@@ -1,8 +1,0 @@
-FROM scratch
-
-COPY bin/webhooks-processor-amd64 /webhooks-processor
-
-USER 10001:10001
-
-# Now define the command-line call to start your application
-ENTRYPOINT ["/webhooks-processor"]

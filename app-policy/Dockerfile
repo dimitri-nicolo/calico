@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+# Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ ARG TARGETARCH
 
 # Precreate the /var/run/dikastes directory so that we don't need any elevated
 # permission to create the directory at runtime.
-COPY --chown=10001 --from=builder /var/run/dikastes /var/run/dikastes/
+COPY --from=builder /var/run/dikastes /var/run/dikastes/
 
 COPY ${BIN_DIR}/dikastes-${TARGETARCH} /dikastes
 COPY ${BIN_DIR}/healthz-${TARGETARCH} /healthz
@@ -47,7 +47,5 @@ LABEL vendor="Project Calico"
 LABEL version=${GIT_VERSION}
 
 COPY --from=source / /
-
-USER 10001:10001
 
 ENTRYPOINT ["/dikastes"]

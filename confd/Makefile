@@ -155,4 +155,4 @@ fv st:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download static-checks test
+ci: clean static-checks build test

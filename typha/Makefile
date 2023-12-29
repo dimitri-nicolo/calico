@@ -2,9 +2,6 @@ include ../metadata.mk
 
 PACKAGE_NAME = github.com/projectcalico/calico/typha
 
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
-
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 TYPHA_IMAGE    ?=typha
@@ -136,7 +133,6 @@ $(TYPHA_CONTAINER_FIPS_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
                                  docker-image/Dockerfile \
                                  docker-image/typha.cfg \
                                  $(shell test "$(TYPHA_IMAGE_ID)" || echo force-rebuild)
-	$(MAKE) register
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/calico-typha-$(ARCH) docker-image/bin/
@@ -164,7 +160,7 @@ ut combined.coverprofile: $(SRC_FILES)
 version: image
 	docker run --rm $(TYPHA_IMAGE):latest-$(ARCH) calico-typha --version
 
-ci: mod-download image-all version static-checks ut
+ci: version static-checks image ut
 ifeq (,$(filter k8sfv-test, $(EXCEPT)))
 	@$(MAKE) k8sfv-test
 endif

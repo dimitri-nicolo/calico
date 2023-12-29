@@ -67,8 +67,8 @@ sub-image-%:
 image: $(FIREWALL_INTEGRATION_IMAGE)
 
 $(FIREWALL_INTEGRATION_IMAGE): $(FIREWALL_INTEGRATION_CONTAINER_CREATED)
-$(FIREWALL_INTEGRATION_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/firewall-integration-$(ARCH)
-	$(DOCKER_BUILD) -t $(FIREWALL_INTEGRATION_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+$(FIREWALL_INTEGRATION_CONTAINER_CREATED): Dockerfile bin/firewall-integration-$(ARCH)
+	$(DOCKER_BUILD) -t $(FIREWALL_INTEGRATION_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -109,7 +109,7 @@ fv:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean image static-checks ut fv
+ci: clean static-checks image ut fv
 
 ## Deploys images to registry
-cd: image cd-common
+cd: image-all cd-common

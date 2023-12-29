@@ -9,9 +9,6 @@ CSI_IMAGE       ?=csi
 REGISTRAR_IMAGE ?=node-driver-registrar
 BUILD_IMAGES    ?=$(FLEXVOL_IMAGE) $(CSI_IMAGE) $(REGISTRAR_IMAGE)
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 ###############################################################################
 # Download and include ../lib.Makefile before anything else
 ###############################################################################
@@ -37,6 +34,7 @@ clean:
 	-docker image rm -f $$(docker images $(CSI_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(FLEXVOL_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(REGISTRAR_IMAGE) -a -q)
+
 	$(MAKE) clean-registrar
 
 ###############################################################################
@@ -181,7 +179,7 @@ fv st:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download build-all clean-registrar static-checks ut
+ci: clean clean-registrar static-checks image ut
 
 ###############################################################################
 # CD

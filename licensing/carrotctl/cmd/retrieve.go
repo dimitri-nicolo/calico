@@ -15,15 +15,12 @@ import (
 var (
 	retrieveUUIDFlag *pflag.FlagSet
 	retrieveUUID     string
-
-	retrieveCertPathFlag *pflag.FlagSet
-	retrieveCertPath     string
 )
 
 func init() {
 	retrieveUUIDFlag = RetrieveLicenseCmd.PersistentFlags()
 	retrieveUUIDFlag.StringVarP(&retrieveUUID, "license-id", "i", "", "License ID")
-	RetrieveLicenseCmd.MarkPersistentFlagRequired("license-id")
+	_ = RetrieveLicenseCmd.MarkPersistentFlagRequired("license-id")
 }
 
 var RetrieveLicenseCmd = &cobra.Command{

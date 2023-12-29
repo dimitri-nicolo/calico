@@ -11,20 +11,17 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"gopkg.in/square/go-jose.v2/jwt"
 
 	lapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	lclient "github.com/projectcalico/calico/licensing/client"
 
-	log "github.com/sirupsen/logrus"
-
-	"gopkg.in/square/go-jose.v2/jwt"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func init() {
@@ -55,7 +52,9 @@ func TestMonitorLoop(t *testing.T) {
 	// license transition timer.
 	m.SetPollInterval(11 * time.Minute)
 	defer h.cancel()
-	go m.MonitorForever(h.ctx)
+	go func() {
+		_ = m.MonitorForever(h.ctx)
+	}()
 
 	Eventually(h.HasActiveWatch).Should(BeTrue())
 	h.SetLicense("good", h.Now().Add(30*time.Minute))
@@ -78,11 +77,11 @@ func TestMonitorLoop(t *testing.T) {
 	Expect(numPops).To(Equal(1))
 
 	// Expect the license to go into grace after 30 minutes so jump forward to 29 minutes and check it's still valid...
-	numPops = h.AdvanceTime(6 * time.Minute) // 29m
+	h.AdvanceTime(6 * time.Minute) // 29m
 	Consistently(h.GetSignalledLicenseStatus, "100ms", "10ms").Should(Equal(lclient.Valid))
 
 	// Then jump past 30 minutes...
-	numPops = h.AdvanceTime(2 * time.Minute)
+	h.AdvanceTime(2 * time.Minute)
 	Eventually(h.GetSignalledLicenseStatus).Should(Equal(lclient.InGracePeriod))
 
 	// Then jump forward a day, which should end the grace period.
@@ -97,11 +96,11 @@ func TestMonitorLoop(t *testing.T) {
 	Eventually(h.GetSignalledLicenseStatus).Should(Equal(lclient.Valid))
 
 	// Then jump past 30 minutes...
-	numPops = h.AdvanceTime(31 * time.Minute)
+	h.AdvanceTime(31 * time.Minute)
 	Eventually(h.GetSignalledLicenseStatus).Should(Equal(lclient.InGracePeriod))
 
 	// Then jump past 24 hours...
-	numPops = h.AdvanceTime(24 * time.Hour)
+	h.AdvanceTime(24 * time.Hour)
 	Eventually(h.GetSignalledLicenseStatus).Should(Equal(lclient.Expired))
 }
 
@@ -110,12 +109,14 @@ func TestRefreshLicense(t *testing.T) {
 		RegisterTestingT(t)
 		m, h := setUpMonitorAndMocks()
 		defer h.cancel()
-		go m.MonitorForever(h.ctx)
+		go func() {
+			_ = m.MonitorForever(h.ctx)
+		}()
 
 		Eventually(h.HasActiveWatch).Should(BeTrue())
 		h.SetLicense("good", h.Now().Add(30*time.Minute))
 
-		m.RefreshLicense(h.ctx)
+		_ = m.RefreshLicense(h.ctx)
 		log.WithField("status", m.GetLicenseStatus()).Info("License status")
 
 		Expect(m.GetLicenseStatus()).To(Equal(lclient.Valid))
@@ -125,26 +126,26 @@ func TestRefreshLicense(t *testing.T) {
 
 		t.Log("Second call with exactly the same license shouldn't trigger feature change")
 		h.OnFeaturesChangedCalled = false
-		m.RefreshLicense(h.ctx)
+		_ = m.RefreshLicense(h.ctx)
 		Expect(h.OnFeaturesChangedCalled).To(BeFalse(), "expected feature change not to be signalled")
 
 		t.Log("After updating license with new features")
 		// Need to make some tweak to avoid "raw license hasn't changed" optimisation.
 		h.allowedFeatures = []string{"some", "new", "features"}
 		h.SetLicense("good2", h.Now().Add(30*time.Minute))
-		m.RefreshLicense(h.ctx)
+		_ = m.RefreshLicense(h.ctx)
 		Expect(h.OnFeaturesChangedCalled).To(BeTrue(), "expected new features to be signalled")
 
 		t.Log("Changing the license without changing the features")
 		// Need to make some tweak to avoid "raw license hasn't changed" optimisation.
 		h.SetLicense("good", h.Now().Add(30*time.Minute))
 		h.OnFeaturesChangedCalled = false
-		m.RefreshLicense(h.ctx)
+		_ = m.RefreshLicense(h.ctx)
 		Expect(h.OnFeaturesChangedCalled).To(BeFalse(), "expected feature change not to be signalled")
 
 		t.Log("changing to a grace-period license")
 		h.SetLicense("in-grace", h.Now().Add(-1*time.Minute))
-		m.RefreshLicense(h.ctx)
+		_ = m.RefreshLicense(h.ctx)
 		Expect(h.OnFeaturesChangedCalled).To(BeFalse(), "expected feature change not to be signalled")
 		Expect(m.GetLicenseStatus()).To(Equal(lclient.InGracePeriod))
 	})
@@ -152,11 +153,13 @@ func TestRefreshLicense(t *testing.T) {
 		RegisterTestingT(t)
 		m, h := setUpMonitorAndMocks()
 		defer h.cancel()
-		go m.MonitorForever(h.ctx)
+		go func() {
+			_ = m.MonitorForever(h.ctx)
+		}()
 		Eventually(h.HasActiveWatch).Should(BeTrue())
 		h.SetLicense("in-grace", h.Now().Add(-1*time.Minute))
 
-		m.RefreshLicense(h.ctx)
+		_ = m.RefreshLicense(h.ctx)
 		log.WithField("status", m.GetLicenseStatus()).Info("License status")
 
 		Expect(m.GetLicenseStatus()).To(Equal(lclient.InGracePeriod))
@@ -167,11 +170,13 @@ func TestRefreshLicense(t *testing.T) {
 		RegisterTestingT(t)
 		m, h := setUpMonitorAndMocks()
 		defer h.cancel()
-		go m.MonitorForever(h.ctx)
+		go func() {
+			_ = m.MonitorForever(h.ctx)
+		}()
 		Eventually(h.HasActiveWatch).Should(BeTrue())
 		h.SetLicense("expired", h.Now().Add(-25*time.Hour))
 
-		m.RefreshLicense(h.ctx)
+		_ = m.RefreshLicense(h.ctx)
 		log.WithField("status", m.GetLicenseStatus()).Info("License status")
 
 		Expect(m.GetLicenseStatus()).To(Equal(lclient.Expired))
@@ -185,7 +190,9 @@ func TestWatch(t *testing.T) {
 	m, h := setUpMonitorAndMocks()
 	m.SetPollInterval(10 * time.Minute)
 	defer h.cancel()
-	go m.MonitorForever(h.ctx)
+	go func() {
+		_ = m.MonitorForever(h.ctx)
+	}()
 	Eventually(h.HasActiveWatch).Should(BeTrue())
 
 	// Add slight delay to make sure the routine is running.
@@ -210,7 +217,9 @@ func TestChanClosed(t *testing.T) {
 	m, h := setUpMonitorAndMocks()
 	m.SetPollInterval(10 * time.Minute)
 	defer h.cancel()
-	go m.MonitorForever(h.ctx)
+	go func() {
+		_ = m.MonitorForever(h.ctx)
+	}()
 	Eventually(h.HasActiveWatch).Should(BeTrue())
 	Expect(h.WatcherCreationCount()).To(Equal(1))
 
@@ -232,7 +241,9 @@ func TestChanError(t *testing.T) {
 	m, h := setUpMonitorAndMocks()
 	m.SetPollInterval(10 * time.Minute)
 	defer h.cancel()
-	go m.MonitorForever(h.ctx)
+	go func() {
+		_ = m.MonitorForever(h.ctx)
+	}()
 	Eventually(h.HasActiveWatch).Should(BeTrue())
 	Expect(h.WatcherCreationCount()).To(Equal(1))
 
@@ -290,9 +301,8 @@ type harness struct {
 type mockBapiClient struct {
 	lock sync.Mutex
 
-	license     string
-	licenseTime time.Time
-	bapiClient
+	license      string
+	licenseTime  time.Time
 	watchChan    chan lapi.WatchEvent
 	terminated   bool
 	watchActive  bool

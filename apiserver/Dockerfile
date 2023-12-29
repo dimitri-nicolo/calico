@@ -1,3 +1,5 @@
+# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
 FROM scratch as source
 
 ARG BIN_DIR
@@ -21,7 +23,5 @@ LABEL version=${GIT_VERSION}
 COPY --from=source / /
 
 WORKDIR /code
-
-USER 10001:10001
 
 ENTRYPOINT ["/code/apiserver"]
