@@ -170,7 +170,7 @@ ifeq (,$(filter k8sfv-test, $(EXCEPT)))
 endif
 
 ## Deploys images to registry
-cd: cd-common
+cd: image-all cd-common
 
 fv: k8sfv-test
 

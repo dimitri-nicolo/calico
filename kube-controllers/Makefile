@@ -183,4 +183,4 @@ ci: clean mod-download image-all static-checks ut
 ###############################################################################
 .PHONY: cd
 ## Deploys images to registry
-cd: cd-common
+cd: image-all cd-common

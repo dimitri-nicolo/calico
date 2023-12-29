@@ -45,13 +45,13 @@ blocks:
         - name: DEV_REGISTRIES
           value: gcr.io/unique-caldron-775/cnx/tigera
         commands:
-        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make VALIDARCHES=amd64 -C apiserver image-all cd-common OMIT_MANIFESTS=true CONFIRM=true; fi
+        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make VALIDARCHES=amd64 -C apiserver cd OMIT_MANIFESTS=true CONFIRM=true; fi
       - name: "Linux arm64"
         env_vars:
         - name: DEV_REGISTRIES
           value: gcr.io/unique-caldron-775/cnx/tigera
         commands:
-        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make VALIDARCHES=arm64 -C apiserver image-all cd-common OMIT_MANIFESTS=true CONFIRM=true; fi
+        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make VALIDARCHES=arm64 -C apiserver cd OMIT_MANIFESTS=true CONFIRM=true; fi
   - name: "Publish apiserver multi-arch manifest"
     dependencies: [ "Publish apiserver images" ]
     skip:

@@ -50,4 +50,4 @@ blocks:
         - name: DEV_REGISTRIES
           value: gcr.io/unique-caldron-775/cnx/tigera
         commands:
-        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make VALIDARCHES=amd64 -C test-tools/mocknode image-all cd-common CONFIRM=true; fi
+        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make VALIDARCHES=amd64 -C test-tools/mocknode cd CONFIRM=true; fi

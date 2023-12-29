@@ -94,4 +94,4 @@ st:
 .PHONY: ci
 ci: static-checks clean image-all test
 ## Deploys images to registry
-cd: cd-common
+cd: image-all cd-common
