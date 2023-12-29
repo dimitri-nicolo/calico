@@ -4,7 +4,7 @@
 TEST_DIR=./tests/k8st
 
 # kubectl binary.
-: ${kubectl:=../hack/test/kind/kubectl}
+: ${kubectl:=./kubectl}
 
 # Normally, cleanup any leftover state, then setup, then test.
 : ${STEPS:=cleanup setup}

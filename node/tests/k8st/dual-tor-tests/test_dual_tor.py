@@ -492,22 +492,22 @@ class FailoverCluster(object):
         kubectl("create ns " + ns)
 
         # Create client, ra-server, rb-server and service.
-        kubectl("run --generator=run-pod/v1 client -n " + ns +
+        kubectl("run client -n " + ns +
                 " --image calico-test/busybox-with-reliable-nc --image-pull-policy Never --labels='pod-name=client' " +
                 " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" }, \"terminationGracePeriodSeconds\": 0 } }'" +
-                " --command /bin/sleep -- 3600")
-        kubectl("run --generator=run-pod/v1 client-host -n " + ns +
+                " --command -- /bin/sleep 3600")
+        kubectl("run client-host -n " + ns +
                 " --image calico-test/busybox-with-reliable-nc --image-pull-policy Never --labels='pod-name=client-host' " +
                 " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"hostNetwork\": true, \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" }, \"terminationGracePeriodSeconds\": 0 } }'" +
-                " --command /bin/sleep -- 3600")
-        kubectl("run --generator=run-pod/v1 ra-server -n " + ns +
+                " --command -- /bin/sleep 3600")
+        kubectl("run ra-server -n " + ns +
                 " --image calico-test/busybox-with-reliable-nc --image-pull-policy Never --labels='pod-name=ra-server,app=server' " +
                 " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-control-plane\" }, \"terminationGracePeriodSeconds\": 0 } }'" +
-                " --command /bin/sleep -- 3600")
-        kubectl("run --generator=run-pod/v1 rb-server -n " + ns +
+                " --command -- /bin/sleep 3600")
+        kubectl("run rb-server -n " + ns +
                 " --image calico-test/busybox-with-reliable-nc --image-pull-policy Never --labels='pod-name=rb-server,app=server' " +
                 " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker3\" }, \"terminationGracePeriodSeconds\": 0 } }'" +
-                " --command /bin/sleep -- 3600")
+                " --command -- /bin/sleep 3600")
         kubectl("wait --timeout=1m --for=condition=ready" +
                 " pod/client -n " + ns)
         kubectl("wait --timeout=1m --for=condition=ready" +

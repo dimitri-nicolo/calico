@@ -428,7 +428,7 @@ dual-tor-test: $(K8ST_IMAGE_TARS) .calico_test.created dual-tor-setup dual-tor-r
 # kind logic from lib.Makefile.
 .PHONY: dual-tor-setup
 DUAL_TOR_DIR=tests/k8st/dual-tor
-dual-tor-setup: dual-tor-cleanup dist/calicoctl $(K8ST_IMAGE_TARS) .calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
+dual-tor-setup: dual-tor-cleanup kubectl dist/calicoctl $(K8ST_IMAGE_TARS) .calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
 	docker build -t calico-test/busybox-with-reliable-nc tests/k8st/reliable-nc
 	mkdir -p $(DUAL_TOR_DIR)/tmp
 	cp -a $(K8ST_IMAGE_TARS) $(DUAL_TOR_DIR)/tmp/
@@ -486,7 +486,7 @@ k8s-test:
 
 .PHONY: kind-k8st-setup
 TEST_LICENSE=$(SECRETS_PATH)/license.yaml
-kind-k8st-setup: $(K8ST_IMAGE_TARS) kind-cluster-create $(TEST_LICENSE) $(KIND_KUBECONFIG)
+kind-k8st-setup: $(K8ST_IMAGE_TARS) kubectl kind-cluster-create $(TEST_LICENSE) $(KIND_KUBECONFIG)
 	TSEE_TEST_LICENSE=$(TEST_LICENSE) GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) KUBECONFIG=$(KIND_KUBECONFIG) ARCH=$(ARCH) ./tests/k8st/deploy_resources_on_kind_cluster.sh
 
 .PHONY: kind-k8st-run-test
@@ -515,7 +515,7 @@ external-network-test:
 
 .PHONY: external-network-setup
 EXTERNAL_NETWORK_DIR=tests/k8st/external-network
-external-network-setup: .calico_test.created external-network-cleanup dist/calicoctl $(KIND_KUBECONFIG)
+external-network-setup: .calico_test.created external-network-cleanup kubectl dist/calicoctl $(KIND_KUBECONFIG)
 	STEPS=setup \
 	ROUTER_IMAGE=$(BIRD_DIND_IMAGE) CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 

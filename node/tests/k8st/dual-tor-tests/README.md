@@ -3,12 +3,12 @@
 
 Start of day: create client and server pods and services:
 
-```
+```bash
 kubectl create ns dualtor
-kubectl run --generator=run-pod/v1 client -n dualtor --image calico-test/busybox-with-reliable-nc --image-pull-policy Never --labels='pod-name=client' --overrides='{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "kind-worker" }, "terminationGracePeriodSeconds": 0 } }' --command /bin/sleep -- 3600
-kubectl run --generator=run-pod/v1 client-host -n dualtor --image calico-test/busybox-with-reliable-nc --image-pull-policy Never --labels='pod-name=client-host'  --overrides='{ "apiVersion": "v1", "spec": { "hostNetwork": true, "nodeSelector": { "kubernetes.io/hostname": "kind-worker" }, "terminationGracePeriodSeconds": 0 } }' --command /bin/sleep -- 3600
-kubectl run --generator=run-pod/v1 ttt -n dualtor --image calico-test/busybox-with-reliable-nc --image-pull-policy Never --labels='pod-name=ra-server,app=server'  --overrides='{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "kind-control-plane" }, "terminationGracePeriodSeconds": 0 } }' --command /bin/sleep -- 3600
-kubectl run --generator=run-pod/v1 rb-server -n dualtor --image calico-test/busybox-with-reliable-nc --image-pull-policy Never --labels='pod-name=rb-server,app=server'  --overrides='{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "kind-worker3" }, "terminationGracePeriodSeconds": 0 } }' --command /bin/sleep -- 3600
+kubectl run client -n dualtor --image calico-test/busybox-with-reliable-nc --image-pull-policy Never --labels='pod-name=client' --overrides='{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "kind-worker" }, "terminationGracePeriodSeconds": 0 } }' --command -- /bin/sleep 3600
+kubectl run client-host -n dualtor --image calico-test/busybox-with-reliable-nc --image-pull-policy Never --labels='pod-name=client-host'  --overrides='{ "apiVersion": "v1", "spec": { "hostNetwork": true, "nodeSelector": { "kubernetes.io/hostname": "kind-worker" }, "terminationGracePeriodSeconds": 0 } }' --command -- /bin/sleep 3600
+kubectl run ttt -n dualtor --image calico-test/busybox-with-reliable-nc --image-pull-policy Never --labels='pod-name=ra-server,app=server'  --overrides='{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "kind-control-plane" }, "terminationGracePeriodSeconds": 0 } }' --command -- /bin/sleep 3600
+kubectl run rb-server -n dualtor --image calico-test/busybox-with-reliable-nc --image-pull-policy Never --labels='pod-name=rb-server,app=server'  --overrides='{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "kind-worker3" }, "terminationGracePeriodSeconds": 0 } }' --command -- /bin/sleep 3600
 kubectl wait --timeout=1m --for=condition=ready pod/client -n dualtor
 kubectl wait --timeout=1m --for=condition=ready pod/client-host -n dualtor
 kubectl wait --timeout=1m --for=condition=ready pod/ra-server -n dualtor
@@ -47,27 +47,27 @@ EOF
 
 Per test case: start servers:
 
-```
+```bash
 kubectl exec -n dualtor ra-server -- /reliable-nc 8090 >ra.log 2>&1 &
 kubectl exec -n dualtor rb-server -- /reliable-nc 8090 >rb.log 2>&1 &
 ```
 
 Client for host access test case
 
-```
+```bash
 rb_pod_ip=10.244.195.198
 kubectl exec -n dualtor -t client-host -- /bin/sh -c 'for i in `seq 1 3000`; do echo $i -- ; sleep .5; done | nc -w 1 $rb_pod_ip 8090' &
 ```
 
 Client for pod IP test case
 
-```
+```bash
 kubectl exec -n dualtor -t client -- /bin/sh -c 'for i in `seq 1 3000`; do echo $i -- ; sleep .5; done | nc -w 1 $rb_pod_ip 8090' &
 ```
 
 Client for node port test case
 
-```
+```bash
 worker2_ip=172.31.20.4
 rb_node_port=31535
 kubectl exec -n dualtor -t client -- /bin/sh -c 'for i in `seq 1 3000`; do echo $i -- ; sleep .5; done | nc -w 1 172.31.20.4 31535' &
@@ -75,7 +75,7 @@ kubectl exec -n dualtor -t client -- /bin/sh -c 'for i in `seq 1 3000`; do echo 
 
 Client for service IP test case
 
-```
+```bash
 rb_svc_ip=10.96.215.109
 kubectl exec -n dualtor -t client -- /bin/sh -c 'for i in `seq 1 3000`; do echo $i -- ; sleep .5; done | nc -w 1 $rb_svc_ip 8090' &
 ```
