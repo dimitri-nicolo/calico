@@ -128,10 +128,6 @@ promotions:
     auto_promote:
       when: "branch =~ 'master|release-'"
 
-  - name: Publish docs
-    pipeline_file: docs/deploy-site.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
   - name: Publish Helm Charts
     pipeline_file: docs/helm-charts.yml
     auto_promote:
