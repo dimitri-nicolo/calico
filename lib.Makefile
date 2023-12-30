@@ -217,7 +217,6 @@ ifeq ($(BUILDARCH),amd64)
 	ETCD_IMAGE = quay.io/coreos/etcd:$(ETCD_VERSION)
 endif
 UBI_IMAGE ?= registry.access.redhat.com/ubi8/ubi-minimal:$(UBI_VERSION)
-UBI_IMAGE_FULL  ?= registry.access.redhat.com/ubi8/ubi:$(UBI_VERSION)
 
 ifeq ($(GIT_USE_SSH),true)
 	GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/";
@@ -285,7 +284,6 @@ QEMU_IMAGE ?= calico/qemu-user-static:latest
 DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) --pull \
 	     --build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
 	     --build-arg UBI_IMAGE=$(UBI_IMAGE) \
-	     --build-arg UBI_IMAGE_FULL=$(UBI_IMAGE_FULL) \
 	     --build-arg GIT_VERSION=$(GIT_VERSION)
 
 DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
@@ -307,8 +305,6 @@ DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
 		-w /go/src/$(PACKAGE_NAME)
 
 DOCKER_GO_BUILD := $(DOCKER_RUN) $(CALICO_BUILD)
-
-DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) $(CALICO_BUILD)
 
 # A target that does nothing but it always stale, used to force a rebuild on certain targets based on some non-file criteria.
 .PHONY: force-rebuild
@@ -596,7 +592,7 @@ LINT_ARGS ?= --max-issues-per-linter 0 --max-same-issues 0 --timeout 8m
 
 .PHONY: golangci-lint
 golangci-lint: $(GENERATED_FILES)
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) golangci-lint run $(LINT_ARGS)'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) golangci-lint run $(LINT_ARGS)'
 
 .PHONY: go-fmt goimports fix
 fix go-fmt goimports:

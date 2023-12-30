@@ -162,7 +162,7 @@ $(CONTAINER_FIPS_CREATED): register Dockerfile $(BINDIR)/dikastes-$(ARCH) $(BIND
 ut: protobuf ut-exec
 
 ut-exec:
-	$(DOCKER_GO_BUILD_CGO) /bin/bash -c "go install gotest.tools/gotestsum@latest && gotestsum --junitfile report/tests.xml ./..."
+	$(DOCKER_GO_BUILD) /bin/bash -c "gotestsum --junitfile report/tests.xml ./..."
 
 
 ###############################################################################
