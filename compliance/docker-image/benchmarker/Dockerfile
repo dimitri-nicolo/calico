@@ -4,7 +4,7 @@ ARG QEMU_IMAGE
 
 FROM ${QEMU_IMAGE} as qemu
 
-FROM alpine:3 as base
+FROM alpine:3 as builder
 
 ARG K8S_VERSION
 ARG KUBE_BENCH_VERSION
@@ -31,8 +31,8 @@ ARG TARGETARCH
 COPY bin/benchmarker-${TARGETARCH} /usr/bin/compliance-benchmarker
 COPY bin/kube-bench-${TARGETARCH} /usr/bin/kube-bench
 
-COPY --from=base /etc/kube-bench /etc/kube-bench/
-COPY --from=base /usr/bin/kubectl /usr/bin/kubectl
+COPY --from=builder /etc/kube-bench /etc/kube-bench/
+COPY --from=builder /usr/bin/kubectl /usr/bin/kubectl
 
 FROM calico/base
 

@@ -4,7 +4,7 @@ ARG QEMU_IMAGE
 
 FROM ${QEMU_IMAGE} as qemu
 
-FROM alpine:3 as base
+FROM alpine:3 as builder
 
 COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
@@ -16,7 +16,7 @@ ARG TARGETARCH
 
 COPY bin/es-proxy-${TARGETARCH} /usr/bin/es-proxy
 # /etc/es-proxy directory used for storing self-signed certificates
-COPY --chown=10001:10001 --from=base /etc/es-proxy /etc/es-proxy/
+COPY --chown=10001:10001 --from=builder /etc/es-proxy /etc/es-proxy/
 
 FROM calico/base
 
