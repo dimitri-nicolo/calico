@@ -58,7 +58,7 @@ $(L7_COLLECTOR_CONTAINER_CREATED): Dockerfile bin/l7-collector-$(ARCH)
 	touch $@
 
 $(ENVOY_INIT_IMAGE): $(ENVOY_INIT_CONTAINER_CREATED)
-$(ENVOY_INIT_CONTAINER_CREATED): envoy-init/Dockerfile envoy-init/init_iptables.sh
+$(ENVOY_INIT_CONTAINER_CREATED): register envoy-init/Dockerfile envoy-init/init_iptables.sh
 	$(DOCKER_BUILD) -t $(ENVOY_INIT_IMAGE):latest-$(ARCH) -f envoy-init/Dockerfile envoy-init
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(ENVOY_INIT_IMAGE)
 	touch $@

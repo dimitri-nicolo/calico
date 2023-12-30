@@ -2,11 +2,11 @@ version: v1.0
 name: Publish egress-gateway images
 agent:
   machine:
-    type: e1-standard-2
+    type: e1-standard-4
     os_image: ubuntu2004
 
 execution_time_limit:
-  minutes: 120
+  minutes: 60
 
 blocks:
   # Build and push images.
