@@ -77,7 +77,8 @@ const healthName = "Dataplane"
 func NewRouteManager(s data.RouteStore, egressTunnelIfaceName string, vni int, healthAgg *health.HealthAggregator, opts ...RouteManagerOpt) *RouteManager {
 	healthAgg.RegisterReporter(healthName, &health.HealthReport{Ready: true}, 0)
 	m := &RouteManager{
-		macBuilder:                          netutil.NewMACBuilder(),
+		macBuilder: netutil.NewMACBuilder(),
+		//nolint:staticcheck // Ignore SA1019 deprecated
 		backoffManager:                      wait.NewJitteredBackoffManager(backoffDuration, jitter, clock.RealClock{}),
 		latestUpdate:                        make(chan data.RouteStore, 1), // channel of size one, if it gets full, older updates will be discarded
 		egressTunnelWorkloadRoutesByDstCIDR: make(map[string]netlink.Route),

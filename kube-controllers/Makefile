@@ -8,10 +8,6 @@ TESLA ?= false
 KUBE_CONTROLLERS_IMAGE  ?=kube-controllers
 FLANNEL_MIGRATION_IMAGE ?=flannel-migration-controller
 
-# Makefile configuration options
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
-
 ifdef RELEASE
 BUILD_IMAGES ?=$(KUBE_CONTROLLERS_IMAGE)
 else
@@ -21,8 +17,6 @@ endif
 ifeq ($(TESLA),true)
 	RELEASE_REGISTRIES    = gcr.io/tigera-tesla/tigera
 	BUILD_TAGS            ?= tesla
-	RELEASE_BRANCH_PREFIX = release-tesla
-	DEV_TAG_SUFFIX        = tesla-0.dev
 	IMAGETAG_PREFIX       ?= tesla
 endif
 
@@ -38,8 +32,8 @@ MOCKERY_FILE_PATHS= \
 	pkg/elasticsearch/ClientBuilder \
 
 SRC_FILES=$(shell find cmd -name '*.go') $(shell find pkg -name '*.go') $(shell find ../libcalico-go -name '*.go')
-KUBE_CONTROLLER_CONTAINER_CREATED=image.created-$(ARCH)
-KUBE_CONTROLLER_CONTAINER_FIPS_CREATED=image.created-$(ARCH)-fips
+KUBE_CONTROLLER_CONTAINER_CREATED=.image.created-$(ARCH)
+KUBE_CONTROLLER_CONTAINER_FIPS_CREATED=.image.created-$(ARCH)-fips
 
 FIPS ?= false
 
@@ -59,14 +53,11 @@ clean:
 	# Clean .created files which indicate images / releases have been built.
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete
-	rm -rf .go-pkg-cache bin image.created-$(ARCH) build report/*.xml release-notes-*
-	-docker rmi $(KUBE_CONTROLLERS_IMAGE)
-	-docker rmi $(KUBE_CONTROLLERS_IMAGE):latest-amd64
-	-docker rmi $(KUBE_CONTROLLERS_IMAGE):latest-fips-amd64
-	-docker rmi $(FLANNEL_MIGRATION_IMAGE)
-	-docker rmi $(FLANNEL_MIGRATION_IMAGE):latest-amd64
-	rm -f tests/fv/fv.test
 	rm -f report/*.xml
+	rm -f tests/fv/fv.test
+	rm -rf bin image.created-$(ARCH) build report/*.xml release-notes-*
+	-docker image rm -f $$(docker images $(FLANNEL_MIGRATION_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(KUBE_CONTROLLERS_IMAGE) -a -q)
 
 ###############################################################################
 # Building the binary
@@ -111,15 +102,15 @@ sub-image-fips-%:
 
 image: $(KUBE_CONTROLLER_CONTAINER_MARKER)
 
-$(KUBE_CONTROLLER_CONTAINER_CREATED): $(BINDIR)/kube-controllers-linux-$(ARCH) $(BINDIR)/check-status-linux-$(ARCH) $(BINDIR)/wrapper-$(ARCH) $(BINDIR)/kubectl-$(ARCH) register
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(KUBE_CONTROLLERS_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(FLANNEL_MIGRATION_IMAGE):latest-$(ARCH) -f docker-images/flannel-migration/Dockerfile.$(ARCH) . --load
+$(KUBE_CONTROLLER_CONTAINER_CREATED): register Dockerfile docker-image/flannel-migration/Dockerfile $(BINDIR)/kube-controllers-linux-$(ARCH) $(BINDIR)/check-status-linux-$(ARCH) $(BINDIR)/wrapper-$(ARCH) $(BINDIR)/kubectl-$(ARCH)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(KUBE_CONTROLLERS_IMAGE):latest-$(ARCH) -f Dockerfile .
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(FLANNEL_MIGRATION_IMAGE):latest-$(ARCH) -f docker-image/flannel-migration/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-$(KUBE_CONTROLLER_CONTAINER_FIPS_CREATED): $(BINDIR)/kube-controllers-linux-$(ARCH) $(BINDIR)/check-status-linux-$(ARCH) $(BINDIR)/wrapper-$(ARCH) $(BINDIR)/kubectl-$(ARCH) register
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(KUBE_CONTROLLERS_IMAGE):latest-fips-$(ARCH) -f Dockerfile.$(ARCH) . --load
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(FLANNEL_MIGRATION_IMAGE):latest-fips-$(ARCH) -f docker-images/flannel-migration/Dockerfile.$(ARCH) . --load
+$(KUBE_CONTROLLER_CONTAINER_FIPS_CREATED): register Dockerfile docker-image/flannel-migration/Dockerfile $(BINDIR)/kube-controllers-linux-$(ARCH) $(BINDIR)/check-status-linux-$(ARCH) $(BINDIR)/wrapper-$(ARCH) $(BINDIR)/kubectl-$(ARCH)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(KUBE_CONTROLLERS_IMAGE):latest-fips-$(ARCH) -f Dockerfile .
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(FLANNEL_MIGRATION_IMAGE):latest-fips-$(ARCH) -f docker-image/flannel-migration/Dockerfile .
 	$(MAKE) FIPS=true retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
 
@@ -179,11 +170,11 @@ st:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download image-all static-checks ut
+ci: clean static-checks image ut
 
 ###############################################################################
 # CD
 ###############################################################################
 .PHONY: cd
 ## Deploys images to registry
-cd: cd-common
+cd: image-all cd-common

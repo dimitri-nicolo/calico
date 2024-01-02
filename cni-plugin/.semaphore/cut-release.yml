@@ -40,3 +40,4 @@ blocks:
           commands:
             - make git-config CONFIRM=true
             - make cut-release CONFIRM=true IMAGE_ONLY=true
+            - make cut-release CONFIRM=true IMAGE_ONLY=true WINDOWS_RELEASE=true

@@ -2,9 +2,6 @@ include ../metadata.mk
 
 PACKAGE_NAME    ?= github.com/projectcalico/calico/es-gateway
 
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
-
 ###############################################################################
 # Env vars related to building
 ###############################################################################
@@ -54,8 +51,8 @@ sub-image-%:
 image: $(ES_GATEWAY_IMAGE)
 
 $(ES_GATEWAY_IMAGE): $(ES_GATEWAY_CONTAINER_CREATED)
-$(ES_GATEWAY_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/es-gateway-$(ARCH)
-	$(DOCKER_BUILD) -t $(ES_GATEWAY_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+$(ES_GATEWAY_CONTAINER_CREATED): Dockerfile bin/es-gateway-$(ARCH)
+	$(DOCKER_BUILD) -t $(ES_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -88,7 +85,7 @@ ut:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks ut
+ci: clean static-checks image ut
 
 ## Deploys images to registry
 cd: image-all cd-common

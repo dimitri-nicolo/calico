@@ -11,9 +11,8 @@ NODE_IMAGE            ?=cnx-node
 # - EE: tigera/cnx-node-windows
 WINDOWS_IMAGE         ?=cnx-node-windows
 
-# If this is a windows release build the windows upgrade image.
-# ARCHES will contain the values in WINDOWS_VERSIONS, prefixed with "windows-".
-WINDOWS_VERSIONS      ?=1809 2004 20H2 ltsc2022
+# If this is a windows release build the windows image.  ARCHES will contain the values
+# in WINDOWS_VERSIONS (defined in metadata.mk), prefixed with "windows-".
 ifdef WINDOWS_RELEASE
 BUILD_IMAGES          ?=$(WINDOWS_IMAGE)
 ARCHES                ?= $(patsubst %,windows-%,$(WINDOWS_VERSIONS))
@@ -21,18 +20,12 @@ else
 BUILD_IMAGES          ?=$(NODE_IMAGE)
 endif
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 # Paths within the build container for BPF source.
 LIBBPF_CONTAINER_PATH=/go/src/github.com/projectcalico/calico/felix/bpf-gpl/include/libbpf/src/
 BPFGPL_CONTAINER_PATH=/go/src/github.com/projectcalico/calico/felix/bpf-gpl/
 
 # Paths within the repository for BPF source.
 LIBBPF_A=../felix/bpf-gpl/include/libbpf/src/$(ARCH)/libbpf.a
-
-# These arches not yet building in node-private
-EXCLUDEARCH?=armv7 arm64 ppc64le s390x
 
 # This gets embedded into node as the Calico version, the Enterprise release
 # is based off of. This should be updated everytime a new opensource Calico
@@ -68,8 +61,8 @@ endif
 # Set the platform correctly for building docker images.
 ifeq ($(ARCH),arm64)
 # Required for eBPF support in ARM64.
-# We need to force ARM64 build image to be used in a crosscompilation run.
-CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
+# We need to force ARM64 build image to be used in a cross-compilation run.
+CALICO_BUILD:=$(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(ARCH)
 endif
 
 ###############################################################################
@@ -180,7 +173,6 @@ clean: clean-windows
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete
 	find . -name '*.pyc' -exec rm -f {} +
-	rm -rf .go-pkg-cache
 	rm -rf certs *.tar $(NODE_CONTAINER_BIN_DIR)
 	rm -rf $(REMOTE_DEPS)
 	rm -rf filesystem/included-source
@@ -189,20 +181,20 @@ clean: clean-windows
 	# We build felix as part of the node build, so clean it as part of the clean.
 	make -C ../felix clean
 	# Delete images that we built in this repo
-	docker rmi $(NODE_IMAGE):latest-$(ARCH) || true
-	docker rmi $(NODE_IMAGE):latest-fips-$(ARCH) || true
-	docker rmi $(TEST_CONTAINER_NAME) || true
+	-docker image rm -f $$(docker images $(NODE_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(NODE_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(TEST_CONTAINER_NAME) -a -q)
 
 clean-windows: clean-windows-builder
-	-rm -f $(WINDOWS_ARCHIVE) $(WINDOWS_ARCHIVE_BINARY) $(WINDOWS_BINARY)
-	-rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1
-	-rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt
-	-rm -f $(WINDOWS_ARCHIVE_ROOT)/cni/*.exe
-	-rm -f $(WINDOWS_ARCHIVE_ROOT)/../nssm.zip
-	-rm -f $(WINDOWS_ARCHIVE_ROOT)/../nssm.exe
-	-rm -f $(WINDOWS_INSTALL_SCRIPT)
-	-rm -rf "$(WINDOWS_DIST)"
-	-docker rmi $(addprefix $(WINDOWS_IMAGE):latest-,$(WINDOWS_VERSIONS))
+	rm -f $(WINDOWS_ARCHIVE) $(WINDOWS_ARCHIVE_BINARY) $(WINDOWS_BINARY)
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/cni/*.exe
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/../nssm.zip
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/../nssm.exe
+	rm -f $(WINDOWS_INSTALL_SCRIPT)
+	rm -rf "$(WINDOWS_DIST)"
+	-docker image rm -f $$(docker images $(WINDOWS_IMAGE) -a -q)
 
 ###############################################################################
 # Building the binary
@@ -243,7 +235,7 @@ $(NODE_CONTAINER_BINARY): filesystem/usr/lib/calico/bpf $(LIBBPF_A) $(SRC_FILES)
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, ./cmd/calico-node/main.go, $@)
 else
-ifeq ($(ARCH),amd64)
+ifeq ($(ARCH), $(filter $(ARCH),amd64 arm64))
 	$(call build_cgo_binary, ./cmd/calico-node/main.go, $@)
 else
 	$(call build_binary, ./cmd/calico-node/main.go, $@)
@@ -278,13 +270,13 @@ sub-image-fips-%:
 	$(MAKE) image FIPS=true ARCH=$*
 
 image $(NODE_IMAGE): register $(NODE_CONTAINER_MARKER)
-$(NODE_CONTAINER_CREATED): $(REMOTE_DEPS) ./Dockerfile.$(ARCH) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) $(NODE_CONTAINER_FILES) $(TOOLS_MOUNTNS_BINARY)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) --build-arg BIRD_IMAGE=$(BIRD_IMAGE) -t $(NODE_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) . --load
+$(NODE_CONTAINER_CREATED): $(REMOTE_DEPS) Dockerfile.$(ARCH) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) $(NODE_CONTAINER_FILES) $(TOOLS_MOUNTNS_BINARY)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) --build-arg BIRD_IMAGE=$(BIRD_IMAGE) -t $(NODE_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-$(NODE_CONTAINER_FIPS_CREATED): $(REMOTE_DEPS) ./Dockerfile.$(ARCH) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) $(NODE_CONTAINER_FILES) $(TOOLS_MOUNTNS_BINARY)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) --build-arg BIRD_IMAGE=$(BIRD_IMAGE) -t $(NODE_IMAGE):latest-fips-$(ARCH) -f ./Dockerfile.$(ARCH) . --load
+$(NODE_CONTAINER_FIPS_CREATED): $(REMOTE_DEPS) Dockerfile.$(ARCH) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) $(NODE_CONTAINER_FILES) $(TOOLS_MOUNTNS_BINARY)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) --build-arg BIRD_IMAGE=$(BIRD_IMAGE) -t $(NODE_IMAGE):latest-fips-$(ARCH) -f Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
 
@@ -360,16 +352,16 @@ busybox.tar:
 	docker pull $(ARCH)/busybox:latest
 	docker save --output busybox.tar $(ARCH)/busybox:latest
 
-workload.tar:
-	cd workload && $(DOCKER_BUILD) -t workload -f Dockerfile.$(ARCH) . --load
+workload.tar: workload/Dockerfile
+	$(DOCKER_BUILD) -t workload -f workload/Dockerfile workload
 	docker save --output workload.tar workload
 
 IPT_ALLOW_ETCD:=-A INPUT -i docker0 -p tcp --dport 2379 -m comment --comment "calico-st-allow-etcd" -j ACCEPT
 
 # Create the calico/test image
 test_image: .calico_test.created
-.calico_test.created: $(TEST_CONTAINER_FILES)
-	cd calico_test && $(DOCKER_BUILD) -f Dockerfile.$(ARCH).calico_test -t $(TEST_CONTAINER_NAME) . --load
+.calico_test.created: calico_test/Dockerfile $(TEST_CONTAINER_FILES)
+	$(DOCKER_BUILD) --build-arg ETCD_VERSION=$(ETCD_VERSION) --build-arg K8S_VERSION=$(K8S_VERSION) -f calico_test/Dockerfile -t $(TEST_CONTAINER_NAME) calico_test
 	touch $@
 
 cnx-node.tar: $(NODE_CONTAINER_CREATED)
@@ -426,10 +418,6 @@ TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
 .PHONY: dual-tor-test
 dual-tor-test: $(K8ST_IMAGE_TARS) .calico_test.created dual-tor-setup dual-tor-run-test dual-tor-cleanup
 
-kubectl:
-	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl
-	chmod +x ./kubectl
-
 # TODO: dual-tor uses a custom kind build, and so doesn't leverage the common
 # kind logic from lib.Makefile.
 .PHONY: dual-tor-setup
@@ -450,12 +438,11 @@ dual-tor-run-test:
 	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v ${HOME}/.kube/kind-config-kind:/root/.kube/config \
-	    -v $(CURDIR)/kubectl:/root/bin/kubectl \
 	    --privileged \
 	    --net host \
 	${TEST_CONTAINER_NAME} \
-	    sh -c 'echo "container started.." && cp /root/bin/kubectl /bin/kubectl && echo "kubectl copied." && \
-	     cd /code/tests/k8st && nosetests $(DUAL_TOR_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-dual-tor-tests.xml" --with-timer'
+	    sh -c 'echo "container started.." && \
+			cd /code/tests/k8st && nosetests $(DUAL_TOR_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-dual-tor-tests.xml" --with-timer'
 
 .PHONY: dual-tor-cleanup
 dual-tor-cleanup:
@@ -493,7 +480,7 @@ k8s-test:
 
 .PHONY: kind-k8st-setup
 TEST_LICENSE=$(SECRETS_PATH)/license.yaml
-kind-k8st-setup: $(K8ST_IMAGE_TARS) kind-cluster-create $(TEST_LICENSE) $(KIND_KUBECONFIG)
+kind-k8st-setup: $(K8ST_IMAGE_TARS) kubectl kind-cluster-create $(TEST_LICENSE) $(KIND_KUBECONFIG)
 	TSEE_TEST_LICENSE=$(TEST_LICENSE) GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) KUBECONFIG=$(KIND_KUBECONFIG) ARCH=$(ARCH) ./tests/k8st/deploy_resources_on_kind_cluster.sh
 
 .PHONY: kind-k8st-run-test
@@ -502,7 +489,6 @@ kind-k8st-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v $(KIND_KUBECONFIG):/root/.kube/config \
-	    -v $(KUBECTL):/bin/kubectl \
 	    -e ROUTER_IMAGE=$(BIRD_IMAGE) \
 	    --privileged \
 	    --net host \
@@ -535,22 +521,15 @@ external-network-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v $(KIND_KUBECONFIG):/root/.kube/config \
-	    -v $(CURDIR)/kubectl:/root/bin/kubectl \
 	    --privileged \
 	    --net host \
 	${TEST_CONTAINER_NAME} \
-	    sh -c 'echo "container started..." && cp /root/bin/kubectl /bin/kubectl && echo "kubectl copied." && \
-	     cd /code/tests/k8st && nosetests $(EXTERNAL_NETWORK_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-enet-tests.xml" --with-timer'
+	    sh -c 'echo "container started..." && \
+			cd /code/tests/k8st && nosetests $(EXTERNAL_NETWORK_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-enet-tests.xml" --with-timer'
 
 .PHONY: external-network-cleanup
 external-network-cleanup:
 	-STEPS=cleanup $(EXTERNAL_NETWORK_DIR)/external-networks.sh
-
-# Needed for Semaphore CI (where disk space is a real issue during k8s-test)
-.PHONY: remove-go-build-image
-remove-go-build-image:
-	@echo "Removing $(CALICO_BUILD) image to save space needed for testing ..."
-	@-docker rmi $(CALICO_BUILD)
 
 .PHONY: st
 ## Run the system tests
@@ -582,10 +561,10 @@ st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: static-checks ut image-all st
+ci: clean static-checks image ut st
 
 ## Deploys images to registry
-cd: cd-common release-windows
+cd: image-all cd-common release-windows
 
 .PHONY: node-test-at
 # Run docker-image acceptance tests

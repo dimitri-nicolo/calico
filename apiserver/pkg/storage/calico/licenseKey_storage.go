@@ -103,7 +103,7 @@ func (gc LicenseKeyConverter) convertToAAPI(libcalicoObject resourceObject, aapi
 	//Decode License information from datastore and return status
 	licClaims, err := licClient.Decode(*lcgLicenseKey)
 	if err == nil {
-		if licClaims.Validate() == licClient.Valid {
+		if licClaims.Validate() != licClient.NoLicenseLoaded {
 			aapiLicenseKey.Status = v3.LicenseKeyStatus{
 				Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 				MaxNodes: *licClaims.Nodes,

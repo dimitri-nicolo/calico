@@ -9,9 +9,6 @@ CSI_IMAGE       ?=csi
 REGISTRAR_IMAGE ?=node-driver-registrar
 BUILD_IMAGES    ?=$(FLEXVOL_IMAGE) $(CSI_IMAGE) $(REGISTRAR_IMAGE)
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 ###############################################################################
 # Download and include ../lib.Makefile before anything else
 ###############################################################################
@@ -34,17 +31,11 @@ clean:
 	rm -rf bin/$(REGISTRAR_IMAGE)-$(ARCH)
 	rm -rf bin
 
-	docker rmi $(FLEXVOL_IMAGE):latest-$(ARCH) || true
-	docker rmi $(FLEXVOL_IMAGE):$(VERSION)-$(ARCH) || true
-	docker rmi $(CSI_IMAGE):latest-$(ARCH) || true
-	docker rmi $(REGISTRAR_IMAGE):latest-$(ARCH) || true
-	docker rmi $(CSI_IMAGE):latest-fips-$(ARCH) || true
-	docker rmi $(REGISTRAR_IMAGE):latest-fips-$(ARCH) || true
+	-docker image rm -f $$(docker images $(CSI_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(FLEXVOL_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(REGISTRAR_IMAGE) -a -q)
+
 	$(MAKE) clean-registrar
-ifeq ($(ARCH),amd64)
-	docker rmi $(FLEXVOL_IMAGE):latest || true
-	docker rmi $(FLEXVOL_IMAGE):$(VERSION) || true
-endif
 
 ###############################################################################
 # Building the binary
@@ -145,30 +136,30 @@ sub-image-fips-%:
 	$(MAKE) image FIPS=true ARCH=$*
 
 $(FLEXVOL_IMAGE): $(FLEXVOL_CONTAINER_MARKER)
-$(FLEXVOL_CONTAINER_CREATED): Dockerfile.$(ARCH) bin/flexvol-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=bin -t $(FLEXVOL_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(FLEXVOL_CONTAINER_CREATED): flexvol/docker-image/Dockerfile bin/flexvol-$(ARCH)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=bin -t $(FLEXVOL_IMAGE):latest-$(ARCH) -f flexvol/docker-image/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(FLEXVOL_IMAGE)
 	touch $@
 
 $(CSI_IMAGE): $(CSI_CONTAINER_MARKER)
-$(CSI_CONTAINER_CREATED): csidriver/Dockerfile.$(ARCH) $(BINDIR)/csi-driver-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(CSI_IMAGE):latest-$(ARCH) -f csidriver/Dockerfile.$(ARCH) . --load
+$(CSI_CONTAINER_CREATED): csidriver/Dockerfile $(BINDIR)/csi-driver-$(ARCH)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(CSI_IMAGE):latest-$(ARCH) -f csidriver/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(CSI_IMAGE)
 	touch $@
 
-$(CSI_CONTAINER_FIPS_CREATED): csidriver/Dockerfile.$(ARCH) $(BINDIR)/csi-driver-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(CSI_IMAGE):latest-fips-$(ARCH) -f csidriver/Dockerfile.$(ARCH) . --load
+$(CSI_CONTAINER_FIPS_CREATED): csidriver/Dockerfile $(BINDIR)/csi-driver-$(ARCH)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(CSI_IMAGE):latest-fips-$(ARCH) -f csidriver/Dockerfile .
 	$(MAKE) FIPS=true retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips BUILD_IMAGES=$(CSI_IMAGE) LATEST_IMAGE_TAG=latest-fips
 	touch $@
 
 $(REGISTRAR_IMAGE): $(REGISTRAR_CONTAINER_MARKER)
-$(REGISTRAR_CONTAINER_CREATED): node-driver-registrar-docker/Dockerfile.$(ARCH) $(BINDIR)/node-driver-registrar-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(REGISTRAR_IMAGE):latest-$(ARCH) -f node-driver-registrar-docker/Dockerfile.$(ARCH) . --load
+$(REGISTRAR_CONTAINER_CREATED): node-driver-registrar-docker/Dockerfile $(BINDIR)/node-driver-registrar-$(ARCH)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(REGISTRAR_IMAGE):latest-$(ARCH) -f node-driver-registrar-docker/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(REGISTRAR_IMAGE)
 	touch $@
 
-$(REGISTRAR_CONTAINER_FIPS_CREATED): node-driver-registrar-docker/Dockerfile.$(ARCH) $(BINDIR)/node-driver-registrar-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(REGISTRAR_IMAGE):latest-fips-$(ARCH) -f node-driver-registrar-docker/Dockerfile.$(ARCH) . --load
+$(REGISTRAR_CONTAINER_FIPS_CREATED): node-driver-registrar-docker/Dockerfile $(BINDIR)/node-driver-registrar-$(ARCH)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(REGISTRAR_IMAGE):latest-fips-$(ARCH) -f node-driver-registrar-docker/Dockerfile .
 	$(MAKE) FIPS=true retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips BUILD_IMAGES=$(REGISTRAR_IMAGE) LATEST_IMAGE_TAG=latest-fips
 	touch $@
 
@@ -188,7 +179,7 @@ fv st:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download build-all clean-registrar static-checks ut
+ci: clean clean-registrar static-checks image ut
 
 ###############################################################################
 # CD

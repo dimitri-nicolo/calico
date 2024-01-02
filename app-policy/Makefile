@@ -7,9 +7,6 @@ PACKAGE_NAME = github.com/projectcalico/calico/app-policy
 GENERATED_FILES=../felix/proto/felixbackend.pb.go proto/healthz.pb.go
 SRC_FILES=$(shell find . -name '*.go' |grep -v vendor) $(GENERATED_FILES)
 
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
-
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 DIKASTES_IMAGE ?=dikastes
@@ -24,8 +21,8 @@ LDFLAGS = -X main.VERSION=$(GIT_VERSION)
 ##############################################################################
 include ../lib.Makefile
 
-CONTAINER_CREATED=image.created-$(ARCH)
-CONTAINER_FIPS_CREATED=image.created-$(ARCH)-fips
+CONTAINER_CREATED=.image.created-$(ARCH)
+CONTAINER_FIPS_CREATED=.image.created-$(ARCH)-fips
 
 FIPS ?= false
 
@@ -36,6 +33,15 @@ BINDIR=bin/$(ARCH)-fips
 else
 CONTAINER_MARKER=$(CONTAINER_CREATED)
 BINDIR=bin
+endif
+
+# Set the platform correctly for building docker images.
+ifeq ($(ARCH),arm64)
+# We need to force ARM64 build image to be used in a cross-compilation run.
+# Coraza needs CGO to use new CRS version (see https://github.com/tigera/calico-private/pull/7011)
+# but UBI based calico/go-build:amd64 doesn't ship the full multi-arch headers for corss-compilation.
+# We need a calico/go-build container for the target architecture to do qemu emulated native build.
+CALICO_BUILD:=$(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(ARCH)
 endif
 
 # Shortcut targets
@@ -53,14 +59,8 @@ clean:
 	# Clean .created files which indicate images / releases have been built.
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete
-	rm -rf .go-pkg-cache report vendor bin
-	-docker rmi $(DIKASTES_IMAGE):latest-$(ARCH)
-	-docker rmi $(DIKASTES_IMAGE):$(VERSION)-$(ARCH)
-ifeq ($(ARCH),amd64)
-	-docker rmi $(DIKASTES_IMAGE):latest
-	-docker rmi $(DIKASTES_IMAGE):latest-fips-amd64
-	-docker rmi $(DIKASTES_IMAGE):$(VERSION)
-endif
+	rm -rf bin report
+	-docker image rm -f $$(docker images $(DIKASTES_IMAGE) -a -q)
 
 .PHONY: clean-generated
 # Delete (checked-in) generated files. Intentionally not part of the main clean target since these files are
@@ -71,7 +71,6 @@ clean-generated:
 ###############################################################################
 # Building the binary
 ###############################################################################
-
 .PHONY: build-all
 ## Build the binaries for all architectures and platforms
 $(VALIDARCHES):
@@ -81,7 +80,7 @@ build-all: $(VALIDARCHES)
 
 .PHONY: build
 ## Build the binary for the current architecture and platform
-build: 
+build: register
 	$(MAKE) $(BINDIR)/dikastes-$(ARCH) ARCH=$(ARCH)
 	$(MAKE) $(BINDIR)/healthz-$(ARCH) ARCH=$(ARCH)
 
@@ -91,7 +90,7 @@ $(BINDIR)/dikastes-%: protobuf $(SRC_FILES)
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, ./cmd/dikastes, $@)
 else
-	$(call build_binary, ./cmd/dikastes, $@)
+	$(call build_cgo_binary, ./cmd/dikastes, $@)
 endif
 
 $(BINDIR)/healthz-amd64: ARCH=amd64
@@ -134,7 +133,7 @@ proto/healthz.pb.go: proto/healthz.proto
 		      --gogofast_out=plugins=grpc:proto
 	$(MAKE) fix
 
-
+###############################################################################
 # Building the image
 ###############################################################################
 .PHONY: image $(DIKASTES_IMAGE)
@@ -146,13 +145,13 @@ sub-image-fips-%:
 	$(MAKE) image FIPS=true ARCH=$*
 
 $(DIKASTES_IMAGE): $(CONTAINER_MARKER)
-$(CONTAINER_CREATED): Dockerfile.$(ARCH) $(BINDIR)/dikastes-$(ARCH) $(BINDIR)/healthz-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(CONTAINER_CREATED): register Dockerfile $(BINDIR)/dikastes-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-$(CONTAINER_FIPS_CREATED): Dockerfile.$(ARCH) $(BINDIR)/dikastes-$(ARCH) $(BINDIR)/healthz-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-fips-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(CONTAINER_FIPS_CREATED): register Dockerfile $(BINDIR)/dikastes-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-fips-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
 ###############################################################################
@@ -163,7 +162,7 @@ $(CONTAINER_FIPS_CREATED): Dockerfile.$(ARCH) $(BINDIR)/dikastes-$(ARCH) $(BINDI
 ut: protobuf ut-exec
 
 ut-exec:
-	$(DOCKER_GO_BUILD_CGO) /bin/bash -c "go install gotest.tools/gotestsum@latest && gotestsum --junitfile report/tests.xml ./..."
+	$(DOCKER_GO_BUILD) /bin/bash -c "gotestsum --junitfile report/tests.xml ./..."
 
 
 ###############################################################################
@@ -171,7 +170,7 @@ ut-exec:
 ###############################################################################
 
 .PHONY: ci
-ci: mod-download build-all check-generated-files static-checks ut
+ci: check-generated-files static-checks image ut
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files

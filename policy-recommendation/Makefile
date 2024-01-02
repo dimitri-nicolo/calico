@@ -62,8 +62,8 @@ sub-image-%:
 image: $(BUILD_IMAGES)
 
 $(POLICY_RECOMMENDATION_IMAGE): $(POLICY_RECOMMENDATION_CONTAINER_CREATED)
-$(POLICY_RECOMMENDATION_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/policy-recommendation-$(ARCH)
-	$(DOCKER_BUILD) -t $(POLICY_RECOMMENDATION_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+$(POLICY_RECOMMENDATION_CONTAINER_CREATED): Dockerfile bin/policy-recommendation-$(ARCH)
+	$(DOCKER_BUILD) -t $(POLICY_RECOMMENDATION_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -105,7 +105,7 @@ ut:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks test
+ci: clean static-checks image test
 
 ## Deploys images to registry
 cd: image-all cd-common

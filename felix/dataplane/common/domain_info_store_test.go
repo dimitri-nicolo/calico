@@ -1238,6 +1238,18 @@ var _ = Describe("Domain Info Store", func() {
 {"Client":"1.1.1.1","LHS":"lhsName1","RHS":"rhsName1","Expiry":"2022-01-01T00:00:00Z","Type":"ip"}
 {"Client":"2.2.2.2","LHS":"lhsName2","RHS":"rhsName2","Expiry":"2022-01-01T00:00:01Z","Type":"ip"}
 `
+
+			expectedFileContentOrder3 = `2
+{"RequiredFeatures":["Epoch","PerClient"],"Epoch":0}
+{"Client":"2.2.2.2","LHS":"lhsName2","RHS":"rhsName2","Expiry":"2022-01-01T00:00:01Z","Type":"ip"}
+{"Client":"1.1.1.1","LHS":"lhsName1","RHS":"rhsName1","Expiry":"2022-01-01T00:00:00Z","Type":"ip"}
+`
+
+			expectedFileContentOrder4 = `2
+{"RequiredFeatures":["PerClient","Epoch"],"Epoch":0}
+{"Client":"2.2.2.2","LHS":"lhsName2","RHS":"rhsName2","Expiry":"2022-01-01T00:00:01Z","Type":"ip"}
+{"Client":"1.1.1.1","LHS":"lhsName1","RHS":"rhsName1","Expiry":"2022-01-01T00:00:00Z","Type":"ip"}
+`
 		)
 
 		var (
@@ -1292,11 +1304,13 @@ var _ = Describe("Domain Info Store", func() {
 			Expect(err).NotTo(HaveOccurred())
 			f, err := os.ReadFile(tempDir + "/" + dir[0].Name())
 			Expect(err).NotTo(HaveOccurred())
-			// The order of client entries in the file is not deterministic, so we need to check for both
-			// possible.
+			// The order of the RequiredFeature and client entries in the file is not deterministic, so we
+			// need to check for all possible orders.
 			Expect(string(f)).Should(SatisfyAny(
 				Equal(expectedFileContentOrder1),
 				Equal(expectedFileContentOrder2),
+				Equal(expectedFileContentOrder3),
+				Equal(expectedFileContentOrder4),
 			))
 		})
 	})

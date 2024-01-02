@@ -52,7 +52,7 @@ spec:
             - "-c"
             - |
                 set -e
-                cp /calicoctl /host/bindir/calicoctl.bin
+                cp /usr/bin/calicoctl /host/bindir/calicoctl.bin
 
                 cat <<EOF>/host/bindir/calicoctl
                 export DATASTORE_TYPE=kubernetes

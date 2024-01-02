@@ -177,10 +177,10 @@ func (s *Server) Accept() (io.ReadWriteCloser, error) {
 				// Set timeout not to hang for ever
 				_ = tlsc.SetReadDeadline(time.Now().Add(s.tlsHandshakeTimeout))
 				err := tlsc.Handshake()
+
 				if err != nil {
 					msg := fmt.Sprintf("tunnel.Server TLS handshake error from %s: %s",
 						tlsc.RemoteAddr().String(), err)
-					log.Errorf(msg)
 					_ = ss.Close()
 					return nil, errors.Errorf(msg)
 				}

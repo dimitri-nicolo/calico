@@ -57,7 +57,7 @@ func main() {
 		log.WithError(err).Fatal("Configuration Error.")
 	}
 
-	// If configuration for certificates isn't provided, then generate one ourseles and
+	// If configuration for certificates isn't provided, then generate one ourselves and
 	// set the correct paths.
 	if config.CertFile == "" || config.KeyFile == "" {
 		log.Warnf("Generating self-signed cert: (%s, %s)", config.DefaultCertFile, config.DefaultKeyFile)

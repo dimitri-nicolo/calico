@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -25,10 +24,12 @@ func (s *ControllerState) webhookGoroutine(
 	rateLimiter RateLimiterInterface, // RateLimiter for this goroutine
 ) {
 	defer s.wg.Done()
-	defer logrus.WithField("uid", webhookRef.UID).Info("Webhook goroutine is terminating")
-	logrus.WithField("uid", webhookRef.UID).Info("Webhook goroutine started")
+	defer logEntry(webhookRef).Info("Webhook goroutine is terminating")
+	logEntry(webhookRef).Info("Webhook goroutine started")
 
 	var processingLock sync.Mutex
+
+	var previousError error
 
 	eventProcessing := func() {
 		defer processingLock.Unlock()
@@ -47,10 +48,9 @@ func (s *ControllerState) webhookGoroutine(
 			return
 		}
 
-		var err error
-
 		events, err := s.config.EventsFetchFunction(ctx, selector, previousRunStamp.Time, thisRunStamp)
-		if err == nil {
+		switch {
+		case err == nil && len(events) > 0:
 			labels := s.extractLabels(*webhookRef)
 			for _, event := range events {
 				if err = rateLimiter.Event(); err != nil {
@@ -60,10 +60,20 @@ func (s *ControllerState) webhookGoroutine(
 					break
 				}
 			}
+			// we have now processed events - either with or without processing error;
+			// we store the previous error value and update webhoook health:
+			previousError = err
+			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, err)
+		case err == nil && len(events) == 0:
+			// we have no error and there is nothing to process so we keep the previousError value
+			// and update the timestamp; the value of previousError is not important to us, we just keep it:
+			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, previousError)
+		default:
+			// we have encountered a Linseed fetch error - we log it and keep the previous timestamp value:
+			s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", previousRunStamp.Time, err)
 		}
 
-		s.updateWebhookHealth(webhookRef, "SecurityEventsProcessing", thisRunStamp, err)
-		logrus.WithField("uid", webhookRef.UID).WithError(err).Info("Iteration completed")
+		logEntry(webhookRef).WithError(err).Info("Iteration completed")
 	}
 
 	tick := time.NewTicker(s.config.FetchingInterval)
@@ -79,7 +89,7 @@ func (s *ControllerState) webhookGoroutine(
 			if processingLock.TryLock() {
 				go eventProcessing()
 			} else {
-				logrus.WithField("uid", webhookRef.UID).Info("Still processing events")
+				logEntry(webhookRef).Info("Still processing events")
 			}
 		}
 	}

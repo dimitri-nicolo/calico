@@ -1,8 +1,5 @@
 PACKAGE_NAME = github.com/projectcalico/calico
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 include metadata.mk
 include lib.Makefile
 
@@ -242,7 +239,7 @@ release-prep: var-require-all-RELEASE_VERSION-HELM_RELEASE-OPERATOR_VERSION-CALI
 	$(eval RELEASE_UPDATE_BRANCH = $(if $(SEMAPHORE),semaphore-,)auto-build-updates-$(RELEASE_VERSION))
 	GIT_PR_BRANCH_BASE=$(if $(SEMAPHORE),$(SEMAPHORE_GIT_BRANCH),) RELEASE_UPDATE_BRANCH=$(RELEASE_UPDATE_BRANCH) \
 	GIT_PR_BRANCH_HEAD=$(if $(GIT_FORK_USER),$(GIT_FORK_USER):$(RELEASE_UPDATE_BRANCH),$(RELEASE_UPDATE_BRANCH)) GIT_REPO_SLUG=$(if $(SEMAPHORE),$(SEMAPHORE_GIT_REPO_SLUG),) \
-	$(MAKE) release-prep/create-and-push-branch release-prep/create-pr release-prep/set-merge-when-ready-on-pr
+	$(MAKE) release-prep/create-and-push-branch release-prep/create-pr release-prep/set-pr-labels
 
 
 ifneq ($(if $(GIT_REPO_SLUG),$(shell dirname $(GIT_REPO_SLUG)),), $(shell dirname `git config remote.$(GIT_REMOTE).url | cut -d: -f2`))
@@ -263,9 +260,9 @@ release-prep/create-pr:
 	$(call github_pr_create,$(GIT_REPO_SLUG),[$(GIT_PR_BRANCH_BASE)] $(if $(SEMAPHORE),Semaphore ,)Auto Release Update for $(RELEASE_VERSION),$(GIT_PR_BRANCH_HEAD),$(GIT_PR_BRANCH_BASE))
 	echo 'Created release update pull request for $(RELEASE_VERSION): $(PR_NUMBER)'
 
-release-prep/set-merge-when-ready-on-pr:
-	$(call github_pr_add_comment,$(GIT_REPO_SLUG),$(PR_NUMBER),/merge-when-ready delete-branch)
-	echo "Added '/merge-when-ready' comment command to pull request $(PR_NUMBER)"
+release-prep/set-pr-labels:
+	$(call github_pr_add_comment,$(GIT_REPO_SLUG),$(PR_NUMBER),/merge-when-ready delete-branch release-note-not-required docs-not-required)
+	echo "Added labels to pull request $(PR_NUMBER): merge-when-ready, release-note-not-required, docs-not-required & delete-branch"
 
 ## Update the AUTHORS.md file.
 update-authors:

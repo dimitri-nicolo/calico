@@ -15,6 +15,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/projectcalico/calico/egress-gateway/controlplane"
 	"github.com/projectcalico/calico/egress-gateway/data"
@@ -212,7 +213,7 @@ func main() {
 func getDialOptions() []grpc.DialOption {
 	d := &net.Dialer{}
 	return []grpc.DialOption{
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(
 			func(ctx context.Context, target string) (net.Conn, error) {
 				return d.DialContext(ctx, "unix", target)

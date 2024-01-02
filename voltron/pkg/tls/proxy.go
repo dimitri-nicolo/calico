@@ -117,7 +117,6 @@ func (p *proxy) acceptConnections(listener net.Listener, tokenPool chan struct{}
 				if err != nil {
 					log.WithError(err).Errorf("Error handling a local connection")
 				}
-				<-time.After(10 * time.Second)
 			}
 		}()
 	}

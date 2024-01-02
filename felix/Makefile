@@ -37,9 +37,6 @@ include ../metadata.mk
 ###############################################################################
 PACKAGE_NAME?=github.com/projectcalico/calico/felix
 
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
-
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 FELIX_IMAGE    ?=felix
@@ -73,8 +70,8 @@ include ../lib.Makefile
 
 ifeq ($(ARCH),arm64)
 # Required for eBPF support in ARM64.
-# We need to force ARM64 build image to be used in a crosscompilation run.
-CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
+# We need to force ARM64 build image to be used in a cross-compilation run.
+CALICO_BUILD:=$(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(ARCH)
 DOCKER_GO_BUILD:=$(DOCKER_RUN) $(CALICO_BUILD)
 endif
 
@@ -181,7 +178,7 @@ bin/calico-felix-$(ARCH): $(LIBBPF_A) $(SRC_FILES) ../go.mod
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, $(PACKAGE_NAME)/cmd/calico-felix, $@)
 else
-ifeq ($(ARCH),amd64)
+ifeq ($(ARCH), $(filter $(ARCH),amd64 arm64))
 	$(call build_cgo_binary, $(PACKAGE_NAME)/cmd/calico-felix, $@)
 else
 	$(call build_binary, $(PACKAGE_NAME)/cmd/calico-felix, $@)
@@ -311,12 +308,12 @@ FELIX_CONTAINER_CREATED=.calico_felix.created-$(ARCH)
 FELIX_IMAGE_WITH_TAG=$(FELIX_IMAGE):latest-$(ARCH)
 FELIX_IMAGE_ID=$(shell docker images -q $(FELIX_IMAGE_WITH_TAG))
 $(FELIX_IMAGE)-$(ARCH): $(FELIX_CONTAINER_CREATED)
-$(FELIX_CONTAINER_CREATED): docker-image/calico-felix-wrapper \
+$(FELIX_CONTAINER_CREATED): register \
+                            docker-image/calico-felix-wrapper \
                             docker-image/felix.cfg \
-                            docker-image/Dockerfile* \
+                            docker-image/Dockerfile \
                             $(shell test "$(FELIX_IMAGE_ID)" || echo force-rebuild)
-	$(MAKE) register
-	$(DOCKER_BUILD) -t $(FELIX_IMAGE_WITH_TAG) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load --network=host;
+	$(DOCKER_BUILD) --network=host -t $(FELIX_IMAGE_WITH_TAG) -f docker-image/Dockerfile docker-image
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $(FELIX_CONTAINER_CREATED)
 
@@ -538,7 +535,7 @@ test-scapy-container: $(SCAPY_CONTAINER_CREATED)
 $(SCAPY_CONTAINER_CREATED): fv/scapy/Dockerfile \
                             $(shell test "$(SCAPY_IMAGE_ID)" || echo force-rebuild)
 	@echo Building scapy container...
-	$(DOCKER_BUILD) --load -t tigera-test/scapy fv/scapy
+	$(DOCKER_BUILD) -t tigera-test/scapy fv/scapy
 	touch $(SCAPY_CONTAINER_CREATED)
 
 TEST_DNS_SERVER_IMAGE_WITH_TAG=tigera-test/dns-server:latest
@@ -553,7 +550,7 @@ $(TEST_DNS_SERVER_CONTAINER_CREATED): ../go.mod \
 	@echo Building test-dns-server-container...
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    CGO_ENABLED=0 go build -v -o fv/dns/server/dns-server -v -buildvcs=false $(BUILD_FLAGS) -ldflags "$(LDFLAGS) -s -w" $(PACKAGE_NAME)/fv/dns/server'
-	$(DOCKER_BUILD) --load -t $(TEST_DNS_SERVER_IMAGE_WITH_TAG) fv/dns/server
+	$(DOCKER_BUILD) -t $(TEST_DNS_SERVER_IMAGE_WITH_TAG) fv/dns/server
 	touch $(TEST_DNS_SERVER_CONTAINER_CREATED)
 
 st:
@@ -569,7 +566,7 @@ gen-files: protobuf bpf/asm/opcode_string.go
 ###############################################################################
 .PHONY: ci cd
 
-ci: mod-download image-all ut
+ci: clean static-checks image ut
 ifeq (,$(filter fv, $(EXCEPT)))
 	@$(MAKE) fv
 endif
@@ -579,7 +576,7 @@ ifeq (,$(filter k8sfv-test, $(EXCEPT)))
 endif
 
 ## Deploy images to registry
-cd: cd-common
+cd: image-all cd-common
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)

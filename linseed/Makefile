@@ -63,8 +63,8 @@ sub-image-%:
 image: $(LINSEED_IMAGE)
 
 $(LINSEED_IMAGE): $(LINSEED_CONTAINER_CREATED)
-$(LINSEED_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/linseed-$(ARCH)
-	$(DOCKER_BUILD) -t $(LINSEED_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+$(LINSEED_CONTAINER_CREATED): Dockerfile bin/linseed-$(ARCH)
+	$(DOCKER_BUILD) -t $(LINSEED_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -185,7 +185,7 @@ build-tests: $(shell find ./fv -type f -name '*.go' -print)
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks test
+ci: clean static-checks image test
 
 ## Deploys images to registry
 cd: image-all cd-common

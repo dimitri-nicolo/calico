@@ -1,0 +1,139 @@
+promotions:
+  # Cleanup after ourselves if we are stopped-short.
+  - name: Cleanup
+    pipeline_file: cleanup.yml
+    auto_promote:
+      when: "result = 'stopped'"
+  # Have separate promotions for publishing images so we can re-run
+  # them individually if they fail, and so we can run them in parallel.
+  - name: Push apiserver images
+    pipeline_file: push-images/apiserver.yml
+    auto_promote:
+      when: "branch =~ 'master|release-.*'"
+  - name: Push ALP images
+    pipeline_file: push-images/alp.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push calicoctl images
+    pipeline_file: push-images/calicoctl.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push calicoq images
+    pipeline_file: push-images/calicoq.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push calico-node images
+    pipeline_file: push-images/node.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push compliance images
+    pipeline_file: push-images/compliance.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push cni-plugin images
+    pipeline_file: push-images/cni-plugin.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push deep-packet-inspection images
+    pipeline_file: push-images/deep-packet-inspection.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push egress-gateway images
+    pipeline_file: push-images/egress-gateway.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push es-gateway images
+    pipeline_file: push-images/es-gateway.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push es-proxy images
+    pipeline_file: push-images/es-proxy.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push firewall-integration images
+    pipeline_file: push-images/firewall-integration.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push honeypod-controller images
+    pipeline_file: push-images/honeypod-controller.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push honeypod-prototype images
+    pipeline_file: push-images/honeypod-prototype.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push ingress-collector images
+    pipeline_file: push-images/ingress-collector.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push intrusion-detection-controller images
+    pipeline_file: push-images/intrusion-detection-controller.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push kube-controllers images
+    pipeline_file: push-images/kube-controllers.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push l7-collector images
+    pipeline_file: push-images/l7-collector.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push license-agent images
+    pipeline_file: push-images/license-agent.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push linseed images
+    pipeline_file: push-images/linseed.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push packetcapture images
+    pipeline_file: push-images/packetcapture.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push pod2daemon images
+    pipeline_file: push-images/pod2daemon.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push policy-recommendation images
+    pipeline_file: push-images/policy-recommendation.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push prometheus-service images
+    pipeline_file: push-images/prometheus-service.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push ts-queryserver images
+    pipeline_file: push-images/ts-queryserver.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push typha images
+    pipeline_file: push-images/typha.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push voltron images
+    pipeline_file: push-images/voltron.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push webhooks-processor images
+    pipeline_file: push-images/webhooks-processor.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+
+  - name: Push flow-log-generator images
+    pipeline_file: push-images/flow-log-generator.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push mock-node images
+    pipeline_file: push-images/mock-node.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+
+  - name: Publish Helm Charts
+    pipeline_file: docs/helm-charts.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+
+  - name: Run Fossa scans
+    pipeline_file: license-scanning/fossa-scan.yml
+    auto_promote:
+      when: "branch =~ 'master|release-.*'"

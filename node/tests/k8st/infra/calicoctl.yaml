@@ -31,7 +31,7 @@ spec:
   - name: calicoctl
     image: tigera/calicoctl:latest-amd64
     command:
-      - /calicoctl
+      - calicoctl
     args:
       - --allow-version-mismatch
       - version

@@ -133,23 +133,42 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 
 	dpStats := statscache.New()
 	policyStoreManager := policystore.NewPolicyStoreManager()
+	checkServerOptions := []checker.AuthServerOption{}
 
-	checkServerOptions := []checker.AuthServerOption{
-		checker.WithSubscriptionType(s.subscriptionType),
-		// register alp check provider. registrations are ordered (first-registered-processed-first)
-		checker.WithRegisteredCheckProvider(checker.NewALPCheckProvider(s.subscriptionType)),
+	if s.policySyncEnabled() {
+		// features that require policy sync
+
+		// syncClient provides synchronization with the policy store and start reporting stats.
+		// ALP uses the policy store to retrieve the policy for a given endpoint.
+		opts := uds.GetDialOptionsWithNetwork(s.dialNetwork)
+		syncClient := syncher.NewClient(
+			s.dialAddress,
+			policyStoreManager,
+			opts,
+			syncher.WithSubscriptionType(s.subscriptionType),
+		)
+		syncClient.RegisterGRPCServices(gs)
+		dpStats.RegisterFlushCallback(syncClient.OnStatsCacheFlush)
+		go syncClient.Start(ctx)
+
+		// register ALP check provider. registrations are ordered (first-registered-processed-first)
+		checkServerOptions = append(
+			checkServerOptions,
+			checker.WithSubscriptionType(s.subscriptionType),
+			checker.WithRegisteredCheckProvider(checker.NewALPCheckProvider(s.subscriptionType)),
+		)
 	}
 
 	if s.wafEnabled {
 		wafLogHandler := logger.New(setupWAFLogging(s.wafLogFile)...)
-		s, err := waf.New(s.wafDirectives, s.wafRulesetBaseDir, wafLogHandler.Process)
+		wafServer, err := waf.New(s.wafDirectives, s.wafRulesetBaseDir, wafLogHandler.Process)
 		if err != nil {
 			log.Fatalf("cannot initialize WAF: %v", err)
 		}
 
 		checkServerOptions = append(
 			checkServerOptions,
-			checker.WithRegisteredCheckProvider(s),
+			checker.WithRegisteredCheckProvider(wafServer),
 		)
 	}
 
@@ -160,20 +179,7 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 	)
 	checkServer.RegisterGRPCServices(gs)
 
-	// syncClient provides synchronization with the policy store and start reporting stats.
-	opts := uds.GetDialOptionsWithNetwork(s.dialNetwork)
-	syncClient := syncher.NewClient(
-		s.dialAddress,
-		policyStoreManager,
-		opts,
-		syncher.WithSubscriptionType(s.subscriptionType),
-	)
-	syncClient.RegisterGRPCServices(gs)
-	// wire up stats cache flush callback
-	dpStats.RegisterFlushCallback(syncClient.OnStatsCacheFlush)
-	go syncClient.Start(ctx)
-	go dpStats.Start(ctx)
-
+	// register grpc reflection service, if enabled
 	if _, ok := os.LookupEnv("DIKASTES_ENABLE_CHECKER_REFLECTION"); ok {
 		reflection.Register(gs)
 	}
@@ -214,4 +220,8 @@ func setupWAFLogging(logFile string) []io.Writer {
 		res = append(res, w)
 	}
 	return res
+}
+
+func (s *Dikastes) policySyncEnabled() bool {
+	return s.dialAddress != ""
 }

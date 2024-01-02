@@ -433,6 +433,13 @@ func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *v3.ManagedC
 
 			log := c.loggerForManagedCluster(mc)
 
+			// Ensure that the cluster exists before proceeding with the reconciliation.
+			// This prevents reconcilation of token and secrets for deleted managed clusters.
+			if _, ok, _ := mcInformer.GetStore().Get(mc); !ok {
+				log.Info("Manager cluster does not exist")
+				continue
+			}
+
 			managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(mc.Name)
 			if err != nil {
 				log.WithError(err).Error("failed to get client for cluster")
@@ -440,15 +447,22 @@ func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *v3.ManagedC
 				continue
 			}
 
+			var needRetry bool
 			if err = c.reconcileTokensForCluster(mc, managedClient); err != nil {
 				log.WithError(err).Error("failed to reconcile tokens for cluster")
+				needRetry = true
+
+			}
+			if err = c.reconcileSecretsForCluster(mc, c.secretsToCopy, managedClient); err != nil {
+				needRetry = true
+				log.WithError(err).Error("failed to reconcile secrets for cluster")
+			}
+
+			// Use single retry when either or both of them fails.
+			if needRetry {
 				retry(rc, mc.Name, *mc, mcChan, stop)
 			}
 
-			if err = c.reconcileSecretsForCluster(mc, c.secretsToCopy, managedClient); err != nil {
-				log.WithError(err).Error("failed to reconcile secrets for cluster")
-				retry(rc, mc.Name, *mc, mcChan, stop)
-			}
 		case secret := <-secretChan:
 			retry := retryUpdate[corev1.Secret]
 
@@ -498,6 +512,8 @@ type retryCalculator struct {
 // duration returns the next duration to use when retrying the given key.
 // after a max number of retries, it will return (false, 0) to indicate that we should give up.
 func (r *retryCalculator) duration(key string) (bool, time.Duration) {
+	fields := logrus.Fields{"numRetries": r.numRetries[key], "maxRetries": r.maxRetries}
+	logrus.WithFields(fields).Debugf("retryCalulator getting duration")
 	if r.numRetries[key] >= r.maxRetries {
 		// Give up.
 		delete(r.numRetries, key)

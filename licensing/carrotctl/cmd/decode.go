@@ -9,6 +9,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/spf13/cobra"
+
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/licensing/client"
@@ -20,7 +21,7 @@ var (
 
 func init() {
 	DecodeLicenseCmd.Flags().StringVarP(&lFile, "file", "f", "", "Decode a given license file")
-	DecodeLicenseCmd.MarkFlagRequired("file")
+	_ = DecodeLicenseCmd.MarkFlagRequired("file")
 }
 
 var DecodeLicenseCmd = &cobra.Command{

@@ -47,8 +47,8 @@ sub-image-%:
 image: $(INGRESS_COLLECTOR_IMAGE)
 
 $(INGRESS_COLLECTOR_IMAGE): $(INGRESS_COLLECTOR_IMAGE_CREATED)
-$(INGRESS_COLLECTOR_IMAGE_CREATED): Dockerfile.$(ARCH) bin/ingress-collector-$(ARCH)
-	$(DOCKER_BUILD) -t $(INGRESS_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(INGRESS_COLLECTOR_IMAGE_CREATED): Dockerfile bin/ingress-collector-$(ARCH)
+	$(DOCKER_BUILD) -t $(INGRESS_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -81,13 +81,12 @@ fv:
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci:
-	# Force ci to always run a clean before running other targets.
-	# This is intentional so that irrespective of where ci is being run from
-	# the ci target will always run a clean.
-	# This change should be reverted when common Makefile runs the ci target
-	# in a way that always runs the "clean" target.
-	$(MAKE) clean static-checks ut fv
+# Force ci to always run a clean before running other targets.
+# This is intentional so that irrespective of where ci is being run from
+# the ci target will always run a clean.
+# This change should be reverted when common Makefile runs the ci target
+# in a way that always runs the "clean" target.
+ci: clean static-checks image ut fv
 
 ###############################################################################
 # CD

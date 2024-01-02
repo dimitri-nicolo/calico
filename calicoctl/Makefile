@@ -5,16 +5,10 @@ PACKAGE_NAME = github.com/projectcalico/calico/calicoctl
 KUBE_APISERVER_PORT?=6443
 KUBE_MOCK_NODE_MANIFEST?=mock-node.yaml
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 CALICOCTL_IMAGE       ?=calicoctl
 BUILD_IMAGES          ?=$(CALICOCTL_IMAGE)
-
-# Remove any excluded architectures since for calicoctl we want to build everything.
-EXCLUDEARCH?=
 
 ###############################################################################
 # Download and include ../lib.Makefile
@@ -44,13 +38,8 @@ clean:
 	# Clean .created files which indicate images / releases have been built.
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete
-	rm -rf .go-pkg-cache bin build certs *.tar calicoctl/commands/report $(CALICO_VERSION_HELPER_DIR)/bin
-	docker rmi $(CALICOCTL_IMAGE):latest-$(ARCH) || true
-	docker rmi $(CALICOCTL_IMAGE):$(VERSION)-$(ARCH) || true
-ifeq ($(ARCH),amd64)
-	docker rmi $(CALICOCTL_IMAGE):latest || true
-	docker rmi $(CALICOCTL_IMAGE):$(VERSION) || true
-endif
+	rm -rf bin build certs *.tar calicoctl/commands/report $(CALICO_VERSION_HELPER_DIR)/bin
+	-docker image rm -f $$(docker images $(CALICOCTL_IMAGE) -a -q)
 
 ###############################################################################
 # Building the binary
@@ -94,8 +83,8 @@ gen-crds:
 .PHONY: image $(CALICOCTL_IMAGE)
 image: $(CALICOCTL_IMAGE)
 $(CALICOCTL_IMAGE): $(CTL_CONTAINER_CREATED)
-$(CTL_CONTAINER_CREATED): Dockerfile.$(ARCH) bin/calicoctl-linux-$(ARCH) register
-	$(DOCKER_BUILD) -t $(CALICOCTL_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(CTL_CONTAINER_CREATED): Dockerfile bin/calicoctl-linux-$(ARCH)
+	$(DOCKER_BUILD) -t $(CALICOCTL_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -251,7 +240,7 @@ stop-kubernetes-master:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: mod-download build-all static-checks test
+ci: clean static-checks image test
 
 ###############################################################################
 # CD

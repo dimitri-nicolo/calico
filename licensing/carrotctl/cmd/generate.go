@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -14,8 +15,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/square/go-jose.v2/jwt"
-
-	"path/filepath"
 
 	"github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
@@ -35,8 +34,7 @@ var (
 	// Defaults to "./tigera.io_certificate.pem"
 	certPath string
 
-	licensePackage              string
-	absPrivKeyPath, absCertPath string
+	licensePackage string
 
 	debug = false
 
@@ -70,8 +68,8 @@ func init() {
 	packageFlags = GenerateLicenseCmd.PersistentFlags()
 	packageFlags.StringVarP(&licensePackage, "package", "p", features.Enterprise, "License Package and feature selection to be assigned to a license")
 
-	GenerateLicenseCmd.MarkPersistentFlagRequired("customer")
-	GenerateLicenseCmd.MarkPersistentFlagRequired("expiry")
+	_ = GenerateLicenseCmd.MarkPersistentFlagRequired("customer")
+	_ = GenerateLicenseCmd.MarkPersistentFlagRequired("expiry")
 }
 
 var GenerateLicenseCmd = &cobra.Command{
@@ -165,7 +163,7 @@ var GenerateLicenseCmd = &cobra.Command{
 			log.Fatalf("error getting the absolute path for '%s' : %s", privKeyPath, err)
 		}
 
-		absCertPath, err = filepath.Abs(certPath)
+		absCertPath, err := filepath.Abs(certPath)
 		if err != nil {
 			log.Fatalf("error getting the absolute path for '%s' : %s", certPath, err)
 		}

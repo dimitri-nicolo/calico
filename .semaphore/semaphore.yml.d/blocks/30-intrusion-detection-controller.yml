@@ -1,0 +1,20 @@
+- name: intrusion-detection-controller
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/intrusion-detection-controller/', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd intrusion-detection-controller
+    jobs:
+      - name: intrusion-detection-controller tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH

@@ -67,8 +67,8 @@ PROMETHEUS_SERVICE_CONTAINER_CREATED=.$(PROMETHEUS_SERVICE_IMAGE).created-$(ARCH
 
 image: $(PROMETHEUS_SERVICE_IMAGE)
 $(PROMETHEUS_SERVICE_IMAGE): $(PROMETHEUS_SERVICE_CONTAINER_CREATED)
-$(PROMETHEUS_SERVICE_CONTAINER_CREATED): bin/prometheus-service-$(ARCH)
-	$(DOCKER_BUILD) --pull -t $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) .
+$(PROMETHEUS_SERVICE_CONTAINER_CREATED): Dockerfile bin/prometheus-service-$(ARCH)
+	$(DOCKER_BUILD) -t $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 
 .PHONY: clean
@@ -124,7 +124,7 @@ run-prometheus-service-proxy:
 .PHONY: ci
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
-ci: clean image-all static-checks ut fv
+ci: clean static-checks image ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common

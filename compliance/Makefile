@@ -9,8 +9,7 @@ COMPLIANCE_REPORTER_IMAGE    =compliance-reporter
 COMPLIANCE_SCALELOADER_IMAGE =compliance-scaleloader
 COMPLIANCE_BENCHMARKER_IMAGE =compliance-benchmarker
 
-# NOTE COMPLIANCE_SCALELOADER_IMAGE isn't included as it's a special case that shouldn't be pushed to quay when
-# releasing images. Pushing this image to gcr is handled explicitly in the cd target.
+# NOTE COMPLIANCE_SCALELOADER_IMAGE isn't included as it is a special case that we don't need to push.
 BUILD_IMAGES ?=$(COMPLIANCE_SERVER_IMAGE) \
  	$(COMPLIANCE_CONTROLLER_IMAGE) \
  	$(COMPLIANCE_SNAPSHOTTER_IMAGE) \
@@ -137,7 +136,7 @@ endif
 
 K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
 check-kube-bench-update:
-	if [ "$(K8S_CLIENT_VERSION)" = "v0.27.8" ]; then \
+	if [ "$(K8S_CLIENT_VERSION)" = "v0.27.9" ]; then \
 		echo "No need for kube-bench update"; \
 	else \
 		echo "************ \n"; \
@@ -168,8 +167,8 @@ COMPLIANCE_SERVER_CONTAINER_CREATED=.compliance-server.created-$(ARCH)
 COMPLIANCE_CONTROLLER_CONTAINER_CREATED=.compliance-controller.created-$(ARCH)
 COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED=.compliance-snapshotter.created-$(ARCH)
 COMPLIANCE_REPORTER_CONTAINER_CREATED=.compliance-reporter.created-$(ARCH)
-COMPLIANCE_SCALELOADER_CONTAINER_CREATED=.compliance-scaleloader.created-$(ARCH)
 COMPLIANCE_BENCHMARKER_CONTAINER_CREATED=.compliance-benchmarker.created-$(ARCH)
+COMPLIANCE_SCALELOADER_CONTAINER_CREATED=.compliance-scaleloader.created-$(ARCH)
 
 # Build the images for the target architecture
 .PHONY: image-all
@@ -178,39 +177,47 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 .PHONY: image
-image: $(BUILD_IMAGES) $(COMPLIANCE_SCALELOADER_IMAGE)
+image: $(BUILD_IMAGES)
 
 # Build the tigera/compliance-server docker image, which contains only Compliance server.
 $(COMPLIANCE_SERVER_IMAGE): $(COMPLIANCE_SERVER_CONTAINER_CREATED)
-$(COMPLIANCE_SERVER_CONTAINER_CREATED): docker-image/server/Dockerfile.$(ARCH) bin/server-$(ARCH) register
-	$(DOCKER_BUILD) -t $(COMPLIANCE_SERVER_IMAGE):latest-$(ARCH) -f docker-image/server/Dockerfile.$(ARCH) . --load
+$(COMPLIANCE_SERVER_CONTAINER_CREATED): docker-image/server/Dockerfile bin/server-$(ARCH)
+	$(DOCKER_BUILD) -t $(COMPLIANCE_SERVER_IMAGE):latest-$(ARCH) -f docker-image/server/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_SERVER_IMAGE)
 	touch $@
 
 # Build the tigera/compliance-controller docker image, which contains only Compliance controller.
 $(COMPLIANCE_CONTROLLER_IMAGE): $(COMPLIANCE_CONTROLLER_CONTAINER_CREATED)
-$(COMPLIANCE_CONTROLLER_CONTAINER_CREATED): docker-image/controller/Dockerfile.$(ARCH) bin/controller-$(ARCH) register
-	$(DOCKER_BUILD) -t $(COMPLIANCE_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile.$(ARCH) . --load
+$(COMPLIANCE_CONTROLLER_CONTAINER_CREATED): docker-image/controller/Dockerfile bin/controller-$(ARCH)
+	$(DOCKER_BUILD) -t $(COMPLIANCE_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_CONTROLLER_IMAGE)
 	touch $@
 
 # Build the tigera/compliance-snapshotter docker image, which contains only Compliance snapshotter.
 $(COMPLIANCE_SNAPSHOTTER_IMAGE): $(COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED)
-$(COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED): docker-image/snapshotter/Dockerfile.$(ARCH) bin/snapshotter-$(ARCH) register
-	$(DOCKER_BUILD) -t $(COMPLIANCE_SNAPSHOTTER_IMAGE):latest-$(ARCH) -f docker-image/snapshotter/Dockerfile.$(ARCH) . --load
+$(COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED): docker-image/snapshotter/Dockerfile bin/snapshotter-$(ARCH)
+	$(DOCKER_BUILD) -t $(COMPLIANCE_SNAPSHOTTER_IMAGE):latest-$(ARCH) -f docker-image/snapshotter/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_SNAPSHOTTER_IMAGE)
 	touch $@
 
 # Build the tigera/compliance-reporter docker image, which contains only Compliance reporter.
 $(COMPLIANCE_REPORTER_IMAGE): $(COMPLIANCE_REPORTER_CONTAINER_CREATED)
-$(COMPLIANCE_REPORTER_CONTAINER_CREATED): docker-image/reporter/Dockerfile.$(ARCH) bin/reporter-$(ARCH) register
-	$(DOCKER_BUILD) -t $(COMPLIANCE_REPORTER_IMAGE):latest-$(ARCH) -f docker-image/reporter/Dockerfile.$(ARCH) . --load
+$(COMPLIANCE_REPORTER_CONTAINER_CREATED): docker-image/reporter/Dockerfile bin/reporter-$(ARCH)
+	$(DOCKER_BUILD) -t $(COMPLIANCE_REPORTER_IMAGE):latest-$(ARCH) -f docker-image/reporter/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_REPORTER_IMAGE)
+	touch $@
+
+# Build the tigera/compliance-benchmarker docker image, which contains only Compliance benchmarker.
+KUBE_BENCH_VERSION := $(shell grep -E 'github.com/aquasecurity/kube-bench' ../go.mod | awk '{print$$2;exit}')
+$(COMPLIANCE_BENCHMARKER_IMAGE): $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED)
+$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): register docker-image/benchmarker/Dockerfile bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH)
+	$(DOCKER_BUILD) --build-arg K8S_VERSION=$(K8S_VERSION) --build-arg KUBE_BENCH_VERSION=$(KUBE_BENCH_VERSION) -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) -f docker-image/benchmarker/Dockerfile .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_BENCHMARKER_IMAGE)
 	touch $@
 
 # Build the tigera/compliance-scaleloader docker image, which contains only Compliance scaleloader.
 $(COMPLIANCE_SCALELOADER_IMAGE): $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED)
-$(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): docker-image/scaleloader/Dockerfile.$(ARCH) bin/scaleloader-$(ARCH) register
+$(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): register docker-image/scaleloader/Dockerfile bin/scaleloader-$(ARCH)
 	rm -rf docker-image/scaleloader/bin
 	rm -rf docker-image/scaleloader/playbooks
 	rm -rf docker-image/scaleloader/scenarios
@@ -218,16 +225,8 @@ $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): docker-image/scaleloader/Dockerfile
 	cp bin/scaleloader-$(ARCH) docker-image/scaleloader/bin/
 	cp -r mockdata/scaleloader/playbooks docker-image/scaleloader
 	cp -r mockdata/scaleloader/scenarios docker-image/scaleloader
-	$(DOCKER_BUILD) -t $(COMPLIANCE_SCALELOADER_IMAGE):latest-$(ARCH) -f docker-image/scaleloader/Dockerfile.$(ARCH) docker-image/scaleloader --load
+	$(DOCKER_BUILD) -t $(COMPLIANCE_SCALELOADER_IMAGE):latest-$(ARCH) -f docker-image/scaleloader/Dockerfile docker-image/scaleloader
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_SCALELOADER_IMAGE)
-	touch $@
-
-# Build the tigera/compliance-benchmarker docker image, which contains only Compliance benchmarker.
-KUBE_BENCH_VERSION := $(shell grep -E 'github.com/aquasecurity/kube-bench' ../go.mod | awk '{print$$2;exit}')
-$(COMPLIANCE_BENCHMARKER_IMAGE): $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED)
-$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): docker-image/benchmarker/Dockerfile.$(ARCH) bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH) register
-	$(DOCKER_BUILD) --build-arg K8S_VERSION=$(K8S_VERSION) --build-arg KUBE_BENCH_VERSION=$(KUBE_BENCH_VERSION) -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) -f docker-image/benchmarker/Dockerfile.$(ARCH) . --load
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_BENCHMARKER_IMAGE)
 	touch $@
 
 .PHONY: clean
@@ -269,12 +268,10 @@ run-linseed:
 .PHONY: cd ci
 
 ## Builds the code and runs all tests.
-ci: static-checks ut
+ci: clean static-checks image ut
 
 ## Deploys images to registry
 cd: image-all cd-common
-# push the scale loader separately because we don't release it and therefore don't want it as part of the build images list.
-	$(MAKE) retag-build-images-with-registries push-images-to-registries push-manifests BUILD_IMAGES=$(COMPLIANCE_SCALELOADER_IMAGE) IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)

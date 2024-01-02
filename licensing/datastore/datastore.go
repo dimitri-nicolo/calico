@@ -25,7 +25,7 @@ type DBAccess struct {
 func init() {
 	// Parse env variables to get DB access information.
 	var db DBAccess
-	envconfig.Process("carrotctl", &db)
+	_ = envconfig.Process("carrotctl", &db)
 
 	DSN = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", db.User, db.Password, db.DNS, db.Port, db.Name)
 }

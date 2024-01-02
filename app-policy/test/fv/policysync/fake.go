@@ -21,6 +21,7 @@ type FakePolicySync struct {
 	updates    chan *proto.ToDataplane
 	stopped    bool
 	disconnect chan struct{}
+	activeCon  int
 
 	endpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
 	profiles  map[proto.ProfileID]*proto.Profile
@@ -40,6 +41,7 @@ func NewFakePolicySync(listenPath string) (*FakePolicySync, error) {
 		sr:         nil,
 		updates:    make(chan *proto.ToDataplane, 1024),
 		disconnect: make(chan struct{}, 1),
+		activeCon:  0,
 
 		endpoints: make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		profiles:  make(map[proto.ProfileID]*proto.Profile),
@@ -56,12 +58,14 @@ func (p *FakePolicySync) Sync(sr *proto.SyncRequest, srv proto.PolicySync_SyncSe
 	}
 
 	p.sr = sr
+	p.activeCon++
 T:
 	for {
 		select {
 		case <-srv.Context().Done():
 			break T
 		case <-p.disconnect:
+			p.activeCon--
 			return context.Canceled // apparently, this replaces 'grpc conn is closing'
 		case upd := <-p.updates:
 			if err := srv.Send(upd); err != nil {
@@ -110,4 +114,8 @@ func (p *FakePolicySync) Addr() (_ string) {
 		return p.lis.Addr().String()
 	}
 	return
+}
+
+func (p *FakePolicySync) ActiveConnections() int {
+	return p.activeCon
 }

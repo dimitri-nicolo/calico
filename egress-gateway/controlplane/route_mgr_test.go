@@ -154,6 +154,7 @@ func TestHandlesFailures(test *testing.T) {
 	link := createDummyLink(test, nl)
 	defer destroyDummyLink(test, nl, link)
 
+	//nolint:staticcheck // Ignore SA1019 deprecated
 	backoffMgr := wait.NewJitteredBackoffManager(5*time.Second, 0, clock.RealClock{})
 	healthAgg := health.NewHealthAggregator()
 	routeManager := NewRouteManager(

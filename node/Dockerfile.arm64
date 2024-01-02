@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 ARG ARCH=aarch64
 ARG GIT_VERSION=unknown
 ARG IPTABLES_VER=1.8.4-17
@@ -21,7 +22,7 @@ ARG QEMU_IMAGE
 ARG BIRD_IMAGE=calico/bird:latest
 ARG UBI_IMAGE
 
-FROM calico/bpftool:v5.0-arm64 as bpftool
+FROM calico/bpftool:v5.3-arm64 as bpftool
 FROM ${QEMU_IMAGE} as qemu
 FROM ${BIRD_IMAGE} as bird
 
@@ -30,7 +31,7 @@ FROM quay.io/centos/centos:stream8 as centos
 MAINTAINER Reza Ramezanpour <reza@projectcalico.org>
 # Enable non-native builds of this image on an amd64 hosts.
 # This must be the first RUN command in this file!
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
+COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin/qemu-aarch64-static
 
 ARG ARCH
 ARG IPTABLES_VER
@@ -128,7 +129,7 @@ ARG RUNIT_VER
 
 # Enable non-native builds of this image on an amd64 hosts.
 # This must be the first RUN command in this file!
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
+COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin/qemu-aarch64-static
 
 # Update base packages to pick up security updates.  Must do this before adding the centos repo.
 RUN microdnf upgrade
@@ -215,7 +216,6 @@ RUN chmod u+s /bin/bird6
 # Copy in the filesystem - this contains licenses, etc...
 COPY filesystem/etc/ /etc
 COPY filesystem/included-source/ /included-source
-COPY filesystem/licenses/ /licenses
 COPY filesystem/usr/ /usr
 COPY filesystem/sbin/* /usr/sbin/
 
@@ -240,33 +240,30 @@ RUN chmod u+s /bin/mountns
 
 # Clean out as many files as we can from the filesystem.  We no longer need dnf or the platform python install
 # or any of its dependencies.
-COPY clean-up-filesystem.sh /
-
-# Allowing qemu binaries to persist.
-RUN sed -i 's#zmore#zmore\n\tqemu\n#m' clean-up-filesystem.sh
+COPY clean-up-filesystem.sh /clean-up-filesystem.sh
 RUN /clean-up-filesystem.sh
+
+# Delete qemu binaries
+RUN rm /usr/bin/qemu-aarch64-static
 
 # Copy everything into a fresh scratch image so that naive CVE scanners don't pick up binaries and libraries
 # that have been removed in our later layers.
 FROM scratch
-COPY --from=ubi / /
 
-# Add in top-level license file
-COPY LICENSE /licenses
-
-# Delete qemu binaries
-RUN rm /usr/bin/qemu-*-static
-
-CMD ["start_runit"]
-
-# Required labels for certification
-LABEL name="Calico node" \
-      vendor="Project Calico" \
-      version=$GIT_VERSION \
-      release="1" \
-      summary="Calico node handles networking and policy for Calico" \
-      description="Calico node handles networking and policy for Calico" \
-      maintainer="reza@tigera.io"
+ARG GIT_VERSION
 
 # Tell sv where to find the services.
 ENV SVDIR=/etc/service/enabled
+
+# Required labels for certification
+LABEL description="Calico node handles networking and policy for Calico"
+LABEL maintainer="maintainers@tigera.io"
+LABEL name="Calico node"
+LABEL release="1"
+LABEL summary="Calico node handles networking and policy for Calico"
+LABEL vendor="Project Calico"
+LABEL version=${GIT_VERSION}
+
+COPY --from=ubi / /
+
+CMD ["start_runit"]

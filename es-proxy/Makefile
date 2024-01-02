@@ -14,8 +14,6 @@ BUILD_IMAGES          ?=$(ES_PROXY_IMAGE)
 ifeq ($(TESLA),true)
 	RELEASE_REGISTRIES    = gcr.io/tigera-tesla/tigera
 	BUILD_TAGS            ?= tesla
-	RELEASE_BRANCH_PREFIX = release-cloud
-	DEV_TAG_SUFFIX        = cloud-0.dev
 	IMAGETAG_PREFIX       ?= tesla
 endif
 
@@ -71,8 +69,8 @@ sub-image-%:
 image: $(ES_PROXY_IMAGE)
 
 $(ES_PROXY_IMAGE): $(ES_PROXY_CONTAINER_CREATED)
-$(ES_PROXY_CONTAINER_CREATED): Dockerfile.$(ARCH) $(BINDIR)/es-proxy-$(ARCH)
-	$(DOCKER_BUILD) -t $(ES_PROXY_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(ES_PROXY_CONTAINER_CREATED): register Dockerfile $(BINDIR)/es-proxy-$(ARCH)
+	$(DOCKER_BUILD) -t $(ES_PROXY_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -110,7 +108,7 @@ fv: image run-k8s-apiserver run-elastic
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks ut fv
+ci: clean static-checks image ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common

@@ -1,4 +1,4 @@
-# Copyright (c) 2020 Tigera, Inc. All rights reserved.
+# Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,17 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG UBI_IMAGE
-ARG ARCH=x86_64
-ARG GIT_VERSION=unknown
 ARG IPTABLES_VER=1.8.2-16
+ARG UBI_IMAGE
 
 # Use this build stage to build iptables rpm binaries.
 # We need to rebuild the iptables rpm because the prepackaged rpm does not have legacy iptables binaries.
 # We need to build runit because there aren't any rpms for it in CentOS or ubi repositories.
 FROM quay.io/centos/centos:stream8 as centos
 
-ARG ARCH
 ARG IPTABLES_VER
 ARG CENTOS_MIRROR_BASE_URL=http://vault.centos.org/8.1.1911
 ARG LIBNFTNL_VER=1.1.1-4
@@ -48,8 +45,8 @@ RUN rpm -i ${LIBNFTNL_SOURCERPM_URL} && \
     yum-builddep -y --spec /root/rpmbuild/SPECS/libnftnl.spec && \
     rpmbuild -bb /root/rpmbuild/SPECS/libnftnl.spec && \
     # Now install libnftnl and libnftnl-devel
-    rpm -Uv /root/rpmbuild/RPMS/${ARCH}/libnftnl-${LIBNFTNL_VER}.el8.${ARCH}.rpm && \
-    rpm -Uv /root/rpmbuild/RPMS/${ARCH}/libnftnl-devel-${LIBNFTNL_VER}.el8.${ARCH}.rpm && \
+    rpm -Uv /root/rpmbuild/RPMS/x86_64/libnftnl-${LIBNFTNL_VER}.el8.x86_64.rpm && \
+    rpm -Uv /root/rpmbuild/RPMS/x86_64/libnftnl-devel-${LIBNFTNL_VER}.el8.x86_64.rpm && \
     # Install source RPM for iptables and install its build dependencies.
     rpm -i ${IPTABLES_SOURCERPM_URL} && \
     yum-builddep -y --spec /root/rpmbuild/SPECS/iptables.spec
@@ -82,30 +79,31 @@ RUN sed -i '/%files$/a \
 RUN rpmbuild -bb /root/rpmbuild/SPECS/iptables.spec
 
 FROM ${UBI_IMAGE} as ubi
-ARG ARCH
-ARG GIT_VERSION
+
+ARG GIT_VERSION=unknown
 ARG IPTABLES_VER
 
 # Update base packages to pick up security updates.
 RUN microdnf upgrade
 
 # Required labels for certification
-LABEL name="Calico egress gateway" \
-      vendor="Project Calico" \
-      version=$GIT_VERSION \
-      release="1" \
-      summary="Calico gateway image for egress traffic" \
-      description="Calico egress gateway configures networking for egress gateway pod" \
-      maintainer="song@tigera.io"
+LABEL description="Calico egress gateway configures networking for egress gateway pod"
+LABEL maintainer="maintainers@tigera.io"
+LABEL name="Calico egress gateway"
+LABEL release="1"
+LABEL summary="Calico gateway image for egress traffic"
+LABEL vendor="Project Calico"
+LABEL version=${GIT_VERSION}
 
 # Copy in our rpms
-COPY --from=centos  /root/rpmbuild/RPMS/${ARCH}/* /tmp/rpms/
+COPY --from=centos  /root/rpmbuild/RPMS/x86_64/* /tmp/rpms/
 
 # Install the necessary packages, making sure that we're using only CentOS repos.
 # Since the ubi repos do not contain all the packages we need (they're missing conntrack-tools),
 # we're using CentOS repos for all our packages. Using packages from a single source (CentOS) makes
 # it less likely we'll run into package dependency version mismatches.
 COPY centos.repo /etc/yum.repos.d/
+
 RUN rm /etc/yum.repos.d/ubi.repo && \
     touch /in-the-container && \
     microdnf install \
@@ -134,18 +132,15 @@ RUN rm /etc/yum.repos.d/ubi.repo && \
     microdnf clean all && \
     # Install iptables via rpms. The libs must be force installed because the iptables source RPM has the release
     # version '9.el8_0.1' while the existing iptables-libs (pulled in by the iputils package) has version '9.el8.1'.
-    rpm --force -i /tmp/rpms/iptables-libs-${IPTABLES_VER}.el8.${ARCH}.rpm && \
-    rpm -i /tmp/rpms/iptables-${IPTABLES_VER}.el8.${ARCH}.rpm && \
+    rpm --force -i /tmp/rpms/iptables-libs-${IPTABLES_VER}.el8.x86_64.rpm && \
+    rpm -i /tmp/rpms/iptables-${IPTABLES_VER}.el8.x86_64.rpm && \
     # Set alternatives
     alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
     alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1
 
-# Copy in the filesystem - this contains licenses, etc...
-COPY filesystem/ /
 COPY bin/egressd-amd64 /egressd
 
 # Add symlink to modprobe where iptables expects it to be.
-# This has to come after copying over filesystem/, since that may overwrite /sbin depending on the base image.
 RUN test -f /sbin/modprobe || ln -s /usr/sbin/modprobe /sbin/modprobe
 
 # Clean out as many files as we can from the filesystem.  We no longer need dnf or the platform python install
@@ -159,13 +154,6 @@ FROM scratch
 
 # base ubi image has been cleaned from  clean-up-filesystem.sh of all unnecessary imports
 COPY --from=ubi / /
-
-# Because we build our binary with CGO, we need to add the necessary *.so files for dynamic linking.
-# If *.so files are missing, you will see an error saying that your entrypoint cannot be found.
-# The necessary files can be found using the ldd command on the binary.
-COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
-COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
-COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
 
 COPY init-gateway.sh /init-gateway.sh
 COPY start-gateway.sh /start-gateway.sh

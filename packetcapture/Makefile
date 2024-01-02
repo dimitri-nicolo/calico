@@ -63,8 +63,8 @@ sub-image-%:
 image: $(BUILD_IMAGES)
 
 $(PACKETCAPTURE_IMAGE): $(PACKETCAPTURE_CONTAINER_CREATED)
-$(PACKETCAPTURE_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/packetcapture-$(ARCH)
-	$(DOCKER_BUILD) -t $(PACKETCAPTURE_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+$(PACKETCAPTURE_CONTAINER_CREATED): Dockerfile bin/packetcapture-$(ARCH)
+	$(DOCKER_BUILD) -t $(PACKETCAPTURE_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -104,7 +104,7 @@ ut:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks ut
+ci: clean static-checks image ut
 
 ## Deploys images to registry
 cd: image-all cd-common

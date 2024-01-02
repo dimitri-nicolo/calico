@@ -7,6 +7,9 @@ PACKAGE_NAME            ?= github.com/projectcalico/calico/honeypod-controller
 ##############################################################################
 HONEYPOD_CONTROLLER_IMAGE ?=honeypod-controller
 BUILD_IMAGES              ?=$(HONEYPOD_CONTROLLER_IMAGE)
+# Snort 2 rpm package is x86_64 only from the vendor. As this is an experimental
+# component and we have plans to remove it, limit honeypod controller to amd64 only.
+ARCH                      =amd64
 
 SNORT_VERSION             ?=2.9.20
 
@@ -66,7 +69,7 @@ image: $(HONEYPOD_CONTROLLER_IMAGE)
 
 $(HONEYPOD_CONTROLLER_IMAGE): $(HONEYPOD_CONTROLLER_CONTAINER_CREATED)
 $(HONEYPOD_CONTROLLER_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/controller-$(ARCH)
-	$(DOCKER_BUILD) --build-arg SNORT_VERSION=$(SNORT_VERSION) -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+	$(DOCKER_BUILD) --build-arg SNORT_VERSION=$(SNORT_VERSION) -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -93,7 +96,7 @@ ut combined.coverprofile: run-elastic
 .PHONY: cd ci
 
 ## Builds the code and runs all tests.
-ci: clean static-checks ut
+ci: clean static-checks image ut
 
 ## Deploys images to registry
 cd: image-all cd-common

@@ -5,7 +5,7 @@ VERSION=${VERSION:="v2.3"}
 TARGET_DIR=${TARGET_DIR:="."}
 NAMESPACE=${NAMESPACE:="--all-namespaces"}
 
-CALICOCTL="kubectl exec -nkube-system calicoctl -- /calicoctl"
+CALICOCTL="kubectl exec -nkube-system calicoctl -- calicoctl"
 
 ensure_calicoctl() {
 	echo "# Checking if calicoctl pod exists..."

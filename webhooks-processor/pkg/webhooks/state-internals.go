@@ -32,7 +32,7 @@ const (
 )
 
 func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.SecurityEventWebhook) {
-	logrus.WithField("uid", webhook.UID).Info("Webhook validation process started")
+	logEntry(webhook).Info("Webhook validation process started")
 
 	if webhook.Spec.State == api.SecurityEventWebhookStateDisabled {
 		s.preventRestarts[webhook.UID] = true
@@ -89,7 +89,7 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 	go s.webhookGoroutine(webhookCtx, config, parsedQuery, processFunc, webhookUpdateChan, webhook, rateLimiter)
 	s.updateWebhookHealth(webhook, "WebhookValidation", time.Now(), nil)
 
-	logrus.WithField("uid", webhook.UID).Info("Webhook validated and registered")
+	logEntry(webhook).Info("Webhook validated and registered")
 }
 
 func (s *ControllerState) parseConfig(ctx context.Context, config []api.SecurityEventWebhookConfigVar) (map[string]string, error) {
@@ -110,15 +110,23 @@ func (s *ControllerState) parseConfig(ctx context.Context, config []api.Security
 }
 
 func (s *ControllerState) updateWebhookHealth(webhook *api.SecurityEventWebhook, reason string, timestamp time.Time, err error) {
-	logrus.WithFields(logrus.Fields{
+	var status metav1.ConditionStatus
+	var message string
+
+	logEntry := logrus.WithFields(logrus.Fields{
 		"webhook.Name": webhook.Name,
 		"reason":       reason,
 		"timestamp":    timestamp,
-	}).WithError(err).Debug("updateWebhookHealth update")
-	status, message := metav1.ConditionTrue, ConditionHealthyDesc
-	if err != nil {
+	}).WithError(err)
+
+	if err == nil {
+		logEntry.Debug("updateWebhookHealth update")
+		status, message = metav1.ConditionTrue, ConditionHealthyDesc
+	} else {
+		logEntry.Error("updateWebhookHealth update")
 		status, message = metav1.ConditionFalse, err.Error()
 	}
+
 	webhook.Status = []metav1.Condition{
 		{
 			Type:               ConditionHealthy,
@@ -194,7 +202,7 @@ func (s *ControllerState) extractLabels(webhook api.SecurityEventWebhook) map[st
 
 func (s *ControllerState) debugProcessFunc(webhook *api.SecurityEventWebhook) ProcessFunc {
 	return func(context.Context, map[string]string, map[string]string, *lsApi.Event) error {
-		logrus.WithField("uid", webhook.UID).Info("Processing Security Events for a webhook in 'Debug' state")
+		logEntry(webhook).Info("Processing Security Events for a webhook in 'Debug' state")
 		return nil
 	}
 }

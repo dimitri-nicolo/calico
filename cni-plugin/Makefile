@@ -2,14 +2,19 @@ include ../metadata.mk
 
 PACKAGE_NAME = github.com/projectcalico/calico/cni-plugin
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 CNI_PLUGIN_IMAGE ?=cni
 WINDOWS_IMAGE ?=cni-windows
-BUILD_IMAGES   ?=$(CNI_PLUGIN_IMAGE)
+
+# If this is a windows release build the windows image.  ARCHES will contain the values
+# in WINDOWS_VERSIONS (defined in metadata.mk), prefixed with "windows-".
+ifdef WINDOWS_RELEASE
+BUILD_IMAGES          ?=$(WINDOWS_IMAGE)
+ARCHES                ?= $(patsubst %,windows-%,$(WINDOWS_VERSIONS))
+else
+BUILD_IMAGES          ?=$(CNI_PLUGIN_IMAGE)
+endif
 
 ###############################################################################
 # include ../lib.Makefile
@@ -58,10 +63,10 @@ clean: clean-windows
 	# Clean .created files which indicate images / releases have been built.
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete
-	rm -rf $(BIN) bin $(DEPLOY_CONTAINER_MARKER) .go-pkg-cache pkg/install/install.test
 	rm -f *.created
-	rm -rf config/
-	rm -rf dist/
+	rm -rf bin $(DEPLOY_CONTAINER_MARKER) pkg/install/install.test
+	rm -rf config/ dist/
+	-docker image rm -f $$(docker images $(CNI_PLUGIN_IMAGE) -a -q)
 
 clean-windows: clean-windows-builder
 	rm -rf $(WINDOWS_BIN) $(WINDOWS_DIST)
@@ -117,14 +122,14 @@ sub-image-fips-%:
 	$(MAKE) image FIPS=true ARCH=$*
 
 # Builds the statically compiled binaries into a container.
-$(DEPLOY_CONTAINER_STATIC_MARKER): Dockerfile.$(ARCH) build fetch-cni-bins
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BIN) -t $(CNI_PLUGIN_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(DEPLOY_CONTAINER_STATIC_MARKER): Dockerfile build fetch-cni-bins
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BIN) -t $(CNI_PLUGIN_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 # Builds the FIPS binaries into a container.
-$(DEPLOY_CONTAINER_FIPS_MARKER): Dockerfile.$(ARCH) build fetch-cni-bins
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BIN) -t $(CNI_PLUGIN_IMAGE):latest-fips-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(DEPLOY_CONTAINER_FIPS_MARKER): Dockerfile build fetch-cni-bins
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BIN) -t $(CNI_PLUGIN_IMAGE):latest-fips-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
 
@@ -207,12 +212,12 @@ test-install-cni: run-k8s-apiserver image pkg/install/install.test
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download build static-checks test-cni-versions image-all test-install-cni
+ci: clean static-checks image test-cni-versions test-install-cni
 
 ## Deploys images to registry
 cd: image-all cd-common
 	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME)-fips
-	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION)-fips EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION)-fips
 
 ## Build fv binary for Windows
 $(WINDOWS_BIN)/win-fv.exe: $(WINFV_SRCFILES)

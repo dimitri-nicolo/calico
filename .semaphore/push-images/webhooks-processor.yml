@@ -11,7 +11,7 @@ execution_time_limit:
 blocks:
   # Build and push images.
   # We'll only do this on non-PR builds, where we have credentials to do so.
-  - name: "Publish webhooks-processor images"
+  - name: Publish webhooks-processor images
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
@@ -37,9 +37,9 @@ blocks:
         - name: docker
         - name: google-service-account-for-gcr
       jobs:
-        - name: "webhooks-processor"
+        - name: Linux multi-arch
           env_vars:
             - name: DEV_REGISTRIES
               value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C webhooks-processor image-all cd-common CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C webhooks-processor cd CONFIRM=true; fi

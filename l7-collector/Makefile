@@ -52,14 +52,14 @@ sub-image-%:
 image: $(L7_COLLECTOR_IMAGE) $(ENVOY_INIT_IMAGE)
 
 $(L7_COLLECTOR_IMAGE): $(L7_COLLECTOR_CONTAINER_CREATED)
-$(L7_COLLECTOR_CONTAINER_CREATED): Dockerfile.$(ARCH) bin/l7-collector-$(ARCH)
-	$(DOCKER_BUILD) -t $(L7_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(L7_COLLECTOR_CONTAINER_CREATED): Dockerfile bin/l7-collector-$(ARCH)
+	$(DOCKER_BUILD) -t $(L7_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(L7_COLLECTOR_IMAGE)
 	touch $@
 
 $(ENVOY_INIT_IMAGE): $(ENVOY_INIT_CONTAINER_CREATED)
-$(ENVOY_INIT_CONTAINER_CREATED): envoy-init/Dockerfile.$(ARCH) envoy-init/init_iptables.sh
-	$(DOCKER_BUILD) -t $(ENVOY_INIT_IMAGE):latest-$(ARCH) -f envoy-init/Dockerfile.$(ARCH) envoy-init --load
+$(ENVOY_INIT_CONTAINER_CREATED): register envoy-init/Dockerfile envoy-init/init_iptables.sh
+	$(DOCKER_BUILD) -t $(ENVOY_INIT_IMAGE):latest-$(ARCH) -f envoy-init/Dockerfile envoy-init
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(ENVOY_INIT_IMAGE)
 	touch $@
 
@@ -92,6 +92,6 @@ fv: bin/l7-collector-$(ARCH)
 ###############################################################################
 .PHONY: ci cd
 
-ci: clean static-checks ut
+ci: clean static-checks image ut
 
 cd: image-all cd-common
