@@ -3,6 +3,9 @@ package nfnetlink
 
 import (
 	"net"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("ParseNflog", func() {
