@@ -12,13 +12,13 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
+	"sync"
+	"time"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
-
-	"strings"
-	"sync"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,6 +27,7 @@ import (
 
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/mock"
@@ -54,6 +55,10 @@ var (
 	tunnelPrivKey *rsa.PrivateKey
 	rootCAs       *x509.CertPool
 	tunnelTLS     tls.Certificate
+
+	// testServerName is the hostname to use for the test server.
+	// Voltron will proxy connections to this hostname to the test server using SNI.
+	testServerName = "test-server-name"
 )
 
 func init() {
@@ -84,34 +89,48 @@ type testClient struct {
 
 func (c *testClient) doRequest(clusterID string) (string, error) {
 	req, err := c.request(clusterID, "https", c.voltronHTTPS)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return "", err
+	}
 	resp, err := c.http.Do(req)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return "", err
+	}
 
 	if resp.StatusCode != 200 {
 		body, err := io.ReadAll(resp.Body)
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return "", err
+		}
 		return "", errors.Errorf("error status: %d, body: %s", resp.StatusCode, body)
 	}
 
 	body, err := io.ReadAll(resp.Body)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return "", err
+	}
 
 	return string(body), nil
 }
 
 func (c *testClient) doHTTPRequest(clusterID string) (string, error) {
 	req, err := c.request(clusterID, "http", c.voltronHTTP)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return "", err
+	}
 	resp, err := http.DefaultClient.Do(req)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return "", err
+	}
 
 	if resp.StatusCode != 200 {
 		return "", errors.Errorf("error status: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return "", err
+	}
 
 	return string(body), nil
 }
@@ -156,64 +175,58 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 		ts2    *testServer
 		lisTs2 net.Listener
 
-		wgSrvCnlt sync.WaitGroup
-		fipsMode  = true
+		wgSrvCnlt                                    sync.WaitGroup
+		fipsMode                                     = true
+		certPemID1, keyPemID1, certPemID2, keyPemID2 []byte
+
+		// client to be used to interact with voltron (mimic UI)
+		ui *testClient
+
+		watchSync chan error
 	)
 
 	clusterID := "external-cluster"
 	clusterID2 := "other-cluster"
 	clusterNS := clusterNamespace
 
-	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
-	scheme := kscheme.Scheme
-	err := v3.AddToScheme(scheme)
-	Expect(err).NotTo(HaveOccurred())
-	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
-
 	authenticator := new(auth.MockJWTAuth)
 	authenticator.On("Authenticate", mock.Anything).Return(&user.DefaultInfo{Name: "jane", Groups: []string{"developers"}}, 0, nil)
-	watchSync := make(chan error)
 
-	// client to be used to interact with voltron (mimic UI)
-	ui := &testClient{
-		http: &http.Client{
-			Transport: &http2.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-				},
-			},
-		},
-	}
+	AfterEach(func() {
+		_ = guardian.Close()
+		_ = voltron.Close()
+		_ = guardian.Close()
+		_ = guardian2.Close()
+		_ = ts.http.Close()
+		_ = ts2.http.Close()
+		close(watchSync)
 
-	It("should start test servers", func() {
-		var err error
-
-		lisTs, err = net.Listen("tcp", "localhost:0")
-		Expect(err).NotTo(HaveOccurred())
-
-		ts = newTestServer("you reached me")
-
-		wgSrvCnlt.Add(1)
-		go func() {
-			defer wgSrvCnlt.Done()
-			_ = ts.http.Serve(lisTs)
-		}()
-
-		lisTs2, err = net.Listen("tcp", "localhost:0")
-		Expect(err).NotTo(HaveOccurred())
-
-		ts2 = newTestServer("you reached the other me")
-
-		wgSrvCnlt.Add(1)
-		go func() {
-			defer wgSrvCnlt.Done()
-			_ = ts2.http.Serve(lisTs2)
-		}()
+		wgSrvCnlt.Wait()
 	})
 
-	It("should start voltron", func() {
+	BeforeEach(func() {
 		var err error
 
+		ui = &testClient{
+			http: &http.Client{
+				Transport: &http2.Transport{
+					TLSClientConfig: &tls.Config{
+						InsecureSkipVerify: true,
+					},
+				},
+			},
+		}
+
+		watchSync = make(chan error)
+
+		// Instantiate a new fake client for each test.
+		k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
+		scheme := kscheme.Scheme
+		err = v3.AddToScheme(scheme)
+		Expect(err).NotTo(HaveOccurred())
+		fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+
+		// Create a Voltron server for use in each test.
 		lisHTTP11, err = net.Listen("tcp", "localhost:0")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -223,145 +236,176 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 		lisTun, err = net.Listen("tcp", "localhost:0")
 		Expect(err).NotTo(HaveOccurred())
 
-		tunnelTargetWhitelist, _ := regex.CompileRegexStrings([]string{
-			`^/$`,
-			`^/some/path$`,
+		By("starting test servers", func() {
+			var err error
+
+			lisTs, err = net.Listen("tcp", "localhost:0")
+			Expect(err).NotTo(HaveOccurred())
+
+			ts = newTestServer("you reached me")
+
+			wgSrvCnlt.Add(1)
+			go func() {
+				defer wgSrvCnlt.Done()
+				_ = ts.http.Serve(lisTs)
+			}()
+
+			lisTs2, err = net.Listen("tcp", "localhost:0")
+			Expect(err).NotTo(HaveOccurred())
+
+			ts2 = newTestServer("you reached the other me")
+
+			wgSrvCnlt.Add(1)
+			go func() {
+				defer wgSrvCnlt.Done()
+				_ = ts2.http.Serve(lisTs2)
+			}()
 		})
 
-		voltron, err = server.New(
-			k8sAPI,
-			fakeClient,
-			&rest.Config{BearerToken: "manager-token"},
-			vcfg.Config{TenantNamespace: clusterNS},
-			authenticator,
-			server.WithTunnelSigningCreds(tunnelCert),
-			server.WithTunnelCert(tunnelTLS),
-			server.WithExternalCredFiles("../../internal/pkg/server/testdata/localhost.pem", "../../internal/pkg/server/testdata/localhost.key"),
-			server.WithInternalCredFiles("../../internal/pkg/server/testdata/tigera-manager-svc.pem", "../../internal/pkg/server/testdata/tigera-manager-svc.key"),
-			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
-			server.WithFIPSModeEnabled(fipsMode),
-		)
-		Expect(err).NotTo(HaveOccurred())
+		By("starting Voltron", func() {
+			tunnelTargetWhitelist, _ := regex.CompileRegexStrings([]string{
+				`^/$`,
+				`^/some/path$`,
+			})
 
-		wgSrvCnlt.Add(1)
-		go func() {
-			defer wgSrvCnlt.Done()
-			_ = voltron.ServeHTTPS(lisHTTP11, "", "")
-		}()
+			voltron, err = server.New(
+				k8sAPI,
+				fakeClient,
+				&rest.Config{BearerToken: "manager-token"},
+				vcfg.Config{TenantNamespace: clusterNS},
+				authenticator,
+				server.WithTunnelSigningCreds(tunnelCert),
+				server.WithTunnelCert(tunnelTLS),
+				server.WithExternalCredFiles("../../internal/pkg/server/testdata/localhost.pem", "../../internal/pkg/server/testdata/localhost.key"),
+				server.WithInternalCredFiles("../../internal/pkg/server/testdata/tigera-manager-svc.pem", "../../internal/pkg/server/testdata/tigera-manager-svc.key"),
+				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
+				server.WithFIPSModeEnabled(fipsMode),
+				server.WithForwardingEnabled(true),
 
-		wgSrvCnlt.Add(1)
-		go func() {
-			defer wgSrvCnlt.Done()
-			_ = voltron.ServeHTTPS(lisHTTP2, "", "")
-		}()
+				// This config routes requests over the tunnel with hostname testServerName to the test server at listHTTP2.
+				server.WithSNIServiceMap(map[string]string{testServerName: lisHTTP2.Addr().String()}),
+			)
+			Expect(err).NotTo(HaveOccurred())
 
-		wgSrvCnlt.Add(1)
-		go func() {
-			defer wgSrvCnlt.Done()
-			_ = voltron.ServeTunnelsTLS(lisTun)
-		}()
+			wgSrvCnlt.Add(1)
+			go func() {
+				defer wgSrvCnlt.Done()
+				_ = voltron.ServeHTTPS(lisHTTP11, "", "")
+			}()
 
-		go func() {
-			_ = voltron.WatchK8sWithSync(watchSync)
-		}()
+			wgSrvCnlt.Add(1)
+			go func() {
+				defer wgSrvCnlt.Done()
+				_ = voltron.ServeHTTPS(lisHTTP2, "", "")
+			}()
 
-		ui.voltronHTTPS = lisHTTP2.Addr().String()
-		ui.voltronHTTP = lisHTTP11.Addr().String()
-	})
+			wgSrvCnlt.Add(1)
+			go func() {
+				defer wgSrvCnlt.Done()
+				_ = voltron.ServeTunnelsTLS(lisTun)
+			}()
 
-	var certPemID1, keyPemID1, certPemID2, keyPemID2 []byte
+			go func() {
+				_ = voltron.WatchK8sWithSync(watchSync)
+			}()
 
-	It("should register 2 clusters", func() {
-		var fingerprintID1, fingerprintID2 string
-
-		var err error
-		certPemID1, keyPemID1, fingerprintID1, err = test.GenerateTestCredentials(clusterID, tunnelCert, tunnelPrivKey)
-		Expect(err).NotTo(HaveOccurred())
-		annotationsID1 := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintID1}
-
-		err = fakeClient.Create(context.Background(), &v3.ManagedCluster{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       v3.KindManagedCluster,
-				APIVersion: v3.GroupVersionCurrent,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        clusterID,
-				Namespace:   clusterNS,
-				Annotations: annotationsID1,
-			},
+			ui.voltronHTTPS = lisHTTP2.Addr().String()
+			ui.voltronHTTP = lisHTTP11.Addr().String()
 		})
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(<-watchSync).NotTo(HaveOccurred())
 
-		certPemID2, keyPemID2, fingerprintID2, err = test.GenerateTestCredentials(clusterID2, tunnelCert, tunnelPrivKey)
-		Expect(err).NotTo(HaveOccurred())
-		annotationsID2 := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintID2}
+		By("registering 2 managed clusters", func() {
+			var fingerprintID1, fingerprintID2 string
 
-		err = fakeClient.Create(context.Background(), &v3.ManagedCluster{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       v3.KindManagedCluster,
-				APIVersion: v3.GroupVersionCurrent,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        clusterID2,
-				Namespace:   clusterNS,
-				Annotations: annotationsID2,
-			},
-		})
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(<-watchSync).NotTo(HaveOccurred())
-	})
+			var err error
+			certPemID1, keyPemID1, fingerprintID1, err = test.GenerateTestCredentials(clusterID, tunnelCert, tunnelPrivKey)
+			Expect(err).NotTo(HaveOccurred())
+			annotationsID1 := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintID1}
 
-	It("should start guardian", func() {
-
-		var err error
-
-		guardian, err = client.New(
-			lisTun.Addr().String(),
-			"voltron",
-			client.WithTunnelCreds(certPemID1, keyPemID1),
-			client.WithTunnelRootCA(rootCAs),
-			client.WithProxyTargets(
-				[]proxy.Target{
-					{
-						Path: "/some/path",
-						Dest: listenerURL(lisTs),
-					},
+			err = fakeClient.Create(context.Background(), &v3.ManagedCluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v3.KindManagedCluster,
+					APIVersion: v3.GroupVersionCurrent,
 				},
-			),
-		)
-		Expect(err).NotTo(HaveOccurred())
-		wgSrvCnlt.Add(1)
-		go func() {
-			defer wgSrvCnlt.Done()
-			_ = guardian.ServeTunnelHTTP()
-		}()
-	})
-
-	It("should start guardian2", func() {
-
-		var err error
-
-		guardian2, err = client.New(
-			lisTun.Addr().String(),
-			"voltron",
-			client.WithTunnelCreds(certPemID2, keyPemID2),
-			client.WithTunnelRootCA(rootCAs),
-			client.WithProxyTargets(
-				[]proxy.Target{
-					{
-						Path: "/some/path",
-						Dest: listenerURL(lisTs2),
-					},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        clusterID,
+					Namespace:   clusterNS,
+					Annotations: annotationsID1,
 				},
-			),
-		)
-		Expect(err).NotTo(HaveOccurred())
-		wgSrvCnlt.Add(1)
-		go func() {
-			defer wgSrvCnlt.Done()
-			_ = guardian2.ServeTunnelHTTP()
-		}()
+			})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(<-watchSync).NotTo(HaveOccurred())
+
+			certPemID2, keyPemID2, fingerprintID2, err = test.GenerateTestCredentials(clusterID2, tunnelCert, tunnelPrivKey)
+			Expect(err).NotTo(HaveOccurred())
+			annotationsID2 := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintID2}
+
+			err = fakeClient.Create(context.Background(), &v3.ManagedCluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v3.KindManagedCluster,
+					APIVersion: v3.GroupVersionCurrent,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        clusterID2,
+					Namespace:   clusterNS,
+					Annotations: annotationsID2,
+				},
+			})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(<-watchSync).NotTo(HaveOccurred())
+		})
+
+		// It should also start Guardian.
+		By("starting guardian", func() {
+			guardian, err = client.New(
+				lisTun.Addr().String(),
+				"voltron",
+				client.WithTunnelCreds(certPemID1, keyPemID1),
+				client.WithTunnelRootCA(rootCAs),
+				client.WithProxyTargets(
+					[]proxy.Target{
+						{
+							Path: "/some/path",
+							Dest: listenerURL(lisTs),
+						},
+					},
+				),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			wgSrvCnlt.Add(1)
+			go func() {
+				defer wgSrvCnlt.Done()
+				_ = guardian.ServeTunnelHTTP()
+			}()
+		})
+
+		By("starting guardian2", func() {
+			var err error
+
+			guardian2, err = client.New(
+				lisTun.Addr().String(),
+				"voltron",
+				client.WithTunnelCreds(certPemID2, keyPemID2),
+				client.WithTunnelRootCA(rootCAs),
+				client.WithProxyTargets(
+					[]proxy.Target{
+						{
+							Path: "/some/path",
+							Dest: listenerURL(lisTs2),
+						},
+					},
+				),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			wgSrvCnlt.Add(1)
+			go func() {
+				defer wgSrvCnlt.Done()
+				_ = guardian2.ServeTunnelHTTP()
+			}()
+		})
+
+		By("indicating that before each is complete", func() {
+			logrus.Info("[TEST] BeforeEach complete")
+		})
 	})
 
 	It("should be possible to reach the test server on http2", func() {
@@ -389,8 +433,89 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("should be possible to stop guardian", func() {
-		_ = guardian.Close()
+	It("should be possible to send a request to Voltron via Guardian", func() {
+		// We need to Listen for connections to pass to Guardian.
+		listener, err := net.Listen("tcp", "localhost:0")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Start listening for connections on the test listener.
+		By("Starting guardian AcceptAndProxy")
+		go func() {
+			_ = guardian.AcceptAndProxy(listener)
+		}()
+
+		// Esablish a connection to the listener.
+		By("Establishing a connection to the test listener at " + listener.Addr().String())
+		var resp string
+		Eventually(func() error {
+			tc := &testClient{
+				// Point the client at the listener that we passed to Guardian above. This will
+				// create connections to Guardian that will be forwarded to Voltron.
+				voltronHTTPS: listener.Addr().String(),
+				http: &http.Client{
+					Timeout: 3 * time.Second,
+					Transport: &http2.Transport{
+						TLSClientConfig: &tls.Config{
+							ServerName:         testServerName,
+							InsecureSkipVerify: true,
+						},
+					},
+				},
+			}
+			resp, err = tc.doRequest(clusterID)
+			return err
+		}).ShouldNot(HaveOccurred())
+
+		Expect(resp).To(Equal(ts.msg))
+
+		By("Establishing many connections at once")
+
+		// numConns needs to be less than the maximum number of connections that Voltron will
+		// accept simultaneously from a single tunnel. This is currently 500.
+		numConns := 499
+		numReqs := 30
+		done := make(chan struct{})
+		for i := 0; i < numConns; i++ {
+			go func() {
+				defer GinkgoRecover()
+
+				tc := &testClient{
+					// Point the client at the listener that we passed to Guardian above. This will
+					// create connections to Guardian that will be forwarded to Voltron.
+					voltronHTTPS: listener.Addr().String(),
+					http: &http.Client{
+						Timeout: 3 * time.Second,
+						Transport: &http2.Transport{
+							TLSClientConfig: &tls.Config{
+								ServerName:         testServerName,
+								InsecureSkipVerify: true,
+							},
+						},
+					},
+				}
+
+				for j := 0; j < numReqs; j++ {
+					resp, err = tc.doRequest(clusterID)
+					Expect(err).NotTo(HaveOccurred())
+					done <- struct{}{}
+				}
+			}()
+		}
+
+		dur := time.Duration(numReqs) * time.Second
+		timeout := time.After(dur)
+		By(fmt.Sprintf("Waiting for all requests to complete in %s", dur))
+		numDone := 0
+		for i := 0; i < numConns*numReqs; i++ {
+			select {
+			case <-done:
+				numDone++
+				continue
+			case <-timeout:
+				Expect(true).To(BeFalse(), "timed out waiting for all requests to complete (%d done)", numDone)
+			}
+		}
+		Expect(numDone).To(Equal(numConns*numReqs), "Not all connections completed")
 	})
 
 	It("should not be possible to reach the test server", func() {
@@ -432,17 +557,6 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 			}, "10s", "1s").ShouldNot(HaveOccurred())
 			Expect(msg).To(Equal(ts.msg))
 		})*/
-
-	It("should clean up", func(done Done) {
-		_ = voltron.Close()
-		_ = guardian.Close()
-		_ = guardian2.Close()
-		_ = ts.http.Close()
-		_ = ts2.http.Close()
-		wgSrvCnlt.Wait()
-
-		close(done)
-	})
 })
 
 func newTestServer(msg string) *testServer {

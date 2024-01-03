@@ -196,6 +196,7 @@ func (m *manager) startStateLoop() {
 				case error:
 					// TODO handle dialer fails as a special case as guardian may want to just crash and restart.
 					err = response.(error)
+					log.WithError(err).Error("failed to dial tunnel")
 				default:
 					// This is a programming error, a developer wrote code that sent the wrong type over this channel
 					// so fail hard.

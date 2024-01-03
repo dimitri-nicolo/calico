@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -40,8 +39,10 @@ import (
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
 // managed cluster certificate that is allowed to initiate connections.
-const AnnotationActiveCertificateFingerprint = "certs.tigera.io/active-fingerprint"
-const contextTimeout = 30 * time.Second
+const (
+	AnnotationActiveCertificateFingerprint = "certs.tigera.io/active-fingerprint"
+	contextTimeout                         = 30 * time.Second
+)
 
 type cluster struct {
 	jclust.ManagedCluster
@@ -71,7 +72,6 @@ type cluster struct {
 // updateActiveFingerprint updates the active fingerprint annotation for a ManagedCluster resource
 // in the management cluster.
 func (c *cluster) updateActiveFingerprint(fingerprint string) error {
-
 	mc := &v3.ManagedCluster{}
 	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 	defer cancel()
@@ -185,7 +185,6 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		c.tlsProxy = tlsProxy
 	}
 
@@ -321,7 +320,6 @@ func (cs *clusters) get(id string) *cluster {
 }
 
 func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last string) error {
-
 	watcher, err := cs.client.Watch(ctx, &v3.ManagedClusterList{}, &ctrlclient.ListOptions{Namespace: cs.voltronCfg.TenantNamespace})
 	if err != nil {
 		return errors.Errorf("failed to create k8s watch: %s", err)
@@ -366,7 +364,12 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			}
 
 			if syncC != nil {
-				syncC <- err
+				select {
+				case syncC <- err:
+				case <-ctx.Done():
+					watcher.Stop()
+					return errors.Errorf("watcher exiting: %s", ctx.Err())
+				}
 			}
 		case <-ctx.Done():
 			watcher.Stop()
@@ -376,7 +379,6 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 }
 
 func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string, error) {
-
 	list := &v3.ManagedClusterList{}
 	err := cs.client.List(ctx, list, &ctrlclient.ListOptions{Namespace: cs.voltronCfg.TenantNamespace})
 	if err != nil {
@@ -602,8 +604,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 
 // setConnectedStatus updates the MangedClusterConnected condition of this cluster's ManagedCluster CR.
 func (c *cluster) setConnectedStatus(status v3.ManagedClusterStatusValue) error {
-
-	var mc = &v3.ManagedCluster{}
+	mc := &v3.ManagedCluster{}
 	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 	defer cancel()
 	err := c.client.Get(ctx, types.NamespacedName{Name: c.ID, Namespace: c.voltronCfg.TenantNamespace}, mc)

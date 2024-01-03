@@ -203,7 +203,7 @@ func (c *Client) AcceptAndProxy(listener net.Listener) error {
 			return err
 		}
 
-		//TODO I think we want to throttle the connections
+		// TODO I think we want to throttle the connections
 		go conn.Forward(srcConn, dstConn)
 	}
 }

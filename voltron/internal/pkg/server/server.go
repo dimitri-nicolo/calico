@@ -25,6 +25,7 @@ import (
 	"github.com/SermoDigital/jose/jwt"
 	"github.com/felixge/httpsnoop"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -227,6 +228,8 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 
 // ServeHTTPS starts serving HTTPS requests
 func (s *Server) ServeHTTPS(lis net.Listener, certFile, keyFile string) error {
+	logrus.Debug("ServeHTTPS")
+	defer logrus.Debug("ServeHTTPS done")
 	return s.http.ServeTLS(lis, certFile, keyFile)
 }
 
@@ -253,6 +256,8 @@ func (s *Server) ListenAndServeInternalHTTPS() error {
 
 // Close stop the server
 func (s *Server) Close() error {
+	defer logrus.Infof("Voltron Server closed")
+
 	s.cancel()
 	if s.tunSrv != nil {
 		s.tunSrv.Stop()
@@ -273,6 +278,9 @@ func (s *Server) Close() error {
 // ServeTunnelsTLS start serving TLS secured tunnels using the provided listener and
 // the TLS configuration of the Server
 func (s *Server) ServeTunnelsTLS(lis net.Listener) error {
+	logrus.Debugf("ServeTunnelsTLS")
+	defer logrus.Debugf("ServeTunnelsTLS exited")
+
 	if s.tunSrv == nil {
 		return errors.Errorf("No tunnel server was initiated")
 	}
@@ -285,6 +293,7 @@ func (s *Server) ServeTunnelsTLS(lis net.Listener) error {
 }
 
 func (s *Server) acceptTunnels(opts ...tunnel.Option) {
+	log.Debugf("Accepting tunnel connections")
 	defer log.Debugf("acceptTunnels exited")
 
 	for {
@@ -300,6 +309,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 				continue
 			}
 		}
+		log.Debugf("tunnel accepted")
 
 		clusterID, fingerprint, tunnelCert := s.extractIdentity(t)
 
@@ -626,6 +636,9 @@ func (s *Server) WatchK8s() error {
 // WatchK8sWithSync is a variant of WatchK8s for testing. Every time a watch
 // event is handled its result is posted on the syncC channel
 func (s *Server) WatchK8sWithSync(syncC chan<- error) error {
+	logrus.Debug("WatchK8sWithSync")
+	defer logrus.Debug("WatchK8sWithSync done")
+
 	if s.k8s == nil {
 		return errors.Errorf("no k8s interface")
 	}

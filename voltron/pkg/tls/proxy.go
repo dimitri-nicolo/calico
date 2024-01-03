@@ -11,6 +11,7 @@ import (
 
 	"github.com/projectcalico/calico/voltron/pkg/conn"
 
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -44,7 +45,7 @@ const (
 	defaultRetryAttempts            = 5
 	defaultRetryInterval            = 2 * time.Second
 	defaultConnectTimeout           = 30 * time.Second
-	defaultMaxConcurrentConnections = 100
+	defaultMaxConcurrentConnections = 500
 )
 
 // NewProxy creates and returns a new Proxy instance
@@ -117,6 +118,9 @@ func (p *proxy) acceptConnections(listener net.Listener, tokenPool chan struct{}
 				if err != nil {
 					log.WithError(err).Errorf("Error handling a local connection")
 				}
+
+				// Avoid tight-looping by sleeping.
+				time.Sleep(1 * time.Second)
 			}
 		}()
 	}
@@ -178,6 +182,7 @@ func (p *proxy) proxyConnection(srcConn net.Conn) error {
 	// We try to extract the SNI so that we can verify this is a tls connection
 	serverName, bytesRead, err := extractSNI(srcConn, p.fipsModeEnabled)
 	if err != nil {
+		logrus.WithError(err).Error("failed to extract SNI from connection")
 		return err
 	}
 
@@ -196,6 +201,8 @@ func (p *proxy) proxyConnection(srcConn net.Conn) error {
 		c := NewLocalConnection(srcConn, bytesRead)
 		return p.proxyLocal(c)
 	}
+
+	logrus.Debugf("Proxying connection with server name '%s' to '%s'", serverName, url)
 
 	if url == "" {
 		return errors.New("couldn't figure out where to send the request")

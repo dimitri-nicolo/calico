@@ -137,9 +137,7 @@ func (s *Server) Serve(lis net.Listener) error {
 
 		log.Debugf("tunnel.Server: new connection from %s", c.RemoteAddr().String())
 
-		ss := &ServerStream{
-			Conn: c,
-		}
+		ss := &ServerStream{Conn: c}
 		ss.ctx, ss.cancel = context.WithCancel(s.ctx)
 
 		s.wg.Add(1)
@@ -177,7 +175,6 @@ func (s *Server) Accept() (io.ReadWriteCloser, error) {
 				// Set timeout not to hang for ever
 				_ = tlsc.SetReadDeadline(time.Now().Add(s.tlsHandshakeTimeout))
 				err := tlsc.Handshake()
-
 				if err != nil {
 					msg := fmt.Sprintf("tunnel.Server TLS handshake error from %s: %s",
 						tlsc.RemoteAddr().String(), err)
@@ -193,9 +190,7 @@ func (s *Server) Accept() (io.ReadWriteCloser, error) {
 			ctyp = "tls "
 		}
 
-		log.Debugf("tunnel.Server accepted %s connection from %s",
-			ctyp, ss.Conn.RemoteAddr().String())
-
+		log.Debugf("tunnel.Server accepted %s connection from %s", ctyp, ss.Conn.RemoteAddr().String())
 		return ss, nil
 	case <-s.ctx.Done():
 		return nil, errors.Errorf("server is exiting")

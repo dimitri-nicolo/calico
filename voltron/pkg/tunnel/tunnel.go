@@ -17,7 +17,7 @@ import (
 
 	"github.com/hashicorp/yamux"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // ErrTunnelClosed is used to notify a caller that an action can't proceed because the tunnel is closed
@@ -35,7 +35,7 @@ func DialInRoutineWithTimeout(dialer Dialer, resultsChan chan interface{}, timeo
 	go func() {
 		defer close(resultsChan)
 
-		log.Debug("Dialing tunnel")
+		logrus.Debug("Dialing tunnel")
 		tun, err := dialer.Dial()
 
 		var result interface{}
@@ -50,15 +50,15 @@ func DialInRoutineWithTimeout(dialer Dialer, resultsChan chan interface{}, timeo
 
 		select {
 		case <-closeChan:
-			log.Debug("Received signal to close, dropping dialing result.")
+			logrus.Debug("Received signal to close, dropping dialing result.")
 			return
 		case resultsChan <- result:
 		case <-timer.C:
-			log.Error("Timed out trying to send the result over the results channel")
+			logrus.Error("Timed out trying to send the result over the results channel")
 			return
 		}
 
-		log.Debug("Finished dialing tunnel.")
+		logrus.Debug("Finished dialing tunnel.")
 	}()
 
 	return closeChan
@@ -100,9 +100,9 @@ func (d *dialer) Dial() (*Tunnel, error) {
 		if err != nil {
 			var xerr x509.UnknownAuthorityError
 			if errors.As(err, &xerr) {
-				log.WithError(err).Infof("tcp.tls.Dial failed: %s. fingerprint='%s' issuerCommonName='%s' subjectCommonName='%s'", xerr.Error(), utils.GenerateFingerprint(xerr.Cert), xerr.Cert.Issuer.CommonName, xerr.Cert.Subject.CommonName)
+				logrus.WithError(err).Infof("tcp.tls.Dial failed: %s. fingerprint='%s' issuerCommonName='%s' subjectCommonName='%s'", xerr.Error(), utils.GenerateFingerprint(xerr.Cert), xerr.Cert.Issuer.CommonName, xerr.Cert.Subject.CommonName)
 			} else {
-				log.WithError(err).Infof("dial attempt %d failed, will retry in %s", i, d.retryInterval.String())
+				logrus.WithError(err).Infof("dial attempt %d failed, will retry in %s", i, d.retryInterval.String())
 			}
 			time.Sleep(d.retryInterval)
 			continue
@@ -154,7 +154,7 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (*Tunne
 	// XXX all the config options should probably become options taken by New()
 	// XXX that can override the defaults set here
 	config := yamux.DefaultConfig()
-	config.AcceptBacklog = 1
+	config.AcceptBacklog = 1000
 	config.EnableKeepAlive = t.keepAliveEnable
 	config.KeepAliveInterval = t.keepAliveInterval
 
@@ -199,7 +199,7 @@ type hasIdentity interface {
 
 // Close closes this end of the tunnel and so all existing connections
 func (t *Tunnel) Close() error {
-	defer log.Debugf("Tunnel: Closed")
+	defer logrus.Debugf("Tunnel: Closed")
 	return convertYAMUXErr(t.mux.Close())
 }
 
@@ -210,8 +210,8 @@ func (t *Tunnel) IsClosed() bool {
 
 // Accept waits for a new connection, returns net.Conn or an error
 func (t *Tunnel) Accept() (net.Conn, error) {
-	log.Debugf("Tunnel: Accepting connections")
-	defer log.Debugf("Tunnel: Accepted connection")
+	logrus.Debugf("Tunnel: Accepting connections")
+	defer logrus.Debugf("Tunnel: Accepted connection")
 	conn, err := t.mux.Accept()
 	return conn, convertYAMUXErr(err)
 }
@@ -225,9 +225,9 @@ func (t *Tunnel) AcceptWithChannel(acceptChan chan interface{}) chan bool {
 	a := acceptChan
 	done := make(chan bool)
 	go func() {
-		log.Debug("tunnel writing connections to new channel")
+		logrus.Debug("tunnel writing connections to new channel")
 		defer func() {
-			log.Debug("tunnel finished writing connections to new channel")
+			logrus.Debug("tunnel finished writing connections to new channel")
 			close(a)
 		}()
 
@@ -257,8 +257,8 @@ func (t *Tunnel) AcceptWithChannel(acceptChan chan interface{}) chan bool {
 
 // AcceptStream waits for a new connection, returns io.ReadWriteCloser or an error
 func (t *Tunnel) AcceptStream() (io.ReadWriteCloser, error) {
-	log.Debugf("Tunnel: Accepting stream")
-	defer log.Debugf("Tunnel: Accepted stream")
+	logrus.Debugf("Tunnel: Accepting stream")
+	defer logrus.Debugf("Tunnel: Accepted stream")
 	rc, err := t.mux.AcceptStream()
 	return rc, convertYAMUXErr(err)
 }
@@ -362,7 +362,7 @@ func DialTLS(target string, config *tls.Config, timeout time.Duration, opts ...O
 		return nil, errors.Errorf("nil config")
 	}
 
-	log.Debugf("Starting TLS dial to %s with a timeout of %v", target, timeout)
+	logrus.Debugf("Starting TLS dial to %s with a timeout of %v", target, timeout)
 
 	// We need to explicitly set the timeout as it seems it's possible for this to hang indefinitely if we
 	// don't.
@@ -371,7 +371,7 @@ func DialTLS(target string, config *tls.Config, timeout time.Duration, opts ...O
 	}
 
 	c, err := tls.DialWithDialer(dialer, "tcp", target, config)
-	log.Debugf("Finished TLS dial to %s", target)
+	logrus.Debugf("Finished TLS dial to %s", target)
 	if err != nil {
 		return nil, fmt.Errorf("tcp.tls.Dial failed: %w", err)
 	}
