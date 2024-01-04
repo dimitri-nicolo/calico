@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -14,8 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -141,32 +138,10 @@ func (s *ControllerState) updateWebhookHealth(webhook *api.SecurityEventWebhook,
 	}()
 }
 
-func (s *ControllerState) lazyClient() (client *kubernetes.Clientset, err error) {
-	if s.cli != nil {
-		client = s.cli
-		return
-	}
-
-	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
-	if err != nil {
-		return
-	}
-
-	if client, err = kubernetes.NewForConfig(config); err == nil {
-		s.cli = client
-	}
-
-	return
-}
-
 func (s *ControllerState) retrieveConfigValue(ctx context.Context, src *api.SecurityEventWebhookConfigVarSource) (string, error) {
-	cli, err := s.lazyClient()
-	if err != nil {
-		return "", err
-	}
-
-	if src.ConfigMapKeyRef != nil {
-		cm, err := cli.CoreV1().ConfigMaps(ConfigVarNamespace).Get(ctx, src.ConfigMapKeyRef.Name, metav1.GetOptions{})
+	switch {
+	case src.ConfigMapKeyRef != nil:
+		cm, err := s.cli.CoreV1().ConfigMaps(ConfigVarNamespace).Get(ctx, src.ConfigMapKeyRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return "", err
 		}
@@ -174,8 +149,8 @@ func (s *ControllerState) retrieveConfigValue(ctx context.Context, src *api.Secu
 			return value, nil
 		}
 		return "", fmt.Errorf("key '%s' not found in the ConfigMap '%s'", src.ConfigMapKeyRef.Key, src.ConfigMapKeyRef.Name)
-	} else if src.SecretKeyRef != nil {
-		secret, err := cli.CoreV1().Secrets(ConfigVarNamespace).Get(ctx, src.SecretKeyRef.Name, metav1.GetOptions{})
+	case src.SecretKeyRef != nil:
+		secret, err := s.cli.CoreV1().Secrets(ConfigVarNamespace).Get(ctx, src.SecretKeyRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return "", err
 		}
@@ -183,9 +158,9 @@ func (s *ControllerState) retrieveConfigValue(ctx context.Context, src *api.Secu
 			return string(value), nil
 		}
 		return "", fmt.Errorf("key '%s' not found in the Secret '%s'", src.SecretKeyRef.Key, src.SecretKeyRef.Name)
+	default:
+		return "", errors.New("neither ConfigMap nor Secret reference present") // this should never happen
 	}
-
-	return "", errors.New("neither ConfigMap nor Secret reference present") // should never happen
 }
 
 func (s *ControllerState) extractLabels(webhook api.SecurityEventWebhook) map[string]string {

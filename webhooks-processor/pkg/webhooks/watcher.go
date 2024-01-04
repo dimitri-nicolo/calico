@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/sirupsen/logrus"
 
@@ -15,6 +16,7 @@ import (
 )
 
 type WebhookWatcherUpdater struct {
+	client             *kubernetes.Clientset
 	whClient           clientv3.SecurityEventWebhookInterface
 	controller         WebhookControllerInterface
 	webhookUpdatesChan chan *api.SecurityEventWebhook
@@ -26,8 +28,13 @@ func NewWebhookWatcherUpdater() (watcher *WebhookWatcherUpdater) {
 	return
 }
 
-func (w *WebhookWatcherUpdater) WithClient(client clientv3.SecurityEventWebhookInterface) *WebhookWatcherUpdater {
+func (w *WebhookWatcherUpdater) WithWebhooksClient(client clientv3.SecurityEventWebhookInterface) *WebhookWatcherUpdater {
 	w.whClient = client
+	return w
+}
+
+func (w *WebhookWatcherUpdater) WithK8sClient(client *kubernetes.Clientset) *WebhookWatcherUpdater {
+	w.client = client
 	return w
 }
 

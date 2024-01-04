@@ -28,11 +28,10 @@ type ControllerConfig struct {
 	FetchingInterval    time.Duration `envconfig:"WEBHOOKS_FETCHING_INTERVAL" default:"10s"`
 }
 
-func NewControllerConfig(clientV3 clientv3.SecurityEventWebhookInterface, providers map[api.SecurityEventWebhookConsumer]providers.Provider, getEvents EventsFetchFunc) *ControllerConfig {
+func NewControllerConfig(providers map[api.SecurityEventWebhookConsumer]providers.Provider, getEvents EventsFetchFunc) *ControllerConfig {
 	config := new(ControllerConfig)
 	envconfig.MustProcess("webhooks", config)
 
-	config.ClientV3 = clientV3
 	config.Providers = providers
 	config.EventsFetchFunction = getEvents
 	return config

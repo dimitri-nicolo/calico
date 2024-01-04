@@ -41,6 +41,11 @@ func (s *ControllerState) WithConfig(config *ControllerConfig) *ControllerState 
 	return s
 }
 
+func (s *ControllerState) WithK8sClient(client *kubernetes.Clientset) *ControllerState {
+	s.cli = client
+	return s
+}
+
 func (s *ControllerState) IncomingWebhookUpdate(ctx context.Context, webhook *api.SecurityEventWebhook) {
 	logEntry(webhook).Info("Processing incoming webhook update")
 
