@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 
 	corev1 "k8s.io/api/core/v1"
@@ -138,10 +139,11 @@ func TestOptions(t *testing.T) {
 }
 
 func TestMainlineFunction(t *testing.T) {
-	var testCases = []struct {
+	testCases := []struct {
 		tenantNamespace string
 		tenantMode      string
-	}{{"", "single tenant"},
+	}{
+		{"", "single tenant"},
 		{"tenant-a", "multi tenant"},
 	}
 	for _, tc := range testCases {
@@ -644,15 +646,120 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantMode string
 		// Eventually the secret should be updated to a new token due to the approaching expiry.
 		secretUpdated := func() bool {
 			newSecret, err := mockK8sClient.CoreV1().Secrets(defaultNamespace).Get(ctx, tokenName, v1.GetOptions{})
-			if err != nil {
-				return false
-			}
-			if reflect.DeepEqual(secret, newSecret) {
-				return false
-			}
-			return true
+			require.NoError(t, err)
+			return !reflect.DeepEqual(secret, newSecret)
 		}
 		require.Eventually(t, secretUpdated, 5*time.Second, 50*time.Millisecond)
+	})
+
+	t.Run("should not reconcile the deleted managed cluster in "+tenantMode, func(t *testing.T) {
+		defer setup(t)()
+
+		reconcilePeriod := 100 * time.Millisecond
+		// Add two managed clusters.
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		err := fakeClient.Create(ctx, &mc)
+		require.NoError(t, err)
+
+		mc2 := v3.ManagedCluster{}
+		mc2.Name = "test-managed-cluster-2"
+		mc2.Namespace = tenantNamespace
+		mc2.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		err = fakeClient.Create(ctx, &mc2)
+		require.NoError(t, err)
+
+		// Configure the client to error on attempts to create secrets in the second managed cluster. Because this is constantly erroring,
+		// it will result in the kickChan trigger being called repeatedly.
+		mockK8sClient2 := k8sfake.NewSimpleClientset()
+		mockClientSet2 := clientSetSet{mockK8sClient2, cs}
+		mockK8sClient2.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
+		})
+
+		// Make a new controller.
+		opts := []token.ControllerOption{
+			token.WithControllerRuntimeClient(fakeClient),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
+			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
+
+			// Configure tokens to expire after 500ms. This means we should see several updates
+			// over the course of this test.
+			token.WithExpiry(500 * time.Millisecond),
+
+			// Set the reconcile period to be very small so that the controller acts faster than
+			// the expiry time of the tokens it creates.
+			token.WithReconcilePeriod(reconcilePeriod),
+
+			// Set the retry period to be smaller than either, so that we are constantly triggering
+			// the kick channel.
+			token.WithBaseRetryPeriod(50 * time.Millisecond),
+			token.WithNamespace(tenantNamespace),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		// Set the mock client set as the return value for the factory. We have one clientset for each managed cluster.
+		factory.On("NewClientSetForApplication", mc.Name).Return(&mockClientSet, nil)
+		factory.On("NewClientSetForApplication", mc2.Name).Return(&mockClientSet2, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
+
+		// Reconcile.
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go controller.Run(stopCh)
+
+		// Expect a token to have been generated for the first cluster.
+		// This happens asynchronously, so we need to wait for the controller to finish processing.
+		var secret *corev1.Secret
+		secretCreated := func() bool {
+			secret, err = mockK8sClient.CoreV1().Secrets(defaultNamespace).Get(ctx, tokenName, v1.GetOptions{})
+			return err == nil
+		}
+		require.Eventually(t, secretCreated, 5*time.Second, 100*time.Millisecond)
+		require.Equal(t, tokenName, secret.Name)
+		require.Equal(t, defaultNamespace, secret.Namespace)
+
+		// Eventually the secret should be updated to a new token due to the approaching expiry.
+		var newSecret *corev1.Secret
+		secretUpdated := func() bool {
+			newSecret, err = mockK8sClient.CoreV1().Secrets(defaultNamespace).Get(ctx, tokenName, v1.GetOptions{})
+			require.NoError(t, err)
+			return !reflect.DeepEqual(secret, newSecret)
+		}
+		require.Eventually(t, secretUpdated, 5*time.Second, 50*time.Millisecond)
+
+		err = fakeClient.Delete(ctx, &mc)
+		require.NoError(t, err)
+
+		err = fakeClient.Get(ctx, types.NamespacedName{Name: "test-managed-cluster", Namespace: tenantNamespace}, &v3.ManagedCluster{})
+		require.Error(t, err)
+
+		// move the newSecret to secret to validate next generated secret is not copied after managed cluster deletion.
+		secret = newSecret
+
+		// new secrets will not be copied/reconciled for the deleted cluster
+		for i := 0; i < 5; i++ {
+			require.False(t, secretUpdated())
+			time.Sleep(reconcilePeriod)
+		}
 	})
 
 	t.Run("verify VoltronLinseedCert propagation from management cluster to managed cluster due to periodic update in "+tenantMode, func(t *testing.T) {
@@ -819,7 +926,6 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantMode string
 		}
 		require.Eventually(t, secretUpdated, 5*time.Second, 100*time.Millisecond)
 	})
-
 }
 
 func TestMultiTenant(t *testing.T) {
