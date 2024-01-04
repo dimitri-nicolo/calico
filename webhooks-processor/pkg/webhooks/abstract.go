@@ -9,7 +9,10 @@ import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
-	"github.com/projectcalico/calico/libcalico-go/lib/watch"
+	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
+
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -22,7 +25,8 @@ type RateLimiterInterface interface {
 }
 
 type WebhookControllerInterface interface {
-	EventsChan() chan<- watch.Event
+	WebhookEventsChan() chan<- calicoWatch.Event
+	K8sEventsChan() chan<- watch.Event
 }
 
 type WebhookUpdaterInterface interface {
@@ -32,6 +36,7 @@ type WebhookUpdaterInterface interface {
 type StateInterface interface {
 	OutgoingWebhookUpdates() <-chan *api.SecurityEventWebhook
 	IncomingWebhookUpdate(context.Context, *api.SecurityEventWebhook)
+	CheckDependencies(runtime.Object)
 	Stop(context.Context, *api.SecurityEventWebhook)
 	StopAll()
 }

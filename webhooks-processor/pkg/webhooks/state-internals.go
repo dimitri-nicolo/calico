@@ -78,6 +78,7 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 		specHash:       specHash,
 		cancelFunc:     cancelFunc,
 		webhookUpdates: webhookUpdateChan,
+		dependencies:   s.extractDependencies(webhook),
 	}
 
 	rateLimiter := helpers.NewRateLimiter(provider.Config().RateLimiterDuration, provider.Config().RateLimiterCount)
@@ -173,6 +174,22 @@ func (s *ControllerState) extractLabels(webhook api.SecurityEventWebhook) map[st
 		}
 	}
 	return labels
+}
+
+func (s *ControllerState) extractDependencies(webhook *api.SecurityEventWebhook) webhookDependencies {
+	secretDeps, cmDeps := make(map[string]bool), make(map[string]bool)
+	for _, configVar := range webhook.Spec.Config {
+		if configVar.ValueFrom == nil {
+			continue
+		}
+		switch {
+		case configVar.ValueFrom.ConfigMapKeyRef != nil:
+			cmDeps[configVar.ValueFrom.ConfigMapKeyRef.Name] = true
+		case configVar.ValueFrom.SecretKeyRef != nil:
+			secretDeps[configVar.ValueFrom.SecretKeyRef.Name] = true
+		}
+	}
+	return webhookDependencies{secrets: secretDeps, configMaps: cmDeps}
 }
 
 func (s *ControllerState) debugProcessFunc(webhook *api.SecurityEventWebhook) ProcessFunc {

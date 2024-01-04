@@ -602,7 +602,7 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 	ctx, testState.Stop = context.WithCancel(context.Background())
 	go func() {
 		testState.Running = true
-		webhookWatcherUpdater := NewWebhookWatcherUpdater().WithClient(config.ClientV3)
+		webhookWatcherUpdater := NewWebhookWatcherUpdater().WithWebhooksClient(config.ClientV3)
 		controllerState := NewControllerState().WithConfig(config)
 		webhookController := NewWebhookController().WithState(controllerState)
 

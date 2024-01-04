@@ -9,6 +9,7 @@ import (
 	"github.com/cnf/structhash"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
@@ -17,6 +18,12 @@ type webhookState struct {
 	specHash       string
 	cancelFunc     context.CancelFunc
 	webhookUpdates chan *api.SecurityEventWebhook
+	dependencies   webhookDependencies
+}
+
+type webhookDependencies struct {
+	secrets    map[string]bool
+	configMaps map[string]bool
 }
 
 type ControllerState struct {
@@ -26,6 +33,16 @@ type ControllerState struct {
 	config          *ControllerConfig
 	wg              sync.WaitGroup
 	cli             *kubernetes.Clientset
+}
+
+func (d webhookDependencies) CheckConfigMap(cmName string) bool {
+	_, ok := d.configMaps[cmName]
+	return ok
+}
+
+func (d webhookDependencies) CheckSecret(secretName string) bool {
+	_, ok := d.secrets[secretName]
+	return ok
 }
 
 func NewControllerState() *ControllerState {
@@ -66,6 +83,10 @@ func (s *ControllerState) IncomingWebhookUpdate(ctx context.Context, webhook *ap
 	}
 
 	s.startNewInstance(ctx, webhook)
+}
+
+func (s *ControllerState) CheckDependencies(runtime.Object) {
+
 }
 
 func (s *ControllerState) Stop(ctx context.Context, webhook *api.SecurityEventWebhook) {
