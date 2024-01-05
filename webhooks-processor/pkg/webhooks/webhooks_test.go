@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
@@ -125,7 +126,7 @@ func TestWebhookNonHealthyStates(t *testing.T) {
 			Name:      "some-secret",
 			ValueFrom: &api.SecurityEventWebhookConfigVarSource{},
 		})
-		testNonHealthyState(wh, "ConfigurationParsing", "invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable")
+		testNonHealthyState(wh, "ConfigurationParsing", "neither ConfigMap nor Secret reference present")
 	})
 
 	t.Run("unknown consumer", func(t *testing.T) {
@@ -602,7 +603,7 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 	ctx, testState.Stop = context.WithCancel(context.Background())
 	go func() {
 		testState.Running = true
-		webhookWatcherUpdater := NewWebhookWatcherUpdater().WithWebhooksClient(config.ClientV3)
+		webhookWatcherUpdater := NewWebhookWatcherUpdater().WithWebhooksClient(config.ClientV3).WithK8sClient(fake.NewSimpleClientset())
 		controllerState := NewControllerState().WithConfig(config)
 		webhookController := NewWebhookController().WithState(controllerState)
 
