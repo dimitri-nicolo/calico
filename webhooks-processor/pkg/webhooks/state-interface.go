@@ -92,16 +92,17 @@ func (s *ControllerState) CheckDependencies(changedObject runtime.Object) {
 		dependencyCheck = func(deps webhookDependencies) bool {
 			return deps.CheckConfigMap(configMap.Name)
 		}
-	} else if secret, ok := changedObject.(*corev1.ConfigMap); ok {
+	} else if secret, ok := changedObject.(*corev1.Secret); ok {
 		dependencyCheck = func(deps webhookDependencies) bool {
 			return deps.CheckSecret(secret.Name)
 		}
 	} else {
 		return
 	}
-	for _, trail := range s.webhooksTrail {
+	for webhookUid, trail := range s.webhooksTrail {
 		if dependencyCheck(trail.dependencies) {
-			trail.specHash = ""
+			logrus.WithField("uid", webhookUid).Info("Webhook will be restarted due to dependency change")
+			trail.specHash = "restart-the-webhook-pretty-please"
 		}
 	}
 }
