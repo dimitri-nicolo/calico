@@ -21,7 +21,6 @@ import (
 )
 
 const (
-	DependencyPrimingTime  = 5 * time.Second
 	WebhooksWatcherTimeout = 1 * time.Minute
 )
 
@@ -108,10 +107,6 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.Cance
 			}
 		}
 	}()
-
-	// allow some time to pass for the above goroutine to process existing configmaps
-	// and secrets before processing existing webhooks during initialization
-	time.Sleep(DependencyPrimingTime)
 
 	// watch for webhook updates to process:
 	for ctx.Err() == nil {

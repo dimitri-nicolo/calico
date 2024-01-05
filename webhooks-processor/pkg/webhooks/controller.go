@@ -68,7 +68,10 @@ func (c *WebhookController) Run(ctx context.Context, ctxCancel context.CancelFun
 		case webhook := <-c.state.OutgoingWebhookUpdates():
 			c.updater.UpdatesChan() <- webhook
 		case event := <-c.k8sEventsChan:
-			c.state.CheckDependencies(event.Object)
+			switch event.Type {
+			case watch.Modified, watch.Deleted:
+				c.state.CheckDependencies(event.Object)
+			}
 		case <-ctx.Done():
 			c.state.StopAll()
 			return
