@@ -12,14 +12,9 @@ type flowCache struct {
 
 	// Cached policy actions. Populated by the before flow calculation and used by the after policy calculation to
 	// speed up processing and to assist with unknown rule matches.
-	policies map[string]actions
+	policies map[string]api.ActionFlag
 }
 
 type endpointCache struct {
 	selectors []MatchType
-}
-
-type actions struct {
-	actionFlag          api.ActionFlag
-	calculatedRuleIndex *int
 }

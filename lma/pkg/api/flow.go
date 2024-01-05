@@ -88,7 +88,7 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 			Type:      EndpointType(lsf.Key.Source.Type),
 			Name:      lsf.Key.Source.AggregatedName,
 			Namespace: lsf.Key.Source.Namespace,
-			IP:        getIPs(lsf.IPs.Source),
+			IPs:       getIPs(lsf.SourceIPs),
 			Port:      &srcPort,
 			Labels:    GetLinseedFlowLabels(lsf.SourceLabels),
 		},
@@ -96,7 +96,7 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 			Type:        EndpointType(lsf.Key.Destination.Type),
 			Name:        lsf.Key.Destination.AggregatedName,
 			Namespace:   lsf.Key.Destination.Namespace,
-			IP:          getIPs(lsf.IPs.Destination),
+			IPs:         getIPs(lsf.DestinationIPs),
 			Port:        &dstPort,
 			Labels:      GetLinseedFlowLabels(lsf.DestinationLabels),
 			Domains:     strings.Join(lsf.DestDomains, ","),
@@ -108,13 +108,19 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 	}
 
 	// Set IP version based on source IP, defaulting to v4.
-	ipVersion := 4
-	if flow.Source.IP != nil {
-		ipVersion = *getVersion(flow.Source.IP)
-	} else if flow.Destination.IP != nil {
-		ipVersion = *getVersion(flow.Destination.IP)
+	var ipVersion *int
+	if flow.Source.IPs != nil {
+		ipVersion = getVersion(flow.Source.IPs)
+	} else if flow.Destination.IPs != nil {
+		ipVersion = getVersion(flow.Destination.IPs)
 	}
-	flow.IPVersion = &ipVersion
+
+	if ipVersion != nil {
+		flow.IPVersion = ipVersion
+	} else {
+		defaultIPVersion := 4
+		flow.IPVersion = &defaultIPVersion
+	}
 
 	return flow
 }
@@ -231,7 +237,7 @@ type FlowEndpointData struct {
 	Labels map[string]string
 
 	// IP, or nil if unknown.
-	IP []*net.IP
+	IPs []*net.IP
 
 	// Domains.
 	Domains string

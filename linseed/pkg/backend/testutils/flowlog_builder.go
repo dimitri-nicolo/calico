@@ -192,8 +192,8 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 	f.DestinationLabels = dlt.Labels()
 
 	// Set the IPs
-	f.IPs.Source = Keys(sourceIPsSet)
-	f.IPs.Destination = Keys(destinationIPsSet)
+	f.SourceIPs = Keys(sourceIPsSet)
+	f.DestinationIPs = Keys(destinationIPsSet)
 
 	// Add in expected policies. Right now, we don't support aggregation
 	// of policies across multiple logs in this builder, and we assume

@@ -220,7 +220,7 @@ func (m *MatcherFactory) Nets(nets []string) EndpointMatcher {
 
 	// Create a closure matching on the nets.
 	return func(_ *api.Flow, ed *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
-		if len(ed.IP) == 0 {
+		if len(ed.IPs) == 0 {
 			// Endpoint IP is unknown. If this is a Calico endpoint then we either have a negative match or an uncertain
 			// match depending on configuration.
 			if ed.IsCalicoManagedEndpoint() && !m.cfg.CalicoEndpointNetMatchAlways {
@@ -233,7 +233,7 @@ func (m *MatcherFactory) Nets(nets []string) EndpointMatcher {
 
 		for i := range nets {
 			matchedIPs := 0
-			for _, ip := range ed.IP {
+			for _, ip := range ed.IPs {
 				if cnets[i].Contains(ip.IP) {
 					log.Debugf("Nets: (ip matches %s)", ip)
 					matchedIPs++
@@ -242,13 +242,13 @@ func (m *MatcherFactory) Nets(nets []string) EndpointMatcher {
 				}
 			}
 
-			if matchedIPs == len(ed.IP) {
+			if matchedIPs == len(ed.IPs) {
 				log.Debugf("Nets: %s (All IPs match)", MatchTypeTrue)
 				return MatchTypeTrue
 			}
 		}
 
-		log.Debugf("Nets: %s (IP does not match %s)", MatchTypeFalse, ed.IP)
+		log.Debugf("Nets: %s (IP does not match %s)", MatchTypeFalse, ed.IPs)
 		return MatchTypeFalse
 	}
 }
@@ -269,7 +269,7 @@ func (m *MatcherFactory) NotNets(nets []string) EndpointMatcher {
 
 	// Create a closure matching on the nets.
 	return func(_ *api.Flow, ed *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
-		if len(ed.IP) == 0 {
+		if len(ed.IPs) == 0 {
 			// Endpoint IP is unknown. If this is a Calico endpoint then we either have a negative match or an uncertain
 			// match depending on configuration.
 			if ed.IsCalicoManagedEndpoint() && !m.cfg.CalicoEndpointNetMatchAlways {
@@ -280,9 +280,9 @@ func (m *MatcherFactory) NotNets(nets []string) EndpointMatcher {
 			return MatchTypeUncertain
 		}
 
-		for i := range nets {
+		for i := range cnets {
 			matchedIPs := 0
-			for _, ip := range ed.IP {
+			for _, ip := range ed.IPs {
 				if !cnets[i].Contains(ip.IP) {
 					log.Debugf("Nets: (ip not matches %s)", ip)
 					matchedIPs++
@@ -291,13 +291,13 @@ func (m *MatcherFactory) NotNets(nets []string) EndpointMatcher {
 				}
 			}
 
-			if matchedIPs == len(ed.IP) {
+			if matchedIPs == len(ed.IPs) {
 				log.Debugf("Nets: %s (All IPs do not match)", MatchTypeTrue)
 				return MatchTypeTrue
 			}
 		}
 
-		log.Debugf("Nets: %s (IP does not match %s)", MatchTypeFalse, ed.IP)
+		log.Debugf("Nets: %s (IP does not match %s)", MatchTypeFalse, ed.IPs)
 		return MatchTypeFalse
 	}
 }

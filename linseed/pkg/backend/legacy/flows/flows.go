@@ -333,8 +333,8 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 	flow.DestDomains = getDestDomainsFromAggregation(log, bucket.AggregatedTerms)
 
 	// Add source IPs and destination IPs
-	flow.IPs.Source = getValuesFromAggregation(log, bucket.AggregatedTerms, "source_ip")
-	flow.IPs.Destination = getValuesFromAggregation(log, bucket.AggregatedTerms, "dest_ip")
+	flow.SourceIPs = getValuesFromAggregation(log, bucket.AggregatedTerms, "source_ip")
+	flow.DestinationIPs = getValuesFromAggregation(log, bucket.AggregatedTerms, "dest_ip")
 
 	return &flow
 }

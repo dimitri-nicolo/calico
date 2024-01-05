@@ -808,7 +808,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(after[1], []string{"default|ns1/default.egress-allow|allow|0"})
+		expectPolicies(after[1], []string{"default|ns1/default.egress-allow|allow|-"})
 	})
 
 	It("handles flows with denied source previewing allow policy with flows before deny policy was added - recalculate before flows", func() {
@@ -962,7 +962,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: true},
 		}))
-		expectPolicies(after[1], []string{"default|ns1/default.egress-allow|allow|0"})
+		expectPolicies(after[1], []string{"default|ns1/default.egress-allow|allow|-"})
 	})
 
 	It("handles global allowed flows with a CIDR match while previewing a deletion for a global allow policy", func() {
@@ -1127,7 +1127,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: false},
 		}))
-		expectPolicies(before[0], []string{"allow-flow|sourceNamespace/allow-flow.cidr-match|allow|0"})
+		expectPolicies(before[0], []string{"allow-flow|sourceNamespace/allow-flow.cidr-match|allow|-"})
 
 		Expect(after[0].DocCount).To(BeEquivalentTo(1))
 		Expect(after[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
@@ -1142,7 +1142,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "source_action", Value: "allow"},
 			{Name: "flow_impacted", Value: false},
 		}))
-		expectPolicies(after[0], []string{"allow-flow|sourceNamespace/allow-flow.cidr-match|allow|0"})
+		expectPolicies(after[0], []string{"allow-flow|sourceNamespace/allow-flow.cidr-match|allow|-"})
 	})
 })
 
