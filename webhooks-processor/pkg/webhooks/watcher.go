@@ -20,6 +20,10 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
+const (
+	DependencyPrimingTime = 5 * time.Second
+)
+
 type WebhookWatcherUpdater struct {
 	client             *kubernetes.Clientset
 	whClient           clientv3.SecurityEventWebhookInterface
@@ -106,9 +110,9 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.Cance
 		}
 	}()
 
-	// allow some time to pass for the above to process existing cms
-	// and secrets before processing existing webhooks on start
-	time.Sleep(5 * time.Second)
+	// allow some time to pass for the above goroutine to process existing configmaps
+	// and secrets before processing existing webhooks during initialization
+	time.Sleep(DependencyPrimingTime)
 
 	// watch for webhook updates to process:
 	for ctx.Err() == nil {
