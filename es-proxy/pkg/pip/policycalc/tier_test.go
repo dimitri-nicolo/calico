@@ -556,7 +556,6 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Source.Nets = []string{"10.0.0.0/16"}
 		action := compute().Action
-		//Expect(action).To(Equal(api.ActionFlagDeny))
 		Expect(action).To(Equal(api.ActionFlagEndOfTierDeny))
 	})
 
@@ -670,7 +669,6 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.NotNets = []string{"10.0.0.0/16"}
 		action := compute().Action
-		//Expect(action).To(Equal(api.ActionFlagDeny))
 		Expect(action).To(Equal(api.ActionFlagEndOfTierDeny))
 	})
 
@@ -711,7 +709,6 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Destination.Nets = []string{"10.0.0.0/16"}
-		//Expect(compute().Action).To(Equal(api.ActionFlagDeny))
 		Expect(compute().Action).To(Equal(api.ActionFlagEndOfTierDeny))
 	})
 
@@ -750,7 +747,6 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Destination.Nets = []string{"10.0.0.0/16"}
-		//Expect(compute().Action).To(Equal(api.ActionFlagDeny))
 		Expect(compute().Action).To(Equal(api.ActionFlagEndOfTierDeny))
 	})
 
@@ -825,7 +821,6 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Destination.NotNets = []string{"10.0.0.0/16"}
-		//Expect(compute().Action).To(Equal(api.ActionFlagDeny))
 		Expect(compute().Action).To(Equal(api.ActionFlagEndOfTierDeny))
 	})
 
