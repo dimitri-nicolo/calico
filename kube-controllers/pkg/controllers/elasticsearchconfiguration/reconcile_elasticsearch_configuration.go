@@ -391,9 +391,9 @@ func (c *reconciler) cleanupDecommissionedElasticsearchUsers(reqLogger *log.Entr
 
 	if errored {
 		return fmt.Errorf("one or more errors occurred while deleting decommissioned users")
-	} else {
-		return nil
 	}
+
+	return nil
 }
 
 // createUser creates the given Elasticsearch user in Elasticsearch if passed a private user and creates a secret containing that users credentials.
