@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2024 Tigera, Inc. All rights reserved.
 
 //go:build tesla
 // +build tesla
@@ -10,7 +10,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 )
 
@@ -60,13 +59,16 @@ func (n *nativeUserSynchronizer) resync() error {
 		}
 
 		for _, user := range users {
+			rolesNames := user.RoleNames()
 			// Exclude Tigera's system users from deletion.
-			if user.FullName != esusers.SystemUserFullName {
-				subjectID := strings.TrimPrefix(user.Username, fmt.Sprintf("%s-", n.esUserPrefix))
-				if !n.userCache.Exists(subjectID) {
-					if err := n.esCLI.DeleteUser(elasticsearch.User{Username: user.Username}); err != nil {
-						return err
-					}
+			// Skip deleting this user if it does not contain roles specific to this tenant.
+			if user.FullName == esusers.SystemUserFullName || !strings.HasSuffix(rolesNames[0], tenantID) {
+				continue
+			}
+			subjectID := strings.TrimPrefix(user.Username, fmt.Sprintf("%s-", n.esUserPrefix))
+			if !n.userCache.Exists(subjectID) {
+				if err := n.esCLI.DeleteUser(elasticsearch.User{Username: user.Username}); err != nil {
+					return err
 				}
 			}
 		}
