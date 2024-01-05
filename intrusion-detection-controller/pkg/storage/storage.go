@@ -6,13 +6,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -20,67 +21,46 @@ import (
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	ForwarderConfigIndexPattern = ".tigera.forwarderconfig.%s"
-	QuerySize                   = 1000
-	MaxClauseCount              = 1024
-	CreateIndexFailureDelay     = time.Second * 15
-	CreateIndexWaitTimeout      = time.Minute
-	DefaultReplicas             = 0
-	DefaultShards               = 5
-)
+	// maxPageSize is the maximum number of results to include in each page returned from Linseed.
+	maxPageSize = 1000
 
-var (
-	ForwarderConfigIndex string // ForwarderConfigIndex is an index for maintaining internal state for the event forwarder
-)
+	MaxClauseCount = 1024
 
-func init() {
-	clusterName := os.Getenv("ELASTIC_INDEX_SUFFIX")
-	if clusterName == "" {
-		clusterName = lmak8s.DefaultCluster
-	}
-	ForwarderConfigIndex = fmt.Sprintf(ForwarderConfigIndexPattern, clusterName)
-}
+	// forwarderConfigIndexName is the name of the configmap used to store forwarder configuration.
+	forwarderConfigConfigMapName = "forwarder-config"
+	forwarderConfigMapNamespace  = "tigera-intrusion-detection"
+)
 
 type Service struct {
 	lmaCLI                        lma.Client
 	c                             *elastic.Client
 	lsClient                      client.Client
+	client                        ctrlclient.WithWatch
 	clusterName                   string
 	forwarderConfigMappingCreated chan struct{}
 	cancel                        context.CancelFunc
-	once                          sync.Once
-	indexSettings                 IndexSettings
 }
 
-func NewService(lmaCLI lma.Client, lsClient client.Client, clusterName string, indexSettings IndexSettings) *Service {
+func NewService(lmaCLI lma.Client, lsClient client.Client, k8scli ctrlclient.WithWatch, clusterName string) *Service {
 	return &Service{
 		lmaCLI:                        lmaCLI,
 		c:                             lmaCLI.Backend(),
 		lsClient:                      lsClient,
+		client:                        k8scli,
 		clusterName:                   clusterName,
 		forwarderConfigMappingCreated: make(chan struct{}),
-		indexSettings:                 indexSettings,
 	}
 }
 
 func (e *Service) Run(ctx context.Context) {
-	e.once.Do(func() {
-		// We create the index ForwarderConfigIndex regardless of whether the event forwarder is enabled or not (so that it's
-		// available when needed).
-		go func() {
-			if err := CreateOrUpdateIndex(ctx, e.c, e.indexSettings, ForwarderConfigIndex, forwarderConfigMapping, e.forwarderConfigMappingCreated); err != nil {
-				log.WithError(err).WithFields(log.Fields{
-					"index": ForwarderConfigIndex,
-				}).Error("Could not create index")
-			}
-		}()
-	})
+	// This function is a no-op, but it is required to implement the controller.Controller interface.
 }
 
 func (e *Service) Close() {
@@ -363,7 +343,7 @@ func flowParams(tr lmav1.TimeRange, matchType lsv1.MatchType, t []string) lsv1.F
 			IPs:  t,
 		},
 	}
-	matchSource.SetMaxPageSize(QuerySize)
+	matchSource.SetMaxPageSize(maxPageSize)
 	return matchSource
 }
 
@@ -420,7 +400,7 @@ func dnsLogParams(tr lmav1.TimeRange, matchType lsv1.DomainMatchType, domainName
 			Domains: domainNameSet,
 		},
 	}
-	matchQname.SetMaxPageSize(QuerySize)
+	matchQname.SetMaxPageSize(maxPageSize)
 	return matchQname
 }
 
@@ -454,51 +434,53 @@ func (e *Service) PutSecurityEventWithID(ctx context.Context, f []lsv1.Event) er
 	return err
 }
 
-// GetSecurityEvents retrieves a listing of security events from ES sorted in ascending order,
+// GetSecurityEvents retrieves a listing of security events sorted in ascending order,
 // where each events time falls within the range given by start and end time.
 func (e *Service) GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) <-chan *lmaAPI.EventResult {
 	return e.lmaCLI.SearchSecurityEvents(ctx, &start, &end, nil, allClusters)
 }
 
-// PutForwarderConfig saves the given ForwarderConfig object back to the datastore.
-func (e *Service) PutForwarderConfig(ctx context.Context, id string, f *ForwarderConfig) error {
-	l := log.WithFields(log.Fields{"func": "PutForwarderConfig"})
-	// Wait for the SecurityEvent Mapping to be created
-	if err := util.WaitForChannel(ctx, e.forwarderConfigMappingCreated, CreateIndexWaitTimeout); err != nil {
+// PutForwarderConfig saves the given ForwarderConfig object as a ConfigMap.
+func (e *Service) PutForwarderConfig(ctx context.Context, f *ForwarderConfig) error {
+	cm := &v1.ConfigMap{}
+
+	// Get the existing configmap, if it exists. If it doesn't, we'll create it.
+	err := e.client.Get(ctx, types.NamespacedName{Name: forwarderConfigConfigMapName, Namespace: forwarderConfigMapNamespace}, cm)
+	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
-	l.Debugf("Save config with id[%s] content [%+v]", id, f)
-	resp, err := e.c.Index().Index(ForwarderConfigIndex).Id(id).BodyJson(f).Do(ctx)
-	l.Debugf("Save config response [%+v]", resp)
-	return err
+
+	// Set the fields on the configmap.
+	bs, err := json.Marshal(f)
+	if err != nil {
+		return err
+	}
+	cm.Data = map[string]string{
+		"config": string(bs),
+	}
+
+	// Create the configmap if it doesn't exist, otherwise update it.
+	if cm.ResourceVersion == "" {
+		cm.Name = forwarderConfigConfigMapName
+		cm.Namespace = forwarderConfigMapNamespace
+		return e.client.Create(ctx, cm)
+	}
+	return e.client.Update(ctx, cm)
 }
 
 // GetForwarderConfig retrieves the forwarder config (which will be a singleton).
-func (e *Service) GetForwarderConfig(ctx context.Context, id string) (*ForwarderConfig, error) {
-	l := log.WithFields(log.Fields{"func": "GetForwarderConfig"})
-	l.Debugf("Search for config with id[%s]", id)
-
-	searchResult, err := e.c.Search().
-		Index(ForwarderConfigIndex).
-		Query(elastic.NewTermQuery("_id", id)). // query for the singleton doc by ID
-		From(0).Size(1).                        // retrieve the single document containing the forwarder config
-		Do(ctx)                                 // execute
+func (e *Service) GetForwarderConfig(ctx context.Context) (*ForwarderConfig, error) {
+	cm := &v1.ConfigMap{}
+	err := e.client.Get(ctx, types.NamespacedName{Name: forwarderConfigConfigMapName, Namespace: forwarderConfigMapNamespace}, cm)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
-
-	l.Debugf("Query took %d milliseconds", searchResult.TookInMillis)
-	l.Debugf("Found a total of %d forwarder config", searchResult.TotalHits())
-
-	if searchResult.Hits.TotalHits.Value > 0 {
-		hit := searchResult.Hits.Hits[0]
-		l.Debugf("Selecting forwarder config with id[%s]", hit.Id)
-		var config ForwarderConfig
-		if err := json.Unmarshal(hit.Source, &config); err != nil {
-			return nil, err
-		}
-		return &config, nil
+	var config ForwarderConfig
+	if err = json.Unmarshal([]byte(cm.Data["config"]), &config); err != nil {
+		return nil, err
 	}
-
-	return nil, nil
+	return &config, nil
 }

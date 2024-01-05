@@ -53,7 +53,6 @@ type alertControllerState struct {
 // managed cluster if the cluster is connected and adds it to the health.PingPongers to handle health checks,
 // else it cancels the existing GlobalAlertController for that ManagedCluster.
 func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName) error {
-
 	mc := &v3.ManagedCluster{}
 	err := r.client.Get(context.Background(), types.NamespacedName{Name: namespacedName.Name, Namespace: r.tenantNamespace}, mc)
 	if err != nil {

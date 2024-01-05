@@ -48,10 +48,10 @@ func (m *MockEvents) GetSecurityEvents(ctx context.Context, start, end time.Time
 	return nil
 }
 
-func (m *MockEvents) PutForwarderConfig(ctx context.Context, id string, f *ForwarderConfig) error {
+func (m *MockEvents) PutForwarderConfig(ctx context.Context, f *ForwarderConfig) error {
 	return nil
 }
 
-func (m *MockEvents) GetForwarderConfig(ctx context.Context, id string) (*ForwarderConfig, error) {
+func (m *MockEvents) GetForwarderConfig(ctx context.Context) (*ForwarderConfig, error) {
 	return nil, nil
 }

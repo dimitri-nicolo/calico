@@ -32,10 +32,16 @@ var (
 )
 
 func main() {
-	cfg, err := config.GetConfig()
+	generalConfig, err := config.GetConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	cfg, err := config.GetDashboardInstallerConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Attempt to load CA cert.
 	caCert, err := os.ReadFile(cfg.KibanaCAPath)
 	if err != nil {
@@ -49,7 +55,7 @@ func main() {
 	}
 
 	// Set up default HTTP transport config.
-	tlsConfig := tls.NewTLSConfig(cfg.FIPSMode)
+	tlsConfig := tls.NewTLSConfig(generalConfig.FIPSMode)
 	tlsConfig.RootCAs = caCertPool
 
 	client := &http.Client{

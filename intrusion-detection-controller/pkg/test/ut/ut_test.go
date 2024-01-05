@@ -10,7 +10,10 @@ import (
 	"net/url"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
+	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
 
@@ -30,6 +33,7 @@ import (
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 )
 
 var _ = Describe("DomainName Thread Feeds UT", func() {
@@ -45,8 +49,7 @@ var _ = Describe("DomainName Thread Feeds UT", func() {
 			Host:   "localhost:9200",
 		}
 
-		indexSettings := storage.DefaultIndexSettings()
-		lmaESCli, err := lma.New(&http.Client{}, u, "", "", "cluster", 1, 0, true, indexSettings.Replicas, indexSettings.Shards)
+		lmaESCli, err := lma.New(&http.Client{}, u, "", "", "cluster", 1, 0, true, 0, 5)
 		if err != nil {
 			panic("could not create unit under test: " + err.Error())
 		}
@@ -55,7 +58,14 @@ var _ = Describe("DomainName Thread Feeds UT", func() {
 		}
 
 		lsc = lsclient.NewMockClient("")
-		uut = storage.NewService(lmaESCli, lsc, "cluster", indexSettings)
+
+		// mock controller runtime client.
+		scheme := scheme.Scheme
+		err = v3.AddToScheme(scheme)
+		Expect(err).NotTo(HaveOccurred())
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+		uut = storage.NewService(lmaESCli, lsc, fakeClient, "cluster")
 		uut.Run(ctx)
 	})
 
@@ -120,7 +130,7 @@ var _ = Describe("DomainName Thread Feeds UT", func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			var linseedError = fmt.Errorf("linseed error")
+			linseedError := fmt.Errorf("linseed error")
 			lsc.SetResults(rest.MockResult{
 				Err: linseedError,
 			},

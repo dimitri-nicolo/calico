@@ -41,12 +41,11 @@ type SuspiciousSet interface {
 type Events interface {
 	PutSecurityEventWithID(context.Context, []v1.Event) error
 	GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) <-chan *lmaAPI.EventResult
-	PutForwarderConfig(ctx context.Context, id string, f *ForwarderConfig) error
-	GetForwarderConfig(ctx context.Context, id string) (*ForwarderConfig, error)
+	PutForwarderConfig(ctx context.Context, f *ForwarderConfig) error
+	GetForwarderConfig(ctx context.Context) (*ForwarderConfig, error)
 }
 
-// IPs are sent as strings to avoid overhead of decoding and encoding net.IP, since they are strings on the
-// wire to elastic.
+// IPs are sent as strings to avoid overhead of decoding and encoding net.IP.
 type IPSetSpec []string
 
 type DomainNameSetSpec []string
