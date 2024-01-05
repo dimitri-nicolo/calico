@@ -94,6 +94,8 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.Cance
 		return
 	}
 	go func() {
+		defer cmWatcher.Stop()
+		defer secretWatcher.Stop()
 		for ctx.Err() == nil {
 			select {
 			case event := <-cmWatcher.ResultChan():
@@ -115,6 +117,7 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.Cance
 			logrus.WithError(err).Error("Unable to watch for SecurityEventWebhook resources")
 			return
 		}
+		defer watcher.Stop()
 		for event := range watcher.ResultChan() {
 			w.controller.WebhookEventsChan() <- event
 		}
