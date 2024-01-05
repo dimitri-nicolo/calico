@@ -87,6 +87,10 @@ promotions:
     pipeline_file: push-images/deep-packet-inspection.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push dex images
+    pipeline_file: push-images/dex.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push egress-gateway images
     pipeline_file: push-images/egress-gateway.yml
     auto_promote:
@@ -133,10 +137,6 @@ promotions:
       when: "branch =~ 'master|release-'"
   - name: Push linseed images
     pipeline_file: push-images/linseed.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
-  - name: Push dex images
-    pipeline_file: push-images/dex.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push packetcapture images

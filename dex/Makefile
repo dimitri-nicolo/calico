@@ -26,10 +26,10 @@ build: bin/dex-$(ARCH)
 
 cmd/dex/%.go:
 	mkdir -p cmd/dex
-	curl -o $@ https://raw.githubusercontent.com/dexidp/dex/$(UPSTREAM_DEX_VERSION)/$@
+	curl -sSfL --retry 5 -o $@ https://raw.githubusercontent.com/dexidp/dex/$(UPSTREAM_DEX_VERSION)/$@
 
 init-cmd: clean cmd/dex/config.go cmd/dex/main.go cmd/dex/serve.go cmd/dex/version.go
-	patch -d ../ -p1 < patches/0001-cmd-changes.patch
+	patch -p2 < patches/0001-cmd-changes.patch
 
 .PHONY: bin/dex-$(ARCH)
 bin/dex-$(ARCH): init-cmd
@@ -38,9 +38,6 @@ ifeq ($(FIPS),true)
 else
 	$(call build_binary, cmd/dex/*.go, $@)
 endif
-
-clean:
-	rm -rf bin cmd
 
 ###############################################################################
 # BUILD IMAGE
@@ -69,3 +66,12 @@ $(DEX_CONTAINER_CREATED): bin/dex-$(ARCH)
 ci: image
 
 cd: image-all cd-common
+
+###############################################################################
+# Misc.
+###############################################################################
+
+clean:
+	rm -rf bin cmd $(DEX_CONTAINER_CREATED)-*
+	$(foreach arch, $(VALIDARCHES), docker rmi -f $(DEX_IMAGE):latest-$(arch);)
+	$(foreach arch, $(VALIDARCHES), docker rmi -f tigera/$(DEX_IMAGE):latest-$(arch);)
