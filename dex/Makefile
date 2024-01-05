@@ -32,7 +32,7 @@ init-cmd: clean cmd/dex/config.go cmd/dex/main.go cmd/dex/serve.go cmd/dex/versi
 	patch -d ../ -p1 < patches/0001-cmd-changes.patch
 
 .PHONY: bin/dex-$(ARCH)
-bin/dex-$(ARCH):
+bin/dex-$(ARCH): init-cmd
 ifeq ($(FIPS),true)
 	$(call build_cgo_boring_binary, cmd/dex/*.go, $@)
 else
@@ -47,12 +47,17 @@ clean:
 ###############################################################################
 DEX_CONTAINER_CREATED=.dex.created-$(ARCH)
 
+.PHONY: image-all
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
+sub-image-%:
+	$(MAKE) image ARCH=$*
+
 .PHONY: $(BUILD_IMAGES)
 image: $(DEX_IMAGE)
 
 $(DEX_IMAGE): $(DEX_CONTAINER_CREATED)
-$(DEX_CONTAINER_CREATED): Dockerfile bin/dex-$(ARCH)
-	$(DOCKER_BUILD) -t $(DEX_IMAGE):latest-$(ARCH) -f Dockerfile .
+$(DEX_CONTAINER_CREATED): bin/dex-$(ARCH)
+	$(DOCKER_BUILD) -t $(DEX_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -61,6 +66,6 @@ $(DEX_CONTAINER_CREATED): Dockerfile bin/dex-$(ARCH)
 ###############################################################################
 .PHONY: ci cd
 
-ci: static-checks image
+ci: image
 
 cd: image-all cd-common

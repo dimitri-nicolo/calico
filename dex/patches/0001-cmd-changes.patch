@@ -1,7 +1,7 @@
 From 480168212495aceb3404d7c4f72fbf0f6ed54168 Mon Sep 17 00:00:00 2001
 From: rene-dekker <rene@tigera.io>
 Date: Thu, 4 Jan 2024 15:39:51 -0800
-Subject: [PATCH] tmp
+Subject: [PATCH] Remove code from dex that is unused and requires code generation. Add FIPS support to tls configs.
 
 ---
  dex/cmd/dex/config.go | 11 -----------

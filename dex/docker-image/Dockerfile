@@ -5,7 +5,7 @@ FROM scratch as source
 ARG TARGETARCH
 
 COPY bin/dex-${TARGETARCH} /dex
-COPY web /srv/dex/web
+COPY docker-image/web /srv/dex/web
 
 FROM calico/base
 
