@@ -86,6 +86,10 @@ promotions:
     pipeline_file: push-images/linseed.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push dex images
+    pipeline_file: push-images/dex.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push packetcapture images
     pipeline_file: push-images/packetcapture.yml
     auto_promote:
