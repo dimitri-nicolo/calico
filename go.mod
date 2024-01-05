@@ -79,7 +79,6 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kelseyhightower/memkv v0.1.1
-	github.com/kylelemons/godebug v1.1.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
 	github.com/libp2p/go-reuseport v0.4.0
 	github.com/mcuadros/go-version v0.0.0-20190830083331-035f6764e8d2
@@ -287,7 +286,6 @@ require (
 	github.com/karrick/godirwalk v1.17.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/lestrrat-go/strftime v1.0.6 // indirect
-	github.com/lib/pq v1.10.9 // indirect
 	github.com/libopenstorage/openstorage v1.0.0 // indirect
 	github.com/lithammer/dedent v1.1.0 // indirect
 	github.com/magefile/mage v1.15.0 // indirect
@@ -297,7 +295,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-runewidth v0.0.10 // indirect
-	github.com/mattn/go-sqlite3 v1.14.17 // indirect
 	github.com/mattn/go-zglob v0.0.2-0.20190814121620-e3c945676326 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/mdlayher/genetlink v1.0.0 // indirect
@@ -404,16 +401,7 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
-require (
-	ariga.io/atlas v0.10.2-0.20230427182402-87a07dfb83bf // indirect
-	entgo.io/ent v0.12.3 // indirect
-	github.com/agext/levenshtein v1.2.3 // indirect
-	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
-	github.com/go-openapi/inflect v0.19.0 // indirect
-	github.com/hashicorp/hcl/v2 v2.13.0 // indirect
-	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
-	github.com/zclconf/go-cty v1.9.1 // indirect
-)
+require github.com/gorilla/websocket v1.5.0 // indirect
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
