@@ -5,9 +5,11 @@ package elasticsearchconfiguration
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"strings"
+
+	"github.com/stretchr/testify/mock"
+
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -101,8 +103,9 @@ var _ = Describe("Reconcile", func() {
 	var esCertSecret, gatewayCertSecret, voltronLinseedCertSecret *corev1.Secret
 	var managementESConfigMap *corev1.ConfigMap
 	var managementClientObjects []runtime.Object
+	var mockESCli *elasticsearch.MockClient
+	var mockESClientBuild *elasticsearch.MockClientBuilder
 	var restartChan chan string
-	fipsModeEnabled := true
 
 	BeforeEach(func() {
 		// Make chan size >1 so we don't need to wait for a listener to insert
@@ -176,10 +179,24 @@ var _ = Describe("Reconcile", func() {
 			CreationTimestamp: metav1.Now(),
 		}})
 		Expect(err).ShouldNot(HaveOccurred())
+
+		mockESCli = elasticsearch.NewMockClient()
+		mockESCli.On("CreateRoles", mock.Anything).Return(nil)
+		mockESCli.On("CreateUser", mock.Anything).Return(nil)
+		// GetUsers is currently only called inside cleanupDecommissionedElasticsearchusers so we only need to return
+		// a non-empty list if we're specifically trying to test the functionality of that function
+		mockESCli.On("GetUsers").Return([]elasticsearch.User{}, nil)
+
+		mockESClientBuild = new(elasticsearch.MockClientBuilder)
+		mockESClientBuild.On("Build").Return(mockESCli, nil)
 	})
 
 	JustBeforeEach(func() {
 		managementK8sCli = k8sfake.NewSimpleClientset(managementClientObjects...)
+	})
+
+	AfterEach(func() {
+		Expect(mockESCli.AssertExpectations(GinkgoT()))
 	})
 
 	Context("Management cluster configuration successfully created", func() {
@@ -189,15 +206,6 @@ var _ = Describe("Reconcile", func() {
 			es := &esv1.Elasticsearch{}
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
-
-			ts := getESServer()
-
-			Expect(err).ShouldNot(HaveOccurred())
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, err)
 
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managementK8sCli, esK8sCli, restartChan, nil)
 
@@ -212,15 +220,6 @@ var _ = Describe("Reconcile", func() {
 			es := &esv1.Elasticsearch{}
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
-
-			ts := getESServer()
-
-			Expect(err).ShouldNot(HaveOccurred())
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, err)
 
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managementK8sCli, esK8sCli, restartChan, nil)
 
@@ -247,15 +246,6 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := getESServer()
-
-			Expect(err).ShouldNot(HaveOccurred())
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, err)
-
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managementK8sCli, esK8sCli, restartChan, nil)
 
 			Expect(r.Reconcile(types.NamespacedName{})).ShouldNot(HaveOccurred())
@@ -278,6 +268,79 @@ var _ = Describe("Reconcile", func() {
 
 			// Assert that the configuration has been rectified.
 			assertManagementConfiguration(managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managementESConfigMap)
+		})
+
+		It("should clean up decommissioned Elasticsearch users and secrets", func() {
+			// Simulate an upgrade scenario by initializing the management and managed clusters with old ES users
+			// and secrets
+			mgmtClientObjs := managementClientObjects
+			mgmtClientObjs = append(mgmtClientObjs, []runtime.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tigera-ee-curator-elasticsearch-access",
+						Namespace: resource.TigeraElasticsearchNamespace,
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tigera-ee-curator-gateway-verification-credentials",
+						Namespace: resource.TigeraElasticsearchNamespace,
+					},
+				},
+			}...)
+			managementK8sCli = k8sfake.NewSimpleClientset(mgmtClientObjs...)
+
+			mgdClientObjs := []runtime.Object{&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tigera-ee-curator-access-gateway",
+					Namespace: common.TigeraOperatorNamespace,
+				},
+			}}
+			managedK8sCli := k8sfake.NewSimpleClientset(mgdClientObjs...)
+
+			// We need to override what gets returned by GetUsers() so that we can test the functionality of our
+			// deletion of decommissioned users so recreate the mock client here.
+			mockESCli = elasticsearch.NewMockClient()
+			mockESCli.On("CreateRoles", mock.Anything).Return(nil)
+			mockESCli.On("CreateUser", mock.Anything).Return(nil)
+
+			mockESClientBuild = new(elasticsearch.MockClientBuilder)
+			mockESClientBuild.On("Build").Return(mockESCli, nil)
+
+			curatorRole := elasticsearch.Role{
+				Name: "tigera-ee-curator-secure",
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor", "manage_index_templates"},
+					Indices: []elasticsearch.RoleIndex{{
+						Names:      []string{"tigera_secure_ee_*.*.*", "tigera_secure_ee_events.*"},
+						Privileges: []string{"all"},
+					}},
+				},
+			}
+
+			curatorUser := elasticsearch.User{
+				Username: "tigera-ee-curator-secure",
+				Roles:    []elasticsearch.Role{curatorRole},
+			}
+
+			allESUsers := []elasticsearch.User{curatorUser}
+
+			mockESCli.On("DeleteUser", curatorUser).Return(nil)
+			mockESCli.On("DeleteRole", curatorRole).Return(nil)
+			mockESCli.On("GetUsers").Return(allESUsers, nil)
+
+			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan, nil)
+			Expect(r.Reconcile(types.NamespacedName{})).ShouldNot(HaveOccurred())
+
+			// Now verify that the secrets associated with the decommissioned user have been deleted.
+			_, err := managementK8sCli.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), "tigera-ee-curator-gateway-verification-credentials", metav1.GetOptions{})
+			Expect(err).Should(HaveOccurred())
+
+			_, err = managedK8sCli.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), "tigera-ee-curator-elasticsearch-access-gateway", metav1.GetOptions{})
+			Expect(err).Should(HaveOccurred())
+
+			_, err = managementK8sCli.CoreV1().Secrets(common.TigeraOperatorNamespace).Get(context.Background(), "tigera-ee-curator-elasticsearch-access", metav1.GetOptions{})
+			Expect(err).Should(HaveOccurred())
 		})
 	})
 
@@ -310,15 +373,6 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := getESServer()
-
-			Expect(err).ShouldNot(HaveOccurred())
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, err)
-
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managementK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
 					r.managementOperatorNamespace = altOperatorNamespace
@@ -336,15 +390,6 @@ var _ = Describe("Reconcile", func() {
 			es := &esv1.Elasticsearch{}
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
-
-			ts := getESServer()
-
-			Expect(err).ShouldNot(HaveOccurred())
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, err)
 
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managementK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
@@ -374,15 +419,6 @@ var _ = Describe("Reconcile", func() {
 			es := &esv1.Elasticsearch{}
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
-
-			ts := getESServer()
-
-			Expect(err).ShouldNot(HaveOccurred())
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, err)
 
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managementK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
@@ -438,15 +474,6 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := getESServer()
-
-			Expect(err).ShouldNot(HaveOccurred())
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, err)
-
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
 					r.clusterName = "managed-1"
@@ -460,20 +487,13 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("regenerates user Secrets if the Secret's hash is stale", func() {
-			ts := getESServer()
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, err)
-
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
 					r.clusterName = "managed-1"
 					r.management = false
 				})
 
-			err = r.Reconcile(types.NamespacedName{})
+			err := r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
@@ -497,20 +517,13 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("does not regenerate the user secrets when the owner reference hasn't changed", func() {
-			ts := getESServer()
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, nil)
-
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
 					r.clusterName = "managed-1"
 					r.ownerReference = "reference1"
 					r.management = false
 				})
-			err = r.Reconcile(types.NamespacedName{})
+			err := r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
@@ -537,13 +550,6 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("regenerates the user secrets when the owner reference has changed", func() {
-			ts := getESServer()
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, nil)
-
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
 					r.clusterName = "managed-1"
@@ -551,7 +557,7 @@ var _ = Describe("Reconcile", func() {
 					r.management = false
 				})
 
-			err = r.Reconcile(types.NamespacedName{})
+			err := r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			assertManagedConfiguration(managedK8sCli, managementK8sCli, resource.OperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
@@ -583,15 +589,6 @@ var _ = Describe("Reconcile", func() {
 			es := &esv1.Elasticsearch{}
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
-
-			ts := getESServer()
-
-			Expect(err).ShouldNot(HaveOccurred())
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, err)
 
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
@@ -642,15 +639,6 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := getESServer()
-
-			Expect(err).ShouldNot(HaveOccurred())
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, err)
-
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
 					r.clusterName = "managed-1"
@@ -665,13 +653,6 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("regenerates user Secrets if the Secret's hash is stale", func() {
-			ts := getESServer()
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, err)
-
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
 					r.clusterName = "managed-1"
@@ -679,7 +660,7 @@ var _ = Describe("Reconcile", func() {
 					r.managedOperatorNamespace = altOperatorNamespace
 				})
 
-			err = r.Reconcile(types.NamespacedName{})
+			err := r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
@@ -703,13 +684,6 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("does not regenerate the user secrets when the owner reference hasn't changed", func() {
-			ts := getESServer()
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, nil)
-
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
 					r.clusterName = "managed-1"
@@ -717,7 +691,7 @@ var _ = Describe("Reconcile", func() {
 					r.management = false
 					r.managedOperatorNamespace = altOperatorNamespace
 				})
-			err = r.Reconcile(types.NamespacedName{})
+			err := r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
@@ -745,13 +719,6 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("regenerates the user secrets when the owner reference has changed", func() {
-			ts := getESServer()
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, nil)
-
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
 					r.clusterName = "managed-1"
@@ -760,7 +727,7 @@ var _ = Describe("Reconcile", func() {
 					r.managedOperatorNamespace = altOperatorNamespace
 				})
 
-			err = r.Reconcile(types.NamespacedName{})
+			err := r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			assertManagedConfiguration(managedK8sCli, managementK8sCli, altOperatorNamespace, esCertSecret, gatewayCertSecret, managedESConfigMap)
@@ -794,15 +761,6 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := getESServer()
-
-			Expect(err).ShouldNot(HaveOccurred())
-
-			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
-			Expect(err).ShouldNot(HaveOccurred())
-			mockESClientBuild.On("Build").Return(esClient, err)
-
 			r := NewReconciler(mockESClientBuild, managementK8sCli, managedK8sCli, esK8sCli, restartChan,
 				func(r *reconciler) {
 					r.clusterName = "managed-1"
@@ -817,12 +775,6 @@ var _ = Describe("Reconcile", func() {
 		})
 	})
 })
-
-func getESServer() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("X-Elastic-Product", "Elasticsearch")
-	}))
-}
 
 func assertManagementConfiguration(managementK8sCli kubernetes.Interface, operatorNs string, expectedESCertSecret *corev1.Secret, expectedGatewayCertSecret *corev1.Secret, expectedESConfigMap *corev1.ConfigMap) {
 	ctx := context.Background()
