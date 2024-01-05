@@ -9,6 +9,7 @@ import (
 	"github.com/cnf/structhash"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -85,8 +86,24 @@ func (s *ControllerState) IncomingWebhookUpdate(ctx context.Context, webhook *ap
 	s.startNewInstance(ctx, webhook)
 }
 
-func (s *ControllerState) CheckDependencies(runtime.Object) {
-
+func (s *ControllerState) CheckDependencies(changedObject runtime.Object) {
+	var dependencyCheck func(webhookDependencies) bool
+	if configMap, ok := changedObject.(*corev1.ConfigMap); ok {
+		dependencyCheck = func(deps webhookDependencies) bool {
+			return deps.CheckConfigMap(configMap.Name)
+		}
+	} else if secret, ok := changedObject.(*corev1.ConfigMap); ok {
+		dependencyCheck = func(deps webhookDependencies) bool {
+			return deps.CheckSecret(secret.Name)
+		}
+	} else {
+		return
+	}
+	for _, trail := range s.webhooksTrail {
+		if dependencyCheck(trail.dependencies) {
+			trail.specHash = ""
+		}
+	}
 }
 
 func (s *ControllerState) Stop(ctx context.Context, webhook *api.SecurityEventWebhook) {
