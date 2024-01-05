@@ -1,0 +1,10 @@
+FROM scratch
+
+COPY bin/eck-operator-amd64 /elastic-operator
+COPY cloud-on-k8s/config/eck.yaml /conf/eck.yaml
+
+USER 10001:10001
+
+ENTRYPOINT ["/elastic-operator"]
+
+CMD ["manager"]
