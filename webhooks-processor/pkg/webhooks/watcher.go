@@ -26,7 +26,7 @@ const (
 )
 
 type WebhookWatcherUpdater struct {
-	client             *kubernetes.Clientset
+	client             kubernetes.Interface
 	whClient           clientv3.SecurityEventWebhookInterface
 	controller         WebhookControllerInterface
 	webhookUpdatesChan chan *api.SecurityEventWebhook
@@ -43,7 +43,7 @@ func (w *WebhookWatcherUpdater) WithWebhooksClient(client clientv3.SecurityEvent
 	return w
 }
 
-func (w *WebhookWatcherUpdater) WithK8sClient(client *kubernetes.Clientset) *WebhookWatcherUpdater {
+func (w *WebhookWatcherUpdater) WithK8sClient(client kubernetes.Interface) *WebhookWatcherUpdater {
 	w.client = client
 	return w
 }
