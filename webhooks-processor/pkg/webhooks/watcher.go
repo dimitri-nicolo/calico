@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	DependencyPrimingTime = 5 * time.Second
+	DependencyPrimingTime  = 5 * time.Second
+	WebhooksWatcherTimeout = 1 * time.Minute
 )
 
 type WebhookWatcherUpdater struct {
@@ -116,7 +117,8 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.Cance
 
 	// watch for webhook updates to process:
 	for ctx.Err() == nil {
-		watcher, err := w.whClient.Watch(ctx, options.ListOptions{})
+		watcherCtx, _ := context.WithTimeout(ctx, WebhooksWatcherTimeout)
+		watcher, err := w.whClient.Watch(watcherCtx, options.ListOptions{})
 		if err != nil {
 			logrus.WithError(err).Error("Unable to watch for SecurityEventWebhook resources")
 			return
