@@ -110,7 +110,7 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.Cance
 
 	// watch for webhook updates to process:
 	for ctx.Err() == nil {
-		watcherCtx, _ := context.WithTimeout(ctx, WebhooksWatcherTimeout)
+		watcherCtx, watcherCtxCancel := context.WithTimeout(ctx, WebhooksWatcherTimeout)
 		watcher, err := w.whClient.Watch(watcherCtx, options.ListOptions{})
 		if err != nil {
 			logrus.WithError(err).Error("Unable to watch for SecurityEventWebhook resources")
@@ -119,5 +119,6 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.Cance
 		for event := range watcher.ResultChan() {
 			w.controller.WebhookEventsChan() <- event
 		}
+		watcherCtxCancel()
 	}
 }
