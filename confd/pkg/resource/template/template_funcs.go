@@ -84,7 +84,7 @@ func filterStatement(fields filterArgs) (string, error) {
 	var conditions []string
 	if fields.cidr != "" {
 		if fields.operator == "" {
-			return "", fmt.Errorf("Operator not included in BGPFilter")
+			return "", fmt.Errorf("operator not included in BGPFilter")
 		}
 		cidrCondition, err := filterMatchCIDR(fields.cidr, fields.operator)
 		if err != nil {
@@ -118,7 +118,7 @@ func filterStatement(fields filterArgs) (string, error) {
 
 func filterAction(action v3.BGPFilterAction) (string, error) {
 	if action != v3.Accept && action != v3.Reject {
-		return "", fmt.Errorf("Unexpected action found in BGPFilter: %s", action)
+		return "", fmt.Errorf("unexpected action found in BGPFilter: %s", action)
 	}
 	return fmt.Sprintf("%s;", strings.ToLower(string(action))), nil
 }
@@ -135,7 +135,7 @@ var (
 func filterMatchCIDR(cidr string, operator v3.BGPFilterMatchOperator) (string, error) {
 	op, ok := operatorLUT[operator]
 	if !ok {
-		return "", fmt.Errorf("Unexpected operator found in BGPFilter: %s", operator)
+		return "", fmt.Errorf("unexpected operator found in BGPFilter: %s", operator)
 	}
 	return fmt.Sprintf("(net %s %s)", op, cidr), nil
 }
@@ -145,7 +145,7 @@ func filterMatchSource(source v3.BGPFilterMatchSource) (string, error) {
 	case v3.BGPFilterSourceRemotePeers:
 		return "((defined(source))&&(source ~ [ RTS_BGP ]))", nil
 	default:
-		return "", fmt.Errorf("Unexpected source found in BGPFilter: %s", source)
+		return "", fmt.Errorf("unexpected source found in BGPFilter: %s", source)
 	}
 }
 
@@ -162,7 +162,7 @@ func filterMatchInterface(iface string) (string, error) {
 func BGPFilterFunctionName(filterName, direction, version string) (string, error) {
 	normalizedDirection := strings.ToLower(direction)
 	if normalizedDirection != "import" && normalizedDirection != "export" {
-		return "", fmt.Errorf("Provided direction '%s' does not map to either 'import' or 'export'", direction)
+		return "", fmt.Errorf("provided direction '%s' does not map to either 'import' or 'export'", direction)
 	}
 	pieces := []string{"bgp_", "", "_", normalizedDirection, "FilterV", version}
 	resizedName, err := truncateAndHashName(filterName, maxBIRDSymLen-len(strings.Join(pieces, "")))
@@ -391,7 +391,7 @@ func BGPFilterBIRDFuncs(pairs memkv.KVPairs, version int) ([]string, error) {
 	if version == 4 || version == 6 {
 		versionStr = fmt.Sprintf("%d", version)
 	} else {
-		return []string{}, fmt.Errorf("Version must be either 4 or 6")
+		return []string{}, fmt.Errorf("version must be either 4 or 6")
 	}
 
 	for _, kvp := range pairs {

@@ -85,7 +85,7 @@ static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 	sip.ip.addr = dst_ip;
 	sip.ip.port = bpf_ntohs(dst_port);
 	sip.ip.protocol = 17;
-	if (bpf_map_lookup_elem(&cali_v4_ip_sets, &sip)) {
+	if (cali_ip_sets_lookup_elem(&sip)) {
 		CALI_DEBUG("Dst IP/port are trusted for DNS\n");
 		// Store 'trusted DNS connection' status in conntrack entry.
 		ctx->state->ct_result.flags |= CALI_CT_FLAG_TRUST_DNS;

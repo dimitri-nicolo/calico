@@ -133,6 +133,8 @@ var (
 
 	bpfLogLevelRegex    = regexp.MustCompile("^(Debug|Info|Off)$")
 	bpfServiceModeRegex = regexp.MustCompile("^(Tunnel|DSR)$")
+	bpfCTLBRegex        = regexp.MustCompile("^(Disabled|Enabled|TCP)$")
+	bpfHostNatRegex     = regexp.MustCompile("^(Disabled|Enabled)$")
 
 	datastoreType         = regexp.MustCompile("^(etcdv3|kubernetes)$")
 	routeSource           = regexp.MustCompile("^(WorkloadIPs|CalicoIPAM)$")
@@ -265,6 +267,8 @@ func init() {
 	registerFieldValidator("bpfLogLevel", validateBPFLogLevel)
 	registerFieldValidator("bpfLogFilters", validateBPFLogFilters)
 	registerFieldValidator("bpfServiceMode", validateBPFServiceMode)
+	registerFieldValidator("bpfConnectTimeLoadBalancing", validateBPFConnectTimeLoadBalancing)
+	registerFieldValidator("bpfHostNetworkedNATWithoutCTLB", validateBPFHostNetworkedNat)
 	registerFieldValidator("dropAcceptReturn", validateFelixEtoHAction)
 	registerFieldValidator("acceptReturn", validateAcceptReturn)
 	registerFieldValidator("dropReject", validateDropReject)
@@ -756,6 +760,18 @@ func validateBPFServiceMode(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate Felix BPF service mode: %s", s)
 	return bpfServiceModeRegex.MatchString(s)
+}
+
+func validateBPFConnectTimeLoadBalancing(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate Felix BPF ConnectTimeLoadBalancing: %s", s)
+	return bpfCTLBRegex.MatchString(s)
+}
+
+func validateBPFHostNetworkedNat(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate Felix BPF HostNetworked NAT: %s", s)
+	return bpfHostNatRegex.MatchString(s)
 }
 
 func validateFelixEtoHAction(fl validator.FieldLevel) bool {
