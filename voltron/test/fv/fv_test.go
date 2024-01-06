@@ -518,8 +518,12 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 		Expect(numDone).To(Equal(numConns*numReqs), "Not all connections completed")
 	})
 
-	It("should not be possible to reach the test server", func() {
-		_, err := ui.doRequest(clusterID)
+	It("should not be possible to reach the test server after guardian is terminated", func() {
+		By("Terminating guardian")
+		err := guardian.Close()
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = ui.doRequest(clusterID)
 		Expect(err).To(HaveOccurred())
 	})
 
