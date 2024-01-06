@@ -9,8 +9,9 @@ import (
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 	"k8s.io/apimachinery/pkg/watch"
+
+	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 )
 
 type WebhookController struct {

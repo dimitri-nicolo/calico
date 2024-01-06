@@ -8,10 +8,11 @@ import (
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
-	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
+	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )

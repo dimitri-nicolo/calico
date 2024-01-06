@@ -11,11 +11,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/events"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/webhooks"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 func main() {
