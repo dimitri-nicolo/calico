@@ -33,7 +33,7 @@ type ControllerState struct {
 	preventRestarts map[types.UID]bool
 	config          *ControllerConfig
 	wg              sync.WaitGroup
-	cli             *kubernetes.Clientset
+	cli             kubernetes.Interface
 }
 
 func (d webhookDependencies) CheckConfigMap(cmName string) bool {
@@ -59,7 +59,7 @@ func (s *ControllerState) WithConfig(config *ControllerConfig) *ControllerState 
 	return s
 }
 
-func (s *ControllerState) WithK8sClient(client *kubernetes.Clientset) *ControllerState {
+func (s *ControllerState) WithK8sClient(client kubernetes.Interface) *ControllerState {
 	s.cli = client
 	return s
 }

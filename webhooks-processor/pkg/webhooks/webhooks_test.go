@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -116,12 +117,24 @@ func TestWebhookNonHealthyStates(t *testing.T) {
 		testNonHealthyState(wh, "QueryValidation", "invalid value for type: runtime_securit")
 	})
 
-	// The following test will fail to initialise a CoreV1 API client.
-	// TODO: Add test for config parsing failure, with `configItem.ValueFrom`,
-	// that test the "key not found in secret/config map" code paths.
-	t.Run("config parsing - no cli client", func(t *testing.T) {
+	t.Run("config parsing", func(t *testing.T) {
 		wh := testutils.NewTestWebhook("test-wh")
+		wh.Spec.Config = append(wh.Spec.Config, api.SecurityEventWebhookConfigVar{
+			Name: "some-secret",
+			ValueFrom: &api.SecurityEventWebhookConfigVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: "non-existing-secret",
+					},
+					Key: "non-existing-key",
+				},
+			},
+		})
+		testNonHealthyState(wh, "ConfigurationParsing", "secrets \"non-existing-secret\" not found")
+	})
 
+	t.Run("config parsing", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
 		wh.Spec.Config = append(wh.Spec.Config, api.SecurityEventWebhookConfigVar{
 			Name:      "some-secret",
 			ValueFrom: &api.SecurityEventWebhookConfigVarSource{},
@@ -601,10 +614,11 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 	var ctx context.Context
 	wg := sync.WaitGroup{}
 	ctx, testState.Stop = context.WithCancel(context.Background())
+	fakeClient := fake.NewSimpleClientset()
 	go func() {
 		testState.Running = true
-		webhookWatcherUpdater := NewWebhookWatcherUpdater().WithWebhooksClient(config.ClientV3).WithK8sClient(fake.NewSimpleClientset())
-		controllerState := NewControllerState().WithConfig(config)
+		webhookWatcherUpdater := NewWebhookWatcherUpdater().WithWebhooksClient(config.ClientV3).WithK8sClient(fakeClient)
+		controllerState := NewControllerState().WithConfig(config).WithK8sClient(fakeClient)
 		webhookController := NewWebhookController().WithState(controllerState)
 
 		wg.Add(2)
