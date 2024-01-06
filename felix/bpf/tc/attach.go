@@ -63,6 +63,7 @@ type AttachPoint struct {
 	RPFEnforceOption     uint8
 	NATin                uint32
 	NATout               uint32
+	UDPOnly              bool
 
 	// EE only
 	VethNS                  uint16
@@ -505,8 +506,11 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		globalData.Flags |= libbpf.GlobalsRPFOptionEnabled
 	}
 
-	// EE only
+	if ap.UDPOnly {
+		globalData.Flags |= libbpf.GlobalsLoUDPOnly
+	}
 
+	// EE only
 	if ap.EgressIPEnabled {
 		globalData.Flags |= libbpf.GlobalsEgressIPEnabled
 	}

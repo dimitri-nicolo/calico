@@ -510,11 +510,10 @@ func newBPFEndpointManager(
 		m.dp = m
 	}
 
-	if config.BPFHostNetworkedNAT == string(apiv3.BPFHostNetworkedNATEnabled) {
+	if config.BPFConnTimeLB == string(apiv3.BPFConnectTimeLBTCP) {
+		m.hostNetworkedNATMode = hostNetworkedNATUDPOnly
+	} else if config.BPFHostNetworkedNAT == string(apiv3.BPFHostNetworkedNATEnabled) {
 		m.hostNetworkedNATMode = hostNetworkedNATEnabled
-		if config.BPFConnTimeLB == string(apiv3.BPFConnectTimeLBTCP) {
-			m.hostNetworkedNATMode = hostNetworkedNATUDPOnly
-		}
 	}
 
 	if m.hostNetworkedNATMode != hostNetworkedNATDisabled {
@@ -2177,6 +2176,9 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(policyDirection PolDirection
 		endpointType = tcdefs.EpTypeLO
 		ap.HostTunnelIP = m.tunnelIP
 		log.Debugf("Setting tunnel ip %s on ap %s", m.tunnelIP, ifaceName)
+		if m.hostNetworkedNATMode == hostNetworkedNATUDPOnly {
+			ap.UDPOnly = true
+		}
 	} else if ifaceName == "tunl0" {
 		if m.Features.IPIPDeviceIsL3 {
 			endpointType = tcdefs.EpTypeL3Device
@@ -2719,7 +2721,7 @@ func (m *bpfEndpointManager) ensureBPFDevices() error {
 		cidr = bpfnatGWCIDR
 	}
 
-	retries := 5
+	retries := 10
 	i := retries
 	for {
 		if err := netlink.NeighAdd(arp); err != nil && err != syscall.EEXIST {
