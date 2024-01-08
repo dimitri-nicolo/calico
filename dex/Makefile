@@ -28,7 +28,7 @@ cmd/dex/%.go:
 	mkdir -p cmd/dex
 	curl -sSfL --retry 5 -o $@ https://raw.githubusercontent.com/dexidp/dex/$(UPSTREAM_DEX_VERSION)/$@
 
-# commit the changes to init-cmd if the tree is dirty
+# Commit the changes made by init-cmd if the tree is dirty
 init-cmd: clean cmd/dex/config.go cmd/dex/main.go cmd/dex/serve.go cmd/dex/version.go
 	patch -p2 < patches/0001-cmd-changes.patch
 	$(MAKE) mod-tidy
