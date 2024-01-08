@@ -212,6 +212,8 @@ func (ha *addHeaderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 	return ha.rt.RoundTrip(r2)
 }
 
+func (rt *addHeaderRoundTripper) WrappedRoundTripper() http.RoundTripper { return rt.rt }
+
 // MustGetConfig returns the rest Config for the local cluster.
 func MustGetConfig() *rest.Config {
 	kubeconfig := os.Getenv("KUBECONFIG")
