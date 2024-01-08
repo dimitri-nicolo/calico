@@ -17,7 +17,7 @@ tigera.licenseEdition: ${LICENSE_EDITION:-enterpriseEdition}
 EOF
 
 if [[ "$GTM_INTEGRATION" == 'enabled' ]]; then
-cat >>${KIBANA_CONFIG} <<EOF
+  cat >>${KIBANA_CONFIG} <<EOF
 # Google Tag Manager configuration
 csp.rules:
   - "script-src 'unsafe-eval' 'self' 'unsafe-inline' https://www.googletagmanager.com"
@@ -27,6 +27,3 @@ googletagmanager.enabled: true
 googletagmanager.container: "GTM-TCNXTCJ"
 EOF
 fi
-
-#remove this script from fs
-rm "$0"
