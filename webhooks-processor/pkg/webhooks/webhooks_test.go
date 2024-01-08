@@ -140,7 +140,7 @@ func TestWebhookDependencyModifications(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		// fake k8s clientset used in the unit test does not propagate watches (this is by design) so we have to take care of it ourself
+		// fake k8s clientset used in the unit test does not propagate watches (this is by design) so we have to take care of it ourselves
 		testState.WebhooksCtrl.K8sEventsChan() <- k8swatch.Event{Type: k8swatch.Modified, Object: testSecret}
 
 		// the webhook should eventually be in a non-healthy state as the secret does not contain referenced data
