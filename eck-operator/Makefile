@@ -82,10 +82,9 @@ sub-image-%:
 image: $(ECK_OPERATOR_IMAGE)
 
 .PHONY: image
-image: $(ECK_OPERATOR_IMAGE)
-$(ECK_OPERATOR_IMAGE): $(ECK_OPERATOR_IMAGE)-$(ARCH)
-$(ECK_OPERATOR_IMAGE)-$(ARCH): build
-	docker buildx build --pull $(DOCKER_SQUASH) -t $(ECK_OPERATOR_IMAGE):latest-$(ARCH) --file ./Dockerfile .
+$(ECK_OPERATOR_IMAGE): $(ECK_OPERATOR_CONTAINER_CREATED)
+$(ECK_OPERATOR_CONTAINER_CREATED): bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
+	$(DOCKER_BUILD) -t $(ECK_OPERATOR_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
