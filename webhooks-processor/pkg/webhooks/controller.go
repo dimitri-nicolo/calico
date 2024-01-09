@@ -9,18 +9,22 @@ import (
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/watch"
+	"k8s.io/apimachinery/pkg/watch"
+
+	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 )
 
 type WebhookController struct {
-	eventsChan chan watch.Event
-	updater    WebhookUpdaterInterface
-	state      StateInterface
+	webhookEventsChan chan calicoWatch.Event
+	k8sEventsChan     chan watch.Event
+	updater           WebhookUpdaterInterface
+	state             StateInterface
 }
 
 func NewWebhookController() *WebhookController {
 	watcher := new(WebhookController)
-	watcher.eventsChan = make(chan watch.Event)
+	watcher.webhookEventsChan = make(chan calicoWatch.Event)
+	watcher.k8sEventsChan = make(chan watch.Event)
 	return watcher
 }
 
@@ -34,8 +38,12 @@ func (c *WebhookController) WithState(state StateInterface) *WebhookController {
 	return c
 }
 
-func (c *WebhookController) EventsChan() chan<- watch.Event {
-	return c.eventsChan
+func (c *WebhookController) WebhookEventsChan() chan<- calicoWatch.Event {
+	return c.webhookEventsChan
+}
+
+func (c *WebhookController) K8sEventsChan() chan<- watch.Event {
+	return c.k8sEventsChan
 }
 
 func (c *WebhookController) Run(ctx context.Context, ctxCancel context.CancelFunc, wg *sync.WaitGroup) {
@@ -47,19 +55,24 @@ func (c *WebhookController) Run(ctx context.Context, ctxCancel context.CancelFun
 
 	for {
 		select {
-		case event := <-c.eventsChan:
+		case event := <-c.webhookEventsChan:
 			switch event.Type {
-			case watch.Added, watch.Modified:
+			case calicoWatch.Added, calicoWatch.Modified:
 				if webhook, ok := event.Object.(*api.SecurityEventWebhook); ok {
 					c.state.IncomingWebhookUpdate(ctx, webhook)
 				}
-			case watch.Deleted:
+			case calicoWatch.Deleted:
 				if webhook, ok := event.Previous.(*api.SecurityEventWebhook); ok {
 					c.state.Stop(ctx, webhook)
 				}
 			}
 		case webhook := <-c.state.OutgoingWebhookUpdates():
 			c.updater.UpdatesChan() <- webhook
+		case event := <-c.k8sEventsChan:
+			switch event.Type {
+			case watch.Modified, watch.Deleted:
+				c.state.CheckDependencies(event.Object)
+			}
 		case <-ctx.Done():
 			c.state.StopAll()
 			return

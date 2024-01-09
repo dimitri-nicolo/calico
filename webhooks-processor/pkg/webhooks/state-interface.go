@@ -9,6 +9,8 @@ import (
 	"github.com/cnf/structhash"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
@@ -17,6 +19,12 @@ type webhookState struct {
 	specHash       string
 	cancelFunc     context.CancelFunc
 	webhookUpdates chan *api.SecurityEventWebhook
+	dependencies   webhookDependencies
+}
+
+type webhookDependencies struct {
+	secrets    map[string]bool
+	configMaps map[string]bool
 }
 
 type ControllerState struct {
@@ -25,7 +33,17 @@ type ControllerState struct {
 	preventRestarts map[types.UID]bool
 	config          *ControllerConfig
 	wg              sync.WaitGroup
-	cli             *kubernetes.Clientset
+	cli             kubernetes.Interface
+}
+
+func (d webhookDependencies) CheckConfigMap(cmName string) bool {
+	_, ok := d.configMaps[cmName]
+	return ok
+}
+
+func (d webhookDependencies) CheckSecret(secretName string) bool {
+	_, ok := d.secrets[secretName]
+	return ok
 }
 
 func NewControllerState() *ControllerState {
@@ -38,6 +56,11 @@ func NewControllerState() *ControllerState {
 
 func (s *ControllerState) WithConfig(config *ControllerConfig) *ControllerState {
 	s.config = config
+	return s
+}
+
+func (s *ControllerState) WithK8sClient(client kubernetes.Interface) *ControllerState {
+	s.cli = client
 	return s
 }
 
@@ -61,6 +84,27 @@ func (s *ControllerState) IncomingWebhookUpdate(ctx context.Context, webhook *ap
 	}
 
 	s.startNewInstance(ctx, webhook)
+}
+
+func (s *ControllerState) CheckDependencies(changedObject runtime.Object) {
+	var dependencyCheck func(webhookDependencies) bool
+	if configMap, ok := changedObject.(*corev1.ConfigMap); ok {
+		dependencyCheck = func(deps webhookDependencies) bool {
+			return deps.CheckConfigMap(configMap.Name)
+		}
+	} else if secret, ok := changedObject.(*corev1.Secret); ok {
+		dependencyCheck = func(deps webhookDependencies) bool {
+			return deps.CheckSecret(secret.Name)
+		}
+	} else {
+		return
+	}
+	for webhookUid, trail := range s.webhooksTrail {
+		if dependencyCheck(trail.dependencies) {
+			logrus.WithField("uid", webhookUid).Info("Webhook will be restarted due to dependency change")
+			trail.specHash = "restart-the-webhook-pretty-please"
+		}
+	}
 }
 
 func (s *ControllerState) Stop(ctx context.Context, webhook *api.SecurityEventWebhook) {

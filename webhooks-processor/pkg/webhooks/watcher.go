@@ -5,8 +5,14 @@ package webhooks
 import (
 	"context"
 	"sync"
+	"time"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
+	toolsWatch "k8s.io/client-go/tools/watch"
 
 	"github.com/sirupsen/logrus"
 
@@ -14,7 +20,12 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
+const (
+	WebhooksWatcherTimeout = 1 * time.Minute
+)
+
 type WebhookWatcherUpdater struct {
+	client             kubernetes.Interface
 	whClient           clientv3.SecurityEventWebhookInterface
 	controller         WebhookControllerInterface
 	webhookUpdatesChan chan *api.SecurityEventWebhook
@@ -26,8 +37,13 @@ func NewWebhookWatcherUpdater() (watcher *WebhookWatcherUpdater) {
 	return
 }
 
-func (w *WebhookWatcherUpdater) WithClient(client clientv3.SecurityEventWebhookInterface) *WebhookWatcherUpdater {
+func (w *WebhookWatcherUpdater) WithWebhooksClient(client clientv3.SecurityEventWebhookInterface) *WebhookWatcherUpdater {
 	w.whClient = client
+	return w
+}
+
+func (w *WebhookWatcherUpdater) WithK8sClient(client kubernetes.Interface) *WebhookWatcherUpdater {
+	w.client = client
 	return w
 }
 
@@ -47,6 +63,7 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.Cance
 
 	logrus.Info("Watching for webhook definitions")
 
+	// watch for webhook updates to apply:
 	go func() {
 		for {
 			select {
@@ -61,14 +78,48 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.Cance
 		}
 	}()
 
+	// watch for config map and secret updates:
+	cmWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{
+		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+			return w.client.CoreV1().ConfigMaps(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{})
+		},
+	})
+	if err != nil {
+		logrus.WithError(err).Error("Unable to watch ConfigMap resources")
+		return
+	}
+	secretWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{
+		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+			return w.client.CoreV1().Secrets(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{})
+		},
+	})
+	if err != nil {
+		logrus.WithError(err).Error("Unable to watch Secret resources")
+		return
+	}
+	go func() {
+		for ctx.Err() == nil {
+			select {
+			case event := <-cmWatcher.ResultChan():
+				w.controller.K8sEventsChan() <- event
+			case event := <-secretWatcher.ResultChan():
+				w.controller.K8sEventsChan() <- event
+			}
+		}
+	}()
+
+	// watch for webhook updates to process:
 	for ctx.Err() == nil {
-		watcher, err := w.whClient.Watch(ctx, options.ListOptions{})
+		watcherCtx, watcherCtxCancel := context.WithTimeout(ctx, WebhooksWatcherTimeout)
+		watcher, err := w.whClient.Watch(watcherCtx, options.ListOptions{})
 		if err != nil {
 			logrus.WithError(err).Error("Unable to watch for SecurityEventWebhook resources")
+			watcherCtxCancel()
 			return
 		}
 		for event := range watcher.ResultChan() {
-			w.controller.EventsChan() <- event
+			w.controller.WebhookEventsChan() <- event
 		}
+		watcherCtxCancel()
 	}
 }
