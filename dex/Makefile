@@ -30,7 +30,7 @@ build: bin/dex-$(ARCH)
 init-cmd: $(DEX_DOWNLOADED)
 $(DEX_DOWNLOADED):
 	mkdir -p cmd/dex
-	curl -sSfL --output-dir cmd/dex/ --remote-name-all --retry 5 https://raw.githubusercontent.com/dexidp/dex/$(UPSTREAM_DEX_VERSION)/cmd/dex/{config,main,serve,version}.go
+	(cd cmd/dex && curl -sSfL --remote-name-all --retry 5 https://raw.githubusercontent.com/dexidp/dex/$(UPSTREAM_DEX_VERSION)/cmd/dex/{config,main,serve,version}.go)
 	patch -p2 < patches/0001-cmd-changes.patch
 	touch $@
 
