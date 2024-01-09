@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -20,7 +19,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -39,8 +37,6 @@ const (
 )
 
 type Service struct {
-	lmaCLI                        lma.Client
-	c                             *elastic.Client
 	lsClient                      client.Client
 	client                        ctrlclient.WithWatch
 	clusterName                   string
@@ -48,10 +44,8 @@ type Service struct {
 	cancel                        context.CancelFunc
 }
 
-func NewService(lmaCLI lma.Client, lsClient client.Client, k8scli ctrlclient.WithWatch, clusterName string) *Service {
+func NewService(lsClient client.Client, k8scli ctrlclient.WithWatch, clusterName string) *Service {
 	return &Service{
-		lmaCLI:                        lmaCLI,
-		c:                             lmaCLI.Backend(),
 		lsClient:                      lsClient,
 		client:                        k8scli,
 		clusterName:                   clusterName,
@@ -85,7 +79,7 @@ func (e *Service) ListIPSets(ctx context.Context) ([]Meta, error) {
 	}
 
 	if err, ok := <-errors; ok {
-		log.WithError(err).Error("failed to read thread feeds")
+		log.WithError(err).Error("failed to read threat feeds")
 		return nil, err
 	}
 
@@ -108,7 +102,7 @@ func (e *Service) ListDomainNameSets(ctx context.Context) ([]Meta, error) {
 	}
 
 	if err, ok := <-errors; ok {
-		log.WithError(err).Error("failed to read thread feeds")
+		log.WithError(err).Error("failed to read threat feeds")
 		return nil, err
 	}
 
@@ -437,7 +431,61 @@ func (e *Service) PutSecurityEventWithID(ctx context.Context, f []lsv1.Event) er
 // GetSecurityEvents retrieves a listing of security events sorted in ascending order,
 // where each events time falls within the range given by start and end time.
 func (e *Service) GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) <-chan *lmaAPI.EventResult {
-	return e.lmaCLI.SearchSecurityEvents(ctx, &start, &end, nil, allClusters)
+	results := make(chan *lmaAPI.EventResult)
+
+	// Fire off a query to Linseed to get security events. We'll funnel the resuls into the channel.
+	go func() {
+		defer close(results)
+
+		// Create the list pager for security events
+		params := lsv1.EventParams{}
+		params.SetTimeRange(&lmav1.TimeRange{From: start, To: end})
+
+		clusterName := e.clusterName
+		if allClusters {
+			clusterName = ""
+		}
+
+		pager := client.NewListPager[lsv1.Event](&params)
+		pages, errors := pager.Stream(ctx, e.lsClient.Events(clusterName).List)
+
+		for page := range pages {
+			for _, item := range page.Items {
+				results <- &lmaAPI.EventResult{
+					ID: item.ID,
+
+					// Copy the Linseed representation into the LMA representation.
+					// Eventually, we should remove the LMA representation and use the Linseed representation directly.
+					EventsData: &lmaAPI.EventsData{
+						Description:     item.Description,
+						Origin:          item.Origin,
+						Severity:        item.Severity,
+						Time:            item.Time.GetTime().Unix(),
+						Type:            item.Type,
+						DestIP:          item.DestIP,
+						DestName:        item.DestName,
+						DestNameAggr:    item.DestNameAggr,
+						DestNamespace:   item.DestNamespace,
+						DestPort:        item.DestPort,
+						Dismissed:       item.Dismissed,
+						Host:            item.Host,
+						SourceIP:        item.SourceIP,
+						SourceName:      item.SourceName,
+						SourceNameAggr:  item.SourceNameAggr,
+						SourceNamespace: item.SourceNamespace,
+						SourcePort:      item.SourcePort,
+						Record:          item.Record,
+					},
+				}
+			}
+		}
+
+		if err, ok := <-errors; ok {
+			results <- &lmaAPI.EventResult{Err: err}
+		}
+	}()
+
+	return results
 }
 
 // PutForwarderConfig saves the given ForwarderConfig object as a ConfigMap.

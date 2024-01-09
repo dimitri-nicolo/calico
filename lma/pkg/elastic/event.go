@@ -172,8 +172,8 @@ func (c *client) BulkProcessorClose() error {
 	return c.bulkProcessor.Close()
 }
 
-// This is used by Honeypod + Alert forwader
-// if start/end is passed it will be used insted of EventsSearchFields.Time
+// SearchSecurityEvents is deprecated and should no longer be used. Instead, clients should query events using the Linseed API.
+// The only remaining user of this function is Honeypod. When Honeypod is switched to Linseed, this function should be removed.
 func (c *client) SearchSecurityEvents(ctx context.Context, start, end *time.Time, filterData []api.EventsSearchFields, allClusters bool) <-chan *api.EventResult {
 	resultChan := make(chan *api.EventResult, resultBucketSize)
 	var index string
