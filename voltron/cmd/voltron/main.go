@@ -337,10 +337,16 @@ func main() {
 			auth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
 		}
 		if cfg.CalicoCloudRequireTenantClaim || cfg.RequireTenantClaim {
-			if cfg.TenantID == "" {
+			// CALICO_CLOUD_TENANT_CLAIM is deprecated in favour of TENANT_CLAIM
+			// We will read both set of environment variables for a grace period
+			if cfg.TenantClaim != "" {
+				authOpts = append(authOpts, auth.WithCalicoCloudTenantClaim(cfg.TenantClaim))
+			} else if cfg.CalicoCloudTenantClaim != "" {
+				// Fallback using deprecated values in case the new ones are not set
+				authOpts = append(authOpts, auth.WithCalicoCloudTenantClaim(cfg.CalicoCloudTenantClaim))
+			} else {
 				log.Panic("Tenant ID not specified")
 			}
-			authOpts = append(authOpts, auth.WithCalicoCloudTenantClaim(cfg.TenantID))
 		}
 
 		oidcAuth, err := auth.NewDexAuthenticator(
