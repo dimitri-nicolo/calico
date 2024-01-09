@@ -22,14 +22,17 @@ include ../lib.Makefile
 # BUILD BINARY
 ###############################################################################
 # This section builds the output binaries.
+DEX_DOWNLOADED=.dex.downloaded
+
 build: bin/dex-$(ARCH)
 
-cmd/dex/%.go:
+# Commit the changes made by init-cmd if the tree is dirty
+init-cmd: $(DEX_DOWNLOADED)
+$(DEX_DOWNLOADED):
 	mkdir -p cmd/dex
-	curl -sSfL --retry 5 -o $@ https://raw.githubusercontent.com/dexidp/dex/$(UPSTREAM_DEX_VERSION)/$@
-
-init-cmd: clean cmd/dex/config.go cmd/dex/main.go cmd/dex/serve.go cmd/dex/version.go
+	(cd cmd/dex && curl -sSfL --remote-name-all --retry 5 https://raw.githubusercontent.com/dexidp/dex/$(UPSTREAM_DEX_VERSION)/cmd/dex/{config,main,serve,version}.go)
 	patch -p2 < patches/0001-cmd-changes.patch
+	touch $@
 
 .PHONY: bin/dex-$(ARCH)
 bin/dex-$(ARCH): init-cmd
@@ -49,7 +52,7 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-.PHONY: $(BUILD_IMAGES)
+.PHONY: image
 image: $(DEX_IMAGE)
 
 $(DEX_IMAGE): $(DEX_CONTAINER_CREATED)
@@ -72,6 +75,6 @@ cd: image-all cd-common
 ###############################################################################
 
 clean:
-	rm -rf bin cmd $(DEX_CONTAINER_CREATED)-*
-	$(foreach arch, $(VALIDARCHES), docker rmi -f $(DEX_IMAGE):latest-$(arch);)
-	$(foreach arch, $(VALIDARCHES), docker rmi -f tigera/$(DEX_IMAGE):latest-$(arch);)
+	rm -rf bin
+	rm -f $(DEX_DOWNLOADED) $(DEX_CONTAINER_CREATED)-*
+	-docker image rm -f $$(docker images $(DEX_IMAGE) -a -q)
