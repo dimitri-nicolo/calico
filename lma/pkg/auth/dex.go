@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/SermoDigital/jose/jws"
@@ -37,8 +38,11 @@ type dexAuthenticator struct {
 
 	verifier *oidc.IDTokenVerifier
 
-	requiredClaims map[string]string
+	claimValidators []claimValidator
 }
+
+// claimValidator is not exported to avoid the need to safe copy the claims map before each call
+type claimValidator func(claims map[string]any) error
 
 // DexOption can be provided to NewDexAuthenticator to configure the authenticator.
 type DexOption func(*dexAuthenticator) error
@@ -129,23 +133,27 @@ func WithGroupsClaim(groupsClaim string) DexOption {
 	}
 }
 
-// WithRequiredClaim adds claims required to authenticate.
-func WithRequiredClaims(claims map[string]string) DexOption {
+func withClaimValidator(validator claimValidator) DexOption {
 	return func(d *dexAuthenticator) error {
-		if d.requiredClaims == nil {
-			d.requiredClaims = make(map[string]string)
-		}
-		for k, v := range claims {
-			d.requiredClaims[k] = v
-		}
+		d.claimValidators = append(d.claimValidators, validator)
 		return nil
 	}
 }
 
 // WithCalicoCloudTenantClaim adds required Calico Cloud Tenant claim
-func WithCalicoCloudTenantClaim(tenant string) DexOption {
-	return WithRequiredClaims(map[string]string{
-		"https://calicocloud.io/tenantID": tenant,
+func WithCalicoCloudTenantClaim(requiredTenantID string) DexOption {
+	return withClaimValidator(func(claims map[string]any) error {
+
+		const claimName = "https://calicocloud.io/tenantIDs"
+
+		if claimValue, ok := claims[claimName]; !ok {
+			return fmt.Errorf("%s claim is missing", claimName)
+		} else if tenantIDs, ok := claimValue.([]any); !ok {
+			return fmt.Errorf("%s claims is a %T, expected []any", claimName, claimValue)
+		} else if !slices.Contains(tenantIDs, any(requiredTenantID)) {
+			return fmt.Errorf("%s claims '%v' do not contain '%v'", claimName, tenantIDs, requiredTenantID)
+		}
+		return nil
 	})
 }
 
@@ -255,19 +263,13 @@ func (d *dexAuthenticator) Authenticate(r *http.Request) (user.Info, int, error)
 		}
 	}
 
-	for claimname, claimvalue := range d.requiredClaims {
-		if v, ok := claims[claimname]; !ok {
+	for _, validator := range d.claimValidators {
+		if err := validator(claims); err != nil {
 			log.WithFields(log.Fields{
-				"username":  username,
-				"claimname": claimname,
-			}).Warn("required claim missing")
-			return nil, 401, fmt.Errorf("claim validation failed")
-		} else if v != claimvalue { // Assuming if v is not a string it will fail
-			log.WithFields(log.Fields{
-				"username":  username,
-				"claimname": claimname,
-				"actual":    v,
-			}).Warn("required claim incorrect")
+				"username": username,
+			}).
+				WithError(err).
+				Warn("invalid claim")
 			return nil, 401, fmt.Errorf("claim validation failed")
 		}
 	}
