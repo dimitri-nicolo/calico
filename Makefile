@@ -11,16 +11,10 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-ELASTIC_VERSION=7.17.14
-GRADLE_VERSION=8.2.1
-TINI_VERSION=0.19.0
+ARCHES=amd64 arm64
 
-# Add --squash argument for CICD pipeline runs only to avoid setting "experimental",
-# for Docker processes on personal machine.
-# set `DOCKER_BUILD=--squash make image` to squash images locally.
-ifdef CI
-DOCKER_BUILD+= --squash
-endif
+ELASTIC_VERSION=7.17.14
+TINI_VERSION=0.19.0
 
 ###############################################################################
 # Download and include Makefile.common
@@ -42,56 +36,102 @@ Makefile.common.$(MAKE_BRANCH):
 
 include Makefile.common
 
-
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-CGO_ENABLED=1
-else
-CGO_ENABLED=0
-endif
-
-build: bin/readiness-probe-$(ARCH)
-
+###############################################################################
+# Build
+###############################################################################
 DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) $(CALICO_BUILD)
+ELASTIC_DOWNLOADED=.elastic.downloaded
+
+.PHONY: build
+build: bin/readiness-probe-$(ARCH) build-es
 
 .PHONY: bin/readiness-probe-$(ARCH)
 bin/readiness-probe-$(ARCH): readiness-probe/main.go
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 		go build -v -ldflags="-s -w" -o $@ readiness-probe/main.go'
 
+.PHONY: init-elastic
+init-elastic: $(ELASTIC_DOWNLOADED)
+$(ELASTIC_DOWNLOADED):
+	mkdir -p build
+	curl -sfL https://github.com/elastic/elasticsearch/archive/refs/tags/v$(ELASTIC_VERSION).tar.gz | tar xz -C build/
+	patch -d build/elasticsearch-$(ELASTIC_VERSION) -p1 < patches/elastic-7.17.x-Update-dependencies-to-reduce-CVEs.patch
+	touch $@
+
+GRADLE_TASK=:distribution:archives:linux-tar:assemble
+ifeq ($(ARCH),amd64)
+	override GRADLE_TASK=:distribution:archives:linux-tar:assemble
+else ifeq ($(ARCH),arm64)
+	override GRADLE_TASK=:distribution:archives:linux-aarch64-tar:assemble
+endif
+
+.PHONY: build-es
+build-es: init-elastic
+	build/elasticsearch-$(ELASTIC_VERSION)/gradlew $(GRADLE_TASK) \
+		-p build/elasticsearch-$(ELASTIC_VERSION) \
+		-Dbuild.snapshot=false \
+		-Dlicense.key=x-pack/license-tools/src/test/resources/public.key
+	find build/elasticsearch-$(ELASTIC_VERSION)/ -name "elasticsearch-$(ELASTIC_VERSION)-linux-*.tar.gz" -exec cp {} build/ \;
+
+.PHONY: clean
+clean:
+	rm -rf bin build .go-pkg-cache Makefile.*
+	rm -f $(ELASTIC_DOWNLOADED) $(ELASTICSEARCH_CONTAINER_MARKER) $(ELASTICSEARCH_CONTAINER_FIPS_MARKER)
+	-docker image rm -f $$(docker images $(ELASTICSEARCH_IMAGE) -a -q)
+
+###############################################################################
+# Image
+###############################################################################
+QEMU_IMAGE ?= calico/qemu-user-static:latest
+
+.PHONY: image-all
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
+sub-image-%:
+	$(MAKE) image ARCH=$*
+
+.PHONY: image
 image: $(ELASTICSEARCH_IMAGE)
 
 $(ELASTICSEARCH_IMAGE): $(ELASTICSEARCH_CONTAINER_MARKER) $(ELASTICSEARCH_CONTAINER_FIPS_MARKER)
 
-$(ELASTICSEARCH_CONTAINER_MARKER): Dockerfile.$(ARCH) build
-	docker buildx build --pull --load \
+ELASTIC_ARCH=
+OPENJDK_ARCH=
+ifeq ($(ARCH),amd64)
+	override ELASTIC_ARCH=x86_64
+	override OPENJDK_ARCH=x64
+else ifeq ($(ARCH),arm64)
+	override ELASTIC_ARCH=aarch64
+	override OPENJDK_ARCH=aarch64
+endif
+
+$(ELASTICSEARCH_CONTAINER_MARKER): Dockerfile build
+	docker buildx build --load --platform=linux/$(ARCH) --pull \
+		--build-arg ELASTIC_ARCH=$(ELASTIC_ARCH) \
 		--build-arg ELASTIC_VERSION=$(ELASTIC_VERSION) \
-		--build-arg GRADLE_VERSION=$(GRADLE_VERSION) \
+		--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
 		--build-arg TINI_VERSION=$(TINI_VERSION) \
 		-t $(ELASTICSEARCH_IMAGE):latest-$(ARCH) \
-		-f Dockerfile.$(ARCH) .
+		-f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 # build fips image
-$(ELASTICSEARCH_CONTAINER_FIPS_MARKER): Dockerfile-fips.$(ARCH) build
-	docker buildx build --pull --load \
+$(ELASTICSEARCH_CONTAINER_FIPS_MARKER): Dockerfile-fips build
+	docker buildx build --load --platform=linux/$(ARCH) --pull \
+		--build-arg ELASTIC_ARCH=$(ELASTIC_ARCH) \
 		--build-arg ELASTIC_VERSION=$(ELASTIC_VERSION) \
-		--build-arg GRADLE_VERSION=$(GRADLE_VERSION) \
+		--build-arg OPENJDK_ARCH=$(OPENJDK_ARCH) \
+		--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
 		--build-arg TINI_VERSION=$(TINI_VERSION) \
 		-t $(ELASTICSEARCH_IMAGE):latest-fips-$(ARCH) \
-		-f Dockerfile-fips.$(ARCH) .
+		-f Dockerfile-fips .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
 
-
+###############################################################################
+# Image
+###############################################################################
 .PHONY: cd
-cd: image cd-common
+cd: image-all cd-common
 	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME)-fips LATEST_IMAGE_TAG=latest-fips
-	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(shell git describe --tags --dirty --long --always --abbrev=12)-fips EXCLUDEARCH="$(EXCLUDEARCH)" LATEST_IMAGE_TAG=latest-fips
-
-.PHONY: clean
-clean:
-	rm -rf bin .go-pkg-cache Makefile.*
-	rm -f $(ELASTICSEARCH_CONTAINER_MARKER) $(ELASTICSEARCH_CONTAINER_FIPS_MARKER)
-	-docker image rm -f $$(docker images $(ELASTICSEARCH_IMAGE) -a -q)
+	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION)-fips LATEST_IMAGE_TAG=latest-fips
