@@ -31,16 +31,12 @@ LDFLAGS ?= -X $(PACKAGE_NAME)/cloud-on-k8s/pkg/about.version=$(VERSION) \
 ###############################################################################
 # BUILD BINARY
 ###############################################################################
-ECK_OPERATOR_DOWNLOADED=.eck-operator.downloaded-$(ARCH)
+ECK_OPERATOR_DOWNLOADED=.eck-operator.downloaded
 
-build: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
-
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(FIPS),true)
 CGO_ENABLED=1
 GOEXPERIMENT=boringcrypto
 TAGS=osusergo,netgo
-LDFLAGS += -linkmode external -extldflags -static
 else
 CGO_ENABLED=0
 endif
@@ -52,6 +48,9 @@ $(ECK_OPERATOR_DOWNLOADED):
 	curl -sfL https://github.com/elastic/cloud-on-k8s/archive/refs/tags/$(ECK_OPERATOR_VERSION).tar.gz | tar xz --strip-components 1 -C cloud-on-k8s
 	patch -d cloud-on-k8s -p1 < patches/0001-Upgrade-golang.org-x-packages.patch
 	touch $@
+
+.PHONY: build
+build: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
 
 .PHONY: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
 bin/$(ECK_OPERATOR_IMAGE)-$(ARCH): $(ECK_OPERATOR_DOWNLOADED)
@@ -81,7 +80,6 @@ sub-image-%:
 .PHONY: image
 image: $(ECK_OPERATOR_IMAGE)
 
-.PHONY: image
 $(ECK_OPERATOR_IMAGE): $(ECK_OPERATOR_CONTAINER_CREATED)
 $(ECK_OPERATOR_CONTAINER_CREATED): bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
 	$(DOCKER_BUILD) -t $(ECK_OPERATOR_IMAGE):latest-$(ARCH) -f Dockerfile .
@@ -101,12 +99,8 @@ cd: image-all cd-common
 ###############################################################################
 # Misc.
 ###############################################################################
-
 .PHONY: clean
 clean:
-	rm -fr bin/ cloud-on-k8s/ $(ECK_OPERATOR_DOWNLOADED)-*
+	rm -fr bin/ cloud-on-k8s/
+	rm -f $(ECK_OPERATOR_DOWNLOADED)
 	-docker image rm -f $$(docker images $(ECK_OPERATOR_IMAGE) -a -q)
-
-
-
-

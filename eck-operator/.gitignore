@@ -1,5 +1,2 @@
-.eck-operator.downloaded*
-.go-pkg-cache
-Makefile.*
-bin/
+.eck-operator.downloaded
 cloud-on-k8s/
