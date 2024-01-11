@@ -1,4 +1,4 @@
-# Copyright 2022 Tigera Inc. All rights reserved.
+# Copyright 2022-2024 Tigera Inc. All rights reserved.
 include ../metadata.mk
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/eck-operator
