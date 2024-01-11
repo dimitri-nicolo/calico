@@ -1,14 +1,14 @@
-- name: webhooks-processor
+- name: eck-operator
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/webhooks-processor/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/eck-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
     prologue:
       commands:
-        - cd webhooks-processor
+        - cd eck-operator
     jobs:
-      - name: webhooks processor tests
+      - name: eck-operator tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
       - name: Build binary
