@@ -25,22 +25,24 @@ global_job_config:
       - ssh-add ~/.keys/*
       # Login to docker in order to pull images.
       - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
-      # set experimental for docker on semaphore vm to use `--squash` for building docker images
-      - sudo bash -c 'echo "{\"experimental\":true}" >> /etc/docker/daemon.json'
-      - sudo systemctl restart docker
+      - sem-version java 17
       - checkout
 blocks:
-  - name: 'Build Image'
+  - name: CI
     dependencies: []
     task:
       jobs:
-        - name: Build Image
-          execution_time_limit:
-            minutes: 30
+        - name: Build Go probe and Elasticsearch
+          matrix:
+            - env_var: ARCH
+              values:
+                - amd64
+                - arm64
           commands:
-            - make image
-  - name: 'Run FOSSA scan & Push Images (non-PR builds only)'
-    dependencies: ["Build Image"]
+            - make build
+  - name: "Run FOSSA scan & Push Images"
+    dependencies:
+      - CI
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
@@ -50,20 +52,14 @@ blocks:
         - name: foss-api-key
       prologue:
         commands:
-          # Correct permissions since they are too open by default:
-          - chmod 0600 ~/.keys/*
-          # Add the key to the ssh agent:
-          - ssh-add ~/.keys/*
           # Login to docker in order to pull images.
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
           - "curl -fsSLH 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install-latest.sh | bash"
       jobs:
-        - name: "FOSSA scan"
+        - name: FOSSA scan
           commands:
-            - "fossa analyze"
+            - fossa analyze
         - name: Run CD
-          execution_time_limit:
-            minutes: 15
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
