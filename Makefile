@@ -114,7 +114,7 @@ else ifeq ($(ARCH),arm64)
 	override OPENJDK_ARCH=aarch64
 endif
 
-$(ELASTICSEARCH_CONTAINER_MARKER): Dockerfile build
+$(ELASTICSEARCH_CONTAINER_MARKER): register Dockerfile build
 	docker buildx build --load --platform=linux/$(ARCH) --pull \
 		--build-arg ELASTIC_ARCH=$(ELASTIC_ARCH) \
 		--build-arg ELASTIC_VERSION=$(ELASTIC_VERSION) \
@@ -126,7 +126,7 @@ $(ELASTICSEARCH_CONTAINER_MARKER): Dockerfile build
 	touch $@
 
 # build fips image
-$(ELASTICSEARCH_CONTAINER_FIPS_MARKER): Dockerfile-fips build
+$(ELASTICSEARCH_CONTAINER_FIPS_MARKER): register Dockerfile-fips build
 	docker buildx build --load --platform=linux/$(ARCH) --pull \
 		--build-arg ELASTIC_ARCH=$(ELASTIC_ARCH) \
 		--build-arg ELASTIC_VERSION=$(ELASTIC_VERSION) \
