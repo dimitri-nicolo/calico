@@ -12,11 +12,14 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
+	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -46,8 +49,7 @@ var _ = Describe("Event forwarder", func() {
 			Host:   "localhost:9200",
 		}
 		ctx, cancel = context.WithCancel(context.Background())
-		indexSettings := storage.DefaultIndexSettings()
-		lmaESCli, err = lma.New(&http.Client{}, u, "", "", clusterName, 1, 0, true, indexSettings.Replicas, indexSettings.Shards)
+		lmaESCli, err = lma.New(&http.Client{}, u, "", "", clusterName, 1, 0, true, 0, 5)
 		if err != nil {
 			panic("could not create unit under test: " + err.Error())
 		}
@@ -58,7 +60,13 @@ var _ = Describe("Event forwarder", func() {
 		err = lmaESCli.CreateEventsIndex(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		esSvc = storage.NewService(lmaESCli, nil, "", indexSettings)
+		// mock controller runtime client.
+		scheme := scheme.Scheme
+		err = v3.AddToScheme(scheme)
+		Expect(err).NotTo(HaveOccurred())
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+		esSvc = storage.NewService(lmaESCli, nil, fakeClient, "")
 		esSvc.Run(ctx)
 
 		// Populate events index with enough test data that needs scrolling
@@ -103,7 +111,6 @@ var _ = Describe("Event forwarder", func() {
 		}).Return(nil)
 
 		eventFwdr := &eventForwarder{
-			id: "fwd-test",
 			logger: log.WithFields(log.Fields{
 				"context": "eventforwarder",
 				"uid":     "fwd-test",

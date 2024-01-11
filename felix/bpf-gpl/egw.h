@@ -18,7 +18,7 @@ static CALI_BPF_INLINE bool is_egw_health_packet(ipv46_addr_t *ip, __be16 port)
 		.ip.port = port,
 		.ip.protocol = 6
 	};
-	if (bpf_map_lookup_elem(&cali_v4_ip_sets, &sip)) {
+	if (cali_ip_sets_lookup_elem(&sip)) {
 		return true;
 	}
 #endif

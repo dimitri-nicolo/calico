@@ -48,10 +48,8 @@ const (
 	logDispatcherFilename = "events.log"
 )
 
-var (
-	// settings is a package level configuration object for the log forwarder.
-	settings = forwarderSettings{}
-)
+// settings is a package level configuration object for the log forwarder.
+var settings = forwarderSettings{}
 
 // forwarderSettings contains configuration for how the log forwarder behaves.
 type forwarderSettings struct {
@@ -177,9 +175,6 @@ type EventForwarder interface {
 // eventForwarder queries the source data store for logs and then dispatches them for forwarding to a final
 // destination.
 type eventForwarder struct {
-	// Provides a unique id for this log forward (usual for differentiating when there are multiple instances)
-	id string
-
 	// Use a decorated logger so we have some extra metadata.
 	logger *log.Entry
 
@@ -199,7 +194,7 @@ type eventForwarder struct {
 
 // NewEventForwarder sets up a new log forwarder instance and returns it.
 // Note: Log forwarder does not currently support concurrency of multiple instances.
-func NewEventForwarder(uid string, events storage.Events) EventForwarder {
+func NewEventForwarder(events storage.Events) EventForwarder {
 	log.WithFields(log.Fields{
 		"exportLogsDirectory":     settings.exportLogsDirectory,
 		"exportLogsMaxFileSizeMB": settings.exportLogsMaxFileSizeMB,
@@ -217,10 +212,8 @@ func NewEventForwarder(uid string, events storage.Events) EventForwarder {
 	)
 
 	return &eventForwarder{
-		id: uid,
 		logger: log.WithFields(log.Fields{
 			"context": "eventforwarder",
-			"uid":     uid,
 			"logfile": fmt.Sprintf("%s/%s", settings.exportLogsDirectory, logDispatcherFilename),
 		}),
 		events:     events,
@@ -285,7 +278,7 @@ func (f *eventForwarder) Run(ctx context.Context) {
 					// Otherwise, let's try to recover a savepoint from the config in the datastore ...
 					// If we have a savepoint for the last successful run, then use that to determine the time
 					// range for the new run.
-					f.config, err = f.events.GetForwarderConfig(f.ctx, f.id)
+					f.config, err = f.events.GetForwarderConfig(f.ctx)
 					if err == nil && f.config != nil {
 						l.WithFields(log.Fields{
 							"forwarderConfig": f.config,
@@ -341,7 +334,7 @@ func (f *eventForwarder) Run(ctx context.Context) {
 					// Attempt to back up forwarding progress (in case the forwarder crashes and we need to recover)
 					err = retry.Do(
 						func() error {
-							return f.events.PutForwarderConfig(f.ctx, f.id, f.config)
+							return f.events.PutForwarderConfig(f.ctx, f.config)
 						},
 						retry.Attempts(settings.numForwardingAttempts),
 						retry.Delay(500*time.Millisecond),
@@ -358,13 +351,12 @@ func (f *eventForwarder) Run(ctx context.Context) {
 					if err != nil {
 						l.Info("Failed to save forwarder config to datastore, even after retries")
 					} else {
-						l.Info("Successfully saved forwarder config to datastore")
+						l.Info("Successfully saved forwarder config to config map")
 					}
 				}
 			},
 			settings.pollingInterval,
 		)
-
 	})
 }
 

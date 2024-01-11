@@ -19,7 +19,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8swatch "k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
@@ -69,6 +73,90 @@ func TestWebhookHealthy(t *testing.T) {
 	require.True(t, wh.Status[0].LastTransitionTime.After(startTime))
 }
 
+func TestWebhookDependencyModifications(t *testing.T) {
+	// note: this is not really a unit test per-se as it verifies the behaviour of a webhook when k8s dependencies change.
+	// it should be an e2e test and lives here due to the character of already exising tests in this repository.
+	t.Run("webhook dependency modification test", func(t *testing.T) {
+
+		// create a new test state - we need to be able to reference K8s APIs as well as the webhooks controller
+		testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+			return []lsApi.Event{}, nil
+		})
+
+		// create the new "test-secret" that will be referenced by the webhook
+		testSecret, err := testState.K8sClient.CoreV1().Secrets("tigera-intrusion-detection").Create(
+			context.TODO(),
+			&v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "tigera-intrusion-detection",
+				},
+				Data: map[string][]byte{
+					"secret-url": []byte("https://example.net/not-important-in-this-context"),
+				},
+			},
+			metav1.CreateOptions{},
+		)
+		require.NoError(t, err)
+
+		// create the "test-webhook" webhook referencing the "test-secret" create above
+		webhook := testutils.NewTestWebhook("test-webhook")
+		webhook.Spec.Config = []api.SecurityEventWebhookConfigVar{
+			api.SecurityEventWebhookConfigVar{
+				Name: "url",
+				ValueFrom: &api.SecurityEventWebhookConfigVarSource{
+					SecretKeyRef: &v1.SecretKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: "test-secret",
+						},
+						Key: "secret-url",
+					},
+				},
+			},
+		}
+
+		timeMarker := time.Now()
+
+		testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: webhook}
+
+		// the webhook should eventually be in a healthy state
+		require.EventuallyWithT(
+			t, func(t *assert.CollectT) {
+				assert.NotNil(t, webhook.Status)
+				assert.Len(t, webhook.Status, 1)
+				assert.Equal(t, "Healthy", webhook.Status[0].Type)
+				assert.Equal(t, metav1.ConditionStatus("True"), webhook.Status[0].Status)
+				assert.Equal(t, "the webhook is healthy", webhook.Status[0].Message)
+				assert.True(t, webhook.Status[0].LastTransitionTime.After(timeMarker))
+			}, time.Second, 100*time.Millisecond,
+		)
+
+		timeMarker = webhook.Status[0].LastTransitionTime.Time
+
+		// update the referenced secret by removing all data in it:
+		testSecret.Data = map[string][]byte{}
+		testSecret, err = testState.K8sClient.CoreV1().Secrets("tigera-intrusion-detection").Update(
+			context.TODO(), testSecret, metav1.UpdateOptions{},
+		)
+		require.NoError(t, err)
+
+		// fake k8s clientset used in the unit test does not propagate watches (this is by design) so we have to take care of it ourselves
+		testState.WebhooksCtrl.K8sEventsChan() <- k8swatch.Event{Type: k8swatch.Modified, Object: testSecret}
+
+		// the webhook should eventually be in a non-healthy state as the secret does not contain referenced data
+		require.EventuallyWithT(
+			t, func(t *assert.CollectT) {
+				assert.NotNil(t, webhook.Status)
+				assert.Len(t, webhook.Status, 1)
+				assert.Equal(t, "Healthy", webhook.Status[0].Type)
+				assert.Equal(t, metav1.ConditionStatus("False"), webhook.Status[0].Status)
+				assert.Equal(t, "key 'secret-url' not found in the Secret 'test-secret'", webhook.Status[0].Message)
+				assert.True(t, webhook.Status[0].LastTransitionTime.After(timeMarker))
+			}, 30*time.Second, 1*time.Second,
+		)
+	})
+}
+
 func TestWebhookNonHealthyStates(t *testing.T) {
 	testNonHealthyState := func(webhook *api.SecurityEventWebhook, reason string, message string) {
 		testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
@@ -82,7 +170,7 @@ func TestWebhookNonHealthyStates(t *testing.T) {
 
 		testState.WebHooksAPI.Watcher.Results <- watch.Event{Type: watch.Added, Object: webhook}
 
-		// Check that webhook status is eventually updated to healthy
+		// Check that webhook status is eventually updated to non-healthy
 		require.Eventually(t, func() bool {
 			return webhook != nil &&
 				webhook.Status != nil &&
@@ -115,17 +203,29 @@ func TestWebhookNonHealthyStates(t *testing.T) {
 		testNonHealthyState(wh, "QueryValidation", "invalid value for type: runtime_securit")
 	})
 
-	// The following test will fail to initialise a CoreV1 API client.
-	// TODO: Add test for config parsing failure, with `configItem.ValueFrom`,
-	// that test the "key not found in secret/config map" code paths.
-	t.Run("config parsing - no cli client", func(t *testing.T) {
+	t.Run("config parsing - referenced value not found", func(t *testing.T) {
 		wh := testutils.NewTestWebhook("test-wh")
+		wh.Spec.Config = append(wh.Spec.Config, api.SecurityEventWebhookConfigVar{
+			Name: "some-secret",
+			ValueFrom: &api.SecurityEventWebhookConfigVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: "non-existing-secret",
+					},
+					Key: "non-existing-key",
+				},
+			},
+		})
+		testNonHealthyState(wh, "ConfigurationParsing", "secrets \"non-existing-secret\" not found")
+	})
 
+	t.Run("config parsing - no cm or secret referenced - k8s validation shouldn't allow for this to ever happen", func(t *testing.T) {
+		wh := testutils.NewTestWebhook("test-wh")
 		wh.Spec.Config = append(wh.Spec.Config, api.SecurityEventWebhookConfigVar{
 			Name:      "some-secret",
 			ValueFrom: &api.SecurityEventWebhookConfigVarSource{},
 		})
-		testNonHealthyState(wh, "ConfigurationParsing", "invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable")
+		testNonHealthyState(wh, "ConfigurationParsing", "neither ConfigMap nor Secret reference present")
 	})
 
 	t.Run("unknown consumer", func(t *testing.T) {
@@ -560,6 +660,8 @@ type TestState struct {
 	GetEvents        func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error)
 	Providers        map[api.SecurityEventWebhookConsumer]providers.Provider
 	FetchingInterval time.Duration
+	K8sClient        kubernetes.Interface
+	WebhooksCtrl     WebhookControllerInterface
 }
 
 func NewTestState(getEvents func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error), providers map[api.SecurityEventWebhookConsumer]providers.Provider) *TestState {
@@ -569,6 +671,7 @@ func NewTestState(getEvents func(context.Context, *query.Query, time.Time, time.
 	testState.Running = false
 	testState.FetchingInterval = 2 * time.Second
 	testState.Providers = providers
+	testState.K8sClient = fake.NewSimpleClientset()
 
 	return testState
 }
@@ -597,18 +700,20 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 		FetchingInterval:    testState.FetchingInterval,
 	}
 
+	webhookWatcherUpdater := NewWebhookWatcherUpdater().WithWebhooksClient(config.ClientV3).WithK8sClient(testState.K8sClient)
+	controllerState := NewControllerState().WithConfig(config).WithK8sClient(testState.K8sClient)
+	webhookController := NewWebhookController().WithUpdater(webhookWatcherUpdater).WithState(controllerState)
+	webhookWatcherUpdater.WithController(webhookController)
+	testState.WebhooksCtrl = webhookController
+
 	var ctx context.Context
 	wg := sync.WaitGroup{}
 	ctx, testState.Stop = context.WithCancel(context.Background())
 	go func() {
 		testState.Running = true
-		webhookWatcherUpdater := NewWebhookWatcherUpdater().WithClient(config.ClientV3)
-		controllerState := NewControllerState().WithConfig(config)
-		webhookController := NewWebhookController().WithState(controllerState)
-
 		wg.Add(2)
-		go webhookController.WithUpdater(webhookWatcherUpdater).Run(ctx, testState.Stop, &wg)
-		go webhookWatcherUpdater.WithController(webhookController).Run(ctx, testState.Stop, &wg)
+		go webhookController.Run(ctx, testState.Stop, &wg)
+		go webhookWatcherUpdater.Run(ctx, testState.Stop, &wg)
 		wg.Wait()
 		testState.Running = false
 	}()

@@ -22,7 +22,7 @@ type Controller interface {
 	Add(ctx context.Context, name string, value interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher)
 
 	// Delete, and NoGC alter the desired state the controller will attempt to
-	// maintain, by syncing with the elastic database.
+	// maintain, by syncing with the database.
 
 	// Delete removes a Set from the desired state.
 	Delete(ctx context.Context, name string)
@@ -83,8 +83,10 @@ type update struct {
 	feedCacher cacher.GlobalThreatFeedCacher
 }
 
-const DefaultUpdateQueueLen = 1000
-const DefaultReconcilePeriod = 15 * time.Second
+const (
+	DefaultUpdateQueueLen  = 1000
+	DefaultReconcilePeriod = 15 * time.Second
+)
 
 var NewTicker = func() *time.Ticker {
 	tkr := time.NewTicker(DefaultReconcilePeriod)
@@ -134,7 +136,6 @@ func (c *controller) Run(ctx context.Context) {
 }
 
 func (c *controller) run(ctx context.Context) {
-
 	log.Infof("Starting threat feeds controller for %T", c.data)
 
 	// Initially, we're just processing state updates, and not triggering any
@@ -197,7 +198,6 @@ func (c *controller) reconcile(ctx context.Context) {
 	}
 
 	for _, m := range metas {
-
 		if u, ok := c.dirty[m.Name]; ok {
 			// value already exists, but is dirty
 			c.updateObject(ctx, u)

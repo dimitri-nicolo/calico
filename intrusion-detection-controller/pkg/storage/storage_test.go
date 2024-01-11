@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
@@ -29,6 +30,9 @@ import (
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
+
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (
@@ -45,9 +49,17 @@ func Test_GetIPSet(t *testing.T) {
 
 	lmaESCli, err := lma.New(http.DefaultClient, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
+
 	// mock linseed client
 	lsc := lsclient.NewMockClient("")
-	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
+
+	// mock controller runtime client.
+	scheme := scheme.Scheme
+	err = v3.AddToScheme(scheme)
+	g.Expect(err).NotTo(HaveOccurred())
+	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+
+	e := NewService(lmaESCli, lsc, fakeClient, "cluster")
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -81,9 +93,17 @@ func Test_GetIPSetModified(t *testing.T) {
 
 	lmaESCli, err := lma.New(http.DefaultClient, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
+
 	// mock linseed client
 	lsc := lsclient.NewMockClient("")
-	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
+
+	// mock controller runtime client.
+	scheme := scheme.Scheme
+	err = v3.AddToScheme(scheme)
+	g.Expect(err).NotTo(HaveOccurred())
+	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+
+	e := NewService(lmaESCli, lsc, fakeClient, "cluster")
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -160,8 +180,14 @@ func Test_QueryIPSet(t *testing.T) {
 		})
 
 	lsc := lsclient.NewMockClient("", results...)
-	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
 
+	// mock controller runtime client.
+	scheme := scheme.Scheme
+	err = v3.AddToScheme(scheme)
+	g.Expect(err).NotTo(HaveOccurred())
+	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+
+	e := NewService(lmaESCli, lsc, fakeClient, "cluster")
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
@@ -232,8 +258,14 @@ func Test_QueryIPSet_SameIPSet(t *testing.T) {
 	)
 
 	lsc := lsclient.NewMockClient("", results...)
-	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
 
+	// mock controller runtime client.
+	scheme := scheme.Scheme
+	err = v3.AddToScheme(scheme)
+	g.Expect(err).NotTo(HaveOccurred())
+	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+
+	e := NewService(lmaESCli, lsc, fakeClient, "cluster")
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
@@ -282,12 +314,18 @@ func Test_QueryIPSet_Big(t *testing.T) {
 			Body: v1.List[v1.FlowLog]{
 				Items: []v1.FlowLog{},
 			},
-		}}
+		},
+	}
 
 	lsc := lsclient.NewMockClient("", results...)
 
-	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
+	// mock controller runtime client.
+	scheme := scheme.Scheme
+	err = v3.AddToScheme(scheme)
+	g.Expect(err).NotTo(HaveOccurred())
+	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
+	e := NewService(lmaESCli, lsc, fakeClient, "cluster")
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
@@ -319,8 +357,14 @@ func Test_ListSets(t *testing.T) {
 	g.Expect(err).Should(BeNil())
 	// mock linseed client
 	lsc := lsclient.NewMockClient("")
-	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
 
+	// mock controller runtime client.
+	scheme := scheme.Scheme
+	err = v3.AddToScheme(scheme)
+	g.Expect(err).NotTo(HaveOccurred())
+	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+
+	e := NewService(lmaESCli, lsc, fakeClient, "cluster")
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
@@ -370,7 +414,14 @@ func Test_Put_Set(t *testing.T) {
 	lmaESCli, err := lma.New(http.DefaultClient, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
 	lsc := lsclient.NewMockClient("")
-	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
+
+	// mock controller runtime client.
+	scheme := scheme.Scheme
+	err = v3.AddToScheme(scheme)
+	g.Expect(err).NotTo(HaveOccurred())
+	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+
+	e := NewService(lmaESCli, lsc, fakeClient, "cluster")
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -429,7 +480,14 @@ func Test_Delete_Set(t *testing.T) {
 	lmaESCli, err := lma.New(http.DefaultClient, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
 	lsc := lsclient.NewMockClient("")
-	e := NewService(lmaESCli, lsc, "cluster", DefaultIndexSettings())
+
+	// mock controller runtime client.
+	scheme := scheme.Scheme
+	err = v3.AddToScheme(scheme)
+	g.Expect(err).NotTo(HaveOccurred())
+	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+
+	e := NewService(lmaESCli, lsc, fakeClient, "cluster")
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()

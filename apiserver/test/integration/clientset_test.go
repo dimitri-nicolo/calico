@@ -4534,6 +4534,7 @@ func testBGPFilterClient(client calicoclient.Interface, name string) error {
 	r5v4 := v3.BGPFilterRuleV4{
 		CIDR:          "10.10.10.0/24",
 		MatchOperator: v3.In,
+		Source:        v3.BGPFilterSourceRemotePeers,
 		Action:        v3.Accept,
 	}
 	r5v6 := v3.BGPFilterRuleV6{
