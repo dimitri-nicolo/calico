@@ -69,6 +69,41 @@ var (
 	}, defaultLabelNames)
 )
 
+// Metrics used by the inner handler when proxying requests to Linseed.
+var (
+	innerLabels = []string{"cluster", "tenant", "url"}
+
+	InnerRequestsInflight = metrics.NewGaugeVec(&metrics.GaugeOpts{
+		Name: "http_inner_requests_inflight",
+		Help: "The current number of requests to Linseed in flight",
+	}, innerLabels)
+
+	InnerRequestsTotal = metrics.NewCounterVec(&metrics.CounterOpts{
+		Name: "http_inner_requests_total",
+		Help: "The total number of http requests to Linseed",
+	}, innerLabels)
+
+	InnerRequestTimeSeconds = metrics.NewHistogramVec(&metrics.HistogramOpts{
+		Name: "http_inner_request_time_seconds",
+		Help: "The duration of http requests to Linseed in seconds",
+	}, innerLabels)
+
+	InnerRequestTimeSecondsTotal = metrics.NewCounterVec(&metrics.CounterOpts{
+		Name: "http_inner_request_time_seconds_total",
+		Help: "The total time of http requests to Linseed in seconds",
+	}, innerLabels)
+
+	InnerRequestBadClusterIDErrors = metrics.NewCounterVec(&metrics.CounterOpts{
+		Name: "http_inner_request_bad_cluster_id_total",
+		Help: "The total number of requests with bad cluster IDs",
+	}, innerLabels)
+
+	InnerRequestBadTenantIDErrors = metrics.NewCounterVec(&metrics.CounterOpts{
+		Name: "http_inner_request_bad_tenant_id_total",
+		Help: "The total number of requests with bad tenant IDs",
+	}, innerLabels)
+)
+
 func NewHandler() http.Handler {
 	registerOnce.Do(func() {
 		RegisterMetricsWith(legacyregistry.MustRegister)
@@ -87,6 +122,12 @@ func RegisterMetricsWith(mustRegister func(...metrics.Registerable)) {
 		requestTimeSecondsTotal,
 		requestsInflight,
 		httpStatusTotal,
+		InnerRequestsInflight,
+		InnerRequestsTotal,
+		InnerRequestTimeSeconds,
+		InnerRequestTimeSecondsTotal,
+		InnerRequestBadClusterIDErrors,
+		InnerRequestBadTenantIDErrors,
 	)
 }
 
