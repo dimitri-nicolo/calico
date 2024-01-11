@@ -19,6 +19,10 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 var _ = Describe("Event forwarder", func() {
@@ -30,6 +34,7 @@ var _ = Describe("Event forwarder", func() {
 		startTime      time.Time
 		endTime        time.Time
 		totalDocs      int
+		lsc            lsclient.MockClient
 	)
 
 	BeforeEach(func() {
@@ -48,27 +53,29 @@ var _ = Describe("Event forwarder", func() {
 		Expect(err).NotTo(HaveOccurred())
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		storageService = storage.NewService(nil, fakeClient, "")
-		storageService.Run(ctx)
-
-		// Populate events index with enough test data that needs scrolling
+		// Populate the linseed client with mock event data. We use a large number
+		// of events to ensure that the forwarder properly handles pagination of data.
+		// The Linseed client defaults to a page size of 1000.
 		totalDocs = 1550
+		data := lsv1.List[lsv1.Event]{Items: []lsv1.Event{}}
 		for i := 0; i < totalDocs; i++ {
-			err := storageService.PutSecurityEventWithID(ctx, []lsv1.Event{
-				{
-					Time:            lsv1.NewEventDate(time.Now()),
-					Type:            "global_alert",
-					Description:     "test event fwd",
-					Severity:        100,
-					Origin:          "event-fwd-resource",
-					SourceNamespace: "sample-fwd-ns",
-					DestNameAggr:    "sample-dest-*",
-					Host:            "node0",
-					Record:          map[string]string{"key1": "value1", "key2": "value2"},
-				},
-			})
-			Expect(err).ShouldNot(HaveOccurred())
+			event := lsv1.Event{
+				Time:            lsv1.NewEventDate(time.Now()),
+				Type:            "global_alert",
+				Description:     "test event fwd",
+				Severity:        100,
+				Origin:          "event-fwd-resource",
+				SourceNamespace: "sample-fwd-ns",
+				DestNameAggr:    "sample-dest-*",
+				Host:            "node0",
+				Record:          map[string]string{"key1": "value1", "key2": "value2"},
+			}
+			data.Items = append(data.Items, event)
 		}
+		lsc = lsclient.NewMockClient("", rest.MockResult{Body: data})
+
+		storageService = storage.NewService(lsc, fakeClient, "")
+		storageService.Run(ctx)
 
 		now = time.Now()
 		endTime = now.Add(time.Duration(2) * time.Minute)
@@ -99,7 +106,10 @@ var _ = Describe("Event forwarder", func() {
 			config:     &storage.ForwarderConfig{},
 		}
 
-		err := eventFwdr.retrieveAndForward(startTime, endTime, 1, 30*time.Second)
+		params := lsv1.EventParams{}
+		params.SetTimeRange(&lmav1.TimeRange{From: startTime, To: endTime})
+		pager := client.NewMockListPager(&params, lsc.Events("").List)
+		err := eventFwdr.retrieveAndForward(pager, startTime, endTime, 1, 30*time.Second)
 		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() int { return dispatchCount }).Should(Equal(totalDocs))
 	})

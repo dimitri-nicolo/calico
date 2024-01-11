@@ -13,12 +13,15 @@ import (
 	"time"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 
 	"github.com/avast/retry-go"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/runloop"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 const (
@@ -320,7 +323,11 @@ func (f *eventForwarder) Run(ctx context.Context) {
 				// ---------------------------------------------------------------------------------------------------
 				// 3. Attempt to retrieve next batch of events (using the computed start and end times).
 				// ---------------------------------------------------------------------------------------------------
-				err = f.retrieveAndForward(start, end, settings.numForwardingAttempts, time.Second)
+				// Create the list pager for security events
+				params := lsv1.EventParams{}
+				params.SetTimeRange(&lmav1.TimeRange{From: start, To: end})
+				pager := client.NewListPager[lsv1.Event](&params)
+				err = f.retrieveAndForward(pager, start, end, settings.numForwardingAttempts, time.Second)
 
 				// ---------------------------------------------------------------------------------------------------
 				// 4. If current run was successful, then persist the new last successful end time
@@ -366,7 +373,7 @@ func (f *eventForwarder) Close() {
 }
 
 // retrieveAndForward handles the actual querying for events and forwarding to file.
-func (f *eventForwarder) retrieveAndForward(start, end time.Time, numAttempts uint, delay time.Duration) error {
+func (f *eventForwarder) retrieveAndForward(pager client.ListPager[lsv1.Event], start, end time.Time, numAttempts uint, delay time.Duration) error {
 	l := f.logger.WithFields(log.Fields{"func": "retrieveAndForward"})
 
 	// ---------------------------------------------------------------------------------------------------
@@ -381,7 +388,7 @@ func (f *eventForwarder) retrieveAndForward(start, end time.Time, numAttempts ui
 		defer close(resultsCh)
 		err = retry.Do(
 			func() error {
-				for e := range f.events.GetSecurityEvents(f.ctx, start, end, true) {
+				for e := range f.events.GetSecurityEvents(f.ctx, pager, true) {
 					if e.Err != nil {
 						return e.Err
 					}
