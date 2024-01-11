@@ -69,39 +69,40 @@ var (
 	}, defaultLabelNames)
 )
 
-// Metrics used by the inner handler when proxying requests to Linseed.
+// Metrics used by the inner handler when proxying requests received over the tunnel from
+// managed clusters.
 var (
-	innerLabels = []string{"cluster", "tenant", "url"}
+	tunnelIngressLabels = []string{"cluster", "tenant", "url"}
 
 	InnerRequestsInflight = metrics.NewGaugeVec(&metrics.GaugeOpts{
-		Name: "http_inner_requests_inflight",
-		Help: "The current number of requests to Linseed in flight",
-	}, innerLabels)
+		Name: "http_tunnel_ingress_requests_inflight",
+		Help: "The current number of requests received from managed clusters in flight",
+	}, tunnelIngressLabels)
 
 	InnerRequestsTotal = metrics.NewCounterVec(&metrics.CounterOpts{
-		Name: "http_inner_requests_total",
-		Help: "The total number of http requests to Linseed",
-	}, innerLabels)
+		Name: "http_tunnel_ingress_requests_total",
+		Help: "The total number of http requests received from managed clusters",
+	}, tunnelIngressLabels)
 
 	InnerRequestTimeSeconds = metrics.NewHistogramVec(&metrics.HistogramOpts{
-		Name: "http_inner_request_time_seconds",
-		Help: "The duration of http requests to Linseed in seconds",
-	}, innerLabels)
+		Name: "http_tunnel_ingress_request_time_seconds",
+		Help: "The duration of http requests received from managed clusters in seconds",
+	}, tunnelIngressLabels)
 
 	InnerRequestTimeSecondsTotal = metrics.NewCounterVec(&metrics.CounterOpts{
-		Name: "http_inner_request_time_seconds_total",
-		Help: "The total time of http requests to Linseed in seconds",
-	}, innerLabels)
+		Name: "http_tunnel_ingress_request_time_seconds_total",
+		Help: "The total time of http requests received from managed clusters in seconds",
+	}, tunnelIngressLabels)
 
 	InnerRequestBadClusterIDErrors = metrics.NewCounterVec(&metrics.CounterOpts{
-		Name: "http_inner_request_bad_cluster_id_total",
+		Name: "http_tunnel_ingress_request_bad_cluster_id_total",
 		Help: "The total number of requests with bad cluster IDs",
-	}, innerLabels)
+	}, tunnelIngressLabels)
 
 	InnerRequestBadTenantIDErrors = metrics.NewCounterVec(&metrics.CounterOpts{
-		Name: "http_inner_request_bad_tenant_id_total",
+		Name: "http_tunnel_ingress_request_bad_tenant_id_total",
 		Help: "The total number of requests with bad tenant IDs",
-	}, innerLabels)
+	}, tunnelIngressLabels)
 )
 
 func NewHandler() http.Handler {
