@@ -33,6 +33,8 @@ LDFLAGS ?= -X $(PACKAGE_NAME)/cloud-on-k8s/pkg/about.version=$(VERSION) \
 ###############################################################################
 ECK_OPERATOR_DOWNLOADED=.eck-operator.downloaded
 
+FIPS ?= false
+
 ifeq ($(FIPS),true)
 CGO_ENABLED=1
 GOEXPERIMENT=boringcrypto
@@ -53,7 +55,7 @@ $(ECK_OPERATOR_DOWNLOADED):
 build: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
 
 .PHONY: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
-bin/$(ECK_OPERATOR_IMAGE)-$(ARCH): $(ECK_OPERATOR_DOWNLOADED)
+bin/$(ECK_OPERATOR_IMAGE)-$(ARCH): register $(ECK_OPERATOR_DOWNLOADED)
 	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e GOEXPERIMENT=$(GOEXPERIMENT) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			cd cloud-on-k8s && \
