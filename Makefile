@@ -39,7 +39,17 @@ include Makefile.common
 ###############################################################################
 # Build
 ###############################################################################
-DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) $(CALICO_BUILD)
+FIPS ?= false
+
+ifeq ($(FIPS),true)
+CGO_ENABLED=1
+GOEXPERIMENT=boringcrypto
+TAGS=osusergo,netgo
+else
+CGO_ENABLED=0
+endif
+
+DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e GOEXPERIMENT=$(GOEXPERIMENT) $(CALICO_BUILD)
 ELASTIC_DOWNLOADED=.elastic.downloaded
 
 .PHONY: build
@@ -48,7 +58,7 @@ build: bin/readiness-probe-$(ARCH) build-es
 .PHONY: bin/readiness-probe-$(ARCH)
 bin/readiness-probe-$(ARCH): readiness-probe/main.go
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-		go build -v -ldflags="-s -w" -o $@ readiness-probe/main.go'
+		go build -v -tags $(TAGS) -ldflags="-s -w" -o $@ readiness-probe/main.go'
 
 .PHONY: init-elastic
 init-elastic: $(ELASTIC_DOWNLOADED)
