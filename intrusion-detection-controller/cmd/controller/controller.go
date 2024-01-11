@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"syscall"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"k8s.io/klog/v2"
@@ -113,6 +114,9 @@ func main() {
 	if err = v3.AddToScheme(scheme); err != nil {
 		log.WithError(err).Fatal("Failed to configure controller runtime client")
 	}
+	if err = corev1.AddToScheme(scheme); err != nil {
+		log.WithError(err).Fatal("Failed to configure controller runtime client")
+	}
 
 	client, err := ctrlclient.NewWithWatch(k8sConfig, ctrlclient.Options{Scheme: scheme})
 	if err != nil {
@@ -147,8 +151,7 @@ func main() {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}
 
-	indexSettings := storage.IndexSettings{Replicas: envCfg.ElasticReplicas, Shards: envCfg.ElasticShards}
-	e := storage.NewService(lmaESClient, linseedClient, "", indexSettings)
+	e := storage.NewService(lmaESClient, linseedClient, client, "")
 	e.Run(ctx)
 	defer e.Close()
 
@@ -236,7 +239,7 @@ func main() {
 		managedClusterController = managedcluster.NewManagedClusterController(calicoClientSet, linseedClient, kubeClientSet, client, TigeraIntrusionDetectionNamespace, util.ManagedClusterClient(k8sConfig, cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA), cfg.FIPSMode, cfg.TenantID, cfg.TenantNamespace)
 	}
 
-	f := forwarder.NewEventForwarder("eventforwarder-1", e)
+	f := forwarder.NewEventForwarder(e)
 
 	hs := health.NewServer(healthPingers, health.Readiers{health.AlwaysReady{}}, healthzSockPort)
 	go func() {
