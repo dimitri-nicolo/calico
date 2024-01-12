@@ -8,6 +8,8 @@ RELEASE_REGISTRIES          ?=quay.io
 RELEASE_BRANCH_PREFIX       ?=release-calient
 DEV_TAG_SUFFIX              ?=calient-0.dev
 
+ARCHES=amd64 arm64
+
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_ELASTICSEARCH_METRICS_PROJECT_ID)
 
@@ -28,12 +30,12 @@ Makefile.common.$(MAKE_BRANCH):
 
 include Makefile.common
 
-clean:
-	rm -rf bin \
-		   Makefile.common*
+###############################################################################
+# Build
+###############################################################################
+FIPS ?= false
 
-# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
+ifeq ($(FIPS),true)
 CGO_ENABLED=1
 GOEXPERIMENT=boringcrypto
 TAGS=osusergo,netgo
@@ -47,17 +49,37 @@ build: bin/elasticsearch-metrics-$(ARCH)
 bin/elasticsearch-metrics-$(ARCH):
 	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e GOEXPERIMENT=$(GOEXPERIMENT) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -buildvcs=false -o $@ -v -tags $(TAGS) -ldflags "$(LDFLAGS) -linkmode external -extldflags -static -s -w" cmd/*.go'
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
+			go build -buildvcs=false -o $@ -v -ldflags="$(LDFLAGS) -s -w" -tags=$(TAGS) cmd/*.go'
+ifeq ($(FIPS),true)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'strings bin/elasticsearch-metrics-$(ARCH) | grep '_Cfunc__goboringcrypto_' 1> /dev/null'
 endif
 
+clean:
+	rm -rf bin Makefile.common*
+	rm -f $(ELASTICSEARCH_METRICS_IMAGE_CREATED)
+	-docker image rm -f $$(docker images $(ELASTICSEARCH_METRICS_IMAGE) -a -q)
+
+###############################################################################
+# Image
+###############################################################################
+ELASTICSEARCH_METRICS_IMAGE_CREATED=.es-metrics.created-$(ARCH)
+
+.PHONY: image-all
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
+sub-image-%:
+	$(MAKE) image ARCH=$*
+
+.PHONY: image
 image: $(ELASTICSEARCH_METRICS_IMAGE)
-$(ELASTICSEARCH_METRICS_IMAGE): $(ELASTICSEARCH_METRICS_IMAGE)-$(ARCH)
-$(ELASTICSEARCH_METRICS_IMAGE)-$(ARCH): build
-	docker buildx build --pull -t $(ELASTICSEARCH_METRICS_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+
+$(ELASTICSEARCH_METRICS_IMAGE): $(ELASTICSEARCH_METRICS_IMAGE_CREATED)
+$(ELASTICSEARCH_METRICS_IMAGE_CREATED): Dockerfile bin/elasticsearch-metrics-$(ARCH)
+	docker buildx build --load --platform=linux/$(ARCH) --pull -t $(ELASTICSEARCH_METRICS_IMAGE):latest-$(ARCH) -f ./Dockerfile .
 ifeq ($(ARCH),amd64)
 	docker tag $(ELASTICSEARCH_METRICS_IMAGE):latest-$(ARCH) $(ELASTICSEARCH_METRICS_IMAGE):latest
 endif
 
-cd: image cd-common
+###############################################################################
+# CI/CD
+###############################################################################
+cd: image-all cd-common
