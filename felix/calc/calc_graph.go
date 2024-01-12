@@ -472,7 +472,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//         |
 	//      <dataplane>
 	//
-	hostIPPassthru := NewDataplanePassthru(callbacks)
+	hostIPPassthru := NewDataplanePassthru(callbacks, conf.Ipv6Support)
 	hostIPPassthru.RegisterWith(allUpdDispatcher)
 	cg.hostIPPassthru = hostIPPassthru
 
