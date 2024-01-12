@@ -157,6 +157,7 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (*Tunne
 	config.AcceptBacklog = 1000
 	config.EnableKeepAlive = t.keepAliveEnable
 	config.KeepAliveInterval = t.keepAliveInterval
+	config.LogOutput = utils.NewLogrusWriter(logrus.WithField("component", "tunnel-yamux"))
 
 	if isServer {
 		mux, err = yamux.Server(&serverCloser{
