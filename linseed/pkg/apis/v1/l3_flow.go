@@ -147,6 +147,9 @@ type L3Flow struct {
 	// DestDomains are the destination domains of this flow
 	DestDomains []string `json:"dest_domains,omitempty"`
 
+	SourceIPs      []string `json:"source_ips,omitempty"`
+	DestinationIPs []string `json:"destination_ips,omitempty"`
+
 	// DestinationLabels are the labels applied to the destination during the lifetime
 	// of this flow. Note that a single label may have had multiple values throughout this flow's life.
 	DestinationLabels []FlowLabels `json:"destination_labels,omitempty"`

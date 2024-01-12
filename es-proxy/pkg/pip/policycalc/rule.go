@@ -89,7 +89,7 @@ func compileRule(m *MatcherFactory, namespace EndpointMatcher, in v3.Rule) *Comp
 	c.add(m.Src(m.Ports(in.Source.Ports)))
 	c.add(m.Src(m.Domains(in.Source.Domains)))
 	c.add(m.Src(m.ServiceAccounts(in.Source.ServiceAccounts)))
-	c.add(m.Not(m.Src(m.Nets(in.Source.NotNets))))
+	c.add(m.Src(m.NotNets(in.Source.NotNets)))
 	c.add(m.Not(m.Src(m.Selector(in.Source.NotSelector))))
 	c.add(m.Not(m.Src(m.Ports(in.Source.NotPorts))))
 
@@ -106,7 +106,7 @@ func compileRule(m *MatcherFactory, namespace EndpointMatcher, in v3.Rule) *Comp
 	c.add(m.Dst(m.Ports(in.Destination.Ports)))
 	c.add(m.Dst(m.Domains(in.Destination.Domains)))
 	c.add(m.Dst(m.ServiceAccounts(in.Destination.ServiceAccounts)))
-	c.add(m.Not(m.Dst(m.Nets(in.Destination.NotNets))))
+	c.add(m.Dst(m.NotNets(in.Destination.NotNets)))
 	c.add(m.Not(m.Dst(m.Selector(in.Destination.NotSelector))))
 	c.add(m.Not(m.Dst(m.Ports(in.Destination.NotPorts))))
 

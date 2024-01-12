@@ -6,7 +6,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -964,6 +963,186 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{Name: "flow_impacted", Value: true},
 		}))
 		expectPolicies(after[1], []string{"default|ns1/default.egress-allow|allow|-"})
+	})
+
+	It("handles global allowed flows with a CIDR match while previewing a deletion for a global allow policy", func() {
+		// Before conditions:
+		//      A(allow)   -> B             [allow]    (allowed by the policy within the source namespace)
+		// After conditions:
+		//      A(allow)   -> B (allow)     [allow]    (allowed by the policy within the source namespace)
+		//
+		// Policy to handle the impact:
+		// Before: allow based on source policy
+		// After:  allow bases on source policy
+		//
+		// Create a client which has all of the flows that:
+		By("Creating a client with a mocked out search results with all allow actions")
+		flows := []lapi.L3Flow{
+			// before: allow/allow    after: allow/allow
+			flow("dst", "allow", "tcp", wepd("destination", "destinationNamespace", 1), wepd("source", "sourceNamespace", 3), "0|allow-flow|sourceNamespace/allow-flow.cidr-match|allow|0"),
+		}
+
+		By("Creating a policy calculator with the required policy updates")
+		tcp := numorstring.ProtocolFromString("TCP")
+		np_cidr_match := &v3.NetworkPolicy{
+			TypeMeta: resources.TypeCalicoNetworkPolicies,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "allow-flow.cidr-match",
+				Namespace: "sourceNamespace",
+			},
+			Spec: v3.NetworkPolicySpec{
+				Tier:     "allow-flow",
+				Selector: "all()",
+				Types:    []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
+				Ingress: []v3.Rule{
+					{
+						Action:   v3.Allow,
+						Protocol: &tcp,
+						Source: v3.EntityRule{
+							Nets: []string{
+								"0.0.0.0/0",
+							},
+						},
+					},
+				},
+				Egress: []v3.Rule{
+					{
+						Action: v3.Allow,
+						Destination: v3.EntityRule{
+							NamespaceSelector: "projectcalico.org/name == 'destinationNamespace'",
+						},
+					},
+					{
+						Action: v3.Pass,
+					},
+				},
+			},
+		}
+
+		globalAllow := &v3.GlobalNetworkPolicy{
+			TypeMeta: resources.TypeCalicoNetworkPolicies,
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "allow-all.global-allow",
+			},
+			Spec: v3.GlobalNetworkPolicySpec{
+				Tier:     "allow-all",
+				Selector: "all()",
+				Types:    []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
+				Ingress: []v3.Rule{
+					{
+						Action: v3.Allow,
+					},
+				},
+				Egress: []v3.Rule{
+					{
+						Action: v3.Allow,
+					},
+				},
+			},
+		}
+
+		namespaceDestination := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "destinationNamespace",
+			},
+		}
+		namespaceSource := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "sourceNamespace",
+			},
+		}
+		namespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "any",
+			},
+		}
+
+		impacted := make(policycalc.ImpactedResources)
+		impacted.Add(resources.GetResourceID(globalAllow), policycalc.Impact{Deleted: true})
+
+		By("Adding a deletion of the global allow")
+		pc := policycalc.NewPolicyCalculator(
+			&config.Config{},
+			policycalc.NewEndpointCache(),
+			&policycalc.ResourceData{
+				Namespaces: []*corev1.Namespace{namespaceDestination, namespaceSource, namespace},
+				Tiers: policycalc.Tiers{
+					{
+						policycalc.Policy{CalicoV3Policy: np_cidr_match, ResourceID: resources.GetResourceID(np_cidr_match)},
+					},
+					{
+						policycalc.Policy{CalicoV3Policy: globalAllow, ResourceID: resources.GetResourceID(globalAllow)},
+					},
+				},
+			},
+			&policycalc.ResourceData{
+				Namespaces: []*corev1.Namespace{namespaceDestination, namespaceSource, namespace},
+				Tiers: policycalc.Tiers{
+					{
+						policycalc.Policy{CalicoV3Policy: np_cidr_match, ResourceID: resources.GetResourceID(np_cidr_match)},
+					},
+					{
+						policycalc.Policy{CalicoV3Policy: globalAllow, ResourceID: resources.GetResourceID(globalAllow)},
+					},
+				},
+			},
+			impacted,
+		)
+
+		// listFn mocks out results from Linseed.
+		listFn := func(context.Context, v1.Params) (*v1.List[lapi.L3Flow], error) {
+			return &v1.List[lapi.L3Flow]{
+				Items: flows,
+			}, nil
+		}
+
+		p := lapi.L3FlowParams{}
+		pager := client.NewMockListPager(&p, listFn)
+
+		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
+		pip := pip{lsclient: client.NewMockClient(""), cfg: config.MustLoadConfig()}
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), pager, "cluster", pc, 1000, false, pelastic.NewFlowFilterIncludeAll())
+		var before []*pelastic.CompositeAggregationBucket
+		var after []*pelastic.CompositeAggregationBucket
+		for flow := range flowsChan {
+			before = append(before, flow.Before...)
+			after = append(after, flow.After...)
+		}
+
+		// Before: We expect 1 flow at destination
+		// After:  We expect 1 flow at destination
+		Expect(before).To(HaveLen(1))
+		Expect(after).To(HaveLen(1))
+
+		Expect(before[0].DocCount).To(BeEquivalentTo(1))
+		Expect(before[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+			{Name: "source_type", Value: "wep"},
+			{Name: "source_namespace", Value: "destinationNamespace"},
+			{Name: "source_name", Value: "destination"},
+			{Name: "dest_type", Value: "wep"},
+			{Name: "dest_namespace", Value: "sourceNamespace"},
+			{Name: "dest_name", Value: "source"},
+			{Name: "reporter", Value: "dst"},
+			{Name: "action", Value: "allow"},
+			{Name: "source_action", Value: "allow"},
+			{Name: "flow_impacted", Value: false},
+		}))
+		expectPolicies(before[0], []string{"allow-flow|sourceNamespace/allow-flow.cidr-match|allow|-"})
+
+		Expect(after[0].DocCount).To(BeEquivalentTo(1))
+		Expect(after[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+			{Name: "source_type", Value: "wep"},
+			{Name: "source_namespace", Value: "destinationNamespace"},
+			{Name: "source_name", Value: "destination"},
+			{Name: "dest_type", Value: "wep"},
+			{Name: "dest_namespace", Value: "sourceNamespace"},
+			{Name: "dest_name", Value: "source"},
+			{Name: "reporter", Value: "dst"},
+			{Name: "action", Value: "allow"},
+			{Name: "source_action", Value: "allow"},
+			{Name: "flow_impacted", Value: false},
+		}))
+		expectPolicies(after[0], []string{"allow-flow|sourceNamespace/allow-flow.cidr-match|allow|-"})
 	})
 })
 

@@ -204,6 +204,100 @@ func TestMultipleFlows(t *testing.T) {
 	})
 }
 
+// TestSourceIPAndDestIPFlows tests that we return multiple flows properly with source IP and
+// destination IP
+func TestSourceIPAndDestIPFlows(t *testing.T) {
+	RunAllModes(t, "TestMultipleFlows", func(t *testing.T) {
+		// Both flows use the same cluster information.
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		// Flow logs batch #1.
+		bld := backendutils.NewFlowLogBuilder()
+		bld.WithType("wep").
+			WithSourceNamespace("tigera-operator").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("tigera-operator").
+			WithSourceIP("34.15.66.3").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		_ = populateFlowData(t, ctx, bld, client, clusterInfo)
+
+		// Flow logs batch #2.
+		bld.WithType("wep").
+			WithSourceNamespace("tigera-operator").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("tigera-operator").
+			WithSourceIP("192.168.66.3").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		_ = populateFlowData(t, ctx, bld, client, clusterInfo)
+
+		// Flow logs batch #3.
+		bld.WithType("wep").
+			WithSourceNamespace("tigera-operator").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.9").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("tigera-operator").
+			WithSourceIP("192.168.66.3").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		_ = populateFlowData(t, ctx, bld, client, clusterInfo)
+
+		// Build a flow log based on the 3 batches
+		exp1 := bld.ExpectedFlow(t)
+
+		// Template for flow logs batch #4.
+		bld2 := backendutils.NewFlowLogBuilder()
+		bld2.WithType("wep").
+			WithSourceNamespace("default").
+			WithDestNamespace("kube-system").
+			WithDestName("kube-dns-*").
+			WithDestIP("10.0.0.10").
+			WithDestService("kube-dns", 53).
+			WithDestPort(53).
+			WithProtocol("udp").
+			WithSourceName("my-deployment").
+			WithSourceIP("192.168.1.1").
+			WithRandomFlowStats().WithRandomPacketStats().
+			WithReporter("src").WithAction("allowed").
+			WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+		exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo)
+
+		// Set time range so that we capture all the populated flow logs.
+		opts := v1.L3FlowParams{}
+		opts.TimeRange = &lmav1.TimeRange{}
+		opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+		opts.TimeRange.To = time.Now().Add(5 * time.Minute)
+
+		// Query for flows. There should be two flows from the populated data.
+		r, err := fb.List(ctx, clusterInfo, &opts)
+		require.NoError(t, err)
+		require.Len(t, r.Items, 2)
+		require.Nil(t, r.AfterKey)
+
+		// Assert that the flow data is populated correctly.
+		require.Equal(t, exp2, r.Items[0])
+		require.Equal(t, *exp1, r.Items[1])
+	})
+}
+
 // TestFlowMultiplePolicies tests a flow that traverses multiple policies and ultimately
 // hits the default profile allow rule.
 func TestFlowMultiplePolicies(t *testing.T) {

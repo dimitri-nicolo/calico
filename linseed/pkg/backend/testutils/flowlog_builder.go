@@ -118,6 +118,8 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 
 	slt := flows.NewLabelTracker()
 	dlt := flows.NewLabelTracker()
+	sourceIPsSet := make(map[string]struct{})
+	destinationIPsSet := make(map[string]struct{})
 
 	if f.Key.Protocol == "tcp" {
 		f.TCPStats = &v1.TCPStats{
@@ -163,6 +165,13 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 			dlt.Add(key, value, log.NumFlows)
 		}
 
+		if log.SourceIP != nil {
+			sourceIPsSet[*log.SourceIP] = struct{}{}
+		}
+		if log.DestIP != nil {
+			destinationIPsSet[*log.DestIP] = struct{}{}
+		}
+
 		if f.TCPStats != nil {
 			f.TCPStats.TotalRetransmissions += log.TCPTotalRetransmissions
 			f.TCPStats.LostPackets += log.TCPLostPackets
@@ -181,6 +190,10 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 	// Set labels.
 	f.SourceLabels = slt.Labels()
 	f.DestinationLabels = dlt.Labels()
+
+	// Set the IPs
+	f.SourceIPs = keys(sourceIPsSet)
+	f.DestinationIPs = keys(destinationIPsSet)
 
 	// Add in expected policies. Right now, we don't support aggregation
 	// of policies across multiple logs in this builder, and we assume
@@ -242,6 +255,18 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 	f.DestDomains = domains
 
 	return f
+}
+
+func keys(set map[string]struct{}) []string {
+	var mapKeys []string
+
+	for k := range set {
+		mapKeys = append(mapKeys, k)
+	}
+
+	sort.Strings(mapKeys)
+
+	return mapKeys
 }
 
 func (b *FlowLogBuilder) WithSourceIP(ip string) *FlowLogBuilder {

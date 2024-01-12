@@ -68,10 +68,12 @@ func (m *MatcherFactory) Not(fm FlowMatcher) FlowMatcher {
 		switch mt {
 		case MatchTypeTrue:
 			mt = MatchTypeFalse
+			log.Debugf("Invert match %s -> %s", MatchTypeTrue, mt)
 		case MatchTypeFalse:
 			mt = MatchTypeTrue
+			log.Debugf("Invert match %s -> %s", MatchTypeFalse, mt)
 		}
-		log.Debugf("Invert match %s -> %s", mt, mt)
+
 		return mt
 	}
 }
@@ -218,7 +220,7 @@ func (m *MatcherFactory) Nets(nets []string) EndpointMatcher {
 
 	// Create a closure matching on the nets.
 	return func(_ *api.Flow, ed *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
-		if ed.IP == nil {
+		if len(ed.IPs) == 0 {
 			// Endpoint IP is unknown. If this is a Calico endpoint then we either have a negative match or an uncertain
 			// match depending on configuration.
 			if ed.IsCalicoManagedEndpoint() && !m.cfg.CalicoEndpointNetMatchAlways {
@@ -230,13 +232,72 @@ func (m *MatcherFactory) Nets(nets []string) EndpointMatcher {
 		}
 
 		for i := range nets {
-			if cnets[i].Contains(ed.IP.IP) {
-				log.Debugf("Nets: %s (IP matches %s)", MatchTypeTrue, ed.IP)
+			matchedIPs := 0
+			for _, ip := range ed.IPs {
+				if cnets[i].Contains(ip.IP) {
+					log.Debugf("Nets: (ip matches %s)", ip)
+					matchedIPs++
+				} else {
+					log.Debugf("Nets: (ip not matches %s)", ip)
+				}
+			}
+
+			if matchedIPs == len(ed.IPs) {
+				log.Debugf("Nets: %s (All IPs match)", MatchTypeTrue)
 				return MatchTypeTrue
 			}
 		}
 
-		log.Debugf("Nets: %s (IP does not match %s)", MatchTypeFalse, ed.IP)
+		log.Debugf("Nets: %s (IP does not match %s)", MatchTypeFalse, ed.IPs)
+		return MatchTypeFalse
+	}
+}
+
+func (m *MatcherFactory) NotNets(nets []string) EndpointMatcher {
+	if len(nets) == 0 {
+		return nil
+	}
+
+	cnets := make([]net.IPNet, len(nets))
+	for i := range nets {
+		_, cidr, err := net.ParseCIDROrIP(nets[i])
+		if err != nil {
+			return nil
+		}
+		cnets[i] = *cidr
+	}
+
+	// Create a closure matching on the nets.
+	return func(_ *api.Flow, ed *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
+		if len(ed.IPs) == 0 {
+			// Endpoint IP is unknown. If this is a Calico endpoint then we either have a negative match or an uncertain
+			// match depending on configuration.
+			if ed.IsCalicoManagedEndpoint() && !m.cfg.CalicoEndpointNetMatchAlways {
+				log.Debugf("Nets: %s (unknown, but assume Calico endpoint matchers use label selectors only)", MatchTypeFalse)
+				return MatchTypeTrue
+			}
+			log.Debugf("Nets: %s (unknown)", MatchTypeUncertain)
+			return MatchTypeUncertain
+		}
+
+		for i := range cnets {
+			matchedIPs := 0
+			for _, ip := range ed.IPs {
+				if !cnets[i].Contains(ip.IP) {
+					log.Debugf("Nets: (ip not matches %s)", ip)
+					matchedIPs++
+				} else {
+					log.Debugf("Nets: (ip matches %s)", ip)
+				}
+			}
+
+			if matchedIPs == len(ed.IPs) {
+				log.Debugf("Nets: %s (All IPs do not match)", MatchTypeTrue)
+				return MatchTypeTrue
+			}
+		}
+
+		log.Debugf("Nets: %s (IP does not match %s)", MatchTypeFalse, ed.IPs)
 		return MatchTypeFalse
 	}
 }
