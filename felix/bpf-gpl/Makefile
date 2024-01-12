@@ -94,6 +94,8 @@ UT_CFLAGS=\
 ut/%.ll: ut/%.c ut/ut.h
 	$(CC) $(UT_CFLAGS) $(CFLAGS) -c $< -o $@
 
+ut/icmp6_port_unreachable.ll: CFLAGS += -DIPVER6
+
 tc_preamble.ll: tc_preamble.c tc_preamble.d
 	$(CC) $(CFLAGS) -c $< -o $@
 
