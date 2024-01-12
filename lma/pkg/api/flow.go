@@ -109,9 +109,9 @@ func FromLinseedFlow(lsf lapi.L3Flow) *Flow {
 
 	// Set IP version based on source IP, defaulting to v4.
 	var ipVersion *int
-	if flow.Source.IPs != nil {
+	if len(flow.Source.IPs) != 0 {
 		ipVersion = getVersion(flow.Source.IPs)
-	} else if flow.Destination.IPs != nil {
+	} else if len(flow.Destination.IPs) != 0 {
 		ipVersion = getVersion(flow.Destination.IPs)
 	}
 
@@ -143,18 +143,18 @@ func GetLinseedFlowLabels(labels []lapi.FlowLabels) map[string]string {
 }
 
 // getIPs will extract net.IP from raw string
-func getIPs(rawIPs []string) []*net.IP {
-	var ips []*net.IP
+func getIPs(rawIPs []string) []net.IP {
+	var ips []net.IP
 	for _, raw := range rawIPs {
 		ip := net.ParseIP(raw)
-		ips = append(ips, ip)
+		ips = append(ips, *ip)
 	}
 	return ips
 }
 
 // getVersion will return the ip version across all IPs
 // if this version is consistent or nil (marking it as unknown)
-func getVersion(ips []*net.IP) *int {
+func getVersion(ips []net.IP) *int {
 
 	if len(ips) == 0 {
 		return nil
@@ -236,8 +236,8 @@ type FlowEndpointData struct {
 	// Labels - only relevant for Calico endpoints.
 	Labels map[string]string
 
-	// IP, or nil if unknown.
-	IPs []*net.IP
+	// IPs, or no data if unknown.
+	IPs []net.IP
 
 	// Domains.
 	Domains string

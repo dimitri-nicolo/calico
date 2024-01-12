@@ -522,7 +522,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 
 	It("checking dest ingress allow exact match when Source.Nets is non-nil", func() {
 		ip := net.MustParseIP("10.0.0.1")
-		f.Source.IPs = []*net.IP{&ip}
+		f.Source.IPs = []net.IP{ip}
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		np.Spec.Types = typesIngress
@@ -535,7 +535,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking dest ingress allow exact match when Source.Nets is non-nil for multiple matching IPs", func() {
 		ip1 := net.MustParseIP("10.0.0.1")
 		ip2 := net.MustParseIP("10.0.0.2")
-		f.Source.IPs = []*net.IP{&ip1, &ip2}
+		f.Source.IPs = []net.IP{ip1, ip2}
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		np.Spec.Types = typesIngress
@@ -548,7 +548,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking dest ingress allow match when Source.Nets is non-nil for multiple non matching IPs", func() {
 		ip1 := net.MustParseIP("10.0.0.1")
 		ip2 := net.MustParseIP("11.0.0.2")
-		f.Source.IPs = []*net.IP{&ip1, &ip2}
+		f.Source.IPs = []net.IP{ip1, ip2}
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		np.Spec.Types = typesIngress
@@ -561,7 +561,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 
 	It("checking source egress allow exact match when Source.Nets is non-nil", func() {
 		ip := net.MustParseIP("10.0.0.1")
-		f.Source.IPs = []*net.IP{&ip}
+		f.Source.IPs = []net.IP{ip}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -574,7 +574,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking source egress allow exact match when Source.Nets is non-nil for multiple matching IPs", func() {
 		ip1 := net.MustParseIP("10.0.0.1")
 		ip2 := net.MustParseIP("10.0.0.2")
-		f.Source.IPs = []*net.IP{&ip1, &ip2}
+		f.Source.IPs = []net.IP{ip1, ip2}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -587,7 +587,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking source egress allow match when Source.Nets is non-nil for multiple non-matching IPs", func() {
 		ip1 := net.MustParseIP("10.0.0.1")
 		ip2 := net.MustParseIP("11.0.0.2")
-		f.Source.IPs = []*net.IP{&ip1, &ip2}
+		f.Source.IPs = []net.IP{ip1, ip2}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -623,7 +623,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 
 	It("checking source egress allow non-match when Source.Nets is non-nil", func() {
 		ip := net.MustParseIP("10.10.0.1")
-		f.Source.IPs = []*net.IP{&ip}
+		f.Source.IPs = []net.IP{ip}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -635,7 +635,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 
 	It("checking source egress allow non-match when Source.NotNets is non-nil", func() {
 		ip := net.MustParseIP("11.10.0.1")
-		f.Source.IPs = []*net.IP{&ip}
+		f.Source.IPs = []net.IP{ip}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -648,7 +648,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking source egress allow non-match when Source.NotNets is non-nil with multiple non-matching IPs", func() {
 		ip1 := net.MustParseIP("11.10.0.1")
 		ip2 := net.MustParseIP("11.20.0.1")
-		f.Source.IPs = []*net.IP{&ip1, &ip2}
+		f.Source.IPs = []net.IP{ip1, ip2}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -661,7 +661,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking source egress allow non-match when Source.NotNets is non-nil with some multiple non-matching IPs", func() {
 		ip1 := net.MustParseIP("10.0.0.1")
 		ip2 := net.MustParseIP("11.0.0.1")
-		f.Source.IPs = []*net.IP{&ip1, &ip2}
+		f.Source.IPs = []net.IP{ip1, ip2}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -676,7 +676,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 
 	It("checking dest ingress allow exact match when Destination.Nets is non-nil", func() {
 		ip := net.MustParseIP("10.0.0.1")
-		f.Destination.IPs = []*net.IP{&ip}
+		f.Destination.IPs = []net.IP{ip}
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		np.Spec.Types = typesIngress
@@ -689,7 +689,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking dest ingress allow match when Destination.Nets is non-nil with multiple matching IPs", func() {
 		ip1 := net.MustParseIP("10.0.0.1")
 		ip2 := net.MustParseIP("10.0.0.2")
-		f.Destination.IPs = []*net.IP{&ip1, &ip2}
+		f.Destination.IPs = []net.IP{ip1, ip2}
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		np.Spec.Types = typesIngress
@@ -702,7 +702,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking dest ingress allow match when Destination.Nets is non-nil with multiple non-matching IPs", func() {
 		ip1 := net.MustParseIP("10.0.0.1")
 		ip2 := net.MustParseIP("11.0.0.2")
-		f.Destination.IPs = []*net.IP{&ip1, &ip2}
+		f.Destination.IPs = []net.IP{ip1, ip2}
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		np.Spec.Types = typesIngress
@@ -714,7 +714,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 
 	It("checking source egress allow exact match when Destination.Nets is non-nil", func() {
 		ip := net.MustParseIP("10.0.0.1")
-		f.Destination.IPs = []*net.IP{&ip}
+		f.Destination.IPs = []net.IP{ip}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -727,7 +727,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking source egress allow match when Destination.Nets is non-nil with multiple matching IPs", func() {
 		ip1 := net.MustParseIP("10.0.0.1")
 		ip2 := net.MustParseIP("10.0.0.2")
-		f.Destination.IPs = []*net.IP{&ip1, &ip2}
+		f.Destination.IPs = []net.IP{ip1, ip2}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -740,7 +740,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking source egress allow match when Destination.Nets is non-nil with multiple non-matching IPs", func() {
 		ip1 := net.MustParseIP("10.0.0.1")
 		ip2 := net.MustParseIP("11.0.0.2")
-		f.Destination.IPs = []*net.IP{&ip1, &ip2}
+		f.Destination.IPs = []net.IP{ip1, ip2}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -776,7 +776,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 
 	It("checking source egress allow non-match when Destination.Nets is non-nil", func() {
 		ip := net.MustParseIP("10.10.0.1")
-		f.Destination.IPs = []*net.IP{&ip}
+		f.Destination.IPs = []net.IP{ip}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -788,7 +788,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 
 	It("checking source egress allow non-match when Destination.NotNets is non-nil", func() {
 		ip := net.MustParseIP("10.10.0.1")
-		f.Destination.IPs = []*net.IP{&ip}
+		f.Destination.IPs = []net.IP{ip}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -801,7 +801,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking source egress allow when Destination.NotNets is non-nil with multiple matching IPs", func() {
 		ip1 := net.MustParseIP("10.10.0.1")
 		ip2 := net.MustParseIP("10.10.0.2")
-		f.Destination.IPs = []*net.IP{&ip1, &ip2}
+		f.Destination.IPs = []net.IP{ip1, ip2}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -814,7 +814,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking source egress allow when Destination.NotNets is non-nil with multiple non-matching IPs", func() {
 		ip1 := net.MustParseIP("10.0.0.1")
 		ip2 := net.MustParseIP("11.10.0.2")
-		f.Destination.IPs = []*net.IP{&ip1, &ip2}
+		f.Destination.IPs = []net.IP{ip1, ip2}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -828,7 +828,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 
 	It("checking dest ingress allow exact match when Source.Nets is non-nil", func() {
 		ip := net.MustParseIP("10.0.0.1")
-		f.Source.IPs = []*net.IP{&ip}
+		f.Source.IPs = []net.IP{ip}
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		np.Spec.Types = typesIngress
@@ -840,7 +840,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 
 	It("checking source egress allow exact match when Source.Nets is non-nil", func() {
 		ip := net.MustParseIP("10.0.0.1")
-		f.Source.IPs = []*net.IP{&ip}
+		f.Source.IPs = []net.IP{ip}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -874,7 +874,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 
 	It("checking dest egress allow non-match when Source.Nets is non-nil", func() {
 		ip := net.MustParseIP("10.10.0.1")
-		f.Source.IPs = []*net.IP{&ip}
+		f.Source.IPs = []net.IP{ip}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -886,7 +886,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 
 	It("checking dest egress allow non-match when Source.NotNets is non-nil", func() {
 		ip := net.MustParseIP("10.10.0.1")
-		f.Source.IPs = []*net.IP{&ip}
+		f.Source.IPs = []net.IP{ip}
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		np.Spec.Types = typesEgress

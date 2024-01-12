@@ -174,11 +174,6 @@ type L3Flow struct {
 	ProcessStats *ProcessStats `json:"process_stats,omitempty"`
 }
 
-type IPs struct {
-	Source      []string `json:"source"`
-	Destination []string `json:"destination"`
-}
-
 type Policy struct {
 	Tier         string `json:"tier"`
 	Namespace    string `json:"namespace"`
