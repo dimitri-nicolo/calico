@@ -40,14 +40,16 @@ blocks:
         - name: Build
           commands:
             - make build
-            # Save the intermediate image to the cache since it takes so long to rebuild.
-            - export KIBANA_VERSION=$(jq -r '.version' kibana/package.json)
-            - docker save -o ${KIBANA_IMAGE_TAR_PATH}-amd64.tar docker.elastic.co/kibana/kibana-ubi8:${KIBANA_VERSION}-amd64
-            - docker save -o ${KIBANA_IMAGE_TAR_PATH}-arm64.tar docker.elastic.co/kibana/kibana-ubi8:${KIBANA_VERSION}-arm64
-            - cache store ${KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY}-amd64 ${KIBANA_IMAGE_TAR_PATH}-amd64.tar
-            - cache store ${KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY}-arm64 ${KIBANA_IMAGE_TAR_PATH}-arm64.tar
-            - rm ${KIBANA_IMAGE_TAR_PATH}-*.tar
             - make image # Test that the image builds correctly
+            - >-
+              export KIBANA_VERSION=$(jq -r '.version' kibana/package.json);
+              if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
+                docker save -o ${KIBANA_IMAGE_TAR_PATH}-amd64.tar docker.elastic.co/kibana/kibana-ubi8:${KIBANA_VERSION}-amd64;
+                docker save -o ${KIBANA_IMAGE_TAR_PATH}-arm64.tar docker.elastic.co/kibana/kibana-ubi8:${KIBANA_VERSION}-arm64;
+                cache store ${KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY}-amd64 ${KIBANA_IMAGE_TAR_PATH}-amd64.tar;
+                cache store ${KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY}-arm64 ${KIBANA_IMAGE_TAR_PATH}-arm64.tar;
+                rm ${KIBANA_IMAGE_TAR_PATH}-*.tar;
+              fi;
 
   - name: Push Images
     dependencies:
