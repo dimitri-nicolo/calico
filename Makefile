@@ -56,7 +56,7 @@ $(KIBANA_DOWNLOADED):
 	touch $@
 
 .PHONY: build
-build: $(KIBANA_DOWNLOADED)
+build: register $(KIBANA_DOWNLOADED)
 	cd kibana && \
 	. $(NVM_DIR)/nvm.sh && nvm install && nvm use && \
 	BUILD_TS_REFS_CACHE_ENABLE=false yarn kbn bootstrap && \
