@@ -55,6 +55,11 @@ $(KIBANA_DOWNLOADED):
 	patch -d kibana -p1 < patches/0003-Support-UBI-arm64-builds.patch
 	touch $@
 
+# always register because build target will build images for all supported arches
+.PHONY: register
+register:
+	docker run --rm --privileged multiarch/qemu-user-static:register || true
+
 .PHONY: build
 build: register $(KIBANA_DOWNLOADED)
 	cd kibana && \
