@@ -23,11 +23,6 @@ RUN /usr/bin/gtm_setup.sh
 
 FROM scratch AS source
 
-# kibana node binaries and packages
-COPY --from=kibana /usr/local/bin/kibana-docker /usr/local/bin/kibana-docker
-COPY --from=kibana /usr/share/fonts /usr/share/fonts/
-COPY --from=kibana --chown=1000:0 /usr/share/kibana /usr/share/kibana/
-
 # init script binary dependencies
 COPY --from=kibana /bin/bash /bin/bash
 COPY --from=kibana /bin/sh /bin/sh
@@ -56,6 +51,11 @@ COPY --from=kibana /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
 COPY --from=kibana /lib64/libgcc_s.so.1 /lib64/libgcc_s.so.1
 COPY --from=kibana /lib64/libm.so.6 /lib64/libm.so.6
 COPY --from=kibana /lib64/libstdc++.so.6 /lib64/libstdc++.so.6
+
+# kibana node binaries and packages
+COPY --from=kibana /usr/local/bin/kibana-docker /usr/local/bin/kibana-docker
+COPY --from=kibana /usr/share/fonts /usr/share/fonts/
+COPY --from=kibana --chown=1000:0 /usr/share/kibana /usr/share/kibana/
 
 FROM calico/base
 
