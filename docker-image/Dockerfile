@@ -1,8 +1,9 @@
 ARG KIBANA_VERSION
 ARG QEMU_IMAGE
-ARG TARGETARCH
 
 FROM ${QEMU_IMAGE} as qemu
+
+ARG TARGETARCH
 
 FROM docker.elastic.co/kibana/kibana-ubi8:${KIBANA_VERSION}-${TARGETARCH} AS kibana
 

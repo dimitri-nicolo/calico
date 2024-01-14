@@ -72,7 +72,6 @@ clean:
 ###############################################################################
 # Image
 ###############################################################################
-OS=linux
 QEMU_IMAGE ?= calico/qemu-user-static:latest
 
 .PHONY: image-all
@@ -83,9 +82,7 @@ sub-image-%:
 .PHONY: image
 image: $(KIBANA_IMAGE)
 $(KIBANA_IMAGE): register docker-image/Dockerfile docker-image/create_kibana_config.sh docker-image/gtm_setup.sh
-	docker buildx build --load --platform=linux/$(ARCH) --pull \
-		--build-arg ARCH=$(ARCH) \
-		--build-arg OS=$(OS) \
+	docker buildx build --load --platform=linux/$(ARCH) \
 		--build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) \
 		--build-arg KIBANA_VERSION=$(KIBANA_VERSION) \
 		--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
