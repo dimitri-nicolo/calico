@@ -1,0 +1,24 @@
+From 72db1ebe8a1a50641a916a95d0e7e89102222100 Mon Sep 17 00:00:00 2001
+From: Jiawei Huang <jiawei@tigera.io>
+Date: Sat, 13 Jan 2024 22:20:57 -0800
+Subject: [PATCH 1/2] Reduce --all-platforms to linux variants only
+
+---
+ src/dev/build/lib/platform.ts | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/src/dev/build/lib/platform.ts b/src/dev/build/lib/platform.ts
+index 4c4ec271318..6c62ca15800 100644
+--- a/src/dev/build/lib/platform.ts
++++ b/src/dev/build/lib/platform.ts
+@@ -48,7 +48,4 @@ export class Platform {
+ export const ALL_PLATFORMS = [
+   new Platform('linux', 'x64', 'linux-x86_64'),
+   new Platform('linux', 'arm64', 'linux-aarch64'),
+-  new Platform('darwin', 'x64', 'darwin-x86_64'),
+-  new Platform('darwin', 'arm64', 'darwin-aarch64'),
+-  new Platform('win32', 'x64', 'windows-x86_64'),
+ ];
+-- 
+2.43.0
+

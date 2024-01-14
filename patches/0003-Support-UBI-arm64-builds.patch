@@ -1,31 +1,30 @@
-From 80307e6611a4f76fec44d1b9ee4509540bd5ff12 Mon Sep 17 00:00:00 2001
+From 81c6c20254d5223017635ba8d0a16286f8cbec63 Mon Sep 17 00:00:00 2001
 From: Jiawei Huang <jiawei@tigera.io>
-Date: Sat, 13 Jan 2024 18:16:07 -0800
-Subject: [PATCH] Support UBI arm64 builds
+Date: Sat, 13 Jan 2024 22:02:36 -0800
+Subject: [PATCH 2/2] Support UBI arm64 builds
 
 ---
- src/dev/build/tasks/os_packages/create_os_package_tasks.ts | 6 ++++++
- .../os_packages/docker_generator/templates/base/Dockerfile | 7 +++++++
- .../docker_generator/templates/build_docker_sh.template.ts | 6 +++---
- 3 files changed, 16 insertions(+), 3 deletions(-)
+ .../build/tasks/os_packages/create_os_package_tasks.ts    | 4 ++--
+ .../docker_generator/templates/base/Dockerfile            | 7 +++++++
+ .../templates/build_docker_sh.template.ts                 | 8 ++++----
+ 3 files changed, 13 insertions(+), 6 deletions(-)
 
 diff --git a/src/dev/build/tasks/os_packages/create_os_package_tasks.ts b/src/dev/build/tasks/os_packages/create_os_package_tasks.ts
-index 6ad51d7981e..15d99209077 100644
+index 4b0654fb6f8..50ef3e417c1 100644
 --- a/src/dev/build/tasks/os_packages/create_os_package_tasks.ts
 +++ b/src/dev/build/tasks/os_packages/create_os_package_tasks.ts
-@@ -81,6 +81,12 @@ export const CreateDockerUBI: Task = {
-       ubi: true,
+@@ -82,9 +82,9 @@ export const CreateDockerUBI: Task = {
        image: true,
      });
-+    await runDockerGenerator(config, log, build, {
+     await runDockerGenerator(config, log, build, {
+-      architecture: 'x64',
 +      architecture: 'aarch64',
-+      context: false,
-+      ubi: true,
-+      image: true,
-+    });
+       context: false,
+-      ubi9: true,
++      ubi8: true,
+       image: true,
+     });
    },
- };
- 
 diff --git a/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile b/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
 index 17102eb2643..ce9195d77e8 100644
 --- a/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
@@ -54,7 +53,7 @@ index 17102eb2643..ce9195d77e8 100644
  
  {{#ubi}}
 diff --git a/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts b/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts
-index 73159cee1f0..0c38baf7322 100644
+index 73159cee1f0..2daef0f7451 100644
 --- a/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts
 +++ b/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts
 @@ -19,10 +19,10 @@ function generator({
@@ -71,6 +70,15 @@ index 73159cee1f0..0c38baf7322 100644
      : `docker build -t ${dockerTargetName} -f Dockerfile . || exit 1;`;
    return dedent(`
    #!/usr/bin/env bash
+@@ -62,7 +62,7 @@ function generator({
+   echo "Building: kibana${imageFlavor}-docker"; \\
+   ${dockerBuild}
+ 
+-  docker save ${imageTag}${imageFlavor}:${version} | gzip -c > ${dockerTargetFilename}
++  docker save ${imageTag}${imageFlavor}:${version}-${dockerArchitecture} | gzip -c > ${dockerTargetFilename}
+ 
+   exit 0
+   `);
 -- 
 2.43.0
 
