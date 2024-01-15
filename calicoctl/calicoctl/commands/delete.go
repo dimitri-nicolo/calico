@@ -93,7 +93,7 @@ Description:
     * remoteClusterConfiguration
     * packetCapture
 
-  The resource type is case insensitive and may be pluralized.
+  The resource type is case-insensitive and may be pluralized.
 
   Attempting to delete a resource that does not exists is treated as a
   terminating error unless the --skip-not-exists flag is set.  If this flag is

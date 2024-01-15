@@ -26,7 +26,7 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 )
 
-// actionFromString should parse strings in case insensitive mode.
+// actionFromString should parse strings in case-insensitive mode.
 func TestActionFromString(t *testing.T) {
 	RegisterTestingT(t)
 

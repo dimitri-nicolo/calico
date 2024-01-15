@@ -201,7 +201,7 @@ const (
 	ifaceNotReady ifaceReadiness = iota
 	ifaceIsReady
 	// We know it was ready at some point in time and we
-	// assume it still is, but we need to reassure outselves.
+	// assume it still is, but we need to reassure ourselves.
 	ifaceIsReadyNotAssured
 )
 
@@ -564,7 +564,7 @@ func newBPFEndpointManager(
 
 	// If not running in test
 	if m.dp == m {
-		// Repin jump maps to a differnt path so that existing programs keep working
+		// Repin jump maps to a different path so that existing programs keep working
 		// as if nothing has changed. We keep those maps as long as we have dirty
 		// devices.
 		//
@@ -575,7 +575,7 @@ func newBPFEndpointManager(
 			return nil, err
 		}
 		m.removeOldJumps = true
-		// Make sure that we envetually clean up after previous versions.
+		// Make sure that we eventually clean up after previous versions.
 		m.legacyCleanUp = true
 	}
 
@@ -701,7 +701,7 @@ func (m *bpfEndpointManager) OnUpdate(msg interface{}) {
 	case *proto.WorkloadEndpointUpdate:
 		m.onWorkloadEndpointUpdate(msg)
 	case *proto.WorkloadEndpointRemove:
-		m.onWorkloadEnpdointRemove(msg)
+		m.onWorkloadEndpointRemove(msg)
 	// Policies.
 	case *proto.ActivePolicyUpdate:
 		m.onPolicyUpdate(msg)
@@ -1013,7 +1013,7 @@ func (m *bpfEndpointManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpoin
 }
 
 // onWorkloadEndpointRemove removes the workload from the cache and the index, which maps from policy to workload.
-func (m *bpfEndpointManager) onWorkloadEnpdointRemove(msg *proto.WorkloadEndpointRemove) {
+func (m *bpfEndpointManager) onWorkloadEndpointRemove(msg *proto.WorkloadEndpointRemove) {
 	wlID := *msg.Id
 	log.WithField("id", wlID).Debug("Workload endpoint removed")
 	oldWEP := m.allWEPs[wlID]
@@ -1192,7 +1192,7 @@ func (m *bpfEndpointManager) syncIfStateMap() {
 			} else {
 				// It will get deleted by the first CompleteDeferredWork() if we
 				// do not get any state update on that interface.
-				log.WithError(err).Warnf("Failed to sync ifstate for iface %d, deffering it.", ifindex)
+				log.WithError(err).Warnf("Failed to sync ifstate for iface %d, deferring it.", ifindex)
 			}
 		} else if m.isDataIface(netiface.Name) || m.isWorkloadIface(netiface.Name) || m.isL3Iface(netiface.Name) {
 			// We only add iface that we still manage as configuration could have changed.
@@ -1302,7 +1302,7 @@ func (m *bpfEndpointManager) syncIfaceProperties() error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("iterating over countrs map failed")
+		return fmt.Errorf("iterating over counters map failed")
 	}
 
 	return nil
@@ -2731,19 +2731,19 @@ func (m *bpfEndpointManager) ensureBPFDevices() error {
 	i := retries
 	for {
 		if err := netlink.NeighAdd(arp); err != nil && err != syscall.EEXIST {
-			log.WithError(err).Warnf("Failed to update neight for %s (arp %#v), retrying.", bpfOutDev, arp)
+			log.WithError(err).Warnf("Failed to update neigh for %s (arp %#v), retrying.", bpfOutDev, arp)
 			i--
 			if i > 0 {
 				time.Sleep(250 * time.Millisecond)
 				continue
 			} else {
-				return fmt.Errorf("failed to update neight for %s (arp %#v) after %d tries: %w",
+				return fmt.Errorf("failed to update neigh for %s (arp %#v) after %d tries: %w",
 					bpfOutDev, arp, retries, err)
 			}
 		}
 		break
 	}
-	log.Infof("Updated neight for %s (arp %v)", bpfOutDev, arp)
+	log.Infof("Updated neigh for %s (arp %v)", bpfOutDev, arp)
 
 	if !m.ipv6Enabled {
 		if err := configureInterface(bpfInDev, 4, "0", writeProcSys); err != nil {
@@ -2764,9 +2764,9 @@ func (m *bpfEndpointManager) ensureBPFDevices() error {
 		log.WithError(err).Fatalf("Failed to set qdisc on lo.")
 	}
 
-	// Setup a link local route to a non-existent link local address that would
+	// Setup a link local route to a nonexistent link local address that would
 	// serve as a gateway to route services via bpfnat veth rather than having
-	// link local routes for each service that would trigger ARP querries.
+	// link local routes for each service that would trigger ARP queries.
 	m.routeTable.RouteUpdate(bpfInDev, routetable.Target{
 		Type: routetable.TargetTypeLinkLocalUnicast,
 		CIDR: cidr,
@@ -2825,7 +2825,7 @@ func (m *bpfEndpointManager) ensureProgramAttached(ap attachPoint) (bpf.AttachRe
 			return nil, fmt.Errorf("loading generic v%d tc hook program: %w", ipFamily, err)
 		}
 
-		// Load deafault policy before the real policy is created and loaded.
+		// Load default policy before the real policy is created and loaded.
 		switch at.DefaultPolicy() {
 		case hook.DefPolicyAllow:
 			err = maps.UpdateMapEntry(m.bpfmaps.JumpMap.MapFD(),

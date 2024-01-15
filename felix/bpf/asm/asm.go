@@ -740,7 +740,7 @@ func (b *Block) addInsnWithOffsetFixupNoTrampoline(insn Insn, targetLabel string
 	if debug {
 		insnLabel = strings.Join(b.insnIdxToLabels[len(b.insns)], ",")
 	}
-	if !b.nextInsnReachble() {
+	if !b.nextInsnReachable() {
 		if debug {
 			log.Debugf("Asm: %v UU:    %v [UNREACHABLE]", insnLabel, insn)
 		}
@@ -869,7 +869,7 @@ func (b *Block) AddCommentF(comment string, args ...any) {
 	b.insnIdxToComments[len(b.insns)] = append(b.insnIdxToComments[len(b.insns)], comment)
 }
 
-func (b *Block) nextInsnReachble() bool {
+func (b *Block) nextInsnReachable() bool {
 	if len(b.insns) == 0 {
 		return true // First instruction is always reachable.
 	}

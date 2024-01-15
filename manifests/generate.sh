@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This script updates the manifests in this directory using helm.
-# Values files for the manifests in this directory can be found in 
+# Values files for the manifests in this directory can be found in
 # ../charts/tigera-operator/values.
 
 # Helm binary to use. Default to the one installed by the Makefile.

@@ -67,7 +67,7 @@ const (
 	DroppedShortPacket
 	DroppedFailedCSUM
 	DroppedIPOptions
-	DroppredIPMalformed
+	DroppedIPMalformed
 	DroppedFailedEncap
 	DroppedFailedDecap
 	DroppedUnauthSource
@@ -135,7 +135,7 @@ var descriptions DescList = DescList{
 		Category: "Dropped", Caption: "packets with unsupported IP options",
 	},
 	{
-		Counter:  DroppredIPMalformed,
+		Counter:  DroppedIPMalformed,
 		Category: "Dropped", Caption: "malformed IP packets",
 	},
 	{

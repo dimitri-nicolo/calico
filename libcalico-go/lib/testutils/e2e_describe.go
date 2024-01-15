@@ -34,7 +34,7 @@ const (
 	*/
 	DatastoreAll = DatastoreK8s
 
-	// Mounted in to the test container during test-setup.
+	// Mounted into the test container during test-setup.
 	kubeconfig = "/kubeconfig.yaml"
 )
 
