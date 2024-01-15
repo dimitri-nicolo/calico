@@ -648,7 +648,6 @@ func (sc *SelectorsController) syncToFortiGateAddr(key, dev string) error {
 
 		// Existing object. Time to update it.
 		clog.Debug("Updating FirewallAddress in FortiGate")
-		fortiFWAddr.IpAddr = existingAddr.IpAddr
 		fortiFWAddr.Mask = existingAddr.Mask
 		err = fc.UpdateFirewallAddress(fortiFWAddr)
 		if err != nil {
