@@ -1,4 +1,4 @@
-// Copyright 2019-2021 Tigera Inc. All rights reserved.
+// Copyright 2019-2024 Tigera Inc. All rights reserved.
 package fortimanager
 
 import (
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -19,21 +20,19 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-
-	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
-	"github.com/projectcalico/calico/libcalico-go/lib/errors"
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	xconfig "github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	fortilib "github.com/projectcalico/calico/firewall-integration/pkg/fortimanager"
+	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
+	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // Controller health
@@ -80,9 +79,14 @@ type SelectorsController struct {
 	calicoGnpInformer  cache.Controller
 }
 
-func NewSelectorsController(ctx context.Context, cfg *config.Config, h *health.HealthAggregator,
-	k8sClientset *kubernetes.Clientset, fcs map[string]fortilib.FortiFWClientApi,
-	calicoClient clientv3.ProjectcalicoV3Interface) *SelectorsController {
+func NewSelectorsController(
+	ctx context.Context,
+	cfg *config.Config,
+	h *health.HealthAggregator,
+	k8sClientset *kubernetes.Clientset,
+	fcs map[string]fortilib.FortiFWClientApi,
+	calicoClient clientv3.ProjectcalicoV3Interface,
+) *SelectorsController {
 
 	// Register with health reporting aggregator.
 	h.RegisterReporter(healthReporterName, &health.HealthReport{Live: true}, healthReportInterval)
@@ -114,7 +118,7 @@ func NewSelectorsController(ctx context.Context, cfg *config.Config, h *health.H
 
 			pod.TypeMeta = resources.TypeK8sPods
 			updates := []syncer.Update{
-				syncer.Update{
+				{
 					Type:       syncer.UpdateTypeSet,
 					ResourceID: resources.GetResourceID(pod),
 					Resource:   pod,
@@ -137,7 +141,7 @@ func NewSelectorsController(ctx context.Context, cfg *config.Config, h *health.H
 			pod.TypeMeta = resources.TypeK8sPods
 
 			updates := []syncer.Update{
-				syncer.Update{
+				{
 					Type:       syncer.UpdateTypeSet,
 					ResourceID: resources.GetResourceID(pod),
 					Resource:   pod,
@@ -159,7 +163,7 @@ func NewSelectorsController(ctx context.Context, cfg *config.Config, h *health.H
 			pod.TypeMeta = resources.TypeK8sPods
 
 			updates := []syncer.Update{
-				syncer.Update{
+				{
 					Type:       syncer.UpdateTypeDeleted,
 					ResourceID: resources.GetResourceID(pod),
 					Resource:   pod,
@@ -261,6 +265,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 				Name:    gnp.Name,
 				Members: set.New[string](),
 			}
+
 			// Insert Address Group in Cache
 			for _, cache := range devToRcacheAddrGrp {
 				cache.Set(gnp.Name, addrGroup)
@@ -272,7 +277,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 			gnp.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
 			// Create an update
 			updates := []syncer.Update{
-				syncer.Update{
+				{
 					Type:       syncer.UpdateTypeSet,
 					ResourceID: resources.GetResourceID(gnp),
 					Resource:   gnp,
@@ -315,7 +320,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 
 			// Create an update
 			updates := []syncer.Update{
-				syncer.Update{
+				{
 					Type:       syncer.UpdateTypeSet,
 					ResourceID: resources.GetResourceID(gnpNew),
 					Resource:   gnpNew,
@@ -343,7 +348,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 			}
 
 			updates := []syncer.Update{
-				syncer.Update{
+				{
 					Type:       syncer.UpdateTypeDeleted,
 					ResourceID: resources.GetResourceID(gnp),
 					Resource:   gnp,
@@ -800,7 +805,7 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 		log.Infof("Received node Event Policy started %#v", update)
 
 		// Create a Firewall Address object in Address cache.
-		cachedEntryGNP.SelectedPods.Iter(func(id apiv3.ResourceID) error {
+		cachedEntryGNP.SelectedPods.Iter(func(id v3.ResourceID) error {
 			p, err := sc.k8sClientset.CoreV1().Pods(id.Namespace).Get(context.Background(), id.Name, metav1.GetOptions{})
 			if err != nil {
 				log.WithError(err).Errorf("Failed to get pod resource from k8s client for pod:%#v", id.Name)
@@ -824,7 +829,7 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 		// Address Group name must match with network policy Name.
 		pods := sc.gnpToPods[update.ResourceID.Name]
 		members := []string{}
-		cachedEntryGNP.SelectedPods.Iter(func(id apiv3.ResourceID) error {
+		cachedEntryGNP.SelectedPods.Iter(func(id v3.ResourceID) error {
 			podName := fmt.Sprintf("%s-%s", id.Namespace, id.Name)
 			pods.Add(id)
 			log.Infof("Assigning pod %v to address group %v", podName, update.ResourceID.Name)
@@ -848,7 +853,7 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 		// Iterate over pods linked to a GNP, if a pod is
 		// NOT present in xrefcache, that means pod had been removed.
 		pods := sc.gnpToPods[update.ResourceID.Name]
-		pods.Iter(func(item apiv3.ResourceID) error {
+		pods.Iter(func(item v3.ResourceID) error {
 
 			podName := fmt.Sprintf("%s-%s", item.Namespace, item.Name)
 			ok := cachedEntryGNP.SelectedPods.Contains(item)
@@ -865,7 +870,7 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 		// Address Group name must match with network policy Name.
 		pods = sc.gnpToPods[update.ResourceID.Name]
 		members := []string{}
-		pods.Iter(func(item apiv3.ResourceID) error {
+		pods.Iter(func(item v3.ResourceID) error {
 
 			podName := fmt.Sprintf("%s-%s", item.Namespace, item.Name)
 			ok := cachedEntryGNP.SelectedPods.Contains(item)
@@ -873,7 +878,7 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 				// The pod that we were tracking is no longer referenced in the GNP,
 				// Remove this node as the address group member.
 				log.Infof("Removing pod %v from address group %v", podName, update.ResourceID.Name)
-				return set.RemoveItem
+				return resources.RemoveItem
 			}
 			members = append(members, podName)
 			return nil
