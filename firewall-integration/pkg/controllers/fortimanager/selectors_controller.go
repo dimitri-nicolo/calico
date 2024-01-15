@@ -916,12 +916,12 @@ func getResourceCacheAddressGrps(fcs map[string]fortilib.FortiFWClientApi) map[s
 				return nil, err
 			}
 
-			for _, addr := range addrGroups {
-				if !strings.Contains(addr.Comment, TigeraComment) {
-					log.Debugf("Filtering out %s as it's not something we manage", addr.Name)
+			for _, addrg := range addrGroups {
+				if !strings.Contains(addrg.Comment, TigeraComment) {
+					log.Debugf("Filtering out %s as it's not something we manage", addrg.Name)
 					continue
 				}
-				groups[addr.Name] = addr
+				groups[addrg.Name] = addrg
 			}
 			log.Debugf("List of address groups: %+v", groups)
 			return groups, nil
@@ -952,13 +952,19 @@ func getResourceCacheAddress(fcs map[string]fortilib.FortiFWClientApi) map[strin
 				return nil, err
 			}
 
-			for _, fwAddr := range fwAddresses {
+			for _, addr := range fwAddresses {
 				// Filter only Addresses managed by
-				if !strings.Contains(fwAddr.Comment, TigeraComment) {
+				if !strings.Contains(addr.Comment, TigeraComment) {
 					continue
 				}
-				addresses[fwAddr.Name] = fwAddr
-				log.Infof("fwAddr name :%#v", fwAddr.Name)
+				addresses[addr.Name] = fortilib.RespFortiGateFWAddressData{
+					Name:    addr.Name,
+					Comment: addr.Comment,
+					Type:    addr.Type,
+					SubType: addr.SubType,
+					Subnet:  addr.IpAddr,
+				}
+				log.Infof("fwAddr name :%#v", addr.Name)
 			}
 			return addresses, nil
 		}
