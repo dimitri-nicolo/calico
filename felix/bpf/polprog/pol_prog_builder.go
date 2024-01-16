@@ -1272,19 +1272,6 @@ func WithIPv6() Option {
 	}
 }
 
-// WithPolicyMapIndexAndStride tells the builder the "shape" of the policy
-// jump map, allowing it to split the program if it gets too large.
-// entryPointIdx is the jump map key for the first "entry point" program.
-// stride is the number of indexes to skip to get to the next sub-program.
-// If WithPolicyMapIndexAndStride is not provided, program-splitting is
-// disabled.
-func WithPolicyMapIndexAndStride(entryPointIdx, stride int) Option {
-	return func(b *Builder) {
-		b.policyMapIndex = entryPointIdx
-		b.policyMapStride = stride
-	}
-}
-
 func protocolToName(protocol *proto.Protocol) string {
 	var pcol string
 	switch p := protocol.NumberOrName.(type) {
