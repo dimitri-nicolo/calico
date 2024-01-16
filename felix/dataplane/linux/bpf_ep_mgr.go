@@ -3515,6 +3515,13 @@ func newJumpMapAlloc(entryPoints int) *jumpMapAlloc {
 	return a
 }
 
+func newJumpMapAlloc(entryPoints int) *jumpMapAlloc {
+	return &jumpMapAlloc{
+		max:  entryPoints,
+		free: make(chan int, entryPoints),
+	}
+}
+
 type jumpMapAlloc struct {
 	lock sync.Mutex
 	max  int
