@@ -29,7 +29,6 @@ global_job_config:
       # Login to docker in order to pull images.
       - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
       - checkout
-      - export KIBANA_IMAGE_CACHE_KEY=kibana-image-${SEMAPHORE_GIT_SHA}
       - export KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY=kibana-image-intermediate-${SEMAPHORE_GIT_SHA}
 
 blocks:
@@ -77,6 +76,6 @@ blocks:
                 - "true"
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
-            - cache restore ${KIBANA_IMAGE_CACHE_KEY}-${ARCH}
+            - cache restore ${KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY}-${ARCH}
             - docker load -i ${KIBANA_IMAGE_TAR_PATH}-${ARCH}.tar
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
