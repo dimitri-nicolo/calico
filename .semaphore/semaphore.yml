@@ -11,10 +11,8 @@ agent:
 
 global_job_config:
   env_vars:
-    - name: KIBANA_IMAGE_NAME
-      value: docker.elastic.co/kibana/kibana-ubi8
     - name: KIBANA_IMAGE_TAR_PATH
-      value: /tmp/kibana-image.tar
+      value: /tmp/kibana-image
   secrets:
     - name: docker-hub
     # Mount the github SSH secret for pulling private repositories.
@@ -30,34 +28,32 @@ global_job_config:
       - ssh-add ~/.keys/*
       # Login to docker in order to pull images.
       - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
-      # set experimental for docker on semaphore vm to use `--squash` for building docker images
-      - sudo bash -c 'echo "{\"experimental\":true}" >> /etc/docker/daemon.json'
-      - sudo systemctl restart docker
       - checkout
       - export KIBANA_IMAGE_CACHE_KEY=kibana-image-${SEMAPHORE_GIT_SHA}
       - export KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY=kibana-image-intermediate-${SEMAPHORE_GIT_SHA}
 
 blocks:
-  - name: 'Build Image'
+  - name: Build Image
     dependencies: []
     task:
       jobs:
         - name: Build
-          execution_time_limit:
-            minutes: 90
           commands:
             - make build
-            # Save the intermediate image to the cache for debugging purposes since it takes so long to rebuild.
-            - export KIBANA_VERSION=$(jq -r '.version' kibana/package.json)
-            - docker save -o ${KIBANA_IMAGE_TAR_PATH} ${KIBANA_IMAGE_NAME}:${KIBANA_VERSION}
-            - cache store ${KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY} ${KIBANA_IMAGE_TAR_PATH}
-            - rm ${KIBANA_IMAGE_TAR_PATH}
             - make image # Test that the image builds correctly
-            - docker save -o ${KIBANA_IMAGE_TAR_PATH} ${KIBANA_IMAGE_NAME}:${KIBANA_VERSION}
-            - cache store ${KIBANA_IMAGE_CACHE_KEY} ${KIBANA_IMAGE_TAR_PATH}
+            - >-
+              export KIBANA_VERSION=$(jq -r '.version' kibana/package.json);
+              if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
+                docker save -o ${KIBANA_IMAGE_TAR_PATH}-amd64.tar docker.elastic.co/kibana/kibana-ubi8:${KIBANA_VERSION}-amd64;
+                docker save -o ${KIBANA_IMAGE_TAR_PATH}-arm64.tar docker.elastic.co/kibana/kibana-ubi8:${KIBANA_VERSION}-arm64;
+                cache store ${KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY}-amd64 ${KIBANA_IMAGE_TAR_PATH}-amd64.tar;
+                cache store ${KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY}-arm64 ${KIBANA_IMAGE_TAR_PATH}-arm64.tar;
+                rm ${KIBANA_IMAGE_TAR_PATH}-*.tar;
+              fi;
 
-  - name: 'Push Images (non-PR builds only)'
-    dependencies: ["Build Image"]
+  - name: Push Images
+    dependencies:
+      - Build Image
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
@@ -66,28 +62,21 @@ blocks:
         - name: google-service-account-for-gcr
       prologue:
         commands:
-          # Correct permissions since they are too open by default:
-          - chmod 0600 ~/.keys/*
-          # Add the key to the ssh agent:
-          - ssh-add ~/.keys/*
           # Login to docker in order to pull images.
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-          # Restore the kibana image created from the build block
-          - cache restore ${KIBANA_IMAGE_CACHE_KEY}
-          - docker load -i ${KIBANA_IMAGE_TAR_PATH}
       jobs:
         - name: Run CD
-          execution_time_limit:
-            minutes: 30
+          matrix:
+            - env_var: ARCH
+              values:
+                - amd64
+                - arm64
+            - env_var: TESLA
+              values:
+                - "false"
+                - "true"
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
+            - cache restore ${KIBANA_IMAGE_CACHE_KEY}-${ARCH}
+            - docker load -i ${KIBANA_IMAGE_TAR_PATH}-${ARCH}.tar
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
-        - name: Run CD (Tesla)
-          execution_time_limit:
-            minutes: 30
-          commands:
-            - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
-          env_vars:
-            - name: TESLA
-              value: 'true'

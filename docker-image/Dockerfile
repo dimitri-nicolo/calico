@@ -1,6 +1,13 @@
 ARG KIBANA_VERSION
+ARG QEMU_IMAGE
 
-FROM docker.elastic.co/kibana/kibana-ubi8:${KIBANA_VERSION} AS kibana
+FROM ${QEMU_IMAGE} as qemu
+
+ARG TARGETARCH
+
+FROM docker.elastic.co/kibana/kibana-ubi8:${KIBANA_VERSION}-${TARGETARCH} AS kibana
+
+COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 # the base image runs as the kibana user (1000) so change user
 # to root (0) to run setup scripts
@@ -8,21 +15,13 @@ USER 0
 
 ARG GTM_INTEGRATION=disable
 
-COPY createKibanaConfig.sh /
-RUN /createKibanaConfig.sh /usr/share/kibana/config/kibana.yml
+COPY create_kibana_config.sh /usr/bin/create_kibana_config.sh
+RUN /usr/bin/create_kibana_config.sh /usr/share/kibana/config/kibana.yml
 
-COPY gtmSetup.sh /
-RUN /gtmSetup.sh
+COPY gtm_setup.sh /usr/bin/gtm_setup.sh
+RUN /usr/bin/gtm_setup.sh
 
-FROM scratch
-
-ENV ELASTIC_CONTAINER=true
-ENV PATH=/usr/share/kibana/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-# kibana node binaries and packages
-COPY --from=kibana /usr/local/bin/kibana-docker /usr/local/bin/kibana-docker
-COPY --from=kibana /usr/share/fonts /usr/share/fonts/
-COPY --from=kibana --chown=1000:0 /usr/share/kibana /usr/share/kibana/
+FROM scratch AS source
 
 # init script binary dependencies
 COPY --from=kibana /bin/bash /bin/bash
@@ -38,15 +37,12 @@ COPY --from=kibana /usr/bin/touch /usr/bin/touch
 COPY --from=kibana /usr/bin/tr /usr/bin/tr
 COPY --from=kibana /usr/bin/xargs /usr/bin/xargs
 
-COPY --from=kibana /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
 COPY --from=kibana /lib64/libacl.so.1 /lib64/libacl.so.1
 COPY --from=kibana /lib64/libattr.so.1 /lib64/libattr.so.1
-COPY --from=kibana /lib64/libc.so.6 /lib64/libc.so.6
 COPY --from=kibana /lib64/libcap.so.2 /lib64/libcap.so.2
 COPY --from=kibana /lib64/libdl.so.2 /lib64/libdl.so.2
 COPY --from=kibana /lib64/libpcre.so.1 /lib64/libpcre.so.1
 COPY --from=kibana /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
-COPY --from=kibana /lib64/libpthread.so.0 /lib64/libpthread.so.0
 COPY --from=kibana /lib64/librt.so.1 /lib64/librt.so.1
 COPY --from=kibana /lib64/libselinux.so.1 /lib64/libselinux.so.1
 COPY --from=kibana /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
@@ -56,18 +52,17 @@ COPY --from=kibana /lib64/libgcc_s.so.1 /lib64/libgcc_s.so.1
 COPY --from=kibana /lib64/libm.so.6 /lib64/libm.so.6
 COPY --from=kibana /lib64/libstdc++.so.6 /lib64/libstdc++.so.6
 
-# libc/nss dependencies and configuration files
-COPY --from=kibana /lib64/libnss_dns.so.2 /lib64/libnss_dns.so.2
-COPY --from=kibana /lib64/libnss_files.so.2 /lib64/libnss_files.so.2
-COPY --from=kibana /lib64/libresolv.so.2 /lib64/libresolv.so.2
+# kibana node binaries and packages
+COPY --from=kibana /usr/local/bin/kibana-docker /usr/local/bin/kibana-docker
+COPY --from=kibana /usr/share/fonts /usr/share/fonts/
+COPY --from=kibana --chown=1000:0 /usr/share/kibana /usr/share/kibana/
 
-COPY --from=kibana /etc/host.conf /etc/host.conf
-COPY --from=kibana /etc/hosts /etc/hosts
-COPY --from=kibana /etc/networks /etc/networks
-COPY --from=kibana /etc/nsswitch.conf /etc/nsswitch.conf
+FROM calico/base
 
-# kibana reads this file
-COPY --from=kibana /etc/os-release /etc/os-release
+ENV ELASTIC_CONTAINER=true
+ENV PATH=/usr/share/kibana/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+COPY --from=source / /
 
 WORKDIR /usr/share/kibana
 

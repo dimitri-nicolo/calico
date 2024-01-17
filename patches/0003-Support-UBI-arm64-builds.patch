@@ -1,0 +1,84 @@
+From 81c6c20254d5223017635ba8d0a16286f8cbec63 Mon Sep 17 00:00:00 2001
+From: Jiawei Huang <jiawei@tigera.io>
+Date: Sat, 13 Jan 2024 22:02:36 -0800
+Subject: [PATCH 2/2] Support UBI arm64 builds
+
+---
+ .../build/tasks/os_packages/create_os_package_tasks.ts    | 4 ++--
+ .../docker_generator/templates/base/Dockerfile            | 7 +++++++
+ .../templates/build_docker_sh.template.ts                 | 8 ++++----
+ 3 files changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/src/dev/build/tasks/os_packages/create_os_package_tasks.ts b/src/dev/build/tasks/os_packages/create_os_package_tasks.ts
+index 4b0654fb6f8..50ef3e417c1 100644
+--- a/src/dev/build/tasks/os_packages/create_os_package_tasks.ts
++++ b/src/dev/build/tasks/os_packages/create_os_package_tasks.ts
+@@ -82,9 +82,9 @@ export const CreateDockerUBI: Task = {
+       image: true,
+     });
+     await runDockerGenerator(config, log, build, {
+-      architecture: 'x64',
++      architecture: 'aarch64',
+       context: false,
+-      ubi9: true,
++      ubi8: true,
+       image: true,
+     });
+   },
+diff --git a/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile b/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
+index 17102eb2643..ce9195d77e8 100644
+--- a/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
++++ b/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
+@@ -9,8 +9,12 @@
+ # Build stage 0 `builder`:
+ # Extract Kibana artifact
+ ################################################################################
++FROM calico/qemu-user-static as qemu
++
+ FROM {{{baseOSImage}}} AS builder
+ 
++COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
++
+ {{#ubi}}
+ RUN {{packageManager}} install -y findutils tar gzip
+ {{/ubi}}
+@@ -55,6 +59,9 @@ RUN mkdir -p /opt/filebeat /opt/metricbeat && \
+ # Add entrypoint
+ ################################################################################
+ FROM {{{baseOSImage}}}
++
++COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
++
+ EXPOSE 5601
+ 
+ {{#ubi}}
+diff --git a/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts b/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts
+index 73159cee1f0..2daef0f7451 100644
+--- a/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts
++++ b/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts
+@@ -19,10 +19,10 @@ function generator({
+   baseOSImage,
+   architecture,
+ }: TemplateContext) {
+-  const dockerArchitecture = architecture === 'aarch64' ? 'linux/arm64' : 'linux/amd64';
+-  const dockerTargetName = `${imageTag}${imageFlavor}:${version}`;
++  const dockerArchitecture = architecture === 'aarch64' ? 'arm64' : 'amd64';
++  const dockerTargetName = `${imageTag}${imageFlavor}:${version}-${dockerArchitecture}`;
+   const dockerBuild = dockerCrossCompile
+-    ? `docker buildx build --platform ${dockerArchitecture} -t ${dockerTargetName} -f Dockerfile . || exit 1;`
++    ? `docker buildx build --platform linux/${dockerArchitecture} -t ${dockerTargetName} -f Dockerfile . || exit 1;`
+     : `docker build -t ${dockerTargetName} -f Dockerfile . || exit 1;`;
+   return dedent(`
+   #!/usr/bin/env bash
+@@ -62,7 +62,7 @@ function generator({
+   echo "Building: kibana${imageFlavor}-docker"; \\
+   ${dockerBuild}
+ 
+-  docker save ${imageTag}${imageFlavor}:${version} | gzip -c > ${dockerTargetFilename}
++  docker save ${imageTag}${imageFlavor}:${version}-${dockerArchitecture} | gzip -c > ${dockerTargetFilename}
+ 
+   exit 0
+   `);
+-- 
+2.43.0
+
