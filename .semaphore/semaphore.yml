@@ -57,6 +57,10 @@ blocks:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
     task:
+      agent:
+        machine:
+          type: e1-standard-2
+          os_image: ubuntu2004
       secrets:
         - name: google-service-account-for-gcr
       prologue:
@@ -66,16 +70,14 @@ blocks:
       jobs:
         - name: Run CD
           matrix:
-            - env_var: ARCH
-              values:
-                - amd64
-                - arm64
             - env_var: TESLA
               values:
                 - "false"
                 - "true"
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
-            - cache restore ${KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY}-${ARCH}
-            - docker load -i ${KIBANA_IMAGE_TAR_PATH}-${ARCH}.tar
+            - cache restore ${KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY}-amd64
+            - docker load -i ${KIBANA_IMAGE_TAR_PATH}-amd64.tar
+            - cache restore ${KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY}-arm64
+            - docker load -i ${KIBANA_IMAGE_TAR_PATH}-arm64.tar
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
