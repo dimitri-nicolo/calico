@@ -39,10 +39,6 @@ import (
 const (
 	healthReporterName   = "FortimanagerSelectorController"
 	healthReportInterval = time.Second * 10
-
-	// Define your maxRetries and retryInterval
-	maxRetries    = 10
-	retryInterval = time.Second * 5
 )
 
 // Selection option
@@ -809,15 +805,15 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 
 		// Create a Firewall Address object in Address cache.
 		cachedEntryGNP.SelectedPods.Iter(func(id v3.ResourceID) error {
-			p, err := getPodWithRetries(sc.k8sClientset, id.Namespace, id.Name, maxRetries, retryInterval)
+			p, err := sc.k8sClientset.CoreV1().Pods(id.Namespace).Get(context.Background(), id.Name, metav1.GetOptions{})
 			if err != nil {
 				log.WithError(err).Errorf("Failed to get pod resource from k8s client for pod:%#v", id.Name)
-				return err
+				return nil
 			} else {
 				fw, err := ConvertK8sPodToFortinetFirewallAddress(p)
 				if err != nil {
 					log.WithError(err).Error("Failed to convert to Fortinet Firewall Address")
-					return err
+					return nil
 				}
 				for _, cache := range sc.devToRcacheAddr {
 					// Update address object in Address Cache.
@@ -964,8 +960,8 @@ func getResourceCacheAddress(fcs map[string]fortilib.FortiFWClientApi) map[strin
 					SubType: addr.SubType,
 					Subnet:  addr.IpAddr,
 				}
-				log.Infof("fwAddr name :%#v", addr.Name)
 			}
+			log.Debugf("List of addresses: %+v", addresses)
 			return addresses, nil
 		}
 
@@ -980,28 +976,4 @@ func getResourceCacheAddress(fcs map[string]fortilib.FortiFWClientApi) map[strin
 	}
 
 	return devToRcacheAddr
-}
-
-// getPodWithRetries gets a pod with retries.
-func getPodWithRetries(client kubernetes.Interface, namespace, name string, maxRetries int, retryInterval time.Duration) (*v1.Pod, error) {
-	var pod *v1.Pod
-	var err error
-	for i := 0; i < maxRetries; i++ {
-		pod, err = client.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
-		if err == nil && isPodReady(pod) && pod.Status.PodIP != "" {
-			return pod, nil
-		}
-		time.Sleep(retryInterval)
-	}
-	return nil, err
-}
-
-// isPodReady checks if a pod is ready.
-func isPodReady(p *v1.Pod) bool {
-	for _, condition := range p.Status.Conditions {
-		if condition.Type == v1.PodReady && condition.Status == v1.ConditionTrue {
-			return true
-		}
-	}
-	return false
 }
