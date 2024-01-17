@@ -100,13 +100,34 @@ rules:
   - apiGroups:
       - operator.tigera.io
     resources:
-      - installations
-      - installations/status
-      - tigerastatuses
-      - tigerastatuses/status
+      - amazoncloudintegrations
       - apiservers
       - apiservers/status
+      - applicationlayers
+      - applicationlayers/status
+      - authentications
+      - compliances
+      - compliances/status
+      - egressgateways
       - imagesets
+      - installations
+      - installations/status
+      - intrusiondetections
+      - intrusiondetections/status
+      - logcollectors
+      - logcollectors/status
+      - logstorages
+      - logstorages/status
+      - managementclusterconnections
+      - managementclusters
+      - managers
+      - managers/status
+      - monitors
+      - monitors/status
+      - policyrecommendations
+      - policyrecommendations/status
+      - tigerastatuses
+      - tigerastatuses/status
     verbs:
       - get
       - list
