@@ -2,7 +2,7 @@ version: v1.0
 name: Fluentd
 
 execution_time_limit:
-  hours: 4
+  hours: 2
 
 agent:
   machine:
@@ -25,32 +25,31 @@ global_job_config:
       - ssh-add ~/.keys/*
       # Login to docker in order to pull images.
       - docker login -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
-      # set experimental for docker on semaphore vm to use `--squash` for building docker images
-      - sudo bash -c 'echo "{\"experimental\":true}" >> /etc/docker/daemon.json'
-      - sudo systemctl restart docker
       - checkout
       # Semaphore is doing shallow clone on a commit without tags.
       # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
       - git fetch --unshallow
 
 blocks:
-  - name: "CI"
+  - name: CI
     dependencies: []
     task:
       jobs:
-        - name: Run UT
-          execution_time_limit:
-            minutes: 60
+        - name: Run CI
+          matrix:
+            - env_var: ARCH
+              values:
+                - amd64
+                - arm64
           commands:
             - make ci
 
-  - name: "FOSSA scan"
+  - name: FOSSA scan
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
-    execution_time_limit:
-      minutes: 30
-    dependencies: ["CI"]
+    dependencies:
+      - CI
     task:
       prologue:
         commands:
@@ -62,8 +61,9 @@ blocks:
       secrets:
         - name: foss-api-key
 
-  - name: "Push Images (non-PR builds only)"
-    dependencies: ["CI"]
+  - name: Push Images
+    dependencies:
+      - CI
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
@@ -73,22 +73,17 @@ blocks:
         - name: foss-api-key
       prologue:
         commands:
-          # Correct permissions since they are too open by default:
-          - chmod 0600 ~/.keys/*
-          # Add the key to the ssh agent:
-          - ssh-add ~/.keys/*
           # Login to docker in order to pull images.
           - docker login -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
         - name: Run CD
-          execution_time_limit:
-            minutes: 60
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - make cd CONFIRM=true
 
-  - name: "Push Windows Images (non-PR builds only)"
-    dependencies: ["CI"]
+  - name: Push Windows Images
+    dependencies:
+      - CI
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
@@ -98,10 +93,6 @@ blocks:
         - name: foss-api-key
       prologue:
         commands:
-          # Correct permissions since they are too open by default:
-          - chmod 0600 ~/.keys/*
-          # Add the key to the ssh agent:
-          - ssh-add ~/.keys/*
           # Login to docker in order to pull images.
           - docker login -u _json_key -p "$(cat ~/secrets/banzai-google-service-account.json)" https://gcr.io
           # Clone the process repo and provision Windows instances.
@@ -120,16 +111,14 @@ blocks:
             - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh -u
       jobs:
         - name: Run CD
-          execution_time_limit:
-            minutes: 60
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - export PROCESS_REPO=~/process/testing/windows-instances
             - CONFIRM=true .semaphore/windows-cd.sh
 
-  - name: "Push Windows Manifests (non-PR builds only)"
+  - name: Push Windows Manifests
     dependencies:
-      - "Push Windows Images (non-PR builds only)"
+      - Push Windows Images
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
@@ -138,16 +127,10 @@ blocks:
         - name: banzai-secrets
       prologue:
         commands:
-          # Correct permissions since they are too open by default:
-          - chmod 0600 ~/.keys/*
-          # Add the key to the ssh agent:
-          - ssh-add ~/.keys/*
           # Login to docker in order to pull images.
           - docker login -u _json_key -p "$(cat ~/secrets/banzai-google-service-account.json)" https://gcr.io
       jobs:
         - name: Run CD
-          execution_time_limit:
-            minutes: 60
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - CONFIRM=true WINDOWS_RELEASE=true make push-windows-manifest

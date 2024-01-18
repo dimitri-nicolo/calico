@@ -1,4 +1,5 @@
 #!/bin/sh
+
 set -e -o pipefail
 
 # set up any environment variables necessary for our liveness check to run properly

@@ -1,3 +1,5 @@
+# Copyright 2019-2024 Tigera Inc. All rights reserved.
+
 GO_BUILD_VER ?= v0.90
 
 # Override shell if we're on Windows
@@ -25,7 +27,6 @@ else
 # For Linux, we leave the image tag alone.
 ifeq ($(OS),Windows_NT)
 FLUENTD_IMAGE ?= tigera/fluentd-windows
-DOCKERFILE    ?= Dockerfile.windows
 
 # Get the Windows build number.
 $(eval WINDOWS_BUILD_VERSION := $(shell (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").CurrentBuild))
@@ -42,8 +43,7 @@ endif
 ARCHES ?=windows-$(WINDOWS_VERSION)
 else
 FLUENTD_IMAGE ?= tigera/fluentd
-DOCKERFILE    ?= Dockerfile
-ARCHES        ?= amd64
+ARCHES        ?= amd64 arm64
 endif
 endif
 
@@ -86,59 +86,53 @@ endif
 
 include Makefile.common
 
-SRC_DIR?=$(PWD)
-# Overwrite configuration, e.g. GCR_REPO:=gcr.io/tigera-dev/experimental/gaurav
+###############################################################################
+# Build
+###############################################################################
+.PHONY: build
+build: eks-log-forwarder-startup
 
 ## build cloudwatch plugin initializer
 eks-log-forwarder-startup:
 	$(MAKE) -C eks/ eks-log-forwarder-startup
 
-build: eks-log-forwarder-startup
+clean:
+	rm -rf eks/bin Makefile.common*
+	rm -f $(FLUENTD_IMAGE_CREATED)
+	-docker image rm -f $$(docker images $(FLUENTD_IMAGE) -a -q)
 
 ###############################################################################
-# Build
+# Image
 ###############################################################################
+FLUENTD_IMAGE_CREATED=.fluentd.created-$(ARCH)
 
-UBI_VERSION        ?= ubi8
-UBI_IMAGE_VERSION  ?= latest
-RUBY_MAJOR_VERSION ?= 2.7
-RUBY_FULL_VERSION  ?= 2.7.6
+QEMU_IMAGE ?= calico/qemu-user-static:latest
 
-# Add --squash argument for CICD pipeline runs only to avoid setting "experimental",
-# for Docker processes on personal machine.
-# DOCKER_SQUASH is defaulted to be empty but can be set `DOCKER_SQUASH=--squash make image` 
-# to squash images locally.
-ifdef CI
-DOCKER_SQUASH=--squash
-endif
+.PHONY: image-all
+image-all: $(addprefix sub-image-,$(VALIDARCHES)) 
+sub-image-%:
+	$(MAKE) image ARCH=$*
 
-$(FLUENTD_IMAGE):
-	$(MAKE) $(addprefix build-image-,$(VALIDARCHES)) IMAGE=$(FLUENTD_IMAGE) DOCKERFILE=$(DOCKERFILE)
+.PHONY: image
+image: $(FLUENTD_IMAGE)
 
-build-image-%:
+$(FLUENTD_IMAGE): $(FLUENTD_IMAGE_CREATED)
+$(FLUENTD_IMAGE_CREATED): register build
 ifeq ($(OS),Windows_NT)
-	docker build --pull $(DOCKER_SQUASH) -t $(IMAGE):latest-$* --file $(DOCKERFILE) .
+	docker build --pull -t $(FLUENTD_IMAGE):latest-amd64 -f Dockerfile.windows .
 else
-	docker buildx build --pull --load -f Dockerfile.fips -t $(IMAGE):latest-$* \
-		--build-arg UBI_VERSION=$(UBI_VERSION) \
-		--build-arg UBI_IMAGE_VERSION=$(UBI_IMAGE_VERSION) \
-		--build-arg RUBY_MAJOR_VERSION=$(RUBY_MAJOR_VERSION) \
-		--build-arg RUBY_FULL_VERSION=$(RUBY_FULL_VERSION) .
-	docker tag $(IMAGE):latest-$* $(IMAGE):latest
+	docker buildx build --load --platform=linux/$(ARCH) --pull \
+		--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
+		-t $(FLUENTD_IMAGE):latest-$(ARCH) -f Dockerfile .
 endif
+ifeq ($(ARCH),amd64)
+	docker tag $(FLUENTD_IMAGE):latest-$(ARCH) $(FLUENTD_IMAGE):latest
+endif
+	touch $@
 
-image: build $(FLUENTD_IMAGE)
-
-clean-image: require-all-IMAGETAG
-	-docker rmi $(FLUENT_IMAGE):latest-$(ARCH) $(FLUENT_IMAGE):latest
-
-## clean slate cloudwatch plugin initializer
-clean-eks-log-forwarder-startup:
-	$(MAKE) -C eks/ clean
-
-clean: clean-eks-log-forwarder-startup
-	rm -rf Makefile.common*
-
+###############################################################################
+# CI/CD
+###############################################################################
 ## test cloudwatch plugin initializer
 test-eks-log-forwarder-startup: eks-log-forwarder-startup
 	$(MAKE) -C eks/ ut
@@ -148,14 +142,16 @@ st:
 
 ## fluentd config tests
 fv: image eks-log-forwarder-startup
-	cd $(SRC_DIR)/test && IMAGETAG=latest ./test.sh && cd $(SRC_DIR)
+ifeq ($(ARCH),amd64)
+	cd test && IMAGETAG=latest ./test.sh
 	$(MAKE) -C eks/ ut
+endif
 
-ci: build test image
+ci: image test
 
 ## push fluentd image to GCR_REPO.
 #  Note: this is called from both Linux and Windows so ARCH_TAG is required.
-cd: image cd-common
+cd: image-all cd-common
 
 # create fluentd windows manifests
 NANOSERVER_VERSIONS ?= 1809 ltsc2022

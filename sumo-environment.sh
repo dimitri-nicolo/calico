@@ -1,5 +1,3 @@
-
-##### SumoLogic #####
 if [[ "${SUMO_AUDIT_LOG}" == "true" || "${SUMO_AUDIT_TSEE_LOG}" == "true" || "${SUMO_AUDIT_KUBE_LOG}" == "true" || "${SUMO_FLOW_LOG}" == "true" || "${SUMO_DNS_LOG}" == "true" ]]; then
   # SumoLogic defaults
   export SUMO_AUDIT_LOG=${SUMO_AUDIT_LOG:-"false"}
