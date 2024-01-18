@@ -1217,15 +1217,16 @@ int calico_tc_skb_accepted_entrypoint(struct __sk_buff *skb)
 		},
 	);
 	struct cali_tc_ctx *ctx = &_ctx;
+	bool policy_skipped = ctx->state->flags & CALI_ST_SKIP_POLICY;
 
 	CALI_DEBUG("Entering calico_tc_skb_accepted_entrypoint\n");
 
-	if (!(ctx->state->flags & CALI_ST_SKIP_POLICY)) {
+	if (!policy_skipped) {
 		counter_inc(ctx, CALI_REASON_ACCEPTED_BY_POLICY);
 	}
 
 	if (CALI_F_HEP) {
-		if (!(ctx->state->flags & CALI_ST_SKIP_POLICY) && (ctx->state->flags & CALI_ST_SUPPRESS_CT_STATE)) {
+		if (!policy_skipped && (ctx->state->flags & CALI_ST_SUPPRESS_CT_STATE)) {
 			// See comment above where CALI_ST_SUPPRESS_CT_STATE is set.
 			CALI_DEBUG("Egress HEP should drop packet with no CT state\n");
 			return TC_ACT_SHOT;
@@ -1238,9 +1239,11 @@ int calico_tc_skb_accepted_entrypoint(struct __sk_buff *skb)
 		goto deny;
 	}
 
-	event_flow_log(ctx);
-	CALI_DEBUG("Flow log event generated for ALLOW\n");
-	update_rule_counters(ctx);
+	if (!policy_skipped) {
+		event_flow_log(ctx);
+		CALI_DEBUG("Flow log event generated for ALLOW\n");
+		update_rule_counters(ctx);
+	}
 
 	ctx->fwd = calico_tc_skb_accepted(ctx);
 	return forward_or_drop(ctx);
