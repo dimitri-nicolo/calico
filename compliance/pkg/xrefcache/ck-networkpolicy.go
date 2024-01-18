@@ -18,8 +18,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (
@@ -53,8 +54,8 @@ type VersionedPolicyResource interface {
 	VersionedResource
 	GetCalicoV1Key() model.PolicyKey
 	GetCalicoV1Policy() *model.Policy
-	GetCalicoV3IngressRules() []apiv3.Rule
-	GetCalicoV3EgressRules() []apiv3.Rule
+	GetCalicoV3IngressRules() []v3.Rule
+	GetCalicoV3EgressRules() []v3.Rule
 	IsNamespaced() bool
 	IsStaged() bool
 }
@@ -72,7 +73,7 @@ type CacheEntryNetworkPolicy struct {
 	AllowRuleSelectors resources.Set
 
 	// The pods matching this policy selector.
-	SelectedPods          resources.Set
+	SelectedPods          set.Set[v3.ResourceID]
 	SelectedHostEndpoints resources.Set
 
 	// The Kubernetes Nodes that a Pod is running on.
@@ -95,7 +96,7 @@ func (c *CacheEntryNetworkPolicy) setVersionedResource(r VersionedResource) {
 
 // versionedCalicoNetworkPolicy implements the VersionedNetworkSetResource for a Calico NetworkPolicy kind.
 type versionedCalicoNetworkPolicy struct {
-	*apiv3.NetworkPolicy
+	*v3.NetworkPolicy
 	v1    *model.Policy
 	v1Key model.PolicyKey
 }
@@ -111,12 +112,12 @@ func (v *versionedCalicoNetworkPolicy) GetCalicoV3() resources.Resource {
 }
 
 // GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoNetworkPolicy) GetCalicoV3IngressRules() []apiv3.Rule {
+func (v *versionedCalicoNetworkPolicy) GetCalicoV3IngressRules() []v3.Rule {
 	return v.NetworkPolicy.Spec.Ingress
 }
 
 // GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoNetworkPolicy) GetCalicoV3EgressRules() []apiv3.Rule {
+func (v *versionedCalicoNetworkPolicy) GetCalicoV3EgressRules() []v3.Rule {
 	return v.NetworkPolicy.Spec.Egress
 }
 
@@ -147,7 +148,7 @@ func (v *versionedCalicoNetworkPolicy) IsStaged() bool {
 
 // versionedCalicoGlobalNetworkPolicy implements the VersionedNetworkSetResource for a Calico GlobalNetworkPolicy kind.
 type versionedCalicoGlobalNetworkPolicy struct {
-	*apiv3.GlobalNetworkPolicy
+	*v3.GlobalNetworkPolicy
 	v1    *model.Policy
 	v1Key model.PolicyKey
 }
@@ -163,12 +164,12 @@ func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV3() resources.Resource {
 }
 
 // GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV3IngressRules() []apiv3.Rule {
+func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV3IngressRules() []v3.Rule {
 	return v.GlobalNetworkPolicy.Spec.Ingress
 }
 
 // GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV3EgressRules() []apiv3.Rule {
+func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV3EgressRules() []v3.Rule {
 	return v.GlobalNetworkPolicy.Spec.Egress
 }
 
@@ -200,7 +201,7 @@ func (v *versionedCalicoGlobalNetworkPolicy) IsStaged() bool {
 // versionedK8sNetworkPolicy implements the VersionedNetworkSetResource for a K8s NetworkPolicy kind.
 type versionedK8sNetworkPolicy struct {
 	*networkingv1.NetworkPolicy
-	v3    *apiv3.NetworkPolicy
+	v3    *v3.NetworkPolicy
 	v1    *model.Policy
 	v1Key model.PolicyKey
 }
@@ -216,12 +217,12 @@ func (v *versionedK8sNetworkPolicy) GetCalicoV3() resources.Resource {
 }
 
 // GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
-func (v *versionedK8sNetworkPolicy) GetCalicoV3IngressRules() []apiv3.Rule {
+func (v *versionedK8sNetworkPolicy) GetCalicoV3IngressRules() []v3.Rule {
 	return v.v3.Spec.Ingress
 }
 
 // GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
-func (v *versionedK8sNetworkPolicy) GetCalicoV3EgressRules() []apiv3.Rule {
+func (v *versionedK8sNetworkPolicy) GetCalicoV3EgressRules() []v3.Rule {
 	return v.v3.Spec.Egress
 }
 
@@ -252,8 +253,8 @@ func (v *versionedK8sNetworkPolicy) IsStaged() bool {
 
 // versionedCalicoStagedNetworkPolicy implements the VersionedNetworkSetResource for a Calico StagedNetworkPolicy kind.
 type versionedCalicoStagedNetworkPolicy struct {
-	*apiv3.StagedNetworkPolicy
-	v3    *apiv3.NetworkPolicy
+	*v3.StagedNetworkPolicy
+	v3    *v3.NetworkPolicy
 	v1    *model.Policy
 	v1Key model.PolicyKey
 }
@@ -269,12 +270,12 @@ func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV3() resources.Resource {
 }
 
 // GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV3IngressRules() []apiv3.Rule {
+func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV3IngressRules() []v3.Rule {
 	return v.v3.Spec.Ingress
 }
 
 // GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV3EgressRules() []apiv3.Rule {
+func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV3EgressRules() []v3.Rule {
 	return v.v3.Spec.Egress
 }
 
@@ -306,8 +307,8 @@ func (v *versionedCalicoStagedNetworkPolicy) IsStaged() bool {
 // versionedCalicoStagedGlobalNetworkPolicy implements the VersionedNetworkSetResource for a Calico
 // StagedGlobalNetworkPolicy kind.
 type versionedCalicoStagedGlobalNetworkPolicy struct {
-	*apiv3.StagedGlobalNetworkPolicy
-	v3    *apiv3.GlobalNetworkPolicy
+	*v3.StagedGlobalNetworkPolicy
+	v3    *v3.GlobalNetworkPolicy
 	v1    *model.Policy
 	v1Key model.PolicyKey
 }
@@ -323,12 +324,12 @@ func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV3() resources.Resou
 }
 
 // GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV3IngressRules() []apiv3.Rule {
+func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV3IngressRules() []v3.Rule {
 	return v.v3.Spec.Ingress
 }
 
 // GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV3EgressRules() []apiv3.Rule {
+func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV3EgressRules() []v3.Rule {
 	return v.v3.Spec.Egress
 }
 
@@ -360,10 +361,10 @@ func (v *versionedCalicoStagedGlobalNetworkPolicy) IsStaged() bool {
 // versionedCalicoStagedKubernetesNetworkPolicy implements the VersionedNetworkSetResource for a
 // StagedKubernetesNetworkPolicy kind.
 type versionedCalicoStagedKubernetesNetworkPolicy struct {
-	*apiv3.StagedKubernetesNetworkPolicy
+	*v3.StagedKubernetesNetworkPolicy
 	enforced *networkingv1.NetworkPolicy
-	v3       *apiv3.NetworkPolicy
-	v1       *model.Policy
+	npV3     *v3.NetworkPolicy
+	npV1     *model.Policy
 	v1Key    model.PolicyKey
 }
 
@@ -374,22 +375,22 @@ func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetPrimary() resources.Re
 
 // GetCalicoV3 implements the VersionedPolicyResource interface.
 func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV3() resources.Resource {
-	return v.v3
+	return v.npV3
 }
 
 // GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV3IngressRules() []apiv3.Rule {
-	return v.v3.Spec.Ingress
+func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV3IngressRules() []v3.Rule {
+	return v.npV3.Spec.Ingress
 }
 
 // GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV3EgressRules() []apiv3.Rule {
-	return v.v3.Spec.Egress
+func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV3EgressRules() []v3.Rule {
+	return v.npV3.Spec.Egress
 }
 
 // getCalicoV1 implements the VersionedPolicyResource interface.
 func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV1() interface{} {
-	return v.v1
+	return v.npV1
 }
 
 // GetCalicoV1Key implements the VersionedPolicyResource interface.
@@ -399,7 +400,7 @@ func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV1Key() model.Po
 
 // GetCalicoV1Policy implements the VersionedPolicyResource interface.
 func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV1Policy() *model.Policy {
-	return v.v1
+	return v.npV1
 }
 
 // IsNamespaced implements the VersionedPolicyResource interface.
@@ -456,14 +457,14 @@ func (c *networkPolicyHandler) kinds() []metav1.TypeMeta {
 func (c *networkPolicyHandler) newCacheEntry() CacheEntry {
 	return &CacheEntryNetworkPolicy{
 		AllowRuleSelectors:    resources.NewSet(),
-		SelectedPods:          resources.NewSet(),
+		SelectedPods:          set.New[v3.ResourceID](),
 		SelectedHostEndpoints: resources.NewSet(),
 		ScheduledNodes:        make(map[string]resources.Set),
 	}
 }
 
 // resourceAdded implements the resourceHandler interface.
-func (c *networkPolicyHandler) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
+func (c *networkPolicyHandler) resourceAdded(id v3.ResourceID, entry CacheEntry) {
 	// Set the context log.
 	entry.(*CacheEntryNetworkPolicy).clog = log.WithField("policy", id)
 
@@ -472,7 +473,7 @@ func (c *networkPolicyHandler) resourceAdded(id apiv3.ResourceID, entry CacheEnt
 }
 
 // resourceUpdated implements the resourceHandler interface.
-func (c *networkPolicyHandler) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
+func (c *networkPolicyHandler) resourceUpdated(id v3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	// Get the augmented resource data.
 	x := entry.(*CacheEntryNetworkPolicy)
 
@@ -488,7 +489,7 @@ func (c *networkPolicyHandler) resourceUpdated(id apiv3.ResourceID, entry CacheE
 }
 
 // resourceDeleted implements the resourceHandler interface.
-func (c *networkPolicyHandler) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
+func (c *networkPolicyHandler) resourceDeleted(id v3.ResourceID, entry CacheEntry) {
 	// Get the augmented resource data.
 	x := entry.(*CacheEntryNetworkPolicy)
 
@@ -503,7 +504,7 @@ func (c *networkPolicyHandler) resourceDeleted(id apiv3.ResourceID, entry CacheE
 }
 
 // recalculate implements the resourceHandler interface.
-func (c *networkPolicyHandler) recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType {
+func (c *networkPolicyHandler) recalculate(id v3.ResourceID, entry CacheEntry) syncer.UpdateType {
 	// Async recalculation is required due to any rule/selector updates.
 	x := entry.(*CacheEntryNetworkPolicy)
 
@@ -521,32 +522,32 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 	// Accept AAPIS versions of the Calico resources, but convert them to the libcalico-go versions.
 	// TODO(rlb): We could get rid of this if we has a single source of truth for the resources.
 	switch tr := res.(type) {
-	case *apiv3.NetworkPolicy:
-		res = &apiv3.NetworkPolicy{
+	case *v3.NetworkPolicy:
+		res = &v3.NetworkPolicy{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,
 			Spec:       tr.Spec,
 		}
-	case *apiv3.GlobalNetworkPolicy:
-		res = &apiv3.GlobalNetworkPolicy{
+	case *v3.GlobalNetworkPolicy:
+		res = &v3.GlobalNetworkPolicy{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,
 			Spec:       tr.Spec,
 		}
-	case *apiv3.StagedNetworkPolicy:
-		res = &apiv3.StagedNetworkPolicy{
+	case *v3.StagedNetworkPolicy:
+		res = &v3.StagedNetworkPolicy{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,
 			Spec:       tr.Spec,
 		}
-	case *apiv3.StagedGlobalNetworkPolicy:
-		res = &apiv3.StagedGlobalNetworkPolicy{
+	case *v3.StagedGlobalNetworkPolicy:
+		res = &v3.StagedGlobalNetworkPolicy{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,
 			Spec:       tr.Spec,
 		}
-	case *apiv3.StagedKubernetesNetworkPolicy:
-		res = &apiv3.StagedKubernetesNetworkPolicy{
+	case *v3.StagedKubernetesNetworkPolicy:
+		res = &v3.StagedKubernetesNetworkPolicy{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,
 			Spec:       tr.Spec,
@@ -554,7 +555,7 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 	}
 
 	switch in := res.(type) {
-	case *apiv3.NetworkPolicy:
+	case *v3.NetworkPolicy:
 		log.Debug("NetworkPolicy update")
 		v1, err := updateprocessors.ConvertNetworkPolicyV3ToV1Value(in)
 		if err != nil {
@@ -563,7 +564,7 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 		v1Key, err := updateprocessors.ConvertNetworkPolicyV3ToV1Key(model.ResourceKey{
 			Name:      in.GetName(),
 			Namespace: in.GetNamespace(),
-			Kind:      apiv3.KindNetworkPolicy,
+			Kind:      v3.KindNetworkPolicy,
 		})
 		if err != nil {
 			return nil, err
@@ -573,7 +574,7 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 			v1:            v1.(*model.Policy),
 			v1Key:         v1Key.(model.PolicyKey),
 		}, nil
-	case *apiv3.GlobalNetworkPolicy:
+	case *v3.GlobalNetworkPolicy:
 		log.Debug("GlobalNetworkPolicy update")
 		v1, err := updateprocessors.ConvertGlobalNetworkPolicyV3ToV1Value(in)
 		if err != nil {
@@ -581,7 +582,7 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 		}
 		v1Key, err := updateprocessors.ConvertGlobalNetworkPolicyV3ToV1Key(model.ResourceKey{
 			Name: in.GetName(),
-			Kind: apiv3.KindNetworkPolicy,
+			Kind: v3.KindNetworkPolicy,
 		})
 		if err != nil {
 			return nil, err
@@ -597,7 +598,7 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 		if err != nil {
 			return nil, err
 		}
-		v3 := kvp.Value.(*apiv3.NetworkPolicy)
+		v3 := kvp.Value.(*v3.NetworkPolicy)
 		v1, err := updateprocessors.ConvertNetworkPolicyV3ToV1Value(v3)
 		if err != nil {
 			return nil, err
@@ -612,10 +613,10 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 			v1:            v1.(*model.Policy),
 			v1Key:         v1Key.(model.PolicyKey),
 		}, nil
-	case *apiv3.StagedNetworkPolicy:
+	case *v3.StagedNetworkPolicy:
 		log.Debug("StagedNetworkPolicy update")
-		action, np := apiv3.ConvertStagedPolicyToEnforced(in)
-		if action == apiv3.StagedActionDelete {
+		action, np := v3.ConvertStagedPolicyToEnforced(in)
+		if action == v3.StagedActionDelete {
 			// The staged action is a delete, so simply remove from the cache since there is nothing to cross reference.
 			log.Debug("Staged delete - remove from cache")
 			return nil, nil
@@ -629,7 +630,7 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 		v1Key, err := updateprocessors.ConvertStagedNetworkPolicyV3ToV1Key(model.ResourceKey{
 			Name:      in.GetName(),
 			Namespace: in.GetNamespace(),
-			Kind:      apiv3.KindStagedNetworkPolicy,
+			Kind:      v3.KindStagedNetworkPolicy,
 		})
 		if err != nil {
 			return nil, err
@@ -641,10 +642,10 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 			v1:                  v1.(*model.Policy),
 			v1Key:               v1Key.(model.PolicyKey),
 		}, nil
-	case *apiv3.StagedGlobalNetworkPolicy:
+	case *v3.StagedGlobalNetworkPolicy:
 		log.Debug("StagedGlobalNetworkPolicy update")
-		action, gnp := apiv3.ConvertStagedGlobalPolicyToEnforced(in)
-		if action == apiv3.StagedActionDelete {
+		action, gnp := v3.ConvertStagedGlobalPolicyToEnforced(in)
+		if action == v3.StagedActionDelete {
 			// The staged action is a delete, so simply remove from the cache since there is nothing to cross reference.
 			log.Debug("Staged delete - remove from cache")
 			return nil, nil
@@ -657,7 +658,7 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 		}
 		v1Key, err := updateprocessors.ConvertStagedGlobalNetworkPolicyV3ToV1Key(model.ResourceKey{
 			Name: in.GetName(),
-			Kind: apiv3.KindStagedGlobalNetworkPolicy,
+			Kind: v3.KindStagedGlobalNetworkPolicy,
 		})
 		if err != nil {
 			return nil, err
@@ -669,10 +670,10 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 			v1:                        v1.(*model.Policy),
 			v1Key:                     v1Key.(model.PolicyKey),
 		}, nil
-	case *apiv3.StagedKubernetesNetworkPolicy:
+	case *v3.StagedKubernetesNetworkPolicy:
 		log.Debug("StagedKubernetesNetworkPolicy update")
-		action, knp := apiv3.ConvertStagedKubernetesPolicyToK8SEnforced(in)
-		if action == apiv3.StagedActionDelete {
+		action, knp := v3.ConvertStagedKubernetesPolicyToK8SEnforced(in)
+		if action == v3.StagedActionDelete {
 			// The staged action is a delete, so simply remove from the cache since there is nothing to cross reference.
 			log.Debug("Staged delete - remove from cache")
 			return nil, nil
@@ -683,15 +684,15 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 		}
 
 		// Convert to the v1 policy value and key.
-		v3 := kvp.Value.(*apiv3.NetworkPolicy)
-		v1, err := updateprocessors.ConvertNetworkPolicyV3ToV1Value(v3)
+		npV3 := kvp.Value.(*v3.NetworkPolicy)
+		v1, err := updateprocessors.ConvertNetworkPolicyV3ToV1Value(npV3)
 		if err != nil {
 			return nil, err
 		}
 		v1Key, err := updateprocessors.ConvertStagedKubernetesNetworkPolicyV3ToV1Key(model.ResourceKey{
 			Name:      in.GetName(),
 			Namespace: in.GetNamespace(),
-			Kind:      apiv3.KindStagedKubernetesNetworkPolicy,
+			Kind:      v3.KindStagedKubernetesNetworkPolicy,
 		})
 		if err != nil {
 			return nil, err
@@ -700,8 +701,8 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 		return &versionedCalicoStagedKubernetesNetworkPolicy{
 			StagedKubernetesNetworkPolicy: in,
 			enforced:                      knp,
-			v3:                            v3,
-			v1:                            v1.(*model.Policy),
+			npV3:                          npV3,
+			npV1:                          v1.(*model.Policy),
 			v1Key:                         v1Key.(model.PolicyKey),
 		}, nil
 	}
@@ -712,7 +713,7 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 // updateRuleSelectors reads the set of policy rule selectors and tracks any allow rules selectors (since these are the
 // only ones that could cause exposure to IPs via network sets). To reduce churn, we group identical selector values
 // across all rules and all Policies (so there is a little book keeping required here).
-func (c *networkPolicyHandler) updateRuleSelectors(id apiv3.ResourceID, x *CacheEntryNetworkPolicy) {
+func (c *networkPolicyHandler) updateRuleSelectors(id v3.ResourceID, x *CacheEntryNetworkPolicy) {
 	// We care about newSelectors on Allow rules, so lets get the set of newSelectors that we care about for this policy.
 	newSelectors := resources.NewSet()
 
@@ -722,7 +723,7 @@ func (c *networkPolicyHandler) updateRuleSelectors(id apiv3.ResourceID, x *Cache
 	ingressV1 := x.GetCalicoV1Policy().InboundRules
 
 	for i, irV3 := range ingressV3 {
-		if irV3.Action == apiv3.Allow && ingressV1[i].SrcSelector != "" {
+		if irV3.Action == v3.Allow && ingressV1[i].SrcSelector != "" {
 			newSelectors.Add(selectorToSelectorID(ingressV1[i].SrcSelector))
 		}
 	}
@@ -731,7 +732,7 @@ func (c *networkPolicyHandler) updateRuleSelectors(id apiv3.ResourceID, x *Cache
 	egressV1 := x.GetCalicoV1Policy().OutboundRules
 
 	for i, erV3 := range egressV3 {
-		if erV3.Action == apiv3.Allow && egressV1[i].DstSelector != "" {
+		if erV3.Action == v3.Allow && egressV1[i].DstSelector != "" {
 			newSelectors.Add(selectorToSelectorID(egressV1[i].DstSelector))
 		}
 	}
@@ -754,7 +755,7 @@ func (c *networkPolicyHandler) scanIngressRules(x *CacheEntryNetworkPolicy) sync
 
 	for i, irV3 := range ingressV3 {
 		// Only allow rules can impact our exposure.
-		if irV3.Action != apiv3.Allow {
+		if irV3.Action != v3.Allow {
 			x.clog.Debugf("Skipping non-allow rule")
 			continue
 		}
@@ -828,7 +829,7 @@ func (c *networkPolicyHandler) scanEgressRules(x *CacheEntryNetworkPolicy) synce
 
 	for i, erV3 := range egressV3 {
 		// Only allow rules can impact our exposure.
-		if erV3.Action != apiv3.Allow {
+		if erV3.Action != v3.Allow {
 			x.clog.Debugf("Skipping non-allow rule")
 			continue
 		}
@@ -890,7 +891,7 @@ func (c *networkPolicyHandler) scanEgressRules(x *CacheEntryNetworkPolicy) synce
 
 // scanProtected scans whether the policy has ingress or egress protection and updates its augmented data. This is
 // independent of other resources and may therefore be calculated as part of the resourceAdded or resourceUpdated call.
-func (c *networkPolicyHandler) scanProtected(id apiv3.ResourceID, x *CacheEntryNetworkPolicy) syncer.UpdateType {
+func (c *networkPolicyHandler) scanProtected(id v3.ResourceID, x *CacheEntryNetworkPolicy) syncer.UpdateType {
 	oldFlags := x.Flags
 
 	// The policy type can be ingress and/or egress. In terms of statistics, this equates to ingress and/or egress
@@ -915,13 +916,13 @@ func (c *networkPolicyHandler) queuePoliciesForRecalculation(update syncer.Updat
 	// We have only registered for notifications from NetworkSets and for changes to configuration that we care about.
 	x := update.Resource.(*CacheEntryNetworkPolicyRuleSelector)
 
-	x.Policies.Iter(func(id apiv3.ResourceID) error {
+	x.Policies.Iter(func(id v3.ResourceID) error {
 		c.QueueUpdate(id, nil, update.Type)
 		return nil
 	})
 }
 
-func (c *networkPolicyHandler) ruleSelectorMatchStarted(policyId, selectorId apiv3.ResourceID) {
+func (c *networkPolicyHandler) ruleSelectorMatchStarted(policyId, selectorId v3.ResourceID) {
 	x, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
 	if !ok {
 		log.Errorf("Match started on policy, but policy is not in cache: %s matches %s", policyId, selectorId)
@@ -932,7 +933,7 @@ func (c *networkPolicyHandler) ruleSelectorMatchStarted(policyId, selectorId api
 	c.QueueUpdate(policyId, nil, EventPolicyRuleSelectorMatchStarted)
 }
 
-func (c *networkPolicyHandler) ruleSelectorMatchStopped(policyId, selectorId apiv3.ResourceID) {
+func (c *networkPolicyHandler) ruleSelectorMatchStopped(policyId, selectorId v3.ResourceID) {
 	x, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
 	if !ok {
 		log.Errorf("Match stopped on policy, but policy is not in cache: %s matches %s", policyId, selectorId)
@@ -943,7 +944,7 @@ func (c *networkPolicyHandler) ruleSelectorMatchStopped(policyId, selectorId api
 	c.QueueUpdate(policyId, nil, EventPolicyRuleSelectorMatchStopped)
 }
 
-func (c *networkPolicyHandler) endpointMatchStarted(policyId, endpointId apiv3.ResourceID) {
+func (c *networkPolicyHandler) endpointMatchStarted(policyId, endpointId v3.ResourceID) {
 	x, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
 	if !ok {
 		log.Errorf("Match started on policy, but policy is not in cache: %s matches %s", policyId, endpointId)
@@ -983,7 +984,7 @@ func (c *networkPolicyHandler) endpointMatchStarted(policyId, endpointId apiv3.R
 	c.QueueUpdate(policyId, x, EventEndpointMatchStarted)
 }
 
-func (c *networkPolicyHandler) endpointMatchStopped(policyId, endpointId apiv3.ResourceID) {
+func (c *networkPolicyHandler) endpointMatchStopped(policyId, endpointId v3.ResourceID) {
 	x, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
 	if !ok {
 		log.Errorf("Match stopped on policy, but policy is not in cache: %s matches %s", policyId, endpointId)

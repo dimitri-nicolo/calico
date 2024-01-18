@@ -73,7 +73,7 @@ type SelectorsController struct {
 	xrefCache          xrefcache.XrefCache
 	healthAggregator   *health.HealthAggregator
 	gnpToNodes         map[string]set.Set[string]
-	gnpToPods          map[string]resources.Set
+	gnpToPods          map[string]set.Set[v3.ResourceID]
 	syncerUpdateChan   chan []syncer.Update
 	calicoClientset    clientv3.ProjectcalicoV3Interface
 	calicoGnpInformer  cache.Controller
@@ -175,7 +175,7 @@ func NewSelectorsController(
 	}, cache.Indexers{})
 
 	gnpToNodes := make(map[string]set.Set[string])
-	gnpToPods := make(map[string]resources.Set)
+	gnpToPods := make(map[string]set.Set[v3.ResourceID])
 	// Create cache clients for all Forti devices
 	devToRcacheAddr := getResourceCacheAddress(fcs)
 	devToRcacheAddrGrp := getResourceCacheAddressGrps(fcs)
@@ -231,7 +231,7 @@ func getPolicySelectorLabel(policySelector string) string {
 }
 
 // Create ListWatcher & Informer for Global Network Policies
-func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[string], gnpToPods map[string]resources.Set,
+func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[string], gnpToPods map[string]set.Set[v3.ResourceID],
 	calicoClient clientv3.ProjectcalicoV3Interface,
 	devToRcacheAddrGrp map[string]rcache.ResourceCache,
 	syncerUpdateChan chan<- []syncer.Update) cache.Controller {
@@ -272,7 +272,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 			}
 
 			gnpToNodes[gnp.Name] = set.New[string]()
-			gnpToPods[gnp.Name] = resources.NewSet()
+			gnpToPods[gnp.Name] = set.New[v3.ResourceID]()
 
 			gnp.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
 			// Create an update
@@ -316,7 +316,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 			gnpNew.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
 
 			gnpToNodes[gnpNew.Name] = set.New[string]()
-			gnpToPods[gnpNew.Name] = resources.NewSet()
+			gnpToPods[gnpNew.Name] = set.New[v3.ResourceID]()
 
 			// Create an update
 			updates := []syncer.Update{
@@ -625,7 +625,7 @@ func (sc *SelectorsController) syncToFortiGateAddr(key, dev string) error {
 			Comment: TigeraComment,
 		}
 		// Lookup to see if this object already exists in the FortiGate.
-		existingAddr, err := fc.GetFirewallAddress(addr.Name)
+		_, err := fc.GetFirewallAddress(addr.Name)
 		if err != nil {
 			// TODO(doublek): Handle doesn't exist error here.
 			if _, ok := err.(fortilib.ErrorResourceDoesNotExist); !ok {
@@ -644,7 +644,6 @@ func (sc *SelectorsController) syncToFortiGateAddr(key, dev string) error {
 
 		// Existing object. Time to update it.
 		clog.Debug("Updating FirewallAddress in FortiGate")
-		fortiFWAddr.Mask = existingAddr.Mask
 		err = fc.UpdateFirewallAddress(fortiFWAddr)
 		if err != nil {
 			clog.WithError(err).Warning("Failed to update FirewallAddress in FortiGate")
@@ -797,7 +796,6 @@ func (sc *SelectorsController) handleNodeUpdate(update syncer.Update) {
 // Handles the PodAssigned/NodeRemoved events from the xrefcache
 // Based on the Update, AddressCache and AddressGroup cache are modified
 func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
-
 	cachedEntry := sc.xrefCache.Get(update.ResourceID)
 	cachedEntryGNP := cachedEntry.(*xrefcache.CacheEntryNetworkPolicy)
 	if update.Type&xrefcache.EventEndpointMatchStarted != 0 {
@@ -807,7 +805,7 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 		cachedEntryGNP.SelectedPods.Iter(func(id v3.ResourceID) error {
 			p, err := sc.k8sClientset.CoreV1().Pods(id.Namespace).Get(context.Background(), id.Name, metav1.GetOptions{})
 			if err != nil {
-				log.WithError(err).Errorf("Failed to get pod resource from k8s client for pod:%#v", id.Name)
+				log.WithError(err).Errorf("failed to get pod resource from k8s client for pod:%#v", id.Name)
 				return nil
 			} else {
 				fw, err := ConvertK8sPodToFortinetFirewallAddress(p)
@@ -870,14 +868,13 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 		pods = sc.gnpToPods[update.ResourceID.Name]
 		members := []string{}
 		pods.Iter(func(item v3.ResourceID) error {
-
 			podName := fmt.Sprintf("%s-%s", item.Namespace, item.Name)
 			ok := cachedEntryGNP.SelectedPods.Contains(item)
 			if !ok {
 				// The pod that we were tracking is no longer referenced in the GNP,
 				// Remove this node as the address group member.
 				log.Infof("Removing pod %v from address group %v", podName, update.ResourceID.Name)
-				return resources.RemoveItem
+				return set.RemoveItem
 			}
 			members = append(members, podName)
 			return nil
