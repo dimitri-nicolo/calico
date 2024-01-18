@@ -26,12 +26,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
-
-	licutils "github.com/projectcalico/calico/licensing/utils"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
@@ -44,6 +38,7 @@ import (
 	"github.com/projectcalico/calico/apiserver/cmd/apiserver/server"
 	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
+	licutils "github.com/projectcalico/calico/licensing/utils"
 )
 
 const defaultEtcdPathPrefix = ""
