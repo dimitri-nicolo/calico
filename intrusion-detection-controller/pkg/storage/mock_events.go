@@ -44,7 +44,7 @@ func copyWithSkip(index int, values []v1.Event) []v1.Event {
 	return copyOfEvents
 }
 
-func (m *MockEvents) GetSecurityEvents(ctx context.Context, p client.ListPager[v1.Event], allClusters bool) <-chan *lmaAPI.EventResult {
+func (m *MockEvents) GetSecurityEvents(ctx context.Context, p client.ListPager[v1.Event]) <-chan *lmaAPI.EventResult {
 	return nil
 }
 

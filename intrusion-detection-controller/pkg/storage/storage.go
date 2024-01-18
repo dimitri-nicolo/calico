@@ -430,19 +430,14 @@ func (e *Service) PutSecurityEventWithID(ctx context.Context, f []lsv1.Event) er
 
 // GetSecurityEvents retrieves a listing of security events sorted in ascending order,
 // where each events time falls within the range given by start and end time.
-func (e *Service) GetSecurityEvents(ctx context.Context, pager client.ListPager[lsv1.Event], allClusters bool) <-chan *lmaAPI.EventResult {
+func (e *Service) GetSecurityEvents(ctx context.Context, pager client.ListPager[lsv1.Event]) <-chan *lmaAPI.EventResult {
 	results := make(chan *lmaAPI.EventResult)
 
 	// Fire off a query to Linseed to get security events. We'll funnel the resuls into the channel.
 	go func() {
 		defer close(results)
 
-		clusterName := e.clusterName
-		if allClusters {
-			clusterName = ""
-		}
-
-		pages, errors := pager.Stream(ctx, e.lsClient.Events(clusterName).List)
+		pages, errors := pager.Stream(ctx, e.lsClient.Events(e.clusterName).List)
 
 		for page := range pages {
 			for _, item := range page.Items {

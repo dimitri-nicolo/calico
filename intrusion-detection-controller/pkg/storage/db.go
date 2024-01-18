@@ -41,7 +41,7 @@ type SuspiciousSet interface {
 
 type Events interface {
 	PutSecurityEventWithID(context.Context, []v1.Event) error
-	GetSecurityEvents(ctx context.Context, pager client.ListPager[v1.Event], allClusters bool) <-chan *lmaAPI.EventResult
+	GetSecurityEvents(ctx context.Context, pager client.ListPager[v1.Event]) <-chan *lmaAPI.EventResult
 	PutForwarderConfig(ctx context.Context, f *ForwarderConfig) error
 	GetForwarderConfig(ctx context.Context) (*ForwarderConfig, error)
 }

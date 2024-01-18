@@ -388,7 +388,7 @@ func (f *eventForwarder) retrieveAndForward(pager client.ListPager[lsv1.Event], 
 		defer close(resultsCh)
 		err = retry.Do(
 			func() error {
-				for e := range f.events.GetSecurityEvents(f.ctx, pager, true) {
+				for e := range f.events.GetSecurityEvents(f.ctx, pager) {
 					if e.Err != nil {
 						return e.Err
 					}
