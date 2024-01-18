@@ -32,10 +32,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-const (
-	baseURI = "http://127.0.0.1:9200"
-)
-
 var oneMinuteAgo time.Time
 
 func Test_GetIPSet(t *testing.T) {
