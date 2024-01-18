@@ -1817,7 +1817,7 @@ func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8,
 		Rules: bpfUntrackedFlowRules,
 	}
 
-	xdpUntrakedPoliciesChain := &Chain{
+	xdpUntrackedPoliciesChain := &Chain{
 		Name: ChainRawBPFUntrackedPolicy,
 		Rules: []Rule{
 			// At this point we know bypass mark is set, which means that the packet has
@@ -1842,7 +1842,7 @@ func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8,
 
 	chains := []*Chain{
 		rawPreroutingChain,
-		xdpUntrakedPoliciesChain,
+		xdpUntrackedPoliciesChain,
 		bpfUntrackedFlowChain,
 		r.failsafeOutChain("raw", ipVersion),
 		r.WireguardIncomingMarkChain(),

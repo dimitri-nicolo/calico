@@ -245,7 +245,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 
 				// Validate the affinities.
 				for _, a := range affs.KVPairs {
-					log.Infof("Validaing affinity: %+v", a)
+					log.Infof("Validating affinity: %+v", a)
 					b, err := bc.Get(ctx, model.BlockKey{CIDR: a.Key.(model.BlockAffinityKey).CIDR}, "")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(b).NotTo(BeNil())
@@ -336,7 +336,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 
 				// For each affinity, expect the corresponding block to have the same affinity.
 				for _, a := range affs.KVPairs {
-					log.Infof("Validaing affinity: %+v", a)
+					log.Infof("Validating affinity: %+v", a)
 					b, err := bc.Get(ctx, model.BlockKey{CIDR: a.Key.(model.BlockAffinityKey).CIDR}, "")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(*b.Value.(*model.AllocationBlock).Affinity).To(Equal(fmt.Sprintf("host:%s", a.Key.(model.BlockAffinityKey).Host)))
@@ -402,7 +402,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 
 				// Validate the affinities.
 				for _, a := range affs.KVPairs {
-					log.Infof("Validaing affinity: %+v", a)
+					log.Infof("Validating affinity: %+v", a)
 					b, err := bc.Get(ctx, model.BlockKey{CIDR: a.Key.(model.BlockAffinityKey).CIDR}, "")
 					Expect(err).NotTo(HaveOccurred())
 
@@ -614,7 +614,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 			affStrB := fmt.Sprintf("host:%s", hostB)
 
 			// Configure a fake client such that we successfully create the
-			// block affininty, but fail to create the actual block.
+			// block affinity, but fail to create the actual block.
 			fc := newFakeClient()
 
 			// Creation function for a block affinity - actually create it.

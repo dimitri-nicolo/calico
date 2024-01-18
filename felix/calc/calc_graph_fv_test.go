@@ -109,7 +109,7 @@ var baseTests = []StateList{
 	// foo="".
 	{withProfileTagInherit, localEpsWithTagInheritProfile},
 	// But if there's an explicit label, it overrides the tag.
-	{localEpsWithTagOverriddenProfile, withProfileTagOverriden},
+	{localEpsWithTagOverriddenProfile, withProfileTagOverridden},
 
 	// Named ports. Simple cases.
 	{localEp1WithNamedPortPolicy},

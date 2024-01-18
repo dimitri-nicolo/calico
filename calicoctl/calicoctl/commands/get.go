@@ -98,7 +98,7 @@ Description:
     * licenseKey
     * packetCapture
 
-  The resource type is case insensitive and may be pluralized.
+  The resource type is case-insensitive and may be pluralized.
 
   Attempting to get resources that do not exist will simply return no results.
 

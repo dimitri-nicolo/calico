@@ -43,7 +43,7 @@ type CalicoAPIConfig struct {
 type CalicoAPIConfigSpec struct {
 	DatastoreType      DatastoreType `json:"datastoreType" envconfig:"DATASTORE_TYPE"`
 	MultiTenantEnabled bool          `json:"multiTenantEnabled" envconfig:"MULTI_TENANT_ENABLED" default:"false"`
-	// Inline the ectd config fields
+	// Inline the etcd config fields
 	EtcdConfig
 	// Inline the k8s config fields.
 	KubeConfig

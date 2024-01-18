@@ -161,7 +161,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 		}
 	})
 
-	It("should ignore delete of non-existent chain", func() {
+	It("should ignore delete of nonexistent chain", func() {
 		table.RemoveChains([]*Chain{
 			{Name: "cali-foobar", Rules: []Rule{{Action: AcceptAction{}}}},
 		})
