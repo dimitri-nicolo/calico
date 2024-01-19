@@ -58,17 +58,20 @@ func Middlewares(cfg config.Config, authn auth.Authenticator, authz *middleware.
 	metrics := middleware.Metrics{}
 	tokenAuth := middleware.NewTokenAuth(authn, authz)
 	return []func(http.Handler) http.Handler{
-		// LogRequestHeaders needs to be placed before any middlewares that mutate the request
+		// Track an in-flight request. Do this first so that we count requests even if they encounter issues
+		// in a subsequent middleware.
+		metrics.TrackInflightRequest(),
+		// LogRequestHeaders needs to be placed before any middlewares that mutate the request.
 		httputils.LogRequestHeaders,
-		// Recoverer recovers from panics, logs the panic and returns 500
+		// Recoverer recovers from panics, logs the panic and returns 500.
 		chimiddleware.Recoverer,
-		// AllowContentType allows only specific content types for the requests
+		// AllowContentType allows only specific content types for the requests.
 		chimiddleware.AllowContentType("application/json", "application/x-ndjson"),
-		// ClusterInfo will extract cluster and tenant information from the request to identify the caller
+		// ClusterInfo will extract cluster and tenant information from the request to identify the caller.
 		clusterInfo.Extract(),
 		// Authenticate tokens.
 		tokenAuth.Do(),
-		// Metrics will track all relevant information for requests
+		// Metrics will track all relevant information for requests.
 		metrics.Track(),
 	}
 }
