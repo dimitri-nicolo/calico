@@ -49,9 +49,6 @@ func PrepareServer(opts *CalicoServerOptions) (*apiserver.ProjectCalicoServer, e
 
 // RunServer runs the Calico API server.  This blocks until stopped channel (passed in through options) is closed.
 func RunServer(opts *CalicoServerOptions, server *apiserver.ProjectCalicoServer) error {
-	readinessPath := "/tmp/ready"
-	_ = os.Remove(readinessPath)
-
 	// Create a context rather than using the stop channel - it's a little more versatile.
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -96,22 +93,6 @@ func RunServer(opts *CalicoServerOptions, server *apiserver.ProjectCalicoServer)
 		server.SharedInformerFactory.Start(ctx.Done())
 		server.CalicoResourceLister.WaitForCacheSync(ctx.Done())
 		server.SharedInformerFactory.WaitForCacheSync(ctx.Done())
-
-		// Add a post-start hook to write the readiness file, which is used for
-		// readiness probes.
-		if err := server.GenericAPIServer.AddPostStartHook("apiserver-autoregistration",
-			func(context genericapiserver.PostStartHookContext) error {
-				f, err := os.Create(readinessPath)
-				if err != nil {
-					klog.Errorln(err)
-					return err
-				}
-				klog.Info("apiserver is ready.")
-				f.Close()
-				return nil
-			}); err != nil {
-			klog.Errorln("failed to add post start hook apiserver-autoregistration:", err)
-		}
 
 		if opts.PrintSwagger {
 			if err := server.GenericAPIServer.AddPostStartHook("swagger-printer",

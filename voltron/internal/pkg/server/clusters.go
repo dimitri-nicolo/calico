@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -17,7 +18,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -30,6 +31,7 @@ import (
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
@@ -51,19 +53,18 @@ type cluster struct {
 
 	tunnelManager tunnelmgr.Manager
 
-	// proxy is a reverse proxy for handling connections to Voltron from the management cluster
-	// that should be directed down the tunnel to the managed cluster.
-	proxy *httputil.ReverseProxy
-
 	// Kubernetes client used for querying and watching ManagedCluster resources.
 	k8sCLI bootstrap.K8sClient
-
 	client ctrlclient.WithWatch
 
-	// tlsProxy is the proxy that handles incoming TLS connections from the managed cluster.
+	// outboundTLSProxy is a reverse outboundTLSProxy for handling connections to Voltron from the management cluster
+	// that should be directed down the tunnel to the managed cluster.
+	outboundTLSProxy *httputil.ReverseProxy
+
+	// inboundTLSProxy is the proxy that handles incoming TLS connections from the managed cluster.
 	// These connections are routed via the server field in the TLS header. Connections via this proxy that
 	// target Voltron itself will be handled by the proxy's inner TLS server.
-	tlsProxy vtls.Proxy
+	inboundTLSProxy vtls.Proxy
 
 	// Pointer to general Voltron configuration.
 	voltronCfg *config.Config
@@ -157,23 +158,24 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 
 	// Append the new certificate to the client certificate pool.
 	cs.clientCertificatePool.AppendCertsFromPEM(mc.Certificate)
-	log.Infof("Appended certificate for cluster %s to client certificate pool", mc.ID)
-
-	// Create a proxy to use for connections received over the tunnel that aren't
-	// directed via SNI. This is just used for Linseed connections from managed clusters.
-	// We use the same TLS configuration as the main tunnel. We will proxy the connection
-	// presenting Voltron's internal management cluster certificate, as Linseed requires mTLS.
-	//
-	// This handler will only be used for requests from managed clusters over the mTLS tunnel
-	// with a server name of "tigera-linseed.tigera-elasticsearch".
-	innerServer := &http.Server{
-		Handler:     NewInnerHandler(cs.voltronCfg.TenantID, mc, cs.innerProxy).Handler(),
-		TLSConfig:   cs.tlsConfig,
-		ReadTimeout: DefaultReadTimeout,
-	}
+	logrus.Infof("Appended certificate for cluster %s to client certificate pool", mc.ID)
 
 	if cs.forwardingEnabled {
-		tlsProxy, err := vtls.NewProxy(
+		// Create a proxy to use for connections received over the tunnel that aren't
+		// directed via SNI. This is just used for Linseed connections from managed clusters.
+		// We use the same TLS configuration as the main tunnel. We will proxy the connection
+		// presenting Voltron's internal management cluster certificate, as Linseed requires mTLS.
+		//
+		// This handler will only be used for requests from managed clusters over the mTLS tunnel
+		// with a server name of "tigera-linseed.tigera-elasticsearch".
+		innerServer := &http.Server{
+			Handler:     NewInnerHandler(cs.voltronCfg.TenantID, mc, cs.innerProxy).Handler(),
+			TLSConfig:   cs.tlsConfig,
+			ReadTimeout: DefaultReadTimeout,
+			ErrorLog:    log.New(utils.NewLogrusWriter(logrus.WithFields(logrus.Fields{"server": "innerServer"})), "", log.LstdFlags),
+		}
+
+		inboundProxy, err := vtls.NewProxy(
 			vtls.WithDefaultServiceURL(cs.defaultForwardServerName),
 			vtls.WithProxyOnSNI(true),
 			vtls.WithSNIServiceMap(cs.sniServiceMap),
@@ -185,7 +187,7 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 		if err != nil {
 			return nil, err
 		}
-		c.tlsProxy = tlsProxy
+		c.inboundTLSProxy = inboundProxy
 	}
 
 	cs.clusters[mc.ID] = c
@@ -210,15 +212,15 @@ func (cs *clusters) List() []jclust.ManagedCluster {
 		return clusterList[i].ID < clusterList[j].ID
 	})
 
-	log.Debugf("Listing current %d clusters.", len(clusterList))
+	logrus.Debugf("Listing current %d clusters.", len(clusterList))
 	for _, cluster := range clusterList {
-		log.Debugf("ID = %s", cluster.ID)
+		logrus.Debugf("ID = %s", cluster.ID)
 	}
 	return clusterList
 }
 
 func (cs *clusters) addNew(mc *jclust.ManagedCluster) error {
-	log.Infof("Adding cluster ID: %q", mc.ID)
+	logrus.Infof("Adding cluster ID: %q", mc.ID)
 
 	_, err := cs.add(mc)
 	if err != nil {
@@ -229,7 +231,7 @@ func (cs *clusters) addNew(mc *jclust.ManagedCluster) error {
 }
 
 func (cs *clusters) addRecovered(mc *jclust.ManagedCluster) error {
-	log.Infof("Recovering cluster ID: %q", mc.ID)
+	logrus.Infof("Recovering cluster ID: %q", mc.ID)
 
 	_, err := cs.add(mc)
 	return err
@@ -244,7 +246,7 @@ func (cs *clusters) update(mc *jclust.ManagedCluster) error {
 func (cs *clusters) updateLocked(mc *jclust.ManagedCluster, recovery bool) error {
 	if c, ok := cs.clusters[mc.ID]; ok {
 		c.Lock()
-		clog := log.WithField("cluster", c.ID)
+		clog := logrus.WithField("cluster", c.ID)
 		clog.Info("Updating the managed cluster")
 
 		oldCert := c.ManagedCluster.Certificate
@@ -298,7 +300,7 @@ func (cs *clusters) remove(mc *jclust.ManagedCluster) error {
 	if !ok {
 		cs.Unlock()
 		msg := fmt.Sprintf("Cluster id %q does not exist", mc.ID)
-		log.Debugf(msg)
+		logrus.Debugf(msg)
 		return errors.Errorf(msg)
 	}
 
@@ -307,7 +309,7 @@ func (cs *clusters) remove(mc *jclust.ManagedCluster) error {
 	delete(cs.clusters, mc.ID)
 	cs.Unlock()
 	c.stop()
-	log.Infof("Cluster id %q removed", mc.ID)
+	logrus.Infof("Cluster id %q removed", mc.ID)
 
 	return nil
 }
@@ -333,7 +335,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			}
 			mcResource, ok := r.Object.(*v3.ManagedCluster)
 			if !ok {
-				log.Debugf("Unexpected object type %T", r.Object)
+				logrus.Debugf("Unexpected object type %T", r.Object)
 				continue
 			}
 
@@ -344,23 +346,23 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 				FIPSModeEnabled:   cs.fipsModeEnabled,
 			}
 
-			log.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.ID)
+			logrus.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.ID)
 
 			var err error
 
 			switch r.Type {
 			case watch.Added, watch.Modified:
-				log.Infof("Adding/Updating %s", mc.ID)
+				logrus.Infof("Adding/Updating %s", mc.ID)
 				err = cs.update(mc)
 			case watch.Deleted:
-				log.Infof("Deleting %s", mc.ID)
+				logrus.Infof("Deleting %s", mc.ID)
 				err = cs.remove(mc)
 			default:
 				err = errors.Errorf("Watch event %s unsupported", r.Type)
 			}
 
 			if err != nil {
-				log.Errorf("ManagedClusters watch event %s failed: %s", r.Type, err)
+				logrus.Errorf("ManagedClusters watch event %s failed: %s", r.Type, err)
 			}
 
 			if syncC != nil {
@@ -401,10 +403,10 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 
 		known[id] = struct{}{}
 
-		log.Debugf("Sync K8s watch for cluster : %s", mc.ID)
+		logrus.Debugf("Sync K8s watch for cluster : %s", mc.ID)
 		err = cs.updateLocked(mc, true)
 		if err != nil {
-			log.Errorf("ManagedClusters listing failed: %s", err)
+			logrus.Errorf("ManagedClusters listing failed: %s", err)
 		}
 
 		if c, ok := cs.clusters[id]; ok {
@@ -429,7 +431,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 		}
 		delete(cs.clusters, id)
 		c.stop()
-		log.Infof("Cluster id %q removed", id)
+		logrus.Infof("Cluster id %q removed", id)
 	}
 
 	return list.ListMeta.ResourceVersion, nil
@@ -449,7 +451,7 @@ func (cs *clusters) watchK8s(ctx context.Context, syncC chan<- error) error {
 		} else {
 			err = errors.WithMessage(err, "k8s list failed")
 		}
-		log.Debugf("ManagedClusters: could not sync watch due to %s", err)
+		logrus.Debugf("ManagedClusters: could not sync watch due to %s", err)
 		select {
 		case <-ctx.Done():
 			return errors.Errorf("watcher exiting: %s", ctx.Err())
@@ -464,7 +466,7 @@ func (cs *clusters) updateCertPool(newCertPEM, oldCertPEM []byte) (error, bool) 
 	updated := false
 	if len(newCertPEM) == 0 {
 		// No pool update necessary for an empty certificate.
-		log.Debugf("No pool update necessary for an empty certificate.")
+		logrus.Debugf("No pool update necessary for an empty certificate.")
 		return nil, updated
 	}
 
@@ -481,14 +483,14 @@ func (cs *clusters) updateCertPool(newCertPEM, oldCertPEM []byte) (error, bool) 
 
 		if oldCert.Equal(newCert) {
 			// No pool update necessary if the certificates are the same.
-			log.Debugf("No pool update necessary if the certificates are the same.")
+			logrus.Debugf("No pool update necessary if the certificates are the same.")
 			return nil, updated
 		}
 	}
 
 	cs.clientCertificatePool.AddCert(newCert)
 	updated = true
-	log.Infof("Updated client cert pool with new value.")
+	logrus.Infof("Updated client cert pool with new value.")
 
 	return nil, updated
 }
@@ -499,11 +501,11 @@ func (c *cluster) checkTunnelState() {
 	c.Lock()
 	defer c.Unlock()
 
-	clog := log.WithField("cluster", c.ID)
+	clog := logrus.WithField("cluster", c.ID)
 
-	c.proxy = nil
+	c.outboundTLSProxy = nil
 	if err := c.tunnelManager.CloseTunnel(); err != nil && err != tunnel.ErrTunnelClosed {
-		log.WithError(err).Error("an error occurred closing the tunnel")
+		logrus.WithError(err).Error("an error occurred closing the tunnel")
 	}
 
 	if err := c.setConnectedStatus(v3.ManagedClusterStatusValueFalse); err != nil {
@@ -527,11 +529,11 @@ func (c *cluster) DialTLS2(network, addr string, cfg *tls.Config) (net.Conn, err
 
 func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c.RLock()
-	proxy := c.proxy
+	proxy := c.outboundTLSProxy
 	c.RUnlock()
 
 	if proxy == nil {
-		log.Debugf("Cannot proxy to cluster %s, no tunnel", c.ID)
+		logrus.Debugf("Cannot proxy to cluster %s, no tunnel", c.ID)
 		writeHTTPError(w, clusterNotConnectedError(c.ID))
 		return
 	}
@@ -545,22 +547,24 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 		return err
 	}
 
-	tlsConfig := calicotls.NewTLSConfig(c.FIPSModeEnabled)
-	tlsConfig.InsecureSkipVerify = true // todo: not sure where this comes from, but this should be dealt with.
-	c.proxy = &httputil.ReverseProxy{
+	// Set up the outbound proxy, which handles traffic from the management cluster desinted
+	// to the managed cluster over the tunnel.
+	outboundTLSConfig := calicotls.NewTLSConfig(c.FIPSModeEnabled)
+	outboundTLSConfig.InsecureSkipVerify = true // todo: not sure where this comes from, but this should be dealt with.
+	c.outboundTLSProxy = &httputil.ReverseProxy{
 		Director:      proxyVoidDirector,
 		FlushInterval: -1,
-		// TODO set the error logger
+		ErrorLog:      log.New(utils.NewLogrusWriter(logrus.WithFields(logrus.Fields{"proxy": "outbound"})), "", log.LstdFlags),
 		Transport: &http2.Transport{
 			DialTLS:         c.DialTLS2,
-			TLSClientConfig: tlsConfig,
+			TLSClientConfig: outboundTLSConfig,
 			AllowHTTP:       true,
 		},
 	}
 
-	if c.tlsProxy != nil {
+	if c.inboundTLSProxy != nil {
 		go func() {
-			log.Debugf("server has started listening for connections from cluster %s", c.ID)
+			logrus.Debugf("server has started listening for connections from cluster %s", c.ID)
 			// This loop only stops trying to listen if the tunnel or manager was closed
 			for {
 				shouldStop := false
@@ -571,16 +575,16 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 							shouldStop = true
 							return
 						}
-						log.WithError(err).Error("failed to listen over the tunnel")
+						logrus.WithError(err).Error("failed to listen over the tunnel")
 						return
 					}
 					defer listener.Close()
 
-					if err := c.tlsProxy.ListenAndProxy(listener); err != nil {
+					if err := c.inboundTLSProxy.ListenAndProxy(listener); err != nil {
 						if err != tunnel.ErrTunnelClosed {
-							log.WithError(err).Error("failed to listen for incoming requests through the tunnel")
+							logrus.WithError(err).Error("failed to listen for incoming requests through the tunnel")
 						} else {
-							log.Info("failed to listen for incoming requests through the tunnel, tunnel closed")
+							logrus.Info("failed to listen for incoming requests through the tunnel, tunnel closed")
 						}
 					}
 				}()
@@ -590,11 +594,11 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 				}
 				time.Sleep(1 * time.Second)
 			}
-			log.Debugf("server has stopped listening for connections from %s", c.ID)
+			logrus.Debugf("server has stopped listening for connections from %s", c.ID)
 		}()
 	}
 	if err := c.setConnectedStatus(v3.ManagedClusterStatusValueTrue); err != nil {
-		log.WithError(err).Errorf("failed to update the connection status for cluster %s", c.ID)
+		logrus.WithError(err).Errorf("failed to update the connection status for cluster %s", c.ID)
 	}
 	// will clean up the tunnel if it breaks, will exit once the tunnel is gone
 	go c.checkTunnelState()
@@ -646,7 +650,7 @@ func (c *cluster) stop() {
 	c.RLock()
 	if c.tunnelManager != nil {
 		if err := c.tunnelManager.Close(); err != nil {
-			log.WithError(err).Error("an error occurred closing the tunnelManager")
+			logrus.WithError(err).Error("an error occurred closing the tunnelManager")
 		}
 	}
 	c.RUnlock()
@@ -659,7 +663,7 @@ func (c *cluster) closeTunnel() error {
 		// Close the tunnel to disconnect.
 		if err := c.tunnelManager.CloseTunnel(); err != nil {
 			if err != tunnel.ErrTunnelClosed {
-				log.WithError(err).Error("an error occurred closing tunnel")
+				logrus.WithError(err).Error("an error occurred closing tunnel")
 				return err
 			}
 		}

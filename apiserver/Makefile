@@ -70,7 +70,7 @@ endif
 # "apiserver" instead of "$(BINDIR)/apiserver".
 #########################################################################
 .PHONY: build
-build: $(BINDIR)/apiserver-$(ARCH) $(BINDIR)/filecheck-$(ARCH)
+build: $(BINDIR)/apiserver-$(ARCH)
 
 $(BINDIR)/apiserver-$(ARCH): $(K8SAPISERVER_GO_FILES)
 ifeq ($(FIPS),true)
@@ -78,9 +78,6 @@ ifeq ($(FIPS),true)
 else
 	$(call build_binary, $(PACKAGE_NAME)/cmd/apiserver, $@)
 endif
-
-$(BINDIR)/filecheck-$(ARCH): $(K8SAPISERVER_GO_FILES)
-	$(call build_binary, $(PACKAGE_NAME)/cmd/filecheck, $@)
 
 ###############################################################################
 # Building the image
@@ -97,12 +94,12 @@ sub-image-fips-%:
 	$(MAKE) image FIPS=true ARCH=$*
 
 $(API_SERVER_IMAGE): $(CONTAINER_MARKER)
-$(CONTAINER_CREATED): Dockerfile $(BINDIR)/apiserver-$(ARCH) $(BINDIR)/filecheck-$(ARCH)
+$(CONTAINER_CREATED): Dockerfile $(BINDIR)/apiserver-$(ARCH)
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(API_SERVER_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-$(CONTAINER_FIPS_CREATED): Dockerfile $(BINDIR)/apiserver-$(ARCH) $(BINDIR)/filecheck-$(ARCH)
+$(CONTAINER_FIPS_CREATED): Dockerfile $(BINDIR)/apiserver-$(ARCH)
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(API_SERVER_IMAGE):latest-fips-$(ARCH) -f Dockerfile .
 	$(MAKE) FIPS=true retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
