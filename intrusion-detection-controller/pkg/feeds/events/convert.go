@@ -63,6 +63,7 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 			mitigations = []string{"Create a global network policy to prevent traffic from this IP address"}
 		}
 	}
+
 	return v1.Event{
 		ID:              generateSuspicousIPSetID(flowLog.StartTime, flowLog.SourceIP, flowLog.SourcePort, flowLog.DestIP, flowLog.DestPort, record),
 		Time:            v1.NewEventTimestamp(time.Now().Unix()),
@@ -109,11 +110,12 @@ func generateSuspicousIPSetID(startTime int64, sourceIP *string, sourcePort *int
 }
 
 func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{}, feeds ...string) v1.Event {
-	var sname string
+	var sourceName string
 	if l.ClientName != "-" && l.ClientName != "" {
-		sname = l.ClientName
+		sourceName = l.ClientName
 	} else {
-		sname = l.ClientNameAggr
+		sourceName = l.ClientNameAggr
+		
 	}
 
 	var desc string
@@ -123,7 +125,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		sDomains = []string{string(l.QName)}
 		desc = fmt.Sprintf("%s/%s queried the domain name %s from global threat feed(s) %s",
 			l.ClientNamespace,
-			sname,
+			sourceName,
 			l.QName,
 			strings.Join(feeds, ", "))
 	case storage.QueryKeyDNSLogRRSetsName:
@@ -147,7 +149,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		sort.Strings(sDomains)
 		desc = fmt.Sprintf("A request originating from %v/%v queried the domain name %v, which is listed in the threat feed %v",
 			l.ClientNamespace,
-			sname,
+			sourceName,
 			strings.Join(sDomains, ", "),
 			strings.Join(feeds, ", "))
 	case storage.QueryKeyDNSLogRRSetsRData:
@@ -173,7 +175,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		sort.Strings(sDomains)
 		desc = fmt.Sprintf("%s/%s got DNS query results including suspicious domain(s) %s from global threat feed(s) %s",
 			l.ClientNamespace,
-			sname,
+			sourceName,
 			strings.Join(sDomains, ", "),
 			strings.Join(feeds, ", "))
 	}
@@ -182,6 +184,10 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		DNSLogID:          l.ID,
 		Feeds:             feeds,
 		SuspiciousDomains: sDomains,
+	}
+
+	if l.ClientName == "-" || l.ClientName == "" || strings.HasSuffix(sourceName, "*"){
+		sourceName = "-"
 	}
 
 	startTime := l.StartTime.Unix()
@@ -194,7 +200,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		Origin:          SuspiciousDnsQueryName,
 		SourceIP:        util.StrPtr(l.ClientIP),
 		SourceNamespace: l.ClientNamespace,
-		SourceName:      l.ClientName,
+		SourceName:      sourceName,
 		SourceNameAggr:  l.ClientNameAggr,
 		Record:          record,
 
