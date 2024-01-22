@@ -40108,6 +40108,7 @@ rules:
     resources:
       - amazoncloudintegrations
       - apiservers
+      - apiservers/finalizers
       - apiservers/status
       - applicationlayers
       - applicationlayers/status
@@ -40117,6 +40118,7 @@ rules:
       - egressgateways
       - imagesets
       - installations
+      - installations/finalizers
       - installations/status
       - intrusiondetections
       - intrusiondetections/status
@@ -40133,6 +40135,7 @@ rules:
       - policyrecommendations
       - policyrecommendations/status
       - tigerastatuses
+      - tigerastatuses/finalizers
       - tigerastatuses/status
     verbs:
       - get

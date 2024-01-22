@@ -24,8 +24,9 @@ Package: calico-felix
 Architecture: amd64 ppc64el
 Depends:
  conntrack,
- ipset,
  iproute2,
+ ipset,
+ libpcap0.8,
  net-tools,
  ${misc:Depends},
  ${shlibs:Depends}

@@ -1354,7 +1354,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							// Wait for the pool change to take effect
 							Eventually(func() string {
 								return bpfDumpRoutes(tc.Felixes[0])
-							}, "60s", "1s").ShouldNot(ContainSubstring("workload in-pool nat-out"))
+							}, "5s", "1s").ShouldNot(ContainSubstring("workload in-pool nat-out"))
 
 							cc.ResetExpectations()
 							cc.ExpectSNAT(w[0][0], w[0][0].IP, hostW[1])
@@ -1368,7 +1368,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							// Wait for the pool change to take effect
 							Eventually(func() string {
 								return bpfDumpRoutes(tc.Felixes[0])
-							}, "60s", "1s").Should(ContainSubstring("workload in-pool nat-out"))
+							}, "5s", "1s").Should(ContainSubstring("workload in-pool nat-out"))
 
 							cc.ResetExpectations()
 							cc.ExpectSNAT(w[0][0], felixIP(0), hostW[1])
@@ -2839,9 +2839,14 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						clusterIP := testSvc.Spec.ClusterIP
 						port := uint16(testSvc.Spec.Ports[0].Port)
 
-						cc.ExpectSome(w[0][1], TargetIP(clusterIP), port)
-						cc.ExpectSome(w[1][0], TargetIP(clusterIP), port)
-						cc.ExpectSome(w[1][1], TargetIP(clusterIP), port)
+						exp := Some
+						if intLocal {
+							exp = None
+						}
+
+						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(port))
+						cc.Expect(exp, w[1][0], TargetIP(clusterIP), ExpectWithPorts(port))
+						cc.Expect(exp, w[1][1], TargetIP(clusterIP), ExpectWithPorts(port))
 						cc.CheckConnectivity()
 					})
 
@@ -2852,12 +2857,12 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							node0IP := felixIP(0)
 							node1IP := felixIP(1)
 
-							// Should work through the nodeport where the pods is
+							// Should work through the nodeport from a pod on the node where the backend is
 							cc.ExpectSome(w[0][1], TargetIP(node0IP), npPort)
-							cc.ExpectSome(w[1][0], TargetIP(node0IP), npPort)
-							cc.ExpectSome(w[1][1], TargetIP(node0IP), npPort)
 
-							// Should not work through the nodeport where the pod isn't
+							// Should not work through the nodeport from a node where the backend is not.
+							cc.ExpectNone(w[1][0], TargetIP(node0IP), npPort)
+							cc.ExpectNone(w[1][1], TargetIP(node0IP), npPort)
 							cc.ExpectNone(w[0][1], TargetIP(node1IP), npPort)
 							cc.ExpectNone(w[1][0], TargetIP(node1IP), npPort)
 							cc.ExpectNone(w[1][1], TargetIP(node1IP), npPort)
@@ -3257,7 +3262,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 								// Also try host networked pods, both on a local and remote node.
 								cc.Expect(Some, hostW[0], TargetIP(clusterIP), ports, hostW0SrcIP)
-								//cc.Expect(Some, hostW[1], TargetIP(clusterIP), ports, hostW1SrcIP)
+								cc.Expect(Some, hostW[1], TargetIP(clusterIP), ports, hostW1SrcIP)
 
 								if testOpts.protocol == "tcp" && !testOpts.ipv6 {
 									// Also excercise ipv4 as ipv6
@@ -5059,7 +5064,8 @@ func conntrackFlushWorkloadEntries(felixes []*infrastructure.Felix) func() {
 	return func() {
 		for _, felix := range felixes {
 			for _, w := range felix.Workloads {
-				if w.GetIP() == felix.GetIP() {
+				wIP := w.GetIP()
+				if wIP == felix.GetIP() || wIP == felix.GetIPv6() {
 					continue // Skip host-networked workloads.
 				}
 				for _, dirn := range []string{"--orig-src", "--orig-dst", "--reply-dst", "--reply-src"} {

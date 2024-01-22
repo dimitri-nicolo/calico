@@ -138,7 +138,7 @@ openssl req -x509 -nodes -newkey rsa:4096 -keyout apiserver.key -out apiserver.c
 ${kubectl} create secret -n calico-apiserver generic calico-apiserver-certs --from-file=apiserver.key --from-file=apiserver.crt
 ${kubectl} patch apiservice v3.projectcalico.org -p \
     "{\"spec\": {\"caBundle\": \"$(${kubectl} get secret -n calico-apiserver calico-apiserver-certs -o go-template='{{ index .data "apiserver.crt" }}')\"}}"
-time ${kubectl} wait pod -l k8s-app=calico-apiserver --for=condition=Ready -n calico-apiserver --timeout=30s
+time ${kubectl} wait pod -l k8s-app=calico-apiserver --for=condition=Ready -n calico-apiserver --timeout=300s
 echo "Calico apiserver is running."
 
 ${kubectl} get po --all-namespaces -o wide
