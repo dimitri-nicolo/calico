@@ -187,6 +187,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 	}
 
 	if l.ClientName == "-" || l.ClientName == "" || strings.HasSuffix(sourceName, "*"){
+		// change the source name back to '-' if it's part of a deployment
 		sourceName = "-"
 	}
 
