@@ -18,42 +18,46 @@ type Metrics struct{}
 func (m Metrics) Track() func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			// increment the number of inflight requests
-			metrics.HTTPInflightRequests.With(m.methodAndPathLabels(req)).Add(float64(1))
-
 			start := time.Now().UTC()
 			wrap := responseInterceptor{ResponseWriter: w}
 			next.ServeHTTP(&wrap, req)
-
-			// decrement the number of inflight requests
-			metrics.HTTPInflightRequests.With(m.methodAndPathLabels(req)).Add(float64(-1))
 
 			if req.URL.Path != "/version" {
 				cluster := ClusterIDFromContext(req.Context())
 				tenant := TenantIDFromContext(req.Context())
 
 				if strings.HasSuffix(req.URL.Path, "bulk") {
-					// increment how many bytes are written via Linseed per cluster ID
+					// Increment how many bytes are written via Linseed per cluster ID
 					metrics.BytesWrittenPerClusterIDAndTenantID.
 						With(m.clusterAndTenantLabels(cluster, tenant)).Add(float64(req.ContentLength))
 				} else {
-					// increment how many bytes are read via Linseed per cluster ID
+					// Increment how many bytes are read via Linseed per cluster ID
 					metrics.BytesReadPerClusterIDAndTenantID.
 						With(m.clusterAndTenantLabels(cluster, tenant)).Add(float64(req.ContentLength))
 				}
 
-				// increment the number of total http request
+				// Increment the number of total http request
 				metrics.HTTPTotalRequests.With(m.allLabels(req, wrap, cluster, tenant)).Inc()
 
-				// observe the response duration
+				// Observe the response duration
 				metrics.HTTPResponseDuration.With(m.methodAndPathLabels(req)).Observe(time.Since(start).Seconds())
 
-				// observe the request input size
+				// Observe the request input size
 				metrics.HTTPRequestSize.With(m.methodAndPathLabels(req)).Observe(float64(req.ContentLength))
 
-				// observe the response size
+				// Observe the response size
 				metrics.HTTPResponseSize.With(m.methodAndPathLabels(req)).Observe(float64(wrap.bytesWritten))
 			}
+		})
+	}
+}
+
+func (m Metrics) TrackInflightRequest() func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			metrics.HTTPInflightRequests.With(m.methodAndPathLabels(req)).Add(float64(1))
+			defer metrics.HTTPInflightRequests.With(m.methodAndPathLabels(req)).Add(float64(-1))
+			next.ServeHTTP(w, req)
 		})
 	}
 }
