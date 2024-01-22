@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SermoDigital/jose/jws"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
@@ -925,6 +927,103 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantMode string
 			return updatedSecret.StringData["key"] == updatedVoltronLinseedSecretData
 		}
 		require.Eventually(t, secretUpdated, 5*time.Second, 100*time.Millisecond)
+	})
+
+	t.Run("update token for service if it contains outdated subject"+tenantMode, func(t *testing.T) {
+		defer setup(t)()
+
+		// Add a managed cluster.
+		oldManagedCluster := v3.ManagedCluster{}
+		oldManagedCluster.Name = "old-managed-cluster"
+		oldManagedCluster.Namespace = tenantNamespace
+		oldManagedCluster.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		err := fakeClient.Create(ctx, &oldManagedCluster)
+		require.NoError(t, err)
+
+		// Make a new controller.
+		opts := []token.ControllerOption{
+			token.WithControllerRuntimeClient(fakeClient),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace}}),
+			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
+
+			// Set the reconcile period to be very small so that the controller can reconcile
+			// the changes we make to the ManagedClusters
+			token.WithReconcilePeriod(10 * time.Millisecond),
+			token.WithNamespace(tenantNamespace),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		// Set the mock client set as the return value for the factory.
+		factory.On("NewClientSetForApplication", oldManagedCluster.Name).Return(&mockClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
+
+		// Reconcile.
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go controller.Run(stopCh)
+
+		// Expect a token to have been generated. This happens asynchronously, so we need
+		// to wait for the controller to finish processing.
+		var secret *corev1.Secret
+		secretCreated := func() bool {
+			secret, err = mockK8sClient.CoreV1().Secrets(defaultNamespace).Get(ctx, tokenName, v1.GetOptions{})
+			return err == nil
+		}
+		require.Eventually(t, secretCreated, 5*time.Second, 100*time.Millisecond)
+
+		tokenBytes := secret.Data["token"]
+		tkn, err := jws.ParseJWT(tokenBytes)
+		require.NoError(t, err)
+
+		expectedTokenSubject := fmt.Sprintf("%s:%s:%s:%s", "", oldManagedCluster.Name, defaultNamespace, defaultServiceName)
+
+		subj, ok := tkn.Claims().Subject()
+		require.True(t, ok)
+		require.Equal(t, subj, expectedTokenSubject)
+		require.Equal(t, tokenName, secret.Name)
+		require.Equal(t, defaultNamespace, secret.Namespace)
+
+		// Now delete the ManagedCluster
+		err = fakeClient.Delete(ctx, &oldManagedCluster)
+		require.NoError(t, err)
+
+		newManagedCluster := v3.ManagedCluster{}
+		newManagedCluster.Name = "new-managed-cluster"
+		newManagedCluster.Namespace = tenantNamespace
+		newManagedCluster.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		factory.On("NewClientSetForApplication", newManagedCluster.Name).Return(&mockClientSet, nil)
+		err = fakeClient.Create(ctx, &newManagedCluster)
+		require.NoError(t, err)
+
+		tokenUpdated := func() bool {
+			tokenSecret, err := mockK8sClient.CoreV1().Secrets(defaultNamespace).Get(ctx, tokenName, v1.GetOptions{})
+			require.NoError(t, err)
+			tokenBytes = tokenSecret.Data["token"]
+			jwt, err := jws.ParseJWT(tokenBytes)
+			require.NoError(t, err)
+
+			newTokenSubject := token.GenerateSubjectLinseed("", newManagedCluster.Name, defaultNamespace, defaultServiceName)
+			subj, ok = jwt.Claims().Subject()
+			require.True(t, ok)
+			return subj == newTokenSubject
+		}
+		require.Eventually(t, tokenUpdated, 5*time.Second, 100*time.Millisecond)
 	})
 }
 
