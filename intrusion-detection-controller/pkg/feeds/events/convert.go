@@ -115,7 +115,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		sourceName = l.ClientName
 	} else {
 		sourceName = l.ClientNameAggr
-		
+
 	}
 
 	var desc string
@@ -186,7 +186,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 		SuspiciousDomains: sDomains,
 	}
 
-	if strings.HasSuffix(sourceName, "*"){
+	if strings.HasSuffix(sourceName, "*") {
 		// change the source name back to '-' if it's part of a deployment
 		sourceName = "-"
 	}
