@@ -210,14 +210,14 @@ $(COMPLIANCE_REPORTER_CONTAINER_CREATED): docker-image/reporter/Dockerfile bin/r
 # Build the tigera/compliance-benchmarker docker image, which contains only Compliance benchmarker.
 KUBE_BENCH_VERSION := $(shell grep -E 'github.com/aquasecurity/kube-bench' ../go.mod | awk '{print$$2;exit}')
 $(COMPLIANCE_BENCHMARKER_IMAGE): $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED)
-$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): register docker-image/benchmarker/Dockerfile bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH)
+$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): docker-image/benchmarker/Dockerfile bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH)
 	$(DOCKER_BUILD) --build-arg K8S_VERSION=$(K8S_VERSION) --build-arg KUBE_BENCH_VERSION=$(KUBE_BENCH_VERSION) -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) -f docker-image/benchmarker/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_BENCHMARKER_IMAGE)
 	touch $@
 
 # Build the tigera/compliance-scaleloader docker image, which contains only Compliance scaleloader.
 $(COMPLIANCE_SCALELOADER_IMAGE): $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED)
-$(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): register docker-image/scaleloader/Dockerfile bin/scaleloader-$(ARCH)
+$(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): docker-image/scaleloader/Dockerfile bin/scaleloader-$(ARCH)
 	rm -rf docker-image/scaleloader/bin
 	rm -rf docker-image/scaleloader/playbooks
 	rm -rf docker-image/scaleloader/scenarios

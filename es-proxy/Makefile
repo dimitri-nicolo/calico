@@ -61,7 +61,7 @@ sub-image-%:
 image: $(ES_PROXY_IMAGE)
 
 $(ES_PROXY_IMAGE): $(ES_PROXY_CONTAINER_CREATED)
-$(ES_PROXY_CONTAINER_CREATED): register Dockerfile $(BINDIR)/es-proxy-$(ARCH)
+$(ES_PROXY_CONTAINER_CREATED): Dockerfile $(BINDIR)/es-proxy-$(ARCH)
 	$(DOCKER_BUILD) -t $(ES_PROXY_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

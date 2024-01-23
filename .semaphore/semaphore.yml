@@ -679,13 +679,6 @@ blocks:
       - name: "Node: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
       - name: "Build Windows archive"
         commands:
           - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
@@ -696,6 +689,25 @@ blocks:
       always:
         commands:
           - test-results publish ./report/nosetests.xml --name "node-ci" || true
+
+- name: "Node: Build - native arm64 runner"
+  run:
+    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: s1-aws-arm64
+    secrets:
+      - name: tigera-dev-ci-pull-credentials
+    prologue:
+      commands:
+        - cd node
+    jobs:
+      - name: Build image
+        commands:
+          - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
 
 - name: "Node: kind-cluster tests"
   run:
@@ -911,13 +923,23 @@ blocks:
       - name: make ci
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+
+- name: egress-gateway - native arm64 runner
+  run:
+    when: "false or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: s1-aws-arm64
+    prologue:
+      commands:
+        - cd egress-gateway
+    jobs:
+      - name: Build image
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+          - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
 - name: es-gateway
   run:
     when: "false or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

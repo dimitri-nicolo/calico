@@ -11,10 +11,20 @@
       - name: make ci
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+
+- name: egress-gateway - native arm64 runner
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: s1-aws-arm64
+    prologue:
+      commands:
+        - cd egress-gateway
+    jobs:
+      - name: Build image
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+          - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64

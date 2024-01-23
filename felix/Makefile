@@ -168,7 +168,6 @@ bin/calico-felix: bin/calico-felix-$(ARCH)
 libbpf: $(LIBBPF_A)
 $(LIBBPF_A): $(shell find bpf-gpl/include/libbpf -type f ! -name "*.a")
 	mkdir -p bpf-gpl/include/libbpf/src/$(ARCH)
-	$(MAKE) register ARCH=$(ARCH)
 	$(DOCKER_GO_BUILD) sh -c "make -j 16 -C bpf-gpl/include/libbpf/src BUILD_STATIC_ONLY=1 OBJDIR=$(ARCH)"
 
 DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) $(TARGET_PLATFORM) -e $(ACK_GINKGO) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) -e CGO_CFLAGS=$(CGO_CFLAGS) $(CALICO_BUILD)
@@ -264,7 +263,6 @@ build-bpf: $(ALL_BPF_PROGS)
 # to avoid unnecessary rebuilds. Note '&:' means "run this target once to produce
 # all target files".
 $(ALL_BPF_PROGS) &: $(shell find bpf-gpl bpf-apache -name '*.[ch]') bpf-gpl/Makefile bpf-apache/Makefile
-	$(MAKE) register ARCH=$(ARCH)
 	$(DOCKER_GO_BUILD) sh -c "make -j 16 -C bpf-apache all && \
 	                          make -j 16 -C bpf-gpl all ut-objs ARCH=$(ARCH)"
 	rm -rf bin/bpf
@@ -308,8 +306,7 @@ FELIX_CONTAINER_CREATED=.calico_felix.created-$(ARCH)
 FELIX_IMAGE_WITH_TAG=$(FELIX_IMAGE):latest-$(ARCH)
 FELIX_IMAGE_ID=$(shell docker images -q $(FELIX_IMAGE_WITH_TAG))
 $(FELIX_IMAGE)-$(ARCH): $(FELIX_CONTAINER_CREATED)
-$(FELIX_CONTAINER_CREATED): register \
-                            docker-image/calico-felix-wrapper \
+$(FELIX_CONTAINER_CREATED): docker-image/calico-felix-wrapper \
                             docker-image/felix.cfg \
                             docker-image/Dockerfile \
                             $(shell test "$(FELIX_IMAGE_ID)" || echo force-rebuild)
