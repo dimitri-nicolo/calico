@@ -109,6 +109,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		// Start felix instances.
 		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
+		if bpfEnabled {
+			ensureBPFProgramsAttached(tc.Felixes[0])
+			ensureBPFProgramsAttached(tc.Felixes[1])
+		}
+
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
 
@@ -331,7 +336,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 
 			Eventually(checkNat, "10s", "1s").Should(BeTrue(), "Expected NAT to be programmed")
 
-			time.Sleep(5 * time.Second)
+			bpfWaitForPolicyRule(tc.Felixes[0], ep1_1.InterfaceName,
+				"ingress", "default.ep1-1-allow-all", `action:"allow"`)
+			bpfWaitForPolicyRule(tc.Felixes[1], ep2_2.InterfaceName,
+				"ingress", "default/staged:default.np3-4", `action:"allow"`)
 		}
 
 		if !bpfEnabled {
@@ -541,6 +549,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 				felix.Exec("ip", "r")
 				felix.Exec("ip", "a")
 			}
+			if bpfEnabled {
+				tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_1.InterfaceName, "all", "--asm")
+				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_2.InterfaceName, "all", "--asm")
+			}
 		}
 
 		ep1_1.Stop()
@@ -619,6 +631,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		// Start felix instances.
 		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
+		if bpfEnabled {
+			ensureBPFProgramsAttached(tc.Felixes[0])
+			ensureBPFProgramsAttached(tc.Felixes[1])
+		}
+
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
 
@@ -679,7 +696,14 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			Eventually(getRuleFunc(tc.Felixes[1], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Consistently(getRuleFunc(tc.Felixes[0], "DPE|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 		} else {
-			time.Sleep(5 * time.Second)
+			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
+				"egress", "default/staged:tier2.np2-1")
+			bpfWaitForPolicy(tc.Felixes[0], ep1_1.InterfaceName,
+				"ingress", "default/staged:tier2.np2-1")
+			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
+				"egress", "default/staged:tier2.np2-1")
+			bpfWaitForPolicy(tc.Felixes[1], ep2_1.InterfaceName,
+				"ingress", "default/staged:tier2.np2-1")
 		}
 	})
 
@@ -703,7 +727,14 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			Eventually(getRuleFunc(tc.Felixes[1], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Consistently(getRuleFunc(tc.Felixes[0], "APE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 		} else {
-			time.Sleep(5 * time.Second)
+			bpfWaitForPolicyRule(tc.Felixes[0], ep1_1.InterfaceName,
+				"egress", "default/staged:tier2.np2-1", `action:"allow"`)
+			bpfWaitForPolicyRule(tc.Felixes[0], ep1_1.InterfaceName,
+				"ingress", "default/staged:tier2.np2-1", `action:"allow"`)
+			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName,
+				"egress", "default/staged:tier2.np2-1", `action:"allow"`)
+			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName,
+				"ingress", "default/staged:tier2.np2-1", `action:"allow"`)
 		}
 
 		time.Sleep(3 * time.Second)
@@ -729,7 +760,14 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			Eventually(getRuleFunc(tc.Felixes[1], "DPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 			Consistently(getRuleFunc(tc.Felixes[0], "DPE0|default/staged:tier2.np2-1"), "10s", "1s").ShouldNot(HaveOccurred())
 		} else {
-			time.Sleep(5 * time.Second)
+			bpfWaitForPolicyRule(tc.Felixes[0], ep1_1.InterfaceName,
+				"egress", "default/staged:tier2.np2-1", `action:"deny"`)
+			bpfWaitForPolicyRule(tc.Felixes[0], ep1_1.InterfaceName,
+				"ingress", "default/staged:tier2.np2-1", `action:"deny"`)
+			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName,
+				"egress", "default/staged:tier2.np2-1", `action:"deny"`)
+			bpfWaitForPolicyRule(tc.Felixes[1], ep2_1.InterfaceName,
+				"ingress", "default/staged:tier2.np2-1", `action:"deny"`)
 		}
 	}
 
@@ -1133,6 +1171,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
 				felix.Exec("ip", "a")
+			}
+			if bpfEnabled {
+				tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_1.InterfaceName, "all", "--asm")
+				tc.Felixes[1].Exec("calico-bpf", "policy", "dump", ep2_1.InterfaceName, "all", "--asm")
 			}
 		}
 

@@ -550,7 +550,7 @@ func (p *Builder) writePolicyRules(policy Policy, actionLabels map[string]string
 
 	for ruleIdx, rule := range policy.Rules {
 		log.Debugf("Start of rule %d", ruleIdx)
-		p.b.AddCommentF("Start of rule %s", rule)
+		p.b.AddCommentF("Start of rule %s %s", policy.Name, rule)
 		p.b.AddCommentF("Rule MatchID: %d", rule.MatchID)
 		action := strings.ToLower(rule.Action)
 		if action == "log" {

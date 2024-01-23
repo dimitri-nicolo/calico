@@ -5160,7 +5160,7 @@ func checkServiceRoute(felix *infrastructure.Felix, ip string) bool {
 func bpfCheckIfPolicyProgrammed(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload bool) bool {
 	startStr := fmt.Sprintf("Start of policy %s", polName)
 	endStr := fmt.Sprintf("End of policy %s", polName)
-	actionStr := fmt.Sprintf("Start of rule action:\"%s\"", action)
+	actionStr := fmt.Sprintf("Start of rule %s action:\"%s\"", polName, action)
 	var policyDbg bpf.PolicyDebugInfo
 	out, err := felix.ExecOutput("cat", bpf.PolicyDebugJSONFileName(iface, hook, proto.IPVersion_IPV4))
 	if err != nil {
@@ -5223,6 +5223,17 @@ func bpfDumpPolicy(felix *infrastructure.Felix, iface, hook string) string {
 
 func bpfWaitForPolicy(felix *infrastructure.Felix, iface, hook, policy string) string {
 	search := fmt.Sprintf("Start of policy %s", policy)
+	out := ""
+	EventuallyWithOffset(1, func() string {
+		out = bpfDumpPolicy(felix, iface, hook)
+		return out
+	}, "5s", "200ms").Should(ContainSubstring(search))
+
+	return out
+}
+
+func bpfWaitForPolicyRule(felix *infrastructure.Felix, iface, hook, policy, rule string) string {
+	search := fmt.Sprintf("Start of rule %s %s", policy, rule)
 	out := ""
 	EventuallyWithOffset(1, func() string {
 		out = bpfDumpPolicy(felix, iface, hook)

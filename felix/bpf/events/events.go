@@ -192,7 +192,7 @@ func ParsePolicyVerdict(data []byte) PolicyVerdict {
 		SrcAddr:        net.IP(data[0:4]),
 		DstAddr:        net.IP(data[32:36]),
 		PostNATDstAddr: net.IP(data[48:52]),
-		NATTunSrcAddr:  net.IP(data[52:56]),
+		NATTunSrcAddr:  net.IP(data[64:68]),
 		PolicyRC:       state.PolicyResult(binary.LittleEndian.Uint32(data[84:88])),
 		SrcPort:        binary.LittleEndian.Uint16(data[88:90]),
 		DstPort:        binary.LittleEndian.Uint16(data[92:94]),
