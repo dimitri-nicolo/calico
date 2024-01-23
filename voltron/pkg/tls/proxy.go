@@ -32,7 +32,6 @@ type proxy struct {
 	retryInterval            time.Duration
 	connectTimeout           time.Duration
 	maxConcurrentConnections int
-	fipsModeEnabled          bool
 
 	// Server used by the proxy for connections directly to Voltron.
 	server        *http.Server
@@ -178,7 +177,7 @@ func (p *proxy) proxyConnection(srcConn net.Conn) error {
 	var bytesRead []byte
 
 	// We try to extract the SNI so that we can verify this is a tls connection
-	serverName, bytesRead, err := extractSNI(srcConn, p.fipsModeEnabled)
+	serverName, bytesRead, err := extractSNI(srcConn)
 	if err != nil {
 		logrus.WithError(err).Error("failed to extract SNI from connection")
 		return err

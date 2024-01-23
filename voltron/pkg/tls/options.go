@@ -83,14 +83,6 @@ func WithMaxConcurrentConnections(maxConcurrency int) ProxyOption {
 	}
 }
 
-// WithFipsModeEnabled Enables FIPS 140-2 verified crypto mode.
-func WithFipsModeEnabled(fipsModeEnabled bool) ProxyOption {
-	return func(p *proxy) error {
-		p.fipsModeEnabled = fipsModeEnabled
-		return nil
-	}
-}
-
 // WithInnerServer sets the server to handle connections received over an established tunnel
 // that should be handled by Voltron itself, rather than proxied using SNI.
 // Namely, connections from managed cluster components to Linseed. Voltron checks the headers

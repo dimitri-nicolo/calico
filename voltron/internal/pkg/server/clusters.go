@@ -181,7 +181,6 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 			vtls.WithSNIServiceMap(cs.sniServiceMap),
 			vtls.WithConnectionRetryAttempts(cs.defaultForwardDialRetryAttempts),
 			vtls.WithConnectionRetryInterval(cs.defaultForwardDialRetryInterval),
-			vtls.WithFipsModeEnabled(cs.fipsModeEnabled),
 			vtls.WithInnerServer(innerServer),
 		)
 		if err != nil {
