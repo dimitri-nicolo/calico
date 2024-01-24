@@ -15,7 +15,7 @@ import (
 func extractSNI(connection net.Conn) (string, []byte, error) {
 	roConn := conn.NewReadOnly(connection)
 
-	postClientHelloReadStopErr := fmt.Errorf("client hello read, consiously stop processing")
+	postClientHelloReadStopErr := fmt.Errorf("client hello read, consciously stopping processing")
 
 	var clientHello tls.ClientHelloInfo
 	// We use the GetConfigForClient function to hook into the ssl handshake logic and pull out the client hello information,
