@@ -36,6 +36,7 @@ clean:
 	rm -f $(SUB_CHARTS)
 
 ci-preflight-checks:
+	$(MAKE) check-dockerfiles
 	$(MAKE) check-gotchas
 	$(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.
 	$(MAKE) generate
@@ -51,6 +52,8 @@ check-gotchas:
 	  exit 1; \
 	fi
 
+check-dockerfiles:
+	./hack/check-dockerfiles.sh
 
 check-language:
 	./hack/check-language.sh
