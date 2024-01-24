@@ -6,8 +6,8 @@
 # only expected changes have happened.
 
 FAILED=0
-TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-mkdir -p $TEST_DIR/tmp
+TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+mkdir -p "$TEST_DIR/tmp"
 
 ADDITIONAL_MOUNT=""
 
@@ -15,17 +15,23 @@ function generateAndCollectConfig() {
   ENV_FILE=$1
   OUT_FILE=$2
 
-  docker run -d --name generate-fluentd-config $ADDITIONAL_MOUNT --hostname config.generator --env-file $ENV_FILE tigera/fluentd:${IMAGETAG} >/dev/null
-  sleep 2
+  docker run -d --name generate-fluentd-config $ADDITIONAL_MOUNT --hostname config.generator --env-file "$ENV_FILE" "tigera/fluentd:${IMAGETAG}" >/dev/null
+  sleep 5
 
-  docker logs generate-fluentd-config | sed -n '/<ROOT>/,/<\/ROOT>/p' | sed -e 's|^.*<ROOT>|<ROOT>|' | sed -e 's/ \+$//' > $OUT_FILE
-  if [ $? -ne 0 ]; then echo "Grabbing config from fluentd container failed"; exit 1; fi
+  if ! docker logs generate-fluentd-config | sed -n '/<ROOT>/,/<\/ROOT>/p' | sed -e 's|^.*<ROOT>|<ROOT>|' | sed -e 's/ \+$//' >"$OUT_FILE"; then
+    echo "Grabbing config from fluentd container failed"
+    exit 1
+  fi
 
-  docker stop generate-fluentd-config >/dev/null
-  if [ $? -ne 0 ]; then echo "Stopping fluentd container failed"; exit 1; fi
+  if ! docker stop generate-fluentd-config >/dev/null; then
+    echo "Stopping fluentd container failed"
+    exit 1
+  fi
 
-  docker rm generate-fluentd-config >/dev/null
-  if [ $? -ne 0 ]; then echo "Removing fluentd container failed"; exit 1; fi
+  if ! docker rm generate-fluentd-config >/dev/null; then
+    echo "Removing fluentd container failed"
+    exit 1
+  fi
 
   unset ADDITIONAL_MOUNT
 }
@@ -40,20 +46,19 @@ function checkConfiguration() {
 
   echo "#### Testing configuration of $READABLE_NAME"
 
-  generateAndCollectConfig $ENV_FILE $UUT
+  generateAndCollectConfig "$ENV_FILE" "$UUT"
 
-  diff $EXPECTED $UUT &> /dev/null
-  if [ $? -eq 0 ]; then
-    echo "  ## configuration is correct"
-  else
+  if ! diff "$EXPECTED" "$UUT" &>/dev/null; then
     echo " XXX configuration is not correct"
     FAILED=1
-    diff $EXPECTED $UUT
+    diff -u "$EXPECTED" "$UUT"
+  else
+    echo "  ## configuration is correct"
   fi
 }
 
-
-STANDARD_ENV_VARS=$(cat << EOM
+STANDARD_ENV_VARS=$(
+  cat <<EOM
 NODENAME=test-node-name
 ELASTIC_INDEX_SUFFIX=test-cluster-name
 ELASTIC_FLOWS_INDEX_SHARDS=5
@@ -72,14 +77,16 @@ ELASTIC_PORT=9200
 EOM
 )
 
-ES_SECURE_VARS=$(cat <<EOM
+ES_SECURE_VARS=$(
+  cat <<EOM
 ELASTIC_SSL_VERIFY=true
 ELASTIC_USER=es-user
 ELASTIC_PASSWORD=es-password
 EOM
 )
 
-S3_VARS=$(cat <<EOM
+S3_VARS=$(
+  cat <<EOM
 AWS_KEY_ID=aws-key-id-value
 AWS_SECRET_KEY=aws-secret-key-value
 S3_STORAGE=true
@@ -90,7 +97,8 @@ S3_FLUSH_INTERVAL=30
 EOM
 )
 
-SYSLOG_NO_TLS_VARS=$(cat <<EOM
+SYSLOG_NO_TLS_VARS=$(
+  cat <<EOM
 SYSLOG_FLOW_LOG=true
 SYSLOG_HOST=169.254.254.254
 SYSLOG_PORT=3665
@@ -100,7 +108,8 @@ SYSLOG_FLUSH_INTERVAL=17s
 EOM
 )
 
-SYSLOG_TLS_VARS=$(cat <<EOM
+SYSLOG_TLS_VARS=$(
+  cat <<EOM
 SYSLOG_FLOW_LOG=true
 SYSLOG_AUDIT_KUBE_LOG=true
 SYSLOG_IDS_EVENT_LOG=true
@@ -114,7 +123,8 @@ SYSLOG_CA_FILE=/etc/pki/tigera/tigera-ca-bundle.crt
 EOM
 )
 
-SYSLOG_TLS_VARS_ALL_LOG_TYPES=$(cat <<EOM
+SYSLOG_TLS_VARS_ALL_LOG_TYPES=$(
+  cat <<EOM
 SYSLOG_FLOW_LOG=true
 SYSLOG_DNS_LOG=true
 SYSLOG_L7_LOG=true
@@ -133,7 +143,8 @@ SYSLOG_CA_FILE=/etc/pki/tigera/tigera-ca-bundle.crt
 EOM
 )
 
-EKS_VARS=$(cat <<EOM
+EKS_VARS=$(
+  cat <<EOM
 MANAGED_K8S=true
 K8S_PLATFORM=eks
 EKS_CLOUDWATCH_LOG_GROUP=/aws/eks/eks-audit-test/cluster/
@@ -141,7 +152,8 @@ EKS_CLOUDWATCH_LOG_FETCH_INTERVAL=10
 EOM
 )
 
-LINSEED_VARS=$(cat <<EOM
+LINSEED_VARS=$(
+  cat <<EOM
 LINSEED_TOKEN=/test/token
 LINSEED_CA_PATH=/etc/flu/ca.pem
 LINSEED_ENDPOINT=ENDPOINT
@@ -151,26 +163,25 @@ LINSEED_FLUSH_INTERVAL=5s
 EOM
 )
 
-
 # Test with ES not secure
-cat > $TEST_DIR/tmp/es-no-secure.env <<EOM
+cat >"$TEST_DIR/tmp/es-no-secure.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=false
 EOM
 
-checkConfiguration $TEST_DIR/tmp/es-no-secure.env es-no-secure "ES unsecure"
+checkConfiguration "$TEST_DIR/tmp/es-no-secure.env" es-no-secure "ES unsecure"
 
 # Test with ES secure
-cat > $TEST_DIR/tmp/es-secure.env << EOM
+cat >"$TEST_DIR/tmp/es-secure.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true
 $ES_SECURE_VARS
 EOM
 
-checkConfiguration $TEST_DIR/tmp/es-secure.env es-secure "ES secure"
+checkConfiguration "$TEST_DIR/tmp/es-secure.env" es-secure "ES secure"
 
 # Test with disabled ES secure (all log types)
-cat > $TEST_DIR/tmp/disable-es-secure.env << EOM
+cat >"$TEST_DIR/tmp/disable-es-secure.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true
 $ES_SECURE_VARS
@@ -184,10 +195,10 @@ DISABLE_ES_AUDIT_KUBE_LOG=true
 DISABLE_ES_BGP_LOG=true
 EOM
 
-checkConfiguration $TEST_DIR/tmp/disable-es-secure.env disable-es-secure "Disable ES secure"
+checkConfiguration "$TEST_DIR/tmp/disable-es-secure.env" disable-es-secure "Disable ES secure"
 
 # Test with some disabled ES secure
-cat > $TEST_DIR/tmp/disable-some-es-secure.env << EOM
+cat >"$TEST_DIR/tmp/disable-some-es-secure.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true
 $ES_SECURE_VARS
@@ -196,10 +207,10 @@ DISABLE_ES_AUDIT_KUBE_LOG=true
 DISABLE_ES_BGP_LOG=true
 EOM
 
-checkConfiguration $TEST_DIR/tmp/disable-some-es-secure.env disable-some-es-secure "Disable some ES secure"
+checkConfiguration "$TEST_DIR/tmp/disable-some-es-secure.env" disable-some-es-secure "Disable some ES secure"
 
 # Test with disabled ES unsecure (all log types)
-cat > $TEST_DIR/tmp/disable-es-unsecure.env << EOM
+cat >"$TEST_DIR/tmp/disable-es-unsecure.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=false
 $ES_SECURE_VARS
@@ -213,10 +224,10 @@ DISABLE_ES_AUDIT_KUBE_LOG=true
 DISABLE_ES_BGP_LOG=true
 EOM
 
-checkConfiguration $TEST_DIR/tmp/disable-es-unsecure.env disable-es-unsecure "Disable ES unsecure"
+checkConfiguration "$TEST_DIR/tmp/disable-es-unsecure.env" disable-es-unsecure "Disable ES unsecure"
 
 # Test with some disabled ES unsecure
-cat > $TEST_DIR/tmp/disable-some-es-unsecure.env << EOM
+cat >"$TEST_DIR/tmp/disable-some-es-unsecure.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=false
 $ES_SECURE_VARS
@@ -225,53 +236,53 @@ DISABLE_ES_AUDIT_KUBE_LOG=true
 DISABLE_ES_BGP_LOG=true
 EOM
 
-checkConfiguration $TEST_DIR/tmp/disable-some-es-unsecure.env disable-some-es-unsecure "Disable some ES unsecure"
+checkConfiguration "$TEST_DIR/tmp/disable-some-es-unsecure.env" disable-some-es-unsecure "Disable some ES unsecure"
 
 # Test with S3 and ES secure
-cat > $TEST_DIR/tmp/es-secure-with-s3.env << EOM
+cat >"$TEST_DIR/tmp/es-secure-with-s3.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true
 $ES_SECURE_VARS
 $S3_VARS
 EOM
 
-checkConfiguration $TEST_DIR/tmp/es-secure-with-s3.env es-secure-with-s3 "ES secure with S3"
+checkConfiguration "$TEST_DIR/tmp/es-secure-with-s3.env" es-secure-with-s3 "ES secure with S3"
 
 # Test with ES not secure and syslog w/no tls
-cat > $TEST_DIR/tmp/es-no-secure-with-syslog-no-tls.env << EOM
+cat >"$TEST_DIR/tmp/es-no-secure-with-syslog-no-tls.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=false
 $SYSLOG_NO_TLS_VARS
 EOM
 
-checkConfiguration $TEST_DIR/tmp/es-no-secure-with-syslog-no-tls.env es-no-secure-with-syslog-no-tls "ES unsecure with syslog without TLS"
+checkConfiguration "$TEST_DIR/tmp/es-no-secure-with-syslog-no-tls.env" es-no-secure-with-syslog-no-tls "ES unsecure with syslog without TLS"
 
 # Test with ES secure and syslog with tls
-cat > $TEST_DIR/tmp/es-secure-with-syslog-with-tls.env << EOM
+cat >"$TEST_DIR/tmp/es-secure-with-syslog-with-tls.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true
 $ES_SECURE_VARS
 $SYSLOG_TLS_VARS
 EOM
 
-TMP=$(tempfile)
+TMP=$(mktemp)
 ADDITIONAL_MOUNT="-v $TMP:/etc/fluentd/syslog/ca.pem"
-checkConfiguration $TEST_DIR/tmp/es-secure-with-syslog-with-tls.env es-secure-with-syslog-with-tls "ES secure with syslog with TLS"
+checkConfiguration "$TEST_DIR/tmp/es-secure-with-syslog-with-tls.env" es-secure-with-syslog-with-tls "ES secure with syslog with TLS"
 
 # Test with ES secure and syslog with tls with all log types
-cat > $TEST_DIR/tmp/es-secure-with-syslog-with-tls-all-log-types.env << EOM
+cat >"$TEST_DIR/tmp/es-secure-with-syslog-with-tls-all-log-types.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true
 $ES_SECURE_VARS
 $SYSLOG_TLS_VARS_ALL_LOG_TYPES
 EOM
 
-TMP=$(tempfile)
+TMP=$(mktemp)
 ADDITIONAL_MOUNT="-v $TMP:/etc/fluentd/syslog/ca.pem"
-checkConfiguration $TEST_DIR/tmp/es-secure-with-syslog-with-tls-all-log-types.env es-secure-with-syslog-with-tls-all-log-types "ES secure with syslog with TLS with all log types"
+checkConfiguration "$TEST_DIR/tmp/es-secure-with-syslog-with-tls-all-log-types.env" es-secure-with-syslog-with-tls-all-log-types "ES secure with syslog with TLS with all log types"
 
 # Test with ES secure and syslog with tls
-cat > $TEST_DIR/tmp/es-secure-with-syslog-and-s3.env << EOM
+cat >"$TEST_DIR/tmp/es-secure-with-syslog-and-s3.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true
 $ES_SECURE_VARS
@@ -279,22 +290,23 @@ $SYSLOG_TLS_VARS
 $S3_VARS
 EOM
 
-checkConfiguration $TEST_DIR/tmp/es-secure-with-syslog-and-s3.env es-secure-with-syslog-and-s3 "ES secure with syslog and S3"
+checkConfiguration "$TEST_DIR/tmp/es-secure-with-syslog-and-s3.env" es-secure-with-syslog-and-s3 "ES secure with syslog and S3"
 
 # Test with EKS
-cat > $TEST_DIR/tmp/eks.env <<EOM
+cat >"$TEST_DIR/tmp/eks.env" <<EOM
 $EKS_VARS
 EOM
-checkConfiguration $TEST_DIR/tmp/eks.env eks "EKS"
+checkConfiguration "$TEST_DIR/tmp/eks.env" eks "EKS"
 
 # Test with EKS, Log Stream Prefix overwritten
-cat > $TEST_DIR/tmp/eks-log-stream-pfx.env <<EOM
+cat >"$TEST_DIR/tmp/eks-log-stream-pfx.env" <<EOM
 $EKS_VARS
 EKS_CLOUDWATCH_LOG_STREAM_PREFIX=kube-apiserver-audit-overwritten-
 EOM
-checkConfiguration $TEST_DIR/tmp/eks-log-stream-pfx.env eks-log-stream-pfx "EKS - Log Stream Prefix overwritten"
+checkConfiguration "$TEST_DIR/tmp/eks-log-stream-pfx.env" eks-log-stream-pfx "EKS - Log Stream Prefix overwritten"
 
-SPLUNK_COMMON_VARS=$(cat <<EOM
+SPLUNK_COMMON_VARS=$(
+  cat <<EOM
 SPLUNK_HEC_TOKEN=splunk-token
 SPLUNK_FLOW_LOG=true
 SPLUNK_AUDIT_LOG=true
@@ -307,14 +319,14 @@ EOM
 )
 
 # Test with Splunk, normal server with http https
-cat > $TEST_DIR/tmp/splunk-trusted-http-https.env << EOM
+cat >"$TEST_DIR/tmp/splunk-trusted-http-https.env" <<EOM
 $SPLUNK_COMMON_VARS
 EOM
 
-checkConfiguration $TEST_DIR/tmp/splunk-trusted-http-https.env splunk-trusted-http-https "Splunk - with http and https"
+checkConfiguration "$TEST_DIR/tmp/splunk-trusted-http-https.env" splunk-trusted-http-https "Splunk - with http and https"
 
 # Test with linseed enabled
-cat > $TEST_DIR/tmp/linseed.env << EOM
+cat >"$TEST_DIR/tmp/linseed.env" <<EOM
 $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=true
 LINSEED_ENABLED=true
@@ -322,11 +334,9 @@ $ES_SECURE_VARS
 $LINSEED_VARS
 EOM
 
-TMP=$(tempfile)
-checkConfiguration $TEST_DIR/tmp/linseed.env linseed "LINSEED API with default params"
+TMP=$(mktemp)
+checkConfiguration "$TEST_DIR/tmp/linseed.env" linseed "LINSEED API with default params"
 
-
-
-rm -f $TMP
+rm -f "$TMP"
 
 exit $FAILED

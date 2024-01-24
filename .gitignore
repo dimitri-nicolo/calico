@@ -1,9 +1,10 @@
-test/tmp/*
-*.swp
 *.go-build-cache*
 *.go-pkg-cache*
+*.swp
 */bin/*
+.fluentd.created-*
 .idea
 .manifest.yaml
-Makefile.common*
 .vscode
+Makefile.common*
+test/tmp/*

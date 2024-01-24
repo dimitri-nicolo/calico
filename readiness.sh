@@ -1,4 +1,5 @@
 #!/bin/sh
+
 set -e -o pipefail
 
 # set up any environment variables necessary for our liveness check to run properly
@@ -23,9 +24,9 @@ fi
 # by default, the total buffer size is 512MB in memory or 64GB on disk
 # see: https://docs.fluentd.org/configuration/buffer-section#buffering-parameters
 # The command below uses awk as an alternative for the `head` command. Head for unknown reasons causes issues with the kubelet.
-buffer_avail_ratio=$(echo $tigera_secure_ee | jq -r ".buffer_available_buffer_space_ratios" | sort -n | awk 'FNR <= 1')
+buffer_avail_ratio=$(echo "$tigera_secure_ee" | jq -r ".buffer_available_buffer_space_ratios" | sort -n | awk 'FNR <= 1')
 LOWER_BOUND_PERCENTAGE=5
-if [ -n $buffer_avail_ratio ] && [ "$buffer_avail_ratio" -lt "$LOWER_BOUND_PERCENTAGE" ]; then
+if [ -n "$buffer_avail_ratio" ] && [ "$buffer_avail_ratio" -lt "$LOWER_BOUND_PERCENTAGE" ]; then
     echo "Remaining buffer is lower than the required percentage: $buffer_avail_ratio < $LOWER_BOUND_PERCENTAGE"
     # remaining buffer is low so we shouldn't accept new requests
     exit 1

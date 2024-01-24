@@ -1,5 +1,3 @@
-
-##### Splunk #####
 if [[ "${SPLUNK_AUDIT_LOG}" == "true" || "${SPLUNK_AUDIT_TSEE_LOG}" == "true" || "${SPLUNK_AUDIT_KUBE_LOG}" == "true" || "${SPLUNK_FLOW_LOG}" == "true" || "${SPLUNK_DNS_LOG}" == "true" ]]; then
   # Splunk defaults
   export SPLUNK_AUDIT_LOG=${SPLUNK_AUDIT_LOG:-"false"}
