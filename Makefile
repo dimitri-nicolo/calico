@@ -117,18 +117,22 @@ sub-image-%:
 image: $(FLUENTD_IMAGE)
 
 $(FLUENTD_IMAGE): $(FLUENTD_IMAGE_CREATED)
-$(FLUENTD_IMAGE_CREATED): register build
+$(FLUENTD_IMAGE_CREATED): eks-log-forwarder-startup
+	$(MAKE) $(addprefix build-image-,$(VALIDARCHES))
+	touch $@
+
+build-image-%:
 ifeq ($(OS),Windows_NT)
-	docker build --pull -t $(FLUENTD_IMAGE):latest-amd64 -f Dockerfile.windows .
+	docker build --pull -t $(FLUENTD_IMAGE):latest-$* -f Dockerfile.windows .
 else
+	$(MAKE) register
 	docker buildx build --load --platform=linux/$(ARCH) --pull \
 		--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
 		-t $(FLUENTD_IMAGE):latest-$(ARCH) -f Dockerfile .
-endif
 ifeq ($(ARCH),amd64)
 	docker tag $(FLUENTD_IMAGE):latest-$(ARCH) $(FLUENTD_IMAGE):latest
 endif
-	touch $@
+endif
 
 ###############################################################################
 # CI/CD
