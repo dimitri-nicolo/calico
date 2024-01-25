@@ -104,6 +104,16 @@ func (auth *rbacAuthorizer) createSubjectAccessReview(user user.Info, resource *
 // access the given authzv1.ResourceAttributes and authzv1.NonResourceAttributes in the namespace specified by the
 // rbacAuthorizer.
 func (auth *rbacAuthorizer) createLocalSubjectAccessReview(user user.Info, resource *authzv1.ResourceAttributes, nonResource *authzv1.NonResourceAttributes) (bool, error) {
+	// Ensure the resource is in the namespace specified by the rbacAuthorizer. This would be checked by the API server regardless, but doing it here
+	// prevents an unnecessary API call.
+	if resource.Namespace != "" && resource.Namespace != auth.ns {
+		return false, fmt.Errorf("resource namespace %s does not match authorizer namespace %s", resource.Namespace, auth.ns)
+	}
+
+	// Ensure the Namespace field is set correctly. We do this within the authorizer library instead of the client so that
+	// the cient code doesn't need to track the namespace.
+	resource.Namespace = auth.ns
+
 	sar := authzv1.LocalSubjectAccessReview{
 		Spec: authzv1.SubjectAccessReviewSpec{
 			ResourceAttributes:    resource,
