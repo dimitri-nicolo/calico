@@ -64,6 +64,8 @@ REPO?=$(GCR_REPO)
 PUSH_IMAGE_BASE?=$(REPO)
 PUSH_IMAGE?=$(PUSH_IMAGE_BASE)/$(BUILD_IMAGE)
 
+GIT_USE_SSH=true
+
 ##############################################################################
 # Download and include Makefile.common before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -89,23 +91,45 @@ include Makefile.common
 ###############################################################################
 # Build
 ###############################################################################
+EKS_SRC_FILES = $(shell find eks/ -name '*.go')
+EKS_VERSION_FLAGS=-X main.VERSION=$(GIT_VERSION) \
+	-X main.BUILD_DATE=$(DATE) \
+	-X main.GIT_TAG=$(GIT_DESCRIPTION) \
+	-X main.GIT_COMMIT=$(GIT_COMMIT)
+
 .PHONY: build
-build: eks-log-forwarder-startup
+build: bin/eks-log-forwarder-startup-$(ARCH)
 
 ## build cloudwatch plugin initializer
-eks-log-forwarder-startup:
-	$(MAKE) -C eks/ eks-log-forwarder-startup
+bin/eks-log-forwarder-startup-$(ARCH): $(EKS_SRC_FILES)
+	@echo "Building eks init-container executable"
+	$(DOCKER_GO_BUILD) \
+	    sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 go build -C eks -o $@ -v -ldflags "$(EKS_VERSION_FLAGS) -s -w"'
+
+bin/eks-log-forwarder-startup.exe: $(EKS_SRC_FILES)
+	@echo "Building eks init-container executable for windows"
+	mkdir -p .go-pkg-cache bin $(GOMOD_CACHE) && \
+		docker run --rm --net=host --init \
+			$(EXTRA_DOCKER_ARGS) \
+			-e GOARCH=amd64 \
+			-e GOCACHE=/go-cache \
+			-e GOOS=windows \
+			-e GOPATH=/go \
+			-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+			-e OS=windows \
+			-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
+			-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+			-w /go/src/$(PACKAGE_NAME) \
+			$(CALICO_BUILD) \
+				sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 go build -C eks -o $@ -v -ldflags "$(EKS_VERSION_FLAGS) -s -w"'
 
 clean:
 	rm -rf eks/bin Makefile.common*
-	rm -f $(FLUENTD_IMAGE_CREATED)
 	-docker image rm -f $$(docker images $(FLUENTD_IMAGE) -a -q)
 
 ###############################################################################
 # Image
 ###############################################################################
-FLUENTD_IMAGE_CREATED=.fluentd.created-$(ARCH)
-
 QEMU_IMAGE ?= calico/qemu-user-static:latest
 
 .PHONY: image-all
@@ -114,12 +138,8 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 .PHONY: image
-image: $(FLUENTD_IMAGE)
-
-$(FLUENTD_IMAGE): $(FLUENTD_IMAGE_CREATED)
-$(FLUENTD_IMAGE_CREATED): eks-log-forwarder-startup
+image:
 	$(MAKE) $(addprefix build-image-,$(VALIDARCHES))
-	touch $@
 
 build-image-%:
 ifeq ($(OS),Windows_NT)
@@ -137,21 +157,26 @@ endif
 ###############################################################################
 # CI/CD
 ###############################################################################
-## test cloudwatch plugin initializer
-test-eks-log-forwarder-startup: eks-log-forwarder-startup
-	$(MAKE) -C eks/ ut
+ifdef UNIT_TESTS
+	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
+endif
 
-ut:
+## test cloudwatch plugin initializer
+ut: bin/eks-log-forwarder-startup-$(ARCH)
+ifeq ($(ARCH),amd64)
+	$(DOCKER_GO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) go test -C eks $(UNIT_TEST_FLAGS)'
+endif
+
 st:
 
 ## fluentd config tests
-fv: image eks-log-forwarder-startup
+fv: image
 ifeq ($(ARCH),amd64)
 	cd test && IMAGETAG=latest ./test.sh
-	$(MAKE) -C eks/ ut
 endif
 
-ci: image test
+ci: build test image
 
 ## push fluentd image to GCR_REPO.
 #  Note: this is called from both Linux and Windows so ARCH_TAG is required.
