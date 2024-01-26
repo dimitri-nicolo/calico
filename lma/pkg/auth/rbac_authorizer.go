@@ -29,11 +29,22 @@ type RBACAuthorizer interface {
 
 type rbacAuthorizer struct {
 	k8sCli k8s.Interface
+
+	// ns is the Namespace in which to scope authorization requests. If empty, use cluster-scoped SubjectAccessReviews.
+	// If non-empty, use namespace-scoped LocalSubjectAccessReviews.
+	ns string
 }
 
 func NewRBACAuthorizer(k8sCli k8s.Interface) RBACAuthorizer {
 	return &rbacAuthorizer{
 		k8sCli: k8sCli,
+	}
+}
+
+func NewNamespacedRBACAuthorizer(k8sCli k8s.Interface, ns string) RBACAuthorizer {
+	return &rbacAuthorizer{
+		k8sCli: k8sCli,
+		ns:     ns,
 	}
 }
 
@@ -48,6 +59,12 @@ func (auth *rbacAuthorizer) Authorize(usr user.Info, resources *authzv1.Resource
 		return false, fmt.Errorf("no resource available to authorize")
 	}
 
+	if auth.ns != "" {
+		// Use namespace-scoped LocalSubjectAccessReviews.
+		return auth.createLocalSubjectAccessReview(usr, resources, nonResources)
+	}
+
+	// Use cluster-scoped SubjectAccessReviews.
 	return auth.createSubjectAccessReview(usr, resources, nonResources)
 }
 
@@ -72,6 +89,47 @@ func (auth *rbacAuthorizer) createSubjectAccessReview(user user.Info, resource *
 	}
 
 	res, err := auth.k8sCli.AuthorizationV1().SubjectAccessReviews().Create(context.Background(), &sar, metav1.CreateOptions{})
+	if res != nil {
+		log.Debugf("Response to access review: %#v", res.Status)
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("error performing AccessReview: %v", err)
+	}
+
+	return res.Status.Allowed, nil
+}
+
+// createLocalSubjectAccessReview creates a authzv1.LocalSubjectAccessReview to check if the given user is authorized to
+// access the given authzv1.ResourceAttributes and authzv1.NonResourceAttributes in the namespace specified by the
+// rbacAuthorizer.
+func (auth *rbacAuthorizer) createLocalSubjectAccessReview(user user.Info, resource *authzv1.ResourceAttributes, nonResource *authzv1.NonResourceAttributes) (bool, error) {
+	// Ensure the resource is in the namespace specified by the rbacAuthorizer. This would be checked by the API server regardless, but doing it here
+	// prevents an unnecessary API call.
+	if resource.Namespace != "" && resource.Namespace != auth.ns {
+		return false, fmt.Errorf("resource namespace %s does not match authorizer namespace %s", resource.Namespace, auth.ns)
+	}
+
+	// Ensure the Namespace field is set correctly. We do this within the authorizer library instead of the client so that
+	// the cient code doesn't need to track the namespace.
+	resource.Namespace = auth.ns
+
+	sar := authzv1.LocalSubjectAccessReview{
+		Spec: authzv1.SubjectAccessReviewSpec{
+			ResourceAttributes:    resource,
+			NonResourceAttributes: nonResource,
+			User:                  user.GetName(),
+			Groups:                user.GetGroups(),
+			Extra:                 make(map[string]authzv1.ExtraValue),
+			UID:                   user.GetUID(),
+		},
+	}
+
+	for k, v := range user.GetExtra() {
+		sar.Spec.Extra[k] = v
+	}
+
+	res, err := auth.k8sCli.AuthorizationV1().LocalSubjectAccessReviews(auth.ns).Create(context.Background(), &sar, metav1.CreateOptions{})
 	if res != nil {
 		log.Debugf("Response to access review: %#v", res.Status)
 	}
