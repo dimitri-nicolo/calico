@@ -1,4 +1,4 @@
-// Copyright 2019-2021 Tigera Inc. All rights reserved.
+// Copyright 2019-2024 Tigera Inc. All rights reserved.
 package fortimanager
 
 import (
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -19,21 +20,19 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-
-	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
-	"github.com/projectcalico/calico/libcalico-go/lib/errors"
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	xconfig "github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	fortilib "github.com/projectcalico/calico/firewall-integration/pkg/fortimanager"
+	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
+	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // Controller health
@@ -74,15 +73,20 @@ type SelectorsController struct {
 	xrefCache          xrefcache.XrefCache
 	healthAggregator   *health.HealthAggregator
 	gnpToNodes         map[string]set.Set[string]
-	gnpToPods          map[string]resources.Set
+	gnpToPods          map[string]set.Set[v3.ResourceID]
 	syncerUpdateChan   chan []syncer.Update
 	calicoClientset    clientv3.ProjectcalicoV3Interface
 	calicoGnpInformer  cache.Controller
 }
 
-func NewSelectorsController(ctx context.Context, cfg *config.Config, h *health.HealthAggregator,
-	k8sClientset *kubernetes.Clientset, fcs map[string]fortilib.FortiFWClientApi,
-	calicoClient clientv3.ProjectcalicoV3Interface) *SelectorsController {
+func NewSelectorsController(
+	ctx context.Context,
+	cfg *config.Config,
+	h *health.HealthAggregator,
+	k8sClientset *kubernetes.Clientset,
+	fcs map[string]fortilib.FortiFWClientApi,
+	calicoClient clientv3.ProjectcalicoV3Interface,
+) *SelectorsController {
 
 	// Register with health reporting aggregator.
 	h.RegisterReporter(healthReporterName, &health.HealthReport{Live: true}, healthReportInterval)
@@ -114,7 +118,7 @@ func NewSelectorsController(ctx context.Context, cfg *config.Config, h *health.H
 
 			pod.TypeMeta = resources.TypeK8sPods
 			updates := []syncer.Update{
-				syncer.Update{
+				{
 					Type:       syncer.UpdateTypeSet,
 					ResourceID: resources.GetResourceID(pod),
 					Resource:   pod,
@@ -137,7 +141,7 @@ func NewSelectorsController(ctx context.Context, cfg *config.Config, h *health.H
 			pod.TypeMeta = resources.TypeK8sPods
 
 			updates := []syncer.Update{
-				syncer.Update{
+				{
 					Type:       syncer.UpdateTypeSet,
 					ResourceID: resources.GetResourceID(pod),
 					Resource:   pod,
@@ -159,7 +163,7 @@ func NewSelectorsController(ctx context.Context, cfg *config.Config, h *health.H
 			pod.TypeMeta = resources.TypeK8sPods
 
 			updates := []syncer.Update{
-				syncer.Update{
+				{
 					Type:       syncer.UpdateTypeDeleted,
 					ResourceID: resources.GetResourceID(pod),
 					Resource:   pod,
@@ -171,7 +175,7 @@ func NewSelectorsController(ctx context.Context, cfg *config.Config, h *health.H
 	}, cache.Indexers{})
 
 	gnpToNodes := make(map[string]set.Set[string])
-	gnpToPods := make(map[string]resources.Set)
+	gnpToPods := make(map[string]set.Set[v3.ResourceID])
 	// Create cache clients for all Forti devices
 	devToRcacheAddr := getResourceCacheAddress(fcs)
 	devToRcacheAddrGrp := getResourceCacheAddressGrps(fcs)
@@ -227,7 +231,7 @@ func getPolicySelectorLabel(policySelector string) string {
 }
 
 // Create ListWatcher & Informer for Global Network Policies
-func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[string], gnpToPods map[string]resources.Set,
+func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[string], gnpToPods map[string]set.Set[v3.ResourceID],
 	calicoClient clientv3.ProjectcalicoV3Interface,
 	devToRcacheAddrGrp map[string]rcache.ResourceCache,
 	syncerUpdateChan chan<- []syncer.Update) cache.Controller {
@@ -261,18 +265,19 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 				Name:    gnp.Name,
 				Members: set.New[string](),
 			}
+
 			// Insert Address Group in Cache
 			for _, cache := range devToRcacheAddrGrp {
 				cache.Set(gnp.Name, addrGroup)
 			}
 
 			gnpToNodes[gnp.Name] = set.New[string]()
-			gnpToPods[gnp.Name] = resources.NewSet()
+			gnpToPods[gnp.Name] = set.New[v3.ResourceID]()
 
 			gnp.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
 			// Create an update
 			updates := []syncer.Update{
-				syncer.Update{
+				{
 					Type:       syncer.UpdateTypeSet,
 					ResourceID: resources.GetResourceID(gnp),
 					Resource:   gnp,
@@ -311,11 +316,11 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 			gnpNew.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
 
 			gnpToNodes[gnpNew.Name] = set.New[string]()
-			gnpToPods[gnpNew.Name] = resources.NewSet()
+			gnpToPods[gnpNew.Name] = set.New[v3.ResourceID]()
 
 			// Create an update
 			updates := []syncer.Update{
-				syncer.Update{
+				{
 					Type:       syncer.UpdateTypeSet,
 					ResourceID: resources.GetResourceID(gnpNew),
 					Resource:   gnpNew,
@@ -343,7 +348,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 			}
 
 			updates := []syncer.Update{
-				syncer.Update{
+				{
 					Type:       syncer.UpdateTypeDeleted,
 					ResourceID: resources.GetResourceID(gnp),
 					Resource:   gnp,
@@ -620,7 +625,7 @@ func (sc *SelectorsController) syncToFortiGateAddr(key, dev string) error {
 			Comment: TigeraComment,
 		}
 		// Lookup to see if this object already exists in the FortiGate.
-		existingAddr, err := fc.GetFirewallAddress(addr.Name)
+		_, err := fc.GetFirewallAddress(addr.Name)
 		if err != nil {
 			// TODO(doublek): Handle doesn't exist error here.
 			if _, ok := err.(fortilib.ErrorResourceDoesNotExist); !ok {
@@ -639,8 +644,6 @@ func (sc *SelectorsController) syncToFortiGateAddr(key, dev string) error {
 
 		// Existing object. Time to update it.
 		clog.Debug("Updating FirewallAddress in FortiGate")
-		fortiFWAddr.IpAddr = existingAddr.IpAddr
-		fortiFWAddr.Mask = existingAddr.Mask
 		err = fc.UpdateFirewallAddress(fortiFWAddr)
 		if err != nil {
 			clog.WithError(err).Warning("Failed to update FirewallAddress in FortiGate")
@@ -793,23 +796,22 @@ func (sc *SelectorsController) handleNodeUpdate(update syncer.Update) {
 // Handles the PodAssigned/NodeRemoved events from the xrefcache
 // Based on the Update, AddressCache and AddressGroup cache are modified
 func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
-
 	cachedEntry := sc.xrefCache.Get(update.ResourceID)
 	cachedEntryGNP := cachedEntry.(*xrefcache.CacheEntryNetworkPolicy)
 	if update.Type&xrefcache.EventEndpointMatchStarted != 0 {
 		log.Infof("Received node Event Policy started %#v", update)
 
 		// Create a Firewall Address object in Address cache.
-		cachedEntryGNP.SelectedPods.Iter(func(id apiv3.ResourceID) error {
+		cachedEntryGNP.SelectedPods.Iter(func(id v3.ResourceID) error {
 			p, err := sc.k8sClientset.CoreV1().Pods(id.Namespace).Get(context.Background(), id.Name, metav1.GetOptions{})
 			if err != nil {
-				log.WithError(err).Errorf("Failed to get pod resource from k8s client for pod:%#v", id.Name)
-				return err
+				log.WithError(err).Errorf("failed to get pod resource from k8s client for pod:%#v", id.Name)
+				return nil
 			} else {
 				fw, err := ConvertK8sPodToFortinetFirewallAddress(p)
 				if err != nil {
 					log.WithError(err).Error("Failed to convert to Fortinet Firewall Address")
-					return err
+					return nil
 				}
 				for _, cache := range sc.devToRcacheAddr {
 					// Update address object in Address Cache.
@@ -824,7 +826,7 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 		// Address Group name must match with network policy Name.
 		pods := sc.gnpToPods[update.ResourceID.Name]
 		members := []string{}
-		cachedEntryGNP.SelectedPods.Iter(func(id apiv3.ResourceID) error {
+		cachedEntryGNP.SelectedPods.Iter(func(id v3.ResourceID) error {
 			podName := fmt.Sprintf("%s-%s", id.Namespace, id.Name)
 			pods.Add(id)
 			log.Infof("Assigning pod %v to address group %v", podName, update.ResourceID.Name)
@@ -848,7 +850,7 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 		// Iterate over pods linked to a GNP, if a pod is
 		// NOT present in xrefcache, that means pod had been removed.
 		pods := sc.gnpToPods[update.ResourceID.Name]
-		pods.Iter(func(item apiv3.ResourceID) error {
+		pods.Iter(func(item v3.ResourceID) error {
 
 			podName := fmt.Sprintf("%s-%s", item.Namespace, item.Name)
 			ok := cachedEntryGNP.SelectedPods.Contains(item)
@@ -865,8 +867,7 @@ func (sc *SelectorsController) handlePodUpdate(update syncer.Update) {
 		// Address Group name must match with network policy Name.
 		pods = sc.gnpToPods[update.ResourceID.Name]
 		members := []string{}
-		pods.Iter(func(item apiv3.ResourceID) error {
-
+		pods.Iter(func(item v3.ResourceID) error {
 			podName := fmt.Sprintf("%s-%s", item.Namespace, item.Name)
 			ok := cachedEntryGNP.SelectedPods.Contains(item)
 			if !ok {
@@ -908,12 +909,12 @@ func getResourceCacheAddressGrps(fcs map[string]fortilib.FortiFWClientApi) map[s
 				return nil, err
 			}
 
-			for _, addr := range addrGroups {
-				if !strings.Contains(addr.Comment, TigeraComment) {
-					log.Debugf("Filtering out %s as it's not something we manage", addr.Name)
+			for _, addrg := range addrGroups {
+				if !strings.Contains(addrg.Comment, TigeraComment) {
+					log.Debugf("Filtering out %s as it's not something we manage", addrg.Name)
 					continue
 				}
-				groups[addr.Name] = addr
+				groups[addrg.Name] = addrg
 			}
 			log.Debugf("List of address groups: %+v", groups)
 			return groups, nil
@@ -944,14 +945,20 @@ func getResourceCacheAddress(fcs map[string]fortilib.FortiFWClientApi) map[strin
 				return nil, err
 			}
 
-			for _, fwAddr := range fwAddresses {
+			for _, addr := range fwAddresses {
 				// Filter only Addresses managed by
-				if !strings.Contains(fwAddr.Comment, TigeraComment) {
+				if !strings.Contains(addr.Comment, TigeraComment) {
 					continue
 				}
-				addresses[fwAddr.Name] = fwAddr
-				log.Infof("fwAddr name :%#v", fwAddr.Name)
+				addresses[addr.Name] = fortilib.RespFortiGateFWAddressData{
+					Name:    addr.Name,
+					Comment: addr.Comment,
+					Type:    addr.Type,
+					SubType: addr.SubType,
+					Subnet:  addr.IpAddr,
+				}
 			}
+			log.Debugf("List of addresses: %+v", addresses)
 			return addresses, nil
 		}
 
