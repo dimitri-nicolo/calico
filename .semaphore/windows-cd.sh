@@ -22,10 +22,10 @@ set -ex
 SSH_ARGS="-i ${PROCESS_REPO}/tf/master_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
 # Build eks log forwarder binaries on the Semaphore VM.
-make eks-log-forwarder-startup
+make bin/eks-log-forwarder-startup.exe
 
 # Tar up repo so we can send it to the Windows instances where we will build the docker image.
-tar --exclude='eks/.go-pkg-cache' --exclude='eks/.go-build-cache' -cvf fluentd-docker.tar .
+tar --exclude='.go-pkg-cache' --exclude='.go-build-cache' -cvf fluentd-docker.tar .
 
 GCR_SECRET=$(cat ~/secrets/banzai-google-service-account.json | base64 -w0)
 GCR_LOGIN="[System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String('${GCR_SECRET}')) | docker login -u _json_key --password-stdin https://gcr.io"
@@ -47,7 +47,7 @@ while read -r host; do
 
   # Kick off cmd in the background, saving the individual logs.
   ssh ${SSH_ARGS} Administrator@${host} "${CMD}" </dev/null | tee ${LOG_FILE} &
-done < ${PROCESS_REPO}/hosts.txt
+done <${PROCESS_REPO}/hosts.txt
 
 # Wait until all image pushing is done.
 wait
@@ -56,4 +56,4 @@ wait
 while read -r host; do
   LOG_FILE=~/log-${host}.txt
   artifact push job --expire-in 2w ${LOG_FILE}
-done < ${PROCESS_REPO}/hosts.txt
+done <${PROCESS_REPO}/hosts.txt
