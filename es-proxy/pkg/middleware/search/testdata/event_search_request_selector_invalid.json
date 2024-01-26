@@ -45,7 +45,7 @@
       ]
     }
   ],
-  "selector": "NOT ( origin = origin1 )",
+  "selector": "(NOT dismissed = true) AND NOT ( origin = origin1 )",
   "sort": [
     {
       "field": "time",
