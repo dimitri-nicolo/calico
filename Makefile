@@ -146,6 +146,7 @@ ifeq ($(OS),Windows_NT)
 	docker build --pull -t $(FLUENTD_IMAGE):latest-$* -f Dockerfile.windows .
 else
 	$(MAKE) register
+	$(MAKE) build
 	docker buildx build --load --platform=linux/$(ARCH) --pull \
 		--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
 		-t $(FLUENTD_IMAGE):latest-$(ARCH) -f Dockerfile .
