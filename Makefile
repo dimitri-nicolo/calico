@@ -47,6 +47,7 @@ ci-preflight-checks:
 	$(MAKE) check-dockerfiles
 	$(MAKE) check-gotchas
 	$(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.
+	$(MAKE) check-release-cut-promotions
 	$(MAKE) generate
 	$(MAKE) check-dirty
 
@@ -62,6 +63,14 @@ check-gotchas:
 
 check-dockerfiles:
 	./hack/check-dockerfiles.sh
+
+check-release-cut-promotions:
+	@docker run --quiet --rm \
+		-v .:/source \
+		-w /source \
+		python:3 \
+		bash -c 'pip3 install --quiet --disable-pip-version-check --root-user-action ignore PyYAML \
+			&& python3 hack/check_semaphore_cut_releases.py'
 
 check-language:
 	./hack/check-language.sh
