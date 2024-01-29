@@ -3,6 +3,8 @@
 package users_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -545,6 +547,20 @@ var _ = Describe("ElasticseachUsers", func() {
 						},
 					},
 				},
+				"tigera-ee-dashboards-installer": {
+					Username: "tigera-ee-dashboards-installer-secure",
+					Roles: []elasticsearch.Role{{
+						Name: "tigera-ee-dashboards-installer-secure",
+						Definition: &elasticsearch.RoleDefinition{
+							Indices: make([]elasticsearch.RoleIndex, 0),
+							Applications: []elasticsearch.Application{{
+								Application: "kibana-.kibana",
+								Privileges:  []string{"all"},
+								Resources:   []string{"*"},
+							}},
+						},
+					}},
+				},
 			}
 
 			expectedPublicUsers = map[users.ElasticsearchUserName]elasticsearch.User{
@@ -663,7 +679,7 @@ func testElasticsearchUsers(privateUsers, publicUsers, expectedprivateUsers, exp
 	Expect(len(publicUsers)).Should(Equal(len(expectedpublicUsers)))
 	for expectedName, expectedUser := range expectedprivateUsers {
 		esUser, exists := privateUsers[expectedName]
-		Expect(exists).Should(BeTrue())
+		Expect(exists).Should(BeTrue(), fmt.Sprintf("User %s does not exist", esUser.Username))
 		Expect(esUser.Username).Should(Equal(expectedUser.Username))
 
 		Expect(len(esUser.Roles)).Should(Equal(len(expectedUser.Roles)))

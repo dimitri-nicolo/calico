@@ -31,6 +31,7 @@ const (
 	ElasticsearchUserNameOperator              ElasticsearchUserName = "tigera-ee-operator"
 	ElasticsearchUserNameElasticsearchMetrics  ElasticsearchUserName = "tigera-ee-elasticsearch-metrics"
 	ElasticsearchUserNameLinseed               ElasticsearchUserName = "tigera-ee-linseed"
+	ElasticsearchUserNameDashboardsInstaller   ElasticsearchUserName = "tigera-ee-dashboards-installer"
 
 	// This suffix is used to maintain a 1:1 mapping of public users that can be safely propagated to the managed cluster and
 	// private users that will be swapped into the request at the ES gateway in the management cluster by stripping this suffix.
@@ -403,6 +404,7 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 				},
 			}},
 		},
+		// Deprecated Elastic user for Kibana dashboard and index-patterns creation
 		ElasticsearchUserNameInstaller: {
 			Username: formatName(ElasticsearchUserNameInstaller, clusterName, true, true),
 			Roles: []elasticsearch.Role{{
@@ -462,6 +464,25 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 								Privileges: []string{"create_index", "write", "manage", "read"},
 							},
 						},
+					},
+				},
+			},
+		},
+		// tigera-ee-dashboards-installer is stored only in tigera-ee-dashboards-installer-user-secret secret.
+		// It is used to create dashboards and index-pattern in Kibana via a K8s job inside tigera-elasticsearch namespace
+		ElasticsearchUserNameDashboardsInstaller: {
+			DirectConnection: true,
+			Username:         formatName(ElasticsearchUserNameDashboardsInstaller, clusterName, true, true),
+			Roles: []elasticsearch.Role{
+				{
+					Name: formatName(ElasticsearchUserNameDashboardsInstaller, clusterName, true, true),
+					Definition: &elasticsearch.RoleDefinition{
+						Indices: make([]elasticsearch.RoleIndex, 0),
+						Applications: []elasticsearch.Application{{
+							Application: "kibana-.kibana",
+							Privileges:  []string{"all"},
+							Resources:   []string{"*"},
+						}},
 					},
 				},
 			},
