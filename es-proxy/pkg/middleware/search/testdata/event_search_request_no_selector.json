@@ -25,6 +25,6 @@
 			]
 		}
 	],
-	"selector":"(NOT dismissed = true) AND NOT (( origin = origin1 ) OR ( origin = origin2 ))",
+	"selector":"NOT (( origin = origin1 ) OR ( origin = origin2 ))",
 	"sort":[{"field":"time","descending":true}]
 }
