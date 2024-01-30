@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strconv"
+	"strings"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/projectcalico/go-json/json"
@@ -22,10 +24,13 @@ import (
 const legacyEventsFormat = "^(tigera_secure_ee_events.).+(.lma)$"
 
 type IndexInfo struct {
-	AliasExists  bool
-	IndexExists  bool
-	AliasedIndex string
-	Mappings     map[string]interface{}
+	WriteIndexDeclared bool
+	IndexExists        bool
+	WriteIndexName     string
+	Mappings           map[string]interface{}
+	Shards             int
+	Replicas           int
+	ILMPolicy          string
 }
 
 func (index IndexInfo) HasMappings(mappings map[string]interface{}) bool {
@@ -52,6 +57,42 @@ func (index IndexInfo) HasMappings(mappings map[string]interface{}) bool {
 	return reflect.DeepEqual(liveMappings, expectedMappings)
 }
 
+func (index IndexInfo) HasSettingsUpToDate(config *TemplateConfig) bool {
+	if !index.IndexExists {
+		// Index does not exist to compare the settings
+		return false
+	}
+
+	// Compare the saved settings with the recently fetched setting
+	settings := config.settings()
+	expectedShards, foundShards := settings["number_of_shards"]
+	expectedReplicas, foundReplicas := settings["number_of_replicas"]
+	lifeCycleEnabled := config.hasLifecycleEnabled()
+	var expectedILMPolicyName string
+	if lifeCycleEnabled {
+		// ILM policy is created by the operator and only referenced by the template
+		expectedILMPolicyName = config.Index.ILMPolicyName()
+	}
+
+	logrus.Debugf("Actual Settings, shard:%d , replica:%d, ILMPolicyName:%s", index.Shards, index.Replicas, index.ILMPolicy)
+	logrus.Debugf("Expected Settings, shard:%s , replica:%s, ILMPolicyName:%s", expectedShards, expectedReplicas, expectedILMPolicyName)
+
+	// Config does not have shards but the latest index have shards or
+	// Config have shards, and it does not match the current index setting
+	if (!foundShards && index.Shards != 0) || (foundShards && expectedShards != index.Shards) {
+		return false
+	}
+
+	if (!foundReplicas && index.Replicas != 0) || (foundReplicas && expectedReplicas != index.Replicas) {
+		return false
+	}
+
+	if len(expectedILMPolicyName) > 0 && index.ILMPolicy != expectedILMPolicyName {
+		return false
+	}
+	return true
+}
+
 // DefaultBootstrapper creates an index template for the give log type and cluster information
 // pairing and create a bootstrap index that uses that template
 var DefaultBootstrapper Bootstrapper = func(ctx context.Context, client *elastic.Client, config *TemplateConfig) (*Template, error) {
@@ -68,12 +109,14 @@ var DefaultBootstrapper Bootstrapper = func(ctx context.Context, client *elastic
 		return nil, err
 	}
 
+	isSettingsUpToDate := indexInfo.HasSettingsUpToDate(config)
+
 	// Check if the index mappings are up to date.
 	// Please note that we only compare the mappings.
 	// One could argue that similar logic should be done to detect settings changes.
 	// This is possible, but we would need to ignore the following fields: provided_name, creation_date, uuid, version.
 	// To keep things simple, we'll ignore this and assume that we're unlikely to update the settings without updating the mappings...
-	if indexInfo.HasMappings(template.Mappings) {
+	if indexInfo.HasMappings(template.Mappings) && isSettingsUpToDate {
 		logrus.Debug("Existing index already uses the latest mappings")
 		return template, nil
 	}
@@ -87,40 +130,112 @@ var DefaultBootstrapper Bootstrapper = func(ctx context.Context, client *elastic
 		return nil, err
 	}
 
-	if indexInfo.AliasExists {
-		if shouldRollover(indexInfo, config) {
+	if indexInfo.WriteIndexDeclared {
+		if shouldRollover(indexInfo, config) || !isSettingsUpToDate {
 			// Rollover index to get latest mappings
-			err = RolloverIndex(ctx, client, config, indexInfo.AliasedIndex)
+			err = RolloverIndex(ctx, client, config, indexInfo.WriteIndexName)
 			if err != nil {
 				logrus.WithError(err).Error("failed to roll over index")
 				return nil, err
 			}
 		}
 	} else if !indexInfo.IndexExists {
+		// data comes in for the first time
 		// The alias doesn't exist, and neither does the index - create both the index and alias
 		err = CreateIndexAndAlias(ctx, client, config)
 		if lmaelastic.IsAlreadyExists(err) {
 			// If we get an already exists error, it means we conflicted with another client.
 			// We can safely ignore this and continue, but make sure we log it out.
-			logrus.WithError(err).Info("index and alias already exist, continuing")
+			logrus.WithError(err).Info("Index and alias already exist, continuing")
 		} else if err != nil {
 			logrus.WithError(err).Error("failed to create index and alias")
 			return nil, err
 		}
-	} else if !indexInfo.AliasExists {
+	} else if !indexInfo.WriteIndexDeclared {
 		// Alias doesn't exist, but the index does
 		err = CreateAliasForIndex(ctx, client, config)
 		if lmaelastic.IsAlreadyExists(err) {
 			// If we get an already exists error, it means we conflicted with another client.
 			// We can safely ignore this and continue, but make sure we log it out.
-			logrus.WithError(err).Info("alias already exists, continuing")
+			logrus.WithError(err).Info("Alias already exists, continuing")
 		} else if err != nil {
-			logrus.WithError(err).Error("failed to create alias for index")
+			logrus.WithError(err).Error("Failed to create alias for index")
 			return nil, err
 		}
 	}
 
 	return template, nil
+}
+
+// getIndexSettings retrieves the Index settings for an index.
+func (index *IndexInfo) getIndexSettings(ctx context.Context, client *elastic.Client, config *TemplateConfig) error {
+	settingsResponse, err := client.IndexGetSettings(index.WriteIndexName).Do(ctx)
+	if err != nil {
+		return err
+	}
+
+	var matchingIndexResponse *elastic.IndicesGetSettingsResponse
+	targetedIndexPrefix := strings.TrimSuffix(config.indexPatterns(), "*")
+
+	for indexName, response := range settingsResponse {
+		if strings.HasPrefix(indexName, targetedIndexPrefix) {
+			matchingIndexResponse = response
+			break
+		}
+	}
+
+	if matchingIndexResponse == nil {
+		return fmt.Errorf("Index not found for pattern %s", config.indexPatterns())
+	}
+
+	indexSettings, ok := matchingIndexResponse.Settings["index"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("Index settings not found")
+	}
+
+	// Extract properties from settings
+	shards, err := extractPropertyFromSettings(indexSettings, "number_of_shards")
+	if err != nil {
+		return fmt.Errorf("Failed to extract shards property: %v", err)
+	}
+
+	replicas, err := extractPropertyFromSettings(indexSettings, "number_of_replicas")
+	if err != nil {
+		return fmt.Errorf("Failed to extract replicas property: %v", err)
+	}
+
+	// ILM policy will be part of lifecycle map
+	// Some index may not have ILM policy eg: tigera_secure_ee_threatfeeds_ipset , tigera_secure_ee_threatfeeds_domainnameset
+	indexSettings, ok = indexSettings["lifecycle"].(map[string]interface{})
+	if ok {
+		ilmPolicy, err := extractPropertyFromSettings(indexSettings, "name")
+		if err != nil {
+			return fmt.Errorf("Failed to extract ilm_policy property: %v", err)
+		}
+		index.ILMPolicy = ilmPolicy
+	}
+
+	// Set values in the IndexInfo struct
+	index.Shards, err = strconv.Atoi(shards)
+	if err != nil {
+		return fmt.Errorf("Failed to convert shards to integer: %v", err)
+	}
+
+	index.Replicas, err = strconv.Atoi(replicas)
+	if err != nil {
+		return fmt.Errorf("Failed to convert replicas to integer: %v", err)
+	}
+
+	return nil
+}
+
+func extractPropertyFromSettings(settings map[string]interface{}, propertyName string) (string, error) {
+	propertyValue, ok := settings[propertyName].(string)
+	if !ok {
+		return "", fmt.Errorf("property '%s' not found", propertyName)
+	}
+
+	return propertyValue, nil
 }
 
 // shouldRollover returns whether or not an index with out-of-date mappings should be rolled over.
@@ -157,25 +272,26 @@ func GetIndexInfo(ctx context.Context, client *elastic.Client, config *TemplateC
 		logrus.WithField("row", row).Debug("Checking if row is a matching write index")
 		if row.Alias == config.Alias() && row.IsWriteIndex == "true" {
 			logrus.WithField("row", row).Debug("Found matching write index")
-			index.AliasExists = true
-			index.AliasedIndex = row.Index
+			index.WriteIndexDeclared = true
+			index.WriteIndexName = row.Index
 			break
 		}
 	}
 
-	if index.AliasExists {
+	if index.WriteIndexDeclared {
 		// Alias exists. This means that the index was setup previously.
-		log := logrus.WithFields(logrus.Fields{"alias": config.Alias(), "index": index.AliasedIndex})
+		log := logrus.WithFields(logrus.Fields{"alias": config.Alias(), "index": index.WriteIndexName})
 		log.Info("Alias exists for index")
 
-		ir, err := client.IndexGet(index.AliasedIndex).Do(ctx)
+		ir, err := client.IndexGet(index.WriteIndexName).Do(ctx)
 		if err != nil {
 			return index, err
 		}
+		index.IndexExists = true
 		log.WithField("response", ir).Debug("IndexGet response")
 
 		// Get mappings
-		index.Mappings = ir[index.AliasedIndex].Mappings
+		index.Mappings = ir[index.WriteIndexName].Mappings
 		if index.Mappings == nil {
 			return index, fmt.Errorf("failed to get index mappings")
 		}
@@ -190,6 +306,12 @@ func GetIndexInfo(ctx context.Context, client *elastic.Client, config *TemplateC
 		// Check if index exists even though it's not aliased
 		logrus.WithField("index", config.BootstrapIndexName()).Info("No alias exists for index")
 		index.IndexExists, err = client.IndexExists(config.BootstrapIndexName()).Do(ctx)
+		if err != nil {
+			return index, err
+		}
+	}
+	if index.IndexExists && index.WriteIndexDeclared {
+		index.getIndexSettings(ctx, client, config)
 		if err != nil {
 			return index, err
 		}
@@ -247,7 +369,7 @@ func CreateAliasForIndex(ctx context.Context, client *elastic.Client, config *Te
 }
 
 func RolloverIndex(ctx context.Context, client *elastic.Client, config *TemplateConfig, oldIndex string) error {
-	logrus.Info("Existing index does not use the latest mappings, let's rollover the index so that it uses the latest mappings")
+	logrus.Info("Existing index does not use the latest mappings or shards or replicas or ILM policy, let's rollover the index so that it uses the latest")
 	rolloverReq := client.RolloverIndex(config.Alias())
 
 	// Event indices prior to 3.17 were created to match the pattern tigera_secure_ee_events.{$managed_cluster}.lma

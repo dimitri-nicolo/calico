@@ -90,7 +90,7 @@ func TestBootstrapFlowTemplate(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, templ)
 	require.Len(t, templ.IndexPatterns, 1)
-	testutils.CheckSingleIndexTemplateBootstrapping(t, ctx, client, idx, info)
+	testutils.CheckSingleIndexTemplateBootstrapping(t, ctx, client, idx, info, "000001", "1", "0", "tigera_secure_ee_flows_policy")
 }
 
 func TestBootstrapFlowTemplateAsync(t *testing.T) {
@@ -129,7 +129,7 @@ func TestBootstrapFlowTemplateAsync(t *testing.T) {
 	}
 
 	// Check that the resulting template in ES is correct.
-	testutils.CheckSingleIndexTemplateBootstrapping(t, ctx, client, idx, info)
+	testutils.CheckSingleIndexTemplateBootstrapping(t, ctx, client, idx, info, "000001", "1", "0", "tigera_secure_ee_flows_policy")
 }
 
 func checkMultiIndexTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster, indexNumber string, expectedNumberIndices int, templateNameEndsInDot bool) {
@@ -382,7 +382,7 @@ func TestMappingsValidity(t *testing.T) {
 			indexInfo, err = templates.GetIndexInfo(ctx, client, config)
 			require.NoError(t, err)
 
-			require.True(t, indexInfo.AliasExists)
+			require.True(t, indexInfo.WriteIndexDeclared)
 
 			// If this fails, need to update mappings file
 			require.Equal(t, indexInfo.Mappings, template.Mappings)
