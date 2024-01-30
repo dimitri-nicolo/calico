@@ -43,7 +43,7 @@
       ]
     }
   ],
-  "selector": "NOT (( origin = origin1 AND type = global_alert ) OR ( origin = origin3 AND type = alert OR source_namespace = ns3 ) OR ( origin = origin2 OR type = honeypod ))",
+  "selector": "(NOT dismissed = true) AND NOT (( origin = origin1 AND type = global_alert ) OR ( origin = origin3 AND type = alert OR source_namespace = ns3 ) OR ( origin = origin2 OR type = honeypod ))",
   "sort": [
     {
       "field": "time",

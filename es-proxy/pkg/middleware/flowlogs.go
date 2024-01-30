@@ -175,14 +175,14 @@ func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, lscl
 		opts := []client.ListPagerOption[lapi.L3Flow]{client.WithMaxResults[lapi.L3Flow](int(params.Limit))}
 		pager := client.NewListPager(flowParams, opts...)
 		if len(params.PolicyPreviews) == 0 {
-			response, stat, err = getFlowLogsFromElastic(ctx, flowFilter, params.Unprotected, pager, lsclient, params.ClusterName)
+			response, stat, err = getFlowLogsFromLinseed(ctx, flowFilter, params.Unprotected, pager, lsclient, params.ClusterName)
 		} else {
 			rbacHelper := NewPolicyImpactRbacHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
-			response, stat, err = getPIPFlowLogsFromElastic(ctx, pager, flowFilter, params, pip, rbacHelper)
+			response, stat, err = getPIPFlowLogsFromLinseed(ctx, pager, flowFilter, params, pip, rbacHelper)
 		}
 
 		if err != nil {
-			log.WithError(err).Info("Error getting search results from elastic")
+			log.WithError(err).Info("Error getting search results from Linseed")
 			http.Error(w, err.Error(), stat)
 		}
 
@@ -483,7 +483,7 @@ func convertToBuckets(items []lapi.L3Flow, unprotectedOnly bool, filter lmaelast
 }
 
 // This method will take a look at the request parameters made to the /flowLogs endpoint and return the results.
-func getFlowLogsFromElastic(
+func getFlowLogsFromLinseed(
 	ctx context.Context,
 	filter lmaelastic.FlowFilter,
 	unprotected bool,
@@ -540,8 +540,8 @@ func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 }
 
 // This method will take a look at the request parameters made to the /flowLogs endpoint with pip settings,
-// verify RBAC based on the previewed settings and return the results from elastic.
-func getPIPFlowLogsFromElastic(
+// verify RBAC based on the previewed settings and return the results from Linseed.
+func getPIPFlowLogsFromLinseed(
 	ctx context.Context,
 	pager client.ListPager[lapi.L3Flow],
 	flowFilter lmaelastic.FlowFilter,

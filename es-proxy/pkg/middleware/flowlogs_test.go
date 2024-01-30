@@ -368,7 +368,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			pager := client.NewMockListPager(&p, listFn)
 
 			// Perform a search.
-			searchResults, stat, err := getFlowLogsFromElastic(
+			searchResults, stat, err := getFlowLogsFromLinseed(
 				context.TODO(),
 				lmaelastic.NewFlowFilterIncludeAll(),
 				false,
@@ -400,7 +400,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			pager := client.NewMockListPager(&p, listFn)
 
 			// Perform a search.
-			searchResults, stat, err := getFlowLogsFromElastic(
+			searchResults, stat, err := getFlowLogsFromLinseed(
 				context.TODO(),
 				lmaelastic.NewFlowFilterIncludeAll(),
 				false,
@@ -454,7 +454,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeWep, mock.Anything).Return(true, nil)
 			flowFilter := lmaelastic.NewFlowFilterUserRBAC(mockFlowHelper)
 
-			searchResults, stat, err := getFlowLogsFromElastic(
+			searchResults, stat, err := getFlowLogsFromLinseed(
 				context.TODO(),
 				flowFilter,
 				false,
@@ -513,7 +513,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				Limit:          1,
 			}
 
-			searchResults, stat, err := getPIPFlowLogsFromElastic(context.TODO(), pager, lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
+			searchResults, stat, err := getPIPFlowLogsFromLinseed(context.TODO(), pager, lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
 			Expect(stat).To(Equal(http.StatusOK))
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
@@ -558,7 +558,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				Limit:          2,
 			}
 
-			searchResults, stat, err := getPIPFlowLogsFromElastic(context.TODO(), pager, lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
+			searchResults, stat, err := getPIPFlowLogsFromLinseed(context.TODO(), pager, lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
 			Expect(stat).To(Equal(http.StatusOK))
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
@@ -603,7 +603,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				ImpactedOnly:   true,
 			}
 
-			searchResults, stat, err := getPIPFlowLogsFromElastic(context.TODO(), pager, lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
+			searchResults, stat, err := getPIPFlowLogsFromLinseed(context.TODO(), pager, lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
 			Expect(stat).To(Equal(http.StatusOK))
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
@@ -633,7 +633,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				PolicyPreviews: []PolicyPreview{},
 			}
 
-			searchResults, stat, err := getPIPFlowLogsFromElastic(context.TODO(), pager, lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
+			searchResults, stat, err := getPIPFlowLogsFromLinseed(context.TODO(), pager, lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
 			Expect(stat).To(Equal(http.StatusBadRequest))
 			Expect(err).To(HaveOccurred())
 			Expect(searchResults).To(BeNil())
@@ -679,7 +679,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeWep, mock.Anything).Return(true, nil)
 
 			flowFilter := lmaelastic.NewFlowFilterUserRBAC(mockFlowHelper)
-			searchResults, stat, err := getPIPFlowLogsFromElastic(context.TODO(), pager, flowFilter, params, pipClient, rbacHelper)
+			searchResults, stat, err := getPIPFlowLogsFromLinseed(context.TODO(), pager, flowFilter, params, pipClient, rbacHelper)
 
 			mockFlowHelper.AssertExpectations(GinkgoT())
 

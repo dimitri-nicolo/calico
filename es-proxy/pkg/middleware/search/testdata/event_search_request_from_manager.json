@@ -2,6 +2,7 @@
   "filter": [],
   "page_size": 100,
   "page_num": 0,
+  "selector": "NOT dismissed = true",
   "sort_by": [
     {
       "field": "time",

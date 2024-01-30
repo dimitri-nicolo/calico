@@ -136,7 +136,7 @@ func newPerfEvents() (Events, error) {
 			return Event{}, ErrLostEvents(lost)
 		}
 
-		return parseEvent(e)
+		return ParseEvent(e)
 	}
 
 	return rd, nil
@@ -159,7 +159,7 @@ type eventHdr struct {
 	Len  uint32
 }
 
-func parseEvent(raw eventRaw) (Event, error) {
+func ParseEvent(raw eventRaw) (Event, error) {
 
 	var hdr eventHdr
 	hdrBytes := (*[unsafe.Sizeof(eventHdr{})]byte)((unsafe.Pointer)(&hdr))

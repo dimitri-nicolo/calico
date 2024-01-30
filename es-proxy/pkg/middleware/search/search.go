@@ -439,14 +439,23 @@ func searchEvents(
 	}
 
 	if len(selectors) > 0 {
+		var exceptionsSelector string
 		if len(selectors) == 1 {
 			// Just one selector - invert it.
-			params.Selector = fmt.Sprintf("NOT ( %s )", selectors[0])
+			exceptionsSelector = fmt.Sprintf("NOT ( %s )", selectors[0])
 		} else {
 			// Combine the selectors using OR, and then negate since we don't want
 			// any alerts that match any of the selectors.
 			// i.e., NOT ( (SEL1) OR (SEL2) OR (SEL3) )
-			params.Selector = fmt.Sprintf("NOT (( %s ))", strings.Join(selectors, " ) OR ( "))
+			exceptionsSelector = fmt.Sprintf("NOT (( %s ))", strings.Join(selectors, " ) OR ( "))
+		}
+
+		if len(params.Selector) > 0 {
+			// Combine exception selector with request selector
+			params.Selector = fmt.Sprintf("(%s) AND %s", params.Selector, exceptionsSelector)
+		} else {
+			// Use exception selector as request selector
+			params.Selector = exceptionsSelector
 		}
 	}
 

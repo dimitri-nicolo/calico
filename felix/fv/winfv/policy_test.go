@@ -40,6 +40,12 @@ func kubectlExec(command string) {
 	_ = testutils.Powershell(cmd)
 }
 
+func kubectlExecWithErrors(command string) {
+	cmd := fmt.Sprintf(`c:\k\kubectl.exe --kubeconfig=c:\k\config -n demo exec %v`, command)
+	err := testutils.PowershellWithError(cmd)
+	log.Infof("Error: %s", err)
+}
+
 func newClient() clientv3.Interface {
 	cfg := apiconfig.NewCalicoAPIConfig()
 	cfg.Spec.DatastoreType = apiconfig.Kubernetes
@@ -63,8 +69,6 @@ var _ = Describe("Windows policy test", func() {
 	var porter, client, clientB, nginx, nginxB string
 
 	BeforeEach(func() {
-		Skip("lmm(temporarily skip failing policy tests)")
-
 		// Get IPs of the pods installed by the test infra setup.
 		client = getPodIP("client", "demo")
 		clientB = getPodIP("client-b", "demo")
@@ -86,7 +90,7 @@ var _ = Describe("Windows policy test", func() {
 			kubectlExec(fmt.Sprintf(`-t client -- wget %v -T 5 -qO -`, porter))
 		})
 		It("client-b pod can't connect to porter pod", func() {
-			kubectlExec(fmt.Sprintf(`-t client-b -- wget %v -T 5 -qO -`, porter))
+			kubectlExecWithErrors(fmt.Sprintf(`-t client-b -- wget %v -T 5 -qO -`, porter))
 		})
 	})
 	Context("egress policy tests", func() {
@@ -94,14 +98,14 @@ var _ = Describe("Windows policy test", func() {
 			kubectlExec(fmt.Sprintf(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 %v'`, nginx))
 		})
 		It("porter pod cannot connect to nginx-b pod", func() {
-			kubectlExec(fmt.Sprintf(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 %v'`, nginxB))
+			kubectlExecWithErrors(fmt.Sprintf(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 %v'`, nginxB))
 		})
 		It("porter pod cannot connect to google.com", func() {
-			kubectlExec(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 www.google.com'`)
+			kubectlExecWithErrors(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 www.google.com'`)
 		})
 		It("porter pod can connect to nginxB after creating service egress policy", func() {
 			// Assert nginx-b is not reachable.
-			kubectlExec(fmt.Sprintf(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 %v'`, nginxB))
+			kubectlExecWithErrors(fmt.Sprintf(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 %v'`, nginxB))
 
 			// Create a policy allowing to the nginx-b service.
 			client := newClient()

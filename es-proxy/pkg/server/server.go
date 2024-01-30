@@ -98,7 +98,11 @@ func Start(cfg *Config) error {
 	if err != nil {
 		log.Fatal("Unable to create authenticator", err)
 	}
-	authz := lmaauth.NewRBACAuthorizer(k8sCli)
+
+	// Create an authorizer to use for lma.tigera.io resources. If a tenant namespace is configured, the authorizer
+	// will use LocalSubjectAccessReviews to check access to the tenant namespace. Otherwise, it will use SubjectAccessReviews
+	// to check access at the cluster scope.
+	authz := lmaauth.NewNamespacedRBACAuthorizer(k8sCli, cfg.TenantNamespace)
 
 	// Create clients for access the management cluster apiserver.
 	k8sClientSet := datastore.MustGetClientSet()

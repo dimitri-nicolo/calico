@@ -3,6 +3,14 @@ PACKAGE_NAME = github.com/projectcalico/calico
 include metadata.mk
 include lib.Makefile
 
+CALICO_VERSIONS_FILE := calico/_data/versions.yml
+
+CALICO_VERSIONS_CALIENT_VERSION_KEY := .[0].title
+CALICO_VERSIONS_OPERATOR_VERSION_KEY := .[0].tigera-operator.version
+CALICO_VERSIONS_HELM_RELEASE_KEY := .[0].helmRelease
+
+calico_versions_get_val = $(shell bin/yq "$(1)" $(CALICO_VERSIONS_FILE))
+
 DOCKER_RUN := mkdir -p ./.go-pkg-cache bin $(GOMOD_CACHE) && \
 	docker run --rm \
 		--net=host \
@@ -39,6 +47,7 @@ ci-preflight-checks:
 	$(MAKE) check-dockerfiles
 	$(MAKE) check-gotchas
 	$(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.
+	$(MAKE) check-release-cut-promotions
 	$(MAKE) generate
 	$(MAKE) check-dirty
 
@@ -54,6 +63,14 @@ check-gotchas:
 
 check-dockerfiles:
 	./hack/check-dockerfiles.sh
+
+check-release-cut-promotions:
+	@docker run --quiet --rm \
+		-v .:/source \
+		-w /source \
+		python:3 \
+		bash -c 'pip3 install --quiet --disable-pip-version-check --root-user-action ignore PyYAML \
+			&& python3 hack/check_semaphore_cut_releases.py'
 
 check-language:
 	./hack/check-language.sh
@@ -306,18 +323,9 @@ bin/metadata.yaml: hack/release/release
 ###############################################################################
 # Post-release validation
 ###############################################################################
-POSTRELEASE_IMAGE=calico/postrelease
-POSTRELEASE_IMAGE_CREATED=.calico.postrelease.created
-$(POSTRELEASE_IMAGE_CREATED):
-	cd hack/postrelease && docker build -t $(POSTRELEASE_IMAGE) .
-	touch $@
+postrelease-checks: bin/yq
+	$(MAKE) -C hack/postrelease/calient docker-test_all \
+		CALICO_VERSION=$(call calico_versions_get_val,$(CALICO_VERSIONS_CALIENT_VERSION_KEY)) \
+		CHART_RELEASE=$(call calico_versions_get_val,$(CALICO_VERSIONS_HELM_RELEASE_KEY)) \
+		OPERATOR_VERSION=$(call calico_versions_get_val,$(CALICO_VERSIONS_OPERATOR_VERSION_KEY))
 
-postrelease-checks: $(POSTRELEASE_IMAGE_CREATED)
-	$(DOCKER_RUN) \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		-e VERSION=$(VERSION) \
-		-e FLANNEL_VERSION=$(FLANNEL_VERSION) \
-		-e VPP_VERSION=$(VPP_VERSION) \
-		-e OPERATOR_VERSION=$(OPERATOR_VERSION) \
-		$(POSTRELEASE_IMAGE) \
-		sh -c "nosetests hack/postrelease -e "$(EXCLUDE_REGEX)" -s -v --with-xunit --xunit-file='postrelease-checks.xml' --with-timer $(EXTRA_NOSE_ARGS)"

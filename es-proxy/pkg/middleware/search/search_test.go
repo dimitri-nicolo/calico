@@ -53,8 +53,12 @@ var (
 
 	//go:embed testdata/event_search_request_from_manager.json
 	eventSearchRequestFromManager string
+	//go:embed testdata/event_search_request_from_manager_no_selector.json
+	eventSearchRequestFromManagerNoSelector string
 	//go:embed testdata/event_search_request.json
 	eventSearchRequest string
+	//go:embed testdata/event_search_request_no_selector.json
+	eventSearchRequestNoSelector string
 	//go:embed testdata/event_search_request_selector.json
 	eventSearchRequestSelector string
 	//go:embed testdata/event_search_request_selector_invalid.json
@@ -731,7 +735,7 @@ var _ = Describe("SearchElasticHits", func() {
 			}))
 		})
 
-		It("should inject alert exceptions in search request", func() {
+		testAlertExceptionsInSearchRequests := func(requestFromManager string, eventSearchRequest string, eventSearchResponse string) {
 			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -787,7 +791,7 @@ var _ = Describe("SearchElasticHits", func() {
 			}
 
 			// validate responses
-			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(requestFromManager)))
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
@@ -804,6 +808,14 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(resp.NumPages).To(Equal(1))
 			Expect(resp.TimedOut).To(BeFalse())
 			Expect(resp.TotalHits).To(Equal(2))
+		}
+
+		It("should inject alert exceptions in search request with a selector", func() {
+			testAlertExceptionsInSearchRequests(eventSearchRequestFromManager, eventSearchRequest, eventSearchResponse)
+		})
+
+		It("should inject alert exceptions in search request without a selector", func() {
+			testAlertExceptionsInSearchRequests(eventSearchRequestFromManagerNoSelector, eventSearchRequestNoSelector, eventSearchResponse)
 		})
 
 		It("should handle alert exceptions selector AND/OR conditions", func() {

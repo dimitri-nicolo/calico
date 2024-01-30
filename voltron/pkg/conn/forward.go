@@ -1,6 +1,7 @@
 package conn
 
 import (
+	"errors"
 	"io"
 	"net"
 	"sync"
@@ -41,12 +42,5 @@ func forwardConnection(srcConn net.Conn, dstCon net.Conn, wg *sync.WaitGroup) {
 }
 
 func isUseOfClosedNetworkErr(err error) bool {
-	switch err := err.(type) {
-	case *net.OpError:
-		if err.Err.Error() == "use of closed network connection" {
-			return true
-		}
-	}
-
-	return false
+	return errors.Is(err, net.ErrClosed)
 }
