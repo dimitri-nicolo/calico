@@ -102,7 +102,7 @@ func (t *mockTable) checkChainsSameAsBefore() {
 		return expectedChains[i].Name < expectedChains[j].Name
 	})
 
-	Expect(currentChains).To(Equal(expectedChains), t.Table+" chains incorrect")
+	ExpectWithOffset(1, t.currentChains).To(Equal(expectedChains), t.Table+" chains incorrect")
 }
 
 func (t *mockTable) getCurrentChainByName(name string) *iptables.Chain {

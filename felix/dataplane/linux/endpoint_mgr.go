@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -140,15 +140,20 @@ type endpointManager struct {
 	// fields.
 	pendingWlEpUpdates  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
 	pendingIfaceUpdates map[string]ifacemonitor.State
+	dirtyPolicyIDs      set.Set[proto.PolicyID]
 
 	// Active state, updated in CompleteDeferredWork.
-	activeWlEndpoints          map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
-	activeWlIfaceNameToID      map[string]proto.WorkloadEndpointID
-	activeUpIfaces             set.Set[string]
-	activeWlIDToChains         map[proto.WorkloadEndpointID][]*iptables.Chain
-	activeWlDispatchChains     map[string]*iptables.Chain
-	activeWlRPFDispatchChains  map[string]*iptables.Chain
-	activeEPMarkDispatchChains map[string]*iptables.Chain
+	activeWlEndpoints                map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
+	activeWlIfaceNameToID            map[string]proto.WorkloadEndpointID
+	activeUpIfaces                   set.Set[string]
+	activeWlIDToChains               map[proto.WorkloadEndpointID][]*iptables.Chain
+	activeWlDispatchChains           map[string]*iptables.Chain
+	activeWlRPFDispatchChains        map[string]*iptables.Chain
+	activeEPMarkDispatchChains       map[string]*iptables.Chain
+	ifaceNameToPolicyGroupChainNames map[string][]string /*chain name*/
+
+	activePolicySelectors map[proto.PolicyID]string
+	policyChainRefCounts  map[string]int // Chain name to count.
 
 	// Workload endpoints that would be locally active but are 'shadowed' by other endpoints
 	// with the same interface name.
@@ -305,12 +310,17 @@ func newEndpointManagerWithShims(
 		// in CompleteDeferredWork and transfer the important data to the activeXYX fields.
 		pendingWlEpUpdates:  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		pendingIfaceUpdates: map[string]ifacemonitor.State{},
+		dirtyPolicyIDs:      set.New[proto.PolicyID](),
 
 		activeUpIfaces: set.New[string](),
 
-		activeWlEndpoints:     map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
-		activeWlIfaceNameToID: map[string]proto.WorkloadEndpointID{},
-		activeWlIDToChains:    map[proto.WorkloadEndpointID][]*iptables.Chain{},
+		activeWlEndpoints:                map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
+		activeWlIfaceNameToID:            map[string]proto.WorkloadEndpointID{},
+		activeWlIDToChains:               map[proto.WorkloadEndpointID][]*iptables.Chain{},
+		ifaceNameToPolicyGroupChainNames: map[string][]string{},
+
+		activePolicySelectors: map[proto.PolicyID]string{},
+		policyChainRefCounts:  map[string]int{},
 
 		shadowedWlEndpoints: map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 
@@ -394,6 +404,29 @@ func (m *endpointManager) OnUpdate(protoBufMsg interface{}) {
 			delete(m.hostIfaceToAddrs, msg.Name)
 		}
 		m.hostEndpointsDirty = true
+	case *proto.ActivePolicyUpdate:
+		newSel := msg.Policy.OriginalSelector
+		if oldSel, ok := m.activePolicySelectors[*msg.Id]; ok && oldSel == newSel {
+			// No change that we care about.
+			return
+		} else if ok {
+			// Existing policy changed selector, mark any endpoints using that
+			// policy for update in case it changes the policy groups.  We don't
+			// need to do that for new policies because the calc graph guarantees
+			// that we'll see an endpoint update after any new policies are
+			// added to an endpoint.
+			m.dirtyPolicyIDs.Add(*msg.Id)
+		}
+		log.WithFields(log.Fields{
+			"id":       *msg.Id,
+			"selector": newSel,
+		}).Debug("Active policy selector new/updated.")
+		m.activePolicySelectors[*msg.Id] = newSel
+	case *proto.ActivePolicyRemove:
+		// We can only get a remove after no endpoints are using this policy
+		// so we no longer need to track it at all.
+		m.dirtyPolicyIDs.Discard(*msg.Id)
+		delete(m.activePolicySelectors, *msg.Id)
 	}
 }
 
@@ -429,6 +462,7 @@ func (m *endpointManager) ResolveUpdateBatch() error {
 }
 
 func (m *endpointManager) CompleteDeferredWork() error {
+	m.markEPsWithDirtyPolicies()
 	m.resolveWorkloadEndpoints()
 
 	if m.hostEndpointsDirty {
@@ -452,6 +486,69 @@ func (m *endpointManager) CompleteDeferredWork() error {
 	m.updateEndpointStatuses()
 
 	return nil
+}
+
+func (m *endpointManager) markEPsWithDirtyPolicies() {
+	if m.dirtyPolicyIDs.Len() == 0 {
+		return
+	}
+
+wepLoop:
+	for wepID, wep := range m.activeWlEndpoints {
+		if _, ok := m.pendingWlEpUpdates[wepID]; ok {
+			continue // Already have an update, skip the scan.
+		}
+		for _, t := range wep.Tiers {
+			for _, pols := range [][]string{t.IngressPolicies, t.EgressPolicies} {
+				for _, p := range pols {
+					polID := proto.PolicyID{
+						Tier: t.Name,
+						Name: p,
+					}
+					if m.dirtyPolicyIDs.Contains(polID) {
+						m.pendingWlEpUpdates[wepID] = wep
+						continue wepLoop
+					}
+				}
+			}
+		}
+	}
+
+	if !m.hostEndpointsDirty {
+	hepLoop:
+		for _, hep := range m.rawHostEndpoints {
+			for _, tiers := range [][]*proto.TierInfo{
+				hep.Tiers,
+				hep.PreDnatTiers,
+				hep.UntrackedTiers,
+				hep.ForwardTiers,
+			} {
+				if m.tiersUseDirtyPolicy(tiers) {
+					m.hostEndpointsDirty = true
+					break hepLoop
+				}
+			}
+		}
+	}
+
+	m.dirtyPolicyIDs.Clear()
+}
+
+func (m *endpointManager) tiersUseDirtyPolicy(tiers []*proto.TierInfo) bool {
+	for _, t := range tiers {
+		for _, pols := range [][]string{t.IngressPolicies, t.EgressPolicies} {
+			for _, p := range pols {
+				polID := proto.PolicyID{
+					Tier: t.Name,
+					Name: p,
+				}
+				if m.dirtyPolicyIDs.Contains(polID) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func (m *endpointManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
@@ -597,6 +694,8 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 				delete(m.sourceSpoofingConfig, oldWorkload.Name)
 				m.rpfSkipChainDirty = true
 			}
+			log.WithField("ifaceName", oldWorkload.Name).Debug("Cleaning up policy groups for workload iface")
+			m.updatePolicyGroups(oldWorkload.Name, nil)
 		}
 		delete(m.activeWlEndpoints, id)
 	}
@@ -650,18 +749,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 				}
 				adminUp := workload.State == "active"
 				if !m.bpfEnabled {
-					chains := m.ruleRenderer.WorkloadEndpointToIptablesChains(
-						workload.Name,
-						m.epMarkMapper,
-						adminUp,
-						workload.Tiers,
-						workload.ProfileIds,
-						workload.IsEgressGateway,
-						uint16(workload.EgressGatewayHealthPort),
-						m.ipVersion,
-					)
-					m.filterTable.UpdateChains(chains)
-					m.activeWlIDToChains[id] = chains
+					m.updateWorkloadEndpointChains(id, workload, ingressPolicyNames, egressPolicyNames, adminUp)
 
 					if len(workload.AllowSpoofedSourcePrefixes) > 0 && !m.hasSourceSpoofingConfiguration(workload.Name) {
 						logCxt.Infof("Disabling RPF check for workload %s", workload.Name)
@@ -815,6 +903,29 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 		}
 		return set.RemoveItem
 	})
+}
+
+func (m *endpointManager) updateWorkloadEndpointChains(
+	id proto.WorkloadEndpointID,
+	workload *proto.WorkloadEndpoint,
+	ingressPolicyNames []string,
+	egressPolicyNames []string,
+	adminUp bool,
+) {
+	ingressGroups := m.groupPolicies("default", ingressPolicyNames, rules.PolicyDirectionInbound)
+	egressGroups := m.groupPolicies("default", egressPolicyNames, rules.PolicyDirectionOutbound)
+	m.updatePolicyGroups(workload.Name, append(ingressGroups, egressGroups...))
+
+	chains := m.ruleRenderer.WorkloadEndpointToIptablesChains(
+		workload.Name,
+		m.epMarkMapper,
+		adminUp,
+		ingressGroups,
+		egressGroups,
+		workload.ProfileIds,
+	)
+	m.filterTable.UpdateChains(chains)
+	m.activeWlIDToChains[id] = chains
 }
 
 func wlIdsAscending(id1, id2 *proto.WorkloadEndpointID) bool {
@@ -1037,6 +1148,11 @@ func (m *endpointManager) updateHostEndpoints() {
 		}
 	}
 
+	ifaceNameToPolicyGroups := map[string][]*rules.PolicyGroup{}
+	addPolicyGroups := func(ifaceName string, pgs []*rules.PolicyGroup) {
+		ifaceNameToPolicyGroups[ifaceName] = append(ifaceNameToPolicyGroups[ifaceName], pgs...)
+	}
+
 	if !m.bpfEnabled {
 		// Build iptables chains for normal and apply-on-forward host endpoint policy.
 		newHostIfaceFiltChains := map[string][]*iptables.Chain{}
@@ -1046,11 +1162,35 @@ func (m *endpointManager) updateHostEndpoints() {
 			hostEp := m.rawHostEndpoints[id]
 
 			// Update chains in the filter and mangle tables, for normal traffic.
+			var ingressPolicyNames, egressPolicyNames []string
+			var ingressForwardPolicyNames, egressForwardPolicyNames []string
+			if len(hostEp.Tiers) > 0 {
+				ingressPolicyNames = hostEp.Tiers[0].IngressPolicies
+				egressPolicyNames = hostEp.Tiers[0].EgressPolicies
+			}
+			if len(hostEp.ForwardTiers) > 0 {
+				ingressForwardPolicyNames = hostEp.ForwardTiers[0].IngressPolicies
+				egressForwardPolicyNames = hostEp.ForwardTiers[0].EgressPolicies
+			}
+
+			ingressGroups := m.groupPolicies("default", hostEp.Tiers, rules.PolicyDirectionInbound)
+			addPolicyGroups(ifaceName, ingressGroups)
+			egressGroups := m.groupPolicies("default", hostEp.Tiers, rules.PolicyDirectionOutbound)
+			addPolicyGroups(ifaceName, egressGroups)
+			ingressForwardGroups := m.groupPolicies("default", hostEp.ForwardTiers, rules.PolicyDirectionInbound)
+			addPolicyGroups(ifaceName, ingressForwardGroups)
+			egressForwardGroups := m.groupPolicies("default", hostEp.ForwardTiers, rules.PolicyDirectionOutbound)
+			addPolicyGroups(ifaceName, egressForwardGroups)
+
 			filtChains := m.ruleRenderer.HostEndpointToFilterChains(
 				ifaceName,
 				hostEp.Tiers,
 				hostEp.ForwardTiers,
 				m.epMarkMapper,
+				ingressGroups,
+				egressGroups,
+				ingressForwardGroups,
+				egressForwardGroups,
 				hostEp.ProfileIds,
 			)
 
@@ -1062,7 +1202,7 @@ func (m *endpointManager) updateHostEndpoints() {
 
 			mangleChains := m.ruleRenderer.HostEndpointToMangleEgressChains(
 				ifaceName,
-				hostEp.Tiers,
+				egressGroups,
 				hostEp.ProfileIds,
 			)
 			if !reflect.DeepEqual(mangleChains, m.activeHostIfaceToMangleEgressChains[ifaceName]) {
@@ -1079,9 +1219,11 @@ func (m *endpointManager) updateHostEndpoints() {
 			hostEp := m.rawHostEndpoints[id]
 
 			// Update the mangle table for preDNAT policy.
+			ingressGroups := m.groupPolicies("default", hostEp.PreDnatTiers, rules.PolicyDirectionInbound)
+			addPolicyGroups(ifaceName, ingressGroups)
 			mangleChains := m.ruleRenderer.HostEndpointToMangleIngressChains(
 				ifaceName,
-				hostEp.PreDnatTiers,
+				ingressGroups,
 			)
 			if !reflect.DeepEqual(mangleChains, m.activeHostIfaceToMangleIngressChains[ifaceName]) {
 				m.mangleTable.UpdateChains(mangleChains)
@@ -1125,14 +1267,23 @@ func (m *endpointManager) updateHostEndpoints() {
 			// Update the raw chain, for untracked traffic.
 			var rawChains []*iptables.Chain
 			if m.bpfEnabled {
+				egressGroups := m.groupPolicies("default", egressPolicyNames, rules.PolicyDirectionOutbound)
+				addPolicyGroups(ifaceName, egressGroups)
+
 				rawChains = append(rawChains, m.ruleRenderer.HostEndpointToRawEgressChain(
 					ifaceName,
-					hostEp.UntrackedTiers,
+					egressGroups,
 				))
 			} else {
+				ingressGroups := m.groupPolicies("default", ingressPolicyNames, rules.PolicyDirectionInbound)
+				addPolicyGroups(ifaceName, ingressGroups)
+				egressGroups := m.groupPolicies("default", egressPolicyNames, rules.PolicyDirectionOutbound)
+				addPolicyGroups(ifaceName, egressGroups)
+
 				rawChains = m.ruleRenderer.HostEndpointToRawChains(
 					ifaceName,
-					hostEp.UntrackedTiers,
+					ingressGroups,
+					egressGroups,
 				)
 			}
 			if !reflect.DeepEqual(rawChains, m.activeHostIfaceToRawChains[ifaceName]) {
@@ -1150,6 +1301,21 @@ func (m *endpointManager) updateHostEndpoints() {
 		}
 
 		m.activeHostIfaceToRawChains = newHostIfaceRawChains
+	}
+
+	// Update policy group refcounting.  First clean up any policy groups
+	// for former host endpoints.
+	for ifaceName := range m.activeIfaceNameToHostEpID {
+		if _, ok := ifaceNameToPolicyGroups[ifaceName]; ok {
+			// This HEP is still active, will be handled below.
+			continue
+		}
+		log.WithField("ifaceName", ifaceName).Debug("Cleaning up policy groups for host iface")
+		m.updatePolicyGroups(ifaceName, nil)
+	}
+	// Then update the policy groups of all active HEPs.
+	for ifaceName, groups := range ifaceNameToPolicyGroups {
+		m.updatePolicyGroups(ifaceName, groups)
 	}
 
 	// Remember the host endpoints that are now in use.
@@ -1488,4 +1654,94 @@ func forAllInterfaces(hep *proto.HostEndpoint) bool {
 // for implementing the endpointsSource interface
 func (m *endpointManager) GetRawHostEndpoints() map[proto.HostEndpointID]*proto.HostEndpoint {
 	return m.rawHostEndpoints
+}
+
+func (m *endpointManager) groupPolicies(tierName string, names []string, direction rules.PolicyDirection) []*rules.PolicyGroup {
+	if len(names) == 0 {
+		return nil
+	}
+	group := &rules.PolicyGroup{
+		Tier:        tierName,
+		Direction:   direction,
+		PolicyNames: []string{names[0]},
+		Selector: m.activePolicySelectors[proto.PolicyID{
+			Tier: tierName,
+			Name: names[0],
+		}],
+	}
+	groups := []*rules.PolicyGroup{group}
+	for _, name := range names[1:] {
+		sel := m.activePolicySelectors[proto.PolicyID{
+			Tier: tierName,
+			Name: name,
+		}]
+		if sel != group.Selector {
+			group = &rules.PolicyGroup{
+				Tier:      tierName,
+				Direction: direction,
+				Selector:  sel,
+			}
+			groups = append(groups, group)
+		}
+		group.PolicyNames = append(group.PolicyNames, name)
+	}
+	return groups
+}
+
+func (m *endpointManager) increfGroups(groups []*rules.PolicyGroup) {
+	for _, group := range groups {
+		if group.ShouldBeInlined() {
+			continue
+		}
+		refcnt := m.policyChainRefCounts[group.ChainName()]
+		if refcnt == 0 {
+			// This group just became active.
+			chains := m.ruleRenderer.PolicyGroupToIptablesChains(group)
+			m.filterTable.UpdateChains(chains)
+			m.mangleTable.UpdateChains(chains)
+			m.rawTable.UpdateChains(chains)
+		}
+		m.policyChainRefCounts[group.ChainName()] = refcnt + 1
+	}
+}
+
+func (m *endpointManager) decrefGroups(chainNames []string) {
+	for _, chainName := range chainNames {
+		refcnt := m.policyChainRefCounts[chainName]
+		if refcnt == 0 {
+			continue // an inlined chainName.
+		}
+		if refcnt == 1 {
+			// This chain just became inactive.
+			log.WithField("chainName", chainName).Debug("Policy group chain no longer referenced.  Removing chain.")
+			m.filterTable.RemoveChainByName(chainName)
+			m.mangleTable.RemoveChainByName(chainName)
+			m.rawTable.RemoveChainByName(chainName)
+			delete(m.policyChainRefCounts, chainName)
+			continue
+		}
+		m.policyChainRefCounts[chainName] = refcnt - 1
+	}
+}
+
+func (m *endpointManager) updatePolicyGroups(ifaceName string, allGroups []*rules.PolicyGroup) {
+	log.WithFields(log.Fields{
+		"ifaceName": ifaceName,
+		"groups":    rules.PolicyGroupSliceStringer(allGroups),
+	}).Debug("Updating policy groups for iface")
+	oldChainNames := m.ifaceNameToPolicyGroupChainNames[ifaceName]
+
+	// Incref first to avoid flapping.
+	m.increfGroups(allGroups)
+	m.decrefGroups(oldChainNames)
+
+	if len(allGroups) > 0 {
+		newChainNames := make([]string, len(allGroups))
+		for i, g := range allGroups {
+			newChainNames[i] = g.ChainName()
+		}
+		m.ifaceNameToPolicyGroupChainNames[ifaceName] = newChainNames
+	} else {
+		delete(m.ifaceNameToPolicyGroupChainNames, ifaceName)
+	}
 }

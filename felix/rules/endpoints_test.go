@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ import (
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
-
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
+	"github.com/onsi/gomega/format"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/ipsets"
@@ -223,11 +223,11 @@ var _ = Describe("Endpoints", func() {
 					"cali1234",
 					epMarkMapper,
 					true,
-					[]*proto.TierInfo{{
+					singlePolicyGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"ai", "bi"},
 						EgressPolicies:  []string{"ae", "be"},
-					}},
+					}}),
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
 					0,
@@ -312,6 +312,135 @@ var _ = Describe("Endpoints", func() {
 								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
+							{Match: Match().MarkClear(0x10),
+								Action:  denyAction,
+								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)}},
+
+							{Action: JumpAction{Target: "cali-pro-prof1"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+							{Action: JumpAction{Target: "cali-pro-prof2"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+
+							{Action: denyAction,
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)}},
+						},
+					},
+					{
+						Name: "cali-sm-cali1234",
+						Rules: []Rule{
+							{Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00}},
+						},
+					},
+				})))
+			})
+
+			It("should render a workload endpoint with policy groups", func() {
+				format.MaxLength = 1000000
+
+				polGrpInABC := &PolicyGroup{
+					Tier:        "default",
+					Direction:   PolicyDirectionInbound,
+					PolicyNames: []string{"a", "b", "c"},
+					Selector:    "all()",
+				}
+				polGrpInEF := &PolicyGroup{
+					Tier:        "default",
+					Direction:   PolicyDirectionInbound,
+					PolicyNames: []string{"e", "f"},
+					Selector:    "someLabel == 'bar'",
+				}
+				polGrpOutAB := &PolicyGroup{
+					Tier:        "default",
+					Direction:   PolicyDirectionOutbound,
+					PolicyNames: []string{"a", "b"},
+					Selector:    "all()",
+				}
+				polGrpOutDE := &PolicyGroup{
+					Tier:        "default",
+					Direction:   PolicyDirectionOutbound,
+					PolicyNames: []string{"d", "e"},
+					Selector:    "someLabel == 'bar'",
+				}
+
+				Expect(renderer.WorkloadEndpointToIptablesChains(
+					"cali1234",
+					epMarkMapper,
+					true,
+					[]*PolicyGroup{
+						polGrpInABC,
+						polGrpInEF,
+					},
+					[]*PolicyGroup{
+						polGrpOutAB,
+						polGrpOutDE,
+					},
+					[]string{"prof1", "prof2"},
+				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
+					{
+						Name: "cali-tw-cali1234",
+						Rules: []Rule{
+							// conntrack rules.
+							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+								Action: AcceptAction{}},
+							{Match: Match().ConntrackState("INVALID"),
+								Action: denyAction},
+
+							{Action: ClearMarkAction{Mark: 0x18}},
+
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: polGrpInABC.ChainName()}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: polGrpInEF.ChainName()}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkClear(0x10),
+								Action:  denyAction,
+								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)}},
+
+							{Action: JumpAction{Target: "cali-pri-prof1"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+							{Action: JumpAction{Target: "cali-pri-prof2"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+
+							{Action: denyAction,
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)}},
+						},
+					},
+					{
+						Name: "cali-fw-cali1234",
+						Rules: []Rule{
+							// conntrack rules.
+							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+								Action: AcceptAction{}},
+							{Match: Match().ConntrackState("INVALID"),
+								Action: denyAction},
+
+							{Action: ClearMarkAction{Mark: 0x18}},
+							dropVXLANRule,
+							dropIPIPRule,
+
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: polGrpOutAB.ChainName()}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: polGrpOutDE.ChainName()}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  denyAction,
 								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)}},
@@ -564,16 +693,16 @@ var _ = Describe("Endpoints", func() {
 
 			It("should render a host endpoint", func() {
 				actual := renderer.HostEndpointToFilterChains("eth0",
-					[]*proto.TierInfo{{
+					singlePolicyGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"ai", "bi"},
 						EgressPolicies:  []string{"ae", "be"},
-					}},
-					[]*proto.TierInfo{{
+					}}),
+					singlePolicyGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"afi", "bfi"},
 						EgressPolicies:  []string{"afe", "bfe"},
-					}},
+					}}),
 					epMarkMapper,
 					[]string{"prof1", "prof2"},
 				)
@@ -762,11 +891,11 @@ var _ = Describe("Endpoints", func() {
 
 			It("should render host endpoint raw chains with untracked policies", func() {
 				Expect(renderer.HostEndpointToRawChains("eth0",
-					[]*proto.TierInfo{{
+					singlePolicyGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"c"},
 						EgressPolicies:  []string{"c"},
-					}},
+					}}),
 				)).To(Equal([]*Chain{
 					{
 						Name: "cali-th-eth0",
@@ -818,10 +947,10 @@ var _ = Describe("Endpoints", func() {
 			It("should render host endpoint mangle chains with pre-DNAT policies", func() {
 				Expect(renderer.HostEndpointToMangleIngressChains(
 					"eth0",
-					[]*proto.TierInfo{{
+					singlePolicyGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"c"},
-					}},
+					}}),
 				)).To(Equal([]*Chain{
 					{
 						Name: "cali-fh-eth0",
@@ -1041,10 +1170,10 @@ var _ = Describe("Endpoints", func() {
 			It("should render host endpoint mangle chains with pre-DNAT policies", func() {
 				Expect(renderer.HostEndpointToMangleIngressChains(
 					"eth0",
-					[]*proto.TierInfo{{
+					singlePolicyGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"c"},
-					}},
+					}}),
 				)).To(Equal([]*Chain{
 					{
 						Name: "cali-fh-eth0",
@@ -1401,4 +1530,294 @@ func trimSMChain(ipvsEnable bool, chains []*Chain) []*Chain {
 	}
 
 	return result
+}
+
+func singlePolicyGroups(names []string) (groups []*PolicyGroup) {
+	for _, n := range names {
+		groups = append(groups, &PolicyGroup{
+			Tier:        "default",
+			PolicyNames: []string{n},
+		})
+	}
+	return
+}
+
+var _ = Describe("PolicyGroups", func() {
+	It("should make sensible UIDs", func() {
+		pgs := []PolicyGroup{
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: nil,
+				Selector:    "all()",
+			},
+			{
+				Tier:        "foo",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: nil,
+				Selector:    "all()",
+			},
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionOutbound,
+				PolicyNames: nil,
+				Selector:    "all()",
+			},
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: []string{"a"},
+				Selector:    "all()",
+			},
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: nil,
+				Selector:    "a == 'b'",
+			},
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: []string{"a", "b"},
+				Selector:    "all()",
+			},
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: []string{"ab"},
+				Selector:    "all()",
+			},
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: []string{"aaa", "bbb"},
+				Selector:    "all()",
+			},
+			{
+				Tier:      "default",
+				Direction: PolicyDirectionInbound,
+				// Between this and the entry above, we check that the data
+				// sent to the hasher is delimited somehow.
+				PolicyNames: []string{"aaab", "bb"},
+				Selector:    "all()",
+			},
+		}
+
+		seenUIDs := map[string]PolicyGroup{}
+		for _, pg := range pgs {
+			uid := pg.UniqueID()
+			Expect(seenUIDs).NotTo(HaveKey(uid), fmt.Sprintf("UID clash with %v", pg))
+			Expect(pg.UniqueID()).To(Equal(uid), "UID different on each call")
+		}
+	})
+})
+
+var _ = table.DescribeTable("PolicyGroup chains",
+	func(group PolicyGroup, expectedRules []Rule) {
+		renderer := NewRenderer(Config{
+			IptablesMarkAccept:   0x8,
+			IptablesMarkPass:     0x10,
+			IptablesMarkScratch0: 0x1,
+			IptablesMarkScratch1: 0x2,
+			IptablesMarkEndpoint: 0x4,
+		})
+		chains := renderer.PolicyGroupToIptablesChains(&group)
+		Expect(chains).To(HaveLen(1))
+		Expect(chains[0].Name).ToNot(BeEmpty())
+		Expect(chains[0].Name).To(Equal(group.ChainName()))
+		Expect(chains[0].Rules).To(Equal(expectedRules))
+	},
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionInbound,
+			PolicyNames: []string{"a"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-pi-a"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionInbound,
+			PolicyNames: []string{"a", "b"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-pi-a"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-b"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionInbound,
+			PolicyNames: []string{"a", "b", "c"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-pi-a"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-b"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-c"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionInbound,
+			PolicyNames: []string{"a", "b", "c", "d"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-pi-a"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-b"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-c"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-d"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionInbound,
+			PolicyNames: []string{"a", "b", "c", "d", "e"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-pi-a"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-b"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-c"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-d"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-e"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionInbound,
+			PolicyNames: []string{"a", "b", "c", "d", "e", "f"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-pi-a"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-b"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-c"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-d"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-pi-e"},
+			},
+			{
+				// Only get a return action every 5 rules and only if it's
+				// not the last action.
+				Match:   Match().MarkNotClear(0x18),
+				Action:  ReturnAction{},
+				Comment: []string{"Return on verdict"},
+			},
+			{
+				Action: JumpAction{Target: "cali-pi-f"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionOutbound,
+			PolicyNames: []string{"a", "b", "c", "d", "e", "f", "g"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-po-a"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-po-b"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-po-c"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-po-d"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-po-e"},
+			},
+			{
+				Match:   Match().MarkNotClear(0x18),
+				Action:  ReturnAction{},
+				Comment: []string{"Return on verdict"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-f"},
+			},
+			{
+				Match:  Match().MarkClear(0x18),
+				Action: JumpAction{Target: "cali-po-g"},
+			},
+		},
+	),
+)
+
+func polGroupEntry(group PolicyGroup, rules []Rule) table.TableEntry {
+	return table.Entry(
+		fmt.Sprintf("%v", group),
+		group,
+		rules,
+	)
 }
