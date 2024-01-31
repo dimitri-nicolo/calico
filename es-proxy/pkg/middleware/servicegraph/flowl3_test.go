@@ -119,12 +119,134 @@ func TestGetL3FlowData(t *testing.T) {
 						// We expect that process stat is extract from the flow reported at source
 						Source: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"frontend-8475b5657d-*:cartservice-5d844fc8b7-*:/src/server": {
 							Name:               "/src/server",
+							Source:             "frontend-8475b5657d-*",
+							Destination:        "cartservice-5d844fc8b7-*",
 							MinNumNamesPerFlow: 1,
 							MaxNumNamesPerFlow: 1,
 							MinNumIDsPerFlow:   1,
 							MaxNumIDsPerFlow:   1,
 						}}),
-						Dest: nil,
+						Dest: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"frontend-8475b5657d-*:cartservice-5d844fc8b7-*:/app/cartservice": {
+							Name:        "/app/cartservice",
+							Source:      "frontend-8475b5657d-*",
+							Destination: "cartservice-5d844fc8b7-*",
+						}}),
+					},
+				},
+			},
+		},
+		{
+			name: "Display process info and process name for flows reported only at source",
+			inputFlows: []lapi.L3Flow{
+				{
+					Key: lapi.L3FlowKey{
+						Action:   "allow",
+						Reporter: "src",
+						Protocol: "tcp",
+						Source: lapi.Endpoint{
+							Type:           "wep",
+							Name:           "",
+							AggregatedName: "frontend-8475b5657d-*",
+							Namespace:      "online-boutique",
+							Port:           0,
+						},
+						Destination: lapi.Endpoint{
+							Type:           "wep",
+							Name:           "",
+							AggregatedName: "cartservice-5d844fc8b7-*",
+							Namespace:      "online-boutique",
+							Port:           7070,
+						},
+					},
+					Process: &lapi.Process{
+						Name: "/src/server",
+					},
+					// Process stats are only reported at source
+					ProcessStats: &lapi.ProcessStats{
+						MaxNumNamesPerFlow: 1,
+						MinNumNamesPerFlow: 1,
+						MaxNumIDsPerFlow:   1,
+						MinNumIDsPerFlow:   1,
+					},
+				},
+				{
+					Key: lapi.L3FlowKey{
+						Action:   "allow",
+						Reporter: "dst",
+						Protocol: "tcp",
+						Source: lapi.Endpoint{
+							Type:           "wep",
+							Name:           "",
+							AggregatedName: "frontend-8475b5657d-*",
+							Namespace:      "online-boutique",
+							Port:           0,
+						},
+						Destination: lapi.Endpoint{
+							Type:           "wep",
+							Name:           "",
+							AggregatedName: "cartservice-5d844fc8b7-*",
+							Namespace:      "online-boutique",
+							Port:           7070,
+						},
+					},
+					Process: &lapi.Process{
+						// Process name is missing at destination
+						Name: "-",
+					},
+					// Process stats are missing at destination
+					ProcessStats: nil,
+				},
+			},
+			wantL3Flows: []L3Flow{
+				{
+					Edge: FlowEdge{
+						Source: FlowEndpoint{
+							Type:      "rep",
+							Namespace: "online-boutique",
+							Name:      "",
+							NameAggr:  "frontend-8475b5657d-*",
+							PortNum:   0,
+						},
+						Dest: FlowEndpoint{
+							Type:      "rep",
+							Namespace: "online-boutique",
+							Name:      "",
+							NameAggr:  "cartservice-5d844fc8b7-*",
+							PortNum:   0,
+						},
+					},
+					AggregatedProtoPorts: &svapi.AggregatedProtoPorts{
+						ProtoPorts: []svapi.AggregatedPorts{
+							{PortRanges: []svapi.PortRange{{MinPort: 7070, MaxPort: 7070}}},
+						},
+						NumOtherProtocols: 0,
+					},
+					Stats: svapi.GraphL3Stats{
+						Allowed:        &svapi.GraphPacketStats{},
+						DeniedAtSource: nil,
+						DeniedAtDest:   nil,
+						Connections: svapi.GraphConnectionStats{
+							TotalPerSampleInterval: -9223372036854775808,
+						},
+						TCP: nil,
+					},
+					Processes: &svapi.GraphProcesses{
+						// We expect that process stat is extract from the flow reported at source
+						Source: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"frontend-8475b5657d-*:cartservice-5d844fc8b7-*:/src/server": {
+							Name:               "/src/server",
+							Source:             "frontend-8475b5657d-*",
+							Destination:        "cartservice-5d844fc8b7-*",
+							MinNumNamesPerFlow: 1,
+							MaxNumNamesPerFlow: 1,
+							MinNumIDsPerFlow:   1,
+							MaxNumIDsPerFlow:   1,
+						}}),
+						// We expect process name to be "-"
+						Dest: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"frontend-8475b5657d-*:cartservice-5d844fc8b7-*:-": {
+							Name:        "-",
+							Source:      "frontend-8475b5657d-*",
+							Destination: "cartservice-5d844fc8b7-*",
+						}}),
 					},
 				},
 			},
@@ -227,12 +349,20 @@ func TestGetL3FlowData(t *testing.T) {
 						// We expect that process stat is extract from the flow reported at destination
 						Dest: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"frontend-8475b5657d-*:cartservice-5d844fc8b7-*:/app/cartservice": {
 							Name:               "/app/cartservice",
+							Source:             "frontend-8475b5657d-*",
+							Destination:        "cartservice-5d844fc8b7-*",
 							MinNumNamesPerFlow: 1,
 							MaxNumNamesPerFlow: 1,
 							MinNumIDsPerFlow:   1,
 							MaxNumIDsPerFlow:   1,
 						}}),
-						Source: nil,
+						Source: svapi.GraphEndpointProcesses{
+							"frontend-8475b5657d-*:cartservice-5d844fc8b7-*:/src/server": {
+								Name:        "/src/server",
+								Source:      "frontend-8475b5657d-*",
+								Destination: "cartservice-5d844fc8b7-*",
+							},
+						},
 					},
 				},
 			},
@@ -338,6 +468,8 @@ func TestGetL3FlowData(t *testing.T) {
 						// We expect that process stat is extract from the flow reported at source
 						Source: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"recommendationservice-6ffb84bb94-*:productcatalogservice-5b9df8d49b-*:/usr/local/bin/python": {
 							Name:               "/usr/local/bin/python",
+							Source:             "recommendationservice-6ffb84bb94-*",
+							Destination:        "productcatalogservice-5b9df8d49b-*",
 							MinNumNamesPerFlow: 1,
 							MaxNumNamesPerFlow: 1,
 							MinNumIDsPerFlow:   1,
@@ -345,6 +477,8 @@ func TestGetL3FlowData(t *testing.T) {
 						}}),
 						Dest: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"recommendationservice-6ffb84bb94-*:productcatalogservice-5b9df8d49b-*:/src/server": {
 							Name:               "/src/server",
+							Source:             "recommendationservice-6ffb84bb94-*",
+							Destination:        "productcatalogservice-5b9df8d49b-*",
 							MinNumNamesPerFlow: 1,
 							MaxNumNamesPerFlow: 1,
 							MinNumIDsPerFlow:   1,
@@ -514,6 +648,8 @@ func TestGetL3FlowData(t *testing.T) {
 					Processes: &svapi.GraphProcesses{
 						Source: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"checkoutservice-84cb944764-*:paymentservice-866fd4b98-*:/src/checkout": {
 							Name:               "/src/checkout",
+							Source:             "checkoutservice-84cb944764-*",
+							Destination:        "paymentservice-866fd4b98-*",
 							MinNumNamesPerFlow: 1,
 							MaxNumNamesPerFlow: 1,
 							MinNumIDsPerFlow:   1,
@@ -521,6 +657,8 @@ func TestGetL3FlowData(t *testing.T) {
 						}}),
 						Dest: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"checkoutservice-84cb944764-*:paymentservice-866fd4b98-*:/usr/local/bin/node": {
 							Name:               "/usr/local/bin/node",
+							Source:             "checkoutservice-84cb944764-*",
+							Destination:        "paymentservice-866fd4b98-*",
 							MinNumNamesPerFlow: 1,
 							MaxNumNamesPerFlow: 1,
 							MinNumIDsPerFlow:   1,
@@ -563,6 +701,8 @@ func TestGetL3FlowData(t *testing.T) {
 					Processes: &svapi.GraphProcesses{
 						Source: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"checkoutservice-84cb944764-*:currencyservice-76f9b766b4-*:/src/checkout": {
 							Name:               "/src/checkout",
+							Source:             "checkoutservice-84cb944764-*",
+							Destination:        "currencyservice-76f9b766b4-*",
 							MinNumNamesPerFlow: 1,
 							MaxNumNamesPerFlow: 1,
 							MinNumIDsPerFlow:   1,
@@ -570,6 +710,8 @@ func TestGetL3FlowData(t *testing.T) {
 						}}),
 						Dest: svapi.GraphEndpointProcesses(map[string]svapi.GraphEndpointProcess{"checkoutservice-84cb944764-*:currencyservice-76f9b766b4-*:/usr/local/bin/node": {
 							Name:               "/usr/local/bin/node",
+							Source:             "checkoutservice-84cb944764-*",
+							Destination:        "currencyservice-76f9b766b4-*",
 							MinNumNamesPerFlow: 1,
 							MaxNumNamesPerFlow: 1,
 							MinNumIDsPerFlow:   1,

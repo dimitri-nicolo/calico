@@ -930,6 +930,8 @@ var _ = Describe("Graph API tests", func() {
               "source": [
                 {
                   "name": "source1",
+                  "source": "",
+                  "destination": "",
                   "min_num_names_per_flow": 269,
                   "max_num_names_per_flow": 601,
                   "min_num_ids_per_flow": 277,
@@ -937,6 +939,8 @@ var _ = Describe("Graph API tests", func() {
                 },
                 {
                   "name": "source2",
+                  "source": "",
+                  "destination": "",
                   "min_num_names_per_flow": 617,
                   "max_num_names_per_flow": 619,
                   "min_num_ids_per_flow": 631,
@@ -946,6 +950,8 @@ var _ = Describe("Graph API tests", func() {
               "dest": [
                 {
                   "name": "dest1",
+                  "source": "",
+                  "destination": "",
                   "min_num_names_per_flow": 283,
                   "max_num_names_per_flow": 919,
                   "min_num_ids_per_flow": 307,
@@ -953,6 +959,8 @@ var _ = Describe("Graph API tests", func() {
                 },
                 {
                   "name": "dest2",
+                  "source": "",
+                  "destination": "",
                   "min_num_names_per_flow": 941,
                   "max_num_names_per_flow": 947,
                   "min_num_ids_per_flow": 953,

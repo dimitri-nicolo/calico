@@ -123,8 +123,10 @@ type GraphEndpointProcess struct {
 	// The process name. If aggregated it will be set to "*"
 	Name string `json:"name"`
 
+	// The aggregated source name
 	Source string `json:"source"`
 
+	// The aggregated destination name
 	Destination string `json:"destination"`
 
 	// The minimum number of process names per flow.

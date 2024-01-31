@@ -197,9 +197,10 @@ func GetL3FlowData(
 
 			// Determine the process info if available in the logs.
 			var processes v1.GraphEndpointProcesses
+			key := fmt.Sprintf("%s:%s:%s", source.NameAggr, dest.NameAggr, processName)
 			if processName != "" && flow.ProcessStats != nil {
 				processes = v1.GraphEndpointProcesses{
-					fmt.Sprintf("%s:%s:%s", source.NameAggr, dest.NameAggr, processName): v1.GraphEndpointProcess{
+					key: v1.GraphEndpointProcess{
 						Name:               processName,
 						Source:             source.NameAggr,
 						Destination:        dest.NameAggr,
@@ -208,6 +209,32 @@ func GetL3FlowData(
 						MinNumIDsPerFlow:   flow.ProcessStats.MinNumIDsPerFlow,
 						MaxNumIDsPerFlow:   flow.ProcessStats.MaxNumIDsPerFlow,
 					},
+				}
+			} else {
+				if flow.ProcessStats != nil {
+					processes = v1.GraphEndpointProcesses{
+						key: v1.GraphEndpointProcess{
+							Name:               defaultProcessName(processName),
+							Source:             source.NameAggr,
+							Destination:        dest.NameAggr,
+							MinNumNamesPerFlow: flow.ProcessStats.MinNumNamesPerFlow,
+							MaxNumNamesPerFlow: flow.ProcessStats.MaxNumNamesPerFlow,
+							MinNumIDsPerFlow:   flow.ProcessStats.MinNumIDsPerFlow,
+							MaxNumIDsPerFlow:   flow.ProcessStats.MaxNumIDsPerFlow,
+						},
+					}
+				} else {
+					processes = v1.GraphEndpointProcesses{
+						key: v1.GraphEndpointProcess{
+							Name:               defaultProcessName(processName),
+							Source:             source.NameAggr,
+							Destination:        dest.NameAggr,
+							MinNumNamesPerFlow: 0,
+							MaxNumNamesPerFlow: 0,
+							MinNumIDsPerFlow:   0,
+							MaxNumIDsPerFlow:   0,
+						},
+					}
 				}
 			}
 
@@ -250,6 +277,13 @@ func GetL3FlowData(
 		fs[i].Stats.Connections.TotalPerSampleInterval = int64(float64(fs[i].Stats.Connections.TotalPerSampleInterval) / l3Flushes)
 	}
 	return fs, <-errors
+}
+
+func defaultProcessName(processName string) string {
+	if processName == "" {
+		return "-"
+	}
+	return processName
 }
 
 func blankToSingleDash(val string) string {
