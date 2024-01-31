@@ -501,6 +501,13 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 
 	// floatingIPs are allowed for the default interface only
 	if podInterface.IsDefault {
+		// Handle source IP spoofing annotation
+		sourcePrefixes, err := k8sconversion.HandleSourceIPSpoofingAnnotation(annot)
+		if err != nil {
+			return nil, err
+		}
+		endpoint.Spec.AllowSpoofedSourcePrefixes = sourcePrefixes
+
 		// List of DNAT ipaddrs to map to this workload endpoint
 		floatingIPs := annot["cni.projectcalico.org/floatingIPs"]
 
