@@ -5,9 +5,9 @@ package storage
 import (
 	"context"
 	"errors"
-	"time"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 )
@@ -44,7 +44,7 @@ func copyWithSkip(index int, values []v1.Event) []v1.Event {
 	return copyOfEvents
 }
 
-func (m *MockEvents) GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) <-chan *lmaAPI.EventResult {
+func (m *MockEvents) GetSecurityEvents(ctx context.Context, p client.ListPager[v1.Event]) <-chan *lmaAPI.EventResult {
 	return nil
 }
 

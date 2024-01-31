@@ -51,7 +51,6 @@ import (
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
-	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 const (
@@ -127,12 +126,6 @@ func main() {
 	configMapNamespace := getStrEnvOrDefault("CONFIG_MAP_NAMESPACE", DefaultConfigMapNamespace)
 	secretsNamespace := getStrEnvOrDefault("SECRETS_NAMESPACE", DefaultSecretsNamespace)
 
-	envCfg := lma.MustLoadConfig()
-	lmaESClient, err := lma.NewFromConfig(envCfg)
-	if err != nil {
-		log.WithError(err).Fatal("Could not connect to Elasticsearch")
-	}
-
 	cfg, err := config.GetConfig()
 	if err != nil {
 		log.Fatal(err)
@@ -151,7 +144,7 @@ func main() {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}
 
-	e := storage.NewService(lmaESClient, linseedClient, client, "")
+	e := storage.NewService(linseedClient, client, "")
 	e.Run(ctx)
 	defer e.Close()
 

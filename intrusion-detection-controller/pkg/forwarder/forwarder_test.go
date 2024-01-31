@@ -4,8 +4,6 @@ package forwarder
 
 import (
 	"context"
-	"net/http"
-	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -20,20 +18,23 @@ import (
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
-	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
-	lma "github.com/projectcalico/calico/lma/pkg/elastic"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 var _ = Describe("Event forwarder", func() {
 	var (
-		ctx         context.Context
-		cancel      context.CancelFunc
-		esSvc       *storage.Service
-		clusterName string
-		startTime   time.Time
-		endTime     time.Time
-		totalDocs   int
-		lmaESCli    lma.Client
+		ctx            context.Context
+		cancel         context.CancelFunc
+		storageService *storage.Service
+		clusterName    string
+		startTime      time.Time
+		endTime        time.Time
+		totalDocs      int
+		lsc            lsclient.MockClient
 	)
 
 	BeforeEach(func() {
@@ -44,21 +45,7 @@ var _ = Describe("Event forwarder", func() {
 		err := os.Setenv("CLUSTER_NAME", clusterName)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		u := &url.URL{
-			Scheme: "http",
-			Host:   "localhost:9200",
-		}
 		ctx, cancel = context.WithCancel(context.Background())
-		lmaESCli, err = lma.New(&http.Client{}, u, "", "", clusterName, 1, 0, true, 0, 5)
-		if err != nil {
-			panic("could not create unit under test: " + err.Error())
-		}
-
-		_, err = lmaESCli.Backend().DeleteIndex("tigera_secure_ee_events*").Do(ctx)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = lmaESCli.CreateEventsIndex(ctx)
-		Expect(err).ShouldNot(HaveOccurred())
 
 		// mock controller runtime client.
 		scheme := scheme.Scheme
@@ -66,14 +53,14 @@ var _ = Describe("Event forwarder", func() {
 		Expect(err).NotTo(HaveOccurred())
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		esSvc = storage.NewService(lmaESCli, nil, fakeClient, "")
-		esSvc.Run(ctx)
-
-		// Populate events index with enough test data that needs scrolling
+		// Populate the linseed client with mock event data. We use a large number
+		// of events to ensure that the forwarder properly handles pagination of data.
+		// The Linseed client defaults to a page size of 1000.
 		totalDocs = 1550
+		data := lsv1.List[lsv1.Event]{Items: []lsv1.Event{}}
 		for i := 0; i < totalDocs; i++ {
-			_, err := lmaESCli.PutSecurityEvent(ctx, lmaAPI.EventsData{
-				Time:            time.Now().Unix(),
+			event := lsv1.Event{
+				Time:            lsv1.NewEventDate(time.Now()),
 				Type:            "global_alert",
 				Description:     "test event fwd",
 				Severity:        100,
@@ -82,20 +69,16 @@ var _ = Describe("Event forwarder", func() {
 				DestNameAggr:    "sample-dest-*",
 				Host:            "node0",
 				Record:          map[string]string{"key1": "value1", "key2": "value2"},
-			})
-			Expect(err).ShouldNot(HaveOccurred())
+			}
+			data.Items = append(data.Items, event)
 		}
+		lsc = lsclient.NewMockClient("", rest.MockResult{Body: data})
+
+		storageService = storage.NewService(lsc, fakeClient, "")
+		storageService.Run(ctx)
 
 		now = time.Now()
 		endTime = now.Add(time.Duration(2) * time.Minute)
-
-		// Sleep for the data to persist in ES
-		time.Sleep(10 * time.Second)
-	})
-
-	AfterEach(func() {
-		_, err := lmaESCli.Backend().DeleteIndex("tigera_secure_ee_events*").Do(ctx)
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should read from events index and dispatches them", func() {
@@ -118,12 +101,15 @@ var _ = Describe("Event forwarder", func() {
 			once:       sync.Once{},
 			cancel:     cancel,
 			ctx:        ctx,
-			events:     esSvc,
+			events:     storageService,
 			dispatcher: dispatcher,
 			config:     &storage.ForwarderConfig{},
 		}
 
-		err := eventFwdr.retrieveAndForward(startTime, endTime, 1, 30*time.Second)
+		params := lsv1.EventParams{}
+		params.SetTimeRange(&lmav1.TimeRange{From: startTime, To: endTime})
+		pager := client.NewMockListPager(&params, lsc.Events("").List)
+		err := eventFwdr.retrieveAndForward(pager, startTime, endTime, 1, 30*time.Second)
 		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() int { return dispatchCount }).Should(Equal(totalDocs))
 	})

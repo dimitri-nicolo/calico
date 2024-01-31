@@ -6,8 +6,6 @@ package ut
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/url"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -25,12 +23,8 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
-	log "github.com/sirupsen/logrus"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
@@ -44,28 +38,15 @@ var _ = Describe("DomainName Thread Feeds UT", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 
-		u := &url.URL{
-			Scheme: "http",
-			Host:   "localhost:9200",
-		}
-
-		lmaESCli, err := lma.New(&http.Client{}, u, "", "", "cluster", 1, 0, true, 0, 5)
-		if err != nil {
-			panic("could not create unit under test: " + err.Error())
-		}
-		if err != nil {
-			log.WithError(err).Fatal("failed to create linseed client")
-		}
-
 		lsc = lsclient.NewMockClient("")
 
 		// mock controller runtime client.
 		scheme := scheme.Scheme
-		err = v3.AddToScheme(scheme)
+		err := v3.AddToScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		uut = storage.NewService(lmaESCli, lsc, fakeClient, "cluster")
+		uut = storage.NewService(lsc, fakeClient, "cluster")
 		uut.Run(ctx)
 	})
 
