@@ -161,12 +161,10 @@ func (er *engineRules) addFlowToEgressToServiceRules(direction calicores.Directi
 	}
 
 	name := flow.Destination.ServiceName
-	namespace := flow.Destination.Namespace
 
 	key := engineRuleKey{
-		name:      name,
-		namespace: namespace,
-		protocol:  *protocol,
+		name:     name,
+		protocol: *protocol,
 	}
 
 	// Update the ports and return if the value already exists.
@@ -186,7 +184,6 @@ func (er *engineRules) addFlowToEgressToServiceRules(direction calicores.Directi
 	val := &types.FlowLogData{
 		Action:    getAction(pass, flow),
 		Name:      name,
-		Namespace: namespace,
 		Protocol:  *protocol,
 		Timestamp: clock.NowRFC3339(),
 	}
@@ -424,31 +421,27 @@ func getFlowType(direction calicores.DirectionType, flow api.Flow, serviceNameSu
 	}
 
 	if endpoint.Type == api.FlowLogEndpointTypeWEP {
-		if dest && (endpoint.Name == "-" || endpoint.Name == "") && endpoint.ServiceName != "-" && endpoint.ServiceName != "" {
-			// Non-pod service
-			return egressToServiceFlowType
-		}
-		if endpoint.Namespace != "-" && endpoint.Namespace != "" {
+		if endpoint.Namespace != "" && endpoint.Namespace != "-" {
 			return namespaceFlowType
 		}
 	}
 
 	if endpoint.Type == api.EndpointTypeNet {
-		if dest && endpoint.Domains != "" && endpoint.Domains != "-" {
-			if localDomains(endpoint.Domains, serviceNameSuffix) {
-				return suppressedFlowType
-			}
-			return egressToDomainFlowType
-		}
-		if dest && endpoint.ServiceName != "-" && endpoint.ServiceName != "" {
-			return egressToServiceFlowType
-		}
 		name := endpoint.Name
 		switch name {
 		case api.FlowLogNetworkPrivate:
 			return privateNetworkFlowType
-		default:
+		case api.FlowLogNetworkPublic:
+			if dest && endpoint.Domains != "" && endpoint.Domains != "-" {
+				return egressToDomainFlowType
+			}
+			if dest && endpoint.ServiceName != "" && endpoint.ServiceName != "-" {
+				return egressToServiceFlowType
+			}
 			return publicNetworkFlowType
+		default:
+			log.Warnf("Unsupported flow type: %s", endpoint.Type)
+			return unsupportedFlowType
 		}
 	}
 
@@ -502,18 +495,4 @@ func parseDomains(domainsAsStr string) []string {
 	domains := strings.Split(domainsAsStr, ",")
 
 	return domains
-}
-
-// localDomains returns true if every domain in the list contains a local service name
-// suffix.
-func localDomains(domains, serviceNameSuffix string) bool {
-	unfiltered := strings.Split(domains, ",")
-	filtered := []string{}
-	for _, domain := range unfiltered {
-		if !strings.HasSuffix(domain, serviceNameSuffix) {
-			filtered = append(filtered, domain)
-		}
-	}
-
-	return len(filtered) == 0
 }

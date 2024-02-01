@@ -24,7 +24,7 @@ var Step5Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "namespace5",
-							AggregatedName: "-",
+							AggregatedName: "deployment1",
 							Type:           lapi.WEP,
 							Port:           97,
 						},
@@ -47,7 +47,7 @@ var Step5Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "namespace5",
-							AggregatedName: "-",
+							AggregatedName: "deployment1",
 							Type:           lapi.WEP,
 							Port:           98,
 						},
@@ -70,7 +70,7 @@ var Step5Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "namespace5",
-							AggregatedName: "-",
+							AggregatedName: "deployment1",
 							Type:           lapi.WEP,
 							Port:           99,
 						},
@@ -93,7 +93,7 @@ var Step5Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "namespace3",
-							AggregatedName: "-",
+							AggregatedName: "deployment1",
 							Type:           lapi.WEP,
 							Port:           99,
 						},
@@ -116,8 +116,8 @@ var Step5Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "-",
-							AggregatedName: "-",
-							Type:           lapi.WEP,
+							AggregatedName: "pub",
+							Type:           lapi.Network,
 							Port:           99,
 						},
 						Protocol: "tcp",
@@ -139,7 +139,7 @@ var Step5Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "namespace5",
-							AggregatedName: "-",
+							AggregatedName: "deployment1",
 							Type:           lapi.WEP,
 							Port:           99,
 						},
@@ -162,7 +162,7 @@ var Step5Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "namespace5",
-							AggregatedName: "-",
+							AggregatedName: "deployment1",
 							Type:           lapi.WEP,
 							Port:           100,
 						},

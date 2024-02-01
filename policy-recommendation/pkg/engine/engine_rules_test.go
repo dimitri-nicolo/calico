@@ -575,7 +575,7 @@ var _ = Describe("EngineRules", func() {
 			Entry("src/WEP/Service - EgressToService", calicores.EgressTraffic, api.Flow{
 				Reporter:    "src",
 				Source:      api.FlowEndpointData{},
-				Destination: api.FlowEndpointData{Type: api.EndpointTypeNet, ServiceName: "svc-ext"},
+				Destination: api.FlowEndpointData{Type: api.EndpointTypeNet, Name: "pub", ServiceName: "svc-ext"},
 				ActionFlag:  api.ActionFlagAllow,
 			}, egressToServiceFlowType),
 			Entry("src/WEP/Namespace - Namespace (Egress)", calicores.EgressTraffic, api.Flow{
@@ -589,13 +589,13 @@ var _ = Describe("EngineRules", func() {
 				Source:      api.FlowEndpointData{},
 				Destination: api.FlowEndpointData{Type: api.EndpointTypeNet, Name: "pvt", Namespace: "-", Domains: "my.web.com,*.*.svc.cluster.local"},
 				ActionFlag:  api.ActionFlagAllow,
-			}, egressToDomainFlowType),
+			}, privateNetworkFlowType),
 			Entry("src/NET/Domain - Suppressed (Egress)", calicores.EgressTraffic, api.Flow{
 				Reporter:    "src",
 				Source:      api.FlowEndpointData{},
 				Destination: api.FlowEndpointData{Type: api.EndpointTypeNet, Name: "pvt", Namespace: "-", Domains: "*.*.svc.cluster.local"},
 				ActionFlag:  api.ActionFlagAllow,
-			}, suppressedFlowType),
+			}, privateNetworkFlowType),
 			Entry("src/NS/Name - NetworkSet", calicores.EgressTraffic, api.Flow{
 				Reporter:    "src",
 				Source:      api.FlowEndpointData{},

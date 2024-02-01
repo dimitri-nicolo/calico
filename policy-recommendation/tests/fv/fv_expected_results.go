@@ -2636,6 +2636,48 @@ var (
 							},
 						},
 					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source: v3.EntityRule{
+							Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
+						},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 99,
+									MaxPort: 99,
+								},
+							},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timestampStep8Relearning,
+								"policyrecommendation.tigera.io/scope":       "Private",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolUDP,
+						Source: v3.EntityRule{
+							Nets: []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
+						},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 101,
+									MaxPort: 101,
+								},
+							},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timestampStep8Relearning,
+								"policyrecommendation.tigera.io/scope":       "Private",
+							},
+						},
+					},
 				},
 				Selector: "projectcalico.org/namespace == 'namespace5'",
 				Types:    []v3.PolicyType{"Egress"},
@@ -2756,46 +2798,42 @@ var (
 						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{
 								{
-									MinPort: 80,
-									MaxPort: 80,
-								},
-							},
-							Services: &v3.ServiceMatch{
-								Name:      "service1a",
-								Namespace: "namespace4",
-							},
-						},
-						Metadata: &v3.RuleMetadata{
-							Annotations: map[string]string{
-								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "service1a",
-								"policyrecommendation.tigera.io/namespace":   "namespace4",
-								"policyrecommendation.tigera.io/scope":       "Service",
-							},
-						},
-					},
-					{
-						Action:   v3.Allow,
-						Protocol: &protocolTCP,
-						Source:   v3.EntityRule{},
-						Destination: v3.EntityRule{
-							Ports: []numorstring.Port{
-								{
 									MinPort: 81,
 									MaxPort: 81,
 								},
 							},
 							Services: &v3.ServiceMatch{
-								Name:      "glb-service1a",
-								Namespace: "-",
+								Name: "glb-service1a",
 							},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
 								"policyrecommendation.tigera.io/name":        "glb-service1a",
-								"policyrecommendation.tigera.io/namespace":   "-",
+								"policyrecommendation.tigera.io/namespace":   "",
 								"policyrecommendation.tigera.io/scope":       "Service",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
+									MinPort: 80,
+									MaxPort: 80,
+								},
+							},
+							NamespaceSelector: "projectcalico.org/name == 'namespace4'",
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/namespace":   "namespace4",
+								"policyrecommendation.tigera.io/scope":       "Namespace",
+								"policyrecommendation.tigera.io/warnings":    "NonServicePortsAndProtoocol",
 							},
 						},
 					},
@@ -2810,17 +2848,14 @@ var (
 									MaxPort: 81,
 								},
 							},
-							Services: &v3.ServiceMatch{
-								Name:      "service1b",
-								Namespace: "namespace3",
-							},
+							NamespaceSelector: "projectcalico.org/name == 'namespace3'",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "service1b",
 								"policyrecommendation.tigera.io/namespace":   "namespace3",
-								"policyrecommendation.tigera.io/scope":       "Service",
+								"policyrecommendation.tigera.io/scope":       "Namespace",
+								"policyrecommendation.tigera.io/warnings":    "NonServicePortsAndProtoocol",
 							},
 						},
 					},
@@ -2864,20 +2899,19 @@ var (
 						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{
 								{
-									MinPort: 666,
-									MaxPort: 666,
+									MinPort: 667,
+									MaxPort: 667,
 								},
 							},
 							Services: &v3.ServiceMatch{
-								Name:      "service3a",
-								Namespace: "namespace5",
+								Name: "glb-service3a",
 							},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "service3a",
-								"policyrecommendation.tigera.io/namespace":   "namespace5",
+								"policyrecommendation.tigera.io/name":        "glb-service3a",
+								"policyrecommendation.tigera.io/namespace":   "",
 								"policyrecommendation.tigera.io/scope":       "Service",
 							},
 						},
@@ -2889,21 +2923,18 @@ var (
 						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{
 								{
-									MinPort: 667,
-									MaxPort: 667,
+									MinPort: 666,
+									MaxPort: 666,
 								},
 							},
-							Services: &v3.ServiceMatch{
-								Name:      "glb-service3a",
-								Namespace: "-",
-							},
+							NamespaceSelector: "projectcalico.org/name == 'namespace5'",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "glb-service3a",
-								"policyrecommendation.tigera.io/namespace":   "-",
-								"policyrecommendation.tigera.io/scope":       "Service",
+								"policyrecommendation.tigera.io/namespace":   "namespace5",
+								"policyrecommendation.tigera.io/scope":       "Namespace",
+								"policyrecommendation.tigera.io/warnings":    "NonServicePortsAndProtoocol",
 							},
 						},
 					},
@@ -2922,17 +2953,14 @@ var (
 									MaxPort: 9090,
 								},
 							},
-							Services: &v3.ServiceMatch{
-								Name:      "service3a",
-								Namespace: "namespace2",
-							},
+							NamespaceSelector: "projectcalico.org/name == 'namespace2'",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "service3a",
 								"policyrecommendation.tigera.io/namespace":   "namespace2",
-								"policyrecommendation.tigera.io/scope":       "Service",
+								"policyrecommendation.tigera.io/scope":       "Namespace",
+								"policyrecommendation.tigera.io/warnings":    "NonServicePortsAndProtoocol",
 							},
 						},
 					},
@@ -2979,20 +3007,19 @@ var (
 						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{
 								{
-									MinPort: 80,
-									MaxPort: 80,
+									MinPort: 81,
+									MaxPort: 81,
 								},
 							},
 							Services: &v3.ServiceMatch{
-								Name:      "service1a",
-								Namespace: "namespace4",
+								Name: "glb-service1a",
 							},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "service1a",
-								"policyrecommendation.tigera.io/namespace":   "namespace4",
+								"policyrecommendation.tigera.io/name":        "glb-service1a",
+								"policyrecommendation.tigera.io/namespace":   "",
 								"policyrecommendation.tigera.io/scope":       "Service",
 							},
 						},
@@ -3004,21 +3031,18 @@ var (
 						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{
 								{
-									MinPort: 81,
-									MaxPort: 81,
+									MinPort: 80,
+									MaxPort: 80,
 								},
 							},
-							Services: &v3.ServiceMatch{
-								Name:      "glb-service1a",
-								Namespace: "-",
-							},
+							NamespaceSelector: "projectcalico.org/name == 'namespace4'",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "glb-service1a",
-								"policyrecommendation.tigera.io/namespace":   "-",
-								"policyrecommendation.tigera.io/scope":       "Service",
+								"policyrecommendation.tigera.io/namespace":   "namespace4",
+								"policyrecommendation.tigera.io/scope":       "Namespace",
+								"policyrecommendation.tigera.io/warnings":    "NonServicePortsAndProtoocol",
 							},
 						},
 					},
@@ -3037,17 +3061,14 @@ var (
 									MaxPort: 99,
 								},
 							},
-							Services: &v3.ServiceMatch{
-								Name:      "service1b",
-								Namespace: "namespace3",
-							},
+							NamespaceSelector: "projectcalico.org/name == 'namespace3'",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
-								"policyrecommendation.tigera.io/name":        "service1b",
 								"policyrecommendation.tigera.io/namespace":   "namespace3",
-								"policyrecommendation.tigera.io/scope":       "Service",
+								"policyrecommendation.tigera.io/scope":       "Namespace",
+								"policyrecommendation.tigera.io/warnings":    "NonServicePortsAndProtoocol",
 							},
 						},
 					},
@@ -3091,6 +3112,30 @@ var (
 						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{
 								{
+									MinPort: 99,
+									MaxPort: 99,
+								},
+							},
+							Services: &v3.ServiceMatch{
+								Name: "glb-service3a",
+							},
+						},
+						Metadata: &v3.RuleMetadata{
+							Annotations: map[string]string{
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
+								"policyrecommendation.tigera.io/name":        "glb-service3a",
+								"policyrecommendation.tigera.io/namespace":   "",
+								"policyrecommendation.tigera.io/scope":       "Service",
+							},
+						},
+					},
+					{
+						Action:   v3.Allow,
+						Protocol: &protocolTCP,
+						Source:   v3.EntityRule{},
+						Destination: v3.EntityRule{
+							Ports: []numorstring.Port{
+								{
 									MinPort: 97,
 									MaxPort: 97,
 								},
@@ -3107,42 +3152,14 @@ var (
 									MaxPort: 100,
 								},
 							},
-							Services: &v3.ServiceMatch{
-								Name:      "service2a",
-								Namespace: "namespace5",
-							},
+							NamespaceSelector: "projectcalico.org/name == 'namespace5'",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
-								"policyrecommendation.tigera.io/name":        "service2a",
 								"policyrecommendation.tigera.io/namespace":   "namespace5",
-								"policyrecommendation.tigera.io/scope":       "Service",
-							},
-						},
-					},
-					{
-						Action:   v3.Allow,
-						Protocol: &protocolTCP,
-						Source:   v3.EntityRule{},
-						Destination: v3.EntityRule{
-							Ports: []numorstring.Port{
-								{
-									MinPort: 99,
-									MaxPort: 99,
-								},
-							},
-							Services: &v3.ServiceMatch{
-								Name:      "glb-service3a",
-								Namespace: "-",
-							},
-						},
-						Metadata: &v3.RuleMetadata{
-							Annotations: map[string]string{
-								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
-								"policyrecommendation.tigera.io/name":        "glb-service3a",
-								"policyrecommendation.tigera.io/namespace":   "-",
-								"policyrecommendation.tigera.io/scope":       "Service",
+								"policyrecommendation.tigera.io/scope":       "Namespace",
+								"policyrecommendation.tigera.io/warnings":    "NonServicePortsAndProtoocol",
 							},
 						},
 					},
@@ -3186,24 +3203,19 @@ var (
 						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{
 								{
-									MinPort: 99,
-									MaxPort: 99,
-								},
-								{
-									MinPort: 666,
-									MaxPort: 666,
+									MinPort: 667,
+									MaxPort: 667,
 								},
 							},
 							Services: &v3.ServiceMatch{
-								Name:      "service3a",
-								Namespace: "namespace5",
+								Name: "glb-service3a",
 							},
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
-								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
-								"policyrecommendation.tigera.io/name":        "service3a",
-								"policyrecommendation.tigera.io/namespace":   "namespace5",
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
+								"policyrecommendation.tigera.io/name":        "glb-service3a",
+								"policyrecommendation.tigera.io/namespace":   "",
 								"policyrecommendation.tigera.io/scope":       "Service",
 							},
 						},
@@ -3215,21 +3227,22 @@ var (
 						Destination: v3.EntityRule{
 							Ports: []numorstring.Port{
 								{
-									MinPort: 667,
-									MaxPort: 667,
+									MinPort: 99,
+									MaxPort: 99,
+								},
+								{
+									MinPort: 666,
+									MaxPort: 666,
 								},
 							},
-							Services: &v3.ServiceMatch{
-								Name:      "glb-service3a",
-								Namespace: "-",
-							},
+							NamespaceSelector: "projectcalico.org/name == 'namespace5'",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
-								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "glb-service3a",
-								"policyrecommendation.tigera.io/namespace":   "-",
-								"policyrecommendation.tigera.io/scope":       "Service",
+								"policyrecommendation.tigera.io/lastUpdated": timeAtStep2,
+								"policyrecommendation.tigera.io/namespace":   "namespace5",
+								"policyrecommendation.tigera.io/scope":       "Namespace",
+								"policyrecommendation.tigera.io/warnings":    "NonServicePortsAndProtoocol",
 							},
 						},
 					},
@@ -3248,17 +3261,14 @@ var (
 									MaxPort: 9090,
 								},
 							},
-							Services: &v3.ServiceMatch{
-								Name:      "service3a",
-								Namespace: "namespace2",
-							},
+							NamespaceSelector: "projectcalico.org/name == 'namespace2'",
 						},
 						Metadata: &v3.RuleMetadata{
 							Annotations: map[string]string{
 								"policyrecommendation.tigera.io/lastUpdated": timeAtStep1,
-								"policyrecommendation.tigera.io/name":        "service3a",
 								"policyrecommendation.tigera.io/namespace":   "namespace2",
-								"policyrecommendation.tigera.io/scope":       "Service",
+								"policyrecommendation.tigera.io/scope":       "Namespace",
+								"policyrecommendation.tigera.io/warnings":    "NonServicePortsAndProtoocol",
 							},
 						},
 					},

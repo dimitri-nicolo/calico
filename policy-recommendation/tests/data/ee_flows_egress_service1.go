@@ -24,7 +24,7 @@ var Step4Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "namespace4",
-							AggregatedName: "-",
+							AggregatedName: "deployment1",
 							Type:           lapi.WEP,
 							Port:           80,
 						},
@@ -47,8 +47,8 @@ var Step4Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "-",
-							AggregatedName: "-",
-							Type:           lapi.WEP,
+							AggregatedName: "pub",
+							Type:           lapi.Network,
 							Port:           81,
 						},
 						Protocol: "tcp",
@@ -69,8 +69,8 @@ var Step4Results = []rest.MockResult{
 							Type:           lapi.WEP,
 						},
 						Destination: lapi.Endpoint{
+							AggregatedName: "deployment1",
 							Namespace:      "namespace5",
-							AggregatedName: "-",
 							Type:           lapi.WEP,
 							Port:           666,
 						},
@@ -93,7 +93,7 @@ var Step4Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "namespace3",
-							AggregatedName: "-",
+							AggregatedName: "deployment1",
 							Type:           lapi.WEP,
 							Port:           81,
 						},
@@ -116,8 +116,8 @@ var Step4Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "-",
-							AggregatedName: "-",
-							Type:           lapi.WEP,
+							AggregatedName: "pub",
+							Type:           lapi.Network,
 							Port:           667,
 						},
 						Protocol: "tcp",
@@ -139,7 +139,7 @@ var Step4Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "namespace2",
-							AggregatedName: "-",
+							AggregatedName: "deployment1",
 							Type:           lapi.WEP,
 							Port:           9090,
 						},
@@ -162,7 +162,7 @@ var Step4Results = []rest.MockResult{
 						},
 						Destination: lapi.Endpoint{
 							Namespace:      "namespace2",
-							AggregatedName: "-",
+							AggregatedName: "deployment1",
 							Type:           lapi.WEP,
 							Port:           1,
 						},

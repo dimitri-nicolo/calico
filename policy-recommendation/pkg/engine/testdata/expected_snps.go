@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 package enginedata
 
 import (
@@ -8,6 +8,9 @@ import (
 	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
+// The contents of this file are meant to be used to hold the expected output of the staged network
+// policy generation engine. The expected output is used to validate the correctness of the engine's
+// output.
 var (
 	ExpectedSnpNamespace1 = &v3.StagedNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -37,7 +40,6 @@ var (
 		Spec: v3.StagedNetworkPolicySpec{
 			StagedAction: v3.StagedActionLearn,
 			Tier:         "test_tier",
-			Order:        getPtrFloat64(1),
 			Selector:     "projectcalico.org/namespace == 'namespace1'",
 			Types: []v3.PolicyType{
 				"Egress", "Ingress",
@@ -183,15 +185,14 @@ var (
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
 						Services: &v3.ServiceMatch{
-							Name:      "service3",
-							Namespace: "namespace3",
+							Name: "service3",
 						},
 					},
 					Metadata: &v3.RuleMetadata{
 						Annotations: map[string]string{
 							"policyrecommendation.tigera.io/lastUpdated": "Wed, 29 Nov 2022 14:05:05 PST",
 							"policyrecommendation.tigera.io/name":        "service3",
-							"policyrecommendation.tigera.io/namespace":   "namespace3",
+							"policyrecommendation.tigera.io/namespace":   "",
 							"policyrecommendation.tigera.io/scope":       "Service",
 						},
 					},
@@ -202,15 +203,14 @@ var (
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
 						Services: &v3.ServiceMatch{
-							Name:      "service4",
-							Namespace: "namespace4",
+							Name: "service4",
 						},
 					},
 					Metadata: &v3.RuleMetadata{
 						Annotations: map[string]string{
 							"policyrecommendation.tigera.io/lastUpdated": "2022-11-30T09:01:38Z",
 							"policyrecommendation.tigera.io/name":        "service4",
-							"policyrecommendation.tigera.io/namespace":   "namespace4",
+							"policyrecommendation.tigera.io/namespace":   "",
 							"policyrecommendation.tigera.io/scope":       "Service",
 						},
 					},
@@ -221,8 +221,7 @@ var (
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
 						Services: &v3.ServiceMatch{
-							Name:      "service2",
-							Namespace: "namespace2",
+							Name: "service2",
 						},
 						Ports: []numorstring.Port{
 							{
@@ -247,7 +246,7 @@ var (
 						Annotations: map[string]string{
 							"policyrecommendation.tigera.io/lastUpdated": "2022-11-30T09:01:38Z",
 							"policyrecommendation.tigera.io/name":        "service2",
-							"policyrecommendation.tigera.io/namespace":   "namespace2",
+							"policyrecommendation.tigera.io/namespace":   "",
 							"policyrecommendation.tigera.io/scope":       "Service",
 						},
 					},
@@ -258,8 +257,7 @@ var (
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
 						Services: &v3.ServiceMatch{
-							Name:      "service2",
-							Namespace: "namespace2",
+							Name: "service2",
 						},
 						Ports: []numorstring.Port{
 							{
@@ -280,7 +278,7 @@ var (
 						Annotations: map[string]string{
 							"policyrecommendation.tigera.io/lastUpdated": "Wed, 29 Nov 2022 14:04:05 PST",
 							"policyrecommendation.tigera.io/name":        "service2",
-							"policyrecommendation.tigera.io/namespace":   "namespace2",
+							"policyrecommendation.tigera.io/namespace":   "",
 							"policyrecommendation.tigera.io/scope":       "Service",
 						},
 					},
@@ -291,8 +289,7 @@ var (
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
 						Services: &v3.ServiceMatch{
-							Name:      "service3",
-							Namespace: "namespace3",
+							Name: "service3",
 						},
 						Ports: []numorstring.Port{
 							{
@@ -313,19 +310,18 @@ var (
 						Annotations: map[string]string{
 							"policyrecommendation.tigera.io/lastUpdated": "2022-11-30T09:01:38Z",
 							"policyrecommendation.tigera.io/name":        "service3",
-							"policyrecommendation.tigera.io/namespace":   "namespace3",
+							"policyrecommendation.tigera.io/namespace":   "",
 							"policyrecommendation.tigera.io/scope":       "Service",
 						},
 					},
 				},
 				{
-					Action:   v3.Pass,
+					Action:   v3.Allow,
 					Protocol: &protocolUDP,
 					Source:   v3.EntityRule{},
 					Destination: v3.EntityRule{
 						Services: &v3.ServiceMatch{
-							Name:      "service1",
-							Namespace: "namespace1",
+							Name: "service1",
 						},
 						Ports: []numorstring.Port{
 							{
@@ -338,7 +334,7 @@ var (
 						Annotations: map[string]string{
 							"policyrecommendation.tigera.io/lastUpdated": "2022-11-30T09:01:38Z",
 							"policyrecommendation.tigera.io/name":        "service1",
-							"policyrecommendation.tigera.io/namespace":   "namespace1",
+							"policyrecommendation.tigera.io/namespace":   "",
 							"policyrecommendation.tigera.io/scope":       "Service",
 						},
 					},
@@ -708,6 +704,10 @@ var (
 							"192.168.0.0/16",
 						},
 						Ports: []numorstring.Port{
+							{
+								MinPort: 441,
+								MaxPort: 441,
+							},
 							{
 								MinPort: 8080,
 								MaxPort: 8080,
@@ -1352,9 +1352,5 @@ var (
 )
 
 func getPtrBool(f bool) *bool {
-	return &f
-}
-
-func getPtrFloat64(f float64) *float64 {
 	return &f
 }
