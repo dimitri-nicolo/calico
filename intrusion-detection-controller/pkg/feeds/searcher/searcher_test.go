@@ -22,12 +22,14 @@ import (
 func TestDoIPSet(t *testing.T) {
 	expected := []v1.Event{
 		{
+			ID:         "1234",
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
 			DestIP:     util.Sptr("2.3.4.5"),
 			DestName:   "dest",
 		},
 		{
+			ID:         "2345",
 			SourceIP:   util.Sptr("5.6.7.8"),
 			SourceName: "source",
 			DestIP:     util.Sptr("2.3.4.5"),
@@ -94,12 +96,14 @@ func TestDoIPSetSuspiciousIPFails(t *testing.T) {
 func TestDoIPSetEventsFails(t *testing.T) {
 	expected := []v1.Event{
 		{
+			ID:         "1234",
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
 			DestIP:     util.Sptr("2.3.4.5"),
 			DestName:   "dest",
 		},
 		{
+			ID:         "2345",
 			SourceIP:   util.Sptr("5.6.7.8"),
 			SourceName: "source",
 			DestIP:     util.Sptr("2.3.4.5"),
