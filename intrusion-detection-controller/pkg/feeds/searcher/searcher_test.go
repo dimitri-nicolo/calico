@@ -37,6 +37,47 @@ func TestDoIPSet(t *testing.T) {
 	runTest(t, true, expected, time.Now(), "", nil, -1)
 }
 
+// TestCacheEvents tests the caching of events is working
+func TestCacheEvents(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	e1 := v1.Event{
+		ID: "1234",
+	}
+
+	e2 := v1.Event{
+		ID: "2345",
+	}
+
+	e3 := v1.Event{
+		ID: "3456",
+	}
+
+	processEvents := []v1.Event{e1, e2, e3}
+
+	cachedEvents := []v1.Event{e1, e2}
+
+	f := util.NewGlobalThreatFeedFromName("mock")
+	suspiciousIP := &storage.MockSuspicious{
+		Error:                nil,
+		LastSuccessfulSearch: time.Now(),
+		SetHash:              "",
+	}
+	suspiciousIP.Events = append(suspiciousIP.Events, processEvents...)
+	eventsDB := &storage.MockEvents{ErrorIndex: -1, Events: []v1.Event{}}
+	uut := NewSearcher(f, 0, suspiciousIP, eventsDB).(*searcher)
+
+	for _, e := range cachedEvents {
+		uut.cachedEvents.Add(e)
+	}
+	feedCacher := cacher.NewMockGlobalThreatFeedCache()
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+	uut.doSearch(ctx, feedCacher)
+
+	g.Expect(eventsDB.Events).Should(ConsistOf([]v1.Event{e3}), "1 Event should be in DB")
+}
+
 // TestDoIPSetNoResults tests the case where no results are returned
 func TestDoIPSetNoResults(t *testing.T) {
 	expected := []v1.Event{}
