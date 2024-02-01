@@ -393,41 +393,49 @@ func (r *DefaultRuleRenderer) PolicyGroupToIptablesChains(group *PolicyGroup) []
 		polChainPrefix = PolicyOutboundPfx
 	}
 	// To keep the number of rules low, we only drop a RETURN rule every
-	// returnStride jump rules.
+	// returnStride jump rules and only if one of the jump rules was to a
+	// non-staged policy.  Staged policies don't set the mark bits when they
+	// fire.
 	const returnStride = 5
+	seenNonStagedPolThisStride := false
 	for i, polName := range group.PolicyNames {
-		if i != 0 && i%returnStride == 0 {
+		if i != 0 && i%returnStride == 0 && seenNonStagedPolThisStride {
 			// If policy makes a verdict (i.e. the pass or accept bit is
 			// non-zero) return to the per-endpoint chain.  Note: the per-endpoint
 			// chain has a similar rule that only checks the accept bit.  Pass
 			// is handled differently in the per-endpoint chain because we need
 			// to continue processing in the same chain on a pass rule.
 			rules = append(rules, Rule{
-				Match:   Match().MarkNotClear(r.IptablesMarkPass | r.IptablesMarkAccept),
+				Match:   Match().MarkNotClear(r.IptablesMarkPass | r.IptablesMarkAccept | r.IptablesMarkDrop),
 				Action:  ReturnAction{},
 				Comment: []string{"Return on verdict"},
 			})
+			seenNonStagedPolThisStride = false
 		}
 
 		var match MatchCriteria
-		if i%returnStride == 0 {
+		if i%returnStride == 0 || !seenNonStagedPolThisStride {
 			// Optimisation, we're the first rule in a block, immediately after
-			// start of chain or a RETURN rule.  No need to check the return bits.
+			// start of chain or a RETURN rule, or, there are no non-staged
+			// policies ahead of us (so the mark bits cannot be set).
 			match = Match()
 		} else {
 			// We're not the first rule in a block, only jump to this policy if
 			// the previous policy didn't set a mark bit.
-			match = Match().MarkClear(r.IptablesMarkPass | r.IptablesMarkAccept)
+			match = Match().MarkClear(r.IptablesMarkPass | r.IptablesMarkAccept | r.IptablesMarkDrop)
 		}
 
 		chainToJumpTo := PolicyChainName(
 			polChainPrefix,
-			&proto.PolicyID{Name: polName},
+			&proto.PolicyID{Tier: group.Tier, Name: polName},
 		)
 		rules = append(rules, Rule{
 			Match:  match,
 			Action: JumpAction{Target: chainToJumpTo},
 		})
+		if !model.PolicyIsStaged(polName) {
+			seenNonStagedPolThisStride = true
+		}
 	}
 	return []*Chain{{
 		Name:  group.ChainName(),
@@ -435,6 +443,7 @@ func (r *DefaultRuleRenderer) PolicyGroupToIptablesChains(group *PolicyGroup) []
 	}}
 }
 
+// endpointIptablesChain sets up iptables rules for an endpoint chain.
 func (r *DefaultRuleRenderer) endpointIptablesChain(
 	tiers []TierPolicyGroups,
 	profileIds []string,
@@ -573,7 +582,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	}
 
 	for _, tier := range tiers {
-		var policyGroups []PolicyGroup
+		var policyGroups []*PolicyGroup
 		if policyType == ingressPolicy {
 			policyGroups = tier.IngressPolicies
 		} else {
@@ -592,41 +601,40 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 			// Track if any of the policies are not staged. If all of the policies in a tier are staged
 			// then the default end of tier behavior should be pass rather than drop.
 			endOfTierDrop := false
-			var chainsToJumpTo []string
-			if polGroup.ShouldBeInlined() {
-				// Group is too small to have its own chain.
-				for _, p := range polGroup.PolicyNames {
-					chainsToJumpTo = append(chainsToJumpTo, PolicyChainName(
-						policyPrefix,
-						&proto.PolicyID{Name: p},
-					))
-				}
-			} else {
-				// Group needs its own chain.
-				chainsToJumpTo = []string{polGroup.ChainName()}
-			}
-			// Then, jump to each policy in turn.
-			for _, chainToJumpTo := range chainsToJumpTo {
-				isStaged := model.PolicyIsStaged(polID)
 
-				// If this is not a staged policy then end of tier behavior should be drop.
-				if !isStaged {
+			for _, polGroup := range policyGroups {
+				var chainsToJumpTo []string
+				var groupHasNonStagedPols = polGroup.HasNonStagedPolicies()
+				if groupHasNonStagedPols {
 					endOfTierDrop = true
 				}
+				if polGroup.ShouldBeInlined() {
+					// Group is too small to have its own chain.
+					for _, p := range polGroup.PolicyNames {
+						chainsToJumpTo = append(chainsToJumpTo, PolicyChainName(
+							policyPrefix,
+							&proto.PolicyID{Tier: tier.Name, Name: p},
+						))
+					}
+				} else {
+					// Group needs its own chain.
+					chainsToJumpTo = []string{polGroup.ChainName()}
+				}
+				// Then, jump to each policy in turn.
+				for _, chainToJumpTo := range chainsToJumpTo {
+					// If a previous policy/group didn't set the "pass" mark, jump to the policy.
+					rules = append(rules, Rule{
+						Match:  Match().MarkClear(r.IptablesMarkPass),
+						Action: JumpAction{Target: chainToJumpTo},
+					})
 
-				polChainName := PolicyChainName(
-					policyPrefix,
-					&proto.PolicyID{Tier: tier.Name, Name: polID},
-				)
+					// Optimisation: skip rendering return rules if we know all the policies in
+					// the group are staged.  Staged policies do not set the accept/pass mark bits
+					// when they fire.
+					if !groupHasNonStagedPols {
+						continue
+					}
 
-				// If a previous policy/group didn't set the "pass" mark, jump to the policy.
-				rules = append(rules, Rule{
-					Match:  Match().MarkClear(r.IptablesMarkPass),
-					Action: JumpAction{Target: chainToJumpTo},
-				})
-
-				// Only handle actions for non-staged policies.
-				if !isStaged {
 					// If policy marked packet as accepted, it returns, setting the accept
 					// mark bit.
 					if chainType == chainTypeUntracked {
@@ -850,6 +858,15 @@ func (g *PolicyGroup) ShouldBeInlined() bool {
 	return len(g.PolicyNames) <= 1
 }
 
+func (g *PolicyGroup) HasNonStagedPolicies() bool {
+	for _, n := range g.PolicyNames {
+		if !model.PolicyIsStaged(n) {
+			return true
+		}
+	}
+	return false
+}
+
 // PolicyGroupSliceStringer provides a String() method for a slice of
 // PolicyGroup pointers.
 type PolicyGroupSliceStringer []*PolicyGroup
@@ -869,4 +886,21 @@ func (p PolicyGroupSliceStringer) String() string {
 		}
 	}
 	return "[" + strings.Join(names, ",") + "]"
+}
+
+type TierPolicyGroupsStringer []TierPolicyGroups
+
+func (tiers TierPolicyGroupsStringer) String() string {
+	if tiers == nil {
+		return "<nil>"
+	}
+	if len(tiers) == 0 {
+		return "[]"
+	}
+	parts := make([]string, len(tiers))
+	for i, t := range tiers {
+		parts[i] = fmt.Sprintf("%s: Ingress:%s, Egress:%s",
+			t.Name, PolicyGroupSliceStringer(t.IngressPolicies), PolicyGroupSliceStringer(t.EgressPolicies))
+	}
+	return "[" + strings.Join(parts, ",") + "]"
 }

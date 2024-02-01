@@ -334,6 +334,7 @@ type RuleRenderer interface {
 	PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain
 	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) (inbound, outbound *iptables.Chain)
 	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked, staged bool) []iptables.Rule
+	PolicyGroupToIptablesChains(group *PolicyGroup) []*iptables.Chain
 
 	MakeNatOutgoingRule(protocol string, action iptables.Action, ipVersion uint8) iptables.Rule
 	NATOutgoingChain(active bool, ipVersion uint8) *iptables.Chain

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/iptables"
@@ -78,10 +79,10 @@ func (t *mockTable) checkChains(expecteds [][]*iptables.Chain) {
 			t.expectedChains[chain.Name] = chain
 		}
 	}
-	t.checkChainsSameAsBefore()
+	t.checkChainsSameAsBefore(1)
 }
 
-func (t *mockTable) checkChainsSameAsBefore() {
+func (t *mockTable) checkChainsSameAsBefore(optionalOffset ...int) {
 	log.Debug("Expected chains")
 	for _, chain := range t.expectedChains {
 		log.WithField("chain", *chain).Debug("")
@@ -101,8 +102,12 @@ func (t *mockTable) checkChainsSameAsBefore() {
 	sort.Slice(expectedChains, func(i, j int) bool {
 		return expectedChains[i].Name < expectedChains[j].Name
 	})
-
-	ExpectWithOffset(1, t.currentChains).To(Equal(expectedChains), t.Table+" chains incorrect")
+	offset := 1
+	if len(optionalOffset) > 0 {
+		offset += optionalOffset[0]
+	}
+	format.MaxLength = 1000000
+	ExpectWithOffset(offset, currentChains).To(Equal(expectedChains), t.Table+" chains incorrect")
 }
 
 func (t *mockTable) getCurrentChainByName(name string) *iptables.Chain {

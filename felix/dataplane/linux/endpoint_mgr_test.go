@@ -360,7 +360,7 @@ func chainsForIfaces(ipVersion uint8,
 		}
 		outRules = append(outRules, iptables.Rule{
 			Match:  iptables.Match(),
-			Action: iptables.ClearMarkAction{Mark: 136}, // 0x8 + 0x80 (IptablesMarkAccept + IptablesMarkDrop)
+			Action: iptables.ClearMarkAction{Mark: 0x98}, // IptablesMarkAccept + IptablesMarkDrop + IptablesMarkPass
 		})
 
 		if egress && ipVersion == 4 && isEgressGateway {
@@ -497,7 +497,7 @@ func chainsForIfaces(ipVersion uint8,
 		}
 		inRules = append(inRules, iptables.Rule{
 			Match:  iptables.Match(),
-			Action: iptables.ClearMarkAction{Mark: 136}, // 0x8 + 0x80 (IptablesMarkAccept + IptablesMarkDrop)
+			Action: iptables.ClearMarkAction{Mark: 0x98}, // IptablesMarkAccept + IptablesMarkDrop + IptablesMarkPass
 		})
 
 		if ingress && tierName != "" && tableKind == ifaceKind {
