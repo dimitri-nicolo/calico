@@ -91,7 +91,11 @@ gen-manifests: bin/helm bin/yq
 	cd ./manifests && ./generate.sh
 
 # The following CRDs are modal, in that for most clusters they are Cluster scoped but for multi-tenant clusters they are namespace scoped.
-MULTI_TENANCY_CRDS_FILE_CHANGES = "operator.tigera.io_managers.yaml" "operator.tigera.io_policyrecommendations.yaml" "calico/crd.projectcalico.org_managedclusters.yaml"
+MULTI_TENANCY_CRDS_FILE_CHANGES = "operator.tigera.io_managers.yaml" \
+																	"operator.tigera.io_policyrecommendations.yaml" \
+																	"operator.tigera.io_compliances.yaml" \
+																	"operator.tigera.io_intrusiondetections.yaml" \
+																	"calico/crd.projectcalico.org_managedclusters.yaml"
 # Get operator CRDs from the operator repo, OPERATOR_BRANCH_NAME must be set
 get-operator-crds: var-require-all-OPERATOR_BRANCH_NAME
 	cd ./charts/tigera-operator/crds/ && \
