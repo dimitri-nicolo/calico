@@ -3583,6 +3583,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 // groupChainNames and a slice of policy names in the groups slice. An
 // inline policy jump is represented by "" in the groupChainNames slice and
 // single-entry slice containing the policy name in the groups slice.
+//
+// Policy chain names in the default tier are stripped of the default/ prefix.
+// this makes it easier to share tests with OS.
 func extractGroups(dpChains map[string]*iptables.Chain, epChainName string) (groupChainNames []string, groups [][]string) {
 	Expect(dpChains).To(HaveKey(epChainName))
 	epChain := dpChains[epChainName]
@@ -3597,17 +3600,21 @@ func extractGroups(dpChains map[string]*iptables.Chain, epChainName string) (gro
 				strings.HasPrefix(ja.Target, string(rules.PolicyOutboundPfx)) {
 				// Found jump to policy.
 				groupChainNames = append(groupChainNames, "")
-				groups = append(groups, []string{removePolChainNamePrefix(ja.Target)})
+				groups = append(groups, []string{removeDefaultTierPrefix(removePolChainNamePrefix(ja.Target))})
 			}
 		}
 	}
 	return
 }
 
+func removeDefaultTierPrefix(name string) string {
+	return strings.TrimPrefix(name, "default/")
+}
+
 func extractPolicyNamesFromJumps(chain *iptables.Chain) (pols []string) {
 	for _, r := range chain.Rules {
 		if ja, ok := r.Action.(iptables.JumpAction); ok {
-			pols = append(pols, removePolChainNamePrefix(ja.Target))
+			pols = append(pols, removeDefaultTierPrefix(removePolChainNamePrefix(ja.Target)))
 		}
 	}
 	return

@@ -17,7 +17,6 @@ package intdataplane
 import (
 	"sort"
 
-	"github.com/davecgh/go-spew/spew"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	log "github.com/sirupsen/logrus"
@@ -44,7 +43,7 @@ func logChains(message string, chains []*iptables.Chain) {
 	if chains == nil {
 		log.Debug(message, " with nil chains")
 	} else {
-		log.Debug(message, spew.Sdump(chains))
+		log.Debug(message, format.Object(chains, 0))
 	}
 }
 
