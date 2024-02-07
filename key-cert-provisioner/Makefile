@@ -85,7 +85,7 @@ ut: build
 		sh -c '$(GIT_CONFIG_SSH) \
 			go test ./...'
 
-ci: clean static-checks ut
+ci: clean static-checks image ut
 
 cd: image-all cd-common
 
