@@ -154,6 +154,7 @@ require (
 	k8s.io/code-generator v0.27.9
 	k8s.io/component-base v0.27.9
 	k8s.io/klog/v2 v2.100.1
+	k8s.io/kube-aggregator v0.27.9
 	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f
 	k8s.io/kubectl v0.27.9
 	k8s.io/kubernetes v1.27.9
@@ -401,8 +402,6 @@ require (
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
-
-require k8s.io/kube-aggregator v0.0.0
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
