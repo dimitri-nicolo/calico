@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2024 Tigera Inc. All rights reserved.
 
 package searcher
 
@@ -90,9 +90,9 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 
 		newEvents := []v1.Event{}
 		for _, event := range results {
-			if !d.cachedEvents.Contains(event) {
+			if !d.cachedEvents.Contains(&event) {
 				newEvents = append(newEvents, event)
-				d.cachedEvents.Add(event)
+				d.cachedEvents.Add(&event)
 			}
 		}
 
@@ -233,7 +233,7 @@ func NewEventCache() *EventCache {
 }
 
 // Contains checks if we've seen the event before
-func (c *EventCache) Contains(event v1.Event) bool {
+func (c *EventCache) Contains(event *v1.Event) bool {
 	key := logKey(event)
 
 	_, ok := c.cache[key]
@@ -241,23 +241,23 @@ func (c *EventCache) Contains(event v1.Event) bool {
 }
 
 // Add adds an event's uniquely generated ID to the cache
-func (c *EventCache) Add(event v1.Event) {
+func (c *EventCache) Add(event *v1.Event) {
 	key := logKey(event)
 	c.cache[key] = time.Now()
 }
 
 // cull expiring entries
 func (c *EventCache) Purge() {
-	timeRange := time.Now().Add(-(c.maxTTL))
+	timeCutOff := time.Now().Add(-(c.maxTTL))
 	for k, ts := range c.cache {
-		if ts.Before(timeRange) {
+		if ts.Before(timeCutOff) {
 			// evict
 			delete(c.cache, k)
 		}
 	}
 }
 
-func logKey(v v1.Event) cacheKey {
+func logKey(v *v1.Event) cacheKey {
 	return cacheKey{
 		ID: v.ID,
 	}

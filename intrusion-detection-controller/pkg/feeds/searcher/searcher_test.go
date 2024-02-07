@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2024 Tigera Inc. All rights reserved.
 
 package searcher
 
@@ -70,7 +70,7 @@ func TestCacheEvents(t *testing.T) {
 	uut := NewSearcher(f, 0, suspiciousIP, eventsDB).(*searcher)
 
 	for _, e := range cachedEvents {
-		uut.cachedEvents.Add(e)
+		uut.cachedEvents.Add(&e)
 	}
 	feedCacher := cacher.NewMockGlobalThreatFeedCache()
 	ctx, cancel := context.WithCancel(context.TODO())
