@@ -18,20 +18,15 @@ ARG IPTABLES_VER=1.8.4-17
 ARG LIBNFTNL_VER=1.1.5-4
 ARG IPSET_VER=7.11-6
 ARG RUNIT_VER=2.1.2
-ARG QEMU_IMAGE
 ARG BIRD_IMAGE=calico/bird:latest
 ARG UBI_IMAGE
 
 FROM calico/bpftool:v5.3-arm64 as bpftool
-FROM ${QEMU_IMAGE} as qemu
 FROM ${BIRD_IMAGE} as bird
 
 FROM quay.io/centos/centos:stream8 as centos
 
 MAINTAINER Reza Ramezanpour <reza@projectcalico.org>
-# Enable non-native builds of this image on an amd64 hosts.
-# This must be the first RUN command in this file!
-COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin/qemu-aarch64-static
 
 ARG ARCH
 ARG IPTABLES_VER
@@ -126,10 +121,6 @@ ARG IPTABLES_VER
 ARG LIBNFTNL_VER
 ARG IPSET_VER
 ARG RUNIT_VER
-
-# Enable non-native builds of this image on an amd64 hosts.
-# This must be the first RUN command in this file!
-COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin/qemu-aarch64-static
 
 # Update base packages to pick up security updates.  Must do this before adding the centos repo.
 RUN microdnf upgrade
@@ -242,9 +233,6 @@ RUN chmod u+s /bin/mountns
 # or any of its dependencies.
 COPY clean-up-filesystem.sh /clean-up-filesystem.sh
 RUN /clean-up-filesystem.sh
-
-# Delete qemu binaries
-RUN rm /usr/bin/qemu-aarch64-static
 
 # Copy everything into a fresh scratch image so that naive CVE scanners don't pick up binaries and libraries
 # that have been removed in our later layers.
