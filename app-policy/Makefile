@@ -35,15 +35,6 @@ CONTAINER_MARKER=$(CONTAINER_CREATED)
 BINDIR=bin
 endif
 
-# Set the platform correctly for building docker images.
-ifeq ($(ARCH),arm64)
-# We need to force ARM64 build image to be used in a cross-compilation run.
-# Coraza needs CGO to use new CRS version (see https://github.com/tigera/calico-private/pull/7011)
-# but UBI based calico/go-build:amd64 doesn't ship the full multi-arch headers for corss-compilation.
-# We need a calico/go-build container for the target architecture to do qemu emulated native build.
-CALICO_BUILD:=$(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(ARCH)
-endif
-
 # Shortcut targets
 default: build
 

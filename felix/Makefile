@@ -68,13 +68,6 @@ FV_SRC_FILES:=$(shell find fv -type f -name '*.go' -print)
 ###############################################################################
 include ../lib.Makefile
 
-ifeq ($(ARCH),arm64)
-# Required for eBPF support in ARM64.
-# We need to force ARM64 build image to be used in a crosscompilation run.
-CALICO_BUILD:=$(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(ARCH)
-DOCKER_GO_BUILD:=$(DOCKER_RUN) $(CALICO_BUILD)
-endif
-
 FV_ETCDIMAGE?=$(ETCD_IMAGE)
 FV_TYPHAIMAGE?=felix-test/typha:latest-$(BUILDARCH)
 FV_K8SIMAGE=$(CALICO_BUILD)
