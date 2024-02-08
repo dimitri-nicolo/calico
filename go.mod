@@ -154,6 +154,7 @@ require (
 	k8s.io/code-generator v0.27.9
 	k8s.io/component-base v0.27.9
 	k8s.io/klog/v2 v2.100.1
+	k8s.io/kube-aggregator v0.27.9
 	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f
 	k8s.io/kubectl v0.27.9
 	k8s.io/kubernetes v1.27.9
