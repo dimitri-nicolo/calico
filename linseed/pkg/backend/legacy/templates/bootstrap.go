@@ -311,7 +311,7 @@ func GetIndexInfo(ctx context.Context, client *elastic.Client, config *TemplateC
 		}
 	}
 	if index.IndexExists && index.WriteIndexDeclared {
-		index.getIndexSettings(ctx, client, config)
+		err = index.getIndexSettings(ctx, client, config)
 		if err != nil {
 			return index, err
 		}
