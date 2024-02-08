@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This script will generate fluentd configs using the image
-# tigera/fluentd:${IMAGETAG} based off the environment variables configurations
+# ${IMAGE}:${IMAGETAG} based off the environment variables configurations
 # below and then compare to previously captured configurations to ensure
 # only expected changes have happened.
 
@@ -15,7 +15,7 @@ function generateAndCollectConfig() {
   ENV_FILE=$1
   OUT_FILE=$2
 
-  docker run -d --name generate-fluentd-config $ADDITIONAL_MOUNT --hostname config.generator --env-file "$ENV_FILE" "tigera/fluentd:${IMAGETAG}" >/dev/null
+  docker run -d --name generate-fluentd-config $ADDITIONAL_MOUNT --hostname config.generator --env-file "$ENV_FILE" "${IMAGE}:${IMAGETAG}" >/dev/null
   sleep 5
 
   if ! docker logs generate-fluentd-config | sed -n '/<ROOT>/,/<\/ROOT>/p' | sed -e 's|^.*<ROOT>|<ROOT>|' | sed -e 's/ \+$//' >"$OUT_FILE"; then

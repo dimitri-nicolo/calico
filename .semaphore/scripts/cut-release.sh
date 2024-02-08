@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-EXPECTED_RELEASE_TAG=$(echo $(git describe --tags --long --always --abbrev=12 --match "*dev*") | grep -P -o "^v\d*.\d*.\d*")
+DEV_TAG_SUFFIX=${DEV_TAG_SUFFIX:-calient-0.dev}
+EXPECTED_RELEASE_TAG=$(git describe --tags --long --always --abbrev=12 --match "*dev*" | grep -P -o "^v\d*.\d*.\d*(-.*)?(?=-${DEV_TAG_SUFFIX})")
 
 if [ -z "$EXPECTED_RELEASE_TAG" ]
 then
