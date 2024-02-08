@@ -14,7 +14,7 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_FLUENTD_DOCKER_PROJECT_ID)
 
 # If this is a windows release we're not building the images and they will all be "cut" together
 ifdef WINDOWS_RELEASE
-FLUENTD_IMAGE=tigera/fluentd-windows
+FLUENTD_IMAGE=fluentd-windows
 ARCHES=windows-1809 windows-2022
 else
 # For Windows we append to the image tag to identify the Windows 10 version.
@@ -26,7 +26,7 @@ else
 #
 # For Linux, we leave the image tag alone.
 ifeq ($(OS),Windows_NT)
-FLUENTD_IMAGE ?= tigera/fluentd-windows
+FLUENTD_IMAGE ?= fluentd-windows
 
 # Get the Windows build number.
 $(eval WINDOWS_BUILD_VERSION := $(shell (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").CurrentBuild))
@@ -42,16 +42,17 @@ endif
 
 ARCHES ?=windows-$(WINDOWS_VERSION)
 else
-FLUENTD_IMAGE ?= tigera/fluentd
+FLUENTD_IMAGE ?= fluentd
 ARCHES        ?= amd64 arm64
 endif
 endif
 
 BUILD_IMAGES          ?= $(FLUENTD_IMAGE)
-DEV_REGISTRIES        ?= gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES    ?= quay.io
+DEV_REGISTRIES        ?= gcr.io/unique-caldron-775/cnx/tigera
+RELEASE_REGISTRIES    ?= quay.io/tigera
 RELEASE_BRANCH_PREFIX ?= release-calient
 DEV_TAG_SUFFIX        ?= calient-0.dev
+
 
 # This variable is used to filter out values from DEV_REGISTRIES, with the
 # result assigned to MANIFEST_REGISTRIES.
@@ -174,7 +175,7 @@ st:
 ## fluentd config tests
 fv: image
 ifeq ($(ARCH),amd64)
-	cd test && IMAGETAG=latest ./test.sh
+	cd test && IMAGETAG=latest IMAGE=$(FLUENTD_IMAGE) ./test.sh
 endif
 
 ci: build test image
