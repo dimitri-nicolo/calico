@@ -6,7 +6,7 @@ if [ -n "$CONFIRM" ]
 then
   RELEASE_VERSION=$(git describe --tags --exact-match --exclude "*dev*")
 else
-  RELEASE_VERSION=$(git describe --tags --long --always --abbrev=12 --match "*dev*" | grep -P -o "^v\d*.\d*.\d*(-.*)?(?=-${DEV_TAG_SUFFIX}")
+  RELEASE_VERSION=$(git describe --tags --long --always --abbrev=12 --match "*dev*" | grep -P -o "^v\d*.\d*.\d*(-.*)?(?=-${DEV_TAG_SUFFIX})")
 fi
 
 if [ -z "${RELEASE_VERSION}" ]
