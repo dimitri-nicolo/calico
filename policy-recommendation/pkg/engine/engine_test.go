@@ -4,6 +4,7 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -20,7 +21,7 @@ import (
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	calres "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
-	enginedata "github.com/projectcalico/calico/policy-recommendation/pkg/engine/data"
+	enginedata "github.com/projectcalico/calico/policy-recommendation/pkg/engine/testdata"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/types"
 	testutils "github.com/projectcalico/calico/policy-recommendation/tests/utils"
 	"github.com/projectcalico/calico/policy-recommendation/utils"
@@ -100,6 +101,7 @@ var _ = DescribeTable("processFlow",
 			Destination: api.FlowEndpointData{
 				Type:      "net",
 				Domains:   "www.mydomain.com",
+				Name:      "pub",
 				Namespace: "",
 				Port:      getPtrUint16(8081),
 			},
@@ -136,8 +138,8 @@ var _ = DescribeTable("processFlow",
 				Namespace: "namespace1",
 			},
 			Destination: api.FlowEndpointData{
-				Type:        "wep",
-				Name:        "",
+				Type:        "net",
+				Name:        "pub",
 				Namespace:   "",
 				ServiceName: "some-service",
 				Port:        getPtrUint16(8081),
@@ -1655,7 +1657,7 @@ var _ = Describe("ProcessRecommendation", func() {
 
 	BeforeEach(func() {
 		data := []api.Flow{}
-		err := testutils.LoadData("./data/flows_egress.json", &data)
+		err := testutils.LoadData("./testdata/flows_egress.json", &data)
 		Expect(err).To(BeNil())
 
 		for i := range data {
@@ -1663,7 +1665,7 @@ var _ = Describe("ProcessRecommendation", func() {
 		}
 
 		data = []api.Flow{}
-		err = testutils.LoadData("./data/flows_ingress.json", &data)
+		err = testutils.LoadData("./testdata/flows_ingress.json", &data)
 		Expect(err).To(BeNil())
 
 		for i := range data {
@@ -1710,11 +1712,9 @@ var _ = Describe("ProcessRecommendation", func() {
 		)
 
 		eng.processRecommendation(flowsEgress, snp)
-		log.Infof("actual egress: %s,\nexpected egress: %s", prettyRules(snp.Spec.Egress), prettyRules(enginedata.ExpectedSnpNamespace1.Spec.Egress))
-
 		eng.processRecommendation(flowsIngress, snp)
-		log.Infof("actual ingress: %s,\nexpected ingress: %s", prettyRules(snp.Spec.Ingress), prettyRules(enginedata.ExpectedSnpNamespace1.Spec.Ingress))
 
+		log.Infof("actual : %s,\nexpected : %s", prettyPrintStagedNetworkPolicy(*snp), prettyPrintStagedNetworkPolicy(*enginedata.ExpectedSnpNamespace1))
 		Expect(equality.Semantic.Equalities.DeepDerivative(*snp, *enginedata.ExpectedSnpNamespace1)).To(BeTrue())
 	})
 })
@@ -1816,14 +1816,6 @@ var (
 	}
 )
 
-// prettyRules logs a pretty version of map[string]string.
-func prettyRules(rules []v3.Rule) string {
-	value, err := json.MarshalIndent(rules, "", " ")
-	Expect(err).NotTo(HaveOccurred())
-
-	return string(value)
-}
-
 func getPtrBool(f bool) *bool {
 	return &f
 }
@@ -1834,4 +1826,18 @@ func getPtrUint8(i uint8) *uint8 {
 
 func getPtrUint16(i uint16) *uint16 {
 	return &i
+}
+
+// prettyPrintStagedNetworkPolicy prints a projectcalico.org/v3 StagedNetworkPolicy in a readable format.
+func prettyPrintStagedNetworkPolicy(policy v3.StagedNetworkPolicy) string {
+	// Convert the StagedNetworkPolicy to JSON format
+	policyJSON, err := json.MarshalIndent(policy, "", "  ")
+	if err != nil {
+		return ""
+	}
+
+	// Replace "\n" with newline character to make it more readable
+	policyString := strings.ReplaceAll(string(policyJSON), "\\n", "\n")
+
+	return policyString
 }

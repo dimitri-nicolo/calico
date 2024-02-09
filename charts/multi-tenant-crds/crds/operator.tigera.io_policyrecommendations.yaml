@@ -67,7 +67,7 @@ spec:
                                         the PolicyRecommendation Deployment container
                                         by name.
                                       enum:
-                                        - policy-recommendation-controller
+                                      - policy-recommendation-controller
                                       type: string
                                     resources:
                                       description: Resources allows customization
@@ -98,17 +98,17 @@ spec:
                                                   inside a container.
                                                 type: string
                                             required:
-                                              - name
+                                            - name
                                             type: object
                                           type: array
                                           x-kubernetes-list-map-keys:
-                                            - name
+                                          - name
                                           x-kubernetes-list-type: map
                                         limits:
                                           additionalProperties:
                                             anyOf:
-                                              - type: integer
-                                              - type: string
+                                            - type: integer
+                                            - type: string
                                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                             x-kubernetes-int-or-string: true
                                           description: 'Limits describes the maximum
@@ -118,8 +118,8 @@ spec:
                                         requests:
                                           additionalProperties:
                                             anyOf:
-                                              - type: integer
-                                              - type: string
+                                            - type: integer
+                                            - type: string
                                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                             x-kubernetes-int-or-string: true
                                           description: 'Requests describes the minimum
@@ -131,7 +131,7 @@ spec:
                                           type: object
                                       type: object
                                   required:
-                                    - name
+                                  - name
                                   type: object
                                 type: array
                               initContainers:
@@ -149,7 +149,7 @@ spec:
                                         the PolicyRecommendation Deployment init container
                                         by name.
                                       enum:
-                                        - policy-recommendation-tls-key-cert-provisioner
+                                      - policy-recommendation-tls-key-cert-provisioner
                                       type: string
                                     resources:
                                       description: Resources allows customization
@@ -180,17 +180,17 @@ spec:
                                                   inside a container.
                                                 type: string
                                             required:
-                                              - name
+                                            - name
                                             type: object
                                           type: array
                                           x-kubernetes-list-map-keys:
-                                            - name
+                                          - name
                                           x-kubernetes-list-type: map
                                         limits:
                                           additionalProperties:
                                             anyOf:
-                                              - type: integer
-                                              - type: string
+                                            - type: integer
+                                            - type: string
                                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                             x-kubernetes-int-or-string: true
                                           description: 'Limits describes the maximum
@@ -200,8 +200,8 @@ spec:
                                         requests:
                                           additionalProperties:
                                             anyOf:
-                                              - type: integer
-                                              - type: string
+                                            - type: integer
+                                            - type: string
                                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                             x-kubernetes-int-or-string: true
                                           description: 'Requests describes the minimum
@@ -213,14 +213,14 @@ spec:
                                           type: object
                                       type: object
                                   required:
-                                    - name
+                                  - name
                                   type: object
                                 type: array
                             type: object
                         type: object
                     type: object
                 type: object
-            type: object`
+            type: object
           status:
             description: PolicyRecommendationStatus defines the observed state of
               Tigera policy recommendation.

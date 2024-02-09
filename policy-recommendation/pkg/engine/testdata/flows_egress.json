@@ -8,7 +8,7 @@
     },
     "Destination": {
       "Type": "net",
-      "Name": "-",
+      "Name": "pub",
       "Namespace": "-",
       "Domains": "www.tigera.io,www.projectcalico.org",
       "Port": 443
@@ -25,7 +25,7 @@
     },
     "Destination": {
       "Type": "net",
-      "Name": "-",
+      "Name": "pub",
       "Namespace": "-",
       "Domains": "www.google.com",
       "Port": 443
@@ -42,7 +42,7 @@
     },
     "Destination": {
       "Type": "net",
-      "Name": "-",
+      "Name": "pub",
       "Namespace": "-",
       "Domains": "www.tigera.io",
       "Port": 442
@@ -59,7 +59,7 @@
     },
     "Destination": {
       "Type": "net",
-      "Name": "-",
+      "Name": "pub",
       "Namespace": "-",
       "Domains": "www.tigera.io",
       "Port": 441
@@ -76,7 +76,7 @@
     },
     "Destination": {
       "Type": "net",
-      "Name": "-",
+      "Name": "pvt",
       "Namespace": "-",
       "Domains": "dest1.namespace2.svc.cluster.local",
       "Port": 441
@@ -93,8 +93,8 @@
     },
     "Destination": {
      "Type": "net",
-     "Name": "-",
-     "Namespace": "namespace1",
+     "Name": "pub",
+     "Namespace": "-",
      "ServiceName": "service1",
      "Port": 3434
     },
@@ -110,8 +110,8 @@
     },
     "Destination": {
       "Type": "net",
-      "Name": "-",
-      "Namespace": "namespace3",
+      "Name": "pub",
+      "Namespace": "-",
       "ServiceName": "service3",
       "Port": 3031
     },
@@ -127,8 +127,8 @@
     },
     "Destination": {
       "Type": "net",
-      "Name": "-",
-      "Namespace": "namespace2",
+      "Name": "pub",
+      "Namespace": "-",
       "ServiceName": "service2",
       "Port": 33
     },
@@ -144,8 +144,8 @@
     },
     "Destination": {
       "Type": "net",
-      "Name": "-",
-      "Namespace": "namespace3",
+      "Name": "pub",
+      "Namespace": "-",
       "ServiceName": "service3",
       "Port": 3030
     },
@@ -161,8 +161,8 @@
     },
     "Destination": {
       "Type": "net",
-      "Name": "-",
-      "Namespace": "namespace4",
+      "Name": "pub",
+      "Namespace": "-",
       "ServiceName": "service4"
     },
     "ActionFlag": 1,

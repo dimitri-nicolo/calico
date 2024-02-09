@@ -60,15 +60,14 @@ var (
 			Action: v3.Allow,
 			Destination: v3.EntityRule{
 				Services: &v3.ServiceMatch{
-					Name:      service3,
-					Namespace: namespace3,
+					Name: service3,
 				},
 			},
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
 					calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:05:05 PST",
 					calres.NameKey:        service3,
-					calres.NamespaceKey:   namespace3,
+					calres.NamespaceKey:   "",
 					calres.ScopeKey:       string(calres.EgressToServiceScope),
 				},
 			},
@@ -78,8 +77,7 @@ var (
 			Action: v3.Allow,
 			Destination: v3.EntityRule{
 				Services: &v3.ServiceMatch{
-					Name:      service2,
-					Namespace: namespace2,
+					Name: service2,
 				},
 				Ports: portsOrdered1,
 			},
@@ -87,7 +85,7 @@ var (
 				Annotations: map[string]string{
 					calres.LastUpdatedKey: "Thu, 30 Nov 2022 06:04:05 PST",
 					calres.NameKey:        service2,
-					calres.NamespaceKey:   namespace2,
+					calres.NamespaceKey:   "",
 					calres.ScopeKey:       string(calres.EgressToServiceScope),
 				},
 			},
@@ -97,8 +95,7 @@ var (
 			Action: v3.Allow,
 			Destination: v3.EntityRule{
 				Services: &v3.ServiceMatch{
-					Name:      service2,
-					Namespace: namespace2,
+					Name: service2,
 				},
 				Ports: portsOrdered1,
 			},
@@ -106,7 +103,7 @@ var (
 				Annotations: map[string]string{
 					calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:04:05 PST",
 					calres.NameKey:        service2,
-					calres.NamespaceKey:   namespace2,
+					calres.NamespaceKey:   "",
 					calres.ScopeKey:       string(calres.EgressToServiceScope),
 				},
 			},
@@ -116,8 +113,7 @@ var (
 			Action: v3.Allow,
 			Destination: v3.EntityRule{
 				Services: &v3.ServiceMatch{
-					Name:      service3,
-					Namespace: namespace3,
+					Name: service3,
 				},
 				Ports: portsOrdered3,
 			},
@@ -125,7 +121,7 @@ var (
 				Annotations: map[string]string{
 					calres.LastUpdatedKey: "Wed, 29 Nov 2022 14:05:05 PST",
 					calres.NameKey:        service3,
-					calres.NamespaceKey:   namespace3,
+					calres.NamespaceKey:   "",
 					calres.ScopeKey:       string(calres.EgressToServiceScope),
 				},
 			},

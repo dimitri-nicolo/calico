@@ -84,9 +84,9 @@ spec:
                                       description: Name is an enum which identifies
                                         the Manager Deployment container by name.
                                       enum:
-                                        - tigera-voltron
-                                        - tigera-manager
-                                        - tigera-es-proxy
+                                      - tigera-voltron
+                                      - tigera-manager
+                                      - tigera-es-proxy
                                       type: string
                                     resources:
                                       description: Resources allows customization
@@ -117,17 +117,17 @@ spec:
                                                   inside a container.
                                                 type: string
                                             required:
-                                              - name
+                                            - name
                                             type: object
                                           type: array
                                           x-kubernetes-list-map-keys:
-                                            - name
+                                          - name
                                           x-kubernetes-list-type: map
                                         limits:
                                           additionalProperties:
                                             anyOf:
-                                              - type: integer
-                                              - type: string
+                                            - type: integer
+                                            - type: string
                                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                             x-kubernetes-int-or-string: true
                                           description: 'Limits describes the maximum
@@ -137,8 +137,8 @@ spec:
                                         requests:
                                           additionalProperties:
                                             anyOf:
-                                              - type: integer
-                                              - type: string
+                                            - type: integer
+                                            - type: string
                                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                             x-kubernetes-int-or-string: true
                                           description: 'Requests describes the minimum
@@ -150,7 +150,7 @@ spec:
                                           type: object
                                       type: object
                                   required:
-                                    - name
+                                  - name
                                   type: object
                                 type: array
                               initContainers:
@@ -167,9 +167,9 @@ spec:
                                       description: Name is an enum which identifies
                                         the Manager Deployment init container by name.
                                       enum:
-                                        - manager-tls-key-cert-provisioner
-                                        - internal-manager-tls-key-cert-provisioner
-                                        - tigera-voltron-linseed-tls-key-cert-provisioner
+                                      - manager-tls-key-cert-provisioner
+                                      - internal-manager-tls-key-cert-provisioner
+                                      - tigera-voltron-linseed-tls-key-cert-provisioner
                                       type: string
                                     resources:
                                       description: Resources allows customization
@@ -202,17 +202,17 @@ spec:
                                                   inside a container.
                                                 type: string
                                             required:
-                                              - name
+                                            - name
                                             type: object
                                           type: array
                                           x-kubernetes-list-map-keys:
-                                            - name
+                                          - name
                                           x-kubernetes-list-type: map
                                         limits:
                                           additionalProperties:
                                             anyOf:
-                                              - type: integer
-                                              - type: string
+                                            - type: integer
+                                            - type: string
                                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                             x-kubernetes-int-or-string: true
                                           description: 'Limits describes the maximum
@@ -222,8 +222,8 @@ spec:
                                         requests:
                                           additionalProperties:
                                             anyOf:
-                                              - type: integer
-                                              - type: string
+                                            - type: integer
+                                            - type: string
                                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                             x-kubernetes-int-or-string: true
                                           description: 'Requests describes the minimum
@@ -235,7 +235,7 @@ spec:
                                           type: object
                                       type: object
                                   required:
-                                    - name
+                                  - name
                                   type: object
                                 type: array
                             type: object

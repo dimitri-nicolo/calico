@@ -88,9 +88,7 @@ var Step4DomainWithNamespacesResults = []rest.MockResult{
 							Type:           lapi.WEP,
 						},
 						Destination: lapi.Endpoint{
-							Name:           "-",
-							Namespace:      "-",
-							AggregatedName: "pvt",
+							AggregatedName: "pub",
 							Type:           lapi.Network,
 							Port:           99,
 						},
