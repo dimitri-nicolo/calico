@@ -43,7 +43,3 @@ blocks:
               value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C intrusion-detection-controller cd CONFIRM=true; fi
-            # Run CD for the cloud build of intrusion-detection-controller.
-            - make -C intrusion-detection-controller clean
-            - export TESLA=true
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C intrusion-detection-controller cd CONFIRM=true; fi

@@ -282,9 +282,9 @@ QEMU_IMAGE ?= calico/qemu-user-static:latest
 
 # DOCKER_BUILD is the base build command used for building all images.
 DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) --pull \
-	     --build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
-	     --build-arg UBI_IMAGE=$(UBI_IMAGE) \
-	     --build-arg GIT_VERSION=$(GIT_VERSION)
+	--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
+	--build-arg UBI_IMAGE=$(UBI_IMAGE) \
+	--build-arg GIT_VERSION=$(GIT_VERSION)
 
 DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
 	docker run --rm \
@@ -844,7 +844,7 @@ retag-build-images-with-registry-%:
 # retag-build-image-with-registry-% retags the build arch images specified by $* and VALIDARCHES with the
 # registry specified by REGISTRY.
 retag-build-image-with-registry-%: var-require-all-REGISTRY-BUILD_IMAGES
-	$(MAKE) -j12 $(addprefix retag-build-image-arch-with-registry-,$(VALIDARCHES)) BUILD_IMAGE=$(call unescapefs,$*)
+	$(MAKE) $(addprefix retag-build-image-arch-with-registry-,$(VALIDARCHES)) BUILD_IMAGE=$(call unescapefs,$*)
 
 # retag-build-image-arch-with-registry-% retags the build / arch image specified by $* and BUILD_IMAGE with the
 # registry specified by REGISTRY.
@@ -867,7 +867,7 @@ push-images-to-registry-%:
 # push-image-to-registry-% pushes the build / arch images specified by $* and VALIDARCHES to the registry
 # specified by REGISTRY.
 push-image-to-registry-%:
-	$(MAKE) -j6 $(addprefix push-image-arch-to-registry-,$(VALIDARCHES)) BUILD_IMAGE=$(call unescapefs,$*)
+	$(MAKE) $(addprefix push-image-arch-to-registry-,$(VALIDARCHES)) BUILD_IMAGE=$(call unescapefs,$*)
 
 # push-image-arch-to-registry-% pushes the build / arch image specified by $* and BUILD_IMAGE to the registry
 # specified by REGISTRY.

@@ -39,4 +39,4 @@ blocks:
               value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
             - make git-config CONFIRM=true
-            - DRYRUN=true bash ./.semaphore/scripts/cut-release.sh
+            - make cut-release DRYRUN=true
