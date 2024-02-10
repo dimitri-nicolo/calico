@@ -18,7 +18,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -141,121 +140,6 @@ func TestFV_RuntimeReports(t *testing.T) {
 		require.NotNil(t, resp.Items[0].Report.GeneratedTime)
 		report.GeneratedTime = resp.Items[0].Report.GeneratedTime
 		require.Equal(t, []v1.RuntimeReport{{Tenant: "tenant-a", Cluster: cluster, Report: report}},
-			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp))
-	})
-
-	// Since this test case was first written, Linseed now populates the GeneratedTime field whenever it writes a new
-	// runtime report into Elasticsearch.  So it is now impossible for Linseed to write a "legacy" report in such a way
-	// that it stays "legacy" (i.e. without a GeneratedTime value).  However we must still test Linseed's ability to
-	// read any pre-existing reports from ES that were ingested by an older Linseed version (or es-gateway) and that
-	// don't have GeneratedTime values.  In order to do that we use the LMA client to write legacy reports.
-	t.Run("should create and list runtime reports using legacy and generated start_time", func(t *testing.T) {
-		// This test only runs against the legacy multi-index backend, since the single-index implementation post-dates
-		// the introduction of Linseed populating the GeneratedTime field. As such, all single-index reports will have
-		// a GeneratedTime value.
-		defer setupAndTeardown(t, DefaultLinseedArgs(), nil, index.RuntimeReportMultiIndex)()
-
-		newRuntimeReport := func(startTime time.Time) v1.Report {
-			return v1.Report{
-				StartTime:  startTime,
-				EndTime:    startTime,
-				Host:       "any-host",
-				Count:      1,
-				Type:       "ProcessStart",
-				ConfigName: "malware-protection",
-				Pod: v1.PodInfo{
-					Name:          "app",
-					NameAggr:      "app-*",
-					Namespace:     "default",
-					ContainerName: "app",
-				},
-				File: v1.File{
-					Path:     "/usr/sbin/runc",
-					HostPath: "/run/docker/runtime-runc/moby/48f10a5eb9a245e6890433205053ba4e72c8e3bab5c13c2920dc32fadd7290cd/runc.rB3K51",
-				},
-				ProcessStart: v1.ProcessStart{
-					Invocation: "runc --root /var/run/docker/runtime-runc/moby",
-					Hashes: v1.ProcessHashes{
-						MD5:    "MD5",
-						SHA1:   "SHA1",
-						SHA256: "SHA256",
-					},
-				},
-				FileAccess: v1.FileAccess{},
-			}
-		}
-
-		expiredLegacyRuntimeReport := newRuntimeReport(time.Now().Add(-40 * time.Minute).UTC())
-		currentLegacyRuntimeReport := newRuntimeReport(time.Now().Add(-20 * time.Minute).UTC())
-		expiredRuntimeReport := newRuntimeReport(time.Now().Add(-5 * time.Minute).UTC())
-		currentRuntimeReport := newRuntimeReport(time.Now().Add(-30 * time.Second).UTC())
-
-		// Use Linseed to write the first non-legacy report.
-		bulk, err := cli.RuntimeReports(cluster).Create(ctx, []v1.Report{expiredRuntimeReport})
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create runtime reports did not succeed")
-
-		// Wait a second, because ES query times only have per-second precision.  (The ES docs seem to be to indicate
-		// per-millisecond precision, but here's what the actual JSON captured with tcpdump says:
-		//     ...{"range":{"generated_time":{"from":"2023-08-08T17:19:39Z",...
-		time.Sleep((11 * time.Second) / 10)
-
-		// Remember the time now, as we want to use this in the query and expect that it will not return that first
-		// non-legacy report.
-		queryTime := time.Now().UTC()
-
-		// Use Linseed to write the second non-legacy report.
-		bulk, err = cli.RuntimeReports(cluster).Create(ctx, []v1.Report{currentRuntimeReport})
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create runtime reports did not succeed")
-
-		// Use LMA client to write the legacy reports.
-		put, err := lmaClient.Backend().Index().Index("tigera_secure_ee_runtime.tenant-a." + cluster + ".").BodyJson(expiredLegacyRuntimeReport).Do(ctx)
-		require.NoError(t, err)
-		logrus.Infof("first legacy write: %#v", put)
-		put, err = lmaClient.Backend().Index().Index("tigera_secure_ee_runtime.tenant-a." + cluster + ".").BodyJson(currentLegacyRuntimeReport).Do(ctx)
-		require.NoError(t, err)
-		logrus.Infof("second legacy write: %#v", put)
-
-		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_runtime*")
-
-		// Read back, using a query that can read reports using legacy and generated times.
-		// We mimic Sasha behaviour by reading legacy reports with a long lookback
-		// and GeneratedTime reports with a shorter lookback.
-		now := time.Now().UTC()
-		resp, err := cli.RuntimeReports("").List(ctx, &v1.RuntimeReportParams{
-			// Expect this to return the "current" non-legacy report but not the "expired" one.
-			QueryParams: v1.QueryParams{
-				TimeRange: &lmav1.TimeRange{
-					From: queryTime,
-					To:   now,
-				},
-			},
-			// Expect this to return the "current" legacy report but not the "expired" one.
-			LegacyTimeRange: &lmav1.TimeRange{
-				From: time.Now().Add(-25 * time.Minute).UTC(),
-				To:   now,
-			},
-		})
-		require.NoError(t, err)
-
-		require.Len(t, resp.Items, 2)
-
-		// Linseed populated the GeneratedTime field of the non-legacy report.  We can't predict it exactly, so copy it
-		// across from the actual to our expected value.
-		nonLegacyIndex := 0
-		if resp.Items[0].Report.GeneratedTime == nil {
-			nonLegacyIndex = 1
-		}
-		require.NotNil(t, resp.Items[nonLegacyIndex].Report.GeneratedTime)
-		require.Nil(t, resp.Items[1-nonLegacyIndex].Report.GeneratedTime)
-		currentRuntimeReport.GeneratedTime = resp.Items[nonLegacyIndex].Report.GeneratedTime
-
-		require.Equal(t, []v1.RuntimeReport{
-			{Tenant: "tenant-a", Cluster: cluster, Report: currentLegacyRuntimeReport},
-			{Tenant: "tenant-a", Cluster: cluster, Report: currentRuntimeReport},
-		},
 			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp))
 	})
 

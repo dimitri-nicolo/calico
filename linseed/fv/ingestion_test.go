@@ -419,10 +419,6 @@ func TestFV_RuntimeIngestion(t *testing.T) {
 					To:   endTime,
 				},
 			},
-			LegacyTimeRange: &lmav1.TimeRange{
-				From: startTime,
-				To:   endTime,
-			},
 		}
 
 		resultList, err := cli.RuntimeReports("").List(ctx, &params)

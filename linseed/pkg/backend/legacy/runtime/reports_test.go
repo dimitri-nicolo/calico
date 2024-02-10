@@ -166,15 +166,6 @@ func TestCreateRuntimeReport(t *testing.T) {
 		require.NotNil(t, sanitized[0].Report.GeneratedTime)
 		f.GeneratedTime = sanitized[0].Report.GeneratedTime
 		require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: cluster, Report: f}}, sanitized)
-
-		// Query using the legacy time range.
-		opts.LegacyTimeRange = opts.TimeRange
-		opts.TimeRange = nil
-		results, err = b.List(ctx, clusterInfo, opts)
-		require.NoError(t, err)
-		require.Equal(t, 1, len(results.Items))
-		sanitized = testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, results)
-		require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: cluster, Report: f}}, sanitized)
 	})
 }
 

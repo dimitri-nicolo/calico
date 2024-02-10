@@ -218,23 +218,7 @@ func (b *runtimeReportBackend) buildQuery(i bapi.ClusterInfo, opts *v1.RuntimeRe
 
 	tr := logtools.WithDefaultUntilNow(opts.GetTimeRange())
 	queryTimeRange := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("generated_time").From(tr.From))
-
-	if opts.LegacyTimeRange != nil {
-		logrus.Debug("Legacy time range declared")
-		legacyTR := logtools.WithDefaultUntilNow(opts.LegacyTimeRange)
-
-		queryLegacy := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("start_time").From(legacyTR.From))
-
-		// this query forces presence of the `generated_time` field
-		generatedTimeQuery := elastic.NewExistsQuery("generated_time")
-
-		// combining all above queries into one ES query
-		query.Should(
-			queryTimeRange.Must(generatedTimeQuery),
-			queryLegacy.MustNot(generatedTimeQuery)).MinimumShouldMatch("1")
-	} else {
-		query.Must(queryTimeRange)
-	}
+	query.Must(queryTimeRange)
 
 	// If a selector was provided, parse it and add it in.
 	if sel := opts.Selector; len(sel) > 0 {

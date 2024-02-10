@@ -1,11 +1,9 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2024 Tigera, Inc. All rights reserved.
 
 package v1
 
 import (
 	"time"
-
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 type RuntimeReport struct {
@@ -36,8 +34,7 @@ type Report struct {
 type RuntimeReportParams struct {
 	QueryParams     `json:",inline" validate:"required"`
 	QuerySortParams `json:",inline"`
-	LegacyTimeRange *lmav1.TimeRange `json:"legacy_time_range"`
-	Selector        string           `json:"selector"`
+	Selector        string `json:"selector"`
 }
 
 type PodInfo struct {
