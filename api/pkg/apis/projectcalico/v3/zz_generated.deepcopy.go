@@ -2792,6 +2792,15 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			copy(*out, *in)
 		}
 	}
+	if in.BPFExcludeCIDRsFromNAT != nil {
+		in, out := &in.BPFExcludeCIDRsFromNAT, &out.BPFExcludeCIDRsFromNAT
+		*out = new([]string)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]string, len(*in))
+			copy(*out, *in)
+		}
+	}
 	if in.IPSecAllowUnsecuredTraffic != nil {
 		in, out := &in.IPSecAllowUnsecuredTraffic, &out.IPSecAllowUnsecuredTraffic
 		*out = new(bool)

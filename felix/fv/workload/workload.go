@@ -134,6 +134,14 @@ func WithListenAnyIP() Opt {
 	}
 }
 
+// WithHostNetworked force the workload to be host-networked even if the listen IP is
+// different than the host IP.
+func WithHostNetworked() Opt {
+	return func(w *Workload) {
+		w.InterfaceName = ""
+	}
+}
+
 func RunEgressGateway(c *infrastructure.Felix, name, profile, ip string) (w *Workload) {
 	return Run(c, name, profile, ip, "egress-gateway", "any", WithMTU(defaultMTU))
 }
