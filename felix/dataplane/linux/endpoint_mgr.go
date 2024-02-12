@@ -910,7 +910,7 @@ func (m *endpointManager) updateWorkloadEndpointChains(
 	workload *proto.WorkloadEndpoint,
 	adminUp bool,
 ) {
-	tierGroups := m.groupTieredPolicy(workload.Tiers)
+	tierGroups := m.groupTieredPolicy(workload.Tiers, includeInbound|includeOutbound)
 	m.updatePolicyGroups(workload.Name, tierGroups)
 
 	chains := m.ruleRenderer.WorkloadEndpointToIptablesChains(
@@ -927,13 +927,27 @@ func (m *endpointManager) updateWorkloadEndpointChains(
 	m.activeWlIDToChains[id] = chains
 }
 
-func (m *endpointManager) groupTieredPolicy(tieredPolicies []*proto.TierInfo) []rules.TierPolicyGroups {
+type tierGroupFilter int
+
+const (
+	includeInbound tierGroupFilter = 1 << iota
+	includeOutbound
+)
+
+func (m *endpointManager) groupTieredPolicy(tieredPolicies []*proto.TierInfo, filter tierGroupFilter) []rules.TierPolicyGroups {
 	var tierPolGroups []rules.TierPolicyGroups
 	for _, tierInfo := range tieredPolicies {
+		var inPols, outPols []*rules.PolicyGroup
+		if filter&includeInbound != 0 {
+			inPols = m.groupPolicies(tierInfo.Name, tierInfo.IngressPolicies, rules.PolicyDirectionInbound)
+		}
+		if filter&includeOutbound != 0 {
+			outPols = m.groupPolicies(tierInfo.Name, tierInfo.EgressPolicies, rules.PolicyDirectionOutbound)
+		}
 		tierPolGroups = append(tierPolGroups, rules.TierPolicyGroups{
 			Name:            tierInfo.Name,
-			IngressPolicies: m.groupPolicies(tierInfo.Name, tierInfo.IngressPolicies, rules.PolicyDirectionInbound),
-			EgressPolicies:  m.groupPolicies(tierInfo.Name, tierInfo.EgressPolicies, rules.PolicyDirectionOutbound),
+			IngressPolicies: inPols,
+			EgressPolicies:  outPols,
 		})
 	}
 	return tierPolGroups
@@ -1173,9 +1187,9 @@ func (m *endpointManager) updateHostEndpoints() {
 			hostEp := m.rawHostEndpoints[id]
 
 			// Update chains in the filter and mangle tables, for normal traffic.
-			normalTierGroups := m.groupTieredPolicy(hostEp.Tiers)
+			normalTierGroups := m.groupTieredPolicy(hostEp.Tiers, includeInbound|includeOutbound)
 			addPolicyGroups(ifaceName, normalTierGroups)
-			forwardTierGroups := m.groupTieredPolicy(hostEp.ForwardTiers)
+			forwardTierGroups := m.groupTieredPolicy(hostEp.ForwardTiers, includeInbound|includeOutbound)
 			addPolicyGroups(ifaceName, forwardTierGroups)
 
 			filtChains := m.ruleRenderer.HostEndpointToFilterChains(
@@ -1211,8 +1225,8 @@ func (m *endpointManager) updateHostEndpoints() {
 			hostEp := m.rawHostEndpoints[id]
 
 			// Update the mangle table for preDNAT policy.
-			preDNATTierGroups := m.groupTieredPolicy(hostEp.PreDnatTiers)
-			addPolicyGroups(ifaceName, preDNATTierGroups) // TODO ingress only?
+			preDNATTierGroups := m.groupTieredPolicy(hostEp.PreDnatTiers, includeInbound)
+			addPolicyGroups(ifaceName, preDNATTierGroups)
 			mangleChains := m.ruleRenderer.HostEndpointToMangleIngressChains(
 				ifaceName,
 				preDNATTierGroups,
@@ -1259,7 +1273,7 @@ func (m *endpointManager) updateHostEndpoints() {
 			// Update the raw chain, for untracked traffic.
 			var rawChains []*iptables.Chain
 			if m.bpfEnabled {
-				untrackedTierGroups := m.groupTieredPolicy(hostEp.UntrackedTiers)
+				untrackedTierGroups := m.groupTieredPolicy(hostEp.UntrackedTiers, includeOutbound)
 				addPolicyGroups(ifaceName, untrackedTierGroups)
 
 				rawChains = append(rawChains, m.ruleRenderer.HostEndpointToRawEgressChain(
@@ -1267,7 +1281,7 @@ func (m *endpointManager) updateHostEndpoints() {
 					untrackedTierGroups,
 				))
 			} else {
-				untrackedTierGroups := m.groupTieredPolicy(hostEp.UntrackedTiers)
+				untrackedTierGroups := m.groupTieredPolicy(hostEp.UntrackedTiers, includeInbound|includeOutbound)
 				addPolicyGroups(ifaceName, untrackedTierGroups)
 
 				rawChains = m.ruleRenderer.HostEndpointToRawChains(

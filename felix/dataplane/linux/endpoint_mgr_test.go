@@ -2593,6 +2593,23 @@ func endpointManagerTests(ipVersion uint8) func() {
 					Id:     &proto.PolicyID{Tier: "default", Name: "polC1"},
 					Policy: &proto.Policy{OriginalSelector: "has(c)"},
 				})
+
+				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
+					Id:     &proto.PolicyID{Tier: "tier2", Name: "polA1"},
+					Policy: &proto.Policy{OriginalSelector: "has(a)"},
+				})
+				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
+					Id:     &proto.PolicyID{Tier: "tier2", Name: "polA2"},
+					Policy: &proto.Policy{OriginalSelector: "has(a)"},
+				})
+				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
+					Id:     &proto.PolicyID{Tier: "tier2", Name: "polB1"},
+					Policy: &proto.Policy{OriginalSelector: "has(b)"},
+				})
+				epMgr.OnUpdate(&proto.ActivePolicyUpdate{
+					Id:     &proto.PolicyID{Tier: "tier2", Name: "polB2"},
+					Policy: &proto.Policy{OriginalSelector: "has(b)"},
+				})
 			})
 
 			It("should 'group' a single policy", func() {
@@ -2690,6 +2707,33 @@ func endpointManagerTests(ipVersion uint8) func() {
 				}))
 			})
 
+			It("should 'group' non-default tier", func() {
+				Expect(epMgr.groupPolicies(
+					"tier2",
+					[]string{"polA1", "polB1", "polB2", "polA2"},
+					rules.PolicyDirectionInbound,
+				)).To(Equal([]*rules.PolicyGroup{
+					{
+						Tier:        "tier2",
+						Direction:   rules.PolicyDirectionInbound,
+						PolicyNames: []string{"polA1"},
+						Selector:    "has(a)",
+					},
+					{
+						Tier:        "tier2",
+						Direction:   rules.PolicyDirectionInbound,
+						PolicyNames: []string{"polB1", "polB2"},
+						Selector:    "has(b)",
+					},
+					{
+						Tier:        "tier2",
+						Direction:   rules.PolicyDirectionInbound,
+						PolicyNames: []string{"polA2"},
+						Selector:    "has(a)",
+					},
+				}))
+			})
+
 			Describe("policy grouping tests", func() {
 				var (
 					table              *mockTable
@@ -2698,8 +2742,21 @@ func endpointManagerTests(ipVersion uint8) func() {
 					ep2IngressChain    string
 					ep2EgressChain     string
 					deleteEP1          func()
+					deleteEP2          func()
 					removeAPolsFromEp1 func()
 				)
+
+				BeforeEach(func() {
+					// Zero out shared vars to avoid test cross-talk.
+					table = nil
+					ep1IngressChain = ""
+					ep1EgressChain = ""
+					ep2IngressChain = ""
+					ep2EgressChain = ""
+					deleteEP1 = nil
+					deleteEP2 = nil
+					removeAPolsFromEp1 = nil
+				})
 
 				defineIngressPolicyGroupingTests := func() {
 					It("should get the expected policy group chains (ingress)", func() {
@@ -2707,11 +2764,13 @@ func endpointManagerTests(ipVersion uint8) func() {
 						Expect(groupsEP1).To(Equal([][]string{
 							{"polA1", "polA2"},
 							{"polB1", "polB2"},
+							{"tier2/polA1", "tier2/polA2"},
 						}))
 						namesEP2, groupsEP2 := extractGroups(table.currentChains, ep2IngressChain)
 						Expect(groupsEP2).To(Equal([][]string{
 							{"polB1", "polB2"},
 							{"polC1"},
+							{"tier2/polA1", "tier2/polA2"},
 						}))
 						Expect(ingressNamesEP1[1]).NotTo(Equal(""), "Policy B group shouldn't be inlined")
 						Expect(ingressNamesEP1[1]).To(Equal(namesEP2[0]), "EPs should share the policy B group")
@@ -2724,11 +2783,13 @@ func endpointManagerTests(ipVersion uint8) func() {
 						Expect(groupsEP1).To(Equal([][]string{
 							{"polA1", "polA2"},
 							{"polB1", "polB2"},
+							{"tier2/polA1", "tier2/polA2"},
 						}))
 						_, groupsEP2 := extractGroups(table.currentChains, ep2IngressChain)
 						Expect(groupsEP2).To(Equal([][]string{
 							{"polB1", "polB2"},
 							{"polC1"},
+							{"tier2/polA1", "tier2/polA2"},
 						}))
 
 						// Then move polA2 to the B group...
@@ -2742,11 +2803,13 @@ func endpointManagerTests(ipVersion uint8) func() {
 						Expect(groupsEP1Post).To(Equal([][]string{
 							{"polA1"},
 							{"polA2", "polB1", "polB2"},
+							{"tier2/polA1", "tier2/polA2"},
 						}))
 						_, groupsEP2Post := extractGroups(table.currentChains, ep2IngressChain)
 						Expect(groupsEP2Post).To(Equal([][]string{
 							{"polB1", "polB2"},
 							{"polC1"},
+							{"tier2/polA1", "tier2/polA2"},
 						}))
 						Expect(table.currentChains).NotTo(HaveKey(ingressNamesEP1[0]), "Old polA group should be cleaned up")
 					})
@@ -2755,6 +2818,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 						namesEP1, _ := extractGroups(table.currentChains, ep1IngressChain)
 						polAGroup := namesEP1[0]
 						polBGroup := namesEP1[1]
+						tier2Group := namesEP1[2]
 						Expect(table.currentChains).To(HaveKey(polAGroup))
 						deleteEP1()
 						applyUpdates(epMgr)
@@ -2762,6 +2826,14 @@ func endpointManagerTests(ipVersion uint8) func() {
 							"Policy A group should be cleaned up")
 						Expect(table.currentChains).To(HaveKey(polBGroup),
 							"Policy B group chain should still be present, it is shared with the second endpoint")
+						Expect(table.currentChains).To(HaveKey(tier2Group),
+							"Tier 2 group chain should still be present, it is shared with the second endpoint")
+						deleteEP2()
+						applyUpdates(epMgr)
+						Expect(table.currentChains).NotTo(HaveKey(polBGroup),
+							"Policy B group should be cleaned up")
+						Expect(table.currentChains).NotTo(HaveKey(tier2Group),
+							"Tier 2 group should be cleaned up")
 					})
 
 					It("should clean up group chain that is no longer used (EP updated)", func() {
@@ -2787,11 +2859,15 @@ func endpointManagerTests(ipVersion uint8) func() {
 						Expect(groupsEP1).To(Equal([][]string{
 							{"polA1"},
 							{"polB1", "polB2"},
+							{"tier2/polA1"},
+							{"tier2/polB1"},
 						}))
 						namesEP2In, _ := extractGroups(table.currentChains, ep2IngressChain)
 						namesEP2, groupsEP2 := extractGroups(table.currentChains, ep2EgressChain)
 						Expect(groupsEP2).To(Equal([][]string{
 							{"polB1", "polB2"},
+							{"tier2/polA1"},
+							{"tier2/polB1"},
 						}))
 						Expect(namesEP1[0]).To(Equal(""), "Group A should be inlined")
 						Expect(namesEP1[1]).NotTo(Equal(""), "Policy B group shouldn't be inlined")
@@ -2830,6 +2906,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 								Ipv4Nets: []string{"10.0.240.2/24"},
 								Ipv6Nets: []string{"2001:db8:2::2/128"},
@@ -2855,6 +2942,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 								Ipv4Nets: []string{"10.0.240.2/24"},
 								Ipv6Nets: []string{"2001:db8:2::3/128"},
@@ -2865,6 +2963,11 @@ func endpointManagerTests(ipVersion uint8) func() {
 						deleteEP1 = func() {
 							epMgr.OnUpdate(&proto.WorkloadEndpointRemove{
 								Id: &wlEPID1,
+							})
+						}
+						deleteEP2 = func() {
+							epMgr.OnUpdate(&proto.WorkloadEndpointRemove{
+								Id: &wlEPID2,
 							})
 						}
 
@@ -2886,6 +2989,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 											EgressPolicies: []string{
 												"polB1",
 												"polB2",
+											},
+										},
+										{
+											Name: "tier2",
+											EgressPolicies: []string{
+												"polB1",
 											},
 										},
 									},
@@ -2939,6 +3048,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 								Ipv4Nets: []string{"10.0.240.2/24"},
 								Ipv6Nets: []string{"2001:db8:2::2/128"},
@@ -2964,6 +3084,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 							},
 						})
@@ -2972,6 +3103,13 @@ func endpointManagerTests(ipVersion uint8) func() {
 						deleteEP1 = func() {
 							epMgr.OnUpdate(&proto.WorkloadEndpointRemove{
 								Id: &wlEPID1,
+							})
+						}
+						deleteEP2 = func() {
+							epMgr.OnUpdate(&proto.HostEndpointRemove{
+								Id: &proto.HostEndpointID{
+									EndpointId: "eth1",
+								},
 							})
 						}
 
@@ -2993,6 +3131,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 											EgressPolicies: []string{
 												"polB1",
 												"polB2",
+											},
+										},
+										{
+											Name: "tier2",
+											EgressPolicies: []string{
+												"polB1",
 											},
 										},
 									},
@@ -3046,6 +3190,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 							},
 						})
@@ -3069,6 +3224,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 								Ipv4Nets: []string{"10.0.240.2/24"},
 								Ipv6Nets: []string{"2001:db8:2::3/128"},
@@ -3081,6 +3247,11 @@ func endpointManagerTests(ipVersion uint8) func() {
 								Id: &proto.HostEndpointID{
 									EndpointId: "eth0",
 								},
+							})
+						}
+						deleteEP2 = func() {
+							epMgr.OnUpdate(&proto.WorkloadEndpointRemove{
+								Id: &wlEPID2,
 							})
 						}
 
@@ -3102,6 +3273,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 											EgressPolicies: []string{
 												"polB1",
 												"polB2",
+											},
+										},
+										{
+											Name: "tier2",
+											EgressPolicies: []string{
+												"polB1",
 											},
 										},
 									},
@@ -3161,6 +3338,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 							},
 						})
@@ -3184,6 +3372,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 							},
 						})
@@ -3193,6 +3392,13 @@ func endpointManagerTests(ipVersion uint8) func() {
 							epMgr.OnUpdate(&proto.HostEndpointRemove{
 								Id: &proto.HostEndpointID{
 									EndpointId: "eth0",
+								},
+							})
+						}
+						deleteEP2 = func() {
+							epMgr.OnUpdate(&proto.HostEndpointRemove{
+								Id: &proto.HostEndpointID{
+									EndpointId: "eth1",
 								},
 							})
 						}
@@ -3215,6 +3421,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 											EgressPolicies: []string{
 												"polB1",
 												"polB2",
+											},
+										},
+										{
+											Name: "tier2",
+											EgressPolicies: []string{
+												"polB1",
 											},
 										},
 									},
@@ -3274,6 +3486,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 							},
 						})
@@ -3297,6 +3520,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 							},
 						})
@@ -3306,6 +3540,13 @@ func endpointManagerTests(ipVersion uint8) func() {
 							epMgr.OnUpdate(&proto.HostEndpointRemove{
 								Id: &proto.HostEndpointID{
 									EndpointId: "eth0",
+								},
+							})
+						}
+						deleteEP2 = func() {
+							epMgr.OnUpdate(&proto.HostEndpointRemove{
+								Id: &proto.HostEndpointID{
+									EndpointId: "eth1",
 								},
 							})
 						}
@@ -3328,6 +3569,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 											EgressPolicies: []string{
 												"polB1",
 												"polB2",
+											},
+										},
+										{
+											Name: "tier2",
+											EgressPolicies: []string{
+												"polB1",
 											},
 										},
 									},
@@ -3387,6 +3634,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 							},
 						})
@@ -3410,6 +3668,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 							},
 						})
@@ -3419,6 +3688,13 @@ func endpointManagerTests(ipVersion uint8) func() {
 							epMgr.OnUpdate(&proto.HostEndpointRemove{
 								Id: &proto.HostEndpointID{
 									EndpointId: "eth0",
+								},
+							})
+						}
+						deleteEP2 = func() {
+							epMgr.OnUpdate(&proto.HostEndpointRemove{
+								Id: &proto.HostEndpointID{
+									EndpointId: "eth1",
 								},
 							})
 						}
@@ -3441,6 +3717,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 											EgressPolicies: []string{
 												"polB1",
 												"polB2",
+											},
+										},
+										{
+											Name: "tier2",
+											EgressPolicies: []string{
+												"polB1",
 											},
 										},
 									},
@@ -3500,6 +3782,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 							},
 						})
@@ -3523,6 +3816,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 											"polB2",
 										},
 									},
+									{
+										Name: "tier2",
+										IngressPolicies: []string{
+											"polA1",
+											"polA2",
+										},
+										EgressPolicies: []string{
+											"polA1",
+											"polB1",
+										},
+									},
 								},
 							},
 						})
@@ -3532,6 +3836,13 @@ func endpointManagerTests(ipVersion uint8) func() {
 							epMgr.OnUpdate(&proto.HostEndpointRemove{
 								Id: &proto.HostEndpointID{
 									EndpointId: "eth0",
+								},
+							})
+						}
+						deleteEP2 = func() {
+							epMgr.OnUpdate(&proto.HostEndpointRemove{
+								Id: &proto.HostEndpointID{
+									EndpointId: "eth1",
 								},
 							})
 						}
@@ -3554,6 +3865,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 											EgressPolicies: []string{
 												"polB1",
 												"polB2",
+											},
+										},
+										{
+											Name: "tier2",
+											EgressPolicies: []string{
+												"polB1",
 											},
 										},
 									},

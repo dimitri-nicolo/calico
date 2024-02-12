@@ -724,6 +724,116 @@ var _ = Describe("Endpoints", func() {
 				})))
 			})
 
+			It("should render a fully-loaded workload endpoint - staged policy group, end-of-tier pass", func() {
+				Expect(renderer.WorkloadEndpointToIptablesChains(
+					"cali1234",
+					epMarkMapper,
+					true,
+					[]TierPolicyGroups{
+						{
+							Name: "default",
+							IngressPolicies: []*PolicyGroup{{
+								Tier:        "default",
+								Direction:   PolicyDirectionInbound,
+								PolicyNames: []string{"staged:ai", "staged:bi"},
+								Selector:    "all()",
+							}},
+							EgressPolicies: []*PolicyGroup{{
+								Tier:        "default",
+								Direction:   PolicyDirectionOutbound,
+								PolicyNames: []string{"staged:ae", "staged:be"},
+								Selector:    "all()",
+							}},
+						},
+					},
+					[]string{"prof1", "prof2"},
+					NotAnEgressGateway,
+					0,
+					UndefinedIPVersion,
+				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
+					{
+						Name: "cali-tw-cali1234",
+						Rules: []Rule{
+							// conntrack rules.
+							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+								Action: AcceptAction{}},
+							{Match: Match().ConntrackState("INVALID"),
+								Action: denyAction},
+
+							{Action: ClearMarkAction{Mark: 0x98}},
+
+							{Comment: []string{"Start of tier default"},
+								Action: ClearMarkAction{Mark: 0x10}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: "cali-gi-HSctAbeg5SPOCTqXywv3"}},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 1, Prefix: "PPI|default"}},
+
+							{Action: JumpAction{Target: "cali-pri-prof1"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+							{Action: JumpAction{Target: "cali-pri-prof2"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
+							{Action: denyAction,
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)}},
+						},
+					},
+					{
+						Name: "cali-fw-cali1234",
+						Rules: []Rule{
+							// conntrack rules.
+							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+								Action: AcceptAction{}},
+							{Match: Match().ConntrackState("INVALID"),
+								Action: denyAction},
+
+							{Action: ClearMarkAction{Mark: 0x98}},
+							dropVXLANRule,
+							dropIPIPRule,
+
+							{Comment: []string{"Start of tier default"},
+								Action: ClearMarkAction{Mark: 0x10}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: "cali-go-Yzgack0Da6LjbAhZ1OEM"}},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 2, Prefix: "PPE|default"}},
+
+							{Action: JumpAction{Target: "cali-pro-prof1"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+							{Action: JumpAction{Target: "cali-pro-prof2"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
+							{Action: denyAction,
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)}},
+						},
+					},
+					{
+						Name: "cali-sm-cali1234",
+						Rules: []Rule{
+							{Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00}},
+						},
+					},
+				})))
+			})
+
 			It("should render a host endpoint", func() {
 				actual := renderer.HostEndpointToFilterChains("eth0",
 					tiersToSinglePolGroups([]*proto.TierInfo{{
@@ -1656,6 +1766,29 @@ var _ = Describe("PolicyGroups", func() {
 			Expect(pg.UniqueID()).To(Equal(uid), "UID different on each call")
 		}
 	})
+
+	It("should detect staged policies", func() {
+		pg := PolicyGroup{
+			Tier:      "default",
+			Direction: PolicyDirectionInbound,
+			PolicyNames: []string{
+				"namespace/staged:foo",
+			},
+			Selector: "all()",
+		}
+		Expect(pg.HasNonStagedPolicies()).To(BeFalse())
+
+		pg.PolicyNames = []string{
+			"staged:foo",
+		}
+		Expect(pg.HasNonStagedPolicies()).To(BeFalse())
+
+		pg.PolicyNames = []string{
+			"namespace/staged:foo",
+			"namespace/bar",
+		}
+		Expect(pg.HasNonStagedPolicies()).To(BeTrue())
+	})
 })
 
 var _ = table.DescribeTable("PolicyGroup chains",
@@ -1855,6 +1988,120 @@ var _ = table.DescribeTable("PolicyGroup chains",
 				Match:   Match().MarkNotClear(0x98),
 				Action:  ReturnAction{},
 				Comment: []string{"Return on verdict"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/f"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/g"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionOutbound,
+			PolicyNames: []string{"staged:a", "staged:b", "staged:c", "d", "e", "f", "g"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			// Match criteria and return rules get skipped until we hit the
+			// first non-staged policy.
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:a"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:b"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:c"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/d"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/e"},
+			},
+			{
+				Match:   Match().MarkNotClear(0x98),
+				Action:  ReturnAction{},
+				Comment: []string{"Return on verdict"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/f"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/g"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionOutbound,
+			PolicyNames: []string{"staged:a", "staged:b", "staged:c", "d", "staged:e", "f", "g"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			// Match criteria and return rules get skipped until we hit the
+			// first non-staged policy.
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:a"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:b"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:c"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/d"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/staged:e"},
+			},
+			{
+				Match:   Match().MarkNotClear(0x98),
+				Action:  ReturnAction{},
+				Comment: []string{"Return on verdict"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/f"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/g"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionOutbound,
+			PolicyNames: []string{"staged:a", "staged:b", "staged:c", "staged:d", "staged:e", "f", "g"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			// Match criteria and return rules get skipped until we hit the
+			// first non-staged policy.
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:a"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:b"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:c"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:d"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:e"},
 			},
 			{
 				Action: JumpAction{Target: "cali-po-default/f"},
