@@ -257,7 +257,7 @@ endif
 # Building the image
 ###############################################################################
 ## Create the images for all supported ARCHes
-image-all: $(addprefix sub-image-,$(VALIDARCHES)) image-windows
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image FIPS=$(FIPS) ARCH=$*
 
@@ -556,7 +556,7 @@ st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar
 ci: clean static-checks image ut st
 
 ## Deploys images to registry
-cd: image-all cd-common release-windows
+cd: image-all cd-common
 
 .PHONY: node-test-at
 # Run docker-image acceptance tests
