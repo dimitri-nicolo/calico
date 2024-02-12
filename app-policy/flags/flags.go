@@ -6,23 +6,25 @@ import (
 	"flag"
 	"os"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type Config struct {
-	ListenNetwork     string      `json:"listenNetwork,omitempty"`
-	ListenAddress     string      `json:"listenAddress,omitempty"`
-	DialNetwork       string      `json:"dialNetwork,omitempty"`
-	DialAddress       string      `json:"dialAddress,omitempty"`
-	LogLevel          string      `json:"logLevel,omitempty"`
-	WAFEnabled        bool        `json:"wafEnabled,omitempty"`
-	WAFDirectives     stringArray `json:"wafDirectives,omitempty"`
-	WAFRulesetBaseDir string      `json:"wafRulesetBaseDir,omitempty"`
-	WAFLogFile        string      `json:"wafLogFile,omitempty"`
-	SubscriptionType  string      `json:"subscriptionType,omitempty"`
-	HTTPServerAddr    string      `json:"httpServerAddr,omitempty"`
-	HTTPServerPort    string      `json:"httpServerPort,omitempty"`
+	ListenNetwork          string        `json:"listenNetwork,omitempty"`
+	ListenAddress          string        `json:"listenAddress,omitempty"`
+	DialNetwork            string        `json:"dialNetwork,omitempty"`
+	DialAddress            string        `json:"dialAddress,omitempty"`
+	LogLevel               string        `json:"logLevel,omitempty"`
+	WAFEnabled             bool          `json:"wafEnabled,omitempty"`
+	WAFRulesetFiles        stringArray   `json:"wafRulesetFiles,omitempty"`
+	WAFDirectives          stringArray   `json:"wafDirectives,omitempty"`
+	WAFLogFile             string        `json:"wafLogFile,omitempty"`
+	WAFEventsFlushInterval time.Duration `json:"wafEventsFlushInterval,omitempty"`
+	SubscriptionType       string        `json:"subscriptionType,omitempty"`
+	HTTPServerAddr         string        `json:"httpServerAddr,omitempty"`
+	HTTPServerPort         string        `json:"httpServerPort,omitempty"`
 
 	*flag.FlagSet `json:"-"`
 }
@@ -34,15 +36,30 @@ func New() *Config {
 		FlagSet: fs,
 	}
 
+	defaultWAFEventsFlushInterval, err := time.ParseDuration(
+		getEnv("DIKASTES_WAF_EVENTS_FLUSH_INTERVAL", "15s"),
+	)
+	if err != nil {
+		log.WithError(err).Fatal("cannot parse DIKASTES_WAF_EVENTS_FLUSH_INTERVAL")
+	}
+
 	fs.StringVar(&cfg.ListenAddress, "listen", "/var/run/dikastes/dikastes.sock", "Listen address")
 	fs.StringVar(&cfg.ListenNetwork, "listen-network", "unix", "Listen network e.g. tcp, unix")
 	fs.StringVar(&cfg.DialAddress, "dial", "", "PolicySync address e.g. /var/run/nodeagent/socket")
 	fs.StringVar(&cfg.DialNetwork, "dial-network", "unix", "PolicySync network e.g. tcp, unix")
 	fs.StringVar(&cfg.LogLevel, "log-level", "info", "Log at specified level e.g. panic, fatal, info, debug, trace")
 	fs.BoolVar(&cfg.WAFEnabled, "waf-enabled", false, "Enable WAF.")
-	fs.StringVar(&cfg.WAFRulesetBaseDir, "waf-ruleset-base-dir", "/etc/modsecurity-ruleset", "Base directory for WAF rulesets.")
+	fs.Var(&cfg.WAFRulesetFiles, "waf-ruleset-file", "WAF ruleset file path to load. e.g. /etc/modsecurity-ruleset/tigera.conf. Can be specified multiple times.")
 	fs.Var(&cfg.WAFDirectives, "waf-directive", "Additional directives to specify for WAF (if enabled). Can be specified multiple times.")
 	fs.StringVar(&cfg.WAFLogFile, "waf-log-file", "", "WAF log file path. e.g. /var/log/calico/waf/waf.log")
+
+	fs.DurationVar(
+		&cfg.WAFEventsFlushInterval,
+		"waf-events-flush-interval",
+		defaultWAFEventsFlushInterval,
+		"flush events interval e.g. 15s, 30s",
+	)
+
 	fs.StringVar(&cfg.SubscriptionType,
 		"subscription-type",
 		getEnv("DIKASTES_SUBSCRIPTION_TYPE", "per-host-policies"),

@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -30,8 +31,9 @@ type Dikastes struct {
 	listenNetwork, listenAddress string
 	wafEnabled                   bool
 	wafLogFile                   string
+	wafRulesetFiles              []string
 	wafDirectives                []string
-	wafRulesetBaseDir            string
+	wafEventsFlushDuration       time.Duration
 	grpcServerOptions            []grpc.ServerOption
 
 	Ready chan struct{}
@@ -65,17 +67,26 @@ func WithGRPCServerOpts(opts ...grpc.ServerOption) DikastesServerOptions {
 	}
 }
 
-func WithWAFConfig(wafEnabled bool, wafLogFile string, directives []string, rulesetBaseDir string) DikastesServerOptions {
+func WithWAFConfig(enabled bool, logfile string, files, directives []string) DikastesServerOptions {
 	return func(ds *Dikastes) {
-		ds.wafEnabled = wafEnabled
+		ds.wafEnabled = enabled
+		ds.wafLogFile = logfile
 		ds.wafDirectives = directives
-		ds.wafLogFile = wafLogFile
-		ds.wafRulesetBaseDir = rulesetBaseDir
+		ds.wafRulesetFiles = files
+	}
+}
+
+func WithWAFFlushDuration(duration time.Duration) DikastesServerOptions {
+	return func(ds *Dikastes) {
+		ds.wafEventsFlushDuration = duration
 	}
 }
 
 func NewDikastesServer(opts ...DikastesServerOptions) *Dikastes {
-	s := &Dikastes{Ready: make(chan struct{})}
+	s := &Dikastes{
+		Ready:                  make(chan struct{}),
+		wafEventsFlushDuration: time.Second * 15,
+	}
 	for _, o := range opts {
 		o(s)
 	}
@@ -161,7 +172,9 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 
 	if s.wafEnabled {
 		wafLogHandler := logger.New(setupWAFLogging(s.wafLogFile)...)
-		wafServer, err := waf.New(s.wafDirectives, s.wafRulesetBaseDir, wafLogHandler.Process)
+		events := waf.NewEventsPipeline(policyStoreManager, wafLogHandler.Process)
+		go events.Start(ctx, s.wafEventsFlushDuration)
+		wafServer, err := waf.New(s.wafRulesetFiles, s.wafDirectives, events)
 		if err != nil {
 			log.Fatalf("cannot initialize WAF: %v", err)
 		}

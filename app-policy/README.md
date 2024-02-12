@@ -34,8 +34,6 @@ processed.  We compute policy based on a global store which is distributed to Di
             Enable WAF.
       -waf-log-file string
             WAF log file path. e.g. /var/log/calico/waf/waf.log
-      -waf-ruleset-base-dir string
-            Base directory for WAF rulesets. (default "/")
 
     Environment variables:
 

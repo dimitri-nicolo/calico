@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -19,6 +18,7 @@ import (
 	corazatypes "github.com/corazawaf/coraza/v3/types"
 
 	mergefs "github.com/jcchavezs/mergefs"
+	mergefsio "github.com/jcchavezs/mergefs/io"
 
 	code "google.golang.org/genproto/googleapis/rpc/code"
 	status "google.golang.org/genproto/googleapis/rpc/status"
@@ -27,11 +27,8 @@ import (
 	envoyauthz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 
 	"github.com/projectcalico/calico/app-policy/checker"
-	"github.com/projectcalico/calico/app-policy/internal/util/io"
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/app-policy/types"
 	"github.com/projectcalico/calico/felix/proto"
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 var (
@@ -49,18 +46,27 @@ var _ checker.CheckProvider = (*Server)(nil)
 
 type Server struct {
 	coraza.WAF
-	eventCallbacks []eventCallbackFn
+	evp *wafEventsPipeline
 }
 
-func New(directives []string, rulesetBaseDir string, eventCallbacks ...eventCallbackFn) (*Server, error) {
-	osFS := io.DirFS(rulesetBaseDir)
+func New(files, directives []string, evp *wafEventsPipeline) (*Server, error) {
 	cfg := coraza.NewWAFConfig().
 		WithRootFS(mergefs.Merge(
 			coreruleset.FS,
-			osFS,
-		))
+			mergefsio.OSFS,
+		)).
+		WithRequestBodyAccess().
+		WithErrorCallback(func(rule corazatypes.MatchedRule) {
+			evp.Process(rule)
+		})
+
+	for _, f := range files {
+		log.WithField("file", f).Debug("loading directives from file")
+		cfg = cfg.WithDirectivesFromFile(f)
+	}
 
 	for _, d := range directives {
+		log.WithField("directive", d).Debug("loading directive")
 		cfg = cfg.WithDirectives(d)
 	}
 
@@ -70,8 +76,8 @@ func New(directives []string, rulesetBaseDir string, eventCallbacks ...eventCall
 	}
 
 	return &Server{
-		WAF:            waf,
-		eventCallbacks: eventCallbacks,
+		WAF: waf,
+		evp: evp,
 	}, nil
 }
 
@@ -89,6 +95,7 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 	httpReq := req.Http
 
 	tx := w.NewTransactionWithID(httpReq.Id)
+
 	defer tx.Close()
 
 	if tx.IsRuleEngineOff() {
@@ -97,6 +104,18 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 
 	dstHost, dstPort, _ := peerToHostPort(attrs.Destination)
 	srcHost, srcPort, _ := peerToHostPort(attrs.Source)
+
+	// after the transaction is closed, process the http info for
+	// the events pipeline
+	defer w.evp.Process(&txHttpInfo{
+		txID:     tx.ID(),
+		destIP:   dstHost,
+		uri:      httpReq.Path,
+		method:   httpReq.Method,
+		protocol: req.Http.Protocol,
+		srcPort:  srcPort,
+		dstPort:  dstPort,
+	})
 
 	tx.ProcessConnection(srcHost, int(srcPort), dstHost, int(dstPort))
 	tx.ProcessURI(httpReq.Path, httpReq.Method, httpReq.Protocol)
@@ -130,7 +149,6 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 
 func (w *Server) processInterruption(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRequest, tx corazatypes.Transaction, it *corazatypes.Interruption) (*envoyauthz.CheckResponse, error) {
 	resp := &envoyauthz.CheckResponse{Status: &status.Status{Code: int32(code.Code_OK)}}
-	defer w.auditEventsFromTransactionInterruption(st, checkReq, tx, it)
 
 	switch it.Action {
 	// We only handle disruptive actions here.
@@ -158,60 +176,6 @@ func (w *Server) processInterruption(st *policystore.PolicyStore, checkReq *envo
 	}
 
 	return resp, nil
-}
-
-func (w *Server) auditEventsFromTransactionInterruption(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRequest, tx corazatypes.Transaction, it *corazatypes.Interruption) {
-	rules := corazaRulesToLinseedWAFRuleHit(tx)
-	src, dst, err := checker.LookupEndpointKeysFromRequest(st, checkReq)
-	switch err.(type) {
-	case types.ErrNoStore, types.ErrUnprocessable:
-		// if there's no store or if endpoint info is generally unprocessable,
-		// we'll have no ability to lookup the endpoint information.
-		// in this case, just log a warning and continue as it is not a fatal error.
-		if log.IsLevelEnabled(log.DebugLevel) {
-			log.WithError(err).Debug("error interacting with store; no wep info for audit event")
-		}
-	case nil:
-		// do nothing
-	default:
-		log.WithError(err).Panic("encountered unexpected error interacting with store")
-	}
-	srcNamespace, srcName := extractFirstWepNameAndNamespace(src)
-	dstNamespace, dstName := extractFirstWepNameAndNamespace(dst)
-	dstAddr, dstPort := envoyCoreAddressToIPPort(checkReq.Attributes.Destination.Address)
-	srcAddr, srcPort := envoyCoreAddressToIPPort(checkReq.Attributes.Source.Address)
-
-	wafLog := &v1.WAFLog{
-		Timestamp: time.Now(),
-		Level:     "WARN",
-		RequestId: checkReq.Attributes.Request.Http.Id,
-		Method:    checkReq.Attributes.Request.Http.Method,
-		Path:      checkReq.Attributes.Request.Http.Path,
-		Protocol:  checkReq.Attributes.Request.Http.Protocol,
-		Msg:       messageFromInterruption(it),
-		Rules:     rules,
-		Destination: &v1.WAFEndpoint{
-			IP:           dstAddr,
-			PortNum:      int32(dstPort),
-			Hostname:     checkReq.Attributes.Request.Http.Host,
-			PodName:      dstName,
-			PodNameSpace: dstNamespace,
-		},
-		Source: &v1.WAFEndpoint{
-			IP:           srcAddr,
-			PortNum:      int32(srcPort),
-			PodName:      srcName,
-			PodNameSpace: srcNamespace,
-		},
-		Host: checkReq.Attributes.Request.Http.Host,
-	}
-	w.runCallbacks(wafLog)
-}
-
-func (w *Server) runCallbacks(wafLog *v1.WAFLog) {
-	for _, cb := range w.eventCallbacks {
-		cb(wafLog)
-	}
 }
 
 func messageFromInterruption(it *corazatypes.Interruption) string {
@@ -283,31 +247,4 @@ func extractFirstWepNameAndNamespace(weps []proto.WorkloadEndpointID) (string, s
 	}
 
 	return wepName, "-"
-}
-
-func corazaRulesToLinseedWAFRuleHit(tx corazatypes.Transaction) (hits []v1.WAFRuleHit) {
-	for _, matchedRule := range tx.MatchedRules() {
-		ruleInfo := matchedRule.Rule()
-		hits = append(hits, v1.WAFRuleHit{
-			Message:    matchedRule.Message(),
-			Disruptive: matchedRule.Disruptive(),
-			Id:         fmt.Sprint(ruleInfo.ID()),
-			Severity:   ruleInfo.Severity().String(),
-			File:       ruleInfo.File(),
-			Line:       fmt.Sprint(ruleInfo.Line()),
-		})
-	}
-	return
-}
-
-func envoyCoreAddressToIPPort(addr *envoycore.Address) (string, int64) {
-	switch v := addr.Address.(type) {
-	case *envoycore.Address_SocketAddress:
-		return v.SocketAddress.Address, int64(v.SocketAddress.GetPortValue())
-	case *envoycore.Address_Pipe:
-		return v.Pipe.Path, 0
-	case *envoycore.Address_EnvoyInternalAddress:
-		return v.EnvoyInternalAddress.EndpointId, 0
-	}
-	return "", 0
 }

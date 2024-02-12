@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	_ "embed"
+
 	envoyauthz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/rpc/code"
@@ -14,6 +16,9 @@ import (
 	"github.com/projectcalico/calico/app-policy/waf"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
+
+//go:embed tigera.conf
+var tigeraConfContents string
 
 func TestCorazaWAFAuthzScenarios(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
@@ -41,18 +46,11 @@ var (
 			expectedLogs:     nil,
 		},
 		{
-			name:  "deny - SQL injection 1",
-			store: nil,
-			directives: []string{
-				"Include @coraza.conf-recommended",
-				"Include @crs-setup.conf.example",
-				"Include @owasp_crs/*.conf",
-				"Include tigera.conf",
-			},
+			name:       "deny - SQL injection 1",
+			store:      nil,
+			directives: []string{},
 			additionalConfigFiles: map[string]string{
-				"tigera.conf": `
-SecRuleEngine On
-`,
+				"tigera.conf": tigeraConfContents,
 			},
 			checkReq: testutils.NewCheckRequestBuilder(
 				testutils.WithMethod("GET"),
@@ -61,16 +59,18 @@ SecRuleEngine On
 			),
 			expectedResponse: waf.DENY,
 			expectedErr:      nil,
-			expectedLogs:     []*v1.WAFLog{},
+			expectedLogs: []*v1.WAFLog{
+				{},
+			},
 		},
 		{
-			name:  "deny - SQL injection 2",
+			name:  "deny - SQL injection 2, detection only",
 			store: nil,
 			directives: []string{
 				"Include @coraza.conf-recommended",
 				"Include @crs-setup.conf.example",
 				"Include @owasp_crs/*.conf",
-				"SecRuleEngine On",
+				"SecRuleEngine DetectionOnly",
 			},
 			checkReq: testutils.NewCheckRequestBuilder(
 				testutils.WithMethod("POST"),
@@ -78,27 +78,41 @@ SecRuleEngine On
 				testutils.WithPath("/vulnerable.php?id=1' waitfor delay '00:00:10'--"),
 				testutils.WithScheme("https"),
 			),
-			expectedResponse: waf.DENY,
+			expectedResponse: waf.OK,
 			expectedErr:      nil,
-			expectedLogs:     []*v1.WAFLog{},
+			expectedLogs: []*v1.WAFLog{
+				{},
+			},
 		},
 	}
 )
 
 func runCorazaWAFAuthzScenario(t testing.TB, scenario *corazaWAFScenario) {
+	psm := policystore.NewPolicyStoreManager()
+	psm.OnInSync()
+
 	tempDir := t.TempDir()
+	files := []string{}
 	for name, content := range scenario.additionalConfigFiles {
 		t.Log("Writing additional config file", tempDir, name)
 		if err := os.WriteFile(filepath.Join(tempDir, name), []byte(content), 0777); err != nil {
 			t.Fatalf("Failed to write file %s: %s", name, err)
 		}
+		// append the file to the directives
+		files = append(files, filepath.Join(tempDir, name))
 	}
 	var observedLogs []*v1.WAFLog
-	waf, err := waf.New(scenario.directives, tempDir, func(v interface{}) {
+	cb := func(v interface{}) {
 		if v, ok := v.(*v1.WAFLog); ok {
 			observedLogs = append(observedLogs, v)
 		}
-	})
+	}
+	evp := waf.NewEventsPipeline(psm, cb)
+	waf, err := waf.New(
+		files,
+		scenario.directives,
+		evp,
+	)
 	if err != nil {
 		t.Fatalf("Failed to create WAF: %s", err)
 	}
@@ -114,6 +128,11 @@ func runCorazaWAFAuthzScenario(t testing.TB, scenario *corazaWAFScenario) {
 			code.Code(scenario.expectedResponse.Status.Code),
 			code.Code(resp.Status.Code),
 		)
+	}
+
+	evp.Flush()
+	if len(observedLogs) != len(scenario.expectedLogs) {
+		t.Fatalf("Expected %d logs, but got %d", len(scenario.expectedLogs), len(observedLogs))
 	}
 }
 

@@ -16,10 +16,12 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	jsonenc "encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/stretchr/testify/assert"
@@ -36,9 +38,19 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
+//go:embed tigera.conf
+var tigeraConfContents string
+var tigeraConfName = "tigera.conf"
+
 func TestRunServer(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	tempDir := t.TempDir()
+	confPath := filepath.Join(tempDir, tigeraConfName)
+	if err := os.WriteFile(confPath, []byte(tigeraConfContents), 0777); err != nil {
+		t.Fatalf("Failed to write file %s: %s", tigeraConfName, err)
+	}
 
 	listenPath := filepath.Join(t.TempDir(), "dikastes.sock")
 	policySyncPath := filepath.Join(t.TempDir(), "nodeagent.sock")
@@ -59,18 +71,17 @@ func TestRunServer(t *testing.T) {
 		"-listen", listenPath,
 		"-waf-log-file", wafLogFile,
 		"-waf-enabled",
+		"-waf-ruleset-file", confPath,
+		"-waf-directive", "SecRuleEngine On",
+		"-waf-events-flush-interval", "500ms",
 		"-subscription-type", "per-host-policies",
 	}
-	// Add the default embedded directives.
-	// e.g. -waf-directive="Include @coraza.conf-recommended", etc
-	args = append(
-		args,
-		testdata.DirectivesToCLI(testdata.DefaultEmbeddedDirectives)...,
-	)
+
 	if err := config.Parse(args); err != nil {
 		t.Fatalf("cannot parse config %v", err)
 		return
 	}
+
 	ready := make(chan struct{}, 1)
 	go runServer(ctx, config, ready)
 	<-ready
@@ -89,11 +100,13 @@ func TestRunServer(t *testing.T) {
 	}{
 		{testutils.NewCheckRequestBuilder(), code.Code_OK, nil},
 		{testutils.NewCheckRequestBuilder(
+			testutils.WithDestinationHostPort("1.1.1.1", 443),
 			testutils.WithMethod("GET"),
 			testutils.WithHost("my.loadbalancer.address"),
 			testutils.WithPath("/cart?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user"),
 		), code.Code_PERMISSION_DENIED, nil},
 		{testutils.NewCheckRequestBuilder(
+			testutils.WithDestinationHostPort("2.2.2.2", 443),
 			testutils.WithMethod("POST"),
 			testutils.WithHost("www.example.com"),
 			testutils.WithPath("/vulnerable.php?id=1' waitfor delay '00:00:10'--"),
@@ -107,6 +120,7 @@ func TestRunServer(t *testing.T) {
 		assert.Equal(t, req.expectedErr, err)
 		assert.Equal(t, req.expectedCode, code.Code(resp.Status.Code))
 	}
+	<-time.After(500 * time.Millisecond)
 
 	f, err := os.Open(wafLogFile)
 	assert.Nil(t, err, "error must not have occurred")
@@ -123,10 +137,10 @@ func TestRunServer(t *testing.T) {
 		}
 		entries = append(entries, log)
 	}
-	assert.Equal(t, 2, len(entries), "expected 2 logs")
+	assert.Equal(t, 2, len(entries), "expected the correct number of logs")
 }
 
-func TestRunServerWithoutPolicySync(t *testing.T) {
+func TestRunServeNoPolicySync(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -148,6 +162,7 @@ func TestRunServerWithoutPolicySync(t *testing.T) {
 		"-listen", listenPath,
 		"-waf-log-file", wafLogFile,
 		"-waf-enabled",
+		"-waf-events-flush-interval", "500ms",
 		"-subscription-type", "per-pod-policies",
 	}
 	// Add the default embedded directives.
@@ -160,6 +175,7 @@ func TestRunServerWithoutPolicySync(t *testing.T) {
 		t.Fatalf("cannot parse config %v", err)
 		return
 	}
+
 	ready := make(chan struct{}, 1)
 	go runServer(ctx, config, ready)
 	<-ready
@@ -178,11 +194,13 @@ func TestRunServerWithoutPolicySync(t *testing.T) {
 	}{
 		{testutils.NewCheckRequestBuilder(), code.Code_OK, nil},
 		{testutils.NewCheckRequestBuilder(
+			testutils.WithDestinationHostPort("1.1.1.1", 443),
 			testutils.WithMethod("GET"),
 			testutils.WithHost("my.loadbalancer.address"),
 			testutils.WithPath("/cart?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user"),
 		), code.Code_PERMISSION_DENIED, nil},
 		{testutils.NewCheckRequestBuilder(
+			testutils.WithDestinationHostPort("1.1.1.1", 443),
 			testutils.WithMethod("POST"),
 			testutils.WithHost("www.example.com"),
 			testutils.WithPath("/vulnerable.php?id=1' waitfor delay '00:00:10'--"),
@@ -196,6 +214,7 @@ func TestRunServerWithoutPolicySync(t *testing.T) {
 		assert.Equal(t, req.expectedErr, err)
 		assert.Equal(t, req.expectedCode, code.Code(resp.Status.Code))
 	}
+	<-time.After(500 * time.Millisecond)
 
 	f, err := os.Open(wafLogFile)
 	assert.Nil(t, err, "error must not have occurred")
@@ -212,7 +231,8 @@ func TestRunServerWithoutPolicySync(t *testing.T) {
 		}
 		entries = append(entries, log)
 	}
-	assert.Equal(t, 2, len(entries), "expected 2 logs")
+	// same destination for both 2 requests, so we expect 1 log entry only
+	assert.Equal(t, 1, len(entries), "expected 1 logs")
 }
 
 func NewExtAuthzClient(ctx context.Context, addr string) (authzv3.AuthorizationClient, error) {

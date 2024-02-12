@@ -91,42 +91,28 @@ func lookupEndpointsFromRequest(store *policystore.PolicyStore, req *authz.Check
 	return
 }
 
-func LookupEndpointKeysFromRequest(store *policystore.PolicyStore, req *authz.CheckRequest) (source, destination []proto.WorkloadEndpointID, err error) {
+func LookupEndpointKeysFromSrcDst(store *policystore.PolicyStore, src, dst string) (source, destination []proto.WorkloadEndpointID, err error) {
 	if store == nil {
 		// can't lookup anything without a store
 		return source, destination, types.ErrNoStore{}
 	}
 
-	log.Debugf("extracting endpoints from request %s", req.String())
-
-	// Extract source and destination IP addresses if possible:
-	requestAttributes := req.GetAttributes()
-	if requestAttributes == nil {
-		return source, destination, types.ErrUnprocessable{Reason: "cannot process specified request without attributes"}
-	}
-
 	// map destination first
-	if addr, port, ok := addrPortFromPeer(requestAttributes.Destination); ok {
-		log.Debugf("found destination address we would like to match: [%v:%v]", addr, port)
-		destinationIp, err := ip.ParseCIDROrIP(addr)
-		if err != nil {
-			rlog.Warnf("cannot process addr %v: %v", addr, err)
-		} else {
-			log.Debug("trying to match destination: ", destinationIp)
-			destination = ipToEndpointKeys(store, destinationIp.Addr())
-		}
+	destinationIp, err := ip.ParseCIDROrIP(dst)
+	if err != nil {
+		rlog.Warnf("cannot process addr %s: %v", dst, err)
+	} else {
+		log.Debug("trying to match destination: ", destinationIp)
+		destination = ipToEndpointKeys(store, destinationIp.Addr())
 	}
 
 	// map source next
-	if addr, port, ok := addrPortFromPeer(requestAttributes.Source); ok {
-		log.Debugf("found source address we would like to match: [%v:%v]", addr, port)
-		sourceIp, err := ip.ParseCIDROrIP(addr)
-		if err != nil {
-			rlog.Warnf("cannot process addr %v: %v", addr, err)
-		} else {
-			log.Debug("trying to match source: ", sourceIp)
-			source = ipToEndpointKeys(store, sourceIp.Addr())
-		}
+	sourceIp, err := ip.ParseCIDROrIP(src)
+	if err != nil {
+		rlog.Warnf("cannot process addr %s: %v", src, err)
+	} else {
+		log.Debug("trying to match source: ", sourceIp)
+		source = ipToEndpointKeys(store, sourceIp.Addr())
 	}
 
 	return

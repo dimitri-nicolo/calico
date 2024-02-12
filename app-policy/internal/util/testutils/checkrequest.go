@@ -80,7 +80,7 @@ func (b *CheckRequestBuilder) Value() *envoyauthz.CheckRequest {
 				Address: addressFromHostPort(b.srcHost, b.srcPort),
 			},
 			Destination: &envoyauthz.AttributeContext_Peer{
-				Address: addressFromHostPort(b.srcHost, b.srcPort),
+				Address: addressFromHostPort(b.dstHost, b.dstPort),
 			},
 			Request: &envoyauthz.AttributeContext_Request{
 				Time: timestamppb.Now(),

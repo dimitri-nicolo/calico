@@ -32,7 +32,7 @@ func main() {
 	}
 
 	log.Infof("Dikastes (%s) launching", VERSION)
-	runServer(ctx, config)
+	runServer(ctx, config, nil)
 }
 
 func runServer(ctx context.Context, config *flags.Config, readyCh ...chan struct{}) {
@@ -55,7 +55,13 @@ func runServer(ctx context.Context, config *flags.Config, readyCh ...chan struct
 		server.WithListenArguments(config.ListenNetwork, config.ListenAddress),
 		server.WithDialAddress(config.DialNetwork, config.DialAddress),
 		server.WithSubscriptionType(config.SubscriptionType),
-		server.WithWAFConfig(config.WAFEnabled, config.WAFLogFile, config.WAFDirectives.Value(), config.WAFRulesetBaseDir),
+		server.WithWAFConfig(
+			config.WAFEnabled,
+			config.WAFLogFile,
+			config.WAFRulesetFiles.Value(),
+			config.WAFDirectives.Value(),
+		),
+		server.WithWAFFlushDuration(config.WAFEventsFlushInterval),
 	)
 	go dikastesServer.Serve(ctx, readyCh...)
 

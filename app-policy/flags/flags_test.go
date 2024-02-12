@@ -27,6 +27,7 @@ func TestFlagDefaults(t *testing.T) {
 		{config.LogLevel, "info"},
 		{config.WAFEnabled, false},
 		{config.WAFDirectives.Value(), []string{}},
+		{config.WAFEventsFlushInterval, "15s"},
 	} {
 		if fmt.Sprint(v.loaded) != fmt.Sprint(v.expected) {
 			t.Errorf("Loaded flag is %v, but we expected %v", v.loaded, v.expected)
@@ -66,6 +67,7 @@ func TestStringArrayArgs(t *testing.T) {
 	args := []string{
 		"dikastes", "server",
 		// short flag
+		"-waf-ruleset-file", "/etc/modsecurity-ruleset/tigera.conf",
 		"-waf-directive", "Include @embedded/crs-setup.conf",
 		// short flag, double quoted
 		"-waf-directive", "SecRuleEngine Off",
@@ -102,6 +104,10 @@ func TestStringArrayArgs(t *testing.T) {
 				"SecAuditLog /var/log/apache2/audit.log",
 				"SecAuditLog /var/log/apache2/audit.log",
 			},
+		},
+		{
+			config.WAFRulesetFiles.Value(),
+			[]string{"/etc/modsecurity-ruleset/tigera.conf"},
 		},
 	} {
 		if fmt.Sprint(v.loaded) != fmt.Sprint(v.expected) {
