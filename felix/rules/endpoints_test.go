@@ -1998,6 +1998,120 @@ var _ = table.DescribeTable("PolicyGroup chains",
 			},
 		},
 	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionOutbound,
+			PolicyNames: []string{"staged:a", "staged:b", "staged:c", "d", "e", "f", "g"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			// Match criteria and return rules get skipped until we hit the
+			// first non-staged policy.
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:a"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:b"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:c"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/d"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/e"},
+			},
+			{
+				Match:   Match().MarkNotClear(0x98),
+				Action:  ReturnAction{},
+				Comment: []string{"Return on verdict"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/f"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/g"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionOutbound,
+			PolicyNames: []string{"staged:a", "staged:b", "staged:c", "d", "staged:e", "f", "g"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			// Match criteria and return rules get skipped until we hit the
+			// first non-staged policy.
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:a"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:b"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:c"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/d"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/staged:e"},
+			},
+			{
+				Match:   Match().MarkNotClear(0x98),
+				Action:  ReturnAction{},
+				Comment: []string{"Return on verdict"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/f"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/g"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionOutbound,
+			PolicyNames: []string{"staged:a", "staged:b", "staged:c", "staged:d", "staged:e", "f", "g"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			// Match criteria and return rules get skipped until we hit the
+			// first non-staged policy.
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:a"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:b"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:c"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:d"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:e"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/f"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/g"},
+			},
+		},
+	),
 )
 
 func polGroupEntry(group PolicyGroup, rules []Rule) table.TableEntry {
