@@ -93,22 +93,6 @@ type k8sClient struct {
 	clientv3.ProjectcalicoV3Interface
 }
 
-var (
-	fakeK8s    *k8sfake.Clientset
-	k8sAPI     bootstrap.K8sClient
-	fakeClient ctrlclient.WithWatch
-
-	voltronTunnelCert      *x509.Certificate
-	voltronTunnelTLSCert   tls.Certificate
-	voltronTunnelPrivKey   *rsa.PrivateKey
-	voltronExtHttpsCert    *x509.Certificate
-	voltronExtHttpsPrivKey *rsa.PrivateKey
-	voltronIntHttpsCert    *x509.Certificate
-	voltronIntHttpsPrivKey *rsa.PrivateKey
-	voltronTunnelCAs       *x509.CertPool
-	voltronHttpsCAs        *x509.CertPool
-)
-
 func describe(name string, testFn func(string)) bool {
 	Describe(name+" cluster-scoped", func() { testFn("") })
 	Describe(name+" namespace-scoped", func() { testFn("resource-ns") })
@@ -116,6 +100,22 @@ func describe(name string, testFn func(string)) bool {
 }
 
 var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
+	var (
+		fakeK8s    *k8sfake.Clientset
+		k8sAPI     bootstrap.K8sClient
+		fakeClient ctrlclient.WithWatch
+
+		voltronTunnelCert      *x509.Certificate
+		voltronTunnelTLSCert   tls.Certificate
+		voltronTunnelPrivKey   *rsa.PrivateKey
+		voltronExtHttpsCert    *x509.Certificate
+		voltronExtHttpsPrivKey *rsa.PrivateKey
+		voltronIntHttpsCert    *x509.Certificate
+		voltronIntHttpsPrivKey *rsa.PrivateKey
+		voltronTunnelCAs       *x509.CertPool
+		voltronHttpsCAs        *x509.CertPool
+	)
+
 	BeforeEach(func() {
 		var err error
 
