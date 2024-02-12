@@ -5,6 +5,7 @@ package events_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -459,6 +460,91 @@ func TestSecurityEvents(t *testing.T) {
 		name := fmt.Sprintf("TestEventSelector: %s", tt.selector)
 		RunAllModes(t, name, func(t *testing.T) {
 			testEventsFiltering(t, tt.selector, tt.expectedEvents)
+		})
+	}
+}
+
+// In this test, we want to check at what point a selector becomes too big.
+// This is required to understand how many security events exceptions we can support.
+func TestSelectorMaxLength(t *testing.T) {
+	events := []v1.Event{
+		{
+			Time:         v1.NewEventTimestamp(time.Now().Unix()),
+			Description:  "A sample WAF Security Event",
+			Name:         "WAF Event",
+			Origin:       "waf-new-alert-rule-info",
+			Severity:     100,
+			Type:         "waf",
+			Dismissed:    false,
+			Host:         "test-host",
+			AttackVector: "Network",
+			MitreTactic:  "Access",
+			MitreIDs:     &[]string{"T1190"},
+			Mitigations:  &[]string{"Use WAF :)"},
+		},
+	}
+
+	testEventsFiltering := func(t *testing.T, numExceptions int, expectedError bool) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		// Create the event in ES.
+		resp, err := b.Create(ctx, clusterInfo, events)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
+		require.Equal(t, len(events), resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, len(events), resp.Succeeded)
+
+		// Refresh the index.
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		require.NoError(t, err)
+
+		selector := "NOT dismissed = true"
+
+		// Here we simulate the logic implemented in searchEvents() in es-proxy where a selector from a query
+		// is combined with selectors defined in AlertExceptions to form a new selector.
+
+		// We make the ns and pod name parameters close to their limit length to test for worst case scenario.
+		// However manual testing shows that the length does not seem to matter, which suggests that the limit
+		// may be caused by the number of ES sub-expressions/queries rather than the length of the JSON being sent to ES...
+		padding := "-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very"
+		nsTemplate := "test-my-very%s-very-long-ns-%d"
+		podNameTemplate := "test-my-very%s-very-long-name-%d-*"
+
+		exceptionSelectors := []string{}
+		for i := 0; i < numExceptions; i++ {
+			ns := fmt.Sprintf(nsTemplate, padding, i)
+			podName := fmt.Sprintf(podNameTemplate, padding, i)
+			exceptionSelectors = append(exceptionSelectors, fmt.Sprintf("type = waf AND name = 'WAF Event' AND dest_namespace = '%s' AND dest_name IN { '%s' }", ns, podName))
+		}
+		exceptions := strings.Join(exceptionSelectors, " OR ")
+		combinedSelector := fmt.Sprintf("(%s) AND NOT (%s)", selector, exceptions)
+		r, e := b.List(ctx, clusterInfo, &v1.EventParams{
+			LogSelectionParams: v1.LogSelectionParams{
+				Selector: combinedSelector,
+			},
+		})
+		if expectedError {
+			require.Error(t, e)
+		} else {
+			require.NoError(t, e)
+			require.Equal(t, 1, len(r.Items))
+		}
+	}
+
+	tests := []struct {
+		name          string
+		numExceptions int
+		expectedError bool
+	}{
+		{"1 exception", 1, false},
+		{"Many exceptions", 1020, false},
+		{"Too many exceptions", 1025, true},
+	}
+
+	for _, tt := range tests {
+		RunAllModes(t, tt.name, func(t *testing.T) {
+			testEventsFiltering(t, tt.numExceptions, tt.expectedError)
 		})
 	}
 }
