@@ -144,5 +144,5 @@ docker run --privileged --net=host -e TYPHA_LOGSEVERITYSCREEN=INFO tigera/typha
 
 Calico Enterprise binaries are licensed under a proprietary license, with the exception of some [GPL licensed eBPF programs](https://github.com/projectcalico/felix/tree/master/bpf-gpl).
 
-Calico imports packages with a number of apache-compatible licenses. For more information, see [filesystem/licenses](./filesystem/licenses).
+Calico imports packages with a number of apache-compatible licenses. For more information, see [licenses](/licenses).
 In addition, the base container image contains pre-packaged software with a variety of licenses.

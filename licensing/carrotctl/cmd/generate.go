@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -88,7 +88,7 @@ var GenerateLicenseCmd = &cobra.Command{
 		claims.Expiry = parseExpiryDate(exp)
 
 		// Generate a random UUID for the licenseID.
-		claims.LicenseID = uuid.NewV4().String()
+		claims.LicenseID = uuid.NewString()
 
 		// If the nodes flag is specified then set the value here
 		// else leave it to nil (default) - which means unlimited nodes license.

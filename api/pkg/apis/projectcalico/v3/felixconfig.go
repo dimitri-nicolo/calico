@@ -591,6 +591,10 @@ type FelixConfigurationSpec struct {
 	// BPFDisableGROForIfaces is a regular expression that controls which interfaces Felix should disable the
 	// Generic Receive Offload [GRO] option.  It should not match the workload interfaces (usually named cali...).
 	BPFDisableGROForIfaces string `json:"bpfDisableGROForIfaces,omitempty" validate:"omitempty,regexp"`
+	// BPFExcludeCIDRsFromNAT is a list of CIDRs that are to be excluded from NAT
+	// resolution so that host can handle them. A typical usecase is node local
+	// DNS cache.
+	BPFExcludeCIDRsFromNAT *[]string `json:"bpfExcludeCIDRsFromNAT,omitempty" validate:"omitempty,cidrs"`
 
 	SyslogReporterNetwork string `json:"syslogReporterNetwork,omitempty"`
 	SyslogReporterAddress string `json:"syslogReporterAddress,omitempty"`
