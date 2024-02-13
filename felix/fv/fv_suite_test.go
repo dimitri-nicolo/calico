@@ -40,6 +40,7 @@ func init() {
 
 	// Avoid truncating diffs when Equals assertions fail.
 	format.TruncatedDiff = false
+	format.MaxLength = 0
 }
 
 func TestFv(t *testing.T) {

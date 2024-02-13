@@ -17,6 +17,7 @@ package intdataplane
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 
 	"testing"
 
@@ -27,6 +28,9 @@ import (
 
 func init() {
 	testutils.HookLogrusForGinkgo()
+
+	format.TruncatedDiff = false
+	format.MaxLength = 0
 }
 
 func TestIntdataplane(t *testing.T) {

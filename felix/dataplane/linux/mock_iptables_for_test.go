@@ -105,7 +105,6 @@ func (t *mockTable) checkChainsSameAsBefore(optionalOffset ...int) {
 	if len(optionalOffset) > 0 {
 		offset += optionalOffset[0]
 	}
-	format.MaxLength = 1000000
 	ExpectWithOffset(offset, currentChains).To(Equal(expectedChains), t.Table+" chains incorrect")
 }
 
