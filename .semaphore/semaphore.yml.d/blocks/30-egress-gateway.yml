@@ -16,7 +16,7 @@
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
-    - Prerequisites
+    - egress-gateway
   task:
     agent:
       machine:
