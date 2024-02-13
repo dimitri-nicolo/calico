@@ -4,6 +4,9 @@
     "@timestamp": {
       "type": "date"
     },
+    "generated_time": {
+      "type": "date"
+    },
     "start_time": {
       "type": "date",
       "format": "epoch_second"
