@@ -2,7 +2,7 @@
 package labelhandler
 
 import (
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/labelindex"
@@ -110,7 +110,7 @@ func (c *labelHandler) QueryEndpoints(selectorExpression string) ([]model.Key, e
 	}
 
 	// Start by adding the query selector to the required list of selectors.
-	selectorId := policyQueryId(uuid.NewV4())
+	selectorId := policyQueryId(uuid.New())
 	c.registerSelector(selectorId, parsedSel)
 
 	// The register selector call will result in synchronous matchStarted policyCallbacks to update our
@@ -128,7 +128,7 @@ func (c *labelHandler) QueryEndpoints(selectorExpression string) ([]model.Key, e
 // selector.
 func (c *labelHandler) QueryPolicies(labels map[string]string, profiles []string) []model.Key {
 	// Add a fake endpoint with the requested labels and profiles.
-	endpointId := policyQueryId(uuid.NewV4())
+	endpointId := policyQueryId(uuid.New())
 	c.index.UpdateLabels(endpointId, labels, profiles)
 
 	// The addition of the endpoint will result in synchronous policyCallbacks to update our matches.  Thus
@@ -144,7 +144,7 @@ func (c *labelHandler) QueryPolicies(labels map[string]string, profiles []string
 
 func (c *labelHandler) QueryRuleSelectors(labels map[string]string, profiles []string) []string {
 	// Add a fake endpoint with the requested labels and profiles.
-	endpointId := ruleQueryId(uuid.NewV4())
+	endpointId := ruleQueryId(uuid.New())
 	c.index.UpdateLabels(endpointId, labels, profiles)
 
 	// The addition of the endpoint will result in synchronous policyCallbacks to update our matches.  Thus

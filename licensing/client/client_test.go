@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/google/uuid"
 	. "github.com/onsi/gomega"
-	uuid "github.com/satori/go.uuid"
 	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/projectcalico/calico/licensing/client"
@@ -42,7 +42,7 @@ var claimToJWTTable = []struct {
 	{
 		description: "fully populated claim",
 		claim: client.LicenseClaims{
-			LicenseID:   uuid.NewV4().String(),
+			LicenseID:   uuid.NewString(),
 			Nodes:       &numNodes2,
 			Customer:    "meepster-inc",
 			Features:    []string{"nice", "features", "for", "you"},
@@ -56,7 +56,7 @@ var claimToJWTTable = []struct {
 	{
 		description: "only required fields for v2.1 populated",
 		claim: client.LicenseClaims{
-			LicenseID:   uuid.NewV4().String(),
+			LicenseID:   uuid.NewString(),
 			Nodes:       &numNodes1,
 			Customer:    "cool-cat-inc",
 			GracePeriod: 90,
@@ -68,7 +68,7 @@ var claimToJWTTable = []struct {
 	{
 		description: "partially populated claim",
 		claim: client.LicenseClaims{
-			LicenseID: uuid.NewV4().String(),
+			LicenseID: uuid.NewString(),
 			Nodes:     &numNodes2,
 			Customer:  "lame-banana-inc",
 			Claims: jwt.Claims{
