@@ -6,16 +6,8 @@ PACKAGE_NAME    ?= github.com/projectcalico/calico/es-proxy
 MOCKERY_FILE_PATHS= \
 	pkg/kibana/Client \
 
-TESLA ?= false
-
 ES_PROXY_IMAGE        ?=es-proxy
 BUILD_IMAGES          ?=$(ES_PROXY_IMAGE)
-
-ifeq ($(TESLA),true)
-	RELEASE_REGISTRIES    = gcr.io/tigera-tesla/tigera
-	BUILD_TAGS            ?= tesla
-	IMAGETAG_PREFIX       ?= tesla
-endif
 
 ##############################################################################
 # Include ../lib.Makefile before anything else

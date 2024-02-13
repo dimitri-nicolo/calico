@@ -9,13 +9,6 @@ IDS_CONTROLLER_IMAGE ?=intrusion-detection-controller
 JOB_INSTALLER_IMAGE  ?=intrusion-detection-job-installer
 BUILD_IMAGES         ?=$(IDS_CONTROLLER_IMAGE) $(JOB_INSTALLER_IMAGE)
 
-TESLA ?= false
-ifeq ($(TESLA),true)
-	RELEASE_REGISTRIES    = gcr.io/tigera-tesla/tigera
-	BUILD_TAGS            ?= tesla
-	IMAGETAG_PREFIX       ?= tesla
-endif
-
 ##############################################################################
 # Include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since

@@ -1,4 +1,5 @@
 # Calico Controllers for Kubernetes
+
 <img src="http://docs.projectcalico.org/images/felix.png" width="100" height="100">
 
 This repository contains a collection of kubernetes controllers for Calico. There are several controllers, each of which monitors
@@ -36,17 +37,19 @@ For more information, see `make help`.
 
 #### Build tags
 
-There are two variants of kube-controllers Cloud and Enterprise. To build or deploy the Cloud version preprend `TESLA=true` to make commands.
+There are two variants of kube-controllers Cloud and Enterprise. To build or deploy the Cloud version prepend `TESLA=true` to make commands.
 
 To add code that only targets one of the variants include the following at the top of the .go file:
 
 Cloud/Tesla only:
-```
+
+```go
 // +build tesla
 ```
 
 Enterprise only:
-```
+
+```go
 // +build !tesla
 ```
 
