@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1767,11 +1767,6 @@ var _ = Describe("rule metadata tests", func() {
 						},
 						Comment: nil,
 					},
-					{
-						Match:   iptables.Match().MarkSingleBitSet(0x80),
-						Action:  iptables.ReturnAction{},
-						Comment: nil,
-					},
 				},
 			},
 			&iptables.Chain{
@@ -1814,11 +1809,6 @@ var _ = Describe("rule metadata tests", func() {
 							Group:  1,
 							Prefix: "ARI0|long-policy-name-that-gets-hashed",
 						},
-						Comment: nil,
-					},
-					{
-						Match:   iptables.Match().MarkSingleBitSet(0x80),
-						Action:  iptables.ReturnAction{},
 						Comment: nil,
 					},
 				},

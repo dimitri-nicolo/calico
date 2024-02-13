@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -70,6 +70,15 @@ func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule
 		// deny associated with this policy iff the end-if-tier pass is hit (i.e. there are no enforced policies that
 		// actually drop the packet already).
 		rules = append(rules, r.StagedPolicyNoMatchRule(dir, name))
+	}
+	// Strip off any return rules at the end of the chain.  No matter their
+	// match criteria, they're effectively no-ops.
+	for len(rules) > 0 {
+		if _, ok := rules[len(rules)-1].Action.(iptables.ReturnAction); ok {
+			rules = rules[:len(rules)-1]
+		} else {
+			break
+		}
 	}
 	if len(chainComments) > 0 {
 		if len(rules) == 0 {

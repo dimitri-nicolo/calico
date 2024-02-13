@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ import (
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
-
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
+	"github.com/onsi/gomega/format"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/ipsets"
@@ -145,7 +145,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: denyAction},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
 								Action:  NfqueueAction{QueueNum: 100},
 								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
@@ -164,7 +164,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: denyAction},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 							dropVXLANRule,
 							dropIPIPRule,
 							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
@@ -223,11 +223,11 @@ var _ = Describe("Endpoints", func() {
 					"cali1234",
 					epMarkMapper,
 					true,
-					[]*proto.TierInfo{{
+					tiersToSinglePolGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"ai", "bi"},
 						EgressPolicies:  []string{"ae", "be"},
-					}},
+					}}),
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
 					0,
@@ -242,7 +242,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: denyAction},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
@@ -291,7 +291,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: denyAction},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 							dropVXLANRule,
 							dropIPIPRule,
 
@@ -342,16 +342,178 @@ var _ = Describe("Endpoints", func() {
 				})))
 			})
 
+			It("should render a workload endpoint with policy groups", func() {
+				format.MaxLength = 1000000
+
+				polGrpInABC := &PolicyGroup{
+					Tier:        "default",
+					Direction:   PolicyDirectionInbound,
+					PolicyNames: []string{"a", "b", "c"},
+					Selector:    "all()",
+				}
+				polGrpInEF := &PolicyGroup{
+					Tier:        "default",
+					Direction:   PolicyDirectionInbound,
+					PolicyNames: []string{"e", "f"},
+					Selector:    "someLabel == 'bar'",
+				}
+				polGrpOutAB := &PolicyGroup{
+					Tier:        "default",
+					Direction:   PolicyDirectionOutbound,
+					PolicyNames: []string{"a", "b"},
+					Selector:    "all()",
+				}
+				polGrpOutDE := &PolicyGroup{
+					Tier:        "default",
+					Direction:   PolicyDirectionOutbound,
+					PolicyNames: []string{"d", "e"},
+					Selector:    "someLabel == 'bar'",
+				}
+
+				Expect(renderer.WorkloadEndpointToIptablesChains(
+					"cali1234",
+					epMarkMapper,
+					true,
+					[]TierPolicyGroups{
+						{
+							Name: "default",
+							IngressPolicies: []*PolicyGroup{
+								polGrpInABC,
+								polGrpInEF,
+							},
+							EgressPolicies: []*PolicyGroup{
+								polGrpOutAB,
+								polGrpOutDE,
+							},
+						},
+					},
+					[]string{"prof1", "prof2"},
+					false,
+					0,
+					4,
+				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
+					{
+						Name: "cali-tw-cali1234",
+						Rules: []Rule{
+							// conntrack rules.
+							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+								Action: AcceptAction{}},
+							{Match: Match().ConntrackState("INVALID"),
+								Action: denyAction},
+
+							{Action: ClearMarkAction{Mark: 0x98}},
+
+							{Comment: []string{"Start of tier default"},
+								Action: ClearMarkAction{Mark: 0x10}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: polGrpInABC.ChainName()}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: polGrpInEF.ChainName()}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"}},
+
+							{Match: Match().MarkSingleBitSet(0x00001).
+								NotMarkMatchesWithMask(0x400000, 0x400000).
+								MarkClear(0x10),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)}},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
+							{Match: Match().MarkClear(0x10),
+								Action:  denyAction,
+								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)}},
+
+							{Action: JumpAction{Target: "cali-pri-prof1"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+							{Action: JumpAction{Target: "cali-pri-prof2"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)}},
+							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
+							{Action: denyAction,
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)}},
+						},
+					},
+					{
+						Name: "cali-fw-cali1234",
+						Rules: []Rule{
+							// conntrack rules.
+							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+								Action: AcceptAction{}},
+							{Match: Match().ConntrackState("INVALID"),
+								Action: denyAction},
+
+							{Action: ClearMarkAction{Mark: 0x98}},
+							dropVXLANRule,
+							dropIPIPRule,
+
+							{Comment: []string{"Start of tier default"},
+								Action: ClearMarkAction{Mark: 0x10}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: polGrpOutAB.ChainName()}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: polGrpOutDE.ChainName()}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)}},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
+							{Match: Match().MarkClear(0x10),
+								Action:  denyAction,
+								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)}},
+
+							{Action: JumpAction{Target: "cali-pro-prof1"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+							{Action: JumpAction{Target: "cali-pro-prof2"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
+							{Action: denyAction,
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)}},
+						},
+					},
+					{
+						Name: "cali-sm-cali1234",
+						Rules: []Rule{
+							{Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00}},
+						},
+					},
+				})))
+			})
+
 			It("should render a fully-loaded workload endpoint - one staged policy, one enforced", func() {
 				Expect(renderer.WorkloadEndpointToIptablesChains(
 					"cali1234",
 					epMarkMapper,
 					true,
-					[]*proto.TierInfo{{
+					tiersToSinglePolGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"staged:ai", "bi"},
 						EgressPolicies:  []string{"ae", "staged:be"},
-					}},
+					}}),
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
 					0,
@@ -366,7 +528,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: denyAction},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
@@ -412,7 +574,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: denyAction},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 							dropVXLANRule,
 							dropIPIPRule,
 
@@ -465,11 +627,11 @@ var _ = Describe("Endpoints", func() {
 					"cali1234",
 					epMarkMapper,
 					true,
-					[]*proto.TierInfo{{
+					tiersToSinglePolGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"staged:ai", "staged:bi"},
 						EgressPolicies:  []string{"staged:ae", "staged:be"},
-					}},
+					}}),
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
 					0,
@@ -484,7 +646,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: denyAction},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
@@ -522,7 +684,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: denyAction},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 							dropVXLANRule,
 							dropIPIPRule,
 
@@ -562,18 +724,128 @@ var _ = Describe("Endpoints", func() {
 				})))
 			})
 
+			It("should render a fully-loaded workload endpoint - staged policy group, end-of-tier pass", func() {
+				Expect(renderer.WorkloadEndpointToIptablesChains(
+					"cali1234",
+					epMarkMapper,
+					true,
+					[]TierPolicyGroups{
+						{
+							Name: "default",
+							IngressPolicies: []*PolicyGroup{{
+								Tier:        "default",
+								Direction:   PolicyDirectionInbound,
+								PolicyNames: []string{"staged:ai", "staged:bi"},
+								Selector:    "all()",
+							}},
+							EgressPolicies: []*PolicyGroup{{
+								Tier:        "default",
+								Direction:   PolicyDirectionOutbound,
+								PolicyNames: []string{"staged:ae", "staged:be"},
+								Selector:    "all()",
+							}},
+						},
+					},
+					[]string{"prof1", "prof2"},
+					NotAnEgressGateway,
+					0,
+					UndefinedIPVersion,
+				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
+					{
+						Name: "cali-tw-cali1234",
+						Rules: []Rule{
+							// conntrack rules.
+							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+								Action: AcceptAction{}},
+							{Match: Match().ConntrackState("INVALID"),
+								Action: denyAction},
+
+							{Action: ClearMarkAction{Mark: 0x98}},
+
+							{Comment: []string{"Start of tier default"},
+								Action: ClearMarkAction{Mark: 0x10}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: "cali-gi-HSctAbeg5SPOCTqXywv3"}},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 1, Prefix: "PPI|default"}},
+
+							{Action: JumpAction{Target: "cali-pri-prof1"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+							{Action: JumpAction{Target: "cali-pri-prof2"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
+							{Action: denyAction,
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)}},
+						},
+					},
+					{
+						Name: "cali-fw-cali1234",
+						Rules: []Rule{
+							// conntrack rules.
+							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+								Action: AcceptAction{}},
+							{Match: Match().ConntrackState("INVALID"),
+								Action: denyAction},
+
+							{Action: ClearMarkAction{Mark: 0x98}},
+							dropVXLANRule,
+							dropIPIPRule,
+
+							{Comment: []string{"Start of tier default"},
+								Action: ClearMarkAction{Mark: 0x10}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: "cali-go-Yzgack0Da6LjbAhZ1OEM"}},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 2, Prefix: "PPE|default"}},
+
+							{Action: JumpAction{Target: "cali-pro-prof1"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+							{Action: JumpAction{Target: "cali-pro-prof2"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
+							{Action: denyAction,
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)}},
+						},
+					},
+					{
+						Name: "cali-sm-cali1234",
+						Rules: []Rule{
+							{Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00}},
+						},
+					},
+				})))
+			})
+
 			It("should render a host endpoint", func() {
 				actual := renderer.HostEndpointToFilterChains("eth0",
-					[]*proto.TierInfo{{
+					tiersToSinglePolGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"ai", "bi"},
 						EgressPolicies:  []string{"ae", "be"},
-					}},
-					[]*proto.TierInfo{{
+					}}),
+					tiersToSinglePolGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"afi", "bfi"},
 						EgressPolicies:  []string{"afe", "bfe"},
-					}},
+					}}),
 					epMarkMapper,
 					[]string{"prof1", "prof2"},
 				)
@@ -590,7 +862,7 @@ var _ = Describe("Endpoints", func() {
 							// Host endpoints get extra failsafe rules.
 							{Action: JumpAction{Target: "cali-failsafe-out"}},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
@@ -643,7 +915,7 @@ var _ = Describe("Endpoints", func() {
 							// Host endpoints get extra failsafe rules.
 							{Action: JumpAction{Target: "cali-failsafe-in"}},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
@@ -693,7 +965,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: denyAction},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
@@ -726,7 +998,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: denyAction},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
@@ -762,11 +1034,11 @@ var _ = Describe("Endpoints", func() {
 
 			It("should render host endpoint raw chains with untracked policies", func() {
 				Expect(renderer.HostEndpointToRawChains("eth0",
-					[]*proto.TierInfo{{
+					tiersToSinglePolGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"c"},
 						EgressPolicies:  []string{"c"},
-					}},
+					}}),
 				)).To(Equal([]*Chain{
 					{
 						Name: "cali-th-eth0",
@@ -774,7 +1046,7 @@ var _ = Describe("Endpoints", func() {
 							// Host endpoints get extra failsafe rules.
 							{Action: JumpAction{Target: "cali-failsafe-out"}},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
@@ -796,7 +1068,7 @@ var _ = Describe("Endpoints", func() {
 							// Host endpoints get extra failsafe rules.
 							{Action: JumpAction{Target: "cali-failsafe-in"}},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
@@ -818,10 +1090,10 @@ var _ = Describe("Endpoints", func() {
 			It("should render host endpoint mangle chains with pre-DNAT policies", func() {
 				Expect(renderer.HostEndpointToMangleIngressChains(
 					"eth0",
-					[]*proto.TierInfo{{
+					tiersToSinglePolGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"c"},
-					}},
+					}}),
 				)).To(Equal([]*Chain{
 					{
 						Name: "cali-fh-eth0",
@@ -837,7 +1109,7 @@ var _ = Describe("Endpoints", func() {
 							// Host endpoints get extra failsafe rules.
 							{Action: JumpAction{Target: "cali-failsafe-in"}},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
@@ -858,11 +1130,11 @@ var _ = Describe("Endpoints", func() {
 					"cali1234",
 					epMarkMapper,
 					true,
-					[]*proto.TierInfo{{
+					tiersToSinglePolGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"ai", "bi"},
 						EgressPolicies:  []string{"ae", "be"},
-					}},
+					}}),
 					[]string{"prof1", "prof2"},
 					IsAnEgressGateway,
 					8080,
@@ -875,7 +1147,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
 								Action: AcceptAction{}},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Match: Match().ProtocolNum(ProtoUDP).
 								SourceIPSet("cali40all-hosts-net").
@@ -910,7 +1182,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
 								Action: AcceptAction{}},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 							{Match: Match().ProtocolNum(ProtoUDP).
 								DestIPSet("cali40all-hosts-net").
 								DestPorts(uint16(EgressIPVXLANPort)),
@@ -996,7 +1268,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
 								Action: ReturnAction{}},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
 								Action:  NfqueueAction{QueueNum: 100},
@@ -1016,7 +1288,7 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
 								Action: ReturnAction{}},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 							dropVXLANRule,
 							dropIPIPRule,
 
@@ -1041,10 +1313,10 @@ var _ = Describe("Endpoints", func() {
 			It("should render host endpoint mangle chains with pre-DNAT policies", func() {
 				Expect(renderer.HostEndpointToMangleIngressChains(
 					"eth0",
-					[]*proto.TierInfo{{
+					tiersToSinglePolGroups([]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"c"},
-					}},
+					}}),
 				)).To(Equal([]*Chain{
 					{
 						Name: "cali-fh-eth0",
@@ -1056,7 +1328,7 @@ var _ = Describe("Endpoints", func() {
 							// Host endpoints get extra failsafe rules.
 							{Action: JumpAction{Target: "cali-failsafe-in"}},
 
-							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: ClearMarkAction{Mark: 0x98}},
 
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
@@ -1097,7 +1369,7 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: denyAction},
 
-								{Action: ClearMarkAction{Mark: 0x88}},
+								{Action: ClearMarkAction{Mark: 0x98}},
 								{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
 									Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
 									Action:  NfqueueAction{QueueNum: 100}},
@@ -1115,7 +1387,7 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: denyAction},
 
-								{Action: ClearMarkAction{Mark: 0x88}},
+								{Action: ClearMarkAction{Mark: 0x98}},
 								dropIPIPRule,
 								{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
 									Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
@@ -1160,7 +1432,7 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: denyAction},
 
-								{Action: ClearMarkAction{Mark: 0x88}},
+								{Action: ClearMarkAction{Mark: 0x98}},
 								{Match: Match().MarkSingleBitSet(0x0001).NotMarkMatchesWithMask(0x400000, 0x400000),
 									Action:  NfqueueAction{QueueNum: 100},
 									Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)}},
@@ -1178,7 +1450,7 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: denyAction},
 
-								{Action: ClearMarkAction{Mark: 0x88}},
+								{Action: ClearMarkAction{Mark: 0x98}},
 								dropVXLANRule,
 								{Match: Match().MarkSingleBitSet(0x0001).NotMarkMatchesWithMask(0x400000, 0x400000),
 									Action:  NfqueueAction{QueueNum: 100},
@@ -1223,7 +1495,7 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: denyAction},
 
-								{Action: ClearMarkAction{Mark: 0x88}},
+								{Action: ClearMarkAction{Mark: 0x98}},
 								{Match: Match().MarkSingleBitSet(0x0001).NotMarkMatchesWithMask(0x400000, 0x400000),
 									Action:  NfqueueAction{QueueNum: 100},
 									Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)}},
@@ -1241,7 +1513,7 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: denyAction},
 
-								{Action: ClearMarkAction{Mark: 0x88}},
+								{Action: ClearMarkAction{Mark: 0x98}},
 								{Match: Match().MarkSingleBitSet(0x0001).NotMarkMatchesWithMask(0x400000, 0x400000),
 									Action:  NfqueueAction{QueueNum: 100},
 									Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)}},
@@ -1286,11 +1558,11 @@ var _ = Describe("Endpoints", func() {
 						"cali1234",
 						epMarkMapper,
 						true,
-						[]*proto.TierInfo{{
+						tiersToSinglePolGroups([]*proto.TierInfo{{
 							Name:            "default",
 							IngressPolicies: []string{"staged:ai", "bi"},
 							EgressPolicies:  []string{"ae", "staged:be"},
-						}},
+						}}),
 						[]string{"prof1", "prof2"},
 						NotAnEgressGateway,
 						0,
@@ -1305,7 +1577,7 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: denyAction},
 
-								{Action: ClearMarkAction{Mark: 0x88}},
+								{Action: ClearMarkAction{Mark: 0x98}},
 
 								{Comment: []string{"Start of tier default"},
 									Action: ClearMarkAction{Mark: 0x10}},
@@ -1345,7 +1617,7 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: denyAction},
 
-								{Action: ClearMarkAction{Mark: 0x88}},
+								{Action: ClearMarkAction{Mark: 0x98}},
 								dropVXLANRule,
 								dropIPIPRule,
 
@@ -1401,4 +1673,451 @@ func trimSMChain(ipvsEnable bool, chains []*Chain) []*Chain {
 	}
 
 	return result
+}
+
+func tiersToSinglePolGroups(tiers []*proto.TierInfo) (tierGroups []TierPolicyGroups) {
+	for _, t := range tiers {
+		tg := TierPolicyGroups{
+			Name: t.Name,
+		}
+		for _, n := range t.IngressPolicies {
+			tg.IngressPolicies = append(tg.IngressPolicies, &PolicyGroup{
+				Tier:        t.Name,
+				PolicyNames: []string{n},
+			})
+		}
+		for _, n := range t.EgressPolicies {
+			tg.EgressPolicies = append(tg.EgressPolicies, &PolicyGroup{
+				Tier:        t.Name,
+				PolicyNames: []string{n},
+			})
+		}
+		tierGroups = append(tierGroups, tg)
+	}
+
+	return
+}
+
+var _ = Describe("PolicyGroups", func() {
+	It("should make sensible UIDs", func() {
+		pgs := []PolicyGroup{
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: nil,
+				Selector:    "all()",
+			},
+			{
+				Tier:        "foo",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: nil,
+				Selector:    "all()",
+			},
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionOutbound,
+				PolicyNames: nil,
+				Selector:    "all()",
+			},
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: []string{"a"},
+				Selector:    "all()",
+			},
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: nil,
+				Selector:    "a == 'b'",
+			},
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: []string{"a", "b"},
+				Selector:    "all()",
+			},
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: []string{"ab"},
+				Selector:    "all()",
+			},
+			{
+				Tier:        "default",
+				Direction:   PolicyDirectionInbound,
+				PolicyNames: []string{"aaa", "bbb"},
+				Selector:    "all()",
+			},
+			{
+				Tier:      "default",
+				Direction: PolicyDirectionInbound,
+				// Between this and the entry above, we check that the data
+				// sent to the hasher is delimited somehow.
+				PolicyNames: []string{"aaab", "bb"},
+				Selector:    "all()",
+			},
+		}
+
+		seenUIDs := map[string]PolicyGroup{}
+		for _, pg := range pgs {
+			uid := pg.UniqueID()
+			Expect(seenUIDs).NotTo(HaveKey(uid), fmt.Sprintf("UID clash with %v", pg))
+			Expect(pg.UniqueID()).To(Equal(uid), "UID different on each call")
+		}
+	})
+
+	It("should detect staged policies", func() {
+		pg := PolicyGroup{
+			Tier:      "default",
+			Direction: PolicyDirectionInbound,
+			PolicyNames: []string{
+				"namespace/staged:foo",
+			},
+			Selector: "all()",
+		}
+		Expect(pg.HasNonStagedPolicies()).To(BeFalse())
+
+		pg.PolicyNames = []string{
+			"staged:foo",
+		}
+		Expect(pg.HasNonStagedPolicies()).To(BeFalse())
+
+		pg.PolicyNames = []string{
+			"namespace/staged:foo",
+			"namespace/bar",
+		}
+		Expect(pg.HasNonStagedPolicies()).To(BeTrue())
+	})
+})
+
+var _ = table.DescribeTable("PolicyGroup chains",
+	func(group PolicyGroup, expectedRules []Rule) {
+		renderer := NewRenderer(Config{
+			DNSPolicyNfqueueID:               100,
+			DNSPacketsNfqueueID:              101,
+			IptablesMarkEgress:               0x4,
+			IptablesMarkAccept:               0x8,
+			IptablesMarkPass:                 0x10,
+			IptablesMarkScratch0:             0x20,
+			IptablesMarkScratch1:             0x40,
+			IptablesMarkDrop:                 0x80,
+			IptablesMarkEndpoint:             0xff00,
+			IptablesMarkNonCaliEndpoint:      0x0100,
+			IptablesMarkDNSPolicy:            0x00001,
+			IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+		})
+		chains := renderer.PolicyGroupToIptablesChains(&group)
+		Expect(chains).To(HaveLen(1))
+		Expect(chains[0].Name).ToNot(BeEmpty())
+		Expect(chains[0].Name).To(Equal(group.ChainName()))
+		Expect(chains[0].Rules).To(Equal(expectedRules))
+	},
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionInbound,
+			PolicyNames: []string{"a"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-pi-default/a"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionInbound,
+			PolicyNames: []string{"a", "b"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-pi-default/a"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/b"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionInbound,
+			PolicyNames: []string{"a", "b", "c"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-pi-default/a"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/b"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/c"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionInbound,
+			PolicyNames: []string{"a", "b", "c", "d"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-pi-default/a"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/b"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/c"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/d"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionInbound,
+			PolicyNames: []string{"a", "b", "c", "d", "e"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-pi-default/a"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/b"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/c"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/d"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/e"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionInbound,
+			PolicyNames: []string{"a", "b", "c", "d", "e", "f"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-pi-default/a"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/b"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/c"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/d"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-pi-default/e"},
+			},
+			{
+				// Only get a return action every 5 rules and only if it's
+				// not the last action.
+				Match:   Match().MarkNotClear(0x98),
+				Action:  ReturnAction{},
+				Comment: []string{"Return on verdict"},
+			},
+			{
+				Action: JumpAction{Target: "cali-pi-default/f"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionOutbound,
+			PolicyNames: []string{"a", "b", "c", "d", "e", "f", "g"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			{
+				Action: JumpAction{Target: "cali-po-default/a"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/b"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/c"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/d"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/e"},
+			},
+			{
+				Match:   Match().MarkNotClear(0x98),
+				Action:  ReturnAction{},
+				Comment: []string{"Return on verdict"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/f"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/g"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionOutbound,
+			PolicyNames: []string{"staged:a", "staged:b", "staged:c", "d", "e", "f", "g"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			// Match criteria and return rules get skipped until we hit the
+			// first non-staged policy.
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:a"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:b"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:c"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/d"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/e"},
+			},
+			{
+				Match:   Match().MarkNotClear(0x98),
+				Action:  ReturnAction{},
+				Comment: []string{"Return on verdict"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/f"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/g"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionOutbound,
+			PolicyNames: []string{"staged:a", "staged:b", "staged:c", "d", "staged:e", "f", "g"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			// Match criteria and return rules get skipped until we hit the
+			// first non-staged policy.
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:a"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:b"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:c"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/d"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/staged:e"},
+			},
+			{
+				Match:   Match().MarkNotClear(0x98),
+				Action:  ReturnAction{},
+				Comment: []string{"Return on verdict"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/f"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/g"},
+			},
+		},
+	),
+	polGroupEntry(
+		PolicyGroup{
+			Tier:        "default",
+			Direction:   PolicyDirectionOutbound,
+			PolicyNames: []string{"staged:a", "staged:b", "staged:c", "staged:d", "staged:e", "f", "g"},
+			Selector:    "all()",
+		},
+		[]Rule{
+			// Match criteria and return rules get skipped until we hit the
+			// first non-staged policy.
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:a"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:b"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:c"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:d"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/staged:e"},
+			},
+			{
+				Action: JumpAction{Target: "cali-po-default/f"},
+			},
+			{
+				Match:  Match().MarkClear(0x98),
+				Action: JumpAction{Target: "cali-po-default/g"},
+			},
+		},
+	),
+)
+
+func polGroupEntry(group PolicyGroup, rules []Rule) table.TableEntry {
+	return table.Entry(
+		fmt.Sprintf("%v", group),
+		group,
+		rules,
+	)
 }

@@ -86,6 +86,10 @@ func (r Rule) renderInner(fragments []string, prefixFragment string, features *e
 	return strings.Join(fragments, " ")
 }
 
+func (r Rule) GomegaString() string {
+	return r.renderInner(nil, "", &environment.Features{})
+}
+
 var shellUnsafe = regexp.MustCompile(`[^\w @%+=:,./-]`)
 
 // escapeComment replaces anything other than "safe" shell characters with an

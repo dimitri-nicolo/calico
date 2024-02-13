@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -89,6 +89,9 @@ const (
 	ProfileInboundPfx  ProfileChainNamePrefix = ChainNamePrefix + "pri-"
 	ProfileOutboundPfx ProfileChainNamePrefix = ChainNamePrefix + "pro-"
 
+	PolicyGroupInboundPrefix  string = ChainNamePrefix + "gi-"
+	PolicyGroupOutboundPrefix string = ChainNamePrefix + "go-"
+
 	ChainWorkloadToHost       = ChainNamePrefix + "wl-to-host"
 	ChainFromWorkloadDispatch = ChainNamePrefix + "from-wl-dispatch"
 	ChainToWorkloadDispatch   = ChainNamePrefix + "to-wl-dispatch"
@@ -151,6 +154,13 @@ const (
 
 	ChainFilterInputTProxy  = ChainNamePrefix + "input-filter-tproxy"
 	ChainFilterOutputTProxy = ChainNamePrefix + "output-filter-tproxy"
+)
+
+type PolicyDirection string
+
+const (
+	PolicyDirectionInbound  PolicyDirection = "inbound"  // AKA ingress
+	PolicyDirectionOutbound PolicyDirection = "outbound" // AKA egress
 )
 
 type RuleAction byte
@@ -278,7 +288,7 @@ type RuleRenderer interface {
 		ifaceName string,
 		epMarkMapper EndpointMarkMapper,
 		adminUp bool,
-		tiers []*proto.TierInfo,
+		tiers []TierPolicyGroups,
 		profileIDs []string,
 		isEgressGateway bool,
 		egwHealthPort uint16,
@@ -298,32 +308,33 @@ type RuleRenderer interface {
 	ToHostDispatchChains(map[string]proto.HostEndpointID, string) []*iptables.Chain
 	HostEndpointToFilterChains(
 		ifaceName string,
-		tiers []*proto.TierInfo,
-		forwardTiers []*proto.TierInfo,
+		tiers []TierPolicyGroups,
+		forwardTiers []TierPolicyGroups,
 		epMarkMapper EndpointMarkMapper,
 		profileIDs []string,
 	) []*iptables.Chain
 	HostEndpointToMangleEgressChains(
 		ifaceName string,
-		tiers []*proto.TierInfo,
+		tiers []TierPolicyGroups,
 		profileIDs []string,
 	) []*iptables.Chain
 	HostEndpointToRawEgressChain(
 		ifaceName string,
-		untrackedTiers []*proto.TierInfo,
+		untrackedTiers []TierPolicyGroups,
 	) *iptables.Chain
 	HostEndpointToRawChains(
 		ifaceName string,
-		untrackedTiers []*proto.TierInfo,
+		untrackedTiers []TierPolicyGroups,
 	) []*iptables.Chain
 	HostEndpointToMangleIngressChains(
 		ifaceName string,
-		preDNATTiers []*proto.TierInfo,
+		preDNATTiers []TierPolicyGroups,
 	) []*iptables.Chain
 
 	PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain
 	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) (inbound, outbound *iptables.Chain)
 	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked, staged bool) []iptables.Rule
+	PolicyGroupToIptablesChains(group *PolicyGroup) []*iptables.Chain
 
 	MakeNatOutgoingRule(protocol string, action iptables.Action, ipVersion uint8) iptables.Rule
 	NATOutgoingChain(active bool, ipVersion uint8) *iptables.Chain
