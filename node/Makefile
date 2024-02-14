@@ -97,7 +97,7 @@ WINDOWS_ARCHIVE_BINARY := $(WINDOWS_ARCHIVE_ROOT)/calico-node.exe
 WINDOWS_ARCHIVE_TAG?=$(GIT_VERSION)
 WINDOWS_ARCHIVE := dist/tigera-calico-windows-$(WINDOWS_ARCHIVE_TAG).zip
 # Version of NSSM to download.
-# We host nssm ourself in Calico OSS, when updating version the new zip needs to be added to release artifacts
+# We host nssm ourselves in Calico OSS, when updating the version number the new zip needs to be added to release artifacts
 WINDOWS_NSSM_VERSION=2.24-103-gdee49fc
 # Explicit list of files that we copy in from the mod cache.  This is required because the copying rules we use are pattern-based
 # and they only work with an explicit rule of the form "$(WINDOWS_MOD_CACHED_FILES): <file path from project root>" (otherwise,
