@@ -1025,9 +1025,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		var conntrackScanner *bpfconntrack.Scanner
 		if config.BPFIpv6Enabled {
-			conntrackScanner = startBPFDataplaneComponents(proto.IPVersion_IPV6, bpfMaps.V6, ipSetIDAllocator, config, ipsetsManagerV6, dp)
+			conntrackScanner, bpfIPSets = startBPFDataplaneComponents(proto.IPVersion_IPV6, bpfMaps.V6, ipSetIDAllocator, config, ipsetsManagerV6, dp)
 		} else {
-			conntrackScanner = startBPFDataplaneComponents(proto.IPVersion_IPV4, bpfMaps.V4, ipSetIDAllocator, config, ipsetsManager, dp)
+			conntrackScanner, bpfIPSets = startBPFDataplaneComponents(proto.IPVersion_IPV4, bpfMaps.V4, ipSetIDAllocator, config, ipsetsManager, dp)
 		}
 
 		filterTbl := filterTableV4
@@ -1043,6 +1043,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				"- BPFHostNetworkedNAT is disabled.")
 		}
 
+		config.LookupsCache.EnableID64()
 		// Forwarding into an IPIP tunnel fails silently because IPIP tunnels are L3 devices and support for
 		// L3 devices in BPF is not available yet.  Disable the FIB lookup in that case.
 		fibLookupEnabled := !config.RulesConfig.IPIPEnabled
@@ -3037,7 +3038,7 @@ func startBPFDataplaneComponents(ipFamily proto.IPVersion,
 	ipSetIDAllocator *idalloc.IDAllocator,
 	config Config,
 	ipSetsMgr *common.IPSetsManager,
-	dp *InternalDataplane) *bpfconntrack.Scanner {
+	dp *InternalDataplane) (*bpfconntrack.Scanner, egressIPSets) {
 
 	ipSetConfig := config.RulesConfig.IPSetConfigV4
 	ipSetEntry := bpfipsets.IPSetEntryFromBytes
@@ -3083,6 +3084,19 @@ func startBPFDataplaneComponents(ipFamily proto.IPVersion,
 	dp.ipSets = append(dp.ipSets, ipSets)
 	ipSetsMgr.AddDataplane(ipSets)
 
+	if ipFamily == proto.IPVersion_IPV4 {
+		// Create an 'ipset' to represent trusted DNS servers.
+		trustedDNSServers := []string{}
+		for _, serverPort := range config.RulesConfig.DNSTrustedServers {
+			trustedDNSServers = append(trustedDNSServers,
+				fmt.Sprintf("%v,udp:%v", serverPort.IP, serverPort.Port))
+		}
+		ipSets.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: bpfipsets.TrustedDNSServersName, Type: ipsets.IPSetTypeHashIPPort},
+			trustedDNSServers,
+		)
+	}
+
 	failsafeMgr := failsafes.NewManager(
 		bpfmaps.FailsafesMap,
 		config.RulesConfig.FailsafeInboundHostPorts,
@@ -3121,5 +3135,5 @@ func startBPFDataplaneComponents(ipFamily proto.IPVersion,
 	} else {
 		log.Info("BPF enabled but no Kubernetes client available, unable to run kube-proxy module.")
 	}
-	return conntrackScanner
+	return conntrackScanner, ipSets
 }
