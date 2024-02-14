@@ -390,6 +390,11 @@ type InternalDataplane struct {
 	ipSecPolTable  *ipsec.PolicyTable
 	ipSecDataplane ipSecDataplane
 
+	vxlanManager   *vxlanManager
+	vxlanParentC   chan string
+	vxlanManagerV6 *vxlanManager
+	vxlanParentCV6 chan string
+
 	wireguardManager   *wireguardManager
 	wireguardManagerV6 *wireguardManager
 
@@ -490,7 +495,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	// Get the feature detector and feature set upfront.
-	featureDetector := environment.NewFeatureDetector(config.FeatureDetectOverrides)
+	featureDetector := environment.NewFeatureDetector(
+		config.FeatureDetectOverrides,
+		environment.WithFeatureGates(config.FeatureGates),
+	)
 	dataplaneFeatures := featureDetector.GetFeatures()
 
 	// Based on the feature set, fix the DNSPolicyMode based on dataplane and Kernel version. The delay packet modes
@@ -663,7 +671,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			routeTableVXLAN = &routetable.DummyTable{}
 		}
 
-		vxlanManager := newVXLANManager(
+		dp.vxlanManager = newVXLANManager(
 			ipSetsV4,
 			routeTableVXLAN,
 			"vxlan.calico",
@@ -672,8 +680,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			4,
 			featureDetector,
 		)
-		go vxlanManager.KeepVXLANDeviceInSync(config.VXLANMTU, dataplaneFeatures.ChecksumOffloadBroken, 10*time.Second)
-		dp.RegisterManager(vxlanManager)
+		dp.vxlanParentC = make(chan string, 1)
+		go dp.vxlanManager.KeepVXLANDeviceInSync(context.Background(), config.VXLANMTU, dataplaneFeatures.ChecksumOffloadBroken, 10*time.Second, dp.vxlanParentC)
+		dp.RegisterManager(dp.vxlanManager)
 	} else {
 		// Start a cleanup goroutine not to block felix if it needs to retry
 		go cleanUpVXLANDevice("vxlan.calico")
@@ -1450,7 +1459,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				routeTableVXLANV6 = &routetable.DummyTable{}
 			}
 
-			vxlanManagerV6 := newVXLANManager(
+			dp.vxlanManagerV6 = newVXLANManager(
 				ipSetsV6,
 				routeTableVXLANV6,
 				"vxlan-v6.calico",
@@ -1459,8 +1468,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				6,
 				featureDetector,
 			)
-			go vxlanManagerV6.KeepVXLANDeviceInSync(config.VXLANMTUV6, dataplaneFeatures.ChecksumOffloadBroken, 10*time.Second)
-			dp.RegisterManager(vxlanManagerV6)
+			dp.vxlanParentCV6 = make(chan string, 1)
+			go dp.vxlanManagerV6.KeepVXLANDeviceInSync(context.Background(), config.VXLANMTUV6, dataplaneFeatures.ChecksumOffloadBroken, 10*time.Second, dp.vxlanParentCV6)
+			dp.RegisterManager(dp.vxlanManagerV6)
 		} else {
 			// Start a cleanup goroutine not to block felix if it needs to retry
 			go cleanUpVXLANDevice("vxlan-v6.calico")
@@ -2543,6 +2553,10 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			d.egressIPManager.OnEGWHealthReport(msg)
 			// Drain the rest of the channel.  This makes sure that we combine work if we're getting backed up.
 			drainChan(d.egwHealthReportC, d.egressIPManager.OnEGWHealthReport)
+		case name := <-d.vxlanParentC:
+			d.vxlanManager.OnParentNameUpdate(name)
+		case name := <-d.vxlanParentCV6:
+			d.vxlanManagerV6.OnParentNameUpdate(name)
 		case <-ipSetsRefreshC:
 			log.Debug("Refreshing IP sets state")
 			d.forceIPSetsRefresh = true
