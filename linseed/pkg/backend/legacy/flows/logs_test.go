@@ -69,9 +69,8 @@ func TestFlowLogBasic(t *testing.T) {
 		require.Len(t, resp.Items, 1)
 		require.NotEmpty(t, resp.Items[0].ID)
 		resp.Items[0].ID = ""
-
-		expected, generated := changeGeneratedTime(f, resp.Items[0])
-		require.Equal(t, expected, generated)
+		resp.Items[0].GeneratedTime = nil
+		require.Equal(t, f, resp.Items[0])
 
 		// Attempt to read it back with a different tenant ID - it should return nothing.
 		resp, err = flb.List(ctx, bapi.ClusterInfo{Tenant: "dummy", Cluster: cluster}, &opts)
@@ -170,12 +169,8 @@ func TestFlowSorting(t *testing.T) {
 
 		// Assert that the logs are returned in the correct order.
 		copyOfLogs := backendutils.AssertLogIDAndCopyFlowLogsWithoutID(t, r)
-
-		exp1, generated1 := changeGeneratedTime(*fl1, copyOfLogs[0])
-		require.Equal(t, exp1, generated1)
-
-		exp2, generated2 := changeGeneratedTime(*fl2, copyOfLogs[1])
-		require.Equal(t, exp2, generated2)
+		require.Equal(t, *fl1, copyOfLogs[0])
+		require.Equal(t, *fl2, copyOfLogs[1])
 
 		// Query again, this time sorting in order to get the logs in reverse order.
 		params.Sort = []v1.SearchRequestSortBy{
@@ -190,12 +185,8 @@ func TestFlowSorting(t *testing.T) {
 		require.Nil(t, r.AfterKey)
 		require.Empty(t, err)
 		copyOfLogs = backendutils.AssertLogIDAndCopyFlowLogsWithoutID(t, r)
-
-		exp1, generated1 = changeGeneratedTime(*fl2, copyOfLogs[0])
-		require.Equal(t, exp1, generated1)
-
-		exp2, generated2 = changeGeneratedTime(*fl1, copyOfLogs[1])
-		require.Equal(t, exp2, generated2)
+		require.Equal(t, *fl2, copyOfLogs[0])
+		require.Equal(t, *fl1, copyOfLogs[1])
 	})
 }
 
@@ -534,8 +525,6 @@ func TestFlowLogFiltering(t *testing.T) {
 				copyOfLogs := backendutils.AssertLogIDAndCopyFlowLogsWithoutID(t, r)
 
 				// Assert that the correct logs are returned.
-				fl1.GeneratedTime = nil
-				fl2.GeneratedTime = nil
 				if testcase.ExpectLog1 {
 					require.Contains(t, copyOfLogs, *fl1)
 				}
@@ -685,11 +674,4 @@ func TestAggregations(t *testing.T) {
 			require.Equal(t, float64(4), *count.Value)
 		})
 	}
-}
-
-func changeGeneratedTime(expected, generated v1.FlowLog) (v1.FlowLog, v1.FlowLog) {
-	expected.GeneratedTime = nil
-	generated.GeneratedTime = nil
-
-	return expected, generated
 }
