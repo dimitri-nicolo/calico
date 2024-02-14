@@ -40866,7 +40866,7 @@ spec:
           operator: Exists
         - effect: NoSchedule
           operator: Exists
-      serviceAccountName: tigera-operator-enterprise
+      serviceAccountName: tigera-operator
       # Set the termination grace period to match how long the operator will wait for
       # resources to terminate when being uninstalled.
       terminationGracePeriodSeconds: 60
