@@ -25,10 +25,6 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
-const (
-	maxTTL = 6 * time.Minute
-)
-
 type Searcher interface {
 	Run(context.Context, cacher.GlobalThreatFeedCacher)
 	SetFeed(*v3.GlobalThreatFeed)
@@ -113,14 +109,14 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 	}
 }
 
-func NewSearcher(feed *v3.GlobalThreatFeed, period time.Duration, suspiciousSet storage.SuspiciousSet, events storage.Events, geoDB geodb.GeoDatabase) Searcher {
+func NewSearcher(feed *v3.GlobalThreatFeed, period time.Duration, suspiciousSet storage.SuspiciousSet, events storage.Events, geoDB geodb.GeoDatabase, maxLinseedTimeSkew int) Searcher {
 	return &searcher{
 		feed:         feed.DeepCopy(),
 		period:       period,
 		q:            suspiciousSet,
 		events:       events,
 		geoDB:        geoDB,
-		cachedEvents: NewEventCache(),
+		cachedEvents: NewEventCache(maxLinseedTimeSkew),
 	}
 }
 
@@ -225,10 +221,11 @@ type EventCache struct {
 	maxTTL time.Duration
 }
 
-func NewEventCache() *EventCache {
+func NewEventCache(maxTTL int) *EventCache {
+	ttl := maxTTL * int(time.Minute)
 	return &EventCache{
 		cache:  make(map[cacheKey]time.Time),
-		maxTTL: time.Duration(maxTTL),
+		maxTTL: time.Duration(ttl),
 	}
 }
 

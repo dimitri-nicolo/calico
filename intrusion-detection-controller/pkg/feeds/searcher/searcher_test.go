@@ -67,7 +67,7 @@ func TestCacheEvents(t *testing.T) {
 	}
 	suspiciousIP.Events = append(suspiciousIP.Events, processEvents...)
 	eventsDB := &storage.MockEvents{ErrorIndex: -1, Events: []v1.Event{}}
-	uut := NewSearcher(f, 0, suspiciousIP, eventsDB).(*searcher)
+	uut := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}, 1).(*searcher)
 
 	for _, e := range cachedEvents {
 		uut.cachedEvents.Add(&e)
@@ -127,7 +127,7 @@ func runTest(t *testing.T, successful bool, expectedSecurityEvents []v1.Event,
 	}
 	suspiciousIP.Events = append(suspiciousIP.Events, expectedSecurityEvents...)
 	eventsDB := &storage.MockEvents{ErrorIndex: eventsErrorIdx, Events: []v1.Event{}}
-	uut := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}).(*searcher)
+	uut := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}, 1).(*searcher)
 	feedCacher := cacher.NewMockGlobalThreatFeedCache()
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -163,7 +163,7 @@ func TestFlowSearcher_SetFeed(t *testing.T) {
 	f2 := util.NewGlobalThreatFeedFromName("swap")
 	suspiciousIP := &storage.MockSuspicious{}
 	eventsDB := &storage.MockEvents{}
-	searcher := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}).(*searcher)
+	searcher := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}, 1).(*searcher)
 
 	searcher.SetFeed(f2)
 	g.Expect(searcher.feed).Should(Equal(f2))

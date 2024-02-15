@@ -60,6 +60,7 @@ type watcher struct {
 	feedWatchersMutex      sync.RWMutex
 	cancel                 context.CancelFunc
 	geoDB                  geodb.GeoDatabase
+	maxLinseedTimeSkew     int
 
 	// Unfortunately, cache.Controller callbacks can't accept
 	// a context, so we need to store this on the watcher so we can pass it
@@ -95,6 +96,7 @@ func NewWatcher(
 	suspiciousDomains storage.SuspiciousSet,
 	events storage.Events,
 	geodb geodb.GeoDatabase,
+	maxLinseedTimeSkew int,
 ) Watcher {
 	feedWatchers := map[string]*feedWatcher{}
 
@@ -122,6 +124,7 @@ func NewWatcher(
 		feedWatchers:           feedWatchers,
 		ping:                   make(chan struct{}),
 		geoDB:                  geodb,
+		maxLinseedTimeSkew:     maxLinseedTimeSkew,
 	}
 
 	w.fifo, w.feeds = util.NewPingableFifo()
@@ -256,7 +259,7 @@ func (s *watcher) startFeedWatcherIP(ctx context.Context, geodb geodb.GeoDatabas
 
 	fw := feedWatcher{
 		feed:       fCopy,
-		searcher:   searcher.NewSearcher(fCopy, time.Minute, s.suspiciousIP, s.events, geodb),
+		searcher:   searcher.NewSearcher(fCopy, time.Minute, s.suspiciousIP, s.events, geodb, s.maxLinseedTimeSkew),
 		feedCacher: feedCacher,
 	}
 
@@ -289,7 +292,7 @@ func (s *watcher) startFeedWatcherDomains(ctx context.Context, f *v3.GlobalThrea
 
 	fw := feedWatcher{
 		feed:       fCopy,
-		searcher:   searcher.NewSearcher(fCopy, time.Minute, s.suspiciousDomains, s.events, &geodb.GeoDB{}),
+		searcher:   searcher.NewSearcher(fCopy, time.Minute, s.suspiciousDomains, s.events, &geodb.GeoDB{}, s.maxLinseedTimeSkew),
 		feedCacher: feedCacher,
 	}
 

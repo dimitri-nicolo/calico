@@ -59,6 +59,7 @@ const (
 
 	DefaultConfigMapNamespace = TigeraIntrusionDetectionNamespace
 	DefaultSecretsNamespace   = TigeraIntrusionDetectionNamespace
+	DefaultMaxLinseedTimeSkew = 1
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -68,11 +69,12 @@ type backendClientAccessor interface {
 
 func main() {
 	var ver, debug bool
-	var healthzSockPort int
+	var healthzSockPort, maxLinseedTimeSkew int
 
 	flag.BoolVar(&ver, "version", false, "Print version information")
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.IntVar(&healthzSockPort, "port", health.DefaultHealthzSockPort, "Healthz port")
+	flag.IntVar(&maxLinseedTimeSkew, "maxttl", DefaultMaxLinseedTimeSkew, "Max time for time skew with linseed")
 	// enable klog flags for API call logging (to stderr).
 	klog.InitFlags(flag.CommandLine)
 	flag.Parse()
@@ -200,7 +202,7 @@ func main() {
 		eip,
 		edn,
 		&http.Client{},
-		e, e, sIP, sDN, e, g)
+		e, e, sIP, sDN, e, g, maxLinseedTimeSkew)
 
 	valueEnableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
 
