@@ -305,6 +305,7 @@ func (e *Service) QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, feed 
 	var tr lmav1.TimeRange
 	tr.From = fromTimestamp
 	tr.To = time.Now()
+	tr.Field = "generated_time"
 
 	queryTerms := splitIPSet(ipset)
 	var queries []queryEntry[lsv1.FlowLog, lsv1.FlowLogParams]
@@ -363,6 +364,7 @@ func (e *Service) QueryDomainNameSet(ctx context.Context, domainNameSet DomainNa
 	var tr lmav1.TimeRange
 	tr.From = fromTimestamp
 	tr.To = time.Now()
+	tr.Field = "generated_time"
 
 	var queries []queryEntry[lsv1.DNSLog, lsv1.DNSLogParams]
 	for _, t := range queryTerms {
