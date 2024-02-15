@@ -20,7 +20,7 @@
   task:
     agent:
       machine:
-        type: s1-aws-arm64
+        type: s1-aws-arm64-2
     prologue:
       commands:
         - cd egress-gateway

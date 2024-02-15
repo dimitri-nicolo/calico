@@ -273,7 +273,7 @@ blocks:
   task:
     agent:
       machine:
-        type: s1-aws-arm64
+        type: s1-aws-arm64-2
     prologue:
       commands:
         - cd app-policy
@@ -712,7 +712,7 @@ blocks:
   task:
     agent:
       machine:
-        type: s1-aws-arm64
+        type: s1-aws-arm64-2
     secrets:
       - name: tigera-dev-ci-pull-credentials
     prologue:
@@ -946,7 +946,7 @@ blocks:
   task:
     agent:
       machine:
-        type: s1-aws-arm64
+        type: s1-aws-arm64-2
     prologue:
       commands:
         - cd egress-gateway
