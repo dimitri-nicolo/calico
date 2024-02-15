@@ -34,6 +34,7 @@ func (f *runtime) List(ctx context.Context, params v1.Params) (*v1.List[v1.Runti
 	err := f.restClient.Post().
 		Path("/runtime/reports").
 		Params(params).
+		Cluster(f.clusterID).
 		Do(ctx).
 		Into(&logs)
 	if err != nil {

@@ -72,7 +72,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 		}
 
 		// Perform a query.
-		runtimeReports, err := cli.RuntimeReports("").List(ctx, &params)
+		runtimeReports, err := cli.RuntimeReports(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.RuntimeReport{}, runtimeReports.Items)
 	})
@@ -131,7 +131,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 				},
 			},
 		}
-		resp, err := cli.RuntimeReports("").List(ctx, &params)
+		resp, err := cli.RuntimeReports(cluster).List(ctx, &params)
 		require.NoError(t, err)
 
 		require.Len(t, resp.Items, 1)
@@ -178,7 +178,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 					AfterKey:    afterKey,
 				},
 			}
-			resp, err := cli.RuntimeReports("").List(ctx, &params)
+			resp, err := cli.RuntimeReports(cluster).List(ctx, &params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
 
@@ -215,7 +215,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 				AfterKey:    afterKey,
 			},
 		}
-		resp, err := cli.RuntimeReports("").List(ctx, &params)
+		resp, err := cli.RuntimeReports(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Items))
 
@@ -339,16 +339,15 @@ func TestFV_RuntimeReports(t *testing.T) {
 				},
 			},
 		}
-		resp, err := cli.RuntimeReports("").List(ctx, &params)
+		respCluster, err := cli.RuntimeReports(cluster).List(ctx, &params)
 		require.NoError(t, err)
-		require.Len(t, resp.Items, 2)
+		require.Len(t, respCluster.Items, 1)
 
-		// Validate that the received reports come from two clusters
-		var clusters []string
-		for _, item := range resp.Items {
+		// Validate that the received reports come from a single clusters
+		for _, item := range respCluster.Items {
 			// Validate that the source is populated
 			require.NotEmpty(t, item.Cluster)
-			clusters = append(clusters, item.Cluster)
+			require.Equal(t, item.Cluster, cluster)
 			// Validate that the id is populated
 			item = testutils.AssertRuntimeReportIDAndReset(t, item)
 			// Validate that the rest of the fields are populated
@@ -357,8 +356,22 @@ func TestFV_RuntimeReports(t *testing.T) {
 			require.Equal(t, runtimeReport, item.Report)
 		}
 
-		require.Contains(t, clusters, cluster)
-		require.Contains(t, clusters, anotherCluster)
+		respAnotherCluster, err := cli.RuntimeReports(anotherCluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.Len(t, respAnotherCluster.Items, 1)
+
+		// Validate that the received reports come from a single clusters
+		for _, item := range respAnotherCluster.Items {
+			// Validate that the source is populated
+			require.NotEmpty(t, item.Cluster)
+			require.Equal(t, item.Cluster, anotherCluster)
+			// Validate that the id is populated
+			item = testutils.AssertRuntimeReportIDAndReset(t, item)
+			// Validate that the rest of the fields are populated
+			require.NotNil(t, item.Report.GeneratedTime)
+			runtimeReport.GeneratedTime = item.Report.GeneratedTime
+			require.Equal(t, runtimeReport, item.Report)
+		}
 	})
 
 	RunRuntimeReportTest(t, "supports query with selector", func(t *testing.T, idx bapi.Index) {
@@ -413,7 +426,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 			},
 			Selector: "'pod.name' = 'app1'",
 		}
-		resp, err := cli.RuntimeReports("").List(ctx, &params)
+		resp, err := cli.RuntimeReports(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 1)
 
@@ -429,7 +442,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 
 		// Repeat with a selector to get only the second report.
 		params.Selector = "'pod.name' = 'app2'"
-		resp, err = cli.RuntimeReports("").List(ctx, &params)
+		resp, err = cli.RuntimeReports(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 1)
 
@@ -445,7 +458,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 
 		// Validate that we can't use a selector with a disallowed field.
 		params.Selector = "'tenant_id' = 'super-secret'"
-		resp, err = cli.RuntimeReports("").List(ctx, &params)
+		resp, err = cli.RuntimeReports(cluster).List(ctx, &params)
 		require.ErrorContains(t, err, "tenant_id")
 	})
 }
@@ -504,7 +517,7 @@ func TestFV_RuntimeReportTenancy(t *testing.T) {
 				},
 			},
 		}
-		resp, err := tenantCLI.RuntimeReports("").List(ctx, &params)
+		resp, err := tenantCLI.RuntimeReports(cluster).List(ctx, &params)
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, resp)
 	})

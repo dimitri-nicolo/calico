@@ -160,7 +160,7 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 
 	// Configure pagination options
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.getIndex(i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.getIndex(i), results, b.deepPaginationCutOff, log)
+	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
 	if err != nil {
 		return nil, err
 	}
@@ -253,22 +253,4 @@ func (b *runtimeReportBackend) extractTenantAndCluster(index string) (tenant str
 	}
 
 	return "", ""
-}
-
-func (b *runtimeReportBackend) getIndex(i bapi.ClusterInfo) string {
-	if b.singleIndex {
-		// Single index mode follows normal rules and can just defer to the Index implementation.
-		return b.index.Index(i)
-	}
-
-	// For multi-index mode, the runtime report backend behaves in a non-standard way. Namely, it ignores the Cluster field
-	// on incoming requests and only uses the Tenant field. So instead of using the api.Index helper, we have our own implementation here.
-	if i.Tenant != "" {
-		// If a tenant is provided, then we must include it in the index.
-		// Read all the clusters associated with a tenant
-		return fmt.Sprintf("tigera_secure_ee_runtime.%s.*", i.Tenant)
-	}
-
-	// Otherwise, this is a single-tenant cluster and we read data for all clusters
-	return "tigera_secure_ee_runtime.*"
 }

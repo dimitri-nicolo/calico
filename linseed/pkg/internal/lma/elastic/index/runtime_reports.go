@@ -34,14 +34,11 @@ func SingleIndexRuntimeReports() Helper {
 func (h runtimeReportsIndexHelper) BaseQuery(i bapi.ClusterInfo) *elastic.BoolQuery {
 	q := elastic.NewBoolQuery()
 	if h.singleIndex {
+		q.Must(elastic.NewTermQuery("cluster", i.Cluster))
 		if i.Tenant != "" {
 			// Query is meant for a specific tenant - filter on tenant.
 			q.Must(elastic.NewTermQuery("tenant", i.Tenant))
 		}
-
-		// This is a request from a single-tenant system. Return all clusters regardless of the x-cluster-id provided.
-		// Note that this is different from how most other data types work, but is the expected behavior for
-		// runtime reports.
 	}
 	return q
 }
