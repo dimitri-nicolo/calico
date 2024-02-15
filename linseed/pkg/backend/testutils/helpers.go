@@ -37,6 +37,9 @@ func AssertFlowLogIDAndReset(t *testing.T, item v1.FlowLog) v1.FlowLog {
 	require.NotEmpty(t, item.ID)
 	item.ID = ""
 
+	require.NotNil(t, item.GeneratedTime)
+	item.GeneratedTime = nil
+
 	return item
 }
 

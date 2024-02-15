@@ -5,6 +5,7 @@ package v1
 import (
 	"encoding/json"
 	"net"
+	"time"
 )
 
 // FlowLogParams define querying parameters to retrieve flow logs
@@ -44,8 +45,9 @@ type FlowLogAggregationParams struct {
 // an empty string
 // Having such values as pointers ensures that json marshalling will render it as such.
 type FlowLog struct {
-	StartTime int64 `json:"start_time"`
-	EndTime   int64 `json:"end_time"`
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
+	StartTime     int64      `json:"start_time"`
+	EndTime       int64      `json:"end_time"`
 
 	// Source fields.
 	SourceIP         *string        `json:"source_ip"`
