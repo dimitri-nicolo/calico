@@ -69,6 +69,7 @@ func TestFlowLogBasic(t *testing.T) {
 		require.Len(t, resp.Items, 1)
 		require.NotEmpty(t, resp.Items[0].ID)
 		resp.Items[0].ID = ""
+		resp.Items[0].GeneratedTime = nil
 		require.Equal(t, f, resp.Items[0])
 
 		// Attempt to read it back with a different tenant ID - it should return nothing.

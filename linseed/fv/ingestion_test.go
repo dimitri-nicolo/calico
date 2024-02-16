@@ -421,7 +421,7 @@ func TestFV_RuntimeIngestion(t *testing.T) {
 			},
 		}
 
-		resultList, err := cli.RuntimeReports("").List(ctx, &params)
+		resultList, err := cli.RuntimeReports(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.NotNil(t, resultList)
 
