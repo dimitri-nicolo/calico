@@ -1,0 +1,6 @@
+[
+  {
+    "destination": "https://foo.bar:9443",
+    "serverName": "foobar"
+  }
+]

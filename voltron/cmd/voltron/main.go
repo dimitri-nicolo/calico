@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2024 Tigera, Inc. All rights reserved.
 
 package main
 
@@ -50,21 +50,6 @@ func main() {
 		`^/apis/?`,
 	})
 
-	unauthenticatedTargets := []string{
-		// Need this unauthenticated so a browswer can download the manager UI webcode.
-		"/",
-		// We need the es/version unauthenticated so the liveness probe for es-proxy
-		// can be successful.
-		"/tigera-elasticsearch/version",
-		// We use special token authentication with Kibana so it doesn't need to be
-		// authenticated.
-		cfg.KibanaBasePath,
-	}
-	if cfg.DexEnabled {
-		// Dex endpoints setup auth tokens so we can't authenticate access.
-		unauthenticatedTargets = append(unauthenticatedTargets, cfg.DexBasePath)
-	}
-
 	if err != nil {
 		log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
 	}
@@ -75,7 +60,6 @@ func main() {
 		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		server.WithExternalCredFiles(cfg.HTTPSCert, cfg.HTTPSKey),
 		server.WithKubernetesAPITargets(kubernetesAPITargets),
-		server.WithUnauthenticatedTargets(unauthenticatedTargets),
 		server.WithInternalMetricsEndpointEnabled(cfg.MetricsEnabled),
 	}
 
@@ -163,6 +147,12 @@ func main() {
 			sniServiceMap[bastURL.Hostname()] = bastURL.Host
 		}
 
+		if cfg.UpstreamTunnelTLSPassThroughRoutesPath != nil {
+			for _, route := range loadTLSPassThroughRoutesFromFile(*cfg.UpstreamTunnelTLSPassThroughRoutesPath) {
+				sniServiceMap[route.ServerName] = route.Destination
+			}
+		}
+
 		log.WithField("map", sniServiceMap).Info("SNI map")
 
 		// Create a proxy to use as the "inner proxy" - handling connections _from_ managed clusters to
@@ -172,17 +162,23 @@ func main() {
 				// All Linseed APIs start with this prefix. In practice, only Linseed connections should ever
 				// hit this handler anyway because we use the server field in the TLS header to direct connections
 				// to this handler.
-				Path:         "/api/v1/",
-				Dest:         cfg.LinseedEndpoint,
-				CABundlePath: cfg.LinseedCABundlePath,
-				ClientKey:    cfg.InternalHTTPSKey,
-				ClientCert:   cfg.InternalHTTPSCert,
+				Path:           "/api/v1/",
+				Dest:           cfg.LinseedEndpoint,
+				CABundlePath:   cfg.LinseedCABundlePath,
+				ClientKeyPath:  cfg.InternalHTTPSKey,
+				ClientCertPath: cfg.InternalHTTPSCert,
 			},
 		}
+
+		if cfg.UpstreamTunnelTLSTerminatedRoutesPath != nil {
+			targetList = append(targetList, loadTLSTerminatedRoutesFromFile(*cfg.UpstreamTunnelTLSTerminatedRoutesPath)...)
+		}
+
 		targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
 		if err != nil {
 			log.WithError(err).Fatal("failed to parse Linseed proxy targets")
 		}
+
 		innerProxy, err := proxy.New(targets)
 		if err != nil {
 			log.WithError(err).Fatalf("failed to create proxier for tunneled connections from a managed cluster")
@@ -222,7 +218,7 @@ func main() {
 		opts = append(opts, server.WithHTTPAccessLogging(logOpts...))
 	}
 
-	targetList := []bootstrap.Target{
+	targetList := bootstrap.Targets{
 		{
 			Path:         "/api/",
 			Dest:         cfg.K8sEndpoint,
@@ -250,6 +246,7 @@ func main() {
 			PathRegexp:       []byte("^/tigera-elasticsearch/version$"),
 			PathReplace:      []byte("/version"),
 			AllowInsecureTLS: true,
+			Unauthenticated:  true,
 		},
 		{
 			Path:         "/packet-capture/",
@@ -276,11 +273,16 @@ func main() {
 			Path:         cfg.KibanaBasePath,
 			Dest:         cfg.KibanaEndpoint,
 			CABundlePath: cfg.KibanaCABundlePath,
+			// We use special token authentication with Kibana so it doesn't need to be
+			// authenticated.
+			Unauthenticated: true,
 		},
 		{
 			Path:             "/",
 			Dest:             cfg.NginxEndpoint,
 			AllowInsecureTLS: true,
+			// Need this unauthenticated so a browser can download the manager UI webcode.
+			Unauthenticated: true,
 		},
 	}
 
@@ -327,6 +329,8 @@ func main() {
 				Path:         cfg.DexBasePath,
 				Dest:         cfg.DexURL,
 				CABundlePath: cfg.DexCABundlePath,
+				// Dex endpoints setup auth tokens, so we can't authenticate access.
+				Unauthenticated: true,
 			})
 		}
 
@@ -367,6 +371,12 @@ func main() {
 	if err != nil {
 		log.Fatal("Unable to create authenticator", err)
 	}
+
+	if cfg.UITlsTerminatedRoutesPath != nil {
+		targetList = append(targetList, loadTLSTerminatedRoutesFromFile(*cfg.UITlsTerminatedRoutesPath)...)
+	}
+
+	opts = append(opts, server.WithUnauthenticatedTargets(targetList.UnauthenticatedPaths()))
 
 	targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
 	if err != nil {
@@ -421,4 +431,30 @@ func main() {
 		cancel()
 		log.Fatal(err)
 	}
+}
+
+func loadTLSTerminatedRoutesFromFile(filePath string) []bootstrap.Target {
+	log.Infof("Loading tls terminated routes from %s.", filePath)
+
+	routes, err := bootstrap.TLSTerminatedRoutesFromFile(filePath)
+	if err != nil {
+		log.WithError(err).Fatalf("Failed to load routes from file %s.", filePath)
+	}
+
+	log.WithField("routes", routes).Infof("Loaded %d tls terminated routes from file", len(routes))
+
+	return routes
+}
+
+func loadTLSPassThroughRoutesFromFile(filePath string) []bootstrap.TLSPassThroughRoute {
+	log.Infof("Loading tls pass through routes from %s.", filePath)
+
+	routes, err := bootstrap.TLSPassThroughRoutesFromFile(filePath)
+	if err != nil {
+		log.WithError(err).Fatalf("Failed to load tunnel pass through routes from %s", filePath)
+	}
+
+	log.WithField("routes", routes).Infof("Loaded %d tls passthrough routes from file", len(routes))
+
+	return routes
 }

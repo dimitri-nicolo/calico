@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2024 Tigera, Inc. All rights reserved.
 
 package proxy
 
@@ -41,8 +41,8 @@ type Target struct {
 	FIPSModeEnabled bool
 
 	// Configures client key and certificate for mTLS from Voltron with the target.
-	ClientKey  string
-	ClientCert string
+	ClientKeyPath  string
+	ClientCertPath string
 }
 
 // Proxy proxies HTTP based on the provided list of targets
@@ -109,8 +109,8 @@ func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), err
 		}
 
 		// If specified, load and include the provided client certificate for mTLS with the destination.
-		if tgt.ClientKey != "" && tgt.ClientCert != "" {
-			clientCert, err := gotls.LoadX509KeyPair(tgt.ClientCert, tgt.ClientKey)
+		if tgt.ClientKeyPath != "" && tgt.ClientCertPath != "" {
+			clientCert, err := gotls.LoadX509KeyPair(tgt.ClientCertPath, tgt.ClientKeyPath)
 			if err != nil {
 				return nil, fmt.Errorf("error load cert key pair for linseed client: %s", err)
 			}

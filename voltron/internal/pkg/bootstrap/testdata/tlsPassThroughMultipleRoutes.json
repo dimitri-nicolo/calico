@@ -1,0 +1,10 @@
+[
+  {
+    "destination": "https://foo.bar:9443",
+    "serverName": "foobar"
+  },
+  {
+    "destination": "https://zaz.bar:9443",
+    "serverName": "zazbar"
+  }
+]
