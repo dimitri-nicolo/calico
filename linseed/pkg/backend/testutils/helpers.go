@@ -229,7 +229,7 @@ func Populate(value reflect.Value) {
 	}
 }
 
-func CheckSingleIndexTemplateBootstrapping(t *testing.T, ctx context.Context, client *elastic.Client, idx bapi.Index, i bapi.ClusterInfo, indexPattern, shards, replicas, ilmpolicy string) {
+func CheckSingleIndexTemplateBootstrapping(t *testing.T, ctx context.Context, client *elastic.Client, idx bapi.Index, i bapi.ClusterInfo, indexPattern, shards, replicas, ILMPolicy string) {
 	// Check that the template was created.
 	templateExists, err := client.IndexTemplateExists(idx.IndexTemplateName(i)).Do(ctx)
 	require.NoError(t, err)
@@ -275,7 +275,7 @@ func CheckSingleIndexTemplateBootstrapping(t *testing.T, ctx context.Context, cl
 		require.Contains(t, settings, "lifecycle")
 		lifecycle, _ := settings["lifecycle"].(map[string]interface{})
 		require.Contains(t, lifecycle, "name")
-		require.EqualValues(t, lifecycle["name"], ilmpolicy)
+		require.EqualValues(t, lifecycle["name"], ILMPolicy)
 		require.EqualValues(t, lifecycle["rollover_alias"], idx.Alias(i))
 	}
 	// Check shards and replicas

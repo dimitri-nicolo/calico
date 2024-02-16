@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/projectcalico/go-json/json"
@@ -168,27 +167,8 @@ var DefaultBootstrapper Bootstrapper = func(ctx context.Context, client *elastic
 }
 
 // getIndexSettings retrieves the Index settings for an index.
-func (index *IndexInfo) getIndexSettings(ctx context.Context, client *elastic.Client, config *TemplateConfig) error {
-	settingsResponse, err := client.IndexGetSettings(index.WriteIndexName).Do(ctx)
-	if err != nil {
-		return err
-	}
-
-	var matchingIndexResponse *elastic.IndicesGetSettingsResponse
-	targetedIndexPrefix := strings.TrimSuffix(config.indexPatterns(), "*")
-
-	for indexName, response := range settingsResponse {
-		if strings.HasPrefix(indexName, targetedIndexPrefix) {
-			matchingIndexResponse = response
-			break
-		}
-	}
-
-	if matchingIndexResponse == nil {
-		return fmt.Errorf("Index not found for pattern %s", config.indexPatterns())
-	}
-
-	indexSettings, ok := matchingIndexResponse.Settings["index"].(map[string]interface{})
+func (index *IndexInfo) getIndexSettings(settings map[string]interface{}) error {
+	indexSettings, ok := settings["index"].(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("Index settings not found")
 	}
@@ -302,16 +282,17 @@ func GetIndexInfo(ctx context.Context, client *elastic.Client, config *TemplateC
 		if err != nil {
 			return index, err
 		}
+
+		// Get settings
+		err = index.getIndexSettings(ir[index.WriteIndexName].Settings)
+		if err != nil {
+			return index, err
+		}
+
 	} else {
 		// Check if index exists even though it's not aliased
 		logrus.WithField("index", config.BootstrapIndexName()).Info("No alias exists for index")
 		index.IndexExists, err = client.IndexExists(config.BootstrapIndexName()).Do(ctx)
-		if err != nil {
-			return index, err
-		}
-	}
-	if index.IndexExists && index.WriteIndexDeclared {
-		err = index.getIndexSettings(ctx, client, config)
 		if err != nil {
 			return index, err
 		}
