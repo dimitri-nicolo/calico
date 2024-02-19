@@ -32,7 +32,7 @@ func main() {
 	}
 
 	log.Infof("Dikastes (%s) launching", VERSION)
-	runServer(ctx, config, nil)
+	runServer(ctx, config)
 }
 
 func runServer(ctx context.Context, config *flags.Config, readyCh ...chan struct{}) {
