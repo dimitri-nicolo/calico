@@ -77,10 +77,8 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 
 		Describe(fmt.Sprintf("VXLAN mode set to %s, routeSource %s, brokenXSum: %v, enableIPv6: %v, overlap: %v", vxlanMode, routeSource, brokenXSum, enableIPv6, overlap), func() {
 			var (
-				cs     *VXLANClusters
-				cc     *connectivity.Checker
-				tc     infrastructure.TopologyContainers
-				client client.Interface
+				cs *VXLANClusters
+				cc *connectivity.Checker
 			)
 
 			BeforeEach(func() {
@@ -113,7 +111,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 							logrus.Info("OverlapTestType_ConnectDisconnect: local and remote clusters share IP pool CIDRs.")
 						}
 					}
-					tc, client = infrastructure.StartNNodeTopology(3, topologyOptions, infra)
+					tc, client := infrastructure.StartNNodeTopology(3, topologyOptions, infra)
 
 					w, w6, hostW, hostW6 := setupWorkloads(infra, tc, topologyOptions, client, enableIPv6)
 
@@ -313,6 +311,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					//   10.65.1.0/26 via 172.17.0.6 dev eth0 proto 80 onlink
 					//   10.65.2.0/26 via 172.17.0.5 dev eth0 proto 80 onlink
 					//   172.17.0.0/16 dev eth0 proto kernel scope link src 172.17.0.7
+					tc := cs.local.tc
 					felix := tc.Felixes[0]
 					Eventually(felix.ExecOutputFn("ip", "route", "show"), "10s").Should(ContainSubstring(
 						fmt.Sprintf("10.65.1.0/26 via %s dev eth0 proto 80 onlink", tc.Felixes[1].IP)))
