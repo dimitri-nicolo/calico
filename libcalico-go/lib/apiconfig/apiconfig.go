@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017,2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,8 +63,6 @@ type EtcdConfig struct {
 	EtcdKey    string `json:"etcdKey" ignored:"true"`
 	EtcdCert   string `json:"etcdCert" ignored:"true"`
 	EtcdCACert string `json:"etcdCACert" ignored:"true"`
-
-	EtcdFIPSModeEnabled bool `json:"etcdFIPSModeEnabled" envconfig:"ETCD_FIPS_MODE_ENABLED"`
 }
 
 type KubeConfig struct {
