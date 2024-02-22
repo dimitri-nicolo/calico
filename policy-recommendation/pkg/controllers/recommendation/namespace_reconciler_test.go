@@ -64,11 +64,8 @@ var _ = Describe("NamespaceReconciler", func() {
 		logEntry := logger.WithField("ManagedCluster", "controller")
 
 		mockClientSet = lmak8s.NewMockClientSet(GinkgoT())
-		fakeClient := fakecalico.NewSimpleClientset()
-		fakeCoreV1 := fakeK8s.NewSimpleClientset().CoreV1()
-
-		mockClientSet.On("ProjectcalicoV3").Return(fakeClient.ProjectcalicoV3())
-		mockClientSet.On("CoreV1").Return(fakeCoreV1)
+		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3())
+		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
 
 		// Get the list of recommendations from the datastore with retries.
 		listRecommendations := func(ret int) ([]v3.StagedNetworkPolicy, error) {

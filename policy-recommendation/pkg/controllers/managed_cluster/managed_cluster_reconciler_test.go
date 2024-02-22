@@ -36,21 +36,19 @@ var _ = Describe("ManagedClusterReconciler", func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		mockClientSetFactory = lmak8s.NewMockClientSetFactory(GinkgoT())
+
 		mockClientSet = lmak8s.NewMockClientSet(GinkgoT())
-		fakeClientset := fakecalico.NewSimpleClientset()
-		fakeCoreV1 := fakeK8s.NewSimpleClientset().CoreV1()
+		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3())
+		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
+
+		mockClientSetFactory = lmak8s.NewMockClientSetFactory(GinkgoT())
+		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-1").Return(mockClientSet, nil)
+		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-2").Return(mockClientSet, nil)
 		scheme := kscheme.Scheme
 		err := v3.AddToScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
+
 		fakek8sCtrlRuntimeClient = fakectlrruntimeclient.NewClientBuilder().WithScheme(scheme).Build()
-
-		mockClientSet.On("ProjectcalicoV3").Return(fakeClientset.ProjectcalicoV3())
-		mockClientSet.On("CoreV1").Return(fakeCoreV1)
-
-		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-1").Return(mockClientSet, nil)
-		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-2").Return(mockClientSet, nil)
-
 		err = fakek8sCtrlRuntimeClient.Create(ctx, &v3.ManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "managed-cluster-1",
