@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Tigera Inc. All rights reserved.
+// Copyright (c) 2022-2024 Tigera Inc. All rights reserved.
 
 package config
 
@@ -45,9 +45,8 @@ func LoadConfig() (*Config, error) {
 	}
 
 	if config.TenantNamespace != "" && config.TenantID == "" {
-		return nil, fmt.Errorf("Tenant namespace was provided but TenantID was not")
+		return nil, fmt.Errorf("cannot define the TenantID without the TenantNamespace")
 	}
-
 	return config, nil
 }
 

@@ -137,6 +137,7 @@ func CheckFieldsInJSON(t *testing.T, jsonMap map[string]interface{}, mappings ma
 	}
 	return true
 }
+
 func IsDynamicMappingDisabled(t *testing.T, mappings map[string]interface{}) {
 	require.NotNil(t, mappings["dynamic"])
 	require.Equal(t, false, mappings["dynamic"])
@@ -231,7 +232,7 @@ func Populate(value reflect.Value) {
 	}
 }
 
-func CheckSingleIndexTemplateBootstrapping(t *testing.T, ctx context.Context, client *elastic.Client, idx bapi.Index, i bapi.ClusterInfo) {
+func CheckSingleIndexTemplateBootstrapping(t *testing.T, ctx context.Context, client *elastic.Client, idx bapi.Index, i bapi.ClusterInfo, indexPattern, shards, replicas, ILMPolicy string) {
 	// Check that the template was created.
 	templateExists, err := client.IndexTemplateExists(idx.IndexTemplateName(i)).Do(ctx)
 	require.NoError(t, err)
@@ -243,7 +244,7 @@ func CheckSingleIndexTemplateBootstrapping(t *testing.T, ctx context.Context, cl
 	require.True(t, indexExists, "index doesn't exist: %s", idx.BootstrapIndexName(i))
 
 	// Check that write alias exists.
-	index := fmt.Sprintf("%s.%s-%s-000001", idx.Name(i), "linseed", time.Now().UTC().Format("20060102"))
+	index := fmt.Sprintf("%s.%s-%s-%s", idx.Name(i), "linseed", time.Now().UTC().Format("20060102"), indexPattern)
 	responseAlias, err := client.CatAliases().Do(ctx)
 	require.NoError(t, err)
 	require.Greater(t, len(responseAlias), 0)
@@ -277,12 +278,12 @@ func CheckSingleIndexTemplateBootstrapping(t *testing.T, ctx context.Context, cl
 		require.Contains(t, settings, "lifecycle")
 		lifecycle, _ := settings["lifecycle"].(map[string]interface{})
 		require.Contains(t, lifecycle, "name")
-		require.EqualValues(t, lifecycle["name"], idx.ILMPolicyName())
+		require.EqualValues(t, lifecycle["name"], ILMPolicy)
 		require.EqualValues(t, lifecycle["rollover_alias"], idx.Alias(i))
 	}
 	// Check shards and replicas
 	require.Contains(t, settings, "number_of_replicas")
-	require.EqualValues(t, settings["number_of_replicas"], "0")
+	require.EqualValues(t, settings["number_of_replicas"], replicas)
 	require.Contains(t, settings, "number_of_shards")
-	require.EqualValues(t, settings["number_of_shards"], "1")
+	require.EqualValues(t, settings["number_of_shards"], shards)
 }

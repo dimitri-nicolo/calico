@@ -102,32 +102,58 @@ func RunLinseed(t *testing.T, args *RunLinseedArgs) *containers.Container {
 }
 
 type RunConfigureElasticArgs struct {
-	AlertBaseIndexName                string
-	AlertPolicyName                   string
-	AuditBaseIndexName                string
-	AuditPolicyName                   string
-	BGPBaseIndexName                  string
-	BGPPolicyName                     string
+	AlertBaseIndexName string
+	AlertPolicyName    string
+
+	AuditBaseIndexName string
+	AuditPolicyName    string
+	AuditReplicas      string
+	AuditShards        string
+
+	BGPBaseIndexName string
+	BGPPolicyName    string
+	BGPReplicas      string
+	BGPShards        string
+
 	ComplianceBenchmarksBaseIndexName string
 	ComplianceBenchmarksPolicyName    string
 	ComplianceReportsBaseIndexName    string
 	ComplianceReportsPolicyName       string
 	ComplianceSnapshotsBaseIndexName  string
 	ComplianceSnapshotsPolicyName     string
-	DNSBaseIndexName                  string
-	DNSPolicyName                     string
-	FlowBaseIndexName                 string
-	FlowPolicyName                    string
-	L7BaseIndexName                   string
-	L7PolicyName                      string
-	RuntimeReportsBaseIndexName       string
-	RuntimeReportsPolicyName          string
+
+	DNSBaseIndexName string
+	DNSPolicyName    string
+	DNSReplicas      string
+	DNSShards        string
+
+	FlowBaseIndexName string
+	FlowPolicyName    string
+	FlowReplicas      string
+	FlowShards        string
+
+	L7BaseIndexName string
+	L7PolicyName    string
+	L7Replicas      string
+	L7Shards        string
+
+	RuntimeReportsBaseIndexName string
+	RuntimeReportsPolicyName    string
+	RuntimeReplicas             string
+	RuntimeShards               string
+
 	ThreatFeedsIPSetBaseIndexName     string
 	ThreatFeedsIPSetPolicyName        string
 	ThreatFeedsDomainSetBaseIndexName string
 	ThreatFeedsDomainSetPolicyName    string
-	WAFBaseIndexName                  string
-	WAFPolicyName                     string
+
+	WAFBaseIndexName string
+	WAFPolicyName    string
+	WAFReplicas      string
+	WAFShards        string
+
+	ElasticReplicas string
+	ElasticShards   string
 }
 
 func RunConfigureElasticLinseed(t *testing.T, args *RunConfigureElasticArgs) {
@@ -166,9 +192,13 @@ func RunConfigureElasticLinseed(t *testing.T, args *RunConfigureElasticArgs) {
 		"-e", fmt.Sprintf("ELASTIC_THREAT_FEEDS_IP_SET_POLICY_NAME=%s", args.ThreatFeedsIPSetPolicyName),
 		"-e", fmt.Sprintf("ELASTIC_WAF_LOGS_BASE_INDEX_NAME=%s", args.WAFBaseIndexName),
 		"-e", fmt.Sprintf("ELASTIC_WAF_LOGS_POLICY_NAME=%s", args.WAFPolicyName),
-		"tigera/linseed:latest",
-		"-configure-elastic-indices",
 	}
+
+	dockerArgs = updateDockerArgs(dockerArgs, args)
+
+	dockerArgs = append(dockerArgs, "tigera/linseed:latest",
+		"-configure-elastic-indices",
+	)
 
 	name := "tigera-configure-elastic-linseed-fv"
 
@@ -177,4 +207,38 @@ func RunConfigureElasticLinseed(t *testing.T, args *RunConfigureElasticArgs) {
 	if c.ListedInDockerPS() {
 		c.Stop()
 	}
+}
+
+func updateDockerArgs(dockerArgs []string, args *RunConfigureElasticArgs) []string {
+	addEnvVarIfNotEmpty := func(key, value string) {
+		if len(value) > 0 {
+			dockerArgs = append(dockerArgs, "-e", fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+
+	addEnvVarIfNotEmpty("ELASTIC_DNS_INDEX_REPLICAS", args.DNSReplicas)
+	addEnvVarIfNotEmpty("ELASTIC_DNS_INDEX_SHARDS", args.DNSShards)
+
+	addEnvVarIfNotEmpty("ELASTIC_FLOWS_INDEX_REPLICAS", args.FlowReplicas)
+	addEnvVarIfNotEmpty("ELASTIC_FLOWS_INDEX_SHARDS", args.FlowShards)
+
+	addEnvVarIfNotEmpty("ELASTIC_AUDIT_INDEX_REPLICAS", args.AuditReplicas)
+	addEnvVarIfNotEmpty("ELASTIC_AUDIT_INDEX_SHARDS", args.AuditShards)
+
+	addEnvVarIfNotEmpty("ELASTIC_L7_INDEX_REPLICAS", args.L7Replicas)
+	addEnvVarIfNotEmpty("ELASTIC_L7_INDEX_SHARDS", args.L7Shards)
+
+	addEnvVarIfNotEmpty("ELASTIC_BGP_INDEX_REPLICAS", args.BGPReplicas)
+	addEnvVarIfNotEmpty("ELASTIC_BGP_INDEX_SHARDS", args.BGPShards)
+
+	addEnvVarIfNotEmpty("ELASTIC_RUNTIME_INDEX_REPLICAS", args.RuntimeReplicas)
+	addEnvVarIfNotEmpty("ELASTIC_RUNTIME_INDEX_SHARDS", args.RuntimeShards)
+
+	addEnvVarIfNotEmpty("ELASTIC_WAF_INDEX_REPLICAS", args.WAFReplicas)
+	addEnvVarIfNotEmpty("ELASTIC_WAF_INDEX_SHARDS", args.WAFShards)
+
+	addEnvVarIfNotEmpty("ELASTIC_REPLICAS", args.ElasticReplicas)
+	addEnvVarIfNotEmpty("ELASTIC_SHARDS", args.ElasticShards)
+
+	return dockerArgs
 }

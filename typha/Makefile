@@ -102,11 +102,9 @@ image: $(BUILD_IMAGES)
 
 # Build the image for the target architecture
 .PHONY: image-all
-image-all: $(addprefix sub-image-,$(VALIDARCHES)) sub-image-fips-amd64
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
-	$(MAKE) image ARCH=$*
-sub-image-fips-%:
-	$(MAKE) image FIPS=true ARCH=$*
+	$(MAKE) image FIPS=$(FIPS) ARCH=$*
 
 # Build the tigera/typha docker image, which contains only Typha.
 .PHONY: image $(TYPHA_IMAGE)

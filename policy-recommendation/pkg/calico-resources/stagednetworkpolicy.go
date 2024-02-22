@@ -1,13 +1,13 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 package calicoresources
 
 import (
 	"fmt"
-	"reflect"
 	"sort"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ktypes "k8s.io/apimachinery/pkg/types"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -41,20 +41,21 @@ const (
 	policyRecommendationTimeFormat = time.RFC3339
 	namespaceScope                 = "namespace"
 
-	LastUpdatedKey        = PolicyRecKeyName + "/lastUpdated"
-	NameKey               = PolicyRecKeyName + "/name"
-	NamespaceKey          = PolicyRecKeyName + "/namespace"
-	ScopeKey              = PolicyRecKeyName + "/scope"
-	StagedActionKey       = projectCalicoKeyName + "/spec.stagedAction"
-	StatusKey             = PolicyRecKeyName + "/status"
-	OwnerReferenceKindKey = projectCalicoKeyName + "/ownerReference.kind"
-	TierKey               = projectCalicoKeyName + "/tier"
+	LastUpdatedKey  = PolicyRecKeyName + "/lastUpdated"
+	NameKey         = PolicyRecKeyName + "/name"
+	NamespaceKey    = PolicyRecKeyName + "/namespace"
+	ScopeKey        = PolicyRecKeyName + "/scope"
+	StagedActionKey = projectCalicoKeyName + "/spec.stagedAction"
+	StatusKey       = PolicyRecKeyName + "/status"
+	TierKey         = projectCalicoKeyName + "/tier"
 
 	LearningStatus    = "Learning"
 	NoDataStatus      = "NoData"
 	StableStatus      = "Stable"
 	StabilizingStatus = "Stabilizing"
 	StaleStatus       = "Stale"
+
+	policyRecommendationScopeKind = "PolicyRecommendationScope"
 )
 
 var (
@@ -66,70 +67,45 @@ var (
 )
 
 // NewStagedNetworkPolicy returns a pointer to a staged network policy.
-func NewStagedNetworkPolicy(name, namespace, tier string, owner metav1.OwnerReference) *v3.StagedNetworkPolicy {
+func NewStagedNetworkPolicy(name, namespace, tier string, uid ktypes.UID) *v3.StagedNetworkPolicy {
 	return &v3.StagedNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v3.KindStagedNetworkPolicy,
+			APIVersion: v3.GroupVersionCurrent,
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
-				StatusKey: NoDataStatus,
+				StatusKey: LearningStatus,
 			},
-			// TODO(dimitri): Must define a valid RFC1123 policy name.
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
 				"projectcalico.org/tier":                tier,
-				"projectcalico.org/ownerReference.kind": owner.Kind,
+				"projectcalico.org/ownerReference.kind": policyRecommendationScopeKind,
 				"policyrecommendation.tigera.io/scope":  namespaceScope,
 				"projectcalico.org/spec.stagedAction":   "Learn",
 			},
-			OwnerReferences: []metav1.OwnerReference{owner},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         v3.GroupVersionCurrent,
+					Kind:               policyRecommendationScopeKind,
+					Name:               types.PolicyRecommendationScopeName,
+					UID:                uid,
+					Controller:         &[]bool{true}[0],
+					BlockOwnerDeletion: &[]bool{false}[0],
+				},
+			},
 		},
 
 		Spec: v3.StagedNetworkPolicySpec{
 			StagedAction: v3.StagedActionLearn,
 			Tier:         tier,
 			Selector:     fmt.Sprintf("%s/namespace == '%s'", projectCalicoKeyName, namespace),
-			Egress:       []v3.Rule{},
-			Ingress:      []v3.Rule{},
-			Types:        []v3.PolicyType{},
+			Egress:       nil,
+			Ingress:      nil,
+			Types:        nil,
 		},
 	}
-}
-
-// SetSnpRules returns true if an update to the staged network policy rules occurred.
-// Replaces the egress/ingress rules in their entirety if the incoming rules differ from the
-// existing.
-func SetSnpRules(snp *v3.StagedNetworkPolicy, egress, ingress []v3.Rule) bool {
-	updated := false
-
-	types := getPolicyTypes(egress, ingress)
-	if !reflect.DeepEqual(types, snp.Spec.Types) {
-		snp.Spec.Types = types
-		updated = true
-	}
-	if !reflect.DeepEqual(egress, snp.Spec.Egress) {
-		snp.Spec.Egress = egress
-		updated = true
-	}
-	if !reflect.DeepEqual(ingress, snp.Spec.Ingress) {
-		snp.Spec.Ingress = ingress
-		updated = true
-	}
-
-	return updated
-}
-
-// getPolicyTypes returns the policy rule types (Egress/Ingress). An empty list is returned if the
-// rules are empty.
-func getPolicyTypes(egress, ingress []v3.Rule) []v3.PolicyType {
-	pt := []v3.PolicyType{}
-	if len(egress) > 0 {
-		pt = append(pt, v3.PolicyTypeEgress)
-	}
-	if len(ingress) > 0 {
-		pt = append(pt, v3.PolicyTypeIngress)
-	}
-
-	return pt
 }
 
 // GetEgressToDomainV3Rule returns the egress traffic to domain rule. The destination entity rule
@@ -163,7 +139,16 @@ func GetEgressToDomainV3Rule(data types.FlowLogData, direction DirectionType) *v
 		rule.Destination.Ports = data.Ports
 	}
 
-	// Domains are stored in alphabetical order
+	// Retruns a sorted slice of domains in alphabetical order.
+	sortDomains := func(domains []string) []string {
+		sortedDomains := domains
+		sort.SliceStable(sortedDomains, func(i, j int) bool {
+			return sortedDomains[i] < sortedDomains[j]
+		})
+
+		return sortedDomains
+	}
+
 	rule.Destination.Domains = sortDomains(data.Domains)
 
 	return rule
@@ -428,16 +413,6 @@ func getEntityRuleReference(direction DirectionType, rule *v3.Rule) *v3.EntityRu
 	}
 
 	return entityRule
-}
-
-// sortDomains returns a sorted list of ports, sorted by min port.
-func sortDomains(domains []string) []string {
-	sortedDomains := domains
-	sort.SliceStable(sortedDomains, func(i, j int) bool {
-		return sortedDomains[i] < sortedDomains[j]
-	})
-
-	return sortedDomains
 }
 
 // sortPorts returns a sorted list of ports, sorted by min port.

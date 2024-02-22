@@ -1,50 +1,21 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved
+// Copyright (c) 2024 Tigera, Inc. All rights reserved
 package utils
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 )
 
-// CopyStagedNetworkPolicy copies context relevant to policy recommendation where from source
-// StagedNetworkPolicy to destination.
-func CopyStagedNetworkPolicy(dest *v3.StagedNetworkPolicy, src v3.StagedNetworkPolicy) {
-	// Metadata
-	dest.ObjectMeta.Name = src.GetObjectMeta().GetName()
-	dest.ObjectMeta.Namespace = src.GetObjectMeta().GetNamespace()
-	dest.ObjectMeta.OwnerReferences = src.GetObjectMeta().GetOwnerReferences()
-
-	dest.ObjectMeta.Annotations = make(map[string]string)
-	for key, annotation := range src.GetObjectMeta().GetAnnotations() {
-		dest.ObjectMeta.Annotations[key] = annotation
-	}
-	dest.ObjectMeta.Labels = make(map[string]string)
-	for key, label := range src.GetObjectMeta().GetLabels() {
-		dest.ObjectMeta.Labels[key] = label
-	}
-
-	// Spec
-	dest.Spec.Selector = src.Spec.Selector
-	dest.Spec.StagedAction = src.Spec.StagedAction
-	dest.Spec.Tier = src.Spec.Tier
-	dest.Spec.Egress = make([]v3.Rule, len(src.Spec.Egress))
-	copy(dest.Spec.Egress, src.Spec.Egress)
-	dest.Spec.Ingress = make([]v3.Rule, len(src.Spec.Ingress))
-	copy(dest.Spec.Ingress, src.Spec.Ingress)
-	dest.Spec.Types = make([]v3.PolicyType, len(src.Spec.Types))
-	copy(dest.Spec.Types, src.Spec.Types)
-}
-
-// GetPolicyName returns a policy name with tier prefix and 5 char hash suffix. If there is an
+// GenerateRecommendationName returns a policy name with tier prefix and 5 char hash suffix. If there is an
 // error in generating the policy name, it returns an empty string.
-func GetPolicyName(tier, name string, suffixGenerator func() string) string {
+func GenerateRecommendationName(tier, name string, suffixGenerator func() string) string {
 	policy, err := getRFC1123PolicyName(tier, name, suffixGenerator())
 	if err != nil {
 		log.WithError(err).Errorf("Failed to generate policy name for tier %s and name %s", tier, name)
@@ -82,4 +53,27 @@ func getRFC1123PolicyName(tier, name, suffix string) (string, error) {
 	}
 
 	return fmt.Sprintf("%s-%s", policy, suffix), nil
+}
+
+// ExtractMessages extracts the messages from a log string.
+func ExtractMessages(logString string) []string {
+	// Split the log string into individual log entries
+	logs := strings.Split(logString, "\n")
+
+	// Regular expression to extract the message from each log entry
+	re := regexp.MustCompile(`msg="([^"]+)"`)
+
+	var messages []string
+
+	// Iterate over each log entry and extract the message
+	for _, logEntry := range logs {
+		// FindStringSubmatch returns an array where index 0 is the full match,
+		// and index 1 is the first captured group (our message)
+		match := re.FindStringSubmatch(logEntry)
+		if len(match) >= 2 {
+			messages = append(messages, match[1])
+		}
+	}
+
+	return messages
 }
