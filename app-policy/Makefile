@@ -35,15 +35,6 @@ CONTAINER_MARKER=$(CONTAINER_CREATED)
 BINDIR=bin
 endif
 
-# Set the platform correctly for building docker images.
-ifeq ($(ARCH),arm64)
-# We need to force ARM64 build image to be used in a cross-compilation run.
-# Coraza needs CGO to use new CRS version (see https://github.com/tigera/calico-private/pull/7011)
-# but UBI based calico/go-build:amd64 doesn't ship the full multi-arch headers for corss-compilation.
-# We need a calico/go-build container for the target architecture to do qemu emulated native build.
-CALICO_BUILD:=$(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(ARCH)
-endif
-
 # Shortcut targets
 default: build
 
@@ -79,8 +70,7 @@ $(VALIDARCHES):
 build-all: $(VALIDARCHES)
 
 .PHONY: build
-## Build the binary for the current architecture and platform
-build: register
+build:
 	$(MAKE) $(BINDIR)/dikastes-$(ARCH) ARCH=$(ARCH)
 	$(MAKE) $(BINDIR)/healthz-$(ARCH) ARCH=$(ARCH)
 
@@ -138,19 +128,17 @@ proto/healthz.pb.go: proto/healthz.proto
 ###############################################################################
 .PHONY: image $(DIKASTES_IMAGE)
 image: $(DIKASTES_IMAGE)
-image-all: $(addprefix sub-image-,$(VALIDARCHES)) sub-image-fips-amd64
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
-	$(MAKE) image ARCH=$*
-sub-image-fips-%:
-	$(MAKE) image FIPS=true ARCH=$*
+	$(MAKE) image FIPS=$(FIPS) ARCH=$*
 
 $(DIKASTES_IMAGE): $(CONTAINER_MARKER)
-$(CONTAINER_CREATED): register Dockerfile $(BINDIR)/dikastes-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+$(CONTAINER_CREATED): Dockerfile $(BINDIR)/dikastes-$(ARCH) $(BINDIR)/healthz-$(ARCH)
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-$(CONTAINER_FIPS_CREATED): register Dockerfile $(BINDIR)/dikastes-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+$(CONTAINER_FIPS_CREATED): Dockerfile $(BINDIR)/dikastes-$(ARCH) $(BINDIR)/healthz-$(ARCH)
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-fips-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@

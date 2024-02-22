@@ -8,38 +8,61 @@ agent:
 execution_time_limit:
   minutes: 60
 
+global_job_config:
+  env_vars:
+    - name: DEV_REGISTRIES
+      value: gcr.io/unique-caldron-775/cnx/tigera
+  secrets:
+    - name: docker-hub
+    - name: google-service-account-for-gcr
+  prologue:
+    commands:
+      - checkout
+      # Semaphore mounts a copy-on-write FS as /var/lib/docker in order to provide a pre-loaded cache of
+      # some images. However, the cache is not useful to us and the copy-on-write FS is a big problem given
+      # how much we churn docker containers during the build.  Disable it.
+      - sudo systemctl stop docker
+      - sudo umount /var/lib/docker && sudo killall qemu-nbd || true
+      - sudo systemctl start docker
+      # Free up space on the build machine.
+      - sudo rm -rf ~/{.kerl,.kiex,.npm,.nvm,.phpbrew,.rbenv,.sbt} /opt/{apache-maven*,firefox*,scala} /usr/lib/jvm /usr/local/{aws2,golang,phantomjs*}
+      # Semaphore is doing shallow clone on a commit without tags.
+      # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
+      - retry git fetch --unshallow
+      - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+      - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
+
 blocks:
-  # Build and push images.
-  # We'll only do this on non-PR builds, where we have credentials to do so.
   - name: Publish egress-gateway images
+    dependencies: []
     skip:
-      # Only run on branches, not PRs.
       when: "branch !~ '.+'"
     task:
-      prologue:
-        commands:
-          - checkout
-          # Semaphore mounts a copy-on-write FS as /var/lib/docker in order to provide a pre-loaded cache of
-          # some images. However, the cache is not useful to us and the copy-on-write FS is a big problem given
-          # how much we churn docker containers during the build.  Disable it.
-          - sudo systemctl stop docker
-          - sudo umount /var/lib/docker && sudo killall qemu-nbd || true
-          - sudo systemctl start docker
-          # Free up space on the build machine.
-          - sudo rm -rf ~/{.kerl,.kiex,.npm,.nvm,.phpbrew,.rbenv,.sbt} /opt/{apache-maven*,firefox*,scala} /usr/lib/jvm /usr/local/{aws2,golang,phantomjs*}
-          # Semaphore is doing shallow clone on a commit without tags.
-          # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
-          - retry git fetch --unshallow
-          - echo $DOCKER_TOKEN | docker login --username "$DOCKER_USER" --password-stdin
-          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-          - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
-      secrets:
-        - name: docker
-        - name: google-service-account-for-gcr
       jobs:
-        - name: Linux multi-arch
-          env_vars:
-            - name: DEV_REGISTRIES
-              value: gcr.io/unique-caldron-775/cnx/tigera
+        - name: Linux amd64
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C egress-gateway cd CONFIRM=true; fi
+            - make -C egress-gateway cd ARCHES=amd64 CONFIRM=true
+  - name: Publish egress-gateway images - native arm64 runner
+    dependencies: []
+    skip:
+      when: "branch !~ '.+'"
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-2
+      jobs:
+        - name: Linux arm64
+          commands:
+            - make -C egress-gateway cd ARCHES=arm64 CONFIRM=true
+  - name: Publish egress-gateway multi-arch manifests
+    dependencies:
+      - Publish egress-gateway images
+      - "Publish egress-gateway images - native arm64 runner"
+    skip:
+      when: "branch !~ '.+'"
+    task:
+      jobs:
+        - name: Linux multi-arch manifests
+          commands:
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C egress-gateway push-manifests-with-tag CONFIRM=true; fi
