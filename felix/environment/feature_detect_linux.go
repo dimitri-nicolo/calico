@@ -64,6 +64,8 @@ var (
 )
 
 type FeatureDetector struct {
+	featureDetectorCommon
+
 	lock            sync.Mutex
 	featureCache    *Features
 	featureOverride map[string]string
@@ -429,6 +431,10 @@ type FakeFeatureDetector struct {
 	Features
 }
 
+func (f *FakeFeatureDetector) FeatureGate(name string) string {
+	return ""
+}
+
 func (f *FakeFeatureDetector) RefreshFeatures() {
 }
 
@@ -438,4 +444,3 @@ func (f *FakeFeatureDetector) GetFeatures() *Features {
 }
 
 var _ FeatureDetectorIface = (*FakeFeatureDetector)(nil)
-var _ FeatureDetectorIface = (*FeatureDetector)(nil)
