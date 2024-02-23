@@ -1,3 +1,5 @@
+// Copyright (c) 2019-2024 Tigera, Inc. All rights reserved.
+
 package bootstrap
 
 import (
@@ -6,6 +8,8 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
 
@@ -17,7 +21,7 @@ type Target struct {
 	// Path is the path portion of the URL based on which we proxy
 	Path string `json:"path"`
 	// Dest is the destination URL
-	Dest string `json:"url"`
+	Dest string `json:"destination"`
 	// TokenPath is where we read the Bearer token from (if non-empty)
 	TokenPath string `json:"tokenPath,omitempty"`
 	// CABundlePath is where we read the CA bundle from to authenticate the
@@ -30,18 +34,32 @@ type Target struct {
 	// AllowInsecureTLS allows https with insecure tls settings
 	AllowInsecureTLS bool `json:"allowInsecureTLS,omitempty"`
 
-	// ClientCert and ClientKey can be set for mTLS on the connection
+	// ClientCertPath and ClientKeyPath can be set for mTLS on the connection
 	// from Voltron to the destination.
-	ClientCert string `json:"clientCert"`
-	ClientKey  string `json:"clientKey"`
+	ClientCertPath string `json:"clientCertPath"`
+	ClientKeyPath  string `json:"clientKeyPath"`
+
+	Unauthenticated bool `json:"unauthenticated,omitempty"`
+}
+
+func (targets *Targets) UnauthenticatedPaths() []string {
+	var paths []string
+
+	for _, target := range *targets {
+		if target.Unauthenticated {
+			paths = append(paths, target.Path)
+		}
+	}
+
+	return paths
 }
 
 // Targets allows unmarshal the json array
 type Targets []Target
 
 // Decode deserializes the list of proxytargets
-func (pt *Targets) Decode(envVar string) error {
-	err := json.Unmarshal([]byte(envVar), pt)
+func (targets *Targets) Decode(envVar string) error {
+	err := json.Unmarshal([]byte(envVar), targets)
 	if err != nil {
 		return err
 	}
@@ -76,11 +94,11 @@ func ProxyTargets(tgts Targets, fipsModeEnabled bool) ([]proxy.Target, error) {
 			AllowInsecureTLS: t.AllowInsecureTLS,
 		}
 
-		if t.ClientKey != "" && t.ClientCert != "" {
-			pt.ClientKey = t.ClientKey
-			pt.ClientCert = t.ClientCert
-		} else if t.ClientKey != "" || t.ClientCert != "" {
-			return nil, fmt.Errorf("must specify both ClientKey and ClientCert")
+		if t.ClientKeyPath != "" && t.ClientCertPath != "" {
+			pt.ClientKeyPath = t.ClientKeyPath
+			pt.ClientCertPath = t.ClientCertPath
+		} else if t.ClientKeyPath != "" || t.ClientCertPath != "" {
+			return nil, fmt.Errorf("must specify both ClientKeyPath and ClientCertPath")
 		}
 
 		var err error
@@ -126,4 +144,48 @@ func ProxyTargets(tgts Targets, fipsModeEnabled bool) ([]proxy.Target, error) {
 	}
 
 	return ret, nil
+}
+
+func TLSTerminatedRoutesFromFile(path string) ([]Target, error) {
+	var targets Targets
+
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading file from %s: %w", path, err)
+	}
+
+	log.Debugf("route contents %s", contents)
+
+	err = json.Unmarshal(contents, &targets)
+	if err != nil {
+		return nil, errors.Errorf("Failed unmarshalling JSON: %s", err)
+	}
+
+	return targets, nil
+}
+
+type TLSPassThroughRoute struct {
+	// Destination is the destination URL
+	Destination string `json:"destination"`
+
+	// Server name to match incoming tunnel traffic to. Matching traffic is proxied to the Destination.
+	ServerName string `json:"serverName"`
+}
+
+func TLSPassThroughRoutesFromFile(path string) ([]TLSPassThroughRoute, error) {
+	var routes []TLSPassThroughRoute
+
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading file from %s: %w", path, err)
+	}
+
+	log.Debugf("route contents %s", contents)
+
+	err = json.Unmarshal(contents, &routes)
+	if err != nil {
+		return nil, errors.Errorf("Failed unmarshalling JSON: %s", err)
+	}
+
+	return routes, nil
 }

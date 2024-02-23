@@ -149,6 +149,19 @@ type Config struct {
 	// TenantNamespace is the namespace for the tenant specified in the TenantID field. If set, Voltron will use this namespace to query per-tenant
 	// information such as ManagedClusters. If unset, and a tenant ID is provided, it will be defaulted based on an auto-detected namespace.
 	TenantNamespace string `envconfig:"TENANT_NAMESPACE" default:""`
+
+	// UITlsTerminatedRoutesPath is the file path for tls terminated routes to configure the UI proxy with. If not specified,
+	// routes are not loaded from the file.
+	UITlsTerminatedRoutesPath *string `split_words:"true"`
+
+	// UpstreamTunnelTLSTerminatedRoutesPath is the file path for tls terminated routes to configure the upstream tunnel
+	// routes with (routes for traffic going from the managed cluster to the management cluster). If not specified, routes
+	// are not loaded from a file.
+	UpstreamTunnelTLSTerminatedRoutesPath *string `split_words:"true"`
+	// UpstreamTunnelTLSPassThroughRoutesPath is the file path for tls pass through routes to configure the upstream tunnel
+	// routes with (routes for traffic going from the managed cluster to the management cluster). If not specified, routes
+	// are not loaded from a file.
+	UpstreamTunnelTLSPassThroughRoutesPath *string `split_words:"true"`
 }
 
 func (cfg Config) String() string {

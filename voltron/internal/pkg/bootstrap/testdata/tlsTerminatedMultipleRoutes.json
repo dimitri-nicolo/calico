@@ -1,0 +1,20 @@
+[
+  {
+    "destination": "https://foo.bar:9443",
+    "path": "/foo/",
+    "pathRegexp": "^/foo/?",
+    "pathReplace": "/",
+    "caBundlePath": "/somebundle.crt",
+    "clientCertPath": "/somecert.pem",
+    "clientKeyPath": "/somekey.pem"
+  },
+  {
+    "destination": "https://zaz.bar:9443",
+    "path": "/zaz/",
+    "pathRegexp": "^/zaz/?",
+    "pathReplace": "/z",
+    "caBundlePath": "/someotherbundle.crt",
+    "clientCertPath": "/someothercert.pem",
+    "clientKeyPath": "/someotherkey.pem"
+  }
+]
