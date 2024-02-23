@@ -693,10 +693,30 @@ blocks:
       - name: "Node: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: "Build Windows archive"
+    epilogue:
+      always:
+        commands:
+          - test-results publish ./report/nosetests.xml --name "node-ci" || true
+
+- name: "Node: multi-arch build"
+  run:
+    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - "Node: Build"
+  task:
+    secrets:
+      # Mount a secret for pulling images from GCR, and a license for the k8s FVs
+      - name: tigera-dev-ci-pull-credentials
+      - name: google-service-account-for-gcr
+      - name: test-customer-license
+    prologue:
+      commands:
+        - cd node
+    jobs:
+      - name: Build Windows archive
         commands:
           - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
-      - name: "Build Windows image"
+      - name: Build Windows image
         commands:
           - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
     epilogue:
@@ -708,7 +728,7 @@ blocks:
   run:
     when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
-    - Prerequisites
+    - "Node: Build"
   task:
     agent:
       machine:
