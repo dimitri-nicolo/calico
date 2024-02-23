@@ -4,7 +4,6 @@ package recommendation_controller
 import (
 	"context"
 	"fmt"
-	"math"
 	"reflect"
 	"sync"
 	"time"
@@ -47,6 +46,9 @@ const (
 
 	// The duration between synching of the datastore.
 	synchingInterval = time.Second * 10
+
+	// The tier order for the recommendation tier.
+	tierOrder = 10000
 )
 
 type recommendationController struct {
@@ -282,7 +284,7 @@ func (c *recommendationController) syncToDatastore(key string) error {
 	// Create a new recommendation (StagedNetworkPolicy) if the store item doesn't yet exist.
 	if storeItem == nil {
 		// Create a new recommendation tier, if that doesn't yet exist.
-		if err := calres.MaybeCreateTier(c.ctx, c.clientSet.ProjectcalicoV3(), rectypes.PolicyRecommendationTierName, &[]float64{math.MaxFloat64}[0], c.clog); err != nil {
+		if err := calres.MaybeCreateTier(c.ctx, c.clientSet.ProjectcalicoV3(), rectypes.PolicyRecommendationTierName, tierOrder, c.clog); err != nil {
 			c.clog.WithError(err).WithField("name", rectypes.PolicyRecommendationTierName).Error("failed creating Tier")
 			return err
 		}

@@ -47,11 +47,11 @@ func DeleteTier(ctx context.Context, calico calicoclient.ProjectcalicoV3Interfac
 }
 
 // MaybeCreateTier attempts to create a new tier if does not already exist.
-func MaybeCreateTier(ctx context.Context, calico calicoclient.ProjectcalicoV3Interface, name string, order *float64, clog *log.Entry) error {
+func MaybeCreateTier(ctx context.Context, calico calicoclient.ProjectcalicoV3Interface, name string, order float64, clog *log.Entry) error {
 	if _, err := calico.Tiers().Get(ctx, name, metav1.GetOptions{}); err != nil {
 		if kerrors.IsNotFound(err) {
 			// Tier doesn't exist, create a new one
-			tier := newTier(name, order)
+			tier := newTier(name, &order)
 
 			if _, err = calico.Tiers().Create(ctx, tier, metav1.CreateOptions{}); err != nil {
 				clog.WithField("key", name).WithError(err).Error("failed to create tier")
