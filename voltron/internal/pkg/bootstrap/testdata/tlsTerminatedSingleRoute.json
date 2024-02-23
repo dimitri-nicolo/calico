@@ -1,0 +1,11 @@
+[
+  {
+    "destination": "https://foo.bar:9443",
+    "path": "/foo/",
+    "pathRegexp": "^/foo/?",
+    "pathReplace": "/",
+    "caBundlePath": "/somebundle.crt",
+    "clientCertPath": "/somecert.pem",
+    "clientKeyPath": "/somekey.pem"
+  }
+]

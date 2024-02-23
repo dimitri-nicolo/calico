@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 package calicoresources
 
 import (
@@ -11,6 +11,8 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+
+	rectypes "github.com/projectcalico/calico/policy-recommendation/pkg/types"
 )
 
 // NewTier returns a pointer to a calico v3 tier resource.
@@ -26,18 +28,18 @@ func newTier(name string, order *float64) *v3.Tier {
 }
 
 // DeleteTier deletes a tier in the datasource.
-func DeleteTier(ctx context.Context, calico calicoclient.ProjectcalicoV3Interface, name string) error {
+func DeleteTier(ctx context.Context, calico calicoclient.ProjectcalicoV3Interface, name string, clog *log.Entry) error {
 	if _, err := calico.Tiers().Get(ctx, name, metav1.GetOptions{}); err != nil {
 		if !kerrors.IsNotFound(err) {
-			log.WithError(err).Warnf("Error getting tier: %s, cannot delete tier", name)
+			clog.WithError(err).Warnf("Error getting tier: %s, cannot delete tier", name)
 			return err
 		}
-		log.Debugf("No tier found with name %s to delete.", name)
+		clog.Debugf("No tier found with name %s to delete.", name)
 		return nil
 	}
 
 	if err := calico.Tiers().Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
-		log.WithError(err).Warnf("Error deleting tier: %s", name)
+		clog.WithError(err).Warnf("Error deleting tier: %s", name)
 		return err
 	}
 
@@ -45,21 +47,21 @@ func DeleteTier(ctx context.Context, calico calicoclient.ProjectcalicoV3Interfac
 }
 
 // MaybeCreateTier attempts to create a new tier if does not already exist.
-func MaybeCreateTier(ctx context.Context, calico calicoclient.ProjectcalicoV3Interface, name string, order *float64) error {
+func MaybeCreateTier(ctx context.Context, calico calicoclient.ProjectcalicoV3Interface, name string, order float64, clog *log.Entry) error {
 	if _, err := calico.Tiers().Get(ctx, name, metav1.GetOptions{}); err != nil {
 		if kerrors.IsNotFound(err) {
 			// Tier doesn't exist, create a new one
-			tier := newTier(name, order)
+			tier := newTier(name, &order)
 
-			log.WithField("key", name).Info("Creating new tier")
 			if _, err = calico.Tiers().Create(ctx, tier, metav1.CreateOptions{}); err != nil {
-				log.WithField("key", name).WithError(err).Error("failed to create tier")
+				clog.WithField("key", name).WithError(err).Error("failed to create tier")
 				return err
 			}
 		} else {
-			log.WithField("key", name).WithError(err).Error("failed to get tier")
+			clog.WithField("key", name).WithError(err).Error("failed to get tier")
 			return err
 		}
+		clog.WithField("tier", rectypes.PolicyRecommendationTierName).Info("Created recommendation tier")
 	}
 
 	return nil

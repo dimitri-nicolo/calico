@@ -171,14 +171,14 @@ func Install(version string) error {
 		}
 	}
 
-	// If set write the multi interface mode to disk so the CNI plugin can read it
+	// If set, write the multi interface mode to disk so the CNI plugin can read it
 	path := "/host/etc/cni/net.d/calico_multi_interface_mode"
 	if c.MultiInterface != "" {
-		err = os.WriteFile(path, []byte(c.MultiInterface), 0644)
+		err = os.WriteFile(winutils.GetHostPath(path), []byte(c.MultiInterface), 0644)
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		logrus.Infof("/host/etc/cni/net.d/calico_multi_interface_mode")
+		logrus.Infof("Wrote to %s", path)
 	} else {
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 			logrus.Fatal(err)

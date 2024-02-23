@@ -63,8 +63,6 @@ bin_allow_list_patterns=(
   '/find$'
   '/ldd$'
   '/ldconfig$'
-
-  qemu
 )
 
 # Convert the binary allow list into arguments for grep.

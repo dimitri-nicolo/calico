@@ -40527,6 +40527,14 @@ rules:
     verbs:
       - create
       - delete
+  # In addition to the above, the operator should have the ability to delete their own resources during uninstallation.
+  - apiGroups:
+      - operator.tigera.io
+    resources:
+      - installations
+      - apiservers
+    verbs:
+      - delete
   - apiGroups:
     - networking.k8s.io
     resources:
@@ -40858,7 +40866,7 @@ spec:
           operator: Exists
         - effect: NoSchedule
           operator: Exists
-      serviceAccountName: tigera-operator-enterprise
+      serviceAccountName: tigera-operator
       # Set the termination grace period to match how long the operator will wait for
       # resources to terminate when being uninstalled.
       terminationGracePeriodSeconds: 60

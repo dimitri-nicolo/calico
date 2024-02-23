@@ -101,11 +101,16 @@ func (m *mockDataplane) loadDefaultPolicies() error {
 	return nil
 }
 
-func (m *mockDataplane) ensureProgramAttached(ap attachPoint) (bpf.AttachResult, error) {
+func (m *mockDataplane) ensureProgramAttached(ap attachPoint) (qDiscInfo, error) {
+	var qdisc qDiscInfo
+	return qdisc, nil
+}
+
+func (m *mockDataplane) ensureProgramLoaded(ap attachPoint, ipFamily proto.IPVersion) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	var res tc.AttachResult // we don't care about the values
+	//var res tc.AttachResult // we don't care about the values
 
 	if apxdp, ok := ap.(*xdp.AttachPoint); ok {
 		apxdp.HookLayout = hook.Layout{
@@ -116,11 +121,11 @@ func (m *mockDataplane) ensureProgramAttached(ap attachPoint) (bpf.AttachResult,
 
 	key := ap.IfaceName() + ":" + ap.HookName().String()
 	if _, exists := m.progs[key]; exists {
-		return res, nil
+		return nil
 	}
 	m.lastProgID += 1
 	m.progs[key] = m.lastProgID
-	return res, nil
+	return nil
 }
 
 func (m *mockDataplane) ensureNoProgram(ap attachPoint) error {
@@ -141,7 +146,7 @@ func (m *mockDataplane) ensureQdisc(iface string) (bool, error) {
 	return false, nil
 }
 
-func (m *mockDataplane) updatePolicyProgram(rules polprog.Rules, polDir string, ap attachPoint) error {
+func (m *mockDataplane) updatePolicyProgram(rules polprog.Rules, polDir string, ap attachPoint, ipFamily proto.IPVersion) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	key := ap.IfaceName() + ":" + ap.HookName().String()
@@ -149,7 +154,7 @@ func (m *mockDataplane) updatePolicyProgram(rules polprog.Rules, polDir string, 
 	return nil
 }
 
-func (m *mockDataplane) removePolicyProgram(ap attachPoint) error {
+func (m *mockDataplane) removePolicyProgram(ap attachPoint, ipFamily proto.IPVersion) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	key := ap.IfaceName() + ":" + ap.HookName().String()
@@ -271,6 +276,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		vxlanMTU             int
 		nodePortDSR          bool
 		maps                 *bpfmap.Maps
+		v4Maps               *bpfmap.IPMaps
+		commonMaps           *bpfmap.CommonMaps
 		rrConfigNormal       rules.Config
 		ruleRenderer         rules.RuleRenderer
 		filterTableV4        IptablesTable
@@ -296,16 +303,20 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 		maps = new(bpfmap.Maps)
 
-		maps.IpsetsMap = bpfipsets.Map()
-		maps.StateMap = state.Map()
-		maps.CtMap = conntrack.Map()
+		v4Maps = new(bpfmap.IPMaps)
+		commonMaps = new(bpfmap.CommonMaps)
+
+		v4Maps.IpsetsMap = bpfipsets.Map()
+		v4Maps.CtMap = conntrack.Map()
+
+		commonMaps.StateMap = state.Map()
 		ifStateMap = mock.NewMockMap(ifstate.MapParams)
-		maps.IfStateMap = ifStateMap
+		commonMaps.IfStateMap = ifStateMap
 		cparams := counters.MapParameters
 		cparams.ValueSize *= bpfmaps.NumPossibleCPUs()
 		countersMap = mock.NewMockMap(cparams)
-		maps.CountersMap = countersMap
-		maps.RuleCountersMap = mock.NewMockMap(counters.PolicyMapParameters)
+		commonMaps.CountersMap = countersMap
+		commonMaps.RuleCountersMap = mock.NewMockMap(counters.PolicyMapParameters)
 
 		progsParams := bpfmaps.MapParameters{
 			Type:       "prog_array",
@@ -316,12 +327,15 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			Version:    2,
 		}
 
-		maps.ProgramsMap = mock.NewMockMap(progsParams)
-		maps.XDPProgramsMap = mock.NewMockMap(progsParams)
+		commonMaps.ProgramsMap = mock.NewMockMap(progsParams)
+		commonMaps.XDPProgramsMap = mock.NewMockMap(progsParams)
 		jumpMap = mock.NewMockMap(progsParams)
-		maps.JumpMap = jumpMap
+		commonMaps.JumpMap = jumpMap
 		xdpJumpMap = mock.NewMockMap(progsParams)
-		maps.XDPJumpMap = xdpJumpMap
+		commonMaps.XDPJumpMap = xdpJumpMap
+
+		maps.V4 = v4Maps
+		maps.CommonMaps = commonMaps
 
 		rrConfigNormal = rules.Config{
 			IPIPEnabled:                      true,
@@ -387,7 +401,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		)
 		Expect(err).NotTo(HaveOccurred())
 		bpfEpMgr.Features = environment.NewFeatureDetector(nil).GetFeatures()
-		bpfEpMgr.hostIP = net.ParseIP("1.2.3.4")
+		bpfEpMgr.v4.hostIP = net.ParseIP("1.2.3.4")
 	}
 
 	genIfaceUpdate := func(name string, state ifacemonitor.State, index int) func() {
@@ -540,7 +554,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 				endpointToHostAction = "RETURN"
 			})
 
-			It("has host-* policy on workload egress but not ingress", func() {
+			It("has host-* policy suppressed on ingress and egress", func() {
 				var caliI, caliE *polprog.Rules
 
 				// Check workload ingress.
@@ -553,7 +567,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 				Expect(caliE.ForHostInterface).To(BeFalse())
 				Expect(caliE.HostNormalTiers).To(HaveLen(1))
 				Expect(caliE.HostNormalTiers[0].Policies).To(HaveLen(1))
-				Expect(caliE.SuppressNormalHostPolicy).To(BeFalse())
+				Expect(caliE.SuppressNormalHostPolicy).To(BeTrue())
 			})
 		})
 	})
@@ -765,7 +779,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			egrRuleMatchId := bpfEpMgr.dp.ruleMatchID(rules.RuleDirEgress, "Allow", rules.RuleOwnerTypePolicy, 0, "allowPol")
 			k := make([]byte, 8)
 			v := make([]byte, 8)
-			rcMap := bpfEpMgr.bpfmaps.RuleCountersMap
+			rcMap := bpfEpMgr.commonMaps.RuleCountersMap
 
 			// create a new policy
 			bpfEpMgr.OnUpdate(&proto.ActivePolicyUpdate{
@@ -831,7 +845,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			egrRuleMatchId := bpfEpMgr.dp.ruleMatchID(rules.RuleDirEgress, "Allow", rules.RuleOwnerTypePolicy, 0, "allowPol")
 			k := make([]byte, 8)
 			v := make([]byte, 8)
-			rcMap := bpfEpMgr.bpfmaps.RuleCountersMap
+			rcMap := bpfEpMgr.commonMaps.RuleCountersMap
 
 			binary.LittleEndian.PutUint64(k, ingRuleMatchId)
 			binary.LittleEndian.PutUint64(v, uint64(10))

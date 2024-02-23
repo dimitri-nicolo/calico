@@ -15,15 +15,15 @@ type PolicyRecommendationQuery struct {
 }
 
 // QueryFlows provides a mock function with given fields: params
-func (_m *PolicyRecommendationQuery) QueryFlows(params *flows.PolicyRecommendationParams) ([]*api.Flow, error) {
+func (_m *PolicyRecommendationQuery) QueryFlows(params *flows.RecommendationFlowLogQueryParams) ([]*api.Flow, error) {
 	ret := _m.Called(params)
 
 	var r0 []*api.Flow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*flows.PolicyRecommendationParams) ([]*api.Flow, error)); ok {
+	if rf, ok := ret.Get(0).(func(*flows.RecommendationFlowLogQueryParams) ([]*api.Flow, error)); ok {
 		return rf(params)
 	}
-	if rf, ok := ret.Get(0).(func(*flows.PolicyRecommendationParams) []*api.Flow); ok {
+	if rf, ok := ret.Get(0).(func(*flows.RecommendationFlowLogQueryParams) []*api.Flow); ok {
 		r0 = rf(params)
 	} else {
 		if ret.Get(0) != nil {
@@ -31,7 +31,7 @@ func (_m *PolicyRecommendationQuery) QueryFlows(params *flows.PolicyRecommendati
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(*flows.PolicyRecommendationParams) error); ok {
+	if rf, ok := ret.Get(1).(func(*flows.RecommendationFlowLogQueryParams) error); ok {
 		r1 = rf(params)
 	} else {
 		r1 = ret.Error(1)

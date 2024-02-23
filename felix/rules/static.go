@@ -24,6 +24,7 @@ import (
 
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/config"
+	"github.com/projectcalico/calico/felix/iptables"
 	. "github.com/projectcalico/calico/felix/iptables"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/tproxydefs"
@@ -274,6 +275,46 @@ func (r *DefaultRuleRenderer) StaticFilterOutputForwardEndpointMarkChain() *Chai
 	}
 }
 
+func FilterInputChainAllowWG(ipVersion uint8, r Config, allowAction iptables.Action) []Rule {
+	var inputRules []Rule
+
+	if ipVersion == 4 && r.WireguardEnabled {
+		// When Wireguard is enabled, auto-allow Wireguard traffic from other nodes.  Without this,
+		// it's too easy to make a host policy that blocks Wireguard traffic, resulting in very confusing
+		// connectivity problems.
+		inputRules = append(inputRules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(uint16(r.WireguardListeningPort)).
+					DestAddrType(AddrTypeLocal),
+				Action:  allowAction,
+				Comment: []string{"Allow incoming IPv4 Wireguard packets"},
+			},
+			// Note that we do not need a drop rule for Wireguard because it already has the peering and allowed IPs
+			// baked into the crypto routing table.
+		)
+	}
+
+	if ipVersion == 6 && r.WireguardEnabledV6 {
+		// When Wireguard is enabled, auto-allow Wireguard traffic from other nodes.  Without this,
+		// it's too easy to make a host policy that blocks Wireguard traffic, resulting in very confusing
+		// connectivity problems.
+		inputRules = append(inputRules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(uint16(r.WireguardListeningPortV6)).
+					DestAddrType(AddrTypeLocal),
+				Action:  allowAction,
+				Comment: []string{"Allow incoming IPv6 Wireguard packets"},
+			},
+			// Note that we do not need a drop rule for Wireguard because it already has the peering and allowed IPs
+			// baked into the crypto routing table.
+		)
+	}
+
+	return inputRules
+}
+
 func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	var inputRules []Rule
 
@@ -400,39 +441,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 		)
 	}
 
-	if ipVersion == 4 && r.WireguardEnabled {
-		// When Wireguard is enabled, auto-allow Wireguard traffic from other nodes.  Without this,
-		// it's too easy to make a host policy that blocks Wireguard traffic, resulting in very confusing
-		// connectivity problems.
-		inputRules = append(inputRules,
-			Rule{
-				Match: Match().ProtocolNum(ProtoUDP).
-					DestPorts(uint16(r.Config.WireguardListeningPort)).
-					DestAddrType(AddrTypeLocal),
-				Action:  r.filterAllowAction,
-				Comment: []string{"Allow incoming IPv4 Wireguard packets"},
-			},
-			// Note that we do not need a drop rule for Wireguard because it already has the peering and allowed IPs
-			// baked into the crypto routing table.
-		)
-	}
-
-	if ipVersion == 6 && r.WireguardEnabledV6 {
-		// When Wireguard is enabled, auto-allow Wireguard traffic from other nodes.  Without this,
-		// it's too easy to make a host policy that blocks Wireguard traffic, resulting in very confusing
-		// connectivity problems.
-		inputRules = append(inputRules,
-			Rule{
-				Match: Match().ProtocolNum(ProtoUDP).
-					DestPorts(uint16(r.Config.WireguardListeningPortV6)).
-					DestAddrType(AddrTypeLocal),
-				Action:  r.filterAllowAction,
-				Comment: []string{"Allow incoming IPv6 Wireguard packets"},
-			},
-			// Note that we do not need a drop rule for Wireguard because it already has the peering and allowed IPs
-			// baked into the crypto routing table.
-		)
-	}
+	inputRules = append(inputRules, FilterInputChainAllowWG(ipVersion, r.Config, r.filterAllowAction)...)
 
 	if ipVersion == 4 && r.EgressIPEnabled && !r.BPFEnabled {
 		// Auto-allow VXLAN traffic destined to egress.calico.

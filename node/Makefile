@@ -58,13 +58,6 @@ NODE_CONTAINER_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node-$(ARCH)
 NODE_CONTAINER_MARKER=$(NODE_CONTAINER_CREATED)
 endif
 
-# Set the platform correctly for building docker images.
-ifeq ($(ARCH),arm64)
-# Required for eBPF support in ARM64.
-# We need to force ARM64 build image to be used in a crosscompilation run.
-CALICO_BUILD:=$(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(ARCH)
-endif
-
 ###############################################################################
 
 # Versions and location of dependencies used in the build.
@@ -264,13 +257,11 @@ endif
 # Building the image
 ###############################################################################
 ## Create the images for all supported ARCHes
-image-all: $(addprefix sub-image-,$(VALIDARCHES)) sub-image-fips-amd64 image-windows
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
-	$(MAKE) image ARCH=$*
-sub-image-fips-%:
-	$(MAKE) image FIPS=true ARCH=$*
+	$(MAKE) image FIPS=$(FIPS) ARCH=$*
 
-image $(NODE_IMAGE): register $(NODE_CONTAINER_MARKER)
+image $(NODE_IMAGE): $(NODE_CONTAINER_MARKER)
 $(NODE_CONTAINER_CREATED): $(REMOTE_DEPS) Dockerfile.$(ARCH) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) $(NODE_CONTAINER_FILES) $(TOOLS_MOUNTNS_BINARY)
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) --build-arg BIRD_IMAGE=$(BIRD_IMAGE) -t $(NODE_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
@@ -406,12 +397,18 @@ load-container-images: $(K8ST_IMAGE_TARS) $(KUBECTL)
 
 .PHONY: st-checks
 st-checks:
-	# Check that we're running as root.
-	test `id -u` -eq '0' || { echo "STs must be run as root to allow writes to /proc"; false; }
-
-	# Insert an iptables rule to allow access from our test containers to etcd
-	# running on the host.
-	iptables-save | grep -q 'calico-st-allow-etcd' || iptables $(IPT_ALLOW_ETCD)
+	@if mount | grep -q "cgroup on /sys/fs/cgroup"; then \
+		echo "cgroup v1 mounted"; \
+	else \
+		echo; \
+		echo "ERROR: Looks like your system uses cgroupv2, which is "; \
+		echo "not compatible with our ancient version of dind."; \
+		echo "You can either run this test in a VM, or add "; \
+		echo "systemd.unified_cgroup_hierarchy=0 to your kernel "; \
+		echo "command line (if supported by your kernel/OS)."; \
+		echo; \
+		exit 1; \
+	fi
 
 GCR_IO_PULL_SECRET?=${HOME}/secrets/docker_cfg.json
 TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
@@ -534,14 +531,13 @@ external-network-cleanup:
 
 .PHONY: st
 ## Run the system tests
-st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
+st: st-checks $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
 	# Use the host, PID and network namespaces from the host.
 	# Privileged is needed since 'calico node' write to /proc (to enable ip_forwarding)
 	# Map the docker socket in so docker can be used from inside the container
 	# HOST_CHECKOUT_DIR is used for volume mounts on containers started by this one.
 	# All of code under test is mounted into the container.
 	#   - This also provides access to calicoctl and the docker client
-	# $(MAKE) st-checks
 	docker run --uts=host \
 		   --pid=host \
 		   --net=host \
@@ -565,7 +561,7 @@ st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar
 ci: clean static-checks image ut st
 
 ## Deploys images to registry
-cd: image-all cd-common release-windows
+cd: image-all cd-common
 
 .PHONY: node-test-at
 # Run docker-image acceptance tests

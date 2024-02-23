@@ -1,5 +1,4 @@
-// Copyright (c) 2022-2023 Tigera Inc. All rights reserved.
-
+// Copyright (c) 2022-2024 Tigera Inc. All rights reserved.
 package main
 
 import (
@@ -8,14 +7,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"k8s.io/apiserver/pkg/authentication/user"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	log "github.com/sirupsen/logrus"
 
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/authentication/user"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -24,44 +20,42 @@ import (
 	lincensing_client "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
+	linseedclient "github.com/projectcalico/calico/linseed/pkg/client"
+	linseedrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-	"github.com/projectcalico/calico/policy-recommendation/pkg/cache"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/config"
-	"github.com/projectcalico/calico/policy-recommendation/pkg/managedcluster"
-	"github.com/projectcalico/calico/policy-recommendation/pkg/namespace"
-	"github.com/projectcalico/calico/policy-recommendation/pkg/policyrecommendation"
-	"github.com/projectcalico/calico/policy-recommendation/pkg/stagednetworkpolicies"
-	"github.com/projectcalico/calico/policy-recommendation/pkg/syncer"
-	"github.com/projectcalico/calico/policy-recommendation/utils"
+	mscontroller "github.com/projectcalico/calico/policy-recommendation/pkg/controllers/managed_cluster"
+	rscontroller "github.com/projectcalico/calico/policy-recommendation/pkg/controllers/recommendation_scope"
 )
 
-// backendClientAccessor is an interface to access the backend client from the main v2 client.
+// backendClientAccessor is an interface to access the backend client from the bapi client.
 type backendClientAccessor interface {
 	Backend() bapi.Client
 }
 
 func main() {
-	var err error
-	policyrecommendationConfig, err := config.LoadConfig()
+	config, err := config.LoadConfig()
 	if err != nil {
-		log.WithError(err).Fatal("Failed to load  policy recommendation config")
+		log.WithError(err).Fatal("Failed to load Policy Recommendation config")
 	}
+	// Initialize logging.
+	config.InitializeLogging()
 
-	policyrecommendationConfig.InitializeLogging()
-
+	//	Initialize context.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientFactory := lmak8s.NewClientSetFactory(
-		policyrecommendationConfig.MultiClusterForwardingCA,
-		policyrecommendationConfig.MultiClusterForwardingEndpoint,
+	// Initialize the client factory. If the tenant namespace is set, we need to impersonate the
+	// service account in the tenant namespace.
+	clientFactory := lmak8s.NewClientSetFactory(config.MultiClusterForwardingCA,
+		config.MultiClusterForwardingEndpoint,
 	)
-
-	clientSet, err := clientFactory.NewClientSetForApplication(lmak8s.DefaultCluster)
-	if err != nil {
-		panic(err.Error())
+	if config.TenantNamespace != "" {
+		impersonationInfo := user.DefaultInfo{
+			Name:   "system:serviceaccount:tigera-policy-recommendation:tigera-policy-recommendation",
+			Groups: []string{},
+		}
+		clientFactory = clientFactory.Impersonate(&impersonationInfo)
 	}
 
 	restConfig := clientFactory.NewRestConfigForApplication(lmak8s.DefaultCluster)
@@ -76,156 +70,101 @@ func main() {
 		log.WithError(err).Fatal("Failed to configure controller runtime client with watch")
 	}
 
-	// Create linseed Client.
-	lsConfig := lsrest.Config{
-		URL:             policyrecommendationConfig.LinseedURL,
-		CACertPath:      policyrecommendationConfig.LinseedCA,
-		ClientKeyPath:   policyrecommendationConfig.LinseedClientKey,
-		ClientCertPath:  policyrecommendationConfig.LinseedClientCert,
-		FIPSModeEnabled: policyrecommendationConfig.FIPSModeEnabled,
-	}
-	linseedClient, err := lsclient.NewClient(policyrecommendationConfig.TenantID, lsConfig, lsrest.WithTokenPath(policyrecommendationConfig.LinseedToken))
+	// Create clientset for application for the standalone (or management) cluster.
+	clientSet, err := clientFactory.NewClientSetForApplication(lmak8s.DefaultCluster)
 	if err != nil {
-		log.WithError(err).Fatal("failed to create linseed client")
+		log.WithError(err).Fatal("Failed to create application client for the standalone or management cluster")
 	}
 
-	// setup license check
+	// Create linseed Client.
+	linseedClient, err := linseedclient.NewClient(
+		config.TenantID,
+		linseedrest.Config{
+			URL:             config.LinseedURL,
+			CACertPath:      config.LinseedCA,
+			ClientKeyPath:   config.LinseedClientKey,
+			ClientCertPath:  config.LinseedClientCert,
+			FIPSModeEnabled: config.FIPSModeEnabled,
+		},
+		linseedrest.WithTokenPath(config.LinseedToken),
+	)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create linseed client")
+	}
+
 	v3Client, err := clientv3.NewFromEnv()
 	if err != nil {
 		log.WithError(err).Fatal("Failed to build v3 Calico client")
 	}
 
-	clusterDomain, err := utils.GetClusterDomain(utils.DefaultResolveConfPath)
-	if err != nil {
-		clusterDomain = utils.DefaultClusterDomain
-		log.WithError(err).Errorf("Couldn't find the cluster domain from the resolv.conf, defaulting to %s", clusterDomain)
-	} else {
-		log.Debugf("clusterDomain: %s", clusterDomain)
-	}
-	serviceNameSuffix := utils.GetServiceNameSuffix(clusterDomain)
-
-	// Define some of the callbacks for the license monitor. Any changes
-	// just send a signal back on the license changed channel.
+	// Define callbacks for the license monitor. Any changes send a signal back on the license changed
+	// channel.
 	licenseMonitor := monitor.New(v3Client.(backendClientAccessor).Backend())
 	err = licenseMonitor.RefreshLicense(ctx)
 	if err != nil {
-		log.WithError(err).Error("Failed to get license from datastore; continuing without a license")
+		log.WithError(err).Error("failed to get license from datastore; continuing without a license")
 	}
-
 	licenseUpdateChan := make(chan struct{})
+	licenseMonitor.SetFeaturesChangedCallback(func() {
+		licenseUpdateChan <- struct{}{}
+	})
+	licenseMonitor.SetStatusChangedCallback(func(newLicenseStatus lincensing_client.LicenseStatus) {
+		licenseUpdateChan <- struct{}{}
+	})
 
-	licenseMonitor.SetFeaturesChangedCallback(
-		func() {
-			licenseUpdateChan <- struct{}{}
-		},
-	)
-
-	licenseMonitor.SetStatusChangedCallback(
-		func(newLicenseStatus lincensing_client.LicenseStatus) {
-			licenseUpdateChan <- struct{}{}
-		},
-	)
-
-	// Start the license monitor, which will trigger the callback above at start of day and then
-	// whenever the license status changes.
 	go func() {
+		// Start the license monitor, which will trigger the callback above at start of day and then
+		// whenever the license status changes.
 		err := licenseMonitor.MonitorForever(context.Background())
 		if err != nil {
-			log.WithError(err).Warn("Error while continuously monitoring the license.")
+			log.WithError(err).Warn("Failed to continuously monitoring the license")
 		}
 	}()
 
-	// Setup Caches
-	// StagedNetworkPolicy cache
-	snpResourceCache := cache.NewSynchronizedObjectCache[*v3.StagedNetworkPolicy]()
-
-	// Namespace cache
-	namespaceCache := cache.NewSynchronizedObjectCache[*v1.Namespace]()
-
-	// NetworkSets Cache
-	networkSetCache := cache.NewSynchronizedObjectCache[*v3.NetworkSet]()
-
-	// Cache set
-	caches := &syncer.CacheSet{
-		Namespaces:            namespaceCache,
-		NetworkSets:           networkSetCache,
-		StagedNetworkPolicies: snpResourceCache,
+	// Create the standalone or management cluster PolicyRecommendationScope controller.
+	rctrl, err := rscontroller.NewRecommendationScopeController(ctx, lmak8s.DefaultCluster, clientSet, linseedClient)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create PolicyRecommendationScope controller")
 	}
 
-	// Setup Synchronizer
-	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSet, *caches, utils.SuffixGenerator)
-
-	// Controller Setup
-	// create main controller
-	suffixGenerator := utils.SuffixGenerator
-	managementStandalonePolicyRecController := policyrecommendation.NewPolicyRecommendationController(
-		clientSet.ProjectcalicoV3(),
-		clientSet,
-		linseedClient,
-		cacheSynchronizer,
-		caches,
-		lmak8s.DefaultCluster,
-		serviceNameSuffix,
-		&suffixGenerator,
-	)
-
-	if policyrecommendationConfig.TenantNamespace != "" {
-		impersonationInfo := user.DefaultInfo{
-			Name:   "system:serviceaccount:tigera-policy-recommendation:tigera-policy-recommendation",
-			Groups: []string{},
-		}
-		clientFactory = clientFactory.Impersonate(&impersonationInfo)
+	// Create the managed cluster controller. Each managed cluster will have its own
+	// PolicyRecommendationScope and Recommendation controllers.
+	mctrl, err := mscontroller.NewManagedClusterController(ctx, client, clientFactory, clientSet, linseedClient, config.TenantNamespace)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create ManagedCluster controller")
 	}
 
-	managedclusterController := managedcluster.NewManagedClusterController(ctx,
-		client,
-		clientFactory,
-		linseedClient,
-		policyrecommendationConfig.TenantNamespace,
-	)
-	stagednetworkpolicyController := stagednetworkpolicies.NewStagedNetworkPolicyController(
-		clientSet.ProjectcalicoV3(),
-		snpResourceCache,
-	)
-	namespaceController := namespace.NewNamespaceController(
-		clientSet,
-		namespaceCache,
-		cacheSynchronizer,
-	)
-
-	// setup shutdown sigs
+	// Setup shutdown sigs
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
+	// Start the controllers if we have a valid license.
 	hasLicense := licenseMonitor.GetFeatureStatus(features.PolicyRecommendation)
-	controllerRunning := false
+	stopChan := make(chan struct{})
+	controllersRunning := false
 
 	for {
-		if hasLicense && !controllerRunning {
-			managementStandalonePolicyRecController.Run(ctx)
-			managedclusterController.Run(ctx)
-			stagednetworkpolicyController.Run(ctx)
-			namespaceController.Run(ctx)
-			controllerRunning = true
-		} else if !hasLicense && controllerRunning {
-			managementStandalonePolicyRecController.Close()
-			managedclusterController.Close()
-			stagednetworkpolicyController.Close()
-			namespaceController.Close()
-			controllerRunning = false
+		if hasLicense && !controllersRunning {
+			log.Info("License status is valid, starting controllers")
+			// Both controllers run until the stop signal is received.
+			// Start the PolicyRecommendationScope controller for the standalone or management cluster.
+			go rctrl.Run(stopChan)
+			// Start the ManagedCluster controller.
+			go mctrl.Run(stopChan)
+
+			controllersRunning = true
+		} else if !hasLicense && controllersRunning {
+			log.Warning("License has expired, stopping controllers")
+			controllersRunning = false
+			close(stopChan)
 		}
 
 		select {
 		case <-licenseUpdateChan:
-			log.Info("License status has changed")
 			hasLicense = licenseMonitor.GetFeatureStatus(features.PolicyRecommendation)
 			continue
 		case <-shutdown:
-			log.Info("exiting")
-			if controllerRunning {
-				managementStandalonePolicyRecController.Close()
-				managedclusterController.Close()
-			}
+			log.Info("Exiting")
 			return
 		}
 	}

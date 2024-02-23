@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 FROM scratch as source
 

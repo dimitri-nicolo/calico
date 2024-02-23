@@ -16,21 +16,25 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
 )
 
-type policyRecommendationQuery struct {
+type PolicyRecommendationQuery interface {
+	QueryFlows(params *RecommendationFlowLogQueryParams) ([]*api.Flow, error)
+}
+
+type recommendationFlowLogQuery struct {
 	ctx       context.Context
 	client    linseed.Client
 	clusterID string
 }
 
-func NewPolicyRecommendationQuery(ctx context.Context, client linseed.Client, id string) *policyRecommendationQuery {
-	return &policyRecommendationQuery{
+func NewRecommendationFlowLogQuery(ctx context.Context, client linseed.Client, id string) *recommendationFlowLogQuery {
+	return &recommendationFlowLogQuery{
 		ctx:       ctx,
 		client:    client,
 		clusterID: id,
 	}
 }
 
-func (qf *policyRecommendationQuery) QueryFlows(params *PolicyRecommendationParams) ([]*api.Flow, error) {
+func (qf *recommendationFlowLogQuery) QueryFlows(params *RecommendationFlowLogQueryParams) ([]*api.Flow, error) {
 	clog := log.WithField("cluster", qf.clusterID)
 
 	if params == nil {
@@ -40,9 +44,7 @@ func (qf *policyRecommendationQuery) QueryFlows(params *PolicyRecommendationPara
 	}
 
 	// Query with the parameters provided
-	query := buildQuery(params)
-	pager := linseed.NewListPager[lapi.L3Flow](query)
-
+	pager := linseed.NewListPager[lapi.L3Flow](buildQuery(params))
 	flows, err := searchFlows(qf.ctx, qf.client.L3Flows(qf.clusterID).List, pager)
 	if err != nil {
 		return flows, err
@@ -52,7 +54,7 @@ func (qf *policyRecommendationQuery) QueryFlows(params *PolicyRecommendationPara
 }
 
 // buildQuery returns linseed L3 flow query parameters using policy recommendation query parameters.
-func buildQuery(params *PolicyRecommendationParams) *lapi.L3FlowParams {
+func buildQuery(params *RecommendationFlowLogQueryParams) *lapi.L3FlowParams {
 	// Parse the start and end times.
 	now := time.Now()
 

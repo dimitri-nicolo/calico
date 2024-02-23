@@ -15,10 +15,24 @@
       - name: app-policy tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
+
+- name: app-policy - native arm64 runner
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - app-policy
+  task:
+    agent:
+      machine:
+        type: s1-aws-arm64-2
+    prologue:
+      commands:
+        - cd app-policy
+    epilogue:
+      always:
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+          - test-results publish report
+    jobs:
+      - name: build binary
+        commands:
+          - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64

@@ -951,33 +951,6 @@ var (
 					},
 				},
 				{
-					Action:   v3.Pass,
-					Protocol: &protocolUDP,
-					Source: v3.EntityRule{
-						NamespaceSelector: "projectcalico.org/name == 'namespace1'",
-					},
-					Destination: v3.EntityRule{
-						Ports: []numorstring.Port{
-							{
-								MinPort: 6464,
-								MaxPort: 6464,
-							},
-							{
-								MinPort: 6465,
-								MaxPort: 6465,
-							},
-						},
-					},
-					Metadata: &v3.RuleMetadata{
-						Annotations: map[string]string{
-							"policyrecommendation.tigera.io/lastUpdated": "2022-11-30T09:01:38Z",
-							"policyrecommendation.tigera.io/namespace":   "namespace1",
-							"policyrecommendation.tigera.io/scope":       "Namespace",
-							"policyrecommendation.tigera.io/warnings":    "NonServicePortsAndProtocol",
-						},
-					},
-				},
-				{
 					Action:   v3.Allow,
 					Protocol: &protocolUDP,
 					Source: v3.EntityRule{
@@ -1080,30 +1053,6 @@ var (
 							"policyrecommendation.tigera.io/lastUpdated": "2022-11-30T09:01:38Z",
 							"policyrecommendation.tigera.io/name":        "global-netset-1",
 							"policyrecommendation.tigera.io/namespace":   "",
-							"policyrecommendation.tigera.io/scope":       "NetworkSet",
-						},
-					},
-				},
-				{
-					Action:   v3.Pass,
-					Protocol: &protocolTCP,
-					Source: v3.EntityRule{
-						Selector:          "projectcalico.org/name == 'netset-1' && projectcalico.org/kind == 'NetworkSet'",
-						NamespaceSelector: "projectcalico.org/name == 'namespace1'",
-					},
-					Destination: v3.EntityRule{
-						Ports: []numorstring.Port{
-							{
-								MinPort: 666,
-								MaxPort: 666,
-							},
-						},
-					},
-					Metadata: &v3.RuleMetadata{
-						Annotations: map[string]string{
-							"policyrecommendation.tigera.io/lastUpdated": "2022-11-30T09:01:38Z",
-							"policyrecommendation.tigera.io/name":        "netset-1",
-							"policyrecommendation.tigera.io/namespace":   "namespace1",
 							"policyrecommendation.tigera.io/scope":       "NetworkSet",
 						},
 					},
