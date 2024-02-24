@@ -4,8 +4,8 @@ ARG UBI_IMAGE
 
 FROM rockylinux:8 AS snort
 
-ARG SNORT3_VERSION=3.1.76.0
-ARG DAQ_VERSION=3.0.13
+ARG SNORT3_VERSION=3.1.81.0
+ARG DAQ_VERSION=3.0.14
 
 RUN dnf upgrade -y && dnf install -y \
     autoconf \
