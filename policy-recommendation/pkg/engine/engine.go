@@ -34,7 +34,9 @@ const (
 
 	// DefaultSelector is the default namespace selector.
 	defaultSelector = `(!projectcalico.org/name starts with "tigera-" && ` +
-		`!projectcalico.org/name starts with "calico-" && !projectcalico.org/name starts with "kube-")`
+		`!projectcalico.org/name starts with "calico-" && ` +
+		`!projectcalico.org/name starts with "kube-" && ` +
+		`!projectcalico.org/name starts with "openshift-")`
 )
 
 // Clock is an interface added for testing purposes.
@@ -279,25 +281,24 @@ func (e *RecommendationEngine) update(snp *v3.StagedNetworkPolicy) bool {
 // getLookback returns the InitialLookback period if the policy is new and has not previously
 // been updated, otherwise use twice the engine-run interval (Default: 2.5min).
 func (e *RecommendationEngine) getLookback(snp v3.StagedNetworkPolicy) time.Duration {
-	if e.scope == nil {
-		// The default selector is not expected to fail validation.
-		parsedSelector, _ := libcselector.Parse(defaultSelector)
-		e.scope = &recommendationScope{
-			initialLookback:           defaultLookback,            // 24h0m0s
-			interval:                  defaultInterval,            // 10m0s
-			stabilization:             defaultStabilizationPeriod, // 5m0s
-			selector:                  parsedSelector,             // Exclude Tigera and Kubernetes and Calico namespaces
-			passIntraNamespaceTraffic: false,                      // Allow intra-namespace traffic
+	initialLookback := defaultLookback
+	interval := defaultInterval
+	if e.scope != nil {
+		if e.scope.initialLookback != 0 {
+			initialLookback = e.scope.initialLookback
+		}
+		if e.scope.interval != 0 {
+			interval = e.scope.interval
 		}
 	}
 
 	_, ok := snp.Annotations[calicores.LastUpdatedKey]
 	if !ok {
 		// First time run will use the initial lookback
-		return e.scope.initialLookback
+		return initialLookback
 	}
 	// Twice the engine-run interval
-	lookback := e.scope.interval * 2
+	lookback := interval * 2
 
 	return lookback
 }
