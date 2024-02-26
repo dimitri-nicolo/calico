@@ -37,7 +37,7 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/aws"
 
